@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Poppins', 'Inter', system-ui, -apple-system, sans-serif;
+  
+  --color-brand-blue: #0D47A1;
+  --color-brand-yellow: #FFD600;
+  
+  --color-bg-light: #F8FAFC;
+  --color-card-bg: #FFFFFF;
+  --color-section-bg: #EEF4FF;
+  
+  --color-text-primary: #1E293B;
+  --color-text-secondary: #64748B;
+  --color-border-color: #E2E8F0;
+  
+  /* Fallbacks for standard utilities if needed */
+  --color-blue-900: #0D47A1;
+  --color-yellow-400: #FFD600;
+  --color-slate-50: #F8FAFC;
+  --color-slate-800: #1E293B;
+  --color-slate-500: #64748B;
+  --color-slate-200: #E2E8F0;
+}
+
+@layer base {
+  body {
+    @apply font-sans text-text-secondary bg-bg-light;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply text-text-primary font-medium;
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply backdrop-blur-md bg-white/70 border border-white/20;
+  }
+  
+  .subtle-shadow {
+    box-shadow: 0 4px 20px -2px rgba(13, 71, 161, 0.05);
+  }
+  
+  .premium-card {
+    @apply bg-white border border-border-color rounded-2xl hover:border-brand-blue/20 transition-all duration-300 hover:shadow-lg hover:shadow-brand-blue/5;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+}
