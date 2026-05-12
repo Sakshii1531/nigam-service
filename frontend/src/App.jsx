@@ -19,6 +19,17 @@ import ServiceDetails from './pages/ServiceDetails';
 import HelpSupport from './pages/HelpSupport';
 import SavedAddresses from './pages/SavedAddresses';
 import EditProfile from './pages/EditProfile';
+import TechLogin from './pages/technician/Login';
+import TechApply from './pages/technician/Apply';
+import TechDashboard from './pages/technician/Dashboard';
+import ActiveJob from './pages/technician/ActiveJob';
+import Schedule from './pages/technician/Schedule';
+import ProfilePage from './pages/technician/Profile';
+import EarningsPage from './pages/technician/Earnings';
+import PersonalInfo from './pages/technician/PersonalInfo';
+import PayoutSettings from './pages/technician/PayoutSettings';
+import Verification from './pages/technician/Verification';
+import HelpSupportTech from './pages/technician/HelpSupport';
 
 const PageHandler = () => {
   const navigate = useNavigate();
@@ -65,6 +76,17 @@ function App() {
         <Route path="/help-support" element={<HelpSupport />} />
         <Route path="/saved-addresses" element={<SavedAddresses />} />
         <Route path="/edit-profile" element={<EditProfile />} />
+        <Route path="/technician/login" element={<TechLogin />} />
+        <Route path="/technician/apply" element={<TechApply />} />
+        <Route path="/technician/dashboard" element={<TechDashboard />} />
+        <Route path="/technician/active-job" element={<ActiveJob />} />
+        <Route path="/technician/schedule" element={<Schedule />} />
+        <Route path="/technician/profile" element={<ProfilePage />} />
+        <Route path="/technician/earnings" element={<EarningsPage />} />
+        <Route path="/technician/personal-info" element={<PersonalInfo />} />
+        <Route path="/technician/payout-settings" element={<PayoutSettings />} />
+        <Route path="/technician/verification" element={<Verification />} />
+        <Route path="/technician/support" element={<HelpSupportTech />} />
         <Route path="*" element={<PageHandler />} />
       </Routes>
     </Router>
