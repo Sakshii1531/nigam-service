@@ -1,7 +1,6 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import Home from './pages/Home';
-import Onboarding from './pages/Onboarding';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Warranty from './pages/Warranty';
@@ -17,6 +16,30 @@ import RefrigeratorDetails from './pages/RefrigeratorDetails';
 import Bookings from './pages/Bookings';
 import Profile from './pages/Profile';
 import ServiceDetails from './pages/ServiceDetails';
+import HelpSupport from './pages/HelpSupport';
+import SavedAddresses from './pages/SavedAddresses';
+import EditProfile from './pages/EditProfile';
+
+const PageHandler = () => {
+  const navigate = useNavigate();
+  return (
+    <div className="min-h-screen bg-[#F5F7FB] flex flex-col items-center justify-center p-6">
+      <div className="bg-white p-8 rounded-2xl shadow-sm text-center max-w-sm w-full border border-gray-100">
+        <div className="w-16 h-16 bg-[#E3ECF9] rounded-full flex items-center justify-center mx-auto mb-4">
+          <span className="text-[#0D47A1] font-bold text-2xl">!</span>
+        </div>
+        <h1 className="text-xl font-bold text-gray-900 mb-2">Page Coming Soon</h1>
+        <p className="text-sm text-gray-500 mb-6">This feature is under development.</p>
+        <button 
+          onClick={() => navigate(-1)}
+          className="w-full bg-[#0D47A1] text-white font-semibold py-3 rounded-xl hover:bg-blue-700 transition-colors shadow-sm"
+        >
+          Go Back
+        </button>
+      </div>
+    </div>
+  );
+};
 
 function App() {
   return (
@@ -24,7 +47,6 @@ function App() {
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/home" element={<Home />} />
-        <Route path="/onboarding" element={<Onboarding />} />
         <Route path="/login" element={<Login />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/services" element={<AllServices />} />
@@ -40,6 +62,10 @@ function App() {
         <Route path="/booking-success" element={<BookingSuccess />} />
         <Route path="/tracking" element={<Tracking />} />
         <Route path="/chat" element={<Chat />} />
+        <Route path="/help-support" element={<HelpSupport />} />
+        <Route path="/saved-addresses" element={<SavedAddresses />} />
+        <Route path="/edit-profile" element={<EditProfile />} />
+        <Route path="*" element={<PageHandler />} />
       </Routes>
     </Router>
   );

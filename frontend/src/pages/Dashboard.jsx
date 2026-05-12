@@ -54,7 +54,7 @@ const Dashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-bg-light flex flex-col pb-20">
+    <div className="min-h-screen bg-bg-light flex flex-col pb-16">
       
       {/* Header */}
       <div className="bg-[#E3ECF9] p-6 rounded-b-[30px] shadow-sm">
@@ -71,7 +71,10 @@ const Dashboard = () => {
               <Bell className="h-5 w-5 text-text-primary" />
               <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
             </button>
-            <div className="w-10 h-10 bg-[#0D47A1] rounded-full flex items-center justify-center text-white font-bold">
+            <div 
+              onClick={() => navigate('/profile')}
+              className="w-10 h-10 bg-[#0D47A1] rounded-full flex items-center justify-center text-white font-bold cursor-pointer"
+            >
               U
             </div>
           </div>
@@ -89,7 +92,7 @@ const Dashboard = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 p-6 flex flex-col gap-8">
+      <div className="flex-1 p-6 flex flex-col gap-6">
         
         {/* Service Banners */}
         <div ref={bannerRef} className="flex gap-4 overflow-x-auto pb-2 -mx-2 px-2 snap-x [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
@@ -204,59 +207,6 @@ const Dashboard = () => {
                   <span className="text-sm font-bold text-[#0D47A1]">
                     ₹{service.price}
                   </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Cleaning Essentials */}
-        <div>
-          <div className="flex justify-between items-center mb-1">
-            <h2 className="text-lg font-bold text-text-primary">Cleaning Essentials</h2>
-            <button 
-              onClick={() => navigate('/cleaning-services')}
-              className="text-sm font-semibold text-[#0D47A1] hover:text-blue-800 transition-colors"
-            >
-              See all
-            </button>
-          </div>
-          <p className="text-xs text-text-secondary mb-4">Monthly cleaning essential services</p>
-          <div className="flex gap-4 overflow-x-auto pb-4 -mx-2 px-2 snap-x [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-            {[
-              { id: 1, title: "Intense cleaning (2 bathrooms)", image: cleaningBathroom1, rating: 4.80, price: 872, originalPrice: 1038, badge: "8% OFF" },
-              { id: 2, title: "Classic cleaning (2 bathrooms)", image: cleaningBathroom2, rating: 4.82, price: 794, originalPrice: 858, badge: "7% OFF" },
-              { id: 3, title: "Sofa Deep Cleaning", image: cleaningSofa, rating: 4.75, price: 569, originalPrice: 699, badge: "18% OFF" },
-              { id: 4, title: "Carpet Cleaning", image: cleaningCarpet, rating: 4.70, price: 899, originalPrice: 1199, badge: "25% OFF" },
-              { id: 5, title: "Kitchen Deep Cleaning", image: cleaningKitchen, rating: 4.88, price: 1299, originalPrice: 1599, badge: "18% OFF" }
-            ].map((service) => (
-              <div 
-                key={service.id}
-                onClick={() => navigate('/booking')}
-                className="flex flex-col gap-2 cursor-pointer flex-shrink-0 w-40 snap-start border border-border-color rounded-2xl p-2 bg-white hover:border-[#0D47A1] transition-all"
-              >
-                <div className="w-full h-32 bg-white rounded-xl flex items-center justify-center overflow-hidden relative">
-                  <img src={service.image} alt={service.title} className="w-full h-full object-cover" />
-                  <span className="absolute top-2 right-2 bg-[#2E7D32] text-white text-xs font-bold px-2 py-0.5 rounded-full">
-                    {service.badge}
-                  </span>
-                </div>
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-sm font-semibold text-text-primary truncate">
-                    {service.title}
-                  </span>
-                  <div className="flex items-center gap-1">
-                    <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
-                    <span className="text-xs text-text-secondary">{service.rating}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold text-[#0D47A1]">
-                      ₹{service.price}
-                    </span>
-                    <span className="text-xs text-text-secondary line-through">
-                      ₹{service.originalPrice}
-                    </span>
-                  </div>
                 </div>
               </div>
             ))}

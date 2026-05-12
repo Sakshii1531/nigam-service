@@ -1,17 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Send, Paperclip } from 'lucide-react';
 
 const Chat = () => {
   const navigate = useNavigate();
   const [message, setMessage] = useState('');
+  const [messages, setMessages] = useState([
+    { id: 1, from: 'technician', text: 'I am on my way, will reach in 10 mins.', time: '10:45 AM' },
+    { id: 2, from: 'user', text: 'Great, I am at home.', time: '10:46 AM' },
+  ]);
+  const bottomRef = useRef(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   const handleSend = (e) => {
     e.preventDefault();
-    if (message.trim()) {
-      alert(`Message sent: ${message}`);
-      setMessage('');
-    }
+    if (!message.trim()) return;
+    const now = new Date();
+    const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    setMessages([...messages, { id: Date.now(), from: 'user', text: message.trim(), time }]);
+    setMessage('');
   };
 
   return (
@@ -20,7 +30,7 @@ const Chat = () => {
         {/* Header */}
         <div className="p-6 flex items-center border-b border-border-color">
           <button 
-            onClick={() => navigate('/tracking')}
+            onClick={() => navigate(-1)}
             className="p-2 hover:bg-slate-100 rounded-full transition-colors"
           >
             <ArrowLeft className="h-6 w-6 text-[#0D47A1]" />
@@ -44,22 +54,25 @@ const Chat = () => {
             🔒 Your phone number is masked for security.
           </div>
 
-          {/* Technician Message */}
-          <div className="flex flex-col items-start gap-1">
-            <div className="bg-white p-4 rounded-t-2xl rounded-r-2xl max-w-[80%] shadow-sm text-sm text-text-primary">
-              I am on my way, will reach in 10 mins.
-            </div>
-            <span className="text-xs text-text-secondary ml-1">10:45 AM</span>
-          </div>
+          {messages.map((msg) => (
+            msg.from === 'technician' ? (
+              <div key={msg.id} className="flex flex-col items-start gap-1">
+                <div className="bg-white p-4 rounded-t-2xl rounded-r-2xl max-w-[80%] shadow-sm text-sm text-text-primary">
+                  {msg.text}
+                </div>
+                <span className="text-xs text-text-secondary ml-1">{msg.time}</span>
+              </div>
+            ) : (
+              <div key={msg.id} className="flex flex-col items-end gap-1">
+                <div className="bg-[#0D47A1] text-white p-4 rounded-t-2xl rounded-l-2xl max-w-[80%] shadow-sm text-sm">
+                  {msg.text}
+                </div>
+                <span className="text-xs text-text-secondary mr-1">{msg.time}</span>
+              </div>
+            )
+          ))}
 
-          {/* User Message */}
-          <div className="flex flex-col items-end gap-1">
-            <div className="bg-[#0D47A1] text-white p-4 rounded-t-2xl rounded-l-2xl max-w-[80%] shadow-sm text-sm">
-              Great, I am at home.
-            </div>
-            <span className="text-xs text-text-secondary mr-1">10:46 AM</span>
-          </div>
-
+          <div ref={bottomRef} />
         </div>
 
         {/* Message Input */}
@@ -87,3 +100,5 @@ const Chat = () => {
 };
 
 export default Chat;
+
+

@@ -1,14 +1,14 @@
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, User, MapPin, CreditCard, HelpCircle, LogOut, ChevronRight } from 'lucide-react';
+import { ArrowLeft, MapPin, CreditCard, HelpCircle, LogOut, ChevronRight, Pencil, Shield } from 'lucide-react';
 
 const Profile = () => {
   const navigate = useNavigate();
 
   const menuItems = [
-    { icon: <MapPin className="h-5 w-5 text-[#0D47A1]" />, title: 'Saved Addresses' },
-    { icon: <CreditCard className="h-5 w-5 text-[#0D47A1]" />, title: 'Payment Methods' },
-    { icon: <HelpCircle className="h-5 w-5 text-[#0D47A1]" />, title: 'Help & Support' },
+    { icon: <MapPin className="h-5 w-5 text-[#0D47A1]" />, title: 'Saved Addresses', path: '/saved-addresses' },
+    { icon: <CreditCard className="h-5 w-5 text-[#0D47A1]" />, title: 'Payment Methods', path: '/payment' },
+    { icon: <HelpCircle className="h-5 w-5 text-[#0D47A1]" />, title: 'Help & Support', path: '/help-support' },
+    { icon: <Shield className="h-5 w-5 text-[#0D47A1]" />, title: 'Warranty', path: '/warranty' },
   ];
 
   return (
@@ -29,17 +29,26 @@ const Profile = () => {
       <div className="flex-1 p-6 flex flex-col gap-6 overflow-y-auto">
         
         {/* User Info Card */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-border-color flex items-center gap-4">
-          <div className="w-16 h-16 bg-[#0D47A1] rounded-full flex items-center justify-center text-white font-bold text-xl">
-            U
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-border-color flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 bg-[#0D47A1] rounded-full flex items-center justify-center text-white font-bold text-xl">
+              U
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-text-primary">User</h2>
+              <p className="text-sm text-text-secondary">+91 9876543210</p>
+              <span className="text-xs text-[#2E7D32] font-semibold bg-[#E8F5E9] px-2 py-0.5 rounded-full mt-1 inline-block">
+                Premium Member
+              </span>
+            </div>
           </div>
-          <div>
-            <h2 className="text-lg font-bold text-text-primary">User</h2>
-            <p className="text-sm text-text-secondary">+91 9876543210</p>
-            <span className="text-xs text-[#2E7D32] font-semibold bg-[#E8F5E9] px-2 py-0.5 rounded-full mt-1 inline-block">
-              Premium Member
-            </span>
-          </div>
+          <button 
+            onClick={() => navigate('/edit-profile')}
+            className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+            aria-label="Edit Profile"
+          >
+            <Pencil className="h-5 w-5 text-[#0D47A1]" />
+          </button>
         </div>
 
         {/* Menu Items */}
@@ -47,6 +56,7 @@ const Profile = () => {
           {menuItems.map((item, index) => (
             <div 
               key={item.title}
+              onClick={() => navigate(item.path)}
               className={`p-4 flex justify-between items-center cursor-pointer hover:bg-slate-50 transition-colors ${index !== menuItems.length - 1 ? 'border-b border-border-color' : ''}`}
             >
               <div className="flex items-center gap-3">

@@ -19,12 +19,12 @@ const Payment = () => {
         {/* Header */}
         <div className="p-6 flex items-center border-b border-border-color">
           <button 
-            onClick={() => navigate('/warranty')}
+            onClick={() => navigate('/dashboard')}
             className="p-2 hover:bg-slate-100 rounded-full transition-colors"
           >
             <ArrowLeft className="h-6 w-6 text-[#0D47A1]" />
           </button>
-          <h1 className="text-xl font-bold text-[#0d47a1] ml-4">Payment Summary</h1>
+          <h1 className="text-lg font-bold text-[#0d47a1] ml-4">Payment Summary</h1>
         </div>
 
         {/* Content */}
@@ -60,7 +60,7 @@ const Payment = () => {
             
             <div className="flex justify-between items-center">
               <span className="font-bold text-text-primary">Total Amount</span>
-              <span className="font-bold text-[#0D47A1] text-lg">$5.00</span>
+              <span className="font-bold text-[#0D47A1] text-base">$5.00</span>
             </div>
           </div>
 
