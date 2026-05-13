@@ -25,11 +25,10 @@ const Login = () => {
     // Simulate API call
     setTimeout(() => {
       setIsLoading(false);
-      // Using same credentials as Super Admin for consistency
       if (formData.email === 'admin123@gmail.com' && formData.password === 'admin123') {
-        navigate('/brand-admin/dashboard');
+        navigate('/super-admin/dashboard');
       } else {
-        setError('Invalid credentials. Please use the default credentials.');
+        setError('Invalid credentials. Please use the default master credentials.');
       }
     }, 1000);
   };
@@ -49,15 +48,15 @@ const Login = () => {
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-1 font-sans">Nigam Care</h1>
           <p className="text-gray-500 text-sm flex items-center justify-center gap-1">
-            <Shield size={14} className="text-[#0D47A1]" /> Brand Portal
+            <Shield size={14} className="text-[#0D47A1]" /> Super Admin Portal
           </p>
         </div>
 
         {/* Login Card */}
         <div className="bg-white border border-gray-100 rounded-2xl p-8 shadow-sm">
           <div className="mb-6 text-center">
-            <h2 className="text-xl font-semibold text-gray-800">Partner Login</h2>
-            <p className="text-gray-500 text-sm mt-1">Enter your credentials to access the brand dashboard</p>
+            <h2 className="text-xl font-semibold text-gray-800">Welcome Back</h2>
+            <p className="text-gray-500 text-sm mt-1">Enter your credentials to access the master panel</p>
           </div>
 
           {error && (
@@ -77,7 +76,7 @@ const Login = () => {
                   type="email"
                   name="email"
                   className="w-full pl-11 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] outline-none transition-all text-sm text-gray-900 placeholder-gray-400"
-                  placeholder="admin@brand.com"
+                  placeholder="admin@system.com"
                   value={formData.email}
                   onChange={handleInputChange}
                   required

@@ -33,6 +33,7 @@ import BrandNotifications from './pages/brand-admin/Notifications';
 import BrandReports from './pages/brand-admin/Reports';
 import BrandSettings from './pages/brand-admin/Settings';
 import TechApply from './pages/technician/Apply';
+import SuperAdminLogin from './pages/super-admin/Login';
 import SuperAdminDashboard from './pages/super-admin/Dashboard';
 import SuperAdminUsers from './pages/super-admin/Users';
 import SuperAdminTechnicians from './pages/super-admin/Technicians';
@@ -61,6 +62,7 @@ import PersonalInfo from './pages/technician/PersonalInfo';
 import PayoutSettings from './pages/technician/PayoutSettings';
 import Verification from './pages/technician/Verification';
 import HelpSupportTech from './pages/technician/HelpSupport';
+import RaisePartRequest from './pages/technician/RaisePartRequest';
 
 const PageHandler = () => {
   const navigate = useNavigate();
@@ -130,8 +132,10 @@ function App() {
         <Route path="/technician/payout-settings" element={<PayoutSettings />} />
         <Route path="/technician/verification" element={<Verification />} />
         <Route path="/technician/support" element={<HelpSupportTech />} />
+        <Route path="/technician/raise-part-request" element={<RaisePartRequest />} />
         
         {/* Super Admin Routes */}
+        <Route path="/super-admin/login" element={<SuperAdminLogin />} />
         <Route path="/super-admin/dashboard" element={<SuperAdminDashboard />} />
         <Route path="/super-admin/users" element={<SuperAdminUsers />} />
         <Route path="/super-admin/technicians" element={<SuperAdminTechnicians />} />

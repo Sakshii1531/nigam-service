@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Calendar, Wrench, User, ClipboardList, Briefcase, ArrowLeft, FileText, Plus, Trash2, Camera, CheckCircle } from 'lucide-react';
+import { Bell, Calendar, Wrench, User, ClipboardList, Briefcase, ArrowLeft, FileText, Plus, Trash2, Camera, CheckCircle, ArrowRight } from 'lucide-react';
 import techJobBefore from '../../assets/tech_job_before.png';
 import techJobAfter from '../../assets/tech_job_after.png';
 
@@ -170,13 +170,22 @@ const Dashboard = () => {
               <Wrench className="h-5 w-5 text-[#0D47A1]" />
               <h3 className="text-sm font-semibold text-[#0D47A1] uppercase tracking-wide">Parts Replaced</h3>
             </div>
-            <button 
-              onClick={addPart}
-              className="flex items-center gap-1 text-sm font-semibold text-[#0D47A1] hover:text-blue-800 transition-colors"
-            >
-              <Plus className="h-4 w-4" />
-              Add Part
-            </button>
+            <div className="flex gap-3">
+              <button 
+                onClick={() => navigate('/technician/raise-part-request')}
+                className="flex items-center gap-1 text-xs font-semibold text-[#0D47A1] hover:text-blue-800 transition-colors"
+              >
+                <ArrowRight className="h-3.5 w-3.5" />
+                Raise Request
+              </button>
+              <button 
+                onClick={addPart}
+                className="flex items-center gap-1 text-xs font-semibold text-[#0D47A1] hover:text-blue-800 transition-colors"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Add Part
+              </button>
+            </div>
           </div>
 
           {/* Manual Add Form */}
@@ -238,6 +247,8 @@ const Dashboard = () => {
               </div>
             ))}
           </div>
+
+
         </div>
 
         {/* Service Photos Card */}

@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from 'react';
-import { Search, Bell, MapPin, Wrench, Zap, Droplet, Thermometer, Shield, Home as HomeIcon, Calendar, MessageSquare, User, Star } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Search, Bell, MapPin, Wrench, Zap, Droplet, Thermometer, Shield, Home as HomeIcon, Calendar, MessageSquare, User, Star, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import acBanner from '../assets/ac_service_banner.png';
 import electricianBanner from '../assets/electrician_banner.png';
@@ -28,6 +28,11 @@ import spaImg from '../assets/categories/spa.png';
 const Dashboard = () => {
   const navigate = useNavigate();
   const bannerRef = useRef(null);
+  const [showWarrantyModal, setShowWarrantyModal] = useState(false);
+  const [isUnderWarranty, setIsUnderWarranty] = useState(null);
+  const [billNo, setBillNo] = useState('');
+  const [billFile, setBillFile] = useState(null);
+  const [selectedServiceForWarranty, setSelectedServiceForWarranty] = useState(null);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -56,6 +61,71 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-bg-light flex flex-col pb-16">
       
+      {/* Warranty Modal */}
+      {showWarrantyModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl flex flex-col gap-5">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-bold text-[#0D47A1]">Warranty Verification</h2>
+              <button 
+                onClick={() => setShowWarrantyModal(false)}
+                className="p-1 hover:bg-slate-100 rounded-full transition-colors"
+              >
+                <X className="h-5 w-5 text-text-secondary" />
+              </button>
+            </div>
+            
+            <p className="text-sm text-text-primary">Please provide your bill details to claim free service under warranty.</p>
+            
+            <div className="flex flex-col gap-3">
+              <div>
+                <label className="text-xs font-medium text-gray-700 mb-1 block">Bill Number</label>
+                <input 
+                  type="text" 
+                  value={billNo}
+                  onChange={(e) => setBillNo(e.target.value)}
+                  placeholder="e.g. WAR123"
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-[#0D47A1]"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-700 mb-1 block">Upload Bill (Optional)</label>
+                <input 
+                  type="file" 
+                  onChange={(e) => setBillFile(e.target.files[0])}
+                  className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-[#E3ECF9] file:text-[#0D47A1] hover:file:bg-blue-100"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-2">
+              <button 
+                onClick={() => {
+                  if (!billNo && !billFile) {
+                    alert('Please provide Bill No or Upload Bill to claim warranty.');
+                    return;
+                  }
+                  setShowWarrantyModal(false);
+                  navigate(`/booking?service=${encodeURIComponent(selectedServiceForWarranty.title)}&price=0&warranty=true`);
+                }}
+                className="flex-1 bg-[#FFD600] text-[#0D47A1] font-bold py-2 rounded-xl hover:bg-yellow-400 transition-colors text-sm"
+              >
+                Verify & Proceed
+              </button>
+              <button 
+                onClick={() => {
+                  setShowWarrantyModal(false);
+                  navigate(`/booking?service=${encodeURIComponent(selectedServiceForWarranty.title)}&price=${selectedServiceForWarranty.price}`);
+                }}
+                className="flex-1 bg-slate-100 text-text-primary font-semibold py-2 rounded-xl hover:bg-slate-200 transition-colors text-sm"
+              >
+                Skip / No Warranty
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-[#E3ECF9] p-6 rounded-b-[30px] shadow-sm">
         <div className="flex justify-between items-center mb-6">
@@ -187,7 +257,10 @@ const Dashboard = () => {
             ].map((service) => (
               <div 
                 key={service.id}
-                onClick={() => navigate('/booking')}
+                onClick={() => {
+                  setSelectedServiceForWarranty(service);
+                  setShowWarrantyModal(true);
+                }}
                 className="flex flex-col gap-2 cursor-pointer flex-shrink-0 w-40 snap-start border border-border-color rounded-2xl p-2 bg-white hover:border-[#0D47A1] transition-all"
               >
                 <div className="w-full h-32 bg-white rounded-xl flex items-center justify-center overflow-hidden relative">
@@ -235,7 +308,14 @@ const Dashboard = () => {
             ].map((service) => (
               <div 
                 key={service.id}
-                onClick={() => navigate(service.path)}
+                onClick={() => {
+                  if (service.path === '/booking') {
+                    setSelectedServiceForWarranty(service);
+                    setShowWarrantyModal(true);
+                  } else {
+                    navigate(service.path);
+                  }
+                }}
                 className="flex flex-col gap-2 cursor-pointer flex-shrink-0 w-40 snap-start border border-border-color rounded-2xl p-2 bg-white hover:border-[#0D47A1] transition-all"
               >
                 <div className="w-full h-32 bg-white rounded-xl flex items-center justify-center overflow-hidden relative">

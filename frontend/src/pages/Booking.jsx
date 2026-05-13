@@ -13,6 +13,8 @@ const Booking = () => {
   const searchParams = new URLSearchParams(location.search);
   const preSelectedService = searchParams.get('service') || 'AC Repair & Service';
   const [selectedService, setSelectedService] = useState(preSelectedService);
+  const price = searchParams.get('price') || '499';
+  const isWarranty = searchParams.get('warranty') === 'true';
 
   const services = [
     'AC Repair & Service',
@@ -62,7 +64,15 @@ const Booking = () => {
                 <span className="text-xs text-text-secondary block">Service</span>
                 <span className="font-bold text-text-primary">{selectedService}</span>
               </div>
-              <ChevronDown className={`h-5 w-5 text-text-secondary transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <span className="text-xs text-text-secondary block">Price</span>
+                  <span className={`font-bold ${isWarranty ? 'text-green-600' : 'text-[#0D47A1]'}`}>
+                    {isWarranty ? '₹0 (Warranty)' : `₹${price}`}
+                  </span>
+                </div>
+                <ChevronDown className={`h-5 w-5 text-text-secondary transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+              </div>
             </div>
           </div>
 

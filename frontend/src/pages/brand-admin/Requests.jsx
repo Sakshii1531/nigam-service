@@ -119,9 +119,6 @@ const Requests = () => {
               <button className="bg-white text-[#1E293B] border border-[#E2E8F0] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#F8FAFC] transition-colors flex items-center gap-2">
                 <Download size={16} /> Export
               </button>
-              <button className="bg-[#0D47A1] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2">
-                <Plus size={16} /> Create Request
-              </button>
             </div>
           </div>
 

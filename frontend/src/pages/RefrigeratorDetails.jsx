@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Star, Check, Shield, Award, Clock } from 'lucide-react';
+import { ArrowLeft, Star, Check, Shield, Award, Clock, X } from 'lucide-react';
 import applianceFridge from '../assets/appliance_fridge.png';
 
 const RefrigeratorDetails = () => {
   const navigate = useNavigate();
   const [selectedIssue, setSelectedIssue] = useState('');
+  const [showWarrantyModal, setShowWarrantyModal] = useState(false);
+  const [isUnderWarranty, setIsUnderWarranty] = useState(null);
+  const [billNo, setBillNo] = useState('');
+  const [billFile, setBillFile] = useState(null);
 
   const issues = [
     'Not Cooling',
@@ -26,6 +30,71 @@ const RefrigeratorDetails = () => {
   return (
     <div className="min-h-screen bg-bg-light flex flex-col pb-20">
       
+      {/* Warranty Modal */}
+      {showWarrantyModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl flex flex-col gap-5">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-bold text-[#0D47A1]">Warranty Verification</h2>
+              <button 
+                onClick={() => setShowWarrantyModal(false)}
+                className="p-1 hover:bg-slate-100 rounded-full transition-colors"
+              >
+                <X className="h-5 w-5 text-text-secondary" />
+              </button>
+            </div>
+            
+            <p className="text-sm text-text-primary">Please provide your bill details to claim free service under warranty.</p>
+            
+            <div className="flex flex-col gap-3">
+              <div>
+                <label className="text-xs font-medium text-gray-700 mb-1 block">Bill Number</label>
+                <input 
+                  type="text" 
+                  value={billNo}
+                  onChange={(e) => setBillNo(e.target.value)}
+                  placeholder="e.g. WAR123"
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-[#0D47A1]"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-700 mb-1 block">Upload Bill (Optional)</label>
+                <input 
+                  type="file" 
+                  onChange={(e) => setBillFile(e.target.files[0])}
+                  className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-[#E3ECF9] file:text-[#0D47A1] hover:file:bg-blue-100"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-2">
+              <button 
+                onClick={() => {
+                  if (!billNo && !billFile) {
+                    alert('Please provide Bill No or Upload Bill to claim warranty.');
+                    return;
+                  }
+                  setShowWarrantyModal(false);
+                  navigate(`/booking?service=Refrigerator Service&price=0&warranty=true`);
+                }}
+                className="flex-1 bg-[#FFD600] text-[#0D47A1] font-bold py-2 rounded-xl hover:bg-yellow-400 transition-colors text-sm"
+              >
+                Verify & Proceed
+              </button>
+              <button 
+                onClick={() => {
+                  setShowWarrantyModal(false);
+                  navigate(`/booking?service=Refrigerator Service&price=499`);
+                }}
+                className="flex-1 bg-slate-100 text-text-primary font-semibold py-2 rounded-xl hover:bg-slate-200 transition-colors text-sm"
+              >
+                Skip / No Warranty
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-[#E3ECF9] p-6 rounded-b-[30px] shadow-sm flex items-center gap-4">
         <button 
@@ -122,12 +191,14 @@ const RefrigeratorDetails = () => {
           <span className="text-base font-bold text-text-primary">₹499</span>
         </div>
         <button
-          onClick={() => navigate(`/booking?service=Refrigerator Service`)}
+          onClick={() => setShowWarrantyModal(true)}
           className="bg-[#FFD600] text-[#0D47A1] font-bold py-2.5 px-6 rounded-2xl hover:bg-yellow-400 transition-colors shadow-sm text-sm"
         >
           Book Service
         </button>
       </div>
+
+
 
     </div>
   );
