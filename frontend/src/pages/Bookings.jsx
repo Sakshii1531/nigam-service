@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Calendar, Clock, ChevronRight, Wrench, Home as HomeIcon, User } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, ChevronRight, Wrench, Home as HomeIcon, User, ShoppingCart } from 'lucide-react';
 
 const Bookings = () => {
   const navigate = useNavigate();
@@ -97,6 +97,13 @@ const Bookings = () => {
         >
           <HomeIcon className="h-6 w-6" />
           <span className="text-xs font-medium">Home</span>
+        </button>
+        <button 
+          onClick={() => navigate('/buy')}
+          className="flex flex-col items-center text-text-secondary hover:text-[#0D47A1]"
+        >
+          <ShoppingCart className="h-6 w-6" />
+          <span className="text-xs font-medium">Buy</span>
         </button>
         <button className="flex flex-col items-center text-[#0D47A1]">
           <Calendar className="h-6 w-6" />

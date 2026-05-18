@@ -19,6 +19,9 @@ import ServiceDetails from './pages/ServiceDetails';
 import HelpSupport from './pages/HelpSupport';
 import SavedAddresses from './pages/SavedAddresses';
 import EditProfile from './pages/EditProfile';
+import Buy from './pages/Buy';
+import BuyNew from './pages/BuyNew';
+import ExtendWarranty from './pages/ExtendWarranty';
 import TechLogin from './pages/technician/Login';
 import BrandLogin from './pages/brand-admin/Login';
 import BrandDashboard from './pages/brand-admin/Dashboard';
@@ -92,11 +95,16 @@ function App() {
         <Route path="/" element={<Login />} />
         <Route path="/home" element={<Home />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/dashboard" element={<Dashboard defaultType="non-warranty" />} />
+        <Route path="/dashboard/non-warranty" element={<Dashboard defaultType="non-warranty" />} />
+        <Route path="/dashboard/in-warranty" element={<Dashboard defaultType="in-warranty" />} />
         <Route path="/services" element={<AllServices />} />
         <Route path="/cleaning-services" element={<AllCleaningServices />} />
         <Route path="/appliance-services" element={<AllApplianceServices />} />
         <Route path="/warranty" element={<Warranty />} />
+        <Route path="/buy" element={<Buy />} />
+        <Route path="/buy-new" element={<BuyNew />} />
+        <Route path="/extend-warranty" element={<ExtendWarranty />} />
         <Route path="/payment" element={<Payment />} />
         <Route path="/refrigerator-details" element={<RefrigeratorDetails />} />
         <Route path="/service-details" element={<ServiceDetails />} />

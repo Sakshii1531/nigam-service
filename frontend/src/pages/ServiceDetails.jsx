@@ -15,6 +15,7 @@ const ServiceDetails = () => {
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const serviceName = searchParams.get('service') || 'AC Repair';
+  const brandName = searchParams.get('brand') || '';
 
   const [selectedIssue, setSelectedIssue] = useState('');
   const [showWarrantyModal, setShowWarrantyModal] = useState(false);
@@ -172,7 +173,9 @@ const ServiceDetails = () => {
             <img src={currentData.image} alt={serviceName} className="h-full object-contain p-4" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-text-primary">{serviceName}</h2>
+            <h2 className="text-xl font-bold text-text-primary">
+              {brandName ? `${brandName} ${serviceName}` : serviceName}
+            </h2>
             <p className="text-xs text-text-secondary mt-1">{currentData.desc}</p>
             <div className="flex items-center gap-1 mt-2">
               <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />

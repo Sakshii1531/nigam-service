@@ -25,15 +25,22 @@ import cleaningImg from '../assets/categories/cleaning.png';
 import saloonImg from '../assets/categories/saloon.png';
 import spaImg from '../assets/categories/spa.png';
 
-const Dashboard = () => {
+const Dashboard = ({ defaultType }) => {
   const navigate = useNavigate();
   const bannerRef = useRef(null);
-  const [activeType, setActiveType] = useState('non-warranty'); // 'non-warranty' or 'in-warranty'
+  const [activeType, setActiveType] = useState(defaultType || 'non-warranty'); // 'non-warranty' or 'in-warranty'
+
+  useEffect(() => {
+    if (defaultType) {
+      setActiveType(defaultType);
+    }
+  }, [defaultType]);
   const [showWarrantyModal, setShowWarrantyModal] = useState(false);
   const [isUnderWarranty, setIsUnderWarranty] = useState(null);
   const [billNo, setBillNo] = useState('');
   const [billFile, setBillFile] = useState(null);
   const [selectedServiceForWarranty, setSelectedServiceForWarranty] = useState(null);
+  const [selectedCategoryForBrands, setSelectedCategoryForBrands] = useState(null);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -58,6 +65,20 @@ const Dashboard = () => {
     { id: 6, name: 'Salon for Women', img: saloonImg },
     { id: 7, name: 'Spa & Massage', img: spaImg },
   ];
+
+  const getBrandsForCategory = (cat) => {
+    const norm = cat?.toLowerCase() || '';
+    if (norm.includes('ac')) {
+      return ['Voltas', 'LG', 'Samsung', 'Daikin', 'Whirlpool', 'Lloyd', 'Panasonic', 'Blue Star', 'Hitachi'];
+    }
+    if (norm.includes('wm') || norm.includes('washing')) {
+      return ['LG', 'Samsung', 'Whirlpool', 'IFB', 'Bosch', 'Haier', 'Godrej', 'Panasonic'];
+    }
+    if (norm.includes('fridge') || norm.includes('refrigerator')) {
+      return ['LG', 'Samsung', 'Whirlpool', 'Godrej', 'Haier', 'Panasonic', 'Bosch'];
+    }
+    return [];
+  };
 
   return (
     <div className="min-h-screen bg-bg-light flex flex-col pb-16">
@@ -133,7 +154,10 @@ const Dashboard = () => {
         {/* Quick Access Toggle */}
         <div className="flex bg-brand-navy p-1 rounded-full border border-brand-blue/5 mb-5 shadow-inner">
           <button 
-            onClick={() => setActiveType('non-warranty')}
+            onClick={() => {
+              setActiveType('non-warranty');
+              navigate('/dashboard/non-warranty');
+            }}
             className={`flex-1 py-2 text-xs font-bold rounded-full transition-all duration-300 flex items-center justify-center gap-2 ${
               activeType === 'non-warranty' 
                 ? 'bg-brand-yellow text-black shadow-md transform scale-[1.02]' 
@@ -144,7 +168,10 @@ const Dashboard = () => {
             Non-Warranty
           </button>
           <button 
-            onClick={() => setActiveType('in-warranty')}
+            onClick={() => {
+              setActiveType('in-warranty');
+              navigate('/dashboard/in-warranty');
+            }}
             className={`flex-1 py-2 text-xs font-bold rounded-full transition-all duration-300 flex items-center justify-center gap-2 ${
               activeType === 'in-warranty' 
                 ? 'bg-brand-yellow text-black shadow-md transform scale-[1.02]' 
@@ -202,7 +229,10 @@ const Dashboard = () => {
               key={index}
               className="flex flex-col items-center gap-1.5 cursor-pointer flex-shrink-0 snap-start"
               onClick={() => {
-                if (activeType === 'in-warranty' && cat.name !== 'For You') {
+                const isAppliance = cat.name === 'AC' || cat.name === 'WM' || cat.name === 'Fridge';
+                if (isAppliance) {
+                  setSelectedCategoryForBrands(cat.name);
+                } else if (activeType === 'in-warranty' && cat.name !== 'For You') {
                   setSelectedServiceForWarranty({ title: cat.name, price: 499 });
                   setShowWarrantyModal(true);
                 } else if (cat.path) {
@@ -246,6 +276,41 @@ const Dashboard = () => {
           ))}
         </div>
 
+        {/* Dynamic Warranty Promo CTA Banners */}
+        {activeType === 'non-warranty' ? (
+          <div className="bg-gradient-to-r from-brand-navy to-[#0B4EA2] rounded-2xl p-5 text-white shadow-md flex items-center justify-between border border-blue-900/10">
+            <div className="flex-1 pr-4">
+              <span className="text-[10px] bg-brand-yellow text-black font-bold px-2 py-0.5 rounded-full uppercase tracking-wider mb-2 inline-block">
+                Smart Protect
+              </span>
+              <h3 className="text-sm font-bold text-white mb-1">Protect your appliances today</h3>
+              <p className="text-[11px] text-white/80 leading-relaxed">Secure your non-warranty appliances with our premium warranty protection plans.</p>
+            </div>
+            <button 
+              onClick={() => navigate('/buy-new')}
+              className="bg-brand-yellow hover:bg-yellow-400 text-black text-xs font-bold py-2 px-3 rounded-xl shadow-sm transition-all flex-shrink-0 cursor-pointer"
+            >
+              Buy Warranty
+            </button>
+          </div>
+        ) : (
+          <div className="bg-gradient-to-r from-brand-yellow/10 to-brand-yellow/20 rounded-2xl p-5 border border-brand-yellow/30 text-text-primary shadow-sm flex items-center justify-between">
+            <div className="flex-1 pr-4">
+              <span className="text-[10px] bg-[#E8F5E9] text-[#2E7D32] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider mb-2 inline-block">
+                Active Coverage
+              </span>
+              <h3 className="text-sm font-bold text-[#0D47A1] mb-1">Your warranty is active!</h3>
+              <p className="text-[11px] text-text-secondary leading-relaxed">Don't let it expire. Extend your coverage at discounted rates.</p>
+            </div>
+            <button 
+              onClick={() => navigate('/extend-warranty')}
+              className="bg-brand-navy hover:bg-[#0B4EA2] text-white text-xs font-bold py-2 px-3 rounded-xl shadow-sm transition-all flex-shrink-0 cursor-pointer"
+            >
+              Extend Warranty
+            </button>
+          </div>
+        )}
+
         {/* Categories */}
         <div>
           <div className="flex justify-between items-center mb-4">
@@ -262,7 +327,15 @@ const Dashboard = () => {
               <div 
                 key={service.id}
                 onClick={() => {
-                  if (activeType === 'in-warranty') {
+                  const nameNorm = service.name.toLowerCase();
+                  const isAC = nameNorm.includes('ac');
+                  const isWM = nameNorm.includes('washing');
+                  
+                  if (isAC) {
+                    setSelectedCategoryForBrands('AC');
+                  } else if (isWM) {
+                    setSelectedCategoryForBrands('WM');
+                  } else if (activeType === 'in-warranty') {
                     setSelectedServiceForWarranty({ title: service.name, price: 499 });
                     setShowWarrantyModal(true);
                   } else {
@@ -381,7 +454,18 @@ const Dashboard = () => {
               <div 
                 key={service.id}
                 onClick={() => {
-                  if (activeType === 'in-warranty') {
+                  const titleNorm = service.title.toLowerCase();
+                  const isAC = titleNorm.includes('ac');
+                  const isWM = titleNorm.includes('washing') || titleNorm.includes('wm');
+                  const isFridge = titleNorm.includes('refrigerator') || titleNorm.includes('fridge');
+                  
+                  if (isAC) {
+                    setSelectedCategoryForBrands('AC');
+                  } else if (isWM) {
+                    setSelectedCategoryForBrands('WM');
+                  } else if (isFridge) {
+                    setSelectedCategoryForBrands('Fridge');
+                  } else if (activeType === 'in-warranty') {
                     setSelectedServiceForWarranty(service);
                     setShowWarrantyModal(true);
                   } else {
@@ -421,7 +505,13 @@ const Dashboard = () => {
           <span className="text-xs font-medium">Home</span>
         </button>
         <button 
-          onClick={() => navigate('/services')}
+          onClick={() => {
+            if (activeType === 'in-warranty') {
+              navigate('/extend-warranty');
+            } else {
+              navigate('/buy-new');
+            }
+          }}
           className="flex flex-col items-center text-text-secondary hover:text-brand-blue"
         >
           <ShoppingCart className="h-6 w-6" />
@@ -449,6 +539,50 @@ const Dashboard = () => {
           <span className="text-xs font-medium">Profile</span>
         </button>
       </div>
+
+      {/* Brand Selection Modal */}
+      {selectedCategoryForBrands && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl flex flex-col gap-5 relative overflow-hidden">
+            <div className="flex justify-between items-center">
+              <div className="flex flex-col">
+                <h2 className="text-lg font-bold text-[#0D47A1]">Select Brand</h2>
+                <p className="text-xs text-text-secondary mt-0.5">
+                  Choose the brand of your {selectedCategoryForBrands === 'WM' ? 'Washing Machine' : selectedCategoryForBrands === 'Fridge' ? 'Refrigerator' : selectedCategoryForBrands === 'AC' ? 'Air Conditioner' : selectedCategoryForBrands}
+                </p>
+              </div>
+              <button 
+                onClick={() => setSelectedCategoryForBrands(null)}
+                className="p-1 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
+              >
+                <X className="h-5 w-5 text-text-secondary" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3 my-2 max-h-80 overflow-y-auto pr-1">
+              {getBrandsForCategory(selectedCategoryForBrands).map((brand) => (
+                <div
+                  key={brand}
+                  onClick={() => {
+                    const brandUrl = 
+                      selectedCategoryForBrands === 'Fridge' || selectedCategoryForBrands === 'Refrigerator'
+                        ? `/refrigerator-details?brand=${encodeURIComponent(brand)}`
+                        : `/service-details?service=${encodeURIComponent(selectedCategoryForBrands === 'AC' ? 'AC Repair' : 'Washing Machine')}&brand=${encodeURIComponent(brand)}`;
+                    
+                    setSelectedCategoryForBrands(null);
+                    navigate(brandUrl);
+                  }}
+                  className="bg-slate-50 border border-slate-200/80 hover:border-[#0B4EA2] hover:bg-blue-50/20 p-4 rounded-2xl flex flex-col items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.03]"
+                >
+                  <span className="text-xs font-bold text-text-primary text-center">
+                    {brand}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

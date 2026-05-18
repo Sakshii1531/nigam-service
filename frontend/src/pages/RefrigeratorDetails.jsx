@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Star, Check, Shield, Award, Clock, X } from 'lucide-react';
 import applianceFridge from '../assets/appliance_fridge.png';
 
 const RefrigeratorDetails = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const brandName = searchParams.get('brand') || '';
   const [selectedIssue, setSelectedIssue] = useState('');
   const [showWarrantyModal, setShowWarrantyModal] = useState(false);
   const [isUnderWarranty, setIsUnderWarranty] = useState(null);
@@ -115,7 +118,9 @@ const RefrigeratorDetails = () => {
             <img src={applianceFridge} alt="Refrigerator" className="h-full object-contain p-4" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-text-primary">Refrigerator Repair & Service</h2>
+            <h2 className="text-xl font-bold text-text-primary">
+              {brandName ? `${brandName} Refrigerator Repair & Service` : 'Refrigerator Repair & Service'}
+            </h2>
             <p className="text-xs text-text-secondary mt-1">Expert repair and maintenance for all refrigerator types.</p>
             <div className="flex items-center gap-1 mt-2">
               <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
