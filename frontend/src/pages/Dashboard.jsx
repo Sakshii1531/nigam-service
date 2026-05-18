@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Search, Bell, MapPin, Wrench, Zap, Droplet, Thermometer, Shield, Home as HomeIcon, Calendar, MessageSquare, User, Star, X, Wind, WashingMachine, Refrigerator, Droplets, Sparkles, ShoppingCart } from 'lucide-react';
+import { Search, Bell, MapPin, Wrench, Zap, Droplet, Thermometer, Shield, Home as HomeIcon, Calendar, MessageSquare, User, Star, X, Wind, WashingMachine, Refrigerator, Droplets, Sparkles, ShoppingCart, Tv, Flame } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import acBanner from '../assets/ac_service_banner.png';
 import electricianBanner from '../assets/electrician_banner.png';
@@ -77,7 +77,25 @@ const Dashboard = ({ defaultType }) => {
     if (norm.includes('fridge') || norm.includes('refrigerator')) {
       return ['LG', 'Samsung', 'Whirlpool', 'Godrej', 'Haier', 'Panasonic', 'Bosch'];
     }
-    return [];
+    if (norm.includes('tv') || norm.includes('television')) {
+      return ['LG', 'Samsung', 'Sony', 'Panasonic', 'Mi', 'OnePlus', 'TCL', 'Haier', 'VU'];
+    }
+    if (norm.includes('geyser') || norm.includes('heater')) {
+      return ['Havells', 'AO Smith', 'Racold', 'Bajaj', 'V-Guard', 'Venus', 'Kenstar'];
+    }
+    if (norm.includes('ro') || norm.includes('purifier')) {
+      return ['Kent', 'Eureka Forbes', 'Aquaguard', 'Pureit', 'Blue Star', 'AO Smith', 'Livpure'];
+    }
+    if (norm.includes('oven') || norm.includes('microwave')) {
+      return ['LG', 'Samsung', 'IFB', 'Morphy Richards', 'Bajaj', 'Panasonic', 'Godrej'];
+    }
+    if (norm.includes('chimney')) {
+      return ['Faber', 'Elica', 'Glen', 'Hindware', 'Kaff', 'Sunflame'];
+    }
+    if (norm.includes('cooler')) {
+      return ['Symphony', 'Bajaj', 'Orient', 'Kenstar', 'Crompton', 'Hindware', 'Usha'];
+    }
+    return ['LG', 'Samsung', 'Whirlpool', 'Panasonic'];
   };
 
   return (
@@ -221,15 +239,18 @@ const Dashboard = ({ defaultType }) => {
             { name: 'AC', icon: <Wind className="h-5 w-5" /> },
             { name: 'WM', icon: <WashingMachine className="h-5 w-5" /> },
             { name: 'Fridge', icon: <Refrigerator className="h-5 w-5" /> },
-            { name: 'Electric', icon: <Zap className="h-5 w-5" /> },
-            { name: 'Plumber', icon: <Droplets className="h-5 w-5" /> },
-            { name: 'Cleaning', icon: <Sparkles className="h-5 w-5" /> }
+            { name: 'TV', icon: <Tv className="h-5 w-5" /> },
+            { name: 'Geyser', icon: <Thermometer className="h-5 w-5" /> },
+            { name: 'RO', icon: <Droplet className="h-5 w-5" /> },
+            { name: 'Oven', icon: <Flame className="h-5 w-5" /> },
+            { name: 'Chimney', icon: <Wind className="h-5 w-5" /> },
+            { name: 'Cooler', icon: <Wind className="h-5 w-5" /> }
           ].map((cat, index) => (
             <div 
               key={index}
               className="flex flex-col items-center gap-1.5 cursor-pointer flex-shrink-0 snap-start"
               onClick={() => {
-                const isAppliance = cat.name === 'AC' || cat.name === 'WM' || cat.name === 'Fridge';
+                const isAppliance = cat.name !== 'For You';
                 if (isAppliance) {
                   setSelectedCategoryForBrands(cat.name);
                 } else if (activeType === 'in-warranty' && cat.name !== 'For You') {
@@ -548,7 +569,14 @@ const Dashboard = ({ defaultType }) => {
               <div className="flex flex-col">
                 <h2 className="text-lg font-bold text-[#0D47A1]">Select Brand</h2>
                 <p className="text-xs text-text-secondary mt-0.5">
-                  Choose the brand of your {selectedCategoryForBrands === 'WM' ? 'Washing Machine' : selectedCategoryForBrands === 'Fridge' ? 'Refrigerator' : selectedCategoryForBrands === 'AC' ? 'Air Conditioner' : selectedCategoryForBrands}
+                  Choose the brand of your {
+                    selectedCategoryForBrands === 'WM' ? 'Washing Machine' : 
+                    selectedCategoryForBrands === 'Fridge' ? 'Refrigerator' : 
+                    selectedCategoryForBrands === 'AC' ? 'Air Conditioner' : 
+                    selectedCategoryForBrands === 'RO' ? 'Water Purifier' : 
+                    selectedCategoryForBrands === 'Oven' ? 'Microwave Oven' : 
+                    selectedCategoryForBrands
+                  }
                 </p>
               </div>
               <button 
@@ -567,7 +595,17 @@ const Dashboard = ({ defaultType }) => {
                     const brandUrl = 
                       selectedCategoryForBrands === 'Fridge' || selectedCategoryForBrands === 'Refrigerator'
                         ? `/refrigerator-details?brand=${encodeURIComponent(brand)}`
-                        : `/service-details?service=${encodeURIComponent(selectedCategoryForBrands === 'AC' ? 'AC Repair' : 'Washing Machine')}&brand=${encodeURIComponent(brand)}`;
+                        : `/service-details?service=${encodeURIComponent(
+                            selectedCategoryForBrands === 'AC' ? 'AC Repair' :
+                            selectedCategoryForBrands === 'WM' ? 'Washing Machine' :
+                            selectedCategoryForBrands === 'RO' ? 'Water Purifier RO Service' :
+                            selectedCategoryForBrands === 'TV' ? 'Smart TV Service & Repair' :
+                            selectedCategoryForBrands === 'Geyser' ? 'Geyser Service & Repair' :
+                            selectedCategoryForBrands === 'Oven' ? 'Microwave Oven Repair' :
+                            selectedCategoryForBrands === 'Chimney' ? 'Kitchen Chimney Service' :
+                            selectedCategoryForBrands === 'Cooler' ? 'Air Cooler Service' :
+                            selectedCategoryForBrands
+                          )}&brand=${encodeURIComponent(brand)}`;
                     
                     setSelectedCategoryForBrands(null);
                     navigate(brandUrl);
