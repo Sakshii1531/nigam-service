@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Search, Bell, MapPin, Wrench, Zap, Droplet, Thermometer, Shield, Home as HomeIcon, Calendar, MessageSquare, User, Star, X } from 'lucide-react';
+import { Search, Bell, MapPin, Wrench, Zap, Droplet, Thermometer, Shield, Home as HomeIcon, Calendar, MessageSquare, User, Star, X, Wind, WashingMachine, Refrigerator, Droplets, Sparkles, ShoppingCart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import acBanner from '../assets/ac_service_banner.png';
 import electricianBanner from '../assets/electrician_banner.png';
@@ -28,6 +28,7 @@ import spaImg from '../assets/categories/spa.png';
 const Dashboard = () => {
   const navigate = useNavigate();
   const bannerRef = useRef(null);
+  const [activeType, setActiveType] = useState('non-warranty'); // 'non-warranty' or 'in-warranty'
   const [showWarrantyModal, setShowWarrantyModal] = useState(false);
   const [isUnderWarranty, setIsUnderWarranty] = useState(null);
   const [billNo, setBillNo] = useState('');
@@ -127,10 +128,37 @@ const Dashboard = () => {
       )}
 
       {/* Header */}
-      <div className="bg-[#E3ECF9] p-6 rounded-b-[30px] shadow-sm">
-        <div className="flex justify-between items-center mb-6">
+      <div className="bg-section-bg px-6 pt-3 pb-0 rounded-b-[30px] shadow-sm">
+        
+        {/* Quick Access Toggle */}
+        <div className="flex bg-brand-navy p-1 rounded-full border border-brand-blue/5 mb-1 shadow-inner">
+          <button 
+            onClick={() => setActiveType('non-warranty')}
+            className={`flex-1 py-2 text-xs font-bold rounded-full transition-all duration-300 flex items-center justify-center gap-2 ${
+              activeType === 'non-warranty' 
+                ? 'bg-brand-yellow text-black shadow-md transform scale-[1.02]' 
+                : 'text-white hover:text-white'
+            }`}
+          >
+            <User className={`h-4 w-4 ${activeType === 'non-warranty' ? 'text-black' : 'text-white'}`} />
+            Non-Warranty
+          </button>
+          <button 
+            onClick={() => setActiveType('in-warranty')}
+            className={`flex-1 py-2 text-xs font-bold rounded-full transition-all duration-300 flex items-center justify-center gap-2 ${
+              activeType === 'in-warranty' 
+                ? 'bg-brand-yellow text-black shadow-md transform scale-[1.02]' 
+                : 'text-white hover:text-white'
+            }`}
+          >
+            <Shield className={`h-4 w-4 ${activeType === 'in-warranty' ? 'text-black' : 'text-white'}`} />
+            In-Warranty
+          </button>
+        </div>
+
+        <div className="flex justify-between items-center mb-2">
           <div className="flex items-center gap-2">
-            <MapPin className="h-5 w-5 text-[#0D47A1]" />
+            <MapPin className="h-5 w-5 text-brand-blue" />
             <div>
               <span className="text-xs text-text-secondary block">Location</span>
               <span className="text-sm font-bold text-text-primary">Civil Lines, Delhi</span>
@@ -143,7 +171,7 @@ const Dashboard = () => {
             </button>
             <div 
               onClick={() => navigate('/profile')}
-              className="w-10 h-10 bg-[#0D47A1] rounded-full flex items-center justify-center text-white font-bold cursor-pointer"
+              className="w-10 h-10 bg-brand-blue rounded-full flex items-center justify-center text-white font-bold cursor-pointer"
             >
               U
             </div>
@@ -156,21 +184,53 @@ const Dashboard = () => {
           <input
             type="text"
             placeholder="Search for services (AC, Geyser...)"
-            className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-border-color rounded-2xl focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] outline-none transition-all text-sm"
+            className="w-full pl-12 pr-4 py-2.5 bg-slate-50 border border-border-color rounded-2xl focus:border-brand-blue focus:ring-1 focus:ring-brand-blue outline-none transition-all text-sm"
           />
+        </div>
+        {/* Horizontal Categories */}
+        <div className="flex overflow-x-auto gap-6 mt-4 pb-0 snap-x no-scrollbar">
+          {[
+            { name: 'For You', icon: <Sparkles className="h-5 w-5" />, path: '/dashboard' },
+            { name: 'AC', icon: <Wind className="h-5 w-5" /> },
+            { name: 'WM', icon: <WashingMachine className="h-5 w-5" /> },
+            { name: 'Fridge', icon: <Refrigerator className="h-5 w-5" /> },
+            { name: 'Electric', icon: <Zap className="h-5 w-5" /> },
+            { name: 'Plumber', icon: <Droplets className="h-5 w-5" /> },
+            { name: 'Cleaning', icon: <Sparkles className="h-5 w-5" /> }
+          ].map((cat, index) => (
+            <div 
+              key={index}
+              className="flex flex-col items-center gap-1.5 cursor-pointer flex-shrink-0 snap-start"
+              onClick={() => {
+                if (activeType === 'in-warranty' && cat.name !== 'For You') {
+                  setSelectedServiceForWarranty({ title: cat.name, price: 499 });
+                  setShowWarrantyModal(true);
+                } else if (cat.path) {
+                  navigate(cat.path);
+                } else {
+                  navigate(`/service-details?service=${encodeURIComponent(cat.name)}`);
+                }
+              }}
+            >
+              <div className="text-brand-blue">
+                {cat.icon}
+              </div>
+              <span className="text-[10px] font-bold text-brand-blue uppercase tracking-wider">
+                {cat.name}
+              </span>
+            </div>
+          ))}
         </div>
       </div>
 
       {/* Main Content */}
       <div className="flex-1 p-6 flex flex-col gap-6">
-        
         {/* Service Banners */}
-        <div ref={bannerRef} className="flex gap-4 overflow-x-auto pb-2 -mx-2 px-2 snap-x [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-          {[
-            { id: 1, image: acBanner },
-            { id: 2, image: electricianBanner },
-            { id: 3, image: plumbingBanner }
-          ].map((banner) => (
+        <div ref={bannerRef} className="flex gap-4 overflow-x-auto pb-2 -mx-2 px-2 snap-x no-scrollbar">
+          {(activeType === 'non-warranty' 
+            ? [{ id: 1, image: acBanner }, { id: 2, image: electricianBanner }, { id: 3, image: plumbingBanner }]
+            : [{ id: 1, image: warrantyBanner1 }, { id: 2, image: warrantyBanner2 }]
+          ).map((banner) => (
             <div 
               key={banner.id}
               className="bg-white rounded-2xl shadow-sm border border-border-color overflow-hidden min-w-[300px] snap-center"
@@ -192,16 +252,23 @@ const Dashboard = () => {
             <h2 className="text-lg font-bold text-text-primary">Our Services</h2>
             <button 
               onClick={() => navigate('/services')}
-              className="text-sm font-semibold text-[#0D47A1] hover:text-blue-800 transition-colors"
+              className="text-sm font-semibold text-[#0B4EA2] hover:text-blue-800 transition-colors"
             >
               See All
             </button>
           </div>
-          <div className="flex overflow-x-auto gap-4 pb-4 -mx-2 px-2 snap-x [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          <div className="flex overflow-x-auto gap-4 pb-4 -mx-2 px-2 snap-x no-scrollbar">
             {services.map((service) => (
               <div 
                 key={service.id}
-                onClick={() => navigate(`/service-details?service=${encodeURIComponent(service.name)}`)}
+                onClick={() => {
+                  if (activeType === 'in-warranty') {
+                    setSelectedServiceForWarranty({ title: service.name, price: 499 });
+                    setShowWarrantyModal(true);
+                  } else {
+                    navigate(`/service-details?service=${encodeURIComponent(service.name)}`);
+                  }
+                }}
                 className="flex flex-col items-center gap-2 cursor-pointer flex-shrink-0 w-24 snap-start"
               >
                 <div className="w-24 h-24 bg-transparent rounded-2xl flex items-center justify-center transition-all overflow-hidden">
@@ -215,13 +282,14 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Smart Warranty Promo */}
-        {/* Smart Warranty Banners */}
+        {/* Warranty Offers / Smart Detection */}
         <div>
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-bold text-text-primary">Warranty Offers</h2>
+            <h2 className="text-lg font-bold text-text-primary">
+              {activeType === 'in-warranty' ? 'Covered Benefits' : 'Warranty Offers'}
+            </h2>
           </div>
-          <div className="flex gap-4 overflow-x-auto pb-2 -mx-2 px-2 snap-x [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          <div className="flex gap-4 overflow-x-auto pb-2 -mx-2 px-2 snap-x no-scrollbar">
             {[
               { id: 1, image: warrantyBanner1 },
               { id: 2, image: warrantyBanner2 }
@@ -247,7 +315,7 @@ const Dashboard = () => {
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-bold text-text-primary">Most Booked Services</h2>
           </div>
-          <div className="flex gap-4 overflow-x-auto pb-4 -mx-2 px-2 snap-x [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          <div className="flex gap-4 overflow-x-auto pb-4 -mx-2 px-2 snap-x no-scrollbar">
             {[
               { id: 1, title: "Foam-jet AC service", image: mostBookedAc1, rating: 4.76, price: 649, badge: "Instant" },
               { id: 2, title: "AC repair", image: mostBookedAc2, rating: 4.74, price: 299, badge: "Instant" },
@@ -258,14 +326,18 @@ const Dashboard = () => {
               <div 
                 key={service.id}
                 onClick={() => {
-                  setSelectedServiceForWarranty(service);
-                  setShowWarrantyModal(true);
+                  if (activeType === 'in-warranty') {
+                    setSelectedServiceForWarranty(service);
+                    setShowWarrantyModal(true);
+                  } else {
+                    navigate(`/booking?service=${encodeURIComponent(service.title)}&price=${service.price}`);
+                  }
                 }}
-                className="flex flex-col gap-2 cursor-pointer flex-shrink-0 w-40 snap-start border border-border-color rounded-2xl p-2 bg-white hover:border-[#0D47A1] transition-all"
+                className="flex flex-col gap-2 cursor-pointer flex-shrink-0 w-40 snap-start border border-border-color rounded-2xl p-2 bg-white hover:border-brand-blue transition-all"
               >
                 <div className="w-full h-32 bg-white rounded-xl flex items-center justify-center overflow-hidden relative">
                   <img src={service.image} alt={service.title} className="w-full h-full object-cover" />
-                  <span className="absolute top-2 right-2 bg-[#E8F5E9] text-[#2E7D32] text-xs font-bold px-2 py-0.5 rounded-full">
+                  <span className={`absolute top-2 right-2 text-xs font-bold px-2 py-0.5 rounded-full ${activeType === 'in-warranty' ? 'bg-[#E8F5E9] text-[#2E7D32]' : 'bg-[#E3F2FD] text-[#0D47A1]'}`}>
                     {service.badge}
                   </span>
                 </div>
@@ -277,8 +349,8 @@ const Dashboard = () => {
                     <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
                     <span className="text-xs text-text-secondary">{service.rating}</span>
                   </div>
-                  <span className="text-sm font-bold text-[#0D47A1]">
-                    ₹{service.price}
+                  <span className={`text-sm font-bold ${activeType === 'in-warranty' ? 'text-green-600' : 'text-[#0B4EA2]'}`}>
+                    {activeType === 'in-warranty' ? '₹0 (Warranty)' : `₹${service.price}`}
                   </span>
                 </div>
               </div>
@@ -292,12 +364,12 @@ const Dashboard = () => {
             <h2 className="text-lg font-bold text-text-primary">Appliance repair & service</h2>
             <button 
               onClick={() => navigate('/appliance-services')}
-              className="text-sm font-semibold text-[#0D47A1] hover:text-blue-800 transition-colors"
+              className="text-sm font-semibold text-[#0B4EA2] hover:text-blue-800 transition-colors"
             >
               See all
             </button>
           </div>
-          <div className="flex gap-4 overflow-x-auto pb-4 -mx-2 px-2 snap-x [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          <div className="flex gap-4 overflow-x-auto pb-4 -mx-2 px-2 snap-x no-scrollbar">
             {[
               { id: 1, title: "Foam-jet AC service", image: mostBookedAc1, rating: 4.76, price: 649, badge: "Instant", path: '/booking' },
               { id: 2, title: "AC repair", image: mostBookedAc2, rating: 4.74, price: 299, badge: "Instant", path: '/booking' },
@@ -309,18 +381,18 @@ const Dashboard = () => {
               <div 
                 key={service.id}
                 onClick={() => {
-                  if (service.path === '/booking') {
+                  if (activeType === 'in-warranty') {
                     setSelectedServiceForWarranty(service);
                     setShowWarrantyModal(true);
                   } else {
-                    navigate(service.path);
+                    navigate(service.path || `/booking?service=${encodeURIComponent(service.title)}&price=${service.price}`);
                   }
                 }}
-                className="flex flex-col gap-2 cursor-pointer flex-shrink-0 w-40 snap-start border border-border-color rounded-2xl p-2 bg-white hover:border-[#0D47A1] transition-all"
+                className="flex flex-col gap-2 cursor-pointer flex-shrink-0 w-40 snap-start border border-border-color rounded-2xl p-2 bg-white hover:border-brand-blue transition-all"
               >
                 <div className="w-full h-32 bg-white rounded-xl flex items-center justify-center overflow-hidden relative">
                   <img src={service.image} alt={service.title} className="w-full h-full object-cover" />
-                  <span className={`absolute top-2 right-2 text-xs font-bold px-2 py-0.5 rounded-full ${service.badge === "2 ACs" ? "bg-[#5C0632] text-white" : "bg-[#E8F5E9] text-[#2E7D32]"}`}>
+                  <span className={`absolute top-2 right-2 text-xs font-bold px-2 py-0.5 rounded-full ${service.badge === "2 ACs" ? "bg-[#5C0632] text-white" : (activeType === 'in-warranty' ? "bg-[#E8F5E9] text-green-600" : "bg-[#E3F2FD] text-[#0D47A1]")}`}>
                     {service.badge}
                   </span>
                 </div>
@@ -332,40 +404,46 @@ const Dashboard = () => {
                     <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
                     <span className="text-xs text-text-secondary">{service.rating}</span>
                   </div>
-                  <span className="text-sm font-bold text-[#0D47A1]">
-                    ₹{service.price}
+                  <span className={`text-sm font-bold ${activeType === 'in-warranty' ? 'text-green-600' : 'text-[#0B4EA2]'}`}>
+                    {activeType === 'in-warranty' ? '₹0 (Warranty)' : `₹${service.price}`}
                   </span>
                 </div>
               </div>
             ))}
           </div>
         </div>
-
       </div>
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-[#E3ECF9] border-t border-border-color p-4 flex justify-around items-center">
-        <button className="flex flex-col items-center text-[#0D47A1]">
+      <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-border-color p-4 flex justify-around items-center z-40">
+        <button className="flex flex-col items-center text-brand-blue">
           <HomeIcon className="h-6 w-6" />
           <span className="text-xs font-medium">Home</span>
         </button>
         <button 
+          onClick={() => navigate('/services')}
+          className="flex flex-col items-center text-text-secondary hover:text-brand-blue"
+        >
+          <ShoppingCart className="h-6 w-6" />
+          <span className="text-xs font-medium">Buy</span>
+        </button>
+        <button 
           onClick={() => navigate('/bookings')}
-          className="flex flex-col items-center text-text-secondary hover:text-[#0D47A1]"
+          className="flex flex-col items-center text-text-secondary hover:text-brand-blue"
         >
           <Calendar className="h-6 w-6" />
           <span className="text-xs font-medium">Bookings</span>
         </button>
         <button 
           onClick={() => navigate('/services')}
-          className="flex flex-col items-center text-text-secondary hover:text-[#0D47A1]"
+          className="flex flex-col items-center text-text-secondary hover:text-brand-blue"
         >
           <Wrench className="h-6 w-6" />
           <span className="text-xs font-medium">Services</span>
         </button>
         <button 
           onClick={() => navigate('/profile')}
-          className="flex flex-col items-center text-text-secondary hover:text-[#0D47A1]"
+          className="flex flex-col items-center text-text-secondary hover:text-brand-blue"
         >
           <User className="h-6 w-6" />
           <span className="text-xs font-medium">Profile</span>

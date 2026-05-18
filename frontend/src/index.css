@@ -1,26 +1,29 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: 'Poppins', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-sans: 'Inter', 'Poppins', system-ui, -apple-system, sans-serif;
   
-  --color-brand-blue: #0D47A1;
-  --color-brand-yellow: #FFD600;
+  --color-brand-blue: #0B4EA2;
+  --color-brand-navy: #072C63;
+  --color-brand-yellow: #FFD400;
   
-  --color-bg-light: #F8FAFC;
+  --color-bg-light: #F7F9FC;
   --color-card-bg: #FFFFFF;
-  --color-section-bg: #EEF4FF;
+  --color-section-bg: #EAF3FF;
+  --color-soft-yellow: #FFF7CC;
   
-  --color-text-primary: #1E293B;
-  --color-text-secondary: #64748B;
-  --color-border-color: #E2E8F0;
+  --color-text-primary: #1F2937;
+  --color-text-secondary: #6B7280;
+  --color-border-color: #D9E2F2;
   
-  /* Fallbacks for standard utilities if needed */
-  --color-blue-900: #0D47A1;
-  --color-yellow-400: #FFD600;
-  --color-slate-50: #F8FAFC;
-  --color-slate-800: #1E293B;
-  --color-slate-500: #64748B;
-  --color-slate-200: #E2E8F0;
+  /* Standard Utility Fallbacks */
+  --color-blue-900: #0B4EA2;
+  --color-blue-950: #072C63;
+  --color-yellow-400: #FFD400;
+  --color-slate-50: #F7F9FC;
+  --color-slate-800: #1F2937;
+  --color-slate-500: #6B7280;
+  --color-slate-200: #D9E2F2;
 }
 
 @layer base {
