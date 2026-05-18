@@ -131,7 +131,7 @@ const Dashboard = () => {
       <div className="bg-section-bg px-6 pt-3 pb-0 rounded-b-[30px] shadow-sm">
         
         {/* Quick Access Toggle */}
-        <div className="flex bg-brand-navy p-1 rounded-full border border-brand-blue/5 mb-1 shadow-inner">
+        <div className="flex bg-brand-navy p-1 rounded-full border border-brand-blue/5 mb-5 shadow-inner">
           <button 
             onClick={() => setActiveType('non-warranty')}
             className={`flex-1 py-2 text-xs font-bold rounded-full transition-all duration-300 flex items-center justify-center gap-2 ${
