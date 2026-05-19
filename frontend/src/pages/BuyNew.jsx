@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Shield, ShoppingCart, CheckCircle, ChevronRight, Upload, 
-  ShieldAlert, CreditCard, Lock, Check, Search, RefreshCw, Sparkles, FileText
+  ShieldAlert, CreditCard, Lock, Check, Search, RefreshCw, Sparkles, FileText,
+  Home as HomeIcon, Calendar, Wrench, User
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -138,7 +139,7 @@ const BuyNew = () => {
   };
 
   return (
-    <div className="min-h-screen bg-bg-light flex flex-col pb-20">
+    <div className="min-h-screen bg-bg-light flex flex-col pb-32">
       
       {/* HEADER */}
       <div className="bg-[#E3ECF9] p-6 rounded-b-[30px] shadow-sm flex items-center gap-4">
@@ -720,6 +721,45 @@ const BuyNew = () => {
           </motion.div>
         )}
 
+      </div>
+
+      {/* Bottom Navigation */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-border-color p-4 flex justify-around items-center z-40">
+        <button 
+          onClick={() => navigate('/dashboard')}
+          className="flex flex-col items-center text-text-secondary hover:text-brand-blue"
+        >
+          <HomeIcon className="h-6 w-6" />
+          <span className="text-xs font-medium">Home</span>
+        </button>
+        <button 
+          onClick={() => navigate('/buy')}
+          className="flex flex-col items-center text-brand-blue"
+        >
+          <ShoppingCart className="h-6 w-6" />
+          <span className="text-xs font-medium">Buy</span>
+        </button>
+        <button 
+          onClick={() => navigate('/bookings')}
+          className="flex flex-col items-center text-text-secondary hover:text-brand-blue"
+        >
+          <Calendar className="h-6 w-6" />
+          <span className="text-xs font-medium">Bookings</span>
+        </button>
+        <button 
+          onClick={() => navigate('/services')}
+          className="flex flex-col items-center text-text-secondary hover:text-brand-blue"
+        >
+          <Wrench className="h-6 w-6" />
+          <span className="text-xs font-medium">Services</span>
+        </button>
+        <button 
+          onClick={() => navigate('/profile')}
+          className="flex flex-col items-center text-text-secondary hover:text-brand-blue"
+        >
+          <User className="h-6 w-6" />
+          <span className="text-xs font-medium">Profile</span>
+        </button>
       </div>
 
     </div>

@@ -24,6 +24,7 @@ import plumberImg from '../assets/categories/plumber_fixed.png';
 import cleaningImg from '../assets/categories/cleaning.png';
 import saloonImg from '../assets/categories/saloon.png';
 import spaImg from '../assets/categories/spa.png';
+import logo from '../assets/nigam-care.png';
 
 const Dashboard = ({ defaultType }) => {
   const navigate = useNavigate();
@@ -182,8 +183,8 @@ const Dashboard = ({ defaultType }) => {
                 : 'text-white hover:text-white'
             }`}
           >
-            <User className={`h-4 w-4 ${activeType === 'non-warranty' ? 'text-black' : 'text-white'}`} />
-            Non-Warranty
+            <img src={logo} alt="Nigam Care Logo" className="h-[22px] w-auto object-contain" />
+            Nigam Care
           </button>
           <button 
             onClick={() => {
@@ -526,13 +527,7 @@ const Dashboard = ({ defaultType }) => {
           <span className="text-xs font-medium">Home</span>
         </button>
         <button 
-          onClick={() => {
-            if (activeType === 'in-warranty') {
-              navigate('/extend-warranty');
-            } else {
-              navigate('/buy-new');
-            }
-          }}
+          onClick={() => navigate('/buy')}
           className="flex flex-col items-center text-text-secondary hover:text-brand-blue"
         >
           <ShoppingCart className="h-6 w-6" />

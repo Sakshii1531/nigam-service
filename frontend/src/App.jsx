@@ -5,6 +5,9 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Warranty from './pages/Warranty';
 import Payment from './pages/Payment';
+import CardPayment from './pages/CardPayment';
+import UpiPayment from './pages/UpiPayment';
+import NetBankingPayment from './pages/NetBankingPayment';
 import Booking from './pages/Booking';
 import Tracking from './pages/Tracking';
 import Chat from './pages/Chat';
@@ -22,6 +25,7 @@ import EditProfile from './pages/EditProfile';
 import Buy from './pages/Buy';
 import BuyNew from './pages/BuyNew';
 import ExtendWarranty from './pages/ExtendWarranty';
+import BuyProduct from './pages/BuyProduct';
 import TechLogin from './pages/technician/Login';
 import BrandLogin from './pages/brand-admin/Login';
 import BrandDashboard from './pages/brand-admin/Dashboard';
@@ -105,7 +109,11 @@ function App() {
         <Route path="/buy" element={<Buy />} />
         <Route path="/buy-new" element={<BuyNew />} />
         <Route path="/extend-warranty" element={<ExtendWarranty />} />
+        <Route path="/buy-product" element={<BuyProduct />} />
         <Route path="/payment" element={<Payment />} />
+        <Route path="/payment/card" element={<CardPayment />} />
+        <Route path="/payment/upi" element={<UpiPayment />} />
+        <Route path="/payment/netbanking" element={<NetBankingPayment />} />
         <Route path="/refrigerator-details" element={<RefrigeratorDetails />} />
         <Route path="/service-details" element={<ServiceDetails />} />
         <Route path="/booking" element={<Booking />} />
