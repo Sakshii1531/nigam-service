@@ -200,7 +200,8 @@ const BuyProduct = () => {
           filteredProducts.map((prod) => (
             <div 
               key={prod.id}
-              className="bg-white rounded-2xl p-4 border border-border-color hover:border-brand-blue transition-all duration-300 shadow-sm flex flex-col gap-2.5 relative overflow-hidden group"
+              onClick={() => navigate(`/product-details?id=${prod.id}`)}
+              className="bg-white rounded-2xl p-4 border border-border-color hover:border-brand-blue transition-all duration-300 shadow-sm flex flex-col gap-2.5 relative overflow-hidden group cursor-pointer"
             >
               {/* Product Header Row (Badges + Ratings) */}
               <div className="flex flex-wrap items-center justify-between gap-1.5 border-b border-dashed border-border-color/60 pb-2">
@@ -256,7 +257,8 @@ const BuyProduct = () => {
                   </div>
                 </div>
                 <button 
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     setSelectedProductForCheckout(prod);
                     setCheckoutStep('details');
                   }}

@@ -7,9 +7,9 @@ const EditProfile = () => {
   const fileInputRef = useRef(null);
   const [avatar, setAvatar] = useState(null);
   const [form, setForm] = useState({
-    name: 'User',
-    phone: '+91 9876543210',
-    email: 'user@example.com',
+    name: 'Sakshi Dwivedi',
+    phone: '+91 98765 43210',
+    email: 'sakshi.dwivedi@gmail.com',
     address: 'Civil Lines, Delhi - 110054',
   });
   const [saved, setSaved] = useState(false);

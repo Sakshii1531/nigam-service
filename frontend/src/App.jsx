@@ -26,6 +26,21 @@ import Buy from './pages/Buy';
 import BuyNew from './pages/BuyNew';
 import ExtendWarranty from './pages/ExtendWarranty';
 import BuyProduct from './pages/BuyProduct';
+import PartnerWarranty from './pages/PartnerWarranty';
+import SelectBrand from './pages/SelectBrand';
+import SelectProduct from './pages/SelectProduct';
+import SelectIssue from './pages/SelectIssue';
+import RaiseWarrantyRequest from './pages/RaiseWarrantyRequest';
+import TicketSuccess from './pages/TicketSuccess';
+import TrackTicket from './pages/TrackTicket';
+import TicketDetails from './pages/TicketDetails';
+import ServiceUpdates from './pages/ServiceUpdates';
+import RateService from './pages/RateService';
+import ProductDetails from './pages/ProductDetails';
+import Rewards from './pages/Rewards';
+import Wishlist from './pages/Wishlist';
+import Coupons from './pages/Coupons';
+import FinanceDetails from './pages/FinanceDetails';
 import TechLogin from './pages/technician/Login';
 import BrandLogin from './pages/brand-admin/Login';
 import BrandDashboard from './pages/brand-admin/Dashboard';
@@ -102,6 +117,16 @@ function App() {
         <Route path="/dashboard" element={<Dashboard defaultType="non-warranty" />} />
         <Route path="/dashboard/non-warranty" element={<Dashboard defaultType="non-warranty" />} />
         <Route path="/dashboard/in-warranty" element={<Dashboard defaultType="in-warranty" />} />
+        <Route path="/partner-warranty" element={<PartnerWarranty />} />
+        <Route path="/partner-warranty/brands/:category" element={<SelectBrand />} />
+        <Route path="/partner-warranty/products/:category/:brand" element={<SelectProduct />} />
+        <Route path="/partner-warranty/issues/:category/:brand/:product" element={<SelectIssue />} />
+        <Route path="/partner-warranty/raise-request/:category/:brand/:product" element={<RaiseWarrantyRequest />} />
+        <Route path="/partner-warranty/ticket-success" element={<TicketSuccess />} />
+        <Route path="/partner-warranty/track-ticket" element={<TrackTicket />} />
+        <Route path="/partner-warranty/ticket-details" element={<TicketDetails />} />
+        <Route path="/partner-warranty/service-updates" element={<ServiceUpdates />} />
+        <Route path="/partner-warranty/rate-service" element={<RateService />} />
         <Route path="/services" element={<AllServices />} />
         <Route path="/cleaning-services" element={<AllCleaningServices />} />
         <Route path="/appliance-services" element={<AllApplianceServices />} />
@@ -110,6 +135,7 @@ function App() {
         <Route path="/buy-new" element={<BuyNew />} />
         <Route path="/extend-warranty" element={<ExtendWarranty />} />
         <Route path="/buy-product" element={<BuyProduct />} />
+        <Route path="/product-details" element={<ProductDetails />} />
         <Route path="/payment" element={<Payment />} />
         <Route path="/payment/card" element={<CardPayment />} />
         <Route path="/payment/upi" element={<UpiPayment />} />
@@ -125,6 +151,10 @@ function App() {
         <Route path="/help-support" element={<HelpSupport />} />
         <Route path="/saved-addresses" element={<SavedAddresses />} />
         <Route path="/edit-profile" element={<EditProfile />} />
+        <Route path="/rewards" element={<Rewards />} />
+        <Route path="/wishlist" element={<Wishlist />} />
+        <Route path="/coupons" element={<Coupons />} />
+        <Route path="/finance/:type" element={<FinanceDetails />} />
         <Route path="/technician/login" element={<TechLogin />} />
         <Route path="/brand-admin/login" element={<BrandLogin />} />
         <Route path="/brand-admin/dashboard" element={<BrandDashboard />} />

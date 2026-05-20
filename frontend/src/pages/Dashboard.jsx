@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Search, Bell, MapPin, Wrench, Zap, Droplet, Thermometer, Shield, Home as HomeIcon, Calendar, MessageSquare, User, Star, X, Wind, WashingMachine, Refrigerator, Droplets, Sparkles, ShoppingCart, Tv, Flame } from 'lucide-react';
+import { Search, Bell, MapPin, Wrench, Zap, Droplet, Thermometer, Shield, Home as HomeIcon, Calendar, MessageSquare, User, Star, X, Wind, WashingMachine, Refrigerator, Droplets, Sparkles, ShoppingCart, Tv, Flame, MousePointerClick } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import acBanner from '../assets/ac_service_banner.png';
 import electricianBanner from '../assets/electrician_banner.png';
@@ -25,6 +25,8 @@ import cleaningImg from '../assets/categories/cleaning.png';
 import saloonImg from '../assets/categories/saloon.png';
 import spaImg from '../assets/categories/spa.png';
 import logo from '../assets/nigam-care.png';
+import clickIcon from '../assets/CLICK.png';
+import handshakeIcon from '../assets/HANDSHAKE.png';
 
 const Dashboard = ({ defaultType }) => {
   const navigate = useNavigate();
@@ -32,10 +34,12 @@ const Dashboard = ({ defaultType }) => {
   const [activeType, setActiveType] = useState(defaultType || 'non-warranty'); // 'non-warranty' or 'in-warranty'
 
   useEffect(() => {
-    if (defaultType) {
+    if (defaultType === 'in-warranty') {
+      navigate('/partner-warranty');
+    } else if (defaultType) {
       setActiveType(defaultType);
     }
-  }, [defaultType]);
+  }, [defaultType, navigate]);
   const [showWarrantyModal, setShowWarrantyModal] = useState(false);
   const [isUnderWarranty, setIsUnderWarranty] = useState(null);
   const [billNo, setBillNo] = useState('');
@@ -171,34 +175,62 @@ const Dashboard = ({ defaultType }) => {
       <div className="bg-section-bg px-6 pt-3 pb-0 rounded-b-[30px] shadow-sm">
         
         {/* Quick Access Toggle */}
-        <div className="flex bg-brand-navy p-1 rounded-full border border-brand-blue/5 mb-5 shadow-inner">
+        <div className="flex bg-brand-navy p-1 rounded-full border border-brand-blue/10 mb-5 shadow-inner items-center -mx-3">
           <button 
             onClick={() => {
               setActiveType('non-warranty');
               navigate('/dashboard/non-warranty');
             }}
-            className={`flex-1 py-2 text-xs font-bold rounded-full transition-all duration-300 flex items-center justify-center gap-2 ${
+            className={`flex-1 py-1.5 px-2.5 rounded-full transition-all duration-300 flex items-center gap-2.5 text-left cursor-pointer ${
               activeType === 'non-warranty' 
-                ? 'bg-brand-yellow text-black shadow-md transform scale-[1.02]' 
-                : 'text-white hover:text-white'
+                ? 'bg-brand-yellow text-[#212121] shadow-md transform scale-[1.01]' 
+                : 'text-white hover:text-slate-100'
             }`}
           >
-            <img src={logo} alt="Nigam Care Logo" className="h-[22px] w-auto object-contain" />
-            Nigam Care
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+              activeType === 'non-warranty' ? 'bg-white text-black shadow-sm' : 'bg-white/10 text-white'
+            }`}>
+              <img 
+                src={clickIcon} 
+                alt="Book Service" 
+                className={`w-8 h-8 object-contain ${
+                  activeType === 'non-warranty' ? 'mix-blend-multiply' : 'invert mix-blend-screen'
+                }`} 
+              />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] font-black leading-tight">Book Service</span>
+              <span className={`text-[8px] font-bold mt-0.5 leading-none ${
+                activeType === 'non-warranty' ? 'text-slate-700' : 'text-slate-300'
+              }`}>Any Brand. Any Product.</span>
+            </div>
           </button>
+          
           <button 
             onClick={() => {
-              setActiveType('in-warranty');
-              navigate('/dashboard/in-warranty');
+              navigate('/partner-warranty');
             }}
-            className={`flex-1 py-2 text-xs font-bold rounded-full transition-all duration-300 flex items-center justify-center gap-2 ${
+            className={`flex-1 py-1.5 px-2.5 rounded-full transition-all duration-300 flex items-center gap-2.5 text-left cursor-pointer ${
               activeType === 'in-warranty' 
-                ? 'bg-brand-yellow text-black shadow-md transform scale-[1.02]' 
-                : 'text-white hover:text-white'
+                ? 'bg-brand-yellow text-[#212121] shadow-md transform scale-[1.01]' 
+                : 'text-white hover:text-slate-100'
             }`}
           >
-            <Shield className={`h-4 w-4 ${activeType === 'in-warranty' ? 'text-black' : 'text-white'}`} />
-            In-Warranty
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+              activeType === 'in-warranty' ? 'bg-brand-navy text-white shadow-sm' : 'bg-white/10 text-white'
+            }`}>
+              <img 
+                src={handshakeIcon} 
+                alt="Partner Warranty" 
+                className="w-8 h-8 object-contain" 
+              />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] font-black leading-tight">Partner Warranty</span>
+              <span className={`text-[8px] font-bold mt-0.5 leading-none whitespace-nowrap ${
+                activeType === 'in-warranty' ? 'text-slate-700' : 'text-slate-300'
+              }`}>Only for NCC Partner Brands</span>
+            </div>
           </button>
         </div>
 
@@ -527,7 +559,13 @@ const Dashboard = ({ defaultType }) => {
           <span className="text-xs font-medium">Home</span>
         </button>
         <button 
-          onClick={() => navigate('/buy')}
+          onClick={() => {
+            if (activeType === 'in-warranty') {
+              navigate('/extend-warranty');
+            } else {
+              navigate('/buy');
+            }
+          }}
           className="flex flex-col items-center text-text-secondary hover:text-brand-blue"
         >
           <ShoppingCart className="h-6 w-6" />
