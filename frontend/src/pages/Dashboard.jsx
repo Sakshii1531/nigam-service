@@ -28,6 +28,13 @@ import logo from '../assets/nigam-care.png';
 import clickIcon from '../assets/CLICK.png';
 import handshakeIcon from '../assets/HANDSHAKE.png';
 
+// Import realistic spare parts assets
+import roPreFilterImg from '../assets/ro_pre_filter_candle.png';
+import roMembraneImg from '../assets/ro_membrane.png';
+import roSedimentImg from '../assets/ro_sediment_filter.png';
+import roCarbonImg from '../assets/ro_carbon_filter.png';
+import roPostCarbonImg from '../assets/ro_post_carbon.png';
+
 const Dashboard = ({ defaultType }) => {
   const navigate = useNavigate();
   const bannerRef = useRef(null);
@@ -544,6 +551,56 @@ const Dashboard = ({ defaultType }) => {
                   </div>
                   <span className={`text-sm font-bold ${activeType === 'in-warranty' ? 'text-green-600' : 'text-[#0B4EA2]'}`}>
                     {activeType === 'in-warranty' ? '₹0 (Warranty)' : `₹${service.price}`}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Spare Parts & Accessories */}
+        <div>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-bold text-text-primary">Spare Parts & Accessories</h2>
+            <button 
+              onClick={() => alert("Loading all spare parts...")}
+              className="text-sm font-semibold text-[#0B4EA2] hover:text-blue-800 transition-colors cursor-pointer"
+            >
+              See all
+            </button>
+          </div>
+          <div className="flex gap-4 overflow-x-auto pb-4 -mx-2 px-2 snap-x no-scrollbar">
+            {[
+              { id: 1, title: 'Pre-Filter Candle', desc: 'RO Outer Candle', price: 199, image: roPreFilterImg, rating: 4.80, badge: 'Genuine' },
+              { id: 2, title: 'RO Membrane', desc: 'High TDS Membrane', price: 899, image: roMembraneImg, rating: 4.92, badge: 'Best Seller' },
+              { id: 3, title: 'Sediment Filter', desc: 'RO Inner Filter', price: 249, image: roSedimentImg, rating: 4.75, badge: 'Genuine' },
+              { id: 4, title: 'Carbon Filter', desc: 'Active Carbon', price: 299, image: roCarbonImg, rating: 4.86, badge: 'Trending' },
+              { id: 5, title: 'Post Carbon', desc: 'Taste Enhancer', price: 249, image: roPostCarbonImg, rating: 4.78, badge: 'Genuine' }
+            ].map((item) => (
+              <div 
+                key={item.id}
+                onClick={() => alert(`Ordering accessory: ${item.title}`)}
+                className="flex flex-col gap-2 cursor-pointer flex-shrink-0 w-40 snap-start border border-border-color rounded-2xl p-2 bg-white hover:border-brand-blue transition-all"
+              >
+                <div className="w-full h-32 bg-slate-50/50 rounded-xl flex items-center justify-center overflow-hidden relative">
+                  <img src={item.image} alt={item.title} className="w-full h-full object-contain p-2 mix-blend-multiply" />
+                  <span className="absolute top-2 right-2 text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E3F2FD] text-[#0D47A1]">
+                    {item.badge}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-sm font-semibold text-text-primary truncate">
+                    {item.title}
+                  </span>
+                  <span className="text-[10px] text-text-secondary truncate">
+                    {item.desc}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
+                    <span className="text-xs text-text-secondary">{item.rating}</span>
+                  </div>
+                  <span className="text-sm font-bold text-[#0B4EA2]">
+                    ₹{item.price}
                   </span>
                 </div>
               </div>
