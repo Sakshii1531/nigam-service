@@ -533,7 +533,7 @@ const Dashboard = ({ defaultType }) => {
                     navigate(service.path || `/booking?service=${encodeURIComponent(service.title)}&price=${service.price}`);
                   }
                 }}
-                className="flex flex-col gap-2 cursor-pointer flex-shrink-0 w-40 snap-start border border-border-color rounded-2xl p-2 bg-white hover:border-brand-blue transition-all"
+                className="flex flex-col gap-2 cursor-pointer flex-shrink-0 w-40 snap-start border border-border-color rounded-2xl p-2 bg-white hover:border-brand-blue transition-all h-[230px]"
               >
                 <div className="w-full h-32 bg-white rounded-xl flex items-center justify-center overflow-hidden relative">
                   <img src={service.image} alt={service.title} className="w-full h-full object-cover" />
@@ -580,7 +580,7 @@ const Dashboard = ({ defaultType }) => {
               <div 
                 key={item.id}
                 onClick={() => alert(`Ordering accessory: ${item.title}`)}
-                className="flex flex-col gap-2 cursor-pointer flex-shrink-0 w-40 snap-start border border-border-color rounded-2xl p-2 bg-white hover:border-brand-blue transition-all"
+                className="flex flex-col gap-2 cursor-pointer flex-shrink-0 w-40 snap-start border border-border-color rounded-2xl p-2 bg-white hover:border-brand-blue transition-all h-[230px]"
               >
                 <div className="w-full h-32 bg-slate-50/50 rounded-xl flex items-center justify-center overflow-hidden relative">
                   <img src={item.image} alt={item.title} className="w-full h-full object-contain p-2 mix-blend-multiply" />
@@ -647,7 +647,7 @@ const Dashboard = ({ defaultType }) => {
           className="flex flex-col items-center text-text-secondary hover:text-brand-blue"
         >
           <User className="h-6 w-6" />
-          <span className="text-xs font-medium">Profile</span>
+          <span className="text-xs font-medium">Account</span>
         </button>
       </div>
 

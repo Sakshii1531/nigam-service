@@ -41,6 +41,13 @@ import Rewards from './pages/Rewards';
 import Wishlist from './pages/Wishlist';
 import Coupons from './pages/Coupons';
 import FinanceDetails from './pages/FinanceDetails';
+import MembershipPlans from './pages/MembershipPlans';
+import RewardsPlayZone from './pages/RewardsPlayZone';
+import MyBookings from './pages/MyBookings';
+import ServicePartner from './pages/ServicePartner';
+import PaymentMethods from './pages/PaymentMethods';
+import NotificationSettings from './pages/NotificationSettings';
+import AboutNCC from './pages/AboutNCC';
 import TechLogin from './pages/technician/Login';
 import BrandLogin from './pages/brand-admin/Login';
 import BrandDashboard from './pages/brand-admin/Dashboard';
@@ -155,6 +162,13 @@ function App() {
         <Route path="/wishlist" element={<Wishlist />} />
         <Route path="/coupons" element={<Coupons />} />
         <Route path="/finance/:type" element={<FinanceDetails />} />
+        <Route path="/membership-plans" element={<MembershipPlans />} />
+        <Route path="/rewards-play-zone" element={<RewardsPlayZone />} />
+        <Route path="/my-bookings" element={<MyBookings />} />
+        <Route path="/service-partner" element={<ServicePartner />} />
+        <Route path="/payment-methods" element={<PaymentMethods />} />
+        <Route path="/notification-settings" element={<NotificationSettings />} />
+        <Route path="/about-ncc" element={<AboutNCC />} />
         <Route path="/technician/login" element={<TechLogin />} />
         <Route path="/brand-admin/login" element={<BrandLogin />} />
         <Route path="/brand-admin/dashboard" element={<BrandDashboard />} />

@@ -1,86 +1,124 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Phone, Mail, MessageSquare, ChevronRight } from 'lucide-react';
+import {
+  ArrowLeft,
+  HelpCircle,
+  Ticket,
+  Phone,
+  MessageCircle,
+  Mail,
+  MessageSquare,
+  MapPin,
+  ChevronRight,
+} from 'lucide-react';
 
 const HelpSupport = () => {
   const navigate = useNavigate();
 
-  const faqs = [
-    { q: "How to track my service?", a: "Go to Dashboard and click on the active booking.", path: "/tracking" },
-    { q: "How to cancel a booking?", a: "Go to Bookings and select the booking to cancel.", path: "/bookings" },
-    { q: "What is covered under warranty?", a: "Check the Warranty page for details.", path: "/warranty" }
+  const menuItems = [
+    {
+      icon: <HelpCircle className="h-5 w-5 text-[#1565C0]" />,
+      title: 'Browse FAQs',
+      sub: null,
+      onClick: () => alert('Loading FAQs...'),
+    },
+    {
+      icon: <Ticket className="h-5 w-5 text-[#1565C0]" />,
+      title: 'Raise a Ticket',
+      sub: null,
+      onClick: () => navigate('/partner-warranty/raise-request/General/NCC/General'),
+    },
+    {
+      icon: <Phone className="h-5 w-5 text-[#1565C0]" />,
+      title: 'Call Us',
+      sub: '1800-123-6222',
+      onClick: () => window.location.href = 'tel:18001236222',
+    },
+    {
+      icon: <MessageCircle className="h-5 w-5 text-[#1565C0]" />,
+      title: 'WhatsApp Support',
+      sub: null,
+      onClick: () => window.open('https://wa.me/918001236222', '_blank'),
+    },
+    {
+      icon: <Mail className="h-5 w-5 text-[#1565C0]" />,
+      title: 'Email Us',
+      sub: 'support@nccservice.in',
+      onClick: () => window.location.href = 'mailto:support@nccservice.in',
+    },
+    {
+      icon: <MessageSquare className="h-5 w-5 text-[#1565C0]" />,
+      title: 'Live Chat',
+      sub: 'We are online',
+      onClick: () => navigate('/chat'),
+    },
   ];
 
   return (
-    <div className="min-h-screen bg-bg-light flex flex-col pb-20">
-      
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-10">
+
       {/* Header */}
-      <div className="bg-[#E3ECF9] p-6 rounded-b-[30px] shadow-sm flex items-center gap-4">
-        <button 
+      <div className="bg-white px-5 py-4 flex items-center gap-3 sticky top-0 z-50 shadow-sm border-b border-slate-100">
+        <button
           onClick={() => navigate(-1)}
-          className="p-2 bg-white rounded-full shadow-sm hover:bg-slate-50 transition-colors"
+          className="p-1.5 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
         >
-          <ArrowLeft className="h-5 w-5 text-[#0D47A1]" />
+          <ArrowLeft className="h-5 w-5 text-slate-700" />
         </button>
-        <h1 className="text-xl font-bold text-text-primary">Help & Support</h1>
+        <h1 className="text-sm font-black text-slate-900">Help & Support</h1>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 p-6 flex flex-col gap-6 overflow-y-auto">
-        
-        {/* Contact Options */}
-        <div className="grid grid-cols-3 gap-4">
-          <div 
-            onClick={() => window.location.href = 'tel:+919876543210'}
-            className="bg-white p-4 rounded-xl shadow-sm text-center flex flex-col items-center gap-2 border border-border-color cursor-pointer hover:bg-slate-50 transition-colors"
-          >
-            <div className="w-10 h-10 bg-[#E3ECF9]/50 rounded-full flex items-center justify-center">
-              <Phone className="h-5 w-5 text-[#0D47A1]" />
-            </div>
-            <span className="text-xs font-semibold">Call Us</span>
-          </div>
-          <div 
-            onClick={() => window.location.href = 'mailto:support@nigamservice.com'}
-            className="bg-white p-4 rounded-xl shadow-sm text-center flex flex-col items-center gap-2 border border-border-color cursor-pointer hover:bg-slate-50 transition-colors"
-          >
-            <div className="w-10 h-10 bg-[#E3ECF9]/50 rounded-full flex items-center justify-center">
-              <Mail className="h-5 w-5 text-[#0D47A1]" />
-            </div>
-            <span className="text-xs font-semibold">Email</span>
-          </div>
-          <div 
-            onClick={() => navigate('/chat')}
-            className="bg-white p-4 rounded-xl shadow-sm text-center flex flex-col items-center gap-2 border border-border-color cursor-pointer hover:bg-slate-50 transition-colors"
-          >
-            <div className="w-10 h-10 bg-[#E3ECF9]/50 rounded-full flex items-center justify-center">
-              <MessageSquare className="h-5 w-5 text-[#0D47A1]" />
-            </div>
-            <span className="text-xs font-semibold">Chat</span>
-          </div>
+      <div className="flex flex-col gap-4 px-4 pt-5">
+
+        {/* Title */}
+        <div className="text-center mb-1">
+          <p className="text-xs font-black uppercase tracking-[3px] text-[#1565C0]">HELP & SUPPORT</p>
         </div>
 
-        {/* FAQs */}
-        <div className="bg-white rounded-2xl shadow-sm border border-border-color overflow-hidden">
-          <div className="p-4 border-b border-border-color">
-            <h2 className="text-sm font-bold text-text-primary">Frequently Asked Questions</h2>
-          </div>
-          {faqs.map((faq, index) => (
-            <div 
-              key={index}
-              onClick={() => navigate(faq.path)}
-              className={`p-4 flex justify-between items-center cursor-pointer hover:bg-slate-50 transition-colors ${index !== faqs.length - 1 ? 'border-b border-border-color' : ''}`}
+        {/* Main Menu List */}
+        <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-sm flex flex-col divide-y divide-slate-100">
+          {menuItems.map((item, i) => (
+            <div
+              key={i}
+              onClick={item.onClick}
+              className="px-4 py-3.5 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer"
             >
-              <div>
-                <span className="text-sm font-semibold text-text-primary block">{faq.q}</span>
-                <span className="text-xs text-text-secondary">{faq.a}</span>
+              <div className="flex items-center gap-3.5">
+                <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
+                  {item.icon}
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-slate-800">{item.title}</span>
+                  {item.sub && (
+                    <span className="text-[10px] text-slate-400 font-semibold mt-0.5">{item.sub}</span>
+                  )}
+                </div>
               </div>
-              <ChevronRight className="h-4 w-4 text-text-secondary" />
+              <ChevronRight className="h-4 w-4 text-slate-400 flex-shrink-0" />
             </div>
           ))}
         </div>
 
-      </div>
+        {/* Service Areas - separate card */}
+        <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-sm">
+          <div
+            onClick={() => alert('Loading service areas map...')}
+            className="px-4 py-3.5 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer"
+          >
+            <div className="flex items-center gap-3.5">
+              <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
+                <MapPin className="h-5 w-5 text-[#1565C0]" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs font-bold text-slate-800">Service Areas</span>
+                <span className="text-[10px] text-slate-400 font-semibold mt-0.5">Check if we serve in your area</span>
+              </div>
+            </div>
+            <ChevronRight className="h-4 w-4 text-slate-400 flex-shrink-0" />
+          </div>
+        </div>
 
+      </div>
     </div>
   );
 };

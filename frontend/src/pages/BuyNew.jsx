@@ -758,7 +758,7 @@ const BuyNew = () => {
           className="flex flex-col items-center text-text-secondary hover:text-brand-blue"
         >
           <User className="h-6 w-6" />
-          <span className="text-xs font-medium">Profile</span>
+          <span className="text-xs font-medium">Account</span>
         </button>
       </div>
 
