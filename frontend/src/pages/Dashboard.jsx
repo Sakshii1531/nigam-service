@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Search, Bell, MapPin, Wrench, Zap, Droplet, Thermometer, Shield, Home as HomeIcon, Calendar, MessageSquare, User, Star, X, Wind, WashingMachine, Refrigerator, Droplets, Sparkles, ShoppingCart, Tv, Flame, MousePointerClick } from 'lucide-react';
+import { Search, Bell, MapPin, Wrench, Zap, Droplet, Thermometer, Shield, Home as HomeIcon, Calendar, MessageSquare, User, Star, X, Wind, WashingMachine, Refrigerator, Droplets, Sparkles, ShoppingCart, Tv, Flame, MousePointerClick, LayoutGrid } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import acBanner from '../assets/ac_service_banner.png';
 import electricianBanner from '../assets/electrician_banner.png';
@@ -34,6 +34,17 @@ import roMembraneImg from '../assets/ro_membrane.png';
 import roSedimentImg from '../assets/ro_sediment_filter.png';
 import roCarbonImg from '../assets/ro_carbon_filter.png';
 import roPostCarbonImg from '../assets/ro_post_carbon.png';
+import Stories from '../components/home/Stories';
+import star3d from '../assets/star_3d.png';
+import ac3d from '../assets/icon_3d_ac.png';
+import wm3d from '../assets/icon_3d_wm.png';
+import fridge3d from '../assets/icon_3d_fridge.png';
+import tv3d from '../assets/icon_3d_tv.png';
+import geyser3d from '../assets/icon_3d_geyser.png';
+import ro3d from '../assets/icon_3d_ro.png';
+import oven3d from '../assets/icon_3d_oven.png';
+import chimney3d from '../assets/icon_3d_chimney.png';
+import cooler3d from '../assets/icon_3d_cooler.png';
 
 const Dashboard = ({ defaultType }) => {
   const navigate = useNavigate();
@@ -250,13 +261,13 @@ const Dashboard = ({ defaultType }) => {
             </div>
           </div>
           <div className="flex gap-3">
-            <button className="p-2 bg-slate-100 rounded-full relative">
+            <button className="w-9 h-9 bg-slate-100 rounded-full relative flex items-center justify-center">
               <Bell className="h-5 w-5 text-text-primary" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
             </button>
             <div 
               onClick={() => navigate('/profile')}
-              className="w-10 h-10 bg-brand-blue rounded-full flex items-center justify-center text-white font-bold cursor-pointer"
+              className="w-9 h-9 bg-brand-blue rounded-full flex items-center justify-center text-white text-sm font-bold cursor-pointer"
             >
               U
             </div>
@@ -269,26 +280,26 @@ const Dashboard = ({ defaultType }) => {
           <input
             type="text"
             placeholder="Search for services (AC, Geyser...)"
-            className="w-full pl-12 pr-4 py-2.5 bg-slate-50 border border-border-color rounded-2xl focus:border-brand-blue focus:ring-1 focus:ring-brand-blue outline-none transition-all text-sm"
+            className="w-full pl-12 pr-4 py-1.5 bg-slate-50 border border-border-color rounded-2xl focus:border-brand-blue focus:ring-1 focus:ring-brand-blue outline-none transition-all text-sm"
           />
         </div>
         {/* Horizontal Categories */}
-        <div className="flex overflow-x-auto gap-6 mt-4 pb-0 snap-x no-scrollbar">
+        <div className="flex overflow-x-auto gap-6 mt-2 pb-1.5 snap-x no-scrollbar">
           {[
-            { name: 'For You', icon: <Sparkles className="h-5 w-5" />, path: '/dashboard' },
-            { name: 'AC', icon: <Wind className="h-5 w-5" /> },
-            { name: 'WM', icon: <WashingMachine className="h-5 w-5" /> },
-            { name: 'Fridge', icon: <Refrigerator className="h-5 w-5" /> },
-            { name: 'TV', icon: <Tv className="h-5 w-5" /> },
-            { name: 'Geyser', icon: <Thermometer className="h-5 w-5" /> },
-            { name: 'RO', icon: <Droplet className="h-5 w-5" /> },
-            { name: 'Oven', icon: <Flame className="h-5 w-5" /> },
-            { name: 'Chimney', icon: <Wind className="h-5 w-5" /> },
-            { name: 'Cooler', icon: <Wind className="h-5 w-5" /> }
+            { name: 'For You', icon: <Sparkles className="h-5 w-5" />, image3d: star3d, path: '/dashboard' },
+            { name: 'AC', icon: <Wind className="h-5 w-5" />, image3d: ac3d },
+            { name: 'WM', icon: <WashingMachine className="h-5 w-5" />, image3d: wm3d },
+            { name: 'Fridge', icon: <Refrigerator className="h-5 w-5" />, image3d: fridge3d },
+            { name: 'TV', icon: <Tv className="h-5 w-5" />, image3d: tv3d },
+            { name: 'Geyser', icon: <Thermometer className="h-5 w-5" />, image3d: geyser3d },
+            { name: 'RO', icon: <Droplet className="h-5 w-5" />, image3d: ro3d },
+            { name: 'Oven', icon: <Flame className="h-5 w-5" />, image3d: oven3d },
+            { name: 'Chimney', icon: <Wind className="h-5 w-5" />, image3d: chimney3d },
+            { name: 'Cooler', icon: <Wind className="h-5 w-5" />, image3d: cooler3d }
           ].map((cat, index) => (
             <div 
               key={index}
-              className="flex flex-col items-center gap-1.5 cursor-pointer flex-shrink-0 snap-start"
+              className="flex flex-col items-center gap-2 cursor-pointer flex-shrink-0 snap-start group"
               onClick={() => {
                 const isAppliance = cat.name !== 'For You';
                 if (isAppliance) {
@@ -303,10 +314,16 @@ const Dashboard = ({ defaultType }) => {
                 }
               }}
             >
-              <div className="text-brand-blue">
-                {cat.icon}
+              <div className="w-10 h-10 flex items-center justify-center">
+                {cat.image3d ? (
+                  <img src={cat.image3d} alt={cat.name} className="w-full h-full object-contain" />
+                ) : (
+                  <div className="text-brand-blue flex items-center justify-center">
+                    {cat.icon}
+                  </div>
+                )}
               </div>
-              <span className="text-[10px] font-bold text-brand-blue uppercase tracking-wider">
+              <span className="text-[10px] font-bold text-brand-blue uppercase tracking-wider text-center">
                 {cat.name}
               </span>
             </div>
@@ -337,40 +354,7 @@ const Dashboard = ({ defaultType }) => {
           ))}
         </div>
 
-        {/* Dynamic Warranty Promo CTA Banners */}
-        {activeType === 'non-warranty' ? (
-          <div className="bg-gradient-to-r from-brand-navy to-[#0B4EA2] rounded-2xl p-5 text-white shadow-md flex items-center justify-between border border-blue-900/10">
-            <div className="flex-1 pr-4">
-              <span className="text-[10px] bg-brand-yellow text-black font-bold px-2 py-0.5 rounded-full uppercase tracking-wider mb-2 inline-block">
-                Smart Protect
-              </span>
-              <h3 className="text-sm font-bold text-white mb-1">Protect your appliances today</h3>
-              <p className="text-[11px] text-white/80 leading-relaxed">Secure your non-warranty appliances with our premium warranty protection plans.</p>
-            </div>
-            <button 
-              onClick={() => navigate('/buy-new')}
-              className="bg-brand-yellow hover:bg-yellow-400 text-black text-xs font-bold py-2 px-3 rounded-xl shadow-sm transition-all flex-shrink-0 cursor-pointer"
-            >
-              Buy Warranty
-            </button>
-          </div>
-        ) : (
-          <div className="bg-gradient-to-r from-brand-yellow/10 to-brand-yellow/20 rounded-2xl p-5 border border-brand-yellow/30 text-text-primary shadow-sm flex items-center justify-between">
-            <div className="flex-1 pr-4">
-              <span className="text-[10px] bg-[#E8F5E9] text-[#2E7D32] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider mb-2 inline-block">
-                Active Coverage
-              </span>
-              <h3 className="text-sm font-bold text-[#0D47A1] mb-1">Your warranty is active!</h3>
-              <p className="text-[11px] text-text-secondary leading-relaxed">Don't let it expire. Extend your coverage at discounted rates.</p>
-            </div>
-            <button 
-              onClick={() => navigate('/extend-warranty')}
-              className="bg-brand-navy hover:bg-[#0B4EA2] text-white text-xs font-bold py-2 px-3 rounded-xl shadow-sm transition-all flex-shrink-0 cursor-pointer"
-            >
-              Extend Warranty
-            </button>
-          </div>
-        )}
+
 
         {/* Categories */}
         <div>
@@ -607,6 +591,7 @@ const Dashboard = ({ defaultType }) => {
             ))}
           </div>
         </div>
+        <Stories />
       </div>
 
       {/* Bottom Navigation */}
@@ -636,11 +621,11 @@ const Dashboard = ({ defaultType }) => {
           <span className="text-xs font-medium">Bookings</span>
         </button>
         <button 
-          onClick={() => navigate('/services')}
+          onClick={() => navigate('/categories')}
           className="flex flex-col items-center text-text-secondary hover:text-brand-blue"
         >
-          <Wrench className="h-6 w-6" />
-          <span className="text-xs font-medium">Services</span>
+          <LayoutGrid className="h-6 w-6" />
+          <span className="text-xs font-medium">Categories</span>
         </button>
         <button 
           onClick={() => navigate('/profile')}

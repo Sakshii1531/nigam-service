@@ -15,7 +15,8 @@ import {
   Bell,
   Settings,
   Shield,
-  FileText
+  FileText,
+  LayoutGrid
 } from 'lucide-react';
 
 import partnerImg from '../assets/working/Gemini_Generated_Image_ahi7orahi7orahi7-removebg-preview (1).png';
@@ -310,11 +311,11 @@ const Profile = () => {
           <span className="text-xs font-semibold mt-0.5">Bookings</span>
         </button>
         <button 
-          onClick={() => navigate('/services')}
+          onClick={() => navigate('/categories')}
           className="flex flex-col items-center text-text-secondary hover:text-brand-blue cursor-pointer transition-colors"
         >
-          <Wrench className="h-6 w-6" />
-          <span className="text-xs font-semibold mt-0.5">Services</span>
+          <LayoutGrid className="h-6 w-6" />
+          <span className="text-xs font-semibold mt-0.5">Categories</span>
         </button>
         <button 
           onClick={() => navigate('/profile')}

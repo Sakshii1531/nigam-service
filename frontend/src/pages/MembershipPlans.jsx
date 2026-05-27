@@ -107,7 +107,7 @@ const MembershipPlans = () => {
   const [selected, setSelected] = useState('gold');
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-10">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-2">
       {/* Header */}
       <div className="bg-white px-5 py-4 flex items-center gap-3 sticky top-0 z-50 shadow-sm border-b border-slate-100">
         <button
@@ -119,13 +119,13 @@ const MembershipPlans = () => {
         <h1 className="text-sm font-black text-slate-900">Membership Plans</h1>
       </div>
 
-      <div className="flex flex-col gap-4 px-4 pt-5 pb-10">
+      <div className="flex flex-col gap-4 px-4 pt-5 pb-2">
 
         {/* Title */}
         <p className="text-[10px] font-extrabold uppercase tracking-[3px] text-[#1565C0] text-center">MEMBERSHIP PLANS</p>
 
-        {/* Plan Cards - 2x2 Grid */}
-        <div className="grid grid-cols-2 gap-3">
+        {/* Plan Cards - Stacked Vertically (One Plan per Row) */}
+        <div className="flex flex-col gap-4">
           {plans.map((plan) => (
             <div
               key={plan.id}
@@ -145,36 +145,36 @@ const MembershipPlans = () => {
                 </div>
               )}
 
-              <div className="p-3 pt-4 flex flex-col gap-2">
+              <div className="p-4 flex flex-col gap-3">
                 {/* Icon + Name Row */}
-                <div className="flex items-center gap-2 mt-1">
+                <div className="flex items-center gap-2.5">
                   <div
-                    className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm"
+                    className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm"
                     style={{ background: plan.iconBg }}
                   >
                     <PlanIcon id={plan.id} />
                   </div>
                   <div>
-                    <h3 className="text-[10px] font-black leading-tight" style={{ color: plan.textColor }}>
+                    <h3 className="text-xs font-black leading-tight" style={{ color: plan.textColor }}>
                       {plan.name}
                     </h3>
                     <div className="flex items-baseline gap-0.5 mt-0.5">
-                      <span className="text-sm font-black text-slate-900">₹{plan.price.toLocaleString()}</span>
-                      <span className="text-[8px] text-slate-500 font-bold">/Yr</span>
+                      <span className="text-base font-black text-slate-900">₹{plan.price.toLocaleString()}</span>
+                      <span className="text-[10px] text-slate-500 font-bold">/Yr</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Benefits */}
-                <div className="flex flex-col gap-1">
+                <div className="flex flex-col gap-1.5">
                   {plan.benefits.slice(0, 4).map((b, i) => (
-                    <div key={i} className="flex items-start gap-1.5">
-                      <Check className="h-3 w-3 mt-0.5 flex-shrink-0" style={{ color: plan.textColor }} />
-                      <span className="text-[9px] text-slate-700 font-semibold leading-tight">{b}</span>
+                    <div key={i} className="flex items-start gap-2">
+                      <Check className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" style={{ color: plan.textColor }} />
+                      <span className="text-[11px] text-slate-700 font-semibold leading-tight">{b}</span>
                     </div>
                   ))}
                   {plan.benefits.length > 4 && (
-                    <span className="text-[8px] font-bold mt-0.5" style={{ color: plan.textColor }}>
+                    <span className="text-[9px] font-bold mt-0.5" style={{ color: plan.textColor }}>
                       +{plan.benefits.length - 4} more benefits
                     </span>
                   )}
@@ -192,7 +192,7 @@ const MembershipPlans = () => {
                       }
                     });
                   }}
-                  className="w-full mt-1 py-1.5 rounded-lg text-[10px] font-black transition-all cursor-pointer"
+                  className="w-full mt-1 py-2 rounded-lg text-xs font-black transition-all cursor-pointer"
                   style={{
                     background: plan.btnBg,
                     color: plan.btnTextColor,
@@ -207,7 +207,7 @@ const MembershipPlans = () => {
         </div>
 
         {/* Bottom Badges */}
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-3 py-3 flex justify-between items-center gap-1 mt-1">
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-4 py-4 flex justify-between items-center gap-1 mt-1">
           {[
             { icon: '💰', title: 'Lower', sub: 'Visiting Charges' },
             { icon: '⚡', title: 'Faster', sub: 'Service' },
@@ -215,10 +215,10 @@ const MembershipPlans = () => {
             { icon: '🎁', title: 'Exclusive', sub: 'Offers' },
             { icon: '⭐', title: 'Priority', sub: 'Support' },
           ].map((b, i) => (
-            <div key={i} className="flex flex-col items-center gap-0.5 text-center">
-              <span className="text-base">{b.icon}</span>
-              <span className="text-[8px] font-black text-slate-700 leading-tight">{b.title}</span>
-              <span className="text-[7px] text-slate-400 font-semibold leading-none">{b.sub}</span>
+            <div key={i} className="flex flex-col items-center gap-1 text-center flex-1">
+              <span className="text-xl">{b.icon}</span>
+              <span className="text-[10px] font-black text-slate-800 leading-tight">{b.title}</span>
+              <span className="text-[8px] text-slate-500 font-bold leading-tight">{b.sub}</span>
             </div>
           ))}
         </div>

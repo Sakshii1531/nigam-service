@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ChevronRight, Laptop, ShieldCheck, Flame, Wind, Droplet, Home as HomeIcon, ShoppingCart, Calendar, Wrench, User } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Laptop, ShieldCheck, Flame, Wind, Droplet, Home as HomeIcon, ShoppingCart, Calendar, Wrench, User, LayoutGrid } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 // Import existing assets for high-fidelity rendering
@@ -325,11 +325,11 @@ const PartnerWarranty = () => {
           <span className="text-xs font-medium">Bookings</span>
         </button>
         <button 
-          onClick={() => navigate('/services')}
+          onClick={() => navigate('/categories')}
           className="flex flex-col items-center text-text-secondary hover:text-brand-blue"
         >
-          <Wrench className="h-6 w-6" />
-          <span className="text-xs font-medium">Services</span>
+          <LayoutGrid className="h-6 w-6" />
+          <span className="text-xs font-medium">Categories</span>
         </button>
         <button 
           onClick={() => navigate('/profile')}

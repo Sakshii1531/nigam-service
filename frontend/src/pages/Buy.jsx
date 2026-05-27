@@ -5,7 +5,7 @@ import {
   Home as HomeIcon, Calendar, Wrench, User, Sparkles, Zap, PackageOpen,
   MapPin, Bell, Search, Wind, Tv, ShieldCheck, FileText, CheckCircle2, 
   ChevronLeft, Info, HelpCircle, Phone, Mail, Lock, Landmark, Wallet, 
-  Percent, Upload
+  Percent, Upload, LayoutGrid
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -17,6 +17,13 @@ import waterPurifierImg from '../assets/categories/water_purifier.png';
 import tvImg from '../assets/categories/television.png';
 import kitchenApplianceImg from '../assets/categories/kitchen_appliance.png';
 import warrantyBanner2 from '../assets/warranty_banner_2.png';
+import star3d from '../assets/star_3d.png';
+import ac3d from '../assets/icon_3d_ac.png';
+import wm3d from '../assets/icon_3d_wm.png';
+import fridge3d from '../assets/icon_3d_fridge.png';
+import tv3d from '../assets/icon_3d_tv.png';
+import geyser3d from '../assets/icon_3d_geyser.png';
+import ro3d from '../assets/icon_3d_ro.png';
 
 // Import realistic spare parts assets
 import roPreFilterImg from '../assets/ro_pre_filter_candle.png';
@@ -165,13 +172,13 @@ const Buy = () => {
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <button className="p-2 bg-white hover:bg-slate-50 rounded-full relative border border-slate-200 shadow-sm">
+                <button className="w-9 h-9 bg-white hover:bg-slate-50 rounded-full relative flex items-center justify-center border border-slate-200 shadow-sm">
                   <Bell className="h-5 w-5 text-text-primary" />
                   <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
                 </button>
                 <div 
                   onClick={() => navigate('/profile')}
-                  className="w-10 h-10 bg-brand-blue rounded-full flex items-center justify-center text-white font-bold cursor-pointer hover:bg-blue-800 transition-colors shadow-sm"
+                  className="w-9 h-9 bg-brand-blue rounded-full flex items-center justify-center text-white text-sm font-bold cursor-pointer hover:bg-blue-800 transition-colors shadow-sm"
                 >
                   U
                 </div>
@@ -184,24 +191,24 @@ const Buy = () => {
               <input
                 type="text"
                 placeholder="Search for services (AC, Geyser...)"
-                className="w-full pl-12 pr-4 py-3 bg-white border border-border-color rounded-2xl focus:border-brand-blue focus:ring-1 focus:ring-brand-blue outline-none transition-all text-xs shadow-sm"
+                className="w-full pl-12 pr-4 py-1.5 bg-white border border-border-color rounded-2xl focus:border-brand-blue focus:ring-1 focus:ring-brand-blue outline-none transition-all text-xs shadow-sm"
               />
             </div>
 
             {/* Horizontal Categories */}
-            <div className="flex overflow-x-auto gap-6 pb-2 snap-x no-scrollbar">
+            <div className="flex overflow-x-auto gap-6 pb-2.5 snap-x no-scrollbar">
               {[
-                { name: 'For You', icon: <Sparkles className="h-5 w-5" /> },
-                { name: 'AC', icon: <Wind className="h-5 w-5" />, appliance: 'Air Conditioner' },
-                { name: 'WM', icon: <Wrench className="h-5 w-5" />, appliance: 'Washing Machine' },
-                { name: 'Fridge', icon: <PackageOpen className="h-5 w-5" />, appliance: 'Refrigerator' },
-                { name: 'TV', icon: <Tv className="h-5 w-5" />, appliance: 'Television' },
-                { name: 'Geyser', icon: <Zap className="h-5 w-5" />, appliance: 'Geyser' },
-                { name: 'RO', icon: <Award className="h-5 w-5" />, appliance: 'Water Purifier' }
+                { name: 'For You', icon: <Sparkles className="h-5 w-5" />, image3d: star3d },
+                { name: 'AC', icon: <Wind className="h-5 w-5" />, image3d: ac3d, appliance: 'Air Conditioner' },
+                { name: 'WM', icon: <Wrench className="h-5 w-5" />, image3d: wm3d, appliance: 'Washing Machine' },
+                { name: 'Fridge', icon: <PackageOpen className="h-5 w-5" />, image3d: fridge3d, appliance: 'Refrigerator' },
+                { name: 'TV', icon: <Tv className="h-5 w-5" />, image3d: tv3d, appliance: 'Television' },
+                { name: 'Geyser', icon: <Zap className="h-5 w-5" />, image3d: geyser3d, appliance: 'Geyser' },
+                { name: 'RO', icon: <Award className="h-5 w-5" />, image3d: ro3d, appliance: 'Water Purifier' }
               ].map((cat, index) => (
                 <div 
                   key={index}
-                  className="flex flex-col items-center gap-1.5 cursor-pointer flex-shrink-0 snap-start"
+                  className="flex flex-col items-center gap-2 cursor-pointer flex-shrink-0 snap-start group"
                   onClick={() => {
                     if (cat.appliance) {
                       setSelectedAppliance(cat.appliance);
@@ -212,10 +219,16 @@ const Buy = () => {
                     }
                   }}
                 >
-                  <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-brand-blue hover:bg-brand-blue hover:text-white transition-all shadow-sm">
-                    {cat.icon}
+                  <div className="w-10 h-10 flex items-center justify-center">
+                    {cat.image3d ? (
+                      <img src={cat.image3d} alt={cat.name} className="w-full h-full object-contain" />
+                    ) : (
+                      <div className="text-brand-blue flex items-center justify-center">
+                        {cat.icon}
+                      </div>
+                    )}
                   </div>
-                  <span className="text-[9px] font-extrabold text-brand-blue uppercase tracking-wider">
+                  <span className="text-[10px] font-bold text-brand-blue uppercase tracking-wider text-center">
                     {cat.name}
                   </span>
                 </div>
@@ -1726,11 +1739,11 @@ const Buy = () => {
           <span className="text-xs font-semibold mt-0.5">Bookings</span>
         </button>
         <button 
-          onClick={() => navigate('/services')}
+          onClick={() => navigate('/categories')}
           className="flex flex-col items-center text-text-secondary hover:text-brand-blue transition-colors cursor-pointer"
         >
-          <Wrench className="h-6 w-6" />
-          <span className="text-xs font-semibold mt-0.5">Services</span>
+          <LayoutGrid className="h-6 w-6" />
+          <span className="text-xs font-semibold mt-0.5">Categories</span>
         </button>
         <button 
           onClick={() => navigate('/profile')}

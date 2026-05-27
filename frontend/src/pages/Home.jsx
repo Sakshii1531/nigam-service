@@ -10,6 +10,7 @@ import DashboardPreview from '../components/home/DashboardPreview';
 import Testimonials from '../components/home/Testimonials';
 import MobileApp from '../components/home/MobileApp';
 import FAQ from '../components/home/FAQ';
+import Stories from '../components/home/Stories';
 
 const Home = () => {
   return (
@@ -25,6 +26,7 @@ const Home = () => {
         <Testimonials />
         <MobileApp />
         <FAQ />
+        <Stories />
       </main>
       <Footer />
     </div>

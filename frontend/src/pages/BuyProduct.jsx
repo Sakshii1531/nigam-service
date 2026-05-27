@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Search, Check, ChevronRight, ShoppingCart, Star, 
-  Home as HomeIcon, Calendar, Wrench, User, Sparkles, Filter, 
+  Home as HomeIcon, Calendar, LayoutGrid, User, Sparkles, Filter, 
   Tag, ShieldCheck, CheckCircle2, FileText, ShoppingBag, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -450,11 +450,11 @@ const BuyProduct = () => {
           <span className="text-xs font-medium">Bookings</span>
         </button>
         <button 
-          onClick={() => navigate('/services')}
+          onClick={() => navigate('/categories')}
           className="flex flex-col items-center text-text-secondary hover:text-brand-blue"
         >
-          <Wrench className="h-6 w-6" />
-          <span className="text-xs font-medium">Services</span>
+          <LayoutGrid className="h-6 w-6" />
+          <span className="text-xs font-medium">Categories</span>
         </button>
         <button 
           onClick={() => navigate('/profile')}

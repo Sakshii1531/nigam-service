@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, Home as HomeIcon, Calendar, Wrench, User, ShoppingCart } from 'lucide-react';
+import { ArrowLeft, Home as HomeIcon, Calendar, LayoutGrid, User, ShoppingCart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import acImg from '../assets/categories/ac.png';
 import wasingImg from '../assets/categories/wasing.png';
@@ -77,9 +77,12 @@ const AllServices = () => {
           <Calendar className="h-6 w-6" />
           <span className="text-xs font-medium">Bookings</span>
         </button>
-        <button className="flex flex-col items-center text-[#0D47A1]">
-          <Wrench className="h-6 w-6" />
-          <span className="text-xs font-medium">Services</span>
+        <button 
+          onClick={() => navigate('/categories')}
+          className="flex flex-col items-center text-text-secondary hover:text-[#0D47A1]"
+        >
+          <LayoutGrid className="h-6 w-6" />
+          <span className="text-xs font-medium">Categories</span>
         </button>
         <button 
           onClick={() => navigate('/profile')}

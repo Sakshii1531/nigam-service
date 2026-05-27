@@ -12,6 +12,7 @@ import Booking from './pages/Booking';
 import Tracking from './pages/Tracking';
 import Chat from './pages/Chat';
 import AllServices from './pages/AllServices';
+import Categories from './pages/Categories';
 import AllCleaningServices from './pages/AllCleaningServices';
 import AllApplianceServices from './pages/AllApplianceServices';
 import BookingSuccess from './pages/BookingSuccess';
@@ -135,6 +136,7 @@ function App() {
         <Route path="/partner-warranty/service-updates" element={<ServiceUpdates />} />
         <Route path="/partner-warranty/rate-service" element={<RateService />} />
         <Route path="/services" element={<AllServices />} />
+        <Route path="/categories" element={<Categories />} />
         <Route path="/cleaning-services" element={<AllCleaningServices />} />
         <Route path="/appliance-services" element={<AllApplianceServices />} />
         <Route path="/warranty" element={<Warranty />} />
