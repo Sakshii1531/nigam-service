@@ -1711,7 +1711,7 @@ const Buy = () => {
       </div>
 
       {/* Sticky Bottom Tab Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-border-color p-4 flex justify-around items-center z-40 shadow-lg rounded-t-3xl">
+      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-border-color p-4 flex justify-around items-center z-40 shadow-lg rounded-t-3xl overflow-visible">
         <button 
           onClick={() => navigate('/dashboard')}
           className="flex flex-col items-center text-text-secondary hover:text-brand-blue transition-colors cursor-pointer"
@@ -1720,30 +1720,35 @@ const Buy = () => {
           <span className="text-xs font-semibold mt-0.5">Home</span>
         </button>
         <button 
-          onClick={() => {
-            setShowSuccess(false);
-            setSelectedAppliance(null);
-            setSelectedTierIndex(0);
-            setStep(1);
-          }}
-          className="flex flex-col items-center text-brand-blue cursor-pointer"
+          onClick={() => navigate('/categories')}
+          className="flex flex-col items-center text-text-secondary hover:text-brand-blue transition-colors cursor-pointer"
         >
-          <ShoppingCart className="h-6 w-6" />
-          <span className="text-xs font-semibold mt-0.5">Buy</span>
+          <LayoutGrid className="h-6 w-6" />
+          <span className="text-xs font-semibold mt-0.5">Categories</span>
         </button>
+
+        {/* Floating Buy Button */}
+        <div className="relative flex flex-col items-center z-50">
+          <button 
+            onClick={() => {
+              setShowSuccess(false);
+              setSelectedAppliance(null);
+              setSelectedTierIndex(0);
+              setStep(1);
+            }}
+            className="w-14 h-14 bg-[#0D47A1] rounded-full flex items-center justify-center border-[5px] border-white shadow-[0_4px_10px_rgba(0,0,0,0.15)] text-white cursor-pointer active:scale-95 transition-all -mt-7"
+          >
+            <ShoppingCart className="h-5 w-5 text-white" />
+          </button>
+          <span className="text-[10px] font-black text-[#0D47A1] mt-1.5 uppercase tracking-wider">Buy</span>
+        </div>
+
         <button 
           onClick={() => navigate('/bookings')}
           className="flex flex-col items-center text-text-secondary hover:text-brand-blue transition-colors cursor-pointer"
         >
           <Calendar className="h-6 w-6" />
           <span className="text-xs font-semibold mt-0.5">Bookings</span>
-        </button>
-        <button 
-          onClick={() => navigate('/categories')}
-          className="flex flex-col items-center text-text-secondary hover:text-brand-blue transition-colors cursor-pointer"
-        >
-          <LayoutGrid className="h-6 w-6" />
-          <span className="text-xs font-semibold mt-0.5">Categories</span>
         </button>
         <button 
           onClick={() => navigate('/profile')}

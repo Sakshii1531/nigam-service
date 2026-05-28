@@ -1,5 +1,5 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -28,6 +28,7 @@ import BuyNew from './pages/BuyNew';
 import ExtendWarranty from './pages/ExtendWarranty';
 import BuyProduct from './pages/BuyProduct';
 import PartnerWarranty from './pages/PartnerWarranty';
+import AllBrands from './pages/AllBrands';
 import SelectBrand from './pages/SelectBrand';
 import SelectProduct from './pages/SelectProduct';
 import SelectIssue from './pages/SelectIssue';
@@ -115,9 +116,20 @@ const PageHandler = () => {
   );
 };
 
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+};
+
 function App() {
   return (
     <Router>
+      <ScrollToTop />
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/home" element={<Home />} />
@@ -126,6 +138,7 @@ function App() {
         <Route path="/dashboard/non-warranty" element={<Dashboard defaultType="non-warranty" />} />
         <Route path="/dashboard/in-warranty" element={<Dashboard defaultType="in-warranty" />} />
         <Route path="/partner-warranty" element={<PartnerWarranty />} />
+        <Route path="/all-brands" element={<AllBrands />} />
         <Route path="/partner-warranty/brands/:category" element={<SelectBrand />} />
         <Route path="/partner-warranty/products/:category/:brand" element={<SelectProduct />} />
         <Route path="/partner-warranty/issues/:category/:brand/:product" element={<SelectIssue />} />
