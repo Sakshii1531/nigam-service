@@ -1475,32 +1475,93 @@ const Buy = () => {
               <h3 className="text-sm font-black text-[#0B4EA2]">Shop by Category</h3>
               <div className="flex items-center gap-5 overflow-x-auto no-scrollbar pb-2.5 pt-1">
                 {[
-                  { name: 'Water Purifier', img: waterPurifierImg },
-                  { name: 'Cooler', img: kitchenApplianceImg },
-                  { name: 'Television', img: tvImg },
-                  { name: 'Air Conditioner', img: splitAcImg },
-                  { name: 'Refrigerator', img: fridgeImg },
+                  { name: 'For You', isForYou: true },
+                  { name: 'AC', appliance: 'Air Conditioner' },
+                  { name: 'Washing Machine', appliance: 'Washing Machine' },
+                  { name: 'Refrigerator', appliance: 'Refrigerator' },
+                  { name: 'TV', appliance: 'Television' },
+                  { name: 'RO Water Purifier', appliance: 'Water Purifier' },
+                  { name: 'Geyser', appliance: 'Geyser' },
                   { name: 'More', isMore: true }
                 ].map((item, idx) => (
                   <div 
                     key={idx}
-                    className="flex-shrink-0 flex flex-col items-center gap-2.5 cursor-pointer group"
+                    className="flex-shrink-0 flex flex-col items-center gap-0.5 cursor-pointer group"
                     onClick={() => {
-                      if (!item.isMore) {
-                        setSelectedAppliance(item.name);
+                      if (item.isForYou) {
+                        navigate('/dashboard');
+                      } else if (item.isMore) {
+                        setStep(12);
+                      } else {
+                        setSelectedAppliance(item.appliance);
                         setSelectedTierIndex(0);
                         setStep(3);
                       }
                     }}
                   >
-                    <div className="w-13 h-13 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center p-2 shadow-sm group-hover:scale-105 group-hover:border-brand-blue/30 transition-all">
-                      {item.isMore ? (
-                        <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center font-bold text-slate-500 text-lg">•••</div>
-                      ) : (
-                        <img src={item.img} alt={item.name} className="w-full h-full object-contain mix-blend-multiply" />
+                    <div className="w-7 h-7 flex items-center justify-center">
+                      {item.name === 'For You' && (
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-[#0B4EA2]">
+                          <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275Z" />
+                          <path d="m5 3 1 2.5L8.5 6 6 7 5 9.5 4 7 1.5 6 4 5Z" opacity="0.5" />
+                          <path d="m19 17 1 2.5 2.5.5-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1Z" opacity="0.5" />
+                        </svg>
+                      )}
+                      {item.name === 'AC' && (
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-[#0B4EA2]">
+                          <rect x="2" y="6" width="20" height="8" rx="2" />
+                          <line x1="6" y1="14" x2="18" y2="14" />
+                          <path d="M7 17l1.5 2" />
+                          <path d="M12 17v2" />
+                          <path d="M17 17l-1.5 2" />
+                          <circle cx="18" cy="10" r="1" fill="currentColor" />
+                        </svg>
+                      )}
+                      {item.name === 'Washing Machine' && (
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-[#0B4EA2]">
+                          <rect x="5" y="3" width="14" height="18" rx="2" />
+                          <circle cx="12" cy="13" r="4" />
+                          <circle cx="12" cy="7" r="1" />
+                        </svg>
+                      )}
+                      {item.name === 'Refrigerator' && (
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-[#0B4EA2]">
+                          <rect x="5" y="2" width="14" height="20" rx="2" />
+                          <line x1="5" y1="10" x2="19" y2="10" />
+                          <line x1="9" y1="6" x2="9" y2="8" />
+                          <line x1="9" y1="13" x2="9" y2="17" />
+                        </svg>
+                      )}
+                      {item.name === 'TV' && (
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-[#0B4EA2]">
+                          <rect x="2" y="3" width="20" height="14" rx="2" />
+                          <path d="M8 21h8" />
+                          <path d="M12 17v4" />
+                        </svg>
+                      )}
+                      {item.name === 'RO Water Purifier' && (
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-[#0B4EA2]">
+                          <path d="M12 22a7 7 0 0 0 7-7c0-4.3-7-13-7-13S5 10.7 5 15a7 7 0 0 0 7 7z" />
+                        </svg>
+                      )}
+                      {item.name === 'Geyser' && (
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-[#0B4EA2]">
+                          <rect x="6" y="2" width="12" height="16" rx="3" />
+                          <path d="M9 22v-4" />
+                          <path d="M15 22v-4" />
+                          <circle cx="12" cy="10" r="2" />
+                        </svg>
+                      )}
+                      {item.isMore && (
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-[#0B4EA2]">
+                          <rect x="3" y="3" width="7" height="7" rx="1" />
+                          <rect x="14" y="3" width="7" height="7" rx="1" />
+                          <rect x="14" y="14" width="7" height="7" rx="1" />
+                          <rect x="3" y="14" width="7" height="7" rx="1" />
+                        </svg>
                       )}
                     </div>
-                    <span className="text-[10px] font-extrabold text-slate-800 text-center leading-tight group-hover:text-brand-blue transition-colors">
+                    <span className="text-[10px] font-black text-[#0B4EA2] text-center leading-tight tracking-tighter group-hover:text-brand-blue transition-colors max-w-[80px]">
                       {item.name}
                     </span>
                   </div>
@@ -1727,21 +1788,18 @@ const Buy = () => {
           <span className="text-xs font-semibold mt-0.5">Categories</span>
         </button>
 
-        {/* Floating Buy Button */}
-        <div className="relative flex flex-col items-center z-50">
-          <button 
-            onClick={() => {
-              setShowSuccess(false);
-              setSelectedAppliance(null);
-              setSelectedTierIndex(0);
-              setStep(1);
-            }}
-            className="w-14 h-14 bg-[#0D47A1] rounded-full flex items-center justify-center border-[5px] border-white shadow-[0_4px_10px_rgba(0,0,0,0.15)] text-white cursor-pointer active:scale-95 transition-all -mt-7"
-          >
-            <ShoppingCart className="h-5 w-5 text-white" />
-          </button>
-          <span className="text-[10px] font-black text-[#0D47A1] mt-1.5 uppercase tracking-wider">Buy</span>
-        </div>
+        <button 
+          onClick={() => {
+            setShowSuccess(false);
+            setSelectedAppliance(null);
+            setSelectedTierIndex(0);
+            setStep(1);
+          }}
+          className="flex flex-col items-center text-brand-blue cursor-pointer transition-colors"
+        >
+          <ShoppingCart className="h-6 w-6" />
+          <span className="text-xs font-semibold mt-0.5">Buy</span>
+        </button>
 
         <button 
           onClick={() => navigate('/bookings')}

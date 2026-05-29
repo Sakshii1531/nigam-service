@@ -446,15 +446,12 @@ const BuyProduct = () => {
           <span className="text-xs font-medium">Categories</span>
         </button>
 
-        {/* Floating Buy Button */}
-        <div className="relative flex flex-col items-center z-50">
-          <button 
-            className="w-14 h-14 bg-[#0D47A1] rounded-full flex items-center justify-center border-[5px] border-white shadow-[0_4px_10px_rgba(0,0,0,0.15)] text-white cursor-pointer active:scale-95 transition-all -mt-7"
-          >
-            <ShoppingCart className="h-5 w-5 text-white" />
-          </button>
-          <span className="text-[10px] font-black text-[#0D47A1] mt-1.5 uppercase tracking-wider">Buy</span>
-        </div>
+        <button 
+          className="flex flex-col items-center text-brand-blue"
+        >
+          <ShoppingCart className="h-6 w-6" />
+          <span className="text-xs font-medium">Buy</span>
+        </button>
 
         <button 
           onClick={() => navigate('/bookings')}
