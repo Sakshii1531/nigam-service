@@ -281,7 +281,7 @@ const ProductDetails = () => {
       <div className="bg-[#E3ECF9] p-4 flex items-center justify-between rounded-b-[25px] shadow-sm sticky top-0 z-30">
         <div className="flex items-center gap-3">
           <button 
-            onClick={() => navigate('/buy-product')}
+            onClick={() => navigate(-1)}
             className="p-2 bg-white rounded-full shadow-sm hover:bg-slate-50 transition-colors cursor-pointer"
           >
             <ArrowLeft className="h-4.5 w-4.5 text-[#0D47A1]" />

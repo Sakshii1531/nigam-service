@@ -119,7 +119,16 @@ const Categories = () => {
                   <div 
                     key={idx} 
                     className="flex flex-col items-center cursor-pointer"
-                    onClick={() => navigate(`/service-details?service=${encodeURIComponent(item.name)}`)}
+                    onClick={() => {
+                      const catMap = {
+                        'AC Repair & Services': 'AC',
+                        'Geyser Repair & Services': 'Geyser',
+                        'Water Purifier & Services': 'RO Water Purifier',
+                        'TV Repair & Services': 'TV',
+                      };
+                      const bookCat = catMap[item.name];
+                      bookCat ? navigate(`/book/${encodeURIComponent(bookCat)}`) : navigate(`/service-details?service=${encodeURIComponent(item.name)}`);
+                    }}
                   >
                     <div className="w-18 h-18 bg-white border border-slate-200/50 rounded-2xl flex items-center justify-center p-2.5 shadow-sm hover:shadow-md transition-shadow">
                       <img src={item.img} alt={item.name} className="w-full h-full object-contain" />
@@ -147,7 +156,16 @@ const Categories = () => {
                   <div 
                     key={idx} 
                     className="flex flex-col items-center cursor-pointer"
-                    onClick={() => navigate(`/service-details?service=${encodeURIComponent(item.name)}`)}
+                    onClick={() => {
+                      const catMap = {
+                        'Chimney Repair & Services': 'Chimney',
+                        'Microwave Repair & Services': 'Microwave',
+                        'Refrigerator Repair & Services': 'Refrigerator',
+                        'Washing Machine Repair': 'Washing Machine',
+                      };
+                      const bookCat = catMap[item.name];
+                      bookCat ? navigate(`/book/${encodeURIComponent(bookCat)}`) : navigate(`/service-details?service=${encodeURIComponent(item.name)}`);
+                    }}
                   >
                     <div className="w-18 h-18 bg-white border border-slate-200/50 rounded-2xl flex items-center justify-center p-2.5 shadow-sm hover:shadow-md transition-shadow">
                       <img src={item.img} alt={item.name} className="w-full h-full object-contain" />
@@ -202,7 +220,16 @@ const Categories = () => {
                   <div 
                     key={idx} 
                     className="flex flex-col items-center cursor-pointer"
-                    onClick={() => navigate(`/service-details?service=${encodeURIComponent(item.name)}`)}
+                    onClick={() => {
+                      const catMap = {
+                        'AC Repair & Services': 'AC',
+                        'Geyser Repair & Services': 'Geyser',
+                        'Water Purifier & Services': 'RO Water Purifier',
+                        'TV Repair & Services': 'TV',
+                      };
+                      const bookCat = catMap[item.name];
+                      bookCat ? navigate(`/book/${encodeURIComponent(bookCat)}`) : navigate(`/service-details?service=${encodeURIComponent(item.name)}`);
+                    }}
                   >
                     <div className="w-18 h-18 bg-white border border-slate-200/50 rounded-2xl flex items-center justify-center p-2.5 shadow-sm hover:shadow-md transition-shadow">
                       <img src={item.img} alt={item.name} className="w-full h-full object-contain" />
@@ -230,7 +257,16 @@ const Categories = () => {
                   <div 
                     key={idx} 
                     className="flex flex-col items-center cursor-pointer"
-                    onClick={() => navigate(`/service-details?service=${encodeURIComponent(item.name)}`)}
+                    onClick={() => {
+                      const catMap = {
+                        'Chimney Repair & Services': 'Chimney',
+                        'Microwave Repair & Services': 'Microwave',
+                        'Refrigerator Repair & Services': 'Refrigerator',
+                        'Washing Machine Repair': 'Washing Machine',
+                      };
+                      const bookCat = catMap[item.name];
+                      bookCat ? navigate(`/book/${encodeURIComponent(bookCat)}`) : navigate(`/service-details?service=${encodeURIComponent(item.name)}`);
+                    }}
                   >
                     <div className="w-18 h-18 bg-white border border-slate-200/50 rounded-2xl flex items-center justify-center p-2.5 shadow-sm hover:shadow-md transition-shadow">
                       <img src={item.img} alt={item.name} className="w-full h-full object-contain" />

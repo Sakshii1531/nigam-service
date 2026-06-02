@@ -9,6 +9,8 @@ import CardPayment from './pages/CardPayment';
 import UpiPayment from './pages/UpiPayment';
 import NetBankingPayment from './pages/NetBankingPayment';
 import Booking from './pages/Booking';
+import BookingFlow from './pages/BookingFlow';
+import { BookingProvider } from './context/BookingContext';
 import Tracking from './pages/Tracking';
 import Chat from './pages/Chat';
 import AllServices from './pages/AllServices';
@@ -129,6 +131,7 @@ const ScrollToTop = () => {
 function App() {
   return (
     <Router>
+      <BookingProvider>
       <ScrollToTop />
       <Routes>
         <Route path="/" element={<Login />} />
@@ -165,6 +168,7 @@ function App() {
         <Route path="/refrigerator-details" element={<RefrigeratorDetails />} />
         <Route path="/service-details" element={<ServiceDetails />} />
         <Route path="/booking" element={<Booking />} />
+        <Route path="/book/:category" element={<BookingFlow />} />
         <Route path="/bookings" element={<Bookings />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/booking-success" element={<BookingSuccess />} />
@@ -233,6 +237,7 @@ function App() {
 
         <Route path="*" element={<PageHandler />} />
       </Routes>
+      </BookingProvider>
     </Router>
   );
 }

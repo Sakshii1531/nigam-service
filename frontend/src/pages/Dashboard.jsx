@@ -304,7 +304,17 @@ const Dashboard = ({ defaultType }) => {
                 } else if (cat.isMore) {
                   navigate('/services');
                 } else if (cat.isFridge) {
-                  navigate('/refrigerator-details');
+                  navigate('/book/Refrigerator');
+                } else if (cat.name === 'AC') {
+                  navigate('/book/AC');
+                } else if (cat.name === 'Washing Machine') {
+                  navigate('/book/Washing Machine');
+                } else if (cat.name === 'TV') {
+                  navigate('/book/TV');
+                } else if (cat.name === 'RO Water Purifier') {
+                  navigate('/book/RO Water Purifier');
+                } else if (cat.name === 'Geyser') {
+                  navigate('/book/Geyser');
                 } else {
                   navigate(`/service-details?service=${encodeURIComponent(cat.service)}`);
                 }
@@ -421,17 +431,30 @@ const Dashboard = ({ defaultType }) => {
               <div 
                 key={service.id}
                 onClick={() => {
-                  const nameNorm = service.name.toLowerCase();
-                  const isAC = nameNorm.includes('ac');
-                  const isWM = nameNorm.includes('washing');
-                  
-                  if (isAC) {
-                    navigate(`/service-details?service=${encodeURIComponent('AC Repair')}`);
-                  } else if (isWM) {
-                    navigate(`/service-details?service=${encodeURIComponent('Washing Machine')}`);
-                  } else if (activeType === 'in-warranty') {
+                  if (activeType === 'in-warranty') {
                     setSelectedServiceForWarranty({ title: service.name, price: 499 });
                     setShowWarrantyModal(true);
+                    return;
+                  }
+                  // Appliance categories → BookingFlow wizard
+                  const APPLIANCE_ROUTES = {
+                    'ac repair': 'AC',
+                    'washing machine': 'Washing Machine',
+                    'refrigerator': 'Refrigerator',
+                    'tv': 'TV',
+                    'television': 'TV',
+                    'geyser': 'Geyser',
+                    'water heater': 'Geyser',
+                    'ro water purifier': 'RO Water Purifier',
+                    'water purifier': 'RO Water Purifier',
+                    'microwave': 'Microwave',
+                    'chimney': 'Chimney',
+                    'air cooler': 'Air Cooler',
+                  };
+                  const nameNorm = service.name.toLowerCase();
+                  const bookCat = Object.keys(APPLIANCE_ROUTES).find(k => nameNorm.includes(k));
+                  if (bookCat) {
+                    navigate(`/book/${encodeURIComponent(APPLIANCE_ROUTES[bookCat])}`);
                   } else {
                     navigate(`/service-details?service=${encodeURIComponent(service.name)}`);
                   }
@@ -743,11 +766,11 @@ const Dashboard = ({ defaultType }) => {
                   const isFridge = titleNorm.includes('refrigerator') || titleNorm.includes('fridge');
                   
                   if (isAC) {
-                    navigate(`/service-details?service=${encodeURIComponent('AC Repair')}`);
+                    navigate('/book/AC');
                   } else if (isWM) {
-                    navigate(`/service-details?service=${encodeURIComponent('Washing Machine')}`);
+                    navigate('/book/Washing Machine');
                   } else if (isFridge) {
-                    navigate(`/refrigerator-details`);
+                    navigate('/book/Refrigerator');
                   } else if (activeType === 'in-warranty') {
                     setSelectedServiceForWarranty(service);
                     setShowWarrantyModal(true);
@@ -785,7 +808,7 @@ const Dashboard = ({ defaultType }) => {
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-bold text-text-primary">Spare Parts & Accessories</h2>
             <button 
-              onClick={() => alert("Loading all spare parts...")}
+            onClick={() => navigate('/buy-product')}
               className="text-sm font-semibold text-[#0B4EA2] hover:text-blue-800 transition-colors cursor-pointer"
             >
               See all
@@ -801,7 +824,7 @@ const Dashboard = ({ defaultType }) => {
             ].map((item) => (
               <div 
                 key={item.id}
-                onClick={() => alert(`Ordering accessory: ${item.title}`)}
+                onClick={() => navigate('/buy-product')}
                 className="flex flex-col gap-2 cursor-pointer flex-shrink-0 w-40 snap-start border border-border-color rounded-2xl p-2 bg-white hover:border-brand-blue transition-all h-[230px]"
               >
                 <div className="w-full h-32 bg-slate-50/50 rounded-xl flex items-center justify-center overflow-hidden relative">

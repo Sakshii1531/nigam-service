@@ -144,7 +144,7 @@ const BuyProduct = () => {
       <div className="bg-[#E3ECF9] p-6 rounded-b-[30px] shadow-sm flex flex-col gap-4">
         <div className="flex items-center gap-4">
           <button 
-            onClick={() => navigate('/buy')}
+            onClick={() => navigate(-1)}
             className="p-2 bg-white rounded-full shadow-sm hover:bg-slate-50 transition-colors"
           >
             <ArrowLeft className="h-5 w-5 text-[#0D47A1]" />
