@@ -2,42 +2,28 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft, Check, ChevronDown, ChevronUp, MapPin, User, Phone, CalendarDays,
+  Sun, Moon, Info, ShieldCheck, ArrowRight
 } from 'lucide-react';
 
 import { getCatalogEntry } from '../data/bookingCatalog';
 
 const getCatalog = (category) => getCatalogEntry(category);
 
-// ─── Step Labels (5 steps) ────────────────────────────────────────────────────
-const STEP_LABELS = ['Select', 'Service', 'Details', 'Schedule', 'Payment'];
+// ─── Step Labels (4 steps) ────────────────────────────────────────────────────
+const STEP_LABELS = ['Select', 'Service', 'Schedule', 'Payment'];
 
 // ─── Progress Bar ─────────────────────────────────────────────────────────────
-const StepBar = ({ currentStep, total = 5 }) => (
-  <div className="flex items-center gap-0 px-1">
-    {STEP_LABELS.map((label, idx) => {
-      const stepNum = idx + 1;
-      const done = stepNum < currentStep;
-      const active = stepNum === currentStep;
+const StepBar = ({ currentStep, total = 4 }) => (
+  <div className="flex items-center gap-1.5 w-full max-w-[200px] mx-auto mt-1 pb-1">
+    {[...Array(total)].map((_, idx) => {
+      const active = idx + 1 <= currentStep;
       return (
-        <React.Fragment key={label}>
-          <div className="flex flex-col items-center flex-shrink-0">
-            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black transition-all duration-300 ${
-              done   ? 'bg-[#0D47A1] text-white scale-90' :
-              active ? 'bg-[#0D47A1] text-white ring-2 ring-[#0D47A1]/30 scale-110' :
-                       'bg-slate-200 text-slate-400'
-            }`}>
-              {done ? <Check className="w-2.5 h-2.5" /> : stepNum}
-            </div>
-            <span className={`text-[8px] font-bold mt-0.5 text-center leading-none w-12 ${
-              active ? 'text-[#0D47A1]' : done ? 'text-slate-500' : 'text-slate-300'
-            }`}>{label}</span>
-          </div>
-          {idx < STEP_LABELS.length - 1 && (
-            <div className={`h-[2px] flex-1 min-w-[8px] mx-0.5 mb-3 rounded-full transition-all duration-500 ${
-              done ? 'bg-[#0D47A1]' : 'bg-slate-200'
-            }`} />
-          )}
-        </React.Fragment>
+        <div
+          key={idx}
+          className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
+            active ? 'bg-[#0D47A1]' : 'bg-slate-200'
+          }`}
+        />
       );
     })}
   </div>
@@ -179,7 +165,7 @@ const BookingFlow = () => {
   const selectedServiceData = data.services.default.find(s => s.id === service);
   const unitPrice = selectedServiceData?.price || 299;
   const totalPrice = unitPrice * quantity;
-  const advanceAmt = 49 * quantity;
+  const advanceAmt = 199;
   const remaining = totalPrice - advanceAmt;
   const isInstallationService = service === 'installation';
 
@@ -189,12 +175,14 @@ const BookingFlow = () => {
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const today = new Date();
     const dates = [];
-    for (let i = 1; i <= 6; i++) {
+    for (let i = 0; i <= 5; i++) {
       const d = new Date(today);
       d.setDate(today.getDate() + i);
+      const isToday = i === 0;
       dates.push({
-        label: `${days[d.getDay()]} ${d.getDate()}`,
-        sub: months[d.getMonth()],
+        dayName: isToday ? 'Today' : days[d.getDay()],
+        dayNum: d.getDate(),
+        month: months[d.getMonth()],
         full: `${days[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]}`,
       });
     }
@@ -203,9 +191,9 @@ const BookingFlow = () => {
   const upcomingDates = getUpcomingDates();
 
   const TIME_GROUPS = [
-    { id: 'Morning',   emoji: '🌅', label: 'Morning',   timeRange: '8 AM – 11 AM' },
-    { id: 'Afternoon', emoji: '☀️',  label: 'Afternoon', timeRange: '12 PM – 3 PM' },
-    { id: 'Evening',   emoji: '🌙',  label: 'Evening',   timeRange: '4 PM – 7 PM' },
+    { id: 'Morning',   icon: <Sun className="w-5 h-5 text-amber-500 fill-amber-500" />, label: 'Morning',   timeRange: '8 AM – 11 AM' },
+    { id: 'Afternoon', icon: <Sun className="w-5 h-5 text-amber-500 fill-amber-500" />, label: 'Afternoon', timeRange: '12 PM – 3 PM' },
+    { id: 'Evening',   icon: <Moon className="w-5 h-5 text-[#5C6BC0] fill-[#5C6BC0]" />, label: 'Evening',   timeRange: '4 PM – 7 PM' },
   ];
 
   const INSTALL_LOCATIONS = [
@@ -254,17 +242,15 @@ const BookingFlow = () => {
   // ── Validation per step ────────────────────────────────────────────────────
   const step1Valid = !!productType;
   const step2Valid = !!service;
-  const step3Valid = !!brand;
-  const step4Valid = !!selectedDate && !!timeGroup;
-  const step5Valid = true;
+  const step3Valid = !!selectedDate && !!timeGroup;
+  const step4Valid = true;
 
   // ── Step config ────────────────────────────────────────────────────────────
   const stepConfig = {
     1: { title: `Select ${catKey} & Quantity`, subtitle: 'What do you need help with?' },
     2: { title: 'Choose Service',              subtitle: 'What service do you need?' },
-    3: { title: 'Additional Details',          subtitle: 'Help us serve you better' },
-    4: { title: 'Schedule Visit',              subtitle: 'When should we come?' },
-    5: { title: 'Address & Payment',           subtitle: 'Almost done! Confirm your details' },
+    3: { title: 'Schedule Visit',              subtitle: 'Choose brand, date & time' },
+    4: { title: 'Address & Payment',           subtitle: 'Almost done! Confirm your details' },
   };
   const { title, subtitle } = stepConfig[step] || {};
 
@@ -282,9 +268,8 @@ const BookingFlow = () => {
   };
   const getBarBtnLabel = () => {
     if (step === 1) return 'Continue — Choose Service';
-    if (step === 2) return 'Continue — Add Details';
-    if (step === 3) return 'Continue — Schedule Visit';
-    if (step === 4) return 'Continue — Address & Payment';
+    if (step === 2) return 'Continue — Schedule Visit';
+    if (step === 3) return 'Continue — Address & Payment';
     return `Pay ₹${advanceAmt} & Confirm Booking`;
   };
   const getBarBtnDisabled = () => {
@@ -292,11 +277,10 @@ const BookingFlow = () => {
     if (step === 2) return !step2Valid;
     if (step === 3) return !step3Valid;
     if (step === 4) return !step4Valid;
-    if (step === 5) return !step5Valid;
     return false;
   };
   const handleBarBtn = () => {
-    if (step < 5) goNext();
+    if (step < 4) goNext();
     else handleConfirmBooking();
   };
 
@@ -304,32 +288,30 @@ const BookingFlow = () => {
     <div className="min-h-screen bg-[#F5F7FA] flex flex-col font-sans">
 
       {/* ── Fixed Header ── */}
-      <div className="bg-white sticky top-0 z-20 shadow-sm border-b border-slate-100">
-        <div className="px-4 pt-4 pb-2 flex items-center gap-3">
-          <button
-            onClick={goBack}
-            className="p-1.5 hover:bg-slate-100 rounded-full transition-colors flex-shrink-0"
-          >
-            <ArrowLeft className="h-5 w-5 text-slate-700" />
-          </button>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-[15px] font-extrabold text-slate-900 leading-tight">{title}</h1>
-            <p className="text-[10px] text-slate-500 font-medium">{subtitle}</p>
-          </div>
-          {/* Step label */}
-          <div className="flex-shrink-0 bg-[#EAF4FF] border border-[#0D47A1]/20 px-3 py-1.5 rounded-full">
-            <span className="text-[10px] font-extrabold text-[#0D47A1]">Step {step} of 5</span>
-          </div>
+      <div className="bg-white sticky top-0 z-20 shadow-sm border-b border-slate-100 px-4 py-3 flex items-center justify-between">
+        <button
+          onClick={goBack}
+          className="p-1 hover:bg-slate-100 rounded-full transition-colors flex-shrink-0"
+        >
+          <ArrowLeft className="h-5 w-5 text-slate-700" />
+        </button>
+        
+        <div className="flex-1 flex flex-col items-center justify-center">
+          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Step {step} of 4</span>
+          <StepBar currentStep={step} total={4} />
         </div>
-        <div className="px-3 pb-3">
-          <StepBar currentStep={step} />
-        </div>
+        
+        <div className="w-7 h-7 flex-shrink-0" />
       </div>
 
       {/* ── Page Content ── */}
-      <div className="flex-1 overflow-y-auto pb-36">
+      <div className={`flex-1 overflow-y-auto ${step === 3 ? 'pb-56' : 'pb-36'}`}>
 
-        {/* ══ STEP 1: SELECT TYPE & QUANTITY ═══════════════════════════════════ */}
+        {/* Step Title & Subtitle */}
+        <div className="px-5 pt-6 pb-1">
+          <h1 className="text-[22px] font-black text-slate-900 leading-tight">{title}</h1>
+          <p className="text-[12px] text-slate-500 font-semibold mt-1">{subtitle}</p>
+        </div>
         {step === 1 && (
           <div className="px-4 pt-5 flex flex-col gap-5">
 
@@ -459,129 +441,53 @@ const BookingFlow = () => {
           </div>
         )}
 
-        {/* ══ STEP 3: ADDITIONAL DETAILS ═══════════════════════════════════════ */}
+        {/* ══ STEP 3: SCHEDULE VISIT (BRAND, DATE, TIME) ══════════════════════ */}
         {step === 3 && (
           <div className="px-4 pt-5 flex flex-col gap-5">
 
             {/* Brand dropdown */}
-            <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm flex flex-col gap-3">
-              <div>
-                <p className="text-[13px] font-extrabold text-slate-900 mb-1">Brand</p>
-                <div className="relative">
-                  <select
-                    value={brand}
-                    onChange={(e) => setBrand(e.target.value)}
-                    className={`w-full appearance-none px-4 py-3 pr-10 bg-slate-50 border rounded-xl text-[12px] font-semibold outline-none transition-all ${
-                      brand
-                        ? 'border-[#0D47A1] text-slate-800 focus:ring-1 focus:ring-[#0D47A1]'
-                        : 'border-slate-200 text-slate-400 focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1]'
-                    }`}
-                  >
-                    <option value="" disabled>Select Brand</option>
-                    {data.brands.map(b => (
-                      <option key={b} value={b}>{b}</option>
-                    ))}
-                    <option value="Other">Other / Not Listed</option>
-                  </select>
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                </div>
+            <div>
+              <p className="text-[12px] font-extrabold text-slate-800 mb-2">Brand (Optional)</p>
+              <div className="relative">
+                <select
+                  value={brand}
+                  onChange={(e) => setBrand(e.target.value)}
+                  className={`w-full appearance-none px-4 py-3.5 pr-10 bg-white border border-slate-200 rounded-2xl text-[13px] font-semibold outline-none transition-all ${
+                    brand ? 'text-slate-800 border-slate-300' : 'text-slate-400'
+                  }`}
+                >
+                  <option value="" disabled>Select Brand</option>
+                  {data.brands.map(b => (
+                    <option key={b} value={b}>{b}</option>
+                  ))}
+                  <option value="Other">Other / Not Listed</option>
+                </select>
+                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
               </div>
-
-              {/* Model (optional) */}
-              <div>
-                <p className="text-[13px] font-extrabold text-slate-900 mb-1">
-                  Model <span className="text-[10px] text-slate-400 font-medium">(Optional)</span>
-                </p>
-                <input
-                  type="text"
-                  value={model}
-                  onChange={(e) => setModel(e.target.value)}
-                  placeholder="Enter model / Inverter"
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[12px] font-medium text-slate-800 placeholder-slate-400 focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] outline-none transition-all"
-                />
-              </div>
+              <button
+                type="button"
+                onClick={() => setBrand('Other')}
+                className="text-[#0D47A1] text-[12px] font-bold mt-2 hover:underline text-left block"
+              >
+                Not sure? Skip
+              </button>
             </div>
-
-            {/* Installation Location — only for installation service */}
-            {isInstallationService && (
-              <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
-                <div className="flex items-center gap-2 mb-3">
-                  <p className="text-[13px] font-extrabold text-slate-900">Installation Location</p>
-                  <span className="text-[9px] bg-[#EAF4FF] text-[#0D47A1] font-extrabold px-2 py-0.5 rounded-full">
-                    Helps us bring the right equipment
-                  </span>
-                </div>
-                <div className="flex flex-col gap-2.5">
-                  {INSTALL_LOCATIONS.map((loc) => {
-                    const isSelected = installLocation === loc;
-                    return (
-                      <button
-                        key={loc}
-                        onClick={() => setInstallLocation(loc)}
-                        className={`flex items-center gap-3 py-2.5 px-3 rounded-xl border transition-all ${
-                          isSelected
-                            ? 'border-[#0D47A1] bg-[#EAF4FF]'
-                            : 'border-transparent hover:border-slate-200'
-                        }`}
-                      >
-                        {/* Radio */}
-                        <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all ${
-                          isSelected ? 'border-[#0D47A1] bg-[#0D47A1]' : 'border-slate-300 bg-white'
-                        }`}>
-                          {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
-                        </div>
-                        <span className={`text-[12px] font-semibold ${isSelected ? 'text-[#0D47A1]' : 'text-slate-700'}`}>
-                          {loc}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Why brand matters */}
-            <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
-              <p className="text-[12px] font-extrabold text-slate-900 mb-2">Why brand matters?</p>
-              <div className="flex flex-col gap-1.5">
-                {(data.whyBrandPoints || [
-                  'Technicians carry brand-specific spare parts',
-                  'Faster diagnosis with brand expertise',
-                  'Correct refrigerant / chemicals used',
-                ]).map((item, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <div className="w-4 h-4 rounded-full bg-[#E8F5E9] flex items-center justify-center flex-shrink-0">
-                      <Check className="w-2.5 h-2.5 text-[#2E7D32]" />
-                    </div>
-                    <span className="text-[10px] text-slate-600 font-medium">{item}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ══ STEP 4: SCHEDULE VISIT ════════════════════════════════════════════ */}
-        {step === 4 && (
-          <div className="px-4 pt-5 flex flex-col gap-5">
 
             {/* Date picker */}
-            <div>
-              {/* Heading row with calendar icon */}
+            <div className="mt-2">
               <div className="flex items-center justify-between mb-3">
-                <p className="text-[12px] font-extrabold text-slate-900">Select Date</p>
+                <p className="text-[12px] font-extrabold text-slate-800">Select Date</p>
                 <button
                   onClick={() => dateInputRef.current?.showPicker?.() || dateInputRef.current?.click()}
-                  className="w-8 h-8 rounded-xl bg-[#EAF4FF] flex items-center justify-center hover:bg-[#D6ECFF] active:scale-90 transition-all"
+                  className="w-8 h-8 rounded-xl bg-[#EAF4FF] flex items-center justify-center hover:bg-[#D6ECFF] transition-all"
                   title="Open calendar"
                 >
                   <CalendarDays className="w-4 h-4 text-[#0D47A1]" />
                 </button>
-                {/* Hidden native date input */}
                 <input
                   ref={dateInputRef}
                   type="date"
-                  min={new Date(Date.now() + 86400000).toISOString().split('T')[0]}
+                  min={new Date().toISOString().split('T')[0]}
                   className="sr-only"
                   onChange={(e) => {
                     if (!e.target.value) return;
@@ -596,25 +502,24 @@ const BookingFlow = () => {
               <div className="flex gap-2.5 overflow-x-auto no-scrollbar pb-1">
                 {upcomingDates.map((d) => {
                   const isActive = selectedDate === d.full;
-                  const parts = d.label.split(' ');
                   return (
                     <button
                       key={d.full}
                       onClick={() => setSelectedDate(d.full)}
-                      className={`flex flex-col items-center justify-center min-w-[64px] h-[72px] rounded-2xl border-2 transition-all flex-shrink-0 ${
+                      className={`flex flex-col items-center justify-center min-w-[62px] h-[78px] rounded-2xl border transition-all flex-shrink-0 ${
                         isActive
-                          ? 'border-[#0D47A1] bg-[#EAF4FF] shadow-sm'
-                          : 'border-slate-200 bg-white hover:border-slate-300'
+                          ? 'border-[#0D47A1] bg-[#0D47A1] text-white shadow-sm'
+                          : 'border-slate-200 bg-white hover:border-slate-300 text-slate-800'
                       }`}
                     >
-                      <span className={`text-[9px] font-bold uppercase ${isActive ? 'text-[#0D47A1]' : 'text-slate-400'}`}>
-                        {parts[0]}
+                      <span className={`text-[10px] font-bold ${isActive ? 'text-white/85' : 'text-slate-400'}`}>
+                        {d.dayName}
                       </span>
-                      <span className={`text-[20px] font-extrabold mt-0.5 ${isActive ? 'text-[#0D47A1]' : 'text-slate-800'}`}>
-                        {parts[1]}
+                      <span className={`text-[20px] font-extrabold mt-0.5 leading-none ${isActive ? 'text-white' : 'text-slate-800'}`}>
+                        {d.dayNum}
                       </span>
-                      <span className={`text-[9px] font-semibold ${isActive ? 'text-[#0D47A1]/70' : 'text-slate-400'}`}>
-                        {d.sub}
+                      <span className={`text-[10px] font-semibold mt-0.5 ${isActive ? 'text-white/85' : 'text-slate-400'}`}>
+                        {d.month}
                       </span>
                     </button>
                   );
@@ -622,35 +527,69 @@ const BookingFlow = () => {
               </div>
             </div>
 
-            {/* Time group selector */}
-            <div>
-              <p className="text-[12px] font-extrabold text-slate-900 mb-3">Select Time Slot</p>
+            {/* Time Slot selector */}
+            <div className="mt-2">
+              <p className="text-[12px] font-extrabold text-slate-800 mb-1">Select Time Slot</p>
+              <p className="text-[10px] text-slate-400 font-semibold mb-3">Choose a convenient time</p>
               <div className="flex flex-col gap-2.5">
-                {TIME_GROUPS.map((tg) => (
-                  <TimeGroupRow
-                    key={tg.id}
-                    emoji={tg.emoji}
-                    label={tg.label}
-                    timeRange={tg.timeRange}
-                    selected={timeGroup === tg.id}
-                    onClick={() => setTimeGroup(tg.id)}
-                  />
-                ))}
+                {TIME_GROUPS.map((tg) => {
+                  const isSelected = timeGroup === tg.id;
+                  return (
+                    <button
+                      key={tg.id}
+                      onClick={() => setTimeGroup(tg.id)}
+                      className={`w-full flex items-center gap-3 p-3.5 rounded-2xl border transition-all duration-200 text-left ${
+                        isSelected
+                          ? 'border-[#0D47A1] bg-white shadow-sm'
+                          : 'border-slate-200 bg-white hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="flex-shrink-0">
+                        {tg.icon}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-[13px] font-extrabold text-slate-800 leading-none">{tg.label}</p>
+                        <p className="text-[10px] text-slate-400 font-semibold mt-1">{tg.timeRange}</p>
+                      </div>
+                      {/* Radio circle */}
+                      <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all ${
+                        isSelected ? 'border-[#0D47A1]' : 'border-slate-300'
+                      }`}>
+                        {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-[#0D47A1]" />}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Note */}
-            <div className="flex items-center gap-2 bg-[#F8F9FA] border border-slate-100 rounded-xl px-4 py-3">
-              <span className="text-sm">⏰</span>
-              <p className="text-[10px] text-slate-500 font-semibold">
-                Your time is confirmed once booking is done.
-              </p>
+            {/* Visiting Charge Box */}
+            <div className="mt-4 flex flex-col gap-3">
+              <div className="bg-[#F4F8FF] border border-[#E1E8F5] rounded-2xl p-4 flex justify-between items-start">
+                <div className="flex-1">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span className="text-[13px] font-extrabold text-slate-800">Visiting Charge</span>
+                    <Info className="w-3.5 h-3.5 text-slate-400 cursor-pointer" />
+                  </div>
+                  <p className="text-[10px] text-slate-500 font-semibold leading-relaxed">
+                    A visiting charge of ₹199 will be collected in advance.
+                  </p>
+                </div>
+                <div className="text-[20px] font-black text-slate-900 ml-4 leading-none">
+                  ₹199
+                </div>
+              </div>
+              <div className="flex items-center gap-2 px-1 text-[11px] text-emerald-600 font-bold">
+                <ShieldCheck className="w-4 h-4 text-[#22C55E] flex-shrink-0" />
+                <span>This amount will be adjusted in your final bill.</span>
+              </div>
             </div>
+
           </div>
         )}
 
-        {/* ══ STEP 5: ADDRESS & PAYMENT ══════════════════════════════════════ */}
-        {step === 5 && (
+        {/* ══ STEP 4: ADDRESS & PAYMENT ══════════════════════════════════════ */}
+        {step === 4 && (
           <div className="px-4 pt-5 flex flex-col gap-4">
 
             {/* Address Details */}
@@ -841,17 +780,55 @@ const BookingFlow = () => {
       </div>
 
       {/* ── Fixed Bottom Bar ── */}
-      <BottomBar
-        icon={selectedServiceData?.icon || '🔧'}
-        label={getBarLabel()}
-        sublabel={getBarSublabel()}
-        price={step === 5 && paymentMode === 'advance' ? advanceAmt : totalPrice}
-        btnLabel={getBarBtnLabel()}
-        btnDisabled={getBarBtnDisabled()}
-        onBtn={handleBarBtn}
-        onExpand={() => setPriceExpanded(p => !p)}
-        expanded={priceExpanded}
-      />
+      {step !== 3 ? (
+        <BottomBar
+          icon={selectedServiceData?.icon || '🔧'}
+          label={getBarLabel()}
+          sublabel={getBarSublabel()}
+          price={step === 4 && paymentMode === 'advance' ? advanceAmt : totalPrice}
+          btnLabel={getBarBtnLabel()}
+          btnDisabled={getBarBtnDisabled()}
+          onBtn={handleBarBtn}
+          onExpand={() => setPriceExpanded(p => !p)}
+          expanded={priceExpanded}
+        />
+      ) : (
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 shadow-[0_-4px_12px_rgba(0,0,0,0.07)] z-30 px-4 pb-4 pt-3 flex flex-col gap-3">
+          {/* Summary Card */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-3 flex items-center justify-between shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-500">
+                <CalendarDays className="w-5 h-5 text-slate-600" />
+              </div>
+              <div className="text-left">
+                <p className="text-[13px] font-extrabold text-slate-800 leading-tight">
+                  {selectedDate ? selectedDate.split(' ').slice(0, 3).join(' ') : 'Select Date'}
+                </p>
+                <p className="text-[10px] text-slate-400 font-bold mt-0.5">
+                  {timeGroup ? TIME_GROUPS.find(t => t.id === timeGroup)?.timeRange : 'Select Time Slot'}
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col items-end">
+              <span className="text-[15px] font-black text-slate-800 leading-none">₹{advanceAmt}</span>
+              <span className="text-[9px] text-slate-400 font-semibold mt-1 uppercase tracking-wider">Visiting Charge</span>
+            </div>
+          </div>
+          {/* Button */}
+          <button
+            disabled={!step3Valid}
+            onClick={goNext}
+            className={`w-full font-extrabold py-3.5 rounded-2xl text-[14px] transition-all active:scale-[0.98] flex items-center justify-center gap-2 ${
+              !step3Valid
+                ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                : 'bg-[#0D47A1] text-white hover:bg-[#1565C0] shadow-md shadow-[#0D47A1]/20'
+            }`}
+          >
+            Continue
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
+      )}
     </div>
   );
 };
