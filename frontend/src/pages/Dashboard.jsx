@@ -502,16 +502,8 @@ const Dashboard = ({ defaultType }) => {
 
         {/* Brands & Offers */}
         <div>
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-bold text-text-primary">Brands & Offers</h2>
-            </div>
-            <button 
-              onClick={() => navigate('/all-brands')}
-              className="text-sm font-semibold text-[#0B4EA2] hover:text-blue-800 transition-colors"
-            >
-              See All
-            </button>
+          <div className="flex items-center mb-4">
+            <h2 className="text-lg font-bold text-text-primary">Brands & Offers</h2>
           </div>
 
           {/* Horizontal Scrollable Carousel */}

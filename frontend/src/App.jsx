@@ -30,7 +30,6 @@ import BuyNew from './pages/BuyNew';
 import ExtendWarranty from './pages/ExtendWarranty';
 import BuyProduct from './pages/BuyProduct';
 import PartnerWarranty from './pages/PartnerWarranty';
-import AllBrands from './pages/AllBrands';
 import SelectBrand from './pages/SelectBrand';
 import SelectProduct from './pages/SelectProduct';
 import SelectIssue from './pages/SelectIssue';
@@ -141,7 +140,6 @@ function App() {
         <Route path="/dashboard/non-warranty" element={<Dashboard defaultType="non-warranty" />} />
         <Route path="/dashboard/in-warranty" element={<Dashboard defaultType="in-warranty" />} />
         <Route path="/partner-warranty" element={<PartnerWarranty />} />
-        <Route path="/all-brands" element={<AllBrands />} />
         <Route path="/partner-warranty/brands/:category" element={<SelectBrand />} />
         <Route path="/partner-warranty/products/:category/:brand" element={<SelectProduct />} />
         <Route path="/partner-warranty/issues/:category/:brand/:product" element={<SelectIssue />} />
