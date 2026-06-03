@@ -20,7 +20,11 @@ const CardPayment = () => {
 
   const handlePay = (e) => {
     e.preventDefault();
-    if (isProductBuy) {
+    const meta = paymentState.bookingMeta;
+    if (meta) {
+      const params = new URLSearchParams({ type: 'service', ...meta });
+      navigate(`/booking-success?${params.toString()}`);
+    } else if (isProductBuy) {
       navigate(`/booking-success?service=${encodeURIComponent(itemName)}&type=product&price=${itemPrice}`);
     } else {
       navigate(`/booking-success?service=${encodeURIComponent(itemName)}`);

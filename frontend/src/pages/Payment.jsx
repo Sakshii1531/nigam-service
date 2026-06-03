@@ -14,7 +14,6 @@ const Payment = () => {
   const itemPrice = paymentState.price !== undefined ? paymentState.price : 5.00;
 
   const handlePay = () => {
-    // Navigate to the selected method's relevant page
     if (selectedMethod === 'card') {
       navigate('/payment/card', { state: paymentState });
     } else if (selectedMethod === 'upi') {

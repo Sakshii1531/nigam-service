@@ -15,7 +15,7 @@ const Tracking = () => {
       <div className="absolute top-0 left-0 right-0 z-10 p-4">
         <div className="bg-white/90 backdrop-blur-sm p-3 rounded-2xl flex items-center shadow-sm border border-border-color">
           <button 
-            onClick={() => navigate('/dashboard')}
+            onClick={() => navigate(-1)}
             className="p-1.5 hover:bg-slate-100 rounded-full transition-colors"
           >
             <ArrowLeft className="h-5 w-5 text-[#0D47A1]" />
