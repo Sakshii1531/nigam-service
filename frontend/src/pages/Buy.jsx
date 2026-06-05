@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams, useLocation, useSearchParams } from 'react-router-dom';
 import { 
   ArrowLeft, Shield, Award, Check, ChevronRight, ShoppingCart,
   Home as HomeIcon, Calendar, Wrench, User, Sparkles, Zap, PackageOpen,
@@ -34,26 +34,105 @@ import roPostCarbonImg from '../assets/ro_post_carbon.png';
 
 const Buy = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const params = useParams();
 
-  // Wizard steps: 1 (Home), 2 (Select Appliance), 3 (Select Category Tiers), 4 (Review & Confirm), 5 (Enter Details), 6 (Payment), 7 (Success Certificate), 8 (My Warranty View)
-  const [step, setStep] = useState(1); 
-  const [selectedAppliance, setSelectedAppliance] = useState(null);
-  const [selectedTierIndex, setSelectedTierIndex] = useState(0);
-  const [showSuccess, setShowSuccess] = useState(false);
+  // Derive step from URL pathname
+  const pathname = location.pathname;
+  let step = 1;
+  if (pathname.includes('/buy/select-appliance')) step = 2;
+  else if (pathname.includes('/buy/select-tier')) step = 3;
+  else if (pathname.includes('/buy/enter-details')) step = 5;
+  else if (pathname.includes('/buy/review')) step = 4;
+  else if (pathname.includes('/buy/payment')) step = 6;
+  else if (pathname.includes('/buy/success')) step = 7;
+  else if (pathname.includes('/buy/my-warranty')) step = 8;
+  else if (pathname.includes('/buy/how-it-works')) step = 9;
+  else if (pathname.includes('/buy/warranty-details')) step = 10;
+
+  // Appliance & tier from URL params + query string
+  const [searchParams] = useSearchParams();
+  const selectedAppliance = params.appliance ? decodeURIComponent(params.appliance) : null;
+  const selectedTierIndex = params.tierIndex 
+    ? parseInt(params.tierIndex) 
+    : searchParams.get('tier') 
+      ? parseInt(searchParams.get('tier')) 
+      : 0;
+
+  // Helper to navigate to a step with current context
+  const goTo = (targetStep, appliance, tierIndex) => {
+    const app = encodeURIComponent(appliance || selectedAppliance || '');
+    const ti = tierIndex !== undefined ? tierIndex : selectedTierIndex;
+    if (targetStep === 1) navigate('/buy');
+    else if (targetStep === 2) navigate('/buy/select-appliance');
+    else if (targetStep === 3) navigate(`/buy/select-tier/${app}`);
+    else if (targetStep === 5) navigate(`/buy/enter-details/${app}/${ti}`);
+    else if (targetStep === 4) navigate(`/buy/review/${app}/${ti}`);
+    else if (targetStep === 6) navigate(`/buy/payment/${app}/${ti}`);
+    else if (targetStep === 7) navigate(`/buy/success/${app}/${ti}`);
+    else if (targetStep === 8) navigate('/buy/my-warranty');
+    else if (targetStep === 9) navigate('/buy/how-it-works');
+    else if (targetStep === 10) navigate('/buy/warranty-details');
+    else if (targetStep === 11) navigate('/buy/accessories');
+    else if (targetStep === 12) navigate('/buy/all-appliances');
+  };
+
+  const setStep = (s) => goTo(s);
 
   // Form states for Step 5 & 6 & 8
+  const [showSuccess, setShowSuccess] = useState(false);
   const [fullName, setFullName] = useState("Rahul Sharma");
   const [mobileNumber, setMobileNumber] = useState("9876543210");
   const [email, setEmail] = useState("rahulsharma@gmail.com");
   const [pincode, setPincode] = useState("110054");
-  const [selectedBrand, setSelectedBrand] = useState("Samsung");
-  const [modelNumber, setModelNumber] = useState("UA32T4010ARXXL");
-  const [purchaseDate, setPurchaseDate] = useState("2024-05-12");
-  const [invoiceFile, setInvoiceFile] = useState({ name: "invoice_samsung_tv.pdf" });
+  const [selectedBrand, setSelectedBrand] = useState("");
+  const [modelNumber, setModelNumber] = useState("");
+  const [purchaseDate, setPurchaseDate] = useState("");
+  const [invoiceFile, setInvoiceFile] = useState(null);
   const [paymentMode, setPaymentMode] = useState("UPI");
   const [activeWarrantyTab, setActiveWarrantyTab] = useState("Active");
   const [selectedWarranty, setSelectedWarranty] = useState(null);
   const [cameFromMore, setCameFromMore] = useState(false);
+
+  // Product-specific brands per appliance
+  const getBrandsForAppliance = (appliance) => {
+    const n = appliance?.toLowerCase() || '';
+    if (n.includes('television') || n.includes('tv'))
+      return ['Samsung', 'LG', 'Sony', 'Panasonic', 'OnePlus', 'Mi'];
+    if (n.includes('refrigerator') || n.includes('fridge'))
+      return ['Samsung', 'LG', 'Whirlpool', 'Haier', 'Godrej', 'Voltas'];
+    if (n.includes('washing') || n.includes('machine'))
+      return ['Samsung', 'LG', 'Whirlpool', 'IFB', 'Bosch', 'Haier'];
+    if (n.includes('ac') || n.includes('conditioner'))
+      return ['Daikin', 'LG', 'Voltas', 'Blue Star', 'Hitachi', 'Carrier'];
+    if (n.includes('purifier'))
+      return ['Kent', 'Aquaguard', 'Livpure', 'Pureit', 'HUL', 'AO Smith'];
+    if (n.includes('geyser'))
+      return ['Havells', 'Bajaj', 'AO Smith', 'Racold', 'Crompton', 'V-Guard'];
+    return ['Samsung', 'LG', 'Sony', 'Panasonic', 'Whirlpool', 'Daikin'];
+  };
+
+  // Product-specific model placeholder
+  const getModelPlaceholder = (appliance) => {
+    const n = appliance?.toLowerCase() || '';
+    if (n.includes('television') || n.includes('tv')) return 'e.g. UA32T4010ARXXL';
+    if (n.includes('refrigerator') || n.includes('fridge')) return 'e.g. RT28T3032S8';
+    if (n.includes('washing') || n.includes('machine')) return 'e.g. WA70T4262GG';
+    if (n.includes('ac') || n.includes('conditioner')) return 'e.g. 1.5T FTKY50';
+    if (n.includes('purifier')) return 'e.g. KIM11PM';
+    return 'Enter model number';
+  };
+
+  // Product-specific invoice filename
+  const getInvoiceLabel = (appliance) => {
+    const n = appliance?.toLowerCase() || '';
+    if (n.includes('television') || n.includes('tv')) return 'invoice_tv.pdf';
+    if (n.includes('refrigerator') || n.includes('fridge')) return 'invoice_fridge.pdf';
+    if (n.includes('washing') || n.includes('machine')) return 'invoice_washing_machine.pdf';
+    if (n.includes('ac') || n.includes('conditioner')) return 'invoice_ac.pdf';
+    if (n.includes('purifier')) return 'invoice_water_purifier.pdf';
+    return 'invoice.pdf';
+  };
 
   // Dynamic pricing tiers by product category
   const getApplianceTiers = (applianceName) => {
@@ -102,6 +181,9 @@ const Buy = () => {
 
   const selectedTiers = getApplianceTiers(selectedAppliance);
   const selectedTier = selectedTiers[selectedTierIndex] || selectedTiers[0] || { label: 'Standard Category Pack', price: 999 };
+  const applianceBrands = getBrandsForAppliance(selectedAppliance);
+  const defaultBrand = applianceBrands[0] || 'Samsung';
+  const activeBrand = selectedBrand || defaultBrand;
 
   return (
     <div className="min-h-screen bg-bg-light flex flex-col pb-24 relative">
@@ -111,25 +193,16 @@ const Buy = () => {
         <div className="bg-white px-6 py-4 flex items-center justify-between border-b border-border-color shadow-sm sticky top-0 z-30">
           <button 
             onClick={() => {
-              if (step === 2) setStep(1);
-              else if (step === 3) {
-                if (cameFromMore) {
-                  setStep(12);
-                } else {
-                  setStep(2);
-                }
-              }
-              else if (step === 4) setStep(3);
-              else if (step === 5) setStep(4);
-              else if (step === 6) setStep(5);
-              else if (step === 8) setStep(1);
-              else if (step === 9) setStep(2);
-              else if (step === 10) setStep(8);
-              else if (step === 11) setStep(1);
-              else if (step === 12) {
-                setCameFromMore(false);
-                setStep(2);
-              }
+              if (step === 2) navigate('/buy');
+              else if (step === 3) navigate('/buy/select-appliance');
+              else if (step === 5) navigate(`/buy/select-tier/${encodeURIComponent(selectedAppliance || '')}`);
+              else if (step === 4) navigate(`/buy/enter-details/${encodeURIComponent(selectedAppliance || '')}/${selectedTierIndex}`);
+              else if (step === 6) navigate(`/buy/review/${encodeURIComponent(selectedAppliance || '')}/${selectedTierIndex}`);
+              else if (step === 8) navigate('/buy');
+              else if (step === 9) navigate('/buy/select-appliance');
+              else if (step === 10) navigate('/buy/my-warranty');
+              else if (step === 11) navigate('/buy');
+              else if (step === 12) navigate('/buy/select-appliance');
             }}
             className="p-2 bg-slate-50 hover:bg-slate-100 rounded-full transition-colors flex items-center justify-center cursor-pointer border border-slate-100"
           >
@@ -160,21 +233,21 @@ const Buy = () => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
-            className="flex flex-col gap-6"
+            className="flex flex-col gap-5"
           >
             {/* Location & Profile Bar */}
             <div className="flex justify-between items-center -mt-2">
               <div className="flex items-center gap-2">
-                <MapPin className="h-5 w-5 text-brand-blue" />
+                <MapPin className="h-4 w-4 text-brand-blue" />
                 <div>
-                  <span className="text-[10px] text-text-secondary block font-bold uppercase tracking-wider">Location</span>
+                  <span className="text-[10px] text-text-secondary block font-semibold">Your Location</span>
                   <span className="text-sm font-bold text-text-primary">Civil Lines, Delhi</span>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2.5">
                 <button className="w-9 h-9 bg-white hover:bg-slate-50 rounded-full relative flex items-center justify-center border border-slate-200 shadow-sm">
-                  <Bell className="h-5 w-5 text-text-primary" />
-                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
+                  <Bell className="h-4.5 w-4.5 text-text-primary" />
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
                 </button>
                 <div 
                   onClick={() => navigate('/profile')}
@@ -187,138 +260,110 @@ const Buy = () => {
 
             {/* Search Bar */}
             <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-text-secondary" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <input
                 type="text"
                 placeholder="Search for services (AC, Geyser...)"
-                className="w-full pl-12 pr-4 py-1.5 bg-white border border-border-color rounded-2xl focus:border-brand-blue focus:ring-1 focus:ring-brand-blue outline-none transition-all text-xs shadow-sm"
+                className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:border-brand-blue focus:ring-1 focus:ring-brand-blue outline-none transition-all text-xs shadow-sm"
               />
             </div>
 
-            {/* Horizontal Categories */}
-            <div className="flex overflow-x-auto gap-6 pb-2.5 snap-x no-scrollbar">
+            {/* Service Type Tabs — AMC, Extended Warranty, Exchange, Buy New */}
+            <div className="flex justify-between pb-1">
               {[
-                { name: 'For You', icon: <Sparkles className="h-5 w-5" />, image3d: star3d },
-                { name: 'AC', icon: <Wind className="h-5 w-5" />, image3d: ac3d, appliance: 'Air Conditioner' },
-                { name: 'WM', icon: <Wrench className="h-5 w-5" />, image3d: wm3d, appliance: 'Washing Machine' },
-                { name: 'Fridge', icon: <PackageOpen className="h-5 w-5" />, image3d: fridge3d, appliance: 'Refrigerator' },
-                { name: 'TV', icon: <Tv className="h-5 w-5" />, image3d: tv3d, appliance: 'Television' },
-                { name: 'Geyser', icon: <Zap className="h-5 w-5" />, image3d: geyser3d, appliance: 'Geyser' },
-                { name: 'RO', icon: <Award className="h-5 w-5" />, image3d: ro3d, appliance: 'Water Purifier' }
-              ].map((cat, index) => (
-                <div 
-                  key={index}
-                  className="flex flex-col items-center gap-2 cursor-pointer flex-shrink-0 snap-start group"
-                  onClick={() => {
-                    if (cat.appliance) {
-                      setSelectedAppliance(cat.appliance);
-                      setSelectedTierIndex(0);
-                      setStep(3);
-                    } else {
-                      setStep(2);
-                    }
-                  }}
+                { name: 'AMC', icon: <Wrench className="h-5 w-5" />, onClick: () => navigate('/buy/amc') },
+                { name: 'Extended\nWarranty', icon: <Shield className="h-5 w-5" />, onClick: () => setStep(2), active: true },
+                { name: 'Exchange', icon: <PackageOpen className="h-5 w-5" />, onClick: () => navigate('/buy/exchange') },
+                { name: 'Buy New', icon: <ShoppingCart className="h-5 w-5" />, onClick: () => navigate('/buy-new') },
+              ].map((tab, idx) => (
+                <div
+                  key={idx}
+                  onClick={tab.onClick}
+                  className={`flex flex-col items-center gap-1.5 cursor-pointer flex-shrink-0 group`}
                 >
-                  <div className="w-10 h-10 flex items-center justify-center">
-                    {cat.image3d ? (
-                      <img src={cat.image3d} alt={cat.name} className="w-full h-full object-contain" />
-                    ) : (
-                      <div className="text-brand-blue flex items-center justify-center">
-                        {cat.icon}
-                      </div>
-                    )}
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-sm transition-all ${
+                    tab.active
+                      ? 'bg-brand-blue text-white shadow-md shadow-brand-blue/20'
+                      : 'bg-white border border-slate-200 text-brand-blue hover:border-brand-blue/40'
+                  }`}>
+                    {tab.icon}
                   </div>
-                  <span className="text-[10px] font-bold text-brand-blue uppercase tracking-wider text-center">
-                    {cat.name}
+                  <span className={`text-[10px] font-bold text-center leading-tight whitespace-pre-line ${
+                    tab.active ? 'text-brand-blue' : 'text-slate-600'
+                  }`}>
+                    {tab.name}
                   </span>
                 </div>
               ))}
             </div>
 
-            {/* SMART PROTECT PROMO CTA BANNER */}
-            <div className="bg-gradient-to-br from-[#E3F2FD] to-[#BBDEFB] rounded-3xl p-5 border border-blue-100 shadow-sm flex items-center gap-4 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-blue-300/20 rounded-full blur-2xl"></div>
+            {/* PROMO BANNER — Protect your appliances with Extended Warranty */}
+            <div className="bg-gradient-to-br from-[#E8F1FF] to-[#C9DEFF] rounded-2xl p-4 border border-blue-100 shadow-sm flex items-center gap-4 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-20 h-20 bg-blue-300/20 rounded-full blur-2xl"></div>
               
-              {/* Left Side Illustration */}
-              <div className="w-[110px] h-[130px] flex-shrink-0 relative flex items-end justify-center rounded-2xl overflow-hidden bg-gradient-to-t from-brand-blue to-blue-300 shadow-inner">
-                <div className="absolute inset-0 bg-cover bg-center mix-blend-overlay opacity-30" style={{ backgroundImage: `url(${warrantyBanner2})` }}></div>
-                <div className="w-16 h-20 rounded-full bg-white/20 absolute -bottom-4"></div>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <Shield className="h-14 w-14 text-white drop-shadow-md animate-pulse" />
+              {/* Left shield illustration */}
+              <div className="w-[100px] h-[120px] flex-shrink-0 relative flex items-center justify-center rounded-2xl overflow-hidden bg-gradient-to-b from-brand-blue/90 to-[#0B4EA2] shadow-md">
+                <div className="absolute inset-0 flex items-end justify-center pb-2">
+                  <img src={fridgeImg} alt="Appliance" className="w-16 h-20 object-contain mix-blend-luminosity opacity-60" />
                 </div>
+                <Shield className="h-12 w-12 text-white drop-shadow-lg z-10 opacity-80" />
               </div>
 
-              {/* Right Side Info */}
+              {/* Right content */}
               <div className="flex-1 flex flex-col items-start relative z-10">
-                <span className="text-[9px] bg-brand-navy text-white font-extrabold px-2.5 py-0.5 rounded-full tracking-wider mb-1.5 uppercase">
-                  SMART PROTECT
-                </span>
                 <h3 className="text-sm font-black text-brand-navy leading-tight mb-2">
-                  Extended Warranty for Your Appliances
+                  Protect your appliances<br />with Extended Warranty
                 </h3>
                 <ul className="flex flex-col gap-1 mb-3">
-                  <li className="flex items-center gap-1.5 text-[10px] font-bold text-slate-800">
-                    <Check className="h-3.5 w-3.5 text-green-600 flex-shrink-0" />
-                    1 Year Warranty
+                  <li className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-700">
+                    <Check className="h-3 w-3 text-green-600 flex-shrink-0" /> Genuine Parts
                   </li>
-                  <li className="flex items-center gap-1.5 text-[10px] font-bold text-slate-800">
-                    <Check className="h-3.5 w-3.5 text-green-600 flex-shrink-0" />
-                    Expert Support
+                  <li className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-700">
+                    <Check className="h-3 w-3 text-green-600 flex-shrink-0" /> Expert Support
                   </li>
-                  <li className="flex items-center gap-1.5 text-[10px] font-bold text-slate-800">
-                    <Check className="h-3.5 w-3.5 text-green-600 flex-shrink-0" />
-                    Hassle Free Claims
+                  <li className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-700">
+                    <Check className="h-3 w-3 text-green-600 flex-shrink-0" /> Hassle Free Claims
                   </li>
                 </ul>
                 <button 
                   onClick={() => setStep(2)}
-                  className="bg-brand-yellow hover:bg-yellow-400 text-brand-navy text-[10px] font-black px-4 py-2 rounded-xl shadow-md transition-all active:scale-95 cursor-pointer"
+                  className="bg-brand-blue hover:bg-blue-800 text-white text-[10px] font-black px-4 py-2 rounded-xl shadow-md transition-all active:scale-95 cursor-pointer"
                 >
-                  Buy Now
+                  Explore Plans
                 </button>
               </div>
             </div>
 
-            {/* Extended Warranty Grid */}
+            {/* Shop by Category */}
             <div className="flex flex-col gap-3">
-              <div className="flex justify-between items-center px-1">
-                <h3 className="text-sm font-black text-brand-navy">Extended Warranty</h3>
+              <div className="flex justify-between items-center">
+                <h3 className="text-sm font-black text-brand-navy">Shop by Category</h3>
                 <button 
                   onClick={() => setStep(2)}
-                  className="text-xs font-bold text-[#0B4EA2] hover:underline cursor-pointer"
+                  className="text-xs font-bold text-brand-blue hover:underline cursor-pointer"
                 >
                   View All
                 </button>
               </div>
-              <div className="flex items-center gap-3 overflow-x-auto no-scrollbar pb-1.5 pt-0.5">
+              <div className="flex items-center gap-3 overflow-x-auto no-scrollbar pb-1">
                 {[
-                  { name: 'AC', img: splitAcImg, appliance: 'Air Conditioner' },
+                  { name: 'TV', img: tvImg, appliance: 'Television' },
                   { name: 'Refrigerator', img: fridgeImg, appliance: 'Refrigerator' },
-                  { name: 'TV', img: tvImg, appliance: 'Television' },
                   { name: 'Washing Machine', img: washingImg, appliance: 'Washing Machine' },
-                  { name: 'More', isMore: true }
+                  { name: 'AC', img: splitAcImg, appliance: 'Air Conditioner' },
+                  { name: 'Water Purifier', img: waterPurifierImg, appliance: 'Water Purifier' },
                 ].map((item, idx) => (
                   <div 
                     key={idx}
                     onClick={() => {
-                      if (item.isMore) {
-                        setStep(2);
-                      } else {
-                        setSelectedAppliance(item.appliance);
-                        setSelectedTierIndex(0);
-                        setStep(3);
-                      }
+                      navigate(`/buy/select-tier/${encodeURIComponent(item.appliance)}`);
                     }}
-                    className="flex-shrink-0 w-[80px] bg-white border border-slate-200/50 rounded-2xl p-2 flex flex-col items-center justify-center gap-1.5 cursor-pointer shadow-sm hover:border-brand-blue/30 hover:scale-[1.03] transition-all text-center min-h-[90px]"
+                    className="flex-shrink-0 w-[72px] bg-white border border-slate-200/60 rounded-2xl p-2 flex flex-col items-center justify-center gap-1.5 cursor-pointer shadow-sm hover:border-brand-blue/30 hover:shadow-md transition-all text-center min-h-[88px]"
                   >
-                    <div className="w-10 h-10 flex items-center justify-center bg-slate-50/50 rounded-xl p-1 overflow-hidden">
-                      {item.isMore ? (
-                        <div className="w-7 h-7 bg-slate-100 rounded-full flex items-center justify-center font-bold text-slate-500 text-lg">•••</div>
-                      ) : (
-                        <img src={item.img} alt={item.name} className="w-full h-full object-contain mix-blend-multiply" />
-                      )}
+                    <div className="w-10 h-10 flex items-center justify-center overflow-hidden">
+                      <img src={item.img} alt={item.name} className="w-full h-full object-contain mix-blend-multiply" />
                     </div>
-                    <span className="text-[9px] font-bold text-slate-800 leading-tight block truncate w-full">
+                    <span className="text-[9px] font-semibold text-slate-700 leading-tight block text-center">
                       {item.name}
                     </span>
                   </div>
@@ -326,66 +371,37 @@ const Buy = () => {
               </div>
             </div>
 
-            {/* Products & Accessories Grid */}
+            {/* Buy Brand New */}
             <div className="flex flex-col gap-3">
-              <div className="flex justify-between items-center px-1">
-                <h3 className="text-sm font-black text-brand-navy">Products & Accessories</h3>
-                <button 
-                  onClick={() => setStep(11)}
-                  className="text-xs font-bold text-[#0B4EA2] hover:underline cursor-pointer"
-                >
+              <div className="flex justify-between items-center">
+                <h3 className="text-sm font-black text-brand-navy">Buy Brand New</h3>
+                <button className="text-xs font-bold text-brand-blue hover:underline cursor-pointer">
                   View All
                 </button>
               </div>
-              <div className="flex items-center gap-3 overflow-x-auto no-scrollbar pb-1.5 pt-0.5">
-                {[
-                  { name: 'Water Purifier', img: waterPurifierImg, appliance: 'Water Purifier' },
-                  { name: 'Cooler', img: kitchenApplianceImg, appliance: 'Cooler' },
-                  { name: 'TV', img: tvImg, appliance: 'Television' },
-                  { name: 'AC', img: splitAcImg, appliance: 'Air Conditioner' },
-                  { name: 'More', isMore: true }
-                ].map((item, idx) => (
-                  <div 
-                    key={idx}
-                    onClick={() => {
-                      if (item.isMore) {
-                        setStep(11);
-                      } else {
-                        setSelectedAppliance(item.appliance);
-                        setSelectedTierIndex(0);
-                        setStep(3);
-                      }
-                    }}
-                    className="flex-shrink-0 w-[80px] bg-white border border-slate-200/50 rounded-2xl p-2 flex flex-col items-center justify-center gap-1.5 cursor-pointer shadow-sm hover:border-brand-blue/30 hover:scale-[1.03] transition-all text-center min-h-[90px]"
-                  >
-                    <div className="w-10 h-10 flex items-center justify-center bg-slate-50/50 rounded-xl p-1 overflow-hidden">
-                      {item.isMore ? (
-                        <div className="w-7 h-7 bg-slate-100 rounded-full flex items-center justify-center font-bold text-slate-500 text-lg">•••</div>
-                      ) : (
-                        <img src={item.img} alt={item.name} className="w-full h-full object-contain mix-blend-multiply" />
-                      )}
+              <div className="bg-white border border-slate-200/60 rounded-2xl p-3 shadow-sm">
+                <div className="flex items-center justify-between gap-2">
+                  {[
+                    { name: 'SAMSUNG', color: '#1428A0' },
+                    { name: 'LG', color: '#A50034' },
+                    { name: 'Whirlpool', color: '#00205B' },
+                    { name: 'VOLTAS', color: '#E31837' },
+                    { name: 'PANASONIC', color: '#003087' },
+                  ].map((brand, idx) => (
+                    <div
+                      key={idx}
+                      className="flex-1 flex items-center justify-center py-2 px-1 bg-slate-50 border border-slate-200/80 rounded-xl hover:bg-blue-50/30 hover:border-brand-blue/30 cursor-pointer transition-all shadow-xs"
+                    >
+                      <span 
+                        className="text-[8px] font-black tracking-tight text-center leading-tight"
+                        style={{ color: brand.color }}
+                      >
+                        {brand.name}
+                      </span>
                     </div>
-                    <span className="text-[9px] font-bold text-slate-800 leading-tight block truncate w-full">
-                      {item.name}
-                    </span>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-
-            {/* Bottom Promo Banner */}
-            <div className="bg-gradient-to-r from-brand-navy to-brand-blue rounded-3xl p-5 text-white shadow-md flex items-center justify-between border border-blue-900/10 mt-1 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-16 h-16 bg-white/5 rounded-full blur-xl"></div>
-              <div className="flex-1 pr-4">
-                <h3 className="text-xs font-black text-white leading-snug">Protect your appliances today</h3>
-                <p className="text-[10px] text-white/80 leading-relaxed mt-0.5 font-medium">Get extended warranty for peace of mind</p>
-              </div>
-              <button 
-                onClick={() => setStep(2)}
-                className="bg-brand-yellow hover:bg-yellow-400 text-brand-navy text-[10px] font-black py-2 px-3.5 rounded-xl shadow-md transition-all active:scale-95 cursor-pointer"
-              >
-                Buy Warranty
-              </button>
             </div>
 
           </motion.div>
@@ -423,9 +439,7 @@ const Buy = () => {
                 <div 
                   key={item.id}
                   onClick={() => {
-                    setSelectedAppliance(item.name);
-                    setSelectedTierIndex(0);
-                    setStep(3);
+                    navigate(`/buy/select-tier/${encodeURIComponent(item.name)}`);
                   }}
                   className="bg-white border border-slate-200/80 rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:border-brand-blue/40 shadow-sm hover:scale-[1.01] transition-all"
                 >
@@ -446,8 +460,7 @@ const Buy = () => {
               {/* View More Appliances Button */}
               <div 
                 onClick={() => {
-                  setCameFromMore(true);
-                  setStep(12);
+                  navigate('/buy/all-appliances');
                 }}
                 className="bg-white border border-slate-200/80 rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:border-brand-blue/40 shadow-sm"
               >
@@ -478,7 +491,7 @@ const Buy = () => {
                 return (
                   <div
                     key={tier.id}
-                    onClick={() => setSelectedTierIndex(idx)}
+                    onClick={() => navigate(`/buy/select-tier/${encodeURIComponent(selectedAppliance || '')}?tier=${idx}`)}
                     className={`bg-white border rounded-2xl p-4.5 flex items-center justify-between cursor-pointer transition-all ${
                       isSelected 
                         ? 'border-brand-blue bg-blue-50/10 shadow-sm ring-1 ring-brand-blue' 
@@ -519,7 +532,7 @@ const Buy = () => {
 
             {/* Continue button */}
             <button 
-              onClick={() => setStep(4)}
+              onClick={() => navigate(`/buy/enter-details/${encodeURIComponent(selectedAppliance || '')}/${selectedTierIndex}`)}
               className="w-full bg-brand-navy hover:bg-blue-900 text-white font-black py-4 rounded-2xl transition-all shadow-md text-sm mt-2 cursor-pointer active:scale-98"
             >
               Continue
@@ -533,92 +546,80 @@ const Buy = () => {
             initial={{ opacity: 0, x: 10 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.3 }}
-            className="flex flex-col gap-5"
+            className="flex flex-col gap-4"
           >
             <div className="px-1">
               <h2 className="text-lg font-black text-brand-navy">Review & Confirm</h2>
               <p className="text-xs text-text-secondary font-semibold">Please review your selection</p>
             </div>
 
-            {/* Review Details Card */}
-            <div className="bg-white border border-slate-200/80 rounded-2xl p-5 flex flex-col gap-4 shadow-sm">
-              <div className="flex gap-4 items-center">
-                <div className="w-16 h-16 bg-slate-50/50 border border-slate-100 rounded-2xl flex items-center justify-center p-1.5 flex-shrink-0">
-                  <img 
-                    src={
-                      selectedAppliance?.toLowerCase().includes('tv') || selectedAppliance?.toLowerCase().includes('television') ? tvImg :
-                      selectedAppliance?.toLowerCase().includes('fridge') || selectedAppliance?.toLowerCase().includes('refrigerator') ? fridgeImg :
-                      selectedAppliance?.toLowerCase().includes('washing') || selectedAppliance?.toLowerCase().includes('machine') ? washingImg :
-                      selectedAppliance?.toLowerCase().includes('ac') || selectedAppliance?.toLowerCase().includes('conditioner') ? splitAcImg :
-                      selectedAppliance?.toLowerCase().includes('purifier') ? waterPurifierImg : kitchenApplianceImg
-                    } 
-                    alt={selectedAppliance} 
-                    className="w-full h-full object-contain mix-blend-multiply" 
-                  />
-                </div>
-                <div>
-                  <h4 className="text-sm font-black text-brand-navy leading-tight">{selectedAppliance}</h4>
-                  <p className="text-[11px] text-text-secondary mt-0.5 font-bold">{selectedTier.label}</p>
-                  <span className="text-[10px] text-text-secondary font-medium block mt-1">Extended Warranty</span>
-                  <span className="inline-block bg-green-50 text-green-700 border border-green-200 text-[9px] font-extrabold px-2 py-0.5 rounded-full mt-1.5 uppercase">
-                    1 Year Warranty
-                  </span>
-                </div>
+            {/* Product Card */}
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-4 flex items-center gap-4 shadow-sm">
+              <div className="w-16 h-16 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center p-1.5 flex-shrink-0">
+                <img 
+                  src={
+                    selectedAppliance?.toLowerCase().includes('tv') || selectedAppliance?.toLowerCase().includes('television') ? tvImg :
+                    selectedAppliance?.toLowerCase().includes('fridge') || selectedAppliance?.toLowerCase().includes('refrigerator') ? fridgeImg :
+                    selectedAppliance?.toLowerCase().includes('washing') || selectedAppliance?.toLowerCase().includes('machine') ? washingImg :
+                    selectedAppliance?.toLowerCase().includes('ac') || selectedAppliance?.toLowerCase().includes('conditioner') ? splitAcImg :
+                    selectedAppliance?.toLowerCase().includes('purifier') ? waterPurifierImg : kitchenApplianceImg
+                  } 
+                  alt={selectedAppliance} 
+                  className="w-full h-full object-contain mix-blend-multiply" 
+                />
               </div>
-
-              <div className="border-t border-slate-100 pt-4 flex flex-col gap-2.5 text-xs">
-                <div className="flex justify-between text-text-secondary font-medium">
-                  <span>Price (1 Year)</span>
-                  <strong className="text-text-primary font-bold">₹{selectedTier.price}</strong>
-                </div>
-                <div className="flex justify-between text-text-secondary font-medium">
-                  <span>GST (18%)</span>
-                  <strong className="text-text-primary font-bold">₹{Math.round(selectedTier.price * 0.18)}</strong>
-                </div>
-                <div className="border-t border-dashed border-slate-200 pt-3 flex justify-between items-center text-sm">
-                  <span className="font-bold text-text-primary">Total Amount</span>
-                  <strong className="text-brand-blue text-lg font-black">₹{Math.round(selectedTier.price * 1.18)}</strong>
-                </div>
+              <div>
+                <h4 className="text-sm font-black text-brand-navy leading-tight">{selectedAppliance}</h4>
+                <p className="text-xs text-text-secondary mt-0.5">{selectedTier.label}</p>
+                <span className="text-xs text-text-secondary font-medium block mt-0.5">1 Year Extended Warranty</span>
               </div>
             </div>
 
-            {/* Disclaimer Alert */}
-            <div className="bg-[#E3F2FD]/50 border border-blue-100 rounded-2xl p-4 flex gap-3 text-[#0D47A1]">
-              <Info className="h-5 w-5 flex-shrink-0 mt-0.5" />
-              <span className="text-[11px] font-bold leading-relaxed">
-                Warranty starts after the manufacturer warranty ends.
-              </span>
-            </div>
-
-            {/* Trust badge row */}
-            <div className="grid grid-cols-3 gap-2 bg-slate-50 border border-slate-100 rounded-2xl p-4">
-              <div className="flex flex-col items-center gap-1.5 text-center">
-                <div className="w-9 h-9 bg-white rounded-full flex items-center justify-center text-brand-blue shadow-sm">
-                  <FileText className="h-4.5 w-4.5" />
-                </div>
-                <span className="text-[9px] font-black text-brand-navy">Easy Claims</span>
+            {/* Pricing Breakdown */}
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-4 flex flex-col gap-3 shadow-sm">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-text-secondary">Warranty Price (1 Year)</span>
+                <span className="font-bold text-text-primary">₹{selectedTier.price}</span>
               </div>
-              <div className="flex flex-col items-center gap-1.5 text-center">
-                <div className="w-9 h-9 bg-white rounded-full flex items-center justify-center text-brand-blue shadow-sm">
-                  <Wrench className="h-4.5 w-4.5" />
-                </div>
-                <span className="text-[9px] font-black text-brand-navy">Expert Support</span>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-text-secondary">GST (10%)</span>
+                <span className="font-bold text-text-primary">₹{Math.round(selectedTier.price * 0.10)}</span>
               </div>
-              <div className="flex flex-col items-center gap-1.5 text-center">
-                <div className="w-9 h-9 bg-white rounded-full flex items-center justify-center text-brand-blue shadow-sm">
-                  <ShieldCheck className="h-4.5 w-4.5" />
-                </div>
-                <span className="text-[9px] font-black text-brand-navy">100% Genuine</span>
+              <div className="border-t border-slate-100 pt-3 flex justify-between items-center">
+                <span className="text-base font-black text-text-primary">Total Amount</span>
+                <span className="text-xl font-black text-brand-blue">₹{Math.round(selectedTier.price * 1.10)}</span>
               </div>
             </div>
 
-            {/* Action button */}
-            <button 
-              onClick={() => setStep(5)}
-              className="w-full bg-brand-navy hover:bg-blue-900 text-white font-black py-4 rounded-2xl transition-all shadow-md text-sm mt-1 cursor-pointer active:scale-98"
-            >
-              Proceed to Buy
-            </button>
+            {/* Benefits Included */}
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-4 flex flex-col gap-2.5 shadow-sm">
+              <h4 className="text-xs font-black text-brand-navy mb-0.5">Benefits Included?</h4>
+              {[
+                'Manufacturing Defects',
+                'Repair & Replacement',
+                'Genuine Spare Parts',
+                'Expert Technician Support',
+                'Hassle Free Claims',
+              ].map((benefit, i) => (
+                <div key={i} className="flex items-center gap-2.5">
+                  <Check className="h-3.5 w-3.5 text-green-600 flex-shrink-0" />
+                  <span className="text-xs text-slate-700">{benefit}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Action button + disclaimer */}
+            <div className="flex flex-col items-center gap-2 mt-1">
+              <button 
+                onClick={() => setStep(6)}
+                className="w-full bg-brand-navy hover:bg-blue-900 text-white font-black py-4 rounded-2xl transition-all shadow-md text-sm cursor-pointer active:scale-98"
+              >
+                Proceed to Payment
+              </button>
+              <p className="text-[10px] text-text-secondary text-center font-medium">
+                ⓘ Warranty starts after the manufacturer warranty ends.
+              </p>
+            </div>
           </motion.div>
         )}
 
@@ -702,16 +703,13 @@ const Buy = () => {
                 <div className="flex-1">
                   <label className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider block">Select Brand</label>
                   <select 
-                    value={selectedBrand}
+                    value={activeBrand}
                     onChange={(e) => setSelectedBrand(e.target.value)}
                     className="text-xs font-bold text-slate-800 w-full outline-none bg-transparent mt-0.5 cursor-pointer appearance-none"
                   >
-                    <option value="Samsung">Samsung</option>
-                    <option value="LG">LG</option>
-                    <option value="Sony">Sony</option>
-                    <option value="Panasonic">Panasonic</option>
-                    <option value="Whirlpool">Whirlpool</option>
-                    <option value="Daikin">Daikin</option>
+                    {applianceBrands.map(b => (
+                      <option key={b} value={b}>{b}</option>
+                    ))}
                   </select>
                 </div>
                 <ChevronRight className="h-4 w-4 text-slate-400 rotate-90" />
@@ -727,7 +725,7 @@ const Buy = () => {
                     value={modelNumber}
                     onChange={(e) => setModelNumber(e.target.value)}
                     className="text-xs font-bold text-slate-800 w-full outline-none bg-transparent mt-0.5"
-                    placeholder="Enter model number"
+                    placeholder={getModelPlaceholder(selectedAppliance)}
                   />
                 </div>
                 <ChevronRight className="h-4 w-4 text-slate-400 rotate-90" />
@@ -778,7 +776,7 @@ const Buy = () => {
 
             {/* Action Button */}
             <button 
-              onClick={() => setStep(6)}
+              onClick={() => setStep(4)}
               className="w-full bg-brand-navy hover:bg-blue-900 text-white font-black py-4 rounded-2xl transition-all shadow-md text-sm mt-3 cursor-pointer active:scale-98"
             >
               Continue
@@ -927,7 +925,7 @@ const Buy = () => {
             <div className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between shadow-sm mt-2">
               <div>
                 <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider block">Total Payable</span>
-                <span className="text-lg font-black text-brand-navy block mt-0.5">₹{Math.round(selectedTier.price * 1.18)}</span>
+                <span className="text-lg font-black text-brand-navy block mt-0.5">₹{Math.round(selectedTier.price * 1.10)}</span>
               </div>
               <span className="text-xs font-bold text-brand-blue hover:underline cursor-pointer">
                 View Details
@@ -937,11 +935,11 @@ const Buy = () => {
             {/* Action Pay Button */}
             <div className="flex flex-col gap-2.5 mt-2">
               <button 
-                onClick={() => setStep(7)}
+                onClick={() => navigate(`/buy/success/${encodeURIComponent(selectedAppliance || '')}/${selectedTierIndex}`)}
                 className="w-full bg-brand-yellow hover:bg-yellow-400 text-brand-navy font-black py-4 rounded-2xl transition-all shadow-md text-sm cursor-pointer active:scale-98 flex items-center justify-center gap-2"
               >
                 <Lock className="h-4.5 w-4.5" />
-                Pay ₹{Math.round(selectedTier.price * 1.18)} Securely
+                Pay ₹{Math.round(selectedTier.price * 1.10)} Securely
               </button>
               <div className="flex items-center justify-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                 <ShieldCheck className="h-4 w-4 text-green-600" />
@@ -1020,9 +1018,6 @@ const Buy = () => {
               </button>
               <button
                 onClick={() => {
-                  setSelectedAppliance(null);
-                  setSelectedTierIndex(0);
-                  setStep(1);
                   navigate('/dashboard');
                 }}
                 className="w-full bg-slate-100 hover:bg-slate-200 text-brand-navy font-bold py-3.5 rounded-xl transition-all text-xs cursor-pointer"

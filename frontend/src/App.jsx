@@ -26,6 +26,8 @@ import HelpSupport from './pages/HelpSupport';
 import SavedAddresses from './pages/SavedAddresses';
 import EditProfile from './pages/EditProfile';
 import Buy from './pages/Buy';
+import AMC from './pages/AMC';
+import Exchange from './pages/Exchange';
 import BuyNew from './pages/BuyNew';
 import ExtendWarranty from './pages/ExtendWarranty';
 import BuyProduct from './pages/BuyProduct';
@@ -155,7 +157,35 @@ function App() {
         <Route path="/appliance-services" element={<AllApplianceServices />} />
         <Route path="/warranty" element={<Warranty />} />
         <Route path="/buy" element={<Buy />} />
+        <Route path="/buy/select-appliance" element={<Buy />} />
+        <Route path="/buy/select-tier/:appliance" element={<Buy />} />
+        <Route path="/buy/enter-details/:appliance/:tierIndex" element={<Buy />} />
+        <Route path="/buy/review/:appliance/:tierIndex" element={<Buy />} />
+        <Route path="/buy/payment/:appliance/:tierIndex" element={<Buy />} />
+        <Route path="/buy/success/:appliance/:tierIndex" element={<Buy />} />
+        <Route path="/buy/my-warranty" element={<Buy />} />
+        <Route path="/buy/how-it-works" element={<Buy />} />
+        <Route path="/buy/warranty-details" element={<Buy />} />
+        <Route path="/buy/all-appliances" element={<Buy />} />
+        <Route path="/buy/accessories" element={<Buy />} />
+        <Route path="/buy/amc" element={<AMC />} />
+        <Route path="/buy/amc/plans/:appliance" element={<AMC />} />
+        <Route path="/buy/amc/enter-details/:appliance/:planIndex" element={<AMC />} />
+        <Route path="/buy/amc/review/:appliance/:planIndex" element={<AMC />} />
+        <Route path="/buy/amc/payment/:appliance/:planIndex" element={<AMC />} />
+        <Route path="/buy/amc/success/:appliance/:planIndex" element={<AMC />} />
+        <Route path="/buy/exchange" element={<Exchange />} />
+        <Route path="/buy/exchange/product/:category" element={<Exchange />} />
+        <Route path="/buy/exchange/offer/:category/:brand/:model/:condition" element={<Exchange />} />
+        <Route path="/buy/exchange/checkout/:category/:brand/:model/:condition" element={<Exchange />} />
+        <Route path="/buy/exchange/payment/:category/:brand/:model/:condition" element={<Exchange />} />
+        <Route path="/buy/exchange/success/:category/:brand/:model/:condition" element={<Exchange />} />
         <Route path="/buy-new" element={<BuyNew />} />
+        <Route path="/buy-new/products/:category" element={<BuyNew />} />
+        <Route path="/buy-new/details/:category/:productName" element={<BuyNew />} />
+        <Route path="/buy-new/cart" element={<BuyNew />} />
+        <Route path="/buy-new/payment" element={<BuyNew />} />
+        <Route path="/buy-new/success" element={<BuyNew />} />
         <Route path="/extend-warranty" element={<ExtendWarranty />} />
         <Route path="/buy-product" element={<BuyProduct />} />
         <Route path="/product-details" element={<ProductDetails />} />
