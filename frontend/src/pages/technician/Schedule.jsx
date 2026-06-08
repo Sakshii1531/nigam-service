@@ -1,225 +1,354 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Home as HomeIcon, Calendar, Wrench, User, MapPin, ClipboardList, Briefcase, CheckCircle } from 'lucide-react';
-import techServiceMap from '../../assets/tech_service_map.png';
+import { Menu, Calendar, Briefcase, ClipboardList, Wrench, User, CreditCard, ShieldCheck, HelpCircle, LogOut, X } from 'lucide-react';
+import { useTech } from '../../context/TechContext';
 
 const Schedule = () => {
   const navigate = useNavigate();
+  const { notifications, selectJobForDetails, acceptJob } = useTech();
 
-  const [requestsList, setRequestsList] = useState([
+  // Selected date defaults to 'Tue 14' as shown in the mockup
+  const [selectedDate, setSelectedDate] = useState('Tue 14');
+  
+  // Sidebar drawer open state
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  // Days list for the horizontal date selector ribbon (Mockup: Sun 12, Mon 13, Tue 14, Wed 15, Thu 16, Fri 17, Sat 18, Sun 19)
+  const calendarDays = [
+    { day: 'Sun', num: '12', current: false },
+    { day: 'Mon', num: '13', current: true },
+    { day: 'Tue', num: '14', current: true },
+    { day: 'Wed', num: '15', current: true },
+    { day: 'Thu', num: '16', current: true },
+    { day: 'Fri', num: '17', current: true },
+    { day: 'Sat', num: '18', current: true },
+    { day: 'Sun', num: '19', current: true }
+  ];
+
+  // Schedule timeline slots for Tue 14 (matching the mockup)
+  const TueSchedules = [
     {
-      id: 1,
-      category: 'Refrigerator',
-      title: 'Cooling System Failure',
-      distance: '2.4 miles away',
-      payout: '$145.00',
+      id: '8842', // Rohit Sharma AC Repair
+      time: '09:00 AM',
+      category: 'Split AC Repair',
+      customer: 'Rohit Sharma',
+      address: '124 Oak Street',
+      status: 'Confirmed'
     },
     {
-      id: 2,
-      category: 'AC Unit',
-      title: 'Annual Maintenance',
-      distance: '5.1 miles away',
-      payout: '$85.00',
-    },
-    {
-      id: 3,
+      id: '8845', // Neha Sen Washing Machine
+      time: '12:30 PM',
       category: 'Washing Machine',
-      title: 'Leaking during cycle',
-      distance: '1.2 miles away',
-      payout: '$110.00',
+      customer: 'Neha Verma',
+      address: 'Sector 12, Lucknow',
+      status: 'Confirmed'
     },
-  ]);
+    {
+      id: '8843', // Mrs Neha Verma Refrigerator (mapped to Anil Mehta in mockup slot 3)
+      time: '04:00 PM',
+      category: 'Refrigerator Repair',
+      customer: 'Anil Mehta',
+      address: 'Gomti Nagar',
+      status: 'Pending'
+    }
+  ];
 
-  const [isSuccess, setIsSuccess] = useState(false);
-  const [acceptedJob, setAcceptedJob] = useState(null);
-
-  const handleAccept = (id) => {
-    const job = requestsList.find(req => req.id === id);
-    setAcceptedJob(job);
-    setIsSuccess(true);
-    setRequestsList(requestsList.filter(req => req.id !== id));
+  const handleJobClick = (jobId, status) => {
+    if (status === 'Confirmed') {
+      acceptJob(jobId);
+    } else {
+      selectJobForDetails(jobId);
+    }
+    navigate('/technician/active-job');
   };
 
-  const handleDecline = (id) => {
-    setRequestsList(requestsList.filter(req => req.id !== id));
-  };
-
-  if (isSuccess) {
-    return (
-      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 max-w-md mx-auto border-x border-slate-100 shadow-sm relative">
-        <div className="flex flex-col items-center text-center gap-6">
-          <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center">
-            <CheckCircle className="h-12 w-12 text-green-500" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">Job Accepted!</h1>
-            <p className="text-sm text-slate-500 mt-2">
-              You have successfully accepted the job. Please proceed to the location.
-            </p>
-          </div>
-
-          {acceptedJob && (
-            <div className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 mt-2">
-              <div className="flex justify-between items-center border-b border-slate-100 pb-2 mb-2">
-                <span className="text-sm text-slate-500">Category</span>
-                <span className="text-sm font-semibold text-slate-900">{acceptedJob.category}</span>
-              </div>
-              <div className="flex justify-between items-center border-b border-slate-100 pb-2 mb-2">
-                <span className="text-sm text-slate-500">Job</span>
-                <span className="text-sm font-semibold text-slate-900">{acceptedJob.title}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-slate-500">Est. Payout</span>
-                <span className="text-sm font-semibold text-[#0D47A1]">{acceptedJob.payout}</span>
-              </div>
-            </div>
-          )}
-
-          <div className="flex flex-col gap-3 w-full mt-4">
-            <button 
-              onClick={() => {
-                setIsSuccess(false);
-                navigate('/technician/dashboard');
-              }}
-              className="w-full bg-[#0D47A1] text-white font-semibold py-3 rounded-xl hover:bg-blue-800 transition-colors"
-            >
-              Go to Active Job
-            </button>
-            <button 
-              onClick={() => setIsSuccess(false)}
-              className="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl hover:bg-slate-50 transition-colors"
-            >
-              View Other Requests
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const unreadNotificationsCount = notifications.filter(n => !n.read).length;
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-20 max-w-md mx-auto border-x border-slate-100 shadow-sm relative">
-
+    <div className="min-h-screen bg-white flex flex-col pb-24 max-w-md mx-auto border-x border-slate-100 shadow-xl relative font-sans overflow-hidden">
+      
       {/* Header */}
-      <div className="bg-white border-b border-slate-100 p-4 flex items-center justify-between sticky top-0 z-10">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-[#0D47A1] rounded-full flex items-center justify-center text-white font-semibold text-sm">
-            A
-          </div>
-          <h1 className="text-lg font-semibold text-slate-900">Technician Panel</h1>
-        </div>
-        <button className="p-2 hover:bg-slate-50 rounded-full transition-colors relative">
-          <Bell className="h-5 w-5 text-slate-700" />
-          <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+      <div className="bg-white border-b border-slate-100 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
+        <button 
+          onClick={() => setIsSidebarOpen(true)}
+          className="p-1 hover:bg-slate-50 rounded-full text-slate-700 transition-colors"
+        >
+          <Menu className="h-6 w-6 text-slate-700" />
         </button>
+        
+        <h1 className="text-base font-extrabold text-[#052355] flex-1 text-center pr-8">Schedule</h1>
+        
+        <div className="w-8"></div> {/* Spacer to center the title */}
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 p-4 flex flex-col gap-4">
+      <div className="flex-1 p-5 flex flex-col gap-6">
+        
+        {/* Horizontal Calendar Date Ribbon */}
+        <div className="flex flex-col gap-2">
+          <div className="flex justify-between items-center px-1">
+            <span className="text-sm font-extrabold text-[#052355]">May 2026</span>
+          </div>
 
-        {/* Greeting */}
-        <div>
-          <h2 className="text-xl font-semibold text-slate-900">Welcome back, Alex</h2>
-          <p className="text-sm text-slate-500 mt-1">You have {requestsList.length} new job requests in your area.</p>
-        </div>
-
-        {/* Section Title */}
-        <div className="flex justify-between items-center">
-          <h3 className="text-base font-semibold text-slate-900">New Requests</h3>
-          <span className="bg-[#E3ECF9] text-[#0D47A1] text-xs font-semibold px-3 py-1 rounded-full">
-            Nearby
-          </span>
-        </div>
-
-        {/* Job Cards */}
-        <div className="flex flex-col gap-4">
-          {requestsList.map((req) => (
-            <div key={req.id} className="bg-white border border-slate-100 rounded-2xl p-3 shadow-sm">
+          <div className="flex gap-1 justify-between overflow-x-auto no-scrollbar py-2">
+            {calendarDays.map((dayItem) => {
+              const dateStr = `${dayItem.day} ${dayItem.num}`;
+              const isSelected = selectedDate === dateStr;
+              const isFaded = !dayItem.current;
               
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <span className="bg-slate-100 text-slate-600 text-xs font-semibold px-2 py-0.5 rounded-md">
-                    {req.category}
+              return (
+                <button
+                  key={dateStr}
+                  onClick={() => {
+                    if (dayItem.current) {
+                      setSelectedDate(dateStr);
+                    }
+                  }}
+                  className={`flex flex-col items-center p-2 rounded-xl min-w-[42px] transition-all ${
+                    isSelected
+                      ? 'bg-[#0D47A1] text-white shadow-xs'
+                      : isFaded
+                        ? 'opacity-30 text-slate-400 cursor-not-allowed'
+                        : 'text-slate-500 hover:bg-slate-50'
+                  }`}
+                >
+                  <span className={`text-[10px] font-bold ${isSelected ? 'text-white' : 'text-slate-450'}`}>
+                    {dayItem.day}
                   </span>
-                  <h4 className="text-sm font-semibold text-slate-900 mt-1">{req.title}</h4>
-                </div>
-                <div className="text-right">
-                  <span className="text-base font-semibold text-[#0D47A1]">{req.payout}</span>
-                  <p className="text-xs text-slate-500">Est. Payout</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-1 text-slate-500 text-xs mb-3">
-                <MapPin className="h-3.5 w-3.5" />
-                <span>{req.distance}</span>
-              </div>
-
-              <div className="flex gap-2">
-                <button 
-                  onClick={() => handleAccept(req.id)}
-                  className="flex-1 bg-[#0D47A1] text-white font-semibold py-2 rounded-xl hover:bg-blue-800 transition-colors text-sm"
-                >
-                  Accept
+                  <span className={`text-sm font-black mt-1 ${isSelected ? 'text-white' : 'text-[#052355]'}`}>
+                    {dayItem.num}
+                  </span>
                 </button>
-                <button 
-                  onClick={() => handleDecline(req.id)}
-                  className="flex-1 bg-white border border-slate-200 text-slate-700 font-semibold py-2 rounded-xl hover:bg-slate-50 transition-colors text-sm"
-                >
-                  Decline
-                </button>
-              </div>
+              );
+            })}
+          </div>
+        </div>
 
+        {/* Timeline Slot List */}
+        <div className="flex-1 flex flex-col relative min-h-[360px]">
+          {selectedDate === 'Tue 14' ? (
+            <div className="flex flex-col gap-6 relative pl-4 mt-2">
+              
+              {/* Blue Vertical Timeline Line */}
+              <div className="absolute left-[108px] top-[22px] bottom-[22px] w-[2px] bg-[#B9D1F9]"></div>
+
+              {TueSchedules.map((item, idx) => (
+                <div key={item.id} className="flex gap-4 items-start relative">
+                  
+                  {/* Left Side: Time column */}
+                  <div className="w-16 flex flex-col items-center flex-shrink-0 pt-0.5">
+                    <span className="text-xs font-black text-[#052355] whitespace-nowrap">{item.time}</span>
+                    <div className="w-6 h-6 bg-slate-100 rounded-full flex items-center justify-center text-[10px] font-black text-slate-400 mt-1">
+                      G
+                    </div>
+                  </div>
+
+                  {/* Middle Side: Timeline node circle */}
+                  <div className="relative flex items-center justify-center h-6 w-6 z-10 flex-shrink-0">
+                    <div className={`rounded-full bg-white border-[#1E6BDB] ${
+                      idx === 0 
+                        ? 'w-3.5 h-3.5 border-[2.5px]' 
+                        : 'w-2.5 h-2.5 border-2'
+                    }`}></div>
+                  </div>
+
+                  {/* Right Side: Appointment Detail Card */}
+                  <div 
+                    onClick={() => handleJobClick(item.id, item.status)}
+                    className="flex-1 bg-white border border-slate-100 rounded-2xl p-4 shadow-2xs hover:shadow-xs cursor-pointer transition-all flex justify-between items-start"
+                  >
+                    <div className="text-left flex-1 min-w-0 pr-2">
+                      <h4 className="text-sm font-extrabold text-[#052355] truncate leading-tight">{item.category}</h4>
+                      <p className="text-xs text-slate-400 font-semibold mt-1 truncate">{item.customer}</p>
+                      <p className="text-[11px] text-slate-500 font-medium mt-1 truncate">{item.address}</p>
+                    </div>
+
+                    <span className={`text-[10px] font-bold px-3 py-1 rounded-full tracking-wide whitespace-nowrap ${
+                      item.status === 'Confirmed'
+                        ? 'bg-green-50 text-green-700 border border-green-200'
+                        : 'bg-orange-55 text-orange-700 border border-orange-200'
+                    }`}>
+                      {item.status}
+                    </span>
+                  </div>
+
+                </div>
+              ))}
             </div>
-          ))}
-
-          {requestsList.length === 0 && (
-            <div className="text-center py-8 text-slate-500 text-sm">
-              No new requests at the moment.
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-slate-400 gap-3 border border-dashed border-slate-200 rounded-3xl my-2">
+              <Calendar className="h-10 w-10 text-slate-300" />
+              <div>
+                <h4 className="text-sm font-bold text-[#052355]">No appointments scheduled</h4>
+                <p className="text-xs text-slate-400 mt-1">Please select Tue 14 to view mockup appointments.</p>
+              </div>
             </div>
           )}
         </div>
 
-        {/* Service Area Card */}
-        <div className="relative w-full h-48 rounded-2xl overflow-hidden group">
-          <img src={techServiceMap} alt="Service Area" className="w-full h-full object-cover transition-transform group-hover:scale-105" />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent opacity-70"></div>
-          <div className="absolute bottom-4 left-4 text-white">
-            <h4 className="text-base font-semibold">Service Area</h4>
-            <p className="text-sm text-slate-200">North Austin District</p>
+        {/* Today's Summary Card */}
+        <div className="bg-[#EBF3FC] rounded-3xl p-5 border border-[#1A73E8]/10 shadow-2xs flex flex-col gap-4">
+          <span className="text-xs font-extrabold text-[#052355] text-left">Today's Summary</span>
+          
+          <div className="grid grid-cols-3 gap-3 text-center">
+            <div className="flex flex-col items-center justify-center">
+              <span className="text-2xl font-black text-[#052355]">3</span>
+              <span className="text-[10px] font-bold text-slate-450 uppercase mt-1">Jobs</span>
+            </div>
+            
+            <div className="flex flex-col items-center justify-center border-x border-slate-200">
+              <span className="text-2xl font-black text-[#052355]">₹2,450</span>
+              <span className="text-[10px] font-bold text-slate-450 uppercase mt-1">Earnings</span>
+            </div>
+            
+            <div className="flex flex-col items-center justify-center">
+              <span className="text-2xl font-black text-[#052355]">85%</span>
+              <span className="text-[10px] font-bold text-slate-450 uppercase mt-1">Target</span>
+            </div>
           </div>
         </div>
 
       </div>
 
+      {/* Sidebar Drawer Overlay */}
+      {isSidebarOpen && (
+        <div 
+          className="absolute inset-0 bg-[#052355]/40 backdrop-blur-xs z-30 transition-all flex justify-start"
+          onClick={() => setIsSidebarOpen(false)}
+        >
+          {/* Drawer Container */}
+          <div 
+            className="bg-white w-72 h-full shadow-2xl flex flex-col z-40 text-left"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header: Dark Blue Profile Section */}
+            <div className="bg-[#052355] text-white p-5 flex flex-col gap-3 relative">
+              <button 
+                onClick={() => setIsSidebarOpen(false)}
+                className="absolute top-4 right-4 p-1 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+              
+              <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-extrabold text-xl shadow-md border-2 border-white/20 mt-2">
+                AR
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-bold text-white leading-tight">Alex Rodriguez</h3>
+                <p className="text-[10px] text-slate-300 font-semibold mt-0.5">Expert HVAC Technician • ★ 4.9</p>
+              </div>
+            </div>
+
+            {/* Menu List */}
+            <div className="flex-1 overflow-y-auto py-4 flex flex-col gap-1">
+              
+              {/* Dashboard / Jobs */}
+              <button 
+                onClick={() => { setIsSidebarOpen(false); navigate('/technician/dashboard'); }}
+                className="w-full px-5 py-3.5 flex items-center gap-3.5 hover:bg-slate-50 text-slate-600 hover:text-[#0D47A1] transition-colors text-left"
+              >
+                <Briefcase className="h-5 w-5 text-slate-400" />
+                <span className="text-xs font-bold">Dashboard (Jobs)</span>
+              </button>
+
+              {/* My Schedule */}
+              <button 
+                onClick={() => { setIsSidebarOpen(false); }}
+                className="w-full px-5 py-3.5 flex items-center gap-3.5 bg-blue-50/50 text-[#0D47A1] transition-colors text-left"
+              >
+                <Calendar className="h-5 w-5 text-[#0D47A1]" />
+                <span className="text-xs font-bold">My Schedule</span>
+              </button>
+
+              {/* Part Requests */}
+              <button 
+                onClick={() => { setIsSidebarOpen(false); navigate('/technician/raise-part-request?tab=claims'); }}
+                className="w-full px-5 py-3.5 flex items-center gap-3.5 hover:bg-slate-50 text-slate-600 hover:text-[#0D47A1] transition-colors text-left"
+              >
+                <ClipboardList className="h-5 w-5 text-slate-400" />
+                <span className="text-xs font-bold">Part Requests</span>
+              </button>
+
+              {/* Inventory */}
+              <button 
+                onClick={() => { setIsSidebarOpen(false); navigate('/technician/inventory'); }}
+                className="w-full px-5 py-3.5 flex items-center gap-3.5 hover:bg-slate-50 text-slate-600 hover:text-[#0D47A1] transition-colors text-left"
+              >
+                <Wrench className="h-5 w-5 text-slate-400" />
+                <span className="text-xs font-bold">My Inventory</span>
+              </button>
+
+              {/* Payout Settings */}
+              <button 
+                onClick={() => { setIsSidebarOpen(false); navigate('/technician/payout-settings'); }}
+                className="w-full px-5 py-3.5 flex items-center gap-3.5 hover:bg-slate-50 text-slate-600 hover:text-[#0D47A1] transition-colors text-left"
+              >
+                <CreditCard className="h-5 w-5 text-slate-400" />
+                <span className="text-xs font-bold">Payout Settings</span>
+              </button>
+
+              {/* KYC Verification */}
+              <button 
+                onClick={() => { setIsSidebarOpen(false); navigate('/technician/verification'); }}
+                className="w-full px-5 py-3.5 flex items-center gap-3.5 hover:bg-slate-50 text-slate-600 hover:text-[#0D47A1] transition-colors text-left"
+              >
+                <ShieldCheck className="h-5 w-5 text-slate-400" />
+                <span className="text-xs font-bold">KYC Verification</span>
+              </button>
+
+              {/* Help & Support */}
+              <button 
+                onClick={() => { setIsSidebarOpen(false); navigate('/technician/support'); }}
+                className="w-full px-5 py-3.5 flex items-center gap-3.5 hover:bg-slate-50 text-slate-600 hover:text-[#0D47A1] transition-colors text-left"
+              >
+                <HelpCircle className="h-5 w-5 text-slate-400" />
+                <span className="text-xs font-bold">Help & Support</span>
+              </button>
+
+              {/* Divider */}
+              <div className="h-[1px] bg-slate-100 my-2 mx-5"></div>
+
+              {/* Logout */}
+              <button 
+                onClick={() => { setIsSidebarOpen(false); navigate('/technician/login'); }}
+                className="w-full px-5 py-3.5 flex items-center gap-3.5 hover:bg-red-50/20 text-red-500 transition-colors text-left"
+              >
+                <LogOut className="h-5 w-5 text-red-400" />
+                <span className="text-xs font-bold">Logout</span>
+              </button>
+
+            </div>
+
+            {/* Version Info */}
+            <div className="p-5 border-t border-slate-100 text-left">
+              <span className="text-[10px] font-bold text-slate-400">Partner App v2.4.1</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-[#E3ECF9] border-t border-border-color p-4 flex justify-around items-center z-10">
-        <button 
-          onClick={() => navigate('/technician/dashboard')}
-          className="flex flex-col items-center text-text-secondary hover:text-[#0D47A1]"
-        >
-          <Briefcase className="h-6 w-6" />
-          <span className="text-xs font-medium">Jobs</span>
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-slate-100 py-3 px-6 flex justify-between items-center z-20 shadow-lg">
+        <button onClick={() => navigate('/technician/dashboard')} className="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-700 transition-all">
+          <Briefcase className="h-6 w-6 stroke-[2]" />
+          <span className="text-[10px] font-bold tracking-wide">Jobs</span>
         </button>
-        <button 
-          onClick={() => navigate('/technician/schedule')}
-          className="flex flex-col items-center text-[#0D47A1]"
-        >
-          <ClipboardList className="h-6 w-6" />
-          <span className="text-xs font-medium">Requests</span>
+        <button onClick={() => navigate('/technician/raise-part-request?tab=claims')} className="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-700 transition-all">
+          <ClipboardList className="h-6 w-6 stroke-[2]" />
+          <span className="text-[10px] font-bold tracking-wide">Requests</span>
         </button>
-        <button 
-          onClick={() => navigate('/technician/active-job')}
-          className="flex flex-col items-center text-text-secondary hover:text-[#0D47A1]"
-        >
-          <Calendar className="h-6 w-6" />
-          <span className="text-xs font-medium">Schedule</span>
+        <button onClick={() => navigate('/technician/inventory')} className="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-700 transition-all">
+          <Wrench className="h-6 w-6 stroke-[2]" />
+          <span className="text-[10px] font-bold tracking-wide">Inventory</span>
         </button>
-        <button 
-          onClick={() => navigate('/technician/profile')}
-          className="flex flex-col items-center text-text-secondary hover:text-[#0D47A1]"
-        >
-          <User className="h-6 w-6" />
-          <span className="text-xs font-medium">Profile</span>
+        <button onClick={() => navigate('/technician/schedule')} className="flex flex-col items-center gap-1 text-[#0D47A1] transition-all">
+          <Calendar className="h-6 w-6 stroke-[2.5]" />
+          <span className="text-[10px] font-black tracking-wide">Schedule</span>
+        </button>
+        <button onClick={() => navigate('/technician/profile')} className="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-700 transition-all">
+          <User className="h-6 w-6 stroke-[2]" />
+          <span className="text-[10px] font-bold tracking-wide">Profile</span>
         </button>
       </div>
 

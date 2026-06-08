@@ -54,6 +54,7 @@ import PaymentMethods from './pages/PaymentMethods';
 import NotificationSettings from './pages/NotificationSettings';
 import AboutNCC from './pages/AboutNCC';
 import TechLogin from './pages/technician/Login';
+import { TechProvider } from './context/TechContext';
 import BrandLogin from './pages/brand-admin/Login';
 import BrandDashboard from './pages/brand-admin/Dashboard';
 import BrandRequests from './pages/brand-admin/Requests';
@@ -97,6 +98,12 @@ import PayoutSettings from './pages/technician/PayoutSettings';
 import Verification from './pages/technician/Verification';
 import HelpSupportTech from './pages/technician/HelpSupport';
 import RaisePartRequest from './pages/technician/RaisePartRequest';
+import TechNotifications from './pages/technician/Notifications';
+import AIAssistant from './pages/technician/AIAssistant';
+import Analytics from './pages/technician/Analytics';
+import Inventory from './pages/technician/Inventory';
+import BillingEstimate from './pages/technician/BillingEstimate';
+
 
 const PageHandler = () => {
   const navigate = useNavigate();
@@ -133,6 +140,7 @@ function App() {
   return (
     <Router>
       <BookingProvider>
+      <TechProvider>
       <ScrollToTop />
       <Routes>
         <Route path="/" element={<Login />} />
@@ -240,6 +248,11 @@ function App() {
         <Route path="/technician/verification" element={<Verification />} />
         <Route path="/technician/support" element={<HelpSupportTech />} />
         <Route path="/technician/raise-part-request" element={<RaisePartRequest />} />
+        <Route path="/technician/notifications" element={<TechNotifications />} />
+        <Route path="/technician/ai-assistant" element={<AIAssistant />} />
+        <Route path="/technician/analytics" element={<Analytics />} />
+        <Route path="/technician/inventory" element={<Inventory />} />
+        <Route path="/technician/billing-estimate" element={<BillingEstimate />} />
         
         {/* Super Admin Routes */}
         <Route path="/super-admin/login" element={<SuperAdminLogin />} />
@@ -265,6 +278,7 @@ function App() {
 
         <Route path="*" element={<PageHandler />} />
       </Routes>
+      </TechProvider>
       </BookingProvider>
     </Router>
   );
