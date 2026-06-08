@@ -103,6 +103,8 @@ import AIAssistant from './pages/technician/AIAssistant';
 import Analytics from './pages/technician/Analytics';
 import Inventory from './pages/technician/Inventory';
 import BillingEstimate from './pages/technician/BillingEstimate';
+import SkillsCertifications from './pages/technician/SkillsCertifications';
+import TechSettings from './pages/technician/TechSettings';
 
 
 const PageHandler = () => {
@@ -253,6 +255,8 @@ function App() {
         <Route path="/technician/analytics" element={<Analytics />} />
         <Route path="/technician/inventory" element={<Inventory />} />
         <Route path="/technician/billing-estimate" element={<BillingEstimate />} />
+        <Route path="/technician/skills-certifications" element={<SkillsCertifications />} />
+        <Route path="/technician/settings" element={<TechSettings />} />
         
         {/* Super Admin Routes */}
         <Route path="/super-admin/login" element={<SuperAdminLogin />} />

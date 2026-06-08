@@ -12,24 +12,24 @@ const Analytics = () => {
   const [selectedTimeframe, setSelectedTimeframe] = useState('This Week');
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-24 max-w-md mx-auto border-x border-slate-100 shadow-xl relative font-sans">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-24 max-w-md mx-auto border-x border-slate-200 shadow-xl relative font-sans">
       
       {/* Header */}
-      <div className="bg-white border-b border-slate-100 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
+      <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
         <button 
           onClick={() => setIsSidebarOpen(true)}
           className="p-1 hover:bg-slate-50 rounded-full text-slate-700 transition-colors"
         >
           <Menu className="h-6 w-6 text-slate-700" />
         </button>
-        <h1 className="text-base font-extrabold text-[#052355] flex-1 text-center pl-8">Analytics</h1>
+        <h1 className="text-base font-medium text-[#052355] flex-1 text-center pl-8">Analytics</h1>
         <button className="p-1 hover:bg-slate-50 rounded-full text-slate-700 transition-colors">
           <MoreVertical className="h-5 w-5 text-slate-700" />
         </button>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 p-5 flex flex-col gap-6">
+      <div className="flex-1 p-3.5 flex flex-col gap-6">
         
         {/* Timeframe Selector */}
         <div className="flex justify-start">
@@ -37,13 +37,13 @@ const Analytics = () => {
             <select 
               value={selectedTimeframe}
               onChange={(e) => setSelectedTimeframe(e.target.value)}
-              className="appearance-none bg-white border border-slate-200 rounded-xl px-4 py-2.5 pr-9 text-xs font-bold text-slate-600 focus:outline-none focus:border-slate-300 shadow-3xs"
+              className="appearance-none bg-white border border-slate-200 rounded-xl px-4 py-2.5 pr-9 text-xs font-normal text-slate-600 focus:outline-none focus:border-slate-300 shadow-sm"
             >
               <option>This Week</option>
               <option>This Month</option>
               <option>This Year</option>
             </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-600 pointer-events-none" />
           </div>
         </div>
 
@@ -51,50 +51,50 @@ const Analytics = () => {
         <div className="grid grid-cols-2 gap-4">
           
           {/* Earnings Card */}
-          <div className="bg-white rounded-2xl p-4.5 border border-slate-100 shadow-3xs text-left">
-            <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wide block">Earnings</span>
-            <p className="text-lg font-black text-[#052355] mt-1.5">₹18,450</p>
+          <div className="bg-white rounded-2xl p-3.5 border border-slate-200 shadow-sm text-left">
+            <span className="text-[10px] font-medium text-slate-600 uppercase tracking-wide block">Earnings</span>
+            <p className="text-lg font-medium text-[#052355] mt-1.5">₹18,450</p>
             <div className="flex items-center gap-1 mt-1 text-[#2E7D32]">
               <TrendingUp className="h-3 w-3 text-[#2E7D32]" />
-              <span className="text-[10px] font-bold">+12.5%</span>
+              <span className="text-[10px] font-normal">+12.5%</span>
             </div>
           </div>
 
           {/* Jobs Completed Card */}
-          <div className="bg-white rounded-2xl p-4.5 border border-slate-100 shadow-3xs text-left">
-            <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wide block">Jobs Completed</span>
-            <p className="text-lg font-black text-[#052355] mt-1.5">18</p>
+          <div className="bg-white rounded-2xl p-3.5 border border-slate-200 shadow-sm text-left">
+            <span className="text-[10px] font-medium text-slate-600 uppercase tracking-wide block">Jobs Completed</span>
+            <p className="text-lg font-medium text-[#052355] mt-1.5">18</p>
             <div className="flex items-center gap-1 mt-1 text-[#2E7D32]">
               <TrendingUp className="h-3 w-3 text-[#2E7D32]" />
-              <span className="text-[10px] font-bold">+8.3%</span>
+              <span className="text-[10px] font-normal">+8.3%</span>
             </div>
           </div>
 
           {/* Completion Rate Card */}
-          <div className="bg-white rounded-2xl p-4.5 border border-slate-100 shadow-3xs text-left">
-            <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wide block">Completion Rate</span>
-            <p className="text-lg font-black text-[#052355] mt-1.5">92%</p>
+          <div className="bg-white rounded-2xl p-3.5 border border-slate-200 shadow-sm text-left">
+            <span className="text-[10px] font-medium text-slate-600 uppercase tracking-wide block">Completion Rate</span>
+            <p className="text-lg font-medium text-[#052355] mt-1.5">92%</p>
             <div className="flex items-center gap-1 mt-1 text-[#2E7D32]">
               <TrendingUp className="h-3 w-3 text-[#2E7D32]" />
-              <span className="text-[10px] font-bold">+5.2%</span>
+              <span className="text-[10px] font-normal">+5.2%</span>
             </div>
           </div>
 
           {/* Customer Rating Card */}
-          <div className="bg-white rounded-2xl p-4.5 border border-slate-100 shadow-3xs text-left">
-            <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wide block">Customer Rating</span>
-            <p className="text-lg font-black text-[#052355] mt-1.5">4.9</p>
+          <div className="bg-white rounded-2xl p-3.5 border border-slate-200 shadow-sm text-left">
+            <span className="text-[10px] font-medium text-slate-600 uppercase tracking-wide block">Customer Rating</span>
+            <p className="text-lg font-medium text-[#052355] mt-1.5">4.9</p>
             <div className="flex items-center gap-1 mt-1 text-[#2E7D32]">
               <TrendingUp className="h-3 w-3 text-[#2E7D32]" />
-              <span className="text-[10px] font-bold">+0.1</span>
+              <span className="text-[10px] font-normal">+0.1</span>
             </div>
           </div>
 
         </div>
 
         {/* Top Services Donut Chart Section */}
-        <div className="bg-white rounded-[2rem] p-5.5 border border-slate-100 shadow-3xs text-left flex flex-col gap-4">
-          <h3 className="text-xs font-black text-[#052355] uppercase tracking-wider">Top Services</h3>
+        <div className="bg-white rounded-[2rem] p-3.5.5 border border-slate-200 shadow-sm text-left flex flex-col gap-4">
+          <h3 className="text-xs font-medium text-[#052355] uppercase tracking-wider">Top Services</h3>
           
           <div className="flex items-center justify-between gap-5 py-2">
             
@@ -118,41 +118,41 @@ const Analytics = () => {
               </svg>
               {/* Inner hole overlay for text */}
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-[10px] font-extrabold text-slate-400 uppercase">Jobs</span>
-                <span className="text-base font-black text-[#052355]">18</span>
+                <span className="text-[10px] font-medium text-slate-600 uppercase">Jobs</span>
+                <span className="text-base font-medium text-[#052355]">18</span>
               </div>
             </div>
 
             {/* Legend List */}
             <div className="flex-1 flex flex-col gap-2.5">
-              <div className="flex items-center justify-between text-xs font-bold">
+              <div className="flex items-center justify-between text-xs font-normal">
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-[#0D47A1] inline-block"></span>
-                  <span className="text-slate-500 font-semibold text-[11px]">AC Repair</span>
+                  <span className="text-slate-500 font-normal text-[11px]">AC Repair</span>
                 </div>
                 <span className="text-[#052355] text-[11px]">45%</span>
               </div>
 
-              <div className="flex items-center justify-between text-xs font-bold">
+              <div className="flex items-center justify-between text-xs font-normal">
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-[#2E7D32] inline-block"></span>
-                  <span className="text-slate-500 font-semibold text-[11px]">Washing Machine</span>
+                  <span className="text-slate-500 font-normal text-[11px]">Washing Machine</span>
                 </div>
                 <span className="text-[#052355] text-[11px]">25%</span>
               </div>
 
-              <div className="flex items-center justify-between text-xs font-bold">
+              <div className="flex items-center justify-between text-xs font-normal">
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-[#7B1FA2] inline-block"></span>
-                  <span className="text-slate-500 font-semibold text-[11px]">Refrigerator</span>
+                  <span className="text-slate-500 font-normal text-[11px]">Refrigerator</span>
                 </div>
                 <span className="text-[#052355] text-[11px]">20%</span>
               </div>
 
-              <div className="flex items-center justify-between text-xs font-bold">
+              <div className="flex items-center justify-between text-xs font-normal">
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-[#FFB300] inline-block"></span>
-                  <span className="text-slate-500 font-semibold text-[11px]">Others</span>
+                  <span className="text-slate-500 font-normal text-[11px]">Others</span>
                 </div>
                 <span className="text-[#052355] text-[11px]">10%</span>
               </div>
@@ -175,7 +175,7 @@ const Analytics = () => {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header: Dark Blue Profile Section */}
-            <div className="bg-[#052355] text-white p-5 flex flex-col gap-3 relative">
+            <div className="bg-[#052355] text-white p-3.5 flex flex-col gap-3 relative">
               <button 
                 onClick={() => setIsSidebarOpen(false)}
                 className="absolute top-4 right-4 p-1 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
@@ -192,8 +192,8 @@ const Analytics = () => {
               </div>
               
               <div>
-                <h3 className="text-sm font-bold text-white leading-tight">Alex Rodriguez</h3>
-                <p className="text-[10px] text-slate-300 font-semibold mt-0.5">Expert HVAC Technician • ★ 4.9</p>
+                <h3 className="text-sm font-normal text-white leading-tight">Alex Rodriguez</h3>
+                <p className="text-[10px] text-slate-500 font-normal mt-0.5">Expert HVAC Technician • ★ 4.9</p>
               </div>
             </div>
 
@@ -203,64 +203,64 @@ const Analytics = () => {
               {/* Dashboard / Jobs */}
               <button 
                 onClick={() => { setIsSidebarOpen(false); navigate('/technician/dashboard'); }}
-                className="w-full px-5 py-3.5 flex items-center gap-3.5 hover:bg-slate-50 text-slate-600 hover:text-[#0D47A1] transition-colors text-left"
+                className="w-full px-3.5 py-3.5 flex items-center gap-3.5 hover:bg-slate-50 text-slate-600 hover:text-[#0D47A1] transition-colors text-left"
               >
-                <Briefcase className="h-5 w-5 text-slate-400" />
-                <span className="text-xs font-bold">Dashboard (Jobs)</span>
+                <Briefcase className="h-5 w-5 text-slate-600" />
+                <span className="text-xs font-normal">Dashboard (Jobs)</span>
               </button>
 
               {/* My Schedule */}
               <button 
                 onClick={() => { setIsSidebarOpen(false); navigate('/technician/schedule'); }}
-                className="w-full px-5 py-3.5 flex items-center gap-3.5 hover:bg-slate-50 text-slate-600 hover:text-[#0D47A1] transition-colors text-left"
+                className="w-full px-3.5 py-3.5 flex items-center gap-3.5 hover:bg-slate-50 text-slate-600 hover:text-[#0D47A1] transition-colors text-left"
               >
-                <Calendar className="h-5 w-5 text-slate-400" />
-                <span className="text-xs font-bold">My Schedule</span>
+                <Calendar className="h-5 w-5 text-slate-600" />
+                <span className="text-xs font-normal">My Schedule</span>
               </button>
 
               {/* Part Requests */}
               <button 
                 onClick={() => { setIsSidebarOpen(false); navigate('/technician/raise-part-request?tab=claims'); }}
-                className="w-full px-5 py-3.5 flex items-center gap-3.5 hover:bg-slate-50 text-slate-600 hover:text-[#0D47A1] transition-colors text-left"
+                className="w-full px-3.5 py-3.5 flex items-center gap-3.5 hover:bg-slate-50 text-slate-600 hover:text-[#0D47A1] transition-colors text-left"
               >
-                <ClipboardList className="h-5 w-5 text-slate-400" />
-                <span className="text-xs font-bold">Part Requests</span>
+                <ClipboardList className="h-5 w-5 text-slate-600" />
+                <span className="text-xs font-normal">Part Requests</span>
               </button>
 
               {/* Inventory */}
               <button 
                 onClick={() => { setIsSidebarOpen(false); navigate('/technician/inventory'); }}
-                className="w-full px-5 py-3.5 flex items-center gap-3.5 hover:bg-slate-50 text-slate-600 hover:text-[#0D47A1] transition-colors text-left"
+                className="w-full px-3.5 py-3.5 flex items-center gap-3.5 hover:bg-slate-50 text-slate-600 hover:text-[#0D47A1] transition-colors text-left"
               >
-                <Wrench className="h-5 w-5 text-slate-400" />
-                <span className="text-xs font-bold">My Inventory</span>
+                <Wrench className="h-5 w-5 text-slate-600" />
+                <span className="text-xs font-normal">My Inventory</span>
               </button>
 
               {/* Payout Settings */}
               <button 
                 onClick={() => { setIsSidebarOpen(false); navigate('/technician/payout-settings'); }}
-                className="w-full px-5 py-3.5 flex items-center gap-3.5 hover:bg-slate-50 text-slate-600 hover:text-[#0D47A1] transition-colors text-left"
+                className="w-full px-3.5 py-3.5 flex items-center gap-3.5 hover:bg-slate-50 text-slate-600 hover:text-[#0D47A1] transition-colors text-left"
               >
-                <CreditCard className="h-5 w-5 text-slate-400" />
-                <span className="text-xs font-bold">Payout Settings</span>
+                <CreditCard className="h-5 w-5 text-slate-600" />
+                <span className="text-xs font-normal">Payout Settings</span>
               </button>
 
               {/* KYC Verification */}
               <button 
                 onClick={() => { setIsSidebarOpen(false); navigate('/technician/verification'); }}
-                className="w-full px-5 py-3.5 flex items-center gap-3.5 hover:bg-slate-50 text-slate-600 hover:text-[#0D47A1] transition-colors text-left"
+                className="w-full px-3.5 py-3.5 flex items-center gap-3.5 hover:bg-slate-50 text-slate-600 hover:text-[#0D47A1] transition-colors text-left"
               >
-                <ShieldCheck className="h-5 w-5 text-slate-400" />
-                <span className="text-xs font-bold">KYC Verification</span>
+                <ShieldCheck className="h-5 w-5 text-slate-600" />
+                <span className="text-xs font-normal">KYC Verification</span>
               </button>
 
               {/* Help & Support */}
               <button 
                 onClick={() => { setIsSidebarOpen(false); navigate('/technician/support'); }}
-                className="w-full px-5 py-3.5 flex items-center gap-3.5 hover:bg-slate-50 text-slate-600 hover:text-[#0D47A1] transition-colors text-left"
+                className="w-full px-3.5 py-3.5 flex items-center gap-3.5 hover:bg-slate-50 text-slate-600 hover:text-[#0D47A1] transition-colors text-left"
               >
-                <HelpCircle className="h-5 w-5 text-slate-400" />
-                <span className="text-xs font-bold">Help & Support</span>
+                <HelpCircle className="h-5 w-5 text-slate-600" />
+                <span className="text-xs font-normal">Help & Support</span>
               </button>
 
               {/* Divider */}
@@ -269,43 +269,43 @@ const Analytics = () => {
               {/* Logout */}
               <button 
                 onClick={() => { setIsSidebarOpen(false); navigate('/technician/login'); }}
-                className="w-full px-5 py-3.5 flex items-center gap-3.5 hover:bg-red-50/20 text-red-500 transition-colors text-left"
+                className="w-full px-3.5 py-3.5 flex items-center gap-3.5 hover:bg-red-50/20 text-red-500 transition-colors text-left"
               >
                 <LogOut className="h-5 w-5 text-red-400" />
-                <span className="text-xs font-bold">Logout</span>
+                <span className="text-xs font-normal">Logout</span>
               </button>
 
             </div>
 
             {/* Version Info */}
-            <div className="p-5 border-t border-slate-100 text-left">
-              <span className="text-[10px] font-bold text-slate-400">Partner App v2.4.1</span>
+            <div className="p-3.5 border-t border-slate-200 text-left">
+              <span className="text-[10px] font-normal text-slate-600">Partner App v2.4.1</span>
             </div>
           </div>
         </div>
       )}
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-slate-100 py-3 px-6 flex justify-between items-center z-20 shadow-lg">
-        <button onClick={() => navigate('/technician/dashboard')} className="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-700 transition-all">
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-slate-200 py-3 px-3.5 flex justify-between items-center z-20 shadow-lg">
+        <button onClick={() => navigate('/technician/dashboard')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-slate-700 transition-all">
           <Briefcase className="h-6 w-6 stroke-[2]" />
-          <span className="text-[10px] font-bold tracking-wide">Jobs</span>
+          <span className="text-[10px] font-normal tracking-wide">Jobs</span>
         </button>
-        <button onClick={() => navigate('/technician/raise-part-request?tab=claims')} className="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-700 transition-all">
+        <button onClick={() => navigate('/technician/raise-part-request?tab=claims')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-slate-700 transition-all">
           <ClipboardList className="h-6 w-6 stroke-[2]" />
-          <span className="text-[10px] font-bold tracking-wide">Requests</span>
+          <span className="text-[10px] font-normal tracking-wide">Requests</span>
         </button>
-        <button onClick={() => navigate('/technician/inventory')} className="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-700 transition-all">
+        <button onClick={() => navigate('/technician/inventory')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-slate-700 transition-all">
           <Wrench className="h-6 w-6 stroke-[2]" />
-          <span className="text-[10px] font-bold tracking-wide">Inventory</span>
+          <span className="text-[10px] font-normal tracking-wide">Inventory</span>
         </button>
-        <button onClick={() => navigate('/technician/schedule')} className="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-700 transition-all">
+        <button onClick={() => navigate('/technician/schedule')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-slate-700 transition-all">
           <Calendar className="h-6 w-6 stroke-[2]" />
-          <span className="text-[10px] font-bold tracking-wide">Schedule</span>
+          <span className="text-[10px] font-normal tracking-wide">Schedule</span>
         </button>
-        <button onClick={() => navigate('/technician/profile')} className="flex flex-col items-center gap-1 text-slate-400 hover:text-[#0D47A1] transition-all">
+        <button onClick={() => navigate('/technician/profile')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-[#0D47A1] transition-all">
           <User className="h-6 w-6 stroke-[2]" />
-          <span className="text-[10px] font-bold tracking-wide">Profile</span>
+          <span className="text-[10px] font-normal tracking-wide">Profile</span>
         </button>
       </div>
 

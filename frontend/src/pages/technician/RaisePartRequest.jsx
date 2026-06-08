@@ -120,11 +120,11 @@ const RaisePartRequest = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F8FC] flex flex-col pb-24 max-w-md mx-auto border-x border-slate-100 shadow-xl relative font-sans">
+    <div className="min-h-screen bg-[#F5F8FC] flex flex-col pb-24 max-w-md mx-auto border-x border-slate-200 shadow-xl relative font-sans">
       
       {/* Header */}
-      <div className="bg-white border-b border-slate-100 p-4 flex items-center justify-between sticky top-0 z-10">
-        <h1 className="text-lg font-bold text-[#052355]">Parts & Claims</h1>
+      <div className="bg-white border-b border-slate-200 p-4 flex items-center justify-between sticky top-0 z-10">
+        <h1 className="text-lg font-normal text-[#052355]">Parts & Claims</h1>
         <button 
           onClick={() => navigate('/technician/notifications')}
           className="p-2.5 hover:bg-slate-50 rounded-full transition-colors relative"
@@ -137,32 +137,32 @@ const RaisePartRequest = () => {
       </div>
 
       {/* Navigation Tabs (Merges Screen 9, 10, 11) */}
-      <div className="bg-white px-5 py-2 border-b border-slate-100 flex gap-5 justify-start items-center">
+      <div className="bg-white px-3.5 py-2 border-b border-slate-200 flex gap-5 justify-start items-center">
         <button
           onClick={() => setActiveTab('inventory')}
-          className={`text-center py-2 px-4.5 rounded-full text-xs font-bold transition-all ${
-            activeTab === 'inventory' ? 'bg-[#E3ECF9] text-[#0D47A1]' : 'text-slate-400 hover:text-slate-600'
+          className={`text-center py-2 px-3.5 rounded-full text-xs font-normal transition-all ${
+            activeTab === 'inventory' ? 'bg-[#E3ECF9] text-[#0D47A1]' : 'text-slate-600 hover:text-slate-600'
           }`}
         >
           Inventory
         </button>
         <button
           onClick={() => setActiveTab('order')}
-          className={`text-center py-2 px-4.5 rounded-full text-xs font-bold transition-all relative ${
-            activeTab === 'order' ? 'bg-[#E3ECF9] text-[#0D47A1]' : 'text-slate-400 hover:text-slate-600'
+          className={`text-center py-2 px-3.5 rounded-full text-xs font-normal transition-all relative ${
+            activeTab === 'order' ? 'bg-[#E3ECF9] text-[#0D47A1]' : 'text-slate-600 hover:text-slate-600'
           }`}
         >
           Order Parts
           {partsCart.length > 0 && (
-            <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[9px] text-white font-bold flex items-center justify-center">
+            <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[9px] text-white font-normal flex items-center justify-center">
               {partsCart.length}
             </span>
           )}
         </button>
         <button
           onClick={() => setActiveTab('claims')}
-          className={`text-center py-2 px-4.5 rounded-full text-xs font-bold transition-all ${
-            activeTab === 'claims' ? 'bg-[#E3ECF9] text-[#0D47A1]' : 'text-slate-400 hover:text-slate-600'
+          className={`text-center py-2 px-3.5 rounded-full text-xs font-normal transition-all ${
+            activeTab === 'claims' ? 'bg-[#E3ECF9] text-[#0D47A1]' : 'text-slate-600 hover:text-slate-600'
           }`}
         >
           FOC Claims
@@ -170,7 +170,7 @@ const RaisePartRequest = () => {
       </div>
 
       {/* Main Views Container */}
-      <div className="flex-1 p-5 flex flex-col gap-4">
+      <div className="flex-1 p-3.5 flex flex-col gap-4">
         
         {/* VIEW 1: INVENTORY (Screen 9) */}
         {activeTab === 'inventory' && (
@@ -183,9 +183,9 @@ const RaisePartRequest = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search parts by name or SKU..."
-                className="w-full bg-white border border-slate-200 rounded-2xl pl-11 pr-4 py-3.5 text-xs font-semibold focus:outline-none focus:border-[#0D47A1] shadow-2xs"
+                className="w-full bg-white border border-slate-200 rounded-2xl pl-11 pr-4 py-3.5 text-xs font-normal focus:outline-none focus:border-[#0D47A1] shadow-sm"
               />
-              <Search className="absolute left-4 top-4 h-4.5 w-4.5 text-slate-400" />
+              <Search className="absolute left-4 top-4 h-4.5 w-4.5 text-slate-600" />
             </div>
 
             {/* In-Stock filters pills */}
@@ -194,10 +194,10 @@ const RaisePartRequest = () => {
                 <button
                   key={pill}
                   onClick={() => setStockFilter(pill)}
-                  className={`px-3 py-1.5 rounded-lg text-[10px] font-bold border whitespace-nowrap transition-all ${
+                  className={`px-3 py-1.5 rounded-lg text-[10px] font-normal border whitespace-nowrap transition-all ${
                     stockFilter === pill
                       ? 'bg-[#052355] text-white border-[#052355]'
-                      : 'bg-white border-slate-200 text-slate-400 hover:bg-slate-50'
+                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
                   }`}
                 >
                   {pill}
@@ -209,16 +209,16 @@ const RaisePartRequest = () => {
             <div className="flex flex-col gap-3.5">
               {filteredInventory.length > 0 ? (
                 filteredInventory.map(item => (
-                  <div key={item.id} className="bg-white rounded-3xl border border-slate-100 shadow-2xs p-4 flex justify-between items-center hover:shadow-xs transition-shadow">
+                  <div key={item.id} className="bg-white rounded-3xl border border-slate-200 shadow-sm p-4 flex justify-between items-center hover:shadow-sm transition-shadow">
                     <div>
-                      <h4 className="text-xs font-extrabold text-[#052355]">{item.name}</h4>
-                      <p className="text-[10px] text-slate-400 font-semibold mt-0.5">SKU: {item.sku} • Price: ₹{item.price}</p>
+                      <h4 className="text-xs font-medium text-[#052355]">{item.name}</h4>
+                      <p className="text-[10px] text-slate-600 font-normal mt-0.5">SKU: {item.sku} • Price: ₹{item.price}</p>
                       
                       <div className="flex items-center gap-1.5 mt-2">
-                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md border uppercase ${getStockBadge(item.qty)}`}>
+                        <span className={`text-[9px] font-normal px-2 py-0.5 rounded-md border uppercase ${getStockBadge(item.qty)}`}>
                           {getStockLabel(item.qty)}
                         </span>
-                        <span className="text-[10px] font-semibold text-slate-500">Qty: {item.qty}</span>
+                        <span className="text-[10px] font-normal text-slate-500">Qty: {item.qty}</span>
                       </div>
                     </div>
 
@@ -227,16 +227,16 @@ const RaisePartRequest = () => {
                         addPartToCart(item);
                         setAddedPartCard(item);
                       }}
-                      className="p-3 bg-blue-50 text-[#0D47A1] hover:bg-blue-100 rounded-2xl transition-all shadow-2xs"
+                      className="p-3 bg-blue-50 text-[#0D47A1] hover:bg-blue-100 rounded-2xl transition-all shadow-sm"
                     >
                       <Plus className="h-5 w-5 stroke-[2.5]" />
                     </button>
                   </div>
                 ))
               ) : (
-                <div className="text-center py-10 bg-white rounded-3xl border border-dashed border-slate-200 p-6 text-slate-400">
-                  <AlertTriangle className="h-10 w-10 mx-auto text-slate-300 mb-2" />
-                  <p className="text-sm font-semibold">No inventory parts found.</p>
+                <div className="text-center py-10 bg-white rounded-3xl border border-dashed border-slate-200 p-4 text-slate-600">
+                  <AlertTriangle className="h-10 w-10 mx-auto text-slate-500 mb-2" />
+                  <p className="text-sm font-normal">No inventory parts found.</p>
                 </div>
               )}
             </div>
@@ -249,13 +249,13 @@ const RaisePartRequest = () => {
           <div className="flex flex-col gap-4">
             
             {/* Supply Source Selection */}
-            <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm flex flex-col gap-3">
-              <span className="text-[10px] font-black tracking-wider text-slate-400 uppercase">Select Source</span>
+            <div className="bg-white rounded-3xl p-3.5 border border-slate-200 shadow-sm flex flex-col gap-3">
+              <span className="text-[10px] font-medium tracking-wider text-slate-600 uppercase">Select Source</span>
               
               <div className="flex flex-col gap-3">
                 {/* Source 1 */}
                 <label className={`p-4 rounded-2xl border flex items-start gap-3 cursor-pointer transition-all ${
-                  orderSource === 'warehouse' ? 'border-[#0D47A1] bg-[#E3ECF9]/10' : 'border-slate-100 hover:bg-slate-50/50'
+                  orderSource === 'warehouse' ? 'border-[#0D47A1] bg-[#E3ECF9]/10' : 'border-slate-200 hover:bg-slate-50/50'
                 }`}>
                   <input 
                     type="radio" 
@@ -265,14 +265,14 @@ const RaisePartRequest = () => {
                     className="mt-1 accent-[#0D47A1]"
                   />
                   <div>
-                    <h4 className="text-xs font-bold text-[#052355]">NCC Warehouse</h4>
-                    <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Gurugram, Haryana • Delivery in 24-48 hrs</p>
+                    <h4 className="text-xs font-normal text-[#052355]">NCC Warehouse</h4>
+                    <p className="text-[10px] text-slate-600 font-normal mt-0.5">Gurugram, Haryana • Delivery in 24-48 hrs</p>
                   </div>
                 </label>
 
                 {/* Source 2 */}
                 <label className={`p-4 rounded-2xl border flex items-start gap-3 cursor-pointer transition-all ${
-                  orderSource === 'brand' ? 'border-[#0D47A1] bg-[#E3ECF9]/10' : 'border-slate-100 hover:bg-slate-50/50'
+                  orderSource === 'brand' ? 'border-[#0D47A1] bg-[#E3ECF9]/10' : 'border-slate-200 hover:bg-slate-50/50'
                 }`}>
                   <input 
                     type="radio" 
@@ -282,14 +282,14 @@ const RaisePartRequest = () => {
                     className="mt-1 accent-[#0D47A1]"
                   />
                   <div>
-                    <h4 className="text-xs font-bold text-[#052355]">Partner Brand</h4>
-                    <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Samsung Service Center • Delivery in 24 hrs</p>
+                    <h4 className="text-xs font-normal text-[#052355]">Partner Brand</h4>
+                    <p className="text-[10px] text-slate-600 font-normal mt-0.5">Samsung Service Center • Delivery in 24 hrs</p>
                   </div>
                 </label>
 
                 {/* Source 3 */}
                 <label className={`p-4 rounded-2xl border flex items-start gap-3 cursor-pointer transition-all ${
-                  orderSource === 'store' ? 'border-[#0D47A1] bg-[#E3ECF9]/10' : 'border-slate-100 hover:bg-slate-50/50'
+                  orderSource === 'store' ? 'border-[#0D47A1] bg-[#E3ECF9]/10' : 'border-slate-200 hover:bg-slate-50/50'
                 }`}>
                   <input 
                     type="radio" 
@@ -299,27 +299,27 @@ const RaisePartRequest = () => {
                     className="mt-1 accent-[#0D47A1]"
                   />
                   <div>
-                    <h4 className="text-xs font-bold text-[#052355]">Nearby Store</h4>
-                    <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Check nearby partners within 10 km</p>
+                    <h4 className="text-xs font-normal text-[#052355]">Nearby Store</h4>
+                    <p className="text-[10px] text-slate-600 font-normal mt-0.5">Check nearby partners within 10 km</p>
                   </div>
                 </label>
               </div>
             </div>
 
             {/* Cart Summary */}
-            <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm flex flex-col gap-4">
-              <span className="text-[10px] font-black tracking-wider text-slate-400 uppercase">Cart Items</span>
+            <div className="bg-white rounded-3xl p-3.5 border border-slate-200 shadow-sm flex flex-col gap-4">
+              <span className="text-[10px] font-medium tracking-wider text-slate-600 uppercase">Cart Items</span>
               
               <div className="flex flex-col gap-3.5">
                 {partsCart.length > 0 ? (
                   partsCart.map(item => (
-                    <div key={item.id} className="flex justify-between items-center text-xs border-b border-slate-50 pb-3 last:border-b-0 last:pb-0">
+                    <div key={item.id} className="flex justify-between items-center text-xs border-b border-slate-200 pb-3 last:border-b-0 last:pb-0">
                       <div>
-                        <h5 className="font-bold text-[#052355]">{item.name}</h5>
-                        <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Qty: {item.qty} • ₹{item.price} each</p>
+                        <h5 className="font-normal text-[#052355]">{item.name}</h5>
+                        <p className="text-[10px] text-slate-600 font-normal mt-0.5">Qty: {item.qty} • ₹{item.price} each</p>
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className="font-extrabold text-[#052355]">₹{item.price * item.qty}</span>
+                        <span className="font-medium text-[#052355]">₹{item.price * item.qty}</span>
                         <button 
                           onClick={() => removePartFromCart(item.id)}
                           className="p-1 hover:bg-red-50 text-red-500 rounded-lg"
@@ -330,16 +330,16 @@ const RaisePartRequest = () => {
                     </div>
                   ))
                 ) : (
-                  <div className="text-center py-6 text-slate-400 text-xs font-semibold">
+                  <div className="text-center py-6 text-slate-600 text-xs font-normal">
                     Cart is empty. Select items in the Inventory tab.
                   </div>
                 )}
               </div>
 
               {partsCart.length > 0 && (
-                <div className="border-t border-slate-100 pt-4 flex justify-between items-center">
-                  <span className="text-xs font-bold text-slate-500">Order Total</span>
-                  <span className="text-lg font-black text-[#0D47A1]">₹{calculateCartTotal()}</span>
+                <div className="border-t border-slate-200 pt-4 flex justify-between items-center">
+                  <span className="text-xs font-normal text-slate-500">Order Total</span>
+                  <span className="text-lg font-medium text-[#0D47A1]">₹{calculateCartTotal()}</span>
                 </div>
               )}
             </div>
@@ -347,7 +347,7 @@ const RaisePartRequest = () => {
             {partsCart.length > 0 && (
               <button 
                 onClick={handlePlaceOrder}
-                className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-bold py-4 rounded-2xl text-sm transition-all shadow-md mt-2"
+                className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-normal py-4 rounded-2xl text-sm transition-all shadow-md mt-2"
               >
                 Place Order (₹{calculateCartTotal()})
               </button>
@@ -366,10 +366,10 @@ const RaisePartRequest = () => {
                 <button
                   key={status}
                   onClick={() => setClaimFilter(status)}
-                  className={`flex-1 text-center py-2.5 rounded-xl text-xs font-bold transition-all ${
+                  className={`flex-1 text-center py-2.5 rounded-xl text-xs font-normal transition-all ${
                     claimFilter === status
-                      ? 'bg-white text-[#052355] shadow-xs'
-                      : 'text-slate-400 hover:text-slate-600'
+                      ? 'bg-white text-[#052355] shadow-sm'
+                      : 'text-slate-600 hover:text-slate-600'
                   }`}
                 >
                   {status}
@@ -381,22 +381,22 @@ const RaisePartRequest = () => {
             <div className="flex flex-col gap-3.5">
               {filteredClaims.length > 0 ? (
                 filteredClaims.map(claim => (
-                  <div key={claim.id} className="bg-white rounded-[2rem] p-5.5 border border-slate-100 shadow-2xs flex justify-between items-start relative mb-0.5 hover:shadow-xs transition-shadow">
-                    <div className="flex-1 text-left">
-                      <span className="text-[9px] font-black text-[#0D47A1] bg-[#E3ECF9] px-2.5 py-0.5 rounded-md uppercase tracking-wider mb-2 inline-block">
+                  <div key={claim.id} className="bg-white rounded-[2rem] p-3.5 border border-slate-200 shadow-sm flex justify-between items-start relative mb-0.5 hover:shadow-sm transition-shadow overflow-hidden">
+                    <div className="flex-1 min-w-0 text-left pr-2">
+                      <span className="text-[9px] font-medium text-[#0D47A1] bg-[#E3ECF9] px-2.5 py-0.5 rounded-md uppercase tracking-wider mb-2 inline-block max-w-full truncate">
                         {claim.brand}
                       </span>
-                      <h4 className="text-xs font-black text-[#052355] mt-1">
+                      <h4 className="text-xs font-medium text-[#052355] mt-1 truncate">
                         {claim.item}
                       </h4>
-                      <p className="text-[9px] text-slate-400 font-bold mt-1.5">
+                      <p className="text-[9px] text-slate-600 font-normal mt-1.5 break-words">
                         Claim ID: {claim.claimId} • Date: {claim.date}
                       </p>
                     </div>
                     
-                    <div className="flex flex-col items-end justify-between min-h-[50px]">
-                      <span className="text-sm font-black text-[#052355]">₹{claim.amount}</span>
-                      <span className={`text-[9px] font-black px-2.5 py-0.5 rounded-md uppercase border mt-3 inline-block ${
+                    <div className="flex flex-col items-end justify-between shrink-0 min-h-[50px]">
+                      <span className="text-sm font-medium text-[#052355] whitespace-nowrap">₹{claim.amount}</span>
+                      <span className={`text-[9px] font-medium px-2.5 py-0.5 rounded-md uppercase border mt-3 inline-block whitespace-nowrap ${
                         claim.status === 'Pending Approval' || claim.status === 'Pending'
                           ? 'border-amber-500 text-amber-500'
                           : claim.status === 'Approved'
@@ -409,16 +409,16 @@ const RaisePartRequest = () => {
                   </div>
                 ))
               ) : (
-                <div className="text-center py-12 bg-white rounded-[2rem] border border-dashed border-slate-200 p-6 text-slate-400">
-                  <ShieldCheck className="h-10 w-10 mx-auto text-slate-350 mb-2" />
-                  <p className="text-sm font-semibold">No claims in this status.</p>
+                <div className="text-center py-12 bg-white rounded-[2rem] border border-dashed border-slate-200 p-4 text-slate-600">
+                  <ShieldCheck className="h-10 w-10 mx-auto text-slate-500 mb-2" />
+                  <p className="text-sm font-normal">No claims in this status.</p>
                 </div>
               )}
             </div>
 
             <button 
               onClick={() => navigate('/technician/billing-estimate')}
-              className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-bold py-4 rounded-2xl text-xs flex items-center justify-center gap-2 transition-all shadow-md mt-2"
+              className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-normal py-4 rounded-2xl text-xs flex items-center justify-center gap-2 transition-all shadow-md mt-2"
             >
               <PlusCircle className="h-4.5 w-4.5" />
               <span>Raise FOC Claim</span>
@@ -431,8 +431,8 @@ const RaisePartRequest = () => {
 
       {/* Claim Modal Form Popup */}
       {showClaimModal && (
-        <div className="absolute inset-0 bg-[#052355]/40 backdrop-blur-xs z-30 flex items-center justify-center p-6">
-          <div className="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl relative border border-slate-100 flex flex-col gap-4">
+        <div className="absolute inset-0 bg-[#052355]/40 backdrop-blur-xs z-30 flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-sm rounded-[2rem] p-4 shadow-2xl relative border border-slate-200 flex flex-col gap-4">
             <button 
               onClick={() => setShowClaimModal(false)}
               className="p-1.5 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors absolute top-4 right-4 text-slate-500"
@@ -440,15 +440,15 @@ const RaisePartRequest = () => {
               <X className="h-5 w-5" />
             </button>
 
-            <h3 className="text-base font-extrabold text-[#052355] mt-1 pr-8">New FOC Claim</h3>
+            <h3 className="text-base font-medium text-[#052355] mt-1 pr-8">New FOC Claim</h3>
             
             <form onSubmit={handleCreateClaim} className="flex flex-col gap-4 mt-2">
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Brand Partner</label>
+                <label className="text-[10px] font-normal text-slate-600 uppercase tracking-wide">Brand Partner</label>
                 <select 
                   value={newClaim.brand}
                   onChange={(e) => setNewClaim({ ...newClaim, brand: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold text-[#052355] focus:outline-none"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-normal text-[#052355] focus:outline-none"
                 >
                   <option>LG Partner Warranty</option>
                   <option>Samsung Warranty</option>
@@ -458,32 +458,32 @@ const RaisePartRequest = () => {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Spare Item Name</label>
+                <label className="text-[10px] font-normal text-slate-600 uppercase tracking-wide">Spare Item Name</label>
                 <input 
                   type="text" 
                   value={newClaim.item}
                   onChange={(e) => setNewClaim({ ...newClaim, item: e.target.value })}
                   placeholder="e.g. Compressor Coil, Washing Machine Motor"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold text-[#052355] focus:outline-none"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-normal text-[#052355] focus:outline-none"
                   required
                 />
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Claim Amount (₹)</label>
+                <label className="text-[10px] font-normal text-slate-600 uppercase tracking-wide">Claim Amount (₹)</label>
                 <input 
                   type="number" 
                   value={newClaim.amount}
                   onChange={(e) => setNewClaim({ ...newClaim, amount: e.target.value })}
                   placeholder="e.g. 1850"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold text-[#052355] focus:outline-none"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-normal text-[#052355] focus:outline-none"
                   required
                 />
               </div>
 
               <button 
                 type="submit"
-                className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-bold py-3.5 rounded-2xl text-xs transition-all shadow-md mt-2"
+                className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-normal py-3.5 rounded-2xl text-xs transition-all shadow-md mt-2"
               >
                 Submit FOC Claim
               </button>
@@ -493,53 +493,53 @@ const RaisePartRequest = () => {
       )}
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-slate-100 py-3 px-6 flex justify-between items-center z-20 shadow-lg">
-        <button onClick={() => navigate('/technician/dashboard')} className="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-700 transition-all">
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-slate-200 py-3 px-3.5 flex justify-between items-center z-20 shadow-lg">
+        <button onClick={() => navigate('/technician/dashboard')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-slate-700 transition-all">
           <Briefcase className="h-6 w-6 stroke-[2]" />
-          <span className="text-[10px] font-bold tracking-wide">Jobs</span>
+          <span className="text-[10px] font-normal tracking-wide">Jobs</span>
         </button>
         <button onClick={() => navigate('/technician/raise-part-request?tab=claims')} className="flex flex-col items-center gap-1 text-[#0D47A1] transition-all">
           <ClipboardList className="h-6 w-6 stroke-[2.5]" />
-          <span className="text-[10px] tracking-wide font-black">Requests</span>
+          <span className="text-[10px] tracking-wide font-medium">Requests</span>
         </button>
-        <button onClick={() => navigate('/technician/inventory')} className="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-700 transition-all">
+        <button onClick={() => navigate('/technician/inventory')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-slate-700 transition-all">
           <Wrench className="h-6 w-6 stroke-[2]" />
-          <span className="text-[10px] tracking-wide font-bold">Inventory</span>
+          <span className="text-[10px] tracking-wide font-normal">Inventory</span>
         </button>
-        <button onClick={() => navigate('/technician/schedule')} className="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-700 transition-all">
+        <button onClick={() => navigate('/technician/schedule')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-slate-700 transition-all">
           <Calendar className="h-6 w-6 stroke-[2]" />
-          <span className="text-[10px] font-bold tracking-wide">Schedule</span>
+          <span className="text-[10px] font-normal tracking-wide">Schedule</span>
         </button>
-        <button onClick={() => navigate('/technician/profile')} className="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-700 transition-all">
+        <button onClick={() => navigate('/technician/profile')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-slate-700 transition-all">
           <User className="h-6 w-6 stroke-[2]" />
-          <span className="text-[10px] font-bold tracking-wide">Profile</span>
+          <span className="text-[10px] font-normal tracking-wide">Profile</span>
         </button>
       </div>
 
       {/* Added to Cart Success Card Modal */}
       {addedPartCard && (
-        <div className="absolute inset-0 bg-[#052355]/40 backdrop-blur-xs z-30 flex items-center justify-center p-6 transition-all">
-          <div className="bg-white rounded-[2rem] p-6 shadow-2xl border border-slate-100 max-w-sm w-full text-center flex flex-col gap-4.5 relative">
+        <div className="absolute inset-0 bg-[#052355]/40 backdrop-blur-xs z-30 flex items-center justify-center p-4 transition-all">
+          <div className="bg-white rounded-[2rem] p-4 shadow-2xl border border-slate-200 max-w-sm w-full text-center flex flex-col gap-4.5 relative">
             {/* Success Icon */}
             <div className="w-14 h-14 bg-green-50 rounded-full flex items-center justify-center mx-auto text-green-500">
               <Check className="h-6 w-6 stroke-[3]" />
             </div>
 
             <div>
-              <h3 className="text-base font-extrabold text-[#052355]">Added to Cart</h3>
-              <p className="text-[11px] text-slate-400 font-bold mt-1">
+              <h3 className="text-base font-medium text-[#052355]">Added to Cart</h3>
+              <p className="text-[11px] text-slate-600 font-normal mt-1">
                 {addedPartCard.name} has been added to your spare parts cart.
               </p>
             </div>
 
             {/* Part Details Box */}
-            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100/50 text-left flex flex-col gap-1.5">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wide">Part Details</span>
-              <div className="flex justify-between items-center text-xs font-bold text-[#052355]">
+            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/50 text-left flex flex-col gap-1.5">
+              <span className="text-[10px] font-medium text-slate-600 uppercase tracking-wide">Part Details</span>
+              <div className="flex justify-between items-center text-xs font-normal text-[#052355]">
                 <span>{addedPartCard.name}</span>
                 <span className="text-[#0D47A1]">₹{addedPartCard.price}</span>
               </div>
-              <div className="flex justify-between items-center text-[10px] text-slate-400 font-semibold">
+              <div className="flex justify-between items-center text-[10px] text-slate-600 font-normal">
                 <span>SKU: {addedPartCard.sku}</span>
                 <span>Qty: {addedPartCard.qty}</span>
               </div>
@@ -549,7 +549,7 @@ const RaisePartRequest = () => {
             <div className="flex gap-3 mt-1">
               <button
                 onClick={() => setAddedPartCard(null)}
-                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-3 px-4 rounded-xl text-xs transition-all"
+                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-normal py-3 px-4 rounded-xl text-xs transition-all"
               >
                 Close
               </button>
@@ -558,7 +558,7 @@ const RaisePartRequest = () => {
                   setAddedPartCard(null);
                   setActiveTab('order');
                 }}
-                className="flex-1 bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-bold py-3 px-4 rounded-xl text-xs transition-all shadow-sm"
+                className="flex-1 bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-normal py-3 px-4 rounded-xl text-xs transition-all shadow-sm"
               >
                 View Cart
               </button>
@@ -568,28 +568,28 @@ const RaisePartRequest = () => {
       )}
       {/* Placed Order Success Card Modal */}
       {placedSource && (
-        <div className="absolute inset-0 bg-[#052355]/40 backdrop-blur-xs z-30 flex items-center justify-center p-6 transition-all">
-          <div className="bg-white rounded-[2rem] p-6 shadow-2xl border border-slate-100 max-w-sm w-full text-center flex flex-col gap-4.5 relative animate-fade-in">
+        <div className="absolute inset-0 bg-[#052355]/40 backdrop-blur-xs z-30 flex items-center justify-center p-4 transition-all">
+          <div className="bg-white rounded-[2rem] p-4 shadow-2xl border border-slate-200 max-w-sm w-full text-center flex flex-col gap-4.5 relative animate-fade-in">
             {/* Success Icon */}
             <div className="w-14 h-14 bg-green-50 rounded-full flex items-center justify-center mx-auto text-green-500">
               <Check className="h-6 w-6 stroke-[3]" />
             </div>
 
             <div>
-              <h3 className="text-base font-extrabold text-[#052355]">Order Placed Successfully</h3>
-              <p className="text-[11px] text-slate-400 font-bold mt-1">
+              <h3 className="text-base font-medium text-[#052355]">Order Placed Successfully</h3>
+              <p className="text-[11px] text-slate-600 font-normal mt-1">
                 Your spare parts order has been submitted successfully.
               </p>
             </div>
 
             {/* Order Details Box */}
-            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100/50 text-left flex flex-col gap-1.5">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wide">Order Details</span>
-              <div className="flex justify-between items-center text-xs font-bold text-[#052355]">
+            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/50 text-left flex flex-col gap-1.5">
+              <span className="text-[10px] font-medium text-slate-600 uppercase tracking-wide">Order Details</span>
+              <div className="flex justify-between items-center text-xs font-normal text-[#052355]">
                 <span>Supply Source</span>
                 <span className="text-[#0D47A1]">{placedSource}</span>
               </div>
-              <div className="flex justify-between items-center text-[10px] text-slate-400 font-semibold">
+              <div className="flex justify-between items-center text-[10px] text-slate-600 font-normal">
                 <span>Status</span>
                 <span className="text-green-600">Claims raised for approval</span>
               </div>
@@ -602,7 +602,7 @@ const RaisePartRequest = () => {
                   setPlacedSource(null);
                   setActiveTab('claims');
                 }}
-                className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-bold py-3.5 rounded-xl text-xs transition-all shadow-sm"
+                className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-normal py-3.5 rounded-xl text-xs transition-all shadow-sm"
               >
                 View Claims
               </button>
@@ -611,7 +611,7 @@ const RaisePartRequest = () => {
                   setPlacedSource(null);
                   setActiveTab('inventory');
                 }}
-                className="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-3.5 rounded-xl text-xs transition-all"
+                className="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-normal py-3.5 rounded-xl text-xs transition-all"
               >
                 Go to Inventory
               </button>
@@ -621,36 +621,36 @@ const RaisePartRequest = () => {
       )}
       {/* Raised Claim Success Card Modal */}
       {raisedClaimCard && (
-        <div className="absolute inset-0 bg-[#052355]/40 backdrop-blur-xs z-30 flex items-center justify-center p-6 transition-all">
-          <div className="bg-white rounded-[2rem] p-6 shadow-2xl border border-slate-100 max-w-sm w-full text-center flex flex-col gap-4.5 relative animate-fade-in">
+        <div className="absolute inset-0 bg-[#052355]/40 backdrop-blur-xs z-30 flex items-center justify-center p-4 transition-all">
+          <div className="bg-white rounded-[2rem] p-4 shadow-2xl border border-slate-200 max-w-sm w-full text-center flex flex-col gap-4.5 relative animate-fade-in">
             {/* Success Icon */}
             <div className="w-14 h-14 bg-green-50 rounded-full flex items-center justify-center mx-auto text-green-500">
               <Check className="h-6 w-6 stroke-[3]" />
             </div>
 
             <div>
-              <h3 className="text-base font-extrabold text-[#052355]">Claim Raised Successfully</h3>
-              <p className="text-[11px] text-slate-400 font-bold mt-1">
+              <h3 className="text-base font-medium text-[#052355]">Claim Raised Successfully</h3>
+              <p className="text-[11px] text-slate-600 font-normal mt-1">
                 Your FOC claim has been submitted successfully.
               </p>
             </div>
 
             {/* Claim Details Box */}
-            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100/50 text-left flex flex-col gap-1.5">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wide">Claim Details</span>
-              <div className="flex justify-between items-center text-xs font-bold text-[#052355]">
+            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/50 text-left flex flex-col gap-1.5">
+              <span className="text-[10px] font-medium text-slate-600 uppercase tracking-wide">Claim Details</span>
+              <div className="flex justify-between items-center text-xs font-normal text-[#052355]">
                 <span>Brand Partner</span>
                 <span className="text-[#0D47A1]">{raisedClaimCard.brand}</span>
               </div>
-              <div className="flex justify-between items-center text-xs font-bold text-[#052355]">
+              <div className="flex justify-between items-center text-xs font-normal text-[#052355]">
                 <span>Spare Item</span>
                 <span>{raisedClaimCard.item}</span>
               </div>
-              <div className="flex justify-between items-center text-[10px] text-slate-400 font-semibold">
+              <div className="flex justify-between items-center text-[10px] text-slate-600 font-normal">
                 <span>Claim ID</span>
                 <span>{raisedClaimCard.claimId}</span>
               </div>
-              <div className="flex justify-between items-center text-[10px] text-slate-400 font-semibold">
+              <div className="flex justify-between items-center text-[10px] text-slate-600 font-normal">
                 <span>Amount</span>
                 <span>₹{raisedClaimCard.amount}</span>
               </div>
@@ -662,7 +662,7 @@ const RaisePartRequest = () => {
                 onClick={() => {
                   setRaisedClaimCard(null);
                 }}
-                className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-bold py-3.5 rounded-xl text-xs transition-all shadow-sm"
+                className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-normal py-3.5 rounded-xl text-xs transition-all shadow-sm"
               >
                 Close
               </button>

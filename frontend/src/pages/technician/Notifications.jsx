@@ -42,21 +42,21 @@ const Notifications = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col pb-8 max-w-md mx-auto border-x border-slate-100 shadow-xl relative font-sans">
+    <div className="min-h-screen bg-white flex flex-col pb-8 max-w-md mx-auto border-x border-slate-200 shadow-xl relative font-sans">
       
       {/* Header */}
-      <div className="bg-white border-b border-slate-100 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
+      <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
         <button 
           onClick={() => navigate(-1)} 
           className="p-1 hover:bg-slate-50 rounded-full text-slate-700 transition-colors"
         >
           <ChevronLeft className="h-6 w-6 text-slate-700 stroke-[2.5]" />
         </button>
-        <h1 className="text-base font-extrabold text-[#052355] flex-1 text-center pr-8">Notifications</h1>
+        <h1 className="text-base font-medium text-[#052355] flex-1 text-center pr-8">Notifications</h1>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 p-5 flex flex-col gap-5">
+      <div className="flex-1 p-3.5 flex flex-col gap-5">
         
         {/* Category Pills */}
         <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1">
@@ -64,7 +64,7 @@ const Notifications = () => {
             <button
               key={pill}
               onClick={() => setFilterTab(pill)}
-              className={`px-5 py-2.5 rounded-xl text-xs font-bold border-0 whitespace-nowrap transition-all ${
+              className={`px-3.5 py-2.5 rounded-xl text-xs font-normal border-0 whitespace-nowrap transition-all ${
                 filterTab === pill
                   ? 'bg-[#0D47A1] text-white'
                   : 'bg-[#F1F5F9]/60 text-slate-500 hover:bg-slate-100'
@@ -81,7 +81,7 @@ const Notifications = () => {
             filteredNotifications.map((n) => (
               <div 
                 key={n.id} 
-                className="py-4.5 flex items-center justify-between border-b border-slate-100 hover:bg-slate-50/30 transition-all text-left px-1"
+                className="py-3.5 flex items-center justify-between border-b border-slate-200 hover:bg-slate-50/30 transition-all text-left px-1"
               >
                 <div className="flex items-center gap-4 flex-1">
                   {/* Icon wrapper */}
@@ -90,22 +90,22 @@ const Notifications = () => {
                   </div>
 
                   <div className="flex-1">
-                    <h4 className="text-xs font-extrabold text-[#052355]">{n.title}</h4>
-                    <p className="text-[10px] text-slate-400 font-semibold mt-0.5 leading-normal">
+                    <h4 className="text-xs font-medium text-[#052355]">{n.title}</h4>
+                    <p className="text-[10px] text-slate-600 font-normal mt-0.5 leading-normal">
                       {n.message}
                     </p>
                   </div>
                 </div>
 
-                <span className="text-[10px] text-slate-400 font-bold whitespace-nowrap self-start mt-1 pl-2">
+                <span className="text-[10px] text-slate-600 font-normal whitespace-nowrap self-start mt-1 pl-2">
                   {n.time}
                 </span>
               </div>
             ))
           ) : (
-            <div className="text-center py-16 text-slate-400 px-6">
-              <Bell className="h-10 w-10 mx-auto text-slate-300 mb-2" />
-              <p className="text-sm font-semibold">No notifications found.</p>
+            <div className="text-center py-16 text-slate-600 px-3.5">
+              <Bell className="h-10 w-10 mx-auto text-slate-500 mb-2" />
+              <p className="text-sm font-normal">No notifications found.</p>
             </div>
           )}
         </div>
@@ -116,7 +116,7 @@ const Notifications = () => {
               markAllNotificationsRead();
               alert('All notifications marked as read.');
             }}
-            className="w-full bg-white border border-[#0D47A1]/30 hover:border-[#0D47A1] text-[#0D47A1] font-bold py-3.5 rounded-2xl text-xs transition-all shadow-2xs mt-6 text-center"
+            className="w-full bg-white border border-[#0D47A1]/30 hover:border-[#0D47A1] text-[#0D47A1] font-normal py-3.5 rounded-2xl text-xs transition-all shadow-sm mt-6 text-center"
           >
             Mark all as read
           </button>

@@ -56,27 +56,27 @@ const AIAssistant = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col max-w-md mx-auto border-x border-slate-100 shadow-xl relative font-sans">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col max-w-md mx-auto border-x border-slate-200 shadow-xl relative font-sans">
       
       {/* Header */}
-      <div className="bg-white border-b border-slate-100 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
+      <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
         <button 
           onClick={() => navigate(-1)} 
           className="p-1 hover:bg-slate-50 rounded-full text-slate-700 transition-colors"
         >
           <ChevronLeft className="h-6 w-6 text-slate-700 stroke-[2.5]" />
         </button>
-        <h1 className="text-base font-extrabold text-[#052355] flex-1 text-center pr-8">AI Assistant</h1>
+        <h1 className="text-base font-medium text-[#052355] flex-1 text-center pr-8">AI Assistant</h1>
       </div>
 
       {/* Chat Area */}
-      <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-5">
+      <div className="flex-1 overflow-y-auto p-3.5 flex flex-col gap-5">
         
         {/* Initial Robot and Greeting View */}
         <div className="flex flex-col gap-5 items-center">
           
           {/* Robot Card Wrapper with blue/white gradient */}
-          <div className="w-full bg-gradient-to-b from-[#E3ECF9]/40 to-[#E3ECF9]/10 rounded-[2.5rem] p-6 flex justify-center items-center relative overflow-hidden border border-[#E3ECF9]/20 shadow-2xs">
+          <div className="w-full bg-gradient-to-b from-[#E3ECF9]/40 to-[#E3ECF9]/10 rounded-[2.5rem] p-4 flex justify-center items-center relative overflow-hidden border border-[#E3ECF9]/20 shadow-sm">
             <img 
               src={robotImg} 
               alt="AI Robot Assistant" 
@@ -85,9 +85,9 @@ const AIAssistant = () => {
           </div>
 
           {/* Greeting Speech Card */}
-          <div className="w-full bg-white rounded-3xl p-5 border border-slate-100 shadow-2xs text-left relative">
-            <h3 className="text-sm font-black text-[#052355]">Hello Alex! 👋</h3>
-            <p className="text-xs text-slate-500 font-bold mt-1.5 leading-relaxed">
+          <div className="w-full bg-white rounded-3xl p-3.5 border border-slate-200 shadow-sm text-left relative">
+            <h3 className="text-sm font-medium text-[#052355]">Hello Alex! 👋</h3>
+            <p className="text-xs text-slate-500 font-normal mt-1.5 leading-relaxed">
               I am your AI Assistant. How can I help you today?
             </p>
           </div>
@@ -99,12 +99,12 @@ const AIAssistant = () => {
                 <button
                   key={idx}
                   onClick={() => handleSendMessage(p.label)}
-                  className="bg-white border border-slate-100 rounded-2xl p-3.5 flex items-center gap-2.5 shadow-2xs hover:shadow-xs hover:border-slate-200 transition-all text-left group"
+                  className="bg-white border border-slate-200 rounded-2xl p-3.5 flex items-center gap-2.5 shadow-sm hover:shadow-sm hover:border-slate-200 transition-all text-left group"
                 >
                   <div className="p-2 bg-slate-50 group-hover:bg-[#E3ECF9]/40 rounded-xl transition-colors">
                     {p.icon}
                   </div>
-                  <span className="text-[11px] font-extrabold text-[#052355] leading-snug">{p.label}</span>
+                  <span className="text-[11px] font-medium text-[#052355] leading-snug">{p.label}</span>
                 </button>
               ))}
             </div>
@@ -120,10 +120,10 @@ const AIAssistant = () => {
                 key={msg.id} 
                 className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
               >
-                <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-xs font-semibold leading-relaxed shadow-3xs ${
+                <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-xs font-normal leading-relaxed shadow-sm ${
                   msg.sender === 'user' 
                     ? 'bg-[#0D47A1] text-white rounded-tr-none' 
-                    : 'bg-white text-[#052355] border border-slate-100 rounded-tl-none'
+                    : 'bg-white text-[#052355] border border-slate-200 rounded-tl-none'
                 }`}>
                   {msg.text}
                 </div>
@@ -136,16 +136,16 @@ const AIAssistant = () => {
       </div>
 
       {/* Bottom Input Pill Bar */}
-      <div className="p-4 bg-white border-t border-slate-100">
-        <div className="flex items-center bg-[#F1F5F9]/60 border border-slate-100 rounded-full px-4.5 py-1.5 gap-2.5">
-          <Compass className="h-5 w-5 text-slate-400" />
+      <div className="p-4 bg-white border-t border-slate-200">
+        <div className="flex items-center bg-[#F1F5F9]/60 border border-slate-200 rounded-full px-3.5 py-1.5 gap-2.5">
+          <Compass className="h-5 w-5 text-slate-600" />
           <input
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') handleSendMessage(inputValue); }}
             placeholder="Tap to speak..."
-            className="flex-1 bg-transparent border-0 text-xs font-semibold placeholder-slate-400 focus:outline-none focus:ring-0 py-2.5"
+            className="flex-1 bg-transparent border-0 text-xs font-normal placeholder-slate-400 focus:outline-none focus:ring-0 py-2.5"
           />
           {inputValue.trim() ? (
             <button 
