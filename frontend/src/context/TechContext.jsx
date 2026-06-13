@@ -11,9 +11,9 @@ export const useTech = () => {
 const INITIAL_JOBS = [
   {
     id: '8842',
-    type: 'D2C Paid Service',
+    type: 'NCC Paid Service',
     category: 'AC Repair',
-    product: 'Split AC',
+    product: 'Split AC Gas Charging',
     brand: 'Voltas',
     model: 'Voltas Split AC 1.5 Ton Inverter',
     serialNo: 'VLT18GN123348X',
@@ -32,7 +32,7 @@ const INITIAL_JOBS = [
   },
   {
     id: '8843',
-    type: 'LG Partner Warranty',
+    type: 'Brand Warranty',
     category: 'Refrigerator Repair',
     product: 'LG Refrigerator',
     brand: 'LG',
@@ -55,15 +55,15 @@ const INITIAL_JOBS = [
     id: '8844',
     type: 'NCC Extended Warranty',
     category: 'AC Repair',
-    product: 'Split AC',
+    product: 'Split AC Claim',
     brand: 'Carrier',
     model: 'Carrier 1.5 Ton 3 Star',
     serialNo: 'CAR-AC-7762X',
     installDate: '22 Feb 2022',
     warrantyStatus: 'Extended Warranty',
     complaint: 'Water leakage from indoor unit',
-    estEarnings: 200,
-    price: 200,
+    estEarnings: 0,
+    price: 0,
     distance: 4.2,
     customerName: 'Mr. Anil Mehta',
     phone: '8877665544',
@@ -74,16 +74,16 @@ const INITIAL_JOBS = [
   },
   {
     id: '8845',
-    type: 'Samsung Partner Warranty',
-    category: 'Washing Machine Repair',
-    product: 'Washing Machine',
+    type: 'AMC Visit',
+    category: 'AC Repair',
+    product: 'Quarterly Service Visit',
     brand: 'Samsung',
     model: 'Samsung Front Load 8kg',
     serialNo: 'SAM-WM-8822X',
     installDate: '15 Sep 2023',
     warrantyStatus: 'In Warranty',
     complaint: 'Vibration during spin cycle',
-    estEarnings: 580,
+    estEarnings: 0,
     price: 0,
     distance: 2.8,
     customerName: 'Miss Neha Sen',
@@ -242,8 +242,8 @@ export const TechProvider = ({ children }) => {
         completedToday: prev.completedToday + 1,
         completedTotal: prev.completedTotal + 1
       }));
-      // Remove job from nearby lists
-      setJobs(prev => prev.filter(j => j.id !== activeJob.id));
+      // Keep the job in nearby list for mock demo purposes
+      // setJobs(prev => prev.filter(j => j.id !== activeJob.id));
       setActiveStep('completed');
     }
   }, [activeJob]);

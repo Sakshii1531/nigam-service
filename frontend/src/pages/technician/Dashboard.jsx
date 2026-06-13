@@ -44,6 +44,16 @@ const Dashboard = () => {
           iconBg: 'bg-[#FF5B26]',
           icon: <ClipboardList className="h-5 w-5 text-white" />
         };
+      case 'NCC Paid Service':
+      case 'NCC PAID SERVICE':
+        return {
+          borderLeft: 'border-l-[5px] border-[#00C853]',
+          titleColor: 'text-[#00C853]',
+          badgeBg: 'bg-[#00C853] text-white',
+          badgeText: 'PAID SERVICE',
+          iconBg: 'bg-[#00C853]',
+          icon: <ClipboardList className="h-5 w-5 text-white" />
+        };
       case 'LG Partner Warranty':
       case 'Samsung Partner Warranty':
         return {
@@ -54,14 +64,35 @@ const Dashboard = () => {
           iconBg: 'bg-[#1E6BDB]',
           icon: <Briefcase className="h-5 w-5 text-white" />
         };
+      case 'Brand Warranty':
+      case 'BRAND WARRANTY':
+        return {
+          borderLeft: 'border-l-[5px] border-[#1E6BDB]',
+          titleColor: 'text-[#1E6BDB]',
+          badgeBg: 'bg-[#1E6BDB] text-white',
+          badgeText: 'WARRANTY',
+          iconBg: 'bg-[#1E6BDB]',
+          icon: <Briefcase className="h-5 w-5 text-white" />
+        };
       case 'NCC Extended Warranty':
+      case 'NCC EXTENDED WARRANTY':
         return {
           borderLeft: 'border-l-[5px] border-[#7C4DFF]',
           titleColor: 'text-[#7C4DFF]',
-          badgeBg: 'bg-[#FFA000] text-white',
-          badgeText: 'PARTIALLY PAID',
+          badgeBg: 'bg-[#7C4DFF] text-white',
+          badgeText: 'CLAIM JOB',
           iconBg: 'bg-[#7C4DFF]',
           icon: <ClipboardList className="h-5 w-5 text-white" />
+        };
+      case 'AMC Visit':
+      case 'AMC VISIT':
+        return {
+          borderLeft: 'border-l-[5px] border-[#FFA000]',
+          titleColor: 'text-[#FFA000]',
+          badgeBg: 'bg-[#FFA000] text-white',
+          badgeText: 'AMC VISIT',
+          iconBg: 'bg-[#FFA000]',
+          icon: <Calendar className="h-5 w-5 text-white" />
         };
       default:
         return {
@@ -183,9 +214,9 @@ const Dashboard = () => {
               </button>
             </div>
 
-            {/* List of 3 nearby jobs - NO Accept/Decline buttons (Image 2 style) */}
+            {/* List of 4 nearby jobs - NO Accept/Decline buttons (Image 2 style) */}
             <div className="flex flex-col gap-3.5">
-              {jobs.slice(0, 3).map((job) => {
+              {jobs.slice(0, 4).map((job) => {
                 const styles = getCardStyle(job.type);
                 return (
                   <div 
@@ -206,7 +237,7 @@ const Dashboard = () => {
                       {/* Text Column */}
                       <div className="min-w-0 flex-1">
                         <span className={`text-xs font-medium block ${styles.titleColor}`}>
-                          {job.type}
+                          {job.type.toUpperCase()}
                         </span>
                         <h4 className="text-sm font-medium text-[#052355] mt-0.5 truncate leading-snug">
                           {getCardSubtitle(job)}
@@ -225,9 +256,19 @@ const Dashboard = () => {
                     <div className="text-right flex flex-col items-end justify-between min-h-[72px] ml-2 flex-shrink-0">
                       <div>
                         <p className="text-base font-medium text-[#052355] leading-none">
-                          ₹{job.price > 0 ? job.price.toLocaleString('en-IN') : 'Free'}
+                          {job.type === 'NCC Extended Warranty' || job.type === 'NCC EXTENDED WARRANTY' 
+                            ? '₹0' 
+                            : job.price > 0 
+                              ? `₹${job.price.toLocaleString('en-IN')}` 
+                              : '₹Free'}
                         </p>
-                        <p className="text-[11px] text-slate-500 font-normal mt-1">Est. Earn: ₹{job.estEarnings}</p>
+                        <p className="text-[11px] text-slate-500 font-normal mt-1">
+                          {job.type === 'NCC Extended Warranty' || job.type === 'NCC EXTENDED WARRANTY'
+                            ? 'Claim Job'
+                            : job.type === 'AMC Visit' || job.type === 'AMC VISIT'
+                              ? 'AMC Visit'
+                              : `Est. Earn: ₹${job.estEarnings}`}
+                        </p>
                       </div>
                       <span className={`inline-block text-[9px] font-medium px-2 py-0.5 rounded-md uppercase tracking-wider ${styles.badgeBg}`}>
                         {styles.badgeText}

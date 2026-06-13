@@ -17,6 +17,54 @@ import manifoldGaugeImg from '../../assets/manifold_gauge_tool.png';
 import screwdriverImg from '../../assets/screwdriver_tool.png';
 import allenKeyImg from '../../assets/allen_key_tool.png';
 
+const CrownIcon = (props) => (
+  <svg 
+    xmlns="http://www.w3.org/2000/svg" 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round" 
+    {...props}
+  >
+    <path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7z" />
+    <path d="M5 20h14" />
+  </svg>
+);
+
+const ShieldCheckIcon = (props) => (
+  <svg 
+    xmlns="http://www.w3.org/2000/svg" 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round" 
+    {...props}
+  >
+    <path d="M20 13c0 5-3.5 7.5-7.66 9.7a1 1 0 0 1-.68 0C7.5 20.5 4 18 4 13V6a1 1 0 0 1 .76-.97l8-2a1 1 0 0 1 .48 0l8 2A1 1 0 0 1 20 6v7z" />
+    <polyline points="9 11 11 13 15 9" />
+  </svg>
+);
+
+const FileIcon = (props) => (
+  <svg 
+    xmlns="http://www.w3.org/2000/svg" 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round" 
+    {...props}
+  >
+    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+    <polyline points="14 2 14 8 20 8" />
+  </svg>
+);
+
 // Canvas drawing component for signature (Screen 8)
 const SignatureCanvas = ({ onSave, onCancel }) => {
   const canvasRef = useRef(null);
@@ -118,6 +166,15 @@ const ActiveJob = () => {
     chatMessages
   } = useTech();
 
+  const isSpecialWarrantyJob = activeJob && (
+    activeJob.type === 'AMC Visit' || 
+    activeJob.type === 'AMC VISIT' || 
+    activeJob.type === 'NCC Extended Warranty' || 
+    activeJob.type === 'NCC EXTENDED WARRANTY' || 
+    activeJob.type === 'Brand Warranty' || 
+    activeJob.type === 'BRAND WARRANTY'
+  );
+
   const getProductImage = (job) => {
     if (!job) return splitAcImg;
     const prodName = (job.product || '').toLowerCase();
@@ -136,11 +193,18 @@ const ActiveJob = () => {
   };
 
   // Navigation tabs inside active job inspection (Screen 5)
-  const [activeTab, setActiveTab] = useState('Overview'); // 'Overview', 'Diagnosis', 'Notes', 'History'
+  const [activeTab, setActiveTab] = useState('Overview'); // 'Overview', 'Diagnosis', 'Parts', 'Notes', 'History'
   const [showAIModal, setShowAIModal] = useState(false);
   const [showSignaturePad, setShowSignaturePad] = useState(false);
   const [notesText, setNotesText] = useState('AC compressor draws high current initially. Fan motor runs, but cooling is zero. Suspect run capacitor degradation.');
   const [enteredInspection, setEnteredInspection] = useState(false);
+  const [additionalServices, setAdditionalServices] = useState([
+    { id: 'deep', name: 'Deep Cleaning', price: 599, checked: true },
+    { id: 'drain', name: 'Drain Pipe Cleaning', price: 199, checked: true },
+    { id: 'foam', name: 'AC Foam Wash', price: 399, checked: false }
+  ]);
+  const [showAddServicesModal, setShowAddServicesModal] = useState(false);
+  const [showInvoicePreviewModal, setShowInvoicePreviewModal] = useState(false);
 
   // Checkboxes for diagnosis verification (Screen 6)
   const [actionsChecked, setActionsChecked] = useState({
@@ -226,16 +290,17 @@ const ActiveJob = () => {
   // Helper function to render Stepper states (Screen 4 style)
   const renderStepper = (isPage = false) => {
     const steps = [
-      { id: 'assigned', label: 'Assigned', desc: 'Job has been assigned to you' },
-      { id: 'ontheway', label: 'On The Way', desc: 'You are on the way to customer' },
-      { id: 'inspection', label: 'Inspection', desc: 'Inspect and confirm the issue' },
-      { id: 'spareapproval', label: 'Spare Approval', desc: 'Waiting for spare approval' },
+      { id: 'assigned', label: 'Assigned', desc: 'Job has been assigned to you', time: '09:20 AM' },
+      { id: 'ontheway', label: 'On The Way', desc: 'You are on the way to customer', time: '09:35 AM' },
+      { id: 'inspection', label: 'Inspection', desc: 'Inspect and confirm the issue', time: '09:50 AM' },
+      { id: 'spareapproval', label: 'Estimate Approval', desc: 'Waiting for customer approval' },
       { id: 'repaircomplete', label: 'Repair Complete', desc: 'Complete the repair work' },
-      { id: 'billing', label: 'Payment Closed', desc: 'Payment collected / Claim closed' }
+      { id: 'billing', label: 'Payment Collected', desc: 'Collect payment from customer' },
+      { id: 'completed', label: 'Job Closed', desc: 'Job completed successfully' }
     ];
 
     const getStepStatus = (id) => {
-      const stepOrder = ['assigned', 'ontheway', 'inspection', 'spareapproval', 'repaircomplete', 'billing'];
+      const stepOrder = ['assigned', 'ontheway', 'inspection', 'spareapproval', 'repaircomplete', 'billing', 'completed'];
       const currentIndex = stepOrder.indexOf(activeStep);
       const targetIndex = stepOrder.indexOf(id);
 
@@ -266,7 +331,7 @@ const ActiveJob = () => {
                 {/* Segmented Timeline Line */}
                 {idx < steps.length - 1 && (
                   <div className={`absolute left-[32px] -translate-x-1/2 top-[24px] bottom-[-40px] w-[2px] z-0 ${
-                    idx < 2 ? 'bg-[#00C853]' : 'bg-slate-200'
+                    status === 'completed' ? 'bg-[#00C853]' : 'bg-slate-200'
                   }`} />
                 )}
 
@@ -281,17 +346,24 @@ const ActiveJob = () => {
                   {idx + 1}
                 </div>
 
-                <div className="ml-4 flex-1 text-left">
-                  <h4 className={`text-sm font-medium transition-all ${
-                    isActive || status === 'completed' ? 'text-[#052355]' : 'text-slate-700'
-                  }`}>
-                    {step.label}
-                  </h4>
-                  <p className={`text-xs font-normal mt-0.5 ${
-                    isActive || status === 'completed' ? 'text-slate-600' : 'text-slate-500'
-                  }`}>
-                    {step.desc}
-                  </p>
+                <div className="ml-4 flex-1 text-left flex justify-between items-center">
+                  <div>
+                    <h4 className={`text-sm font-medium transition-all ${
+                      isActive || status === 'completed' ? 'text-[#052355]' : 'text-slate-700'
+                    }`}>
+                      {step.label}
+                    </h4>
+                    <p className={`text-xs font-normal mt-0.5 ${
+                      isActive || status === 'completed' ? 'text-slate-600' : 'text-slate-500'
+                    }`}>
+                      {step.desc}
+                    </p>
+                  </div>
+                  {step.time && (
+                    <span className="text-[10px] text-slate-500 font-normal">
+                      {step.time}
+                    </span>
+                  )}
                 </div>
               </div>
             );
@@ -310,14 +382,21 @@ const ActiveJob = () => {
                 {status === 'completed' ? <Check className="h-3 w-3 stroke-[3]" /> : idx + 1}
               </div>
 
-              <div className="flex-1">
-                <h4 className={`text-xs font-normal transition-all ${
-                  status === 'active' ? 'text-[#052355]' : 'text-slate-600'
-                }`}>
-                  {step.label}
-                </h4>
-                {status === 'active' && (
-                  <p className="text-[10px] text-slate-600 font-normal mt-0.5">{step.desc}</p>
+              <div className="flex-1 flex justify-between items-start">
+                <div>
+                  <h4 className={`text-xs font-normal transition-all ${
+                    status === 'active' ? 'text-[#052355]' : 'text-slate-600'
+                  }`}>
+                    {step.label}
+                  </h4>
+                  {status === 'active' && (
+                    <p className="text-[10px] text-slate-600 font-normal mt-0.5">{step.desc}</p>
+                  )}
+                </div>
+                {step.time && (
+                  <span className="text-[9px] text-slate-400 font-normal ml-2">
+                    {step.time}
+                  </span>
                 )}
               </div>
             </div>
@@ -353,7 +432,32 @@ const ActiveJob = () => {
     }`}>
       
       {/* Header */}
-      {activeStep === 'details' && activeJob ? (
+      {activeStep === 'details' && activeJob && isSpecialWarrantyJob ? (
+        /* White Header for Special Warranty Details */
+        <div className="bg-white px-3.5 py-4 flex justify-between items-center z-10 border-b border-slate-200">
+          <button 
+            onClick={() => {
+              setActiveStep('idle');
+              navigate('/technician/dashboard');
+            }} 
+            className="p-1 hover:bg-slate-100 rounded-full transition-colors text-[#052355]"
+          >
+            <ArrowLeft className="h-6 w-6 stroke-[2]" />
+          </button>
+          
+          <h1 className="text-base font-normal text-[#052355]">
+            {activeJob.type === 'AMC Visit' || activeJob.type === 'AMC VISIT'
+              ? 'AMC Visit Details'
+              : activeJob.type === 'NCC Extended Warranty' || activeJob.type === 'NCC EXTENDED WARRANTY'
+                ? 'Extended Warranty Details'
+                : 'Brand Warranty Details'}
+          </h1>
+          
+          <button className="p-1 hover:bg-slate-100 rounded-full transition-colors text-[#052355]">
+            <MoreVertical className="h-6 w-6 stroke-[2]" />
+          </button>
+        </div>
+      ) : activeStep === 'details' && activeJob ? (
         /* Navy Blue Header for Job Details Screen 3 */
         <div className="bg-[#052355] text-white pt-4 pb-12 px-3.5 flex flex-col gap-4 rounded-b-[2.5rem] relative z-10 shadow-md">
           {/* Top Bar */}
@@ -518,119 +622,270 @@ const ActiveJob = () => {
         
         {/* STEP A: UNACCEPTED DETAILS VIEW (Screen 3) */}
         {activeStep === 'details' && activeJob && (
-          <div className="flex flex-col gap-4 mt-[-2.5rem] relative z-20 px-1">
+          <div className={`flex flex-col gap-4 ${isSpecialWarrantyJob ? 'mt-4' : 'mt-[-2.5rem]'} relative z-20 px-1`}>
             
-            {/* Unified Main Info Card */}
-            <div className="bg-white rounded-3xl p-3.5 border border-slate-200/60 shadow-sm flex flex-col gap-4">
-              {/* Job Summary Section */}
-              <div className="flex flex-col gap-1">
-                <h2 className="text-xl font-medium text-[#052355] text-left">
-                  {activeJob.product} Repair
-                </h2>
-                <p className="text-xs text-slate-600 font-normal text-left">
-                  {activeJob.model && activeJob.model.toLowerCase().startsWith(activeJob.brand.toLowerCase())
-                    ? activeJob.model
-                    : `${activeJob.brand} ${activeJob.model || ''}`}
-                </p>
+            {isSpecialWarrantyJob ? (
+              /* Special Warranty Mockup layout cards */
+              activeJob.type === 'AMC Visit' || activeJob.type === 'AMC VISIT' ? (
+                <div className="flex flex-col gap-4">
+                  {/* Badge and Subtitle */}
+                  <div className="flex items-center gap-3 px-1 text-left">
+                    <span className="bg-[#FFA000] text-white text-[9px] font-semibold px-2.5 py-1 rounded-md uppercase tracking-wider">
+                      AMC VISIT
+                    </span>
+                    <span className="text-xs text-slate-500 font-normal">
+                      Free Preventive Service
+                    </span>
+                  </div>
 
-                {/* Dynamic Image for Product */}
-                <div className="my-3 flex items-center justify-center w-full">
-                  <img 
-                    src={getProductImage(activeJob)} 
-                    alt={activeJob.product} 
-                    className="w-full h-20 object-contain" 
-                  />
+                  {/* AMC Plan Details Card */}
+                  <div className="bg-white rounded-3xl p-4 border border-slate-200/60 shadow-sm flex flex-col gap-3.5 text-left">
+                    <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">AMC Plan Details</h3>
+                    <div className="flex items-center gap-4">
+                      <div className="w-16 h-16 bg-[#FFA000] rounded-full flex items-center justify-center text-white flex-shrink-0">
+                        <CrownIcon className="w-8 h-8" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-base font-semibold text-[#052355]">AMC Gold Plan</h4>
+                        
+                        <div className="mt-3 space-y-2">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-slate-500 font-normal">Expiry Date</span>
+                            <span className="text-[#052355] font-semibold">15 Jan 2027</span>
+                          </div>
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-slate-500 font-normal">Visits Remaining</span>
+                            <span className="text-[#052355] font-semibold">3</span>
+                          </div>
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-slate-500 font-normal">Plan Type</span>
+                            <span className="text-[#052355] font-semibold">Quarterly</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : activeJob.type === 'NCC Extended Warranty' || activeJob.type === 'NCC EXTENDED WARRANTY' ? (
+                <div className="flex flex-col gap-4">
+                  {/* Badge and Subtitle */}
+                  <div className="flex items-center gap-3 px-1 text-left">
+                    <span className="bg-[#7C4DFF] text-white text-[9px] font-semibold px-2.5 py-1 rounded-md uppercase tracking-wider">
+                      NCC EXTENDED WARRANTY
+                    </span>
+                    <span className="text-xs text-slate-500 font-normal">
+                      Claim Job
+                    </span>
+                  </div>
+
+                  {/* Coverage Details Card */}
+                  <div className="bg-white rounded-3xl p-4 border border-slate-200/60 shadow-sm flex flex-col gap-3.5 text-left">
+                    <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Coverage Details</h3>
+                    <div className="flex items-center gap-4">
+                      <div className="w-16 h-16 bg-[#7C4DFF] rounded-full flex items-center justify-center text-white flex-shrink-0">
+                        <ShieldCheckIcon className="w-8 h-8" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-base font-semibold text-[#052355]">NCC Protect Plus</h4>
+                        
+                        <div className="mt-3 space-y-2">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-slate-500 font-normal">Plan Name</span>
+                            <span className="text-[#052355] font-semibold">NCC Protect Plus</span>
+                          </div>
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-slate-500 font-normal">Valid Till</span>
+                            <span className="text-[#052355] font-semibold">15 Jan 2028</span>
+                          </div>
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-slate-500 font-normal">Claims Remaining</span>
+                            <span className="text-[#052355] font-semibold">2</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  {/* Badge and Subtitle */}
+                  <div className="flex items-center gap-3 px-1 text-left">
+                    <span className="bg-[#1E6BDB] text-white text-[9px] font-semibold px-2.5 py-1 rounded-md uppercase tracking-wider">
+                      BRAND WARRANTY
+                    </span>
+                    <span className="text-xs text-slate-500 font-normal">
+                      LG Warranty Call
+                    </span>
+                  </div>
+
+                  {/* Warranty Information Card */}
+                  <div className="bg-white rounded-3xl p-4 border border-slate-200/60 shadow-sm flex flex-col text-left">
+                    <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3.5">Warranty Information</h3>
+                    <div className="flex items-center gap-4">
+                      <div className="w-16 h-16 bg-[#1E6BDB] rounded-full flex items-center justify-center text-white flex-shrink-0">
+                        <ShieldCheckIcon className="w-8 h-8" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-slate-500 font-normal">Warranty Status</span>
+                            <span className="text-green-600 font-semibold">In Warranty</span>
+                          </div>
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-slate-500 font-normal">Warranty Till</span>
+                            <span className="text-[#052355] font-semibold">15 Jan 2027</span>
+                          </div>
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-slate-500 font-normal">Case ID</span>
+                            <span className="text-[#052355] font-semibold">LG-IN-8842</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Separator inside card */}
+                    <div className="h-[1px] bg-slate-100 my-4 w-full"></div>
+
+                    {/* Purchase Invoice inside card */}
+                    <div>
+                      <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2.5">Purchase Invoice</h4>
+                      <div className="flex justify-between items-center bg-slate-50 border border-slate-100 rounded-2xl p-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-400">
+                            <FileIcon className="w-6 h-6 text-slate-500" />
+                          </div>
+                          <div className="text-left">
+                            <p className="text-xs font-semibold text-[#052355] truncate max-w-[150px]">invoice_voltas_ac.pdf</p>
+                            <p className="text-[10px] text-slate-500 font-normal">PDF • 420 KB</p>
+                          </div>
+                        </div>
+                        <button 
+                          onClick={() => alert('Opening purchase invoice PDF...')}
+                          className="bg-[#EEF4FE] text-[#1E6BDB] hover:bg-[#DCE7FC] px-5 py-2 rounded-full text-xs font-semibold transition-colors"
+                        >
+                          View
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )
+            ) : (
+              /* Unified Main Info Card */
+              <div className="bg-white rounded-3xl p-3.5 border border-slate-200/60 shadow-sm flex flex-col gap-4">
+                {/* Job Summary Section */}
+                <div className="flex flex-col gap-1">
+                  <h2 className="text-xl font-medium text-[#052355] text-left">
+                    {activeJob.product} Repair
+                  </h2>
+                  <p className="text-xs text-slate-600 font-normal text-left">
+                    {activeJob.model && activeJob.model.toLowerCase().startsWith(activeJob.brand.toLowerCase())
+                      ? activeJob.model
+                      : `${activeJob.brand} ${activeJob.model || ''}`}
+                  </p>
+
+                  {/* Dynamic Image for Product */}
+                  <div className="my-3 flex items-center justify-center w-full">
+                    <img 
+                      src={getProductImage(activeJob)} 
+                      alt={activeJob.product} 
+                      className="w-full h-20 object-contain" 
+                    />
+                  </div>
+                </div>
+
+                {/* Divider */}
+                <div className="h-[1px] bg-slate-100 w-full"></div>
+
+                {/* Customer Information */}
+                <div className="flex justify-between items-center">
+                  <div>
+                    <span className="text-[10px] font-normal text-slate-600 uppercase tracking-wider block">Customer</span>
+                    <p className="text-base font-medium text-[#052355] mt-1">{activeJob.customerName}</p>
+                    <p className="text-xs text-slate-600 mt-0.5 font-normal">{activeJob.phone}</p>
+                  </div>
+                  <div className="flex gap-2.5">
+                    <a 
+                      href={`tel:${activeJob.phone}`} 
+                      className="w-10 h-10 rounded-full bg-[#E8F1FF] flex items-center justify-center text-[#1A73E8] hover:bg-[#D4E5FF] transition-colors"
+                    >
+                      <Phone className="h-4.5 w-4.5 stroke-[2.5]" />
+                    </a>
+                    <button 
+                      onClick={() => setChatOpen(true)} 
+                      className="w-10 h-10 rounded-full bg-[#E8F1FF] flex items-center justify-center text-[#1A73E8] hover:bg-[#D4E5FF] transition-colors"
+                    >
+                      <MessageSquare className="h-4.5 w-4.5 stroke-[2.5]" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Divider */}
+                <div className="h-[1px] bg-slate-100 w-full"></div>
+
+                {/* Service Address & Navigation */}
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] font-normal text-slate-600 uppercase tracking-wider block">Service Address</span>
+                  <p className="text-sm font-normal text-[#052355] mt-1 leading-relaxed">{activeJob.address}</p>
+                  
+                  <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-200">
+                    <span className="text-[11px] font-normal text-slate-600">• {activeJob.distance} km away</span>
+                    <button 
+                      onClick={() => alert(`Opening Google Maps navigation to: ${activeJob.address}`)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-[#E8F1FF] text-[#1A73E8] font-normal rounded-full text-[11px] hover:bg-[#D4E5FF] transition-colors"
+                    >
+                      <MapPin className="h-3.5 w-3.5 text-[#1A73E8]" />
+                      Navigate
+                    </button>
+                  </div>
                 </div>
               </div>
+            )}
 
-              {/* Divider */}
-              <div className="h-[1px] bg-slate-100 w-full"></div>
-
-              {/* Customer Information */}
-              <div className="flex justify-between items-center">
-                <div>
-                  <span className="text-[10px] font-normal text-slate-600 uppercase tracking-wider block">Customer</span>
-                  <p className="text-base font-medium text-[#052355] mt-1">{activeJob.customerName}</p>
-                  <p className="text-xs text-slate-600 mt-0.5 font-normal">{activeJob.phone}</p>
+            {/* Estimates & Payable (Only for standard non-warranty jobs) */}
+            {!isSpecialWarrantyJob && (
+              <div className="bg-white rounded-3xl p-3.5 border border-slate-200/60 shadow-sm flex flex-col gap-3">
+                <div className="flex justify-between items-center pb-2.5 border-b border-slate-200">
+                  <span className="text-xs text-slate-500 font-normal">Customer Payable</span>
+                  <span className={`text-[10px] font-medium px-2 py-0.5 rounded uppercase ${
+                    activeJob.price > 0 ? 'bg-[#E8F5E9] text-[#2E7D32]' : 'bg-[#E3ECF9] text-[#1E6BDB]'
+                  }`}>
+                    {activeJob.price > 0 ? 'PAID SERVICE' : 'FREE SERVICE'}
+                  </span>
                 </div>
-                <div className="flex gap-2.5">
-                  <a 
-                    href={`tel:${activeJob.phone}`} 
-                    className="w-10 h-10 rounded-full bg-[#E8F1FF] flex items-center justify-center text-[#1A73E8] hover:bg-[#D4E5FF] transition-colors"
-                  >
-                    <Phone className="h-4.5 w-4.5 stroke-[2.5]" />
-                  </a>
-                  <button 
-                    onClick={() => setChatOpen(true)} 
-                    className="w-10 h-10 rounded-full bg-[#E8F1FF] flex items-center justify-center text-[#1A73E8] hover:bg-[#D4E5FF] transition-colors"
-                  >
-                    <MessageSquare className="h-4.5 w-4.5 stroke-[2.5]" />
-                  </button>
+                <div className="flex justify-between items-center pb-2.5 border-b border-slate-200">
+                  <span className="text-xs text-slate-500 font-normal">Est. Spare Cost</span>
+                  <span className="text-sm font-medium text-[#052355]">₹{activeJob.price > 0 ? '950' : '0'}</span>
                 </div>
-              </div>
-
-              {/* Divider */}
-              <div className="h-[1px] bg-slate-100 w-full"></div>
-
-              {/* Service Address & Navigation */}
-              <div className="flex flex-col gap-1">
-                <span className="text-[10px] font-normal text-slate-600 uppercase tracking-wider block">Service Address</span>
-                <p className="text-sm font-normal text-[#052355] mt-1 leading-relaxed">{activeJob.address}</p>
-                
-                <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-200">
-                  <span className="text-[11px] font-normal text-slate-600">• {activeJob.distance} km away</span>
-                  <button 
-                    onClick={() => alert(`Opening Google Maps navigation to: ${activeJob.address}`)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#E8F1FF] text-[#1A73E8] font-normal rounded-full text-[11px] hover:bg-[#D4E5FF] transition-colors"
-                  >
-                    <MapPin className="h-3.5 w-3.5 text-[#1A73E8]" />
-                    Navigate
-                  </button>
+                <div className="flex justify-between items-center pb-2.5 border-b border-slate-200">
+                  <span className="text-xs text-slate-500 font-normal">Est. Earn</span>
+                  <span className="text-sm font-medium text-[#052355]">₹{activeJob.estEarnings}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-slate-500 font-normal">Payment Mode</span>
+                  <span className="text-xs font-normal text-slate-600">
+                    {activeJob.price > 0 ? 'UPI / Cash / Card' : 'NCC Claim Payout'}
+                  </span>
                 </div>
               </div>
-            </div>
-
-            {/* Estimates & Payable */}
-            <div className="bg-white rounded-3xl p-3.5 border border-slate-200/60 shadow-sm flex flex-col gap-3">
-              <div className="flex justify-between items-center pb-2.5 border-b border-slate-200">
-                <span className="text-xs text-slate-500 font-normal">Customer Payable</span>
-                <span className={`text-[10px] font-medium px-2 py-0.5 rounded uppercase ${
-                  activeJob.price > 0 ? 'bg-[#E8F5E9] text-[#2E7D32]' : 'bg-[#E3ECF9] text-[#1E6BDB]'
-                }`}>
-                  {activeJob.price > 0 ? 'PAID SERVICE' : 'FREE SERVICE'}
-                </span>
-              </div>
-              <div className="flex justify-between items-center pb-2.5 border-b border-slate-200">
-                <span className="text-xs text-slate-500 font-normal">Est. Spare Cost</span>
-                <span className="text-sm font-medium text-[#052355]">₹{activeJob.price > 0 ? '950' : '0'}</span>
-              </div>
-              <div className="flex justify-between items-center pb-2.5 border-b border-slate-200">
-                <span className="text-xs text-slate-500 font-normal">Est. Earn</span>
-                <span className="text-sm font-medium text-[#052355]">₹{activeJob.estEarnings}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-slate-500 font-normal">Payment Mode</span>
-                <span className="text-xs font-normal text-slate-600">
-                  {activeJob.price > 0 ? 'UPI / Cash / Card' : 'NCC Claim Payout'}
-                </span>
-              </div>
-            </div>
-
+            )}
             {/* Bottom Actions */}
-            <div className="flex gap-3.5 mt-2">
-              <button 
-                onClick={() => { setActiveStep('inspection'); setActiveTab('Overview'); }}
-                className="flex-1 bg-white hover:bg-slate-50 text-[#0D47A1] font-normal py-3 px-4 rounded-xl text-xs transition-all border border-[#0D47A1]/20 shadow-sm"
-              >
-                View Details
-              </button>
-              <button 
-                onClick={() => { setActiveStep('assigned'); }}
-                className="flex-1 bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-normal py-3 px-4 rounded-xl text-xs transition-all shadow-sm"
-              >
-                Accept Job
-              </button>
-            </div>
+            {!isSpecialWarrantyJob && (
+              <div className="flex gap-3.5 mt-2">
+                <button 
+                  onClick={() => { setActiveStep('inspection'); setActiveTab('Overview'); }}
+                  className="flex-1 bg-white hover:bg-slate-50 text-[#0D47A1] font-normal py-3 px-4 rounded-xl text-xs transition-all border border-[#0D47A1]/20 shadow-sm"
+                >
+                  View Details
+                </button>
+                <button 
+                  onClick={() => { setActiveStep('assigned'); }}
+                  className="flex-1 bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-normal py-3 px-4 rounded-xl text-xs transition-all shadow-sm"
+                >
+                  Accept Job
+                </button>
+              </div>
+            )}
 
           </div>
         )}
@@ -705,7 +960,7 @@ const ActiveJob = () => {
                 {/* Tabs Selector (Screen 5 Overview) */}
                 {activeTab !== 'Diagnosis' && (
                   <div className="flex justify-between items-center bg-white p-1 rounded-2xl border border-slate-200 shadow-sm gap-1 mx-[-10px]">
-                    {['Overview', 'Diagnosis', 'Notes', 'History'].map((tab) => (
+                    {['Overview', 'Diagnosis', 'Parts', 'Notes', 'History'].map((tab) => (
                       <button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
@@ -722,103 +977,136 @@ const ActiveJob = () => {
                 )}
 
                 {/* Tab 1 Content: Overview */}
-                {activeTab === 'Overview' && (
-                  <div className="flex flex-col gap-4">
-                    
-                    {/* Card 1: Product Details */}
-                    <div className="bg-white rounded-3xl p-3.5 border border-slate-200 shadow-sm flex flex-col gap-4">
-                      <h4 className="text-sm font-medium text-[#052355] text-left">Product Details</h4>
+                {activeTab === 'Overview' && (() => {
+                  const additionalServicesTotal = additionalServices
+                    .filter(s => s.checked)
+                    .reduce((sum, s) => sum + s.price, 0);
+                  const baseServicePrice = activeJob && activeJob.price > 0 ? activeJob.price : 2200;
+                  const totalAmount = baseServicePrice + additionalServicesTotal;
+
+                  return (
+                    <div className="flex flex-col gap-4">
                       
-                      {/* AC Product Row */}
-                      <div className="flex gap-4 items-center">
-                        <img 
-                          src={getProductImage(activeJob)} 
-                          alt={activeJob.product} 
-                          className="w-16 h-16 object-contain rounded-xl border border-slate-200 p-1"
-                        />
-                        <div className="text-left flex-1">
-                          <h5 className="text-sm font-medium text-[#052355]">{activeJob.brand} Split AC 1.5 Ton</h5>
-                          <p className="text-xs text-slate-600 font-normal mt-0.5">Model: {activeJob.model || '183V Vectra'}</p>
-                          <p className="text-[10px] text-slate-600 font-mono mt-0.5">S/N: {activeJob.serialNo || 'VLT183V123456'}</p>
-                        </div>
-                      </div>
-
-                      {/* Divider */}
-                      <div className="h-[1px] bg-slate-100 w-full"></div>
-
-                      {/* Installation & Warranty Rows */}
-                      <div className="flex flex-col gap-2.5">
-                        <div className="flex justify-between items-center">
-                          <span className="text-xs text-slate-600 font-normal">Installation Date</span>
-                          <span className="text-xs text-[#052355] font-medium">{activeJob.installDate || '12 Jan 2023'}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-xs text-slate-600 font-normal">Warranty Status</span>
-                          <span className="text-xs font-medium bg-red-50 text-red-600 px-2.5 py-0.5 rounded-lg">
-                            {activeJob.warrantyStatus || 'Out of Warranty'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Card 2: Complaint */}
-                    <div className="bg-white rounded-3xl p-3.5 border border-slate-200 shadow-sm flex flex-col gap-2 text-left">
-                      <h4 className="text-sm font-medium text-[#052355]">Complaint</h4>
-                      <p className="text-sm text-slate-700 font-normal mt-1">
-                        {activeJob.complaint || 'AC not cooling properly'}
-                      </p>
-                    </div>
-
-                    {/* Card 3: Invoice */}
-                    <div className="bg-white rounded-3xl p-3.5 border border-slate-200 shadow-sm flex flex-col gap-3 text-left">
-                      <h4 className="text-sm font-medium text-[#052355]">Invoice</h4>
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-3 bg-slate-50 border border-slate-200/60 p-2.5 rounded-2xl flex-1 max-w-[70%]">
-                          <div className="w-12 h-10 bg-white border border-slate-200 rounded-lg flex flex-col justify-between p-1 overflow-hidden shadow-sm">
-                            <div className="h-1 bg-slate-300 w-8 rounded-full"></div>
-                            <div className="h-0.5 bg-slate-200 w-10 rounded-full"></div>
-                            <div className="h-0.5 bg-slate-250 w-6 rounded-full"></div>
-                            <div className="h-1 bg-[#0D47A1]/20 w-8 rounded-full"></div>
-                          </div>
-                          <div className="truncate">
-                            <p className="text-xs font-normal text-slate-700 truncate">invoice_voltas_ac.pdf</p>
-                            <p className="text-[10px] text-slate-600 font-normal">PDF Document • 420 KB</p>
-                          </div>
-                        </div>
+                      {/* Card 1: Product Details */}
+                      <div className="bg-white rounded-3xl p-3.5 border border-slate-200 shadow-sm flex flex-col gap-4">
+                        <h4 className="text-sm font-medium text-[#052355] text-left">Product Details</h4>
                         
+                        {/* AC Product Row */}
+                        <div className="flex gap-4 items-center">
+                          <img 
+                            src={getProductImage(activeJob)} 
+                            alt={activeJob.product} 
+                            className="w-16 h-16 object-contain rounded-xl border border-slate-200 p-1"
+                          />
+                          <div className="text-left flex-1">
+                            <h5 className="text-sm font-medium text-[#052355]">{activeJob.brand} Split AC 1.5 Ton Inverter</h5>
+                            <p className="text-xs text-slate-600 font-normal mt-0.5">Model: {activeJob.model || 'Voltas Split AC 1.5 Ton Inverter'}</p>
+                            <p className="text-[10px] text-slate-600 font-mono mt-0.5">S/N: {activeJob.serialNo || 'VLT18GN123348X'}</p>
+                          </div>
+                        </div>
+
+                        {/* Divider */}
+                        <div className="h-[1px] bg-slate-100 w-full"></div>
+
+                        {/* Installation & Warranty Rows */}
+                        <div className="flex flex-col gap-2.5">
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs text-slate-600 font-normal">Installation Date</span>
+                            <span className="text-xs text-[#052355] font-medium">{activeJob.installDate || '12 Jan 2023'}</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs text-slate-600 font-normal">Warranty Status</span>
+                            <span className="text-xs font-medium bg-red-50 text-red-600 px-2.5 py-0.5 rounded-lg">
+                              {activeJob.warrantyStatus || 'Out of Warranty'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Card 2: Complaint */}
+                      <div className="bg-white rounded-3xl p-3.5 border border-slate-200 shadow-sm flex flex-col gap-2 text-left">
+                        <h4 className="text-sm font-medium text-[#052355]">Complaint</h4>
+                        <p className="text-sm text-slate-700 font-normal mt-1">
+                          {activeJob.complaint || 'AC not cooling properly'}
+                        </p>
+                      </div>
+
+                      {/* Card 3: Additional Services (Add-on) */}
+                      <div className="bg-white rounded-3xl p-3.5 border border-slate-200 shadow-sm flex flex-col gap-3.5 text-left">
+                        <h4 className="text-sm font-medium text-[#052355]">Additional Services (Add-on)</h4>
+                        
+                        <div className="flex flex-col gap-3.5 mt-1">
+                          {additionalServices.map((service) => (
+                            <div key={service.id} className="flex justify-between items-center">
+                              <label className="flex items-center gap-3.5 cursor-pointer select-none">
+                                <input 
+                                  type="checkbox" 
+                                  checked={service.checked}
+                                  onChange={() => {
+                                    setAdditionalServices(prev => 
+                                      prev.map(s => s.id === service.id ? { ...s, checked: !s.checked } : s)
+                                    );
+                                  }}
+                                  className="h-4 w-4 rounded border-slate-300 text-[#0D47A1] focus:ring-[#0D47A1]"
+                                />
+                                <span className="text-xs font-normal text-slate-700">{service.name}</span>
+                              </label>
+                              <span className="text-xs font-medium text-[#052355]">₹{service.price}</span>
+                            </div>
+                          ))}
+                        </div>
+
                         <button 
-                          onClick={() => alert('Viewing Invoice PDF...')}
-                          className="text-xs font-medium text-[#0D47A1] bg-[#E3ECF9] px-3.5 py-2 rounded-2xl hover:bg-[#c2d7f5] transition-all"
+                          onClick={() => setShowAddServicesModal(true)}
+                          className="text-xs font-medium text-[#0D47A1] text-left hover:underline mt-2.5 flex items-center gap-1"
                         >
-                          View
+                          + Add More Service
                         </button>
                       </div>
-                    </div>
 
-                    {/* Card 4: Brand Support */}
-                    <div className="bg-white rounded-3xl p-3.5 border border-slate-200 shadow-sm flex flex-col gap-3 text-left">
-                      <h4 className="text-sm font-medium text-[#052355]">Brand Support</h4>
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <p className="text-sm font-medium text-[#052355]">{activeJob.brand} Customer Care</p>
-                          <a 
-                            href="tel:18001234555" 
-                            className="flex items-center gap-1 text-xs text-[#0D47A1] font-normal mt-1 hover:underline"
-                          >
-                            1800 123 4555
-                          </a>
-                        </div>
-                        <div className="flex flex-col items-end gap-1">
-                          <button className="p-1.5 hover:bg-slate-50 rounded-full text-slate-600">
-                            <MoreVertical className="h-5 w-5" />
-                          </button>
-                          <span className="text-[10px] text-slate-600 font-mono font-normal">0:00</span>
+                      {/* Card 4: Invoice Summary */}
+                      <div className="bg-white rounded-3xl p-3.5 border border-slate-200 shadow-sm flex flex-col gap-3 text-left">
+                        <h4 className="text-sm font-medium text-[#052355]">Invoice Summary</h4>
+                        
+                        <div className="flex flex-col gap-3.5 mt-1 text-xs">
+                          <div className="flex justify-between items-center text-slate-600">
+                            <span>Service</span>
+                            <span className="font-medium text-[#052355]">₹{baseServicePrice.toLocaleString('en-IN')}</span>
+                          </div>
+                          
+                          <div className="flex justify-between items-center text-slate-600">
+                            <span>Additional Services</span>
+                            <span className="font-medium text-[#052355]">₹{additionalServicesTotal.toLocaleString('en-IN')}</span>
+                          </div>
+
+                          <div className="h-[1px] bg-slate-100 my-1"></div>
+
+                          <div className="flex justify-between items-center text-[#052355] font-semibold text-sm">
+                            <span>Total Amount</span>
+                            <span className="text-[#00C853] font-bold">₹{totalAmount.toLocaleString('en-IN')}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                  </div>
-                )}
+                      {/* View / Generate Invoice Actions */}
+                      <div className="flex gap-3.5 mt-2 mb-2">
+                        <button 
+                          onClick={() => setShowInvoicePreviewModal(true)}
+                          className="flex-1 bg-white border border-[#0D47A1] hover:bg-slate-50 text-[#0D47A1] font-semibold py-3.5 rounded-2xl text-xs transition-all shadow-sm"
+                        >
+                          View Invoice
+                        </button>
+                        <button 
+                          onClick={() => setActiveStep('billing')}
+                          className="flex-1 bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-semibold py-3.5 rounded-2xl text-xs transition-all shadow-md"
+                        >
+                          Generate Invoice
+                        </button>
+                      </div>
+
+                    </div>
+                  );
+                })()}
 
                 {/* Tab 2 Content: Diagnosis (AI Diagnosis & Parts Screens 6/7/8) */}
                 {activeTab === 'Diagnosis' && (
@@ -1144,6 +1432,29 @@ const ActiveJob = () => {
                   </div>
                 )}
 
+                {/* Tab 2.5 Content: Parts */}
+                {activeTab === 'Parts' && (
+                  <div className="bg-white rounded-3xl p-3.5 border border-slate-200 shadow-sm flex flex-col gap-4 text-left">
+                    <h4 className="text-sm font-medium text-[#052355]">Parts Details</h4>
+                    <div className="flex flex-col gap-3.5">
+                      {partsCartChecked.map(part => (
+                        <div key={part.id} className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl flex justify-between items-center">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-white border border-slate-200 rounded-lg flex items-center justify-center p-1">
+                              <img src={part.image} alt={part.name} className="w-full h-full object-contain" />
+                            </div>
+                            <div className="text-left">
+                              <p className="text-xs font-medium text-[#052355]">{part.name}</p>
+                              <p className="text-[10px] text-slate-500 font-normal mt-0.5">SKU: {part.sku}</p>
+                            </div>
+                          </div>
+                          <span className="text-xs font-semibold text-[#0D47A1]">₹{part.price}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Tab 3 Content: Notes */}
                 {activeTab === 'Notes' && (
                   <div className="bg-white rounded-3xl p-3.5 border border-slate-200 shadow-sm flex flex-col gap-4">
@@ -1283,17 +1594,84 @@ const ActiveJob = () => {
                   </div>
                 </div>
 
-                {/* File Action PDF / Whatsapp */}
+                 {/* File Action PDF / Whatsapp */}
                 <div className="grid grid-cols-2 gap-3 mt-2">
                   <button 
-                    onClick={() => alert('PDF Estimate invoice generated.')}
+                    onClick={() => {
+                      const additionalServicesTotal = additionalServices
+                        .filter(s => s.checked)
+                        .reduce((sum, s) => sum + s.price, 0);
+                      const baseServicePrice = activeJob && activeJob.price > 0 ? activeJob.price : 2200;
+                      const totalAmount = baseServicePrice + additionalServicesTotal;
+
+                      const printWindow = window.open('', '_blank');
+                      printWindow.document.write(`
+                        <html>
+                          <head>
+                            <title>Invoice - #${activeJob.id}</title>
+                            <style>
+                              body { font-family: sans-serif; padding: 40px; color: #333; }
+                              .header { border-bottom: 2px solid #052355; padding-bottom: 20px; margin-bottom: 20px; }
+                              .title { font-size: 24px; color: #052355; font-weight: bold; }
+                              .details { margin-bottom: 30px; font-size: 14px; line-height: 1.6; }
+                              .items { width: 100%; border-collapse: collapse; }
+                              .items th { border-bottom: 2px solid #eee; padding: 10px; text-align: left; }
+                              .items td { border-bottom: 1px solid #eee; padding: 10px; }
+                              .total { font-size: 18px; font-weight: bold; margin-top: 20px; text-align: right; color: #00C853; }
+                            </style>
+                          </head>
+                          <body>
+                            <div class="header">
+                              <div class="title">NCC Partner Service Invoice</div>
+                              <div>Invoice: #INV-${activeJob.id}</div>
+                            </div>
+                            <div class="details">
+                              <strong>Customer:</strong> ${activeJob.customerName}<br>
+                              <strong>Phone:</strong> ${activeJob.phone}<br>
+                              <strong>Product:</strong> ${activeJob.brand} ${activeJob.product}<br>
+                              <strong>Status:</strong> Paid / Closed
+                            </div>
+                            <table class="items">
+                              <thead>
+                                <tr>
+                                  <th>Item Description</th>
+                                  <th>Amount</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                <tr>
+                                  <td>Base Service Charge</td>
+                                  <td>₹${baseServicePrice}</td>
+                                </tr>
+                                ${additionalServices.filter(s => s.checked).map(service => '<tr><td>' + service.name + '</td><td>₹' + service.price + '</td></tr>').join('')}
+                              </tbody>
+                            </table>
+                            <div class="total">Grand Total: ₹${totalAmount.toLocaleString('en-IN')}</div>
+                            <script>
+                              window.onload = function() { window.print(); }
+                            </script>
+                          </body>
+                        </html>
+                      `);
+                      printWindow.document.close();
+                    }}
                     className="bg-slate-50 hover:bg-slate-100 text-[#052355] font-normal py-3 rounded-2xl text-xs transition-all border border-slate-200 flex items-center justify-center gap-1.5 shadow-sm"
                   >
                     <FileText className="h-4 w-4 text-[#0D47A1]" />
                     Generate PDF
                   </button>
                   <button 
-                    onClick={() => alert('Estimate invoice link sent on WhatsApp.')}
+                    onClick={() => {
+                      const additionalServicesTotal = additionalServices
+                        .filter(s => s.checked)
+                        .reduce((sum, s) => sum + s.price, 0);
+                      const baseServicePrice = activeJob && activeJob.price > 0 ? activeJob.price : 2200;
+                      const totalAmount = baseServicePrice + additionalServicesTotal;
+
+                      const whatsappText = `Hi ${activeJob.customerName || 'Customer'}, here is the invoice of ₹${totalAmount.toLocaleString('en-IN')} for your ${activeJob.brand} ${activeJob.product} service: http://nccpartner.com/invoice/INV-${activeJob.id}`;
+                      const whatsappUrl = `https://api.whatsapp.com/send?phone=91${activeJob.phone || '9876543210'}&text=${encodeURIComponent(whatsappText)}`;
+                      window.open(whatsappUrl, '_blank');
+                    }}
                     className="bg-slate-50 hover:bg-slate-100 text-green-600 font-normal py-3 rounded-2xl text-xs transition-all border border-slate-200 flex items-center justify-center gap-1.5 shadow-sm"
                   >
                     <MessageSquare className="h-4 w-4 text-green-500" />
@@ -1355,6 +1733,142 @@ const ActiveJob = () => {
         )}
 
       </div>
+
+      {/* Add More Services Overlay Card Modal */}
+      {showAddServicesModal && (() => {
+        const AVAILABLE_ADDONS = [
+          { id: 'foam', name: 'AC Foam Wash', price: 399 },
+          { id: 'coil', name: 'Condenser Coil Cleaning', price: 299 },
+          { id: 'leak', name: 'Gas Leakage Fix', price: 499 },
+          { id: 'capacitor', name: 'Capacitor Replacement', price: 440 },
+          { id: 'wiring', name: 'Wiring Repair', price: 199 }
+        ];
+
+        // Filter out addons that are currently checked/active in the additionalServices list
+        const filteredAddons = AVAILABLE_ADDONS.filter(
+          addon => !additionalServices.some(s => s.name.toLowerCase() === addon.name.toLowerCase() && s.checked)
+        );
+
+        return (
+          <div className="fixed inset-0 bg-[#052355]/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-[2rem] w-full max-w-sm p-5 shadow-2xl flex flex-col gap-4 border border-slate-100">
+              <div className="flex justify-between items-center pb-2.5 border-b border-slate-100">
+                <h3 className="text-base font-semibold text-[#052355]">Add More Services</h3>
+                <button 
+                  onClick={() => setShowAddServicesModal(false)}
+                  className="text-slate-400 hover:text-slate-650 text-xs font-semibold hover:underline"
+                >
+                  Cancel
+                </button>
+              </div>
+
+              <div className="flex flex-col gap-3.5 max-h-64 overflow-y-auto pr-1">
+                {filteredAddons.length > 0 ? (
+                  filteredAddons.map(addon => (
+                    <div key={addon.id} className="flex justify-between items-center p-3.5 bg-slate-50 border border-slate-200/60 rounded-2xl">
+                      <div className="text-left">
+                        <p className="text-xs font-semibold text-[#052355]">{addon.name}</p>
+                        <p className="text-[10px] text-slate-500 font-normal mt-0.5">₹{addon.price}</p>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          setAdditionalServices(prev => {
+                            const existingIndex = prev.findIndex(s => s.name.toLowerCase() === addon.name.toLowerCase());
+                            if (existingIndex > -1) {
+                              return prev.map((s, idx) => idx === existingIndex ? { ...s, checked: true } : s);
+                            }
+                            return [
+                              ...prev,
+                              { id: addon.id, name: addon.name, price: addon.price, checked: true }
+                            ];
+                          });
+                          setShowAddServicesModal(false);
+                        }}
+                        className="bg-[#E3ECF9] hover:bg-[#c2d7f5] text-[#0D47A1] text-xs font-semibold px-3 py-1.5 rounded-xl transition-all shadow-xs"
+                      >
+                        + Add
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-slate-500 text-center py-5">All available services have been added.</p>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Invoice Preview Overlay Card Modal */}
+      {showInvoicePreviewModal && (() => {
+        const additionalServicesTotal = additionalServices
+          .filter(s => s.checked)
+          .reduce((sum, s) => sum + s.price, 0);
+        const baseServicePrice = activeJob && activeJob.price > 0 ? activeJob.price : 2200;
+        const totalAmount = baseServicePrice + additionalServicesTotal;
+
+        return (
+          <div className="fixed inset-0 bg-[#052355]/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-[2rem] w-full max-w-sm p-6 shadow-2xl flex flex-col gap-4 border border-slate-100 animate-in fade-in zoom-in-95 duration-200">
+              <div className="flex justify-between items-center pb-2.5 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded bg-[#052355] flex items-center justify-center text-white text-xs font-bold">N</div>
+                  <span className="text-sm font-semibold text-[#052355]">NCC Invoice Preview</span>
+                </div>
+                <button 
+                  onClick={() => setShowInvoicePreviewModal(false)}
+                  className="text-slate-400 hover:text-slate-650 text-xs font-semibold hover:underline"
+                >
+                  Close
+                </button>
+              </div>
+
+              <div className="text-left flex flex-col gap-3 text-xs text-slate-600">
+                <div className="flex justify-between border-b border-slate-100 pb-2">
+                  <span>Invoice No:</span>
+                  <span className="font-semibold text-[#052355]">#INV-8842</span>
+                </div>
+                <div className="flex justify-between border-b border-slate-100 pb-2">
+                  <span>Customer:</span>
+                  <span className="font-semibold text-[#052355]">{activeJob?.customerName || 'Rohit Sharma'}</span>
+                </div>
+                <div className="flex justify-between border-b border-slate-100 pb-2">
+                  <span>Product:</span>
+                  <span className="font-semibold text-[#052355]">{activeJob?.brand} {activeJob?.product}</span>
+                </div>
+
+                <div className="flex flex-col gap-2 mt-2">
+                  <span className="font-semibold text-[#052355] text-[11px] uppercase tracking-wider">Line Items</span>
+                  <div className="flex justify-between pl-2">
+                    <span>Base Service Charge:</span>
+                    <span className="font-medium text-[#052355]">₹{baseServicePrice}</span>
+                  </div>
+                  {additionalServices.filter(s => s.checked).map(service => (
+                    <div key={service.id} className="flex justify-between pl-2">
+                      <span>{service.name}:</span>
+                      <span className="font-medium text-[#052355]">₹{service.price}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="h-[1px] bg-slate-200 my-2"></div>
+
+                <div className="flex justify-between text-sm text-[#052355] font-bold">
+                  <span>Total Payable:</span>
+                  <span className="text-[#00C853]">₹{totalAmount.toLocaleString('en-IN')}</span>
+                </div>
+              </div>
+
+              <button 
+                onClick={() => setShowInvoicePreviewModal(false)}
+                className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-semibold py-3.5 rounded-2xl text-xs transition-all shadow-md mt-2"
+              >
+                Okay, Got it
+              </button>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Screen 16: AI Assistant Chat Panel Slide-over Drawer Overlay */}
       {chatOpen && (
