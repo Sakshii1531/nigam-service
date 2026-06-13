@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Bell, Briefcase, ClipboardList, Calendar, Wrench, User, Search, PlusCircle, 
-  MapPin, Check, Plus, AlertTriangle, ShieldCheck, ChevronRight, X 
+  MapPin, Check, Plus, AlertTriangle, ShieldCheck, ChevronRight, ChevronLeft, X 
 } from 'lucide-react';
 import { useTech } from '../../context/TechContext';
 
@@ -29,6 +29,7 @@ const RaisePartRequest = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [stockFilter, setStockFilter] = useState('All'); // 'All', 'In Stock', 'Low Stock', 'Out of Stock'
   const [claimFilter, setClaimFilter] = useState('Pending'); // 'Pending', 'Approved', 'Rejected'
+  const [selectedPendingPart, setSelectedPendingPart] = useState(null);
   
   const [orderSource, setOrderSource] = useState('warehouse'); // 'warehouse', 'brand', 'store'
   const [showClaimModal, setShowClaimModal] = useState(false);
@@ -122,8 +123,82 @@ const RaisePartRequest = () => {
   return (
     <div className="min-h-screen bg-[#F5F8FC] flex flex-col pb-24 max-w-md mx-auto border-x border-slate-200 shadow-xl relative font-sans">
       
-      {/* Header */}
-      <div className="bg-white border-b border-slate-200 p-4 flex items-center justify-between sticky top-0 z-10">
+      {selectedPendingPart ? (
+        <div className="flex-1 flex flex-col">
+          {/* Header */}
+          <div className="bg-white border-b border-slate-200 p-4 flex items-center justify-between sticky top-0 z-10">
+            <button 
+              type="button"
+              onClick={() => setSelectedPendingPart(null)}
+              className="p-1 hover:bg-slate-50 rounded-full transition-colors cursor-pointer"
+            >
+              <ChevronLeft className="h-6 w-6 text-slate-700 stroke-[2.5]" />
+            </button>
+            <h1 className="text-base font-semibold text-[#FF8F00] flex-1 text-center pr-8">Part Pending</h1>
+            <button type="button" className="p-1 hover:bg-slate-50 rounded-full text-slate-500">
+              <svg viewBox="0 0 24 24" className="w-5 h-5 text-slate-750" fill="currentColor">
+                <circle cx="12" cy="5" r="2" />
+                <circle cx="12" cy="12" r="2" />
+                <circle cx="12" cy="19" r="2" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 p-5 flex flex-col gap-6 w-full">
+            {/* Card */}
+            <div className="bg-white border border-slate-200/80 rounded-[2rem] p-5 flex flex-col gap-4 shadow-sm text-left">
+              <h2 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Pending Part</h2>
+              
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-center p-2 flex-shrink-0">
+                  <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-500">
+                    <ClipboardList className="w-7 h-7" />
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-sm font-bold text-[#052355] truncate">{selectedPendingPart.item}</h3>
+                  <p className="text-[10px] text-slate-500 font-normal mt-0.5">Part No: {selectedPendingPart.claimId}</p>
+                  <p className="text-[10px] text-slate-500 font-normal mt-0.5">Qty: 1</p>
+                </div>
+                <div className="shrink-0 self-end">
+                  <span className="bg-[#FFF3E0] text-[#EF6C00] text-[9px] font-bold px-2.5 py-1 rounded uppercase tracking-wider">
+                    Part Pending
+                  </span>
+                </div>
+              </div>
+
+              <div className="h-[1px] bg-slate-100 my-2"></div>
+
+              <div className="space-y-3 text-xs">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500 font-normal">Requested On</span>
+                  <span className="text-slate-800 font-semibold">{selectedPendingPart.date === 'Just now' ? '12 May 2025' : selectedPendingPart.date}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500 font-normal">Expected By</span>
+                  <span className="text-slate-800 font-semibold">16 May 2025</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Button */}
+            <button 
+              type="button"
+              onClick={() => {
+                setSelectedPendingPart(null);
+                setActiveTab('inventory');
+              }}
+              className="w-full py-4 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-bold text-sm rounded-2xl cursor-pointer text-center transition-all shadow-xs mt-auto"
+            >
+              View in Parts Tab
+            </button>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Header */}
+          <div className="bg-white border-b border-slate-200 p-4 flex items-center justify-between sticky top-0 z-10">
         <h1 className="text-lg font-normal text-[#052355]">Parts & Claims</h1>
         <button 
           onClick={() => navigate('/technician/notifications')}
@@ -381,7 +456,17 @@ const RaisePartRequest = () => {
             <div className="flex flex-col gap-3.5">
               {filteredClaims.length > 0 ? (
                 filteredClaims.map(claim => (
-                  <div key={claim.id} className="bg-white rounded-[2rem] p-3.5 border border-slate-200 shadow-sm flex justify-between items-start relative mb-0.5 hover:shadow-sm transition-shadow overflow-hidden">
+                  <div 
+                    key={claim.id} 
+                    onClick={() => {
+                      if (claim.status === 'Pending Approval' || claim.status === 'Pending') {
+                        setSelectedPendingPart(claim);
+                      }
+                    }}
+                    className={`bg-white rounded-[2rem] p-3.5 border border-slate-200 shadow-sm flex justify-between items-start relative mb-0.5 hover:shadow-md transition-shadow overflow-hidden ${
+                      claim.status === 'Pending Approval' || claim.status === 'Pending' ? 'cursor-pointer' : ''
+                    }`}
+                  >
                     <div className="flex-1 min-w-0 text-left pr-2">
                       <span className="text-[9px] font-medium text-[#0D47A1] bg-[#E3ECF9] px-2.5 py-0.5 rounded-md uppercase tracking-wider mb-2 inline-block max-w-full truncate">
                         {claim.brand}
@@ -417,7 +502,7 @@ const RaisePartRequest = () => {
             </div>
 
             <button 
-              onClick={() => navigate('/technician/billing-estimate')}
+              onClick={() => setShowClaimModal(true)}
               className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-normal py-4 rounded-2xl text-xs flex items-center justify-center gap-2 transition-all shadow-md mt-2"
             >
               <PlusCircle className="h-4.5 w-4.5" />
@@ -428,6 +513,8 @@ const RaisePartRequest = () => {
         )}
 
       </div>
+        </>
+      )}
 
       {/* Claim Modal Form Popup */}
       {showClaimModal && (

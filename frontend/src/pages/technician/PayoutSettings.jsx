@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Bell, Briefcase, ClipboardList, Calendar, User, CreditCard, Plus } from 'lucide-react';
+import { ArrowLeft, Bell, Briefcase, ClipboardList, Calendar, Wrench, User, CreditCard, Plus } from 'lucide-react';
 
 const PayoutSettings = () => {
   const navigate = useNavigate();
@@ -18,7 +18,7 @@ const PayoutSettings = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-20 max-w-md mx-auto border-x border-slate-100 shadow-sm relative">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-24 max-w-md mx-auto border-x border-slate-100 shadow-sm relative">
 
       {/* Header */}
       <div className="bg-white border-b border-slate-100 p-4 flex items-center justify-between sticky top-0 z-10">
@@ -77,22 +77,26 @@ const PayoutSettings = () => {
       </div>
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-[#E3ECF9] border-t border-border-color p-4 flex justify-around items-center z-10">
-        <button onClick={() => navigate('/technician/dashboard')} className="flex flex-col items-center text-text-secondary hover:text-[#0D47A1]">
-          <Briefcase className="h-6 w-6" />
-          <span className="text-xs font-medium">Jobs</span>
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-slate-200 py-3 px-3.5 flex justify-between items-center z-20 shadow-lg">
+        <button onClick={() => navigate('/technician/dashboard')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-slate-700 transition-all">
+          <Briefcase className="h-6 w-6 stroke-[2]" />
+          <span className="text-[10px] font-normal tracking-wide">Jobs</span>
         </button>
-        <button onClick={() => navigate('/technician/schedule')} className="flex flex-col items-center text-text-secondary hover:text-[#0D47A1]">
-          <ClipboardList className="h-6 w-6" />
-          <span className="text-xs font-medium">Requests</span>
+        <button onClick={() => navigate('/technician/raise-part-request?tab=claims')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-slate-700 transition-all">
+          <ClipboardList className="h-6 w-6 stroke-[2]" />
+          <span className="text-[10px] font-normal tracking-wide">Requests</span>
         </button>
-        <button onClick={() => navigate('/technician/active-job')} className="flex flex-col items-center text-text-secondary hover:text-[#0D47A1]">
-          <Calendar className="h-6 w-6" />
-          <span className="text-xs font-medium">Schedule</span>
+        <button onClick={() => navigate('/technician/inventory')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-slate-700 transition-all">
+          <Wrench className="h-6 w-6 stroke-[2]" />
+          <span className="text-[10px] font-normal tracking-wide">Inventory</span>
         </button>
-        <button onClick={() => navigate('/technician/profile')} className="flex flex-col items-center text-[#0D47A1]">
-          <User className="h-6 w-6" />
-          <span className="text-xs font-medium">Profile</span>
+        <button onClick={() => navigate('/technician/schedule')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-slate-700 transition-all">
+          <Calendar className="h-6 w-6 stroke-[2]" />
+          <span className="text-[10px] font-normal tracking-wide">Schedule</span>
+        </button>
+        <button onClick={() => navigate('/technician/profile')} className="flex flex-col items-center gap-1 text-[#0D47A1] transition-all">
+          <User className="h-6 w-6 stroke-[2.5]" />
+          <span className="text-[10px] font-medium tracking-wide">Profile</span>
         </button>
       </div>
 

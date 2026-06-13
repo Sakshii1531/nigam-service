@@ -1,12 +1,90 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, ArrowLeft, Shield, Calendar, TrendingUp, ChevronDown, Check, Clock, Briefcase, ClipboardList, User } from 'lucide-react';
+import { Bell, ArrowLeft, Shield, Calendar, TrendingUp, ChevronDown, Check, Clock, Briefcase, ClipboardList, User, Wrench } from 'lucide-react';
+import { useTech } from '../../context/TechContext';
 
 const EarningsPage = () => {
   const navigate = useNavigate();
+  const { earningsTally, notifications } = useTech();
+  const [withdrawableBalance, setWithdrawableBalance] = useState(12450);
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [withdrawStep, setWithdrawStep] = useState('confirm'); // 'confirm', 'success'
+
+  const unreadNotificationsCount = notifications.filter(n => !n.read).length;
+
+  const handleWithdraw = () => {
+    setWithdrawStep('success');
+    setWithdrawableBalance(0);
+  };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-20 max-w-md mx-auto border-x border-slate-100 shadow-sm relative">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-24 max-w-md mx-auto border-x border-slate-100 shadow-sm relative font-sans">
+
+      {/* Withdraw Modal */}
+      {showWithdrawModal && (
+        <div className="fixed inset-0 bg-[#052355]/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-[2rem] w-full max-w-sm p-6 shadow-2xl border border-slate-100 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200">
+            {withdrawStep === 'confirm' ? (
+              <>
+                <div className="w-14 h-14 bg-blue-50 rounded-full flex items-center justify-center text-[#0D47A1] mx-auto">
+                  <TrendingUp className="h-6 w-6" />
+                </div>
+                <div className="text-center">
+                  <h3 className="text-base font-semibold text-[#052355]">Confirm Withdrawal</h3>
+                  <p className="text-xs text-slate-500 mt-1">Are you sure you want to withdraw your available balance to your primary bank account?</p>
+                </div>
+                <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/50 text-left text-xs font-normal text-slate-650 space-y-2">
+                  <div className="flex justify-between">
+                    <span>Withdrawal Amount</span>
+                    <span className="font-semibold text-[#052355]">₹{withdrawableBalance.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Destination Account</span>
+                    <span className="font-semibold text-[#052355]">HDFC Bank (•••• 4321)</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Processing Fee</span>
+                    <span className="text-green-600 font-semibold">₹0 (Free)</span>
+                  </div>
+                </div>
+                <div className="flex gap-3 mt-1">
+                  <button 
+                    onClick={() => setShowWithdrawModal(false)}
+                    className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold py-3 rounded-xl text-xs transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={handleWithdraw}
+                    className="flex-1 bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-semibold py-3 rounded-xl text-xs transition-all shadow-sm"
+                  >
+                    Withdraw
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center text-green-500 mx-auto border border-green-100 shadow-sm">
+                  <Check className="h-8 w-8 stroke-[3]" />
+                </div>
+                <div className="text-center">
+                  <h3 className="text-lg font-semibold text-[#052355]">Transfer Initiated!</h3>
+                  <p className="text-xs text-slate-500 mt-2">Your funds are being transferred to your registered bank account. Usually settles within 2-4 hours.</p>
+                </div>
+                <button 
+                  onClick={() => {
+                    setShowWithdrawModal(false);
+                    setWithdrawStep('confirm');
+                  }}
+                  className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-semibold py-3.5 rounded-2xl text-xs transition-all shadow-md mt-2"
+                >
+                  Great, Got it
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Header */}
       <div className="bg-white border-b border-slate-100 p-4 flex items-center justify-between sticky top-0 z-10">
@@ -14,11 +92,16 @@ const EarningsPage = () => {
           <button onClick={() => navigate(-1)} className="p-1 hover:bg-slate-50 rounded-full">
             <ArrowLeft className="h-6 w-6 text-slate-700" />
           </button>
-          <h1 className="text-lg font-semibold text-slate-900">Technician Panel</h1>
+          <h1 className="text-lg font-semibold text-slate-900">Earnings & Payouts</h1>
         </div>
-        <button className="p-2 hover:bg-slate-50 rounded-full transition-colors relative">
+        <button 
+          onClick={() => navigate('/technician/notifications')}
+          className="p-2 hover:bg-slate-50 rounded-full transition-colors relative"
+        >
           <Bell className="h-5 w-5 text-slate-700" />
-          <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+          {unreadNotificationsCount > 0 && (
+            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+          )}
         </button>
       </div>
 
@@ -26,24 +109,31 @@ const EarningsPage = () => {
       <div className="flex-1 p-4 flex flex-col gap-4">
 
         {/* Available Balance Card */}
-        <div className="bg-[#0A192F] text-white rounded-2xl p-4 shadow-sm">
-          <span className="text-xs font-semibold text-slate-400 uppercase">Available Balance</span>
-          <p className="text-3xl font-semibold mt-1">$4,280.50</p>
-          <div className="flex items-center gap-1 mt-1 text-slate-400 text-xs">
-            <Shield className="h-3.5 w-3.5" />
+        <div className="bg-[#052355] text-white rounded-3xl p-5 shadow-sm text-left relative overflow-hidden">
+          <div className="absolute top-[-10px] right-[-10px] w-28 h-28 bg-white/5 rounded-full blur-xl"></div>
+          <span className="text-xs font-semibold text-slate-300 uppercase tracking-wide">Available Balance</span>
+          <p className="text-3xl font-semibold mt-1">₹{withdrawableBalance.toLocaleString('en-IN')}</p>
+          <div className="flex items-center gap-1.5 mt-2.5 text-slate-300 text-xs">
+            <Shield className="h-4 w-4 text-green-400" />
             <span>Secured & Verified Funds</span>
           </div>
 
           <div className="mt-6 flex flex-col gap-3">
             <button 
-              onClick={() => alert('Withdrawal request of $4,280.50 submitted!')}
-              className="w-full bg-[#FFD600] text-[#0D47A1] font-semibold py-3 rounded-xl hover:bg-yellow-400 transition-colors"
+              onClick={() => {
+                if (withdrawableBalance === 0) {
+                  alert('No funds available for withdrawal.');
+                } else {
+                  setShowWithdrawModal(true);
+                }
+              }}
+              className="w-full bg-[#FFD600] text-[#0D47A1] font-semibold py-3.5 rounded-2xl hover:bg-yellow-400 transition-colors shadow-sm"
             >
               Withdraw Funds
             </button>
             <button 
-              onClick={() => alert('Report downloading...')}
-              className="w-full bg-transparent border border-slate-700 text-white font-semibold py-3 rounded-xl hover:bg-slate-800 transition-colors"
+              onClick={() => alert('Earnings statement report download started...')}
+              className="w-full bg-white/10 border border-white/20 text-white font-semibold py-3.5 rounded-2xl hover:bg-white/20 transition-colors"
             >
               Download Report
             </button>
@@ -51,47 +141,33 @@ const EarningsPage = () => {
         </div>
 
         {/* Today's Earnings */}
-        <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm text-left">
           <span className="text-xs font-semibold text-slate-500">Today's Earnings</span>
-          <p className="text-2xl font-semibold text-slate-900 mt-1">$345.00</p>
+          <p className="text-2xl font-semibold text-slate-900 mt-1">₹{earningsTally.today.toLocaleString('en-IN')}</p>
           <div className="flex items-center gap-1 mt-2 text-green-600 text-sm font-medium">
             <TrendingUp className="h-4 w-4" />
             <span>+12.5% from yesterday</span>
           </div>
         </div>
 
-        {/* Weekly Average */}
-        <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
-          <span className="text-xs font-semibold text-slate-500">Weekly Average</span>
-          <p className="text-2xl font-semibold text-slate-900 mt-1">$1,890.20</p>
-          <div className="flex items-center gap-1 mt-2 text-slate-500 text-sm">
-            <Calendar className="h-4 w-4" />
-            <span>Target: $2,000.00</span>
+        {/* Weekly Target progress */}
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm text-left">
+          <div className="flex justify-between items-center">
+            <span className="text-xs font-semibold text-slate-500">Weekly Target Progress</span>
+            <span className="text-xs font-bold text-[#0D47A1]">70%</span>
           </div>
-        </div>
-
-        {/* Jobs Completed */}
-        <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
-          <span className="text-xs font-semibold text-slate-500">Jobs Completed (Mo)</span>
-          <p className="text-2xl font-semibold text-slate-900 mt-1">48</p>
+          <p className="text-xl font-semibold text-slate-900 mt-1">₹14,500 / ₹20,000</p>
           
           {/* Progress Bar */}
           <div className="w-full h-2 bg-slate-100 rounded-full mt-4 overflow-hidden">
-            <div className="h-full bg-[#0D47A1] rounded-full" style={{ width: '70%' }}></div>
+            <div className="h-full bg-[#0D47A1] rounded-full transition-all duration-500" style={{ width: '70%' }}></div>
           </div>
         </div>
 
-        {/* Pending Payouts */}
-        <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
-          <span className="text-xs font-semibold text-slate-500">Pending Payouts</span>
-          <p className="text-2xl font-semibold text-slate-900 mt-1">$120.00</p>
-          <p className="text-xs text-slate-500 mt-1">2 items awaiting review</p>
-        </div>
-
         {/* Income Trends */}
-        <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm text-left">
           <div className="flex justify-between items-center mb-6">
-            <h3 className="text-base font-semibold text-slate-900">Income Trends</h3>
+            <h3 className="text-sm font-semibold text-[#052355] uppercase tracking-wider">Income Trends</h3>
             <div className="relative">
               <select className="appearance-none bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-600 focus:outline-none pr-8">
                 <option>Last 7 Days</option>
@@ -104,7 +180,7 @@ const EarningsPage = () => {
           </div>
           
           {/* Bar Chart Placeholder */}
-          <div className="flex justify-between items-end h-40 gap-2 px-2">
+          <div className="flex justify-between items-end h-40 gap-2.5 px-2">
             {[
               { day: 'Mon', val: 40 },
               { day: 'Tue', val: 20 },
@@ -116,22 +192,23 @@ const EarningsPage = () => {
             ].map((d) => (
               <div key={d.day} className="flex-1 flex flex-col items-center gap-2">
                 <div 
-                  className="w-full bg-[#E3ECF9] rounded-t-md hover:bg-[#0D47A1] transition-colors" 
+                  className="w-full bg-[#E3ECF9] rounded-t-md hover:bg-[#0D47A1] transition-colors cursor-pointer" 
                   style={{ height: `${d.val}%` }}
+                  title={`${d.day}: ₹${d.val * 50}`}
                 ></div>
-                <span className="text-xs text-slate-500">{d.day}</span>
+                <span className="text-[10px] text-slate-500 font-semibold">{d.day}</span>
               </div>
             ))}
           </div>
         </div>
 
         {/* Recent Payouts */}
-        <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-sm">
-          <div className="p-4 flex justify-between items-center border-b border-slate-100">
-            <h3 className="text-base font-semibold text-slate-900">Recent Payouts</h3>
+        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm text-left">
+          <div className="p-4 flex justify-between items-center border-b border-slate-200 bg-slate-50/50">
+            <h3 className="text-sm font-semibold text-[#052355] uppercase tracking-wider">Recent Payouts</h3>
             <button 
               onClick={() => alert('Viewing all payouts...')}
-              className="text-sm text-[#0D47A1] font-semibold hover:text-blue-800 transition-colors"
+              className="text-xs text-[#0D47A1] font-semibold hover:text-blue-800 transition-colors"
             >
               View All
             </button>
@@ -139,31 +216,31 @@ const EarningsPage = () => {
 
           <div className="flex flex-col">
             {[
-              { id: 1, job: '#88219', date: 'Nov 14, 2023', amount: '+$185.00', status: 'SETTLED' },
-              { id: 2, job: '#88204', date: 'Nov 13, 2023', amount: '+$95.50', status: 'SETTLED' },
-              { id: 3, job: '#88195', date: 'Nov 12, 2023', amount: '+$210.00', status: 'PENDING' },
-              { id: 4, job: '#88188', date: 'Nov 11, 2023', amount: '+$120.00', status: 'SETTLED' },
+              { id: 1, job: '#8842', date: 'Nov 14, 2023', amount: '+₹850.00', status: 'SETTLED' },
+              { id: 2, job: '#8831', date: 'Nov 13, 2023', amount: '+₹650.50', status: 'SETTLED' },
+              { id: 3, job: '#8844', date: 'Nov 12, 2023', amount: '+₹1,210.00', status: 'PENDING' },
+              { id: 4, job: '#8822', date: 'Nov 11, 2023', amount: '+₹920.00', status: 'SETTLED' },
             ].map((p) => (
-              <div key={p.id} className="p-4 flex justify-between items-center border-b border-slate-100 last:border-b-0 hover:bg-slate-50 transition-colors">
+              <div key={p.id} className="p-4 flex justify-between items-center border-b border-slate-100 last:border-b-0 hover:bg-slate-55 transition-colors">
                 <div className="flex items-center gap-3">
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                    p.status === 'SETTLED' ? 'bg-green-50' : 'bg-yellow-50'
+                    p.status === 'SETTLED' ? 'bg-green-50 text-green-500' : 'bg-yellow-50 text-yellow-500'
                   }`}>
                     {p.status === 'SETTLED' ? (
-                      <Check className="h-5 w-5 text-green-500" />
+                      <Check className="h-5 w-5" />
                     ) : (
-                      <Clock className="h-5 w-5 text-yellow-500" />
+                      <Clock className="h-5 w-5" />
                     )}
                   </div>
                   <div>
-                    <h4 className="text-sm font-semibold text-slate-900">Job {p.job}</h4>
-                    <p className="text-xs text-slate-500">{p.date}</p>
+                    <h4 className="text-xs font-semibold text-slate-900">Job {p.job}</h4>
+                    <p className="text-[10px] text-slate-500 font-normal">{p.date}</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <span className="text-sm font-semibold text-slate-900">{p.amount}</span>
-                  <div className="mt-0.5">
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                  <span className="text-xs font-semibold text-slate-900">{p.amount}</span>
+                  <div className="mt-1">
+                    <span className={`text-[9px] font-semibold px-2.5 py-0.5 rounded-md ${
                       p.status === 'SETTLED' 
                         ? 'bg-green-50 text-green-600' 
                         : 'bg-yellow-50 text-yellow-600'
@@ -180,34 +257,26 @@ const EarningsPage = () => {
       </div>
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-[#E3ECF9] border-t border-border-color p-4 flex justify-around items-center z-10">
-        <button 
-          onClick={() => navigate('/technician/dashboard')}
-          className="flex flex-col items-center text-text-secondary hover:text-[#0D47A1]"
-        >
-          <Briefcase className="h-6 w-6" />
-          <span className="text-xs font-medium">Jobs</span>
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-slate-200 py-3 px-3.5 flex justify-between items-center z-20 shadow-lg">
+        <button onClick={() => navigate('/technician/dashboard')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-slate-700 transition-all">
+          <Briefcase className="h-6 w-6 stroke-[2]" />
+          <span className="text-[10px] font-normal tracking-wide">Jobs</span>
         </button>
-        <button 
-          onClick={() => navigate('/technician/schedule')}
-          className="flex flex-col items-center text-text-secondary hover:text-[#0D47A1]"
-        >
-          <ClipboardList className="h-6 w-6" />
-          <span className="text-xs font-medium">Requests</span>
+        <button onClick={() => navigate('/technician/raise-part-request?tab=claims')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-slate-700 transition-all">
+          <ClipboardList className="h-6 w-6 stroke-[2]" />
+          <span className="text-[10px] font-normal tracking-wide">Requests</span>
         </button>
-        <button 
-          onClick={() => navigate('/technician/active-job')}
-          className="flex flex-col items-center text-text-secondary hover:text-[#0D47A1]"
-        >
-          <Calendar className="h-6 w-6" />
-          <span className="text-xs font-medium">Schedule</span>
+        <button onClick={() => navigate('/technician/inventory')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-slate-700 transition-all">
+          <Wrench className="h-6 w-6 stroke-[2]" />
+          <span className="text-[10px] font-normal tracking-wide">Inventory</span>
         </button>
-        <button 
-          onClick={() => navigate('/technician/profile')}
-          className="flex flex-col items-center text-[#0D47A1]"
-        >
-          <User className="h-6 w-6" />
-          <span className="text-xs font-medium">Profile</span>
+        <button onClick={() => navigate('/technician/schedule')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-slate-700 transition-all">
+          <Calendar className="h-6 w-6 stroke-[2]" />
+          <span className="text-[10px] font-normal tracking-wide">Schedule</span>
+        </button>
+        <button onClick={() => navigate('/technician/profile')} className="flex flex-col items-center gap-1 text-[#0D47A1] transition-all">
+          <User className="h-6 w-6 stroke-[2.5]" />
+          <span className="text-[10px] font-medium tracking-wide">Profile</span>
         </button>
       </div>
 

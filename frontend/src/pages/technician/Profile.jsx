@@ -71,16 +71,22 @@ const ProfilePage = () => {
       <div className="flex-1 p-3.5 flex flex-col gap-6">
         
         {/* Profile Details Block */}
-        <div className="flex flex-col items-center text-center">
-          <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-slate-200 shadow-md">
+        <div 
+          onClick={() => navigate('/technician/personal-info')}
+          className="flex flex-col items-center text-center cursor-pointer group"
+        >
+          <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-slate-200 shadow-md group-hover:border-[#0D47A1] transition-all relative">
             <img 
               src={techAvatar} 
               alt="Alex Rodriguez Avatar" 
               className="w-full h-full object-cover" 
             />
+            <div className="absolute inset-0 bg-[#052355]/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <span className="text-white text-[10px] font-semibold">Edit</span>
+            </div>
           </div>
           
-          <h2 className="text-lg font-medium text-[#052355] mt-3">Alex Rodriguez</h2>
+          <h2 className="text-lg font-medium text-[#052355] mt-3 group-hover:text-[#0D47A1] transition-colors">Alex Rodriguez</h2>
           <p className="text-xs text-slate-600 font-normal mt-0.5">Expert HVAC Technician</p>
           
           {/* Star Rating Badge */}

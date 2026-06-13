@@ -1,12 +1,27 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Bell, Briefcase, ClipboardList, Calendar, User, Save } from 'lucide-react';
+import { ArrowLeft, Bell, Briefcase, ClipboardList, Calendar, Wrench, User, Save } from 'lucide-react';
 
 const PersonalInfo = () => {
   const navigate = useNavigate();
+  const [showToast, setShowToast] = useState(false);
+
+  const handleSave = () => {
+    setShowToast(true);
+    setTimeout(() => {
+      setShowToast(false);
+    }, 3000);
+  };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-20 max-w-md mx-auto border-x border-slate-100 shadow-sm relative">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-24 max-w-md mx-auto border-x border-slate-100 shadow-sm relative">
+
+      {/* Toast Notification */}
+      {showToast && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 bg-green-600 text-white px-6 py-3 rounded-2xl shadow-lg z-55 flex items-center gap-2 border border-green-500 animate-in fade-in slide-in-from-top-4 duration-250">
+          <span className="text-xs font-semibold">✓ Profile updated successfully!</span>
+        </div>
+      )}
 
       {/* Header */}
       <div className="bg-white border-b border-slate-100 p-4 flex items-center justify-between sticky top-0 z-10">
@@ -53,7 +68,7 @@ const PersonalInfo = () => {
             <label className="text-xs font-semibold text-slate-500 uppercase">Phone Number</label>
             <input 
               type="tel" 
-              defaultValue="+1 (555) 019-2834" 
+              defaultValue="+91 98765 43210" 
               className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl text-sm text-slate-700 focus:outline-none focus:border-[#0D47A1]"
             />
           </div>
@@ -62,7 +77,7 @@ const PersonalInfo = () => {
           <div className="flex flex-col gap-1">
             <label className="text-xs font-semibold text-slate-500 uppercase">Address</label>
             <textarea 
-              defaultValue="742 Evergreen Terrace, Apt 4B, North Austin, TX" 
+              defaultValue="Flat 4B, Royal Residency, Gomti Nagar, Lucknow, UP 226010" 
               className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl text-sm text-slate-700 focus:outline-none focus:border-[#0D47A1] resize-none h-20"
             />
           </div>
@@ -71,7 +86,7 @@ const PersonalInfo = () => {
 
         {/* Save Button */}
         <button 
-          onClick={() => alert('Profile updated successfully!')}
+          onClick={handleSave}
           className="w-full bg-[#0D47A1] text-white font-semibold py-3 rounded-xl hover:bg-blue-800 transition-colors flex items-center justify-center gap-2"
         >
           <Save className="h-5 w-5" />
@@ -81,22 +96,26 @@ const PersonalInfo = () => {
       </div>
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-[#E3ECF9] border-t border-border-color p-4 flex justify-around items-center z-10">
-        <button onClick={() => navigate('/technician/dashboard')} className="flex flex-col items-center text-text-secondary hover:text-[#0D47A1]">
-          <Briefcase className="h-6 w-6" />
-          <span className="text-xs font-medium">Jobs</span>
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-slate-200 py-3 px-3.5 flex justify-between items-center z-20 shadow-lg">
+        <button onClick={() => navigate('/technician/dashboard')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-slate-700 transition-all">
+          <Briefcase className="h-6 w-6 stroke-[2]" />
+          <span className="text-[10px] font-normal tracking-wide">Jobs</span>
         </button>
-        <button onClick={() => navigate('/technician/schedule')} className="flex flex-col items-center text-text-secondary hover:text-[#0D47A1]">
-          <ClipboardList className="h-6 w-6" />
-          <span className="text-xs font-medium">Requests</span>
+        <button onClick={() => navigate('/technician/raise-part-request?tab=claims')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-slate-700 transition-all">
+          <ClipboardList className="h-6 w-6 stroke-[2]" />
+          <span className="text-[10px] font-normal tracking-wide">Requests</span>
         </button>
-        <button onClick={() => navigate('/technician/active-job')} className="flex flex-col items-center text-text-secondary hover:text-[#0D47A1]">
-          <Calendar className="h-6 w-6" />
-          <span className="text-xs font-medium">Schedule</span>
+        <button onClick={() => navigate('/technician/inventory')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-slate-700 transition-all">
+          <Wrench className="h-6 w-6 stroke-[2]" />
+          <span className="text-[10px] font-normal tracking-wide">Inventory</span>
         </button>
-        <button onClick={() => navigate('/technician/profile')} className="flex flex-col items-center text-[#0D47A1]">
-          <User className="h-6 w-6" />
-          <span className="text-xs font-medium">Profile</span>
+        <button onClick={() => navigate('/technician/schedule')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-slate-700 transition-all">
+          <Calendar className="h-6 w-6 stroke-[2]" />
+          <span className="text-[10px] font-normal tracking-wide">Schedule</span>
+        </button>
+        <button onClick={() => navigate('/technician/profile')} className="flex flex-col items-center gap-1 text-[#0D47A1] transition-all">
+          <User className="h-6 w-6 stroke-[2.5]" />
+          <span className="text-[10px] font-medium tracking-wide">Profile</span>
         </button>
       </div>
 
