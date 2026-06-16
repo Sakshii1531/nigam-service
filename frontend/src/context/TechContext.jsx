@@ -70,7 +70,12 @@ const INITIAL_JOBS = [
     address: 'Flat 302, Royal Residency, Lucknow, UP 226016',
     isNCCEW: true,
     isPriority: true,
-    isRecommended: false
+    isRecommended: false,
+    // Extended Warranty specific
+    ewPlanName: 'NCC Protect Plus',
+    ewValidTill: '15 Jan 2028',
+    ewClaimsRemaining: 2,
+    ewClaimsTotal: 3
   },
   {
     id: '8845',
@@ -91,7 +96,15 @@ const INITIAL_JOBS = [
     address: 'C-42, Aliganj, Lucknow, UP 226024',
     isPartner: true,
     isPriority: false,
-    isRecommended: true
+    isRecommended: true,
+    // AMC specific
+    amcPlanName: 'AMC Gold Plan',
+    amcId: 'NCCAMC289412',
+    amcVisitsTotal: 4,
+    amcVisitsRemaining: 3,
+    amcVisitNumber: 2,
+    amcPlanExpiry: '15 Jan 2027',
+    amcPlanType: 'Quarterly'
   },
   {
     id: '8846',
@@ -112,7 +125,11 @@ const INITIAL_JOBS = [
     address: 'B-10, Indira Nagar, Lucknow, UP 226016',
     isNCCEW: true,
     isPriority: true,
-    isRecommended: false
+    isRecommended: false,
+    ewPlanName: 'NCC Shield Basic',
+    ewValidTill: '01 Nov 2027',
+    ewClaimsRemaining: 1,
+    ewClaimsTotal: 2
   }
 ];
 
@@ -231,6 +248,24 @@ export const TechProvider = ({ children }) => {
       signature: null,
       geoLocation: true
     });
+  }, []);
+
+  // Decrement AMC visits remaining after job completion
+  const decrementAmcVisit = useCallback((jobId) => {
+    setJobs(prev => prev.map(j =>
+      j.id === jobId && j.type === 'AMC Visit'
+        ? { ...j, amcVisitsRemaining: Math.max(0, (j.amcVisitsRemaining || 1) - 1), amcVisitNumber: (j.amcVisitNumber || 1) + 1 }
+        : j
+    ));
+  }, []);
+
+  // Decrement EW claims remaining after job completion
+  const decrementEwClaim = useCallback((jobId) => {
+    setJobs(prev => prev.map(j =>
+      j.id === jobId && j.type === 'NCC Extended Warranty'
+        ? { ...j, ewClaimsRemaining: Math.max(0, (j.ewClaimsRemaining || 1) - 1) }
+        : j
+    ));
   }, []);
 
   const collectPayment = useCallback(() => {
@@ -356,6 +391,8 @@ export const TechProvider = ({ children }) => {
       setActiveStep,
       resetActiveJob,
       collectPayment,
+      decrementAmcVisit,
+      decrementEwClaim,
       addPartToCart,
       removePartFromCart,
       clearCart,

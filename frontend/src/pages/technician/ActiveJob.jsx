@@ -16,6 +16,10 @@ import fanMotorImg from '../../assets/fan_motor_part.png';
 import manifoldGaugeImg from '../../assets/manifold_gauge_tool.png';
 import screwdriverImg from '../../assets/screwdriver_tool.png';
 import allenKeyImg from '../../assets/allen_key_tool.png';
+import AMCHistoryDrawer from './job-flows/AMCHistoryDrawer';
+import AMCOverview from './job-flows/AMCOverview';
+import BrandWarrantyOverview from './job-flows/BrandWarrantyOverview';
+import ExtendedWarrantyOverview from './job-flows/ExtendedWarrantyOverview';
 
 const CrownIcon = (props) => (
   <svg 
@@ -158,6 +162,8 @@ const ActiveJob = () => {
     setActiveStep,
     resetActiveJob, 
     collectPayment,
+    decrementAmcVisit,
+    decrementEwClaim,
     selectedParts,
     setSelectedParts,
     proofs,
@@ -206,6 +212,8 @@ const ActiveJob = () => {
   const [showAddServicesModal, setShowAddServicesModal] = useState(false);
   const [showInvoicePreviewModal, setShowInvoicePreviewModal] = useState(false);
   const [showInvoicePdfModal, setShowInvoicePdfModal] = useState(false);
+  // AMC: show history drawer before entering inspection tabs
+  const [showAmcHistoryDrawer, setShowAmcHistoryDrawer] = useState(false);
 
   // Checkboxes for diagnosis verification (Screen 6)
   const [actionsChecked, setActionsChecked] = useState({
@@ -876,23 +884,38 @@ const ActiveJob = () => {
                 </div>
               </div>
             )}
-            {/* Bottom Actions */}
-            {!isSpecialWarrantyJob && (
-              <div className="flex gap-3.5 mt-2">
+            {/* Bottom Actions — all 4 card types get Accept Job */}
+            <div className="flex gap-3.5 mt-2">
+              {!isSpecialWarrantyJob && (
                 <button 
                   onClick={() => { setActiveStep('inspection'); setActiveTab('Overview'); }}
                   className="flex-1 bg-white hover:bg-slate-50 text-[#0D47A1] font-normal py-3 px-4 rounded-xl text-xs transition-all border border-[#0D47A1]/20 shadow-sm"
                 >
                   View Details
                 </button>
-                <button 
-                  onClick={() => { setActiveStep('assigned'); }}
-                  className="flex-1 bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-normal py-3 px-4 rounded-xl text-xs transition-all shadow-sm"
-                >
-                  Accept Job
-                </button>
-              </div>
-            )}
+              )}
+              <button 
+                onClick={() => { setActiveStep('assigned'); }}
+                className={`flex-1 font-normal py-3 px-4 rounded-xl text-xs transition-all shadow-sm ${
+                  activeJob?.type === 'AMC Visit'
+                    ? 'bg-[#FFA000] hover:bg-amber-500 text-white'
+                    : activeJob?.type === 'NCC Extended Warranty'
+                      ? 'bg-[#7C4DFF] hover:bg-purple-600 text-white'
+                      : activeJob?.type === 'Brand Warranty'
+                        ? 'bg-[#1E6BDB] hover:bg-blue-700 text-white'
+                        : 'bg-[#0D47A1] hover:bg-[#0A3F91] text-white'
+                }`}
+              >
+                {activeJob?.type === 'AMC Visit'
+                  ? 'Accept AMC Visit'
+                  : activeJob?.type === 'NCC Extended Warranty'
+                    ? 'Accept Claim Job'
+                    : activeJob?.type === 'Brand Warranty'
+                      ? 'Accept Warranty Job'
+                      : 'Accept Job'
+                }
+              </button>
+            </div>
 
           </div>
         )}
@@ -953,7 +976,13 @@ const ActiveJob = () => {
                 </div>
 
                 <button 
-                  onClick={() => advanceStep()}
+                  onClick={() => {
+                    advanceStep();
+                    // For AMC jobs: show history drawer before entering inspection
+                    if (activeJob?.type === 'AMC Visit' || activeJob?.type === 'AMC VISIT') {
+                      setShowAmcHistoryDrawer(true);
+                    }
+                  }}
                   className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-normal py-4 rounded-2xl text-sm transition-all shadow-md"
                 >
                   Mark as Inspection Arrived
@@ -983,8 +1012,96 @@ const ActiveJob = () => {
                   </div>
                 )}
 
-                {/* Tab 1 Content: Overview */}
+                {/* Tab 1 Content: Overview — card-type-aware */}
                 {activeTab === 'Overview' && (() => {
+
+                  // Brand Warranty
+                  if (activeJob?.type === 'Brand Warranty' || activeJob?.type === 'BRAND WARRANTY') {
+                    return (
+                      <div className="flex flex-col gap-2">
+                        <BrandWarrantyOverview
+                          job={activeJob}
+                          additionalServices={additionalServices}
+                          setAdditionalServices={setAdditionalServices}
+                          setShowAddServicesModal={setShowAddServicesModal}
+                          getProductImage={getProductImage}
+                        />
+                        <div className="flex gap-3.5 mt-2 mb-2">
+                          <button
+                            onClick={() => setShowInvoicePreviewModal(true)}
+                            className="flex-1 bg-white border border-[#1E6BDB] hover:bg-slate-50 text-[#1E6BDB] font-semibold py-3.5 rounded-2xl text-xs transition-all shadow-sm"
+                          >
+                            View Invoice
+                          </button>
+                          <button
+                            onClick={() => setActiveStep('billing')}
+                            className="flex-1 bg-[#1E6BDB] hover:bg-blue-700 text-white font-semibold py-3.5 rounded-2xl text-xs transition-all shadow-md"
+                          >
+                            Generate Invoice
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // NCC Extended Warranty
+                  if (activeJob?.type === 'NCC Extended Warranty' || activeJob?.type === 'NCC EXTENDED WARRANTY') {
+                    return (
+                      <div className="flex flex-col gap-2">
+                        <ExtendedWarrantyOverview
+                          job={activeJob}
+                          additionalServices={additionalServices}
+                          setAdditionalServices={setAdditionalServices}
+                          setShowAddServicesModal={setShowAddServicesModal}
+                          getProductImage={getProductImage}
+                        />
+                        <div className="flex gap-3.5 mt-2 mb-2">
+                          <button
+                            onClick={() => setShowInvoicePreviewModal(true)}
+                            className="flex-1 bg-white border border-[#7C4DFF] hover:bg-slate-50 text-[#7C4DFF] font-semibold py-3.5 rounded-2xl text-xs transition-all shadow-sm"
+                          >
+                            View Claim Invoice
+                          </button>
+                          <button
+                            onClick={() => setActiveStep('billing')}
+                            className="flex-1 bg-[#7C4DFF] hover:bg-purple-600 text-white font-semibold py-3.5 rounded-2xl text-xs transition-all shadow-md"
+                          >
+                            Generate Invoice
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // AMC Visit
+                  if (activeJob?.type === 'AMC Visit' || activeJob?.type === 'AMC VISIT') {
+                    return (
+                      <div className="flex flex-col gap-2">
+                        <AMCOverview
+                          job={activeJob}
+                          additionalServices={additionalServices}
+                          setAdditionalServices={setAdditionalServices}
+                          setShowAddServicesModal={setShowAddServicesModal}
+                        />
+                        <div className="flex gap-3.5 mt-2 mb-2">
+                          <button
+                            onClick={() => setShowInvoicePreviewModal(true)}
+                            className="flex-1 bg-white border border-[#FFA000] hover:bg-slate-50 text-[#FFA000] font-semibold py-3.5 rounded-2xl text-xs transition-all shadow-sm"
+                          >
+                            Preview Report
+                          </button>
+                          <button
+                            onClick={() => setActiveStep('billing')}
+                            className="flex-1 bg-[#FFA000] hover:bg-amber-500 text-white font-semibold py-3.5 rounded-2xl text-xs transition-all shadow-md"
+                          >
+                            Complete Visit
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // Default: NCC Paid Service (Card 1)
                   const additionalServicesTotal = additionalServices
                     .filter(s => s.checked)
                     .reduce((sum, s) => sum + s.price, 0);
@@ -1560,34 +1677,48 @@ const ActiveJob = () => {
             )}
 
             {/* Step: SPARE APPROVAL (Step 4) */}
-            {activeStep === 'spareapproval' && (
-              <div className="bg-white rounded-3xl p-3.5 border border-slate-200 shadow-sm flex flex-col gap-4 text-center">
-                <div className="w-14 h-14 bg-amber-50 rounded-full flex items-center justify-center text-amber-500 mx-auto">
-                  <Clock className="h-7 w-7 animate-spin" />
-                </div>
-                <div>
-                  <h3 className="text-base font-normal text-[#052355]">Spare Approval Pending</h3>
-                  <p className="text-xs text-slate-600 mt-1 font-normal">We are verifying extended warranty coverage for your selected parts. Usually approved within 5 minutes.</p>
-                </div>
+            {activeStep === 'spareapproval' && (() => {
+              const isWarrantyType = activeJob?.type === 'Brand Warranty' || activeJob?.type === 'BRAND WARRANTY' || activeJob?.type === 'NCC Extended Warranty' || activeJob?.type === 'NCC EXTENDED WARRANTY';
+              const isAMC = activeJob?.type === 'AMC Visit' || activeJob?.type === 'AMC VISIT';
+              const approvalColor = isWarrantyType ? 'bg-[#1E6BDB]' : isAMC ? 'bg-[#FFA000]' : 'bg-[#0D47A1]';
+              const approvalIconColor = isWarrantyType ? 'text-blue-500 bg-blue-50' : isAMC ? 'text-amber-500 bg-amber-50' : 'text-amber-500 bg-amber-50';
+              return (
+                <div className="bg-white rounded-3xl p-3.5 border border-slate-200 shadow-sm flex flex-col gap-4 text-center">
+                  <div className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto ${approvalIconColor}`}>
+                    <Clock className="h-7 w-7 animate-spin" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-normal text-[#052355]">
+                      {isWarrantyType ? 'Claim Parts Authorization' : isAMC ? 'AMC Parts Approval' : 'Spare Approval Pending'}
+                    </h3>
+                    <p className="text-xs text-slate-600 mt-1 font-normal">
+                      {isWarrantyType
+                        ? 'Verifying NCC coverage for selected parts. Parts covered under warranty will be FOC. Usually approved within 5 minutes.'
+                        : isAMC
+                          ? 'Verifying if selected parts fall under your AMC plan scope. Usually approved within 5 minutes.'
+                          : 'We are verifying extended warranty coverage for your selected parts. Usually approved within 5 minutes.'}
+                    </p>
+                  </div>
 
-                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-left space-y-2">
-                  <span className="text-[10px] font-medium tracking-wider text-slate-600 uppercase">Items for Approval</span>
-                  {selectedParts.map(part => (
-                    <div key={part.id} className="flex justify-between text-xs font-normal text-slate-600">
-                      <span>{part.name}</span>
-                      <span className="text-green-600 font-normal">Checked</span>
-                    </div>
-                  ))}
-                </div>
+                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-left space-y-2">
+                    <span className="text-[10px] font-medium tracking-wider text-slate-600 uppercase">Items for Approval</span>
+                    {selectedParts.map(part => (
+                      <div key={part.id} className="flex justify-between text-xs font-normal text-slate-600">
+                        <span>{part.name}</span>
+                        <span className="text-green-600 font-normal">Checked</span>
+                      </div>
+                    ))}
+                  </div>
 
-                <button 
-                  onClick={() => advanceStep()}
-                  className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-normal py-4 rounded-2xl text-sm transition-all shadow-md mt-2"
-                >
-                  Simulate Claims Approval (Next Step)
-                </button>
-              </div>
-            )}
+                  <button 
+                    onClick={() => advanceStep()}
+                    className={`w-full ${approvalColor} text-white font-normal py-4 rounded-2xl text-sm transition-all shadow-md mt-2`}
+                  >
+                    Simulate Approval (Next Step)
+                  </button>
+                </div>
+              );
+            })()}
 
             {/* Step: REPAIR COMPLETE (Step 5) */}
             {activeStep === 'repaircomplete' && (
@@ -1737,10 +1868,26 @@ const ActiveJob = () => {
                 </div>
 
                 <button 
-                  onClick={() => collectPayment()}
+                  onClick={() => {
+                    collectPayment();
+                    // Decrement AMC visits remaining
+                    if ((activeJob?.type === 'AMC Visit' || activeJob?.type === 'AMC VISIT') && activeJob?.id) {
+                      decrementAmcVisit(activeJob.id);
+                    }
+                    // Decrement EW claims remaining
+                    if ((activeJob?.type === 'NCC Extended Warranty' || activeJob?.type === 'NCC EXTENDED WARRANTY') && activeJob?.id) {
+                      decrementEwClaim(activeJob.id);
+                    }
+                  }}
                   className="w-full bg-[#FFD400] hover:bg-yellow-400 text-[#052355] font-medium py-4 rounded-2xl text-sm transition-all shadow-md mt-2"
                 >
-                  Collect Payment (Complete Job)
+                  {activeJob?.type === 'AMC Visit' || activeJob?.type === 'AMC VISIT'
+                    ? 'Close Visit & Generate Report'
+                    : activeJob?.type === 'NCC Extended Warranty' || activeJob?.type === 'NCC EXTENDED WARRANTY'
+                      ? 'Close Claim Job'
+                      : activeJob?.type === 'Brand Warranty' || activeJob?.type === 'BRAND WARRANTY'
+                        ? 'Close Warranty Job'
+                        : 'Collect Payment (Complete Job)'}
                 </button>
               </div>
             )}
@@ -2203,6 +2350,17 @@ const ActiveJob = () => {
             </button>
           </div>
         </div>
+      )}
+
+      {/* AMC Service History Drawer — shown after "Mark as Inspection Arrived" for AMC jobs */}
+      {showAmcHistoryDrawer && (
+        <AMCHistoryDrawer
+          job={activeJob}
+          onStartVisit={() => {
+            setShowAmcHistoryDrawer(false);
+            setEnteredInspection(true);
+          }}
+        />
       )}
 
       {/* Bottom Navigation */}
