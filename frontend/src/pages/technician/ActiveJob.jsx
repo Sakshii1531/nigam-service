@@ -319,11 +319,7 @@ const ActiveJob = () => {
     };
 
     const stepperContent = (
-      <div className={`flex flex-col relative ${isPage ? 'gap-4 px-1 py-2' : 'gap-4 pl-7 mt-2'}`}>
-        {/* Timeline Connector Line for non-page layout */}
-        {!isPage && (
-          <div className="absolute left-[9px] top-2 bottom-12 w-0.5 bg-slate-100"></div>
-        )}
+      <div className={`flex flex-col relative ${isPage ? 'gap-4 px-1 py-2' : 'gap-0 pl-7 mt-2'}`}>
 
         {steps.map((step, idx) => {
           const status = getStepStatus(step.id);
@@ -334,79 +330,123 @@ const ActiveJob = () => {
               <div 
                 key={step.id} 
                 className={`relative flex items-center py-2 px-4 rounded-2xl transition-all ${
-                  isActive ? 'bg-[#F4F8FF]' : ''
+                  isActive ? 'bg-[#F0F6FF]' : ''
                 }`}
               >
                 {/* Segmented Timeline Line */}
                 {idx < steps.length - 1 && (
-                  <div className={`absolute left-[32px] -translate-x-1/2 top-[24px] bottom-[-40px] w-[2px] z-0 ${
+                  <div className={`absolute left-[32px] -translate-x-1/2 top-[36px] bottom-[-28px] w-[2px] z-0 ${
                     status === 'completed' ? 'bg-[#00C853]' : 'bg-slate-200'
                   }`} />
                 )}
 
-                {/* Step Icon Indicator */}
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-normal z-10 transition-all ${
-                  status === 'completed' 
-                    ? 'bg-[#00C853] text-white' 
-                    : isActive 
-                      ? 'bg-[#0D47A1] text-white ring-4 ring-[#E3ECF9]' 
-                      : 'bg-white border-2 border-slate-200 text-slate-500'
+                {/* Step Icon Indicator — 3 distinct states */}
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold z-10 transition-all flex-shrink-0 ${
+                  status === 'completed'
+                    ? 'bg-[#00C853] text-white shadow-sm'
+                    : isActive
+                      ? 'bg-[#0D47A1] text-white ring-4 ring-[#C7DAFF]'
+                      : 'bg-white border-2 border-slate-200 text-slate-400'
                 }`}>
-                  {idx + 1}
+                  {status === 'completed' ? (
+                    <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 6L9 17l-5-5" />
+                    </svg>
+                  ) : (
+                    idx + 1
+                  )}
                 </div>
 
                 <div className="ml-4 flex-1 text-left flex justify-between items-center">
                   <div>
-                    <h4 className={`text-sm font-medium transition-all ${
-                      isActive || status === 'completed' ? 'text-[#052355]' : 'text-slate-700'
+                    <h4 className={`text-sm transition-all ${
+                      status === 'completed'
+                        ? 'font-semibold text-[#00853A]'
+                        : isActive
+                          ? 'font-semibold text-[#052355]'
+                          : 'font-normal text-slate-400'
                     }`}>
                       {step.label}
                     </h4>
                     <p className={`text-xs font-normal mt-0.5 ${
-                      isActive || status === 'completed' ? 'text-slate-600' : 'text-slate-500'
+                      status === 'completed'
+                        ? 'text-[#00C853]'
+                        : isActive
+                          ? 'text-slate-600'
+                          : 'text-slate-400'
                     }`}>
                       {step.desc}
                     </p>
                   </div>
-                  {step.time && (
-                    <span className="text-[10px] text-slate-500 font-normal">
+                  {step.time ? (
+                    <span className={`text-[10px] font-normal ml-2 ${
+                      status === 'completed' ? 'text-[#00C853]' : isActive ? 'text-slate-500' : 'text-slate-300'
+                    }`}>
                       {step.time}
                     </span>
-                  )}
+                  ) : status === 'pending' ? (
+                    <span className="text-[10px] font-normal ml-2 text-slate-300">—</span>
+                  ) : null}
                 </div>
               </div>
             );
           }
 
           return (
-            <div key={step.id} className="relative flex gap-4">
-              {/* Step Icon Indicator */}
-              <div className={`absolute -left-[28px] top-0 w-[20px] h-[20px] rounded-full flex items-center justify-center border-2 text-[10px] font-normal z-10 transition-all ${
-                status === 'completed' 
-                  ? 'bg-green-500 border-green-500 text-white' 
-                  : status === 'active' 
-                    ? 'bg-white border-[#0D47A1] text-[#0D47A1] ring-4 ring-[#E3ECF9]' 
-                    : 'bg-white border-slate-200 text-slate-500'
-              }`}>
-                {status === 'completed' ? <Check className="h-3 w-3 stroke-[3]" /> : idx + 1}
+            <div key={step.id} className="relative flex gap-3 pb-0">
+              {/* Left column: circle + connector line */}
+              <div className="flex flex-col items-center" style={{ minWidth: 20 }}>
+                {/* Step Icon Indicator — 3 distinct states */}
+                <div className={`w-5 h-5 rounded-full flex items-center justify-center border-2 text-[10px] font-semibold z-10 transition-all flex-shrink-0 ${
+                  status === 'completed'
+                    ? 'bg-[#00C853] border-[#00C853] text-white'
+                    : status === 'active'
+                      ? 'bg-white border-[#0D47A1] text-[#0D47A1] ring-4 ring-[#C7DAFF]'
+                      : 'bg-white border-slate-200 text-slate-400'
+                }`}>
+                  {status === 'completed' ? (
+                    <svg viewBox="0 0 24 24" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 6L9 17l-5-5" />
+                    </svg>
+                  ) : (
+                    idx + 1
+                  )}
+                </div>
+                {/* Per-step connector line */}
+                {idx < steps.length - 1 && (
+                  <div className={`w-0.5 flex-1 mt-1 mb-1 ${
+                    status === 'completed' ? 'bg-[#00C853]' : 'bg-slate-200'
+                  }`} style={{ minHeight: 22 }} />
+                )}
               </div>
 
-              <div className="flex-1 flex justify-between items-start">
+              {/* Right column: label + desc + time */}
+              <div className={`flex-1 flex justify-between items-start ${ idx < steps.length - 1 ? 'pb-3' : 'pb-0' }`}>
                 <div>
-                  <h4 className={`text-xs font-normal transition-all ${
-                    status === 'active' ? 'text-[#052355]' : 'text-slate-600'
+                  <h4 className={`text-xs transition-all ${
+                    status === 'completed'
+                      ? 'font-semibold text-[#00853A]'
+                      : status === 'active'
+                        ? 'font-semibold text-[#052355]'
+                        : 'font-normal text-slate-400'
                   }`}>
                     {step.label}
                   </h4>
-                  {status === 'active' && (
-                    <p className="text-[10px] text-slate-600 font-normal mt-0.5">{step.desc}</p>
+                  {(status === 'active' || status === 'completed') && (
+                    <p className={`text-[10px] font-normal mt-0.5 ${
+                      status === 'completed' ? 'text-[#00C853]' : 'text-slate-600'
+                    }`}>{step.desc}</p>
                   )}
                 </div>
-                {step.time && (
-                  <span className="text-[9px] text-slate-400 font-normal ml-2">
+                {step.time ? (
+                  <span className={`text-[9px] font-normal ml-2 ${
+                    status === 'completed' ? 'text-[#00C853]' : status === 'active' ? 'text-slate-400' : 'text-slate-300'
+                  }`}>
                     {step.time}
                   </span>
-                )}
+                ) : status === 'pending' ? (
+                  <span className="text-[9px] font-normal ml-2 text-slate-300">—</span>
+                ) : null}
               </div>
             </div>
           );
