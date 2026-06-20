@@ -4,7 +4,7 @@ import {
   ArrowLeft, Bell, Briefcase, ClipboardList, Calendar, User, Wrench, 
   MapPin, Phone, MessageSquare, Shield, Share2, MoreVertical, CheckCircle, 
   Clock, Plus, Info, Upload, Check, Video, Mic, FileText, Send, Sparkles,
-  ChevronRight, AlertTriangle
+  ChevronRight, AlertTriangle, Package, CreditCard, Wallet, Banknote, QrCode
 } from 'lucide-react';
 import { useTech } from '../../context/TechContext';
 import splitAcImg from '../../assets/categories/split_ac.png';
@@ -13,6 +13,7 @@ import fridgeImg from '../../assets/appliance_fridge.png';
 import capacitorImg from '../../assets/capacitor_part.png';
 import gasRefillImg from '../../assets/gas_refill_part.png';
 import fanMotorImg from '../../assets/fan_motor_part.png';
+import compressorImg from '../../assets/compressor_part.png';
 import manifoldGaugeImg from '../../assets/manifold_gauge_tool.png';
 import screwdriverImg from '../../assets/screwdriver_tool.png';
 import allenKeyImg from '../../assets/allen_key_tool.png';
@@ -79,17 +80,12 @@ const SignatureCanvas = ({ onSave, onCancel }) => {
     if (!canvas) return { x: 0, y: 0 };
     const rect = canvas.getBoundingClientRect();
     
-    // Support touch events
-    if (e.touches && e.touches.length > 0) {
-      return {
-        x: e.touches[0].clientX - rect.left,
-        y: e.touches[0].clientY - rect.top
-      };
-    }
+    const clientX = e.touches && e.touches.length > 0 ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches && e.touches.length > 0 ? e.touches[0].clientY : e.clientY;
     
     return {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
+      x: (clientX - rect.left) * (canvas.width / (rect.width || 1)),
+      y: (clientY - rect.top) * (canvas.height / (rect.height || 1))
     };
   };
 
@@ -162,6 +158,7 @@ const ActiveJob = () => {
     setActiveStep,
     resetActiveJob, 
     collectPayment,
+    creditTravelFee,
     decrementAmcVisit,
     decrementEwClaim,
     selectedParts,
@@ -207,13 +204,90 @@ const ActiveJob = () => {
   const [additionalServices, setAdditionalServices] = useState([
     { id: 'deep', name: 'Deep Cleaning', price: 599, checked: true },
     { id: 'drain', name: 'Drain Pipe Cleaning', price: 199, checked: true },
-    { id: 'foam', name: 'AC Foam Wash', price: 399, checked: false }
+    { id: 'foam', name: 'AC Foam Wash', price: 399, checked: false },
+    { id: 'jet', name: 'Jet Pump Service', price: 299, checked: false },
+    { id: 'outdoor', name: 'Outdoor Unit Cleaning', price: 249, checked: false }
   ]);
   const [showAddServicesModal, setShowAddServicesModal] = useState(false);
+  const [spareParts, setSpareParts] = useState([
+    { id: 'part-1', name: 'Copper Pipe (1/4)', price: 800, checked: true }
+  ]);
+  const [showAddPartsModal, setShowAddPartsModal] = useState(false);
   const [showInvoicePreviewModal, setShowInvoicePreviewModal] = useState(false);
   const [showInvoicePdfModal, setShowInvoicePdfModal] = useState(false);
   // AMC: show history drawer before entering inspection tabs
   const [showAmcHistoryDrawer, setShowAmcHistoryDrawer] = useState(false);
+
+  // States for Spare Part Job Details page interactions
+  const getTomorrowDateString = () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  };
+  const [expectedRevisitDate, setExpectedRevisitDate] = useState(getTomorrowDateString());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [selectedTempDate, setSelectedTempDate] = useState('');
+  const [showOtherDetails, setShowOtherDetails] = useState(false);
+  const [revisitRepairStatus, setRevisitRepairStatus] = useState('completed'); // 'completed', 'unable', 'cancelled'
+  const [revisitReason, setRevisitReason] = useState('');
+  const [revisitPaymentMethod, setRevisitPaymentMethod] = useState('upi');
+
+  const [revisitOtp, setRevisitOtp] = useState(['8', '7', '4', '5']);
+  const [hasSignedRevisit, setHasSignedRevisit] = useState(false);
+  const revisitCanvasRef = useRef(null);
+  const [isDrawingRevisit, setIsDrawingRevisit] = useState(false);
+
+  const getRevisitCoordinates = (e) => {
+    const canvas = revisitCanvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    
+    const clientX = e.touches && e.touches.length > 0 ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches && e.touches.length > 0 ? e.touches[0].clientY : e.clientY;
+    
+    return {
+      x: (clientX - rect.left) * (canvas.width / (rect.width || 1)),
+      y: (clientY - rect.top) * (canvas.height / (rect.height || 1))
+    };
+  };
+
+  const startDrawingRevisit = (e) => {
+    const canvas = revisitCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#052355';
+    ctx.lineCap = 'round';
+    
+    const { x, y } = getRevisitCoordinates(e);
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    setIsDrawingRevisit(true);
+    setHasSignedRevisit(true);
+  };
+
+  const drawRevisit = (e) => {
+    if (!isDrawingRevisit) return;
+    const canvas = revisitCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const { x, y } = getRevisitCoordinates(e);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+  };
+
+  const stopDrawingRevisit = () => {
+    setIsDrawingRevisit(false);
+  };
+
+  const clearRevisitSignature = () => {
+    const canvas = revisitCanvasRef.current;
+    if (canvas) {
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+    setHasSignedRevisit(false);
+  };
 
   // Checkboxes for diagnosis verification (Screen 6)
   const [actionsChecked, setActionsChecked] = useState({
@@ -239,6 +313,17 @@ const ActiveJob = () => {
       chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [chatMessages, chatOpen]);
+
+  useEffect(() => {
+    if (showDatePicker) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [showDatePicker]);
 
   if (!activeJob) {
     return (
@@ -477,11 +562,13 @@ const ActiveJob = () => {
 
   return (
     <div className={`min-h-screen flex flex-col max-w-md mx-auto border-x border-slate-200 shadow-xl relative font-sans ${
-      activeStep === 'inspection' && !enteredInspection ? 'bg-white pb-1' : 'bg-[#F5F8FC] pb-24'
+      activeStep === 'inspection' && !enteredInspection ? 'bg-white pb-1' :
+      (activeStep === 'revisit_complete' || activeStep === 'customer_update_preview' || activeStep === 'spare_part_required' || activeStep === 'completed_pending' || activeStep === 'spare_part_job_details' || activeStep === 'cancellation_summary' || activeStep === 'unable_to_fix_summary' || activeStep === 'revisit_billing' || activeStep === 'revisit_payment' || activeStep === 'revisit_payment_upi' || activeStep === 'revisit_payment_cash' || activeStep === 'revisit_payment_card' || activeStep === 'revisit_payment_wallet' || activeStep === 'revisit_otp') ? 'bg-[#F5F8FC] pb-0' :
+      'bg-[#F5F8FC] pb-24'
     }`}>
       
       {/* Header */}
-      {activeStep === 'details' && activeJob && isSpecialWarrantyJob ? (
+      {activeStep === 'spare_part_required' || activeStep === 'completed_pending' || activeStep === 'customer_update_preview' || activeStep === 'spare_part_job_details' || activeStep === 'revisit_complete' || activeStep === 'cancellation_summary' || activeStep === 'unable_to_fix_summary' || activeStep === 'revisit_billing' || activeStep === 'revisit_payment' || activeStep === 'revisit_payment_upi' || activeStep === 'revisit_payment_cash' || activeStep === 'revisit_payment_card' || activeStep === 'revisit_payment_wallet' || activeStep === 'revisit_otp' ? null : activeStep === 'details' && activeJob && isSpecialWarrantyJob ? (
         /* White Header for Special Warranty Details */
         <div className="bg-white px-3.5 py-4 flex justify-between items-center z-10 border-b border-slate-200">
           <button 
@@ -562,63 +649,43 @@ const ActiveJob = () => {
         </div>
       ) : activeStep === 'inspection' && enteredInspection ? (
         /* White Header for Job Details worksheets View (Screen 5) */
-        activeTab === 'Diagnosis' && selectedParts.length === 0 ? (
-          <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center sticky top-0 z-10">
-            <button 
-              onClick={() => {
-                if (showAIModal) {
+        <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
+          <button 
+            onClick={() => {
+              if (activeTab === 'Diagnosis') {
+                if (selectedParts.length > 0) {
+                  setSelectedParts([]);
+                  setShowAIModal(true);
+                } else if (showAIModal) {
                   setShowAIModal(false);
                 } else {
-                  setActiveTab('Overview');
+                  setEnteredInspection(false);
                 }
-              }} 
-              className="p-1 hover:bg-slate-50 rounded-full"
-            >
-              <ArrowLeft className="h-6 w-6 text-[#0D47A1]" />
-            </button>
-            
-            <div className="flex-1 text-center pr-8">
-              <h1 className="text-base font-medium text-[#0D47A1]">
-                {showAIModal ? 'Recommended Parts' : 'AI Diagnostic Assistant'}
-              </h1>
-            </div>
-          </div>
-        ) : activeTab === 'Diagnosis' && selectedParts.length > 0 ? (
-          <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center sticky top-0 z-10">
-            <button 
-              onClick={() => {
-                setSelectedParts([]);
-                setShowAIModal(true);
-              }} 
-              className="p-1 hover:bg-slate-50 rounded-full"
-            >
-              <ArrowLeft className="h-6 w-6 text-[#0D47A1]" />
-            </button>
-            
-            <div className="flex-1 text-center pr-8">
-              <h1 className="text-base font-medium text-[#0D47A1]">Upload Proof</h1>
-            </div>
-          </div>
-        ) : (
-          <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
-            <button 
-              onClick={() => {
+              } else {
                 setEnteredInspection(false);
-              }} 
-              className="p-1 hover:bg-slate-50 rounded-full text-slate-700"
-            >
-              <ArrowLeft className="h-6 w-6 text-slate-700" />
-            </button>
-            
-            <div className="text-center">
-              <h1 className="text-base font-normal text-[#052355]">Job Details</h1>
-            </div>
-
-            <button className="p-1.5 hover:bg-slate-50 rounded-full text-slate-700">
-              <MoreVertical className="h-5 w-5 text-slate-700" />
-            </button>
+              }
+            }} 
+            className="p-1 hover:bg-slate-50 rounded-full text-slate-700"
+          >
+            <ArrowLeft className="h-6 w-6 text-slate-700" />
+          </button>
+          
+          <div className="text-center">
+            <h1 className="text-base font-normal text-[#052355]">
+              {activeTab === 'Diagnosis' && selectedParts.length > 0
+                ? 'Upload Proof'
+                : activeTab === 'Diagnosis' && showAIModal
+                  ? 'Recommended Parts'
+                  : activeTab === 'Diagnosis'
+                    ? 'AI Diagnostic Assistant'
+                    : 'Job Details'}
+            </h1>
           </div>
-        )
+
+          <button className="p-1.5 hover:bg-slate-50 rounded-full text-slate-700">
+            <MoreVertical className="h-5 w-5 text-slate-700" />
+          </button>
+        </div>
       ) : (
         /* Regular White Header for Job Progress Stepper */
         <div className="bg-white border-b border-slate-200 p-4 flex items-center justify-between sticky top-0 z-10">
@@ -980,7 +1047,7 @@ const ActiveJob = () => {
             ) : (
               /* Normal stepper list flow */
               <>
-                {!(activeStep === 'inspection' && enteredInspection) && renderStepper()}
+                {!(activeStep === 'inspection' && enteredInspection) && activeStep !== 'spare_part_required' && activeStep !== 'completed_pending' && activeStep !== 'customer_update_preview' && activeStep !== 'spare_part_job_details' && activeStep !== 'revisit_complete' && activeStep !== 'cancellation_summary' && activeStep !== 'unable_to_fix_summary' && activeStep !== 'revisit_billing' && activeStep !== 'revisit_payment' && activeStep !== 'revisit_payment_upi' && activeStep !== 'revisit_payment_cash' && activeStep !== 'revisit_payment_card' && activeStep !== 'revisit_payment_wallet' && activeStep !== 'revisit_otp' && renderStepper()}
 
             {/* 2. Step Details Panel */}
             {/* Step: ASSIGNED (Step 1) */}
@@ -1034,23 +1101,21 @@ const ActiveJob = () => {
               <div className="flex flex-col gap-4">
                 
                 {/* Tabs Selector (Screen 5 Overview) */}
-                {activeTab !== 'Diagnosis' && (
-                  <div className="flex justify-between items-center bg-white p-1 rounded-2xl border border-slate-200 shadow-sm gap-1 mx-[-10px]">
-                    {['Overview', 'Diagnosis', 'Parts', 'Notes', 'History'].map((tab) => (
-                      <button
-                        key={tab}
-                        onClick={() => setActiveTab(tab)}
-                        className={`flex-1 text-center py-2.5 rounded-xl text-xs font-medium transition-all ${
-                          activeTab === tab 
-                            ? 'bg-[#0D47A1] text-white shadow-sm' 
-                            : 'text-slate-500 hover:text-slate-800'
-                        }`}
-                      >
-                        {tab}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                <div className="flex justify-between items-center bg-white p-1 rounded-2xl border border-slate-200 shadow-sm gap-1 mx-[-10px]">
+                  {['Overview', 'Diagnosis', 'Parts', 'Notes', 'History'].map((tab) => (
+                    <button
+                      key={tab}
+                      onClick={() => setActiveTab(tab)}
+                      className={`flex-1 text-center py-2.5 rounded-xl text-xs font-medium transition-all ${
+                        activeTab === tab 
+                          ? 'bg-[#0D47A1] text-white shadow-sm' 
+                          : 'text-slate-500 hover:text-slate-800'
+                      }`}
+                    >
+                      {tab}
+                    </button>
+                  ))}
+                </div>
 
                 {/* Tab 1 Content: Overview — card-type-aware */}
                 {activeTab === 'Overview' && (() => {
@@ -1145,8 +1210,14 @@ const ActiveJob = () => {
                   const additionalServicesTotal = additionalServices
                     .filter(s => s.checked)
                     .reduce((sum, s) => sum + s.price, 0);
+                  const sparePartsTotal = spareParts
+                    .filter(p => p.checked)
+                    .reduce((sum, p) => sum + p.price, 0);
                   const baseServicePrice = activeJob && activeJob.price > 0 ? activeJob.price : 2200;
-                  const totalAmount = baseServicePrice + additionalServicesTotal;
+                  const totalAmount = baseServicePrice + additionalServicesTotal + sparePartsTotal;
+
+                  const selectedAddons = additionalServices.filter(s => s.checked);
+                  const unselectedAddons = additionalServices.filter(s => !s.checked);
 
                   return (
                     <div className="flex flex-col gap-4">
@@ -1195,36 +1266,132 @@ const ActiveJob = () => {
                         </p>
                       </div>
 
-                      {/* Card 3: Additional Services (Add-on) */}
+                      {/* Card 3: Selected Services */}
                       <div className="bg-white rounded-3xl p-3.5 border border-slate-200 shadow-sm flex flex-col gap-3.5 text-left">
-                        <h4 className="text-sm font-medium text-[#052355]">Additional Services (Add-on)</h4>
+                        <h4 className="text-sm font-medium text-[#052355]">Selected Services</h4>
                         
-                        <div className="flex flex-col gap-3.5 mt-1">
-                          {additionalServices.map((service) => (
-                            <div key={service.id} className="flex justify-between items-center">
-                              <label className="flex items-center gap-3.5 cursor-pointer select-none">
+                        <div className="flex flex-col gap-3 mt-1">
+                          {/* Base Service */}
+                          <div className="flex justify-between items-center bg-slate-50/50 border border-slate-100 rounded-2xl p-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-5 h-5 bg-[#00C853] rounded-full flex items-center justify-center text-white flex-shrink-0 shadow-sm">
+                                <svg className="w-3 h-3 stroke-[3.5]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                              </div>
+                              <span className="text-xs font-medium text-slate-700">
+                                {activeJob.product.toLowerCase().includes('ac') ? 'AC Gas Charging' : activeJob.product + ' Repair'}
+                              </span>
+                            </div>
+                            <span className="text-xs font-semibold text-[#052355]">₹{baseServicePrice.toLocaleString('en-IN')}</span>
+                          </div>
+
+                          {/* Checked Addons */}
+                          {selectedAddons.map((service) => (
+                            <div key={service.id} className="flex justify-between items-center bg-slate-50/50 border border-slate-100 rounded-2xl p-3">
+                              <div className="flex items-center gap-3">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setAdditionalServices(prev => 
+                                      prev.map(s => s.id === service.id ? { ...s, checked: false } : s)
+                                    );
+                                  }}
+                                  className="w-5 h-5 bg-[#00C853] hover:bg-red-500 rounded-full flex items-center justify-center text-white flex-shrink-0 shadow-sm group transition-colors"
+                                  title="Unselect Service"
+                                >
+                                  <span className="group-hover:hidden">
+                                    <svg className="w-3 h-3 stroke-[3.5]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                  </span>
+                                  <span className="hidden group-hover:block text-xs font-bold leading-none">×</span>
+                                </button>
+                                <span className="text-xs font-normal text-slate-700">{service.name}</span>
+                              </div>
+                              <span className="text-xs font-semibold text-[#052355]">₹{service.price}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Card 3.2: Add More Services */}
+                      <div className="bg-white rounded-3xl p-3.5 border border-slate-200 shadow-sm flex flex-col gap-3.5 text-left">
+                        <h4 className="text-sm font-medium text-[#052355]">Add More Services</h4>
+                        
+                        <div className="flex flex-col gap-3 mt-1">
+                          {unselectedAddons.map((service) => (
+                            <div key={service.id} className="flex justify-between items-center bg-slate-50/50 border border-slate-100 rounded-2xl p-3">
+                              <label className="flex items-center gap-3.5 cursor-pointer select-none flex-1">
                                 <input 
                                   type="checkbox" 
-                                  checked={service.checked}
+                                  checked={false}
                                   onChange={() => {
                                     setAdditionalServices(prev => 
-                                      prev.map(s => s.id === service.id ? { ...s, checked: !s.checked } : s)
+                                      prev.map(s => s.id === service.id ? { ...s, checked: true } : s)
                                     );
                                   }}
                                   className="h-4 w-4 rounded border-slate-300 text-[#0D47A1] focus:ring-[#0D47A1]"
                                 />
                                 <span className="text-xs font-normal text-slate-700">{service.name}</span>
                               </label>
-                              <span className="text-xs font-medium text-[#052355]">₹{service.price}</span>
+                              <span className="text-xs font-semibold text-[#052355]">₹{service.price}</span>
                             </div>
                           ))}
                         </div>
 
                         <button 
                           onClick={() => setShowAddServicesModal(true)}
-                          className="text-xs font-medium text-[#0D47A1] text-left hover:underline mt-2.5 flex items-center gap-1"
+                          className="text-xs font-medium text-[#0D47A1] text-left hover:underline mt-2 flex items-center gap-1"
                         >
                           + Add More Service
+                        </button>
+                      </div>
+
+                      {/* Card 3.5: Required Spare Parts */}
+                      <div className="bg-white rounded-3xl p-3.5 border border-slate-200 shadow-sm flex flex-col gap-3.5 text-left">
+                        <h4 className="text-sm font-medium text-[#052355]">Required Spare Parts</h4>
+                        
+                        <div className="flex flex-col gap-3 mt-1">
+                          {spareParts.filter(p => p.checked).map((part) => (
+                            <div key={part.id} className="flex justify-between items-center bg-slate-50 border border-slate-100 rounded-2xl p-3">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-[#0D47A1]">
+                                  <svg className="w-5 h-5 text-[#0D47A1]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M4 12h8a4 4 0 0 0 4-4V4" />
+                                    <path d="M8 12a4 4 0 0 1 4-4" />
+                                    <rect x="2" y="10" width="2" height="4" rx="0.5" fill="currentColor" />
+                                    <rect x="14" y="2" width="4" height="2" rx="0.5" fill="currentColor" />
+                                    <path d="M12 16a4 4 0 0 0 4 4h4" />
+                                    <rect x="20" y="18" width="2" height="4" rx="0.5" fill="currentColor" />
+                                  </svg>
+                                </div>
+                                <span className="text-xs font-normal text-slate-700">{part.name}</span>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <span className="text-xs font-medium text-[#052355]">₹{part.price}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSpareParts(prev => 
+                                      prev.map(p => p.id === part.id ? { ...p, checked: false } : p)
+                                    );
+                                  }}
+                                  className="text-slate-400 hover:text-red-500 font-semibold text-xs px-1"
+                                  title="Remove Part"
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        <button 
+                          onClick={() => setShowAddPartsModal(true)}
+                          className="text-xs font-medium text-[#0D47A1] text-left hover:underline mt-2 flex items-center justify-center gap-1 w-full pt-1.5 border-t border-slate-100"
+                        >
+                          + Add Part
                         </button>
                       </div>
 
@@ -1243,6 +1410,13 @@ const ActiveJob = () => {
                             <span className="font-medium text-[#052355]">₹{additionalServicesTotal.toLocaleString('en-IN')}</span>
                           </div>
 
+                          {sparePartsTotal > 0 && (
+                            <div className="flex justify-between items-center text-slate-600">
+                              <span>Spare Parts</span>
+                              <span className="font-medium text-[#052355]">₹{sparePartsTotal.toLocaleString('en-IN')}</span>
+                            </div>
+                          )}
+
                           <div className="h-[1px] bg-slate-100 my-1"></div>
 
                           <div className="flex justify-between items-center text-[#052355] font-semibold text-sm">
@@ -1252,19 +1426,13 @@ const ActiveJob = () => {
                         </div>
                       </div>
 
-                      {/* View / Generate Invoice Actions */}
-                      <div className="flex gap-3.5 mt-2 mb-2">
+                      {/* Review Estimate Action */}
+                      <div className="mt-2 mb-2">
                         <button 
-                          onClick={() => setShowInvoicePreviewModal(true)}
-                          className="flex-1 bg-white border border-[#0D47A1] hover:bg-slate-50 text-[#0D47A1] font-semibold py-3.5 rounded-2xl text-xs transition-all shadow-sm"
+                          onClick={() => setActiveStep('spare_part_required')}
+                          className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-semibold py-4 rounded-2xl text-xs transition-all shadow-md text-center"
                         >
-                          View Invoice
-                        </button>
-                        <button 
-                          onClick={() => setActiveStep('billing')}
-                          className="flex-1 bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-semibold py-3.5 rounded-2xl text-xs transition-all shadow-md"
-                        >
-                          Generate Invoice
+                          Review Estimate
                         </button>
                       </div>
 
@@ -1780,6 +1948,1440 @@ const ActiveJob = () => {
               </div>
             )}
 
+            {/* Step: SPARE PART REQUIRED (Mockup Page) */}
+            {activeStep === 'spare_part_required' && (
+              <div className="bg-[#F5F8FC] flex flex-col gap-4 text-left font-sans -mx-4 -my-4 p-4 min-h-screen">
+                {/* Custom Navy Header matching mockup */}
+                <div className="bg-[#052355] text-white pt-4 pb-6 px-4 flex flex-col gap-3 rounded-b-[2rem] relative z-10 shadow-md -mx-4 -mt-4">
+                  <div className="flex items-center gap-3">
+                    <button 
+                      onClick={() => setActiveStep('inspection')} 
+                      className="p-1 hover:bg-white/10 rounded-full transition-colors"
+                    >
+                      <ArrowLeft className="h-6 w-6 text-white" />
+                    </button>
+                    <div className="flex-1 text-center pr-9">
+                      <h1 className="text-base font-normal text-white">Spare Part Required</h1>
+                      <span className="text-[10px] text-white/70 block font-normal mt-0.5">#{activeJob.id}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Required Part Card */}
+                <div className="bg-white rounded-3xl p-4 border border-slate-200/60 shadow-sm flex flex-col gap-3.5 mt-2">
+                  <div className="flex items-center gap-2 text-amber-600 bg-amber-50/50 border border-amber-100/50 px-3 py-1.5 rounded-xl w-fit">
+                    <AlertTriangle className="h-4 w-4 fill-amber-50" />
+                    <span className="text-[10px] font-semibold uppercase tracking-wider">Required Part</span>
+                  </div>
+
+                  <div className="flex gap-4 items-center bg-slate-50 border border-slate-100 rounded-2xl p-3">
+                    <div className="w-16 h-16 bg-white border border-slate-200 rounded-xl flex items-center justify-center p-1 flex-shrink-0">
+                      <img 
+                        src={compressorImg} 
+                        alt="Compressor" 
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                    <div className="text-left flex-1">
+                      <h5 className="text-sm font-semibold text-[#052355]">Compressor</h5>
+                      <p className="text-xs text-slate-500 font-normal mt-1">Qty: 1</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Estimated Cost Section */}
+                <div className="bg-white rounded-3xl p-4 border border-slate-200/60 shadow-sm flex justify-between items-center">
+                  <span className="text-xs font-semibold text-[#052355] uppercase tracking-wider">Estimated Cost</span>
+                  <span className="text-lg font-bold text-[#052355]">₹4,500</span>
+                </div>
+
+                {/* Availability Section */}
+                <div className="bg-white rounded-3xl p-4 border border-slate-200/60 shadow-sm flex flex-col gap-3">
+                  <h4 className="text-xs font-semibold text-[#052355] uppercase tracking-wider">Availability</h4>
+                  
+                  <div className="flex flex-col gap-3 mt-1">
+                    {/* Option 1: In Technician Stock */}
+                    <label className="flex items-center justify-between p-3.5 bg-slate-50 border border-slate-100 rounded-2xl cursor-pointer select-none">
+                      <div className="flex items-center gap-3">
+                        <div className="w-4 h-4 rounded-full border border-slate-300 flex items-center justify-center"></div>
+                        <span className="text-xs font-normal text-slate-700">In Technician Stock</span>
+                      </div>
+                    </label>
+
+                    {/* Option 2: NCC Warehouse */}
+                    <label className="flex items-center justify-between p-3.5 bg-slate-50 border border-slate-100 rounded-2xl cursor-pointer select-none">
+                      <div className="flex items-center gap-3">
+                        <div className="w-4 h-4 rounded-full border border-slate-300 flex items-center justify-center"></div>
+                        <span className="text-xs font-normal text-slate-700">NCC Warehouse</span>
+                      </div>
+                      <span className="bg-green-50 text-green-600 font-medium rounded-md px-2 py-0.5 text-[9px] uppercase tracking-wider">
+                        Available
+                      </span>
+                    </label>
+
+                    {/* Option 3: Not Available (Selected) */}
+                    <label className="flex items-center justify-between p-3.5 bg-blue-50/30 border border-[#0D47A1]/20 rounded-2xl cursor-pointer select-none">
+                      <div className="flex flex-col gap-0.5">
+                        <div className="flex items-center gap-3">
+                          <div className="w-4 h-4 rounded-full border-2 border-[#0D47A1] flex items-center justify-center">
+                            <div className="w-2 h-2 rounded-full bg-[#0D47A1]"></div>
+                          </div>
+                          <span className="text-xs font-semibold text-[#052355]">Not Available</span>
+                        </div>
+                        <p className="text-[10px] text-slate-500 font-normal pl-7">Need to order / Not available</p>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Warning Revisit Notice */}
+                <div className="bg-amber-50 border border-amber-200/50 rounded-3xl p-4 flex gap-3 text-left">
+                  <div className="flex flex-col">
+                    <p className="text-[11px] text-amber-800 font-normal leading-relaxed">
+                      Customer will be notified. You can revisit within 48 hours after part is available.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Bottom Action Button */}
+                <button 
+                  onClick={() => {
+                    setActiveStep('customer_update_preview');
+                  }}
+                  className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-semibold py-4 rounded-2xl text-xs transition-all shadow-md mt-auto mb-1 text-center"
+                >
+                  Mark as Spare Part Pending
+                </button>
+              </div>
+            )}
+
+            {/* Step: CUSTOMER UPDATE PREVIEW (Mockup Page) */}
+            {activeStep === 'customer_update_preview' && (
+              <div className="bg-[#F5F8FC] flex flex-col gap-4 text-left font-sans -mx-4 -my-4 p-4 min-h-screen">
+                {/* Custom Navy Header matching mockup */}
+                <div className="bg-[#052355] text-white pt-4 pb-6 px-4 flex flex-col gap-3 rounded-b-[2.5rem] relative z-10 shadow-md -mx-4 -mt-4">
+                  <div className="flex items-center justify-between">
+                    <button 
+                      onClick={() => setActiveStep('spare_part_required')} 
+                      className="p-1 hover:bg-white/10 rounded-full transition-colors"
+                    >
+                      <ArrowLeft className="h-6 w-6 text-white" />
+                    </button>
+                    <div className="flex-1 text-center pr-9">
+                      <h1 className="text-base font-semibold text-white">Customer Update</h1>
+                      <span className="text-xs text-white/80 block font-normal mt-0.5">(Preview)</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex-1 flex flex-col mt-1">
+                  <div className="bg-white rounded-3xl p-5 border border-slate-200/50 shadow-sm flex flex-col gap-4">
+                    {/* NCC Service Update */}
+                    <div className="flex items-center gap-3">
+                      <Bell className="h-6 w-6 text-[#0A3F91] stroke-[2]" />
+                      <span className="text-base font-bold text-[#052355]">NCC Service Update</span>
+                    </div>
+                    
+                    {/* Greeting */}
+                    <div className="text-left space-y-2 mt-1">
+                      <p className="text-sm font-semibold text-[#052355]">Hi Rohit Sharma,</p>
+                      <p className="text-xs text-slate-600 font-normal leading-relaxed">
+                        During inspection, the following part is required:
+                      </p>
+                    </div>
+
+                    {/* Sub-card 1: Compressor & Cost */}
+                    <div className="border border-slate-200/60 rounded-2xl bg-white overflow-hidden shadow-sm">
+                      <div className="p-4 flex items-center gap-4">
+                        <div className="w-14 h-14 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center p-1 flex-shrink-0">
+                          <img src={compressorImg} alt="Compressor" className="w-full h-full object-contain" />
+                        </div>
+                        <div className="flex flex-col text-left">
+                          <span className="text-xs font-semibold text-[#0D47A1]">Required Part</span>
+                          <span className="text-base font-bold text-[#052355] mt-1">Compressor</span>
+                        </div>
+                      </div>
+                      <div className="border-t border-slate-100 px-4 py-3.5 flex justify-between items-center">
+                        <span className="text-xs font-normal text-slate-600">Estimated Cost</span>
+                        <span className="text-xl font-extrabold text-[#052355]">₹4,500</span>
+                      </div>
+                    </div>
+
+                    {/* Sub-card 2: Expected Visit & Current Status */}
+                    <div className="border border-slate-200/60 rounded-2xl bg-white overflow-hidden p-4 flex flex-col gap-3.5 shadow-sm">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center text-slate-500 flex-shrink-0">
+                          <Calendar className="h-5 w-5 text-slate-500" />
+                        </div>
+                        <div className="flex flex-col text-left">
+                          <span className="text-xs font-normal text-slate-600">Expected Visit</span>
+                          <span className="text-xs font-semibold text-[#0D47A1] mt-0.5">Within 48 Hours</span>
+                        </div>
+                      </div>
+                      
+                      <div className="border-t border-slate-100 pt-3 flex flex-col gap-1.5 text-left">
+                        <span className="text-xs font-normal text-slate-600">Current Status</span>
+                        <span className="bg-[#FFF3E0] text-[#E65100] font-bold rounded-lg px-3 py-1 text-[11px] w-fit">
+                          Spare Part Pending
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Footer Note */}
+                  <p className="text-xs text-slate-600 font-normal leading-relaxed text-left mt-3 px-1">
+                    You will be updated once the part is available and technician visits again to complete the repair.
+                  </p>
+
+                  {/* Send Update Button */}
+                  <button 
+                    onClick={() => setActiveStep('completed_pending')}
+                    className="w-full bg-[#052355] hover:bg-[#031c45] text-white font-bold py-4 rounded-2xl text-sm transition-all shadow-md mt-6 mb-1 text-center"
+                  >
+                    Send Update
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step: COMPLETED PENDING (Outcome) */}
+            {activeStep === 'completed_pending' && (
+              <div className="bg-white rounded-3xl p-4 border border-slate-200 shadow-sm text-center flex flex-col gap-6 py-10 my-4">
+                <div className="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center text-amber-500 mx-auto border border-amber-100 shadow-sm">
+                  <Clock className="h-10 w-10 stroke-[2.5]" />
+                </div>
+                
+                <div>
+                  <h2 className="text-2xl font-medium text-[#052355]">Spare Part Pending</h2>
+                  <p className="text-sm text-slate-600 mt-2 font-normal">Customer notified. Job is marked as pending. Revisit will be scheduled once the spare part becomes available.</p>
+                </div>
+
+                <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 text-left text-xs font-normal text-slate-600 space-y-2.5">
+                  <div className="flex justify-between border-b border-slate-200/50 pb-2">
+                    <span className="text-slate-600">Job Reference</span>
+                    <span className="text-[#052355]">#{activeJob.id}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Status</span>
+                    <span className="text-amber-600 font-normal bg-amber-50 px-2 py-0.5 rounded-md text-[10px]">Awaiting Spare Part</span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-3 mt-2">
+                  <button 
+                    onClick={() => {
+                      setActiveStep('spare_part_job_details');
+                    }}
+                    className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-semibold py-4 rounded-2xl text-sm transition-all shadow-md text-center"
+                  >
+                    View Job Details
+                  </button>
+                  
+                  <button 
+                    onClick={() => {
+                      resetActiveJob();
+                      navigate('/technician/dashboard');
+                    }}
+                    className="w-full bg-slate-100 hover:bg-slate-250 text-[#052355] font-semibold py-4 rounded-2xl text-sm transition-all border border-slate-200 shadow-sm text-center"
+                  >
+                    Go to Dashboard
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step: SPARE PART JOB DETAILS (Mockup Page) */}
+            {activeStep === 'spare_part_job_details' && (
+              <div className="bg-[#F5F8FC] flex flex-col gap-4 text-left font-sans -mx-4 -my-4 p-4 min-h-screen">
+                {/* Custom Navy Header matching mockup */}
+                <div className="bg-[#052355] text-white pt-4 pb-6 px-4 flex flex-col gap-3 rounded-b-[2.5rem] relative z-10 shadow-md -mx-4 -mt-4">
+                  <div className="flex items-center justify-between">
+                    <button 
+                      onClick={() => setActiveStep('completed_pending')} 
+                      className="p-1 hover:bg-white/10 rounded-full transition-colors"
+                    >
+                      <ArrowLeft className="h-6 w-6 text-white" />
+                    </button>
+                    <div className="flex-1 text-center pr-9">
+                      <h1 className="text-base font-semibold text-white">Job Details</h1>
+                      <span className="text-xs text-white/80 block font-normal mt-0.5">#{activeJob.id}</span>
+                    </div>
+                    <button className="p-1 hover:bg-white/10 rounded-full transition-colors">
+                      <MoreVertical className="h-6 w-6 text-white" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-3xl p-5 border border-slate-200/50 shadow-sm flex flex-col gap-5 mt-2">
+                  {/* Status Badge */}
+                  <span className="bg-[#FF9100] text-white font-bold rounded-lg px-3 py-1.5 text-[10px] w-fit uppercase tracking-wider">
+                    Spare Part Pending
+                  </span>
+
+                  {/* Title & Subtitle */}
+                  <div className="text-left space-y-1 mt-1">
+                    <h2 className="text-lg font-bold text-[#052355] leading-snug">
+                      {activeJob?.complaint || 'Split AC Gas Charging'}
+                    </h2>
+                    <p className="text-xs text-slate-500 font-normal leading-relaxed">
+                      {activeJob?.brand || 'Voltas'} {activeJob?.product || 'Split AC'} {activeJob?.details || '1.5 Ton Inverter'}
+                    </p>
+                  </div>
+
+                  {/* Product Image */}
+                  <div className="w-full flex justify-center py-3 bg-slate-50 rounded-2xl border border-slate-100 shadow-inner">
+                    <div className="w-36 h-36 flex items-center justify-center p-1 flex-shrink-0">
+                      <img 
+                        src={getProductImage(activeJob)} 
+                        alt="Product" 
+                        className="w-full h-full object-contain rounded-xl"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Status Box */}
+                  <div className="space-y-2 text-left">
+                    <span className="text-xs font-normal text-slate-500">Status</span>
+                    <h4 className="text-base font-bold text-[#FF9100]">Spare Part Pending</h4>
+                    <p className="text-xs text-slate-600 font-normal leading-relaxed">
+                      Waiting for part availability. <br />
+                      Technician will revisit within 48 hours.
+                    </p>
+                  </div>
+
+                  <hr className="border-slate-150" />
+
+                  {/* Details List */}
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-slate-500 font-normal">Required Part</span>
+                      <span className="text-[#052355] font-semibold">Compressor</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-slate-500 font-normal">Estimated Cost</span>
+                      <span className="text-[#052355] font-semibold">₹4,500</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-slate-500 font-normal">Expected Revisit</span>
+                      <span className="text-[#052355] font-semibold">
+                        {expectedRevisitDate}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Update Expected Date Button */}
+                  <button 
+                    onClick={() => {
+                      setSelectedTempDate(expectedRevisitDate);
+                      setShowDatePicker(true);
+                    }}
+                    className="w-full border border-blue-200 text-[#0D47A1] font-semibold py-3 rounded-2xl text-xs hover:bg-blue-50 transition-all text-center mt-2 shadow-sm"
+                  >
+                    Update Expected Date
+                  </button>
+
+                  <hr className="border-slate-150 mt-1" />
+
+                  {/* Other Details Dropdown */}
+                  <div 
+                    onClick={() => setShowOtherDetails(!showOtherDetails)}
+                    className="flex justify-between items-center py-2 cursor-pointer select-none"
+                  >
+                    <span className="text-sm font-bold text-[#052355]">Other Details</span>
+                    <ChevronRight className={`h-5 w-5 text-slate-400 transition-transform duration-200 ${showOtherDetails ? 'rotate-90' : ''}`} />
+                  </div>
+
+                  {showOtherDetails && (
+                    <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 space-y-3 text-xs text-left animate-fadeIn">
+                      <div className="space-y-1">
+                        <span className="text-slate-500 block font-normal">Service Category</span>
+                        <span className="text-[#052355] font-semibold">AC Service & Repair</span>
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-slate-500 block font-normal">Fault Description</span>
+                        <span className="text-slate-650 font-normal leading-relaxed">
+                          AC compressor drawing high current on startup. The fan motor runs normally but there is zero cooling. Diagnostics confirm compressor run capacitor has degraded.
+                        </span>
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-slate-500 block font-normal">Customer Remarks</span>
+                        <span className="text-slate-650 font-normal leading-relaxed">
+                          AC is completely shut down. Please replace the compressor part as soon as possible.
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Go to Dashboard Button */}
+                  <button 
+                    onClick={() => {
+                      resetActiveJob();
+                      navigate('/technician/dashboard');
+                    }}
+                    className="w-full bg-[#052355] hover:bg-[#031c45] text-white font-semibold py-4 rounded-2xl text-sm transition-all shadow-md mt-4 text-center"
+                  >
+                    Go to Dashboard
+                  </button>
+                </div>
+
+                {/* Date Picker Modal */}
+                {showDatePicker && (
+                  <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-end justify-center z-50 -mx-4">
+                    <div className="bg-white w-full max-w-md rounded-t-[2.5rem] p-5 shadow-xl flex flex-col gap-4 text-left animate-slideUp">
+                      <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                        <h3 className="text-base font-bold text-[#052355]">Select Revisit Date</h3>
+                        <button 
+                          onClick={() => setShowDatePicker(false)}
+                          className="text-slate-400 hover:text-slate-600 text-sm font-semibold p-1"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-4 gap-2.5 py-2">
+                        {(() => {
+                          const nextDays = [];
+                          for (let i = 1; i <= 8; i++) {
+                            const date = new Date();
+                            date.setDate(date.getDate() + i);
+                            nextDays.push({
+                              full: date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+                              dayName: date.toLocaleDateString('en-US', { weekday: 'short' }),
+                              dayNum: date.getDate(),
+                              monthName: date.toLocaleDateString('en-US', { month: 'short' })
+                            });
+                          }
+                          return nextDays.map((day, idx) => {
+                            const isSelected = selectedTempDate === day.full || (!selectedTempDate && idx === 0);
+                            return (
+                              <button
+                                key={day.full}
+                                onClick={() => setSelectedTempDate(day.full)}
+                                className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all ${
+                                  isSelected 
+                                    ? 'border-[#0D47A1] bg-blue-50/50 text-[#0D47A1] font-bold shadow-sm'
+                                    : 'border-slate-200 hover:border-slate-350 text-slate-700 bg-white font-normal'
+                                }`}
+                              >
+                                <span className={`text-[10px] uppercase ${isSelected ? 'text-[#0D47A1]/85 font-semibold' : 'text-slate-400'}`}>
+                                  {day.dayName}
+                                </span>
+                                <span className="text-base mt-1">{day.dayNum}</span>
+                                <span className={`text-[10px] ${isSelected ? 'text-[#0D47A1]/85 font-semibold' : 'text-slate-400'}`}>
+                                  {day.monthName}
+                                </span>
+                              </button>
+                            );
+                          });
+                        })()}
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          if (selectedTempDate) {
+                            setExpectedRevisitDate(selectedTempDate);
+                          }
+                          setShowDatePicker(false);
+                        }}
+                        className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-semibold py-4 rounded-2xl text-sm transition-all shadow-md mt-2 text-center"
+                      >
+                        Confirm New Revisit Date
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Step: REVISIT & COMPLETE (Mockup Page) */}
+            {activeStep === 'revisit_complete' && (
+              <div className="bg-[#F5F8FC] flex flex-col gap-4 text-left font-sans -mx-4 -my-4 p-4 min-h-screen">
+                {/* Custom Navy Header matching mockup */}
+                <div className="bg-[#052355] text-white pt-4 pb-6 px-4 flex flex-col gap-3 rounded-b-[2.5rem] relative z-10 shadow-md -mx-4 -mt-4">
+                  <div className="flex items-center justify-between">
+                    <button 
+                      onClick={() => {
+                        setActiveStep('idle');
+                        navigate('/technician/dashboard');
+                      }} 
+                      className="p-1 hover:bg-white/10 rounded-full transition-colors"
+                    >
+                      <ArrowLeft className="h-6 w-6 text-white" />
+                    </button>
+                    <div className="flex-1 text-center pr-9">
+                      <h1 className="text-base font-semibold text-white">Revisit & Complete</h1>
+                      <span className="text-xs text-white/80 block font-normal mt-0.5">
+                        #{activeJob?.id || '8842'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex-1 flex flex-col gap-4 mt-2">
+                  {/* Card 1: Part Received? */}
+                  <div className="bg-white rounded-3xl border border-slate-200/50 shadow-sm overflow-hidden flex flex-col">
+                    {/* Top Alert Info */}
+                    <div className="bg-[#FFF8E1] p-4 flex gap-3.5 items-start text-left border-b border-amber-50">
+                      <div className="w-10 h-10 bg-white border border-amber-100 rounded-xl flex items-center justify-center text-amber-600 flex-shrink-0 shadow-xs">
+                        <Package className="h-5 w-5 stroke-[2]" />
+                      </div>
+                      <div className="flex flex-col text-left">
+                        <h4 className="text-sm font-bold text-[#052355]">Part Received?</h4>
+                        <p className="text-[11px] text-slate-500 font-normal mt-0.5">
+                          Confirm part availability to continue
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Part Details */}
+                    <div className="p-4 flex flex-col gap-1 text-left">
+                      <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Required Part</span>
+                      <div className="flex justify-between items-center mt-0.5">
+                        <span className="text-sm font-bold text-[#052355]">Compressor</span>
+                        <span className="text-sm font-bold text-[#052355]">₹4,500</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section Label */}
+                  <h3 className="text-xs font-bold text-[#052355] uppercase tracking-wider text-left mt-2">
+                    Mark Repair Status
+                  </h3>
+
+                  {/* Status Options Single Card Container */}
+                  <div className="bg-white border border-slate-200/80 rounded-3xl overflow-hidden shadow-xs flex flex-col">
+                    {/* Option 1: Part Installed & Repair Completed */}
+                    <div 
+                      onClick={() => {
+                        setRevisitRepairStatus('completed');
+                        setRevisitReason('');
+                      }}
+                      className={`p-4 flex items-start gap-3.5 cursor-pointer select-none transition-all ${
+                        revisitRepairStatus === 'completed'
+                          ? 'bg-green-50/20'
+                          : 'hover:bg-slate-50/50'
+                      }`}
+                    >
+                      <div className="flex-shrink-0 mt-0.5">
+                        {revisitRepairStatus === 'completed' ? (
+                          <div className="w-5 h-5 rounded-full bg-green-600 flex items-center justify-center text-white">
+                            <Check className="h-3.5 w-3.5 stroke-[3]" />
+                          </div>
+                        ) : (
+                          <div className="w-5 h-5 rounded-full border-2 border-slate-300 bg-white" />
+                        )}
+                      </div>
+                      <div className="flex flex-col text-left">
+                        <span className={`text-xs font-bold ${revisitRepairStatus === 'completed' ? 'text-green-700' : 'text-[#052355]'}`}>
+                          Part Installed & Repair Completed
+                        </span>
+                        <span className="text-[10px] text-slate-500 font-normal mt-0.5">
+                          Customer appliance working fine
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="h-[1px] bg-slate-100"></div>
+
+                    {/* Option 2: Unable to Fix */}
+                    <div 
+                      onClick={() => {
+                        setRevisitRepairStatus('unable');
+                        setRevisitReason('');
+                      }}
+                      className={`p-4 flex flex-col gap-3 cursor-pointer select-none transition-all ${
+                        revisitRepairStatus === 'unable'
+                          ? 'bg-blue-50/15'
+                          : 'hover:bg-slate-50/50'
+                      }`}
+                    >
+                      <div className="flex items-start gap-3.5">
+                        <div className="flex-shrink-0 mt-0.5">
+                          {revisitRepairStatus === 'unable' ? (
+                            <div className="w-5 h-5 rounded-full bg-[#0D47A1] flex items-center justify-center text-white">
+                              <Check className="h-3.5 w-3.5 stroke-[3]" />
+                            </div>
+                          ) : (
+                            <div className="w-5 h-5 rounded-full border-2 border-slate-300 bg-white" />
+                          )}
+                        </div>
+                        <div className="flex flex-col text-left">
+                          <span className={`text-xs font-bold ${revisitRepairStatus === 'unable' ? 'text-[#0D47A1]' : 'text-[#052355]'}`}>
+                            Unable to Fix
+                          </span>
+                          <span className="text-[10px] text-slate-500 font-normal mt-0.5">
+                            Issue still not resolved
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Inline Reason List for Unable to Fix */}
+                      {revisitRepairStatus === 'unable' && (
+                        <div className="pl-8.5 pr-2 py-2 flex flex-col gap-2.5 border-t border-slate-100 mt-1" onClick={(e) => e.stopPropagation()}>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Select Reason</span>
+                          {[
+                            "Appliance Beyond Economical Repair (BER)",
+                            "Required part is obsolete / unavailable",
+                            "Incorrect initial diagnosis",
+                            "Requires senior specialist intervention"
+                          ].map((reason) => (
+                            <label key={reason} className="flex items-center gap-2.5 cursor-pointer">
+                              <input 
+                                type="radio" 
+                                name="unableReason" 
+                                value={reason}
+                                checked={revisitReason === reason}
+                                onChange={(e) => setRevisitReason(e.target.value)}
+                                className="w-3.5 h-3.5 text-[#0D47A1] focus:ring-0"
+                              />
+                              <span className="text-xs text-slate-600 font-normal">{reason}</span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="h-[1px] bg-slate-100"></div>
+
+                    {/* Option 3: Customer Cancelled */}
+                    <div 
+                      onClick={() => {
+                        setRevisitRepairStatus('cancelled');
+                        setRevisitReason('');
+                      }}
+                      className={`p-4 flex flex-col gap-3 cursor-pointer select-none transition-all ${
+                        revisitRepairStatus === 'cancelled'
+                          ? 'bg-red-50/15'
+                          : 'hover:bg-slate-50/50'
+                      }`}
+                    >
+                      <div className="flex items-start gap-3.5">
+                        <div className="flex-shrink-0 mt-0.5">
+                          {revisitRepairStatus === 'cancelled' ? (
+                            <div className="w-5 h-5 rounded-full bg-red-600 flex items-center justify-center text-white">
+                              <Check className="h-3.5 w-3.5 stroke-[3]" />
+                            </div>
+                          ) : (
+                            <div className="w-5 h-5 rounded-full border-2 border-slate-300 bg-white" />
+                          )}
+                        </div>
+                        <div className="flex flex-col text-left">
+                          <span className={`text-xs font-bold ${revisitRepairStatus === 'cancelled' ? 'text-red-700' : 'text-[#052355]'}`}>
+                            Customer Cancelled
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Inline Reason List for Customer Cancelled */}
+                      {revisitRepairStatus === 'cancelled' && (
+                        <div className="pl-8.5 pr-2 py-2 flex flex-col gap-2.5 border-t border-slate-100 mt-1" onClick={(e) => e.stopPropagation()}>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Select Reason</span>
+                          {[
+                            "Repair estimate / spare part cost too high",
+                            "Customer decided to purchase new appliance",
+                            "Customer resolved through third party",
+                            "Customer not reachable / unavailable"
+                          ].map((reason) => (
+                            <label key={reason} className="flex items-center gap-2.5 cursor-pointer">
+                              <input 
+                                type="radio" 
+                                name="cancelledReason" 
+                                value={reason}
+                                checked={revisitReason === reason}
+                                onChange={(e) => setRevisitReason(e.target.value)}
+                                className="w-3.5 h-3.5 text-red-650 focus:ring-0"
+                              />
+                              <span className="text-xs text-slate-650 font-normal">{reason}</span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Continue Button */}
+                  <button 
+                    disabled={(revisitRepairStatus === 'unable' || revisitRepairStatus === 'cancelled') && !revisitReason}
+                    onClick={() => {
+                      if (revisitRepairStatus === 'completed') {
+                        // Go to billing worksheet
+                        setActiveStep('revisit_billing');
+                      } else if (revisitRepairStatus === 'unable') {
+                        setActiveStep('unable_to_fix_summary');
+                      } else if (revisitRepairStatus === 'cancelled') {
+                        setActiveStep('cancellation_summary');
+                      }
+                    }}
+                    className={`w-full text-white font-bold py-4 rounded-2xl text-sm transition-all shadow-md mt-6 mb-6 text-center ${
+                      ((revisitRepairStatus === 'unable' || revisitRepairStatus === 'cancelled') && !revisitReason)
+                        ? 'bg-slate-300 cursor-not-allowed shadow-none'
+                        : 'bg-[#052355] hover:bg-[#0a2c66]'
+                    }`}
+                  >
+                    {revisitRepairStatus === 'completed' 
+                      ? 'Continue to Billing' 
+                      : revisitRepairStatus === 'unable'
+                        ? 'Complete & Close Job'
+                        : 'Proceed to Cancellation Summary'
+                    }
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step: CANCELLATION SUMMARY (Prepaid Travel Payout) */}
+            {activeStep === 'cancellation_summary' && (
+              <div className="bg-[#F5F8FC] flex flex-col gap-4 text-left font-sans -mx-4 -my-4 p-4 min-h-screen">
+                {/* Custom Navy Header */}
+                <div className="bg-[#052355] text-white pt-4 pb-6 px-4 flex flex-col gap-3 rounded-b-[2.5rem] relative z-10 shadow-md -mx-4 -mt-4">
+                  <div className="flex items-center justify-between">
+                    <button 
+                      onClick={() => {
+                        setActiveStep('revisit_complete');
+                      }} 
+                      className="p-1 hover:bg-white/10 rounded-full transition-colors"
+                    >
+                      <ArrowLeft className="h-6 w-6 text-white" />
+                    </button>
+                    <div className="flex-1 text-center pr-9">
+                      <h1 className="text-base font-semibold text-white">Cancellation Summary</h1>
+                      <span className="text-xs text-white/80 block font-normal mt-0.5">
+                        #{activeJob?.id || '8842'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex-1 flex flex-col gap-5 mt-4">
+                  {/* Status Indicator Card */}
+                  <div className="bg-white rounded-3xl p-5 border border-slate-200/50 shadow-sm flex flex-col items-center text-center gap-3">
+                    <div className="w-14 h-14 bg-red-50 rounded-full flex items-center justify-center text-red-650 shadow-xs">
+                      <Check className="h-8 w-8 stroke-[3.5] text-red-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-[#052355]">Job Cancelled</h3>
+                      <p className="text-xs text-slate-500 mt-1">Ticket has been closed successfully</p>
+                    </div>
+                  </div>
+
+                  {/* Summary Details Card */}
+                  <div className="bg-white rounded-3xl p-5 border border-slate-200/50 shadow-sm flex flex-col gap-4">
+                    <h4 className="text-xs font-bold text-[#052355] uppercase tracking-wider border-b border-slate-100 pb-2">
+                      Details
+                    </h4>
+                    
+                    <div className="space-y-3 text-xs">
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-500 font-normal">Customer Name</span>
+                        <span className="text-[#052355] font-semibold">{activeJob?.customerName || 'Amit Singh'}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-550 font-normal">Cancellation Reason</span>
+                        <span className="text-slate-700 font-semibold text-right max-w-[200px] truncate">{revisitReason}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-500 font-normal">Prepaid Visit Fee</span>
+                        <span className="text-[#052355] font-semibold">₹150</span>
+                      </div>
+                      <div className="flex justify-between items-center border-t border-slate-100 pt-3">
+                        <span className="text-xs font-bold text-[#052355]">Travel Payout Credited</span>
+                        <span className="text-sm font-bold text-green-600">₹150</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-amber-50 border border-amber-200/60 rounded-2xl p-4 flex gap-3 items-start">
+                    <Info className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                    <p className="text-[11px] text-amber-800 leading-relaxed font-normal">
+                      Since the customer paid the visiting charges upfront, no payment collection is required. The travel payout of <strong>₹150</strong> is credited to your dashboard wallet immediately.
+                    </p>
+                  </div>
+
+                  {/* Complete Button */}
+                  <button 
+                    onClick={() => {
+                      creditTravelFee();
+                      setActiveStep('idle');
+                      resetActiveJob();
+                      navigate('/technician/dashboard');
+                    }}
+                    className="w-full bg-[#052355] hover:bg-[#0a2c66] text-white font-bold py-4 rounded-2xl text-sm transition-all shadow-md mt-auto mb-6 text-center"
+                  >
+                    Go to Dashboard
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step: UNABLE TO FIX SUMMARY */}
+            {activeStep === 'unable_to_fix_summary' && (
+              <div className="bg-[#F5F8FC] flex flex-col gap-4 text-left font-sans -mx-4 -my-4 p-4 min-h-screen">
+                {/* Custom Navy Header */}
+                <div className="bg-[#052355] text-white pt-4 pb-6 px-4 flex flex-col gap-3 rounded-b-[2.5rem] relative z-10 shadow-md -mx-4 -mt-4">
+                  <div className="flex items-center justify-between">
+                    <button 
+                      onClick={() => {
+                        setActiveStep('revisit_complete');
+                      }} 
+                      className="p-1 hover:bg-white/10 rounded-full transition-colors"
+                    >
+                      <ArrowLeft className="h-6 w-6 text-white" />
+                    </button>
+                    <div className="flex-1 text-center pr-9">
+                      <h1 className="text-base font-semibold text-white">Job Closed - Unresolved</h1>
+                      <span className="text-xs text-white/80 block font-normal mt-0.5">
+                        #{activeJob?.id || '8842'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex-1 flex flex-col gap-5 mt-4">
+                  {/* Status Indicator Card */}
+                  <div className="bg-white rounded-3xl p-5 border border-slate-200/50 shadow-sm flex flex-col items-center text-center gap-3">
+                    <div className="w-14 h-14 bg-slate-50 rounded-full flex items-center justify-center text-slate-600 shadow-xs">
+                      <AlertTriangle className="h-8 w-8 stroke-[2.5] text-slate-500" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-[#052355]">Closed Unresolved</h3>
+                      <p className="text-xs text-slate-500 mt-1">Ticket has been closed as incomplete</p>
+                    </div>
+                  </div>
+
+                  {/* Summary Details Card */}
+                  <div className="bg-white rounded-3xl p-5 border border-slate-200/50 shadow-sm flex flex-col gap-4">
+                    <h4 className="text-xs font-bold text-[#052355] uppercase tracking-wider border-b border-slate-100 pb-2">
+                      Details
+                    </h4>
+                    
+                    <div className="space-y-3 text-xs">
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-500 font-normal">Customer Name</span>
+                        <span className="text-[#052355] font-semibold">{activeJob?.customerName || 'Amit Singh'}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-500 font-normal">Failure Reason</span>
+                        <span className="text-[#052355] font-semibold text-right max-w-[200px] truncate">{revisitReason}</span>
+                      </div>
+                      <div className="flex justify-between items-center border-t border-slate-100 pt-3">
+                        <span className="text-xs font-bold text-[#052355]">Customer Charged</span>
+                        <span className="text-sm font-bold text-slate-700">₹0</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-bold text-[#052355]">Technician Payout</span>
+                        <span className="text-sm font-bold text-slate-700">₹0</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-blue-50 border border-blue-200/60 rounded-2xl p-4 flex gap-3 items-start">
+                    <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                    <p className="text-[11px] text-blue-800 leading-relaxed font-normal">
+                      The job has been logged as unresolved due to technician/part issue. A refund or re-assignment request has been initiated for the customer.
+                    </p>
+                  </div>
+
+                  {/* Complete Button */}
+                  <button 
+                    onClick={() => {
+                      setActiveStep('idle');
+                      resetActiveJob();
+                      navigate('/technician/dashboard');
+                    }}
+                    className="w-full bg-[#052355] hover:bg-[#0a2c66] text-white font-bold py-4 rounded-2xl text-sm transition-all shadow-md mt-auto mb-6 text-center"
+                  >
+                    Go to Dashboard
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step: REVISIT BILLING (Final Bill Mockup) */}
+            {activeStep === 'revisit_billing' && (
+              <div className="bg-[#052355] flex flex-col text-left font-sans -mx-4 -my-4 min-h-screen relative">
+                {/* Custom Navy Header matching mockup */}
+                <div className="bg-[#052355] text-white pt-6 pb-8 px-5 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <button 
+                      onClick={() => {
+                        setActiveStep('revisit_complete');
+                      }} 
+                      className="p-1 hover:bg-white/10 rounded-full transition-colors"
+                    >
+                      <ArrowLeft className="h-6 w-6 text-white" />
+                    </button>
+                    <div className="flex-1 text-center pr-9">
+                      <h1 className="text-lg font-bold text-white">Final Bill</h1>
+                      <span className="text-sm text-white/80 block font-normal mt-0.5">
+                        #6642
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* White overlapping sheet */}
+                <div className="flex-1 bg-white rounded-t-[2.5rem] px-6 pt-7 pb-6 flex flex-col mt-[-1.5rem] relative z-10 shadow-lg">
+                  <div className="flex flex-col gap-6">
+                    {/* Bill Summary Title */}
+                    <h2 className="text-lg font-bold text-[#052355] mt-1">
+                      Bill Summary
+                    </h2>
+
+                    {/* Bill Items */}
+                    <div className="flex flex-col gap-6 text-sm font-medium text-slate-700">
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-650">Service Charge</span>
+                        <span className="text-[#052355] font-semibold text-sm">₹2,200</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-650">Additional Services</span>
+                        <span className="text-[#052355] font-semibold text-sm">₹798</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-650">Spare Part (Compressor)</span>
+                        <span className="text-[#052355] font-semibold text-sm">₹4,500</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-650">Tax (18% GST)</span>
+                        <span className="text-[#052355] font-semibold text-sm">₹1,215</span>
+                      </div>
+                    </div>
+
+                    {/* Divider */}
+                    <div className="h-[1px] bg-[#E2E8F0] my-2"></div>
+
+                    {/* Total Amount */}
+                    <div className="flex justify-between items-center">
+                      <span className="text-lg font-bold text-[#052355]">Total Amount</span>
+                      <span className="text-2xl font-extrabold text-[#16A34A]">₹8,713</span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-4 mt-6">
+                    {/* Yellow Alert Box (no icon, centered text) */}
+                    <div className="bg-[#FFF8E1] rounded-2xl py-4 px-6 flex items-center justify-center text-center">
+                      <p className="text-sm text-amber-900 leading-relaxed font-normal">
+                        This is the final bill amount to be collected from the customer.
+                      </p>
+                    </div>
+
+                    {/* Proceed to Payment Button */}
+                    <button 
+                      onClick={() => {
+                        setActiveStep('revisit_payment');
+                      }}
+                      className="w-full bg-[#052355] hover:bg-[#0a2c66] text-white font-bold py-4 rounded-2xl text-base transition-all shadow-md text-center"
+                    >
+                      Proceed to Payment
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Step: REVISIT PAYMENT (Collect Payment Screen) */}
+            {activeStep === 'revisit_payment' && (
+              <div className="bg-[#052355] flex flex-col text-left font-sans -mx-4 -my-4 min-h-screen relative">
+                {/* Custom Navy Header matching mockup */}
+                <div className="bg-[#052355] text-white pt-6 pb-8 px-5 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <button 
+                      onClick={() => {
+                        setActiveStep('revisit_billing');
+                      }} 
+                      className="p-1 hover:bg-white/10 rounded-full transition-colors"
+                    >
+                      <ArrowLeft className="h-6 w-6 text-white" />
+                    </button>
+                    <div className="flex-1 text-center pr-9">
+                      <h1 className="text-lg font-bold text-white">Collect Payment</h1>
+                      <span className="text-sm text-white/80 block font-normal mt-0.5">
+                        #8842
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* White overlapping sheet */}
+                <div className="flex-1 bg-white rounded-t-[2.5rem] px-6 pt-7 pb-6 flex flex-col justify-between mt-[-1.5rem] relative z-10 shadow-lg">
+                  <div className="flex flex-col gap-6">
+                    {/* Total Payable Row */}
+                    <div className="flex justify-between items-center py-1">
+                      <span className="text-base font-bold text-[#052355]">Total Payable</span>
+                      <span className="text-2xl font-extrabold text-[#16A34A]">₹8,713</span>
+                    </div>
+
+                    {/* Divider */}
+                    <div className="h-[1px] bg-[#E2E8F0] -mt-2"></div>
+
+                    {/* Section Title */}
+                    <h2 className="text-[15px] font-bold text-[#052355] mt-1">
+                      Select Payment Method
+                    </h2>
+
+                    {/* Payment Options List */}
+                    <div className="flex flex-col gap-3.5">
+                      {/* Option 1: UPI */}
+                      <label 
+                        onClick={() => setRevisitPaymentMethod('upi')}
+                        className={`flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition-all ${
+                          revisitPaymentMethod === 'upi' ? 'border-[#0D47A1] bg-blue-50/10' : 'border-slate-100 bg-white'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3.5">
+                          <input 
+                            type="radio" 
+                            name="revisit_payment_method" 
+                            checked={revisitPaymentMethod === 'upi'}
+                            onChange={() => setRevisitPaymentMethod('upi')}
+                            className="h-5 w-5 text-[#0D47A1] border-slate-350 focus:ring-[#0D47A1]"
+                          />
+                          <span className="text-sm font-bold text-[#052355]">UPI</span>
+                        </div>
+                        <div className="flex items-center">
+                          <span className="font-extrabold italic text-sm tracking-tighter text-[#0A3F91]">
+                            U<span className="text-[#FF9100]">P</span><span className="text-[#00B050]">I</span>
+                          </span>
+                        </div>
+                      </label>
+
+                      {/* Option 2: Cash */}
+                      <label 
+                        onClick={() => setRevisitPaymentMethod('cash')}
+                        className={`flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition-all ${
+                          revisitPaymentMethod === 'cash' ? 'border-[#0D47A1] bg-blue-50/10' : 'border-slate-100 bg-white'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3.5">
+                          <input 
+                            type="radio" 
+                            name="revisit_payment_method" 
+                            checked={revisitPaymentMethod === 'cash'}
+                            onChange={() => setRevisitPaymentMethod('cash')}
+                            className="h-5 w-5 text-[#0D47A1] border-slate-350 focus:ring-[#0D47A1]"
+                          />
+                          <span className="text-sm font-bold text-[#052355]">Cash</span>
+                        </div>
+                        <Wallet className="h-5 w-5 text-slate-455" />
+                      </label>
+
+                      {/* Option 3: Card */}
+                      <label 
+                        onClick={() => setRevisitPaymentMethod('card')}
+                        className={`flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition-all ${
+                          revisitPaymentMethod === 'card' ? 'border-[#0D47A1] bg-blue-50/10' : 'border-slate-100 bg-white'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3.5">
+                          <input 
+                            type="radio" 
+                            name="revisit_payment_method" 
+                            checked={revisitPaymentMethod === 'card'}
+                            onChange={() => setRevisitPaymentMethod('card')}
+                            className="h-5 w-5 text-[#0D47A1] border-slate-350 focus:ring-[#0D47A1]"
+                          />
+                          <span className="text-sm font-bold text-[#052355]">Card</span>
+                        </div>
+                        <CreditCard className="h-5 w-5 text-slate-455" />
+                      </label>
+
+                      {/* Option 4: Wallet */}
+                      <label 
+                        onClick={() => setRevisitPaymentMethod('wallet')}
+                        className={`flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition-all ${
+                          revisitPaymentMethod === 'wallet' ? 'border-[#0D47A1] bg-blue-50/10' : 'border-slate-100 bg-white'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3.5">
+                          <input 
+                            type="radio" 
+                            name="revisit_payment_method" 
+                            checked={revisitPaymentMethod === 'wallet'}
+                            onChange={() => setRevisitPaymentMethod('wallet')}
+                            className="h-5 w-5 text-[#0D47A1] border-slate-350 focus:ring-[#0D47A1]"
+                          />
+                          <span className="text-sm font-bold text-[#052355]">Wallet</span>
+                        </div>
+                        <Banknote className="h-5 w-5 text-slate-455" />
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col mt-6">
+                    {/* Collect Payment Green Button */}
+                    <button 
+                      onClick={() => {
+                        if (revisitPaymentMethod === 'upi') {
+                          setActiveStep('revisit_payment_upi');
+                        } else if (revisitPaymentMethod === 'cash') {
+                          setActiveStep('revisit_payment_cash');
+                        } else if (revisitPaymentMethod === 'card') {
+                          setActiveStep('revisit_payment_card');
+                        } else if (revisitPaymentMethod === 'wallet') {
+                          setActiveStep('revisit_payment_wallet');
+                        }
+                      }}
+                      className="w-full bg-[#16A34A] hover:bg-[#15803D] text-white font-bold py-4 rounded-2xl text-base transition-all shadow-md text-center"
+                    >
+                      Collect Payment
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Step: REVISIT PAYMENT - UPI SCAN */}
+            {activeStep === 'revisit_payment_upi' && (
+              <div className="bg-[#052355] flex flex-col text-left font-sans -mx-4 -my-4 min-h-screen relative">
+                <div className="bg-[#052355] text-white pt-6 pb-8 px-5 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <button 
+                      onClick={() => {
+                        setActiveStep('revisit_payment');
+                      }} 
+                      className="p-1 hover:bg-white/10 rounded-full transition-colors"
+                    >
+                      <ArrowLeft className="h-6 w-6 text-white" />
+                    </button>
+                    <div className="flex-1 text-center pr-9">
+                      <h1 className="text-lg font-bold text-white">UPI Collection</h1>
+                      <span className="text-sm text-white/80 block font-normal mt-0.5">
+                        #8842
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex-1 bg-white rounded-t-[2.5rem] px-6 pt-8 pb-6 flex flex-col justify-between mt-[-1.5rem] relative z-10 shadow-lg">
+                  <div className="flex flex-col items-center gap-6 text-center">
+                    <span className="text-sm font-bold text-[#052355] uppercase tracking-wide">
+                      Scan QR Code
+                    </span>
+
+                    {/* QR Code Container */}
+                    <div className="bg-slate-50 border border-slate-200 p-5 rounded-3xl flex flex-col items-center gap-3 relative shadow-inner w-full max-w-[280px]">
+                      <div className="p-4 bg-white rounded-2xl shadow border border-slate-100 relative overflow-hidden">
+                        <QrCode className="h-44 w-44 text-[#0D47A1]" />
+                      </div>
+                      <span className="text-xs font-bold text-green-700 bg-green-50 border border-green-150 px-3.5 py-1 rounded-full uppercase tracking-wider">
+                        Scan QR to Pay Instantly
+                      </span>
+                    </div>
+
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs font-normal text-slate-500">Amount to pay</span>
+                      <span className="text-3xl font-extrabold text-[#16A34A]">₹8,713</span>
+                    </div>
+
+                    <p className="text-sm text-slate-600 px-4 font-normal leading-relaxed">
+                      Ask the customer to scan the QR code using GPay, PhonePe, Paytm, or BHIM UPI app.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col mt-6">
+                    <button 
+                      onClick={() => {
+                        setActiveStep('revisit_otp');
+                      }}
+                      className="w-full bg-[#16A34A] hover:bg-[#15803D] text-white font-bold py-4 rounded-2xl text-base transition-all shadow-md text-center"
+                    >
+                      Confirm Payment Received
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Step: REVISIT PAYMENT - CASH */}
+            {activeStep === 'revisit_payment_cash' && (
+              <div className="bg-[#052355] flex flex-col text-left font-sans -mx-4 -my-4 min-h-screen relative">
+                <div className="bg-[#052355] text-white pt-6 pb-8 px-5 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <button 
+                      onClick={() => {
+                        setActiveStep('revisit_payment');
+                      }} 
+                      className="p-1 hover:bg-white/10 rounded-full transition-colors"
+                    >
+                      <ArrowLeft className="h-6 w-6 text-white" />
+                    </button>
+                    <div className="flex-1 text-center pr-9">
+                      <h1 className="text-lg font-bold text-white">Cash Collection</h1>
+                      <span className="text-sm text-white/80 block font-normal mt-0.5">
+                        #8842
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex-1 bg-white rounded-t-[2.5rem] px-6 pt-8 pb-6 flex flex-col justify-between mt-[-1.5rem] relative z-10 shadow-lg">
+                  <div className="flex flex-col items-center gap-6 text-center">
+                    <span className="text-sm font-bold text-[#052355] uppercase tracking-wide">
+                      Collect Cash
+                    </span>
+
+                    {/* Cash Icon Container */}
+                    <div className="bg-[#EBF7EE] p-6 rounded-full flex items-center justify-center text-green-700 shadow-sm w-28 h-28 mt-4">
+                      <Banknote className="h-16 w-16 stroke-[1.8]" />
+                    </div>
+
+                    <div className="flex flex-col gap-1 mt-2">
+                      <span className="text-xs font-normal text-slate-505">Collect from customer</span>
+                      <span className="text-3xl font-extrabold text-[#16A34A]">₹8,713</span>
+                    </div>
+
+                    <p className="text-sm text-slate-600 px-4 font-normal leading-relaxed">
+                      Please collect the cash amount of ₹8,713 from the customer. Verify and count all cash notes carefully before clicking confirm.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col mt-6">
+                    <button 
+                      onClick={() => {
+                        setActiveStep('revisit_otp');
+                      }}
+                      className="w-full bg-[#16A34A] hover:bg-[#15803D] text-white font-bold py-4 rounded-2xl text-base transition-all shadow-md text-center"
+                    >
+                      Confirm Cash Collected
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Step: REVISIT PAYMENT - CARD */}
+            {activeStep === 'revisit_payment_card' && (
+              <div className="bg-[#052355] flex flex-col text-left font-sans -mx-4 -my-4 min-h-screen relative">
+                <div className="bg-[#052355] text-white pt-6 pb-8 px-5 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <button 
+                      onClick={() => {
+                        setActiveStep('revisit_payment');
+                      }} 
+                      className="p-1 hover:bg-white/10 rounded-full transition-colors"
+                    >
+                      <ArrowLeft className="h-6 w-6 text-white" />
+                    </button>
+                    <div className="flex-1 text-center pr-9">
+                      <h1 className="text-lg font-bold text-white">Card Collection</h1>
+                      <span className="text-sm text-white/80 block font-normal mt-0.5">
+                        #8842
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex-1 bg-white rounded-t-[2.5rem] px-6 pt-8 pb-6 flex flex-col justify-between mt-[-1.5rem] relative z-10 shadow-lg">
+                  <div className="flex flex-col items-center gap-6 text-center">
+                    <span className="text-sm font-bold text-[#052355] uppercase tracking-wide">
+                      POS Terminal Payment
+                    </span>
+
+                    {/* Card Icon Container */}
+                    <div className="bg-blue-50 p-6 rounded-full flex items-center justify-center text-[#0D47A1] shadow-sm w-28 h-28 mt-4">
+                      <CreditCard className="h-16 w-16 stroke-[1.8]" />
+                    </div>
+
+                    <div className="flex flex-col gap-1 mt-2">
+                      <span className="text-xs font-normal text-slate-505">Swipe/Tap amount</span>
+                      <span className="text-3xl font-extrabold text-[#16A34A]">₹8,713</span>
+                    </div>
+
+                    <p className="text-sm text-slate-600 px-4 font-normal leading-relaxed">
+                      Initiate the transaction of ₹8,713 on your card POS machine. Prompt the customer to insert, swipe, or tap their Debit/Credit card.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col mt-6">
+                    <button 
+                      onClick={() => {
+                        setActiveStep('revisit_otp');
+                      }}
+                      className="w-full bg-[#16A34A] hover:bg-[#15803D] text-white font-bold py-4 rounded-2xl text-base transition-all shadow-md text-center"
+                    >
+                      Confirm Card Payment Success
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Step: REVISIT PAYMENT - WALLET */}
+            {activeStep === 'revisit_payment_wallet' && (
+              <div className="bg-[#052355] flex flex-col text-left font-sans -mx-4 -my-4 min-h-screen relative">
+                <div className="bg-[#052355] text-white pt-6 pb-8 px-5 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <button 
+                      onClick={() => {
+                        setActiveStep('revisit_payment');
+                      }} 
+                      className="p-1 hover:bg-white/10 rounded-full transition-colors"
+                    >
+                      <ArrowLeft className="h-6 w-6 text-white" />
+                    </button>
+                    <div className="flex-1 text-center pr-9">
+                      <h1 className="text-lg font-bold text-white">Wallet Collection</h1>
+                      <span className="text-sm text-white/80 block font-normal mt-0.5">
+                        #8842
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex-1 bg-white rounded-t-[2.5rem] px-6 pt-8 pb-6 flex flex-col justify-between mt-[-1.5rem] relative z-10 shadow-lg">
+                  <div className="flex flex-col items-center gap-6 text-center">
+                    <span className="text-sm font-bold text-[#052355] uppercase tracking-wide">
+                      Mobile Wallet Transfer
+                    </span>
+
+                    {/* Wallet Icon Container */}
+                    <div className="bg-purple-50 p-6 rounded-full flex items-center justify-center text-purple-700 shadow-sm w-28 h-28 mt-4">
+                      <Wallet className="h-16 w-16 stroke-[1.8]" />
+                    </div>
+
+                    <div className="flex flex-col gap-1 mt-2">
+                      <span className="text-xs font-normal text-slate-550">Payable amount</span>
+                      <span className="text-3xl font-extrabold text-[#16A34A]">₹8,713</span>
+                    </div>
+
+                    <p className="text-sm text-slate-600 px-4 font-normal leading-relaxed">
+                      Ask the customer to send ₹8,713 to the NCC business phone number or transfer it directly to the registered Paytm/PhonePe wallet account.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col mt-6">
+                    <button 
+                      onClick={() => {
+                        setActiveStep('revisit_otp');
+                      }}
+                      className="w-full bg-[#16A34A] hover:bg-[#15803D] text-white font-bold py-4 rounded-2xl text-base transition-all shadow-md text-center"
+                    >
+                      Confirm Wallet Payment Success
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Step: REVISIT OTP / JOB CLOSURE */}
+            {activeStep === 'revisit_otp' && (
+              <div className="bg-[#052355] flex flex-col text-left font-sans -mx-4 -my-4 min-h-screen relative">
+                {/* Custom Navy Header matching mockup */}
+                <div className="bg-[#052355] text-white pt-6 pb-8 px-5 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <button 
+                      onClick={() => {
+                        setActiveStep('revisit_payment');
+                      }} 
+                      className="p-1 hover:bg-white/10 rounded-full transition-colors"
+                    >
+                      <ArrowLeft className="h-6 w-6 text-white" />
+                    </button>
+                    <div className="flex-1 text-center pr-9">
+                      <h1 className="text-lg font-bold text-white">Job Closure</h1>
+                      <span className="text-sm text-white/80 block font-normal mt-0.5">
+                        #8842
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* White overlapping sheet */}
+                <div className="flex-1 bg-white rounded-t-[2.5rem] px-6 pt-7 pb-6 flex flex-col justify-between mt-[-1.5rem] relative z-10 shadow-lg">
+                  <div className="flex flex-col gap-1">
+                    {/* Enter OTP Section */}
+                    <h2 className="text-base font-bold text-[#052355] mt-1">
+                      Enter OTP
+                    </h2>
+                    <p className="text-xs text-slate-500 font-normal mt-0.5">
+                      Please enter the OTP shared by customer
+                    </p>
+
+                    {/* OTP 4 digit inputs */}
+                    <div className="flex gap-4 my-5 justify-start">
+                      {revisitOtp.map((digit, idx) => (
+                        <input 
+                          key={idx}
+                          type="text" 
+                          maxLength={1}
+                          value={digit}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            const newOtp = [...revisitOtp];
+                            newOtp[idx] = val;
+                            setRevisitOtp(newOtp);
+                            if (val && idx < 3) {
+                              const nextInput = document.getElementById(`revisit-otp-${idx + 1}`);
+                              if (nextInput) nextInput.focus();
+                            }
+                          }}
+                          id={`revisit-otp-${idx}`}
+                          className="w-14 h-14 border border-slate-200 rounded-2xl text-center text-xl font-bold text-[#052355] focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] outline-none shadow-xs"
+                        />
+                      ))}
+                    </div>
+
+                    {/* Divider */}
+                    <div className="h-[1px] bg-[#E2E8F0] my-4"></div>
+
+                    {/* Signature Section */}
+                    <h3 className="text-[13px] font-bold text-[#052355] mb-2">
+                      Customer Signature (Optional)
+                    </h3>
+
+                    {/* Signature Pad container */}
+                    <div className="relative border border-slate-200 rounded-3xl h-[150px] w-full overflow-hidden bg-slate-50 shadow-inner">
+                      <canvas 
+                        ref={revisitCanvasRef}
+                        width={340}
+                        height={150}
+                        onMouseDown={startDrawingRevisit}
+                        onMouseMove={drawRevisit}
+                        onMouseUp={stopDrawingRevisit}
+                        onTouchStart={startDrawingRevisit}
+                        onTouchMove={drawRevisit}
+                        onTouchEnd={stopDrawingRevisit}
+                        className="bg-transparent absolute inset-0 z-20 cursor-crosshair touch-none w-full h-[150px]"
+                      />
+                      
+                      {!hasSignedRevisit && (
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-10">
+                          <span 
+                            style={{ fontFamily: "'Brush Script MT', 'Dancing Script', 'Pacifico', 'Caveat', cursive" }}
+                            className="text-[34px] text-slate-300 italic font-medium opacity-80"
+                          >
+                            Rohit Sharma
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex justify-end mt-1.5 px-1">
+                      <button 
+                        type="button"
+                        onClick={clearRevisitSignature}
+                        className="text-xs font-bold text-[#0D47A1] hover:underline"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col mt-6">
+                    {/* Verify & Close Job Green Button */}
+                    <button 
+                      onClick={() => {
+                        collectPayment();
+                      }}
+                      className="w-full bg-[#16A34A] hover:bg-[#15803D] text-white font-bold py-4 rounded-2xl text-base transition-all shadow-md text-center"
+                    >
+                      Verify & Close Job
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Step: BILLING (Step 6 / Screen 12: Billing & Estimate) */}
             {activeStep === 'billing' && (
               <div className="bg-white rounded-3xl p-3.5 border border-slate-200 shadow-sm flex flex-col gap-4">
@@ -1829,8 +3431,11 @@ const ActiveJob = () => {
                       const additionalServicesTotal = additionalServices
                         .filter(s => s.checked)
                         .reduce((sum, s) => sum + s.price, 0);
+                      const sparePartsTotal = spareParts
+                        .filter(p => p.checked)
+                        .reduce((sum, p) => sum + p.price, 0);
                       const baseServicePrice = activeJob && activeJob.price > 0 ? activeJob.price : 2200;
-                      const totalAmount = baseServicePrice + additionalServicesTotal;
+                      const totalAmount = baseServicePrice + additionalServicesTotal + sparePartsTotal;
 
                       const printWindow = window.open('', '_blank');
                       printWindow.document.write(`
@@ -1872,6 +3477,7 @@ const ActiveJob = () => {
                                   <td>₹${baseServicePrice}</td>
                                 </tr>
                                 ${additionalServices.filter(s => s.checked).map(service => '<tr><td>' + service.name + '</td><td>₹' + service.price + '</td></tr>').join('')}
+                                ${spareParts.filter(p => p.checked).map(part => '<tr><td>' + part.name + '</td><td>₹' + part.price + '</td></tr>').join('')}
                               </tbody>
                             </table>
                             <div class="total">Grand Total: ₹${totalAmount.toLocaleString('en-IN')}</div>
@@ -1893,8 +3499,11 @@ const ActiveJob = () => {
                       const additionalServicesTotal = additionalServices
                         .filter(s => s.checked)
                         .reduce((sum, s) => sum + s.price, 0);
+                      const sparePartsTotal = spareParts
+                        .filter(p => p.checked)
+                        .reduce((sum, p) => sum + p.price, 0);
                       const baseServicePrice = activeJob && activeJob.price > 0 ? activeJob.price : 2200;
-                      const totalAmount = baseServicePrice + additionalServicesTotal;
+                      const totalAmount = baseServicePrice + additionalServicesTotal + sparePartsTotal;
 
                       const whatsappText = `Hi ${activeJob.customerName || 'Customer'}, here is the invoice of ₹${totalAmount.toLocaleString('en-IN')} for your ${activeJob.brand} ${activeJob.product} service: http://nccpartner.com/invoice/INV-${activeJob.id}`;
                       const whatsappUrl = `https://api.whatsapp.com/send?phone=91${activeJob.phone || '9876543210'}&text=${encodeURIComponent(whatsappText)}`;
@@ -1939,28 +3548,44 @@ const ActiveJob = () => {
 
         {/* STEP C: JOB COMPLETED SUCCESS VIEW (Screen 4 Outcome) */}
         {activeStep === 'completed' && (
-          <div className="bg-white rounded-3xl p-4 border border-slate-200 shadow-sm text-center flex flex-col gap-6 py-10 my-4">
-            <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center text-green-500 mx-auto border border-green-100 shadow-sm">
-              <CheckCircle className="h-10 w-10 stroke-[2.5]" />
+          <div className="bg-white rounded-[2.5rem] p-6 border border-slate-100 shadow-sm text-center flex flex-col gap-6 py-8 my-4 max-w-sm mx-auto">
+            {/* Confetti and Checkmark Container */}
+            <div className="relative w-28 h-28 mx-auto flex items-center justify-center mt-2">
+              {/* Confetti Dots */}
+              <span className="absolute top-2 left-4 w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
+              <span className="absolute top-3 right-6 w-2 h-2 rounded-full bg-red-400 animate-bounce" style={{ animationDelay: '0.1s' }}></span>
+              <span className="absolute top-1/2 -left-1 w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping"></span>
+              <span className="absolute top-10 right-0 w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
+              <span className="absolute bottom-2 left-6 w-2 h-2 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '0.2s' }}></span>
+              <span className="absolute bottom-4 right-4 w-2 h-2 rounded-full bg-amber-600 animate-pulse"></span>
+              <span className="absolute top-6 left-10 w-1.5 h-1.5 rounded-full bg-yellow-400 animate-bounce"></span>
+
+              <div className="w-20 h-20 bg-[#EBF7EE] rounded-full flex items-center justify-center text-green-600 shadow-xs border border-green-50">
+                <Check className="h-10 w-10 stroke-[3]" />
+              </div>
             </div>
             
-            <div>
-              <h2 className="text-2xl font-medium text-[#052355]">Job Completed!</h2>
-              <p className="text-sm text-slate-600 mt-2 font-normal">Great work! The diagnostics and service records have been closed successfully.</p>
+            <div className="flex flex-col gap-1.5">
+              <h2 className="text-[22px] font-bold text-[#052355]">Job Completed!</h2>
+              <p className="text-[13px] text-slate-500 font-normal leading-relaxed">Great work! Job has been completed successfully.</p>
             </div>
 
-            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 text-left text-xs font-normal text-slate-600 space-y-2.5">
-              <div className="flex justify-between border-b border-slate-200/50 pb-2">
-                <span className="text-slate-600">Job Reference</span>
-                <span className="text-[#052355]">#8842</span>
+            <div className="bg-[#F8FAFC] rounded-[2rem] p-5.5 border border-slate-100 text-left space-y-3.5 shadow-inner">
+              <div className="flex justify-between items-center text-xs font-normal">
+                <span className="text-slate-500">Job Reference</span>
+                <span className="text-[#052355] font-bold text-sm">#8842</span>
               </div>
-              <div className="flex justify-between border-b border-slate-200/50 pb-2">
-                <span className="text-slate-600">Total Earnings Added</span>
-                <span className="text-[#0D47A1]">₹850</span>
+              <div className="flex justify-between items-center text-xs font-normal">
+                <span className="text-slate-500">Total Amount Collected</span>
+                <span className="text-[#052355] font-bold text-sm">₹8,713</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-slate-600">Status</span>
-                <span className="text-green-600 font-normal bg-green-50 px-2 py-0.5 rounded-md text-[10px]">Closed & Paid</span>
+              <div className="flex justify-between items-center text-xs font-normal">
+                <span className="text-slate-500">You Earned</span>
+                <span className="text-[#052355] font-bold text-sm">₹850</span>
+              </div>
+              <div className="flex justify-between items-center text-xs font-normal">
+                <span className="text-slate-500">Status</span>
+                <span className="text-[#16A34A] font-bold text-sm">Closed & Paid</span>
               </div>
             </div>
 
@@ -1969,7 +3594,7 @@ const ActiveJob = () => {
                 resetActiveJob();
                 navigate('/technician/dashboard');
               }}
-              className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-normal py-4 rounded-2xl text-sm transition-all shadow-md mt-2"
+              className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-bold py-4 rounded-2xl text-base transition-all shadow-md mt-2 text-center"
             >
               Back to Dashboard
             </button>
@@ -2043,13 +3668,81 @@ const ActiveJob = () => {
         );
       })()}
 
+      {/* Add Spare Parts Overlay Card Modal */}
+      {showAddPartsModal && (() => {
+        const AVAILABLE_PARTS = [
+          { id: 'part-1', name: 'Copper Pipe (1/4)', price: 800 },
+          { id: 'part-filter', name: 'Filter Dryer', price: 350 },
+          { id: 'part-capacitor', name: 'Capacitor 45 MFD', price: 450 },
+          { id: 'part-gas', name: 'Refrigerant Gas (R410A)', price: 1200 },
+          { id: 'part-expansion', name: 'Expansion Valve', price: 650 }
+        ];
+
+        // Filter out parts that are currently checked/active in the spareParts list
+        const filteredParts = AVAILABLE_PARTS.filter(
+          part => !spareParts.some(p => p.name.toLowerCase() === part.name.toLowerCase() && p.checked)
+        );
+
+        return (
+          <div className="fixed inset-0 bg-[#052355]/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-[2rem] w-full max-w-sm p-5 shadow-2xl flex flex-col gap-4 border border-slate-100">
+              <div className="flex justify-between items-center pb-2.5 border-b border-slate-100">
+                <h3 className="text-base font-semibold text-[#052355]">Add Spare Parts</h3>
+                <button 
+                  onClick={() => setShowAddPartsModal(false)}
+                  className="text-slate-400 hover:text-slate-650 text-xs font-semibold hover:underline"
+                >
+                  Cancel
+                </button>
+              </div>
+
+              <div className="flex flex-col gap-3.5 max-h-64 overflow-y-auto pr-1">
+                {filteredParts.length > 0 ? (
+                  filteredParts.map(part => (
+                    <div key={part.id} className="flex justify-between items-center p-3.5 bg-slate-50 border border-slate-200/60 rounded-2xl">
+                      <div className="text-left">
+                        <p className="text-xs font-semibold text-[#052355]">{part.name}</p>
+                        <p className="text-[10px] text-slate-500 font-normal mt-0.5">₹{part.price}</p>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          setSpareParts(prev => {
+                            const existingIndex = prev.findIndex(p => p.name.toLowerCase() === part.name.toLowerCase());
+                            if (existingIndex > -1) {
+                              return prev.map((p, idx) => idx === existingIndex ? { ...p, checked: true } : p);
+                            }
+                            return [
+                              ...prev,
+                              { id: part.id, name: part.name, price: part.price, checked: true }
+                            ];
+                          });
+                          setShowAddPartsModal(false);
+                        }}
+                        className="bg-[#E3ECF9] hover:bg-[#c2d7f5] text-[#0D47A1] text-xs font-semibold px-3 py-1.5 rounded-xl transition-all shadow-xs"
+                      >
+                        + Add
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-slate-500 text-center py-5">All available spare parts have been added.</p>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Invoice Preview Overlay Card Modal */}
       {showInvoicePreviewModal && (() => {
         const additionalServicesTotal = additionalServices
           .filter(s => s.checked)
           .reduce((sum, s) => sum + s.price, 0);
+        const sparePartsTotal = spareParts
+          .filter(p => p.checked)
+          .reduce((sum, p) => sum + p.price, 0);
         const baseServicePrice = activeJob && activeJob.price > 0 ? activeJob.price : 2200;
-        const totalAmount = baseServicePrice + additionalServicesTotal;
+        const totalAmount = baseServicePrice + additionalServicesTotal + sparePartsTotal;
 
         return (
           <div className="fixed inset-0 bg-[#052355]/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
@@ -2061,7 +3754,7 @@ const ActiveJob = () => {
                 </div>
                 <button 
                   onClick={() => setShowInvoicePreviewModal(false)}
-                  className="text-slate-400 hover:text-slate-650 text-xs font-semibold hover:underline"
+                  className="text-slate-400 hover:text-slate-655 text-xs font-semibold hover:underline"
                 >
                   Close
                 </button>
@@ -2091,6 +3784,12 @@ const ActiveJob = () => {
                     <div key={service.id} className="flex justify-between pl-2">
                       <span>{service.name}:</span>
                       <span className="font-medium text-[#052355]">₹{service.price}</span>
+                    </div>
+                  ))}
+                  {spareParts.filter(p => p.checked).map(part => (
+                    <div key={part.id} className="flex justify-between pl-2">
+                      <span>{part.name}:</span>
+                      <span className="font-medium text-[#052355]">₹{part.price}</span>
                     </div>
                   ))}
                 </div>
@@ -2404,7 +4103,21 @@ const ActiveJob = () => {
       )}
 
       {/* Bottom Navigation */}
-      {!(activeStep === 'inspection' && !enteredInspection) && (
+      {!(activeStep === 'inspection' && !enteredInspection) && 
+        activeStep !== 'revisit_complete' && 
+        activeStep !== 'customer_update_preview' && 
+        activeStep !== 'spare_part_required' && 
+        activeStep !== 'completed_pending' && 
+        activeStep !== 'spare_part_job_details' && 
+        activeStep !== 'cancellation_summary' && 
+        activeStep !== 'unable_to_fix_summary' && 
+        activeStep !== 'revisit_billing' && 
+        activeStep !== 'revisit_payment' && 
+        activeStep !== 'revisit_payment_upi' && 
+        activeStep !== 'revisit_payment_cash' && 
+        activeStep !== 'revisit_payment_card' && 
+        activeStep !== 'revisit_payment_wallet' && 
+        activeStep !== 'revisit_otp' && (
         <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-slate-200 py-3 px-3.5 flex justify-between items-center z-20 shadow-lg">
           <button onClick={() => navigate('/technician/dashboard')} className="flex flex-col items-center gap-1 text-[#0D47A1] transition-all">
             <Briefcase className="h-6 w-6 stroke-[2.5]" />

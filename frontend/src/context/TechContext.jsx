@@ -283,6 +283,16 @@ export const TechProvider = ({ children }) => {
     }
   }, [activeJob]);
 
+  const creditTravelFee = useCallback(() => {
+    setEarningsTally(prev => ({
+      ...prev,
+      today: prev.today + 150,
+      total: prev.total + 150,
+      completedToday: prev.completedToday + 1,
+      completedTotal: prev.completedTotal + 1
+    }));
+  }, []);
+
   const addPartToCart = useCallback((part) => {
     setPartsCart(prev => {
       const existing = prev.find(item => item.id === part.id);
@@ -391,6 +401,7 @@ export const TechProvider = ({ children }) => {
       setActiveStep,
       resetActiveJob,
       collectPayment,
+      creditTravelFee,
       decrementAmcVisit,
       decrementEwClaim,
       addPartToCart,

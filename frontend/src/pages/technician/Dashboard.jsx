@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Briefcase, ClipboardList, Calendar, Wrench, User, MapPin, ChevronRight, Menu } from 'lucide-react';
+import { 
+  Bell, Briefcase, ClipboardList, Calendar, Wrench, User, MapPin, ChevronRight, Menu,
+  Clock, Shield, Star, GraduationCap, MessageSquare, Megaphone, Scan, CheckCircle, RotateCw, X, LogOut, Sparkles, CreditCard, ShieldCheck, Award, Settings, HelpCircle
+} from 'lucide-react';
 import { useTech } from '../../context/TechContext';
+import techAvatar from '../../assets/tech_avatar.png';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -10,6 +14,7 @@ const Dashboard = () => {
     earningsTally, 
     acceptJob, 
     selectJobForDetails,
+    setActiveStep,
     notifications
   } = useTech();
 
@@ -17,10 +22,11 @@ const Dashboard = () => {
   const [filterTab, setFilterTab] = useState('All'); // 'All', 'Priority', 'Recommended'
   const [categoryTab, setCategoryTab] = useState('All'); // 'All', 'D2C', 'Partner', 'NCC EW'
   const [expandedJobId, setExpandedJobId] = useState('8842'); // default to D2C Paid Service job ID
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const unreadNotificationsCount = notifications.filter(n => !n.read).length;
 
-  // Filter jobs based on selected tabs
+  // Filter jobs based on selected tabs for View 2 (Full Jobs list)
   const filteredJobs = jobs.filter(job => {
     if (filterTab === 'Priority' && !job.isPriority) return false;
     if (filterTab === 'Recommended' && !job.isRecommended) return false;
@@ -32,89 +38,33 @@ const Dashboard = () => {
     return true;
   });
 
-  // Color mappings matching Image 2
-  const getCardStyle = (type) => {
-    switch (type) {
-      case 'D2C Paid Service':
-        return {
-          borderLeft: 'border-l-[5px] border-[#FF5B26]',
-          titleColor: 'text-[#FF5B26]',
-          badgeBg: 'bg-[#4CAF50] text-white',
-          badgeText: 'PAID SERVICE',
-          iconBg: 'bg-[#FF5B26]',
-          icon: <ClipboardList className="h-5 w-5 text-white" />
-        };
-      case 'NCC Paid Service':
-      case 'NCC PAID SERVICE':
-        return {
-          borderLeft: 'border-l-[5px] border-[#00C853]',
-          titleColor: 'text-[#00C853]',
-          badgeBg: 'bg-[#00C853] text-white',
-          badgeText: 'PAID SERVICE',
-          iconBg: 'bg-[#00C853]',
-          icon: <ClipboardList className="h-5 w-5 text-white" />
-        };
-      case 'LG Partner Warranty':
-      case 'Samsung Partner Warranty':
-        return {
-          borderLeft: 'border-l-[5px] border-[#1E6BDB]',
-          titleColor: 'text-[#1E6BDB]',
-          badgeBg: 'bg-[#1E6BDB] text-white',
-          badgeText: 'FREE SERVICE',
-          iconBg: 'bg-[#1E6BDB]',
-          icon: <Briefcase className="h-5 w-5 text-white" />
-        };
-      case 'Brand Warranty':
-      case 'BRAND WARRANTY':
-        return {
-          borderLeft: 'border-l-[5px] border-[#1E6BDB]',
-          titleColor: 'text-[#1E6BDB]',
-          badgeBg: 'bg-[#1E6BDB] text-white',
-          badgeText: 'WARRANTY',
-          iconBg: 'bg-[#1E6BDB]',
-          icon: <Briefcase className="h-5 w-5 text-white" />
-        };
-      case 'NCC Extended Warranty':
-      case 'NCC EXTENDED WARRANTY':
-        return {
-          borderLeft: 'border-l-[5px] border-[#7C4DFF]',
-          titleColor: 'text-[#7C4DFF]',
-          badgeBg: 'bg-[#7C4DFF] text-white',
-          badgeText: 'CLAIM JOB',
-          iconBg: 'bg-[#7C4DFF]',
-          icon: <ClipboardList className="h-5 w-5 text-white" />
-        };
-      case 'AMC Visit':
-      case 'AMC VISIT':
-        return {
-          borderLeft: 'border-l-[5px] border-[#FFA000]',
-          titleColor: 'text-[#FFA000]',
-          badgeBg: 'bg-[#FFA000] text-white',
-          badgeText: 'AMC VISIT',
-          iconBg: 'bg-[#FFA000]',
-          icon: <Calendar className="h-5 w-5 text-white" />
-        };
-      default:
-        return {
-          borderLeft: 'border-l-[5px] border-slate-400',
-          titleColor: 'text-slate-700',
-          badgeBg: 'bg-slate-500 text-white',
-          badgeText: 'SERVICE',
-          iconBg: 'bg-slate-500 text-white',
-          icon: <Wrench className="h-5 w-5 text-white" />
-        };
-    }
-  };
+  // LG Logo SVG Component
+  const LgLogo = () => (
+    <div className="flex items-center gap-1 flex-shrink-0 select-none">
+      <svg viewBox="0 0 100 100" className="w-5 h-5">
+        <circle cx="50" cy="50" r="48" fill="#C60C30" />
+        <path d="M50,22 A28,28 0 0,0 50,78 A28,28 0 0,0 72,70 M62,50 H50 V34" stroke="white" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        <circle cx="40" cy="40" r="4" fill="white" />
+      </svg>
+      <span className="font-bold text-slate-800 text-xs tracking-tighter">LG</span>
+    </div>
+  );
 
-  const getCardSubtitle = (job) => {
-    if (job.type === 'D2C Paid Service') {
-      return job.warrantyStatus; // "Out of Warranty"
-    }
-    return job.product;
-  };
+  // Voltas Logo Component
+  const VoltasLogo = () => (
+    <span className="font-black text-[#0D47A1] italic text-xs tracking-wide select-none">VOLTAS</span>
+  );
+
+  // Samsung Logo SVG Component
+  const SamsungLogo = () => (
+    <svg viewBox="0 0 120 40" className="w-14 h-4 select-none">
+      <ellipse cx="60" cy="20" rx="55" ry="17" fill="#0A2C74" />
+      <text x="60" y="25" fill="white" fontFamily="Helvetica, Arial, sans-serif" fontWeight="900" fontSize="10" textAnchor="middle" letterSpacing="0.8">SAMSUNG</text>
+    </svg>
+  );
 
   return (
-    <div className="min-h-screen bg-[#F5F8FC] flex flex-col pb-24 max-w-md mx-auto border-x border-slate-200 shadow-xl relative font-sans">
+    <div className="min-h-screen bg-[#F5F8FC] flex flex-col pb-[68px] max-w-md mx-auto border-x border-slate-200 shadow-xl relative font-sans overflow-x-hidden">
       
       {/* Top Banner / Header Section */}
       {showAllJobs ? (
@@ -143,141 +93,503 @@ const Dashboard = () => {
         </div>
       ) : (
         /* Top Navy Blue Banner - Wraps both Header and Greeting Card */
-        <div className="bg-[#052355] text-white pt-3 pb-3 px-3.5 rounded-b-[2rem] flex flex-col gap-2 shadow-md">
+        <div className="bg-[#052355] text-white pt-4 pb-6 px-4 rounded-b-[2rem] flex flex-col gap-4 shadow-lg">
           {/* Header Bar */}
           <div className="flex justify-between items-center text-white">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center border border-white/20">
-                <span className="text-[#FFD400] font-normal text-lg">N</span>
+              <button 
+                onClick={() => setIsSidebarOpen(true)}
+                className="p-1 hover:bg-white/10 rounded-full text-white transition-colors"
+              >
+                <Menu className="h-6 w-6 text-white stroke-[2]" />
+              </button>
+              <div className="flex items-center gap-1.5 ml-1">
+                {/* Custom NCC shield logo */}
+                <div className="w-7 h-7 rounded-md bg-[#FFD400] flex items-center justify-center shadow-md">
+                  <span className="text-[#052355] font-black text-sm">NCC</span>
+                </div>
+                <span className="font-bold tracking-wider text-sm flex items-center gap-1">
+                  NCC <span className="text-[#FFD400]">PARTNER</span>
+                </span>
               </div>
-              <span className="font-normal tracking-wider text-base">NCC <span className="text-[#FFD400]">PARTNER</span></span>
             </div>
             
-            <button 
-              onClick={() => navigate('/technician/notifications')}
-              className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-all border border-white/10 relative"
-            >
-              <Bell className="h-4.5 w-4.5 text-white" />
-              {unreadNotificationsCount > 0 && (
-                <span className="absolute top-0.5 right-0.5 w-4 h-4 bg-red-500 rounded-full text-[10px] font-medium flex items-center justify-center border border-[#052355] text-white">
-                  {unreadNotificationsCount}
+            <div className="flex items-center gap-3">
+              {/* Notification icon */}
+              <button 
+                onClick={() => navigate('/technician/notifications')}
+                className="p-2 hover:bg-white/10 rounded-full transition-all relative"
+              >
+                <Bell className="h-5.5 w-5.5 text-white" />
+                <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-red-500 rounded-full text-[9px] font-bold flex items-center justify-center border border-[#052355] text-white">
+                  5
                 </span>
-              )}
-            </button>
+              </button>
+
+              {/* User Avatar with Green dot status indicator */}
+              <div 
+                onClick={() => navigate('/technician/profile')}
+                className="relative w-8.5 h-8.5 rounded-full border-2 border-white/20 overflow-hidden cursor-pointer hover:border-white/50 transition-all shadow-md"
+              >
+                <img 
+                  src={techAvatar} 
+                  alt="Alex Rodriguez Avatar" 
+                  className="w-full h-full object-cover" 
+                />
+                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border border-[#052355] rounded-full"></span>
+              </div>
+            </div>
           </div>
 
-          {/* Greeting & Stats Card inside the Navy Blue section if showAllJobs is false */}
-          <div className="bg-white rounded-3xl p-3.5 border border-slate-200 shadow-sm flex flex-col gap-4 mt-1">
+          {/* Greeting & Partner Score Layout */}
+          <div className="flex justify-between items-start gap-3 mt-1">
+            {/* Greeting Column */}
             <div>
-              <h2 className="text-xl font-medium text-[#052355] flex items-center gap-2">
+              <h2 className="text-lg font-bold text-white flex items-center gap-1.5">
                 Good Morning, Alex 👋
               </h2>
-              <p className="text-slate-500 text-xs mt-1 font-normal">Ready to make a difference today?</p>
+              <p className="text-slate-300 text-[10px] mt-0.5 font-medium">Proud to be a part of NCC Service Network</p>
             </div>
 
-            {/* Nested Stats Box */}
-            <div className="bg-[#F0F5FD] rounded-2xl p-3 flex justify-between items-center">
-              <div>
-                <span className="text-[10px] font-medium text-slate-600 uppercase tracking-wider block">Today's Earnings</span>
-                <p className="text-xl font-medium text-[#052355] mt-1 flex items-baseline gap-0.5">
-                  <span className="text-sm font-normal">₹</span>{earningsTally.today.toLocaleString('en-IN')}
-                </p>
-              </div>
-              <div className="h-8 w-[1px] bg-slate-200"></div>
-              <div className="text-right flex items-center gap-2">
-                <p className="text-xl font-medium text-[#0D47A1]">{earningsTally.completedToday}</p>
-                <div className="text-left leading-none">
-                  <span className="text-[10px] font-medium text-slate-600 uppercase tracking-wider block">Jobs</span>
-                  <span className="text-[10px] font-medium text-slate-600 uppercase tracking-wider block">Completed</span>
+            {/* Partner Score Column */}
+            <div className="text-right flex flex-col items-end">
+              <span className="text-[8px] font-bold text-slate-300 uppercase tracking-widest">PARTNER SCORE</span>
+              
+              <div className="flex items-center gap-1.5 mt-0.5">
+                {/* 5 Yellow Stars */}
+                <div className="flex items-center gap-0.5">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="w-2.5 h-2.5 fill-[#FFD400] text-[#FFD400]" />
+                  ))}
                 </div>
+                <span className="text-xl font-bold text-white leading-none">4.9</span>
               </div>
+
+              {/* Elite Partner Tag */}
+              <span className="inline-flex items-center gap-1 bg-[#FFD400] text-[#052355] text-[7.5px] font-extrabold px-1.5 py-0.5 rounded-md mt-1.5 shadow-sm">
+                👑 ELITE PARTNER
+              </span>
             </div>
           </div>
         </div>
       )}
 
       {/* Main Container below the Navy Blue Banner */}
-      <div className="flex-1 px-3.5 py-4 flex flex-col gap-4">
+      <div className="flex-1 px-3.5 py-4 flex flex-col gap-5">
 
         {/* VIEW 1: HOME DASHBOARD */}
         {!showAllJobs && (
           <>
-            {/* Nearby Jobs Section Header */}
-            <div className="flex justify-between items-center mt-1">
-              <h3 className="text-base font-medium text-[#052355]">Nearby Jobs</h3>
-              <button 
-                onClick={() => setShowAllJobs(true)}
-                className="text-xs font-medium text-[#0D47A1] hover:underline flex items-center gap-0.5"
-              >
-                View All
-                <ChevronRight className="h-4 w-4" />
-              </button>
+            {/* Redesigned Combined Stats Card (Reduced Height, One Single Container Card) */}
+            <div className="bg-white rounded-[22px] border border-slate-200 shadow-sm p-2 grid grid-cols-4 divide-x divide-slate-100 -mt-8 relative z-10">
+              {/* Card 1: Available Jobs */}
+              <div className="flex flex-col items-center text-center justify-between min-h-[72px] px-1">
+                <div className="flex items-center gap-1 justify-center">
+                  <div className="w-6 h-6 rounded-full bg-[#E3F2FD] flex items-center justify-center flex-shrink-0">
+                    <Briefcase className="w-3.5 h-3.5 text-[#1565C0]" />
+                  </div>
+                  <span className="text-[13px] font-bold text-[#052355]">12</span>
+                </div>
+                <span className="text-[9px] font-semibold text-slate-500 leading-none mt-1">Available<br/>Jobs</span>
+                <button 
+                  onClick={() => { setShowAllJobs(true); setFilterTab('All'); }}
+                  className="text-[7px] font-bold text-[#1565C0] hover:underline mt-1 flex items-center gap-0.5"
+                >
+                  View All <ChevronRight className="w-2 h-2" />
+                </button>
+              </div>
+
+              {/* Card 2: Active Jobs */}
+              <div className="flex flex-col items-center text-center justify-between min-h-[72px] px-1">
+                <div className="flex items-center gap-1 justify-center">
+                  <div className="w-6 h-6 rounded-full bg-[#E8F5E9] flex items-center justify-center flex-shrink-0">
+                    <Wrench className="w-3.5 h-3.5 text-[#2E7D32]" />
+                  </div>
+                  <span className="text-[13px] font-bold text-[#2E7D32]">3</span>
+                </div>
+                <span className="text-[9px] font-semibold text-slate-500 leading-none mt-1">Active<br/>Jobs</span>
+                <button 
+                  onClick={() => navigate('/technician/active-job')}
+                  className="text-[7px] font-bold text-[#1565C0] hover:underline mt-1 flex items-center gap-0.5"
+                >
+                  View All <ChevronRight className="w-2 h-2" />
+                </button>
+              </div>
+
+              {/* Card 3: Revisit Jobs */}
+              <div className="flex flex-col items-center text-center justify-between min-h-[72px] px-1">
+                <div className="flex items-center gap-1 justify-center">
+                  <div className="w-6 h-6 rounded-full bg-[#FFF3E0] flex items-center justify-center flex-shrink-0">
+                    <RotateCw className="w-3.5 h-3.5 text-[#E65100]" />
+                  </div>
+                  <span className="text-[13px] font-bold text-[#E65100]">2</span>
+                </div>
+                <span className="text-[9px] font-semibold text-slate-500 leading-none mt-1">Revisit<br/>Jobs</span>
+                <button 
+                  onClick={() => { setShowAllJobs(true); setFilterTab('All'); }}
+                  className="text-[7px] font-bold text-[#1565C0] hover:underline mt-1 flex items-center gap-0.5"
+                >
+                  View All <ChevronRight className="w-2 h-2" />
+                </button>
+              </div>
+
+              {/* Card 4: Completed Today */}
+              <div className="flex flex-col items-center text-center justify-between min-h-[72px] px-1">
+                <div className="flex items-center gap-1 justify-center">
+                  <div className="w-6 h-6 rounded-full bg-[#F3E5F5] flex items-center justify-center flex-shrink-0">
+                    <CheckCircle className="w-3.5 h-3.5 text-[#6A1B9A]" />
+                  </div>
+                  <span className="text-[13px] font-bold text-[#6A1B9A]">5</span>
+                </div>
+                <span className="text-[9px] font-semibold text-slate-500 leading-none mt-1">Completed<br/>Today</span>
+                <button 
+                  onClick={() => navigate('/technician/earnings')}
+                  className="text-[7px] font-bold text-[#1565C0] hover:underline mt-1 flex items-center gap-0.5"
+                >
+                  View All <ChevronRight className="w-2 h-2" />
+                </button>
+              </div>
             </div>
 
-            {/* List of 4 nearby jobs - NO Accept/Decline buttons (Image 2 style) */}
-            <div className="flex flex-col gap-3.5">
-              {jobs.slice(0, 4).map((job) => {
-                const styles = getCardStyle(job.type);
-                return (
-                  <div 
-                    key={job.id} 
-                    onClick={() => {
-                      selectJobForDetails(job.id);
-                      navigate('/technician/active-job');
-                    }}
-                    className={`bg-white rounded-3xl p-3.5 cursor-pointer hover:shadow-md transition-all duration-350 shadow-sm flex justify-between items-start border border-slate-300 ${styles.borderLeft}`}
-                  >
-                    {/* Left Column: Icon Block & Text Block */}
-                    <div className="flex items-start gap-3 min-w-0 flex-1">
-                      {/* Square Icon Box */}
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm ${styles.iconBg}`}>
-                        {styles.icon}
-                      </div>
+            {/* Revisit Schedule Section */}
+            <div className="flex flex-col gap-1.5 mt-2">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <RotateCw className="w-4 h-4 text-[#E65100]" />
+                  <h3 className="text-sm font-bold text-[#052355]">Revisit Schedule</h3>
+                </div>
+                <button 
+                  onClick={() => { setShowAllJobs(true); setFilterTab('All'); }}
+                  className="text-[10.5px] font-bold text-[#E65100] hover:underline"
+                >
+                  View All
+                </button>
+              </div>
+              <p className="text-[10px] text-slate-500">Pending jobs requiring spare parts or follow-up visit</p>
 
-                      {/* Text Column */}
-                      <div className="min-w-0 flex-1">
-                        <span className={`text-xs font-medium block ${styles.titleColor}`}>
-                          {job.type.toUpperCase()}
-                        </span>
-                        <h4 className="text-sm font-medium text-[#052355] mt-0.5 truncate leading-snug">
-                          {getCardSubtitle(job)}
-                        </h4>
-                        
-                        {/* Location / Bottom Icons Row */}
-                        <div className="flex items-center gap-2 text-slate-500 text-xs font-normal mt-3">
-                          <span className="w-4 h-4 rounded-full border border-slate-250 bg-slate-50 flex items-center justify-center text-[8px] text-slate-500 font-normal">🧭</span>
-                          <MapPin className="h-3.5 w-3.5 text-slate-500" />
-                          <span>{job.distance} km away</span>
-                        </div>
+              {/* Redesigned Revisit Card */}
+              <div className="bg-[#FFFDF9] border border-[#FFE0B2] rounded-2xl p-3 shadow-sm flex flex-col gap-2.5 mt-1.5 hover:shadow-md transition-shadow">
+                {/* Row 1: Brand details and Action button */}
+                <div className="flex justify-between items-start gap-2.5">
+                  {/* Left Block: Brand Box & Details */}
+                  <div className="flex items-start gap-2.5 min-w-0">
+                    <div className="flex flex-col items-center flex-shrink-0">
+                      <div className="w-9 h-9 bg-[#FF9800] rounded-xl flex items-center justify-center shadow-sm">
+                        <svg className="w-5.5 h-5.5 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                          <rect x="5" y="3" width="14" height="18" rx="2" />
+                          <circle cx="12" cy="13" r="4" />
+                          <circle cx="12" cy="13" r="1.5" />
+                          <line x1="8" y1="6" x2="8.01" y2="6" strokeWidth="3.5" strokeLinecap="round" />
+                          <line x1="12" y1="6" x2="12.01" y2="6" strokeWidth="3.5" strokeLinecap="round" />
+                        </svg>
                       </div>
+                      <span className="text-[#0A2C74] font-extrabold text-[7px] tracking-widest mt-1">SAMSUNG</span>
                     </div>
 
-                    {/* Right Column: Price and Badge */}
-                    <div className="text-right flex flex-col items-end justify-between min-h-[72px] ml-2 flex-shrink-0">
-                      <div>
-                        <p className="text-base font-medium text-[#052355] leading-none">
-                          {job.type === 'NCC Extended Warranty' || job.type === 'NCC EXTENDED WARRANTY' 
-                            ? '₹0' 
-                            : job.price > 0 
-                              ? `₹${job.price.toLocaleString('en-IN')}` 
-                              : '₹Free'}
-                        </p>
-                        <p className="text-[11px] text-slate-500 font-normal mt-1">
-                          {job.type === 'NCC Extended Warranty' || job.type === 'NCC EXTENDED WARRANTY'
-                            ? 'Claim Job'
-                            : job.type === 'AMC Visit' || job.type === 'AMC VISIT'
-                              ? 'AMC Visit'
-                              : `Est. Earn: ₹${job.estEarnings}`}
-                        </p>
+                    <div className="min-w-0">
+                      <h4 className="text-[11px] font-semibold text-[#052355] truncate">Washing Machine</h4>
+                      <p className="text-[9px] text-slate-500 mt-0.5 font-normal whitespace-nowrap">Customer: <span className="text-[#052355] font-semibold">Amit Singh</span></p>
+                      <p className="text-[9px] text-slate-500 mt-0.5 font-normal whitespace-nowrap">Job ID: <span className="text-[#052355] font-semibold">NCC12345</span></p>
+                      <div className="flex items-center gap-1 text-[8.5px] text-slate-500 mt-1 font-normal whitespace-nowrap">
+                        <MapPin className="w-3 h-3 text-slate-400" />
+                        <span>2.6 km away</span>
                       </div>
-                      <span className={`inline-block text-[9px] font-medium px-2 py-0.5 rounded-md uppercase tracking-wider ${styles.badgeBg}`}>
-                        {styles.badgeText}
-                      </span>
                     </div>
                   </div>
-                );
-              })}
+
+                  {/* Right Block: Actions */}
+                  <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                    <button 
+                      onClick={() => { 
+                        selectJobForDetails('8842'); 
+                        setActiveStep('revisit_complete'); 
+                        navigate('/technician/active-job'); 
+                      }}
+                      className="border border-[#FF9800] text-[#FF9800] hover:bg-[#FF9800]/5 text-[8px] font-bold py-1 px-2 rounded tracking-wide transition-all shadow-xs whitespace-nowrap"
+                    >
+                      START REVISIT
+                    </button>
+                    <span className="bg-[#FFF3E0] text-[#E65100] text-[8px] font-bold py-0.5 px-2 rounded-full text-center whitespace-nowrap">
+                      Visit #2
+                    </span>
+                  </div>
+                </div>
+
+                {/* Divider Line */}
+                <div className="h-[1px] bg-slate-100 my-2"></div>
+
+                {/* Row 2: Columns (Reason, Part Status, Revisit Date) */}
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <span className="text-[7.5px] text-slate-400 font-bold uppercase tracking-wider block">Reason</span>
+                    <span className="text-[9px] font-semibold text-slate-700 block mt-0.5 leading-snug">Awaiting Drain Pump</span>
+                  </div>
+                  <div>
+                    <span className="text-[7.5px] text-slate-400 font-bold uppercase tracking-wider block">Part Status</span>
+                    <span className="text-[9px] font-semibold text-slate-700 flex items-center gap-0.5 mt-0.5 leading-snug flex-wrap">
+                      Spare Part Recd.
+                      <svg className="w-3 h-3 text-green-600 fill-green-150 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[7.5px] text-slate-400 font-bold uppercase tracking-wider block">Revisit Date</span>
+                    <span className="text-[9px] font-semibold text-slate-700 block mt-0.5 leading-snug">Tomorrow 11:00 AM</span>
+                  </div>
+                </div>
+              </div>
             </div>
+
+            {/* High Priority Jobs Banner */}
+            <div 
+              onClick={() => { setShowAllJobs(true); setFilterTab('Priority'); }}
+              className="bg-[#FFF1F2] border border-[#FFD3D6] rounded-2xl p-3 flex items-center justify-between cursor-pointer hover:shadow-md transition-all mt-2.5"
+            >
+              <div className="flex items-center gap-3">
+                {/* Premium Alarm Siren SVG */}
+                <div className="flex-shrink-0 animate-pulse">
+                  <svg viewBox="0 0 24 24" className="w-7 h-7 text-[#E53935]" fill="currentColor">
+                    <path d="M4 19h16v1a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1z" fill="#90A4AE" />
+                    <path d="M5 16h14v3H5v-3z" fill="#455A64" />
+                    <path d="M12 5C8.13 5 5 8.13 5 12v4h14v-4c0-3.87-3.13-7-12-7z" fill="#E53935" opacity="0.95" />
+                    <path d="M12 7c-2.76 0-5 2.24-5 5v4h10v-4c0-2.76-2.24-5-5-5z" fill="#FF8A80" opacity="0.8" />
+                    <path d="M2 10a8.97 8.97 0 0 1 2.2-5.8l1.4 1.4A6.97 6.97 0 0 0 4 10H2zm20 0h-2c0-1.9-.77-3.64-2-4.9l1.4-1.4A8.97 8.97 0 0 1 22 10z" fill="#E53935" />
+                    <path d="M12 1v2M5.2 3.8l1.4 1.4m10.8-1.4-1.4 1.4" stroke="#E53935" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                </div>
+                
+                <div>
+                  <h4 className="text-xs font-bold text-[#D32F2F]">High Priority Jobs</h4>
+                  <p className="text-[10px] text-slate-650 mt-0.5">Time-sensitive jobs that need your attention</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-[#D32F2F] text-white text-[10px] font-bold flex items-center justify-center">
+                  2
+                </span>
+                <span className="text-[10px] font-bold text-[#D32F2F] flex items-center gap-0.5 whitespace-nowrap">
+                  View All
+                  <ChevronRight className="h-4 w-4" />
+                </span>
+              </div>
+            </div>
+
+            {/* Nearby Jobs Section */}
+            <div className="flex flex-col gap-2 mt-2.5">
+              <div className="flex justify-between items-center">
+                <h3 className="text-sm font-bold text-[#052355]">Nearby Jobs</h3>
+                <button 
+                  onClick={() => setShowAllJobs(true)}
+                  className="text-[10.5px] font-bold text-[#0D47A1] hover:underline flex items-center gap-0.5"
+                >
+                  View All
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* List of 4 Nearby Jobs */}
+              <div className="flex flex-col gap-2.5">
+                
+                {/* Card 1: Paid Service (Split AC Gas Charging) */}
+                <div 
+                  onClick={() => { selectJobForDetails('8842'); navigate('/technician/active-job'); }}
+                  className="bg-white rounded-2xl p-2.5 cursor-pointer hover:shadow-md transition-all shadow-xs flex justify-between items-center border border-slate-200 border-l-[5px] border-[#4CAF50]"
+                >
+                  <div className="flex items-start gap-2 flex-1 min-w-0">
+                    <div className="w-7.5 h-7.5 rounded-xl bg-[#E8F5E9] flex items-center justify-center flex-shrink-0">
+                      <ClipboardList className="w-3.5 h-3.5 text-[#2E7D32]" />
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[7.5px] font-bold block text-[#2E7D32] tracking-wider">PAID SERVICE</span>
+                      <h4 className="text-[11.5px] font-semibold text-[#052355] mt-0.5 leading-tight truncate">Split AC Gas Charging</h4>
+                      <p className="text-[9px] text-slate-500 mt-0.5 font-normal">Customer: <span className="text-[#052355] font-semibold">Ramesh Kurmar</span></p>
+                      <div className="flex items-center gap-2 text-[8.5px] text-slate-500 mt-1 font-normal">
+                        <span className="flex items-center gap-0.5"><Clock className="w-3 h-3 text-slate-400" /> Today, 02:00 PM</span>
+                        <span className="flex items-center gap-0.5"><MapPin className="w-3 h-3 text-slate-400" /> 1.6 km away</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Brand and Pricing details */}
+                  <div className="flex items-center gap-1.5 ml-1.5 flex-shrink-0">
+                    <LgLogo />
+                    <div className="h-5 w-[1px] bg-slate-200"></div>
+                    <div className="text-right flex flex-col items-end min-w-[55px]">
+                      <p className="text-[11.5px] font-bold text-[#052355]">₹2,200</p>
+                      <p className="text-[8px] text-slate-400 font-semibold mt-0.5">Est. Earn: ₹850</p>
+                      <span className="inline-block text-[7px] font-bold px-1.5 py-0.5 rounded bg-[#4CAF50] text-white uppercase tracking-wider mt-1 shadow-xs">
+                        PAID SERVICE
+                      </span>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                  </div>
+                </div>
+
+                {/* Card 2: Brand Warranty (LG Refrigerator) */}
+                <div 
+                  onClick={() => { selectJobForDetails('8843'); navigate('/technician/active-job'); }}
+                  className="bg-white rounded-2xl p-2.5 cursor-pointer hover:shadow-md transition-all shadow-xs flex justify-between items-center border border-slate-200 border-l-[5px] border-[#1E6BDB]"
+                >
+                  <div className="flex items-start gap-2 flex-1 min-w-0">
+                    <div className="w-7.5 h-7.5 rounded-xl bg-[#E3F2FD] flex items-center justify-center flex-shrink-0">
+                      <Shield className="w-3.5 h-3.5 text-[#1565C0]" />
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[7.5px] font-bold block text-[#1565C0] tracking-wider">BRAND WARRANTY</span>
+                      <h4 className="text-[11.5px] font-semibold text-[#052355] mt-0.5 leading-tight truncate">LG Refrigerator</h4>
+                      <p className="text-[9px] text-slate-550 mt-0.5 font-normal">Customer: <span className="text-[#052355] font-semibold">Neha Verma</span></p>
+                      <div className="flex items-center gap-2 text-[8.5px] text-slate-500 mt-1 font-normal">
+                        <span className="flex items-center gap-0.5"><Clock className="w-3 h-3 text-slate-400" /> Today, 04:00 PM</span>
+                        <span className="flex items-center gap-0.5"><MapPin className="w-3 h-3 text-slate-400" /> 3.1 km away</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 ml-1.5 flex-shrink-0">
+                    <LgLogo />
+                    <div className="h-5 w-[1px] bg-slate-200"></div>
+                    <div className="text-right flex flex-col items-end min-w-[55px]">
+                      <p className="text-[11.5px] font-bold text-[#052355]">₹Free</p>
+                      <p className="text-[8px] text-slate-400 font-semibold mt-0.5">Est. Earn: ₹0</p>
+                      <span className="inline-block text-[7px] font-bold px-1.5 py-0.5 rounded bg-[#1E6BDB] text-white uppercase tracking-wider mt-1 shadow-xs">
+                        WARRANTY
+                      </span>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                  </div>
+                </div>
+
+                {/* Card 3: Extended Warranty (Split AC Claim) */}
+                <div 
+                  onClick={() => { selectJobForDetails('8844'); navigate('/technician/active-job'); }}
+                  className="bg-white rounded-2xl p-2.5 cursor-pointer hover:shadow-md transition-all shadow-xs flex justify-between items-center border border-slate-200 border-l-[5px] border-[#7C4DFF]"
+                >
+                  <div className="flex items-start gap-2 flex-1 min-w-0">
+                    <div className="w-7.5 h-7.5 rounded-xl bg-[#F3E5F5] flex items-center justify-center flex-shrink-0">
+                      <Shield className="w-3.5 h-3.5 text-[#6A1B9A]" />
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[7.5px] font-bold block text-[#6A1B9A] tracking-wider">EXTENDED WARRANTY</span>
+                      <h4 className="text-[11.5px] font-semibold text-[#052355] mt-0.5 leading-tight truncate">Split AC Claim</h4>
+                      <p className="text-[9px] text-slate-500 mt-0.5 font-normal">Customer: <span className="text-[#052355] font-semibold">Mohit Sharma</span></p>
+                      <div className="flex items-center gap-2 text-[8.5px] text-slate-500 mt-1 font-normal">
+                        <span className="flex items-center gap-0.5"><Clock className="w-3 h-3 text-slate-400" /> Today, 05:30 PM</span>
+                        <span className="flex items-center gap-0.5"><MapPin className="w-3 h-3 text-slate-400" /> 4.2 km away</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 ml-1.5 flex-shrink-0">
+                    <span className="font-black text-[#0D47A1] italic text-[10px] tracking-wide select-none">VOLTAS</span>
+                    <div className="h-5 w-[1px] bg-slate-200"></div>
+                    <div className="text-right flex flex-col items-end min-w-[55px]">
+                      <p className="text-[11.5px] font-bold text-[#052355]">₹0</p>
+                      <p className="text-[8px] text-slate-400 font-semibold mt-0.5">Claim Job</p>
+                      <span className="inline-block text-[7px] font-bold px-1.5 py-0.5 rounded bg-[#7C4DFF] text-white uppercase tracking-wider mt-1 shadow-xs">
+                        CLAIM JOB
+                      </span>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                  </div>
+                </div>
+
+                {/* Card 4: AMC Visit (Quarterly Service Visit) */}
+                <div 
+                  onClick={() => { selectJobForDetails('8845'); navigate('/technician/active-job'); }}
+                  className="bg-white rounded-2xl p-2.5 cursor-pointer hover:shadow-md transition-all shadow-xs flex justify-between items-center border border-slate-200 border-l-[5px] border-[#FFA000]"
+                >
+                  <div className="flex items-start gap-2 flex-1 min-w-0">
+                    <div className="w-7.5 h-7.5 rounded-xl bg-[#FFF3E0] flex items-center justify-center flex-shrink-0">
+                      <Calendar className="w-3.5 h-3.5 text-[#E65100]" />
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[7.5px] font-bold block text-[#E65100] tracking-wider">AMC VISIT</span>
+                      <h4 className="text-[11.5px] font-semibold text-[#052355] mt-0.5 leading-tight truncate">Quarterly Service Visit</h4>
+                      <p className="text-[9px] text-slate-500 mt-0.5 font-normal">Customer: <span className="text-[#052355] font-semibold">Suresh Yadav</span></p>
+                      <div className="flex items-center gap-2 text-[8.5px] text-slate-500 mt-1 font-normal">
+                        <span className="flex items-center gap-0.5"><Clock className="w-3 h-3 text-slate-400" /> Tomorrow, 11:00 AM</span>
+                        <span className="flex items-center gap-0.5"><MapPin className="w-3 h-3 text-slate-400" /> 2.8 km away</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 ml-1.5 flex-shrink-0">
+                    <SamsungLogo />
+                    <div className="h-5 w-[1px] bg-slate-200"></div>
+                    <div className="text-right flex flex-col items-end min-w-[55px]">
+                      <p className="text-[11.5px] font-bold text-[#052355]">₹Free</p>
+                      <p className="text-[8px] text-slate-400 font-semibold mt-0.5">AMC Visit</p>
+                      <span className="inline-block text-[7px] font-bold px-1.5 py-0.5 rounded bg-[#FFA000] text-white uppercase tracking-wider mt-1 shadow-xs">
+                        AMC VISIT
+                      </span>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            {/* Quick Actions (Academy, Support, Announcements) */}
+            <div className="grid grid-cols-3 gap-2 mt-2.5">
+              
+              {/* NCC Academy Link */}
+              <div 
+                onClick={() => navigate('/technician/skills-certifications')}
+                className="bg-white rounded-2xl p-2 border border-slate-200 shadow-xs flex items-center justify-between cursor-pointer hover:shadow-sm transition-all"
+              >
+                <div className="flex items-center gap-1 min-w-0 flex-1">
+                  <div className="w-6.5 h-6.5 rounded-lg bg-[#E3F2FD] flex items-center justify-center flex-shrink-0">
+                    <GraduationCap className="w-3.5 h-3.5 text-[#1565C0]" />
+                  </div>
+                  <h5 className="text-[9px] font-semibold text-[#052355] truncate">NCC Academy</h5>
+                </div>
+                <ChevronRight className="w-2.5 h-2.5 text-slate-400 flex-shrink-0 ml-1" />
+              </div>
+
+              {/* Need Help? Link */}
+              <div 
+                onClick={() => navigate('/technician/support')}
+                className="bg-white rounded-2xl p-2 border border-slate-200 shadow-xs flex items-center justify-between cursor-pointer hover:shadow-sm transition-all"
+              >
+                <div className="flex items-center gap-1 min-w-0 flex-1">
+                  <div className="w-6.5 h-6.5 rounded-lg bg-[#E8F5E9] flex items-center justify-center flex-shrink-0">
+                    <MessageSquare className="w-3.5 h-3.5 text-[#2E7D32]" />
+                  </div>
+                  <h5 className="text-[9px] font-semibold text-[#052355] truncate">Need Help?</h5>
+                </div>
+                <ChevronRight className="w-2.5 h-2.5 text-slate-400 flex-shrink-0 ml-1" />
+              </div>
+
+              {/* Announcements Link */}
+              <div 
+                onClick={() => navigate('/technician/notifications')}
+                className="bg-white rounded-2xl p-2 border border-slate-200 shadow-xs flex items-center justify-between cursor-pointer hover:shadow-sm transition-all"
+              >
+                <div className="flex items-center gap-1 min-w-0 flex-1">
+                  <div className="w-6.5 h-6.5 rounded-lg bg-[#FFF3E0] flex items-center justify-center flex-shrink-0">
+                    <Megaphone className="w-3.5 h-3.5 text-[#E65100]" />
+                  </div>
+                  <h5 className="text-[9px] font-semibold text-[#052355] truncate">Announcements</h5>
+                </div>
+                <ChevronRight className="w-2.5 h-2.5 text-slate-400 flex-shrink-0 ml-1" />
+              </div>
+            </div>
+
+            {/* Floating Scan Button */}
+            <button 
+              onClick={() => alert("Scanner opened.")}
+              className="fixed bottom-20 right-4 z-30 w-14 h-14 rounded-full bg-[#052355] text-white flex flex-col items-center justify-center shadow-2xl hover:bg-[#0d47a1] active:scale-95 transition-all duration-200"
+            >
+              <Scan className="w-6 h-6 stroke-[2]" />
+              <span className="text-[8px] font-extrabold tracking-widest mt-0.5 uppercase">SCAN</span>
+            </button>
           </>
         )}
 
@@ -342,8 +654,8 @@ const Dashboard = () => {
             <div className="flex flex-col gap-3.5 mt-1">
               {filteredJobs.length > 0 ? (
                 filteredJobs.map((job) => {
-                  const styles = getCardStyle(job.type);
                   const isExpanded = expandedJobId === job.id;
+                  const borderLeftColor = job.type.includes('Paid') ? 'border-l-[#4CAF50]' : job.type.includes('Warranty') ? 'border-l-[#1E6BDB]' : 'border-l-[#FFA000]';
                   
                   return (
                     <div 
@@ -352,61 +664,56 @@ const Dashboard = () => {
                         selectJobForDetails(job.id);
                         navigate('/technician/active-job');
                       }}
-                      className={`bg-white rounded-3xl p-3.5 transition-all duration-300 flex flex-col gap-3 cursor-pointer ${
+                      className={`bg-white rounded-3xl p-4 transition-all duration-300 flex flex-col gap-3 cursor-pointer border-l-[6px] ${borderLeftColor} ${
                         isExpanded 
-                          ? `border-2 border-[#D2E3FC] shadow-md ${styles.borderLeft}` 
-                          : `border border-slate-300 shadow-sm hover:border-slate-400 ${styles.borderLeft}`
+                          ? `border-2 border-[#D2E3FC] shadow-md` 
+                          : `border border-slate-300 shadow-sm hover:border-slate-400`
                       }`}
                     >
                       <div className="flex justify-between items-start gap-2">
                         {/* Left Column */}
                         <div className="min-w-0 flex-1">
-                          {/* Title Area */}
-                          {job.type === 'D2C Paid Service' ? (
-                            <span className="inline-block bg-[#FFF2EE] text-[#FF5B26] px-2.5 py-1 rounded-md text-[10px] font-medium uppercase tracking-wider">
-                              D2C Paid Service
-                            </span>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <div className={`w-6 h-6 rounded flex items-center justify-center text-white ${styles.iconBg}`}>
-                                {React.cloneElement(styles.icon, { className: "h-3.5 w-3.5 text-white" })}
-                              </div>
-                              <span className={`text-[11px] font-medium tracking-wide uppercase ${styles.titleColor}`}>
-                                {job.type}
-                              </span>
-                            </div>
-                          )}
+                          <span className={`inline-block text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${
+                            job.type.includes('Paid') 
+                              ? 'bg-[#E8F5E9] text-[#2E7D32]'
+                              : job.type.includes('Warranty')
+                                ? 'bg-[#E3F2FD] text-[#1565C0]'
+                                : 'bg-[#FFF3E0] text-[#E65100]'
+                          }`}>
+                            {job.type}
+                          </span>
 
                           {/* Subtitle / Product name */}
-                          <h4 className="text-sm font-medium text-[#052355] mt-2.5 truncate leading-snug">
-                            {getCardSubtitle(job)}
+                          <h4 className="text-sm font-bold text-[#052355] mt-2.5 truncate leading-snug">
+                            {job.product}
                           </h4>
                           
                           {/* Location Pin Row */}
-                          <div className="flex items-center gap-1.5 text-slate-600 text-xs font-normal mt-4">
-                            <MapPin className={`h-4 w-4 ${styles.titleColor} stroke-[2]`} />
+                          <div className="flex items-center gap-1.5 text-slate-500 text-xs font-medium mt-3">
+                            <MapPin className="h-4 w-4 text-slate-400" />
                             <span>{job.distance} km</span>
-                            <span className="text-slate-500 font-normal">•</span>
+                            <span className="text-slate-300">•</span>
                             <span>{job.customerName}</span>
                           </div>
                         </div>
                         
                         {/* Right Content: Price, Est Earn, Badge */}
-                        <div className="text-right flex flex-col items-end justify-between min-h-[80px] ml-2 flex-shrink-0">
+                        <div className="text-right flex flex-col items-end justify-between min-h-[75px] ml-2 flex-shrink-0">
                           <div>
-                            <p className="text-base font-medium text-[#052355] leading-none">
+                            <p className="text-base font-bold text-[#052355] leading-none">
                               ₹{job.price > 0 ? job.price.toLocaleString('en-IN') : '0'}
                             </p>
-                            <p className="text-[11px] text-slate-500 font-normal mt-1.5">Est. Earn ₹{job.estEarnings}</p>
+                            <p className="text-[10px] text-slate-500 font-semibold mt-1">Est. Earn ₹{job.estEarnings}</p>
                           </div>
                           
-                          {/* Badges */}
-                          <span className={`inline-block text-[9px] font-medium px-2.5 py-1 rounded-md uppercase tracking-wider ${
-                            job.type === 'D2C Paid Service' 
-                              ? 'bg-[#E8F5E9] text-[#2E7D32]' // Solid green background, dark green text badge
-                              : styles.badgeBg
+                          <span className={`inline-block text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${
+                            job.type.includes('Paid') 
+                              ? 'bg-[#E8F5E9] text-[#2E7D32]'
+                              : job.type.includes('Warranty')
+                                ? 'bg-[#E3F2FD] text-[#1565C0]'
+                                : 'bg-[#FFF3E0] text-[#E65100]'
                           }`}>
-                            {job.type === 'D2C Paid Service' ? 'PAID SERVICE' : styles.badgeText}
+                            {job.type.includes('Paid') ? 'PAID SERVICE' : job.type.includes('Claim') ? 'CLAIM JOB' : 'AMC VISIT'}
                           </span>
                         </div>
                       </div>
@@ -416,13 +723,13 @@ const Dashboard = () => {
                         <div className="flex gap-3.5 mt-2" onClick={(e) => e.stopPropagation()}>
                           <button 
                             onClick={() => acceptJob(job.id)}
-                            className="flex-1 bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-medium py-2.5 rounded-xl text-xs transition-all shadow-sm"
+                            className="flex-1 bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-bold py-2.5 rounded-xl text-xs transition-all shadow-xs"
                           >
                             Accept
                           </button>
                           <button 
                             onClick={() => alert(`Job #${job.id} declined.`)}
-                            className="flex-1 bg-white hover:bg-slate-50 text-slate-700 font-medium py-2.5 rounded-xl text-xs transition-all border border-slate-300"
+                            className="flex-1 bg-white hover:bg-slate-50 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition-all border border-slate-300"
                           >
                             Decline
                           </button>
@@ -433,8 +740,8 @@ const Dashboard = () => {
                 })
               ) : (
                 <div className="text-center py-10 bg-white rounded-3xl border border-dashed border-slate-200 p-4 text-slate-500">
-                  <Briefcase className="h-10 w-10 mx-auto text-slate-500 mb-2" />
-                  <p className="text-sm font-normal">No available jobs found.</p>
+                  <Briefcase className="h-10 w-10 mx-auto text-slate-400 mb-2" />
+                  <p className="text-sm font-medium">No available jobs found.</p>
                 </div>
               )}
             </div>
@@ -442,46 +749,166 @@ const Dashboard = () => {
         )}
       </div>
 
+      {/* Sidebar Drawer Overlay */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-[#052355]/40 backdrop-blur-xs z-50 transition-all flex justify-start"
+          onClick={() => setIsSidebarOpen(false)}
+        >
+          {/* Drawer Container */}
+          <div 
+            className="bg-white w-72 h-full shadow-2xl flex flex-col z-50 text-left animate-slide-in-left"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header: Dark Blue Profile Section */}
+            <div className="bg-[#052355] text-white p-5 flex flex-col gap-4 relative">
+              <button 
+                onClick={() => setIsSidebarOpen(false)}
+                className="absolute top-4 right-4 p-1.5 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
+              >
+                <X className="h-4.5 w-4.5" />
+              </button>
+              
+              <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-white/20 mt-2 shadow-md">
+                <img 
+                  src={techAvatar} 
+                  alt="Alex Rodriguez Avatar Side" 
+                  className="w-full h-full object-cover" 
+                />
+              </div>
+              
+              <div>
+                <h3 className="text-base font-bold text-white leading-tight">Alex Rodriguez</h3>
+                <p className="text-[11px] text-slate-300 font-medium mt-1">Expert HVAC Technician • ★ 4.9</p>
+              </div>
+            </div>
+
+            {/* Menu List */}
+            <div className="flex-1 overflow-y-auto py-4 flex flex-col gap-0.5">
+              {/* Dashboard / Jobs */}
+              <button 
+                onClick={() => { setIsSidebarOpen(false); navigate('/technician/dashboard'); }}
+                className="w-full px-5 py-3.5 flex items-center gap-4 hover:bg-slate-50 text-slate-650 hover:text-[#0D47A1] transition-colors text-left"
+              >
+                <Briefcase className="h-5 w-5 text-slate-500" />
+                <span className="text-xs font-semibold">Dashboard (Jobs)</span>
+              </button>
+
+              {/* My Schedule */}
+              <button 
+                onClick={() => { setIsSidebarOpen(false); navigate('/technician/schedule'); }}
+                className="w-full px-5 py-3.5 flex items-center gap-4 hover:bg-slate-50 text-slate-650 hover:text-[#0D47A1] transition-colors text-left"
+              >
+                <Calendar className="h-5 w-5 text-slate-500" />
+                <span className="text-xs font-semibold">My Schedule</span>
+              </button>
+
+              {/* Part Requests */}
+              <button 
+                onClick={() => { setIsSidebarOpen(false); navigate('/technician/raise-part-request?tab=claims'); }}
+                className="w-full px-5 py-3.5 flex items-center gap-4 hover:bg-slate-50 text-slate-650 hover:text-[#0D47A1] transition-colors text-left"
+              >
+                <ClipboardList className="h-5 w-5 text-slate-500" />
+                <span className="text-xs font-semibold">Part Requests</span>
+              </button>
+
+              {/* Inventory */}
+              <button 
+                onClick={() => { setIsSidebarOpen(false); navigate('/technician/inventory'); }}
+                className="w-full px-5 py-3.5 flex items-center gap-4 hover:bg-slate-50 text-slate-650 hover:text-[#0D47A1] transition-colors text-left"
+              >
+                <Wrench className="h-5 w-5 text-slate-500" />
+                <span className="text-xs font-semibold">My Inventory</span>
+              </button>
+
+              {/* Payout Settings */}
+              <button 
+                onClick={() => { setIsSidebarOpen(false); navigate('/technician/payout-settings'); }}
+                className="w-full px-5 py-3.5 flex items-center gap-4 hover:bg-slate-50 text-slate-650 hover:text-[#0D47A1] transition-colors text-left"
+              >
+                <CreditCard className="h-5 w-5 text-slate-500" />
+                <span className="text-xs font-semibold">Payout Settings</span>
+              </button>
+
+              {/* KYC Verification */}
+              <button 
+                onClick={() => { setIsSidebarOpen(false); navigate('/technician/verification'); }}
+                className="w-full px-5 py-3.5 flex items-center gap-4 hover:bg-slate-50 text-slate-650 hover:text-[#0D47A1] transition-colors text-left"
+              >
+                <ShieldCheck className="h-5 w-5 text-slate-500" />
+                <span className="text-xs font-semibold">KYC Verification</span>
+              </button>
+
+              {/* Help & Support */}
+              <button 
+                onClick={() => { setIsSidebarOpen(false); navigate('/technician/support'); }}
+                className="w-full px-5 py-3.5 flex items-center gap-4 hover:bg-slate-50 text-slate-650 hover:text-[#0D47A1] transition-colors text-left"
+              >
+                <HelpCircle className="h-5 w-5 text-slate-500" />
+                <span className="text-xs font-semibold">Help & Support</span>
+              </button>
+
+              {/* Divider */}
+              <div className="h-[1px] bg-slate-100 my-3.5 mx-5"></div>
+
+              {/* Logout */}
+              <button 
+                onClick={() => { setIsSidebarOpen(false); navigate('/technician/login'); }}
+                className="w-full px-5 py-3.5 flex items-center gap-4 hover:bg-red-50/20 text-red-600 transition-colors text-left"
+              >
+                <LogOut className="h-5 w-5 text-red-500" />
+                <span className="text-xs font-semibold">Logout</span>
+              </button>
+            </div>
+
+            {/* Version Info */}
+            <div className="p-5 border-t border-slate-150 text-left">
+              <span className="text-[10px] font-semibold text-slate-500">Partner App v2.4.1</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-slate-200 py-3 px-3.5 flex justify-between items-center z-20 shadow-lg">
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-slate-200 py-3 px-3.5 flex justify-between items-center z-25 shadow-lg">
         <button 
           onClick={() => { setShowAllJobs(false); navigate('/technician/dashboard'); }}
           className="flex flex-col items-center gap-1 text-[#0D47A1] transition-all"
         >
           <Briefcase className="h-6 w-6 stroke-[2.5]" />
-          <span className="text-[10px] font-medium tracking-wide">Jobs</span>
+          <span className="text-[10px] font-bold tracking-wide">Jobs</span>
         </button>
         
         <button 
           onClick={() => navigate('/technician/raise-part-request?tab=claims')}
-          className="flex flex-col items-center gap-1 text-slate-600 hover:text-slate-700 transition-all"
+          className="flex flex-col items-center gap-1 text-slate-550 hover:text-slate-700 transition-all"
         >
           <ClipboardList className="h-6 w-6 stroke-[2]" />
-          <span className="text-[10px] font-normal tracking-wide">Requests</span>
+          <span className="text-[10px] font-semibold tracking-wide">Requests</span>
         </button>
         
         <button 
           onClick={() => navigate('/technician/inventory')}
-          className="flex flex-col items-center gap-1 text-slate-600 hover:text-slate-700 transition-all"
+          className="flex flex-col items-center gap-1 text-slate-550 hover:text-slate-700 transition-all"
         >
           <Wrench className="h-6 w-6 stroke-[2]" />
-          <span className="text-[10px] font-normal tracking-wide">Inventory</span>
+          <span className="text-[10px] font-semibold tracking-wide">Inventory</span>
         </button>
         
         <button 
           onClick={() => navigate('/technician/schedule')}
-          className="flex flex-col items-center gap-1 text-slate-600 hover:text-slate-700 transition-all"
+          className="flex flex-col items-center gap-1 text-slate-550 hover:text-slate-700 transition-all"
         >
           <Calendar className="h-6 w-6 stroke-[2]" />
-          <span className="text-[10px] font-normal tracking-wide">Schedule</span>
+          <span className="text-[10px] font-semibold tracking-wide">Schedule</span>
         </button>
         
         <button 
           onClick={() => navigate('/technician/profile')}
-          className="flex flex-col items-center gap-1 text-slate-600 hover:text-slate-700 transition-all"
+          className="flex flex-col items-center gap-1 text-slate-550 hover:text-slate-700 transition-all"
         >
           <User className="h-6 w-6 stroke-[2]" />
-          <span className="text-[10px] font-normal tracking-wide">Profile</span>
+          <span className="text-[10px] font-semibold tracking-wide">Profile</span>
         </button>
       </div>
 
