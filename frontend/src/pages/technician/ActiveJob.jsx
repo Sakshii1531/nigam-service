@@ -178,6 +178,7 @@ const ActiveJob = () => {
     activeJob.type === 'BRAND WARRANTY'
   );
 
+
   const getProductImage = (job) => {
     if (!job) return splitAcImg;
     const prodName = (job.product || '').toLowerCase();
@@ -307,6 +308,30 @@ const ActiveJob = () => {
   const [chatOpen, setChatOpen] = useState(false);
   const [chatInput, setChatInput] = useState('');
   const chatEndRef = useRef(null);
+
+  const isWarrantyOrAMC = activeJob && (
+    activeJob.type === 'Brand Warranty' || activeJob.type === 'BRAND WARRANTY' ||
+    activeJob.type === 'NCC Extended Warranty' || activeJob.type === 'NCC EXTENDED WARRANTY' ||
+    activeJob.type === 'AMC Visit' || activeJob.type === 'AMC VISIT'
+  );
+
+  const selectedSparePart = spareParts.find(p => p.checked) || { name: 'Compressor', price: 4500 };
+  const dynamicPartName = selectedSparePart.name;
+  const dynamicPartPrice = isWarrantyOrAMC ? 0 : selectedSparePart.price;
+
+  const revisitServiceCharge = isWarrantyOrAMC ? 0 : 2200;
+  const revisitSparePartPrice = dynamicPartPrice;
+  const revisitAdditionalServicesPrice = additionalServices
+    .filter(s => s.checked)
+    .reduce((sum, s) => sum + s.price, 0);
+  
+  const revisitTaxableAmount = revisitServiceCharge + revisitSparePartPrice + revisitAdditionalServicesPrice;
+  const revisitTax = Math.round(revisitTaxableAmount * 0.18);
+  const revisitTotal = revisitTaxableAmount + revisitTax;
+
+  const finalAmountCollected = spareParts.some(p => p.checked) 
+    ? revisitTotal 
+    : (isWarrantyOrAMC ? 942 : 2112);
 
   useEffect(() => {
     if (chatEndRef.current) {
@@ -1119,6 +1144,7 @@ const ActiveJob = () => {
 
                 {/* Tab 1 Content: Overview — card-type-aware */}
                 {activeTab === 'Overview' && (() => {
+                  const hasSpareParts = spareParts.filter(p => p.checked).length > 0;
 
                   // Brand Warranty
                   if (activeJob?.type === 'Brand Warranty' || activeJob?.type === 'BRAND WARRANTY') {
@@ -1130,20 +1156,34 @@ const ActiveJob = () => {
                           setAdditionalServices={setAdditionalServices}
                           setShowAddServicesModal={setShowAddServicesModal}
                           getProductImage={getProductImage}
+                          spareParts={spareParts}
+                          setSpareParts={setSpareParts}
+                          setShowAddPartsModal={setShowAddPartsModal}
                         />
                         <div className="flex gap-3.5 mt-2 mb-2">
-                          <button
-                            onClick={() => setShowInvoicePreviewModal(true)}
-                            className="flex-1 bg-white border border-[#1E6BDB] hover:bg-slate-50 text-[#1E6BDB] font-semibold py-3.5 rounded-2xl text-xs transition-all shadow-sm"
-                          >
-                            View Invoice
-                          </button>
-                          <button
-                            onClick={() => setActiveStep('billing')}
-                            className="flex-1 bg-[#1E6BDB] hover:bg-blue-700 text-white font-semibold py-3.5 rounded-2xl text-xs transition-all shadow-md"
-                          >
-                            Generate Invoice
-                          </button>
+                          {hasSpareParts ? (
+                            <button
+                              onClick={() => setActiveStep('spare_part_required')}
+                              className="w-full bg-[#1E6BDB] hover:bg-blue-700 text-white font-semibold py-4 rounded-2xl text-xs transition-all shadow-md text-center"
+                            >
+                              Review Estimate
+                            </button>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => setShowInvoicePreviewModal(true)}
+                                className="flex-1 bg-white border border-[#1E6BDB] hover:bg-slate-50 text-[#1E6BDB] font-semibold py-3.5 rounded-2xl text-xs transition-all shadow-sm"
+                              >
+                                View Invoice
+                              </button>
+                              <button
+                                onClick={() => setActiveStep('billing')}
+                                className="flex-1 bg-[#1E6BDB] hover:bg-blue-700 text-white font-semibold py-3.5 rounded-2xl text-xs transition-all shadow-md"
+                              >
+                                Generate Invoice
+                              </button>
+                            </>
+                          )}
                         </div>
                       </div>
                     );
@@ -1159,20 +1199,34 @@ const ActiveJob = () => {
                           setAdditionalServices={setAdditionalServices}
                           setShowAddServicesModal={setShowAddServicesModal}
                           getProductImage={getProductImage}
+                          spareParts={spareParts}
+                          setSpareParts={setSpareParts}
+                          setShowAddPartsModal={setShowAddPartsModal}
                         />
                         <div className="flex gap-3.5 mt-2 mb-2">
-                          <button
-                            onClick={() => setShowInvoicePreviewModal(true)}
-                            className="flex-1 bg-white border border-[#7C4DFF] hover:bg-slate-50 text-[#7C4DFF] font-semibold py-3.5 rounded-2xl text-xs transition-all shadow-sm"
-                          >
-                            View Claim Invoice
-                          </button>
-                          <button
-                            onClick={() => setActiveStep('billing')}
-                            className="flex-1 bg-[#7C4DFF] hover:bg-purple-600 text-white font-semibold py-3.5 rounded-2xl text-xs transition-all shadow-md"
-                          >
-                            Generate Invoice
-                          </button>
+                          {hasSpareParts ? (
+                            <button
+                              onClick={() => setActiveStep('spare_part_required')}
+                              className="w-full bg-[#7C4DFF] hover:bg-purple-600 text-white font-semibold py-4 rounded-2xl text-xs transition-all shadow-md text-center"
+                            >
+                              Review Estimate
+                            </button>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => setShowInvoicePreviewModal(true)}
+                                className="flex-1 bg-white border border-[#7C4DFF] hover:bg-slate-50 text-[#7C4DFF] font-semibold py-3.5 rounded-2xl text-xs transition-all shadow-sm"
+                              >
+                                View Claim Invoice
+                              </button>
+                              <button
+                                onClick={() => setActiveStep('billing')}
+                                className="flex-1 bg-[#7C4DFF] hover:bg-purple-600 text-white font-semibold py-3.5 rounded-2xl text-xs transition-all shadow-md"
+                              >
+                                Generate Invoice
+                              </button>
+                            </>
+                          )}
                         </div>
                       </div>
                     );
@@ -1187,20 +1241,34 @@ const ActiveJob = () => {
                           additionalServices={additionalServices}
                           setAdditionalServices={setAdditionalServices}
                           setShowAddServicesModal={setShowAddServicesModal}
+                          spareParts={spareParts}
+                          setSpareParts={setSpareParts}
+                          setShowAddPartsModal={setShowAddPartsModal}
                         />
                         <div className="flex gap-3.5 mt-2 mb-2">
-                          <button
-                            onClick={() => setShowInvoicePreviewModal(true)}
-                            className="flex-1 bg-white border border-[#FFA000] hover:bg-slate-50 text-[#FFA000] font-semibold py-3.5 rounded-2xl text-xs transition-all shadow-sm"
-                          >
-                            Preview Report
-                          </button>
-                          <button
-                            onClick={() => setActiveStep('billing')}
-                            className="flex-1 bg-[#FFA000] hover:bg-amber-500 text-white font-semibold py-3.5 rounded-2xl text-xs transition-all shadow-md"
-                          >
-                            Complete Visit
-                          </button>
+                          {hasSpareParts ? (
+                            <button
+                              onClick={() => setActiveStep('spare_part_required')}
+                              className="w-full bg-[#FFA000] hover:bg-amber-500 text-white font-semibold py-4 rounded-2xl text-xs transition-all shadow-md text-center"
+                            >
+                              Review Estimate
+                            </button>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => setShowInvoicePreviewModal(true)}
+                                className="flex-1 bg-white border border-[#FFA000] hover:bg-slate-50 text-[#FFA000] font-semibold py-3.5 rounded-2xl text-xs transition-all shadow-sm"
+                              >
+                                Preview Report
+                              </button>
+                              <button
+                                onClick={() => setActiveStep('billing')}
+                                className="flex-1 bg-[#FFA000] hover:bg-amber-500 text-white font-semibold py-3.5 rounded-2xl text-xs transition-all shadow-md"
+                              >
+                                Complete Visit
+                              </button>
+                            </>
+                          )}
                         </div>
                       </div>
                     );
@@ -1977,13 +2045,13 @@ const ActiveJob = () => {
                   <div className="flex gap-4 items-center bg-slate-50 border border-slate-100 rounded-2xl p-3">
                     <div className="w-16 h-16 bg-white border border-slate-200 rounded-xl flex items-center justify-center p-1 flex-shrink-0">
                       <img 
-                        src={compressorImg} 
-                        alt="Compressor" 
+                        src={getProductImage(activeJob)} 
+                        alt={dynamicPartName} 
                         className="w-full h-full object-contain"
                       />
                     </div>
                     <div className="text-left flex-1">
-                      <h5 className="text-sm font-semibold text-[#052355]">Compressor</h5>
+                      <h5 className="text-sm font-semibold text-[#052355]">{dynamicPartName}</h5>
                       <p className="text-xs text-slate-500 font-normal mt-1">Qty: 1</p>
                     </div>
                   </div>
@@ -1992,7 +2060,9 @@ const ActiveJob = () => {
                 {/* Estimated Cost Section */}
                 <div className="bg-white rounded-3xl p-4 border border-slate-200/60 shadow-sm flex justify-between items-center">
                   <span className="text-xs font-semibold text-[#052355] uppercase tracking-wider">Estimated Cost</span>
-                  <span className="text-lg font-bold text-[#052355]">₹4,500</span>
+                  <span className="text-lg font-bold text-[#052355]">
+                    ₹{dynamicPartPrice === 0 ? '0 (Covered)' : dynamicPartPrice.toLocaleString('en-IN')}
+                  </span>
                 </div>
 
                 {/* Availability Section */}
@@ -2084,7 +2154,7 @@ const ActiveJob = () => {
                     
                     {/* Greeting */}
                     <div className="text-left space-y-2 mt-1">
-                      <p className="text-sm font-semibold text-[#052355]">Hi Rohit Sharma,</p>
+                      <p className="text-sm font-semibold text-[#052355]">Hi {activeJob?.customerName || 'Rohit Sharma'},</p>
                       <p className="text-xs text-slate-600 font-normal leading-relaxed">
                         During inspection, the following part is required:
                       </p>
@@ -2094,16 +2164,18 @@ const ActiveJob = () => {
                     <div className="border border-slate-200/60 rounded-2xl bg-white overflow-hidden shadow-sm">
                       <div className="p-4 flex items-center gap-4">
                         <div className="w-14 h-14 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center p-1 flex-shrink-0">
-                          <img src={compressorImg} alt="Compressor" className="w-full h-full object-contain" />
+                          <img src={getProductImage(activeJob)} alt={dynamicPartName} className="w-full h-full object-contain" />
                         </div>
                         <div className="flex flex-col text-left">
                           <span className="text-xs font-semibold text-[#0D47A1]">Required Part</span>
-                          <span className="text-base font-bold text-[#052355] mt-1">Compressor</span>
+                          <span className="text-base font-bold text-[#052355] mt-1">{dynamicPartName}</span>
                         </div>
                       </div>
                       <div className="border-t border-slate-100 px-4 py-3.5 flex justify-between items-center">
                         <span className="text-xs font-normal text-slate-600">Estimated Cost</span>
-                        <span className="text-xl font-extrabold text-[#052355]">₹4,500</span>
+                        <span className="text-xl font-extrabold text-[#052355]">
+                          ₹{dynamicPartPrice === 0 ? '0 (Covered)' : dynamicPartPrice.toLocaleString('en-IN')}
+                        </span>
                       </div>
                     </div>
 
@@ -2255,11 +2327,13 @@ const ActiveJob = () => {
                   <div className="space-y-4">
                     <div className="flex justify-between items-center text-xs">
                       <span className="text-slate-500 font-normal">Required Part</span>
-                      <span className="text-[#052355] font-semibold">Compressor</span>
+                      <span className="text-[#052355] font-semibold">{dynamicPartName}</span>
                     </div>
                     <div className="flex justify-between items-center text-xs">
                       <span className="text-slate-500 font-normal">Estimated Cost</span>
-                      <span className="text-[#052355] font-semibold">₹4,500</span>
+                      <span className="text-[#052355] font-semibold">
+                        ₹{dynamicPartPrice === 0 ? '0 (Covered)' : dynamicPartPrice.toLocaleString('en-IN')}
+                      </span>
                     </div>
                     <div className="flex justify-between items-center text-xs">
                       <span className="text-slate-500 font-normal">Expected Revisit</span>
@@ -2437,8 +2511,10 @@ const ActiveJob = () => {
                     <div className="p-4 flex flex-col gap-1 text-left">
                       <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Required Part</span>
                       <div className="flex justify-between items-center mt-0.5">
-                        <span className="text-sm font-bold text-[#052355]">Compressor</span>
-                        <span className="text-sm font-bold text-[#052355]">₹4,500</span>
+                        <span className="text-sm font-bold text-[#052355]">{dynamicPartName}</span>
+                        <span className="text-sm font-bold text-[#052355]">
+                          ₹{dynamicPartPrice === 0 ? '0 (Covered)' : dynamicPartPrice.toLocaleString('en-IN')}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -2813,7 +2889,7 @@ const ActiveJob = () => {
                     <div className="flex-1 text-center pr-9">
                       <h1 className="text-lg font-bold text-white">Final Bill</h1>
                       <span className="text-sm text-white/80 block font-normal mt-0.5">
-                        #6642
+                        #{activeJob?.id || '6642'}
                       </span>
                     </div>
                   </div>
@@ -2831,19 +2907,27 @@ const ActiveJob = () => {
                     <div className="flex flex-col gap-6 text-sm font-medium text-slate-700">
                       <div className="flex justify-between items-center">
                         <span className="text-slate-650">Service Charge</span>
-                        <span className="text-[#052355] font-semibold text-sm">₹2,200</span>
+                        <span className="text-[#052355] font-semibold text-sm">
+                          ₹{revisitServiceCharge === 0 ? '0 (Covered)' : revisitServiceCharge.toLocaleString('en-IN')}
+                        </span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-slate-650">Additional Services</span>
-                        <span className="text-[#052355] font-semibold text-sm">₹798</span>
+                        <span className="text-[#052355] font-semibold text-sm">
+                          ₹{revisitAdditionalServicesPrice.toLocaleString('en-IN')}
+                        </span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-slate-650">Spare Part (Compressor)</span>
-                        <span className="text-[#052355] font-semibold text-sm">₹4,500</span>
+                        <span className="text-slate-650">Spare Part ({dynamicPartName})</span>
+                        <span className="text-[#052355] font-semibold text-sm">
+                          ₹{revisitSparePartPrice === 0 ? '0 (Covered)' : revisitSparePartPrice.toLocaleString('en-IN')}
+                        </span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-slate-650">Tax (18% GST)</span>
-                        <span className="text-[#052355] font-semibold text-sm">₹1,215</span>
+                        <span className="text-[#052355] font-semibold text-sm">
+                          ₹{revisitTax.toLocaleString('en-IN')}
+                        </span>
                       </div>
                     </div>
 
@@ -2853,7 +2937,9 @@ const ActiveJob = () => {
                     {/* Total Amount */}
                     <div className="flex justify-between items-center">
                       <span className="text-lg font-bold text-[#052355]">Total Amount</span>
-                      <span className="text-2xl font-extrabold text-[#16A34A]">₹8,713</span>
+                      <span className="text-2xl font-extrabold text-[#16A34A]">
+                        ₹{revisitTotal.toLocaleString('en-IN')}
+                      </span>
                     </div>
                   </div>
 
@@ -2896,7 +2982,7 @@ const ActiveJob = () => {
                     <div className="flex-1 text-center pr-9">
                       <h1 className="text-lg font-bold text-white">Collect Payment</h1>
                       <span className="text-sm text-white/80 block font-normal mt-0.5">
-                        #8842
+                        #{activeJob?.id || '8842'}
                       </span>
                     </div>
                   </div>
@@ -2908,7 +2994,9 @@ const ActiveJob = () => {
                     {/* Total Payable Row */}
                     <div className="flex justify-between items-center py-1">
                       <span className="text-base font-bold text-[#052355]">Total Payable</span>
-                      <span className="text-2xl font-extrabold text-[#16A34A]">₹8,713</span>
+                      <span className="text-2xl font-extrabold text-[#16A34A]">
+                        ₹{revisitTotal.toLocaleString('en-IN')}
+                      </span>
                     </div>
 
                     {/* Divider */}
@@ -3070,7 +3158,7 @@ const ActiveJob = () => {
 
                     <div className="flex flex-col gap-1">
                       <span className="text-xs font-normal text-slate-500">Amount to pay</span>
-                      <span className="text-3xl font-extrabold text-[#16A34A]">₹8,713</span>
+                      <span className="text-3xl font-extrabold text-[#16A34A]">₹{revisitTotal.toLocaleString('en-IN')}</span>
                     </div>
 
                     <p className="text-sm text-slate-600 px-4 font-normal leading-relaxed">
@@ -3127,11 +3215,11 @@ const ActiveJob = () => {
 
                     <div className="flex flex-col gap-1 mt-2">
                       <span className="text-xs font-normal text-slate-505">Collect from customer</span>
-                      <span className="text-3xl font-extrabold text-[#16A34A]">₹8,713</span>
+                      <span className="text-3xl font-extrabold text-[#16A34A]">₹{revisitTotal.toLocaleString('en-IN')}</span>
                     </div>
 
                     <p className="text-sm text-slate-600 px-4 font-normal leading-relaxed">
-                      Please collect the cash amount of ₹8,713 from the customer. Verify and count all cash notes carefully before clicking confirm.
+                      Please collect the cash amount of ₹{revisitTotal.toLocaleString('en-IN')} from the customer. Verify and count all cash notes carefully before clicking confirm.
                     </p>
                   </div>
 
@@ -3184,11 +3272,11 @@ const ActiveJob = () => {
 
                     <div className="flex flex-col gap-1 mt-2">
                       <span className="text-xs font-normal text-slate-505">Swipe/Tap amount</span>
-                      <span className="text-3xl font-extrabold text-[#16A34A]">₹8,713</span>
+                      <span className="text-3xl font-extrabold text-[#16A34A]">₹{revisitTotal.toLocaleString('en-IN')}</span>
                     </div>
 
                     <p className="text-sm text-slate-600 px-4 font-normal leading-relaxed">
-                      Initiate the transaction of ₹8,713 on your card POS machine. Prompt the customer to insert, swipe, or tap their Debit/Credit card.
+                      Initiate the transaction of ₹{revisitTotal.toLocaleString('en-IN')} on your card POS machine. Prompt the customer to insert, swipe, or tap their Debit/Credit card.
                     </p>
                   </div>
 
@@ -3241,11 +3329,11 @@ const ActiveJob = () => {
 
                     <div className="flex flex-col gap-1 mt-2">
                       <span className="text-xs font-normal text-slate-550">Payable amount</span>
-                      <span className="text-3xl font-extrabold text-[#16A34A]">₹8,713</span>
+                      <span className="text-3xl font-extrabold text-[#16A34A]">₹{revisitTotal.toLocaleString('en-IN')}</span>
                     </div>
 
                     <p className="text-sm text-slate-600 px-4 font-normal leading-relaxed">
-                      Ask the customer to send ₹8,713 to the NCC business phone number or transfer it directly to the registered Paytm/PhonePe wallet account.
+                      Ask the customer to send ₹{revisitTotal.toLocaleString('en-IN')} to the NCC business phone number or transfer it directly to the registered Paytm/PhonePe wallet account.
                     </p>
                   </div>
 
@@ -3577,7 +3665,7 @@ const ActiveJob = () => {
               </div>
               <div className="flex justify-between items-center text-xs font-normal">
                 <span className="text-slate-500">Total Amount Collected</span>
-                <span className="text-[#052355] font-bold text-sm">₹8,713</span>
+                <span className="text-[#052355] font-bold text-sm">₹{finalAmountCollected.toLocaleString('en-IN')}</span>
               </div>
               <div className="flex justify-between items-center text-xs font-normal">
                 <span className="text-slate-500">You Earned</span>
