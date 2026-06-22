@@ -144,12 +144,6 @@ const Dashboard = () => {
           {/* Header Bar */}
           <div className="flex justify-between items-center text-white">
             <div className="flex items-center gap-2">
-              <button 
-                onClick={() => setIsSidebarOpen(true)}
-                className="p-1 hover:bg-white/10 rounded-full text-white transition-colors"
-              >
-                <Menu className="h-6 w-6 text-white stroke-[2]" />
-              </button>
               <div className="flex items-center gap-1.5 ml-1">
                 {/* Custom NCC shield logo */}
                 <div className="w-7 h-7 rounded-md bg-[#FFD400] flex items-center justify-center shadow-md">
@@ -525,7 +519,7 @@ const Dashboard = () => {
               
               {/* NCC Academy Link */}
               <div 
-                onClick={() => navigate('/technician/skills-certifications')}
+                onClick={() => navigate('/technician/academy')}
                 className="bg-white rounded-2xl p-2 border border-slate-200 shadow-xs flex items-center justify-between cursor-pointer hover:shadow-sm transition-all"
               >
                 <div className="flex items-center gap-1 min-w-0 flex-1">
@@ -539,7 +533,7 @@ const Dashboard = () => {
 
               {/* Need Help? Link */}
               <div 
-                onClick={() => navigate('/technician/support')}
+                onClick={() => navigate('/technician/technical-support')}
                 className="bg-white rounded-2xl p-2 border border-slate-200 shadow-xs flex items-center justify-between cursor-pointer hover:shadow-sm transition-all"
               >
                 <div className="flex items-center gap-1 min-w-0 flex-1">
@@ -553,7 +547,7 @@ const Dashboard = () => {
 
               {/* Announcements Link */}
               <div 
-                onClick={() => navigate('/technician/notifications')}
+                onClick={() => navigate('/technician/announcements')}
                 className="bg-white rounded-2xl p-2 border border-slate-200 shadow-xs flex items-center justify-between cursor-pointer hover:shadow-sm transition-all"
               >
                 <div className="flex items-center gap-1 min-w-0 flex-1">

@@ -108,6 +108,9 @@ import BillingEstimate from './pages/technician/BillingEstimate';
 import SkillsCertifications from './pages/technician/SkillsCertifications';
 import TechSettings from './pages/technician/TechSettings';
 import PartnerLevel from './pages/technician/PartnerLevel';
+import Academy from './pages/technician/Academy';
+import TechnicalSupport from './pages/technician/TechnicalSupport';
+import Announcements from './pages/technician/Announcements';
 
 
 const PageHandler = () => {
@@ -135,7 +138,23 @@ const ScrollToTop = () => {
   const { pathname } = useLocation();
 
   useEffect(() => {
+    // Scroll window and document immediately
     window.scrollTo(0, 0);
+    if (document.documentElement) document.documentElement.scrollTop = 0;
+    if (document.body) document.body.scrollTop = 0;
+
+    // Reset scroll of any scrollable container after render
+    const resetScroll = () => {
+      const scrollables = document.querySelectorAll('.overflow-y-auto, [class*="overflow-y-auto"], .overflow-auto');
+      scrollables.forEach(el => {
+        el.scrollTop = 0;
+      });
+    };
+
+    // Run immediately and also after a short delay to catch deferred layouts
+    resetScroll();
+    const timer = setTimeout(resetScroll, 100);
+    return () => clearTimeout(timer);
   }, [pathname]);
 
   return null;
@@ -263,6 +282,9 @@ function App() {
         <Route path="/technician/skills-certifications" element={<SkillsCertifications />} />
         <Route path="/technician/settings" element={<TechSettings />} />
         <Route path="/technician/partner-level" element={<PartnerLevel />} />
+        <Route path="/technician/academy" element={<Academy />} />
+        <Route path="/technician/technical-support" element={<TechnicalSupport />} />
+        <Route path="/technician/announcements" element={<Announcements />} />
         
         {/* Super Admin Routes */}
         <Route path="/super-admin/login" element={<SuperAdminLogin />} />
