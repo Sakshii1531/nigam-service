@@ -202,6 +202,11 @@ const ActiveJob = () => {
   const [showSignaturePad, setShowSignaturePad] = useState(false);
   const [notesText, setNotesText] = useState('AC compressor draws high current initially. Fan motor runs, but cooling is zero. Suspect run capacitor degradation.');
   const [enteredInspection, setEnteredInspection] = useState(false);
+  const [inspectionDiagnosed, setInspectionDiagnosed] = useState(false);
+  const [selectedDiagnosis, setSelectedDiagnosis] = useState('confirmed'); // 'confirmed', 'different', 'none'
+  const [productPhoto, setProductPhoto] = useState('https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=300&q=80');
+  const [serialPhoto, setSerialPhoto] = useState('https://images.unsplash.com/photo-1589571894960-20bbe2828d0a?auto=format&fit=crop&w=300&q=80');
+  const [issuePhoto, setIssuePhoto] = useState('https://images.unsplash.com/photo-1621905252507-b354bc25edac?auto=format&fit=crop&w=300&q=80');
   const [additionalServices, setAdditionalServices] = useState([
     { id: 'deep', name: 'Deep Cleaning', price: 599, checked: true },
     { id: 'drain', name: 'Drain Pipe Cleaning', price: 199, checked: true },
@@ -672,7 +677,30 @@ const ActiveJob = () => {
             <MoreVertical className="h-5 w-5 text-slate-700" />
           </button>
         </div>
-      ) : activeStep === 'inspection' && enteredInspection ? (
+      ) : activeStep === 'inspection' && enteredInspection && !inspectionDiagnosed ? (
+        /* Navy Blue Header for the NEW Inspection page */
+        <div className="bg-[#052355] text-white px-4 py-3 flex items-center justify-between sticky top-0 z-10">
+          <button 
+            onClick={() => {
+              setEnteredInspection(false);
+            }} 
+            className="p-1 hover:bg-white/10 rounded-full text-white"
+          >
+            <ArrowLeft className="h-6 w-6 text-white" />
+          </button>
+          
+          <div className="text-center">
+            <h1 className="text-base font-normal text-white">
+              Inspection
+            </h1>
+            <span className="text-[10px] text-white/70 block font-normal mt-0.5">#{activeJob?.id}</span>
+          </div>
+
+          <button className="p-1.5 hover:bg-white/10 rounded-full text-white">
+            <MoreVertical className="h-5 w-5 text-white" />
+          </button>
+        </div>
+      ) : activeStep === 'inspection' && enteredInspection && inspectionDiagnosed ? (
         /* White Header for Job Details worksheets View (Screen 5) */
         <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
           <button 
@@ -684,10 +712,10 @@ const ActiveJob = () => {
                 } else if (showAIModal) {
                   setShowAIModal(false);
                 } else {
-                  setEnteredInspection(false);
+                  setInspectionDiagnosed(false);
                 }
               } else {
-                setEnteredInspection(false);
+                setInspectionDiagnosed(false);
               }
             }} 
             className="p-1 hover:bg-slate-50 rounded-full text-slate-700"
@@ -718,7 +746,11 @@ const ActiveJob = () => {
             <button 
               onClick={() => {
                 if (activeStep === 'inspection' && enteredInspection) {
-                  setEnteredInspection(false);
+                  if (inspectionDiagnosed) {
+                    setInspectionDiagnosed(false);
+                  } else {
+                    setEnteredInspection(false);
+                  }
                 } else if (activeStep === 'completed') {
                   resetActiveJob();
                   navigate('/technician/dashboard');
@@ -1063,10 +1095,10 @@ const ActiveJob = () => {
                 {renderStepper(true)}
                 
                 <button 
-                  onClick={() => setEnteredInspection(true)}
+                  onClick={() => { setEnteredInspection(true); setInspectionDiagnosed(false); }}
                   className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-medium py-3.5 rounded-xl text-xs transition-all shadow-md mt-8 mb-1"
                 >
-                  Mark as Inspection
+                  Start Inspection
                 </button>
               </div>
             ) : (
@@ -1124,8 +1156,178 @@ const ActiveJob = () => {
             {/* Step: INSPECTION (Step 3 - Details Tabs & Diagnosis Screen 5/6/7/8) */}
             {activeStep === 'inspection' && (
               <div className="flex flex-col gap-4">
-                
-                {/* Tabs Selector (Screen 5 Overview) */}
+                {!inspectionDiagnosed ? (
+                  /* New Inspection Screen matching mockup exactly */
+                  <div className="flex flex-col gap-5 text-left pb-4 bg-white rounded-3xl p-1">
+                    {/* Section 1: Upload Product Photos */}
+                    <div className="flex flex-col gap-1.5">
+                      <h3 className="text-sm font-semibold text-[#052355]">Upload Product Photos</h3>
+                      <p className="text-xs text-slate-500 font-normal">Required for verification</p>
+                      
+                      {/* Three Column Photo Grid */}
+                      <div className="grid grid-cols-3 gap-2 mt-2">
+                        {/* Box 1: Product Photo */}
+                        <div className="flex flex-col items-center">
+                          <label className="w-full aspect-square bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden flex items-center justify-center relative cursor-pointer hover:bg-slate-100 transition-colors shadow-sm">
+                            <input 
+                              type="file" 
+                              accept="image/*" 
+                              className="hidden" 
+                              onChange={(e) => {
+                                if (e.target.files && e.target.files[0]) {
+                                  setProductPhoto(URL.createObjectURL(e.target.files[0]));
+                                }
+                              }}
+                            />
+                            <img 
+                              src={productPhoto} 
+                              alt="Product" 
+                              className="w-full h-full object-cover" 
+                            />
+                          </label>
+                          <span className="text-[10px] font-semibold text-[#052355] text-center mt-2 leading-tight">Product Photo</span>
+                          <span className="text-[9px] text-slate-500 text-center leading-tight">(Indoor Unit)</span>
+                        </div>
+
+                        {/* Box 2: Serial Number Photo */}
+                        <div className="flex flex-col items-center">
+                          <label className="w-full aspect-square bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden flex items-center justify-center relative cursor-pointer hover:bg-slate-100 transition-colors shadow-sm">
+                            <input 
+                              type="file" 
+                              accept="image/*" 
+                              className="hidden" 
+                              onChange={(e) => {
+                                if (e.target.files && e.target.files[0]) {
+                                  setSerialPhoto(URL.createObjectURL(e.target.files[0]));
+                                }
+                              }}
+                            />
+                            <img 
+                              src={serialPhoto} 
+                              alt="Serial Number" 
+                              className="w-full h-full object-cover" 
+                            />
+                          </label>
+                          <span className="text-[10px] font-semibold text-[#052355] text-center mt-2 leading-tight">Serial Number</span>
+                          <span className="text-[9px] text-slate-500 text-center leading-tight">Photo</span>
+                        </div>
+
+                        {/* Box 3: Issue Photo */}
+                        <div className="flex flex-col items-center">
+                          <label className="w-full aspect-square bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden flex items-center justify-center relative cursor-pointer hover:bg-slate-100 transition-colors shadow-sm">
+                            <input 
+                              type="file" 
+                              accept="image/*" 
+                              className="hidden" 
+                              onChange={(e) => {
+                                if (e.target.files && e.target.files[0]) {
+                                  setIssuePhoto(URL.createObjectURL(e.target.files[0]));
+                                }
+                              }}
+                            />
+                            <img 
+                              src={issuePhoto} 
+                              alt="Issue" 
+                              className="w-full h-full object-cover" 
+                            />
+                          </label>
+                          <span className="text-[10px] font-semibold text-[#052355] text-center mt-2 leading-tight">Issue Photo</span>
+                          <span className="text-[9px] text-slate-500 text-center leading-tight">(Problem Area)</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section 2: What did you find? */}
+                    <div className="flex flex-col gap-1.5 mt-3">
+                      <h3 className="text-sm font-semibold text-[#052355]">What did you find?</h3>
+                      <p className="text-xs text-slate-500 font-normal">Select diagnosis result</p>
+
+                      {/* Diagnosis Options List */}
+                      <div className="flex flex-col gap-2.5 mt-2">
+                        {/* Option 1: Issue Confirmed */}
+                        <button
+                          type="button"
+                          onClick={() => setSelectedDiagnosis('confirmed')}
+                          className={`flex items-center justify-between p-3.5 bg-white border rounded-2xl transition-all text-left shadow-sm ${
+                            selectedDiagnosis === 'confirmed'
+                              ? 'border-green-500 ring-1 ring-green-500/20 bg-green-50/5'
+                              : 'border-slate-200 hover:border-slate-350'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-[#00C853] flex items-center justify-center text-white flex-shrink-0">
+                              <Check className="h-4.5 w-4.5 stroke-[3]" />
+                            </div>
+                            <div>
+                              <p className="text-xs font-semibold text-green-700">Issue Confirmed</p>
+                              <p className="text-[10px] text-slate-500 font-normal mt-0.5">The reported issue is correct</p>
+                            </div>
+                          </div>
+                          <ChevronRight className="h-4 w-4 text-slate-400" />
+                        </button>
+
+                        {/* Option 2: Different Issue Found */}
+                        <button
+                          type="button"
+                          onClick={() => setSelectedDiagnosis('different')}
+                          className={`flex items-center justify-between p-3.5 bg-white border rounded-2xl transition-all text-left shadow-sm ${
+                            selectedDiagnosis === 'different'
+                              ? 'border-amber-500 ring-1 ring-amber-500/20 bg-amber-50/5'
+                              : 'border-slate-200 hover:border-slate-350'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-[#FFA000] flex items-center justify-center text-white flex-shrink-0">
+                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4.5 h-4.5">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.602 10.602Z" />
+                              </svg>
+                            </div>
+                            <div>
+                              <p className="text-xs font-semibold text-amber-700">Different Issue Found</p>
+                              <p className="text-[10px] text-slate-500 font-normal mt-0.5">Found a different issue</p>
+                            </div>
+                          </div>
+                          <ChevronRight className="h-4 w-4 text-slate-400" />
+                        </button>
+
+                        {/* Option 3: No Issue Found */}
+                        <button
+                          type="button"
+                          onClick={() => setSelectedDiagnosis('none')}
+                          className={`flex items-center justify-between p-3.5 bg-white border rounded-2xl transition-all text-left shadow-sm ${
+                            selectedDiagnosis === 'none'
+                              ? 'border-slate-500 ring-1 ring-slate-500/20 bg-slate-50/5'
+                              : 'border-slate-200 hover:border-slate-350'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-[#5E7A9C] flex items-center justify-center text-white flex-shrink-0">
+                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4.5 h-4.5">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                              </svg>
+                            </div>
+                            <div>
+                              <p className="text-xs font-semibold text-slate-700">No Issue Found</p>
+                              <p className="text-[10px] text-slate-500 font-normal mt-0.5">No issue found with product</p>
+                            </div>
+                          </div>
+                          <ChevronRight className="h-4 w-4 text-slate-400" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Section 3: Continue Button */}
+                    <button
+                      type="button"
+                      onClick={() => setInspectionDiagnosed(true)}
+                      className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-medium py-3.5 rounded-xl text-xs transition-all shadow-md mt-6"
+                    >
+                      Continue
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    {/* Tabs Selector (Screen 5 Overview) */}
                 <div className="flex justify-between items-center bg-white p-1 rounded-2xl border border-slate-200 shadow-sm gap-1 mx-[-10px]">
                   {['Overview', 'Diagnosis', 'Parts', 'Notes', 'History'].map((tab) => (
                     <button
@@ -1949,6 +2151,8 @@ const ActiveJob = () => {
                   </div>
                 )}
 
+                  </>
+                )}
               </div>
             )}
 
@@ -4191,7 +4395,7 @@ const ActiveJob = () => {
       )}
 
       {/* Bottom Navigation */}
-      {!(activeStep === 'inspection' && !enteredInspection) && 
+      {!(activeStep === 'inspection' && !inspectionDiagnosed) && 
         activeStep !== 'revisit_complete' && 
         activeStep !== 'customer_update_preview' && 
         activeStep !== 'spare_part_required' && 

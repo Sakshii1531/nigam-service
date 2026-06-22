@@ -53,6 +53,8 @@ import ServicePartner from './pages/ServicePartner';
 import PaymentMethods from './pages/PaymentMethods';
 import NotificationSettings from './pages/NotificationSettings';
 import AboutNCC from './pages/AboutNCC';
+import AllBrands from './pages/AllBrands';
+import Onboarding from './pages/Onboarding';
 import TechLogin from './pages/technician/Login';
 import { TechProvider } from './context/TechContext';
 import BrandLogin from './pages/brand-admin/Login';
@@ -105,6 +107,7 @@ import Inventory from './pages/technician/Inventory';
 import BillingEstimate from './pages/technician/BillingEstimate';
 import SkillsCertifications from './pages/technician/SkillsCertifications';
 import TechSettings from './pages/technician/TechSettings';
+import PartnerLevel from './pages/technician/PartnerLevel';
 
 
 const PageHandler = () => {
@@ -226,6 +229,8 @@ function App() {
         <Route path="/payment-methods" element={<PaymentMethods />} />
         <Route path="/notification-settings" element={<NotificationSettings />} />
         <Route path="/about-ncc" element={<AboutNCC />} />
+        <Route path="/all-brands" element={<AllBrands />} />
+        <Route path="/onboarding" element={<Onboarding />} />
         <Route path="/technician/login" element={<TechLogin />} />
         <Route path="/brand-admin/login" element={<BrandLogin />} />
         <Route path="/brand-admin/dashboard" element={<BrandDashboard />} />
@@ -257,6 +262,7 @@ function App() {
         <Route path="/technician/billing-estimate" element={<BillingEstimate />} />
         <Route path="/technician/skills-certifications" element={<SkillsCertifications />} />
         <Route path="/technician/settings" element={<TechSettings />} />
+        <Route path="/technician/partner-level" element={<PartnerLevel />} />
         
         {/* Super Admin Routes */}
         <Route path="/super-admin/login" element={<SuperAdminLogin />} />

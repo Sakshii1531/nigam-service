@@ -80,7 +80,7 @@ const INITIAL_JOBS = [
   {
     id: '8845',
     type: 'AMC Visit',
-    category: 'AC Repair',
+    category: 'Washing Machine Repair',
     product: 'Quarterly Service Visit',
     brand: 'Samsung',
     model: 'Samsung Front Load 8kg',
@@ -130,6 +130,69 @@ const INITIAL_JOBS = [
     ewValidTill: '01 Nov 2027',
     ewClaimsRemaining: 1,
     ewClaimsTotal: 2
+  },
+  {
+    id: '8847',
+    type: 'NCC Paid Service',
+    category: 'RO',
+    product: 'RO Water Purifier Service',
+    brand: 'Kent',
+    model: 'Kent Grand Plus RO',
+    serialNo: 'KNT-RO-88122',
+    installDate: '10 Feb 2023',
+    warrantyStatus: 'Out of Warranty',
+    complaint: 'Water taste is bitter / filter change needed',
+    estEarnings: 450,
+    price: 950,
+    distance: 1.2,
+    customerName: 'Sanjay Kumar',
+    phone: '9882233445',
+    address: 'A-24, Sector 4, Vikas Nagar, Lucknow, UP 226022',
+    isD2C: true,
+    isPriority: false,
+    isRecommended: true
+  },
+  {
+    id: '8848',
+    type: 'Brand Warranty',
+    category: 'TV',
+    product: 'LED TV Panel Repair',
+    brand: 'Sony',
+    model: 'Sony Bravia 43" 4K Smart LED',
+    serialNo: 'SNY-TV-55102',
+    installDate: '14 Jun 2025',
+    warrantyStatus: 'In Warranty',
+    complaint: 'Horizontal line on display screen',
+    estEarnings: 650,
+    price: 0,
+    distance: 3.8,
+    customerName: 'Vikram Singh',
+    phone: '9443322110',
+    address: 'Flat 502, Orchid Heights, Hazratganj, Lucknow, UP 226001',
+    isPartner: true,
+    isPriority: true,
+    isRecommended: false
+  },
+  {
+    id: '8849',
+    type: 'NCC Paid Service',
+    category: 'Chimney',
+    product: 'Kitchen Chimney Deep Cleaning',
+    brand: 'Faber',
+    model: 'Faber 60cm Auto Clean Chimney',
+    serialNo: 'FBR-CH-99321',
+    installDate: '05 Sep 2024',
+    warrantyStatus: 'Out of Warranty',
+    complaint: 'Suction power is low / heavy oil deposition',
+    estEarnings: 550,
+    price: 1450,
+    distance: 2.1,
+    customerName: 'Priya Sharma',
+    phone: '9556677889',
+    address: 'C-12, Sector B, Aliganj, Lucknow, UP 226024',
+    isD2C: true,
+    isPriority: false,
+    isRecommended: true
   }
 ];
 
@@ -158,6 +221,10 @@ const INITIAL_NOTIFICATIONS = [
 
 export const TechProvider = ({ children }) => {
   const [jobs, setJobs] = useState(INITIAL_JOBS);
+  const [activeSpecs, setActiveSpecs] = useState(['AC', 'Refrigerator', 'Washing Machine']);
+  const toggleSpec = useCallback((spec) => {
+    setActiveSpecs(prev => prev.includes(spec) ? prev.filter(s => s !== spec) : [...prev, spec]);
+  }, []);
   const [inventory, setInventory] = useState(INITIAL_INVENTORY);
   const [claims, setClaims] = useState(INITIAL_CLAIMS);
   const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
@@ -410,7 +477,9 @@ export const TechProvider = ({ children }) => {
       placePartsOrder,
       raiseClaim,
       markAllNotificationsRead,
-      addChatMessage
+      addChatMessage,
+      activeSpecs,
+      toggleSpec
     }}>
       {children}
     </TechContext.Provider>

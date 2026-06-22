@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Bell, Briefcase, ClipboardList, Calendar, Wrench, User, MapPin, ChevronRight, Menu,
-  Clock, Shield, Star, GraduationCap, MessageSquare, Megaphone, Scan, CheckCircle, RotateCw, X, LogOut, Sparkles, CreditCard, ShieldCheck, Award, Settings, HelpCircle
+  Clock, Shield, Star, GraduationCap, MessageSquare, Megaphone, Scan, CheckCircle, RotateCw, X, LogOut, Sparkles, CreditCard, ShieldCheck, Award, Settings, HelpCircle, ArrowLeft
 } from 'lucide-react';
 import { useTech } from '../../context/TechContext';
 import techAvatar from '../../assets/tech_avatar.png';
@@ -15,7 +15,9 @@ const Dashboard = () => {
     acceptJob, 
     selectJobForDetails,
     setActiveStep,
-    notifications
+    notifications,
+    activeSpecs,
+    toggleSpec
   } = useTech();
 
   const [showAllJobs, setShowAllJobs] = useState(false);
@@ -26,8 +28,51 @@ const Dashboard = () => {
 
   const unreadNotificationsCount = notifications.filter(n => !n.read).length;
 
+  const isJobSpecActive = (job) => {
+    const cat = job.category.toLowerCase();
+    if (cat.includes('ac')) return activeSpecs.includes('AC');
+    if (cat.includes('refrigerator')) return activeSpecs.includes('Refrigerator');
+    if (cat.includes('washing') || cat.includes('machine') || job.model.toLowerCase().includes('wm') || job.product.toLowerCase().includes('visit')) {
+      return activeSpecs.includes('Washing Machine');
+    }
+    if (cat.includes('ro') || cat.includes('purifier') || cat.includes('water')) return activeSpecs.includes('RO');
+    if (cat.includes('tv') || cat.includes('led') || cat.includes('television')) return activeSpecs.includes('TV');
+    if (cat.includes('chimney')) return activeSpecs.includes('Chimney');
+    return true;
+  };
+
+  const availableJobsCount = jobs.filter(isJobSpecActive).length;
+
+  // Sony Logo Component
+  const SonyLogo = () => (
+    <span className="font-extrabold text-slate-800 text-xs tracking-wider select-none">SONY</span>
+  );
+
+  // Kent Logo Component
+  const KentLogo = () => (
+    <span className="font-bold text-sky-600 text-xs italic tracking-wider select-none">KENT</span>
+  );
+
+  // Faber Logo Component
+  const FaberLogo = () => (
+    <span className="font-semibold text-rose-600 text-xs tracking-widest select-none">FABER</span>
+  );
+
+  const renderBrandLogo = (brandName) => {
+    const b = brandName.toLowerCase();
+    if (b.includes('lg')) return <LgLogo />;
+    if (b.includes('samsung')) return <SamsungLogo />;
+    if (b.includes('voltas')) return <VoltasLogo />;
+    if (b.includes('sony')) return <SonyLogo />;
+    if (b.includes('kent')) return <KentLogo />;
+    if (b.includes('faber')) return <FaberLogo />;
+    return <span className="font-bold text-xs uppercase text-slate-650">{brandName}</span>;
+  };
+
   // Filter jobs based on selected tabs for View 2 (Full Jobs list)
   const filteredJobs = jobs.filter(job => {
+    if (!isJobSpecActive(job)) return false;
+
     if (filterTab === 'Priority' && !job.isPriority) return false;
     if (filterTab === 'Recommended' && !job.isRecommended) return false;
 
@@ -37,6 +82,8 @@ const Dashboard = () => {
 
     return true;
   });
+
+  const nearbyJobs = jobs.filter(isJobSpecActive).slice(0, 4);
 
   // LG Logo SVG Component
   const LgLogo = () => (
@@ -152,24 +199,27 @@ const Dashboard = () => {
             </div>
 
             {/* Partner Score Column */}
-            <div className="text-right flex flex-col items-end">
-              <span className="text-[8px] font-bold text-slate-300 uppercase tracking-widest">PARTNER SCORE</span>
+            <button 
+              onClick={() => navigate('/technician/partner-level')}
+              className="text-right flex flex-col items-end cursor-pointer group focus:outline-none border-0 bg-transparent p-0"
+            >
+              <span className="text-[8px] font-bold text-slate-300 uppercase tracking-widest group-hover:text-[#FFD400] transition-colors">PARTNER SCORE</span>
               
               <div className="flex items-center gap-1.5 mt-0.5">
                 {/* 5 Yellow Stars */}
                 <div className="flex items-center gap-0.5">
                   {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-2.5 h-2.5 fill-[#FFD400] text-[#FFD400]" />
+                    <Star key={i} className="w-2.5 h-2.5 fill-[#FFD400] text-[#FFD400] group-hover:scale-110 transition-transform" />
                   ))}
                 </div>
-                <span className="text-xl font-bold text-white leading-none">4.9</span>
+                <span className="text-xl font-bold text-white leading-none group-hover:text-[#FFD400] transition-colors">4.9</span>
               </div>
 
               {/* Elite Partner Tag */}
-              <span className="inline-flex items-center gap-1 bg-[#FFD400] text-[#052355] text-[7.5px] font-extrabold px-1.5 py-0.5 rounded-md mt-1.5 shadow-sm">
+              <span className="inline-flex items-center gap-1 bg-[#FFD400] text-[#052355] text-[7.5px] font-extrabold px-1.5 py-0.5 rounded-md mt-1.5 shadow-sm group-hover:bg-yellow-400 transition-colors">
                 👑 ELITE PARTNER
               </span>
-            </div>
+            </button>
           </div>
         </div>
       )}
@@ -188,7 +238,7 @@ const Dashboard = () => {
                   <div className="w-6 h-6 rounded-full bg-[#E3F2FD] flex items-center justify-center flex-shrink-0">
                     <Briefcase className="w-3.5 h-3.5 text-[#1565C0]" />
                   </div>
-                  <span className="text-[13px] font-bold text-[#052355]">12</span>
+                  <span className="text-[13px] font-bold text-[#052355]">{availableJobsCount}</span>
                 </div>
                 <span className="text-[9px] font-semibold text-slate-500 leading-none mt-1">Available<br/>Jobs</span>
                 <button 
@@ -389,150 +439,84 @@ const Dashboard = () => {
                 </button>
               </div>
 
-              {/* List of 4 Nearby Jobs */}
+              {/* List of Nearby Jobs */}
               <div className="flex flex-col gap-2.5">
-                
-                {/* Card 1: Paid Service (Split AC Gas Charging) */}
-                <div 
-                  onClick={() => { selectJobForDetails('8842'); navigate('/technician/active-job'); }}
-                  className="bg-white rounded-2xl p-2.5 cursor-pointer hover:shadow-md transition-all shadow-xs flex justify-between items-center border border-slate-200 border-l-[5px] border-[#4CAF50]"
-                >
-                  <div className="flex items-start gap-2 flex-1 min-w-0">
-                    <div className="w-7.5 h-7.5 rounded-xl bg-[#E8F5E9] flex items-center justify-center flex-shrink-0">
-                      <ClipboardList className="w-3.5 h-3.5 text-[#2E7D32]" />
-                    </div>
+                {nearbyJobs.length > 0 ? (
+                  nearbyJobs.map((job) => {
+                    const type = job.type.toLowerCase();
+                    
+                    // Styles helpers
+                    let borderColor = 'border-l-[#4CAF50]';
+                    let tagBg = 'bg-[#4CAF50]';
+                    let tagText = 'PAID SERVICE';
+                    let iconContainerClass = 'bg-[#E8F5E9] text-[#2E7D32]';
+                    let JobIcon = ClipboardList;
 
-                    <div className="min-w-0 flex-1">
-                      <span className="text-[7.5px] font-bold block text-[#2E7D32] tracking-wider">PAID SERVICE</span>
-                      <h4 className="text-[11.5px] font-semibold text-[#052355] mt-0.5 leading-tight truncate">Split AC Gas Charging</h4>
-                      <p className="text-[9px] text-slate-500 mt-0.5 font-normal">Customer: <span className="text-[#052355] font-semibold">Ramesh Kurmar</span></p>
-                      <div className="flex items-center gap-2 text-[8.5px] text-slate-500 mt-1 font-normal">
-                        <span className="flex items-center gap-0.5"><Clock className="w-3 h-3 text-slate-400" /> Today, 02:00 PM</span>
-                        <span className="flex items-center gap-0.5"><MapPin className="w-3 h-3 text-slate-400" /> 1.6 km away</span>
+                    if (type.includes('warranty') && !type.includes('extended')) {
+                      borderColor = 'border-l-[#1E6BDB]';
+                      tagBg = 'bg-[#1E6BDB]';
+                      tagText = 'WARRANTY';
+                      iconContainerClass = 'bg-[#E3F2FD] text-[#1565C0]';
+                      JobIcon = Shield;
+                    } else if (type.includes('extended')) {
+                      borderColor = 'border-l-[#7C4DFF]';
+                      tagBg = 'bg-[#7C4DFF]';
+                      tagText = 'CLAIM JOB';
+                      iconContainerClass = 'bg-[#F3E5F5] text-[#6A1B9A]';
+                      JobIcon = Shield;
+                    } else if (type.includes('amc')) {
+                      borderColor = 'border-l-[#FFA000]';
+                      tagBg = 'bg-[#FFA000]';
+                      tagText = 'AMC VISIT';
+                      iconContainerClass = 'bg-[#FFF3E0] text-[#E65100]';
+                      JobIcon = Calendar;
+                    }
+
+                    return (
+                      <div 
+                        key={job.id}
+                        onClick={() => { selectJobForDetails(job.id); navigate('/technician/active-job'); }}
+                        className={`bg-white rounded-2xl p-2.5 cursor-pointer hover:shadow-md transition-all shadow-xs flex justify-between items-center border border-slate-200 border-l-[5px] ${borderColor}`}
+                      >
+                        <div className="flex items-start gap-2 flex-1 min-w-0">
+                          <div className={`w-7.5 h-7.5 rounded-xl flex items-center justify-center flex-shrink-0 ${iconContainerClass}`}>
+                            <JobIcon className="w-3.5 h-3.5" />
+                          </div>
+
+                          <div className="min-w-0 flex-1">
+                            <span className="text-[7.5px] font-bold block tracking-wider uppercase text-slate-400">{job.type}</span>
+                            <h4 className="text-[11.5px] font-semibold text-[#052355] mt-0.5 leading-tight truncate">{job.product}</h4>
+                            <p className="text-[9px] text-slate-500 mt-0.5 font-normal">Customer: <span className="text-[#052355] font-semibold">{job.customerName}</span></p>
+                            <div className="flex items-center gap-2 text-[8.5px] text-slate-500 mt-1 font-normal">
+                              <span className="flex items-center gap-0.5"><Clock className="w-3 h-3 text-slate-400" /> Today, 02:00 PM</span>
+                              <span className="flex items-center gap-0.5"><MapPin className="w-3 h-3 text-slate-400" /> {job.distance} km away</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Brand and Pricing details */}
+                        <div className="flex items-center gap-1.5 ml-1.5 flex-shrink-0">
+                          {renderBrandLogo(job.brand)}
+                          <div className="h-5 w-[1px] bg-slate-200"></div>
+                          <div className="text-right flex flex-col items-end min-w-[55px]">
+                            <p className="text-[11.5px] font-bold text-[#052355]">{job.price > 0 ? `₹${job.price}` : '₹Free'}</p>
+                            <p className="text-[8px] text-slate-400 font-semibold mt-0.5">
+                              {job.estEarnings > 0 ? `Est. Earn: ₹${job.estEarnings}` : tagText}
+                            </p>
+                            <span className={`inline-block text-[7px] font-bold px-1.5 py-0.5 rounded text-white uppercase tracking-wider mt-1 shadow-xs ${tagBg}`}>
+                              {tagText}
+                            </span>
+                          </div>
+                          <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                        </div>
                       </div>
-                    </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-center py-6 bg-white rounded-2xl border border-dashed border-slate-200 text-slate-500 text-xs">
+                    No allocated jobs for active specifications.
                   </div>
-
-                  {/* Brand and Pricing details */}
-                  <div className="flex items-center gap-1.5 ml-1.5 flex-shrink-0">
-                    <LgLogo />
-                    <div className="h-5 w-[1px] bg-slate-200"></div>
-                    <div className="text-right flex flex-col items-end min-w-[55px]">
-                      <p className="text-[11.5px] font-bold text-[#052355]">₹2,200</p>
-                      <p className="text-[8px] text-slate-400 font-semibold mt-0.5">Est. Earn: ₹850</p>
-                      <span className="inline-block text-[7px] font-bold px-1.5 py-0.5 rounded bg-[#4CAF50] text-white uppercase tracking-wider mt-1 shadow-xs">
-                        PAID SERVICE
-                      </span>
-                    </div>
-                    <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                  </div>
-                </div>
-
-                {/* Card 2: Brand Warranty (LG Refrigerator) */}
-                <div 
-                  onClick={() => { selectJobForDetails('8843'); navigate('/technician/active-job'); }}
-                  className="bg-white rounded-2xl p-2.5 cursor-pointer hover:shadow-md transition-all shadow-xs flex justify-between items-center border border-slate-200 border-l-[5px] border-[#1E6BDB]"
-                >
-                  <div className="flex items-start gap-2 flex-1 min-w-0">
-                    <div className="w-7.5 h-7.5 rounded-xl bg-[#E3F2FD] flex items-center justify-center flex-shrink-0">
-                      <Shield className="w-3.5 h-3.5 text-[#1565C0]" />
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <span className="text-[7.5px] font-bold block text-[#1565C0] tracking-wider">BRAND WARRANTY</span>
-                      <h4 className="text-[11.5px] font-semibold text-[#052355] mt-0.5 leading-tight truncate">LG Refrigerator</h4>
-                      <p className="text-[9px] text-slate-550 mt-0.5 font-normal">Customer: <span className="text-[#052355] font-semibold">Neha Verma</span></p>
-                      <div className="flex items-center gap-2 text-[8.5px] text-slate-500 mt-1 font-normal">
-                        <span className="flex items-center gap-0.5"><Clock className="w-3 h-3 text-slate-400" /> Today, 04:00 PM</span>
-                        <span className="flex items-center gap-0.5"><MapPin className="w-3 h-3 text-slate-400" /> 3.1 km away</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-1.5 ml-1.5 flex-shrink-0">
-                    <LgLogo />
-                    <div className="h-5 w-[1px] bg-slate-200"></div>
-                    <div className="text-right flex flex-col items-end min-w-[55px]">
-                      <p className="text-[11.5px] font-bold text-[#052355]">₹Free</p>
-                      <p className="text-[8px] text-slate-400 font-semibold mt-0.5">Est. Earn: ₹0</p>
-                      <span className="inline-block text-[7px] font-bold px-1.5 py-0.5 rounded bg-[#1E6BDB] text-white uppercase tracking-wider mt-1 shadow-xs">
-                        WARRANTY
-                      </span>
-                    </div>
-                    <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                  </div>
-                </div>
-
-                {/* Card 3: Extended Warranty (Split AC Claim) */}
-                <div 
-                  onClick={() => { selectJobForDetails('8844'); navigate('/technician/active-job'); }}
-                  className="bg-white rounded-2xl p-2.5 cursor-pointer hover:shadow-md transition-all shadow-xs flex justify-between items-center border border-slate-200 border-l-[5px] border-[#7C4DFF]"
-                >
-                  <div className="flex items-start gap-2 flex-1 min-w-0">
-                    <div className="w-7.5 h-7.5 rounded-xl bg-[#F3E5F5] flex items-center justify-center flex-shrink-0">
-                      <Shield className="w-3.5 h-3.5 text-[#6A1B9A]" />
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <span className="text-[7.5px] font-bold block text-[#6A1B9A] tracking-wider">EXTENDED WARRANTY</span>
-                      <h4 className="text-[11.5px] font-semibold text-[#052355] mt-0.5 leading-tight truncate">Split AC Claim</h4>
-                      <p className="text-[9px] text-slate-500 mt-0.5 font-normal">Customer: <span className="text-[#052355] font-semibold">Mohit Sharma</span></p>
-                      <div className="flex items-center gap-2 text-[8.5px] text-slate-500 mt-1 font-normal">
-                        <span className="flex items-center gap-0.5"><Clock className="w-3 h-3 text-slate-400" /> Today, 05:30 PM</span>
-                        <span className="flex items-center gap-0.5"><MapPin className="w-3 h-3 text-slate-400" /> 4.2 km away</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-1.5 ml-1.5 flex-shrink-0">
-                    <span className="font-black text-[#0D47A1] italic text-[10px] tracking-wide select-none">VOLTAS</span>
-                    <div className="h-5 w-[1px] bg-slate-200"></div>
-                    <div className="text-right flex flex-col items-end min-w-[55px]">
-                      <p className="text-[11.5px] font-bold text-[#052355]">₹0</p>
-                      <p className="text-[8px] text-slate-400 font-semibold mt-0.5">Claim Job</p>
-                      <span className="inline-block text-[7px] font-bold px-1.5 py-0.5 rounded bg-[#7C4DFF] text-white uppercase tracking-wider mt-1 shadow-xs">
-                        CLAIM JOB
-                      </span>
-                    </div>
-                    <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                  </div>
-                </div>
-
-                {/* Card 4: AMC Visit (Quarterly Service Visit) */}
-                <div 
-                  onClick={() => { selectJobForDetails('8845'); navigate('/technician/active-job'); }}
-                  className="bg-white rounded-2xl p-2.5 cursor-pointer hover:shadow-md transition-all shadow-xs flex justify-between items-center border border-slate-200 border-l-[5px] border-[#FFA000]"
-                >
-                  <div className="flex items-start gap-2 flex-1 min-w-0">
-                    <div className="w-7.5 h-7.5 rounded-xl bg-[#FFF3E0] flex items-center justify-center flex-shrink-0">
-                      <Calendar className="w-3.5 h-3.5 text-[#E65100]" />
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <span className="text-[7.5px] font-bold block text-[#E65100] tracking-wider">AMC VISIT</span>
-                      <h4 className="text-[11.5px] font-semibold text-[#052355] mt-0.5 leading-tight truncate">Quarterly Service Visit</h4>
-                      <p className="text-[9px] text-slate-500 mt-0.5 font-normal">Customer: <span className="text-[#052355] font-semibold">Suresh Yadav</span></p>
-                      <div className="flex items-center gap-2 text-[8.5px] text-slate-500 mt-1 font-normal">
-                        <span className="flex items-center gap-0.5"><Clock className="w-3 h-3 text-slate-400" /> Tomorrow, 11:00 AM</span>
-                        <span className="flex items-center gap-0.5"><MapPin className="w-3 h-3 text-slate-400" /> 2.8 km away</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-1.5 ml-1.5 flex-shrink-0">
-                    <SamsungLogo />
-                    <div className="h-5 w-[1px] bg-slate-200"></div>
-                    <div className="text-right flex flex-col items-end min-w-[55px]">
-                      <p className="text-[11.5px] font-bold text-[#052355]">₹Free</p>
-                      <p className="text-[8px] text-slate-400 font-semibold mt-0.5">AMC Visit</p>
-                      <span className="inline-block text-[7px] font-bold px-1.5 py-0.5 rounded bg-[#FFA000] text-white uppercase tracking-wider mt-1 shadow-xs">
-                        AMC VISIT
-                      </span>
-                    </div>
-                    <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                  </div>
-                </div>
-
+                )}
               </div>
             </div>
 
@@ -581,15 +565,6 @@ const Dashboard = () => {
                 <ChevronRight className="w-2.5 h-2.5 text-slate-400 flex-shrink-0 ml-1" />
               </div>
             </div>
-
-            {/* Floating Scan Button */}
-            <button 
-              onClick={() => alert("Scanner opened.")}
-              className="fixed bottom-20 right-4 z-30 w-14 h-14 rounded-full bg-[#052355] text-white flex flex-col items-center justify-center shadow-2xl hover:bg-[#0d47a1] active:scale-95 transition-all duration-200"
-            >
-              <Scan className="w-6 h-6 stroke-[2]" />
-              <span className="text-[8px] font-extrabold tracking-widest mt-0.5 uppercase">SCAN</span>
-            </button>
           </>
         )}
 
@@ -603,33 +578,30 @@ const Dashboard = () => {
                 className={`flex-1 py-2.5 rounded-xl text-xs font-medium flex items-center justify-center gap-1 transition-all ${
                   filterTab === 'All'
                     ? 'bg-[#0D47A1] text-white shadow-sm'
-                    : 'bg-[#F0F4FA] text-slate-600 hover:bg-[#E1EBF5] hover:text-slate-700'
+                    : 'bg-[#F0F4FA] text-slate-650 hover:bg-[#E1EBF5] hover:text-slate-755'
                 }`}
               >
-                All Jobs (8)
+                All Jobs ({filteredJobs.length})
               </button>
               <button
                 onClick={() => setFilterTab('Priority')}
                 className={`flex-1 py-2.5 rounded-xl text-xs font-medium flex items-center justify-center gap-1 transition-all ${
                   filterTab === 'Priority'
                     ? 'bg-[#0D47A1] text-white shadow-sm'
-                    : 'bg-[#F0F4FA] text-slate-600 hover:bg-[#E1EBF5] hover:text-slate-700'
+                    : 'bg-[#F0F4FA] text-slate-650 hover:bg-[#E1EBF5] hover:text-slate-755'
                 }`}
               >
-                Priority (3)
-                <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-[#E53935] text-white text-[8px] font-medium">
-                  −
-                </span>
+                Priority ({filteredJobs.filter(j => j.isPriority).length})
               </button>
               <button
                 onClick={() => setFilterTab('Recommended')}
                 className={`flex-1 py-2.5 rounded-xl text-xs font-medium flex items-center justify-center gap-1 transition-all ${
                   filterTab === 'Recommended'
                     ? 'bg-[#0D47A1] text-white shadow-sm'
-                    : 'bg-[#F0F4FA] text-slate-600 hover:bg-[#E1EBF5] hover:text-slate-700'
+                    : 'bg-[#F0F4FA] text-slate-650 hover:bg-[#E1EBF5] hover:text-slate-755'
                 }`}
               >
-                Recommended (2)
+                Recommended ({filteredJobs.filter(j => j.isRecommended).length})
               </button>
             </div>
 

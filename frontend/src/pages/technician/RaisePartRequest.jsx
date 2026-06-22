@@ -198,18 +198,25 @@ const RaisePartRequest = () => {
       ) : (
         <>
           {/* Header */}
-          <div className="bg-white border-b border-slate-200 p-4 flex items-center justify-between sticky top-0 z-10">
-        <h1 className="text-lg font-normal text-[#052355]">Parts & Claims</h1>
-        <button 
-          onClick={() => navigate('/technician/notifications')}
-          className="p-2.5 hover:bg-slate-50 rounded-full transition-colors relative"
-        >
-          <Bell className="h-5 w-5 text-[#052355]" />
-          {unreadNotificationsCount > 0 && (
-            <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full"></span>
-          )}
-        </button>
-      </div>
+          <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
+            <button 
+              type="button"
+              onClick={() => navigate(-1)} 
+              className="p-1 hover:bg-slate-50 rounded-full text-slate-700 transition-colors"
+            >
+              <ChevronLeft className="h-6 w-6 text-slate-700 stroke-[2.5]" />
+            </button>
+            <h1 className="text-base font-semibold text-[#052355]">Parts & Claims</h1>
+            <button 
+              onClick={() => navigate('/technician/notifications')}
+              className="p-2.5 hover:bg-slate-50 rounded-full transition-colors relative"
+            >
+              <Bell className="h-5 w-5 text-[#052355]" />
+              {unreadNotificationsCount > 0 && (
+                <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full"></span>
+              )}
+            </button>
+          </div>
 
       {/* Navigation Tabs (Merges Screen 9, 10, 11) */}
       <div className="bg-white px-3.5 py-2 border-b border-slate-200 flex gap-5 justify-start items-center">

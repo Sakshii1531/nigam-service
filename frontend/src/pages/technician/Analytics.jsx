@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Menu, MoreVertical, ChevronDown, TrendingUp, Briefcase, 
-  ClipboardList, Wrench, Calendar, User, ShieldCheck, HelpCircle, LogOut, CreditCard, X
+  ClipboardList, Wrench, Calendar, User, ShieldCheck, HelpCircle, LogOut, CreditCard, X,
+  ArrowLeft
 } from 'lucide-react';
 import techAvatar from '../../assets/tech_avatar.png';
 
@@ -17,10 +18,10 @@ const Analytics = () => {
       {/* Header */}
       <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
         <button 
-          onClick={() => setIsSidebarOpen(true)}
+          onClick={() => navigate(-1)}
           className="p-1 hover:bg-slate-50 rounded-full text-slate-700 transition-colors"
         >
-          <Menu className="h-6 w-6 text-slate-700" />
+          <ArrowLeft className="h-6 w-6 text-slate-700" />
         </button>
         <h1 className="text-base font-medium text-[#052355] flex-1 text-center pl-8">Analytics</h1>
         <button className="p-1 hover:bg-slate-50 rounded-full text-slate-700 transition-colors">
