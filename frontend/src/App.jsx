@@ -111,6 +111,7 @@ import PartnerLevel from './pages/technician/PartnerLevel';
 import Academy from './pages/technician/Academy';
 import TechnicalSupport from './pages/technician/TechnicalSupport';
 import Announcements from './pages/technician/Announcements';
+import EarningDetailPage from './pages/technician/EarningDetail';
 
 
 const PageHandler = () => {
@@ -285,6 +286,7 @@ function App() {
         <Route path="/technician/academy" element={<Academy />} />
         <Route path="/technician/technical-support" element={<TechnicalSupport />} />
         <Route path="/technician/announcements" element={<Announcements />} />
+        <Route path="/technician/earning-detail/:id" element={<EarningDetailPage />} />
         
         {/* Super Admin Routes */}
         <Route path="/super-admin/login" element={<SuperAdminLogin />} />

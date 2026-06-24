@@ -1,14 +1,25 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Bell, ArrowLeft, Shield, Calendar, TrendingUp, ChevronDown, Check, Clock, Briefcase, ClipboardList, User, Wrench } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Bell, ArrowLeft, Shield, Calendar, TrendingUp, ChevronDown, Check, Clock, Briefcase, ClipboardList, User, Wrench, Zap, FileText } from 'lucide-react';
 import { useTech } from '../../context/TechContext';
 
 const EarningsPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { earningsTally, notifications } = useTech();
   const [withdrawableBalance, setWithdrawableBalance] = useState(12450);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [withdrawStep, setWithdrawStep] = useState('confirm'); // 'confirm', 'success'
+
+  // Read ?tab=quick or ?tab=invoice from URL
+  const searchParams = new URLSearchParams(location.search);
+  const initialTab = searchParams.get('tab') === 'invoice' ? 'invoice' : 'quick';
+  const [activeTab, setActiveTab] = useState(initialTab);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    setActiveTab(params.get('tab') === 'invoice' ? 'invoice' : 'quick');
+  }, [location.search]);
 
   const unreadNotificationsCount = notifications.filter(n => !n.read).length;
 
@@ -150,6 +161,63 @@ const EarningsPage = () => {
           </div>
         </div>
 
+        {/* Tab Switcher */}
+        <div className="bg-white border border-slate-200 rounded-2xl p-1 shadow-sm flex gap-1">
+          <button
+            onClick={() => setActiveTab('quick')}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+              activeTab === 'quick'
+                ? 'bg-amber-400 text-white shadow-sm'
+                : 'text-slate-500 hover:bg-slate-50'
+            }`}
+          >
+            <Zap className={`h-3.5 w-3.5 ${activeTab === 'quick' ? 'fill-white' : ''}`} />
+            QuickPayout
+          </button>
+          <button
+            onClick={() => setActiveTab('invoice')}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+              activeTab === 'invoice'
+                ? 'bg-[#0A2D6E] text-white shadow-sm'
+                : 'text-slate-500 hover:bg-slate-50'
+            }`}
+          >
+            <FileText className="h-3.5 w-3.5" />
+            InvoicePayout
+          </button>
+        </div>
+
+        {/* Tab Summary Card */}
+        {activeTab === 'quick' ? (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 shadow-sm text-left">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="p-1.5 bg-amber-100 rounded-lg">
+                <Zap className="h-4 w-4 text-amber-500 fill-amber-400" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-amber-800">QuickPayout — D2C Services</p>
+                <p className="text-[10px] text-amber-600">Instant credit after job completion</p>
+              </div>
+            </div>
+            <p className="text-2xl font-bold text-[#0D47A1] mt-1">₹8,200</p>
+            <p className="text-[10px] text-slate-500 mt-0.5">24 Jobs • Instant Credit</p>
+          </div>
+        ) : (
+          <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 shadow-sm text-left">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="p-1.5 bg-blue-100 rounded-lg">
+                <FileText className="h-4 w-4 text-[#0D47A1]" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-[#052355]">InvoicePayout — Invoice Jobs</p>
+                <p className="text-[10px] text-blue-500">Settled after approval from NCC</p>
+              </div>
+            </div>
+            <p className="text-2xl font-bold text-[#0D47A1] mt-1">₹4,250</p>
+            <p className="text-[10px] text-slate-500 mt-0.5">18 Jobs • Approval Pending</p>
+          </div>
+        )}
+
         {/* Weekly Target progress */}
         <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm text-left">
           <div className="flex justify-between items-center">
@@ -216,11 +284,11 @@ const EarningsPage = () => {
 
           <div className="flex flex-col">
             {[
-              { id: 1, job: '#8842', date: 'Nov 14, 2023', amount: '+₹850.00', status: 'SETTLED' },
-              { id: 2, job: '#8831', date: 'Nov 13, 2023', amount: '+₹650.50', status: 'SETTLED' },
-              { id: 3, job: '#8844', date: 'Nov 12, 2023', amount: '+₹1,210.00', status: 'PENDING' },
-              { id: 4, job: '#8822', date: 'Nov 11, 2023', amount: '+₹920.00', status: 'SETTLED' },
-            ].map((p) => (
+              { id: 1, job: '#8842', date: 'Nov 14, 2023', amount: '+₹850.00', status: 'SETTLED', type: 'quick' },
+              { id: 2, job: '#8831', date: 'Nov 13, 2023', amount: '+₹650.50', status: 'SETTLED', type: 'quick' },
+              { id: 3, job: '#8844', date: 'Nov 12, 2023', amount: '+₹1,210.00', status: 'PENDING', type: 'invoice' },
+              { id: 4, job: '#8822', date: 'Nov 11, 2023', amount: '+₹920.00', status: 'SETTLED', type: 'invoice' },
+            ].filter(p => p.type === activeTab).map((p) => (
               <div key={p.id} className="p-4 flex justify-between items-center border-b border-slate-100 last:border-b-0 hover:bg-slate-55 transition-colors">
                 <div className="flex items-center gap-3">
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
