@@ -19,7 +19,8 @@ import {
   MoreVertical,
   Eye,
   X,
-  CheckCircle2
+  CheckCircle2,
+  Search
 } from 'lucide-react';
 
 const StatCard = ({ title, value, icon, trend, trendType, color }) => {
