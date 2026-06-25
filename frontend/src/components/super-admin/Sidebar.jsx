@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Users, 
@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 
 const Sidebar = () => {
+  const navigate = useNavigate();
   const menuItems = [
     { path: '/super-admin/dashboard', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
     { path: '/super-admin/users', icon: <Users size={20} />, label: 'User Management' },
@@ -78,7 +79,10 @@ const Sidebar = () => {
 
       {/* Logout */}
       <div className="p-4 border-t border-[#E2E8F0]">
-        <button className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+        <button 
+          onClick={() => navigate('/super-admin/login')}
+          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+        >
           <LogOut size={20} />
           <span>Logout</span>
         </button>

@@ -291,6 +291,30 @@ const Academy = () => {
                   </div>
                 </div>
 
+                {/* File Upload Input */}
+                <div>
+                  <label className="text-xs font-semibold text-[#64748B] mb-1 block">Select Manual File *</label>
+                  <div className="border-2 border-dashed border-[#E2E8F0] rounded-xl p-4 flex flex-col items-center justify-center bg-[#F8FAFC] hover:bg-[#EEF4FF]/30 hover:border-[#0D47A1]/55 transition-all cursor-pointer relative">
+                    <input 
+                      type="file"
+                      required
+                      accept={newGuide.type === 'PDF' ? '.pdf' : 'video/*'}
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                          showToast(`Selected file: ${file.name}`);
+                        }
+                      }}
+                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                    />
+                    <UploadCloud className="text-[#0D47A1] mb-1.5" size={24} />
+                    <p className="text-xs font-bold text-[#1E293B]">Click to select manual file</p>
+                    <p className="text-[10px] text-[#64748B] mt-0.5">
+                      {newGuide.type === 'PDF' ? 'PDF document formats (Max 10MB)' : 'Video formats (Max 100MB)'}
+                    </p>
+                  </div>
+                </div>
+
                 <div className="pt-4 border-t border-[#E2E8F0] flex gap-3 justify-end text-sm">
                   <button 
                     type="button"

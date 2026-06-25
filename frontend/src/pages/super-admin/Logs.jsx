@@ -14,6 +14,7 @@ import {
 
 const Logs = () => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedType, setSelectedType] = useState('All Types');
   
   const [logs, setLogs] = useState([
     { id: 1, user: 'Super Admin', action: 'Approved Brand LG', type: 'System', date: '12 May, 2026 - 11:30 AM' },
@@ -23,11 +24,13 @@ const Logs = () => {
     { id: 5, user: 'System', action: 'Low stock alert for Refrigerator Compressor', type: 'Inventory', date: '10 May, 2026 - 09:00 AM' },
   ]);
 
-  const filteredLogs = logs.filter(log => 
-    log.user.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    log.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    log.type.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredLogs = logs.filter(log => {
+    const matchesSearch = log.user.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          log.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          log.type.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesType = selectedType === 'All Types' || log.type === selectedType;
+    return matchesSearch && matchesType;
+  });
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex">
@@ -40,10 +43,10 @@ const Logs = () => {
         <Topbar title="Activity Logs" />
 
         {/* Body */}
-        <div className="p-6 space-y-6 flex-1">
+        <div className="p-6 space-y-6 flex-1 text-slate-800">
           
           {/* Filters & Search */}
-          <div className="bg-white p-4 rounded-2xl border border-[#E2E8F0] flex flex-wrap gap-4 items-center justify-between">
+          <div className="bg-white p-4 rounded-2xl border border-[#E2E8F0] flex flex-wrap gap-4 items-center justify-between shadow-sm">
             <div className="flex flex-wrap gap-3 items-center flex-1">
               {/* Search */}
               <div className="relative w-64">
@@ -52,7 +55,7 @@ const Logs = () => {
                 </div>
                 <input
                   type="text"
-                  className="w-full pl-10 pr-4 py-2 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] focus:border-[#0D47A1] outline-none transition-all text-sm bg-[#F8FAFC]"
+                  className="w-full pl-10 pr-4 py-2 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] focus:border-[#0D47A1] outline-none transition-all text-sm bg-[#F8FAFC] text-slate-800"
                   placeholder="Search Admin, Action..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -60,7 +63,11 @@ const Logs = () => {
               </div>
 
               {/* Filters */}
-              <select className="text-sm text-[#1E293B] border border-[#E2E8F0] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#0D47A1] bg-[#F8FAFC]">
+              <select 
+                value={selectedType}
+                onChange={(e) => setSelectedType(e.target.value)}
+                className="text-sm text-[#1E293B] border border-[#E2E8F0] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#0D47A1] bg-[#F8FAFC]"
+              >
                 <option>All Types</option>
                 <option>System</option>
                 <option>Support</option>
@@ -72,7 +79,7 @@ const Logs = () => {
           </div>
 
           {/* Timeline */}
-          <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] flex-1 overflow-y-auto">
+          <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] flex-1 overflow-y-auto shadow-sm">
             <div className="border-l-2 border-[#E2E8F0] ml-4 pl-6 space-y-6">
               {filteredLogs.map((log) => (
                 <div key={log.id} className="relative">
@@ -84,12 +91,12 @@ const Logs = () => {
                     log.type === 'Finance' ? 'bg-yellow-500' : 'bg-orange-500'
                   }`}></div>
                   
-                  <div className="bg-[#F8FAFC] p-4 rounded-xl border border-[#E2E8F0]">
+                  <div className="bg-[#F8FAFC] p-4 rounded-xl border border-[#E2E8F0] hover:bg-slate-50 transition-colors cursor-pointer">
                     <div className="flex justify-between items-start">
                       <div>
                         <p className="text-sm font-bold text-[#1E293B]">{log.action}</p>
                         <p className="text-xs text-[#64748B] flex items-center gap-1 mt-0.5">
-                          <User size={12} /> {log.user} • <span className="font-medium text-[#0D47A1]">{log.type}</span>
+                          <User size={12} /> {log.user} • <span className="font-semibold text-[#0D47A1]">{log.type}</span>
                         </p>
                       </div>
                       <span className="text-xs text-[#64748B] flex items-center gap-1"><Clock size={12} /> {log.date}</span>
@@ -100,8 +107,8 @@ const Logs = () => {
 
               {filteredLogs.length === 0 && (
                 <div className="text-center py-12 text-[#64748B]">
-                  <Clock size={48} className="mx-auto mb-2 opacity-50" />
-                  <p>No logs found matching your criteria.</p>
+                  <Clock size={48} className="mx-auto mb-2 opacity-50 text-slate-400" />
+                  <p className="text-sm font-medium">No logs found matching your criteria.</p>
                 </div>
               )}
             </div>
