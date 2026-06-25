@@ -14,7 +14,8 @@ import {
   ShieldCheck,
   AlertTriangle,
   RotateCcw,
-  Check
+  Check,
+  ArrowLeft
 } from 'lucide-react';
 
 const WarrantyClaims = () => {
@@ -86,8 +87,104 @@ const WarrantyClaims = () => {
       <div className="flex-1 ml-64 min-h-screen flex flex-col relative">
         <Topbar title="Warranty & Claims Management" />
 
-        <div className="p-6 space-y-6 flex-1">
-          {/* Stats Grid */}
+        {showDrawer && selectedClaim ? (
+          <div className="p-6 space-y-6 flex-1 bg-[#F8FAFC] text-left">
+            <div className="flex items-center justify-between">
+              <button 
+                onClick={() => setShowDrawer(false)}
+                className="flex items-center gap-2 text-sm font-semibold text-[#0D47A1] hover:text-blue-800 transition-colors"
+              >
+                <ArrowLeft size={16} /> Back to Claims
+              </button>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden flex flex-col max-w-3xl text-sm">
+              <div className="p-6 border-b border-[#E2E8F0] flex justify-between items-center bg-[#F8FAFC]">
+                <div>
+                  <h2 className="text-lg font-bold text-[#1E293B]">Claim Details</h2>
+                  <p className="text-sm text-[#0D47A1] font-medium">{selectedClaim.id}</p>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-6 flex-1">
+                <div>
+                  <h3 className="text-xs uppercase text-[#64748B] font-semibold mb-2">Claim Overview</h3>
+                  <div className="bg-[#F8FAFC] p-4 rounded-xl space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-[#64748B]">Claim Type:</span>
+                      <span className="font-semibold text-indigo-600">{selectedClaim.claimType}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[#64748B]">Spare Part:</span>
+                      <span className="font-semibold text-[#1E293B]">{selectedClaim.item}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[#64748B]">Claim Amount:</span>
+                      <span className="font-bold text-[#1E293B]">{selectedClaim.amount}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[#64748B]">Technician:</span>
+                      <span className="font-medium text-blue-650">{selectedClaim.technician}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-xs uppercase text-[#64748B] font-semibold mb-2">Customer & Product details</h3>
+                  <div className="bg-[#F8FAFC] p-4 rounded-xl space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-[#64748B]">Customer Name:</span>
+                      <span className="font-medium text-[#1E293B]">{selectedClaim.customer}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[#64748B]">Serial Number:</span>
+                      <span className="font-mono text-xs text-[#1E293B]">{selectedClaim.serial}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[#64748B]">Date Submitted:</span>
+                      <span className="text-[#64748B]">{selectedClaim.date}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-xs uppercase text-[#64748B] font-semibold mb-2">Diagnosis Reason</h3>
+                  <p className="bg-[#F8FAFC] p-4 rounded-xl text-xs text-slate-650 font-medium">
+                    {selectedClaim.reason}
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-6 border-t border-[#E2E8F0] flex gap-3 bg-[#F8FAFC]">
+                {selectedClaim.status === 'Pending Approval' ? (
+                  <>
+                    <button 
+                      onClick={() => updateClaimStatus(selectedClaim.id, 'Approved')}
+                      className="bg-[#0D47A1] text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-1 shadow-sm"
+                    >
+                      <Check size={16} /> Approve Claim
+                    </button>
+                    <button 
+                      onClick={() => updateClaimStatus(selectedClaim.id, 'Rejected')}
+                      className="bg-white text-red-600 border border-red-200 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-red-50/20 transition-colors flex items-center justify-center gap-1"
+                    >
+                      <X size={16} /> Reject Claim
+                    </button>
+                  </>
+                ) : (
+                  <button 
+                    disabled 
+                    className="w-full bg-gray-150 text-gray-450 py-2.5 rounded-lg text-sm font-medium cursor-not-allowed flex items-center justify-center gap-1"
+                  >
+                    ✓ Claim Reconciled & Settle Completed
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="p-6 space-y-6 flex-1">
+            {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {stats.map((card, index) => (
               <div key={index} className="bg-white p-6 rounded-2xl border border-[#E2E8F0] flex items-center gap-4">
@@ -285,102 +382,10 @@ const WarrantyClaims = () => {
               </div>
             </div>
           )}
-        </div>
-
-        {/* Drawer */}
-        {showDrawer && selectedClaim && (
-          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm z-30 flex justify-end">
-            <div className="w-full max-w-md bg-white h-full shadow-2xl flex flex-col">
-              <div className="p-6 border-b border-[#E2E8F0] flex justify-between items-center">
-                <div>
-                  <h2 className="text-lg font-bold text-[#1E293B]">Claim Details</h2>
-                  <p className="text-sm text-[#0D47A1] font-medium">{selectedClaim.id}</p>
-                </div>
-                <button 
-                  onClick={() => setShowDrawer(false)}
-                  className="text-[#64748B] hover:text-[#1E293B] p-2 hover:bg-[#F8FAFC] rounded-full"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-
-              <div className="p-6 space-y-6 flex-1 overflow-y-auto text-sm">
-                <div>
-                  <h3 className="text-xs uppercase text-[#64748B] font-semibold mb-2">Claim Overview</h3>
-                  <div className="bg-[#F8FAFC] p-4 rounded-xl space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-[#64748B]">Claim Type:</span>
-                      <span className="font-semibold text-indigo-600">{selectedClaim.claimType}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[#64748B]">Spare Part:</span>
-                      <span className="font-semibold text-[#1E293B]">{selectedClaim.item}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[#64748B]">Claim Amount:</span>
-                      <span className="font-bold text-[#1E293B]">{selectedClaim.amount}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[#64748B]">Technician:</span>
-                      <span className="font-medium text-blue-650">{selectedClaim.technician}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-xs uppercase text-[#64748B] font-semibold mb-2">Customer & Product details</h3>
-                  <div className="bg-[#F8FAFC] p-4 rounded-xl space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-[#64748B]">Customer Name:</span>
-                      <span className="font-medium text-[#1E293B]">{selectedClaim.customer}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[#64748B]">Serial Number:</span>
-                      <span className="font-mono text-xs text-[#1E293B]">{selectedClaim.serial}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[#64748B]">Date Submitted:</span>
-                      <span className="text-[#64748B]">{selectedClaim.date}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-xs uppercase text-[#64748B] font-semibold mb-2">Diagnosis Reason</h3>
-                  <p className="bg-[#F8FAFC] p-4 rounded-xl text-xs text-slate-650 font-medium">
-                    {selectedClaim.reason}
-                  </p>
-                </div>
-              </div>
-
-              <div className="p-6 border-t border-[#E2E8F0] flex gap-3">
-                {selectedClaim.status === 'Pending Approval' ? (
-                  <>
-                    <button 
-                      onClick={() => updateClaimStatus(selectedClaim.id, 'Approved')}
-                      className="flex-1 bg-[#0D47A1] text-white py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-1 shadow-sm"
-                    >
-                      <Check size={16} /> Approve Claim
-                    </button>
-                    <button 
-                      onClick={() => updateClaimStatus(selectedClaim.id, 'Rejected')}
-                      className="flex-1 bg-white text-red-600 border border-red-200 py-2.5 rounded-lg text-sm font-medium hover:bg-red-50/20 transition-colors flex items-center justify-center gap-1"
-                    >
-                      <X size={16} /> Reject Claim
-                    </button>
-                  </>
-                ) : (
-                  <button 
-                    disabled 
-                    className="w-full bg-gray-150 text-gray-400 py-2.5 rounded-lg text-sm font-medium cursor-not-allowed flex items-center justify-center gap-1"
-                  >
-                    ✓ Claim Reconciled & Settle Completed
-                  </button>
-                )}
-              </div>
-            </div>
           </div>
         )}
+
+
 
         {/* Success Toast */}
         {successMessage && (

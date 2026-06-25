@@ -11,7 +11,8 @@ import {
   X,
   Eye,
   Calendar,
-  Bell
+  Bell,
+  ArrowLeft
 } from 'lucide-react';
 
 const AMCs = () => {
@@ -89,8 +90,106 @@ const AMCs = () => {
       <div className="flex-1 ml-64 min-h-screen flex flex-col">
         <Topbar title="AMC Subscriptions" />
 
-        <div className="p-6 space-y-6 flex-1">
-          {/* Summary Cards */}
+        {showDrawer && selectedAmc ? (
+          <div className="p-6 space-y-6 flex-1 bg-[#F8FAFC] text-left">
+            <div className="flex items-center justify-between">
+              <button 
+                onClick={() => setShowDrawer(false)}
+                className="flex items-center gap-2 text-sm font-semibold text-[#0D47A1] hover:text-blue-800 transition-colors"
+              >
+                <ArrowLeft size={16} /> Back to AMC Subscriptions
+              </button>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden flex flex-col max-w-3xl">
+              <div className="p-6 border-b border-[#E2E8F0] bg-[#F8FAFC] flex justify-between items-center">
+                <div>
+                  <h2 className="text-lg font-bold text-[#1E293B]">AMC Contract Details</h2>
+                  <p className="text-sm text-[#0D47A1] font-medium">{selectedAmc.id}</p>
+                </div>
+              </div>
+              
+              <div className="p-6 space-y-6 flex-1">
+                <div>
+                  <h3 className="text-xs uppercase text-[#64748B] font-semibold mb-2">Customer Info</h3>
+                  <div className="bg-[#F8FAFC] p-4 rounded-xl space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-[#64748B]">Name:</span>
+                      <span className="font-medium text-[#1E293B]">{selectedAmc.customer}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[#64748B]">Appliance:</span>
+                      <span className="font-medium text-[#1E293B]">{selectedAmc.product} ({selectedAmc.brand})</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[#64748B]">Model:</span>
+                      <span className="font-medium text-[#1E293B]">{selectedAmc.model}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-xs uppercase text-[#64748B] font-semibold mb-2">Plan Coverage</h3>
+                  <div className="bg-[#F8FAFC] p-4 rounded-xl space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-[#64748B]">Plan:</span>
+                      <span className="font-semibold text-indigo-600">{selectedAmc.planName}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[#64748B]">Visits:</span>
+                      <span className="font-medium text-[#1E293B]">{selectedAmc.visits} scheduled visits completed</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[#64748B]">Expiry Date:</span>
+                      <span className="font-medium text-red-600">{selectedAmc.expiryDate}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-xs uppercase text-[#64748B] font-semibold mb-2">Maintenance History</h3>
+                  <div className="border-l-2 border-[#E2E8F0] ml-2 pl-4 space-y-4">
+                    <div className="relative">
+                      <div className="absolute -left-[21px] top-1 w-3 h-3 bg-green-600 rounded-full"></div>
+                      <p className="text-sm font-medium text-[#1E293B]">Visit #1: Deep Cleaning</p>
+                      <p className="text-xs text-[#64748B]">Completed on 15 Feb, 2026 by Rahul Kumar</p>
+                    </div>
+                    {selectedAmc.visits.startsWith('0') ? (
+                      <div className="relative">
+                        <div className="absolute -left-[21px] top-1 w-3 h-3 bg-yellow-500 rounded-full"></div>
+                        <p className="text-sm font-medium text-[#1E293B]">Visit #1: Preventive Maintenance</p>
+                        <p className="text-xs text-[#64748B]">Scheduled for 30 Jun, 2026</p>
+                      </div>
+                    ) : (
+                      <div className="relative">
+                        <div className="absolute -left-[21px] top-1 w-3 h-3 bg-gray-300 rounded-full"></div>
+                        <p className="text-sm font-medium text-[#64748B]">Visit #2: Diagnostics checkup</p>
+                        <p className="text-xs text-[#64748B]">Pending schedule</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 border-t border-[#E2E8F0] flex gap-3 bg-[#F8FAFC]">
+                <button 
+                  onClick={() => triggerRenewalReminder(selectedAmc.id)}
+                  className="bg-white text-[#1E293B] border border-[#E2E8F0] px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-[#F8FAFC] transition-colors flex items-center justify-center gap-1"
+                >
+                  <Bell size={14} /> Send Reminder
+                </button>
+                <button 
+                  onClick={() => triggerScheduleVisit(selectedAmc.id)}
+                  className="bg-[#0D47A1] text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-1"
+                >
+                  Schedule Visit
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="p-6 space-y-6 flex-1">
+            {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {stats.map((card, index) => (
               <div key={index} className="bg-white p-6 rounded-2xl border border-[#E2E8F0] flex items-center gap-4">
@@ -219,103 +318,9 @@ const AMCs = () => {
             </div>
           </div>
         </div>
+      )}
 
-        {/* Details Drawer */}
-        {showDrawer && selectedAmc && (
-          <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-30 flex justify-end">
-            <div className="w-full max-w-md bg-white h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
-              <div className="p-6 border-b border-[#E2E8F0] flex justify-between items-center">
-                <div>
-                  <h2 className="text-lg font-bold text-[#1E293B]">AMC Contract Details</h2>
-                  <p className="text-sm text-[#0D47A1] font-medium">{selectedAmc.id}</p>
-                </div>
-                <button 
-                  onClick={() => setShowDrawer(false)}
-                  className="text-[#64748B] hover:text-[#1E293B] p-2 hover:bg-[#F8FAFC] rounded-full"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-              
-              <div className="p-6 space-y-6 flex-1 overflow-y-auto">
-                <div>
-                  <h3 className="text-xs uppercase text-[#64748B] font-semibold mb-2">Customer Info</h3>
-                  <div className="bg-[#F8FAFC] p-4 rounded-xl space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-[#64748B]">Name:</span>
-                      <span className="font-medium text-[#1E293B]">{selectedAmc.customer}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[#64748B]">Appliance:</span>
-                      <span className="font-medium text-[#1E293B]">{selectedAmc.product} ({selectedAmc.brand})</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[#64748B]">Model:</span>
-                      <span className="font-medium text-[#1E293B]">{selectedAmc.model}</span>
-                    </div>
-                  </div>
-                </div>
 
-                <div>
-                  <h3 className="text-xs uppercase text-[#64748B] font-semibold mb-2">Plan Coverage</h3>
-                  <div className="bg-[#F8FAFC] p-4 rounded-xl space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-[#64748B]">Plan:</span>
-                      <span className="font-semibold text-indigo-600">{selectedAmc.planName}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[#64748B]">Visits:</span>
-                      <span className="font-medium text-[#1E293B]">{selectedAmc.visits} scheduled visits completed</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[#64748B]">Expiry Date:</span>
-                      <span className="font-medium text-red-600">{selectedAmc.expiryDate}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-xs uppercase text-[#64748B] font-semibold mb-2">Maintenance History</h3>
-                  <div className="border-l-2 border-[#E2E8F0] ml-2 pl-4 space-y-4">
-                    <div className="relative">
-                      <div className="absolute -left-[21px] top-1 w-3 h-3 bg-green-600 rounded-full"></div>
-                      <p className="text-sm font-medium text-[#1E293B]">Visit #1: Deep Cleaning</p>
-                      <p className="text-xs text-[#64748B]">Completed on 15 Feb, 2026 by Rahul Kumar</p>
-                    </div>
-                    {selectedAmc.visits.startsWith('0') ? (
-                      <div className="relative">
-                        <div className="absolute -left-[21px] top-1 w-3 h-3 bg-yellow-500 rounded-full"></div>
-                        <p className="text-sm font-medium text-[#1E293B]">Visit #1: Preventive Maintenance</p>
-                        <p className="text-xs text-[#64748B]">Scheduled for 30 Jun, 2026</p>
-                      </div>
-                    ) : (
-                      <div className="relative">
-                        <div className="absolute -left-[21px] top-1 w-3 h-3 bg-gray-300 rounded-full"></div>
-                        <p className="text-sm font-medium text-[#64748B]">Visit #2: Diagnostics checkup</p>
-                        <p className="text-xs text-[#64748B]">Pending schedule</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-6 border-t border-[#E2E8F0] flex gap-3 bg-[#F8FAFC]">
-                <button 
-                  onClick={() => triggerRenewalReminder(selectedAmc.id)}
-                  className="flex-1 bg-white text-[#1E293B] border border-[#E2E8F0] py-2.5 rounded-lg text-sm font-medium hover:bg-[#F8FAFC] transition-colors flex items-center justify-center gap-1"
-                >
-                  <Bell size={14} /> Send Reminder
-                </button>
-                <button 
-                  onClick={() => triggerScheduleVisit(selectedAmc.id)}
-                  className="flex-1 bg-[#0D47A1] text-white py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-1"
-                >
-                  Schedule Visit
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Success Toast */}
         {successMessage && (

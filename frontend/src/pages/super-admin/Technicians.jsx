@@ -15,7 +15,13 @@ import {
   MapPin,
   X,
   CheckCircle2,
-  Plus
+  Plus,
+  ArrowLeft,
+  Mail,
+  Phone as PhoneIcon,
+  Calendar as CalendarIcon,
+  ShieldCheck,
+  Briefcase
 } from 'lucide-react';
 
 const Technicians = () => {
@@ -26,6 +32,7 @@ const Technicians = () => {
   const [selectedSkill, setSelectedSkill] = useState('All Skills');
   const [selectedStatus, setSelectedStatus] = useState('All Status');
   const [successMessage, setSuccessMessage] = useState('');
+  const [selectedTechProfile, setSelectedTechProfile] = useState(null);
 
   const [showModal, setShowModal] = useState(false);
   const [newTech, setNewTech] = useState({ name: '', skill: 'AC & Refrigerator', city: 'Delhi', rating: '5.0', availability: 'Available', status: 'Active' });
@@ -98,6 +105,260 @@ const Technicians = () => {
     return matchesSearch && matchesSkill && matchesStatus;
   });
 
+  const renderFullPageProfile = () => {
+    const tech = selectedTechProfile;
+    const mockEmail = `${tech.name.toLowerCase().replace(' ', '.')}@nigamcare.com`;
+    const mockPhone = "+91 9" + tech.id.replace('TECH-00', '') + "8765 4321";
+    const mockJoinedDate = "15 Jan 2025";
+    const mockReviews = [
+      { id: 1, author: "Rajesh S.", text: "Outstanding service. The technician identified the issue with my AC within 5 minutes and replaced the capacitor. Recommended!", rating: 5, date: "Yesterday" },
+      { id: 2, author: "Kiran P.", text: "Prompt and extremely professional. Cleaned up the workspace after repairing the refrigerator.", rating: 4.8, date: "3 days ago" },
+    ];
+    
+    return (
+      <div className="p-6 space-y-6 flex-1 bg-[#F8FAFC]">
+        {/* Back navigation & Header */}
+        <div className="flex items-center justify-between">
+          <button 
+            onClick={() => setSelectedTechProfile(null)}
+            className="flex items-center gap-2 text-sm font-semibold text-[#0D47A1] hover:text-blue-800 transition-colors"
+          >
+            <ArrowLeft size={16} /> Back to Technicians
+          </button>
+          
+          <div className="flex gap-2">
+            {tech.status === 'Pending' && (
+              <>
+                <button 
+                  onClick={() => {
+                    handleStatusChange(tech.id, 'Active');
+                    setSelectedTechProfile({ ...tech, status: 'Active' });
+                  }}
+                  className="bg-green-600 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-green-700 transition-colors flex items-center gap-1.5 shadow-sm"
+                >
+                  <CheckCircle size={14} /> Approve Partner
+                </button>
+                <button 
+                  onClick={() => {
+                    handleStatusChange(tech.id, 'Inactive');
+                    setSelectedTechProfile({ ...tech, status: 'Inactive' });
+                  }}
+                  className="bg-red-600 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-red-700 transition-colors flex items-center gap-1.5 shadow-sm"
+                >
+                  <XCircle size={14} /> Reject Partner
+                </button>
+              </>
+            )}
+
+            {tech.status === 'Active' && (
+              <button 
+                onClick={() => {
+                  handleStatusChange(tech.id, 'Inactive');
+                  setSelectedTechProfile({ ...tech, status: 'Inactive' });
+                }}
+                className="bg-red-600 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-red-700 transition-colors flex items-center gap-1.5 shadow-sm"
+              >
+                <Ban size={14} /> Suspend Partner
+              </button>
+            )}
+
+            {tech.status === 'Inactive' && (
+              <button 
+                onClick={() => {
+                  handleStatusChange(tech.id, 'Active');
+                  setSelectedTechProfile({ ...tech, status: 'Active' });
+                }}
+                className="bg-green-600 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-green-700 transition-colors flex items-center gap-1.5 shadow-sm"
+              >
+                <CheckCircle size={14} /> Activate Partner
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Profile Card */}
+        <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden text-left">
+          <div className="bg-gradient-to-r from-[#0D47A1] to-[#1E3A8A] h-32 relative"></div>
+          <div className="p-6 relative pt-0">
+            <div className="flex flex-col md:flex-row md:items-end justify-between -mt-16 mb-6 gap-4">
+              <div className="flex items-end gap-4">
+                <div className="w-24 h-24 bg-[#EEF4FF] rounded-full border-4 border-white shadow flex items-center justify-center text-[#0D47A1] font-bold text-3xl">
+                  {tech.name.split(' ').map(n => n[0]).join('')}
+                </div>
+                <div className="pb-1">
+                  <h1 className="text-2xl font-bold text-[#1E293B]">{tech.name}</h1>
+                  <p className="text-sm text-[#64748B] font-medium">{tech.id} • Verified Nigam Service Partner</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                  tech.status === 'Active' ? 'bg-green-50 text-green-700 border border-green-200' :
+                  tech.status === 'Inactive' ? 'bg-red-50 text-red-700 border border-red-200' :
+                  'bg-yellow-50 text-yellow-700 border border-yellow-200'
+                }`}>
+                  {tech.status}
+                </span>
+                <span className={`px-3 py-1 rounded-full text-xs font-semibold bg-[#F1F5F9] text-slate-700 border border-slate-200`}>
+                  {tech.availability}
+                </span>
+              </div>
+            </div>
+
+            {/* Profile Content Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              
+              {/* Left Column - Core Info */}
+              <div className="space-y-6 lg:col-span-1">
+                <div className="bg-[#F8FAFC] p-5 rounded-xl border border-[#E2E8F0]">
+                  <h3 className="text-sm font-bold text-[#1E293B] mb-4">Contact Information</h3>
+                  <div className="space-y-3.5 text-sm">
+                    <div className="flex items-center gap-3 text-slate-700">
+                      <Mail size={16} className="text-[#64748B] flex-shrink-0" />
+                      <span className="truncate">{mockEmail}</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-slate-700">
+                      <PhoneIcon size={16} className="text-[#64748B] flex-shrink-0" />
+                      <span>{mockPhone}</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-slate-700">
+                      <MapPin size={16} className="text-[#64748B] flex-shrink-0" />
+                      <span>{tech.city}, India</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-slate-700">
+                      <CalendarIcon size={16} className="text-[#64748B] flex-shrink-0" />
+                      <span>Joined {mockJoinedDate}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-[#F8FAFC] p-5 rounded-xl border border-[#E2E8F0]">
+                  <h3 className="text-sm font-bold text-[#1E293B] mb-4">Specialization</h3>
+                  <div className="space-y-2">
+                    <span className="inline-block bg-blue-50 text-[#0D47A1] text-xs font-semibold px-3 py-1 rounded-full border border-blue-100">
+                      {tech.skill}
+                    </span>
+                    <p className="text-xs text-[#64748B] mt-2">Certified Nigam Technician authorized to verify, repair and troubleshoot consumer products and appliances.</p>
+                  </div>
+                </div>
+
+                <div className="bg-[#F8FAFC] p-5 rounded-xl border border-[#E2E8F0]">
+                  <h3 className="text-sm font-bold text-[#1E293B] mb-4">Verification status</h3>
+                  <div className="space-y-3 text-xs">
+                    <div className="flex items-center justify-between py-1 border-b border-slate-100">
+                      <span className="text-[#64748B] font-medium">Aadhar Card Verification</span>
+                      <span className="text-green-600 font-semibold flex items-center gap-1">
+                        <ShieldCheck size={14} /> Verified
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between py-1 border-b border-slate-100">
+                      <span className="text-[#64748B] font-medium">PAN Card Verification</span>
+                      <span className="text-green-600 font-semibold flex items-center gap-1">
+                        <ShieldCheck size={14} /> Verified
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between py-1">
+                      <span className="text-[#64748B] font-medium">Background Verification</span>
+                      <span className="text-green-600 font-semibold flex items-center gap-1">
+                        <ShieldCheck size={14} /> Passed
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column - Stats & History */}
+              <div className="space-y-6 lg:col-span-2">
+                
+                {/* Stats row */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <div className="bg-white p-4 rounded-xl border border-[#E2E8F0] shadow-sm text-center">
+                    <p className="text-xs text-[#64748B] font-medium">Completed Jobs</p>
+                    <p className="text-2xl font-bold text-[#1E293B] mt-1">{tech.completedJobs}</p>
+                  </div>
+                  <div className="bg-white p-4 rounded-xl border border-[#E2E8F0] shadow-sm text-center">
+                    <p className="text-xs text-[#64748B] font-medium">Active Jobs</p>
+                    <p className="text-2xl font-bold text-[#1E293B] mt-1">{tech.activeJobs}</p>
+                  </div>
+                  <div className="bg-white p-4 rounded-xl border border-[#E2E8F0] shadow-sm text-center">
+                    <p className="text-xs text-[#64748B] font-medium">Avg Rating</p>
+                    <p className="text-2xl font-bold text-amber-500 mt-1 flex items-center justify-center gap-1">
+                      <Star size={20} fill="currentColor" /> {tech.rating}
+                    </p>
+                  </div>
+                  <div className="bg-white p-4 rounded-xl border border-[#E2E8F0] shadow-sm text-center">
+                    <p className="text-xs text-[#64748B] font-medium">Nigam Trust Score</p>
+                    <p className="text-2xl font-bold text-green-600 mt-1">98%</p>
+                  </div>
+                </div>
+
+                {/* Job History summary list */}
+                <div className="bg-white p-5 rounded-xl border border-[#E2E8F0] shadow-sm">
+                  <h3 className="text-sm font-bold text-[#1E293B] mb-4">Recent Service Activity</h3>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-start pb-3 border-b border-slate-100">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-800">AC Deep Cleaning & Service</p>
+                        <p className="text-xs text-slate-500">Ticket #NC-53920 • {tech.city}</p>
+                      </div>
+                      <span className="bg-green-50 text-green-600 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                        Completed
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-start pb-3 border-b border-slate-100">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-800">Double Door Refrigerator Repair</p>
+                        <p className="text-xs text-slate-500">Ticket #NC-53421 • {tech.city}</p>
+                      </div>
+                      <span className="bg-green-50 text-green-600 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                        Completed
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-800">Microwave Heating Element Replacement</p>
+                        <p className="text-xs text-slate-500">Ticket #NC-52840 • {tech.city}</p>
+                      </div>
+                      <span className="bg-green-50 text-green-600 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                        Completed
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Reviews */}
+                <div className="bg-white p-5 rounded-xl border border-[#E2E8F0] shadow-sm">
+                  <h3 className="text-sm font-bold text-[#1E293B] mb-4">Latest Customer Reviews</h3>
+                  <div className="space-y-4">
+                    {mockReviews.map(review => (
+                      <div key={review.id} className="space-y-1 pb-3 border-b border-slate-100 last:border-0 last:pb-0">
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="font-semibold text-slate-800">{review.author}</span>
+                          <span className="text-slate-400">{review.date}</span>
+                        </div>
+                        <div className="flex items-center gap-0.5 text-amber-500">
+                          <Star size={12} fill="currentColor" />
+                          <Star size={12} fill="currentColor" />
+                          <Star size={12} fill="currentColor" />
+                          <Star size={12} fill="currentColor" />
+                          <Star size={12} fill="currentColor" />
+                        </div>
+                        <p className="text-xs text-slate-600 italic font-normal">"{review.text}"</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex relative">
       {/* Sidebar */}
@@ -109,7 +370,10 @@ const Technicians = () => {
         <Topbar title="Technician Management" />
 
         {/* Body */}
-        <div className="p-6 space-y-6 flex-1">
+        {selectedTechProfile ? (
+          renderFullPageProfile()
+        ) : (
+          <div className="p-6 space-y-6 flex-1">
           
           {/* Header Actions */}
           <div className="flex justify-between items-center">
@@ -245,7 +509,7 @@ const Technicians = () => {
                       <td className="px-6 py-4 text-center">
                         <div className="flex gap-2 justify-center">
                           <button 
-                            onClick={() => showToast(`Opening profile details for ${tech.name}...`)}
+                            onClick={() => setSelectedTechProfile(tech)}
                             className="p-1.5 text-[#64748B] hover:text-[#0D47A1] hover:bg-[#EEF4FF] rounded" 
                             title="View Profile"
                           >
@@ -307,8 +571,9 @@ const Technicians = () => {
               </div>
             )}
           </div>
-
         </div>
+      )}
+
       </div>
 
       {/* Add Technician Modal */}

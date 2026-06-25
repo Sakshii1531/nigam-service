@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -25,6 +25,37 @@ import {
 
 const Sidebar = () => {
   const navigate = useNavigate();
+  const scrollContainerRef = useRef(null);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    let timer;
+    const savedScroll = sessionStorage.getItem('super-sidebar-scroll');
+    if (savedScroll) {
+      const scrollVal = parseInt(savedScroll, 10);
+      container.scrollTop = scrollVal;
+      // Re-apply after a short delay for layout paint
+      timer = setTimeout(() => {
+        container.scrollTop = scrollVal;
+      }, 50);
+    }
+
+    const handleScroll = () => {
+      // Only save if the container still has overflow or we are at a non-zero scroll position
+      if (container.scrollTop > 0 || container.scrollHeight > container.clientHeight) {
+        sessionStorage.setItem('super-sidebar-scroll', container.scrollTop.toString());
+      }
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+      if (timer) clearTimeout(timer);
+    };
+  }, []);
+
   const menuItems = [
     { path: '/super-admin/dashboard', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
     { path: '/super-admin/users', icon: <Users size={20} />, label: 'User Management' },
@@ -33,7 +64,6 @@ const Sidebar = () => {
     { path: '/super-admin/requests', icon: <ClipboardList size={20} />, label: 'Service Requests' },
     { path: '/super-admin/warranty', icon: <FileCheck size={20} />, label: 'Warranty Management' },
     { path: '/super-admin/assignment', icon: <UserPlus size={20} />, label: 'Tech Assignment' },
-    { path: '/super-admin/tracking', icon: <MapPin size={20} />, label: 'Live Tracking' },
     { path: '/super-admin/inventory', icon: <Package size={20} />, label: 'Spare Parts & Inventory' },
     { path: '/super-admin/orders', icon: <Truck size={20} />, label: 'Orders & Dispatch' },
     { path: '/super-admin/billing', icon: <CreditCard size={20} />, label: 'Billing & Payments' },
@@ -59,11 +89,19 @@ const Sidebar = () => {
       </div>
 
       {/* Navigation */}
-      <div className="flex-1 overflow-y-auto py-4 space-y-1">
+      <div 
+        ref={scrollContainerRef}
+        className="flex-1 overflow-y-auto py-4 space-y-1"
+      >
         {menuItems.map((item) => (
           <NavLink
             key={item.path}
             to={item.path}
+            onClick={() => {
+              if (scrollContainerRef.current) {
+                sessionStorage.setItem('super-sidebar-scroll', scrollContainerRef.current.scrollTop.toString());
+              }
+            }}
             className={({ isActive }) => `
               flex items-center gap-3 px-6 py-2.5 text-sm font-medium transition-colors
               ${isActive 

@@ -156,6 +156,8 @@ const ScrollToTop = () => {
     const resetScroll = () => {
       const scrollables = document.querySelectorAll('.overflow-y-auto, [class*="overflow-y-auto"], .overflow-auto');
       scrollables.forEach(el => {
+        // Do not reset scroll on sidebar/navigation panels
+        if (el.closest('.w-64') || el.closest('.w-72') || el.closest('aside') || el.closest('nav')) return;
         el.scrollTop = 0;
       });
     };

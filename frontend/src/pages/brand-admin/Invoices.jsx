@@ -13,7 +13,8 @@ import {
   Edit,
   MoreVertical,
   X,
-  FileText
+  FileText,
+  ArrowLeft
 } from 'lucide-react';
 
 const Invoices = () => {
@@ -72,7 +73,92 @@ const Invoices = () => {
         <Topbar title="Billing & Invoices" />
 
         {/* Body */}
-        <div className="p-6 space-y-6 flex-1">
+        {showDrawer && selectedInvoice ? (
+          <div className="p-6 space-y-6 flex-1 bg-[#F8FAFC] text-left">
+            <div className="flex items-center justify-between">
+              <button 
+                onClick={() => setShowDrawer(false)}
+                className="flex items-center gap-2 text-sm font-semibold text-[#0D47A1] hover:text-blue-800 transition-colors"
+              >
+                <ArrowLeft size={16} /> Back to Invoices
+              </button>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden flex flex-col max-w-3xl text-sm">
+              <div className="p-6 border-b border-[#E2E8F0] flex justify-between items-center bg-[#F8FAFC]">
+                <div>
+                  <h2 className="text-lg font-bold text-[#1E293B]">Invoice Breakdown</h2>
+                  <p className="text-sm text-[#0D47A1] font-medium">{selectedInvoice.id}</p>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-6 flex-1">
+                <div>
+                  <h3 className="text-xs uppercase text-[#64748B] font-semibold mb-2">Service Overview</h3>
+                  <div className="bg-[#F8FAFC] p-4 rounded-xl space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-[#64748B]">Customer Name:</span>
+                      <span className="font-medium text-[#1E293B]">{selectedInvoice.customer}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[#64748B]">Technician Assigned:</span>
+                      <span className="font-medium text-[#1E293B]">{selectedInvoice.technician}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[#64748B]">Appliance:</span>
+                      <span className="font-medium text-[#1E293B]">{selectedInvoice.product}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-xs uppercase text-[#64748B] font-semibold mb-2">Billing Details</h3>
+                  <div className="bg-[#F8FAFC] p-4 rounded-xl space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-[#64748B]">Labor Service Charge:</span>
+                      <span className="font-semibold text-slate-800">{selectedInvoice.serviceCharge}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[#64748B]">Spare Parts Cost:</span>
+                      <span className="font-semibold text-slate-800">{selectedInvoice.partCharge}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[#64748B]">GST (18% Integrated):</span>
+                      <span className="font-semibold text-slate-800">{selectedInvoice.gst}</span>
+                    </div>
+                    <div className="border-t border-[#E2E8F0] pt-2 flex justify-between text-base font-bold">
+                      <span className="text-[#1E293B]">Grand Total:</span>
+                      <span className="text-indigo-650">{selectedInvoice.total}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-xs uppercase text-[#64748B] font-semibold mb-2">Transaction Status</h3>
+                  <div className="flex items-center gap-2">
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                      selectedInvoice.status === 'Paid' ? 'bg-green-100 text-green-700' :
+                      selectedInvoice.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' :
+                      'bg-red-100 text-red-700'
+                    }`}>
+                      {selectedInvoice.status}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 border-t border-[#E2E8F0] flex gap-3 bg-[#F8FAFC]">
+                <button 
+                  onClick={() => triggerPdfDownload(selectedInvoice.id)}
+                  className="bg-[#0D47A1] text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+                >
+                  <FileText size={16} /> Download PDF Invoice
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="p-6 space-y-6 flex-1">
           
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -195,92 +281,11 @@ const Invoices = () => {
             </div>
           </div>
 
-        </div>
+          </div>
+        )}
       </div>
 
-      {/* Invoice Detail Drawer */}
-      {showDrawer && selectedInvoice && (
-        <div className="absolute inset-0 bg-black/20 backdrop-blur-sm z-30 flex justify-end">
-          <div className="w-full max-w-md bg-white h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
-            <div className="p-6 border-b border-[#E2E8F0] flex justify-between items-center bg-[#F8FAFC]">
-              <div>
-                <h2 className="text-lg font-bold text-[#1E293B]">Invoice Breakdown</h2>
-                <p className="text-sm text-[#0D47A1] font-medium">{selectedInvoice.id}</p>
-              </div>
-              <button 
-                onClick={() => setShowDrawer(false)}
-                className="text-[#64748B] hover:text-[#1E293B] p-2 hover:bg-[#EEF2F6] rounded-full"
-              >
-                <X size={20} />
-              </button>
-            </div>
 
-            <div className="p-6 space-y-6 flex-1 overflow-y-auto text-sm">
-              <div>
-                <h3 className="text-xs uppercase text-[#64748B] font-semibold mb-2">Service Overview</h3>
-                <div className="bg-[#F8FAFC] p-4 rounded-xl space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-[#64748B]">Customer Name:</span>
-                    <span className="font-medium text-[#1E293B]">{selectedInvoice.customer}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-[#64748B]">Technician Assigned:</span>
-                    <span className="font-medium text-[#1E293B]">{selectedInvoice.technician}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-[#64748B]">Appliance:</span>
-                    <span className="font-medium text-[#1E293B]">{selectedInvoice.product}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-xs uppercase text-[#64748B] font-semibold mb-2">Billing Details</h3>
-                <div className="bg-[#F8FAFC] p-4 rounded-xl space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-[#64748B]">Labor Service Charge:</span>
-                    <span className="font-semibold text-slate-800">{selectedInvoice.serviceCharge}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-[#64748B]">Spare Parts Cost:</span>
-                    <span className="font-semibold text-slate-800">{selectedInvoice.partCharge}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-[#64748B]">GST (18% Integrated):</span>
-                    <span className="font-semibold text-slate-800">{selectedInvoice.gst}</span>
-                  </div>
-                  <div className="border-t border-[#E2E8F0] pt-2 flex justify-between text-base font-bold">
-                    <span className="text-[#1E293B]">Grand Total:</span>
-                    <span className="text-indigo-650">{selectedInvoice.total}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-xs uppercase text-[#64748B] font-semibold mb-2">Transaction Status</h3>
-                <div className="flex items-center gap-2">
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                    selectedInvoice.status === 'Paid' ? 'bg-green-100 text-green-700' :
-                    selectedInvoice.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' :
-                    'bg-red-100 text-red-700'
-                  }`}>
-                    {selectedInvoice.status}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-6 border-t border-[#E2E8F0] flex gap-3">
-              <button 
-                onClick={() => triggerPdfDownload(selectedInvoice.id)}
-                className="flex-1 bg-[#0D47A1] text-white py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-1.5 shadow-sm"
-              >
-                <FileText size={16} /> Download PDF Invoice
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Success Toast */}
       {successMessage && (

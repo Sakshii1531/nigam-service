@@ -14,7 +14,8 @@ import {
   CheckCircle2,
   Calendar,
   User,
-  Activity
+  Activity,
+  ArrowLeft
 } from 'lucide-react';
 
 const Orders = () => {
@@ -75,7 +76,111 @@ const Orders = () => {
         <Topbar title="Orders & Dispatch" />
 
         {/* Body */}
-        <div className="p-6 space-y-6 flex-1">
+        {showDrawer && selectedOrder ? (
+          <div className="p-6 space-y-6 flex-1 bg-[#F8FAFC] text-left">
+            <div className="flex items-center justify-between">
+              <button 
+                onClick={() => {
+                  setShowDrawer(false);
+                  setSelectedOrder(null);
+                }}
+                className="flex items-center gap-2 text-sm font-semibold text-[#0D47A1] hover:text-blue-800 transition-colors"
+              >
+                <ArrowLeft size={16} /> Back to Orders
+              </button>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden flex flex-col">
+              <div className="p-6 border-b border-[#E2E8F0] bg-[#F8FAFC] flex justify-between items-center">
+                <div>
+                  <span className="text-xs font-bold text-[#0D47A1]">{selectedOrder.id}</span>
+                  <h3 className="text-lg font-black text-[#1E293B]">Order Details</h3>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-6 flex-1 overflow-y-auto">
+                <div className="space-y-4">
+                  <div className="bg-slate-50 p-4 rounded-xl space-y-2">
+                    <p className="text-xs text-[#64748B] font-bold uppercase tracking-wider flex items-center gap-1.5">
+                      <User size={14} /> Requester Info
+                    </p>
+                    <p className="text-sm font-bold text-[#1E293B]">{selectedOrder.requester}</p>
+                    <p className="text-xs text-slate-600">Shipment Destination: {selectedOrder.address}</p>
+                  </div>
+
+                  <div className="p-4 border border-[#E2E8F0] rounded-xl space-y-3">
+                    <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider flex items-center gap-1.5">
+                      <Package size={14} /> Ordered Item
+                    </h4>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-[#1E293B] font-bold">{selectedOrder.part}</span>
+                      <span className="font-semibold text-slate-700">Qty: {selectedOrder.quantity}</span>
+                    </div>
+                    <div className="flex justify-between text-xs pt-1">
+                      <span className="text-[#64748B]">Priority Level:</span>
+                      <span className="font-bold text-red-600">{selectedOrder.priority}</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-[#64748B]">Request Date:</span>
+                      <span className="font-bold text-slate-700">{selectedOrder.date}</span>
+                    </div>
+                  </div>
+
+                  <div className="p-4 border border-[#E2E8F0] rounded-xl space-y-3">
+                    <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider flex items-center gap-1.5">
+                      <Activity size={14} /> Shipping & Dispatch
+                    </h4>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-[#64748B]">Courier Partner:</span>
+                      <span className="font-bold text-[#1E293B]">{selectedOrder.courier}</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-[#64748B]">Tracking ID:</span>
+                      <span className="font-bold text-[#0D47A1]">{selectedOrder.trackingNo}</span>
+                    </div>
+                    <div className="flex justify-between text-xs border-t border-dashed border-[#E2E8F0] pt-2">
+                      <span className="text-[#64748B] font-bold">Delivery Status:</span>
+                      <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                        selectedOrder.status === 'Delivered' ? 'bg-green-50 text-green-600' :
+                        selectedOrder.status === 'Dispatched' ? 'bg-blue-50 text-blue-600' :
+                        'bg-yellow-50 text-yellow-600'
+                      }`}>
+                        {selectedOrder.status}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 border-t border-[#E2E8F0] bg-[#F8FAFC] flex gap-3">
+                {selectedOrder.status === 'Pending' && (
+                  <button
+                    onClick={() => handleStatusChange(selectedOrder.id, 'Dispatched')}
+                    className="bg-[#0D47A1] text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors shadow-sm text-center flex items-center justify-center gap-2"
+                  >
+                    <Truck size={16} /> Dispatch Order Now
+                  </button>
+                )}
+
+                {selectedOrder.status === 'Dispatched' && (
+                  <button
+                    onClick={() => handleStatusChange(selectedOrder.id, 'Delivered')}
+                    className="bg-green-600 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-green-700 transition-colors shadow-sm text-center flex items-center justify-center gap-2"
+                  >
+                    <CheckCircle size={16} /> Mark Order Delivered
+                  </button>
+                )}
+
+                {selectedOrder.status === 'Delivered' && (
+                  <div className="w-full bg-green-50 border border-green-200 text-green-700 p-3 rounded-xl text-center text-xs font-bold">
+                    Order Successfully Handed Over & Closed
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="p-6 space-y-6 flex-1">
           
           {/* Header Actions */}
           <div className="flex justify-between items-center">
@@ -204,112 +309,11 @@ const Orders = () => {
               </div>
             )}
           </div>
-
-        </div>
-      </div>
-
-      {/* Details Slide-out Drawer */}
-      {showDrawer && selectedOrder && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/45">
-          <div className="w-full max-w-md bg-white h-full shadow-2xl p-6 flex flex-col justify-between animate-slide-in">
-            <div className="space-y-6 overflow-y-auto">
-              <div className="flex justify-between items-center border-b border-[#E2E8F0] pb-4">
-                <div>
-                  <span className="text-xs font-bold text-[#0D47A1]">{selectedOrder.id}</span>
-                  <h3 className="text-lg font-black text-[#1E293B]">Order Details</h3>
-                </div>
-                <button 
-                  onClick={() => {
-                    setShowDrawer(false);
-                    setSelectedOrder(null);
-                  }}
-                  className="p-1.5 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-100"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div className="bg-slate-50 p-4 rounded-xl space-y-2">
-                  <p className="text-xs text-[#64748B] font-bold uppercase tracking-wider flex items-center gap-1.5">
-                    <User size={14} /> Requester Info
-                  </p>
-                  <p className="text-sm font-bold text-[#1E293B]">{selectedOrder.requester}</p>
-                  <p className="text-xs text-slate-600">Shipment Destination: {selectedOrder.address}</p>
-                </div>
-
-                <div className="p-4 border border-[#E2E8F0] rounded-xl space-y-3">
-                  <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider flex items-center gap-1.5">
-                    <Package size={14} /> Ordered Item
-                  </h4>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-[#1E293B] font-bold">{selectedOrder.part}</span>
-                    <span className="font-semibold text-slate-700">Qty: {selectedOrder.quantity}</span>
-                  </div>
-                  <div className="flex justify-between text-xs pt-1">
-                    <span className="text-[#64748B]">Priority Level:</span>
-                    <span className="font-bold text-red-600">{selectedOrder.priority}</span>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-[#64748B]">Request Date:</span>
-                    <span className="font-bold text-slate-700">{selectedOrder.date}</span>
-                  </div>
-                </div>
-
-                <div className="p-4 border border-[#E2E8F0] rounded-xl space-y-3">
-                  <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider flex items-center gap-1.5">
-                    <Activity size={14} /> Shipping & Dispatch
-                  </h4>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-[#64748B]">Courier Partner:</span>
-                    <span className="font-bold text-[#1E293B]">{selectedOrder.courier}</span>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-[#64748B]">Tracking ID:</span>
-                    <span className="font-bold text-[#0D47A1]">{selectedOrder.trackingNo}</span>
-                  </div>
-                  <div className="flex justify-between text-xs border-t border-dashed border-[#E2E8F0] pt-2">
-                    <span className="text-[#64748B] font-bold">Delivery Status:</span>
-                    <span className={`px-2 py-0.5 rounded text-xs font-bold ${
-                      selectedOrder.status === 'Delivered' ? 'bg-green-50 text-green-600' :
-                      selectedOrder.status === 'Dispatched' ? 'bg-blue-50 text-blue-600' :
-                      'bg-yellow-50 text-yellow-600'
-                    }`}>
-                      {selectedOrder.status}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-4 border-t border-[#E2E8F0] flex gap-3">
-              {selectedOrder.status === 'Pending' && (
-                <button
-                  onClick={() => handleStatusChange(selectedOrder.id, 'Dispatched')}
-                  className="w-full bg-[#0D47A1] text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm text-center flex items-center justify-center gap-2"
-                >
-                  <Truck size={16} /> Dispatch Order Now
-                </button>
-              )}
-
-              {selectedOrder.status === 'Dispatched' && (
-                <button
-                  onClick={() => handleStatusChange(selectedOrder.id, 'Delivered')}
-                  className="w-full bg-green-600 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-green-700 transition-colors shadow-sm text-center flex items-center justify-center gap-2"
-                >
-                  <CheckCircle size={16} /> Mark Order Delivered
-                </button>
-              )}
-
-              {selectedOrder.status === 'Delivered' && (
-                <div className="w-full bg-green-50 border border-green-200 text-green-700 p-3 rounded-xl text-center text-xs font-bold">
-                  Order Successfully Handed Over & Closed
-                </div>
-              )}
-            </div>
-          </div>
         </div>
       )}
+      </div>
+
+
 
       {/* Success Toast */}
       {successMessage && (

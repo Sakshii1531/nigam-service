@@ -11,7 +11,8 @@ import {
   Eye,
   QrCode,
   AlertTriangle,
-  PackageCheck
+  PackageCheck,
+  ArrowLeft
 } from 'lucide-react';
 
 const ReverseLogistics = () => {
@@ -79,8 +80,104 @@ const ReverseLogistics = () => {
       <div className="flex-1 ml-64 min-h-screen flex flex-col relative">
         <Topbar title="Defective Parts Return (Reverse Logistics)" />
 
-        <div className="p-6 space-y-6 flex-1">
-          {/* Stats Grid */}
+        {showDrawer && selectedReturn ? (
+          <div className="p-6 space-y-6 flex-1 bg-[#F8FAFC] text-left">
+            <div className="flex items-center justify-between">
+              <button 
+                onClick={() => setShowDrawer(false)}
+                className="flex items-center gap-2 text-sm font-semibold text-[#0D47A1] hover:text-blue-800 transition-colors"
+              >
+                <ArrowLeft size={16} /> Back to Returns
+              </button>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden flex flex-col max-w-3xl text-sm">
+              <div className="p-6 border-b border-[#E2E8F0] flex justify-between items-center bg-[#F8FAFC]">
+                <div>
+                  <h2 className="text-lg font-bold text-[#1E293B]">Return Defective Part</h2>
+                  <p className="text-sm text-[#0D47A1] font-medium">{selectedReturn.id}</p>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-6 flex-1">
+                <div>
+                  <h3 className="text-xs uppercase text-[#64748B] font-semibold mb-2">Item Specifications</h3>
+                  <div className="bg-[#F8FAFC] p-4 rounded-xl space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-[#64748B]">Part:</span>
+                      <span className="font-semibold text-[#1E293B]">{selectedReturn.partName}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[#64748B]">SKU:</span>
+                      <span className="font-mono text-[#1E293B]">{selectedReturn.sku}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[#64748B]">Ticket ID:</span>
+                      <span className="font-semibold text-[#0D47A1]">{selectedReturn.ticketId}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-xs uppercase text-[#64748B] font-semibold mb-2">Logistics & Tracking</h3>
+                  <div className="bg-[#F8FAFC] p-4 rounded-xl space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-[#64748B]">Technician:</span>
+                      <span className="font-medium text-[#1E293B]">{selectedReturn.technician}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[#64748B]">Courier Provider:</span>
+                      <span className="font-medium text-[#1E293B]">BlueDart Express</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[#64748B]">AWB Tracking:</span>
+                      <span className="font-mono text-[#1E293B]">{selectedReturn.trackingNo}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-xs uppercase text-[#64748B] font-semibold mb-2">Logistics Timeline</h3>
+                  <div className="border-l-2 border-[#E2E8F0] ml-2 pl-4 space-y-3">
+                    <div className="relative">
+                      <div className="absolute -left-[21px] top-1 w-3 h-3 bg-green-600 rounded-full"></div>
+                      <p className="font-semibold text-slate-800">Part replaced at client site</p>
+                      <p className="text-xs text-slate-500">{selectedReturn.replaceDate}</p>
+                    </div>
+                    {selectedReturn.transitStatus !== 'Replaced' && (
+                      <div className="relative">
+                        <div className="absolute -left-[21px] top-1 w-3 h-3 bg-green-600 rounded-full"></div>
+                        <p className="font-semibold text-slate-800">Picked up by BlueDart</p>
+                        <p className="text-xs text-slate-500">AWB Active</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 border-t border-[#E2E8F0] flex gap-3 bg-[#F8FAFC]">
+                {(selectedReturn.status === 'Pending Verification' || selectedReturn.status === 'Pending Return Shipment') && (
+                  <>
+                    <button 
+                      onClick={() => handleVerify(selectedReturn.id)}
+                      className="bg-[#0D47A1] text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-1 shadow-sm"
+                    >
+                      Verify Part Return
+                    </button>
+                    <button 
+                      onClick={() => handleFlagDamage(selectedReturn.id)}
+                      className="bg-white text-red-655 border border-red-200 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-red-50/20 transition-colors flex items-center justify-center gap-1"
+                    >
+                      <AlertTriangle size={14} /> Flag Transit Damage
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="p-6 space-y-6 flex-1">
+            {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {stats.map((card, index) => (
               <div key={index} className="bg-white p-6 rounded-2xl border border-[#E2E8F0] flex items-center gap-4">
@@ -202,101 +299,9 @@ const ReverseLogistics = () => {
             </div>
           </div>
         </div>
+      )}
 
-        {/* Details Drawer */}
-        {showDrawer && selectedReturn && (
-          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm z-30 flex justify-end">
-            <div className="w-full max-w-md bg-white h-full shadow-2xl flex flex-col">
-              <div className="p-6 border-b border-[#E2E8F0] flex justify-between items-center">
-                <div>
-                  <h2 className="text-lg font-bold text-[#1E293B]">Return Defective Part</h2>
-                  <p className="text-sm text-[#0D47A1] font-medium">{selectedReturn.id}</p>
-                </div>
-                <button 
-                  onClick={() => setShowDrawer(false)}
-                  className="text-[#64748B] hover:text-[#1E293B] p-2 hover:bg-[#F8FAFC] rounded-full"
-                >
-                  <X size={20} />
-                </button>
-              </div>
 
-              <div className="p-6 space-y-6 flex-1 overflow-y-auto text-sm">
-                <div>
-                  <h3 className="text-xs uppercase text-[#64748B] font-semibold mb-2">Item Specifications</h3>
-                  <div className="bg-[#F8FAFC] p-4 rounded-xl space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-[#64748B]">Part:</span>
-                      <span className="font-semibold text-[#1E293B]">{selectedReturn.partName}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[#64748B]">SKU:</span>
-                      <span className="font-mono text-[#1E293B]">{selectedReturn.sku}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[#64748B]">Ticket ID:</span>
-                      <span className="font-semibold text-[#0D47A1]">{selectedReturn.ticketId}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-xs uppercase text-[#64748B] font-semibold mb-2">Logistics & Tracking</h3>
-                  <div className="bg-[#F8FAFC] p-4 rounded-xl space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-[#64748B]">Technician:</span>
-                      <span className="font-medium text-[#1E293B]">{selectedReturn.technician}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[#64748B]">Courier Provider:</span>
-                      <span className="font-medium text-[#1E293B]">BlueDart Express</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[#64748B]">AWB Tracking:</span>
-                      <span className="font-mono text-[#1E293B]">{selectedReturn.trackingNo}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-xs uppercase text-[#64748B] font-semibold mb-2">Logistics Timeline</h3>
-                  <div className="border-l-2 border-[#E2E8F0] ml-2 pl-4 space-y-3">
-                    <div className="relative">
-                      <div className="absolute -left-[21px] top-1 w-3 h-3 bg-green-600 rounded-full"></div>
-                      <p className="font-semibold text-slate-800">Part replaced at client site</p>
-                      <p className="text-xs text-slate-500">{selectedReturn.replaceDate}</p>
-                    </div>
-                    {selectedReturn.transitStatus !== 'Replaced' && (
-                      <div className="relative">
-                        <div className="absolute -left-[21px] top-1 w-3 h-3 bg-green-600 rounded-full"></div>
-                        <p className="font-semibold text-slate-800">Picked up by BlueDart</p>
-                        <p className="text-xs text-slate-500">AWB Active</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-6 border-t border-[#E2E8F0] flex gap-3">
-                {(selectedReturn.status === 'Pending Verification' || selectedReturn.status === 'Pending Return Shipment') && (
-                  <>
-                    <button 
-                      onClick={() => handleVerify(selectedReturn.id)}
-                      className="flex-1 bg-[#0D47A1] text-white py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-1 shadow-sm"
-                    >
-                      Verify Part Return
-                    </button>
-                    <button 
-                      onClick={() => handleFlagDamage(selectedReturn.id)}
-                      className="flex-1 bg-white text-red-655 border border-red-200 py-2.5 rounded-lg text-sm font-medium hover:bg-red-50/20 transition-colors flex items-center justify-center gap-1"
-                    >
-                      <AlertTriangle size={14} /> Flag Transit Damage
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Success Toast */}
         {successMessage && (

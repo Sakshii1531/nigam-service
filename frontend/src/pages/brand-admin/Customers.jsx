@@ -13,7 +13,8 @@ import {
   CheckCircle2,
   Send,
   ShieldCheck,
-  ClipboardList
+  ClipboardList,
+  ArrowLeft
 } from 'lucide-react';
 
 const Customers = () => {
@@ -68,7 +69,118 @@ const Customers = () => {
         <Topbar title="Customer Management" />
 
         {/* Body */}
-        <div className="p-6 space-y-6 flex-1">
+        {showDrawer && selectedCustomer ? (
+          <div className="p-6 space-y-6 flex-1 bg-[#F8FAFC] text-left">
+            <div className="flex items-center justify-between">
+              <button 
+                onClick={() => setShowDrawer(false)}
+                className="flex items-center gap-2 text-sm font-semibold text-[#0D47A1] hover:text-blue-800 transition-colors"
+              >
+                <ArrowLeft size={16} /> Back to Customers
+              </button>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden flex flex-col max-w-3xl">
+              {/* Header */}
+              <div className="p-6 border-b border-[#E2E8F0] flex justify-between items-center bg-[#F8FAFC]">
+                <div>
+                  <h3 className="text-lg font-bold text-[#1E293B]">Customer Profile</h3>
+                  <p className="text-xs text-[#64748B]">Verify details, history and active status</p>
+                </div>
+              </div>
+
+              {/* Body */}
+              <div className="p-6 space-y-6 flex-1">
+                
+                {/* Basic Info */}
+                <div className="flex items-center gap-4 border-b border-[#E2E8F0] pb-6">
+                  <div className="w-16 h-16 bg-[#EEF4FF] rounded-full flex items-center justify-center text-[#0D47A1] font-bold text-2xl">
+                    {selectedCustomer.name.split(' ').map(n => n[0]).join('')}
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-bold text-[#1E293B]">{selectedCustomer.name}</h4>
+                    <p className="text-sm font-medium text-[#0D47A1]">{selectedCustomer.id}</p>
+                    <span className={`inline-block mt-1 text-xs font-semibold px-2 py-0.5 rounded-full ${
+                      selectedCustomer.warrantyStatus === 'Under Warranty' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-orange-50 text-orange-700 border border-orange-200'
+                    }`}>
+                      {selectedCustomer.warrantyStatus}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Contact Details */}
+                <div className="space-y-3">
+                  <h5 className="text-xs font-bold uppercase tracking-wider text-[#64748B]">Contact Info</h5>
+                  <div className="bg-[#F8FAFC] p-4 rounded-xl border border-[#E2E8F0] space-y-2 text-sm text-[#1E293B]">
+                    <p className="flex items-center gap-2"><Mail size={16} className="text-[#64748B]" /> {selectedCustomer.email}</p>
+                    <p className="flex items-center gap-2"><Phone size={16} className="text-[#64748B]" /> {selectedCustomer.phone}</p>
+                    <p className="flex items-center gap-2"><MapPin size={16} className="text-[#64748B]" /> {selectedCustomer.city}</p>
+                  </div>
+                </div>
+
+                {/* Products Registered */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h5 className="text-xs font-bold uppercase tracking-wider text-[#64748B]">Registered Products</h5>
+                    <span className="text-xs font-bold text-[#0D47A1] bg-blue-50 px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <ShieldCheck size={12} /> {selectedCustomer.products.length} Products
+                    </span>
+                  </div>
+                  <div className="divide-y divide-[#E2E8F0] border border-[#E2E8F0] rounded-xl overflow-hidden bg-white text-sm">
+                    {selectedCustomer.products.map((prod, idx) => (
+                      <div key={idx} className="p-3 hover:bg-[#F8FAFC]">
+                        <p className="font-medium text-[#1E293B]">{prod}</p>
+                        <p className="text-xs text-[#64748B]">Warranty Active</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Active Complaints */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h5 className="text-xs font-bold uppercase tracking-wider text-[#64748B]">Complaints & Tickets</h5>
+                    <span className="text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <ClipboardList size={12} /> {selectedCustomer.complaintsList.length} Active
+                    </span>
+                  </div>
+                  {selectedCustomer.complaintsList.length > 0 ? (
+                    <div className="divide-y divide-[#E2E8F0] border border-[#E2E8F0] rounded-xl overflow-hidden bg-white text-sm">
+                      {selectedCustomer.complaintsList.map((comp, idx) => (
+                        <div key={idx} className="p-3 bg-red-50/20">
+                          <p className="font-medium text-red-700">{comp}</p>
+                          <p className="text-xs text-red-500">Status: In Progress</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-green-600 bg-green-50 p-3 rounded-xl border border-green-200 font-medium">
+                      No active complaints or service tickets found.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="p-4 border-t border-[#E2E8F0] bg-[#F8FAFC] flex gap-3">
+                <button 
+                  onClick={() => { handleSendNotification(selectedCustomer.name); setShowDrawer(false); }}
+                  className="bg-[#0D47A1] text-white px-6 py-2.5 rounded-xl text-xs font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-1"
+                >
+                  <Send size={14} /> Send Message
+                </button>
+                <button 
+                  onClick={() => setShowDrawer(false)}
+                  className="bg-white text-[#64748B] border border-[#E2E8F0] px-6 py-2.5 rounded-xl text-xs font-semibold hover:bg-[#F8FAFC] transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+
+            </div>
+          </div>
+        ) : (
+          <div className="p-6 space-y-6 flex-1">
           
           {/* Filters & Search */}
           <div className="bg-white p-4 rounded-2xl border border-[#E2E8F0] flex flex-wrap gap-4 items-center justify-between">
@@ -210,119 +322,6 @@ const Customers = () => {
             </div>
           </div>
 
-        </div>
-
-        {/* Slide-over Customer Details Drawer */}
-        {showDrawer && selectedCustomer && (
-          <div className="fixed inset-0 z-40 overflow-hidden">
-            <div className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity" onClick={() => setShowDrawer(false)} />
-            <div className="absolute inset-y-0 right-0 max-w-full flex pl-10">
-              <div className="w-screen max-w-md bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
-                
-                {/* Header */}
-                <div className="p-6 border-b border-[#E2E8F0] flex justify-between items-center bg-[#F8FAFC]">
-                  <div>
-                    <h3 className="text-lg font-bold text-[#1E293B]">Customer Profile</h3>
-                    <p className="text-xs text-[#64748B]">Verify details, history and active status</p>
-                  </div>
-                  <button 
-                    onClick={() => setShowDrawer(false)}
-                    className="text-[#64748B] hover:text-[#1E293B] p-2 hover:bg-[#E2E8F0] rounded-full"
-                  >
-                    <X size={20} />
-                  </button>
-                </div>
-
-                {/* Body */}
-                <div className="p-6 space-y-6 flex-1 overflow-y-auto">
-                  
-                  {/* Basic Info */}
-                  <div className="flex items-center gap-4 border-b border-[#E2E8F0] pb-6">
-                    <div className="w-16 h-16 bg-[#EEF4FF] rounded-full flex items-center justify-center text-[#0D47A1] font-bold text-2xl">
-                      {selectedCustomer.name.split(' ').map(n => n[0]).join('')}
-                    </div>
-                    <div>
-                      <h4 className="text-lg font-bold text-[#1E293B]">{selectedCustomer.name}</h4>
-                      <p className="text-sm font-medium text-[#0D47A1]">{selectedCustomer.id}</p>
-                      <span className={`inline-block mt-1 text-xs font-semibold px-2 py-0.5 rounded-full ${
-                        selectedCustomer.warrantyStatus === 'Under Warranty' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-orange-50 text-orange-700 border border-orange-200'
-                      }`}>
-                        {selectedCustomer.warrantyStatus}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Contact Details */}
-                  <div className="space-y-3">
-                    <h5 className="text-xs font-bold uppercase tracking-wider text-[#64748B]">Contact Info</h5>
-                    <div className="bg-[#F8FAFC] p-4 rounded-xl border border-[#E2E8F0] space-y-2 text-sm text-[#1E293B]">
-                      <p className="flex items-center gap-2"><Mail size={16} className="text-[#64748B]" /> {selectedCustomer.email}</p>
-                      <p className="flex items-center gap-2"><Phone size={16} className="text-[#64748B]" /> {selectedCustomer.phone}</p>
-                      <p className="flex items-center gap-2"><MapPin size={16} className="text-[#64748B]" /> {selectedCustomer.city}</p>
-                    </div>
-                  </div>
-
-                  {/* Products Registered */}
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h5 className="text-xs font-bold uppercase tracking-wider text-[#64748B]">Registered Products</h5>
-                      <span className="text-xs font-bold text-[#0D47A1] bg-blue-50 px-2 py-0.5 rounded-full flex items-center gap-1">
-                        <ShieldCheck size={12} /> {selectedCustomer.products.length} Products
-                      </span>
-                    </div>
-                    <div className="divide-y divide-[#E2E8F0] border border-[#E2E8F0] rounded-xl overflow-hidden bg-white text-sm">
-                      {selectedCustomer.products.map((prod, idx) => (
-                        <div key={idx} className="p-3 hover:bg-[#F8FAFC]">
-                          <p className="font-medium text-[#1E293B]">{prod}</p>
-                          <p className="text-xs text-[#64748B]">Warranty Active</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Active Complaints */}
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h5 className="text-xs font-bold uppercase tracking-wider text-[#64748B]">Complaints & Tickets</h5>
-                      <span className="text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-full flex items-center gap-1">
-                        <ClipboardList size={12} /> {selectedCustomer.complaintsList.length} Active
-                      </span>
-                    </div>
-                    {selectedCustomer.complaintsList.length > 0 ? (
-                      <div className="divide-y divide-[#E2E8F0] border border-[#E2E8F0] rounded-xl overflow-hidden bg-white text-sm">
-                        {selectedCustomer.complaintsList.map((comp, idx) => (
-                          <div key={idx} className="p-3 bg-red-50/20">
-                            <p className="font-medium text-red-700">{comp}</p>
-                            <p className="text-xs text-red-500">Status: In Progress</p>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-xs text-green-600 bg-green-50 p-3 rounded-xl border border-green-200 font-medium">
-                        No active complaints or service tickets found.
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Footer */}
-                <div className="p-4 border-t border-[#E2E8F0] bg-[#F8FAFC] flex gap-3">
-                  <button 
-                    onClick={() => { handleSendNotification(selectedCustomer.name); setShowDrawer(false); }}
-                    className="flex-1 bg-[#0D47A1] text-white py-2.5 rounded-xl text-xs font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-1"
-                  >
-                    <Send size={14} /> Send Message
-                  </button>
-                  <button 
-                    onClick={() => setShowDrawer(false)}
-                    className="flex-1 bg-white text-[#64748B] border border-[#E2E8F0] py-2.5 rounded-xl text-xs font-semibold hover:bg-[#F8FAFC] transition-colors"
-                  >
-                    Close
-                  </button>
-                </div>
-
-              </div>
-            </div>
           </div>
         )}
 

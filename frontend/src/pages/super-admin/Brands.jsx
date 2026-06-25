@@ -12,7 +12,11 @@ import {
   Plus,
   ShieldCheck,
   TrendingUp,
-  X
+  X,
+  ArrowLeft,
+  Mail,
+  Phone as PhoneIcon,
+  Calendar as CalendarIcon
 } from 'lucide-react';
 
 const Brands = () => {
@@ -23,6 +27,7 @@ const Brands = () => {
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
   const [selectedStatus, setSelectedStatus] = useState('All Status');
   const [successMessage, setSuccessMessage] = useState('');
+  const [selectedBrandProfile, setSelectedBrandProfile] = useState(null);
 
   const [showModal, setShowModal] = useState(false);
   const [newBrand, setNewBrand] = useState({ name: '', category: 'Home Appliances', activeCases: '0', spareStock: '0', status: 'Active', revenue: '₹0' });
@@ -86,6 +91,178 @@ const Brands = () => {
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
+  const renderFullPageBrand = () => {
+    const brand = selectedBrandProfile;
+    const mockEmail = `support@${brand.name.toLowerCase().replace(' ', '')}.com`;
+    const mockPhone = "+91 1800 " + brand.id.replace('BRD-00', '') + "24 680";
+    const mockJoinedDate = "10 Dec 2024";
+    const mockServices = [
+      { id: 1, name: "Refrigerator Cooling Coil Replacement", category: "Appliance Repair", count: 24, status: "Active" },
+      { id: 2, name: "Washing Machine Motor Overhaul", category: "Appliance Repair", count: 18, status: "Active" },
+      { id: 3, name: "AC Deep Cleaning Package", category: "Maintenance", count: 105, status: "Active" },
+    ];
+    
+    return (
+      <div className="p-6 space-y-6 flex-1 bg-[#F8FAFC]">
+        {/* Back navigation & Header */}
+        <div className="flex items-center justify-between">
+          <button 
+            onClick={() => setSelectedBrandProfile(null)}
+            className="flex items-center gap-2 text-sm font-semibold text-[#0D47A1] hover:text-blue-800 transition-colors"
+          >
+            <ArrowLeft size={16} /> Back to Partner Brands
+          </button>
+          
+          <div className="flex gap-2">
+            {brand.status === 'Pending' ? (
+              <button 
+                onClick={() => {
+                  handleStatusChange(brand.id, 'Active');
+                  setSelectedBrandProfile({ ...brand, status: 'Active' });
+                }}
+                className="bg-green-600 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-green-700 transition-colors flex items-center gap-1.5 shadow-sm"
+              >
+                <ShieldCheck size={14} /> Approve Brand
+              </button>
+            ) : (
+              <button 
+                onClick={() => {
+                  handleStatusChange(brand.id, 'Pending');
+                  setSelectedBrandProfile({ ...brand, status: 'Pending' });
+                }}
+                className="bg-red-600 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-red-700 transition-colors flex items-center gap-1.5 shadow-sm"
+              >
+                <XCircle size={14} /> Deactivate Brand
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Brand Card */}
+        <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden text-left">
+          <div className="bg-gradient-to-r from-[#0D47A1] to-[#1E3A8A] h-32 relative"></div>
+          <div className="p-6 relative pt-0">
+            <div className="flex flex-col md:flex-row md:items-end justify-between -mt-16 mb-6 gap-4">
+              <div className="flex items-end gap-4">
+                <div className="w-24 h-24 bg-[#EEF4FF] rounded-lg border-4 border-white shadow flex items-center justify-center text-[#0D47A1] font-bold text-3xl">
+                  {brand.name[0]}
+                </div>
+                <div className="pb-1">
+                  <h1 className="text-2xl font-bold text-[#1E293B]">{brand.name}</h1>
+                  <p className="text-sm text-[#64748B] font-medium">{brand.id} • Authorized Nigam Partner Brand</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                  brand.status === 'Active' ? 'bg-green-50 text-green-700 border border-green-200' :
+                  'bg-yellow-50 text-yellow-700 border border-yellow-200'
+                }`}>
+                  {brand.status}
+                </span>
+                <span className={`px-3 py-1 rounded-full text-xs font-semibold bg-[#EEF4FF] text-[#0D47A1] border border-blue-200`}>
+                  {brand.category}
+                </span>
+              </div>
+            </div>
+
+            {/* Content Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              
+              {/* Left Column - Core Info */}
+              <div className="space-y-6 lg:col-span-1">
+                <div className="bg-[#F8FAFC] p-5 rounded-xl border border-[#E2E8F0]">
+                  <h3 className="text-sm font-bold text-[#1E293B] mb-4">Partner Brand Info</h3>
+                  <div className="space-y-3.5 text-sm">
+                    <div className="flex items-center gap-3 text-slate-700">
+                      <Mail size={16} className="text-[#64748B] flex-shrink-0" />
+                      <span className="truncate">{mockEmail}</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-slate-700">
+                      <PhoneIcon size={16} className="text-[#64748B] flex-shrink-0" />
+                      <span>{mockPhone}</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-slate-700">
+                      <CalendarIcon size={16} className="text-[#64748B] flex-shrink-0" />
+                      <span>Partnered {mockJoinedDate}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-[#F8FAFC] p-5 rounded-xl border border-[#E2E8F0]">
+                  <h3 className="text-sm font-bold text-[#1E293B] mb-4">SLA Compliance</h3>
+                  <div className="space-y-3 text-xs">
+                    <div className="flex justify-between py-1 border-b border-slate-100">
+                      <span className="text-[#64748B] font-medium">Avg Resolution Time</span>
+                      <span className="text-slate-800 font-semibold">24.5 Hrs</span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-slate-100">
+                      <span className="text-[#64748B] font-medium">SLA Adherence Rate</span>
+                      <span className="text-green-600 font-semibold">97.8%</span>
+                    </div>
+                    <div className="flex justify-between py-1">
+                      <span className="text-[#64748B] font-medium">Customer Sat Score</span>
+                      <span className="text-amber-500 font-semibold">4.7 / 5.0</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column - Stats & History */}
+              <div className="space-y-6 lg:col-span-2">
+                
+                {/* Stats row */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <div className="bg-white p-4 rounded-xl border border-[#E2E8F0] shadow-sm text-center">
+                    <p className="text-xs text-[#64748B] font-medium">Active Cases</p>
+                    <p className="text-2xl font-bold text-[#1E293B] mt-1">{brand.activeCases}</p>
+                  </div>
+                  <div className="bg-white p-4 rounded-xl border border-[#E2E8F0] shadow-sm text-center">
+                    <p className="text-xs text-[#64748B] font-medium">Spare Parts Stock</p>
+                    <p className="text-2xl font-bold text-blue-600 mt-1">{brand.spareStock}</p>
+                  </div>
+                  <div className="bg-white p-4 rounded-xl border border-[#E2E8F0] shadow-sm text-center">
+                    <p className="text-xs text-[#64748B] font-medium">Revenue Share</p>
+                    <p className="text-2xl font-bold text-green-600 mt-1 flex items-center justify-center gap-1">
+                      <TrendingUp size={18} /> {brand.revenue}
+                    </p>
+                  </div>
+                  <div className="bg-white p-4 rounded-xl border border-[#E2E8F0] shadow-sm text-center">
+                    <p className="text-xs text-[#64748B] font-medium">Contract Terms</p>
+                    <p className="text-sm font-semibold text-slate-800 mt-2">12 Months (Auto-Renew)</p>
+                  </div>
+                </div>
+
+                {/* Popular Services Catalog summary */}
+                <div className="bg-white p-5 rounded-xl border border-[#E2E8F0] shadow-sm">
+                  <h3 className="text-sm font-bold text-[#1E293B] mb-4">Service Offerings & Statistics</h3>
+                  <div className="space-y-4">
+                    {mockServices.map(service => (
+                      <div key={service.id} className="flex justify-between items-start pb-3 border-b border-slate-100 last:border-0 last:pb-0">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-800">{service.name}</p>
+                          <p className="text-xs text-slate-500">{service.category}</p>
+                        </div>
+                        <div className="text-right">
+                          <span className="bg-blue-50 text-[#0D47A1] text-xs font-semibold px-2.5 py-0.5 rounded-full block w-fit ml-auto">
+                            {service.count} Tickets
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex relative">
       {/* Sidebar */}
@@ -97,7 +274,10 @@ const Brands = () => {
         <Topbar title="Brand Management" />
 
         {/* Body */}
-        <div className="p-6 space-y-6 flex-1">
+        {selectedBrandProfile ? (
+          renderFullPageBrand()
+        ) : (
+          <div className="p-6 space-y-6 flex-1">
           
           {/* Header Actions */}
           <div className="flex justify-between items-center">
@@ -210,7 +390,7 @@ const Brands = () => {
                       <td className="px-6 py-4 text-center">
                         <div className="flex gap-2 justify-center">
                           <button 
-                            onClick={() => showToast(`Opening profile details for brand ${brand.name}...`)}
+                            onClick={() => setSelectedBrandProfile(brand)}
                             className="p-1.5 text-[#64748B] hover:text-[#0D47A1] hover:bg-[#EEF4FF] rounded" 
                             title="View Details"
                           >
@@ -251,8 +431,9 @@ const Brands = () => {
               </div>
             )}
           </div>
-
         </div>
+      )}
+
       </div>
 
       {/* Add Brand Modal */}
