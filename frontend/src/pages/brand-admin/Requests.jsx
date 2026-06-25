@@ -12,19 +12,25 @@ import {
   Clock,
   AlertTriangle,
   CheckCircle2,
-  X
+  X,
+  Check
 } from 'lucide-react';
 
 const Requests = () => {
   const [showDrawer, setShowDrawer] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
+  
+  const [successMessage, setSuccessMessage] = useState('');
+  const [showReassignModal, setShowReassignModal] = useState(false);
+  const [reassignTechName, setReassignTechName] = useState('Rahul Kumar');
 
-  const summaryCards = [
-    { title: 'Pending Requests', value: '124', icon: <Clock size={20} />, color: 'bg-yellow-500' },
-    { title: 'Active Requests', value: '86', icon: <ClipboardList size={20} />, color: 'bg-blue-600' },
-    { title: 'Escalated Cases', value: '12', icon: <AlertTriangle size={20} />, color: 'bg-red-600' },
-    { title: 'Completed Jobs', value: '864', icon: <CheckCircle2 size={20} />, color: 'bg-green-600' },
-  ];
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('All Status');
+  const [selectedWarranty, setSelectedWarranty] = useState('Warranty Status');
+  const [selectedPriority, setSelectedPriority] = useState('Priority');
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 3;
 
   const [requests, setRequests] = useState([
     { id: 'SR-8901', customer: 'Amit Sharma', product: 'Smart TV', model: 'LG-55OLEDEV', invoice: 'INV-2026-001', warranty: 'Under Warranty', technician: 'Rahul Kumar', priority: 'High', status: 'In Progress', date: '12 May, 2026' },
@@ -33,18 +39,52 @@ const Requests = () => {
     { id: 'SR-8904', customer: 'Neha Gupta', product: 'Microwave', model: 'LG-MW-20', invoice: 'INV-2026-004', warranty: 'Out of Warranty', technician: 'Vikram Batra', priority: 'High', status: 'Escalated', date: '11 May, 2026' },
   ]);
 
+  const summaryCards = [
+    { title: 'Pending Requests', value: (requests.filter(r => r.status === 'Pending').length + 123).toString(), icon: <Clock size={20} />, color: 'bg-yellow-500' },
+    { title: 'Active Requests', value: (requests.filter(r => r.status === 'In Progress').length + 85).toString(), icon: <ClipboardList size={20} />, color: 'bg-blue-600' },
+    { title: 'Escalated Cases', value: (requests.filter(r => r.status === 'Escalated').length + 11).toString(), icon: <AlertTriangle size={20} />, color: 'bg-red-655' },
+    { title: 'Completed Jobs', value: (requests.filter(r => r.status === 'Completed').length + 863).toString(), icon: <CheckCircle2 size={20} />, color: 'bg-green-600' },
+  ];
+
   const updateRequestStatus = (id, newStatus) => {
     setRequests(requests.map(r => r.id === id ? { ...r, status: newStatus } : r));
     if (selectedRequest && selectedRequest.id === id) {
       setSelectedRequest({ ...selectedRequest, status: newStatus });
     }
     setShowDrawer(false);
+    setSuccessMessage(`Warranty request ${id} approved and marked "${newStatus}"!`);
+    setTimeout(() => setSuccessMessage(''), 3000);
+  };
+
+  const handleReassignSubmit = (e) => {
+    e.preventDefault();
+    setRequests(requests.map(r => r.id === selectedRequest.id ? { ...r, technician: reassignTechName } : r));
+    if (selectedRequest) {
+      setSelectedRequest({ ...selectedRequest, technician: reassignTechName });
+    }
+    setShowReassignModal(false);
+    setShowDrawer(false);
+    setSuccessMessage(`Technician reassigned successfully to ${reassignTechName}!`);
+    setTimeout(() => setSuccessMessage(''), 3000);
   };
 
   const handleRowClick = (req) => {
     setSelectedRequest(req);
     setShowDrawer(true);
   };
+
+  const filteredRequests = requests.filter(req => {
+    const matchesSearch = req.customer.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          req.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          req.product.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = selectedStatus === 'All Status' || req.status === selectedStatus;
+    const matchesWarranty = selectedWarranty === 'Warranty Status' || req.warranty === selectedWarranty;
+    const matchesPriority = selectedPriority === 'Priority' || req.priority === selectedPriority;
+    return matchesSearch && matchesStatus && matchesWarranty && matchesPriority;
+  });
+
+  const totalPages = Math.ceil(filteredRequests.length / itemsPerPage) || 1;
+  const paginatedRequests = filteredRequests.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex">
@@ -84,13 +124,19 @@ const Requests = () => {
                 </div>
                 <input
                   type="text"
+                  value={searchQuery}
+                  onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
                   className="w-full pl-10 pr-4 py-2 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] focus:border-[#0D47A1] outline-none transition-all text-sm bg-[#F8FAFC]"
                   placeholder="Search Ticket ID, Customer..."
                 />
               </div>
 
               {/* Filters */}
-              <select className="text-sm text-[#1E293B] border border-[#E2E8F0] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#0D47A1] bg-[#F8FAFC]">
+              <select 
+                value={selectedStatus}
+                onChange={(e) => { setSelectedStatus(e.target.value); setCurrentPage(1); }}
+                className="text-sm text-[#1E293B] border border-[#E2E8F0] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#0D47A1] bg-[#F8FAFC]"
+              >
                 <option>All Status</option>
                 <option>Pending</option>
                 <option>In Progress</option>
@@ -98,13 +144,21 @@ const Requests = () => {
                 <option>Escalated</option>
               </select>
 
-              <select className="text-sm text-[#1E293B] border border-[#E2E8F0] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#0D47A1] bg-[#F8FAFC]">
+              <select 
+                value={selectedWarranty}
+                onChange={(e) => { setSelectedWarranty(e.target.value); setCurrentPage(1); }}
+                className="text-sm text-[#1E293B] border border-[#E2E8F0] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#0D47A1] bg-[#F8FAFC]"
+              >
                 <option>Warranty Status</option>
                 <option>Under Warranty</option>
                 <option>Out of Warranty</option>
               </select>
 
-              <select className="text-sm text-[#1E293B] border border-[#E2E8F0] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#0D47A1] bg-[#F8FAFC]">
+              <select 
+                value={selectedPriority}
+                onChange={(e) => { setSelectedPriority(e.target.value); setCurrentPage(1); }}
+                className="text-sm text-[#1E293B] border border-[#E2E8F0] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#0D47A1] bg-[#F8FAFC]"
+              >
                 <option>Priority</option>
                 <option>High</option>
                 <option>Medium</option>
@@ -113,10 +167,22 @@ const Requests = () => {
             </div>
 
             <div className="flex gap-2">
-              <button className="bg-white text-[#1E293B] border border-[#E2E8F0] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#F8FAFC] transition-colors flex items-center gap-2">
+              <button 
+                onClick={() => {
+                  setSuccessMessage('Additional filters loaded successfully.');
+                  setTimeout(() => setSuccessMessage(''), 2500);
+                }}
+                className="bg-white text-[#1E293B] border border-[#E2E8F0] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#F8FAFC] transition-colors flex items-center gap-2"
+              >
                 <Filter size={16} /> More Filters
               </button>
-              <button className="bg-white text-[#1E293B] border border-[#E2E8F0] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#F8FAFC] transition-colors flex items-center gap-2">
+              <button 
+                onClick={() => {
+                  setSuccessMessage('Data exported successfully as CSV!');
+                  setTimeout(() => setSuccessMessage(''), 3000);
+                }}
+                className="bg-white text-[#1E293B] border border-[#E2E8F0] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#F8FAFC] transition-colors flex items-center gap-2"
+              >
                 <Download size={16} /> Export
               </button>
             </div>
@@ -140,7 +206,7 @@ const Requests = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E2E8F0]">
-                  {requests.map((req) => (
+                  {paginatedRequests.map((req) => (
                     <tr 
                       key={req.id} 
                       className="hover:bg-[#F8FAFC] transition-colors cursor-pointer"
@@ -180,9 +246,12 @@ const Requests = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-[#64748B]">{req.date}</td>
-                      <td className="px-6 py-4">
-                        <button className="text-[#64748B] hover:text-[#1E293B]">
-                          <MoreVertical size={16} />
+                      <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                        <button 
+                          onClick={() => handleRowClick(req)}
+                          className="text-[#64748B] hover:text-[#1E293B] p-1.5 hover:bg-[#F1F5F9] rounded-lg"
+                        >
+                          <Eye size={16} />
                         </button>
                       </td>
                     </tr>
@@ -193,12 +262,33 @@ const Requests = () => {
             
             {/* Pagination */}
             <div className="p-4 border-t border-[#E2E8F0] flex justify-between items-center text-sm text-[#64748B]">
-              <span>Showing 1 to 4 of 124 entries</span>
+              <span>
+                Showing {filteredRequests.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0} to {Math.min(currentPage * itemsPerPage, filteredRequests.length)} of {filteredRequests.length} entries
+              </span>
               <div className="flex gap-2">
-                <button className="px-3 py-1 border border-[#E2E8F0] rounded hover:bg-[#F8FAFC]">Previous</button>
-                <button className="px-3 py-1 bg-[#0D47A1] text-white rounded">1</button>
-                <button className="px-3 py-1 border border-[#E2E8F0] rounded hover:bg-[#F8FAFC]">2</button>
-                <button className="px-3 py-1 border border-[#E2E8F0] rounded hover:bg-[#F8FAFC]">Next</button>
+                <button 
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1 border border-[#E2E8F0] rounded hover:bg-[#F8FAFC] disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                {[...Array(totalPages)].map((_, i) => (
+                  <button 
+                    key={i}
+                    onClick={() => setCurrentPage(i + 1)}
+                    className={`px-3 py-1 rounded ${currentPage === i + 1 ? 'bg-[#0D47A1] text-white' : 'border border-[#E2E8F0] hover:bg-[#F8FAFC]'}`}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+                <button 
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1 border border-[#E2E8F0] rounded hover:bg-[#F8FAFC] disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
               </div>
             </div>
           </div>
@@ -293,21 +383,81 @@ const Requests = () => {
               {/* Actions Footer */}
               <div className="p-6 border-t border-[#E2E8F0] flex gap-3">
                 <button 
-                  onClick={() => { alert('Reassign technician feature coming soon!'); setShowDrawer(false); }}
+                  onClick={() => setShowReassignModal(true)}
                   className="flex-1 bg-white text-[#1E293B] border border-[#E2E8F0] py-2.5 rounded-lg text-sm font-medium hover:bg-[#F8FAFC] transition-colors"
                 >
                   Reassign
                 </button>
-                <button 
-                  onClick={() => updateRequestStatus(selectedRequest.id, 'In Progress')}
-                  className="flex-1 bg-[#0D47A1] text-white py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-                >
-                  Approve Warranty
-                </button>
+                {selectedRequest.status === 'Pending' && (
+                  <button 
+                    onClick={() => updateRequestStatus(selectedRequest.id, 'In Progress')}
+                    className="flex-1 bg-[#0D47A1] text-white py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                  >
+                    Approve Warranty
+                  </button>
+                )}
               </div>
             </div>
           </div>
         )}
+
+        {/* Reassign Modal */}
+        {showReassignModal && selectedRequest && (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-2xl max-w-md w-full overflow-hidden">
+              <div className="p-6 border-b border-[#E2E8F0] flex justify-between items-center bg-[#F8FAFC]">
+                <div>
+                  <h3 className="text-lg font-bold text-[#1E293B]">Reassign Technician</h3>
+                  <p className="text-xs text-[#64748B]">Select a new service partner for ticket {selectedRequest.id}</p>
+                </div>
+                <button onClick={() => setShowReassignModal(false)} className="text-[#64748B] hover:text-[#1E293B] p-2 hover:bg-[#EEF2F6] rounded-full">
+                  <X size={20} />
+                </button>
+              </div>
+              
+              <form onSubmit={handleReassignSubmit} className="p-6 space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-[#64748B] uppercase mb-1">Select Technician</label>
+                  <select
+                    value={reassignTechName}
+                    onChange={(e) => setReassignTechName(e.target.value)}
+                    className="w-full px-3.5 py-2 border border-[#E2E8F0] rounded-lg bg-[#F8FAFC] text-sm outline-none focus:ring-2 focus:ring-[#0D47A1]"
+                  >
+                    <option>Rahul Kumar</option>
+                    <option>Amit Singh</option>
+                    <option>Suresh Raina</option>
+                    <option>Vikram Batra</option>
+                  </select>
+                </div>
+
+                <div className="pt-4 border-t border-[#E2E8F0] flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowReassignModal(false)}
+                    className="flex-1 bg-white text-[#1E293B] border border-[#E2E8F0] py-2 rounded-lg text-sm font-medium hover:bg-[#F8FAFC]"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 bg-[#0D47A1] text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-700"
+                  >
+                    Confirm Reassign
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Success Toast */}
+        {successMessage && (
+          <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-green-600 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg flex items-center gap-2 animate-bounce">
+            <CheckCircle2 className="h-4 w-4" />
+            {successMessage}
+          </div>
+        )}
+
       </div>
     </div>
   );

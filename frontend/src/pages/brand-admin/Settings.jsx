@@ -6,14 +6,30 @@ import {
   Settings as SettingsIcon, 
   Bell, 
   Shield, 
-  Globe, 
   Save,
-  Check
+  Check,
+  CheckCircle2
 } from 'lucide-react';
 
 const Settings = () => {
   const [activeTab, setActiveTab] = useState('profile');
-  const [saved, setSaved] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+
+  // Form states
+  const [brandName, setBrandName] = useState('LG Electronics');
+  const [supportEmail, setSupportEmail] = useState('support@lg.com');
+  const [supportPhone, setSupportPhone] = useState('1800-123-4567');
+  const [website, setWebsite] = useState('https://lg.com');
+
+  // Config toggles
+  const [autoAssign, setAutoAssign] = useState(true);
+  const [requirePhoto, setRequirePhoto] = useState(true);
+  const [emailNotifs, setEmailNotifs] = useState(true);
+  const [smsAlerts, setSmsAlerts] = useState(false);
+
+  // Security password fields
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
 
   const tabs = [
     { id: 'profile', label: 'Brand Profile', icon: <User size={16} /> },
@@ -22,13 +38,39 @@ const Settings = () => {
     { id: 'security', label: 'Security', icon: <Shield size={16} /> },
   ];
 
+  const showToast = (message) => {
+    setSuccessMessage(message);
+    setTimeout(() => {
+      setSuccessMessage('');
+    }, 3000);
+  };
+
   const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    if (activeTab === 'profile') {
+      showToast(`Profile settings for "${brandName}" updated successfully!`);
+    } else if (activeTab === 'service') {
+      showToast('Service configurations updated successfully!');
+    } else if (activeTab === 'notifications') {
+      showToast('Notification preferences saved!');
+    } else if (activeTab === 'security') {
+      if (!currentPassword || !newPassword) {
+        showToast('Please fill in password fields to update.');
+        return;
+      }
+      setCurrentPassword('');
+      setNewPassword('');
+      showToast('Password updated successfully!');
+    }
+  };
+
+  const handleToggle = (setting, stateSetter, currentVal) => {
+    const newVal = !currentVal;
+    stateSetter(newVal);
+    showToast(`${setting} is now ${newVal ? 'ENABLED' : 'DISABLED'}`);
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex">
+    <div className="min-h-screen bg-[#F8FAFC] flex relative">
       {/* Sidebar */}
       <Sidebar />
 
@@ -70,32 +112,36 @@ const Settings = () => {
                     <label className="text-sm font-medium text-[#64748B] mb-1 block">Brand Name</label>
                     <input
                       type="text"
-                      className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none text-sm"
-                      defaultValue="LG Electronics"
+                      className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none text-sm text-slate-800 bg-[#F8FAFC]"
+                      value={brandName}
+                      onChange={(e) => setBrandName(e.target.value)}
                     />
                   </div>
                   <div>
                     <label className="text-sm font-medium text-[#64748B] mb-1 block">Support Email</label>
                     <input
                       type="email"
-                      className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none text-sm"
-                      defaultValue="support@lg.com"
+                      className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none text-sm text-slate-800 bg-[#F8FAFC]"
+                      value={supportEmail}
+                      onChange={(e) => setSupportEmail(e.target.value)}
                     />
                   </div>
                   <div>
                     <label className="text-sm font-medium text-[#64748B] mb-1 block">Support Phone</label>
                     <input
                       type="text"
-                      className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none text-sm"
-                      defaultValue="1800-123-4567"
+                      className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none text-sm text-slate-800 bg-[#F8FAFC]"
+                      value={supportPhone}
+                      onChange={(e) => setSupportPhone(e.target.value)}
                     />
                   </div>
                   <div>
                     <label className="text-sm font-medium text-[#64748B] mb-1 block">Website</label>
                     <input
                       type="text"
-                      className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none text-sm"
-                      defaultValue="https://lg.com"
+                      className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none text-sm text-slate-800 bg-[#F8FAFC]"
+                      value={website}
+                      onChange={(e) => setWebsite(e.target.value)}
                     />
                   </div>
                 </div>
@@ -113,7 +159,12 @@ const Settings = () => {
                       <p className="text-xs text-[#64748B]">Automatically assign closest available technician to new requests.</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" className="sr-only peer" defaultChecked />
+                      <input 
+                        type="checkbox" 
+                        className="sr-only peer" 
+                        checked={autoAssign} 
+                        onChange={() => handleToggle('Auto-assign Technicians', setAutoAssign, autoAssign)} 
+                      />
                       <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0D47A1]"></div>
                     </label>
                   </div>
@@ -124,7 +175,12 @@ const Settings = () => {
                       <p className="text-xs text-[#64748B]">Technicians must upload photo after service completion.</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" className="sr-only peer" defaultChecked />
+                      <input 
+                        type="checkbox" 
+                        className="sr-only peer" 
+                        checked={requirePhoto} 
+                        onChange={() => handleToggle('Require Photo Proof', setRequirePhoto, requirePhoto)} 
+                      />
                       <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0D47A1]"></div>
                     </label>
                   </div>
@@ -143,7 +199,12 @@ const Settings = () => {
                       <p className="text-xs text-[#64748B]">Receive daily summary reports via email.</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" className="sr-only peer" defaultChecked />
+                      <input 
+                        type="checkbox" 
+                        className="sr-only peer" 
+                        checked={emailNotifs} 
+                        onChange={() => handleToggle('Email Notifications', setEmailNotifs, emailNotifs)} 
+                      />
                       <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0D47A1]"></div>
                     </label>
                   </div>
@@ -154,7 +215,12 @@ const Settings = () => {
                       <p className="text-xs text-[#64748B]">Send SMS to customers on status updates.</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" className="sr-only peer" />
+                      <input 
+                        type="checkbox" 
+                        className="sr-only peer" 
+                        checked={smsAlerts} 
+                        onChange={() => handleToggle('SMS Alerts', setSmsAlerts, smsAlerts)} 
+                      />
                       <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0D47A1]"></div>
                     </label>
                   </div>
@@ -171,16 +237,20 @@ const Settings = () => {
                     <label className="text-sm font-medium text-[#64748B] mb-1 block">Current Password</label>
                     <input
                       type="password"
-                      className="w-full max-w-md px-4 py-2.5 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none text-sm"
+                      className="w-full max-w-md px-4 py-2.5 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none text-sm text-slate-800 bg-[#F8FAFC]"
                       placeholder="••••••••"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
                     />
                   </div>
                   <div>
                     <label className="text-sm font-medium text-[#64748B] mb-1 block">New Password</label>
                     <input
                       type="password"
-                      className="w-full max-w-md px-4 py-2.5 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none text-sm"
+                      className="w-full max-w-md px-4 py-2.5 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none text-sm text-slate-800 bg-[#F8FAFC]"
                       placeholder="••••••••"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
                     />
                   </div>
                 </div>
@@ -191,9 +261,9 @@ const Settings = () => {
             <div className="mt-8 flex justify-end">
               <button 
                 onClick={handleSave}
-                className="bg-[#0D47A1] text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2 min-w-[120px] justify-center"
+                className="bg-[#0D47A1] text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2 min-w-[120px] justify-center shadow-sm"
               >
-                {saved ? <><Check size={16} /> Saved</> : <><Save size={16} /> Save Changes</>}
+                <Save size={16} /> Save Changes
               </button>
             </div>
 
@@ -201,6 +271,14 @@ const Settings = () => {
 
         </div>
       </div>
+
+      {/* Success Toast */}
+      {successMessage && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-green-600 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg flex items-center gap-2 animate-bounce">
+          <CheckCircle2 className="h-4 w-4" />
+          {successMessage}
+        </div>
+      )}
     </div>
   );
 };

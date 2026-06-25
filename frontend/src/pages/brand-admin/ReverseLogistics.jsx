@@ -1,0 +1,313 @@
+import React, { useState } from 'react';
+import Sidebar from '../../components/brand-admin/Sidebar';
+import Topbar from '../../components/brand-admin/Topbar';
+import { 
+  Search, 
+  Filter, 
+  RotateCcw, 
+  Truck, 
+  CheckCircle2, 
+  X,
+  Eye,
+  QrCode,
+  AlertTriangle,
+  PackageCheck
+} from 'lucide-react';
+
+const ReverseLogistics = () => {
+  const [showDrawer, setShowDrawer] = useState(false);
+  const [selectedReturn, setSelectedReturn] = useState(null);
+  const [successMessage, setSuccessMessage] = useState('');
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedTransit, setSelectedTransit] = useState('All Transit Status');
+  const [selectedVerification, setSelectedVerification] = useState('All Verification Status');
+
+  const [returns, setReturns] = useState([
+    { id: 'RET-4001', technician: 'Rahul Kumar', partName: 'Faulty Compressor', sku: 'CP-45/5', ticketId: 'SR-8901', replaceDate: '12 May, 2026', transitStatus: 'In Transit', status: 'Pending Verification', trackingNo: 'BD-982143', damageFlag: false },
+    { id: 'RET-4002', technician: 'Amit Singh', partName: 'Burnt Drain Pump', sku: 'GRK-410', ticketId: 'SR-8902', replaceDate: '12 May, 2026', transitStatus: 'Replaced', status: 'Pending Return Shipment', trackingNo: 'N/A', damageFlag: false },
+    { id: 'RET-4003', technician: 'Suresh Raina', partName: 'Burnt Magnetron', sku: 'FM-10W', ticketId: 'SR-8903', replaceDate: '11 May, 2026', transitStatus: 'Delivered', status: 'Verified & Scrapped', trackingNo: 'BD-883201', damageFlag: false },
+    { id: 'RET-4004', technician: 'Vikram Batra', partName: 'Cracked LED TV Panel', sku: 'PCB-U01', ticketId: 'SR-8904', replaceDate: '10 May, 2026', transitStatus: 'Delivered', status: 'Transit Damaged', trackingNo: 'BD-776211', damageFlag: true },
+  ]);
+
+  const stats = [
+    { title: 'Pending Returns', value: returns.filter(r => r.status === 'Pending Verification' || r.status === 'Pending Return Shipment').length.toString() + ' pcs', icon: <RotateCcw size={20} />, color: 'bg-yellow-500' },
+    { title: 'In Transit', value: returns.filter(r => r.transitStatus === 'In Transit').length.toString() + ' pcs', icon: <Truck size={20} />, color: 'bg-blue-600' },
+    { title: 'Verified / Scrapped', value: returns.filter(r => r.status === 'Verified & Scrapped').length.toString() + ' pcs', icon: <CheckCircle2 size={20} />, color: 'bg-green-600' },
+    { title: 'Transit Damages', value: returns.filter(r => r.damageFlag).length.toString() + ' pcs', icon: <AlertTriangle size={20} />, color: 'bg-red-650' },
+  ];
+
+  const handleRowClick = (ret) => {
+    setSelectedReturn(ret);
+    setShowDrawer(true);
+  };
+
+  const handleVerify = (id) => {
+    setReturns(returns.map(r => r.id === id ? { ...r, transitStatus: 'Delivered', status: 'Verified & Scrapped' } : r));
+    if (selectedReturn && selectedReturn.id === id) {
+      setSelectedReturn({ ...selectedReturn, transitStatus: 'Delivered', status: 'Verified & Scrapped' });
+    }
+    setSuccessMessage(`Defective part return ${id} verified and logged into scrap disposal ledger.`);
+    setShowDrawer(false);
+    setTimeout(() => setSuccessMessage(''), 3000);
+  };
+
+  const handleFlagDamage = (id) => {
+    setReturns(returns.map(r => r.id === id ? { ...r, transitStatus: 'Delivered', status: 'Transit Damaged', damageFlag: true } : r));
+    if (selectedReturn && selectedReturn.id === id) {
+      setSelectedReturn({ ...selectedReturn, transitStatus: 'Delivered', status: 'Transit Damaged', damageFlag: true });
+    }
+    setSuccessMessage(`Logistics dispute successfully raised for return ${id}.`);
+    setShowDrawer(false);
+    setTimeout(() => setSuccessMessage(''), 3000);
+  };
+
+  const filteredReturns = returns.filter(ret => {
+    const matchesSearch = ret.id.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          ret.partName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          ret.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          ret.technician.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesTransit = selectedTransit === 'All Transit Status' || ret.transitStatus === selectedTransit;
+    const matchesVerification = selectedVerification === 'All Verification Status' || ret.status === selectedVerification;
+    return matchesSearch && matchesTransit && matchesVerification;
+  });
+
+  return (
+    <div className="min-h-screen bg-[#F8FAFC] flex">
+      <Sidebar />
+
+      <div className="flex-1 ml-64 min-h-screen flex flex-col relative">
+        <Topbar title="Defective Parts Return (Reverse Logistics)" />
+
+        <div className="p-6 space-y-6 flex-1">
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {stats.map((card, index) => (
+              <div key={index} className="bg-white p-6 rounded-2xl border border-[#E2E8F0] flex items-center gap-4">
+                <div className={`w-12 h-12 ${card.color} rounded-xl flex items-center justify-center text-white flex-shrink-0`}>
+                  {card.icon}
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-[#64748B]">{card.title}</p>
+                  <p className="text-2xl font-bold text-[#1E293B]">{card.value}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Filters & Actions */}
+          <div className="bg-white p-4 rounded-2xl border border-[#E2E8F0] flex flex-wrap gap-4 items-center justify-between">
+            <div className="flex flex-wrap gap-3 items-center flex-1">
+              <div className="relative w-64">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#64748B]">
+                  <Search size={16} />
+                </div>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] focus:border-[#0D47A1] outline-none transition-all text-sm bg-[#F8FAFC]"
+                  placeholder="Search Return ID, SKU..."
+                />
+              </div>
+
+              <select 
+                value={selectedTransit}
+                onChange={(e) => setSelectedTransit(e.target.value)}
+                className="text-sm text-[#1E293B] border border-[#E2E8F0] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#0D47A1] bg-[#F8FAFC]"
+              >
+                <option>All Transit Status</option>
+                <option>Replaced</option>
+                <option>In Transit</option>
+                <option>Delivered</option>
+              </select>
+
+              <select 
+                value={selectedVerification}
+                onChange={(e) => setSelectedVerification(e.target.value)}
+                className="text-sm text-[#1E293B] border border-[#E2E8F0] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#0D47A1] bg-[#F8FAFC]"
+              >
+                <option>All Verification Status</option>
+                <option>Pending Verification</option>
+                <option>Verified & Scrapped</option>
+                <option>Transit Damaged</option>
+                <option>Pending Return Shipment</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Table */}
+          <div className="bg-white rounded-2xl border border-[#E2E8F0] overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead className="bg-[#F8FAFC] text-[#64748B] text-xs uppercase">
+                  <tr>
+                    <th className="px-6 py-4">Return ID</th>
+                    <th className="px-6 py-4">Technician</th>
+                    <th className="px-6 py-4">Part Name (SKU)</th>
+                    <th className="px-6 py-4">Ticket Link</th>
+                    <th className="px-6 py-4">Replace Date</th>
+                    <th className="px-6 py-4">Transit Status</th>
+                    <th className="px-6 py-4">Verification Status</th>
+                    <th className="px-6 py-4">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#E2E8F0]">
+                  {filteredReturns.map((ret) => (
+                    <tr 
+                      key={ret.id} 
+                      className="hover:bg-[#F8FAFC] transition-colors cursor-pointer"
+                      onClick={() => handleRowClick(ret)}
+                    >
+                      <td className="px-6 py-4 font-medium text-[#0D47A1]">{ret.id}</td>
+                      <td className="px-6 py-4 text-[#1E293B]">{ret.technician}</td>
+                      <td className="px-6 py-4">
+                        <div>
+                          <p className="text-[#1E293B] font-medium">{ret.partName}</p>
+                          <p className="text-[#64748B] text-xs">SKU: {ret.sku}</p>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-[#0D47A1] font-semibold">{ret.ticketId}</td>
+                      <td className="px-6 py-4 text-[#64748B]">{ret.replaceDate}</td>
+                      <td className="px-6 py-4">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                          ret.transitStatus === 'Delivered' ? 'bg-green-50 text-green-700' :
+                          ret.transitStatus === 'In Transit' ? 'bg-blue-50 text-blue-700' :
+                          'bg-amber-50 text-amber-700'
+                        }`}>
+                          {ret.transitStatus}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                          ret.status === 'Verified & Scrapped' ? 'bg-green-50 text-green-600' :
+                          ret.status === 'Transit Damaged' ? 'bg-red-50 text-red-650' :
+                          'bg-yellow-50 text-yellow-650'
+                        }`}>
+                          {ret.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                        <button 
+                          onClick={() => handleRowClick(ret)}
+                          className="text-[#64748B] hover:text-[#1E293B] p-1.5 hover:bg-[#F1F5F9] rounded-lg"
+                        >
+                          <Eye size={18} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        {/* Details Drawer */}
+        {showDrawer && selectedReturn && (
+          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm z-30 flex justify-end">
+            <div className="w-full max-w-md bg-white h-full shadow-2xl flex flex-col">
+              <div className="p-6 border-b border-[#E2E8F0] flex justify-between items-center">
+                <div>
+                  <h2 className="text-lg font-bold text-[#1E293B]">Return Defective Part</h2>
+                  <p className="text-sm text-[#0D47A1] font-medium">{selectedReturn.id}</p>
+                </div>
+                <button 
+                  onClick={() => setShowDrawer(false)}
+                  className="text-[#64748B] hover:text-[#1E293B] p-2 hover:bg-[#F8FAFC] rounded-full"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-6 flex-1 overflow-y-auto text-sm">
+                <div>
+                  <h3 className="text-xs uppercase text-[#64748B] font-semibold mb-2">Item Specifications</h3>
+                  <div className="bg-[#F8FAFC] p-4 rounded-xl space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-[#64748B]">Part:</span>
+                      <span className="font-semibold text-[#1E293B]">{selectedReturn.partName}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[#64748B]">SKU:</span>
+                      <span className="font-mono text-[#1E293B]">{selectedReturn.sku}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[#64748B]">Ticket ID:</span>
+                      <span className="font-semibold text-[#0D47A1]">{selectedReturn.ticketId}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-xs uppercase text-[#64748B] font-semibold mb-2">Logistics & Tracking</h3>
+                  <div className="bg-[#F8FAFC] p-4 rounded-xl space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-[#64748B]">Technician:</span>
+                      <span className="font-medium text-[#1E293B]">{selectedReturn.technician}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[#64748B]">Courier Provider:</span>
+                      <span className="font-medium text-[#1E293B]">BlueDart Express</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[#64748B]">AWB Tracking:</span>
+                      <span className="font-mono text-[#1E293B]">{selectedReturn.trackingNo}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-xs uppercase text-[#64748B] font-semibold mb-2">Logistics Timeline</h3>
+                  <div className="border-l-2 border-[#E2E8F0] ml-2 pl-4 space-y-3">
+                    <div className="relative">
+                      <div className="absolute -left-[21px] top-1 w-3 h-3 bg-green-600 rounded-full"></div>
+                      <p className="font-semibold text-slate-800">Part replaced at client site</p>
+                      <p className="text-xs text-slate-500">{selectedReturn.replaceDate}</p>
+                    </div>
+                    {selectedReturn.transitStatus !== 'Replaced' && (
+                      <div className="relative">
+                        <div className="absolute -left-[21px] top-1 w-3 h-3 bg-green-600 rounded-full"></div>
+                        <p className="font-semibold text-slate-800">Picked up by BlueDart</p>
+                        <p className="text-xs text-slate-500">AWB Active</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 border-t border-[#E2E8F0] flex gap-3">
+                {(selectedReturn.status === 'Pending Verification' || selectedReturn.status === 'Pending Return Shipment') && (
+                  <>
+                    <button 
+                      onClick={() => handleVerify(selectedReturn.id)}
+                      className="flex-1 bg-[#0D47A1] text-white py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-1 shadow-sm"
+                    >
+                      Verify Part Return
+                    </button>
+                    <button 
+                      onClick={() => handleFlagDamage(selectedReturn.id)}
+                      className="flex-1 bg-white text-red-655 border border-red-200 py-2.5 rounded-lg text-sm font-medium hover:bg-red-50/20 transition-colors flex items-center justify-center gap-1"
+                    >
+                      <AlertTriangle size={14} /> Flag Transit Damage
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Success Toast */}
+        {successMessage && (
+          <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-green-600 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg flex items-center gap-2 animate-bounce">
+            <CheckCircle2 className="h-4 w-4" />
+            {successMessage}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default ReverseLogistics;

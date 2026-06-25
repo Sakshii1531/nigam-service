@@ -6,8 +6,8 @@ import { Mail, Lock, ArrowRight, Shield, Cpu } from 'lucide-react';
 const Login = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
+    email: 'admin123@gmail.com',
+    password: 'admin123',
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -76,7 +76,7 @@ const Login = () => {
                 <input
                   type="email"
                   name="email"
-                  className="w-full pl-11 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] outline-none transition-all text-sm text-gray-900 placeholder-gray-400"
+                  className="w-full pl-11 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] outline-none transition-all text-sm text-gray-900 placeholder-gray-400 animate-pulse-subtle"
                   placeholder="admin@brand.com"
                   value={formData.email}
                   onChange={handleInputChange}
@@ -104,6 +104,11 @@ const Login = () => {
                   required
                 />
               </div>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-100 p-3.5 rounded-xl text-xs text-blue-700">
+              <span className="font-semibold block mb-0.5">Demo Credentials Pre-filled:</span>
+              <span>Email: admin123@gmail.com / Password: admin123</span>
             </div>
 
             <button
