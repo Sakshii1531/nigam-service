@@ -26,6 +26,8 @@ const Technicians = () => {
   ]);
 
   const [showModal, setShowModal] = useState(false);
+  const [editingTech, setEditingTech] = useState(null);
+  const [openMenuTechId, setOpenMenuTechId] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
   const [newTech, setNewTech] = useState({
     name: '',
@@ -63,22 +65,43 @@ const Technicians = () => {
 
   const handleFormSubmit = (e) => {
     e.preventDefault();
-    const nextIdNum = technicians.length + 1;
-    const formattedId = `TECH-0${nextIdNum < 10 ? '0' + nextIdNum : nextIdNum}`;
-    
-    const newTechnician = {
-      id: formattedId,
-      name: newTech.name,
-      skill: newTech.skill,
-      city: newTech.city,
-      rating: parseFloat(newTech.rating) || 5.0,
-      activeJobs: 0,
-      completedJobs: 0,
-      status: newTech.availability === 'Offline' ? 'Inactive' : 'Active',
-      availability: newTech.availability
-    };
+    if (editingTech) {
+      setTechnicians(technicians.map(t => {
+        if (t.id === editingTech.id) {
+          return {
+            ...t,
+            name: newTech.name,
+            skill: newTech.skill,
+            city: newTech.city,
+            rating: parseFloat(newTech.rating) || 5.0,
+            availability: newTech.availability,
+            status: newTech.availability === 'Offline' ? 'Inactive' : 'Active'
+          };
+        }
+        return t;
+      }));
+      setSuccessMessage(`Technician "${newTech.name}" updated successfully!`);
+      setEditingTech(null);
+    } else {
+      const nextIdNum = technicians.length + 1;
+      const formattedId = `TECH-0${nextIdNum < 10 ? '0' + nextIdNum : nextIdNum}`;
+      
+      const newTechnician = {
+        id: formattedId,
+        name: newTech.name,
+        skill: newTech.skill,
+        city: newTech.city,
+        rating: parseFloat(newTech.rating) || 5.0,
+        activeJobs: 0,
+        completedJobs: 0,
+        status: newTech.availability === 'Offline' ? 'Inactive' : 'Active',
+        availability: newTech.availability
+      };
 
-    setTechnicians([newTechnician, ...technicians]);
+      setTechnicians([newTechnician, ...technicians]);
+      setSuccessMessage(`Technician "${newTech.name}" added successfully!`);
+    }
+    
     setShowModal(false);
     setNewTech({
       name: '',
@@ -87,7 +110,6 @@ const Technicians = () => {
       rating: 5.0,
       availability: 'Available'
     });
-    setSuccessMessage(`Technician "${newTech.name}" added successfully!`);
     setTimeout(() => setSuccessMessage(''), 3000);
   };
 
@@ -188,7 +210,17 @@ const Technicians = () => {
             </div>
 
             <button 
-              onClick={() => setShowModal(true)}
+              onClick={() => {
+                setEditingTech(null);
+                setNewTech({
+                  name: '',
+                  skill: 'AC & Refrigerator',
+                  city: 'Delhi',
+                  rating: 5.0,
+                  availability: 'Available'
+                });
+                setShowModal(true);
+              }}
               className="bg-[#0D47A1] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
             >
               <Users size={16} /> Add Technician
@@ -254,7 +286,21 @@ const Technicians = () => {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex gap-2">
-                          <button className="p-2 text-[#64748B] hover:text-[#0D47A1] hover:bg-[#EEF4FF] rounded-lg transition-colors" title="Edit Profile">
+                          <button 
+                            onClick={() => {
+                              setEditingTech(tech);
+                              setNewTech({
+                                name: tech.name,
+                                skill: tech.skill,
+                                city: tech.city,
+                                rating: tech.rating,
+                                availability: tech.availability
+                              });
+                              setShowModal(true);
+                            }}
+                            className="p-2 text-[#64748B] hover:text-[#0D47A1] hover:bg-[#EEF4FF] rounded-lg transition-colors" 
+                            title="Edit Profile"
+                          >
                             <Edit size={16} />
                           </button>
                           <button 
@@ -264,9 +310,79 @@ const Technicians = () => {
                           >
                             <Power size={16} />
                           </button>
-                          <button className="p-2 text-[#64748B] hover:text-[#1E293B] hover:bg-[#F8FAFC] rounded-lg transition-colors">
-                            <MoreVertical size={16} />
-                          </button>
+                          <div className="relative">
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenMenuTechId(openMenuTechId === tech.id ? null : tech.id);
+                              }}
+                              className="p-2 text-[#64748B] hover:text-[#1E293B] hover:bg-[#F8FAFC] rounded-lg transition-colors"
+                            >
+                              <MoreVertical size={16} />
+                            </button>
+                            
+                            {openMenuTechId === tech.id && (
+                              <>
+                                <div 
+                                  className="fixed inset-0 z-10" 
+                                  onClick={() => setOpenMenuTechId(null)}
+                                />
+                                <div className="absolute right-0 mt-1 w-44 bg-white border border-[#E2E8F0] rounded-xl shadow-lg py-1.5 z-20 animate-in fade-in slide-in-from-top-2 duration-100 text-left">
+                                  <button
+                                    onClick={() => {
+                                      setOpenMenuTechId(null);
+                                      setEditingTech(tech);
+                                      setNewTech({
+                                        name: tech.name,
+                                        skill: tech.skill,
+                                        city: tech.city,
+                                        rating: tech.rating,
+                                        availability: tech.availability
+                                      });
+                                      setShowModal(true);
+                                    }}
+                                    className="w-full text-left px-3 py-2 text-xs text-[#1E293B] hover:bg-[#F8FAFC] flex items-center gap-2"
+                                  >
+                                    <Edit size={14} className="text-[#64748B]" />
+                                    <span>Edit Profile</span>
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setOpenMenuTechId(null);
+                                      handleSuspend(tech.id);
+                                    }}
+                                    className="w-full text-left px-3 py-2 text-xs text-[#1E293B] hover:bg-[#F8FAFC] flex items-center gap-2"
+                                  >
+                                    <Power size={14} className="text-[#64748B]" />
+                                    <span>{tech.availability === 'Offline' ? 'Activate' : 'Suspend'}</span>
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setOpenMenuTechId(null);
+                                      setSuccessMessage(`Viewing history of ${tech.name}...`);
+                                      setTimeout(() => setSuccessMessage(''), 3000);
+                                    }}
+                                    className="w-full text-left px-3 py-2 text-xs text-[#1E293B] hover:bg-[#F8FAFC] flex items-center gap-2"
+                                  >
+                                    <Briefcase size={14} className="text-[#64748B]" />
+                                    <span>View Job History</span>
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setOpenMenuTechId(null);
+                                      setTechnicians(technicians.filter(t => t.id !== tech.id));
+                                      setSuccessMessage(`Technician "${tech.name}" deleted successfully!`);
+                                      setTimeout(() => setSuccessMessage(''), 3000);
+                                    }}
+                                    className="w-full text-left px-3 py-2 text-xs text-red-600 hover:bg-red-50 flex items-center gap-2 border-t border-[#F1F5F9]"
+                                  >
+                                    <X size={14} className="text-red-500" />
+                                    <span>Delete Partner</span>
+                                  </button>
+                                </div>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </td>
                     </tr>
@@ -285,8 +401,12 @@ const Technicians = () => {
           <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="p-6 border-b border-[#E2E8F0] flex justify-between items-center bg-[#F8FAFC]">
               <div>
-                <h3 className="text-lg font-bold text-[#1E293B]">Add New Technician</h3>
-                <p className="text-xs text-[#64748B]">Register a new service partner to the platform</p>
+                <h3 className="text-lg font-bold text-[#1E293B]">
+                  {editingTech ? 'Edit Technician Profile' : 'Add New Technician'}
+                </h3>
+                <p className="text-xs text-[#64748B]">
+                  {editingTech ? 'Modify service partner details' : 'Register a new service partner to the platform'}
+                </p>
               </div>
               <button 
                 onClick={() => setShowModal(false)}
@@ -378,7 +498,7 @@ const Technicians = () => {
                   type="submit"
                   className="flex-1 bg-[#0D47A1] text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
                 >
-                  Save Technician
+                  {editingTech ? 'Update Details' : 'Save Technician'}
                 </button>
               </div>
             </form>

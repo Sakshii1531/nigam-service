@@ -12,7 +12,8 @@ import {
   Eye,
   IndianRupee,
   ShieldAlert,
-  Truck
+  Truck,
+  ArrowLeft
 } from 'lucide-react';
 
 const Exchanges = () => {
@@ -75,8 +76,112 @@ const Exchanges = () => {
       <div className="flex-1 ml-64 min-h-screen flex flex-col relative">
         <Topbar title="Exchange Program" />
 
-        <div className="p-6 space-y-6 flex-1">
-          {/* Stats Grid */}
+        {showDrawer && selectedExchange ? (
+          <div className="p-6 space-y-6 flex-1 bg-[#F8FAFC] text-left">
+            <div className="flex items-center justify-between">
+              <button 
+                onClick={() => setShowDrawer(false)}
+                className="flex items-center gap-2 text-sm font-semibold text-[#0D47A1] hover:text-blue-800 transition-colors"
+              >
+                <ArrowLeft size={16} /> Back to Exchanges
+              </button>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden flex flex-col max-w-3xl text-sm">
+              <div className="p-6 border-b border-[#E2E8F0] flex justify-between items-center bg-[#F8FAFC]">
+                <div>
+                  <h2 className="text-lg font-bold text-[#1E293B]">Exchange Details</h2>
+                  <p className="text-sm text-[#0D47A1] font-medium">{selectedExchange.id}</p>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-6 flex-1">
+                <div>
+                  <h3 className="text-xs uppercase text-[#64748B] font-semibold mb-2">Customer & Order Details</h3>
+                  <div className="bg-[#F8FAFC] p-4 rounded-xl space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-[#64748B]">Name:</span>
+                      <span className="font-medium text-[#1E293B]">{selectedExchange.customer}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[#64748B]">Buying New:</span>
+                      <span className="font-medium text-blue-650">LG OLED 55" Smart TV</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[#64748B]">Exchange Discount:</span>
+                      <span className="font-bold text-green-600">{selectedExchange.valuation}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-xs uppercase text-[#64748B] font-semibold mb-2">Traded appliance Details</h3>
+                  <div className="bg-[#F8FAFC] p-4 rounded-xl space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-[#64748B]">Appliance:</span>
+                      <span className="font-medium text-[#1E293B]">{selectedExchange.oldProduct}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[#64748B]">Brand & Model:</span>
+                      <span className="font-medium text-[#1E293B]">{selectedExchange.oldBrand} - {selectedExchange.oldModel}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[#64748B]">Condition:</span>
+                      <span className="font-bold text-indigo-600">{selectedExchange.condition}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-xs uppercase text-[#64748B] font-semibold mb-2">Verification Inspection Report</h3>
+                  <div className="bg-[#F8FAFC] p-4 rounded-xl space-y-2 text-xs text-[#64748B]">
+                    <p className="font-medium text-[#1E293B] mb-1">Technician Inspection Log (By Rahul Kumar):</p>
+                    <p>• Compressor starting up normally. Minor rust on condenser coil.</p>
+                    <p>• Interior shelving intact. Door seal gasket requires replacement.</p>
+                    <p className="font-semibold text-green-600 mt-2">✓ Verified: Final exchange valuation matches initial estimate.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 border-t border-[#E2E8F0] flex gap-3 bg-[#F8FAFC]">
+                {selectedExchange.status === 'Pending Inspection' && (
+                  <>
+                    <button 
+                      onClick={() => updateExchangeStatus(selectedExchange.id, 'Inspection Approved')}
+                      className="bg-[#0D47A1] text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-1 shadow-sm"
+                    >
+                      Approve Valuation
+                    </button>
+                    <button 
+                      onClick={() => handleDispute(selectedExchange.id)}
+                      className="bg-white text-red-655 border border-red-200 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-red-50/20 transition-colors flex items-center justify-center gap-1"
+                    >
+                      <ShieldAlert size={14} /> Dispute
+                    </button>
+                  </>
+                )}
+                {selectedExchange.status === 'Inspection Approved' && (
+                  <button 
+                    onClick={() => updateExchangeStatus(selectedExchange.id, 'Defective Received')}
+                    className="w-full bg-emerald-600 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2 shadow-sm"
+                  >
+                    <Truck size={16} /> Mark Defective Appliance Received
+                  </button>
+                )}
+                {selectedExchange.status === 'Defective Received' && (
+                  <button 
+                    disabled 
+                    className="w-full bg-gray-150 text-gray-400 py-2.5 rounded-lg text-sm font-medium cursor-not-allowed flex items-center justify-center gap-1"
+                  >
+                    ✓ Defective Appliance Logged In Inventory
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="p-6 space-y-6 flex-1">
+            {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {stats.map((card, index) => (
               <div key={index} className="bg-white p-6 rounded-2xl border border-[#E2E8F0] flex items-center gap-4">
@@ -196,109 +301,7 @@ const Exchanges = () => {
               </table>
             </div>
           </div>
-        </div>
-
-        {/* Drawer */}
-        {showDrawer && selectedExchange && (
-          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm z-30 flex justify-end">
-            <div className="w-full max-w-md bg-white h-full shadow-2xl flex flex-col">
-              <div className="p-6 border-b border-[#E2E8F0] flex justify-between items-center">
-                <div>
-                  <h2 className="text-lg font-bold text-[#1E293B]">Exchange Details</h2>
-                  <p className="text-sm text-[#0D47A1] font-medium">{selectedExchange.id}</p>
-                </div>
-                <button 
-                  onClick={() => setShowDrawer(false)}
-                  className="text-[#64748B] hover:text-[#1E293B] p-2 hover:bg-[#F8FAFC] rounded-full"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-
-              <div className="p-6 space-y-6 flex-1 overflow-y-auto">
-                <div>
-                  <h3 className="text-xs uppercase text-[#64748B] font-semibold mb-2">Customer & Order Details</h3>
-                  <div className="bg-[#F8FAFC] p-4 rounded-xl space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-[#64748B]">Name:</span>
-                      <span className="font-medium text-[#1E293B]">{selectedExchange.customer}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[#64748B]">Buying New:</span>
-                      <span className="font-medium text-blue-650">LG OLED 55" Smart TV</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[#64748B]">Exchange Discount:</span>
-                      <span className="font-bold text-green-600">{selectedExchange.valuation}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-xs uppercase text-[#64748B] font-semibold mb-2">Traded appliance Details</h3>
-                  <div className="bg-[#F8FAFC] p-4 rounded-xl space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-[#64748B]">Appliance:</span>
-                      <span className="font-medium text-[#1E293B]">{selectedExchange.oldProduct}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[#64748B]">Brand & Model:</span>
-                      <span className="font-medium text-[#1E293B]">{selectedExchange.oldBrand} - {selectedExchange.oldModel}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[#64748B]">Condition:</span>
-                      <span className="font-bold text-indigo-600">{selectedExchange.condition}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-xs uppercase text-[#64748B] font-semibold mb-2">Verification Inspection Report</h3>
-                  <div className="bg-[#F8FAFC] p-4 rounded-xl space-y-2 text-xs text-[#64748B]">
-                    <p className="font-medium text-[#1E293B] mb-1">Technician Inspection Log (By Rahul Kumar):</p>
-                    <p>• Compressor starting up normally. Minor rust on condenser coil.</p>
-                    <p>• Interior shelving intact. Door seal gasket requires replacement.</p>
-                    <p className="font-semibold text-green-600 mt-2">✓ Verified: Final exchange valuation matches initial estimate.</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-6 border-t border-[#E2E8F0] flex gap-3">
-                {selectedExchange.status === 'Pending Inspection' && (
-                  <>
-                    <button 
-                      onClick={() => updateExchangeStatus(selectedExchange.id, 'Inspection Approved')}
-                      className="flex-1 bg-[#0D47A1] text-white py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-1 shadow-sm"
-                    >
-                      Approve Valuation
-                    </button>
-                    <button 
-                      onClick={() => handleDispute(selectedExchange.id)}
-                      className="bg-white text-red-600 border border-red-200 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-red-50/20 transition-colors flex items-center justify-center gap-1"
-                    >
-                      <ShieldAlert size={14} /> Dispute
-                    </button>
-                  </>
-                )}
-                {selectedExchange.status === 'Inspection Approved' && (
-                  <button 
-                    onClick={() => updateExchangeStatus(selectedExchange.id, 'Defective Received')}
-                    className="w-full bg-emerald-600 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2 shadow-sm"
-                  >
-                    <Truck size={16} /> Mark Defective Appliance Received
-                  </button>
-                )}
-                {selectedExchange.status === 'Defective Received' && (
-                  <button 
-                    disabled 
-                    className="w-full bg-gray-100 text-gray-400 py-2.5 rounded-lg text-sm font-medium cursor-not-allowed flex items-center justify-center gap-1"
-                  >
-                    ✓ Defective Appliance Logged In Inventory
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
+       </div>
         )}
 
         {/* Success Toast */}

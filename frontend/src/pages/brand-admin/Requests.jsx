@@ -13,7 +13,8 @@ import {
   AlertTriangle,
   CheckCircle2,
   X,
-  Check
+  Check,
+  ArrowLeft
 } from 'lucide-react';
 
 const Requests = () => {
@@ -97,7 +98,114 @@ const Requests = () => {
         <Topbar title="Service Requests" />
 
         {/* Body */}
-        <div className="p-6 space-y-6 flex-1">
+        {showDrawer && selectedRequest ? (
+          <div className="p-6 space-y-6 flex-1 bg-[#F8FAFC] text-left">
+            <div className="flex items-center justify-between">
+              <button 
+                onClick={() => setShowDrawer(false)}
+                className="flex items-center gap-2 text-sm font-semibold text-[#0D47A1] hover:text-blue-800 transition-colors"
+              >
+                <ArrowLeft size={16} /> Back to Requests
+              </button>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden flex flex-col max-w-3xl">
+              <div className="p-6 border-b border-[#E2E8F0] flex justify-between items-center bg-[#F8FAFC]">
+                <div>
+                  <h2 className="text-lg font-bold text-[#1E293B]">Request Details</h2>
+                  <p className="text-sm text-[#0D47A1] font-medium">{selectedRequest.id}</p>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-6 flex-1">
+                {/* Customer Details */}
+                <div>
+                  <h3 className="text-xs uppercase text-[#64748B] font-semibold mb-2">Customer Details</h3>
+                  <div className="bg-[#F8FAFC] p-4 rounded-xl space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-[#64748B]">Name:</span>
+                      <span className="text-sm font-medium text-[#1E293B]">{selectedRequest.customer}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-[#64748B]">Phone:</span>
+                      <span className="text-sm font-medium text-[#1E293B]">+91 98765 43210</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Appliance Details */}
+                <div>
+                  <h3 className="text-xs uppercase text-[#64748B] font-semibold mb-2">Appliance Details</h3>
+                  <div className="bg-[#F8FAFC] p-4 rounded-xl space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-[#64748B]">Product:</span>
+                      <span className="text-sm font-medium text-[#1E293B]">{selectedRequest.product}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-[#64748B]">Model:</span>
+                      <span className="text-sm font-medium text-[#1E293B]">{selectedRequest.model}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-[#64748B]">Invoice:</span>
+                      <span className="text-sm font-medium text-[#0D47A1]">{selectedRequest.invoice}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Status & Timeline */}
+                <div>
+                  <h3 className="text-xs uppercase text-[#64748B] font-semibold mb-2">Status & Timeline</h3>
+                  <div className="bg-[#F8FAFC] p-4 rounded-xl space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-[#64748B]">Current Status:</span>
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                        selectedRequest.status === 'Completed' ? 'bg-green-50 text-green-600' :
+                        selectedRequest.status === 'In Progress' ? 'bg-blue-50 text-blue-600' :
+                        selectedRequest.status === 'Pending' ? 'bg-yellow-50 text-yellow-600' :
+                        'bg-red-50 text-red-600'
+                      }`}>
+                        {selectedRequest.status}
+                      </span>
+                    </div>
+                    
+                    {/* Mini Timeline */}
+                    <div className="border-l-2 border-[#E2E8F0] ml-2 pl-4 space-y-3 mt-2">
+                      <div className="relative">
+                        <div className="absolute -left-[21px] top-1 w-3 h-3 bg-[#0D47A1] rounded-full"></div>
+                        <p className="text-sm font-medium text-[#1E293B]">Request Raised</p>
+                        <p className="text-xs text-[#64748B]">12 May, 2026 - 10:00 AM</p>
+                      </div>
+                      <div className="relative">
+                        <div className="absolute -left-[21px] top-1 w-3 h-3 bg-[#0D47A1] rounded-full"></div>
+                        <p className="text-sm font-medium text-[#1E293B]">Technician Assigned</p>
+                        <p className="text-xs text-[#64748B]">12 May, 2026 - 11:30 AM</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions Footer */}
+              <div className="p-6 border-t border-[#E2E8F0] flex gap-3 bg-[#F8FAFC]">
+                <button 
+                  onClick={() => setShowReassignModal(true)}
+                  className="bg-white text-[#1E293B] border border-[#E2E8F0] px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-[#F8FAFC] transition-colors"
+                >
+                  Reassign
+                </button>
+                {selectedRequest.status === 'Pending' && (
+                  <button 
+                    onClick={() => updateRequestStatus(selectedRequest.id, 'In Progress')}
+                    className="bg-[#0D47A1] text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                  >
+                    Approve Warranty
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="p-6 space-y-6 flex-1">
           
           {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -293,113 +401,10 @@ const Requests = () => {
             </div>
           </div>
 
-        </div>
-
-        {/* Details Drawer (Right Slide-over) */}
-        {showDrawer && selectedRequest && (
-          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm z-30 flex justify-end">
-            <div className="w-full max-w-md bg-white h-full shadow-2xl flex flex-col">
-              <div className="p-6 border-b border-[#E2E8F0] flex justify-between items-center">
-                <div>
-                  <h2 className="text-lg font-bold text-[#1E293B]">Request Details</h2>
-                  <p className="text-sm text-[#0D47A1] font-medium">{selectedRequest.id}</p>
-                </div>
-                <button 
-                  onClick={() => setShowDrawer(false)}
-                  className="text-[#64748B] hover:text-[#1E293B] p-2 hover:bg-[#F8FAFC] rounded-full"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-              
-              <div className="p-6 space-y-6 flex-1 overflow-y-auto">
-                {/* Customer Details */}
-                <div>
-                  <h3 className="text-xs uppercase text-[#64748B] font-semibold mb-2">Customer Details</h3>
-                  <div className="bg-[#F8FAFC] p-4 rounded-xl space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-sm text-[#64748B]">Name:</span>
-                      <span className="text-sm font-medium text-[#1E293B]">{selectedRequest.customer}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-[#64748B]">Phone:</span>
-                      <span className="text-sm font-medium text-[#1E293B]">+91 98765 43210</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Appliance Details */}
-                <div>
-                  <h3 className="text-xs uppercase text-[#64748B] font-semibold mb-2">Appliance Details</h3>
-                  <div className="bg-[#F8FAFC] p-4 rounded-xl space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-sm text-[#64748B]">Product:</span>
-                      <span className="text-sm font-medium text-[#1E293B]">{selectedRequest.product}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-[#64748B]">Model:</span>
-                      <span className="text-sm font-medium text-[#1E293B]">{selectedRequest.model}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-[#64748B]">Invoice:</span>
-                      <span className="text-sm font-medium text-[#0D47A1]">{selectedRequest.invoice}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Status & Timeline */}
-                <div>
-                  <h3 className="text-xs uppercase text-[#64748B] font-semibold mb-2">Status & Timeline</h3>
-                  <div className="bg-[#F8FAFC] p-4 rounded-xl space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-[#64748B]">Current Status:</span>
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
-                        selectedRequest.status === 'Completed' ? 'bg-green-50 text-green-600' :
-                        selectedRequest.status === 'In Progress' ? 'bg-blue-50 text-blue-600' :
-                        selectedRequest.status === 'Pending' ? 'bg-yellow-50 text-yellow-600' :
-                        'bg-red-50 text-red-600'
-                      }`}>
-                        {selectedRequest.status}
-                      </span>
-                    </div>
-                    
-                    {/* Mini Timeline */}
-                    <div className="border-l-2 border-[#E2E8F0] ml-2 pl-4 space-y-3 mt-2">
-                      <div className="relative">
-                        <div className="absolute -left-[21px] top-1 w-3 h-3 bg-[#0D47A1] rounded-full"></div>
-                        <p className="text-sm font-medium text-[#1E293B]">Request Raised</p>
-                        <p className="text-xs text-[#64748B]">12 May, 2026 - 10:00 AM</p>
-                      </div>
-                      <div className="relative">
-                        <div className="absolute -left-[21px] top-1 w-3 h-3 bg-[#0D47A1] rounded-full"></div>
-                        <p className="text-sm font-medium text-[#1E293B]">Technician Assigned</p>
-                        <p className="text-xs text-[#64748B]">12 May, 2026 - 11:30 AM</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Actions Footer */}
-              <div className="p-6 border-t border-[#E2E8F0] flex gap-3">
-                <button 
-                  onClick={() => setShowReassignModal(true)}
-                  className="flex-1 bg-white text-[#1E293B] border border-[#E2E8F0] py-2.5 rounded-lg text-sm font-medium hover:bg-[#F8FAFC] transition-colors"
-                >
-                  Reassign
-                </button>
-                {selectedRequest.status === 'Pending' && (
-                  <button 
-                    onClick={() => updateRequestStatus(selectedRequest.id, 'In Progress')}
-                    className="flex-1 bg-[#0D47A1] text-white py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-                  >
-                    Approve Warranty
-                  </button>
-                )}
-              </div>
-            </div>
           </div>
         )}
+
+
 
         {/* Reassign Modal */}
         {showReassignModal && selectedRequest && (

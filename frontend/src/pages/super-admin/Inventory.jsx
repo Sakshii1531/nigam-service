@@ -13,7 +13,8 @@ import {
   X,
   CheckCircle2,
   SlidersHorizontal,
-  ChevronRight
+  ChevronRight,
+  ArrowLeft
 } from 'lucide-react';
 
 const Inventory = () => {
@@ -125,7 +126,84 @@ const Inventory = () => {
         <Topbar title="Spare Parts & Inventory" />
 
         {/* Body */}
-        <div className="p-6 space-y-6 flex-1">
+        {showDetailsDrawer && selectedPart ? (
+          <div className="p-6 space-y-6 flex-1 bg-[#F8FAFC] text-left">
+            <div className="flex items-center justify-between">
+              <button 
+                onClick={() => {
+                  setShowDetailsDrawer(false);
+                  setSelectedPart(null);
+                }}
+                className="flex items-center gap-2 text-sm font-semibold text-[#0D47A1] hover:text-blue-800 transition-colors"
+              >
+                <ArrowLeft size={16} /> Back to Inventory
+              </button>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden flex flex-col">
+              <div className="p-6 border-b border-[#E2E8F0] bg-[#F8FAFC] flex justify-between items-center">
+                <div>
+                  <span className="text-xs font-bold text-[#0D47A1]">{selectedPart.id}</span>
+                  <h3 className="text-lg font-black text-[#1E293B]">{selectedPart.name}</h3>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-6 flex-1 overflow-y-auto">
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="p-3 bg-slate-50 rounded-xl">
+                      <p className="text-xs text-[#64748B] font-semibold">Brand Partner</p>
+                      <p className="font-bold text-[#1E293B] mt-1">{selectedPart.brand}</p>
+                    </div>
+                    <div className="p-3 bg-slate-50 rounded-xl">
+                      <p className="text-xs text-[#64748B] font-semibold">Appliance Type</p>
+                      <p className="font-bold text-[#1E293B] mt-1">{selectedPart.category}</p>
+                    </div>
+                  </div>
+
+                  <div className="p-4 border border-[#E2E8F0] rounded-xl space-y-3">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-[#64748B]">Unit Price:</span>
+                      <span className="font-bold text-[#1E293B]">{selectedPart.price}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-[#64748B]">Threshold Alert:</span>
+                      <span className="font-semibold text-slate-700">{selectedPart.threshold} units</span>
+                    </div>
+                    <div className="flex justify-between text-sm border-t border-dashed border-[#E2E8F0] pt-3">
+                      <span className="text-[#64748B] font-bold">Current Stock:</span>
+                      <span className={`font-black ${selectedPart.stock <= selectedPart.threshold ? 'text-red-600' : 'text-green-600'}`}>
+                        {selectedPart.stock} units
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider">Mock Supplier Status</h4>
+                    <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl">
+                      <p className="text-xs text-[#0D47A1] font-bold">Authorized Distributor: Nigam Spares Ltd</p>
+                      <p className="text-xs text-slate-600 mt-1">Lead time: 2-3 business days. Re-order threshold is active.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 border-t border-[#E2E8F0] bg-[#F8FAFC] flex gap-3">
+                <button
+                  onClick={() => {
+                    setEditingPart(selectedPart);
+                    setShowDetailsDrawer(false);
+                    setShowEditModal(true);
+                  }}
+                  className="bg-[#0D47A1] text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors shadow-sm text-center"
+                >
+                  Adjust Stock / Edit Details
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="p-6 space-y-6 flex-1">
           
           {/* Header Actions */}
           <div className="flex justify-between items-center">
@@ -279,6 +357,7 @@ const Inventory = () => {
           </div>
 
         </div>
+        )}
       </div>
 
       {/* Add New Part Modal */}
@@ -478,81 +557,7 @@ const Inventory = () => {
         </div>
       )}
 
-      {/* Details Slide-out Drawer */}
-      {showDetailsDrawer && selectedPart && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/40">
-          <div className="w-full max-w-md bg-white h-full shadow-2xl p-6 flex flex-col justify-between animate-slide-in">
-            <div className="space-y-6 overflow-y-auto">
-              <div className="flex justify-between items-center border-b border-[#E2E8F0] pb-4">
-                <div>
-                  <span className="text-xs font-bold text-[#0D47A1]">{selectedPart.id}</span>
-                  <h3 className="text-lg font-black text-[#1E293B]">{selectedPart.name}</h3>
-                </div>
-                <button 
-                  onClick={() => {
-                    setShowDetailsDrawer(false);
-                    setSelectedPart(null);
-                  }}
-                  className="p-1.5 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-100"
-                >
-                  <X size={20} />
-                </button>
-              </div>
 
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div className="p-3 bg-slate-50 rounded-xl">
-                    <p className="text-xs text-[#64748B] font-semibold">Brand Partner</p>
-                    <p className="font-bold text-[#1E293B] mt-1">{selectedPart.brand}</p>
-                  </div>
-                  <div className="p-3 bg-slate-50 rounded-xl">
-                    <p className="text-xs text-[#64748B] font-semibold">Appliance Type</p>
-                    <p className="font-bold text-[#1E293B] mt-1">{selectedPart.category}</p>
-                  </div>
-                </div>
-
-                <div className="p-4 border border-[#E2E8F0] rounded-xl space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-[#64748B]">Unit Price:</span>
-                    <span className="font-bold text-[#1E293B]">{selectedPart.price}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-[#64748B]">Threshold Alert:</span>
-                    <span className="font-semibold text-slate-700">{selectedPart.threshold} units</span>
-                  </div>
-                  <div className="flex justify-between text-sm border-t border-dashed border-[#E2E8F0] pt-3">
-                    <span className="text-[#64748B] font-bold">Current Stock:</span>
-                    <span className={`font-black ${selectedPart.stock <= selectedPart.threshold ? 'text-red-600' : 'text-green-600'}`}>
-                      {selectedPart.stock} units
-                    </span>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider">Mock Supplier Status</h4>
-                  <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl">
-                    <p className="text-xs text-[#0D47A1] font-bold">Authorized Distributor: Nigam Spares Ltd</p>
-                    <p className="text-xs text-slate-600 mt-1">Lead time: 2-3 business days. Re-order threshold is active.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-4 border-t border-[#E2E8F0] flex gap-3">
-              <button
-                onClick={() => {
-                  setEditingPart(selectedPart);
-                  setShowDetailsDrawer(false);
-                  setShowEditModal(true);
-                }}
-                className="w-full bg-[#0D47A1] text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm text-center"
-              >
-                Adjust Stock / Edit Details
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Success Toast */}
       {successMessage && (

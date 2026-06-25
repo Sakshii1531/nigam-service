@@ -21,7 +21,8 @@ import {
   Smartphone,
   MapPin,
   Mail,
-  Phone
+  Phone,
+  ArrowLeft
 } from 'lucide-react';
 
 const Users = () => {
@@ -130,7 +131,101 @@ const Users = () => {
         <Topbar title="User Management" />
 
         {/* Body */}
-        <div className="p-6 space-y-6 flex-1">
+        {showDrawer && selectedUser ? (
+          <div className="p-6 space-y-6 flex-1 bg-[#F8FAFC] text-left">
+            <div className="flex items-center justify-between">
+              <button 
+                onClick={() => {
+                  setShowDrawer(false);
+                  setSelectedUser(null);
+                }}
+                className="flex items-center gap-2 text-sm font-semibold text-[#0D47A1] hover:text-blue-800 transition-colors"
+              >
+                <ArrowLeft size={16} /> Back to Customers
+              </button>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden flex flex-col">
+              <div className="p-6 border-b border-[#E2E8F0] bg-[#F8FAFC] flex justify-between items-center">
+                <div>
+                  <span className="text-xs font-bold text-[#0D47A1]">{selectedUser.id}</span>
+                  <h3 className="text-lg font-black text-[#1E293B]">Customer Profile</h3>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-6 flex-1 overflow-y-auto">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-14 h-14 bg-[#EEF4FF] text-[#0D47A1] rounded-full flex items-center justify-center font-bold text-xl">
+                      {selectedUser.name.split(' ').map(n => n[0]).join('')}
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-[#1E293B] text-base">{selectedUser.name}</h4>
+                      <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                        selectedUser.status === 'Active' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'
+                      }`}>{selectedUser.status}</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 text-xs border border-[#E2E8F0] rounded-xl p-3.5 bg-slate-50 font-medium">
+                    <p className="flex items-center gap-2 text-slate-700"><Mail size={14} className="text-[#64748B]" /> {selectedUser.email}</p>
+                    <p className="flex items-center gap-2 text-slate-700 mt-1.5"><Phone size={14} className="text-[#64748B]" /> {selectedUser.phone}</p>
+                    <div className="flex gap-2 items-start text-slate-700 mt-1.5">
+                      <MapPin size={14} className="text-[#64748B] flex-shrink-0 mt-0.5" /> 
+                      <div className="space-y-1">
+                        {selectedUser.addresses.map((addr, idx) => (
+                          <p key={idx} className="bg-white px-2 py-0.5 border border-[#E2E8F0] rounded text-slate-600">{addr}</p>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider">Registered Appliances ({selectedUser.appliances})</h4>
+                    <div className="space-y-2">
+                      {selectedUser.applianceList.map((app, idx) => (
+                        <div key={idx} className="p-3 border border-[#E2E8F0] rounded-xl flex items-center justify-between">
+                          <div className="flex items-center gap-2.5">
+                            <div className="p-2 bg-slate-100 rounded-lg text-[#0D47A1]">
+                              {app.type === 'TV' ? <Tv size={16} /> : <Refrigerator size={16} />}
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold text-[#1E293B]">{app.brand} {app.type}</p>
+                              <p className="text-[10px] text-slate-500 font-semibold">{app.model}</p>
+                            </div>
+                          </div>
+                          <span className="text-[10px] text-[#0D47A1] font-bold bg-[#EEF4FF] px-2 py-0.5 rounded-full">Covered</span>
+                        </div>
+                      ))}
+                      {selectedUser.applianceList.length === 0 && (
+                        <p className="text-xs text-[#64748B] italic">No appliances registered yet.</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 border-t border-[#E2E8F0] bg-[#F8FAFC] flex gap-3">
+                {selectedUser.status === 'Active' ? (
+                  <button
+                    onClick={() => handleStatusChange(selectedUser.id, 'Suspended')}
+                    className="w-full bg-orange-600 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-orange-700 transition-colors shadow-sm text-center flex items-center justify-center gap-2"
+                  >
+                    <Ban size={16} /> Suspend Account
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleStatusChange(selectedUser.id, 'Active')}
+                    className="w-full bg-green-600 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-green-700 transition-colors shadow-sm text-center flex items-center justify-center gap-2"
+                  >
+                    <CheckCircle size={16} /> Activate Account
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="p-6 space-y-6 flex-1">
           
           {/* Header Actions */}
           <div className="flex justify-between items-center">
@@ -361,105 +456,11 @@ const Users = () => {
               </div>
             )}
           </div>
-
-        </div>
-      </div>
-
-      {/* Details Slide-out Drawer */}
-      {showDrawer && selectedUser && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/45">
-          <div className="w-full max-w-md bg-white h-full shadow-2xl p-6 flex flex-col justify-between animate-slide-in">
-            <div className="space-y-6 overflow-y-auto">
-              <div className="flex justify-between items-center border-b border-[#E2E8F0] pb-4">
-                <div>
-                  <span className="text-xs font-bold text-[#0D47A1]">{selectedUser.id}</span>
-                  <h3 className="text-lg font-black text-[#1E293B]">Customer Profile</h3>
-                </div>
-                <button 
-                  onClick={() => {
-                    setShowDrawer(false);
-                    setSelectedUser(null);
-                  }}
-                  className="p-1.5 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-100"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-
-              {/* User overview info */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-14 h-14 bg-[#EEF4FF] text-[#0D47A1] rounded-full flex items-center justify-center font-bold text-xl">
-                    {selectedUser.name.split(' ').map(n => n[0]).join('')}
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-[#1E293B] text-base">{selectedUser.name}</h4>
-                    <span className={`px-2 py-0.5 rounded text-xs font-bold ${
-                      selectedUser.status === 'Active' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'
-                    }`}>{selectedUser.status}</span>
-                  </div>
-                </div>
-
-                {/* Contact list details */}
-                <div className="space-y-2 text-xs border border-[#E2E8F0] rounded-xl p-3.5 bg-slate-50 font-medium">
-                  <p className="flex items-center gap-2 text-slate-700"><Mail size={14} className="text-[#64748B]" /> {selectedUser.email}</p>
-                  <p className="flex items-center gap-2 text-slate-700 mt-1.5"><Phone size={14} className="text-[#64748B]" /> {selectedUser.phone}</p>
-                  <div className="flex gap-2 items-start text-slate-700 mt-1.5">
-                    <MapPin size={14} className="text-[#64748B] flex-shrink-0 mt-0.5" /> 
-                    <div className="space-y-1">
-                      {selectedUser.addresses.map((addr, idx) => (
-                        <p key={idx} className="bg-white px-2 py-0.5 border border-[#E2E8F0] rounded text-slate-600">{addr}</p>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Registered Appliances */}
-                <div className="space-y-3">
-                  <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider">Registered Appliances ({selectedUser.appliances})</h4>
-                  <div className="space-y-2">
-                    {selectedUser.applianceList.map((app, idx) => (
-                      <div key={idx} className="p-3 border border-[#E2E8F0] rounded-xl flex items-center justify-between">
-                        <div className="flex items-center gap-2.5">
-                          <div className="p-2 bg-slate-100 rounded-lg text-[#0D47A1]">
-                            {app.type === 'TV' ? <Tv size={16} /> : <Refrigerator size={16} />}
-                          </div>
-                          <div>
-                            <p className="text-xs font-bold text-[#1E293B]">{app.brand} {app.type}</p>
-                            <p className="text-[10px] text-slate-500 font-semibold">{app.model}</p>
-                          </div>
-                        </div>
-                        <span className="text-[10px] text-[#0D47A1] font-bold bg-[#EEF4FF] px-2 py-0.5 rounded-full">Covered</span>
-                      </div>
-                    ))}
-                    {selectedUser.applianceList.length === 0 && (
-                      <p className="text-xs text-[#64748B] italic">No appliances registered yet.</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-4 border-t border-[#E2E8F0] flex gap-3">
-              {selectedUser.status === 'Active' ? (
-                <button
-                  onClick={() => handleStatusChange(selectedUser.id, 'Suspended')}
-                  className="w-full bg-orange-600 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-orange-700 transition-colors shadow-sm text-center flex items-center justify-center gap-2"
-                >
-                  <Ban size={16} /> Suspend Account
-                </button>
-              ) : (
-                <button
-                  onClick={() => handleStatusChange(selectedUser.id, 'Active')}
-                  className="w-full bg-green-600 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-green-700 transition-colors shadow-sm text-center flex items-center justify-center gap-2"
-                >
-                  <CheckCircle size={16} /> Activate Account
-                </button>
-              )}
-            </div>
-          </div>
         </div>
       )}
+      </div>
+
+
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (

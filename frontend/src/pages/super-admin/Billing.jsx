@@ -12,7 +12,8 @@ import {
   XCircle,
   Clock,
   X,
-  FileCheck
+  FileCheck,
+  ArrowLeft
 } from 'lucide-react';
 
 const Billing = () => {
@@ -78,7 +79,80 @@ const Billing = () => {
         <Topbar title="Billing & Payments" />
 
         {/* Body */}
-        <div className="p-6 space-y-6 flex-1">
+        {showDrawer && selectedTxn ? (
+          <div className="p-6 space-y-6 flex-1 bg-[#F8FAFC] text-left">
+            <div className="flex items-center justify-between">
+              <button 
+                onClick={() => setShowDrawer(false)}
+                className="flex items-center gap-2 text-sm font-semibold text-[#0D47A1] hover:text-blue-800 transition-colors"
+              >
+                <ArrowLeft size={16} /> Back to Billing
+              </button>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden flex flex-col">
+              <div className="p-6 border-b border-[#E2E8F0] bg-[#F8FAFC]">
+                <h3 className="text-lg font-bold text-[#1E293B]">Transaction Details</h3>
+                <p className="text-xs text-[#0D47A1] font-semibold">{selectedTxn.id}</p>
+              </div>
+
+              <div className="p-6 space-y-6 flex-1 overflow-y-auto">
+                <div className="space-y-4">
+                  <div>
+                    <span className="text-xs font-semibold text-[#64748B] uppercase block">Entity/User</span>
+                    <p className="text-sm font-bold text-[#1E293B]">{selectedTxn.user}</p>
+                  </div>
+                  <div>
+                    <span className="text-xs font-semibold text-[#64748B] uppercase block">Transacted Amount</span>
+                    <p className="text-lg font-extrabold text-[#0D47A1]">{selectedTxn.amount}</p>
+                  </div>
+                  <div>
+                    <span className="text-xs font-semibold text-[#64748B] uppercase block">Transaction Description</span>
+                    <p className="text-sm text-[#1E293B] bg-slate-50 p-3 rounded-lg border border-slate-100 mt-1 leading-relaxed">
+                      {selectedTxn.description}
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <span className="text-xs font-semibold text-[#64748B] uppercase block">Type</span>
+                      <span className="inline-block mt-1 px-2.5 py-0.5 rounded bg-slate-100 text-slate-800 text-xs font-semibold">
+                        {selectedTxn.type}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-xs font-semibold text-[#64748B] uppercase block">Status</span>
+                      <span className={`inline-block mt-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        selectedTxn.status === 'Paid' ? 'bg-green-50 text-green-600' :
+                        selectedTxn.status === 'Pending' ? 'bg-yellow-50 text-yellow-600' :
+                        'bg-red-50 text-red-600'
+                      }`}>
+                        {selectedTxn.status}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 border-t border-[#E2E8F0] bg-[#F8FAFC] flex gap-3">
+                {selectedTxn.status === 'Pending' && selectedTxn.type === 'Payout' && (
+                  <button 
+                    onClick={() => handleReleasePayout(selectedTxn.id)}
+                    className="bg-[#0D47A1] text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+                  >
+                    <FileCheck size={14} /> Release Payout
+                  </button>
+                )}
+                <button 
+                  onClick={() => { showToast(`Generating invoice download for ${selectedTxn.id}...`); setShowDrawer(false); }}
+                  className="bg-white text-[#1E293B] border border-[#E2E8F0] px-4 py-2 rounded-lg text-xs font-semibold hover:bg-[#F8FAFC] transition-colors"
+                >
+                  Download Invoice
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="p-6 space-y-6 flex-1">
           
           {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -243,91 +317,11 @@ const Billing = () => {
               </div>
             )}
           </div>
-
-        </div>
-      </div>
-
-      {/* Slide-over Transaction Drawer */}
-      {showDrawer && selectedTxn && (
-        <div className="fixed inset-0 z-40 overflow-hidden">
-          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity" onClick={() => setShowDrawer(false)} />
-          <div className="absolute inset-y-0 right-0 max-w-full flex pl-10">
-            <div className="w-screen max-w-md bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
-              
-              {/* Header */}
-              <div className="p-6 border-b border-[#E2E8F0] flex justify-between items-center bg-[#F8FAFC]">
-                <div>
-                  <h3 className="text-lg font-bold text-[#1E293B]">Transaction Details</h3>
-                  <p className="text-xs text-[#0D47A1] font-semibold">{selectedTxn.id}</p>
-                </div>
-                <button 
-                  onClick={() => setShowDrawer(false)}
-                  className="text-[#64748B] hover:text-[#1E293B] p-2 hover:bg-[#E2E8F0] rounded-full"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-
-              {/* Body */}
-              <div className="p-6 space-y-6 flex-1 overflow-y-auto">
-                <div className="space-y-4">
-                  <div>
-                    <span className="text-xs font-semibold text-[#64748B] uppercase block">Entity/User</span>
-                    <p className="text-sm font-bold text-[#1E293B]">{selectedTxn.user}</p>
-                  </div>
-                  <div>
-                    <span className="text-xs font-semibold text-[#64748B] uppercase block">Transacted Amount</span>
-                    <p className="text-lg font-extrabold text-[#0D47A1]">{selectedTxn.amount}</p>
-                  </div>
-                  <div>
-                    <span className="text-xs font-semibold text-[#64748B] uppercase block">Transaction Description</span>
-                    <p className="text-sm text-[#1E293B] bg-slate-50 p-3 rounded-lg border border-slate-100 mt-1 leading-relaxed">
-                      {selectedTxn.description}
-                    </p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <span className="text-xs font-semibold text-[#64748B] uppercase block">Type</span>
-                      <span className="inline-block mt-1 px-2.5 py-0.5 rounded bg-slate-100 text-slate-800 text-xs font-semibold">
-                        {selectedTxn.type}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-xs font-semibold text-[#64748B] uppercase block">Status</span>
-                      <span className={`inline-block mt-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        selectedTxn.status === 'Paid' ? 'bg-green-50 text-green-600' :
-                        selectedTxn.status === 'Pending' ? 'bg-yellow-50 text-yellow-600' :
-                        'bg-red-50 text-red-600'
-                      }`}>
-                        {selectedTxn.status}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Footer */}
-              <div className="p-4 border-t border-[#E2E8F0] bg-[#F8FAFC] flex gap-3">
-                {selectedTxn.status === 'Pending' && selectedTxn.type === 'Payout' && (
-                  <button 
-                    onClick={() => handleReleasePayout(selectedTxn.id)}
-                    className="flex-1 bg-[#0D47A1] text-white py-2.5 rounded-xl text-xs font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-1 shadow-sm"
-                  >
-                    <FileCheck size={14} /> Release Payout
-                  </button>
-                )}
-                <button 
-                  onClick={() => { showToast(`Generating invoice download for ${selectedTxn.id}...`); setShowDrawer(false); }}
-                  className="flex-1 bg-white text-[#1E293B] border border-[#E2E8F0] py-2.5 rounded-xl text-xs font-semibold hover:bg-[#F8FAFC] transition-colors"
-                >
-                  Download Invoice
-                </button>
-              </div>
-
-            </div>
-          </div>
         </div>
       )}
+      </div>
+
+
 
       {/* Success Toast */}
       {successMessage && (

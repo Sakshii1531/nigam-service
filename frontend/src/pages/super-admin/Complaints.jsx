@@ -11,7 +11,8 @@ import {
   ArrowUpRight,
   X,
   CheckCircle2,
-  Clock
+  Clock,
+  ArrowLeft
 } from 'lucide-react';
 
 const Complaints = () => {
@@ -81,7 +82,99 @@ const Complaints = () => {
         <Topbar title="Complaints & Escalations" />
 
         {/* Body */}
-        <div className="p-6 space-y-6 flex-1">
+        {showDrawer && selectedComplaint ? (
+          <div className="p-6 space-y-6 flex-1 bg-[#F8FAFC] text-left">
+            <div className="flex items-center justify-between">
+              <button 
+                onClick={() => setShowDrawer(false)}
+                className="flex items-center gap-2 text-sm font-semibold text-[#0D47A1] hover:text-blue-800 transition-colors"
+              >
+                <ArrowLeft size={16} /> Back to Complaints
+              </button>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden flex flex-col">
+              <div className="p-6 border-b border-[#E2E8F0] bg-[#F8FAFC]">
+                <h3 className="text-lg font-bold text-[#1E293B]">Complaint Record</h3>
+                <p className="text-xs text-[#0D47A1] font-semibold">{selectedComplaint.id}</p>
+              </div>
+
+              <div className="p-6 space-y-6 flex-1 overflow-y-auto">
+                <div className="space-y-4">
+                  <div>
+                    <span className="text-xs font-semibold text-[#64748B] uppercase block">Customer/User</span>
+                    <p className="text-sm font-bold text-[#1E293B]">{selectedComplaint.user}</p>
+                  </div>
+                  <div>
+                    <span className="text-xs font-semibold text-[#64748B] uppercase block">Subject</span>
+                    <p className="text-sm font-semibold text-[#1E293B]">{selectedComplaint.subject}</p>
+                  </div>
+                  <div>
+                    <span className="text-xs font-semibold text-[#64748B] uppercase block">Complaint Description</span>
+                    <p className="text-sm text-[#1E293B] bg-slate-50 p-3 rounded-lg border border-slate-100 mt-1 leading-relaxed">
+                      {selectedComplaint.description}
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <span className="text-xs font-semibold text-[#64748B] uppercase block">Priority Level</span>
+                      <span className={`inline-block mt-1 px-2.5 py-0.5 rounded text-xs font-medium ${
+                        selectedComplaint.priority === 'High' ? 'bg-red-50 text-red-600' :
+                        selectedComplaint.priority === 'Medium' ? 'bg-yellow-50 text-yellow-600' :
+                        'bg-green-50 text-green-600'
+                      }`}>
+                        {selectedComplaint.priority}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-xs font-semibold text-[#64748B] uppercase block">Current Status</span>
+                      <span className={`inline-block mt-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        selectedComplaint.status === 'Resolved' ? 'bg-green-50 text-green-600' :
+                        selectedComplaint.status === 'In Progress' ? 'bg-blue-50 text-blue-600' :
+                        'bg-yellow-50 text-yellow-600'
+                      }`}>
+                        {selectedComplaint.status}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 border-t border-[#E2E8F0] bg-[#F8FAFC] flex gap-3">
+                {selectedComplaint.status !== 'Resolved' ? (
+                  <>
+                    <button 
+                      onClick={() => { handleStatusChange(selectedComplaint.id, 'In Progress'); setShowDrawer(false); }}
+                      className="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors"
+                    >
+                      Investigate
+                    </button>
+                    <button 
+                      onClick={() => { handleStatusChange(selectedComplaint.id, 'Resolved'); setShowDrawer(false); }}
+                      className="bg-green-600 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-green-700 transition-colors"
+                    >
+                      Resolve
+                    </button>
+                  </>
+                ) : (
+                  <button 
+                    disabled 
+                    className="bg-slate-100 text-slate-400 px-4 py-2 rounded-lg text-xs font-semibold cursor-not-allowed"
+                  >
+                    Resolved & Closed
+                  </button>
+                )}
+                <button 
+                  onClick={() => setShowDrawer(false)}
+                  className="bg-white text-[#64748B] border border-[#E2E8F0] px-4 py-2 rounded-lg text-xs font-semibold hover:bg-[#F8FAFC] transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="p-6 space-y-6 flex-1">
           
           {/* Header Actions */}
           <div className="flex justify-between items-center">
@@ -246,13 +339,7 @@ const Complaints = () => {
                             </>
                           )}
 
-                          <button 
-                            onClick={() => handleEscalate(cmp.id)}
-                            className="p-1.5 text-[#64748B] hover:text-red-600 hover:bg-red-50 rounded" 
-                            title="Escalate"
-                          >
-                            <ArrowUpRight size={16} />
-                          </button>
+
                         </div>
                       </td>
                     </tr>
@@ -268,110 +355,11 @@ const Complaints = () => {
               </table>
             </div>
           </div>
-
-        </div>
-      </div>
-
-      {/* Slide-over Drawer for details */}
-      {showDrawer && selectedComplaint && (
-        <div className="fixed inset-0 z-40 overflow-hidden">
-          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity" onClick={() => setShowDrawer(false)} />
-          <div className="absolute inset-y-0 right-0 max-w-full flex pl-10">
-            <div className="w-screen max-w-md bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
-              
-              {/* Header */}
-              <div className="p-6 border-b border-[#E2E8F0] flex justify-between items-center bg-[#F8FAFC]">
-                <div>
-                  <h3 className="text-lg font-bold text-[#1E293B]">Complaint Record</h3>
-                  <p className="text-xs text-[#0D47A1] font-semibold">{selectedComplaint.id}</p>
-                </div>
-                <button 
-                  onClick={() => setShowDrawer(false)}
-                  className="text-[#64748B] hover:text-[#1E293B] p-2 hover:bg-[#E2E8F0] rounded-full"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-
-              {/* Body */}
-              <div className="p-6 space-y-6 flex-1 overflow-y-auto">
-                <div className="space-y-4">
-                  <div>
-                    <span className="text-xs font-semibold text-[#64748B] uppercase block">Customer/User</span>
-                    <p className="text-sm font-bold text-[#1E293B]">{selectedComplaint.user}</p>
-                  </div>
-                  <div>
-                    <span className="text-xs font-semibold text-[#64748B] uppercase block">Subject</span>
-                    <p className="text-sm font-semibold text-[#1E293B]">{selectedComplaint.subject}</p>
-                  </div>
-                  <div>
-                    <span className="text-xs font-semibold text-[#64748B] uppercase block">Complaint Description</span>
-                    <p className="text-sm text-[#1E293B] bg-slate-50 p-3 rounded-lg border border-slate-100 mt-1 leading-relaxed">
-                      {selectedComplaint.description}
-                    </p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <span className="text-xs font-semibold text-[#64748B] uppercase block">Priority Level</span>
-                      <span className={`inline-block mt-1 px-2.5 py-0.5 rounded text-xs font-medium ${
-                        selectedComplaint.priority === 'High' ? 'bg-red-50 text-red-600' :
-                        selectedComplaint.priority === 'Medium' ? 'bg-yellow-50 text-yellow-600' :
-                        'bg-green-50 text-green-600'
-                      }`}>
-                        {selectedComplaint.priority}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-xs font-semibold text-[#64748B] uppercase block">Current Status</span>
-                      <span className={`inline-block mt-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        selectedComplaint.status === 'Resolved' ? 'bg-green-50 text-green-600' :
-                        selectedComplaint.status === 'In Progress' ? 'bg-blue-50 text-blue-600' :
-                        'bg-yellow-50 text-yellow-600'
-                      }`}>
-                        {selectedComplaint.status}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Footer */}
-              <div className="p-4 border-t border-[#E2E8F0] bg-[#F8FAFC] flex gap-3">
-                {selectedComplaint.status !== 'Resolved' ? (
-                  <>
-                    <button 
-                      onClick={() => { handleStatusChange(selectedComplaint.id, 'In Progress'); setShowDrawer(false); }}
-                      className="flex-1 bg-blue-600 text-white py-2.5 rounded-xl text-xs font-semibold hover:bg-blue-700 transition-colors"
-                    >
-                      Investigate
-                    </button>
-                    <button 
-                      onClick={() => { handleStatusChange(selectedComplaint.id, 'Resolved'); setShowDrawer(false); }}
-                      className="flex-1 bg-green-600 text-white py-2.5 rounded-xl text-xs font-semibold hover:bg-green-700 transition-colors"
-                    >
-                      Resolve
-                    </button>
-                  </>
-                ) : (
-                  <button 
-                    disabled 
-                    className="flex-1 bg-slate-100 text-slate-400 py-2.5 rounded-xl text-xs font-semibold cursor-not-allowed"
-                  >
-                    Resolved & Closed
-                  </button>
-                )}
-                <button 
-                  onClick={() => setShowDrawer(false)}
-                  className="flex-1 bg-white text-[#64748B] border border-[#E2E8F0] py-2.5 rounded-xl text-xs font-semibold hover:bg-[#F8FAFC] transition-colors"
-                >
-                  Close
-                </button>
-              </div>
-
-            </div>
-          </div>
         </div>
       )}
+      </div>
+
+
 
       {/* Success Toast */}
       {successMessage && (

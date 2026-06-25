@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -23,6 +23,37 @@ import {
 } from 'lucide-react';
 
 const Sidebar = () => {
+  const scrollContainerRef = useRef(null);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    let timer;
+    const savedScroll = sessionStorage.getItem('brand-sidebar-scroll');
+    if (savedScroll) {
+      const scrollVal = parseInt(savedScroll, 10);
+      container.scrollTop = scrollVal;
+      // Re-apply after a short delay for layout paint
+      timer = setTimeout(() => {
+        container.scrollTop = scrollVal;
+      }, 50);
+    }
+
+    const handleScroll = () => {
+      // Only save if the container still has overflow or we are at a non-zero scroll position
+      if (container.scrollTop > 0 || container.scrollHeight > container.clientHeight) {
+        sessionStorage.setItem('brand-sidebar-scroll', container.scrollTop.toString());
+      }
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+      if (timer) clearTimeout(timer);
+    };
+  }, []);
+
   const menuGroups = [
     {
       title: 'Core Dashboard',
@@ -75,7 +106,10 @@ const Sidebar = () => {
 
   return (
     <div className="w-64 bg-white h-screen border-r border-[#E2E8F0] flex flex-col justify-between fixed left-0 top-0 z-20">
-      <div className="p-4 overflow-y-auto flex-1 pb-4 scrollbar-thin">
+      <div 
+        ref={scrollContainerRef}
+        className="p-4 overflow-y-auto flex-1 pb-4 scrollbar-thin"
+      >
         {/* Logo */}
         <div className="flex items-center gap-2 mb-6 px-2">
           <div className="w-8 h-8 bg-[#FFD600] rounded-lg flex items-center justify-center text-[#0D47A1] font-bold text-lg">
@@ -99,6 +133,11 @@ const Sidebar = () => {
                   <NavLink
                     key={index}
                     to={item.path}
+                    onClick={() => {
+                      if (scrollContainerRef.current) {
+                        sessionStorage.setItem('brand-sidebar-scroll', scrollContainerRef.current.scrollTop.toString());
+                      }
+                    }}
                     className={({ isActive }) => `
                       flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all
                       ${isActive 
