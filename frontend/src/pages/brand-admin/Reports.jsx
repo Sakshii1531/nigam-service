@@ -1,20 +1,39 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
 import { 
-  BarChart3, 
-  Download, 
   Calendar, 
   TrendingUp, 
   Smile, 
   Frown, 
   Meh,
-  PieChart
+  Download,
+  CheckCircle2
 } from 'lucide-react';
 
 const Reports = () => {
+  const [timeframe, setTimeframe] = useState('Last 30 Days');
+  const [successMessage, setSuccessMessage] = useState('');
+
+  const showToast = (message) => {
+    setSuccessMessage(message);
+    setTimeout(() => {
+      setSuccessMessage('');
+    }, 3000);
+  };
+
+  const handleTimeframeChange = (e) => {
+    const val = e.target.value;
+    setTimeframe(val);
+    showToast(`Timeframe updated to ${val}`);
+  };
+
+  const handleExport = (format) => {
+    showToast(`Exporting data to ${format}... Download started!`);
+  };
+
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex">
+    <div className="min-h-screen bg-[#F8FAFC] flex relative">
       {/* Sidebar */}
       <Sidebar />
 
@@ -33,7 +52,11 @@ const Reports = () => {
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#64748B]">
                   <Calendar size={16} />
                 </div>
-                <select className="pl-10 pr-4 py-2 border border-[#E2E8F0] rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-[#0D47A1]">
+                <select 
+                  value={timeframe}
+                  onChange={handleTimeframeChange}
+                  className="pl-10 pr-4 py-2 border border-[#E2E8F0] rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-[#0D47A1] text-slate-700 font-medium"
+                >
                   <option>Last 30 Days</option>
                   <option>Last Quarter</option>
                   <option>This Year</option>
@@ -42,10 +65,16 @@ const Reports = () => {
             </div>
             
             <div className="flex gap-2">
-              <button className="bg-white text-[#1E293B] border border-[#E2E8F0] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#F8FAFC] transition-colors flex items-center gap-2">
+              <button 
+                onClick={() => handleExport('CSV')}
+                className="bg-white text-[#1E293B] border border-[#E2E8F0] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#F8FAFC] transition-colors flex items-center gap-2"
+              >
                 <Download size={16} /> Export CSV
               </button>
-              <button className="bg-[#0D47A1] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2">
+              <button 
+                onClick={() => handleExport('PDF')}
+                className="bg-[#0D47A1] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
+              >
                 <Download size={16} /> Export PDF
               </button>
             </div>
@@ -57,7 +86,7 @@ const Reports = () => {
             {/* Monthly Service Reports (Simulated Bar) */}
             <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0]">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-lg font-bold text-[#1E293B]">Monthly Service Reports</h2>
+                <h2 className="text-lg font-bold text-[#1E293B]">Monthly Service Reports ({timeframe})</h2>
                 <span className="text-xs text-green-600 font-medium flex items-center gap-1">
                   <TrendingUp size={14} /> +15% vs last month
                 </span>
@@ -69,11 +98,12 @@ const Reports = () => {
                   return (
                     <div key={index} className="flex-1 flex flex-col items-center gap-2">
                       <div 
-                        className="w-full bg-[#E3ECF9] hover:bg-[#0D47A1] rounded-t-lg transition-all duration-300 group relative"
+                        className="w-full bg-[#E3ECF9] hover:bg-[#0D47A1] rounded-t-lg transition-all duration-300 group relative cursor-pointer"
                         style={{ height: `${heights[index]}%` }}
+                        onClick={() => showToast(`Month: ${month}, Tickets: ${heights[index] * 10}`)}
                       >
-                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-[#1E293B] text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                          {heights[index] * 10}
+                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-[#1E293B] text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                          {heights[index] * 10} Tickets
                         </div>
                       </div>
                       <span className="text-xs text-[#64748B]">{month}</span>
@@ -94,13 +124,17 @@ const Reports = () => {
                   { label: 'Smart TV', value: 15, color: 'bg-gray-400' },
                   { label: 'Microwave', value: 15, color: 'bg-gray-300' },
                 ].map((item, index) => (
-                  <div key={index}>
+                  <div 
+                    key={index}
+                    onClick={() => showToast(`${item.label} accounts for ${item.value}% of failures`)}
+                    className="cursor-pointer group"
+                  >
                     <div className="flex justify-between text-sm mb-1">
-                      <span className="text-[#1E293B] font-medium">{item.label}</span>
+                      <span className="text-[#1E293B] font-medium group-hover:text-[#0D47A1]">{item.label}</span>
                       <span className="text-[#64748B]">{item.value}%</span>
                     </div>
                     <div className="w-full h-2 bg-[#F1F5F9] rounded-full overflow-hidden">
-                      <div className={`h-full ${item.color}`} style={{ width: `${item.value}%` }}></div>
+                      <div className={`h-full ${item.color} group-hover:opacity-80 transition-opacity`} style={{ width: `${item.value}%` }}></div>
                     </div>
                   </div>
                 ))}
@@ -118,13 +152,17 @@ const Reports = () => {
                   { name: 'Suresh Raina', jobs: 210, rate: 92 },
                   { name: 'Vikram Batra', jobs: 67, rate: 75 },
                 ].map((tech, index) => (
-                  <div key={index} className="flex items-center gap-4">
+                  <div 
+                    key={index} 
+                    className="flex items-center gap-4 cursor-pointer group"
+                    onClick={() => showToast(`${tech.name}: ${tech.jobs} jobs completed with ${tech.rate}% success rating`)}
+                  >
                     <div className="w-8 h-8 bg-[#EEF4FF] rounded-full flex items-center justify-center text-[#0D47A1] font-bold text-xs flex-shrink-0">
                       {tech.name.split(' ').map(n => n[0]).join('')}
                     </div>
                     <div className="flex-1">
                       <div className="flex justify-between text-sm mb-1">
-                        <span className="text-[#1E293B] font-medium">{tech.name}</span>
+                        <span className="text-[#1E293B] font-medium group-hover:text-[#0D47A1]">{tech.name}</span>
                         <span className="text-[#64748B]">{tech.jobs} jobs</span>
                       </div>
                       <div className="w-full h-1.5 bg-[#F1F5F9] rounded-full overflow-hidden">
@@ -141,24 +179,33 @@ const Reports = () => {
               <h2 className="text-lg font-bold text-[#1E293B] mb-6">Customer Satisfaction (CSAT)</h2>
               
               <div className="flex items-center justify-around h-40">
-                <div className="text-center">
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-green-600 mx-auto mb-2">
+                <div 
+                  className="text-center cursor-pointer group"
+                  onClick={() => showToast('75% of customers left a positive feedback!')}
+                >
+                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-green-600 mx-auto mb-2 group-hover:scale-105 transition-transform">
                     <Smile size={24} />
                   </div>
                   <p className="text-xl font-bold text-[#1E293B]">75%</p>
                   <p className="text-xs text-[#64748B]">Satisfied</p>
                 </div>
                 
-                <div className="text-center">
-                  <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600 mx-auto mb-2">
+                <div 
+                  className="text-center cursor-pointer group"
+                  onClick={() => showToast('20% of customers left a neutral feedback!')}
+                >
+                  <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600 mx-auto mb-2 group-hover:scale-105 transition-transform">
                     <Meh size={24} />
                   </div>
                   <p className="text-xl font-bold text-[#1E293B]">20%</p>
                   <p className="text-xs text-[#64748B]">Neutral</p>
                 </div>
                 
-                <div className="text-center">
-                  <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center text-red-600 mx-auto mb-2">
+                <div 
+                  className="text-center cursor-pointer group"
+                  onClick={() => showToast('Warning: 5% of customers left an unsatisfied feedback.')}
+                >
+                  <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center text-red-600 mx-auto mb-2 group-hover:scale-105 transition-transform">
                     <Frown size={24} />
                   </div>
                   <p className="text-xl font-bold text-[#1E293B]">5%</p>
@@ -170,6 +217,14 @@ const Reports = () => {
 
         </div>
       </div>
+
+      {/* Success Toast */}
+      {successMessage && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-green-600 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg flex items-center gap-2 animate-bounce">
+          <CheckCircle2 className="h-4 w-4" />
+          {successMessage}
+        </div>
+      )}
     </div>
   );
 };

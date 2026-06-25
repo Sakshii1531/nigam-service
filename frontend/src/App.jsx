@@ -69,6 +69,14 @@ import BrandCustomers from './pages/brand-admin/Customers';
 import BrandNotifications from './pages/brand-admin/Notifications';
 import BrandReports from './pages/brand-admin/Reports';
 import BrandSettings from './pages/brand-admin/Settings';
+import BrandAMCs from './pages/brand-admin/AMCs';
+import BrandExchanges from './pages/brand-admin/Exchanges';
+import BrandWarrantyClaims from './pages/brand-admin/WarrantyClaims';
+import BrandCatalog from './pages/brand-admin/Catalog';
+import BrandReviews from './pages/brand-admin/Reviews';
+import BrandChat from './pages/brand-admin/Chat';
+import BrandAcademy from './pages/brand-admin/Academy';
+import BrandReverseLogistics from './pages/brand-admin/ReverseLogistics';
 import TechApply from './pages/technician/Apply';
 import SuperAdminLogin from './pages/super-admin/Login';
 import SuperAdminDashboard from './pages/super-admin/Dashboard';
@@ -264,6 +272,14 @@ function App() {
         <Route path="/brand-admin/notifications" element={<BrandNotifications />} />
         <Route path="/brand-admin/reports" element={<BrandReports />} />
         <Route path="/brand-admin/settings" element={<BrandSettings />} />
+        <Route path="/brand-admin/amcs" element={<BrandAMCs />} />
+        <Route path="/brand-admin/exchanges" element={<BrandExchanges />} />
+        <Route path="/brand-admin/warranty-claims" element={<BrandWarrantyClaims />} />
+        <Route path="/brand-admin/catalog" element={<BrandCatalog />} />
+        <Route path="/brand-admin/reviews" element={<BrandReviews />} />
+        <Route path="/brand-admin/chat" element={<BrandChat />} />
+        <Route path="/brand-admin/academy" element={<BrandAcademy />} />
+        <Route path="/brand-admin/reverse-logistics" element={<BrandReverseLogistics />} />
         <Route path="/technician/apply" element={<TechApply />} />
         <Route path="/technician/dashboard" element={<TechDashboard />} />
         <Route path="/technician/active-job" element={<ActiveJob />} />

@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
 import { 
-  FileCheck, 
   Clock, 
   CheckCircle2, 
   XCircle, 
@@ -10,21 +9,17 @@ import {
   Search, 
   Filter, 
   MoreVertical,
-  Eye,
-  Check,
-  X
+  X,
+  Check
 } from 'lucide-react';
 
 const PartRequests = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
-
-  const stats = [
-    { title: 'Pending Approval', value: '18', icon: <Clock size={20} />, color: 'bg-yellow-500' },
-    { title: 'Approved', value: '45', icon: <CheckCircle2 size={20} />, color: 'bg-blue-600' },
-    { title: 'Dispatched', value: '32', icon: <Truck size={20} />, color: 'bg-teal-600' },
-    { title: 'Rejected', value: '4', icon: <XCircle size={20} />, color: 'bg-red-600' },
-  ];
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('All Status');
+  const [selectedWarranty, setSelectedWarranty] = useState('Warranty');
+  const [successMessage, setSuccessMessage] = useState('');
 
   const [requests, setRequests] = useState([
     { id: 'PR-1001', technician: 'Rahul Kumar', product: 'Refrigerator', part: 'Compressor', reason: 'Leakage in coil', warranty: 'Under Warranty', cost: '₹4,500', status: 'Pending' },
@@ -33,17 +28,49 @@ const PartRequests = () => {
     { id: 'PR-1004', technician: 'Vikram Batra', product: 'Smart TV', part: 'Display Panel', reason: 'Cracked screen', warranty: 'Out of Warranty', cost: '₹12,000', status: 'Rejected' },
   ]);
 
+  const showToast = (message) => {
+    setSuccessMessage(message);
+    setTimeout(() => {
+      setSuccessMessage('');
+    }, 3000);
+  };
+
   const updateStatus = (id, newStatus) => {
     setRequests(requests.map(r => r.id === id ? { ...r, status: newStatus } : r));
     if (selectedRequest && selectedRequest.id === id) {
       setSelectedRequest({ ...selectedRequest, status: newStatus });
     }
+    showToast(`Request ${id} status updated to ${newStatus} successfully!`);
   };
 
   const handleRowClick = (req) => {
     setSelectedRequest(req);
     setShowModal(true);
   };
+
+  const filteredRequests = requests.filter(req => {
+    const matchesSearch = req.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      req.part.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      req.technician.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      req.product.toLowerCase().includes(searchQuery.toLowerCase());
+      
+    const matchesStatus = selectedStatus === 'All Status' || req.status === selectedStatus;
+    const matchesWarranty = selectedWarranty === 'Warranty' || req.warranty === selectedWarranty;
+    
+    return matchesSearch && matchesStatus && matchesWarranty;
+  });
+
+  const pendingCount = requests.filter(r => r.status === 'Pending').length;
+  const approvedCount = requests.filter(r => r.status === 'Approved').length;
+  const dispatchedCount = requests.filter(r => r.status === 'Dispatched').length;
+  const rejectedCount = requests.filter(r => r.status === 'Rejected').length;
+
+  const stats = [
+    { title: 'Pending Approval', value: (pendingCount + 17).toString(), icon: <Clock size={20} />, color: 'bg-yellow-500' },
+    { title: 'Approved', value: (approvedCount + 44).toString(), icon: <CheckCircle2 size={20} />, color: 'bg-blue-600' },
+    { title: 'Dispatched', value: (dispatchedCount + 31).toString(), icon: <Truck size={20} />, color: 'bg-teal-600' },
+    { title: 'Rejected', value: (rejectedCount + 3).toString(), icon: <XCircle size={20} />, color: 'bg-[#EF4444]' },
+  ];
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex">
@@ -83,13 +110,19 @@ const PartRequests = () => {
                 </div>
                 <input
                   type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] focus:border-[#0D47A1] outline-none transition-all text-sm bg-[#F8FAFC]"
                   placeholder="Search Request ID or Part..."
                 />
               </div>
 
               {/* Filters */}
-              <select className="text-sm text-[#1E293B] border border-[#E2E8F0] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#0D47A1] bg-[#F8FAFC]">
+              <select 
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+                className="text-sm text-[#1E293B] border border-[#E2E8F0] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#0D47A1] bg-[#F8FAFC]"
+              >
                 <option>All Status</option>
                 <option>Pending</option>
                 <option>Approved</option>
@@ -97,15 +130,27 @@ const PartRequests = () => {
                 <option>Rejected</option>
               </select>
 
-              <select className="text-sm text-[#1E293B] border border-[#E2E8F0] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#0D47A1] bg-[#F8FAFC]">
+              <select 
+                value={selectedWarranty}
+                onChange={(e) => setSelectedWarranty(e.target.value)}
+                className="text-sm text-[#1E293B] border border-[#E2E8F0] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#0D47A1] bg-[#F8FAFC]"
+              >
                 <option>Warranty</option>
                 <option>Under Warranty</option>
                 <option>Out of Warranty</option>
               </select>
             </div>
 
-            <button className="bg-white text-[#1E293B] border border-[#E2E8F0] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#F8FAFC] transition-colors flex items-center gap-2">
-              <Filter size={16} /> More Filters
+            <button 
+              onClick={() => {
+                setSelectedStatus('All Status');
+                setSelectedWarranty('Warranty');
+                setSearchQuery('');
+                showToast('Filters reset successfully');
+              }}
+              className="bg-white text-[#1E293B] border border-[#E2E8F0] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#F8FAFC] transition-colors flex items-center gap-2"
+            >
+              <Filter size={16} /> Reset Filters
             </button>
           </div>
 
@@ -125,7 +170,7 @@ const PartRequests = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E2E8F0]">
-                  {requests.map((req) => (
+                  {filteredRequests.map((req) => (
                     <tr 
                       key={req.id} 
                       className="hover:bg-[#F8FAFC] transition-colors cursor-pointer"
@@ -184,13 +229,24 @@ const PartRequests = () => {
                               <Truck size={14} /> Dispatch
                             </button>
                           )}
-                          <button className="p-1.5 text-[#64748B] hover:text-[#1E293B] rounded">
+                          <button 
+                            onClick={() => handleRowClick(req)}
+                            className="p-1.5 text-[#64748B] hover:text-[#1E293B] rounded"
+                            title="View Details"
+                          >
                             <MoreVertical size={16} />
                           </button>
                         </div>
                       </td>
                     </tr>
                   ))}
+                  {filteredRequests.length === 0 && (
+                    <tr>
+                      <td colSpan="7" className="px-6 py-10 text-center text-sm text-[#64748B]">
+                        No part requests found matching search or filter criteria.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -200,8 +256,8 @@ const PartRequests = () => {
 
         {/* Detail Modal */}
         {showModal && selectedRequest && (
-          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm z-30 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
+          <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-30 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
               <div className="p-6 border-b border-[#E2E8F0] flex justify-between items-center">
                 <div>
                   <h2 className="text-lg font-bold text-[#1E293B]">Part Request Details</h2>
@@ -248,6 +304,18 @@ const PartRequests = () => {
                     {selectedRequest.warranty}
                   </span>
                 </div>
+
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-[#64748B]">Current Status:</span>
+                  <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                    selectedRequest.status === 'Approved' ? 'bg-blue-50 text-blue-600' :
+                    selectedRequest.status === 'Dispatched' ? 'bg-teal-50 text-teal-600' :
+                    selectedRequest.status === 'Pending' ? 'bg-yellow-50 text-yellow-600' :
+                    'bg-red-50 text-red-600'
+                  }`}>
+                    {selectedRequest.status}
+                  </span>
+                </div>
               </div>
 
               <div className="p-6 border-t border-[#E2E8F0] flex gap-3 justify-end">
@@ -283,6 +351,14 @@ const PartRequests = () => {
                 </button>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Success Toast */}
+        {successMessage && (
+          <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-green-600 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg flex items-center gap-2 animate-bounce">
+            <CheckCircle2 className="h-4 w-4" />
+            {successMessage}
           </div>
         )}
       </div>
