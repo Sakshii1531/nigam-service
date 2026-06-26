@@ -136,14 +136,6 @@ const Warranty = () => {
               </div>
               
               <button 
-                type="button"
-                onClick={() => setShowQRModal(true)}
-                className="bg-white text-[#1E293B] border border-[#E2E8F0] px-4 py-3 rounded-xl text-sm font-medium hover:bg-[#F8FAFC] transition-colors flex items-center gap-2"
-              >
-                <QrCode size={18} /> Scan QR
-              </button>
-              
-              <button 
                 type="submit"
                 className="bg-[#0D47A1] text-white px-6 py-3 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
               >
