@@ -225,7 +225,7 @@ const Dashboard = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
             {/* Recent Requests Table */}
-            <div className="lg:col-span-2 bg-white rounded-2xl border border-[#E2E8F0] overflow-hidden">
+            <div className="lg:col-span-3 bg-white rounded-2xl border border-[#E2E8F0] overflow-hidden">
               <div className="p-6 border-b border-[#E2E8F0] flex justify-between items-center">
                 <div className="flex items-center gap-4 flex-1">
                   <h2 className="text-lg font-bold text-[#1E293B]">Recent Requests</h2>
@@ -288,34 +288,6 @@ const Dashboard = () => {
                     ))}
                   </tbody>
                 </table>
-              </div>
-            </div>
-
-            {/* Live Activity Feed */}
-            <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0]">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-lg font-bold text-[#1E293B]">Live Activity</h2>
-                <button 
-                  onClick={() => {
-                    setSuccessMessage('Live activity history loaded successfully.');
-                    setTimeout(() => setSuccessMessage(''), 3000);
-                  }}
-                  className="text-sm text-[#0D47A1] hover:underline font-medium"
-                >
-                  View All
-                </button>
-              </div>
-              
-              <div className="space-y-4">
-                {recentActivities.map((activity) => (
-                  <div key={activity.id} className="flex gap-3 text-sm">
-                    <div className="w-2 h-2 bg-[#0D47A1] rounded-full mt-1.5 flex-shrink-0"></div>
-                    <div>
-                      <p className="text-[#1E293B] font-medium">{activity.text}</p>
-                      <p className="text-[#64748B] text-xs mt-0.5">{activity.time}</p>
-                    </div>
-                  </div>
-                ))}
               </div>
             </div>
           </div>
