@@ -26,7 +26,10 @@ const Login = () => {
     setTimeout(() => {
       setIsLoading(false);
       if (formData.email === 'admin123@gmail.com' && formData.password === 'admin123') {
-        navigate('/super-admin/dashboard');
+        const [name, domain] = formData.email.split('@');
+        navigate('/super-admin/verify-otp', {
+          state: { destination: `${name.slice(0, 5)}•••@${domain}` },
+        });
       } else {
         setError('Invalid credentials. Please use the default master credentials.');
       }
@@ -87,7 +90,7 @@ const Login = () => {
             <div>
               <div className="flex justify-between mb-1.5">
                 <label className="text-sm font-medium text-gray-700">Password</label>
-                <a href="#" className="text-xs text-[#0D47A1] hover:underline font-medium">Forgot Password?</a>
+                <button type="button" onClick={() => navigate('/super-admin/forgot-password')} className="text-xs text-[#0D47A1] hover:underline font-medium">Forgot Password?</button>
               </div>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">

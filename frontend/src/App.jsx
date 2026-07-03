@@ -121,6 +121,26 @@ import TechnicalSupport from './pages/technician/TechnicalSupport';
 import Announcements from './pages/technician/Announcements';
 import EarningDetailPage from './pages/technician/EarningDetail';
 
+// Auth (OTP + password recovery) — all panels
+import VerifyOtp from './pages/VerifyOtp';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+import TechVerifyOtp from './pages/technician/VerifyOtp';
+import TechForgotPassword from './pages/technician/ForgotPassword';
+import BrandVerifyOtp from './pages/brand-admin/VerifyOtp';
+import BrandForgotPassword from './pages/brand-admin/ForgotPassword';
+import SuperAdminVerifyOtp from './pages/super-admin/VerifyOtp';
+import SuperAdminForgotPassword from './pages/super-admin/ForgotPassword';
+
+// Communication
+import CallScreen from './components/CallScreen';
+import TechChat from './pages/technician/Chat';
+import TechNavigation from './pages/technician/Navigation';
+
+// Notifications
+import NotificationsFeed from './pages/Notifications';
+import NotificationDetail from './pages/NotificationDetail';
+
 
 const PageHandler = () => {
   const navigate = useNavigate();
@@ -181,6 +201,9 @@ function App() {
         <Route path="/" element={<Login />} />
         <Route path="/home" element={<Home />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/verify-otp" element={<VerifyOtp />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/dashboard" element={<Dashboard defaultType="non-warranty" />} />
         <Route path="/dashboard/non-warranty" element={<Dashboard defaultType="non-warranty" />} />
         <Route path="/dashboard/in-warranty" element={<Dashboard defaultType="in-warranty" />} />
@@ -245,6 +268,7 @@ function App() {
         <Route path="/booking-success" element={<BookingSuccess />} />
         <Route path="/tracking" element={<Tracking />} />
         <Route path="/chat" element={<Chat />} />
+        <Route path="/call" element={<CallScreen />} />
         <Route path="/help-support" element={<HelpSupport />} />
         <Route path="/saved-addresses" element={<SavedAddresses />} />
         <Route path="/edit-profile" element={<EditProfile />} />
@@ -258,11 +282,17 @@ function App() {
         <Route path="/service-partner" element={<ServicePartner />} />
         <Route path="/payment-methods" element={<PaymentMethods />} />
         <Route path="/notification-settings" element={<NotificationSettings />} />
+        <Route path="/notifications" element={<NotificationsFeed />} />
+        <Route path="/notifications/:id" element={<NotificationDetail />} />
         <Route path="/about-ncc" element={<AboutNCC />} />
         <Route path="/all-brands" element={<AllBrands />} />
         <Route path="/onboarding" element={<Onboarding />} />
         <Route path="/technician/login" element={<TechLogin />} />
+        <Route path="/technician/verify-otp" element={<TechVerifyOtp />} />
+        <Route path="/technician/forgot-password" element={<TechForgotPassword />} />
         <Route path="/brand-admin/login" element={<BrandLogin />} />
+        <Route path="/brand-admin/verify-otp" element={<BrandVerifyOtp />} />
+        <Route path="/brand-admin/forgot-password" element={<BrandForgotPassword />} />
         <Route path="/brand-admin/dashboard" element={<BrandDashboard />} />
         <Route path="/brand-admin/requests" element={<BrandRequests />} />
         <Route path="/brand-admin/warranty" element={<BrandWarranty />} />
@@ -284,6 +314,8 @@ function App() {
         <Route path="/brand-admin/reverse-logistics" element={<BrandReverseLogistics />} />
         <Route path="/technician/apply" element={<TechApply />} />
         <Route path="/technician/dashboard" element={<TechDashboard />} />
+        <Route path="/technician/chat" element={<TechChat />} />
+        <Route path="/technician/navigation" element={<TechNavigation />} />
         <Route path="/technician/active-job" element={<ActiveJob />} />
         <Route path="/technician/schedule" element={<Schedule />} />
         <Route path="/technician/profile" element={<ProfilePage />} />
@@ -308,6 +340,8 @@ function App() {
         
         {/* Super Admin Routes */}
         <Route path="/super-admin/login" element={<SuperAdminLogin />} />
+        <Route path="/super-admin/verify-otp" element={<SuperAdminVerifyOtp />} />
+        <Route path="/super-admin/forgot-password" element={<SuperAdminForgotPassword />} />
         <Route path="/super-admin/dashboard" element={<SuperAdminDashboard />} />
         <Route path="/super-admin/users" element={<SuperAdminUsers />} />
         <Route path="/super-admin/technicians" element={<SuperAdminTechnicians />} />
