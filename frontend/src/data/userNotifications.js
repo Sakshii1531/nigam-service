@@ -3,17 +3,6 @@
 
 export const USER_NOTIFICATIONS = [
   {
-    id: 'n5',
-    type: 'tracking',
-    title: 'Technician En Route',
-    message: 'Rahul Sharma is on the way for your AC Repair. Track his live location and ETA.',
-    detail:
-      'Your technician has started the journey to your location. You can follow the live map, see the estimated time of arrival and contact him securely via a masked number.',
-    time: 'Just now',
-    read: false,
-    cta: { label: 'Track Live', route: '/tracking' },
-  },
-  {
     id: 'n4',
     type: 'assigned',
     title: 'Technician Assigned',

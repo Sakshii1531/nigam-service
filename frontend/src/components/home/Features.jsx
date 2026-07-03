@@ -3,7 +3,6 @@ import { MapPin, ShieldCheck, PhoneOff, Zap, CreditCard, Star, Bell, BarChart3 }
 import { motion, AnimatePresence } from 'framer-motion';
 
 const features = [
-  { id: 1, title: 'Live Tracking', desc: 'Real-time technician tracking on map.', icon: MapPin },
   { id: 2, title: 'Google Maps', desc: 'Seamless navigation and location services.', icon: MapPin },
   { id: 3, title: 'AI Assignment', desc: 'Smart matching for the best technician.', icon: Zap },
   { id: 4, title: 'Number Masking', desc: 'Secure communication for privacy.', icon: PhoneOff },

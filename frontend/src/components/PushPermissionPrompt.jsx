@@ -14,7 +14,7 @@ let alreadyPrompted = false;
 const PushPermissionPrompt = ({
   accent = '#0D47A1',
   title = 'Stay in the loop',
-  subtitle = 'Enable notifications to get live technician updates, arrival alerts and payment receipts.',
+  subtitle = 'Enable notifications to get service updates, arrival alerts and payment receipts.',
 }) => {
   const [open, setOpen] = useState(false);
 

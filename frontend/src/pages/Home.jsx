@@ -5,7 +5,6 @@ import Hero from '../components/home/Hero';
 import PopularServices from '../components/home/PopularServices';
 import HowItWorks from '../components/home/HowItWorks';
 import Features from '../components/home/Features';
-import LiveTrackingPreview from '../components/home/LiveTrackingPreview';
 import DashboardPreview from '../components/home/DashboardPreview';
 import Testimonials from '../components/home/Testimonials';
 import MobileApp from '../components/home/MobileApp';
@@ -21,7 +20,6 @@ const Home = () => {
         <PopularServices />
         <HowItWorks />
         <Features />
-        <LiveTrackingPreview />
         <DashboardPreview />
         <Testimonials />
         <MobileApp />

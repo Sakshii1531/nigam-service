@@ -11,7 +11,6 @@ import NetBankingPayment from './pages/NetBankingPayment';
 import Booking from './pages/Booking';
 import BookingFlow from './pages/BookingFlow';
 import { BookingProvider } from './context/BookingContext';
-import Tracking from './pages/Tracking';
 import Chat from './pages/Chat';
 import AllServices from './pages/AllServices';
 import Categories from './pages/Categories';
@@ -131,11 +130,6 @@ import BrandVerifyOtp from './pages/brand-admin/VerifyOtp';
 import BrandForgotPassword from './pages/brand-admin/ForgotPassword';
 import SuperAdminVerifyOtp from './pages/super-admin/VerifyOtp';
 import SuperAdminForgotPassword from './pages/super-admin/ForgotPassword';
-
-// Communication
-import CallScreen from './components/CallScreen';
-import TechChat from './pages/technician/Chat';
-import TechNavigation from './pages/technician/Navigation';
 
 // Notifications
 import NotificationsFeed from './pages/Notifications';
@@ -266,9 +260,7 @@ function App() {
         <Route path="/bookings" element={<Bookings />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/booking-success" element={<BookingSuccess />} />
-        <Route path="/tracking" element={<Tracking />} />
         <Route path="/chat" element={<Chat />} />
-        <Route path="/call" element={<CallScreen />} />
         <Route path="/help-support" element={<HelpSupport />} />
         <Route path="/saved-addresses" element={<SavedAddresses />} />
         <Route path="/edit-profile" element={<EditProfile />} />
@@ -314,8 +306,6 @@ function App() {
         <Route path="/brand-admin/reverse-logistics" element={<BrandReverseLogistics />} />
         <Route path="/technician/apply" element={<TechApply />} />
         <Route path="/technician/dashboard" element={<TechDashboard />} />
-        <Route path="/technician/chat" element={<TechChat />} />
-        <Route path="/technician/navigation" element={<TechNavigation />} />
         <Route path="/technician/active-job" element={<ActiveJob />} />
         <Route path="/technician/schedule" element={<Schedule />} />
         <Route path="/technician/profile" element={<ProfilePage />} />
