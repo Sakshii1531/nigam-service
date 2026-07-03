@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Send, Paperclip, Phone, Check, CheckCheck, X, ShieldOff, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, Send, Paperclip, Check, CheckCheck, X, ShieldOff, Image as ImageIcon } from 'lucide-react';
 
 const CANNED_REPLIES = [
   'Sure, I will take care of that.',
@@ -81,15 +81,6 @@ const Chat = () => {
             </span>
           </div>
         </div>
-        <button
-          onClick={() =>
-            navigate('/call', { state: { name: 'Rahul Sharma', role: 'Service Technician', backTo: '/chat' } })
-          }
-          disabled={sessionEnded}
-          className="p-2.5 bg-[#E3ECF9] rounded-full hover:bg-[#D0E0F5] transition-colors disabled:opacity-40"
-        >
-          <Phone className="h-5 w-5 text-[#0D47A1]" />
-        </button>
         {!sessionEnded && (
           <button
             onClick={() => setSessionEnded(true)}

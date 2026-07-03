@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Smartphone, ShieldCheck, MapPin, ArrowRight } from 'lucide-react';
+import { Smartphone, ShieldCheck, PhoneOff, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const slides = [
@@ -20,9 +20,9 @@ const slides = [
   },
   {
     id: 3,
-    title: "Live Tracking & Secure Chat",
-    description: "Track your technician in real-time and chat securely without sharing numbers.",
-    icon: <MapPin className="h-16 w-16 text-[#0D47A1]" />,
+    title: "Secure Masked Chat",
+    description: "Chat with your technician securely — your phone number always stays private and masked.",
+    icon: <PhoneOff className="h-16 w-16 text-[#0D47A1]" />,
     bg: "bg-[#FFFBEB]"
   }
 ];

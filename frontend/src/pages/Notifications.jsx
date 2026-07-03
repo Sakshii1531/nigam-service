@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, Settings, MapPin, UserCheck, FileText, CreditCard, CheckCircle2, Bell, ChevronRight,
+  ArrowLeft, Settings, UserCheck, FileText, CreditCard, CheckCircle2, Bell, ChevronRight,
 } from 'lucide-react';
 import { USER_NOTIFICATIONS } from '../data/userNotifications';
 
 const ICONS = {
-  tracking: { Icon: MapPin, bg: 'bg-[#E3ECF9]', color: 'text-[#0D47A1]' },
   assigned: { Icon: UserCheck, bg: 'bg-[#E8F5E9]', color: 'text-[#2E7D32]' },
   created: { Icon: FileText, bg: 'bg-[#EDE7F6]', color: 'text-[#5E35B1]' },
   payment: { Icon: CreditCard, bg: 'bg-[#FFF3E0]', color: 'text-[#F57F17]' },

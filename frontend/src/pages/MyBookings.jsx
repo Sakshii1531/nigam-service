@@ -70,7 +70,7 @@ const MyBookings = () => {
             <div
               key={i}
               className="bg-white px-5 py-4 flex flex-col gap-0.5 hover:bg-slate-50 transition-colors cursor-pointer"
-              onClick={() => navigate('/tracking')}
+              onClick={() => navigate('/bookings')}
             >
               <div className="flex justify-between items-start">
                 <span className="text-xs font-black text-slate-800">{booking.id}</span>

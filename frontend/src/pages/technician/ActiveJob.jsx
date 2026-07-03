@@ -984,12 +984,12 @@ const ActiveJob = () => {
                     <p className="text-xs text-slate-600 mt-0.5 font-normal">{activeJob.phone}</p>
                   </div>
                   <div className="flex gap-2.5">
-                    <button
-                      onClick={() => navigate('/call', { state: { name: activeJob.customerName, role: 'Customer', backTo: '/technician/active-job' } })}
+                    <a
+                      href={`tel:${activeJob.phone}`}
                       className="w-10 h-10 rounded-full bg-[#E8F1FF] flex items-center justify-center text-[#1A73E8] hover:bg-[#D4E5FF] transition-colors"
                     >
                       <Phone className="h-4.5 w-4.5 stroke-[2.5]" />
-                    </button>
+                    </a>
                     <button 
                       onClick={() => setChatOpen(true)} 
                       className="w-10 h-10 rounded-full bg-[#E8F1FF] flex items-center justify-center text-[#1A73E8] hover:bg-[#D4E5FF] transition-colors"
@@ -1002,20 +1002,13 @@ const ActiveJob = () => {
                 {/* Divider */}
                 <div className="h-[1px] bg-slate-100 w-full"></div>
 
-                {/* Service Address & Navigation */}
+                {/* Service Address */}
                 <div className="flex flex-col gap-1">
                   <span className="text-[10px] font-normal text-slate-600 uppercase tracking-wider block">Service Address</span>
                   <p className="text-sm font-normal text-[#052355] mt-1 leading-relaxed">{activeJob.address}</p>
-                  
-                  <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-200">
+
+                  <div className="flex items-center mt-3 pt-3 border-t border-slate-200">
                     <span className="text-[11px] font-normal text-slate-600">• {activeJob.distance} km away</span>
-                    <button
-                      onClick={() => navigate('/technician/navigation')}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-[#E8F1FF] text-[#1A73E8] font-normal rounded-full text-[11px] hover:bg-[#D4E5FF] transition-colors"
-                    >
-                      <MapPin className="h-3.5 w-3.5 text-[#1A73E8]" />
-                      Navigate
-                    </button>
                   </div>
                 </div>
               </div>

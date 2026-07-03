@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
 import {
@@ -14,12 +13,10 @@ import {
   Info,
   Calendar,
   CheckCircle,
-  CheckCircle2,
-  Phone
+  CheckCircle2
 } from 'lucide-react';
 
 const Chat = () => {
-  const navigate = useNavigate();
   const [activeChannel, setActiveChannel] = useState('cust-1'); // 'cust-1', 'tech-1'
   const [inputText, setInputText] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -174,12 +171,6 @@ const Chat = () => {
                   <p className="text-[10px] text-green-600 font-semibold">{activeChat.lastSeen}</p>
                 </div>
               </div>
-              <button
-                onClick={() => navigate('/call', { state: { name: activeChat.name, role: activeChat.role, backTo: '/brand-admin/chat' } })}
-                className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#EEF4FF] text-[#0D47A1] text-xs font-semibold hover:bg-[#E0EBFF] transition-colors"
-              >
-                <Phone size={15} /> Masked Call
-              </button>
             </div>
 
             {/* Message Area */}

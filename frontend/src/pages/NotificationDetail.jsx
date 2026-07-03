@@ -1,12 +1,11 @@
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  ArrowLeft, MapPin, UserCheck, FileText, CreditCard, CheckCircle2, Bell, ChevronRight,
+  ArrowLeft, UserCheck, FileText, CreditCard, CheckCircle2, Bell, ChevronRight,
 } from 'lucide-react';
 import { USER_NOTIFICATIONS } from '../data/userNotifications';
 
 const ICONS = {
-  tracking: { Icon: MapPin, bg: 'bg-[#E3ECF9]', color: 'text-[#0D47A1]' },
   assigned: { Icon: UserCheck, bg: 'bg-[#E8F5E9]', color: 'text-[#2E7D32]' },
   created: { Icon: FileText, bg: 'bg-[#EDE7F6]', color: 'text-[#5E35B1]' },
   payment: { Icon: CreditCard, bg: 'bg-[#FFF3E0]', color: 'text-[#F57F17]' },
@@ -37,16 +36,6 @@ const NotificationDetail = () => {
           <span className="text-xs text-slate-400 mt-1">{n.time}</span>
           <p className="text-sm text-slate-600 leading-relaxed mt-4">{n.detail}</p>
         </div>
-
-        {/* Live tracking link highlight for en-route */}
-        {n.type === 'tracking' && (
-          <div className="mt-4 bg-[#E3ECF9] rounded-2xl p-4 flex items-center gap-3">
-            <MapPin className="h-5 w-5 text-[#0D47A1] shrink-0" />
-            <p className="text-xs text-[#0D47A1] font-medium">
-              A live tracking link is active for this request. Tap below to follow your technician in real time.
-            </p>
-          </div>
-        )}
 
         {n.cta && (
           <button
