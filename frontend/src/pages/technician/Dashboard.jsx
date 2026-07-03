@@ -5,6 +5,7 @@ import {
   Clock, Shield, Star, GraduationCap, MessageSquare, Megaphone, Scan, CheckCircle, RotateCw, X, LogOut, Sparkles, CreditCard, ShieldCheck, Award, Settings, HelpCircle, ArrowLeft
 } from 'lucide-react';
 import { useTech } from '../../context/TechContext';
+import PushPermissionPrompt from '../../components/PushPermissionPrompt';
 import techAvatar from '../../assets/tech_avatar.png';
 
 const Dashboard = () => {
@@ -112,7 +113,10 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-[#F5F8FC] flex flex-col pb-[68px] max-w-md mx-auto border-x border-slate-200 shadow-xl relative font-sans overflow-x-hidden">
-      
+
+      {/* First-run push notification permission prompt */}
+      <PushPermissionPrompt subtitle="Enable notifications to get new job alerts, payouts and announcements instantly." />
+
       {/* Top Banner / Header Section */}
       {showAllJobs ? (
         /* White Header for Jobs List Screen (Screen 2) */

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Search, Bell, MapPin, Wrench, Zap, Droplet, Thermometer, Shield, Home as HomeIcon, Calendar, MessageSquare, User, Star, X, Wind, WashingMachine, Refrigerator, Droplets, Sparkles, ShoppingCart, Tv, Flame, MousePointerClick, LayoutGrid } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import PushPermissionPrompt from '../components/PushPermissionPrompt';
 import acBanner from '../assets/ac_service_banner.png';
 import electricianBanner from '../assets/electrician_banner.png';
 import plumbingBanner from '../assets/plumbing_banner.png';
@@ -123,7 +124,10 @@ const Dashboard = ({ defaultType }) => {
 
   return (
     <div className="min-h-screen bg-bg-light flex flex-col pb-16">
-      
+
+      {/* First-run push notification permission prompt */}
+      <PushPermissionPrompt />
+
       {/* Warranty Modal */}
       {showWarrantyModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -261,7 +265,10 @@ const Dashboard = ({ defaultType }) => {
             </div>
           </div>
           <div className="flex gap-3">
-            <button className="w-9 h-9 bg-slate-100 rounded-full relative flex items-center justify-center">
+            <button
+              onClick={() => navigate('/notifications')}
+              className="w-9 h-9 bg-slate-100 rounded-full relative flex items-center justify-center"
+            >
               <Bell className="h-5 w-5 text-text-primary" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
             </button>

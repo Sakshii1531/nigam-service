@@ -8,10 +8,24 @@ const Login = () => {
   const [usePhone, setUsePhone] = useState(true);
   const [isSignup, setIsSignup] = useState(false);
 
+  const maskDestination = (raw) => {
+    const val = (raw || '').trim();
+    if (!val) return usePhone ? '+91 98•••••210' : 'user••@example.com';
+    if (usePhone) {
+      const digits = val.replace(/\D/g, '');
+      if (digits.length >= 6) return `+91 ${digits.slice(0, 2)}•••••${digits.slice(-3)}`;
+      return val;
+    }
+    const [name, domain] = val.split('@');
+    if (!domain) return val;
+    return `${name.slice(0, 2)}••@${domain}`;
+  };
+
   const handleLogin = (e) => {
     e.preventDefault();
-    // Simulate login
-    navigate('/dashboard');
+    const form = new FormData(e.currentTarget);
+    const destination = maskDestination(form.get('identifier'));
+    navigate('/verify-otp', { state: { destination } });
   };
 
   return (
@@ -86,6 +100,7 @@ const Login = () => {
               <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-text-secondary" />
               <input
                 type="tel"
+                name="identifier"
                 placeholder="Enter Phone Number"
                 className="w-full pl-12 pr-4 py-2 bg-white/50 border border-slate-200 rounded-2xl focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] outline-none transition-all text-sm shadow-sm focus:shadow-md"
                 required
@@ -97,6 +112,7 @@ const Login = () => {
               <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-text-secondary" />
               <input
                 type="email"
+                name="identifier"
                 placeholder="Enter Email Address"
                 className="w-full pl-12 pr-4 py-2 bg-white/50 border border-slate-200 rounded-2xl focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] outline-none transition-all text-sm shadow-sm focus:shadow-md"
                 required
@@ -118,6 +134,7 @@ const Login = () => {
 
           <button
             type="button"
+            onClick={() => navigate('/forgot-password')}
             className="text-xs font-semibold text-[#0D47A1] self-end hover:text-blue-800 transition-colors"
           >
             Forgot Password?

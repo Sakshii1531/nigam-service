@@ -1,0 +1,84 @@
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Bell, X } from 'lucide-react';
+
+// Module-level flag: shown once per app session (resets on full refresh).
+let alreadyPrompted = false;
+
+/**
+ * Reusable "Enable notifications?" bottom-sheet prompt. Simulated — does not
+ * request real OS permission. Auto-appears once shortly after mount.
+ *
+ * Props: accent ('#0D47A1' default), title/subtitle overrides optional.
+ */
+const PushPermissionPrompt = ({
+  accent = '#0D47A1',
+  title = 'Stay in the loop',
+  subtitle = 'Enable notifications to get live technician updates, arrival alerts and payment receipts.',
+}) => {
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (alreadyPrompted) return;
+    const t = setTimeout(() => {
+      alreadyPrompted = true;
+      setOpen(true);
+    }, 1200);
+    return () => clearTimeout(t);
+  }, []);
+
+  const close = () => setOpen(false);
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={close}
+            className="fixed inset-0 bg-black/40 z-[90]"
+          />
+          <motion.div
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+            className="fixed bottom-0 left-0 right-0 z-[100] bg-white rounded-t-[28px] p-6 shadow-2xl max-w-md mx-auto"
+          >
+            <button onClick={close} className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-slate-100 text-slate-400">
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="flex flex-col items-center text-center gap-3">
+              <div
+                className="w-16 h-16 rounded-2xl flex items-center justify-center"
+                style={{ backgroundColor: `${accent}1A` }}
+              >
+                <Bell className="h-8 w-8" style={{ color: accent }} />
+              </div>
+              <h2 className="text-lg font-bold text-slate-900">{title}</h2>
+              <p className="text-sm text-slate-500 max-w-xs">{subtitle}</p>
+            </div>
+
+            <div className="flex flex-col gap-2.5 mt-6">
+              <button
+                onClick={close}
+                className="w-full text-white font-semibold py-3 rounded-2xl transition-transform active:scale-[0.98]"
+                style={{ backgroundColor: accent }}
+              >
+                Allow Notifications
+              </button>
+              <button onClick={close} className="w-full text-slate-500 font-semibold py-2.5 rounded-2xl hover:bg-slate-50">
+                Not now
+              </button>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+};
+
+export default PushPermissionPrompt;
