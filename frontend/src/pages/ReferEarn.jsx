@@ -1,32 +1,48 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Gift, Copy, Check, Share2 } from 'lucide-react';
+import { ArrowLeft, Gift, Copy, Check, Share2, Coins, Sparkles } from 'lucide-react';
 
 const ReferEarn = () => {
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
+  const [showEarnedToast, setShowEarnedToast] = useState(false);
   const referralCode = 'SAKSHI100';
+
+  const addReferralCoins = () => {
+    const current = parseInt(localStorage.getItem('user_coins') || '2450', 10);
+    localStorage.setItem('user_coins', (current + 100).toString());
+    setShowEarnedToast(true);
+    setTimeout(() => setShowEarnedToast(false), 3000);
+  };
 
   const handleCopy = () => {
     navigator.clipboard.writeText(referralCode);
     setCopied(true);
+    addReferralCoins();
     setTimeout(() => setCopied(false), 2000);
   };
 
   const handleShare = () => {
+    addReferralCoins();
     if (navigator.share) {
       navigator.share({
         title: 'NCC Services - Refer & Earn',
-        text: `Use my referral code ${referralCode} to get 10% off on your first service booking!`,
+        text: `Use my referral code ${referralCode} to earn 100 Coins on your first service booking!`,
         url: window.location.origin
       }).catch(console.error);
-    } else {
-      handleCopy();
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-10">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-10 relative">
+      {/* Toast Alert */}
+      {showEarnedToast && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 bg-emerald-600 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-2 z-[999] animate-bounce text-xs font-black">
+          <Sparkles className="h-4 w-4" />
+          <span>+100 Coins Credited to your Rewards!</span>
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-white px-5 py-4 flex items-center justify-center gap-3 sticky top-0 z-50 shadow-sm border-b border-slate-100 relative">
         <button
@@ -51,7 +67,7 @@ const ReferEarn = () => {
             Invite Friends, Earn Rewards!
           </h2>
           <p className="text-xs text-slate-500 font-semibold leading-relaxed px-2">
-            Share the love with your friends. Get <span className="text-[#0D47A1] font-black">₹100 cashback</span> in your wallet when they book their first service, and they get <span className="text-emerald-600 font-black">10% off</span>!
+            Share the love with your friends. Get <span className="text-[#0D47A1] font-black">100 Coins reward</span> in your wallet when they book their first service, and they get <span className="text-emerald-600 font-black">10% off</span>!
           </p>
         </div>
 
@@ -76,7 +92,7 @@ const ReferEarn = () => {
               ) : (
                 <>
                   <Copy className="h-4 w-4" />
-                  <span>Copy</span>
+                  <span>Copy & Claim</span>
                 </>
               )}
             </button>
@@ -118,7 +134,7 @@ const ReferEarn = () => {
               <div>
                 <h4 className="text-[11.5px] font-black text-slate-800">Get Rewarded</h4>
                 <p className="text-[10px] text-slate-500 font-semibold leading-relaxed mt-0.5">
-                  You get ₹100 wallet cashback and your friend receives 10% off their booking!
+                  You get 100 Coins credited to Nigam Super Rewards and your friend receives 10% off their booking!
                 </p>
               </div>
             </div>
@@ -131,7 +147,7 @@ const ReferEarn = () => {
           className="w-full max-w-sm bg-[#0D47A1] hover:bg-blue-800 text-white text-xs font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md mt-4"
         >
           <Share2 className="h-4.5 w-4.5" />
-          <span>Share with Friends</span>
+          <span>Share & Earn 100 Coins</span>
         </button>
       </div>
     </div>

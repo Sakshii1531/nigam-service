@@ -28,6 +28,7 @@ const ProfilePage = () => {
   const [chatMessages, setChatMessages] = useState([
     { id: 1, sender: 'ai', text: 'Hello Alex! I am your AI Assistant. How can I help you today?' }
   ]);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const handleSendChatMessage = () => {
     if (!chatInput.trim()) return;
@@ -217,47 +218,23 @@ const ProfilePage = () => {
           </button>
         </div>
 
-        {/* Recent Earnings */}
-        <div className="mx-3 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between px-4 pt-4 pb-2">
-            <h3 className="text-sm font-semibold text-[#052355]">Recent Earnings</h3>
-            <button
-              onClick={() => navigate('/technician/earnings')}
-              className="text-[11px] font-semibold text-[#0D47A1] hover:underline"
-            >
-              View All
-            </button>
-          </div>
-          <div className="divide-y divide-slate-100">
-            {recentEarnings.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => navigate(`/technician/earning-detail/${item.id}`)}
-                className="w-full px-4 py-3 flex items-center gap-3 hover:bg-slate-50 transition-colors text-left"
-              >
-                <div className={`p-1.5 rounded-lg flex-shrink-0 ${item.icon === 'zap' ? 'bg-amber-50' : 'bg-blue-50'}`}>
-                  {item.icon === 'zap'
-                    ? <Zap className="h-4 w-4 text-amber-500 fill-amber-400" />
-                    : <FileText className="h-4 w-4 text-[#0D47A1]" />
-                  }
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[11px] font-medium text-[#052355] leading-tight truncate">{item.title}</p>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full border ${item.tag === 'QuickPayout' ? 'text-amber-600 bg-amber-50 border-amber-200' : 'text-blue-600 bg-blue-50 border-blue-200'}`}>
-                      {item.tag}
-                    </span>
-                    <p className="text-[9px] text-slate-400">{item.date}</p>
-                  </div>
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <p className="text-xs font-bold text-[#052355]">₹{item.amount}</p>
-                  <p className={`text-[9px] font-medium mt-0.5 ${item.statusColor}`}>{item.status} •</p>
-                </div>
-                <ChevronRight className="h-4 w-4 text-slate-300 flex-shrink-0" />
-              </button>
-            ))}
-          </div>
+        {/* Recent Earnings Card */}
+        <div className="mx-3 bg-white rounded-2xl border border-slate-200 shadow-sm">
+          <button
+            onClick={() => navigate('/technician/recent-earnings')}
+            className="w-full px-4 py-3.5 flex items-center gap-3 hover:bg-slate-50 transition-colors rounded-2xl text-left"
+          >
+            <div className="p-2 bg-amber-50 border border-amber-200 rounded-xl flex-shrink-0">
+              <TrendingUp className="h-5 w-5 text-amber-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-[#052355]">Recent Earnings</p>
+              <p className="text-[10px] text-slate-500 mt-0.5">View your recent earnings</p>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <ChevronRight className="h-4 w-4 text-slate-400" />
+            </div>
+          </button>
         </div>
 
         {/* Bank Account */}
@@ -322,7 +299,7 @@ const ProfilePage = () => {
         {/* Logout */}
         <div className="mx-3 mb-2">
           <button
-            onClick={() => navigate('/technician/login')}
+            onClick={() => setShowLogoutConfirm(true)}
             className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-red-200 bg-red-50 text-red-500 hover:bg-red-100 transition-colors text-xs font-semibold"
           >
             <LogOut className="h-4 w-4" />
@@ -378,7 +355,7 @@ const ProfilePage = () => {
               ))}
               <div className="h-[1px] bg-slate-100 my-2 mx-5"></div>
               <button
-                onClick={() => { setIsSidebarOpen(false); navigate('/technician/login'); }}
+                onClick={() => { setIsSidebarOpen(false); setShowLogoutConfirm(true); }}
                 className="w-full px-3.5 py-3.5 flex items-center gap-3.5 hover:bg-red-50/20 text-red-500 transition-colors text-left"
               >
                 <LogOut className="h-5 w-5 text-red-400" />
@@ -475,6 +452,40 @@ const ProfilePage = () => {
           <span className="text-[10px] font-medium tracking-wide">Profile</span>
         </button>
       </div>
+
+      {/* Logout Confirmation Modal Overlay */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-6 z-[100] animate-fade-in">
+          <div className="bg-white border border-slate-100 rounded-[28px] p-6 max-w-xs w-full flex flex-col items-center text-center gap-4 shadow-xl">
+            <div className="w-12 h-12 bg-red-50 text-red-600 rounded-full flex items-center justify-center">
+              <LogOut className="h-5 w-5" />
+            </div>
+            <div>
+              <h4 className="text-sm font-black text-[#052355] mb-1">Log Out</h4>
+              <p className="text-[11px] text-slate-500 font-semibold leading-normal">
+                Are you sure you want to log out of your account?
+              </p>
+            </div>
+            <div className="flex gap-2.5 w-full mt-2">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-800 text-[10.5px] font-black py-2.5 rounded-xl transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowLogoutConfirm(false);
+                  navigate('/technician/login');
+                }}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white text-[10.5px] font-black py-2.5 rounded-xl transition-colors cursor-pointer shadow-sm"
+              >
+                Yes, Log Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
