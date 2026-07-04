@@ -105,6 +105,7 @@ import ActiveJob from './pages/technician/ActiveJob';
 import Schedule from './pages/technician/Schedule';
 import ProfilePage from './pages/technician/Profile';
 import EarningsPage from './pages/technician/Earnings';
+import RecentEarnings from './pages/technician/RecentEarnings';
 import PersonalInfo from './pages/technician/PersonalInfo';
 import PayoutSettings from './pages/technician/PayoutSettings';
 import Verification from './pages/technician/Verification';
@@ -164,6 +165,13 @@ const ScrollToTop = () => {
   const { pathname } = useLocation();
 
   useEffect(() => {
+    // Toggle technician app styling class on body
+    if (pathname.startsWith('/technician')) {
+      document.body.classList.add('tech-app-active');
+    } else {
+      document.body.classList.remove('tech-app-active');
+    }
+
     // Scroll window and document immediately
     window.scrollTo(0, 0);
     if (document.documentElement) document.documentElement.scrollTop = 0;
@@ -316,6 +324,7 @@ function App() {
         <Route path="/technician/schedule" element={<Schedule />} />
         <Route path="/technician/profile" element={<ProfilePage />} />
         <Route path="/technician/earnings" element={<EarningsPage />} />
+        <Route path="/technician/recent-earnings" element={<RecentEarnings />} />
         <Route path="/technician/personal-info" element={<PersonalInfo />} />
         <Route path="/technician/payout-settings" element={<PayoutSettings />} />
         <Route path="/technician/verification" element={<Verification />} />

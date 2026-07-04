@@ -26,6 +26,7 @@ const Dashboard = () => {
   const [categoryTab, setCategoryTab] = useState('All'); // 'All', 'D2C', 'Partner', 'NCC EW'
   const [expandedJobId, setExpandedJobId] = useState('8842'); // default to D2C Paid Service job ID
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const unreadNotificationsCount = notifications.filter(n => !n.read).length;
 
@@ -112,7 +113,7 @@ const Dashboard = () => {
   );
 
   return (
-    <div className="min-h-screen bg-[#F5F8FC] flex flex-col pb-[68px] max-w-md mx-auto border-x border-slate-200 shadow-xl relative font-sans overflow-x-hidden">
+    <div className="tech-app-container min-h-screen bg-[#F5F8FC] flex flex-col pb-[68px] max-w-md mx-auto border-x border-slate-200 shadow-xl relative font-sans overflow-x-hidden">
 
       {/* First-run push notification permission prompt */}
       <PushPermissionPrompt subtitle="Enable notifications to get new job alerts, payouts and announcements instantly." />
@@ -228,71 +229,71 @@ const Dashboard = () => {
         {/* VIEW 1: HOME DASHBOARD */}
         {!showAllJobs && (
           <>
-            {/* Redesigned Combined Stats Card (Reduced Height, One Single Container Card) */}
-            <div className="bg-white rounded-[22px] border border-slate-200 shadow-sm p-2 grid grid-cols-4 divide-x divide-slate-100 -mt-8 relative z-10">
+            {/* Redesigned Combined Stats Card (2x2 Grid) */}
+            <div className="bg-white rounded-[24px] border border-slate-200 shadow-sm p-4.5 grid grid-cols-2 -mt-8 relative z-10">
               {/* Card 1: Available Jobs */}
-              <div className="flex flex-col items-center text-center justify-between min-h-[72px] px-1">
-                <div className="flex items-center gap-1 justify-center">
-                  <div className="w-6 h-6 rounded-full bg-[#E3F2FD] flex items-center justify-center flex-shrink-0">
+              <div className="flex flex-col items-center text-center justify-between min-h-[76px] pb-3 pr-2 border-r border-b border-slate-100">
+                <div className="flex items-center gap-1.5 justify-center">
+                  <div className="w-6.5 h-6.5 rounded-full bg-[#E3F2FD] flex items-center justify-center flex-shrink-0">
                     <Briefcase className="w-3.5 h-3.5 text-[#1565C0]" />
                   </div>
-                  <span className="text-[13px] font-bold text-[#052355]">{availableJobsCount}</span>
+                  <span className="text-[14px] font-black text-[#052355]">{availableJobsCount}</span>
                 </div>
-                <span className="text-[9px] font-semibold text-slate-500 leading-none mt-1">Available<br/>Jobs</span>
+                <span className="text-[9.5px] font-bold text-slate-500 leading-tight mt-1">Available Jobs</span>
                 <button 
                   onClick={() => { setShowAllJobs(true); setFilterTab('All'); }}
-                  className="text-[7px] font-bold text-[#1565C0] hover:underline mt-1 flex items-center gap-0.5"
+                  className="text-[7.5px] font-bold text-[#1565C0] hover:underline mt-1 flex items-center gap-0.5"
                 >
                   View All <ChevronRight className="w-2 h-2" />
                 </button>
               </div>
 
               {/* Card 2: Active Jobs */}
-              <div className="flex flex-col items-center text-center justify-between min-h-[72px] px-1">
-                <div className="flex items-center gap-1 justify-center">
-                  <div className="w-6 h-6 rounded-full bg-[#E8F5E9] flex items-center justify-center flex-shrink-0">
+              <div className="flex flex-col items-center text-center justify-between min-h-[76px] pb-3 pl-2 border-b border-slate-100">
+                <div className="flex items-center gap-1.5 justify-center">
+                  <div className="w-6.5 h-6.5 rounded-full bg-[#E8F5E9] flex items-center justify-center flex-shrink-0">
                     <Wrench className="w-3.5 h-3.5 text-[#2E7D32]" />
                   </div>
-                  <span className="text-[13px] font-bold text-[#2E7D32]">3</span>
+                  <span className="text-[14px] font-black text-[#2E7D32]">3</span>
                 </div>
-                <span className="text-[9px] font-semibold text-slate-500 leading-none mt-1">Active<br/>Jobs</span>
+                <span className="text-[9.5px] font-bold text-slate-500 leading-tight mt-1">Active Jobs</span>
                 <button 
                   onClick={() => navigate('/technician/active-job')}
-                  className="text-[7px] font-bold text-[#1565C0] hover:underline mt-1 flex items-center gap-0.5"
+                  className="text-[7.5px] font-bold text-[#1565C0] hover:underline mt-1 flex items-center gap-0.5"
                 >
                   View All <ChevronRight className="w-2 h-2" />
                 </button>
               </div>
 
               {/* Card 3: Revisit Jobs */}
-              <div className="flex flex-col items-center text-center justify-between min-h-[72px] px-1">
-                <div className="flex items-center gap-1 justify-center">
-                  <div className="w-6 h-6 rounded-full bg-[#FFF3E0] flex items-center justify-center flex-shrink-0">
+              <div className="flex flex-col items-center text-center justify-between min-h-[76px] pt-3 pr-2 border-r border-slate-100">
+                <div className="flex items-center gap-1.5 justify-center">
+                  <div className="w-6.5 h-6.5 rounded-full bg-[#FFF3E0] flex items-center justify-center flex-shrink-0">
                     <RotateCw className="w-3.5 h-3.5 text-[#E65100]" />
                   </div>
-                  <span className="text-[13px] font-bold text-[#E65100]">2</span>
+                  <span className="text-[14px] font-black text-[#E65100]">2</span>
                 </div>
-                <span className="text-[9px] font-semibold text-slate-500 leading-none mt-1">Revisit<br/>Jobs</span>
+                <span className="text-[9.5px] font-bold text-slate-500 leading-tight mt-1">Revisit Jobs</span>
                 <button 
                   onClick={() => { setShowAllJobs(true); setFilterTab('All'); }}
-                  className="text-[7px] font-bold text-[#1565C0] hover:underline mt-1 flex items-center gap-0.5"
+                  className="text-[7.5px] font-bold text-[#1565C0] hover:underline mt-1 flex items-center gap-0.5"
                 >
                   View All <ChevronRight className="w-2 h-2" />
                 </button>
               </div>
 
               {/* Card 4: Completed Today */}
-              <div className="flex flex-col items-center text-center justify-between min-h-[72px] px-1">
-                <div className="flex items-center gap-1 justify-center">
-                  <div className="w-6 h-6 rounded-full bg-[#F3E5F5] flex items-center justify-center flex-shrink-0">
+              <div className="flex flex-col items-center text-center justify-between min-h-[76px] pt-3 pl-2">
+                <div className="flex items-center gap-1.5 justify-center">
+                  <div className="w-6.5 h-6.5 rounded-full bg-[#F3E5F5] flex items-center justify-center flex-shrink-0">
                     <CheckCircle className="w-3.5 h-3.5 text-[#6A1B9A]" />
                   </div>
-                  <span className="text-[13px] font-bold text-[#6A1B9A]">5</span>
+                  <span className="text-[14px] font-black text-[#6A1B9A]">5</span>
                 </div>
-                <span className="text-[9px] font-semibold text-slate-500 leading-none mt-1">Completed<br/>Today</span>
+                <span className="text-[9.5px] font-bold text-slate-500 leading-tight mt-1">Completed Today</span>
                 <button 
                   onClick={() => navigate('/technician/earnings')}
-                  className="text-[7px] font-bold text-[#1565C0] hover:underline mt-1 flex items-center gap-0.5"
+                  className="text-[7.5px] font-bold text-[#1565C0] hover:underline mt-1 flex items-center gap-0.5"
                 >
                   View All <ChevronRight className="w-2 h-2" />
                 </button>
@@ -474,38 +475,48 @@ const Dashboard = () => {
                       <div 
                         key={job.id}
                         onClick={() => { selectJobForDetails(job.id); navigate('/technician/active-job'); }}
-                        className={`bg-white rounded-2xl p-2.5 cursor-pointer hover:shadow-md transition-all shadow-xs flex justify-between items-center border border-slate-200 border-l-[5px] ${borderColor}`}
+                        className={`bg-white rounded-[20px] p-3.5 cursor-pointer hover:shadow-md transition-all shadow-[0_3px_15px_rgba(0,0,0,0.03)] flex flex-col gap-2.5 border border-slate-200 border-l-[4px] ${borderColor}`}
                       >
-                        <div className="flex items-start gap-2 flex-1 min-w-0">
-                          <div className={`w-7.5 h-7.5 rounded-xl flex items-center justify-center flex-shrink-0 ${iconContainerClass}`}>
-                            <JobIcon className="w-3.5 h-3.5" />
-                          </div>
-
-                          <div className="min-w-0 flex-1">
-                            <span className="text-[7.5px] font-bold block tracking-wider uppercase text-slate-400">{job.type}</span>
-                            <h4 className="text-[11.5px] font-semibold text-[#052355] mt-0.5 leading-tight truncate">{job.product}</h4>
-                            <p className="text-[9px] text-slate-500 mt-0.5 font-normal">Customer: <span className="text-[#052355] font-semibold">{job.customerName}</span></p>
-                            <div className="flex items-center gap-2 text-[8.5px] text-slate-500 mt-1 font-normal">
-                              <span className="flex items-center gap-0.5"><Clock className="w-3 h-3 text-slate-400" /> Today, 02:00 PM</span>
-                              <span className="flex items-center gap-0.5"><MapPin className="w-3 h-3 text-slate-400" /> {job.distance} km away</span>
+                        {/* Top Row: Service Category & Brand Logo */}
+                        <div className="flex justify-between items-center pb-2 border-b border-slate-50">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${iconContainerClass}`}>
+                              <JobIcon className="w-3.5 h-3.5" />
                             </div>
+                            <span className="text-[9px] font-bold tracking-wider uppercase text-slate-400">{job.type}</span>
+                          </div>
+                          <div className="flex items-center">
+                            {renderBrandLogo(job.brand)}
                           </div>
                         </div>
 
-                        {/* Brand and Pricing details */}
-                        <div className="flex items-center gap-1.5 ml-1.5 flex-shrink-0">
-                          {renderBrandLogo(job.brand)}
-                          <div className="h-5 w-[1px] bg-slate-200"></div>
-                          <div className="text-right flex flex-col items-end min-w-[55px]">
-                            <p className="text-[11.5px] font-bold text-[#052355]">{job.price > 0 ? `₹${job.price}` : '₹Free'}</p>
-                            <p className="text-[8px] text-slate-400 font-semibold mt-0.5">
-                              {job.estEarnings > 0 ? `Est. Earn: ₹${job.estEarnings}` : tagText}
+                        {/* Bottom Row: Details & Pricing */}
+                        <div className="flex justify-between items-end">
+                          {/* Left: Product & Customer Info */}
+                          <div className="min-w-0 flex-1 pr-3">
+                            <h4 className="text-[12.5px] font-black text-[#052355] leading-snug">{job.product}</h4>
+                            <p className="text-[9.5px] text-slate-500 mt-1 font-semibold">
+                              Customer: <span className="text-[#052355] font-black">{job.customerName}</span>
                             </p>
-                            <span className={`inline-block text-[7px] font-bold px-1.5 py-0.5 rounded text-white uppercase tracking-wider mt-1 shadow-xs ${tagBg}`}>
-                              {tagText}
-                            </span>
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[8.5px] text-slate-400 mt-1.5 font-bold">
+                              <span className="flex items-center gap-1"><Clock className="w-3 h-3 text-slate-300" /> Today, 02:00 PM</span>
+                              <span className="flex items-center gap-1"><MapPin className="w-3 h-3 text-slate-300" /> {job.distance} km away</span>
+                            </div>
                           </div>
-                          <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+
+                          {/* Right: Pricing & Status tag */}
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <div className="text-right flex flex-col items-end min-w-[70px]">
+                              <p className="text-[13px] font-black text-[#052355]">{job.price > 0 ? `₹${job.price}` : '₹Free'}</p>
+                              <p className="text-[8.5px] text-[#0D47A1] font-black mt-0.5">
+                                {job.estEarnings > 0 ? `Est. Earn: ₹${job.estEarnings}` : 'Warranty Job'}
+                              </p>
+                              <span className={`inline-block text-[7.5px] font-black px-2 py-1 rounded-lg text-white uppercase tracking-wider mt-1.5 shadow-2xs ${tagBg}`}>
+                                {tagText}
+                              </span>
+                            </div>
+                            <ChevronRight className="w-4 h-4 text-slate-400" />
+                          </div>
                         </div>
                       </div>
                     );
@@ -823,7 +834,7 @@ const Dashboard = () => {
 
               {/* Logout */}
               <button 
-                onClick={() => { setIsSidebarOpen(false); navigate('/technician/login'); }}
+                onClick={() => { setIsSidebarOpen(false); setShowLogoutConfirm(true); }}
                 className="w-full px-5 py-3.5 flex items-center gap-4 hover:bg-red-50/20 text-red-600 transition-colors text-left"
               >
                 <LogOut className="h-5 w-5 text-red-500" />
@@ -881,6 +892,40 @@ const Dashboard = () => {
           <span className="text-[10px] font-semibold tracking-wide">Profile</span>
         </button>
       </div>
+
+      {/* Logout Confirmation Modal Overlay */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-6 z-[100] animate-fade-in">
+          <div className="bg-white border border-slate-100 rounded-[28px] p-6 max-w-xs w-full flex flex-col items-center text-center gap-4 shadow-xl">
+            <div className="w-12 h-12 bg-red-50 text-red-600 rounded-full flex items-center justify-center">
+              <LogOut className="h-5 w-5" />
+            </div>
+            <div>
+              <h4 className="text-sm font-black text-[#052355] mb-1">Log Out</h4>
+              <p className="text-[11px] text-slate-500 font-semibold leading-normal">
+                Are you sure you want to log out of your account?
+              </p>
+            </div>
+            <div className="flex gap-2.5 w-full mt-2">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-800 text-[10.5px] font-black py-2.5 rounded-xl transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowLogoutConfirm(false);
+                  navigate('/technician/login');
+                }}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white text-[10.5px] font-black py-2.5 rounded-xl transition-colors cursor-pointer shadow-sm"
+              >
+                Yes, Log Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

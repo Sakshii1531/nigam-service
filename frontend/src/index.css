@@ -57,3 +57,51 @@
     scrollbar-width: none;  /* Firefox */
   }
 }
+
+/* Technician App Font Size Scaling Overrides */
+body.tech-app-active,
+.tech-app-container {
+  font-size: 1.08em;
+}
+
+body.tech-app-active [class*="text-[7"],
+.tech-app-container [class*="text-[7"] {
+  font-size: 10.5px !important;
+}
+body.tech-app-active [class*="text-[8"],
+.tech-app-container [class*="text-[8"] {
+  font-size: 11.5px !important;
+}
+body.tech-app-active [class*="text-[9"],
+.tech-app-container [class*="text-[9"] {
+  font-size: 12.5px !important;
+}
+body.tech-app-active [class*="text-[10"],
+.tech-app-container [class*="text-[10"] {
+  font-size: 13.5px !important;
+}
+body.tech-app-active [class*="text-[11"],
+.tech-app-container [class*="text-[11"] {
+  font-size: 14px !important;
+}
+body.tech-app-active [class*="text-[12"],
+.tech-app-container [class*="text-[12"] {
+  font-size: 14.5px !important;
+}
+body.tech-app-active [class*="text-[13"],
+.tech-app-container [class*="text-[13"] {
+  font-size: 15px !important;
+}
+
+body.tech-app-active .text-xs,
+.tech-app-container .text-xs { font-size: 14.5px !important; }
+body.tech-app-active .text-sm,
+.tech-app-container .text-sm { font-size: 16px !important; }
+body.tech-app-active .text-base,
+.tech-app-container .text-base { font-size: 18px !important; }
+body.tech-app-active .text-lg,
+.tech-app-container .text-lg { font-size: 20.5px !important; }
+body.tech-app-active .text-xl,
+.tech-app-container .text-xl { font-size: 22.5px !important; }
+body.tech-app-active .text-2xl,
+.tech-app-container .text-2xl { font-size: 26px !important; }

@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, CreditCard, Landmark, Wallet, ChevronRight } from 'lucide-react';
+import { ArrowLeft, CreditCard, Landmark, Wallet, ChevronRight, Coins, Check } from 'lucide-react';
 
 const Payment = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [selectedMethod, setSelectedMethod] = useState('card');
+  const [redeemCoins, setRedeemCoins] = useState(false);
 
   // Dynamic parameters passed from the state
   const paymentState = location.state || {};
@@ -13,13 +14,24 @@ const Payment = () => {
   const itemName = paymentState.productName || 'AC Deep Cleaning';
   const itemPrice = paymentState.price !== undefined ? paymentState.price : 5.00;
 
+  const availableCoins = parseInt(localStorage.getItem('user_coins') || '2450', 10);
+  // Conversion: 10 coins = ₹1 (or $1 for services)
+  const coinsRate = 10;
+  const maxCoinsToRedeem = Math.min(availableCoins, Math.floor((isProductBuy ? itemPrice : 5.00) * coinsRate));
+  const coinDiscountValue = redeemCoins ? (maxCoinsToRedeem / coinsRate) : 0;
+  const finalPrice = Math.max(0, (isProductBuy ? itemPrice : 5.00) - coinDiscountValue);
+
   const handlePay = () => {
+    if (redeemCoins) {
+      const current = parseInt(localStorage.getItem('user_coins') || '2450', 10);
+      localStorage.setItem('user_coins', Math.max(0, current - maxCoinsToRedeem).toString());
+    }
     if (selectedMethod === 'card') {
-      navigate('/payment/card', { state: paymentState });
+      navigate('/payment/card', { state: { ...paymentState, finalPrice } });
     } else if (selectedMethod === 'upi') {
-      navigate('/payment/upi', { state: paymentState });
+      navigate('/payment/upi', { state: { ...paymentState, finalPrice } });
     } else if (selectedMethod === 'netbanking') {
-      navigate('/payment/netbanking', { state: paymentState });
+      navigate('/payment/netbanking', { state: { ...paymentState, finalPrice } });
     }
   };
 
@@ -52,6 +64,33 @@ const Payment = () => {
           </div>
         </div>
 
+        {/* Redeem Nigam Coins Card */}
+        {availableCoins > 0 && (
+          <div 
+            onClick={() => setRedeemCoins(prev => !prev)}
+            className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between shadow-xs ${
+              redeemCoins ? 'border-[#0D47A1] bg-blue-50/10' : 'border-slate-100 bg-white'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-amber-50 text-amber-500 rounded-xl flex-shrink-0">
+                <Coins className="h-5 w-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <span className="text-xs font-black text-slate-800 block">Redeem Nigam Coins</span>
+                <span className="text-[10px] text-slate-500 font-semibold mt-0.5 block leading-normal">
+                  Use {maxCoinsToRedeem} Coins to get {isProductBuy ? `₹${coinDiscountValue.toLocaleString('en-IN')}` : `$${coinDiscountValue.toFixed(2)}`} off ({availableCoins} Coins available)
+                </span>
+              </div>
+            </div>
+            <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${
+              redeemCoins ? 'border-[#0D47A1] bg-[#0D47A1] text-white' : 'border-slate-350 bg-white'
+            }`}>
+              {redeemCoins && <Check className="h-3 w-3 stroke-[3]" />}
+            </div>
+          </div>
+        )}
+
         {/* Price Breakdown */}
         <div className="flex flex-col gap-2.5 bg-white p-4 rounded-2xl border border-slate-100 shadow-xs">
           <h2 className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-0.5">Price Breakdown</h2>
@@ -69,13 +108,22 @@ const Payment = () => {
               <span className="font-extrabold text-green-600">-$45.00</span>
             </div>
           )}
+
+          {redeemCoins && (
+            <div className="flex justify-between items-center text-xs animate-in fade-in">
+              <span className="text-slate-500 font-bold">Coins Discount ({maxCoinsToRedeem} Coins)</span>
+              <span className="font-extrabold text-green-600">
+                {isProductBuy ? `-₹${coinDiscountValue.toLocaleString('en-IN')}` : `-$${coinDiscountValue.toFixed(2)}`}
+              </span>
+            </div>
+          )}
           
           <div className="border-t border-slate-100 border-dashed my-1"></div>
           
           <div className="flex justify-between items-center">
             <span className="font-black text-slate-800 text-xs">Total Amount</span>
             <span className="font-black text-[#0D47A1] text-sm">
-              {isProductBuy ? `₹${itemPrice.toLocaleString('en-IN')}` : `$5.00`}
+              {isProductBuy ? `₹${finalPrice.toLocaleString('en-IN')}` : `$${finalPrice.toFixed(2)}`}
             </span>
           </div>
         </div>
@@ -159,7 +207,7 @@ const Payment = () => {
           onClick={handlePay}
           className="w-full bg-[#FFD600] text-[#0D47A1] font-extrabold py-3.5 rounded-2xl flex items-center justify-center gap-2 hover:bg-yellow-400 active:scale-[0.99] transition-all shadow-md cursor-pointer"
         >
-          Proceed with Selected Method ({isProductBuy ? `₹${itemPrice.toLocaleString('en-IN')}` : `$5.00`})
+          Proceed with Selected Method ({isProductBuy ? `₹${finalPrice.toLocaleString('en-IN')}` : `$${finalPrice.toFixed(2)}`})
         </button>
       </div>
 

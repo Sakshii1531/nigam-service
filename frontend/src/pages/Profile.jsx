@@ -26,6 +26,7 @@ import partnerImg from '../assets/working/Gemini_Generated_Image_ahi7orahi7orahi
 const Profile = () => {
   const navigate = useNavigate();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const userCoins = parseInt(localStorage.getItem('user_coins') || '2450', 10);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-24">
@@ -118,9 +119,12 @@ const Profile = () => {
           </div>
 
           {/* Rewards */}
-          <div className="bg-white border border-slate-100 rounded-2xl p-2.5 flex flex-col gap-0.5 shadow-2xs hover:shadow-xs transition-all">
+          <div 
+            onClick={() => navigate('/rewards-play-zone')}
+            className="bg-white border border-slate-100 rounded-2xl p-2.5 flex flex-col gap-0.5 shadow-2xs hover:shadow-xs transition-all cursor-pointer"
+          >
             <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider truncate">Rewards</span>
-            <span className="text-lg font-black text-slate-900 mt-0.5">2,450</span>
+            <span className="text-lg font-black text-slate-900 mt-0.5">{userCoins.toLocaleString('en-IN')}</span>
             <span className="text-[9px] font-extrabold text-slate-400 self-start mt-0.5">Coins</span>
           </div>
 
@@ -312,7 +316,7 @@ const Profile = () => {
         >
           <div className="flex-1 flex flex-col gap-1 pr-24 z-10">
             <h4 className="text-[13px] font-black text-amber-900">Refer & Earn</h4>
-            <p className="text-[10px] text-amber-700 font-extrabold leading-snug">Earn ₹100 for every friend who joins</p>
+            <p className="text-[10px] text-amber-700 font-extrabold leading-snug">Earn 100 Coins for every friend who joins</p>
             <button 
               onClick={(e) => { e.stopPropagation(); navigate('/refer-earn'); }} 
               className="bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-black px-4.5 py-2 rounded-xl mt-2 transition-all cursor-pointer self-start shadow-sm"
