@@ -323,10 +323,82 @@ export const BOOKING_CATALOG = {
 export const getCatalogEntry = (category) => {
   if (!category) return null;
   const decoded = decodeURIComponent(category);
-  const key = Object.keys(BOOKING_CATALOG).find(
-    (k) => k.toLowerCase() === decoded.toLowerCase()
+  const decodedNorm = decoded.toLowerCase();
+
+  // 1. Look up in Services Customization data (from Services tab)
+  const savedConfigs = localStorage.getItem('custom_service_details_configs');
+  const serviceConfigs = savedConfigs ? JSON.parse(savedConfigs) : {};
+
+  const savedCatalogs = localStorage.getItem('custom_service_catalogs');
+  const serviceCatalogs = savedCatalogs ? JSON.parse(savedCatalogs) : {};
+
+  let matchedServiceKey = null;
+  Object.keys(serviceConfigs).forEach(key => {
+    const keyNorm = key.toLowerCase();
+    if (keyNorm === decodedNorm || keyNorm.includes(decodedNorm) || decodedNorm.includes(keyNorm)) {
+      matchedServiceKey = key;
+    }
+  });
+
+  if (matchedServiceKey) {
+    const config = serviceConfigs[matchedServiceKey] || {};
+    const catalog = serviceCatalogs[matchedServiceKey] || [];
+
+    const productTypes = (config.productTypes || []).map(t => ({
+      id: t.toLowerCase().replace(/ /g, '_'),
+      name: t,
+      icon: '⚡',
+      desc: ''
+    }));
+
+    const servicesList = [];
+    catalog.forEach(group => {
+      if (group && group.items) {
+        group.items.forEach(item => {
+          servicesList.push({
+            id: item.name.toLowerCase().replace(/ /g, '_'),
+            name: item.name,
+            icon: item.icon || '🔧',
+            desc: item.desc || (Array.isArray(item.bullets) ? item.bullets.join(' · ') : item.bullets || ''),
+            price: parseInt((item.price || '').replace('₹', '')) || 299,
+            unit: item.unit || 'per unit'
+          });
+        });
+      }
+    });
+
+    const staticDefault = BOOKING_CATALOG[decoded] || BOOKING_CATALOG[Object.keys(BOOKING_CATALOG).find(k => k.toLowerCase() === decodedNorm)] || {};
+
+    const mockData = {
+      icon: staticDefault.icon || null,
+      color: staticDefault.color || '#0D47A1',
+      lightBg: staticDefault.lightBg || '#EAF4FF',
+      productTypes,
+      services: {
+        default: servicesList
+      },
+      brands: config.brands || staticDefault.brands || ['LG', 'Samsung', 'Whirlpool', 'Panasonic'],
+      whyBrandPoints: staticDefault.whyBrandPoints || ['Brand certified expert technicians', 'Correct parts calibration', 'Genuine brand replacement parts'],
+      categoryNote: config.categoryNote || staticDefault.categoryNote || 'Prices shown are indicative.',
+      bannerImg: config.bannerImg || '',
+      tagline: config.tagline || '',
+      subtitle: config.subtitle || ''
+    };
+
+    return { key: decoded, data: mockData };
+  }
+
+  // 2. Otherwise, fall back to Category Customization / Static defaults
+  const savedBookingCatalogs = localStorage.getItem('custom_booking_catalog');
+  const customBookingCatalog = savedBookingCatalogs ? JSON.parse(savedBookingCatalogs) : {};
+
+  const unifiedCatalog = { ...BOOKING_CATALOG, ...customBookingCatalog };
+
+  const key = Object.keys(unifiedCatalog).find(
+    (k) => k.toLowerCase() === decodedNorm
   );
-  return key ? { key, data: BOOKING_CATALOG[key] } : null;
+
+  return key ? { key, data: unifiedCatalog[key] } : null;
 };
 
 /**

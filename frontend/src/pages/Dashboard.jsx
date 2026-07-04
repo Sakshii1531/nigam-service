@@ -53,6 +53,53 @@ const Dashboard = ({ defaultType }) => {
   const bannerRef = useRef(null);
   const [activeType, setActiveType] = useState(defaultType || 'non-warranty'); // 'non-warranty' or 'in-warranty'
 
+  const customCategoriesSaved = localStorage.getItem('custom_categories');
+  const dashboardCategories = customCategoriesSaved ? JSON.parse(customCategoriesSaved) : [
+    { name: 'For You', icon: 'sparkles', isForYou: true },
+    { name: 'AC', icon: 'ac', service: 'AC Repair' },
+    { name: 'Washing Machine', icon: 'washing', service: 'Washing Machine' },
+    { name: 'Refrigerator', icon: 'fridge', isFridge: true },
+    { name: 'TV', icon: 'tv', service: 'Smart TV Service & Repair' },
+    { name: 'RO Water Purifier', icon: 'ro', service: 'Water Purifier RO Service' },
+    { name: 'Geyser', icon: 'geyser', service: 'Geyser Service & Repair' },
+    { name: 'More', icon: 'more', isMore: true }
+  ];
+
+  // Load custom sliding banners dynamically from localStorage
+  const savedNonWarrantyBanners = localStorage.getItem('custom_banners_non_warranty');
+  const regularBanners = savedNonWarrantyBanners ? JSON.parse(savedNonWarrantyBanners) : [
+    { id: 1, image: acBanner },
+    { id: 2, image: electricianBanner },
+    { id: 3, image: plumbingBanner }
+  ];
+
+  const savedWarrantyBanners = localStorage.getItem('custom_banners_warranty');
+  const warrantyBannersList = savedWarrantyBanners ? JSON.parse(savedWarrantyBanners) : [
+    { id: 1, image: warrantyBanner1 },
+    { id: 2, image: warrantyBanner2 }
+  ];
+
+  // Load custom most booked services
+  const savedMostBooked = localStorage.getItem('custom_most_booked_services');
+  const mostBookedServices = savedMostBooked ? JSON.parse(savedMostBooked) : [
+    { id: 1, title: "Foam-jet AC service", image: mostBookedAc1, rating: 4.76, price: 649, badge: "Instant" },
+    { id: 2, title: "AC repair", image: mostBookedAc2, rating: 4.74, price: 299, badge: "Instant" },
+    { id: 3, title: "Washing Machine", image: mostBookedWm, rating: 4.85, price: 499, badge: "Instant" },
+    { id: 4, title: "Home Cleaning", image: mostBookedCleaning, rating: 4.90, price: 999, badge: "Trending" },
+    { id: 5, title: "Women Salon", image: mostBookedSalon, rating: 4.80, price: 799, badge: "Best Seller" }
+  ];
+
+  // Load custom appliance services
+  const savedApplianceServices = localStorage.getItem('custom_appliance_services');
+  const applianceServices = savedApplianceServices ? JSON.parse(savedApplianceServices) : [
+    { id: 1, title: "Foam-jet AC service", image: mostBookedAc1, rating: 4.76, price: 649, badge: "Instant", path: '/booking' },
+    { id: 2, title: "AC repair", image: mostBookedAc2, rating: 4.74, price: 299, badge: "Instant", path: '/booking' },
+    { id: 3, title: "Washing Machine", image: mostBookedWm, rating: 4.85, price: 499, badge: "Instant", path: '/booking' },
+    { id: 4, title: "Refrigerator Repair & Service", image: applianceFridge, rating: 4.80, price: 899, badge: "Instant", path: '/refrigerator-details' },
+    { id: 5, title: "Deep Clean AC", image: mostBookedAc1, rating: 4.76, price: 1198, badge: "2 ACs", path: '/booking' },
+    { id: 6, title: "WM Checkup", image: mostBookedWm, rating: 4.85, price: 199, badge: "Instant", path: '/booking' }
+  ];
+
   useEffect(() => {
     if (defaultType === 'in-warranty') {
       navigate('/partner-warranty');
@@ -80,7 +127,8 @@ const Dashboard = ({ defaultType }) => {
     return () => clearInterval(interval);
   }, []);
 
-  const services = [
+  const savedDashboardServices = localStorage.getItem('custom_dashboard_services');
+  const services = savedDashboardServices ? JSON.parse(savedDashboardServices) : [
     { id: 1, name: 'AC Repair', img: acImg },
     { id: 2, name: 'Washing Machine', img: wasingImg },
     { id: 3, name: 'Electrician', img: electricianImg },
@@ -88,6 +136,58 @@ const Dashboard = ({ defaultType }) => {
     { id: 5, name: 'Full Home Cleaning', img: cleaningImg },
     { id: 6, name: 'Salon for Women', img: saloonImg },
     { id: 7, name: 'Spa & Massage', img: spaImg },
+  ];
+
+  const savedBrands = localStorage.getItem('custom_brand_cards');
+  const brandCards = savedBrands ? JSON.parse(savedBrands) : [
+    {
+      id: 1,
+      brandName: 'LLOYD',
+      title: 'New Launch Glacier Series AC',
+      subtitle: 'Experience Superior Cooling & Comfort',
+      image: splitAcImg,
+      buttonText: 'Explore on NCC',
+      actionUrl: '/service-details?service=AC%20Repair&brand=Lloyd',
+      badgeText: '',
+      gradient: 'from-[#E3F2FD] via-[#F4F9FF] to-[#D5E6FF]',
+      textColor: '#014694'
+    },
+    {
+      id: 2,
+      brandName: 'SAMSUNG',
+      title: 'Bespoke AI Laundry Range',
+      subtitle: 'Smart. Gentle. Intelligent.',
+      image: mostBookedWm,
+      buttonText: 'Visit Official Site',
+      actionUrl: 'https://www.samsung.com',
+      badgeText: 'Official Partner',
+      gradient: 'from-[#E8F5E9] via-[#F6FAF6] to-[#D2E8D4]',
+      textColor: '#1B5E20'
+    },
+    {
+      id: 3,
+      brandName: 'DAIKIN',
+      title: 'Air Specialist Inverter Series',
+      subtitle: 'Perfect Comfort. Every Season.',
+      image: splitAcImg,
+      buttonText: 'Explore on NCC',
+      actionUrl: '/service-details?service=AC%20Repair&brand=Daikin',
+      badgeText: 'Air Specialist',
+      gradient: 'from-[#F0F4FF] via-[#F7F9FF] to-[#E1E8FF]',
+      textColor: '#00529C'
+    },
+    {
+      id: 4,
+      brandName: 'LG',
+      title: 'Double Door Frost Free Refrigerator',
+      subtitle: 'Premium cooling. Maximum savings.',
+      image: applianceFridge,
+      buttonText: 'Explore on NCC',
+      actionUrl: '/refrigerator-details',
+      badgeText: '',
+      gradient: 'from-[#FCE4EC] via-[#FFF1F3] to-[#F8BBD0]',
+      textColor: '#C30F42'
+    }
   ];
 
   const getBrandsForCategory = (cat) => {
@@ -292,16 +392,7 @@ const Dashboard = ({ defaultType }) => {
         </div>
         {/* Horizontal Categories */}
         <div className="flex overflow-x-auto gap-6 mt-2 pb-1.5 snap-x no-scrollbar">
-          {[
-            { name: 'For You', isForYou: true },
-            { name: 'AC', service: 'AC Repair' },
-            { name: 'Washing Machine', service: 'Washing Machine' },
-            { name: 'Refrigerator', isFridge: true },
-            { name: 'TV', service: 'Smart TV Service & Repair' },
-            { name: 'RO Water Purifier', service: 'Water Purifier RO Service' },
-            { name: 'Geyser', service: 'Geyser Service & Repair' },
-            { name: 'More', isMore: true }
-          ].map((cat, index) => (
+          {dashboardCategories.map((cat, index) => (
             <div 
               key={index}
               className="flex flex-col items-center gap-0.5 cursor-pointer flex-shrink-0 snap-start group"
@@ -322,71 +413,79 @@ const Dashboard = ({ defaultType }) => {
                   navigate('/book/RO Water Purifier');
                 } else if (cat.name === 'Geyser') {
                   navigate('/book/Geyser');
-                } else {
+                } else if (cat.service) {
                   navigate(`/service-details?service=${encodeURIComponent(cat.service)}`);
+                } else {
+                  navigate(`/book/${encodeURIComponent(cat.name)}`);
                 }
               }}
             >
               <div className="w-7 h-7 flex items-center justify-center">
-                {cat.name === 'For You' && (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue">
-                    <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275Z" />
-                    <path d="m5 3 1 2.5L8.5 6 6 7 5 9.5 4 7 1.5 6 4 5Z" opacity="0.5" />
-                    <path d="m19 17 1 2.5 2.5.5-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1Z" opacity="0.5" />
-                  </svg>
-                )}
-                {cat.name === 'AC' && (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue">
-                    <rect x="2" y="6" width="20" height="8" rx="2" />
-                    <line x1="6" y1="14" x2="18" y2="14" />
-                    <path d="M7 17l1.5 2" />
-                    <path d="M12 17v2" />
-                    <path d="M17 17l-1.5 2" />
-                    <circle cx="18" cy="10" r="1" fill="currentColor" />
-                  </svg>
-                )}
-                {cat.name === 'Washing Machine' && (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue">
-                    <rect x="5" y="3" width="14" height="18" rx="2" />
-                    <circle cx="12" cy="13" r="4" />
-                    <circle cx="12" cy="7" r="1" />
-                  </svg>
-                )}
-                {cat.name === 'Refrigerator' && (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue">
-                    <rect x="5" y="2" width="14" height="20" rx="2" />
-                    <line x1="5" y1="10" x2="19" y2="10" />
-                    <line x1="9" y1="6" x2="9" y2="8" />
-                    <line x1="9" y1="13" x2="9" y2="17" />
-                  </svg>
-                )}
-                {cat.name === 'TV' && (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue">
-                    <rect x="2" y="3" width="20" height="14" rx="2" />
-                    <path d="M8 21h8" />
-                    <path d="M12 17v4" />
-                  </svg>
-                )}
-                {cat.name === 'RO Water Purifier' && (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue">
-                    <path d="M12 22a7 7 0 0 0 7-7c0-4.3-7-13-7-13S5 10.7 5 15a7 7 0 0 0 7 7z" />
-                  </svg>
-                )}
-                {cat.name === 'Geyser' && (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue">
-                    <rect x="6" y="2" width="12" height="16" rx="3" />
-                    <path d="M9 22v-4" />
-                    <path d="M15 22v-4" />
-                    <circle cx="12" cy="10" r="2" />
-                  </svg>
-                )}
-                {cat.isMore && (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue">
-                    <rect x="3" y="3" width="7" height="7" rx="1" />
-                    <rect x="14" y="3" width="7" height="7" rx="1" />
-                    <rect x="14" y="14" width="7" height="7" rx="1" />
-                    <rect x="3" y="14" width="7" height="7" rx="1" />
-                  </svg>
+                {cat.icon && cat.icon.startsWith('data:image/') ? (
+                  <img src={cat.icon} alt={cat.name} className="w-7 h-7 object-contain" />
+                ) : (
+                  <>
+                    {(cat.icon === 'sparkles') && (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue">
+                        <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275Z" />
+                        <path d="m5 3 1 2.5L8.5 6 6 7 5 9.5 4 7 1.5 6 4 5Z" opacity="0.5" />
+                        <path d="m19 17 1 2.5 2.5.5-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1Z" opacity="0.5" />
+                      </svg>
+                    )}
+                    {cat.icon === 'ac' && (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue">
+                        <rect x="2" y="6" width="20" height="8" rx="2" />
+                        <line x1="6" y1="14" x2="18" y2="14" />
+                        <path d="M7 17l1.5 2" />
+                        <path d="M12 17v2" />
+                        <path d="M17 17l-1.5 2" />
+                        <circle cx="18" cy="10" r="1" fill="currentColor" />
+                      </svg>
+                    )}
+                    {cat.icon === 'washing' && (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue">
+                        <rect x="5" y="3" width="14" height="18" rx="2" />
+                        <circle cx="12" cy="13" r="4" />
+                        <circle cx="12" cy="7" r="1" />
+                      </svg>
+                    )}
+                    {cat.icon === 'fridge' && (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue">
+                        <rect x="5" y="2" width="14" height="20" rx="2" />
+                        <line x1="5" y1="10" x2="19" y2="10" />
+                        <line x1="9" y1="6" x2="9" y2="8" />
+                        <line x1="9" y1="13" x2="9" y2="17" />
+                      </svg>
+                    )}
+                    {cat.icon === 'tv' && (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue">
+                        <rect x="2" y="3" width="20" height="14" rx="2" />
+                        <path d="M8 21h8" />
+                        <path d="M12 17v4" />
+                      </svg>
+                    )}
+                    {cat.icon === 'ro' && (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue">
+                        <path d="M12 22a7 7 0 0 0 7-7c0-4.3-7-13-7-13S5 10.7 5 15a7 7 0 0 0 7 7z" />
+                      </svg>
+                    )}
+                    {cat.icon === 'geyser' && (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue">
+                        <rect x="6" y="2" width="12" height="16" rx="3" />
+                        <path d="M9 22v-4" />
+                        <path d="M15 22v-4" />
+                        <circle cx="12" cy="10" r="2" />
+                      </svg>
+                    )}
+                    {(cat.icon === 'more' || !['sparkles','ac','washing','fridge','tv','ro','geyser','more'].includes(cat.icon)) && (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue">
+                        <rect x="3" y="3" width="7" height="7" rx="1" />
+                        <rect x="14" y="3" width="7" height="7" rx="1" />
+                        <rect x="14" y="14" width="7" height="7" rx="1" />
+                        <rect x="3" y="14" width="7" height="7" rx="1" />
+                      </svg>
+                    )}
+                  </>
                 )}
               </div>
               <span className="text-[10px] font-black text-brand-blue uppercase tracking-tighter text-center max-w-[80px]">
@@ -401,10 +500,7 @@ const Dashboard = ({ defaultType }) => {
       <div className="flex-1 p-6 flex flex-col gap-6">
         {/* Service Banners */}
         <div ref={bannerRef} className="flex gap-4 overflow-x-auto pb-2 -mx-2 px-2 snap-x no-scrollbar">
-          {(activeType === 'non-warranty' 
-            ? [{ id: 1, image: acBanner }, { id: 2, image: electricianBanner }, { id: 3, image: plumbingBanner }]
-            : [{ id: 1, image: warrantyBanner1 }, { id: 2, image: warrantyBanner2 }]
-          ).map((banner) => (
+          {(activeType === 'non-warranty' ? regularBanners : warrantyBannersList).map((banner) => (
             <div 
               key={banner.id}
               className="bg-white rounded-2xl shadow-sm border border-border-color overflow-hidden min-w-[300px] snap-center"
@@ -515,158 +611,67 @@ const Dashboard = ({ defaultType }) => {
 
           {/* Horizontal Scrollable Carousel */}
           <div className="flex overflow-x-auto gap-4 pt-1.5 pb-4 -mx-2 px-2 snap-x no-scrollbar">
-            {/* Lloyd Card */}
-            <div 
-              onClick={() => navigate(`/service-details?service=${encodeURIComponent('AC Repair')}&brand=Lloyd`)}
-              className="w-full sm:max-w-[340px] flex-shrink-0 h-[200px] rounded-[24px] bg-gradient-to-br from-[#E3F2FD] via-[#F4F9FF] to-[#D5E6FF] p-4 flex flex-col justify-between relative overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.03)] border border-slate-100/50 cursor-pointer snap-start"
-            >
-              <div className="flex flex-col items-start z-10 max-w-[65%]">
-                <span className="font-sans font-black text-xl text-[#014694] tracking-tight">
-                  LLOYD
-                </span>
-                <h3 className="text-xs font-black text-slate-800 mt-1.5 leading-tight">
-                  New Launch Glacier Series AC
-                </h3>
-                <p className="text-[10px] font-semibold text-slate-600 mt-0.5 leading-tight">
-                  Experience Superior Cooling & Comfort
-                </p>
-              </div>
-
-              {/* Absolute AC Image */}
-              <img 
-                src={splitAcImg} 
-                alt="Lloyd AC" 
-                className="absolute -right-3 top-8 w-[140px] h-[80px] object-contain z-0 mix-blend-multiply" 
-              />
-
-              {/* CTA Button */}
-              <div className="z-10 mt-auto flex items-center">
-                <div className="bg-white text-[#0D47A1] text-[11px] font-black py-2 px-4 rounded-full flex items-center gap-2 shadow-[0_2px_8px_rgba(0,0,0,0.05)] border border-slate-100/80 hover:bg-slate-50 transition-colors">
-                  <span>Explore on NCC</span>
-                  <ShoppingCart className="w-3.5 h-3.5 text-[#0D47A1]" />
+            {brandCards.map((bc) => (
+              <div 
+                key={bc.id}
+                onClick={() => {
+                  if (bc.actionUrl.startsWith('http')) {
+                    window.open(bc.actionUrl, '_blank');
+                  } else {
+                    navigate(bc.actionUrl);
+                  }
+                }}
+                className={`w-full sm:max-w-[340px] flex-shrink-0 h-[200px] rounded-[24px] bg-gradient-to-br ${bc.gradient} p-4 flex flex-col justify-between relative overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.03)] border border-slate-100/50 cursor-pointer snap-start`}
+              >
+                <div className="flex flex-col items-start z-10 max-w-[65%]">
+                  {bc.badgeText && (
+                    <span 
+                      className="text-[9px] font-bold px-2 py-0.5 rounded-md tracking-wide mb-1"
+                      style={{ 
+                        backgroundColor: bc.textColor === '#014694' ? '#E3F2FD' : (bc.textColor === '#1B5E20' ? '#E8F5E9' : '#FCE4EC'),
+                        color: bc.textColor 
+                      }}
+                    >
+                      {bc.badgeText}
+                    </span>
+                  )}
+                  <span className="font-sans font-black text-xl tracking-tight" style={{ color: bc.textColor }}>
+                    {bc.brandName}
+                  </span>
+                  <h3 className="text-xs font-black text-slate-800 mt-1.5 leading-tight">
+                    {bc.title}
+                  </h3>
+                  <p className="text-[10px] font-semibold text-slate-600 mt-0.5 leading-tight">
+                    {bc.subtitle}
+                  </p>
                 </div>
-              </div>
-            </div>
 
-            {/* Samsung Card */}
-            <div 
-              onClick={() => window.open('https://www.samsung.com', '_blank')}
-              className="w-full sm:max-w-[340px] flex-shrink-0 h-[200px] rounded-[24px] bg-gradient-to-br from-[#E8F5E9] via-[#F6FAF6] to-[#D2E8D4] p-4 flex flex-col justify-between relative overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.03)] border border-slate-100/50 cursor-pointer snap-start"
-            >
-              <div className="flex flex-col items-start z-10 max-w-[65%]">
-                <span className="bg-[#1B5E20] text-white text-[9px] font-bold px-2 py-0.5 rounded-md tracking-wide">
-                  Official Partner
-                </span>
-                <span className="font-sans font-black text-xl text-slate-800 tracking-[0.1em] mt-1.5">
-                  SAMSUNG
-                </span>
-                <h3 className="text-xs font-black text-slate-800 mt-1.5 leading-tight">
-                  Bespoke AI Laundry Range
-                </h3>
-                <p className="text-[10px] font-semibold text-slate-600 mt-0.5 leading-tight">
-                  Smart. Gentle. Intelligent.
-                </p>
-              </div>
+                {/* Absolute Appliance Image */}
+                {bc.image && (
+                  <img 
+                    src={bc.image} 
+                    alt={bc.brandName} 
+                    className="absolute -right-3 top-8 w-[140px] h-[100px] object-contain z-0 mix-blend-multiply" 
+                  />
+                )}
 
-              {/* Absolute Washing Machine Image */}
-              <img 
-                src={mostBookedWm} 
-                alt="Samsung WM" 
-                className="absolute right-1 top-6 w-[110px] h-[110px] object-contain z-0" 
-              />
-
-              {/* CTA Button */}
-              <div className="z-10 mt-auto flex items-center">
-                <div className="bg-white text-[#0D47A1] text-[11px] font-black py-2 px-4 rounded-full flex items-center gap-2 shadow-[0_2px_8px_rgba(0,0,0,0.05)] border border-slate-100/80 hover:bg-slate-50 transition-colors">
-                  <span>Visit Official Site</span>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 text-[#0D47A1]">
-                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                    <polyline points="15 3 21 3 21 9" />
-                    <line x1="10" y1="14" x2="21" y2="3" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-
-            {/* Daikin Card */}
-            <div 
-              onClick={() => navigate(`/service-details?service=${encodeURIComponent('AC Repair')}&brand=Daikin`)}
-              className="w-full sm:max-w-[340px] flex-shrink-0 h-[200px] rounded-[24px] bg-gradient-to-br from-[#F0F4FF] via-[#F7F9FF] to-[#E1E8FF] p-4 flex flex-col justify-between relative overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.03)] border border-slate-100/50 cursor-pointer snap-start"
-            >
-              <div className="flex flex-col items-start z-10 max-w-[65%]">
-                <span className="bg-[#E3F2FD] text-[#0D47A1] text-[9px] font-bold px-2 py-0.5 rounded-md tracking-wide">
-                  6pocine
-                </span>
-                <div className="flex items-center gap-1.5 mt-1.5">
-                  <svg viewBox="0 0 24 24" className="w-5 h-5 text-[#0091FF] fill-current flex-shrink-0">
-                    <path d="M4 20 L20 4 L20 20 Z" />
-                  </svg>
-                  <span className="font-sans font-black text-xl text-[#00529C] tracking-wide">DAIKIN</span>
-                </div>
-                <h3 className="text-xs font-black text-slate-800 mt-1.5 leading-tight">
-                  Air Specialist Inverter Series
-                </h3>
-                <p className="text-[10px] font-semibold text-slate-600 mt-0.5 leading-tight">
-                  Perfect Comfort. Every Season.
-                </p>
-              </div>
-
-              {/* Absolute AC Image */}
-              <img 
-                src={splitAcImg} 
-                alt="Daikin AC" 
-                className="absolute -right-3 top-8 w-[140px] h-[80px] object-contain z-0 mix-blend-multiply" 
-              />
-
-              {/* CTA Button */}
-              <div className="z-10 mt-auto flex items-center">
-                <div className="bg-white text-[#0D47A1] text-[11px] font-black py-2 px-4 rounded-full flex items-center gap-2 shadow-[0_2px_8px_rgba(0,0,0,0.05)] border border-slate-100/80 hover:bg-slate-50 transition-colors">
-                  <span>Explore on NCC</span>
-                  <ShoppingCart className="w-3.5 h-3.5 text-[#0D47A1]" />
-                </div>
-              </div>
-            </div>
-
-            {/* LG Card (Spillover for visual cue) */}
-            <div 
-              onClick={() => navigate(`/refrigerator-details`)}
-              className="w-full sm:max-w-[340px] flex-shrink-0 h-[200px] rounded-[24px] bg-gradient-to-br from-[#FCE4EC] via-[#FFF1F3] to-[#F8BBD0] p-4 flex flex-col justify-between relative overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.03)] border border-slate-100/50 cursor-pointer snap-start"
-            >
-              <div className="flex flex-col items-start z-10 max-w-[65%]">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-5 h-5 flex-shrink-0 flex items-center justify-center">
-                    <svg viewBox="0 0 100 100" className="w-full h-full">
-                      <circle cx="50" cy="50" r="46" fill="#C30F42" />
-                      <path d="M 50 22 A 28 28 0 1 0 78 50" fill="none" stroke="#FFFFFF" strokeWidth="8" strokeLinecap="round" />
-                      <path d="M 50 36 L 50 64 L 64 64" fill="none" stroke="#FFFFFF" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" />
-                      <circle cx="39" cy="45" r="5" fill="#FFFFFF" />
-                    </svg>
+                {/* CTA Button */}
+                <div className="z-10 mt-auto flex items-center">
+                  <div className="bg-white text-[#0D47A1] text-[11px] font-black py-2 px-4 rounded-full flex items-center gap-2 shadow-[0_2px_8px_rgba(0,0,0,0.05)] border border-slate-100/80 hover:bg-slate-50 transition-colors">
+                    <span>{bc.buttonText || 'Explore on NCC'}</span>
+                    {bc.buttonText?.toLowerCase().includes('site') ? (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 text-[#0D47A1]">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                        <polyline points="15 3 21 3 21 9" />
+                        <line x1="10" y1="14" x2="21" y2="3" />
+                      </svg>
+                    ) : (
+                      <ShoppingCart className="w-3.5 h-3.5 text-[#0D47A1]" />
+                    )}
                   </div>
-                  <span className="font-sans font-black text-xl text-[#C30F42] tracking-wider">LG</span>
-                </div>
-                <h3 className="text-xs font-black text-slate-800 mt-1.5 leading-tight">
-                  Double Door Frost Free Refrigerator
-                </h3>
-                <p className="text-[10px] font-semibold text-slate-600 mt-0.5 leading-tight">
-                  Premium cooling. Maximum savings.
-                </p>
-              </div>
-
-              {/* Absolute Refrigerator Image */}
-              <img 
-                src={applianceFridge} 
-                alt="LG Refrigerator" 
-                className="absolute right-2 top-6 w-[100px] h-[100px] object-contain z-0" 
-              />
-
-              {/* CTA Button */}
-              <div className="z-10 mt-auto flex items-center">
-                <div className="bg-white text-[#0D47A1] text-[11px] font-black py-2 px-4 rounded-full flex items-center gap-2 shadow-[0_2px_8px_rgba(0,0,0,0.05)] border border-slate-100/80 hover:bg-slate-50 transition-colors">
-                  <span>Explore on NCC</span>
-                  <ShoppingCart className="w-3.5 h-3.5 text-[#0D47A1]" />
                 </div>
               </div>
-            </div>
+            ))}
           </div>
 
           {/* Description Legend */}
@@ -694,13 +699,7 @@ const Dashboard = ({ defaultType }) => {
             <h2 className="text-lg font-bold text-text-primary">Most Booked Services</h2>
           </div>
           <div className="flex gap-4 overflow-x-auto pb-4 -mx-2 px-2 snap-x no-scrollbar">
-            {[
-              { id: 1, title: "Foam-jet AC service", image: mostBookedAc1, rating: 4.76, price: 649, badge: "Instant" },
-              { id: 2, title: "AC repair", image: mostBookedAc2, rating: 4.74, price: 299, badge: "Instant" },
-              { id: 3, title: "Washing Machine", image: mostBookedWm, rating: 4.85, price: 499, badge: "Instant" },
-              { id: 4, title: "Home Cleaning", image: mostBookedCleaning, rating: 4.90, price: 999, badge: "Trending" },
-              { id: 5, title: "Women Salon", image: mostBookedSalon, rating: 4.80, price: 799, badge: "Best Seller" }
-            ].map((service) => (
+            {mostBookedServices.map((service) => (
               <div 
                 key={service.id}
                 onClick={() => {
@@ -708,7 +707,14 @@ const Dashboard = ({ defaultType }) => {
                     setSelectedServiceForWarranty(service);
                     setShowWarrantyModal(true);
                   } else {
-                    navigate(`/booking?service=${encodeURIComponent(service.title)}&price=${service.price}`);
+                    // Check if there is a custom catalog config saved for this exact title
+                    const savedConfigs = localStorage.getItem('custom_service_details_configs');
+                    const configs = savedConfigs ? JSON.parse(savedConfigs) : {};
+                    if (configs[service.title]) {
+                      navigate(`/book/${encodeURIComponent(service.title)}`);
+                    } else {
+                      navigate(`/booking?service=${encodeURIComponent(service.title)}&price=${service.price}`);
+                    }
                   }
                 }}
                 className="flex flex-col gap-2 cursor-pointer flex-shrink-0 w-40 snap-start border border-border-color rounded-2xl p-2 bg-white hover:border-brand-blue transition-all"
@@ -748,14 +754,7 @@ const Dashboard = ({ defaultType }) => {
             </button>
           </div>
           <div className="flex gap-4 overflow-x-auto pb-4 -mx-2 px-2 snap-x no-scrollbar">
-            {[
-              { id: 1, title: "Foam-jet AC service", image: mostBookedAc1, rating: 4.76, price: 649, badge: "Instant", path: '/booking' },
-              { id: 2, title: "AC repair", image: mostBookedAc2, rating: 4.74, price: 299, badge: "Instant", path: '/booking' },
-              { id: 3, title: "Washing Machine", image: mostBookedWm, rating: 4.85, price: 499, badge: "Instant", path: '/booking' },
-              { id: 4, title: "Refrigerator Repair & Service", image: applianceFridge, rating: 4.80, price: 899, badge: "Instant", path: '/refrigerator-details' },
-              { id: 5, title: "Deep Clean AC", image: mostBookedAc1, rating: 4.76, price: 1198, badge: "2 ACs", path: '/booking' },
-              { id: 6, title: "WM Checkup", image: mostBookedWm, rating: 4.85, price: 199, badge: "Instant", path: '/booking' }
-            ].map((service) => (
+            {applianceServices.map((service) => (
               <div 
                 key={service.id}
                 onClick={() => {
@@ -764,7 +763,15 @@ const Dashboard = ({ defaultType }) => {
                   const isWM = titleNorm.includes('washing') || titleNorm.includes('wm');
                   const isFridge = titleNorm.includes('refrigerator') || titleNorm.includes('fridge');
                   
-                  if (isAC) {
+                  // Check if there is a custom catalog config saved for this exact title
+                  const savedConfigs = localStorage.getItem('custom_service_details_configs');
+                  const configs = savedConfigs ? JSON.parse(savedConfigs) : {};
+                  
+                  if (configs[service.title]) {
+                    navigate(`/book/${encodeURIComponent(service.title)}`);
+                  } else if (service.path && service.path !== '/booking' && service.path !== '/book/AC' && service.path !== '/book/Washing Machine' && service.path !== '/book/Refrigerator') {
+                    navigate(service.path);
+                  } else if (isAC) {
                     navigate('/book/AC');
                   } else if (isWM) {
                     navigate('/book/Washing Machine');

@@ -7,6 +7,19 @@ import {
 
 import { getCatalogEntry } from '../data/bookingCatalog';
 
+import electricianBanner from '../assets/electrician_banner.png';
+import plumbingBanner from '../assets/plumbing_banner.png';
+import acBanner from '../assets/ac_service_banner.png';
+import heroService from '../assets/hero_service.png';
+
+const getDefaultBanner = (categoryKey) => {
+  const norm = categoryKey.toLowerCase();
+  if (norm.includes('ac')) return acBanner;
+  if (norm.includes('elect')) return electricianBanner;
+  if (norm.includes('plumb')) return plumbingBanner;
+  return heroService;
+};
+
 const getCatalog = (category) => getCatalogEntry(category);
 
 // ─── Step Labels (4 steps) ────────────────────────────────────────────────────
@@ -240,7 +253,7 @@ const BookingFlow = () => {
   };
 
   // ── Validation per step ────────────────────────────────────────────────────
-  const step1Valid = !!productType;
+  const step1Valid = (!data.productTypes || data.productTypes.length === 0) ? true : !!productType;
   const step2Valid = !!service;
   const step3Valid = !!selectedDate && !!timeGroup;
   const step4Valid = true;
@@ -307,6 +320,8 @@ const BookingFlow = () => {
       {/* ── Page Content ── */}
       <div className={`flex-1 overflow-y-auto ${step === 3 ? 'pb-56' : 'pb-36'}`}>
 
+
+
         {/* Step Title & Subtitle */}
         <div className="px-5 pt-6 pb-1">
           <h1 className="text-[22px] font-black text-slate-900 leading-tight">{title}</h1>
@@ -316,23 +331,25 @@ const BookingFlow = () => {
           <div className="px-4 pt-5 flex flex-col gap-5">
 
             {/* Product type label */}
-            <div>
-              <p className="text-[12px] font-extrabold text-slate-500 uppercase tracking-wider mb-3">
-                Select {catKey} Type
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                {data.productTypes.map((pt) => (
-                  <OptionCard
-                    key={pt.id}
-                    icon={pt.icon}
-                    name={pt.name}
-                    desc={pt.desc}
-                    selected={productType === pt.name}
-                    onClick={() => setProductType(pt.name)}
-                  />
-                ))}
+            {data.productTypes && data.productTypes.length > 0 && (
+              <div>
+                <p className="text-[12px] font-extrabold text-slate-500 uppercase tracking-wider mb-3">
+                  Select {catKey} Type
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  {data.productTypes.map((pt) => (
+                    <OptionCard
+                      key={pt.id}
+                      icon={pt.icon}
+                      name={pt.name}
+                      desc={pt.desc}
+                      selected={productType === pt.name}
+                      onClick={() => setProductType(pt.name)}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Quantity stepper */}
             <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
@@ -368,8 +385,12 @@ const BookingFlow = () => {
 
             {/* Info card */}
             <div className="bg-white border border-slate-100 rounded-2xl p-4 flex items-center gap-3 shadow-sm">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: data.lightBg }}>
-                <img src={data.icon} alt="" className="w-6 h-6 object-contain" />
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: data.lightBg || '#EAF4FF' }}>
+                {data.icon ? (
+                  <img src={data.icon} alt="" className="w-6 h-6 object-contain" />
+                ) : (
+                  <span className="text-xl">🛠️</span>
+                )}
               </div>
               <div>
                 <p className="text-[12px] font-extrabold text-slate-900">{catKey} Service by NCC</p>
@@ -397,10 +418,14 @@ const BookingFlow = () => {
                   }`}
                 >
                   {/* Icon */}
-                  <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-xl ${
+                  <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-xl overflow-hidden ${
                     isSelected ? 'bg-[#0D47A1]/10' : 'bg-slate-100'
                   }`}>
-                    {svc.icon}
+                    {typeof svc.icon === 'string' && (svc.icon.startsWith('data:image/') || svc.icon.includes('/')) ? (
+                      <img src={svc.icon} alt="" className="w-6 h-6 object-contain" />
+                    ) : (
+                      svc.icon || '🔧'
+                    )}
                   </div>
                   {/* Name + desc */}
                   <div className="flex-1 min-w-0">
@@ -416,7 +441,7 @@ const BookingFlow = () => {
                     <span className={`text-[14px] font-extrabold ${isSelected ? 'text-[#0D47A1]' : 'text-slate-900'}`}>
                       ₹{svc.price}
                     </span>
-                    <span className="text-[9px] text-slate-400 font-medium">per AC</span>
+                    <span className="text-[9px] text-slate-400 font-medium">{svc.unit || 'per unit'}</span>
                   </div>
                   {/* Radio */}
                   <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all ${

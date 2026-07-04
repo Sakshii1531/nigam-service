@@ -18,7 +18,7 @@ import electricianImg3 from '../../assets/story_electrician_3.png';
 import salonImg2 from '../../assets/story_salon_2.png';
 import salonImg3 from '../../assets/story_salon_3.png';
 
-const stories = [
+const DEFAULT_STORIES = [
   {
     id: 1,
     title: 'Cold showers in winter? Hard pass',
@@ -113,6 +113,9 @@ const Stories = () => {
   const [viewerOpen, setViewerOpen] = useState(false);
   const [startStoryIndex, setStartStoryIndex] = useState(0);
 
+  const savedStories = localStorage.getItem('custom_stories');
+  const storiesList = savedStories ? JSON.parse(savedStories) : DEFAULT_STORIES;
+
   const openStory = (index) => {
     setStartStoryIndex(index);
     setViewerOpen(true);
@@ -128,7 +131,7 @@ const Stories = () => {
 
           {/* Horizontally scrollable container with snap physics */}
           <div className="flex overflow-x-auto gap-4 pb-4 snap-x snap-mandatory no-scrollbar -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
-            {stories.map((story, index) => (
+            {storiesList.map((story, index) => (
               <motion.div
                 key={story.id}
                 initial={{ opacity: 0, y: 20 }}
@@ -162,7 +165,7 @@ const Stories = () => {
       {/* Full-screen Story Viewer */}
       {viewerOpen && (
         <StoryViewer
-          stories={stories}
+          stories={storiesList}
           startIndex={startStoryIndex}
           onClose={() => setViewerOpen(false)}
         />

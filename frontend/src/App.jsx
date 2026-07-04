@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -100,6 +100,7 @@ import SuperAdminCities from './pages/super-admin/Cities';
 import SuperAdminRoles from './pages/super-admin/Roles';
 import SuperAdminSettings from './pages/super-admin/Settings';
 import SuperAdminLogs from './pages/super-admin/Logs';
+import CustomerAppCustomization from './pages/super-admin/CustomerAppCustomization';
 import TechDashboard from './pages/technician/Dashboard';
 import ActiveJob from './pages/technician/ActiveJob';
 import Schedule from './pages/technician/Schedule';
@@ -344,6 +345,7 @@ function App() {
         <Route path="/technician/earning-detail/:id" element={<EarningDetailPage />} />
         
         {/* Super Admin Routes */}
+        <Route path="/super-admin" element={<Navigate to="/super-admin/login" replace />} />
         <Route path="/super-admin/login" element={<SuperAdminLogin />} />
         <Route path="/super-admin/verify-otp" element={<SuperAdminVerifyOtp />} />
         <Route path="/super-admin/forgot-password" element={<SuperAdminForgotPassword />} />
@@ -351,6 +353,7 @@ function App() {
         <Route path="/super-admin/users" element={<SuperAdminUsers />} />
         <Route path="/super-admin/technicians" element={<SuperAdminTechnicians />} />
         <Route path="/super-admin/brands" element={<SuperAdminBrands />} />
+        <Route path="/super-admin/customer-app-customization" element={<CustomerAppCustomization />} />
         <Route path="/super-admin/requests" element={<SuperAdminRequests />} />
         <Route path="/super-admin/warranty" element={<SuperAdminWarranty />} />
         <Route path="/super-admin/assignment" element={<SuperAdminAssignment />} />
