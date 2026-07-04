@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   ChevronRight, 
@@ -16,13 +16,16 @@ import {
   Settings,
   Shield,
   FileText,
-  LayoutGrid
+  LayoutGrid,
+  Package,
+  RefreshCw
 } from 'lucide-react';
 
 import partnerImg from '../assets/working/Gemini_Generated_Image_ahi7orahi7orahi7-removebg-preview (1).png';
 
 const Profile = () => {
   const navigate = useNavigate();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-24">
@@ -173,6 +176,34 @@ const Profile = () => {
               <ChevronRight className="h-4.5 w-4.5 text-slate-400" />
             </div>
 
+            {/* My Orders */}
+            <div 
+              onClick={() => navigate('/my-orders')}
+              className="p-4 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer"
+            >
+              <div className="flex items-center gap-3.5">
+                <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
+                  <Package className="h-4.5 w-4.5" />
+                </div>
+                <span className="text-xs font-bold text-slate-800">My Orders</span>
+              </div>
+              <ChevronRight className="h-4.5 w-4.5 text-slate-400" />
+            </div>
+
+            {/* Exchange Details */}
+            <div 
+              onClick={() => navigate('/exchange-details')}
+              className="p-4 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer"
+            >
+              <div className="flex items-center gap-3.5">
+                <div className="p-2 bg-amber-50 text-amber-600 rounded-xl">
+                  <RefreshCw className="h-4.5 w-4.5" />
+                </div>
+                <span className="text-xs font-bold text-slate-800">Exchange Details</span>
+              </div>
+              <ChevronRight className="h-4.5 w-4.5 text-slate-400" />
+            </div>
+
             {/* Rewards & Play Zone */}
             <div 
               onClick={() => navigate('/rewards-play-zone')}
@@ -257,30 +288,53 @@ const Profile = () => {
               <ChevronRight className="h-4.5 w-4.5 text-slate-400" />
             </div>
 
+            {/* Logout */}
+            <div 
+              onClick={() => setShowLogoutConfirm(true)}
+              className="p-4 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer group"
+            >
+              <div className="flex items-center gap-3.5">
+                <div className="p-2 bg-red-50 text-red-600 rounded-xl">
+                  <LogOut className="h-4.5 w-4.5" />
+                </div>
+                <span className="text-xs font-bold text-red-600">Log Out</span>
+              </div>
+              <ChevronRight className="h-4.5 w-4.5 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+            </div>
+
           </div>
         </div>
 
-        {/* Join as Service Partner Banner */}
+        {/* Refer & Earn Banner */}
         <div 
-          onClick={() => navigate('/service-partner')}
-          className="bg-gradient-to-r from-[#D9E3FC] to-[#EBE7FD] rounded-[24px] p-5 relative overflow-hidden shadow-2xs flex items-center justify-between mt-1 min-h-[120px] border border-blue-100/30 cursor-pointer hover:shadow-md transition-all"
+          onClick={() => navigate('/refer-earn')}
+          className="bg-gradient-to-r from-[#FFF8F0] to-[#FFF0E0] rounded-[24px] p-5 relative overflow-hidden shadow-2xs flex items-center justify-between mt-1 min-h-[120px] border border-amber-200/50 cursor-pointer hover:shadow-md transition-all"
         >
           <div className="flex-1 flex flex-col gap-1 pr-24 z-10">
-            <h4 className="text-[13px] font-black text-slate-900">Join as Service Partner</h4>
-            <p className="text-[10px] text-slate-600 font-extrabold leading-snug">Grow your business with NCC</p>
+            <h4 className="text-[13px] font-black text-amber-900">Refer & Earn</h4>
+            <p className="text-[10px] text-amber-700 font-extrabold leading-snug">Earn ₹100 for every friend who joins</p>
             <button 
-              onClick={(e) => { e.stopPropagation(); navigate('/service-partner'); }} 
-              className="bg-[#0D47A1] hover:bg-blue-800 text-white text-[10px] font-black px-4.5 py-2 rounded-xl mt-2 transition-all cursor-pointer self-start shadow-sm"
+              onClick={(e) => { e.stopPropagation(); navigate('/refer-earn'); }} 
+              className="bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-black px-4.5 py-2 rounded-xl mt-2 transition-all cursor-pointer self-start shadow-sm"
             >
-              Join Now
+              Refer Now
             </button>
           </div>
-          <div className="absolute bottom-0 right-0 h-[120px] w-28 flex items-end justify-center pointer-events-none z-0">
-            <img 
-              src={partnerImg} 
-              alt="Service Partner" 
-              className="h-full object-contain object-bottom select-none" 
-            />
+          <div className="absolute bottom-2 right-4 h-[90px] w-24 flex items-center justify-center pointer-events-none z-0">
+            <svg viewBox="0 0 100 100" className="h-18 w-18 text-amber-500 drop-shadow-[0_4px_8px_rgba(245,158,11,0.25)]">
+              {/* Gift Box Base */}
+              <rect x="25" y="40" width="50" height="45" rx="6" fill="#F59E0B" />
+              {/* Gift Box Lid */}
+              <rect x="20" y="30" width="60" height="12" rx="4" fill="#FBBF24" />
+              {/* Vertical Ribbon */}
+              <rect x="46" y="30" width="8" height="55" fill="#EF4444" />
+              {/* Horizontal Ribbon */}
+              <rect x="25" y="40" width="50" height="8" fill="#EF4444" />
+              {/* Ribbon Bow Left */}
+              <path d="M48 30 C35 15, 30 25, 48 30 Z" fill="#EF4444" />
+              {/* Ribbon Bow Right */}
+              <path d="M52 30 C65 15, 70 25, 52 30 Z" fill="#EF4444" />
+            </svg>
           </div>
         </div>
 
@@ -327,6 +381,40 @@ const Profile = () => {
           <span className="text-xs font-semibold mt-0.5">Account</span>
         </button>
       </div>
+
+      {/* Logout Confirmation Modal Overlay */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-6 z-[100] animate-fade-in">
+          <div className="bg-white border border-slate-100 rounded-[28px] p-6 max-w-xs w-full flex flex-col items-center text-center gap-4 shadow-xl">
+            <div className="w-12 h-12 bg-red-50 text-red-600 rounded-full flex items-center justify-center">
+              <LogOut className="h-5 w-5" />
+            </div>
+            <div>
+              <h4 className="text-sm font-black text-slate-900 mb-1">Log Out</h4>
+              <p className="text-[11px] text-slate-500 font-semibold leading-normal">
+                Are you sure you want to log out of your account?
+              </p>
+            </div>
+            <div className="flex gap-2.5 w-full mt-2">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-800 text-[10.5px] font-black py-2.5 rounded-xl transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowLogoutConfirm(false);
+                  navigate('/login');
+                }}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white text-[10.5px] font-black py-2.5 rounded-xl transition-colors cursor-pointer shadow-sm"
+              >
+                Yes, Log Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

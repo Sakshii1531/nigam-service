@@ -48,6 +48,9 @@ import FinanceDetails from './pages/FinanceDetails';
 import MembershipPlans from './pages/MembershipPlans';
 import RewardsPlayZone from './pages/RewardsPlayZone';
 import MyBookings from './pages/MyBookings';
+import MyOrders from './pages/MyOrders';
+import ExchangeDetails from './pages/ExchangeDetails';
+import ReferEarn from './pages/ReferEarn';
 import ServicePartner from './pages/ServicePartner';
 import PaymentMethods from './pages/PaymentMethods';
 import NotificationSettings from './pages/NotificationSettings';
@@ -271,6 +274,9 @@ function App() {
         <Route path="/membership-plans" element={<MembershipPlans />} />
         <Route path="/rewards-play-zone" element={<RewardsPlayZone />} />
         <Route path="/my-bookings" element={<MyBookings />} />
+        <Route path="/my-orders" element={<MyOrders />} />
+        <Route path="/exchange-details" element={<ExchangeDetails />} />
+        <Route path="/refer-earn" element={<ReferEarn />} />
         <Route path="/service-partner" element={<ServicePartner />} />
         <Route path="/payment-methods" element={<PaymentMethods />} />
         <Route path="/notification-settings" element={<NotificationSettings />} />
