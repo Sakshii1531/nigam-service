@@ -1,12 +1,11 @@
 import React, { useRef } from 'react';
-import { ClipboardList, ShieldCheck, UserCheck, MapPin, PhoneForwarded, CheckCircle2 } from 'lucide-react';
+import { ClipboardList, ShieldCheck, UserCheck, PhoneForwarded, CheckCircle2 } from 'lucide-react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 
 const steps = [
   { id: 1, title: 'Raise Request', desc: 'Select a service and book a convenient slot.', icon: ClipboardList },
   { id: 2, title: 'Smart Warranty', desc: 'System automatically detects product warranty.', icon: ShieldCheck },
   { id: 3, title: 'Tech Assignment', desc: 'Verified technician is assigned instantly.', icon: UserCheck },
-  { id: 4, title: 'Live Tracking', desc: 'Track technician location in real-time.', icon: MapPin },
   { id: 5, title: 'Secure Comms', desc: 'Masked calling for privacy and security.', icon: PhoneForwarded },
   { id: 6, title: 'Payment & Completion', desc: 'Rate the service and pay securely.', icon: CheckCircle2 },
 ];

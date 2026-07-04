@@ -151,10 +151,10 @@ const BookingSuccess = () => {
 
           {/* ── Action Buttons ── */}
           <button
-            onClick={() => navigate('/tracking')}
+            onClick={() => navigate('/my-bookings')}
             className="w-full bg-[#0D47A1] text-white font-extrabold py-4 rounded-2xl text-[15px] shadow-md shadow-[#0D47A1]/25 hover:bg-[#1565C0] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
           >
-            Track Booking
+            View My Bookings
             <ArrowRight className="w-5 h-5" />
           </button>
 
