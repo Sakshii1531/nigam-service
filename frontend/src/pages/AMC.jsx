@@ -229,34 +229,170 @@ const AMC = () => {
               />
             </div>
 
-            {/* Service Tabs — AMC active */}
-            <div className="flex justify-between pb-1">
+            {/* Service Type Cards — NCC Shield, NCC AMC, Exchange, Buy New */}
+            <div className="flex gap-3 overflow-x-auto no-scrollbar py-2 px-1 -mx-6 px-6 mt-[-10px]">
               {[
-                { name: 'AMC', icon: <Wrench className="h-5 w-5" />, active: true, onClick: () => {} },
-                { name: 'Extended\nWarranty', icon: <Shield className="h-5 w-5" />, onClick: () => navigate('/buy/select-appliance') },
-                { name: 'Exchange', icon: <PackageOpen className="h-5 w-5" />, onClick: () => navigate('/buy/exchange') },
-                { name: 'Buy New', icon: <ShoppingCart className="h-5 w-5" />, onClick: () => navigate('/buy-new') },
-              ].map((tab, idx) => (
+                {
+                  name: 'NCC Shield\nExtended Warranty',
+                  desc: 'Extra protection for\nlonger peace of mind',
+                  icon: (
+                    <div className="relative w-16 h-16 flex items-center justify-center filter drop-shadow-[0_3px_6px_rgba(13,71,161,0.25)]">
+                      <svg viewBox="0 0 100 100" className="w-full h-full">
+                        <defs>
+                          <linearGradient id="bevelGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stopColor="#1E88E5" />
+                            <stop offset="50%" stopColor="#1565C0" />
+                            <stop offset="50%" stopColor="#0D47A1" />
+                            <stop offset="100%" stopColor="#0A2D6E" />
+                          </linearGradient>
+                        </defs>
+                        {/* Outer Shield Shape */}
+                        <path
+                          d="M50 6 C68 16 82 14 88 18 C88 38 86 52 86 58 C86 78 68 90 50 95 C32 90 14 78 14 58 C14 52 12 38 12 18 C18 14 32 16 50 6 Z"
+                          fill="url(#bevelGrad)"
+                        />
+                        {/* Inner White Outline */}
+                        <path
+                          d="M50 14 C65 22 76 20 81 24 C81 40 79 51 79 56 C79 72 65 82 50 86 C35 82 21 72 21 56 C21 51 19 40 19 24 C24 20 35 22 50 14 Z"
+                          fill="none"
+                          stroke="#ffffff"
+                          strokeWidth="2.5"
+                          strokeOpacity="0.9"
+                        />
+                        <text
+                          x="50"
+                          y="46"
+                          fill="#ffffff"
+                          fontSize="13"
+                          fontWeight="900"
+                          fontFamily="system-ui, -apple-system, sans-serif"
+                          textAnchor="middle"
+                        >
+                          NCC
+                        </text>
+                        <text
+                          x="50"
+                          y="60"
+                          fill="#ffffff"
+                          fontSize="8.5"
+                          fontWeight="900"
+                          fontFamily="system-ui, -apple-system, sans-serif"
+                          textAnchor="middle"
+                          letterSpacing="0.6"
+                        >
+                          SHIELD
+                        </text>
+                      </svg>
+                    </div>
+                  ),
+                  onClick: () => navigate('/buy/select-appliance')
+                },
+                {
+                  name: 'NCC AMC\nPlans',
+                  desc: 'Regular care for\nreliable performance',
+                  icon: (
+                    <div className="relative w-16 h-16 flex items-center justify-center filter drop-shadow-[0_3px_6px_rgba(13,71,161,0.25)]">
+                      <svg viewBox="0 0 100 100" className="w-full h-full">
+                        <defs>
+                          <linearGradient id="bevelGrad2" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stopColor="#1E88E5" />
+                            <stop offset="50%" stopColor="#1565C0" />
+                            <stop offset="50%" stopColor="#0D47A1" />
+                            <stop offset="100%" stopColor="#0A2D6E" />
+                          </linearGradient>
+                        </defs>
+                        {/* Outer Shield Shape */}
+                        <path
+                          d="M50 6 C68 16 82 14 88 18 C88 38 86 52 86 58 C86 78 68 90 50 95 C32 90 14 78 14 58 C14 52 12 38 12 18 C18 14 32 16 50 6 Z"
+                          fill="url(#bevelGrad2)"
+                        />
+                        {/* Inner White Outline */}
+                        <path
+                          d="M50 14 C65 22 76 20 81 24 C81 40 79 51 79 56 C79 72 65 82 50 86 C35 82 21 72 21 56 C21 51 19 40 19 24 C24 20 35 22 50 14 Z"
+                          fill="none"
+                          stroke="#ffffff"
+                          strokeWidth="2.5"
+                          strokeOpacity="0.9"
+                        />
+                        <text
+                          x="50"
+                          y="46"
+                          fill="#ffffff"
+                          fontSize="13"
+                          fontWeight="900"
+                          fontFamily="system-ui, -apple-system, sans-serif"
+                          textAnchor="middle"
+                        >
+                          NCC
+                        </text>
+                        <text
+                          x="50"
+                          y="60"
+                          fill="#ffffff"
+                          fontSize="8.5"
+                          fontWeight="900"
+                          fontFamily="system-ui, -apple-system, sans-serif"
+                          textAnchor="middle"
+                          letterSpacing="0.6"
+                        >
+                          AMC
+                        </text>
+                      </svg>
+                    </div>
+                  ),
+                  onClick: () => {}
+                },
+                {
+                  name: 'Exchange\nAppliances',
+                  desc: 'Upgrade old appliances\nfor brand new ones',
+                  icon: (
+                    <div className="w-16 h-16 flex items-center justify-center text-[#0B4EA2]">
+                      <svg viewBox="0 0 100 100" className="w-11 h-11 stroke-[#0B4EA2] stroke-[6] fill-none">
+                        <path d="M25 35 L75 35 M75 35 L60 20 M75 35 L60 50" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d="M75 65 L25 65 M25 65 L40 50 M25 65 L40 80" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </div>
+                  ),
+                  onClick: () => navigate('/buy/exchange')
+                },
+                {
+                  name: 'Buy\nNew',
+                  desc: 'Shop latest\nappliances & more',
+                  icon: (
+                    <div className="w-16 h-16 flex items-center justify-center text-[#0B4EA2]">
+                      <svg viewBox="0 0 100 100" className="w-11 h-11 stroke-[#0B4EA2] stroke-[5.5] fill-none">
+                        <circle cx="35" cy="80" r="5" fill="#0B4EA2" />
+                        <circle cx="75" cy="80" r="5" fill="#0B4EA2" />
+                        <path d="M15 20 H30 L45 60 H80 L90 30 H35" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </div>
+                  ),
+                  onClick: () => navigate('/buy-new')
+                }
+              ].map((card, idx) => (
                 <div
                   key={idx}
-                  onClick={tab.onClick}
-                  className="flex flex-col items-center gap-1.5 cursor-pointer flex-shrink-0"
+                  onClick={card.onClick}
+                  className="flex-shrink-0 w-[136px] bg-white border border-slate-100 rounded-[24px] p-3.5 pt-4 pb-3.5 flex flex-col items-center text-center justify-between shadow-[0_4px_20px_rgb(0,0,0,0.02)] hover:shadow-md transition-all cursor-pointer min-h-[210px] group"
                 >
-                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-sm transition-all ${
-                    tab.active
-                      ? 'bg-brand-blue text-white shadow-md shadow-brand-blue/20'
-                      : 'bg-white border border-slate-200 text-brand-blue hover:border-brand-blue/40'
-                  }`}>
-                    {tab.icon}
+                  <div className="flex flex-col items-center w-full">
+                    <div className="group-hover:scale-105 transition-transform duration-300">
+                      {card.icon}
+                    </div>
+                    <h3 className="text-[11px] font-black text-[#0A2D6E] leading-snug mt-3 mb-1 min-h-[30px] flex items-center justify-center whitespace-pre-line">
+                      {card.name}
+                    </h3>
+                    <p className="text-[8.5px] text-slate-500 font-semibold leading-normal line-clamp-2 px-0.5 whitespace-pre-line">
+                      {card.desc}
+                    </p>
                   </div>
-                  <span className={`text-[10px] font-bold text-center leading-tight whitespace-pre-line ${
-                    tab.active ? 'text-brand-blue' : 'text-slate-600'
-                  }`}>{tab.name}</span>
+                  <div className="w-6 h-6 rounded-full bg-white border border-slate-100 flex items-center justify-center shadow-sm mt-2.5 group-hover:bg-slate-50 transition-colors">
+                    <ChevronRight className="h-3.5 w-3.5 text-[#0B4EA2] stroke-[3]" />
+                  </div>
                 </div>
               ))}
             </div>
 
-            {/* AMC Promo Banner */}
             <div className="bg-gradient-to-br from-[#E8F1FF] to-[#C9DEFF] rounded-2xl p-4 border border-blue-100 shadow-sm flex items-center gap-4 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-20 h-20 bg-blue-300/20 rounded-full blur-2xl"></div>
 
