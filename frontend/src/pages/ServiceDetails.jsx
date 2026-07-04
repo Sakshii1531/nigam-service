@@ -232,6 +232,19 @@ const CatalogCard = ({ item, navigate, serviceName, onViewDetails, quantity = 0,
   );
 };
 
+// Helper to resolve generic icons for custom sub-services
+const getSubServiceIcon = (name) => {
+  const norm = name.toLowerCase();
+  if (norm.includes('ac') || norm.includes('cool')) return acIconImg;
+  if (norm.includes('wash') || norm.includes('machine')) return washingIconImg;
+  if (norm.includes('clean') || norm.includes('salon')) return cleaningIconImg;
+  if (norm.includes('elect') || norm.includes('power')) return electricianImg;
+  if (norm.includes('plumb') || norm.includes('pipe') || norm.includes('leak')) return plumberImg;
+  if (norm.includes('tv') || norm.includes('smart') || norm.includes('screen')) return tvImg;
+  if (norm.includes('water') || norm.includes('ro') || norm.includes('purif')) return roImg;
+  return electricianImg; // default fallback
+};
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 const ServiceDetails = () => {
   const navigate = useNavigate();
@@ -239,7 +252,27 @@ const ServiceDetails = () => {
   const params = new URLSearchParams(location.search);
   const serviceName = params.get('service') || 'Electrician';
 
-  const config = SERVICE_CONFIG[serviceName] || DEFAULT_CONFIG;
+  // Load configuration dynamically
+  const savedConfigs = localStorage.getItem('custom_service_details_configs');
+  const detailsConfigs = savedConfigs ? JSON.parse(savedConfigs) : SERVICE_CONFIG;
+  const rawConfig = detailsConfigs[serviceName] || DEFAULT_CONFIG;
+
+  // Resolve subServices with preset icons if necessary
+  const resolvedSubServices = (rawConfig.subServices || []).map(sub => {
+    if (typeof sub === 'string') {
+      return { name: sub, img: getSubServiceIcon(sub) };
+    }
+    if (sub && sub.name) {
+      return { name: sub.name, img: sub.img || getSubServiceIcon(sub.name) };
+    }
+    return sub;
+  });
+
+  const config = {
+    ...rawConfig,
+    subServices: resolvedSubServices
+  };
+
   const [selectedSub, setSelectedSub] = useState(config.subServices[0]?.name || '');
   const [showMenu, setShowMenu] = useState(false);
   const [detailItem, setDetailItem] = useState(null);
@@ -249,7 +282,12 @@ const ServiceDetails = () => {
   const [expandedReviews, setExpandedReviews] = useState({});
   const [cart, setCart] = useState({});
 
-  const allCatalogItems = SERVICE_CATALOG.flatMap(group => group.items);
+  // Load catalog dynamically
+  const savedCatalogs = localStorage.getItem('custom_service_catalogs');
+  const serviceCatalogs = savedCatalogs ? JSON.parse(savedCatalogs) : null;
+  const currentCatalog = (serviceCatalogs && serviceCatalogs[serviceName]) ? serviceCatalogs[serviceName] : SERVICE_CATALOG;
+
+  const allCatalogItems = currentCatalog.flatMap(group => group.items);
 
   const handleQuantityChange = (itemName, qty) => {
     setCart(prev => {
@@ -382,7 +420,7 @@ const ServiceDetails = () => {
 
       {/* ── Detailed Service Catalog ── */}
       <div className="px-4 pb-32 flex flex-col gap-6 pt-8">
-        {SERVICE_CATALOG.map((group, gi) => (
+        {currentCatalog.map((group, gi) => (
           <div key={gi} id={group.section}>
             <h3 className="text-[14px] font-extrabold text-slate-900 mb-3">{group.section}</h3>
             <div className="flex flex-col gap-4">

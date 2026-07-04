@@ -1,5 +1,5 @@
-import React, { useRef, useEffect } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import React, { useRef, useEffect, useState } from 'react';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Users, 
@@ -20,12 +20,17 @@ import {
   Lock, 
   Settings, 
   Clock,
-  LogOut
+  LogOut,
+  Image,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 
 const Sidebar = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const scrollContainerRef = useRef(null);
+  const [isCustomerAppOpen, setIsCustomerAppOpen] = useState(location.pathname.includes('/super-admin/customer-app-customization'));
 
   useEffect(() => {
     const container = scrollContainerRef.current;
@@ -61,6 +66,20 @@ const Sidebar = () => {
     { path: '/super-admin/users', icon: <Users size={20} />, label: 'User Management' },
     { path: '/super-admin/technicians', icon: <UserCheck size={20} />, label: 'Technician Management' },
     { path: '/super-admin/brands', icon: <Building size={20} />, label: 'Brand Management' },
+    { 
+      label: 'Customer App Section', 
+      icon: <LayoutDashboard size={20} />,
+      hasSub: true,
+      subItems: [
+        { path: '/super-admin/customer-app-customization?tab=categories', label: 'Category Customization' },
+        { path: '/super-admin/customer-app-customization?tab=banners', label: 'Banner Customization' },
+        { path: '/super-admin/customer-app-customization?tab=services', label: 'Services Customization' },
+        { path: '/super-admin/customer-app-customization?tab=brands', label: 'Brands & Offers' },
+        { path: '/super-admin/customer-app-customization?tab=mostbooked', label: 'Most Booked Services' },
+        { path: '/super-admin/customer-app-customization?tab=applianceservices', label: 'Appliance Repair & Service' },
+        { path: '/super-admin/customer-app-customization?tab=stories', label: 'Stories Customization' }
+      ]
+    },
     { path: '/super-admin/requests', icon: <ClipboardList size={20} />, label: 'Service Requests' },
     { path: '/super-admin/warranty', icon: <FileCheck size={20} />, label: 'Warranty Management' },
     { path: '/super-admin/assignment', icon: <UserPlus size={20} />, label: 'Tech Assignment' },
@@ -78,7 +97,7 @@ const Sidebar = () => {
   ];
 
   return (
-    <div className="w-64 bg-white h-screen border-r border-[#E2E8F0] flex flex-col fixed left-0 top-0 z-20">
+    <div className="w-64 bg-[#EEF4FF] h-screen border-r border-[#E2E8F0] flex flex-col fixed left-0 top-0 z-20">
       {/* Logo */}
       <div className="p-6 border-b border-[#E2E8F0]">
         <div className="flex items-center gap-2">
@@ -93,26 +112,74 @@ const Sidebar = () => {
         ref={scrollContainerRef}
         className="flex-1 overflow-y-auto py-4 space-y-1"
       >
-        {menuItems.map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            onClick={() => {
-              if (scrollContainerRef.current) {
-                sessionStorage.setItem('super-sidebar-scroll', scrollContainerRef.current.scrollTop.toString());
-              }
-            }}
-            className={({ isActive }) => `
-              flex items-center gap-3 px-6 py-2.5 text-sm font-medium transition-colors
-              ${isActive 
-                ? 'text-[#0D47A1] bg-[#EEF4FF] border-r-4 border-[#0D47A1]' 
-                : 'text-[#64748B] hover:text-[#1E293B] hover:bg-[#F8FAFC]'}
-            `}
-          >
-            <span className="flex-shrink-0">{item.icon}</span>
-            <span>{item.label}</span>
-          </NavLink>
-        ))}
+        {menuItems.map((item, idx) => {
+          if (item.hasSub) {
+            const isAnySubActive = item.subItems.some(sub => location.pathname + location.search === sub.path || (sub.path.includes('categories') && location.pathname + location.search === '/super-admin/customer-app-customization'));
+            return (
+              <div key={idx} className="flex flex-col">
+                <button
+                  type="button"
+                  onClick={() => setIsCustomerAppOpen(prev => !prev)}
+                  className={`flex items-center justify-between w-full px-6 py-2.5 text-sm font-bold transition-colors cursor-pointer text-left ${
+                    isAnySubActive ? 'text-[#0D47A1]' : 'text-[#64748B] hover:text-[#1E293B]'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="flex-shrink-0">{item.icon}</span>
+                    <span>{item.label}</span>
+                  </div>
+                  {isCustomerAppOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                </button>
+                {isCustomerAppOpen && (
+                  <div className="flex flex-col pl-4 border-l border-slate-100 ml-8 mb-1 gap-1">
+                    {item.subItems.map((sub, sIdx) => {
+                      const isSubActive = location.pathname + location.search === sub.path || (sub.path.includes('categories') && location.pathname + location.search === '/super-admin/customer-app-customization');
+                      return (
+                        <NavLink
+                          key={sIdx}
+                          to={sub.path}
+                          onClick={() => {
+                            if (scrollContainerRef.current) {
+                              sessionStorage.setItem('super-sidebar-scroll', scrollContainerRef.current.scrollTop.toString());
+                            }
+                          }}
+                          className={`
+                            pl-3 py-1 text-xs font-semibold rounded-md transition-colors block
+                            ${isSubActive 
+                              ? 'text-[#0D47A1] bg-[#EEF4FF] font-black' 
+                              : 'text-[#64748B] hover:text-[#1E293B] hover:bg-[#F8FAFC]'}
+                          `}
+                        >
+                          {sub.label}
+                        </NavLink>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          }
+          return (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              onClick={() => {
+                if (scrollContainerRef.current) {
+                  sessionStorage.setItem('super-sidebar-scroll', scrollContainerRef.current.scrollTop.toString());
+                }
+              }}
+              className={({ isActive }) => `
+                flex items-center gap-3 px-6 py-2.5 text-sm font-medium transition-colors
+                ${isActive 
+                  ? 'text-[#0D47A1] bg-[#EEF4FF] border-r-4 border-[#0D47A1]' 
+                  : 'text-[#64748B] hover:text-[#1E293B] hover:bg-[#F8FAFC]'}
+              `}
+            >
+              <span className="flex-shrink-0">{item.icon}</span>
+              <span>{item.label}</span>
+            </NavLink>
+          );
+        })}
       </div>
 
       {/* Logout */}
