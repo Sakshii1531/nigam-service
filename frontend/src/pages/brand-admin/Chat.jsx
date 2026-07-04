@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
-import { 
-  Search, 
-  Send, 
-  Smile, 
-  Paperclip, 
+import {
+  Search,
+  Send,
+  Smile,
+  Paperclip,
   MessageSquare,
   User,
   Wrench,

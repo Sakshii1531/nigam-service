@@ -9,8 +9,11 @@ const TechLogin = () => {
 
   const handleLogin = (e) => {
     e.preventDefault();
-    // Simulate login for technician
-    navigate('/technician/dashboard');
+    const form = new FormData(e.currentTarget);
+    const raw = (form.get('identifier') || '').toString().trim();
+    const digits = raw.replace(/\D/g, '');
+    const destination = digits.length >= 6 ? `+91 ${digits.slice(0, 2)}•••••${digits.slice(-3)}` : raw || 'EMP•••45';
+    navigate('/technician/verify-otp', { state: { destination } });
   };
 
   return (
@@ -52,6 +55,7 @@ const TechLogin = () => {
               <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
               <input
                 type="text"
+                name="identifier"
                 placeholder="Enter your ID or Phone"
                 className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] outline-none transition-all text-sm"
                 required
@@ -78,7 +82,7 @@ const TechLogin = () => {
           {/* Forgot Password */}
           <button
             type="button"
-            onClick={() => alert('Password reset link sent to your email!')}
+            onClick={() => navigate('/technician/forgot-password')}
             className="text-xs font-semibold text-[#0D47A1] self-end hover:text-blue-800 transition-colors"
           >
             Forgot Password?
