@@ -239,6 +239,9 @@ function App() {
         <Route path="/buy/my-warranty" element={<Buy />} />
         <Route path="/buy/how-it-works" element={<Buy />} />
         <Route path="/buy/warranty-details" element={<Buy />} />
+        <Route path="/buy/amc-details" element={<Buy />} />
+        <Route path="/buy/file-claim" element={<Buy />} />
+        <Route path="/buy/claim-success" element={<Buy />} />
         <Route path="/buy/all-appliances" element={<Buy />} />
         <Route path="/buy/accessories" element={<Buy />} />
         <Route path="/buy/amc" element={<AMC />} />

@@ -342,19 +342,7 @@ const AMC = () => {
                   ),
                   onClick: () => {}
                 },
-                {
-                  name: 'Exchange\nAppliances',
-                  desc: 'Upgrade old appliances\nfor brand new ones',
-                  icon: (
-                    <div className="w-16 h-16 flex items-center justify-center text-[#0B4EA2]">
-                      <svg viewBox="0 0 100 100" className="w-11 h-11 stroke-[#0B4EA2] stroke-[6] fill-none">
-                        <path d="M25 35 L75 35 M75 35 L60 20 M75 35 L60 50" strokeLinecap="round" strokeLinejoin="round" />
-                        <path d="M75 65 L25 65 M25 65 L40 50 M25 65 L40 80" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </div>
-                  ),
-                  onClick: () => navigate('/buy/exchange')
-                },
+
                 {
                   name: 'Buy\nNew',
                   desc: 'Shop latest\nappliances & more',
