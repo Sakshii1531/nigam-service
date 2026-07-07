@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation, useSearchParams } from 'react-router-dom';
 import { 
   ArrowLeft, Shield, Award, Check, ChevronRight, ShoppingCart,
@@ -49,6 +49,9 @@ const Buy = () => {
   else if (pathname.includes('/buy/my-warranty')) step = 8;
   else if (pathname.includes('/buy/how-it-works')) step = 9;
   else if (pathname.includes('/buy/warranty-details')) step = 10;
+  else if (pathname.includes('/buy/amc-details')) step = 13;
+  else if (pathname.includes('/buy/file-claim')) step = 14;
+  else if (pathname.includes('/buy/claim-success')) step = 15;
 
   // Appliance & tier from URL params + query string
   const [searchParams] = useSearchParams();
@@ -75,9 +78,23 @@ const Buy = () => {
     else if (targetStep === 10) navigate('/buy/warranty-details');
     else if (targetStep === 11) navigate('/buy/accessories');
     else if (targetStep === 12) navigate('/buy/all-appliances');
+    else if (targetStep === 13) navigate('/buy/amc-details');
+    else if (targetStep === 14) navigate('/buy/file-claim');
+    else if (targetStep === 15) navigate('/buy/claim-success');
   };
 
   const setStep = (s) => goTo(s);
+
+  // Carousel state for Banners
+  const [activeBanner, setActiveBanner] = useState(0);
+
+  useEffect(() => {
+    // Auto-slide every 4 seconds
+    const timer = setInterval(() => {
+      setActiveBanner((prev) => (prev + 1) % 3);
+    }, 4000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Form states for Step 5 & 6 & 8
   const [showSuccess, setShowSuccess] = useState(false);
@@ -93,6 +110,17 @@ const Buy = () => {
   const [activeWarrantyTab, setActiveWarrantyTab] = useState("Active");
   const [selectedWarranty, setSelectedWarranty] = useState(null);
   const [cameFromMore, setCameFromMore] = useState(false);
+
+  // Protection Plans & Claims States
+  const [activePlanSection, setActivePlanSection] = useState("Extended Warranties"); // 'Extended Warranties' | 'AMC Plans'
+  const [selectedAMC, setSelectedAMC] = useState(null);
+  const [claimSubject, setClaimSubject] = useState(""); 
+  const [claimOrderId, setClaimOrderId] = useState("");
+  const [claimPlanType, setClaimPlanType] = useState(""); 
+  const [claimIssue, setClaimIssue] = useState("");
+  const [claimDate, setClaimDate] = useState("");
+  const [claimTime, setClaimTime] = useState("10:00 AM - 1:00 PM");
+  const [submittedTicketId, setSubmittedTicketId] = useState("");
 
   // Product-specific brands per appliance
   const getBrandsForAppliance = (appliance) => {
@@ -189,7 +217,7 @@ const Buy = () => {
     <div className="min-h-screen bg-bg-light flex flex-col pb-24 relative">
       
       {/* Header section with back navigation for sub-steps */}
-      {step > 1 && step !== 7 && (
+      {step > 1 && step !== 7 && step !== 15 && (
         <div className="bg-white px-6 py-4 flex items-center justify-between border-b border-border-color shadow-sm sticky top-0 z-30">
           <button 
             onClick={() => {
@@ -203,6 +231,11 @@ const Buy = () => {
               else if (step === 10) navigate('/buy/my-warranty');
               else if (step === 11) navigate('/buy');
               else if (step === 12) navigate('/buy/select-appliance');
+              else if (step === 13) navigate('/buy/my-warranty');
+              else if (step === 14) {
+                if (claimPlanType === "Extended Warranty") navigate('/buy/warranty-details');
+                else navigate('/buy/amc-details');
+              }
             }}
             className="p-2 bg-slate-50 hover:bg-slate-100 rounded-full transition-colors flex items-center justify-center cursor-pointer border border-slate-100"
           >
@@ -215,11 +248,13 @@ const Buy = () => {
             {step === 4 && 'Review & Confirm'}
             {step === 5 && 'Enter Details'}
             {step === 6 && 'Payment'}
-            {step === 8 && 'My Warranty'}
+            {step === 8 && 'My Protection Plans'}
             {step === 9 && 'How it Works'}
             {step === 10 && 'Warranty Details'}
             {step === 11 && 'Products & Accessories'}
             {step === 12 && 'All Appliances'}
+            {step === 13 && 'AMC Details'}
+            {step === 14 && 'File a Claim'}
           </h1>
         </div>
       )}
@@ -381,19 +416,7 @@ const Buy = () => {
                   ),
                   onClick: () => navigate('/buy/amc')
                 },
-                {
-                  name: 'Exchange\nAppliances',
-                  desc: 'Upgrade old appliances\nfor brand new ones',
-                  icon: (
-                    <div className="w-16 h-16 flex items-center justify-center text-[#0B4EA2]">
-                      <svg viewBox="0 0 100 100" className="w-11 h-11 stroke-[#0B4EA2] stroke-[6] fill-none">
-                        <path d="M25 35 L75 35 M75 35 L60 20 M75 35 L60 50" strokeLinecap="round" strokeLinejoin="round" />
-                        <path d="M75 65 L25 65 M25 65 L40 50 M25 65 L40 80" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </div>
-                  ),
-                  onClick: () => navigate('/buy/exchange')
-                },
+
                 {
                   name: 'Buy\nNew',
                   desc: 'Shop latest\nappliances & more',
@@ -432,40 +455,157 @@ const Buy = () => {
               ))}
             </div>
 
-            <div className="bg-gradient-to-br from-[#E8F1FF] to-[#C9DEFF] rounded-2xl p-4 border border-blue-100 shadow-sm flex items-center gap-4 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-20 h-20 bg-blue-300/20 rounded-full blur-2xl"></div>
-              
-              {/* Left shield illustration */}
-              <div className="w-[100px] h-[120px] flex-shrink-0 relative flex items-center justify-center rounded-2xl overflow-hidden bg-gradient-to-b from-brand-blue/90 to-[#0B4EA2] shadow-md">
-                <div className="absolute inset-0 flex items-end justify-center pb-2">
-                  <img src={fridgeImg} alt="Appliance" className="w-16 h-20 object-contain mix-blend-luminosity opacity-60" />
+            {/* Promotional Banners Carousel */}
+            <div className="relative w-full overflow-hidden rounded-2xl group">
+              <div 
+                className="flex transition-transform duration-500 ease-in-out"
+                style={{ transform: `translateX(-${activeBanner * 100}%)` }}
+              >
+                
+                {/* Banner 1: Extended Warranty */}
+                <div className="w-full flex-shrink-0 px-0.5">
+                  <div 
+                    onClick={() => setStep(2)}
+                    className="bg-gradient-to-br from-[#E8F1FF] to-[#C9DEFF] rounded-2xl p-4 border border-blue-100 shadow-sm flex items-center gap-4 relative overflow-hidden cursor-pointer hover:shadow-md transition-all text-left min-h-[142px]"
+                  >
+                    <div className="absolute top-0 right-0 w-20 h-20 bg-blue-300/20 rounded-full blur-2xl"></div>
+                    
+                    {/* Left shield illustration */}
+                    <div className="w-[80px] h-[80px] flex-shrink-0 relative flex items-center justify-center rounded-2xl overflow-hidden bg-gradient-to-b from-brand-blue/90 to-[#0B4EA2] shadow-md">
+                      <Shield className="h-10 w-10 text-white drop-shadow-lg z-10" />
+                    </div>
+
+                    {/* Right content */}
+                    <div className="flex-1 flex flex-col items-start relative z-10">
+                      <h3 className="text-xs font-black text-brand-navy leading-tight mb-2">
+                        Protect appliances with Extended Warranty
+                      </h3>
+                      <ul className="flex flex-col gap-0.5 mb-2.5">
+                        <li className="flex items-center gap-1.5 text-[9px] font-semibold text-slate-700">
+                          <Check className="h-2.5 w-2.5 text-green-600 flex-shrink-0" /> Genuine Parts
+                        </li>
+                        <li className="flex items-center gap-1.5 text-[9px] font-semibold text-slate-700">
+                          <Check className="h-2.5 w-2.5 text-green-600 flex-shrink-0" /> Expert Support
+                        </li>
+                        <li className="flex items-center gap-1.5 text-[9px] font-semibold text-slate-700">
+                          <Check className="h-2.5 w-2.5 text-green-600 flex-shrink-0" /> Hassle Free Claims
+                        </li>
+                      </ul>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setStep(2);
+                        }}
+                        className="bg-brand-blue hover:bg-blue-800 text-white text-[9px] font-black px-3.5 py-1.5 rounded-xl shadow-md transition-all active:scale-95 cursor-pointer"
+                      >
+                        Explore Plans
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <Shield className="h-12 w-12 text-white drop-shadow-lg z-10 opacity-80" />
+
+                {/* Banner 2: Buy New Products */}
+                <div className="w-full flex-shrink-0 px-0.5">
+                  <div 
+                    onClick={() => navigate('/buy-new')}
+                    className="bg-gradient-to-br from-[#FFF5E6] to-[#FFE6C9] rounded-2xl p-4 border border-amber-100 shadow-sm flex items-center gap-4 relative overflow-hidden cursor-pointer hover:shadow-md transition-all text-left min-h-[142px]"
+                  >
+                    <div className="absolute top-0 right-0 w-20 h-20 bg-amber-300/20 rounded-full blur-2xl"></div>
+                    
+                    {/* Left shopping cart illustration */}
+                    <div className="w-[80px] h-[80px] flex-shrink-0 relative flex items-center justify-center rounded-2xl overflow-hidden bg-gradient-to-b from-[#F59E0B] to-[#D97706] shadow-md">
+                      <ShoppingCart className="h-10 w-10 text-white drop-shadow-lg z-10" />
+                    </div>
+
+                    {/* Right content */}
+                    <div className="flex-1 flex flex-col items-start relative z-10">
+                      <h3 className="text-xs font-black text-brand-navy leading-tight mb-2">
+                        Shop Latest Appliances & Electronics
+                      </h3>
+                      <ul className="flex flex-col gap-0.5 mb-2.5">
+                        <li className="flex items-center gap-1.5 text-[9px] font-semibold text-slate-700">
+                          <Check className="h-2.5 w-2.5 text-green-600 flex-shrink-0" /> Free Doorstep Installation
+                        </li>
+                        <li className="flex items-center gap-1.5 text-[9px] font-semibold text-slate-700">
+                          <Check className="h-2.5 w-2.5 text-green-600 flex-shrink-0" /> 1 Year Brand Warranty
+                        </li>
+                        <li className="flex items-center gap-1.5 text-[9px] font-semibold text-slate-700">
+                          <Check className="h-2.5 w-2.5 text-green-600 flex-shrink-0" /> No Cost EMI Options
+                        </li>
+                      </ul>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate('/buy-new');
+                        }}
+                        className="bg-[#D97706] hover:bg-amber-700 text-white text-[9px] font-black px-3.5 py-1.5 rounded-xl shadow-md transition-all active:scale-95 cursor-pointer"
+                      >
+                        Shop New
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Banner 3: NCC AMC Plans */}
+                <div className="w-full flex-shrink-0 px-0.5">
+                  <div 
+                    onClick={() => navigate('/buy/amc')}
+                    className="bg-gradient-to-br from-[#E6F4EA] to-[#C9EAD2] rounded-2xl p-4 border border-emerald-100 shadow-sm flex items-center gap-4 relative overflow-hidden cursor-pointer hover:shadow-md transition-all text-left min-h-[142px]"
+                  >
+                    <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-300/20 rounded-full blur-2xl"></div>
+                    
+                    {/* Left check-shield illustration */}
+                    <div className="w-[80px] h-[80px] flex-shrink-0 relative flex items-center justify-center rounded-2xl overflow-hidden bg-gradient-to-b from-[#10B981] to-[#059669] shadow-md">
+                      <ShieldCheck className="h-10 w-10 text-white drop-shadow-lg z-10" />
+                    </div>
+
+                    {/* Right content */}
+                    <div className="flex-1 flex flex-col items-start relative z-10">
+                      <h3 className="text-xs font-black text-brand-navy leading-tight mb-2">
+                        NCC AMC Maintenance & Care Plans
+                      </h3>
+                      <ul className="flex flex-col gap-0.5 mb-2.5">
+                        <li className="flex items-center gap-1.5 text-[9px] font-semibold text-slate-700">
+                          <Check className="h-2.5 w-2.5 text-green-600 flex-shrink-0" /> Regular Preventive Visits
+                        </li>
+                        <li className="flex items-center gap-1.5 text-[9px] font-semibold text-slate-700">
+                          <Check className="h-2.5 w-2.5 text-green-600 flex-shrink-0" /> Free Spare Repairs
+                        </li>
+                        <li className="flex items-center gap-1.5 text-[9px] font-semibold text-slate-700">
+                          <Check className="h-2.5 w-2.5 text-green-600 flex-shrink-0" /> Zero Labor & Service Charges
+                        </li>
+                      </ul>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate('/buy/amc');
+                        }}
+                        className="bg-[#059669] hover:bg-emerald-700 text-white text-[9px] font-black px-3.5 py-1.5 rounded-xl shadow-md transition-all active:scale-95 cursor-pointer"
+                      >
+                        Explore AMC
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
               </div>
 
-              {/* Right content */}
-              <div className="flex-1 flex flex-col items-start relative z-10">
-                <h3 className="text-sm font-black text-brand-navy leading-tight mb-2">
-                  Protect your appliances<br />with Extended Warranty
-                </h3>
-                <ul className="flex flex-col gap-1 mb-3">
-                  <li className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-700">
-                    <Check className="h-3 w-3 text-green-600 flex-shrink-0" /> Genuine Parts
-                  </li>
-                  <li className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-700">
-                    <Check className="h-3 w-3 text-green-600 flex-shrink-0" /> Expert Support
-                  </li>
-                  <li className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-700">
-                    <Check className="h-3 w-3 text-green-600 flex-shrink-0" /> Hassle Free Claims
-                  </li>
-                </ul>
-                <button 
-                  onClick={() => setStep(2)}
-                  className="bg-brand-blue hover:bg-blue-800 text-white text-[10px] font-black px-4 py-2 rounded-xl shadow-md transition-all active:scale-95 cursor-pointer"
-                >
-                  Explore Plans
-                </button>
+              {/* Dots indicator at the bottom center of the carousel wrapper */}
+              <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex gap-1.5 z-20">
+                {[0, 1, 2].map((idx) => (
+                  <button
+                    key={idx}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveBanner(idx);
+                    }}
+                    className={`w-1.5 h-1.5 rounded-full transition-all cursor-pointer ${
+                      activeBanner === idx ? 'bg-brand-navy w-3' : 'bg-slate-400/40'
+                    }`}
+                  />
+                ))}
               </div>
+
             </div>
 
             {/* Shop by Category */}
@@ -1162,7 +1302,7 @@ const Buy = () => {
           </motion.div>
         )}
 
-        {/* STEP 8: MY WARRANTY (VIEW) */}
+        {/* STEP 8: MY PROTECTION PLANS (VIEW) */}
         {step === 8 && (
           <motion.div 
             initial={{ opacity: 0, x: 10 }}
@@ -1170,81 +1310,228 @@ const Buy = () => {
             transition={{ duration: 0.3 }}
             className="flex flex-col gap-5 pb-8"
           >
-            <div className="px-1 -mt-2">
-              <h2 className="text-lg font-black text-brand-navy">My Warranty</h2>
-              <p className="text-xs text-text-secondary font-semibold">Track all your warranties</p>
+            <div className="px-1 -mt-2 text-left">
+              <h2 className="text-lg font-black text-brand-navy">My Protection Plans</h2>
+              <p className="text-xs text-text-secondary font-semibold">Track all your active plans & coverage</p>
             </div>
 
-            {/* Tab selection row */}
-            <div className="flex gap-2 bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200/40">
-              {['Active', 'Expiring Soon', 'Expired'].map((tab) => {
-                const isActive = activeWarrantyTab === tab;
+            {/* Extended Warranties vs AMC selector */}
+            <div className="flex gap-2 bg-slate-100 p-1 rounded-2xl border border-slate-200/40">
+              {['Extended Warranties', 'AMC Plans'].map((sec) => {
+                const isActive = activePlanSection === sec;
                 return (
                   <button
-                    key={tab}
-                    onClick={() => setActiveWarrantyTab(tab)}
+                    key={sec}
+                    onClick={() => setActivePlanSection(sec)}
                     className={`flex-1 text-center py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
                       isActive 
-                        ? 'bg-white text-[#0B4EA2] shadow-sm font-black' 
+                        ? 'bg-brand-blue text-white shadow-sm font-black' 
                         : 'text-slate-500 hover:text-slate-800 font-bold'
                     }`}
                   >
-                    {tab}
+                    {sec}
                   </button>
                 );
               })}
             </div>
 
-            {/* List based on active tab */}
-            {activeWarrantyTab === 'Active' ? (
+            {activePlanSection === 'Extended Warranties' ? (
+              <>
+                {/* Tab selection row */}
+                <div className="flex gap-2 bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200/40">
+                  {['Active', 'Expiring Soon', 'Expired'].map((tab) => {
+                    const isActive = activeWarrantyTab === tab;
+                    return (
+                      <button
+                        key={tab}
+                        onClick={() => setActiveWarrantyTab(tab)}
+                        className={`flex-1 text-center py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                          isActive 
+                            ? 'bg-white text-[#0B4EA2] shadow-sm font-black' 
+                            : 'text-slate-500 hover:text-slate-800 font-bold'
+                        }`}
+                      >
+                        {tab}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* List based on active tab */}
+                {activeWarrantyTab === 'Active' ? (
+                  <div className="flex flex-col gap-4">
+                    
+                    {/* Television Warranty Card */}
+                    <div className="bg-white border border-slate-200 rounded-3xl p-4.5 flex gap-4 shadow-sm relative overflow-hidden text-left">
+                      <div className="w-18 h-18 bg-slate-50 rounded-2xl flex items-center justify-center p-1 border border-slate-100 flex-shrink-0">
+                        <img src={tvImg} alt="Television" className="w-full h-full object-contain mix-blend-multiply" />
+                      </div>
+                      <div className="flex-1 flex flex-col gap-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <h4 className="text-sm font-black text-brand-navy leading-tight truncate">Television</h4>
+                          <span className="bg-green-50 text-green-700 border border-green-200 text-[9px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                            Active
+                          </span>
+                        </div>
+                        <span className="text-[11px] text-slate-500 font-bold">Samsung</span>
+                        <span className="text-[10px] text-brand-blue font-extrabold block">1 Year Extended Warranty</span>
+                        
+                        <div className="flex flex-col gap-0.5 mt-2 text-[10px] text-slate-500 font-semibold border-t border-slate-100 pt-2">
+                          <div className="flex justify-between">
+                            <span>Order ID:</span>
+                            <strong className="text-slate-800 font-extrabold">NCCEW123456</strong>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Valid Till:</span>
+                            <strong className="text-slate-800 font-extrabold">12 May 2026</strong>
+                          </div>
+                        </div>
+                        
+                        <button 
+                          onClick={() => {
+                            setSelectedWarranty({
+                              title: "Television",
+                              brand: "Samsung",
+                              plan: "1 Year Extended Warranty",
+                              orderId: "NCCEW123456",
+                              validTill: "12 May 2026",
+                              status: "Active",
+                              img: tvImg,
+                              coverage: [
+                                "Screen panel failures and screen burn-in",
+                                "Internal circuit board (motherboard) errors",
+                                "Remote receiver or sensor issues",
+                                "Power supply and voltage adapter failures",
+                                "Speaker and audio driver malfunctioning"
+                              ],
+                              terms: "Mirrors the manufacturer's original coverage. Does not cover any accidental physical damage, liquid spills, or services performed by unauthorized local workshops."
+                            });
+                            setStep(10);
+                          }}
+                          className="w-full border border-[#0B4EA2]/30 hover:border-[#0B4EA2]/60 hover:bg-blue-50/20 text-[#0B4EA2] font-black text-xs py-2.5 rounded-xl mt-3 transition-colors cursor-pointer"
+                        >
+                          View Details
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Air Conditioner Warranty Card */}
+                    <div className="bg-white border border-slate-200 rounded-3xl p-4.5 flex gap-4 shadow-sm relative overflow-hidden text-left">
+                      <div className="w-18 h-18 bg-slate-50 rounded-2xl flex items-center justify-center p-1 border border-slate-100 flex-shrink-0">
+                        <img src={splitAcImg} alt="Air Conditioner" className="w-full h-full object-contain mix-blend-multiply" />
+                      </div>
+                      <div className="flex-1 flex flex-col gap-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <h4 className="text-sm font-black text-brand-navy leading-tight truncate">Air Conditioner</h4>
+                          <span className="bg-green-50 text-green-700 border border-green-200 text-[9px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                            Active
+                          </span>
+                        </div>
+                        <span className="text-[11px] text-slate-500 font-bold">LG</span>
+                        <span className="text-[10px] text-brand-blue font-extrabold block">1 Year Extended Warranty</span>
+                        
+                        <div className="flex flex-col gap-0.5 mt-2 text-[10px] text-slate-500 font-semibold border-t border-slate-100 pt-2">
+                          <div className="flex justify-between">
+                            <span>Order ID:</span>
+                            <strong className="text-slate-800 font-extrabold">NCCEW987654</strong>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Valid Till:</span>
+                            <strong className="text-slate-800 font-extrabold">10 Apr 2026</strong>
+                          </div>
+                        </div>
+                        
+                        <button 
+                          onClick={() => {
+                            setSelectedWarranty({
+                              title: "Air Conditioner",
+                              brand: "LG",
+                              plan: "1 Year Extended Warranty",
+                              orderId: "NCCEW987654",
+                              validTill: "10 Apr 2026",
+                              status: "Active",
+                              img: splitAcImg,
+                              coverage: [
+                                "Compressor faults and failure replacement",
+                                "Gas leakage detection and refrigerant recharging",
+                                "Cooling coil or condenser unit failure",
+                                "Internal fan motor or blower breakdown",
+                                "PCB remote sensor and electronic kit replacement"
+                              ],
+                              terms: "Mirrors the manufacturer's original coverage. Does not cover physical aesthetic damage, external voltage fluctuation damage, or unauthorized handling."
+                            });
+                            setStep(10);
+                          }}
+                          className="w-full border border-[#0B4EA2]/30 hover:border-[#0B4EA2]/60 hover:bg-blue-50/20 text-[#0B4EA2] font-black text-xs py-2.5 rounded-xl mt-3 transition-colors cursor-pointer"
+                        >
+                          View Details
+                        </button>
+                      </div>
+                    </div>
+
+                  </div>
+                ) : (
+                  <div className="bg-white border border-slate-150 rounded-2xl p-8 flex flex-col items-center justify-center gap-3 text-center shadow-sm">
+                    <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center text-slate-400">
+                      <Shield className="h-6 w-6" />
+                    </div>
+                    <span className="text-xs font-black text-brand-navy">No Warranties Found</span>
+                    <span className="text-[10px] text-slate-400 font-semibold max-w-[200px] leading-relaxed">
+                      There are no warranties recorded in this category.
+                    </span>
+                  </div>
+                )}
+              </>
+            ) : (
+              // AMC Plans List
               <div className="flex flex-col gap-4">
                 
-                {/* Television Warranty Card */}
-                <div className="bg-white border border-slate-200 rounded-3xl p-4.5 flex gap-4 shadow-sm relative overflow-hidden">
+                {/* Water Purifier AMC Card */}
+                <div className="bg-white border border-slate-200 rounded-3xl p-4.5 flex gap-4 shadow-sm relative overflow-hidden text-left">
                   <div className="w-18 h-18 bg-slate-50 rounded-2xl flex items-center justify-center p-1 border border-slate-100 flex-shrink-0">
-                    <img src={tvImg} alt="Television" className="w-full h-full object-contain mix-blend-multiply" />
+                    <img src={waterPurifierImg} alt="Water Purifier" className="w-full h-full object-contain mix-blend-multiply" />
                   </div>
                   <div className="flex-1 flex flex-col gap-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
-                      <h4 className="text-sm font-black text-brand-navy leading-tight truncate">Television</h4>
+                      <h4 className="text-sm font-black text-brand-navy leading-tight truncate">Water Purifier</h4>
                       <span className="bg-green-50 text-green-700 border border-green-200 text-[9px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
                         Active
                       </span>
                     </div>
-                    <span className="text-[11px] text-slate-500 font-bold">Samsung</span>
-                    <span className="text-[10px] text-brand-blue font-extrabold block">1 Year Extended Warranty</span>
+                    <span className="text-[11px] text-slate-500 font-bold">Tata Swach</span>
+                    <span className="text-[10px] text-brand-blue font-extrabold block">Comprehensive AMC Plan</span>
                     
                     <div className="flex flex-col gap-0.5 mt-2 text-[10px] text-slate-500 font-semibold border-t border-slate-100 pt-2">
                       <div className="flex justify-between">
                         <span>Order ID:</span>
-                        <strong className="text-slate-800 font-extrabold">NCCEW123456</strong>
+                        <strong className="text-slate-800 font-extrabold">NCCAMC9876</strong>
                       </div>
                       <div className="flex justify-between">
                         <span>Valid Till:</span>
-                        <strong className="text-slate-800 font-extrabold">12 May 2026</strong>
+                        <strong className="text-slate-800 font-extrabold">20 Aug 2026</strong>
                       </div>
                     </div>
                     
                     <button 
                       onClick={() => {
-                        setSelectedWarranty({
-                          title: "Television",
-                          brand: "Samsung",
-                          plan: "1 Year Extended Warranty",
-                          orderId: "NCCEW123456",
-                          validTill: "12 May 2026",
+                        setSelectedAMC({
+                          title: "Water Purifier",
+                          brand: "Tata Swach",
+                          plan: "Comprehensive AMC Plan",
+                          orderId: "NCCAMC9876",
+                          validTill: "20 Aug 2026",
                           status: "Active",
-                          img: tvImg,
+                          img: waterPurifierImg,
                           coverage: [
-                            "Screen panel failures and screen burn-in",
-                            "Internal circuit board (motherboard) errors",
-                            "Remote receiver or sensor issues",
-                            "Power supply and voltage adapter failures",
-                            "Speaker and audio driver malfunctioning"
+                            "RO Membrane and Carbon filter replacement",
+                            "Free Sediment and Pre-filter candle replacement",
+                            "Unlimited breakdown service calls",
+                            "Zero repair labor charges",
+                            "Water TDS check and pH balancing"
                           ],
-                          terms: "Mirrors the manufacturer's original coverage. Does not cover any accidental physical damage, liquid spills, or services performed by unauthorized local workshops."
+                          terms: "Includes replacement of consumable filters once per contract year. Excludes booster pump motor replacement or physical tank breakage."
                         });
-                        setStep(10);
+                        setStep(13);
                       }}
                       className="w-full border border-[#0B4EA2]/30 hover:border-[#0B4EA2]/60 hover:bg-blue-50/20 text-[#0B4EA2] font-black text-xs py-2.5 rounded-xl mt-3 transition-colors cursor-pointer"
                     >
@@ -1253,52 +1540,51 @@ const Buy = () => {
                   </div>
                 </div>
 
-                {/* Air Conditioner Warranty Card */}
-                <div className="bg-white border border-slate-200 rounded-3xl p-4.5 flex gap-4 shadow-sm relative overflow-hidden">
+                {/* Washing Machine AMC Card */}
+                <div className="bg-white border border-slate-200 rounded-3xl p-4.5 flex gap-4 shadow-sm relative overflow-hidden text-left">
                   <div className="w-18 h-18 bg-slate-50 rounded-2xl flex items-center justify-center p-1 border border-slate-100 flex-shrink-0">
-                    <img src={splitAcImg} alt="Air Conditioner" className="w-full h-full object-contain mix-blend-multiply" />
+                    <img src={washingImg} alt="Washing Machine" className="w-full h-full object-contain mix-blend-multiply" />
                   </div>
                   <div className="flex-1 flex flex-col gap-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
-                      <h4 className="text-sm font-black text-brand-navy leading-tight truncate">Air Conditioner</h4>
+                      <h4 className="text-sm font-black text-brand-navy leading-tight truncate">Washing Machine</h4>
                       <span className="bg-green-50 text-green-700 border border-green-200 text-[9px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
                         Active
                       </span>
                     </div>
-                    <span className="text-[11px] text-slate-500 font-bold">LG</span>
-                    <span className="text-[10px] text-brand-blue font-extrabold block">1 Year Extended Warranty</span>
+                    <span className="text-[11px] text-slate-500 font-bold">IFB</span>
+                    <span className="text-[10px] text-brand-blue font-extrabold block">Essential AMC Plan</span>
                     
                     <div className="flex flex-col gap-0.5 mt-2 text-[10px] text-slate-500 font-semibold border-t border-slate-100 pt-2">
                       <div className="flex justify-between">
                         <span>Order ID:</span>
-                        <strong className="text-slate-800 font-extrabold">NCCEW987654</strong>
+                        <strong className="text-slate-800 font-extrabold">NCCAMC5432</strong>
                       </div>
                       <div className="flex justify-between">
                         <span>Valid Till:</span>
-                        <strong className="text-slate-800 font-extrabold">10 Apr 2026</strong>
+                        <strong className="text-slate-800 font-extrabold">15 Sep 2026</strong>
                       </div>
                     </div>
                     
                     <button 
                       onClick={() => {
-                        setSelectedWarranty({
-                          title: "Air Conditioner",
-                          brand: "LG",
-                          plan: "1 Year Extended Warranty",
-                          orderId: "NCCEW987654",
-                          validTill: "10 Apr 2026",
+                        setSelectedAMC({
+                          title: "Washing Machine",
+                          brand: "IFB",
+                          plan: "Essential AMC Plan",
+                          orderId: "NCCAMC5432",
+                          validTill: "15 Sep 2026",
                           status: "Active",
-                          img: splitAcImg,
+                          img: washingImg,
                           coverage: [
-                            "Compressor faults and failure replacement",
-                            "Gas leakage detection and refrigerant recharging",
-                            "Cooling coil or condenser unit failure",
-                            "Internal fan motor or blower breakdown",
-                            "PCB remote sensor and electronic kit replacement"
+                            "Preventive drum descaling and checkup",
+                            "Motor and spin belt check-up",
+                            "Water inlet valve testing",
+                            "Zero diagnostic service charges"
                           ],
-                          terms: "Mirrors the manufacturer's original coverage. Does not cover physical aesthetic damage, external voltage fluctuation damage, or unauthorized handling."
+                          terms: "Excludes main motor rewinding, drum spin basket replacement, or outer body cabinet rust-proofing."
                         });
-                        setStep(10);
+                        setStep(13);
                       }}
                       className="w-full border border-[#0B4EA2]/30 hover:border-[#0B4EA2]/60 hover:bg-blue-50/20 text-[#0B4EA2] font-black text-xs py-2.5 rounded-xl mt-3 transition-colors cursor-pointer"
                     >
@@ -1307,16 +1593,6 @@ const Buy = () => {
                   </div>
                 </div>
 
-              </div>
-            ) : (
-              <div className="bg-white border border-slate-150 rounded-2xl p-8 flex flex-col items-center justify-center gap-3 text-center shadow-sm">
-                <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center text-slate-400">
-                  <Shield className="h-6 w-6" />
-                </div>
-                <span className="text-xs font-black text-brand-navy">No Warranties Found</span>
-                <span className="text-[10px] text-slate-400 font-semibold max-w-[200px] leading-relaxed">
-                  There are no warranties recorded in this category.
-                </span>
               </div>
             )}
           </motion.div>
@@ -1571,7 +1847,13 @@ const Buy = () => {
             <div className="w-full flex flex-col gap-3 mt-2">
               <button
                 onClick={() => {
-                  alert("Your repair/claim ticket has been initialized! Our team will contact you in 2 hours.");
+                  setClaimSubject(selectedWarranty.title);
+                  setClaimOrderId(selectedWarranty.orderId);
+                  setClaimPlanType("Extended Warranty");
+                  setClaimIssue("");
+                  setClaimDate("");
+                  setClaimTime("10:00 AM - 1:00 PM");
+                  goTo(14);
                 }}
                 className="w-full bg-[#0B4EA2] hover:bg-blue-800 text-white font-black py-4 rounded-2xl transition-all shadow-md text-sm cursor-pointer active:scale-98"
               >
@@ -1895,6 +2177,309 @@ const Buy = () => {
                   </div>
                 </div>
               ))}
+            </div>
+          </motion.div>
+        )}
+
+        {/* STEP 13: AMC DETAILS PAGE */}
+        {step === 13 && selectedAMC && (
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="flex flex-col gap-6 pb-8"
+          >
+            {/* Appliance cutout summary card */}
+            <div className="bg-white border border-slate-200 rounded-3xl p-5 flex gap-4 shadow-sm relative overflow-hidden text-left">
+              <div className="w-18 h-18 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center p-1.5 flex-shrink-0">
+                <img src={selectedAMC.img} alt={selectedAMC.title} className="w-full h-full object-contain mix-blend-multiply" />
+              </div>
+              <div className="flex-1 flex flex-col gap-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-base font-black text-brand-navy leading-tight truncate">{selectedAMC.title}</h3>
+                  <span className="bg-green-50 text-green-700 border border-green-200 text-[9px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> {selectedAMC.status}
+                  </span>
+                </div>
+                <span className="text-xs text-slate-500 font-bold">{selectedAMC.brand}</span>
+                <span className="text-[11px] text-brand-blue font-extrabold block">{selectedAMC.plan}</span>
+              </div>
+            </div>
+
+            {/* Policy Specifications Card */}
+            <div className="bg-gradient-to-br from-brand-navy to-[#059669] rounded-3xl p-6 text-white shadow-md flex flex-col gap-4 relative overflow-hidden border border-emerald-900/10 text-left">
+              <div className="absolute -top-8 -right-8 w-20 h-20 bg-white/5 rounded-full blur-xl"></div>
+              
+              <div className="flex justify-between items-center border-b border-white/10 pb-3">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#FFD54F]">AMC Plan Information</span>
+                <Wrench className="h-5 w-5 text-[#FFD54F]" />
+              </div>
+              
+              <div className="flex flex-col gap-3 text-xs font-semibold">
+                <div className="flex justify-between">
+                  <span className="text-white/60">Order ID:</span>
+                  <strong className="font-mono tracking-wider text-white font-extrabold">{selectedAMC.orderId}</strong>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-white/60">Coverage Status:</span>
+                  <span className="text-green-400 font-bold">100% Protected & Active</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-white/60">AMC Plan Type:</span>
+                  <span className="font-bold text-white">{selectedAMC.plan}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-white/60">Valid Till:</span>
+                  <strong className="text-[#FFD54F] font-extrabold">{selectedAMC.validTill}</strong>
+                </div>
+              </div>
+            </div>
+
+            {/* "What's Covered" Section */}
+            <div className="flex flex-col gap-3 text-left">
+              <h4 className="text-xs font-black text-brand-navy uppercase tracking-wider px-1">What is Covered</h4>
+              
+              <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm flex flex-col gap-3.5">
+                {selectedAMC.coverage.map((item, idx) => (
+                  <div key={idx} className="flex gap-3 items-start">
+                    <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                    <span className="text-xs text-slate-700 font-semibold leading-relaxed">
+                      {item}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Exclusions Box */}
+            <div className="flex flex-col gap-3 text-left">
+              <h4 className="text-xs font-black text-brand-navy uppercase tracking-wider px-1">Terms & Exclusions</h4>
+              
+              <div className="bg-slate-50 border border-slate-200 rounded-3xl p-5 shadow-sm">
+                <p className="text-[11px] text-slate-600 font-semibold leading-relaxed">
+                  {selectedAMC.terms}
+                </p>
+              </div>
+            </div>
+
+            {/* Action CTAs */}
+            <div className="w-full flex flex-col gap-3 mt-2">
+              <button
+                onClick={() => {
+                  setClaimSubject(selectedAMC.title);
+                  setClaimOrderId(selectedAMC.orderId);
+                  setClaimPlanType("AMC Plan");
+                  setClaimIssue("");
+                  setClaimDate("");
+                  setClaimTime("10:00 AM - 1:00 PM");
+                  goTo(14);
+                }}
+                className="w-full bg-[#059669] hover:bg-emerald-800 text-white font-black py-4 rounded-2xl transition-all shadow-md text-sm cursor-pointer active:scale-98"
+              >
+                Schedule AMC Service / Claim
+              </button>
+              
+              <button
+                onClick={() => {
+                  alert("Digital Certificate downloaded successfully!");
+                }}
+                className="w-full bg-slate-100 hover:bg-slate-200 text-brand-navy font-bold py-3 rounded-xl transition-all text-xs cursor-pointer"
+              >
+                Download AMC Certificate
+              </button>
+            </div>
+
+          </motion.div>
+        )}
+
+        {/* STEP 14: FILE A CLAIM FORM */}
+        {step === 14 && (
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="flex flex-col gap-6 pb-8 text-left"
+          >
+            <div className="px-1 -mt-2">
+              <span className="text-[9px] bg-brand-navy text-white font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                {claimPlanType} Claim
+              </span>
+              <h2 className="text-lg font-black text-brand-navy mt-1.5">Raise claim for {claimSubject}</h2>
+              <p className="text-xs text-text-secondary font-semibold">Policy Order ID: {claimOrderId}</p>
+            </div>
+
+            <div className="bg-white border border-slate-200 rounded-3xl p-5 flex flex-col gap-5 shadow-sm">
+              
+              {/* Issue description field */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-black text-brand-navy uppercase tracking-wider pl-1 font-bold">Describe the Issue</label>
+                <textarea
+                  value={claimIssue}
+                  onChange={(e) => setClaimIssue(e.target.value)}
+                  placeholder="Describe details of the issue you are facing with your appliance..."
+                  rows={4}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue/20 transition-all resize-none"
+                />
+              </div>
+
+              {/* Appointment Date field */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-black text-brand-navy uppercase tracking-wider pl-1 font-bold">Preferred Appointment Date</label>
+                <input
+                  type="date"
+                  value={claimDate}
+                  min={new Date().toISOString().split('T')[0]}
+                  onChange={(e) => setClaimDate(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-semibold text-slate-800 outline-none focus:border-brand-blue transition-all"
+                />
+              </div>
+
+              {/* Time slot field */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-black text-brand-navy uppercase tracking-wider pl-1 font-bold">Preferred Time Slot</label>
+                <select
+                  value={claimTime}
+                  onChange={(e) => setClaimTime(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-semibold text-slate-800 outline-none focus:border-brand-blue transition-all cursor-pointer"
+                >
+                  <option value="10:00 AM - 1:00 PM">10:00 AM - 1:00 PM (Morning)</option>
+                  <option value="1:00 PM - 4:00 PM">1:00 PM - 4:00 PM (Afternoon)</option>
+                  <option value="4:00 PM - 7:00 PM">4:00 PM - 7:00 PM (Evening)</option>
+                </select>
+              </div>
+
+            </div>
+
+            {/* Action buttons */}
+            <div className="w-full flex flex-col gap-3 mt-2">
+              <button
+                onClick={() => {
+                  if (!claimIssue.trim()) {
+                    alert("Please describe the issue you are facing.");
+                    return;
+                  }
+                  if (!claimDate) {
+                    alert("Please select a preferred date for the appointment.");
+                    return;
+                  }
+                  
+                  const generatedId = 'NCC-CLM-' + Math.floor(100000 + Math.random() * 900000);
+                  setSubmittedTicketId(generatedId);
+                  goTo(15);
+                }}
+                className="w-full bg-brand-navy hover:bg-blue-900 text-white font-black py-4 rounded-2xl transition-all shadow-md text-sm cursor-pointer active:scale-98 text-center"
+              >
+                Submit Claim Request
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* STEP 15: CLAIM TICKET SUBMITTED SUCCESS SCREEN */}
+        {step === 15 && (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.4 }}
+            className="flex flex-col items-center text-center p-2 pb-8 gap-6"
+          >
+            {/* Success Check circle */}
+            <div className="w-18 h-18 bg-emerald-100 rounded-full flex items-center justify-center border-4 border-emerald-50">
+              <Check className="h-9 w-9 text-emerald-600 stroke-[3px]" />
+            </div>
+
+            <div>
+              <h2 className="text-xl font-black text-brand-navy leading-tight">Claim Ticket Raised!</h2>
+              <p className="text-xs text-text-secondary font-semibold mt-1">Our technician team has been notified.</p>
+            </div>
+
+            {/* Claim details card */}
+            <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm w-full flex flex-col gap-3 text-left">
+              <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                <span className="text-[10px] font-black text-brand-navy uppercase tracking-wider font-bold">Ticket Summary</span>
+                <span className="text-xs font-mono font-black text-[#0B4EA2]">{submittedTicketId}</span>
+              </div>
+
+              <div className="flex flex-col gap-2.5 text-xs font-semibold text-slate-500">
+                <div className="flex justify-between">
+                  <span>Product:</span>
+                  <span className="text-slate-800 font-extrabold">{claimSubject}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Plan Type:</span>
+                  <span className="text-slate-800 font-extrabold">{claimPlanType}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Scheduled Date:</span>
+                  <span className="text-slate-800 font-extrabold">{claimDate}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Preferred Slot:</span>
+                  <span className="text-slate-800 font-extrabold">{claimTime}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Tracking timeline */}
+            <div className="flex flex-col gap-3 w-full text-left">
+              <h4 className="text-xs font-black text-brand-navy uppercase tracking-wider px-1">Ticket Tracking Timeline</h4>
+              
+              <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm flex flex-col gap-5">
+                {[
+                  {
+                    title: "Claim Ticket Raised",
+                    desc: `Request submitted successfully with ID ${submittedTicketId}`,
+                    status: "Done",
+                    time: "Just Now"
+                  },
+                  {
+                    title: "Technician Assignment",
+                    desc: "An NCC certified service expert will be assigned to your ticket",
+                    status: "Pending",
+                    time: "Within 2 Hours"
+                  },
+                  {
+                    title: "Inspection Scheduled",
+                    desc: `Technician visit scheduled at your address on ${claimDate}`,
+                    status: "Pending",
+                    time: claimTime
+                  }
+                ].map((item, idx) => (
+                  <div key={idx} className="flex gap-4 relative text-left">
+                    {idx !== 2 && (
+                      <div className="absolute left-[18px] top-9 bottom-[-24px] w-0.5 bg-slate-100"></div>
+                    )}
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 shadow-2xs relative z-10 border transition-all duration-300 bg-white">
+                      {item.status === "Done" ? (
+                        <Check className="h-4.5 w-4.5 text-emerald-600 stroke-[3px]" />
+                      ) : (
+                        <span className="text-xs font-extrabold text-slate-400">{idx + 1}</span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <h5 className="text-xs font-black text-brand-navy truncate">{item.title}</h5>
+                        <span className="text-[9px] font-black text-[#0B4EA2] flex-shrink-0 bg-blue-50/80 px-2 py-0.5 rounded-full">{item.time}</span>
+                      </div>
+                      <p className="text-[10px] text-text-secondary leading-relaxed font-semibold mt-0.5">
+                        {item.desc}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Back action */}
+            <div className="w-full mt-2">
+              <button
+                onClick={() => {
+                  setStep(8);
+                }}
+                className="w-full bg-brand-navy hover:bg-blue-900 text-white font-black py-4 rounded-2xl transition-all shadow-md text-sm cursor-pointer active:scale-98"
+              >
+                Back to My Protection Plans
+              </button>
             </div>
           </motion.div>
         )}
