@@ -23,7 +23,8 @@ import {
   LogOut,
   Image,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  RefreshCw
 } from 'lucide-react';
 
 const Sidebar = () => {
@@ -84,6 +85,7 @@ const Sidebar = () => {
     { path: '/super-admin/warranty', icon: <FileCheck size={20} />, label: 'Warranty Management' },
     { path: '/super-admin/assignment', icon: <UserPlus size={20} />, label: 'Tech Assignment' },
     { path: '/super-admin/inventory', icon: <Package size={20} />, label: 'Spare Parts & Inventory' },
+    { path: '/super-admin/exchange-offers', icon: <RefreshCw size={20} />, label: 'Exchange Offers' },
     { path: '/super-admin/orders', icon: <Truck size={20} />, label: 'Orders & Dispatch' },
     { path: '/super-admin/billing', icon: <CreditCard size={20} />, label: 'Billing & Payments' },
     { path: '/super-admin/complaints', icon: <AlertTriangle size={20} />, label: 'Complaints & Escalations' },

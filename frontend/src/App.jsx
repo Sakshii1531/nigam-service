@@ -101,6 +101,7 @@ import SuperAdminRoles from './pages/super-admin/Roles';
 import SuperAdminSettings from './pages/super-admin/Settings';
 import SuperAdminLogs from './pages/super-admin/Logs';
 import CustomerAppCustomization from './pages/super-admin/CustomerAppCustomization';
+import SuperAdminExchangeOffers from './pages/super-admin/ExchangeOffers';
 import TechDashboard from './pages/technician/Dashboard';
 import ActiveJob from './pages/technician/ActiveJob';
 import Schedule from './pages/technician/Schedule';
@@ -369,6 +370,7 @@ function App() {
         <Route path="/super-admin/roles" element={<SuperAdminRoles />} />
         <Route path="/super-admin/settings" element={<SuperAdminSettings />} />
         <Route path="/super-admin/logs" element={<SuperAdminLogs />} />
+        <Route path="/super-admin/exchange-offers" element={<SuperAdminExchangeOffers />} />
 
         <Route path="*" element={<PageHandler />} />
       </Routes>
