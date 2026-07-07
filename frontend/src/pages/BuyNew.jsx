@@ -3,9 +3,13 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { 
   ArrowLeft, Shield, ShoppingCart, CheckCircle, ChevronRight, Check, Search, 
   Wrench, Percent, CreditCard, Lock, Landmark, Wallet, ShieldCheck, Plus, Minus, Trash2,
-  ChevronLeft, Zap, CheckCircle2, Home as HomeIcon, LayoutGrid, User, Calendar
+  ChevronLeft, Zap, CheckCircle2, Home as HomeIcon, LayoutGrid, User, Calendar, RefreshCw
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+
+// Import Exchange Modal & Configs
+import { initializeExchangeConfigs } from '../data/exchangeMockData';
+import ExchangeModal from '../components/exchange/ExchangeModal';
 
 // Import assets
 import fridgeImg from '../assets/appliance_fridge.png';
@@ -150,12 +154,39 @@ const BuyNew = () => {
     setCart([]);
   };
 
+  const [paymentMode, setPaymentMode] = useState('UPI');
+
+  // Exchange states
+  const [exchangeConfigs, setExchangeConfigs] = useState({});
+  const [exchangeApplied, setExchangeApplied] = useState(() => {
+    const saved = localStorage.getItem('nigam_applied_exchange');
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [isExchangeModalOpen, setIsExchangeModalOpen] = useState(false);
+
+  useEffect(() => {
+    setExchangeConfigs(initializeExchangeConfigs());
+  }, [location.pathname]); // Reload configuration on navigation/renders
+
+  useEffect(() => {
+    if (exchangeApplied) {
+      localStorage.setItem('nigam_applied_exchange', JSON.stringify(exchangeApplied));
+    } else {
+      localStorage.removeItem('nigam_applied_exchange');
+    }
+  }, [exchangeApplied]);
+
+  // Active configuration for selected product
+  const productExchangeConfig = exchangeConfigs[finalProduct?.id];
+  const isExchangeActiveForProduct = productExchangeConfig?.exchangeEnabled;
+  const isCurrentExchangeApplied = exchangeApplied && exchangeApplied.productId === finalProduct?.id;
+
   // Cart pricing details
-  const cartSubtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+  const cartSubtotalBeforeExchange = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+  const totalExchangeSavings = cart.reduce((sum, item) => sum + (item.exchange ? item.exchange.totalSavings * item.qty : 0), 0);
+  const cartSubtotal = cartSubtotalBeforeExchange - totalExchangeSavings;
   const deliveryCharges = 0;
   const cartTotal = cartSubtotal + deliveryCharges;
-
-  const [paymentMode, setPaymentMode] = useState('UPI');
 
   return (
     <div className="min-h-screen bg-bg-light flex flex-col pb-24 relative">
@@ -307,9 +338,19 @@ const BuyNew = () => {
             </div>
 
             {/* Product Details Info */}
-            <div className="flex flex-col gap-1.5 px-1">
+            <div className="flex flex-col gap-1.5 px-1 text-left">
               <h2 className="text-xl font-black text-brand-navy">{finalProduct.name}</h2>
-              <span className="text-2xl font-black text-green-600">₹{finalProduct.price.toLocaleString()}</span>
+              {isCurrentExchangeApplied ? (
+                <div className="flex flex-col gap-0.5">
+                  <div className="flex items-baseline gap-2.5">
+                    <span className="text-2xl font-black text-green-600">₹{(finalProduct.price - exchangeApplied.totalSavings).toLocaleString()}</span>
+                    <span className="text-sm font-bold text-slate-400 line-through">₹{finalProduct.price.toLocaleString()}</span>
+                  </div>
+                  <span className="text-[10px] font-black text-[#10B981] bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 self-start">Exchange Offer Applied</span>
+                </div>
+              ) : (
+                <span className="text-2xl font-black text-green-600">₹{finalProduct.price.toLocaleString()}</span>
+              )}
             </div>
 
             {/* Product Specs List */}
@@ -337,10 +378,91 @@ const BuyNew = () => {
               ))}
             </div>
 
+            {/* EXCHANGE OFFER SECTION */}
+            {isExchangeActiveForProduct && (
+              <div className="bg-white border border-slate-200/80 rounded-2xl p-4.5 text-left shadow-sm flex flex-col gap-3.5 mt-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-brand-blue">
+                      <RefreshCw className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-black text-brand-navy">Exchange Your Old Device</h4>
+                      <span className="text-[10px] font-bold text-slate-400">Save big on your upgrade</span>
+                    </div>
+                  </div>
+                  <span className="text-xs font-black text-brand-blue bg-blue-50 px-2.5 py-1 rounded-lg">
+                    Get up to ₹{productExchangeConfig?.maxVal?.toLocaleString()} off
+                  </span>
+                </div>
+
+                {!isCurrentExchangeApplied ? (
+                  <div className="flex flex-col gap-2">
+                    <button
+                      onClick={() => setIsExchangeModalOpen(true)}
+                      className="w-full bg-white border border-brand-blue hover:bg-blue-50/10 text-brand-blue font-black py-2.5 rounded-xl transition-all text-xs cursor-pointer text-center"
+                    >
+                      Check Exchange Value
+                    </button>
+                    <p className="text-[9px] text-slate-400 font-semibold leading-normal">
+                      * Final exchange value depends on the device model and physical condition during pickup.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="bg-emerald-50/30 border border-emerald-100 rounded-xl p-3.5 flex flex-col gap-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <span className="text-xs font-black text-emerald-800 block">Exchange Applied</span>
+                          <span className="text-[10px] text-slate-500 font-bold block mt-0.5">
+                            {exchangeApplied.brand} {exchangeApplied.model}
+                          </span>
+                        </div>
+                      </div>
+                      <span className="text-xs font-black text-[#10B981]">
+                        - ₹{exchangeApplied.totalSavings?.toLocaleString()}
+                      </span>
+                    </div>
+                    
+                    <div className="flex gap-2.5 border-t border-slate-100 pt-2.5">
+                      <button
+                        onClick={() => setIsExchangeModalOpen(true)}
+                        className="flex-1 bg-white border border-slate-200 hover:border-slate-300 text-slate-700 font-bold py-1.5 rounded-lg text-[10px] transition-all cursor-pointer"
+                      >
+                        Change Exchange
+                      </button>
+                      <button
+                        onClick={() => setExchangeApplied(null)}
+                        className="flex-1 bg-red-50 hover:bg-red-100 text-red-500 font-bold py-1.5 rounded-lg text-[10px] transition-all cursor-pointer"
+                      >
+                        Remove Exchange
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Bottom Buy Buttons */}
             <div className="flex flex-col gap-3.5 mt-2">
               <button 
-                onClick={() => addToCart(finalProduct)}
+                onClick={() => {
+                  const productExchange = isCurrentExchangeApplied ? exchangeApplied : null;
+                  const itemToAdd = { ...finalProduct, qty: 1, category: finalCategory };
+                  if (productExchange) {
+                    itemToAdd.exchange = { ...productExchange, productId: finalProduct.id };
+                  }
+                  
+                  // Add to cart helper logic directly
+                  const existing = cart.find(item => item.id === finalProduct.id);
+                  if (existing) {
+                    setCart(cart.map(item => item.id === finalProduct.id ? { ...item, qty: item.qty + 1, exchange: itemToAdd.exchange || item.exchange } : item));
+                  } else {
+                    setCart([...cart, itemToAdd]);
+                  }
+                  navigate('/buy-new/cart');
+                }}
                 className="w-full bg-[#0B4EA2] hover:bg-blue-800 text-white font-black py-4 rounded-2xl transition-all shadow-md text-sm cursor-pointer active:scale-98"
               >
                 Add to Cart
@@ -348,7 +470,8 @@ const BuyNew = () => {
               <button 
                 onClick={() => {
                   // Instant Checkout with single item
-                  setCart([{ ...finalProduct, qty: 1, category: finalCategory }]);
+                  const productExchange = isCurrentExchangeApplied ? { ...exchangeApplied, productId: finalProduct.id } : null;
+                  setCart([{ ...finalProduct, qty: 1, category: finalCategory, exchange: productExchange }]);
                   navigate('/buy-new/payment');
                 }}
                 className="w-full bg-white border-2 border-brand-blue hover:bg-blue-50/20 text-brand-blue font-black py-3.5 rounded-2xl transition-all text-sm cursor-pointer"
@@ -401,13 +524,23 @@ const BuyNew = () => {
                       key={item.id}
                       className="bg-white border border-slate-200/80 rounded-2xl p-4 flex justify-between items-center shadow-sm"
                     >
-                      <div className="flex items-center gap-3.5">
+                      <div className="flex items-center gap-3.5 text-left">
                         <div className="w-14 h-14 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center p-1.5 flex-shrink-0">
                           <img src={getApplianceImg(item.category)} alt={item.name} className="w-full h-full object-contain mix-blend-multiply" />
                         </div>
                         <div>
                           <h4 className="text-xs font-black text-brand-navy leading-snug">{item.name}</h4>
-                          <span className="text-xs font-extrabold text-brand-blue block mt-1">₹{item.price.toLocaleString()}</span>
+                          {item.exchange ? (
+                            <div className="flex flex-col gap-0.5 mt-1">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-xs font-extrabold text-brand-blue">₹{(item.price - item.exchange.totalSavings).toLocaleString()}</span>
+                                <span className="text-[10px] text-slate-400 line-through">₹{item.price.toLocaleString()}</span>
+                              </div>
+                              <span className="text-[9px] text-[#10B981] font-bold">🔄 Exchange Applied (-₹{item.exchange.totalSavings.toLocaleString()})</span>
+                            </div>
+                          ) : (
+                            <span className="text-xs font-extrabold text-brand-blue block mt-1">₹{item.price.toLocaleString()}</span>
+                          )}
                         </div>
                       </div>
                       
@@ -442,13 +575,20 @@ const BuyNew = () => {
                 </div>
 
                 {/* Price Details */}
-                <div className="bg-white border border-slate-200/80 rounded-2xl p-4.5 flex flex-col gap-3 shadow-sm mt-1">
+                <div className="bg-white border border-slate-200/80 rounded-2xl p-4.5 flex flex-col gap-3 shadow-sm mt-1 text-left">
                   <h4 className="text-xs font-black text-brand-navy uppercase tracking-wider mb-0.5">Price Details</h4>
                   
                   <div className="flex justify-between items-center text-xs text-text-secondary font-medium">
                     <span>MRP</span>
-                    <span>₹{cartSubtotal.toLocaleString()}</span>
+                    <span>₹{cartSubtotalBeforeExchange.toLocaleString()}</span>
                   </div>
+
+                  {totalExchangeSavings > 0 && (
+                    <div className="flex justify-between items-center text-xs text-green-600 font-bold">
+                      <span>Exchange Discount</span>
+                      <span>- ₹{totalExchangeSavings.toLocaleString()}</span>
+                    </div>
+                  )}
                   
                   <div className="flex justify-between items-center text-xs text-text-secondary font-medium border-t border-slate-100 pt-3">
                     <span>Delivery</span>
@@ -686,6 +826,15 @@ const BuyNew = () => {
           <span className="text-xs font-semibold mt-0.5">Account</span>
         </button>
       </div>
+
+      {/* Exchange Wizard Modal */}
+      <ExchangeModal
+        isOpen={isExchangeModalOpen}
+        onClose={() => setIsExchangeModalOpen(false)}
+        product={{ ...finalProduct, category: finalCategory }}
+        config={productExchangeConfig}
+        onApply={(details) => setExchangeApplied({ ...details, productId: finalProduct.id })}
+      />
 
     </div>
   );
