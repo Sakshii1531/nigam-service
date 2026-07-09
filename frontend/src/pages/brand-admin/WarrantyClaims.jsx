@@ -31,16 +31,16 @@ const WarrantyClaims = () => {
   const [extendedSearchQuery, setExtendedSearchQuery] = useState('');
 
   const [claims, setClaims] = useState([
-    { id: 'CLM-8801', technician: 'Rahul Kumar', item: 'Washing Machine Motor', claimType: 'Brand Warranty', amount: '₹1,850', status: 'Pending Approval', date: '12 May, 2026', customer: 'Mrs. Neha Verma', serial: 'LG-REF-99201X', reason: 'Motor windings burnt out' },
-    { id: 'CLM-8802', technician: 'Amit Singh', item: 'PCB Board', claimType: 'Extended Warranty', amount: '₹2,450', status: 'Approved', date: '10 May, 2026', customer: 'Mr. Anil Mehta', serial: 'CAR-AC-7762X', reason: 'PCB relay failure' },
-    { id: 'CLM-8803', technician: 'Suresh Raina', item: 'Compressor Coil', claimType: 'Brand Warranty', amount: '₹2,200', status: 'Rejected', date: '08 May, 2026', customer: 'Mrs. Indu Mishra', serial: 'IFB-MW-3301X', reason: 'Coil damage due to external impact' },
-    { id: 'CLM-8804', technician: 'Vikram Batra', item: 'LED TV Panel', claimType: 'Extended Warranty', amount: '₹8,500', status: 'Pending Approval', date: '07 May, 2026', customer: 'Vikram Singh', serial: 'SNY-TV-55102', reason: 'Vertical lines on display' },
+    { id: 'CLM-8801', technician: 'Rahul Kumar', item: 'Washing Machine Motor', claimType: 'Brand Warranty', amount: '₹1,850', status: 'Pending Approval', date: '12 May, 2026', customer: 'Mrs. Neha Verma', serial: 'REF-99201X', reason: 'Motor windings burnt out' },
+    { id: 'CLM-8802', technician: 'Amit Singh', item: 'PCB Board', claimType: 'Extended Warranty', amount: '₹2,450', status: 'Approved', date: '10 May, 2026', customer: 'Mr. Anil Mehta', serial: 'AC-7762X', reason: 'PCB relay failure' },
+    { id: 'CLM-8803', technician: 'Suresh Raina', item: 'Compressor Coil', claimType: 'Brand Warranty', amount: '₹2,200', status: 'Rejected', date: '08 May, 2026', customer: 'Mrs. Indu Mishra', serial: 'MW-3301X', reason: 'Coil damage due to external impact' },
+    { id: 'CLM-8804', technician: 'Vikram Batra', item: 'LED TV Panel', claimType: 'Extended Warranty', amount: '₹8,500', status: 'Pending Approval', date: '07 May, 2026', customer: 'Vikram Singh', serial: 'TV-55102', reason: 'Vertical lines on display' },
   ]);
 
   const [extendedWarrantyReg, setExtendedWarrantyReg] = useState([
-    { regId: 'EW-101', customer: 'Karan Johar', product: 'Split AC', brand: 'LG', model: 'LG-AC-1.5T', planName: 'NCC Protect Plus', validity: '15 Jan 2028', status: 'Active' },
-    { regId: 'EW-102', customer: 'Shilpa Shetty', product: 'Washing Machine', brand: 'LG', model: 'LG-WM-FrontLoad', planName: 'NCC Shield Basic', validity: '01 Nov 2027', status: 'Active' },
-    { regId: 'EW-103', customer: 'Rajkumar Hirani', product: 'Microwave', brand: 'LG', model: 'LG-MW-Convection', planName: 'NCC Shield Basic', validity: '12 Apr 2026', status: 'Expired' },
+    { regId: 'EW-101', customer: 'Karan Johar', product: 'Split AC', brand: 'Generic', model: 'AC-1.5T', planName: 'NCC Protect Plus', validity: '15 Jan 2028', status: 'Active' },
+    { regId: 'EW-102', customer: 'Shilpa Shetty', product: 'Washing Machine', brand: 'Generic', model: 'WM-FrontLoad', planName: 'NCC Shield Basic', validity: '01 Nov 2027', status: 'Active' },
+    { regId: 'EW-103', customer: 'Rajkumar Hirani', product: 'Microwave', brand: 'Generic', model: 'MW-Convection', planName: 'NCC Shield Basic', validity: '12 Apr 2026', status: 'Expired' },
   ]);
 
   const stats = [

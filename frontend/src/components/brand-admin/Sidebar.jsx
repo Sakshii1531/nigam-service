@@ -1,173 +1,234 @@
-import React, { useRef, useEffect } from 'react';
-import { NavLink } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  ClipboardList, 
-  ShieldCheck, 
-  Users, 
-  Package, 
-  FileCheck, 
-  Receipt, 
-  UserSquare2, 
-  Bell, 
-  BarChart3, 
+import React, { useState, useRef, useEffect } from 'react';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+import {
+  LayoutDashboard,
+  ClipboardList,
+  BarChart3,
+  AlertTriangle,
+  CheckSquare,
+  Package,
+  ShieldCheck,
+  RefreshCcw,
+  FileText,
+  Receipt,
+  Phone,
+  CreditCard,
+  TrendingUp,
+  Users,
+  Building2,
   Settings,
   LogOut,
-  Wrench,
-  RefreshCw,
-  ShoppingBag,
-  Star,
-  MessageSquare,
-  GraduationCap,
-  RotateCcw,
-  FileText
+  ChevronRight,
+  Plus,
+  Headphones
 } from 'lucide-react';
 
 const Sidebar = () => {
   const scrollContainerRef = useRef(null);
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  const [sparePartsOpen, setSparePartsOpen] = useState(
+    location.pathname === '/brand-admin/part-requests' ||
+    location.pathname === '/brand-admin/inventory'
+  );
+
+  useEffect(() => {
+    if (location.pathname === '/brand-admin/part-requests' || location.pathname === '/brand-admin/inventory') {
+      setSparePartsOpen(true);
+    }
+  }, [location.pathname]);
 
   useEffect(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
-
     let timer;
     const savedScroll = sessionStorage.getItem('brand-sidebar-scroll');
     if (savedScroll) {
       const scrollVal = parseInt(savedScroll, 10);
       container.scrollTop = scrollVal;
-      // Re-apply after a short delay for layout paint
-      timer = setTimeout(() => {
-        container.scrollTop = scrollVal;
-      }, 50);
+      timer = setTimeout(() => { container.scrollTop = scrollVal; }, 50);
     }
-
     const handleScroll = () => {
-      // Only save if the container still has overflow or we are at a non-zero scroll position
       if (container.scrollTop > 0 || container.scrollHeight > container.clientHeight) {
         sessionStorage.setItem('brand-sidebar-scroll', container.scrollTop.toString());
       }
     };
-
     container.addEventListener('scroll', handleScroll);
-    return () => {
-      container.removeEventListener('scroll', handleScroll);
-      if (timer) clearTimeout(timer);
-    };
+    return () => { container.removeEventListener('scroll', handleScroll); if (timer) clearTimeout(timer); };
   }, []);
 
-  const menuGroups = [
-    {
-      title: 'Core Dashboard',
-      items: [
-        { icon: <LayoutDashboard size={18} />, text: 'Dashboard', path: '/brand-admin/dashboard' },
-        { icon: <Bell size={18} />, text: 'Notifications', path: '/brand-admin/notifications' },
-        { icon: <Receipt size={18} />, text: 'Billing & Invoices', path: '/brand-admin/invoices' },
-        { icon: <BarChart3 size={18} />, text: 'Reports & Analytics', path: '/brand-admin/reports' },
-      ]
-    },
-    {
-      title: 'Service & Products',
-      items: [
-        { icon: <ClipboardList size={18} />, text: 'Service Requests', path: '/brand-admin/requests' },
-        { icon: <FileText size={18} />, text: 'Part Requests', path: '/brand-admin/part-requests' },
-        { icon: <Package size={18} />, text: 'Parts Inventory', path: '/brand-admin/inventory' },
-        { icon: <ShoppingBag size={18} />, text: 'Product Catalog', path: '/brand-admin/catalog' },
-      ]
-    },
-    {
-      title: 'Warranties & Contracts',
-      items: [
-        { icon: <ShieldCheck size={18} />, text: 'Warranty Verification', path: '/brand-admin/warranty' },
-        { icon: <FileCheck size={18} />, text: 'Warranty & FOC Claims', path: '/brand-admin/warranty-claims' },
-        { icon: <Wrench size={18} />, text: 'AMC Management', path: '/brand-admin/amcs' },
-      ]
-    },
-    {
-      title: 'Exchanges & Logistics',
-      items: [
-        { icon: <RefreshCw size={18} />, text: 'Exchange Requests', path: '/brand-admin/exchanges' },
-        { icon: <RotateCcw size={18} />, text: 'Reverse Logistics', path: '/brand-admin/reverse-logistics' },
-      ]
-    },
-    {
-      title: 'Partners & Customers',
-      items: [
-        { icon: <Users size={18} />, text: 'Technicians', path: '/brand-admin/technicians' },
-        { icon: <UserSquare2 size={18} />, text: 'Customers', path: '/brand-admin/customers' },
-        { icon: <MessageSquare size={18} />, text: 'Support Chat', path: '/brand-admin/chat' },
-        { icon: <Star size={18} />, text: 'Customer Reviews', path: '/brand-admin/reviews' },
-        { icon: <GraduationCap size={18} />, text: 'Academy & Training', path: '/brand-admin/academy' },
-      ]
-    },
-    {
-      title: 'System',
-      items: [
-        { icon: <Settings size={18} />, text: 'Settings', path: '/brand-admin/settings' },
-      ]
+  const saveScroll = () => {
+    if (scrollContainerRef.current) {
+      sessionStorage.setItem('brand-sidebar-scroll', scrollContainerRef.current.scrollTop.toString());
     }
-  ];
+  };
+
+  const navLink = ({ isActive }) =>
+    'flex items-center gap-2.5 px-3 py-2 rounded-xl text-[12px] font-semibold transition-all whitespace-nowrap ' +
+    (isActive ? 'bg-[#1565C0] text-white shadow-sm' : 'text-blue-100 hover:bg-[#1a3a8a] hover:text-white');
 
   return (
-    <div className="w-64 bg-white h-screen border-r border-[#E2E8F0] flex flex-col justify-between fixed left-0 top-0 z-20">
-      <div 
-        ref={scrollContainerRef}
-        className="p-4 overflow-y-auto flex-1 pb-4 scrollbar-thin"
-      >
+    <div className="w-64 bg-[#0D2B6B] h-screen flex flex-col fixed left-0 top-0 z-20">
+      <div ref={scrollContainerRef} className="p-4 overflow-y-auto flex-1 pb-2 scrollbar-thin">
+
         {/* Logo */}
-        <div className="flex items-center gap-2 mb-6 px-2">
-          <div className="w-8 h-8 bg-[#FFD600] rounded-lg flex items-center justify-center text-[#0D47A1] font-bold text-lg">
-            N
+        <div className="flex items-center gap-2.5 mb-5 px-1 py-1">
+          <div className="w-9 h-9 bg-white rounded-lg flex items-center justify-center shadow-sm flex-shrink-0">
+            <span className="text-[#0D47A1] font-black text-sm">BP</span>
           </div>
           <div>
-            <span className="text-base font-bold text-[#1E293B] block">Nigam Care</span>
-            <span className="text-xs text-[#64748B]">Brand Portal</span>
+            <span className="text-sm font-bold text-white block leading-tight">Brand Admin</span>
+            <span className="text-[10px] text-blue-200 font-bold tracking-widest uppercase">Brand Panel</span>
           </div>
         </div>
 
-        {/* Navigation Groups */}
-        <nav className="space-y-4">
-          {menuGroups.map((group, groupIdx) => (
-            <div key={groupIdx} className="space-y-1">
-              <span className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider px-3 block mb-1">
-                {group.title}
-              </span>
-              <div className="space-y-0.5">
-                {group.items.map((item, index) => (
-                  <NavLink
-                    key={index}
-                    to={item.path}
-                    onClick={() => {
-                      if (scrollContainerRef.current) {
-                        sessionStorage.setItem('brand-sidebar-scroll', scrollContainerRef.current.scrollTop.toString());
-                      }
-                    }}
-                    className={({ isActive }) => `
-                      flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all
-                      ${isActive 
-                        ? 'bg-[#EEF4FF] text-[#0D47A1]' 
-                        : 'text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#1E293B]'}
-                    `}
-                  >
-                    {({ isActive }) => (
-                      <>
-                        <span className={isActive ? 'text-[#0D47A1]' : 'text-[#64748B]'}>
-                          {item.icon}
-                        </span>
-                        <span>{item.text}</span>
-                      </>
-                    )}
-                  </NavLink>
-                ))}
-              </div>
+        {/* Dashboard standalone */}
+        <NavLink to="/brand-admin/dashboard" onClick={saveScroll}
+          className={({ isActive }) =>
+            'flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[12px] font-bold transition-all mb-4 whitespace-nowrap ' +
+            (isActive ? 'bg-[#1565C0] text-white shadow-md' : 'text-blue-100 hover:bg-[#1a3a8a] hover:text-white')
+          }
+        >
+          <LayoutDashboard size={16} />
+          <span>Dashboard</span>
+        </NavLink>
+
+        <nav className="space-y-5">
+
+          {/* COMPLAINT MANAGEMENT */}
+          <div>
+            <span className="text-[11px] font-black text-[#93C5FD] uppercase tracking-widest px-3 block mb-1.5">
+              Complaint Management
+            </span>
+            <div className="space-y-0.5">
+              <NavLink to="/brand-admin/requests" onClick={saveScroll} className={navLink}>
+                <Plus size={14} /><span>Register Complaint</span>
+                <span className="ml-auto bg-green-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0">New</span>
+              </NavLink>
+              <NavLink to="/brand-admin/complaints" onClick={saveScroll} className={navLink}>
+                <ClipboardList size={14} /><span>All Complaints</span>
+              </NavLink>
+              <NavLink to="/brand-admin/complaint-monitoring" onClick={saveScroll} className={navLink}>
+                <BarChart3 size={14} /><span>Complaint Monitoring</span>
+              </NavLink>
+              <NavLink to="/brand-admin/escalations" onClick={saveScroll}
+                className={({ isActive }) =>
+                  'flex items-center justify-between px-3 py-2 rounded-xl text-[12px] font-semibold transition-all whitespace-nowrap ' +
+                  (isActive ? 'bg-[#1565C0] text-white' : 'text-blue-100 hover:bg-[#1a3a8a] hover:text-white')
+                }
+              >
+                <span className="flex items-center gap-2.5"><AlertTriangle size={14} /><span>Escalations</span></span>
+                <span className="bg-orange-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0">23</span>
+              </NavLink>
             </div>
-          ))}
+          </div>
+
+          {/* SERVICE & OPERATIONS */}
+          <div>
+            <span className="text-[11px] font-black text-[#93C5FD] uppercase tracking-widest px-3 block mb-1.5">
+              Service &amp; Operations
+            </span>
+            <div className="space-y-0.5">
+              <NavLink to="/brand-admin/service-completion" onClick={saveScroll} className={navLink}>
+                <CheckSquare size={14} /><span>Service Completion Monitor</span>
+              </NavLink>
+
+              {/* Spare Parts collapsible */}
+              <button
+                onClick={() => setSparePartsOpen(!sparePartsOpen)}
+                className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-[12px] font-semibold text-blue-100 hover:bg-[#1a3a8a] hover:text-white transition-all whitespace-nowrap"
+              >
+                <span className="flex items-center gap-2.5 flex-shrink-0"><Package size={14} /><span>Spare Parts Management</span></span>
+                <ChevronRight size={12} className={'transition-transform duration-200 flex-shrink-0 ' + (sparePartsOpen ? 'rotate-90' : '')} />
+              </button>
+              {sparePartsOpen && (
+                <div className="ml-4 space-y-0.5 border-l-2 border-blue-700/50 pl-3 pb-1">
+                  <NavLink to="/brand-admin/part-requests" onClick={saveScroll}
+                    className={({ isActive }) =>
+                      'flex items-center px-2 py-1.5 rounded-lg text-[11px] font-semibold transition-all whitespace-nowrap ' +
+                      (isActive ? 'bg-[#1565C0] text-white shadow-sm' : 'text-blue-200 hover:text-white hover:bg-[#1a3a8a]')
+                    }
+                  >Part Requests</NavLink>
+                  <NavLink to="/brand-admin/inventory" onClick={saveScroll}
+                    className={({ isActive }) =>
+                      'flex items-center px-2 py-1.5 rounded-lg text-[11px] font-semibold transition-all whitespace-nowrap ' +
+                      (isActive ? 'bg-[#1565C0] text-white shadow-sm' : 'text-blue-200 hover:text-white hover:bg-[#1a3a8a]')
+                    }
+                  >Inventory</NavLink>
+                </div>
+              )}
+
+              <NavLink to="/brand-admin/warranty" onClick={saveScroll} className={navLink}>
+                <ShieldCheck size={14} /><span>Warranty Verification</span>
+              </NavLink>
+              <NavLink to="/brand-admin/replacement-approvals" onClick={saveScroll} className={navLink}>
+                <RefreshCcw size={14} /><span>Replacement Approvals</span>
+              </NavLink>
+              <NavLink to="/brand-admin/documents" onClick={saveScroll} className={navLink}>
+                <FileText size={14} /><span>Letter &amp; Document Center</span>
+              </NavLink>
+            </div>
+          </div>
+
+          {/* FINANCE & BILLING */}
+          <div>
+            <span className="text-[11px] font-black text-[#93C5FD] uppercase tracking-widest px-3 block mb-1.5">
+              Finance &amp; Billing
+            </span>
+            <div className="space-y-0.5">
+              <NavLink to="/brand-admin/invoices" onClick={saveScroll} className={navLink}>
+                <Receipt size={14} /><span>Invoices &amp; Billing</span>
+              </NavLink>
+              <NavLink to="/brand-admin/call-rates" onClick={saveScroll} className={navLink}>
+                <Phone size={14} /><span>Call Rates &amp; Charges</span>
+              </NavLink>
+              <NavLink to="/brand-admin/payments" onClick={saveScroll} className={navLink}>
+                <CreditCard size={14} /><span>Payments</span>
+              </NavLink>
+              <NavLink to="/brand-admin/reports" onClick={saveScroll} className={navLink}>
+                <TrendingUp size={14} /><span>Reports &amp; Analytics</span>
+              </NavLink>
+            </div>
+          </div>
+
+          {/* ADMINISTRATION */}
+          <div>
+            <span className="text-[11px] font-black text-[#93C5FD] uppercase tracking-widest px-3 block mb-1.5">
+              Administration
+            </span>
+            <div className="space-y-0.5">
+              <NavLink to="/brand-admin/users" onClick={saveScroll} className={navLink}>
+                <Users size={14} /><span>User &amp; Role Management</span>
+              </NavLink>
+              <NavLink to="/brand-admin/teams" onClick={saveScroll} className={navLink}>
+                <Building2 size={14} /><span>Teams &amp; Departments</span>
+              </NavLink>
+              <NavLink to="/brand-admin/settings" onClick={saveScroll} className={navLink}>
+                <Settings size={14} /><span>Settings</span>
+              </NavLink>
+            </div>
+          </div>
+
         </nav>
       </div>
 
-      {/* Logout */}
-      <div className="p-4 border-t border-[#E2E8F0]">
-        <button className="flex items-center gap-2.5 px-3 py-2 w-full rounded-xl text-xs font-medium text-[#64748B] hover:bg-red-50 hover:text-red-600 transition-all">
-          <LogOut size={18} />
+      {/* Bottom: Quick Help + Logout */}
+      <div className="p-3 border-t border-[#1a3a8a]">
+        <div className="bg-[#1a3580]/60 rounded-xl p-3 mb-2">
+          <div className="flex items-center gap-2 mb-1">
+            <Headphones size={13} className="text-blue-300" />
+            <p className="text-[10px] font-bold text-white">Quick Help</p>
+          </div>
+          <p className="text-[9px] text-blue-300 mb-1">Customer Care Support</p>
+          <p className="text-xs font-bold text-[#FFD600]">1800-123-4567</p>
+          <p className="text-[9px] text-blue-300 mt-0.5">24x7 Support Available</p>
+        </div>
+        <button
+          onClick={() => navigate('/brand-admin/login')}
+          className="flex items-center gap-2.5 px-3 py-2 w-full rounded-xl text-[11px] font-medium text-blue-300 hover:bg-red-900/30 hover:text-red-400 transition-all"
+        >
+          <LogOut size={14} />
           Logout
         </button>
       </div>
@@ -176,3 +237,4 @@ const Sidebar = () => {
 };
 
 export default Sidebar;
+
