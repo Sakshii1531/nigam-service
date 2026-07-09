@@ -70,7 +70,7 @@ const Invoices = () => {
       {/* Main Content */}
       <div className="flex-1 ml-64 min-h-screen flex flex-col">
         {/* Topbar */}
-        <Topbar title="Billing & Invoices" />
+        <Topbar title="Invoices & Billing" />
 
         {/* Body */}
         {showDrawer && selectedInvoice ? (

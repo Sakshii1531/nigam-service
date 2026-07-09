@@ -79,6 +79,16 @@ import BrandReviews from './pages/brand-admin/Reviews';
 import BrandChat from './pages/brand-admin/Chat';
 import BrandAcademy from './pages/brand-admin/Academy';
 import BrandReverseLogistics from './pages/brand-admin/ReverseLogistics';
+import BrandComplaintMonitoring from './pages/brand-admin/ComplaintMonitoring';
+import BrandEscalations from './pages/brand-admin/Escalations';
+import BrandServiceCompletionMonitor from './pages/brand-admin/ServiceCompletionMonitor';
+import BrandReplacementApprovals from './pages/brand-admin/ReplacementApprovals';
+import BrandLetterDocumentCenter from './pages/brand-admin/LetterDocumentCenter';
+import BrandCallRatesCharges from './pages/brand-admin/CallRatesCharges';
+import BrandPayments from './pages/brand-admin/Payments';
+import BrandUserRoleManagement from './pages/brand-admin/UserRoleManagement';
+import BrandTeamsDepartments from './pages/brand-admin/TeamsDepartments';
+import BrandRegisterComplaint from './pages/brand-admin/RegisterComplaint';
 import TechApply from './pages/technician/Apply';
 import SuperAdminLogin from './pages/super-admin/Login';
 import SuperAdminDashboard from './pages/super-admin/Dashboard';
@@ -306,7 +316,7 @@ function App() {
         <Route path="/brand-admin/verify-otp" element={<BrandVerifyOtp />} />
         <Route path="/brand-admin/forgot-password" element={<BrandForgotPassword />} />
         <Route path="/brand-admin/dashboard" element={<BrandDashboard />} />
-        <Route path="/brand-admin/requests" element={<BrandRequests />} />
+        <Route path="/brand-admin/requests" element={<BrandRegisterComplaint />} />
         <Route path="/brand-admin/warranty" element={<BrandWarranty />} />
         <Route path="/brand-admin/technicians" element={<BrandTechnicians />} />
         <Route path="/brand-admin/inventory" element={<BrandInventory />} />
@@ -324,6 +334,16 @@ function App() {
         <Route path="/brand-admin/chat" element={<BrandChat />} />
         <Route path="/brand-admin/academy" element={<BrandAcademy />} />
         <Route path="/brand-admin/reverse-logistics" element={<BrandReverseLogistics />} />
+        <Route path="/brand-admin/complaints" element={<BrandRequests />} />
+        <Route path="/brand-admin/complaint-monitoring" element={<BrandComplaintMonitoring />} />
+        <Route path="/brand-admin/escalations" element={<BrandEscalations />} />
+        <Route path="/brand-admin/service-completion" element={<BrandServiceCompletionMonitor />} />
+        <Route path="/brand-admin/replacement-approvals" element={<BrandReplacementApprovals />} />
+        <Route path="/brand-admin/documents" element={<BrandLetterDocumentCenter />} />
+        <Route path="/brand-admin/call-rates" element={<BrandCallRatesCharges />} />
+        <Route path="/brand-admin/payments" element={<BrandPayments />} />
+        <Route path="/brand-admin/users" element={<BrandUserRoleManagement />} />
+        <Route path="/brand-admin/teams" element={<BrandTeamsDepartments />} />
         <Route path="/technician/apply" element={<TechApply />} />
         <Route path="/technician/dashboard" element={<TechDashboard />} />
         <Route path="/technician/active-job" element={<ActiveJob />} />

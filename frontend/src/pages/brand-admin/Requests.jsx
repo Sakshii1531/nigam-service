@@ -34,17 +34,17 @@ const Requests = () => {
   const itemsPerPage = 3;
 
   const [requests, setRequests] = useState([
-    { id: 'SR-8901', customer: 'Amit Sharma', product: 'Smart TV', model: 'LG-55OLEDEV', invoice: 'INV-2026-001', warranty: 'Under Warranty', technician: 'Rahul Kumar', priority: 'High', status: 'In Progress', date: '12 May, 2026' },
-    { id: 'SR-8902', customer: 'Priya Patel', product: 'Refrigerator', model: 'LG-REF-450', invoice: 'INV-2026-002', warranty: 'Out of Warranty', technician: 'Amit Singh', priority: 'Medium', status: 'Pending', date: '12 May, 2026' },
-    { id: 'SR-8903', customer: 'Rajesh K.', product: 'Washing Machine', model: 'LG-WM-70', invoice: 'INV-2026-003', warranty: 'Under Warranty', technician: 'Suresh Raina', priority: 'Low', status: 'Completed', date: '11 May, 2026' },
-    { id: 'SR-8904', customer: 'Neha Gupta', product: 'Microwave', model: 'LG-MW-20', invoice: 'INV-2026-004', warranty: 'Out of Warranty', technician: 'Vikram Batra', priority: 'High', status: 'Escalated', date: '11 May, 2026' },
+    { id: 'SR-8901', customer: 'Amit Sharma', product: 'Smart TV', model: 'TV-55OLEDEV', invoice: 'INV-2026-001', warranty: 'Under Warranty', technician: 'Rahul Kumar', priority: 'High', status: 'In Progress', date: '12 May, 2026' },
+    { id: 'SR-8902', customer: 'Priya Patel', product: 'Refrigerator', model: 'REF-450', invoice: 'INV-2026-002', warranty: 'Out of Warranty', technician: 'Amit Singh', priority: 'Medium', status: 'Pending', date: '12 May, 2026' },
+    { id: 'SR-8903', customer: 'Rajesh K.', product: 'Washing Machine', model: 'WM-70', invoice: 'INV-2026-003', warranty: 'Under Warranty', technician: 'Suresh Raina', priority: 'Low', status: 'Completed', date: '11 May, 2026' },
+    { id: 'SR-8904', customer: 'Neha Gupta', product: 'Microwave', model: 'MW-20', invoice: 'INV-2026-004', warranty: 'Out of Warranty', technician: 'Vikram Batra', priority: 'High', status: 'Escalated', date: '11 May, 2026' },
   ]);
 
   const summaryCards = [
-    { title: 'Pending Requests', value: (requests.filter(r => r.status === 'Pending').length + 123).toString(), icon: <Clock size={20} />, color: 'bg-yellow-500' },
-    { title: 'Active Requests', value: (requests.filter(r => r.status === 'In Progress').length + 85).toString(), icon: <ClipboardList size={20} />, color: 'bg-blue-600' },
-    { title: 'Escalated Cases', value: (requests.filter(r => r.status === 'Escalated').length + 11).toString(), icon: <AlertTriangle size={20} />, color: 'bg-red-655' },
-    { title: 'Completed Jobs', value: (requests.filter(r => r.status === 'Completed').length + 863).toString(), icon: <CheckCircle2 size={20} />, color: 'bg-green-600' },
+    { title: 'Pending Complaints', value: (requests.filter(r => r.status === 'Pending').length + 123).toString(), icon: <Clock size={20} />, color: 'bg-yellow-500' },
+    { title: 'Active Complaints', value: (requests.filter(r => r.status === 'In Progress').length + 85).toString(), icon: <ClipboardList size={20} />, color: 'bg-blue-600' },
+    { title: 'Escalated Cases', value: (requests.filter(r => r.status === 'Escalated').length + 11).toString(), icon: <AlertTriangle size={20} />, color: 'bg-red-500' },
+    { title: 'Completed Calls', value: (requests.filter(r => r.status === 'Completed').length + 863).toString(), icon: <CheckCircle2 size={20} />, color: 'bg-green-600' },
   ];
 
   const updateRequestStatus = (id, newStatus) => {
@@ -95,7 +95,7 @@ const Requests = () => {
       {/* Main Content */}
       <div className="flex-1 ml-64 min-h-screen flex flex-col relative">
         {/* Topbar */}
-        <Topbar title="Service Requests" />
+        <Topbar title="All Complaints" />
 
         {/* Body */}
         {showDrawer && selectedRequest ? (

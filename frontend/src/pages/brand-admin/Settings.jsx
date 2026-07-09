@@ -16,10 +16,10 @@ const Settings = () => {
   const [successMessage, setSuccessMessage] = useState('');
 
   // Form states
-  const [brandName, setBrandName] = useState('LG Electronics');
-  const [supportEmail, setSupportEmail] = useState('support@lg.com');
+  const [brandName, setBrandName] = useState('Brand Partner');
+  const [supportEmail, setSupportEmail] = useState('support@brand.com');
   const [supportPhone, setSupportPhone] = useState('1800-123-4567');
-  const [website, setWebsite] = useState('https://lg.com');
+  const [website, setWebsite] = useState('https://brand.com');
 
   // Config toggles
   const [autoAssign, setAutoAssign] = useState(true);
