@@ -19,7 +19,8 @@ import {
   Star,
   MessageSquare,
   GraduationCap,
-  RotateCcw
+  RotateCcw,
+  FileText
 } from 'lucide-react';
 
 const Sidebar = () => {
@@ -60,6 +61,7 @@ const Sidebar = () => {
       items: [
         { icon: <LayoutDashboard size={18} />, text: 'Dashboard', path: '/brand-admin/dashboard' },
         { icon: <Bell size={18} />, text: 'Notifications', path: '/brand-admin/notifications' },
+        { icon: <Receipt size={18} />, text: 'Billing & Invoices', path: '/brand-admin/invoices' },
         { icon: <BarChart3 size={18} />, text: 'Reports & Analytics', path: '/brand-admin/reports' },
       ]
     },
@@ -67,6 +69,7 @@ const Sidebar = () => {
       title: 'Service & Products',
       items: [
         { icon: <ClipboardList size={18} />, text: 'Service Requests', path: '/brand-admin/requests' },
+        { icon: <FileText size={18} />, text: 'Part Requests', path: '/brand-admin/part-requests' },
         { icon: <Package size={18} />, text: 'Parts Inventory', path: '/brand-admin/inventory' },
         { icon: <ShoppingBag size={18} />, text: 'Product Catalog', path: '/brand-admin/catalog' },
       ]
