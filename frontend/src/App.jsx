@@ -245,6 +245,7 @@ function App() {
         <Route path="/buy/all-appliances" element={<Buy />} />
         <Route path="/buy/accessories" element={<Buy />} />
         <Route path="/buy/amc" element={<AMC />} />
+        <Route path="/buy/amc/select-appliance" element={<AMC />} />
         <Route path="/buy/amc/plans/:appliance" element={<AMC />} />
         <Route path="/buy/amc/enter-details/:appliance/:planIndex" element={<AMC />} />
         <Route path="/buy/amc/review/:appliance/:planIndex" element={<AMC />} />

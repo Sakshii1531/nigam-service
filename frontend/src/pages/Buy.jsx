@@ -414,7 +414,7 @@ const Buy = () => {
                       </svg>
                     </div>
                   ),
-                  onClick: () => navigate('/buy/amc')
+                  onClick: () => navigate('/buy/amc/select-appliance')
                 },
 
                 {
