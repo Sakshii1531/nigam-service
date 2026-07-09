@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft, Shield, Check, ChevronRight, ShoppingCart,
@@ -23,7 +23,8 @@ const AMC = () => {
   // Derive step from URL
   const pathname = location.pathname;
   let step = 1;
-  if (pathname.includes('/buy/amc/plans')) step = 2;
+  if (pathname.includes('/buy/amc/select-appliance')) step = 7;
+  else if (pathname.includes('/buy/amc/plans')) step = 2;
   else if (pathname.includes('/buy/amc/enter-details')) step = 3;
   else if (pathname.includes('/buy/amc/review')) step = 4;
   else if (pathname.includes('/buy/amc/payment')) step = 5;
@@ -41,6 +42,15 @@ const AMC = () => {
   const [pincode, setPincode] = useState('');
   const [invoiceFile, setInvoiceFile] = useState(null);
   const [paymentMode, setPaymentMode] = useState('UPI');
+
+  useEffect(() => {
+    if (location.state?.scrollToCategories) {
+      setTimeout(() => {
+        document.getElementById('amc-categories')?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
 
   // AMC Plans per appliance
   const getAMCPlans = (appliance) => {
@@ -170,7 +180,8 @@ const AMC = () => {
         <div className="bg-white px-6 py-4 flex items-center justify-between border-b border-border-color shadow-sm sticky top-0 z-30">
           <button
             onClick={() => {
-              if (step === 2) navigate('/buy/amc');
+              if (step === 7) navigate('/buy/amc');
+              else if (step === 2) navigate('/buy/amc/select-appliance');
               else if (step === 3) navigate(`/buy/amc/plans/${encodeURIComponent(selectedAppliance || '')}`);
               else if (step === 4) navigate(`/buy/amc/enter-details/${encodeURIComponent(selectedAppliance || '')}/${selectedPlanIndex}`);
               else if (step === 5) navigate(`/buy/amc/review/${encodeURIComponent(selectedAppliance || '')}/${selectedPlanIndex}`);
@@ -180,6 +191,7 @@ const AMC = () => {
             <ArrowLeft className="h-5 w-5 text-text-primary" />
           </button>
           <h1 className="text-base font-extrabold text-brand-navy text-center flex-1 pr-9">
+            {step === 7 && 'Select Appliance'}
             {step === 2 && `AMC Plans for ${selectedAppliance}`}
             {step === 3 && 'Enter Details'}
             {step === 4 && 'Review & Confirm'}
@@ -340,7 +352,7 @@ const AMC = () => {
                       </svg>
                     </div>
                   ),
-                  onClick: () => {}
+                  onClick: () => navigate('/buy/amc/select-appliance')
                 },
 
                 {
@@ -413,7 +425,7 @@ const AMC = () => {
             </div>
 
             {/* Shop by Category */}
-            <div className="flex flex-col gap-3">
+            <div id="amc-categories" className="flex flex-col gap-3">
               <div className="flex justify-between items-center">
                 <h3 className="text-sm font-black text-brand-navy">Shop by Category</h3>
                 <button className="text-xs font-bold text-brand-blue hover:underline cursor-pointer">View All</button>
@@ -463,6 +475,51 @@ const AMC = () => {
                   ))}
                 </div>
               </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* ── STEP 7: SELECT AMC APPLIANCE ── */}
+        {step === 7 && (
+          <motion.div
+            initial={{ opacity: 0, x: 10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3 }}
+            className="flex flex-col gap-5"
+          >
+            <div className="px-1">
+              <h2 className="text-lg font-black text-brand-navy">NCC AMC Plans</h2>
+              <p className="text-xs text-text-secondary font-semibold">Select an appliance for AMC plan</p>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              {[
+                { id: 'tv', name: 'Television', desc: 'NCC AMC Plans', price: '₹599', img: tvImg },
+                { id: 'refrigerator', name: 'Refrigerator', desc: 'NCC AMC Plans', price: '₹799', img: fridgeImg },
+                { id: 'washing-machine', name: 'Washing Machine', desc: 'NCC AMC Plans', price: '₹699', img: washingImg },
+                { id: 'ac', name: 'Air Conditioner', desc: 'NCC AMC Plans', price: '₹999', img: splitAcImg },
+                { id: 'water-purifier', name: 'Water Purifier', desc: 'NCC AMC Plans', price: '₹999', img: waterPurifierImg }
+              ].map((item) => (
+                <div 
+                  key={item.id}
+                  onClick={() => {
+                    navigate(`/buy/amc/plans/${encodeURIComponent(item.name)}`);
+                  }}
+                  className="bg-white border border-slate-200/80 rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:border-brand-blue/40 shadow-sm hover:scale-[1.01] transition-all text-left"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 bg-slate-50/50 border border-slate-100 rounded-xl flex items-center justify-center p-1.5 flex-shrink-0">
+                      <img src={item.img} alt={item.name} className="w-full h-full object-contain mix-blend-multiply" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-brand-navy leading-tight">{item.name}</h4>
+                      <p className="text-[11px] text-text-secondary mt-0.5 font-medium">{item.desc}</p>
+                      <span className="text-xs font-extrabold text-brand-blue block mt-1">From {item.price}/Year</span>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-text-secondary flex-shrink-0" />
+                </div>
+              ))}
             </div>
           </motion.div>
         )}
