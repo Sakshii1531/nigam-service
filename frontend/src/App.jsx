@@ -191,11 +191,21 @@ const ScrollToTop = () => {
   const { pathname } = useLocation();
 
   useEffect(() => {
-    // Toggle technician app styling class on body
+    // Toggle application specific styling class on body
     if (pathname.startsWith('/technician')) {
       document.body.classList.add('tech-app-active');
+      document.body.classList.remove('super-admin-active', 'brand-admin-active', 'customer-app-active');
+    } else if (pathname.startsWith('/super-admin')) {
+      document.body.classList.add('super-admin-active');
+      document.body.classList.remove('tech-app-active', 'brand-admin-active', 'customer-app-active');
+    } else if (pathname.startsWith('/brand-admin')) {
+      document.body.classList.add('brand-admin-active');
+      document.body.classList.remove('tech-app-active', 'super-admin-active', 'customer-app-active');
+    } else if (pathname === '/home' || pathname === '/about-ncc') {
+      document.body.classList.remove('tech-app-active', 'super-admin-active', 'brand-admin-active', 'customer-app-active');
     } else {
-      document.body.classList.remove('tech-app-active');
+      document.body.classList.add('customer-app-active');
+      document.body.classList.remove('tech-app-active', 'super-admin-active', 'brand-admin-active');
     }
 
     // Scroll window and document immediately

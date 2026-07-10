@@ -105,3 +105,35 @@ body.tech-app-active .text-xl,
 .tech-app-container .text-xl { font-size: 22.5px !important; }
 body.tech-app-active .text-2xl,
 .tech-app-container .text-2xl { font-size: 26px !important; }
+
+/* Constrain mobile-first views to a simulated mobile device frame on desktop viewports */
+@media (min-width: 640px) {
+  body.customer-app-active,
+  body.tech-app-active {
+    background-color: #E2E8F0 !important; /* Cool grey slate background surrounding the app column */
+  }
+
+  body.customer-app-active #root,
+  body.tech-app-active #root {
+    width: 100% !important;
+    max-width: 480px !important;
+    min-height: 100vh !important;
+    margin: 0 auto !important;
+    background-color: #F8FAFC !important; /* Mobile app viewport inner background */
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+    position: relative !important;
+    overflow-x: hidden !important;
+    border-left: 1px solid rgba(0, 0, 0, 0.05) !important;
+    border-right: 1px solid rgba(0, 0, 0, 0.05) !important;
+  }
+
+  /* Force fixed positioned layout components (header, footer bottom-nav, modals) to align inside the centered container */
+  body.customer-app-active .fixed,
+  body.tech-app-active .fixed {
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%) !important;
+    width: 100% !important;
+    max-width: 480px !important;
+  }
+}
