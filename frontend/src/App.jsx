@@ -112,6 +112,20 @@ import SuperAdminSettings from './pages/super-admin/Settings';
 import SuperAdminLogs from './pages/super-admin/Logs';
 import CustomerAppCustomization from './pages/super-admin/CustomerAppCustomization';
 import SuperAdminExchangeOffers from './pages/super-admin/ExchangeOffers';
+import SuperAdminASM from './pages/super-admin/ASM';
+import SuperAdminServicePartners from './pages/super-admin/ServicePartners';
+import SuperAdminAMC from './pages/super-admin/AMC';
+import SuperAdminProducts from './pages/super-admin/Products';
+import SuperAdminWarrantyVerification from './pages/super-admin/WarrantyVerification';
+import SuperAdminSpareParts from './pages/super-admin/SpareParts';
+import SuperAdminEscalationDesk from './pages/super-admin/EscalationDesk';
+import SuperAdminStories from './pages/super-admin/Stories';
+import SuperAdminVideos from './pages/super-admin/Videos';
+import SuperAdminAdvertisements from './pages/super-admin/Advertisements';
+import SuperAdminRevenue from './pages/super-admin/Revenue';
+import SuperAdminPayouts from './pages/super-admin/Payouts';
+import SuperAdminTransactions from './pages/super-admin/Transactions';
+import SuperAdminCMS from './pages/super-admin/CMS';
 import TechDashboard from './pages/technician/Dashboard';
 import ActiveJob from './pages/technician/ActiveJob';
 import Schedule from './pages/technician/Schedule';
@@ -395,6 +409,20 @@ function App() {
         <Route path="/super-admin/settings" element={<SuperAdminSettings />} />
         <Route path="/super-admin/logs" element={<SuperAdminLogs />} />
         <Route path="/super-admin/exchange-offers" element={<SuperAdminExchangeOffers />} />
+        <Route path="/super-admin/asm" element={<SuperAdminASM />} />
+        <Route path="/super-admin/service-partners" element={<SuperAdminServicePartners />} />
+        <Route path="/super-admin/amc" element={<SuperAdminAMC />} />
+        <Route path="/super-admin/products" element={<SuperAdminProducts />} />
+        <Route path="/super-admin/warranty-verification" element={<SuperAdminWarrantyVerification />} />
+        <Route path="/super-admin/spare-parts" element={<SuperAdminSpareParts />} />
+        <Route path="/super-admin/escalation-desk" element={<SuperAdminEscalationDesk />} />
+        <Route path="/super-admin/stories" element={<SuperAdminStories />} />
+        <Route path="/super-admin/videos" element={<SuperAdminVideos />} />
+        <Route path="/super-admin/advertisements" element={<SuperAdminAdvertisements />} />
+        <Route path="/super-admin/revenue" element={<SuperAdminRevenue />} />
+        <Route path="/super-admin/payouts" element={<SuperAdminPayouts />} />
+        <Route path="/super-admin/transactions" element={<SuperAdminTransactions />} />
+        <Route path="/super-admin/cms" element={<SuperAdminCMS />} />
 
         <Route path="*" element={<PageHandler />} />
       </Routes>
