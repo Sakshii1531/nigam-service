@@ -8,6 +8,7 @@ const Topbar = ({ title, subtitle }) => {
   const [isDateDropdownOpen, setIsDateDropdownOpen] = useState(false);
   const [selectedDateRange, setSelectedDateRange] = useState('21 May 2025 – 21 May 2025');
   const [copied, setCopied] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   
   const navigate = useNavigate();
 
@@ -164,7 +165,7 @@ const Topbar = ({ title, subtitle }) => {
                   <span>Profile</span>
                 </button>
                 <button
-                  onClick={() => { setIsDropdownOpen(false); navigate('/brand-admin/login'); }}
+                  onClick={() => { setIsDropdownOpen(false); setShowLogoutConfirm(true); }}
                   className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors border-t border-[#F1F5F9]"
                 >
                   <LogOut size={16} className="text-red-500" />
@@ -175,6 +176,40 @@ const Topbar = ({ title, subtitle }) => {
           )}
         </div>
       </div>
+
+      {/* Logout Confirmation Modal Overlay */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-6 z-[100] animate-fade-in">
+          <div className="bg-white border border-slate-100 rounded-[28px] p-6 max-w-xs w-full flex flex-col items-center text-center gap-4 shadow-xl">
+            <div className="w-12 h-12 bg-red-50 text-red-600 rounded-full flex items-center justify-center">
+              <LogOut className="h-5 w-5 text-red-600" />
+            </div>
+            <div>
+              <h4 className="text-sm font-black text-slate-900 mb-1">Log Out</h4>
+              <p className="text-[11px] text-slate-500 font-semibold leading-normal">
+                Are you sure you want to log out of your account?
+              </p>
+            </div>
+            <div className="flex gap-2.5 w-full mt-2">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-800 text-[10.5px] font-black py-2.5 rounded-xl transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowLogoutConfirm(false);
+                  navigate('/brand-admin/login');
+                }}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white text-[10.5px] font-black py-2.5 rounded-xl transition-colors cursor-pointer shadow-sm"
+              >
+                Yes, Log Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
