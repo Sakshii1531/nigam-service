@@ -47,6 +47,58 @@ const Dashboard = () => {
   const [activeTabASM, setActiveTabASM] = useState('7days');
   const [activeTabPartner, setActiveTabPartner] = useState('7days');
 
+  // Chart interactivity states
+  const [activeRevenueIndex, setActiveRevenueIndex] = useState(null);
+  const [activeDoughnutIndex, setActiveDoughnutIndex] = useState(null);
+  const [activeRequestBar, setActiveRequestBar] = useState(null);
+  const [activeTechSegment, setActiveTechSegment] = useState(null);
+
+  const revenuePoints = [
+    { x: 10, y: 90, date: '15 May', value: '₹35,40,000' },
+    { x: 73, y: 73, date: '16 May', value: '₹42,10,000' },
+    { x: 130, y: 85, date: '17 May', value: '₹38,50,000' },
+    { x: 190, y: 65, date: '18 May', value: '₹45,80,000' },
+    { x: 250, y: 50, date: '19 May', value: '₹41,20,000' },
+    { x: 310, y: 38, date: '20 May', value: '₹48,90,000' },
+    { x: 390, y: 25, date: '21 May', value: '₹50,60,600' }
+  ];
+
+  const handleRevenueMouseMove = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const relativeX = (e.clientX - rect.left) / rect.width;
+    const viewBoxX = relativeX * 400;
+    let minDiff = Infinity;
+    let nearestIndex = 0;
+    revenuePoints.forEach((pt, i) => {
+      const diff = Math.abs(pt.x - viewBoxX);
+      if (diff < minDiff) {
+        minDiff = diff;
+        nearestIndex = i;
+      }
+    });
+    setActiveRevenueIndex(nearestIndex);
+  };
+
+  const handleRevenueClick = () => {
+    if (activeRevenueIndex !== null) {
+      showToast(`Revenue on ${revenuePoints[activeRevenueIndex].date}: ${revenuePoints[activeRevenueIndex].value}`);
+    }
+  };
+
+  const doughnutSegments = [
+    { label: 'Open', value: '1,632', pct: 28, stroke: '#0D47A1', dashArray: "70.3 251.2", dashOffset: "0", routeVal: 'open' },
+    { label: 'Completed', value: '1,820', pct: 32, stroke: '#10B981', dashArray: "80.4 251.2", dashOffset: "-70.3", routeVal: 'completed' },
+    { label: 'Assigned', value: '1,054', pct: 18, stroke: '#38BDF8', dashArray: "45.2 251.2", dashOffset: "-150.7", routeVal: 'assigned' },
+    { label: 'In-Progress', value: '712', pct: 12, stroke: '#F59E0B', dashArray: "30.1 251.2", dashOffset: "-195.9", routeVal: 'in-progress' },
+    { label: 'Cancelled', value: '112', pct: 10, stroke: '#EF4444', dashArray: "25.2 251.2", dashOffset: "-226", routeVal: 'cancelled' },
+  ];
+
+  const techSegments = [
+    { label: 'Online', value: '824', pct: 64, stroke: '#10B981', dashArray: "160.7 251.2", dashOffset: "0", statusKey: 'online' },
+    { label: 'On Job', value: '312', pct: 24, stroke: '#0D47A1', dashArray: "60.3 251.2", dashOffset: "-160.7", statusKey: 'on-job' },
+    { label: 'Offline', value: '148', pct: 12, stroke: '#94A3B8', dashArray: "30.2 251.2", dashOffset: "-221", statusKey: 'offline' },
+  ];
+
   const showToast = (message) => {
     setSuccessMessage(message);
     setTimeout(() => {
@@ -56,16 +108,16 @@ const Dashboard = () => {
 
   // Top KPI Metrics
   const stats = [
-    { title: 'Total Revenue', value: '₹2,84,50,600', trend: '18.6% vs last 7 days', positive: true, icon: <IndianRupee size={16} />, iconColor: 'text-[#0D47A1] bg-[#E8F0FE]' },
-    { title: "Today's Revenue", value: '₹12,45,300', trend: '12.3% vs yesterday', positive: true, icon: <IndianRupee size={16} />, iconColor: 'text-green-600 bg-green-50' },
-    { title: 'Active Requests', value: '1,632', trend: '8.5% vs yesterday', positive: false, icon: <ClipboardList size={16} />, iconColor: 'text-red-500 bg-red-50' },
-    { title: 'AMC Customers', value: '24,850', trend: '15.2% vs last 7 days', positive: true, icon: <Users size={16} />, iconColor: 'text-purple-600 bg-purple-50' },
-    { title: 'NCC Shield Customers', value: '18,320', trend: '9.7% vs last 7 days', positive: true, icon: <Shield size={16} />, iconColor: 'text-orange-600 bg-orange-50' },
-    { title: 'Product Orders', value: '512', trend: '14.8% vs yesterday', positive: true, icon: <Briefcase size={16} />, iconColor: 'text-pink-600 bg-pink-50' },
-    { title: 'Open Escalations', value: '74', trend: '6.3% vs yesterday', positive: false, icon: <AlertTriangle size={16} />, iconColor: 'text-red-600 bg-red-50' },
-    { title: 'Active Cities', value: '52', trend: 'No change', neutral: true, icon: <MapPin size={16} />, iconColor: 'text-blue-500 bg-blue-50' },
-    { title: 'Active Service Partners', value: '1,284', trend: '11.4% vs yesterday', positive: true, icon: <Building size={16} />, iconColor: 'text-emerald-600 bg-emerald-50' },
-    { title: 'Customer Satisfaction', value: '4.7 / 5', trend: '0.2 vs last 7 days', positive: true, icon: <Star size={16} />, iconColor: 'text-yellow-600 bg-yellow-50' }
+    { title: 'Total Revenue', value: '₹2,84,50,600', trend: '18.6% vs last 7 days', positive: true, icon: <IndianRupee size={16} />, iconColor: 'text-[#0D47A1] bg-[#E8F0FE]', path: '/super-admin/revenue' },
+    { title: "Today's Revenue", value: '₹12,45,300', trend: '12.3% vs yesterday', positive: true, icon: <IndianRupee size={16} />, iconColor: 'text-green-600 bg-green-50', path: '/super-admin/revenue' },
+    { title: 'Active Requests', value: '1,632', trend: '8.5% vs yesterday', positive: false, icon: <ClipboardList size={16} />, iconColor: 'text-red-500 bg-red-50', path: '/super-admin/requests' },
+    { title: 'AMC Customers', value: '24,850', trend: '15.2% vs last 7 days', positive: true, icon: <Users size={16} />, iconColor: 'text-purple-600 bg-purple-50', path: '/super-admin/amc' },
+    { title: 'NCC Shield Customers', value: '18,320', trend: '9.7% vs last 7 days', positive: true, icon: <Shield size={16} />, iconColor: 'text-orange-600 bg-orange-50', path: '/super-admin/warranty' },
+    { title: 'Product Orders', value: '512', trend: '14.8% vs yesterday', positive: true, icon: <Briefcase size={16} />, iconColor: 'text-pink-600 bg-pink-50', path: '/super-admin/orders' },
+    { title: 'Open Escalations', value: '74', trend: '6.3% vs yesterday', positive: false, icon: <AlertTriangle size={16} />, iconColor: 'text-red-600 bg-red-50', path: '/super-admin/escalation-desk' },
+    { title: 'Active Cities', value: '52', trend: 'No change', neutral: true, icon: <MapPin size={16} />, iconColor: 'text-blue-500 bg-blue-50', path: '/super-admin/cities' },
+    { title: 'Active Service Partners', value: '1,284', trend: '11.4% vs yesterday', positive: true, icon: <Building size={16} />, iconColor: 'text-emerald-600 bg-emerald-50', path: '/super-admin/service-partners' },
+    { title: 'Customer Satisfaction', value: '4.7 / 5', trend: '0.2 vs last 7 days', positive: true, icon: <Star size={16} />, iconColor: 'text-yellow-600 bg-yellow-50', path: '/super-admin/reports' }
   ];
 
   // Quick Action List
@@ -103,7 +155,7 @@ const Dashboard = () => {
               <div 
                 key={idx} 
                 className="bg-white p-4 rounded-xl border border-[#E2E8F0] flex flex-col justify-between hover:shadow-md transition-all duration-200 cursor-pointer"
-                onClick={() => showToast(`Opening logs for ${stat.title}`)}
+                onClick={() => navigate(stat.path)}
               >
                 <div className="flex justify-between items-start">
                   <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${stat.iconColor}`}>
@@ -155,7 +207,14 @@ const Dashboard = () => {
 
               {/* Line Chart SVG */}
               <div className="relative h-44 w-full flex items-end">
-                <svg className="w-full h-full" viewBox="0 0 400 130" preserveAspectRatio="none">
+                <svg 
+                  className="w-full h-full cursor-pointer" 
+                  viewBox="0 0 400 130" 
+                  preserveAspectRatio="none"
+                  onMouseMove={handleRevenueMouseMove}
+                  onMouseLeave={() => setActiveRevenueIndex(null)}
+                  onClick={handleRevenueClick}
+                >
                   <defs>
                     <linearGradient id="revenue-gradient" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor="#0D47A1" stopOpacity="0.2"/>
@@ -185,13 +244,69 @@ const Dashboard = () => {
                   />
                   
                   {/* Node Circles */}
-                  <circle cx="10" cy="90" r="4" fill="#0D47A1" stroke="white" strokeWidth="1.5" />
-                  <circle cx="73" cy="73" r="4" fill="#0D47A1" stroke="white" strokeWidth="1.5" />
-                  <circle cx="130" cy="85" r="4" fill="#0D47A1" stroke="white" strokeWidth="1.5" />
-                  <circle cx="190" cy="65" r="4" fill="#0D47A1" stroke="white" strokeWidth="1.5" />
-                  <circle cx="250" cy="50" r="4" fill="#0D47A1" stroke="white" strokeWidth="1.5" />
-                  <circle cx="310" cy="38" r="4" fill="#0D47A1" stroke="white" strokeWidth="1.5" />
-                  <circle cx="390" cy="25" r="4" fill="#0D47A1" stroke="white" strokeWidth="1.5" />
+                  {revenuePoints.map((pt, i) => (
+                    <circle 
+                      key={i}
+                      cx={pt.x} 
+                      cy={pt.y} 
+                      r={activeRevenueIndex === i ? 6 : 4} 
+                      fill={activeRevenueIndex === i ? '#38BDF8' : '#0D47A1'} 
+                      stroke="white" 
+                      strokeWidth={activeRevenueIndex === i ? 2 : 1.5}
+                      className="transition-all duration-150"
+                    />
+                  ))}
+
+                  {/* Active Tooltip and Guide */}
+                  {activeRevenueIndex !== null && (() => {
+                    const activePt = revenuePoints[activeRevenueIndex];
+                    const tooltipY = activePt.y > 50 ? activePt.y - 45 : activePt.y + 15;
+                    return (
+                      <>
+                        <line 
+                          x1={activePt.x} 
+                          y1="20" 
+                          x2={activePt.x} 
+                          y2="120" 
+                          stroke="#0D47A1" 
+                          strokeWidth="1.5" 
+                          strokeDasharray="3 3" 
+                          pointerEvents="none"
+                        />
+                        <g pointerEvents="none">
+                          <rect 
+                            x={Math.max(10, Math.min(270, activePt.x - 60))} 
+                            y={tooltipY} 
+                            width="120" 
+                            height="36" 
+                            rx="6" 
+                            fill="#1E293B" 
+                            className="shadow-lg"
+                          />
+                          <text 
+                            x={Math.max(10, Math.min(270, activePt.x - 60)) + 60} 
+                            y={tooltipY + 13} 
+                            textAnchor="middle" 
+                            fill="#94A3B8" 
+                            fontSize="9" 
+                            fontWeight="bold"
+                          >
+                            {activePt.date}
+                          </text>
+                          <text 
+                            x={Math.max(10, Math.min(270, activePt.x - 60)) + 60} 
+                            y={tooltipY + 27} 
+                            textAnchor="middle" 
+                            fill="#38BDF8" 
+                            fontSize="10" 
+                            fontWeight="extrabold"
+                          >
+                            {activePt.value}
+                          </text>
+                        </g>
+                      </>
+                    );
+                  })()}
                 </svg>
               </div>
               <div className="flex justify-between text-[10px] text-slate-400 font-semibold px-1 mt-2">
@@ -218,54 +333,63 @@ const Dashboard = () => {
                     {/* Background Circle */}
                     <circle cx="50" cy="50" r="40" fill="transparent" stroke="#F1F5F9" strokeWidth="12"/>
                     
-                    {/* Open (28%): blue. dasharray circum = 2*pi*r = 251.2 */}
-                    <circle cx="50" cy="50" r="40" fill="transparent" stroke="#0D47A1" strokeWidth="12"
-                      strokeDasharray="70.3 251.2" strokeDashoffset="0"/>
-                    
-                    {/* Completed (32%): green */}
-                    <circle cx="50" cy="50" r="40" fill="transparent" stroke="#10B981" strokeWidth="12"
-                      strokeDasharray="80.4 251.2" strokeDashoffset="-70.3"/>
-                    
-                    {/* Assigned (18%): light blue */}
-                    <circle cx="50" cy="50" r="40" fill="transparent" stroke="#38BDF8" strokeWidth="12"
-                      strokeDasharray="45.2 251.2" strokeDashoffset="-150.7"/>
-
-                    {/* In-Progress (12%): orange */}
-                    <circle cx="50" cy="50" r="40" fill="transparent" stroke="#F59E0B" strokeWidth="12"
-                      strokeDasharray="30.1 251.2" strokeDashoffset="-195.9"/>
-
-                    {/* Cancelled (10%): red */}
-                    <circle cx="50" cy="50" r="40" fill="transparent" stroke="#EF4444" strokeWidth="12"
-                      strokeDasharray="25.2 251.2" strokeDashoffset="-226"/>
+                    {doughnutSegments.map((segment, i) => (
+                      <circle 
+                        key={i}
+                        cx="50" 
+                        cy="50" 
+                        r="40" 
+                        fill="transparent" 
+                        stroke={segment.stroke} 
+                        strokeWidth={activeDoughnutIndex === i ? 16 : 12}
+                        strokeDasharray={segment.dashArray} 
+                        strokeDashoffset={segment.dashOffset}
+                        className="cursor-pointer transition-all duration-200 hover:opacity-90"
+                        onMouseEnter={() => setActiveDoughnutIndex(i)}
+                        onMouseLeave={() => setActiveDoughnutIndex(null)}
+                        onClick={() => {
+                          showToast(`Filtering by ${segment.label} requests`);
+                          navigate(`/super-admin/requests?status=${segment.routeVal}`);
+                        }}
+                      />
+                    ))}
                   </svg>
-                  <div className="absolute flex flex-col items-center">
-                    <span className="text-base font-extrabold text-[#1E293B]">5.3K</span>
-                    <span className="text-[9px] text-[#64748B] font-semibold">Requests</span>
+                  <div className="absolute flex flex-col items-center leading-none text-center">
+                    <span className="text-sm font-extrabold text-[#1E293B] transition-all">
+                      {activeDoughnutIndex !== null ? doughnutSegments[activeDoughnutIndex].value : '5.3K'}
+                    </span>
+                    <span className="text-[8px] text-[#64748B] font-bold uppercase mt-0.5 tracking-tight transition-all">
+                      {activeDoughnutIndex !== null ? doughnutSegments[activeDoughnutIndex].label : 'Requests'}
+                    </span>
                   </div>
                 </div>
 
                 {/* Legend List */}
                 <div className="flex-1 space-y-1.5 pl-2">
-                  <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
-                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#0D47A1]"></span>Open</span>
-                    <span className="text-slate-500 text-[11px]">1,632 (28%)</span>
-                  </div>
-                  <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
-                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#38BDF8]"></span>Assigned</span>
-                    <span className="text-slate-500 text-[11px]">1,054 (18%)</span>
-                  </div>
-                  <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
-                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#F59E0B]"></span>In-Progress</span>
-                    <span className="text-slate-500 text-[11px]">712 (12%)</span>
-                  </div>
-                  <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
-                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#10B981]"></span>Completed</span>
-                    <span className="text-slate-500 text-[11px]">1,820 (32%)</span>
-                  </div>
-                  <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
-                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#EF4444]"></span>Cancelled</span>
-                    <span className="text-slate-500 text-[11px]">112 (10%)</span>
-                  </div>
+                  {doughnutSegments.map((segment, i) => (
+                    <div 
+                      key={i} 
+                      className={`flex items-center justify-between text-xs font-semibold p-1 rounded-lg transition-all cursor-pointer ${
+                        activeDoughnutIndex === i ? 'bg-slate-50 scale-[1.02]' : 'hover:bg-slate-50'
+                      }`}
+                      onMouseEnter={() => setActiveDoughnutIndex(i)}
+                      onMouseLeave={() => setActiveDoughnutIndex(null)}
+                      onClick={() => {
+                        showToast(`Filtering by ${segment.label} requests`);
+                        navigate(`/super-admin/requests?status=${segment.routeVal}`);
+                      }}
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: segment.stroke }} />
+                        <span className={activeDoughnutIndex === i ? 'text-[#0D47A1] font-bold' : 'text-slate-700'}>
+                          {segment.label}
+                        </span>
+                      </span>
+                      <span className="text-slate-500 text-[11px] font-semibold">
+                        {segment.value} ({segment.pct}%)
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -295,15 +419,35 @@ const Dashboard = () => {
                 {[600, 800, 700, 900, 850, 950, 900].map((val, i) => {
                   const maxVal = 1000;
                   const heightPct = (val / maxVal) * 100;
+                  const day = 15 + i;
                   return (
-                    <div key={i} className="flex flex-col items-center gap-1.5 w-7 relative group cursor-pointer" onClick={() => showToast(`Requests on Day ${i+15}: ${val}`)}>
+                    <div 
+                      key={i} 
+                      className="flex flex-col items-center gap-1.5 w-7 relative group cursor-pointer" 
+                      onMouseEnter={() => setActiveRequestBar(i)}
+                      onMouseLeave={() => setActiveRequestBar(null)}
+                      onClick={() => {
+                        setActiveRequestBar(i);
+                        showToast(`Requests on ${day} May: ${val}`);
+                      }}
+                    >
+                      {/* Tooltip */}
+                      {(activeRequestBar === i) && (
+                        <div className="absolute -top-7 bg-[#1E293B] text-white text-[9px] px-1.5 py-0.5 rounded font-bold shadow-md z-10 whitespace-nowrap">
+                          {val} reqs
+                        </div>
+                      )}
                       <div className="w-full bg-[#F1F5F9] rounded-md h-32 flex items-end">
                         <div 
-                          className="w-full bg-[#0D47A1] rounded-md transition-all duration-300 hover:bg-[#38BDF8]"
+                          className={`w-full rounded-md transition-all duration-200 ${
+                            activeRequestBar === i ? 'bg-[#38BDF8] scale-x-105 shadow-sm' : 'bg-[#0D47A1]'
+                          }`}
                           style={{ height: `${heightPct}%` }}
                         ></div>
                       </div>
-                      <span className="text-[10px] text-slate-400 font-bold">{15 + i}</span>
+                      <span className={`text-[10px] font-bold transition-colors ${
+                        activeRequestBar === i ? 'text-[#0D47A1]' : 'text-slate-400'
+                      }`}>{day}</span>
                     </div>
                   );
                 })}
@@ -454,36 +598,61 @@ const Dashboard = () => {
                 <div className="relative w-28 h-28 flex items-center justify-center">
                   <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
                     <circle cx="50" cy="50" r="40" fill="transparent" stroke="#F1F5F9" strokeWidth="8"/>
-                    {/* Online (64%): green */}
-                    <circle cx="50" cy="50" r="40" fill="transparent" stroke="#10B981" strokeWidth="8"
-                      strokeDasharray="160.7 251.2" strokeDashoffset="0"/>
-                    {/* On Job (24%): blue */}
-                    <circle cx="50" cy="50" r="40" fill="transparent" stroke="#0D47A1" strokeWidth="8"
-                      strokeDasharray="60.3 251.2" strokeDashoffset="-160.7"/>
-                    {/* Offline (12%): grey */}
-                    <circle cx="50" cy="50" r="40" fill="transparent" stroke="#94A3B8" strokeWidth="8"
-                      strokeDasharray="30.2 251.2" strokeDashoffset="-221"/>
+                    {techSegments.map((segment, i) => (
+                      <circle 
+                        key={i}
+                        cx="50" 
+                        cy="50" 
+                        r="40" 
+                        fill="transparent" 
+                        stroke={segment.stroke} 
+                        strokeWidth={activeTechSegment === i ? 11 : 8}
+                        strokeDasharray={segment.dashArray} 
+                        strokeDashoffset={segment.dashOffset}
+                        className="cursor-pointer transition-all duration-200 hover:opacity-95"
+                        onMouseEnter={() => setActiveTechSegment(i)}
+                        onMouseLeave={() => setActiveTechSegment(null)}
+                        onClick={() => {
+                          showToast(`Viewing all ${segment.label} technicians`);
+                          navigate(`/super-admin/technicians?status=${segment.statusKey}`);
+                        }}
+                      />
+                    ))}
                   </svg>
                   <div className="absolute flex flex-col items-center leading-none text-center">
-                    <span className="text-base font-extrabold text-[#1E293B]">1,284</span>
-                    <span className="text-[8px] text-slate-400 font-bold uppercase mt-1">Total Techs</span>
+                    <span className="text-base font-extrabold text-[#1E293B] transition-all">
+                      {activeTechSegment !== null ? techSegments[activeTechSegment].value : '1,284'}
+                    </span>
+                    <span className="text-[8px] text-slate-400 font-bold uppercase mt-1 transition-all">
+                      {activeTechSegment !== null ? techSegments[activeTechSegment].label : 'Total Techs'}
+                    </span>
                   </div>
                 </div>
 
                 {/* Legend list below */}
                 <div className="w-full space-y-1.5 px-2">
-                  <div className="flex items-center justify-between text-[11px] font-bold text-slate-700">
-                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-[#10B981]"></span>Online</span>
-                    <span className="text-slate-500 font-semibold">824 (64%)</span>
-                  </div>
-                  <div className="flex items-center justify-between text-[11px] font-bold text-slate-700">
-                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-[#0D47A1]"></span>On Job</span>
-                    <span className="text-slate-500 font-semibold">312 (24%)</span>
-                  </div>
-                  <div className="flex items-center justify-between text-[11px] font-bold text-slate-700">
-                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-[#94A3B8]"></span>Offline</span>
-                    <span className="text-slate-500 font-semibold">148 (12%)</span>
-                  </div>
+                  {techSegments.map((segment, i) => (
+                    <div 
+                      key={i} 
+                      className={`flex items-center justify-between text-[11px] font-bold p-1 rounded-lg transition-all cursor-pointer ${
+                        activeTechSegment === i ? 'bg-slate-50 scale-[1.02]' : 'hover:bg-slate-50'
+                      }`}
+                      onMouseEnter={() => setActiveTechSegment(i)}
+                      onMouseLeave={() => setActiveTechSegment(null)}
+                      onClick={() => {
+                        showToast(`Viewing all ${segment.label} technicians`);
+                        navigate(`/super-admin/technicians?status=${segment.statusKey}`);
+                      }}
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: segment.stroke }} />
+                        <span className={activeTechSegment === i ? 'text-[#0D47A1]' : 'text-slate-700'}>
+                          {segment.label}
+                        </span>
+                      </span>
+                      <span className="text-slate-500 font-semibold">{segment.value} ({segment.pct}%)</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
