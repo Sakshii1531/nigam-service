@@ -50,7 +50,26 @@ const Dashboard = () => {
   const [tollFreeInput, setTollFreeInput] = useState('1800-123-4567');
   const [successMsg, setSuccessMsg] = useState('');
 
+  // Graph interaction states
+  const [activeTrendIndex, setActiveTrendIndex] = useState(null);
+  const [activeStatusIndex, setActiveStatusIndex] = useState(null);
+  const [activeProductIndex, setActiveProductIndex] = useState(null);
+
   const toast = (msg) => { setSuccessMsg(msg); setTimeout(() => setSuccessMsg(''), 3000); };
+
+  const handleTrendMouseMove = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const relativeX = (e.clientX - rect.left) / rect.width;
+    const viewBoxX = relativeX * 500;
+    const index = Math.min(6, Math.max(0, Math.round(viewBoxX / 83.3)));
+    setActiveTrendIndex(index);
+  };
+
+  const handleTrendClick = () => {
+    if (activeTrendIndex !== null) {
+      toast(`Complaints on ${trendLabels[activeTrendIndex]}: ${trendData[activeTrendIndex].toLocaleString()}`);
+    }
+  };
 
   /* ── KPI data ── */
   const kpis = [
@@ -117,13 +136,18 @@ const Dashboard = () => {
     { label: 'Customer Support', icon: <PhoneCall size={16} />, color: 'bg-slate-600', path: '/brand-admin/chat' },
   ];
 
-  /* Build conic-gradient for donut */
-  let cumulative = 0;
-  const conicStops = statusSegments.map(s => {
-    const start = cumulative;
-    cumulative += s.pct;
-    return `${s.color} ${start.toFixed(1)}% ${cumulative.toFixed(1)}%`;
-  }).join(', ');
+  // Calculate SVG Donut segments dynamically
+  let accumulatedPercent = 0;
+  const statusSegmentsWithSVGProps = statusSegments.map((segment) => {
+    const dashOffset = -accumulatedPercent * 2.512;
+    const dashArray = `${segment.pct * 2.512} 251.2`;
+    accumulatedPercent += segment.pct;
+    return {
+      ...segment,
+      dashArray,
+      dashOffset
+    };
+  });
 
   return (
     <div className="min-h-screen bg-[#F1F5F9] flex relative">
@@ -150,7 +174,16 @@ const Dashboard = () => {
                 <span className="text-[9px] text-[#64748B] bg-[#F1F5F9] px-2 py-0.5 rounded-lg">Last 7 Days ▾</span>
               </div>
               <div className="relative h-32">
-                <svg width="100%" height="100%" viewBox="0 0 500 100" preserveAspectRatio="none">
+                <svg 
+                  width="100%" 
+                  height="100%" 
+                  viewBox="0 0 500 100" 
+                  preserveAspectRatio="none"
+                  onMouseMove={handleTrendMouseMove}
+                  onMouseLeave={() => setActiveTrendIndex(null)}
+                  onClick={handleTrendClick}
+                  className="cursor-pointer"
+                >
                   <defs>
                     <linearGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.3" />
@@ -167,17 +200,81 @@ const Dashboard = () => {
                     points={trendData.map((v, i) => `${i * 83.3},${100 - (v / maxTrend) * 85}`).join(' ')}
                     fill="none"
                     stroke="#3B82F6"
-                    strokeWidth="2"
+                    strokeWidth="2.5"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   />
-                  {/* Dots + labels */}
-                  {trendData.map((v, i) => (
-                    <g key={i}>
-                      <circle cx={i * 83.3} cy={100 - (v / maxTrend) * 85} r="3" fill="#3B82F6" />
-                      <text x={i * 83.3} y={100 - (v / maxTrend) * 85 - 7} textAnchor="middle" fontSize="7" fill="#1E293B" fontWeight="700">{v.toLocaleString()}</text>
-                    </g>
-                  ))}
+                  
+                  {/* Node Circles */}
+                  {trendData.map((v, i) => {
+                    const cx = i * 83.3;
+                    const cy = 100 - (v / maxTrend) * 85;
+                    return (
+                      <circle 
+                        key={i}
+                        cx={cx} 
+                        cy={cy} 
+                        r={activeTrendIndex === i ? 5 : 3.5} 
+                        fill={activeTrendIndex === i ? '#3B82F6' : '#2563EB'} 
+                        stroke="white"
+                        strokeWidth={activeTrendIndex === i ? 1.5 : 1}
+                        className="transition-all duration-150"
+                      />
+                    );
+                  })}
+
+                  {/* Active Tooltip and Guide */}
+                  {activeTrendIndex !== null && (() => {
+                    const val = trendData[activeTrendIndex];
+                    const cx = activeTrendIndex * 83.3;
+                    const cy = 100 - (val / maxTrend) * 85;
+                    const tooltipY = cy > 40 ? cy - 35 : cy + 10;
+                    return (
+                      <>
+                        <line 
+                          x1={cx} 
+                          y1="0" 
+                          x2={cx} 
+                          y2="100" 
+                          stroke="#3B82F6" 
+                          strokeWidth="1" 
+                          strokeDasharray="2 2" 
+                          pointerEvents="none"
+                        />
+                        <g pointerEvents="none">
+                          <rect 
+                            x={Math.max(5, Math.min(415, cx - 40))} 
+                            y={tooltipY} 
+                            width="80" 
+                            height="28" 
+                            rx="4" 
+                            fill="#1E293B" 
+                            opacity="0.9"
+                          />
+                          <text 
+                            x={Math.max(5, Math.min(415, cx - 40)) + 40} 
+                            y={tooltipY + 10} 
+                            textAnchor="middle" 
+                            fill="#94A3B8" 
+                            fontSize="6" 
+                            fontWeight="bold"
+                          >
+                            {trendLabels[activeTrendIndex]}
+                          </text>
+                          <text 
+                            x={Math.max(5, Math.min(415, cx - 40)) + 40} 
+                            y={tooltipY + 21} 
+                            textAnchor="middle" 
+                            fill="#60A5FA" 
+                            fontSize="8" 
+                            fontWeight="extrabold"
+                          >
+                            {val.toLocaleString()}
+                          </text>
+                        </g>
+                      </>
+                    );
+                  })()}
                 </svg>
               </div>
               <div className="flex justify-between mt-1">
@@ -195,21 +292,55 @@ const Dashboard = () => {
               </div>
               <div className="flex items-center gap-6 justify-center flex-1 py-2">
                 <div className="relative w-28 h-28 flex items-center justify-center flex-shrink-0">
-                  <div
-                    className="w-28 h-28 rounded-full"
-                    style={{ background: `conic-gradient(${conicStops})` }}
-                  />
-                  <div className="absolute w-16 h-16 bg-white rounded-full flex flex-col items-center justify-center shadow-inner">
-                    <span className="text-sm font-black text-[#1E293B]">12,568</span>
-                    <span className="text-[8px] text-[#64748B]">Total</span>
+                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="40" fill="transparent" stroke="#F8FAFC" strokeWidth="12" />
+                    {statusSegmentsWithSVGProps.map((s, i) => (
+                      <circle
+                        key={i}
+                        cx="50"
+                        cy="50"
+                        r="40"
+                        fill="transparent"
+                        stroke={s.color}
+                        strokeWidth={activeStatusIndex === i ? 15 : 12}
+                        strokeDasharray={s.dashArray}
+                        strokeDashoffset={s.dashOffset}
+                        className="cursor-pointer transition-all duration-200 hover:opacity-90"
+                        onMouseEnter={() => setActiveStatusIndex(i)}
+                        onMouseLeave={() => setActiveStatusIndex(null)}
+                        onClick={() => {
+                          toast(`Filtering by ${s.label} complaints`);
+                          navigate(`/brand-admin/complaint-monitoring?status=${s.label}`);
+                        }}
+                      />
+                    ))}
+                  </svg>
+                  <div className="absolute flex flex-col items-center justify-center leading-none text-center pointer-events-none">
+                    <span className="text-sm font-black text-[#1E293B] transition-all">
+                      {activeStatusIndex !== null ? statusSegments[activeStatusIndex].value.toLocaleString() : '12,568'}
+                    </span>
+                    <span className="text-[7px] text-[#64748B] font-bold uppercase mt-0.5 tracking-tight transition-all">
+                      {activeStatusIndex !== null ? statusSegments[activeStatusIndex].label : 'Total'}
+                    </span>
                   </div>
                 </div>
                 <div className="space-y-1 flex-1">
                   {statusSegments.map((s, i) => (
-                    <div key={i} className="flex items-center justify-between text-[9px] gap-2">
+                    <div 
+                      key={i} 
+                      className={`flex items-center justify-between text-[9px] gap-2 p-1 rounded transition-all cursor-pointer ${
+                        activeStatusIndex === i ? 'bg-slate-50 scale-[1.02]' : 'hover:bg-slate-50'
+                      }`}
+                      onMouseEnter={() => setActiveStatusIndex(i)}
+                      onMouseLeave={() => setActiveStatusIndex(null)}
+                      onClick={() => {
+                        toast(`Filtering by ${s.label} complaints`);
+                        navigate(`/brand-admin/complaint-monitoring?status=${s.label}`);
+                      }}
+                    >
                       <span className="flex items-center gap-1.5 min-w-0">
                         <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: s.color }} />
-                        <span className="text-[#64748B] font-medium truncate">{s.label}</span>
+                        <span className={`text-[#64748B] font-medium truncate ${activeStatusIndex === i ? 'text-blue-600 font-bold' : ''}`}>{s.label}</span>
                       </span>
                       <span className="font-bold text-[#1E293B] flex-shrink-0">{s.value.toLocaleString()} ({s.pct}%)</span>
                     </div>
@@ -231,13 +362,25 @@ const Dashboard = () => {
               </div>
               <div className="space-y-3 flex-1 flex flex-col justify-center">
                 {productWise.map((p, i) => (
-                  <div key={i}>
+                  <div 
+                    key={i}
+                    className="cursor-pointer group p-1 rounded-lg hover:bg-slate-50 transition-all duration-200"
+                    onMouseEnter={() => setActiveProductIndex(i)}
+                    onMouseLeave={() => setActiveProductIndex(null)}
+                    onClick={() => {
+                      toast(`Viewing complaints for ${p.name}`);
+                      navigate(`/brand-admin/complaints?product=${p.name}`);
+                    }}
+                  >
                     <div className="flex justify-between items-center mb-0.5">
-                      <span className="text-[10px] font-semibold text-[#64748B]">{p.name}</span>
+                      <span className={`text-[10px] font-semibold transition-colors ${activeProductIndex === i ? 'text-blue-600 font-bold' : 'text-[#64748B]'}`}>{p.name}</span>
                       <span className="text-[10px] font-bold text-[#1E293B]">{p.value.toLocaleString()} ({p.pct}%)</span>
                     </div>
-                    <div className="w-full bg-[#F1F5F9] rounded-full h-1.5">
-                      <div className="h-1.5 rounded-full transition-all" style={{ width: `${p.pct}%`, background: p.color }} />
+                    <div className="w-full bg-[#F1F5F9] rounded-full h-1.5 overflow-hidden">
+                      <div 
+                        className="h-1.5 rounded-full transition-all duration-300 group-hover:scale-y-110" 
+                        style={{ width: `${p.pct}%`, background: p.color }} 
+                      />
                     </div>
                   </div>
                 ))}

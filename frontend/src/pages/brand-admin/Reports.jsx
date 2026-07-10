@@ -14,6 +14,7 @@ import {
 const Reports = () => {
   const [timeframe, setTimeframe] = useState('Last 30 Days');
   const [successMessage, setSuccessMessage] = useState('');
+  const [activeReportBar, setActiveReportBar] = useState(null);
 
   const showToast = (message) => {
     setSuccessMessage(message);
@@ -95,18 +96,28 @@ const Reports = () => {
               <div className="flex items-end justify-between h-48 gap-4 pt-4">
                 {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'].map((month, index) => {
                   const heights = [40, 65, 35, 80, 55, 90];
+                  const isActive = activeReportBar === index;
                   return (
                     <div key={index} className="flex-1 flex flex-col items-center gap-2">
                       <div 
-                        className="w-full bg-[#E3ECF9] hover:bg-[#0D47A1] rounded-t-lg transition-all duration-300 group relative cursor-pointer"
+                        className={`w-full rounded-t-lg transition-all duration-300 group relative cursor-pointer ${
+                          isActive ? 'bg-[#0D47A1] scale-x-105 shadow-sm' : 'bg-[#E3ECF9] hover:bg-[#0D47A1]'
+                        }`}
                         style={{ height: `${heights[index]}%` }}
-                        onClick={() => showToast(`Month: ${month}, Tickets: ${heights[index] * 10}`)}
+                        onMouseEnter={() => setActiveReportBar(index)}
+                        onMouseLeave={() => setActiveReportBar(null)}
+                        onClick={() => {
+                          setActiveReportBar(index);
+                          showToast(`Month: ${month}, Tickets: ${heights[index] * 10}`);
+                        }}
                       >
-                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-[#1E293B] text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                        <div className={`absolute -top-8 left-1/2 -translate-x-1/2 bg-[#1E293B] text-white text-xs px-2 py-1 rounded transition-opacity whitespace-nowrap z-10 ${
+                          isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 pointer-events-none'
+                        }`}>
                           {heights[index] * 10} Tickets
                         </div>
                       </div>
-                      <span className="text-xs text-[#64748B]">{month}</span>
+                      <span className={`text-xs transition-colors font-semibold ${isActive ? 'text-[#0D47A1] font-bold' : 'text-[#64748B]'}`}>{month}</span>
                     </div>
                   );
                 })}
@@ -127,14 +138,14 @@ const Reports = () => {
                   <div 
                     key={index}
                     onClick={() => showToast(`${item.label} accounts for ${item.value}% of failures`)}
-                    className="cursor-pointer group"
+                    className="cursor-pointer group p-1.5 rounded-lg hover:bg-slate-50 transition-all duration-200"
                   >
                     <div className="flex justify-between text-sm mb-1">
-                      <span className="text-[#1E293B] font-medium group-hover:text-[#0D47A1]">{item.label}</span>
-                      <span className="text-[#64748B]">{item.value}%</span>
+                      <span className="text-[#1E293B] font-semibold group-hover:text-[#0D47A1] transition-colors">{item.label}</span>
+                      <span className="text-[#64748B] font-bold">{item.value}%</span>
                     </div>
                     <div className="w-full h-2 bg-[#F1F5F9] rounded-full overflow-hidden">
-                      <div className={`h-full ${item.color} group-hover:opacity-80 transition-opacity`} style={{ width: `${item.value}%` }}></div>
+                      <div className={`h-full ${item.color} transition-all group-hover:scale-y-110`} style={{ width: `${item.value}%` }}></div>
                     </div>
                   </div>
                 ))}
@@ -154,19 +165,19 @@ const Reports = () => {
                 ].map((tech, index) => (
                   <div 
                     key={index} 
-                    className="flex items-center gap-4 cursor-pointer group"
+                    className="flex items-center gap-4 cursor-pointer group p-1.5 rounded-lg hover:bg-slate-50 transition-all duration-200"
                     onClick={() => showToast(`${tech.name}: ${tech.jobs} jobs completed with ${tech.rate}% success rating`)}
                   >
-                    <div className="w-8 h-8 bg-[#EEF4FF] rounded-full flex items-center justify-center text-[#0D47A1] font-bold text-xs flex-shrink-0">
+                    <div className="w-8 h-8 bg-[#EEF4FF] rounded-full flex items-center justify-center text-[#0D47A1] font-bold text-xs flex-shrink-0 group-hover:scale-105 transition-transform">
                       {tech.name.split(' ').map(n => n[0]).join('')}
                     </div>
                     <div className="flex-1">
                       <div className="flex justify-between text-sm mb-1">
-                        <span className="text-[#1E293B] font-medium group-hover:text-[#0D47A1]">{tech.name}</span>
-                        <span className="text-[#64748B]">{tech.jobs} jobs</span>
+                        <span className="text-[#1E293B] font-semibold group-hover:text-[#0D47A1] transition-colors">{tech.name}</span>
+                        <span className="text-[#64748B] font-bold">{tech.jobs} jobs</span>
                       </div>
                       <div className="w-full h-1.5 bg-[#F1F5F9] rounded-full overflow-hidden">
-                        <div className="h-full bg-[#0D47A1]" style={{ width: `${tech.rate}%` }}></div>
+                        <div className="h-full bg-[#0D47A1] transition-all group-hover:scale-y-110" style={{ width: `${tech.rate}%` }}></div>
                       </div>
                     </div>
                   </div>
@@ -180,10 +191,10 @@ const Reports = () => {
               
               <div className="flex items-center justify-around h-40">
                 <div 
-                  className="text-center cursor-pointer group"
+                  className="text-center cursor-pointer group p-2.5 rounded-xl hover:bg-slate-50 hover:scale-105 transition-all duration-200"
                   onClick={() => showToast('75% of customers left a positive feedback!')}
                 >
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-green-600 mx-auto mb-2 group-hover:scale-105 transition-transform">
+                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-green-600 mx-auto mb-2 group-hover:scale-110 transition-transform">
                     <Smile size={24} />
                   </div>
                   <p className="text-xl font-bold text-[#1E293B]">75%</p>
@@ -191,10 +202,10 @@ const Reports = () => {
                 </div>
                 
                 <div 
-                  className="text-center cursor-pointer group"
+                  className="text-center cursor-pointer group p-2.5 rounded-xl hover:bg-slate-50 hover:scale-105 transition-all duration-200"
                   onClick={() => showToast('20% of customers left a neutral feedback!')}
                 >
-                  <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600 mx-auto mb-2 group-hover:scale-105 transition-transform">
+                  <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600 mx-auto mb-2 group-hover:scale-110 transition-transform">
                     <Meh size={24} />
                   </div>
                   <p className="text-xl font-bold text-[#1E293B]">20%</p>
@@ -202,10 +213,10 @@ const Reports = () => {
                 </div>
                 
                 <div 
-                  className="text-center cursor-pointer group"
+                  className="text-center cursor-pointer group p-2.5 rounded-xl hover:bg-slate-50 hover:scale-105 transition-all duration-200"
                   onClick={() => showToast('Warning: 5% of customers left an unsatisfied feedback.')}
                 >
-                  <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center text-red-600 mx-auto mb-2 group-hover:scale-105 transition-transform">
+                  <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center text-red-600 mx-auto mb-2 group-hover:scale-110 transition-transform">
                     <Frown size={24} />
                   </div>
                   <p className="text-xl font-bold text-[#1E293B]">5%</p>

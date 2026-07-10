@@ -123,7 +123,10 @@ const Reports = () => {
                   <div 
                     key={i} 
                     className="w-12 flex flex-col items-center gap-2 cursor-pointer group"
-                    onClick={() => setActiveRevenueBar(activeRevenueBar === i ? null : i)}
+                    onClick={() => {
+                      setActiveRevenueBar(activeRevenueBar === i ? null : i);
+                      showToast(`Monthly Revenue for ${item.month}: ${item.val}`);
+                    }}
                   >
                     <div className="w-full relative">
                       {/* Tooltip */}
@@ -160,13 +163,17 @@ const Reports = () => {
                   { label: 'Bangalore', pct: 96 },
                   { label: 'Chennai', pct: 88 },
                 ].map((item, i) => (
-                  <div key={i} className="space-y-1">
+                  <div 
+                    key={i} 
+                    className="space-y-1 cursor-pointer group p-1.5 rounded-lg hover:bg-slate-50 transition-all"
+                    onClick={() => showToast(`Service Success Rate in ${item.label}: ${item.pct}%`)}
+                  >
                     <div className="flex justify-between text-xs font-semibold">
-                      <span className="text-[#1E293B]">{item.label}</span>
+                      <span className="text-[#1E293B] group-hover:text-[#0D47A1] transition-colors">{item.label}</span>
                       <span className="text-[#0D47A1]">{item.pct}%</span>
                     </div>
                     <div className="w-full bg-[#F1F5F9] h-2 rounded-full overflow-hidden">
-                      <div className="bg-green-600 h-full rounded-full" style={{ width: `${item.pct}%` }}></div>
+                      <div className="bg-green-600 h-full rounded-full transition-all group-hover:bg-[#10B981]" style={{ width: `${item.pct}%` }}></div>
                     </div>
                   </div>
                 ))}
@@ -187,7 +194,10 @@ const Reports = () => {
                   <div 
                     key={i} 
                     className="w-12 flex flex-col items-center gap-2 cursor-pointer group"
-                    onClick={() => setActiveTechBar(activeTechBar === i ? null : i)}
+                    onClick={() => {
+                      setActiveTechBar(activeTechBar === i ? null : i);
+                      showToast(`Technician Productivity on ${item.day}: ${item.val}`);
+                    }}
                   >
                     <div className="w-full relative">
                       {/* Tooltip */}
@@ -218,7 +228,7 @@ const Reports = () => {
                 <span className="text-[#0D47A1] text-sm font-bold bg-blue-50 px-2 py-0.5 rounded">78% Return Rate</span>
               </div>
               <div className="flex items-center justify-center h-48">
-                <div className="relative w-32 h-32 cursor-pointer group" onClick={() => showToast('Customer Retention is up 3.4% this quarter!')}>
+                <div className="relative w-32 h-32 cursor-pointer group hover:scale-105 transition-all duration-300" onClick={() => showToast('Customer Retention is up 3.4% this quarter!')}>
                   <div className="absolute inset-0 rounded-full border-[12px] border-[#EEF4FF]"></div>
                   <div className="absolute inset-0 rounded-full border-[12px] border-[#0D47A1] border-t-transparent border-r-transparent rotate-45 transition-transform group-hover:rotate-90 duration-500"></div>
                   <div className="absolute inset-0 flex items-center justify-center flex-col">
