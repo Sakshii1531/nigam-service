@@ -2,313 +2,705 @@ import React, { useState } from 'react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
 import { 
-  Search, 
-  Filter, 
-  ShoppingBag, 
   Plus, 
-  Edit, 
   Trash2, 
-  MoreVertical,
   X,
-  Check,
-  Eye,
-  IndianRupee,
-  Package,
-  Layers,
-  Sparkles,
-  CheckCircle2
+  CheckCircle2,
+  Wrench,
+  ChevronDown,
+  ChevronUp,
+  Building2,
+  Boxes,
+  Settings2,
+  ArrowRight,
+  ListChecks
 } from 'lucide-react';
 
 const Catalog = () => {
-  const [showModal, setShowModal] = useState(false);
-  const [newProduct, setNewProduct] = useState({ name: '', category: 'Smart TV', model: '', price: '', stock: '', status: 'Active' });
   const [successMessage, setSuccessMessage] = useState('');
+  const [activeTab, setActiveTab] = useState('services');
+  const [selectedSubBrandId, setSelectedSubBrandId] = useState('SUB-301');
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('All Categories');
-  const [selectedStatus, setSelectedStatus] = useState('All Status');
+  // Master Services List
+  const [masterServices, setMasterServices] = useState([
+    { id: 'MSVC-1', name: 'Fan Installation & Wiring', type: 'Installation', charge: 600 },
+    { id: 'MSVC-2', name: 'LED Panel Replacement', type: 'Repair', charge: 850 },
+    { id: 'MSVC-3', name: 'Annual Electrical Safety Check', type: 'Inspection', charge: 1200 },
+    { id: 'MSVC-4', name: 'MCB & Switchgear Servicing', type: 'Maintenance', charge: 950 },
+  ]);
+  const [showAddServiceModal, setShowAddServiceModal] = useState(false);
+  const [newMasterService, setNewMasterService] = useState({ name: '', type: 'Installation', charge: '' });
 
-  const [products, setProducts] = useState([
-    { id: 'PROD-001', name: 'LG 55" OLED 4K Smart TV', category: 'Smart TV', model: 'LG-55OLEDEV', price: '₹1,24,990', stock: 12, status: 'Active' },
-    { id: 'PROD-002', name: 'LG 260L Double Door Refrigerator', category: 'Refrigerator', model: 'LG-REF-450', price: '₹28,490', stock: 8, status: 'Active' },
-    { id: 'PROD-003', name: 'LG 7kg Front Load Washing Machine', category: 'Washing Machine', model: 'LG-WM-70', price: '₹34,990', stock: 0, status: 'Active' },
-    { id: 'PROD-004', name: 'LG 20L Solo Microwave Oven', category: 'Microwave', model: 'LG-MW-20', price: '₹7,490', stock: 15, status: 'Draft' },
+  const [subBrands, setSubBrands] = useState([
+    { id: 'SUB-301', name: 'Havells Lighting', category: 'LED & Luminaires', products: [
+      { 
+        id: 'SUBPROD-1', 
+        name: 'Adore LED Downlight', 
+        model: 'HVL-DL-12W', 
+        services: [
+          { id: 'SVC-1', name: 'LED Panel Fitting & Wiring', type: 'Installation', charge: 600 },
+          { id: 'SVC-2', name: 'Driver Unit Replacement', type: 'Repair', charge: 750 },
+          { id: 'SVC-3', name: 'Luminaire Output Inspection', type: 'Inspection', charge: 500 }
+        ]
+      },
+      { 
+        id: 'SUBPROD-2', 
+        name: 'Endura Pro Batten', 
+        model: 'HVL-BTN-22W', 
+        services: [
+          { id: 'SVC-4', name: 'Batten Mounting & Connection', type: 'Installation', charge: 450 },
+          { id: 'SVC-5', name: 'Flicker & Fault Diagnosis', type: 'Inspection', charge: 400 }
+        ]
+      }
+    ]},
+    { id: 'SUB-302', name: 'Havells Appliances', category: 'Fans & Small Appliances', products: [
+      { 
+        id: 'SUBPROD-3', 
+        name: 'Stealth Air Ceiling Fan', 
+        model: 'HVL-FAN-1200', 
+        services: [
+          { id: 'SVC-6', name: 'Ceiling Fan Installation & Balancing', type: 'Installation', charge: 600 },
+          { id: 'SVC-7', name: 'Capacitor & Regulator Replacement', type: 'Repair', charge: 450 },
+          { id: 'SVC-8', name: 'Motor Bearing Lubrication', type: 'Maintenance', charge: 350 }
+        ]
+      }
+    ]}
   ]);
 
-  const stats = [
-    { title: 'Total Products', value: (products.length + 44).toString(), icon: <Layers size={20} />, color: 'bg-blue-600' },
-    { title: 'Active Catalog', value: (products.filter(p => p.status === 'Active').length + 33).toString(), icon: <ShoppingBag size={20} />, color: 'bg-emerald-600' },
-    { title: 'Out of Stock', value: products.filter(p => p.stock === 0).length.toString(), icon: <Package size={20} />, color: 'bg-red-600' },
-    { title: 'Orders Fulfilled', value: '240', icon: <Sparkles size={20} />, color: 'bg-indigo-600' },
-  ];
+  const [expandedProductId, setExpandedProductId] = useState(null);
 
-  const handleAddProductSubmit = (e) => {
+  // Add Sub-brand modal
+  const [showAddSubBrandModal, setShowAddSubBrandModal] = useState(false);
+  const [newSubBrand, setNewSubBrand] = useState({ name: '', category: '' });
+
+  // Add Product modal
+  const [showAddSubProductModal, setShowAddSubProductModal] = useState(false);
+  const [newSubProduct, setNewSubProduct] = useState({ name: '', model: '', configureDefaultServices: true });
+
+  // Map Service modal
+  const [showMapServiceModal, setShowMapServiceModal] = useState(false);
+  const [mappingProductId, setMappingProductId] = useState(null);
+  const [newService, setNewService] = useState({ name: '', type: 'Installation', charge: '' });
+
+  const selectedSub = subBrands.find(s => s.id === selectedSubBrandId) || null;
+
+  const handleAddSubBrandSubmit = (e) => {
     e.preventDefault();
-    if (!newProduct.name || !newProduct.model || !newProduct.price) {
-      setSuccessMessage('Error: Please fill out all required fields.');
-      setTimeout(() => setSuccessMessage(''), 3000);
-      return;
-    }
-    const formattedPrice = newProduct.price.startsWith('₹') ? newProduct.price : `₹${Number(newProduct.price).toLocaleString()}`;
-    const addedProd = {
-      id: `PROD-0${products.length + 1}`,
-      name: newProduct.name,
-      category: newProduct.category,
-      model: newProduct.model,
-      price: formattedPrice,
-      stock: Number(newProduct.stock) || 0,
-      status: newProduct.status
+    if (!newSubBrand.name) return;
+    const addedSub = {
+      id: `SUB-${Date.now()}`,
+      name: newSubBrand.name,
+      category: newSubBrand.category || 'General',
+      products: []
     };
-    setProducts([addedProd, ...products]);
-    setNewProduct({ name: '', category: 'Smart TV', model: '', price: '', stock: '', status: 'Active' });
-    setShowModal(false);
-    setSuccessMessage(`Product "${newProduct.name}" added to catalog successfully!`);
+    setSubBrands([...subBrands, addedSub]);
+    setSelectedSubBrandId(addedSub.id);
+    setNewSubBrand({ name: '', category: '' });
+    setShowAddSubBrandModal(false);
+    setSuccessMessage(`Sub-brand "${addedSub.name}" created!`);
     setTimeout(() => setSuccessMessage(''), 3000);
   };
 
-  const deleteProduct = (id) => {
-    const prod = products.find(p => p.id === id);
-    setProducts(products.filter(p => p.id !== id));
-    setSuccessMessage(`Product "${prod ? prod.name : id}" deleted from catalog.`);
+  const handleAddSubProductSubmit = (e) => {
+    e.preventDefault();
+    if (!newSubProduct.name || !newSubProduct.model) return;
+    const initialServices = newSubProduct.configureDefaultServices ? [
+      { id: `SVC-${Date.now()}-1`, name: 'Standard Installation Support', type: 'Installation', charge: 1500 },
+      { id: `SVC-${Date.now()}-2`, name: 'General Inspection & Diagnosis', type: 'Inspection', charge: 500 }
+    ] : [];
+    const updatedSubs = subBrands.map(sub => {
+      if (sub.id === selectedSubBrandId) {
+        return { ...sub, products: [...(sub.products || []), { id: `SUBPROD-${Date.now()}`, name: newSubProduct.name, model: newSubProduct.model, services: initialServices }] };
+      }
+      return sub;
+    });
+    setSubBrands(updatedSubs);
+    setNewSubProduct({ name: '', model: '', configureDefaultServices: true });
+    setShowAddSubProductModal(false);
+    setSuccessMessage(`Product "${newSubProduct.name}" added!`);
     setTimeout(() => setSuccessMessage(''), 3000);
   };
 
-  const filteredProducts = products.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          p.model.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          p.id.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === 'All Categories' || p.category === selectedCategory;
-    const matchesStatus = selectedStatus === 'All Status' || p.status === selectedStatus;
-    return matchesSearch && matchesCategory && matchesStatus;
-  });
+  const handleMapServiceSubmit = (e) => {
+    e.preventDefault();
+    if (!newService.name || !newService.charge) return;
+    const updatedSubs = subBrands.map(sub => {
+      if (sub.id === selectedSubBrandId) {
+        return {
+          ...sub,
+          products: (sub.products || []).map(prod => {
+            if (prod.id === mappingProductId) {
+              return { ...prod, services: [...(prod.services || []), { id: `SVC-${Date.now()}`, name: newService.name, type: newService.type, charge: Number(newService.charge) }] };
+            }
+            return prod;
+          })
+        };
+      }
+      return sub;
+    });
+    setSubBrands(updatedSubs);
+    setNewService({ name: '', type: 'Installation', charge: '' });
+    setShowMapServiceModal(false);
+    setSuccessMessage('Service mapped to product successfully!');
+    setTimeout(() => setSuccessMessage(''), 3000);
+  };
+
+  const handleDeleteService = (productId, serviceId) => {
+    const updatedSubs = subBrands.map(sub => {
+      if (sub.id === selectedSubBrandId) {
+        return {
+          ...sub,
+          products: (sub.products || []).map(prod => {
+            if (prod.id === productId) {
+              return { ...prod, services: (prod.services || []).filter(s => s.id !== serviceId) };
+            }
+            return prod;
+          })
+        };
+      }
+      return sub;
+    });
+    setSubBrands(updatedSubs);
+    setSuccessMessage('Service removed.');
+    setTimeout(() => setSuccessMessage(''), 2000);
+  };
+
+  const handleAddServiceSubmit = (e) => {
+    e.preventDefault();
+    if (!newMasterService.name || !newMasterService.charge) return;
+    const added = {
+      id: `MSVC-${Date.now()}`,
+      name: newMasterService.name,
+      type: newMasterService.type,
+      charge: Number(newMasterService.charge)
+    };
+    setMasterServices([...masterServices, added]);
+    setNewMasterService({ name: '', type: 'Installation', charge: '' });
+    setShowAddServiceModal(false);
+    setSuccessMessage(`Service "${added.name}" created!`);
+    setTimeout(() => setSuccessMessage(''), 3000);
+  };
+
+  const handleDeleteMasterService = (id) => {
+    setMasterServices(masterServices.filter(s => s.id !== id));
+    setSuccessMessage('Service deleted.');
+    setTimeout(() => setSuccessMessage(''), 2000);
+  };
+
+  const serviceTypeColors = {
+    Installation: 'bg-blue-50 text-blue-700',
+    Repair: 'bg-orange-50 text-orange-700',
+    Maintenance: 'bg-purple-50 text-purple-700',
+    Inspection: 'bg-teal-50 text-teal-700',
+    Finishing: 'bg-pink-50 text-pink-700',
+  };
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex">
       <Sidebar />
 
-      <div className="flex-1 ml-64 min-h-screen flex flex-col relative">
-        <Topbar title="Product Catalog Management" />
+      <div className="flex-1 ml-64 min-h-screen flex flex-col">
+        <Topbar title="Sub-Brands & Service Matrix" />
 
-        <div className="p-6 space-y-6 flex-1">
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {stats.map((card, index) => (
-              <div key={index} className="bg-white p-6 rounded-2xl border border-[#E2E8F0] flex items-center gap-4">
-                <div className={`w-12 h-12 ${card.color} rounded-xl flex items-center justify-center text-white flex-shrink-0`}>
-                  {card.icon}
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-[#64748B]">{card.title}</p>
-                  <p className="text-2xl font-bold text-[#1E293B]">{card.value}</p>
-                </div>
+        <div className="p-6 flex-1 text-left space-y-5">
+
+          {/* Page Header */}
+          <div className="bg-gradient-to-r from-[#0D47A1] to-[#1565C0] rounded-2xl p-5 text-white flex items-center justify-between shadow-sm">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-white/15 rounded-xl flex items-center justify-center">
+                <Settings2 className="h-6 w-6 text-white" />
               </div>
-            ))}
+              <div>
+                <h2 className="text-base font-extrabold">Sub-Brands & Service Configuration</h2>
+                <p className="text-blue-100 text-xs mt-0.5 font-medium">Manage services, sub-brands, products and service mappings from one place</p>
+              </div>
+            </div>
+            <div className="flex gap-6 text-right">
+              <div>
+                <span className="text-[10px] font-bold text-blue-200 uppercase tracking-widest block">Services</span>
+                <span className="text-2xl font-black">{masterServices.length}</span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-blue-200 uppercase tracking-widest block">Sub-Brands</span>
+                <span className="text-2xl font-black">{subBrands.length}</span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-blue-200 uppercase tracking-widest block">Products</span>
+                <span className="text-2xl font-black">{subBrands.reduce((a, s) => a + (s.products?.length || 0), 0)}</span>
+              </div>
+            </div>
           </div>
 
-          {/* Filters & Actions */}
-          <div className="bg-white p-4 rounded-2xl border border-[#E2E8F0] flex flex-wrap gap-4 items-center justify-between">
-            <div className="flex flex-wrap gap-3 items-center flex-1">
-              <div className="relative w-64">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#64748B]">
-                  <Search size={16} />
-                </div>
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] focus:border-[#0D47A1] outline-none transition-all text-sm bg-[#F8FAFC]"
-                  placeholder="Search Product Name or Model..."
-                />
-              </div>
-
-              <select 
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="text-sm text-[#1E293B] border border-[#E2E8F0] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#0D47A1] bg-[#F8FAFC]"
+          {/* Tab Bar */}
+          <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden">
+            <div className="flex border-b border-[#E2E8F0]">
+              <button
+                onClick={() => setActiveTab('services')}
+                className={`flex items-center gap-2 px-6 py-3.5 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors cursor-pointer ${
+                  activeTab === 'services'
+                    ? 'border-[#0D47A1] text-[#0D47A1] bg-blue-50/30'
+                    : 'border-transparent text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+                }`}
               >
-                <option>All Categories</option>
-                <option>Smart TV</option>
-                <option>Refrigerator</option>
-                <option>Washing Machine</option>
-                <option>Microwave</option>
-              </select>
-
-              <select 
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                className="text-sm text-[#1E293B] border border-[#E2E8F0] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#0D47A1] bg-[#F8FAFC]"
+                <ListChecks size={14} />
+                Services Master List
+                <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${activeTab === 'services' ? 'bg-[#0D47A1] text-white' : 'bg-slate-100 text-slate-500'}`}>
+                  {masterServices.length}
+                </span>
+              </button>
+              <button
+                onClick={() => setActiveTab('subbrands')}
+                className={`flex items-center gap-2 px-6 py-3.5 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors cursor-pointer ${
+                  activeTab === 'subbrands'
+                    ? 'border-[#0D47A1] text-[#0D47A1] bg-blue-50/30'
+                    : 'border-transparent text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+                }`}
               >
-                <option>All Status</option>
-                <option>Active</option>
-                <option>Draft</option>
-              </select>
+                <Building2 size={14} />
+                Sub-Brands & Products
+                <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${activeTab === 'subbrands' ? 'bg-[#0D47A1] text-white' : 'bg-slate-100 text-slate-500'}`}>
+                  {subBrands.length}
+                </span>
+              </button>
             </div>
 
-            <button 
-              onClick={() => setShowModal(true)}
-              className="bg-[#0D47A1] text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-sm"
-            >
-              <Plus size={16} /> Add Product
-            </button>
-          </div>
-
-          {/* Product Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {filteredProducts.map((product) => (
-              <div key={product.id} className="bg-white rounded-2xl border border-[#E2E8F0] overflow-hidden flex flex-col justify-between hover:shadow-lg transition-shadow">
-                <div className="p-5 space-y-4">
-                  <div className="h-32 bg-[#F8FAFC] rounded-xl flex items-center justify-center text-[#94A3B8]">
-                    <ShoppingBag size={40} />
-                  </div>
+            {/* ── TAB: Services Master List ── */}
+            {activeTab === 'services' && (
+              <div className="p-5">
+                <div className="flex items-center justify-between mb-5">
                   <div>
-                    <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">{product.category}</span>
-                    <h3 className="text-sm font-bold text-[#1E293B] line-clamp-1 mt-0.5">{product.name}</h3>
-                    <p className="text-xs text-[#64748B] mt-0.5">Model: {product.model}</p>
+                    <h3 className="text-sm font-extrabold text-slate-800">All Services</h3>
+                    <p className="text-[11px] text-slate-400 font-medium mt-0.5">Define your service catalog here. These services can then be mapped to products.</p>
                   </div>
+                  <button
+                    onClick={() => setShowAddServiceModal(true)}
+                    className="bg-[#0D47A1] hover:bg-blue-800 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 cursor-pointer shadow-sm transition-colors"
+                  >
+                    <Plus size={14} /> Add Service
+                  </button>
                 </div>
 
-                <div className="p-5 border-t border-[#E2E8F0] bg-[#F8FAFC] flex justify-between items-center">
-                  <div>
-                    <span className="text-[10px] text-[#64748B] block">Price</span>
-                    <span className="text-sm font-bold text-[#1E293B]">{product.price}</span>
+                {masterServices.length === 0 ? (
+                  <div className="text-center py-14 border border-dashed border-slate-200 rounded-xl">
+                    <ListChecks size={32} className="text-slate-200 mx-auto mb-3" />
+                    <p className="text-sm font-bold text-slate-400">No services created yet</p>
+                    <p className="text-xs text-slate-300 mt-1">Click "Add Service" to define your first service.</p>
                   </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
-                      product.stock === 0 ? 'bg-red-50 text-red-700 border border-red-150' : 'bg-green-50 text-green-700 border border-green-150'
-                    }`}>
-                      {product.stock === 0 ? 'Out of Stock' : `${product.stock} in Stock`}
-                    </span>
-                    <button 
-                      onClick={() => deleteProduct(product.id)}
-                      className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
-                      title="Delete Product"
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {masterServices.map(svc => (
+                      <div key={svc.id} className="border border-slate-150 rounded-xl p-4 flex items-center justify-between bg-white hover:shadow-sm hover:border-slate-200 transition-all">
+                        <div className="flex items-start gap-3 min-w-0">
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${serviceTypeColors[svc.type]?.replace('text-', 'bg-').split(' ')[0] || 'bg-slate-100'}`}>
+                            <Wrench size={14} className={serviceTypeColors[svc.type]?.split(' ')[1] || 'text-slate-500'} />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-slate-800 truncate">{svc.name}</p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded ${serviceTypeColors[svc.type] || 'bg-slate-100 text-slate-600'}`}>{svc.type}</span>
+                              <span className="text-[10px] font-extrabold text-green-600">₹{svc.charge.toLocaleString()}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleDeleteMasterService(svc.id)}
+                          className="p-1.5 text-slate-300 hover:text-red-500 rounded-lg transition-colors cursor-pointer shrink-0 ml-2"
+                          title="Delete service"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    ))}
                   </div>
+                )}
+              </div>
+            )}
+
+            {/* ── TAB: Sub-Brands & Products ── */}
+            {activeTab === 'subbrands' && (
+              <div className="p-5">
+                <div className="grid grid-cols-12 gap-5 items-start">
+
+                  {/* Left: Sub-Brands List */}
+                  <div className="col-span-4 border border-[#E2E8F0] rounded-xl overflow-hidden">
+                    <div className="p-3 border-b border-[#E2E8F0] bg-slate-50/50 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Building2 size={13} className="text-[#0D47A1]" />
+                        <span className="text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">Sub-Brands</span>
+                      </div>
+                      <button
+                        onClick={() => setShowAddSubBrandModal(true)}
+                        className="bg-[#0D47A1] hover:bg-blue-800 text-white text-[9px] font-bold px-2.5 py-1.5 rounded-lg flex items-center gap-1 cursor-pointer shadow-sm transition-colors"
+                      >
+                        <Plus size={10} /> Add Sub-brand
+                      </button>
+                    </div>
+
+                    <div className="p-2 space-y-1.5">
+                      {subBrands.length === 0 ? (
+                        <div className="text-center py-8 text-xs text-slate-400 italic">No sub-brands yet.</div>
+                      ) : (
+                        subBrands.map(sub => {
+                          const isActive = selectedSubBrandId === sub.id;
+                          return (
+                            <button
+                              key={sub.id}
+                              onClick={() => { setSelectedSubBrandId(sub.id); setExpandedProductId(null); }}
+                              className={`w-full text-left p-3 rounded-xl border transition-all cursor-pointer ${
+                                isActive ? 'bg-[#EEF4FF] border-[#0D47A1]' : 'bg-white border-slate-150 hover:bg-slate-50'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[9px] font-black shrink-0 ${isActive ? 'bg-[#0D47A1] text-white' : 'bg-slate-100 text-slate-500'}`}>
+                                    {sub.name.charAt(0)}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className={`text-xs font-bold truncate ${isActive ? 'text-[#0D47A1]' : 'text-slate-700'}`}>{sub.name}</p>
+                                    <p className="text-[9px] text-slate-400 font-medium truncate">{sub.category}</p>
+                                  </div>
+                                </div>
+                                <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full shrink-0 ${isActive ? 'bg-[#0D47A1] text-white' : 'bg-slate-100 text-slate-500'}`}>
+                                  {(sub.products || []).length}
+                                </span>
+                              </div>
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Right: Products & Services */}
+                  <div className="col-span-8">
+                    {!selectedSub ? (
+                      <div className="border border-dashed border-slate-200 rounded-xl p-12 text-center">
+                        <Building2 size={30} className="text-slate-200 mx-auto mb-2" />
+                        <p className="text-sm font-bold text-slate-400">Select a sub-brand to manage its products</p>
+                      </div>
+                    ) : (
+                      <div className="border border-[#E2E8F0] rounded-xl overflow-hidden">
+                        <div className="p-4 bg-slate-50/50 border-b border-[#E2E8F0] flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 bg-[#0D47A1] rounded-xl flex items-center justify-center text-white font-black text-sm">
+                              {selectedSub.name.charAt(0)}
+                            </div>
+                            <div>
+                              <h3 className="text-sm font-extrabold text-slate-800">{selectedSub.name}</h3>
+                              <span className="text-[9px] font-bold text-slate-400 uppercase bg-slate-100 px-2 py-0.5 rounded border border-slate-200">{selectedSub.category}</span>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => setShowAddSubProductModal(true)}
+                            className="bg-[#0D47A1] hover:bg-blue-800 text-white text-xs font-bold px-3.5 py-2 rounded-xl flex items-center gap-1.5 cursor-pointer shadow-sm transition-colors"
+                          >
+                            <Boxes size={13} /> Add Product
+                          </button>
+                        </div>
+
+                        <div className="p-4 space-y-3">
+                          <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest block">Products &amp; Their Available Services</span>
+
+                          {(selectedSub.products || []).length === 0 ? (
+                            <div className="text-center py-8 border border-dashed border-slate-200 rounded-xl">
+                              <Boxes size={26} className="text-slate-200 mx-auto mb-2" />
+                              <p className="text-xs text-slate-400 font-semibold">No products added yet.</p>
+                              <p className="text-[10px] text-slate-300 mt-0.5">Click "Add Product" above.</p>
+                            </div>
+                          ) : (
+                            <div className="space-y-2.5">
+                              {(selectedSub.products || []).map(prod => {
+                                const isOpen = expandedProductId === prod.id;
+                                return (
+                                  <div key={prod.id} className="border border-slate-200 rounded-xl overflow-hidden">
+                                    <div className="p-3 bg-white flex items-center justify-between">
+                                      <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center text-indigo-600">
+                                          <Wrench size={14} />
+                                        </div>
+                                        <div>
+                                          <p className="text-xs font-bold text-slate-800">{prod.name}</p>
+                                          <p className="text-[10px] font-mono text-slate-400">Model: {prod.model}</p>
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full border border-slate-200">
+                                          {(prod.services || []).length} Services
+                                        </span>
+                                        <button
+                                          onClick={() => { setMappingProductId(prod.id); setShowMapServiceModal(true); }}
+                                          className="bg-indigo-600 hover:bg-indigo-700 text-white text-[9px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
+                                        >
+                                          <Plus size={10} /> Map Service
+                                        </button>
+                                        <button
+                                          onClick={() => setExpandedProductId(isOpen ? null : prod.id)}
+                                          className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                                        >
+                                          {isOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                        </button>
+                                      </div>
+                                    </div>
+
+                                    {isOpen && (
+                                      <div className="border-t border-slate-100 bg-slate-50/40 p-3">
+                                        {(prod.services || []).length === 0 ? (
+                                          <p className="text-xs text-slate-400 italic text-center py-3">No services mapped yet — click "Map Service".</p>
+                                        ) : (
+                                          <div className="space-y-1.5">
+                                            {(prod.services || []).map(svc => (
+                                              <div key={svc.id} className="bg-white border border-slate-150 rounded-lg px-3 py-2 flex items-center justify-between">
+                                                <div className="flex items-center gap-2.5">
+                                                  <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full ${serviceTypeColors[svc.type] || 'bg-slate-100 text-slate-600'}`}>
+                                                    {svc.type}
+                                                  </span>
+                                                  <span className="text-xs font-semibold text-slate-700">{svc.name}</span>
+                                                </div>
+                                                <div className="flex items-center gap-2.5">
+                                                  <span className="text-xs font-extrabold text-green-600">₹{svc.charge.toLocaleString()}</span>
+                                                  <button onClick={() => handleDeleteService(prod.id, svc.id)} className="p-1 text-slate-300 hover:text-red-500 rounded transition-colors cursor-pointer" title="Remove">
+                                                    <Trash2 size={12} />
+                                                  </button>
+                                                </div>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                 </div>
               </div>
-            ))}
+            )}
           </div>
+
         </div>
 
-        {/* Add Product Modal */}
-        {showModal && (
-          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm z-30 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-              <div className="p-6 border-b border-[#E2E8F0] flex justify-between items-center">
-                <h2 className="text-lg font-bold text-[#1E293B]">Add New Product</h2>
-                <button 
-                  onClick={() => setShowModal(false)}
-                  className="text-[#64748B] hover:text-[#1E293B] p-2 hover:bg-[#F8FAFC] rounded-full"
-                >
-                  <X size={20} />
+
+        {/* ── Modal: Add Service ── */}
+        {showAddServiceModal && (
+          <div className="fixed inset-0 bg-black/25 backdrop-blur-sm z-40 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+              <div className="p-5 border-b border-[#E2E8F0] flex items-center justify-between bg-slate-50">
+                <div className="flex items-center gap-2">
+                  <ListChecks size={18} className="text-[#0D47A1]" />
+                  <h2 className="text-sm font-extrabold text-slate-800">Create New Service</h2>
+                </div>
+                <button onClick={() => setShowAddServiceModal(false)} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer">
+                  <X size={18} />
                 </button>
               </div>
-
-              <form onSubmit={handleAddProductSubmit} className="p-6 space-y-4 text-sm">
+              <form onSubmit={handleAddServiceSubmit} className="p-5 space-y-4 text-sm">
                 <div>
-                  <label className="text-xs font-semibold text-[#64748B] mb-1 block">Product Name</label>
+                  <label className="text-xs font-bold text-slate-500 mb-1.5 block uppercase tracking-wider">Service Name *</label>
                   <input
-                    type="text"
-                    required
-                    className="w-full px-4 py-2 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none"
-                    placeholder="e.g. LG Dual Inverter AC"
-                    value={newProduct.name}
-                    onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
+                    type="text" required
+                    className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-xl focus:ring-2 focus:ring-[#0D47A1] outline-none text-slate-800 bg-[#F8FAFC] text-sm"
+                    placeholder="e.g. Tiles Laying & Installation"
+                    value={newMasterService.name}
+                    onChange={(e) => setNewMasterService({ ...newMasterService, name: e.target.value })}
                   />
                 </div>
-
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-semibold text-[#64748B] mb-1 block">Category</label>
+                    <label className="text-xs font-bold text-slate-500 mb-1.5 block uppercase tracking-wider">Service Type *</label>
                     <select
-                      className="w-full px-4 py-2 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none"
-                      value={newProduct.category}
-                      onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-xl focus:ring-2 focus:ring-[#0D47A1] outline-none text-slate-800 bg-[#F8FAFC] text-sm"
+                      value={newMasterService.type}
+                      onChange={(e) => setNewMasterService({ ...newMasterService, type: e.target.value })}
                     >
-                      <option>Smart TV</option>
-                      <option>Refrigerator</option>
-                      <option>Washing Machine</option>
-                      <option>Microwave</option>
+                      <option>Installation</option>
+                      <option>Repair</option>
+                      <option>Maintenance</option>
+                      <option>Inspection</option>
+                      <option>Finishing</option>
                     </select>
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-[#64748B] mb-1 block">Model Code</label>
+                    <label className="text-xs font-bold text-slate-500 mb-1.5 block uppercase tracking-wider">Charge (INR) *</label>
                     <input
-                      type="text"
-                      required
-                      className="w-full px-4 py-2 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none"
-                      placeholder="e.g. LG-AC-300"
-                      value={newProduct.model}
-                      onChange={(e) => setNewProduct({ ...newProduct, model: e.target.value })}
+                      type="number" required
+                      className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-xl focus:ring-2 focus:ring-[#0D47A1] outline-none text-slate-800 bg-[#F8FAFC] text-sm"
+                      placeholder="e.g. 1200"
+                      value={newMasterService.charge}
+                      onChange={(e) => setNewMasterService({ ...newMasterService, charge: e.target.value })}
                     />
                   </div>
                 </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs font-semibold text-[#64748B] mb-1 block">Price (INR)</label>
-                    <input
-                      type="number"
-                      required
-                      className="w-full px-4 py-2 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none"
-                      placeholder="e.g. 45000"
-                      value={newProduct.price}
-                      onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-[#64748B] mb-1 block">Initial Stock</label>
-                    <input
-                      type="number"
-                      className="w-full px-4 py-2 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none"
-                      placeholder="e.g. 10"
-                      value={newProduct.stock}
-                      onChange={(e) => setNewProduct({ ...newProduct, stock: e.target.value })}
-                    />
-                  </div>
+                <div className="pt-3 border-t border-[#E2E8F0] flex gap-3 justify-end">
+                  <button type="button" onClick={() => setShowAddServiceModal(false)} className="px-4 py-2 rounded-xl text-sm font-semibold text-slate-600 border border-slate-200 hover:bg-slate-50 cursor-pointer">Cancel</button>
+                  <button type="submit" className="px-5 py-2 rounded-xl text-sm font-bold bg-[#0D47A1] text-white hover:bg-blue-700 shadow-sm cursor-pointer">Create Service</button>
                 </div>
+              </form>
+            </div>
+          </div>
+        )}
 
+        {/* ── Modal: Add Sub-brand ── */}
+        {showAddSubBrandModal && (
+          <div className="fixed inset-0 bg-black/25 backdrop-blur-sm z-40 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+              <div className="p-5 border-b border-[#E2E8F0] flex items-center justify-between bg-slate-50">
+                <div className="flex items-center gap-2">
+                  <Building2 size={18} className="text-[#0D47A1]" />
+                  <h2 className="text-sm font-extrabold text-slate-800">Create New Sub-Brand</h2>
+                </div>
+                <button onClick={() => setShowAddSubBrandModal(false)} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer">
+                  <X size={18} />
+                </button>
+              </div>
+              <form onSubmit={handleAddSubBrandSubmit} className="p-5 space-y-4 text-sm">
                 <div>
-                  <label className="text-xs font-semibold text-[#64748B] mb-1 block">Status</label>
-                  <div className="flex gap-4">
-                    <label className="flex items-center gap-1.5 cursor-pointer">
-                      <input 
-                        type="radio" 
-                        name="status"
-                        checked={newProduct.status === 'Active'}
-                        onChange={() => setNewProduct({ ...newProduct, status: 'Active' })}
-                      />
-                      Active
-                    </label>
-                    <label className="flex items-center gap-1.5 cursor-pointer">
-                      <input 
-                        type="radio" 
-                        name="status"
-                        checked={newProduct.status === 'Draft'}
-                        onChange={() => setNewProduct({ ...newProduct, status: 'Draft' })}
-                      />
-                      Draft
-                    </label>
+                  <label className="text-xs font-bold text-slate-500 mb-1.5 block uppercase tracking-wider">Sub-brand Name *</label>
+                  <input
+                    type="text" required
+                    className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-xl focus:ring-2 focus:ring-[#0D47A1] outline-none text-slate-800 bg-[#F8FAFC] text-sm"
+                    placeholder="e.g. Somany Ceramica"
+                    value={newSubBrand.name}
+                    onChange={(e) => setNewSubBrand({ ...newSubBrand, name: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-500 mb-1.5 block uppercase tracking-wider">Category / Niche</label>
+                  <input
+                    type="text"
+                    className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-xl focus:ring-2 focus:ring-[#0D47A1] outline-none text-slate-800 bg-[#F8FAFC] text-sm"
+                    placeholder="e.g. Tiles & Ceramic"
+                    value={newSubBrand.category}
+                    onChange={(e) => setNewSubBrand({ ...newSubBrand, category: e.target.value })}
+                  />
+                </div>
+                <div className="pt-3 border-t border-[#E2E8F0] flex gap-3 justify-end">
+                  <button type="button" onClick={() => setShowAddSubBrandModal(false)} className="px-4 py-2 rounded-xl text-sm font-semibold text-slate-600 border border-slate-200 hover:bg-slate-50 cursor-pointer">Cancel</button>
+                  <button type="submit" className="px-5 py-2 rounded-xl text-sm font-bold bg-[#0D47A1] text-white hover:bg-blue-700 shadow-sm cursor-pointer">Create Sub-Brand</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* ── Modal: Add Product ── */}
+        {showAddSubProductModal && (
+          <div className="fixed inset-0 bg-black/25 backdrop-blur-sm z-40 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+              <div className="p-5 border-b border-[#E2E8F0] flex items-center justify-between bg-slate-50">
+                <div className="flex items-center gap-2">
+                  <Boxes size={18} className="text-[#0D47A1]" />
+                  <div>
+                    <h2 className="text-sm font-extrabold text-slate-800">Add Product</h2>
+                    <p className="text-[10px] text-slate-400 font-medium">Under: {selectedSub?.name}</p>
                   </div>
                 </div>
+                <button onClick={() => setShowAddSubProductModal(false)} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer">
+                  <X size={18} />
+                </button>
+              </div>
+              <form onSubmit={handleAddSubProductSubmit} className="p-5 space-y-4 text-sm">
+                <div>
+                  <label className="text-xs font-bold text-slate-500 mb-1.5 block uppercase tracking-wider">Product Name *</label>
+                  <input
+                    type="text" required
+                    className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-xl focus:ring-2 focus:ring-[#0D47A1] outline-none text-slate-800 bg-[#F8FAFC] text-sm"
+                    placeholder="e.g. Duragres Tiles"
+                    value={newSubProduct.name}
+                    onChange={(e) => setNewSubProduct({ ...newSubProduct, name: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-500 mb-1.5 block uppercase tracking-wider">Model Code *</label>
+                  <input
+                    type="text" required
+                    className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-xl focus:ring-2 focus:ring-[#0D47A1] outline-none text-slate-800 bg-[#F8FAFC] text-sm"
+                    placeholder="e.g. SMY-DG-102"
+                    value={newSubProduct.model}
+                    onChange={(e) => setNewSubProduct({ ...newSubProduct, model: e.target.value })}
+                  />
+                </div>
+                <label className="flex items-center gap-2.5 cursor-pointer py-1">
+                  <input
+                    type="checkbox"
+                    checked={newSubProduct.configureDefaultServices}
+                    onChange={(e) => setNewSubProduct({ ...newSubProduct, configureDefaultServices: e.target.checked })}
+                    className="h-4 w-4 text-[#0D47A1] rounded cursor-pointer"
+                  />
+                  <span className="text-xs font-semibold text-slate-600">Auto-add default Installation &amp; Inspection services</span>
+                </label>
+                <div className="pt-3 border-t border-[#E2E8F0] flex gap-3 justify-end">
+                  <button type="button" onClick={() => setShowAddSubProductModal(false)} className="px-4 py-2 rounded-xl text-sm font-semibold text-slate-600 border border-slate-200 hover:bg-slate-50 cursor-pointer">Cancel</button>
+                  <button type="submit" className="px-5 py-2 rounded-xl text-sm font-bold bg-[#0D47A1] text-white hover:bg-blue-700 shadow-sm cursor-pointer">Add Product</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
-                <div className="pt-4 border-t border-[#E2E8F0] flex gap-3 justify-end text-sm">
-                  <button 
-                    type="button"
-                    onClick={() => setShowModal(false)}
-                    className="bg-white text-[#64748B] border border-[#E2E8F0] px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-[#F8FAFC] transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    type="submit"
-                    className="bg-[#0D47A1] text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm"
-                  >
-                    Save Product
-                  </button>
+        {/* ── Modal: Map Service ── */}
+        {showMapServiceModal && (
+          <div className="fixed inset-0 bg-black/25 backdrop-blur-sm z-40 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+              <div className="p-5 border-b border-[#E2E8F0] flex items-center justify-between bg-slate-50">
+                <div className="flex items-center gap-2">
+                  <Wrench size={18} className="text-indigo-600" />
+                  <div>
+                    <h2 className="text-sm font-extrabold text-slate-800">Map Service to Product</h2>
+                    <p className="text-[10px] text-slate-400 font-medium">
+                      {(selectedSub?.products || []).find(p => p.id === mappingProductId)?.name}
+                    </p>
+                  </div>
+                </div>
+                <button onClick={() => setShowMapServiceModal(false)} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer">
+                  <X size={18} />
+                </button>
+              </div>
+              <form onSubmit={handleMapServiceSubmit} className="p-5 space-y-4 text-sm">
+                <div>
+                  <label className="text-xs font-bold text-slate-500 mb-1.5 block uppercase tracking-wider">Service Name *</label>
+                  <input
+                    type="text" required
+                    className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-xl focus:ring-2 focus:ring-[#0D47A1] outline-none text-slate-800 bg-[#F8FAFC] text-sm"
+                    placeholder="e.g. Standard Layout Grouting"
+                    value={newService.name}
+                    onChange={(e) => setNewService({ ...newService, name: e.target.value })}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-bold text-slate-500 mb-1.5 block uppercase tracking-wider">Service Type *</label>
+                    <select
+                      className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-xl focus:ring-2 focus:ring-[#0D47A1] outline-none text-slate-800 bg-[#F8FAFC] text-sm"
+                      value={newService.type}
+                      onChange={(e) => setNewService({ ...newService, type: e.target.value })}
+                    >
+                      <option>Installation</option>
+                      <option>Repair</option>
+                      <option>Maintenance</option>
+                      <option>Inspection</option>
+                      <option>Finishing</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-slate-500 mb-1.5 block uppercase tracking-wider">Charge (INR) *</label>
+                    <input
+                      type="number" required
+                      className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-xl focus:ring-2 focus:ring-[#0D47A1] outline-none text-slate-800 bg-[#F8FAFC] text-sm"
+                      placeholder="e.g. 1200"
+                      value={newService.charge}
+                      onChange={(e) => setNewService({ ...newService, charge: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="pt-3 border-t border-[#E2E8F0] flex gap-3 justify-end">
+                  <button type="button" onClick={() => setShowMapServiceModal(false)} className="px-4 py-2 rounded-xl text-sm font-semibold text-slate-600 border border-slate-200 hover:bg-slate-50 cursor-pointer">Cancel</button>
+                  <button type="submit" className="px-5 py-2 rounded-xl text-sm font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm cursor-pointer">Map Service</button>
                 </div>
               </form>
             </div>
@@ -317,8 +709,8 @@ const Catalog = () => {
 
         {/* Success Toast */}
         {successMessage && (
-          <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-green-600 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg flex items-center gap-2 animate-bounce">
-            <CheckCircle2 className="h-4 w-4" />
+          <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-[#0D47A1] text-white text-xs font-semibold px-5 py-2.5 rounded-full shadow-lg flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-green-300" />
             {successMessage}
           </div>
         )}

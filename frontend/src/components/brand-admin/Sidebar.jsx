@@ -160,6 +160,9 @@ const Sidebar = () => {
                 </div>
               )}
 
+              <NavLink to="/brand-admin/catalog" onClick={saveScroll} className={navLink}>
+                <Package size={14} /><span>Sub-Brands &amp; Catalog</span>
+              </NavLink>
               <NavLink to="/brand-admin/warranty" onClick={saveScroll} className={navLink}>
                 <ShieldCheck size={14} /><span>Warranty Verification</span>
               </NavLink>
