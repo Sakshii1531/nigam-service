@@ -18,7 +18,8 @@ import {
   FileText,
   LayoutGrid,
   Package,
-  RefreshCw
+  RefreshCw,
+  Ticket
 } from 'lucide-react';
 
 import partnerImg from '../assets/working/Gemini_Generated_Image_ahi7orahi7orahi7-removebg-preview (1).png';
@@ -232,6 +233,20 @@ const Profile = () => {
                   <Gift className="h-4.5 w-4.5" />
                 </div>
                 <span className="text-xs font-bold text-slate-800">Rewards & Play Zone</span>
+              </div>
+              <ChevronRight className="h-4.5 w-4.5 text-slate-400" />
+            </div>
+
+            {/* My Coupons */}
+            <div 
+              onClick={() => navigate('/coupons')}
+              className="p-4 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer"
+            >
+              <div className="flex items-center gap-3.5">
+                <div className="p-2 bg-rose-50 text-rose-600 rounded-xl">
+                  <Ticket className="h-4.5 w-4.5" />
+                </div>
+                <span className="text-xs font-bold text-slate-800">My Coupons</span>
               </div>
               <ChevronRight className="h-4.5 w-4.5 text-slate-400" />
             </div>
