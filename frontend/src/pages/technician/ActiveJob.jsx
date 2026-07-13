@@ -385,7 +385,7 @@ const ActiveJob = () => {
         </div>
 
         {/* Bottom Nav */}
-        <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-slate-200 py-3 px-3.5 flex justify-between items-center z-20 shadow-lg">
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 py-3 px-3.5 flex justify-around items-center z-20 shadow-lg">
           <button onClick={() => navigate('/technician/dashboard')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-slate-700 transition-all">
             <Briefcase className="h-6 w-6 stroke-[2]" />
             <span className="text-[10px] font-normal tracking-wide">Jobs</span>
@@ -4403,7 +4403,7 @@ const ActiveJob = () => {
         activeStep !== 'revisit_payment_card' && 
         activeStep !== 'revisit_payment_wallet' && 
         activeStep !== 'revisit_otp' && (
-        <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-slate-200 py-3 px-3.5 flex justify-between items-center z-20 shadow-lg">
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 py-3 px-3.5 flex justify-around items-center z-20 shadow-lg">
           <button onClick={() => navigate('/technician/dashboard')} className="flex flex-col items-center gap-1 text-[#0D47A1] transition-all">
             <Briefcase className="h-6 w-6 stroke-[2.5]" />
             <span className="text-[10px] font-medium tracking-wide">Jobs</span>
