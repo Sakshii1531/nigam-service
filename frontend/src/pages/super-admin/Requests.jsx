@@ -23,17 +23,18 @@ const Requests = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('All Status');
   const [selectedBrand, setSelectedBrand] = useState('All Brands');
+  const [selectedMode, setSelectedMode] = useState('All Modes');
   const [successMessage, setSuccessMessage] = useState('');
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [showDrawer, setShowDrawer] = useState(false);
   const [successCardData, setSuccessCardData] = useState(null);
 
   const [requests, setRequests] = useState([
-    { id: 'SR-8901', customer: 'Amit Sharma', product: 'Smart TV', brand: 'LG', status: 'Pending', priority: 'High', date: '12 May, 2026', technician: 'Unassigned', description: 'Cracked screen display after delivery.' },
-    { id: 'SR-8902', customer: 'Priya Patel', product: 'Refrigerator', brand: 'Samsung', status: 'Assigned', priority: 'Medium', date: '12 May, 2026', technician: 'Rahul Kumar', description: 'Cooling coil not working, making weird sounds.' },
-    { id: 'SR-8903', customer: 'Rajesh K.', product: 'Washing Machine', brand: 'Whirlpool', status: 'Completed', priority: 'Low', date: '11 May, 2026', technician: 'Suresh Raina', description: 'Scheduled quarterly preventive clean maintenance.' },
-    { id: 'SR-8904', customer: 'Neha Gupta', product: 'Microwave', brand: 'LG', status: 'Escalated', priority: 'High', date: '11 May, 2026', technician: 'Vikram Batra', description: 'Device spark when turned on. Crucial safety issue.' },
-    { id: 'SR-8905', customer: 'Vikram S.', product: 'AC', brand: 'Samsung', status: 'In Progress', priority: 'Medium', date: '10 May, 2026', technician: 'Amit Singh', description: 'Gas refill service required for Split AC.' },
+    { id: 'SR-8901', customer: 'Amit Sharma', product: 'Smart TV', brand: 'LG', status: 'Pending', priority: 'High', date: '12 May, 2026', technician: 'Unassigned', description: 'Cracked screen display after delivery.', mode: 'B2B' },
+    { id: 'SR-8902', customer: 'Priya Patel', product: 'Refrigerator', brand: 'Samsung', status: 'Assigned', priority: 'Medium', date: '12 May, 2026', technician: 'Rahul Kumar', description: 'Cooling coil not working, making weird sounds.', mode: 'B2C' },
+    { id: 'SR-8903', customer: 'Rajesh K.', product: 'Washing Machine', brand: 'Whirlpool', status: 'Completed', priority: 'Low', date: '11 May, 2026', technician: 'Suresh Raina', description: 'Scheduled quarterly preventive clean maintenance.', mode: 'B2B' },
+    { id: 'SR-8904', customer: 'Neha Gupta', product: 'Microwave', brand: 'LG', status: 'Escalated', priority: 'High', date: '11 May, 2026', technician: 'Vikram Batra', description: 'Device spark when turned on. Crucial safety issue.', mode: 'B2C' },
+    { id: 'SR-8905', customer: 'Vikram S.', product: 'AC', brand: 'Samsung', status: 'In Progress', priority: 'Medium', date: '10 May, 2026', technician: 'Amit Singh', description: 'Gas refill service required for Split AC.', mode: 'B2C' },
   ]);
 
   const showToast = (message) => {
@@ -58,7 +59,8 @@ const Requests = () => {
                           r.brand.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = selectedStatus === 'All Status' || r.status === selectedStatus;
     const matchesBrand = selectedBrand === 'All Brands' || r.brand === selectedBrand;
-    return matchesSearch && matchesStatus && matchesBrand;
+    const matchesMode = selectedMode === 'All Modes' || r.mode === selectedMode;
+    return matchesSearch && matchesStatus && matchesBrand && matchesMode;
   });
 
   const pendingCount = requests.filter(r => r.status === 'Pending').length;
@@ -98,7 +100,15 @@ const Requests = () => {
                 <div className="space-y-4">
                   <div>
                     <span className="text-xs font-semibold text-[#64748B] uppercase block">Customer Name</span>
-                    <p className="text-sm font-bold text-[#1E293B]">{selectedRequest.customer}</p>
+                    <p className="text-sm font-bold text-[#1E293B] flex items-center gap-2">
+                      <span>{selectedRequest.customer}</span>
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
+                        selectedRequest.mode === 'B2B' ? 'bg-purple-50 text-purple-600 border border-purple-100' :
+                        'bg-slate-100 text-slate-655'
+                      }`}>
+                        {selectedRequest.mode || 'B2C'}
+                      </span>
+                    </p>
                   </div>
                   <div>
                     <span className="text-xs font-semibold text-[#64748B] uppercase block">Appliance & Brand</span>
@@ -264,6 +274,16 @@ const Requests = () => {
                 <option>Samsung</option>
                 <option>Whirlpool</option>
               </select>
+
+              <select 
+                value={selectedMode}
+                onChange={(e) => setSelectedMode(e.target.value)}
+                className="text-sm text-[#1E293B] border border-[#E2E8F0] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#0D47A1] bg-[#F8FAFC]"
+              >
+                <option>All Modes</option>
+                <option>B2B</option>
+                <option>B2C</option>
+              </select>
             </div>
 
             <button 
@@ -271,6 +291,7 @@ const Requests = () => {
                 setSearchQuery('');
                 setSelectedStatus('All Status');
                 setSelectedBrand('All Brands');
+                setSelectedMode('All Modes');
                 showToast('Filters reset successfully');
               }}
               className="bg-white text-[#1E293B] border border-[#E2E8F0] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#F8FAFC] transition-colors"
@@ -304,7 +325,17 @@ const Requests = () => {
                       onClick={() => { setSelectedRequest(req); setShowDrawer(true); }}
                     >
                       <td className="px-6 py-4 font-medium text-[#0D47A1]">{req.id}</td>
-                      <td className="px-6 py-4 text-[#1E293B] font-medium">{req.customer}</td>
+                      <td className="px-6 py-4 text-[#1E293B] font-medium">
+                        <div className="flex items-center gap-2">
+                          <span>{req.customer}</span>
+                          <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ${
+                            req.mode === 'B2B' ? 'bg-purple-50 text-purple-600 border border-purple-100' :
+                            'bg-slate-100 text-slate-655'
+                          }`}>
+                            {req.mode || 'B2C'}
+                          </span>
+                        </div>
+                      </td>
                       <td className="px-6 py-4 text-[#1E293B]">{req.product}</td>
                       <td className="px-6 py-4 text-[#1E293B]">{req.brand}</td>
                       <td className="px-6 py-4">

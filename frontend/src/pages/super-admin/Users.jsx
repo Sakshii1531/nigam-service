@@ -22,12 +22,14 @@ import {
   MapPin,
   Mail,
   Phone,
-  ArrowLeft
+  ArrowLeft,
+  Info
 } from 'lucide-react';
 
 const Users = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('All Status');
+  const [selectedSource, setSelectedSource] = useState('All Sources');
   const [selectedSort, setSelectedSort] = useState('Sort By');
   const [successMessage, setSuccessMessage] = useState('');
 
@@ -44,11 +46,14 @@ const Users = () => {
   const entriesPerPage = 4;
 
   const [users, setUsers] = useState([
-    { id: 'USR-1001', name: 'Amit Sharma', email: 'amit@example.com', phone: '+91 98765 43210', appliances: 3, services: 5, status: 'Active', lastActive: '2 hours ago', addresses: ['H-44, Sector 6, Noida', 'B-102, Mansarovar Garden, Delhi'], applianceList: [{ type: 'TV', brand: 'LG', model: 'OLED55' }, { type: 'Refrigerator', brand: 'Samsung', model: 'Double Door 320L' }] },
-    { id: 'USR-1002', name: 'Priya Patel', email: 'priya@example.com', phone: '+91 98765 43211', appliances: 1, services: 2, status: 'Active', lastActive: '1 day ago', addresses: ['504, Windsor Heights, Mumbai'], applianceList: [{ type: 'Washing Machine', brand: 'Whirlpool', model: 'Fully Auto 7kg' }] },
-    { id: 'USR-1003', name: 'Rajesh Kumar', email: 'rajesh@example.com', phone: '+91 98765 43212', appliances: 2, services: 0, status: 'Suspended', lastActive: '3 days ago', addresses: ['Flat 12B, Green Glen Layout, Bangalore'], applianceList: [{ type: 'AC', brand: 'LG', model: '1.5 Ton Split' }] },
-    { id: 'USR-1004', name: 'Neha Gupta', email: 'neha@example.com', phone: '+91 98765 43213', appliances: 4, services: 12, status: 'Active', lastActive: '10 mins ago', addresses: ['Pocket 1, Sector 9, Rohini, Delhi'], applianceList: [{ type: 'Microwave', brand: 'LG', model: 'Convection 28L' }, { type: 'Chimney', brand: 'Havells', model: 'Auto Clean 90cm' }] },
-    { id: 'USR-1005', name: 'Vikram Singh', email: 'vikram@example.com', phone: '+91 98765 43214', appliances: 0, services: 0, status: 'Pending', lastActive: 'New', addresses: ['C-12, Gomti Nagar, Lucknow'], applianceList: [] },
+    { id: 'USR-1001', name: 'Amit Sharma', email: 'amit@example.com', phone: '+91 98765 43210', appliances: 3, services: 5, status: 'Active', lastActive: '2 hours ago', addresses: ['H-44, Sector 6, Noida', 'B-102, Mansarovar Garden, Delhi'], applianceList: [{ type: 'TV', brand: 'LG', model: 'OLED55' }, { type: 'Refrigerator', brand: 'Samsung', model: 'Double Door 320L' }], source: 'B2B' },
+    { id: 'USR-1002', name: 'Priya Patel', email: 'priya@example.com', phone: '+91 98765 43211', appliances: 1, services: 2, status: 'Active', lastActive: '1 day ago', addresses: ['504, Windsor Heights, Mumbai'], applianceList: [{ type: 'Washing Machine', brand: 'Whirlpool', model: 'Fully Auto 7kg' }], source: 'B2C' },
+    { id: 'USR-1003', name: 'Rajesh Kumar', email: 'rajesh@example.com', phone: '+91 98765 43212', appliances: 2, services: 0, status: 'Suspended', lastActive: '3 days ago', addresses: ['Flat 12B, Green Glen Layout, Bangalore'], applianceList: [{ type: 'AC', brand: 'LG', model: '1.5 Ton Split' }], source: 'AMC' },
+    { id: 'USR-1004', name: 'Neha Gupta', email: 'neha@example.com', phone: '+91 98765 43213', appliances: 4, services: 12, status: 'Active', lastActive: '10 mins ago', addresses: ['Pocket 1, Sector 9, Rohini, Delhi'], applianceList: [{ type: 'Microwave', brand: 'LG', model: 'Convection 28L' }, { type: 'Chimney', brand: 'Havells', model: 'Auto Clean 90cm' }], source: 'Extended Warranty' },
+    { id: 'USR-1005', name: 'Vikram Singh', email: 'vikram@example.com', phone: '+91 98765 43214', appliances: 0, services: 0, status: 'Pending', lastActive: 'New', addresses: ['C-12, Gomti Nagar, Lucknow'], applianceList: [], source: 'B2C' },
+    { id: 'USR-1006', name: 'Sanjay Verma', email: 'sanjay@example.com', phone: '+91 98765 43215', appliances: 2, services: 3, status: 'Active', lastActive: '5 hours ago', addresses: ['A-5, Sector 15, Dwarka, Delhi'], applianceList: [], source: 'B2B' },
+    { id: 'USR-1007', name: 'Anjali Desai', email: 'anjali@example.com', phone: '+91 98765 43216', appliances: 1, services: 1, status: 'Active', lastActive: '12 hours ago', addresses: ['703, Pearl Towers, Pune'], applianceList: [], source: 'AMC' },
+    { id: 'USR-1008', name: 'Rohit Mehta', email: 'rohit@example.com', phone: '+91 98765 43217', appliances: 5, services: 8, status: 'Active', lastActive: 'Yesterday', addresses: ['Flat 401, Sapphire Residency, Hyderabad'], applianceList: [], source: 'Extended Warranty' }
   ]);
 
   const showToast = (message) => {
@@ -95,8 +100,9 @@ const Users = () => {
                           u.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           u.email.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = selectedStatus === 'All Status' || u.status === selectedStatus;
+    const matchesSource = selectedSource === 'All Sources' || u.source === selectedSource;
     const matchesMinAppliances = !minAppliances || u.appliances >= Number(minAppliances);
-    return matchesSearch && matchesStatus && matchesMinAppliances;
+    return matchesSearch && matchesStatus && matchesSource && matchesMinAppliances;
   });
 
   const sortedUsers = [...filteredUsers].sort((a, b) => {
@@ -170,6 +176,7 @@ const Users = () => {
                   <div className="space-y-2 text-xs border border-[#E2E8F0] rounded-xl p-3.5 bg-slate-50 font-medium">
                     <p className="flex items-center gap-2 text-slate-700"><Mail size={14} className="text-[#64748B]" /> {selectedUser.email}</p>
                     <p className="flex items-center gap-2 text-slate-700 mt-1.5"><Phone size={14} className="text-[#64748B]" /> {selectedUser.phone}</p>
+                    <p className="flex items-center gap-2 text-slate-700 mt-1.5"><Info size={14} className="text-[#64748B]" /> Source: {selectedUser.source || 'B2C'}</p>
                     <div className="flex gap-2 items-start text-slate-700 mt-1.5">
                       <MapPin size={14} className="text-[#64748B] flex-shrink-0 mt-0.5" /> 
                       <div className="space-y-1">
@@ -272,6 +279,21 @@ const Users = () => {
                 </select>
 
                 <select 
+                  value={selectedSource}
+                  onChange={(e) => {
+                    setSelectedSource(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="text-sm text-[#1E293B] border border-[#E2E8F0] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#0D47A1] bg-[#F8FAFC]"
+                >
+                  <option>All Sources</option>
+                  <option>B2B</option>
+                  <option>B2C</option>
+                  <option>AMC</option>
+                  <option>Extended Warranty</option>
+                </select>
+
+                <select 
                   value={selectedSort}
                   onChange={(e) => setSelectedSort(e.target.value)}
                   className="text-sm text-[#1E293B] border border-[#E2E8F0] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#0D47A1] bg-[#F8FAFC]"
@@ -346,7 +368,17 @@ const Users = () => {
                             {user.name.split(' ').map(n => n[0]).join('')}
                           </div>
                           <div>
-                            <p className="text-[#1E293B] font-bold text-sm">{user.name}</p>
+                          <div className="flex items-center gap-2">
+                              <p className="text-[#1E293B] font-bold text-sm">{user.name}</p>
+                              <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ${
+                                user.source === 'B2B' ? 'bg-purple-50 text-purple-600 border border-purple-100' :
+                                user.source === 'AMC' ? 'bg-amber-50 text-amber-600 border border-amber-100' :
+                                user.source === 'Extended Warranty' ? 'bg-blue-50 text-blue-600 border border-blue-100' :
+                                'bg-slate-100 text-slate-600'
+                              }`}>
+                                {user.source || 'B2C'}
+                              </span>
+                            </div>
                             <p className="text-[#64748B] text-xs font-medium">{user.id}</p>
                           </div>
                         </div>

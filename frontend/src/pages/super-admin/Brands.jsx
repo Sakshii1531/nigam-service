@@ -16,7 +16,8 @@ import {
   ArrowLeft,
   Mail,
   Phone as PhoneIcon,
-  Calendar as CalendarIcon
+  Calendar as CalendarIcon,
+  Download
 } from 'lucide-react';
 
 const Brands = () => {
@@ -83,6 +84,32 @@ const Brands = () => {
     showToast(`Brand "${addedBrand.name}" registered successfully!`);
   };
 
+  const handleExportCSV = (brandName, services) => {
+    const headers = ["Service Name", "Category", "Price per Ticket (INR)", "Tickets Closed", "Total Revenue (INR)"];
+    const rows = services.map(s => [
+      s.name,
+      s.category,
+      s.price,
+      s.count,
+      s.price * s.count
+    ]);
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => row.map(val => `"${val.toString().replace(/"/g, '""')}"`).join(","))
+    ].join("\n");
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `${brandName.toLowerCase().replace(/\s+/g, '_')}_service_revenue.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast('Service revenue sheet downloaded successfully!');
+  };
+
   const filteredBrands = brands.filter(b => {
     const matchesSearch = b.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           b.id.toLowerCase().includes(searchQuery.toLowerCase());
@@ -96,10 +123,35 @@ const Brands = () => {
     const mockEmail = `support@${brand.name.toLowerCase().replace(' ', '')}.com`;
     const mockPhone = "+91 1800 " + brand.id.replace('BRD-00', '') + "24 680";
     const mockJoinedDate = "10 Dec 2024";
-    const mockServices = [
-      { id: 1, name: "Refrigerator Cooling Coil Replacement", category: "Appliance Repair", count: 24, status: "Active" },
-      { id: 2, name: "Washing Machine Motor Overhaul", category: "Appliance Repair", count: 18, status: "Active" },
-      { id: 3, name: "AC Deep Cleaning Package", category: "Maintenance", count: 105, status: "Active" },
+    
+    const brandServicesData = {
+      'BRD-001': [
+        { name: "Refrigerator Compressor Replacement", category: "Appliance Repair", price: 6000, count: 45 },
+        { name: "Washing Machine Tub Assembly", category: "Appliance Repair", price: 4000, count: 30 },
+        { name: "Smart OLED TV Panel Replacement", category: "OLED TV Service", price: 5000, count: 12 }
+      ],
+      'BRD-002': [
+        { name: "AC Condenser Leak Repair", category: "HVAC Repair", price: 4500, count: 40 },
+        { name: "Double Door Defrost Timer Change", category: "Appliance Repair", price: 2500, count: 20 },
+        { name: "Microwave Magnetron Fitting", category: "Appliance Repair", price: 2500, count: 36 }
+      ],
+      'BRD-003': [
+        { name: "Washing Machine Gear Box Change", category: "Appliance Repair", price: 4500, count: 20 },
+        { name: "Single Door Gasket Fitting", category: "Appliance Repair", price: 1500, count: 40 },
+        { name: "AC Gas Charging (R32)", category: "HVAC Repair", price: 4000, count: 15 }
+      ],
+      'BRD-004': [
+        { name: "Geyser Heating Element Fitting", category: "Appliance Repair", price: 2500, count: 30 },
+        { name: "Kitchen Chimney Filter Cleaning", category: "Maintenance", price: 1300, count: 50 }
+      ],
+      'BRD-005': [
+        { name: "AC General Wet Service", category: "Maintenance", price: 1500, count: 0 },
+        { name: "Direct Cool Refrigerator Defrosting", category: "Appliance Repair", price: 1200, count: 0 }
+      ]
+    };
+
+    const activeServices = brandServicesData[brand.id] || [
+      { name: "General Diagnostics & Inspection", category: "Inspection", price: 499, count: 0 }
     ];
     
     return (
@@ -142,25 +194,25 @@ const Brands = () => {
         <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden text-left">
           <div className="bg-gradient-to-r from-[#0D47A1] to-[#1E3A8A] h-32 relative"></div>
           <div className="p-6 relative pt-0">
-            <div className="flex flex-col md:flex-row md:items-end justify-between -mt-16 mb-6 gap-4">
+            <div className="flex flex-col md:flex-row md:items-end justify-between mb-6 gap-4">
               <div className="flex items-end gap-4">
-                <div className="w-24 h-24 bg-[#EEF4FF] rounded-lg border-4 border-white shadow flex items-center justify-center text-[#0D47A1] font-bold text-3xl">
+                <div className="w-24 h-24 bg-[#EEF4FF] rounded-2xl border-4 border-white shadow-md flex items-center justify-center text-[#0D47A1] font-black text-3xl -mt-12 relative z-10">
                   {brand.name[0]}
                 </div>
                 <div className="pb-1">
-                  <h1 className="text-2xl font-bold text-[#1E293B]">{brand.name}</h1>
+                  <h1 className="text-2xl font-extrabold text-[#1E293B]">{brand.name}</h1>
                   <p className="text-sm text-[#64748B] font-medium">{brand.id} • Authorized Nigam Partner Brand</p>
                 </div>
               </div>
               
-              <div className="flex items-center gap-2">
-                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+              <div className="flex items-center gap-2 pb-1">
+                <span className={`px-3 py-1 rounded-full text-xs font-bold ${
                   brand.status === 'Active' ? 'bg-green-50 text-green-700 border border-green-200' :
                   'bg-yellow-50 text-yellow-700 border border-yellow-200'
                 }`}>
                   {brand.status}
                 </span>
-                <span className={`px-3 py-1 rounded-full text-xs font-semibold bg-[#EEF4FF] text-[#0D47A1] border border-blue-200`}>
+                <span className={`px-3 py-1 rounded-full text-xs font-bold bg-[#EEF4FF] text-[#0D47A1] border border-blue-200`}>
                   {brand.category}
                 </span>
               </div>
@@ -233,23 +285,60 @@ const Brands = () => {
                   </div>
                 </div>
 
-                {/* Popular Services Catalog summary */}
+                {/* Service Offerings & Revenue Breakdown */}
                 <div className="bg-white p-5 rounded-xl border border-[#E2E8F0] shadow-sm">
-                  <h3 className="text-sm font-bold text-[#1E293B] mb-4">Service Offerings & Statistics</h3>
-                  <div className="space-y-4">
-                    {mockServices.map(service => (
-                      <div key={service.id} className="flex justify-between items-start pb-3 border-b border-slate-100 last:border-0 last:pb-0">
-                        <div>
-                          <p className="text-sm font-semibold text-slate-800">{service.name}</p>
-                          <p className="text-xs text-slate-500">{service.category}</p>
-                        </div>
-                        <div className="text-right">
-                          <span className="bg-blue-50 text-[#0D47A1] text-xs font-semibold px-2.5 py-0.5 rounded-full block w-fit ml-auto">
-                            {service.count} Tickets
-                          </span>
-                        </div>
-                      </div>
-                    ))}
+                  <div className="flex justify-between items-center mb-4">
+                    <div>
+                      <h3 className="text-sm font-bold text-[#1E293B]">Service Revenue Breakdown</h3>
+                      <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Calculated total business contribution of each service for {brand.name}.</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button 
+                        onClick={() => handleExportCSV(brand.name, activeServices)}
+                        className="bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-800 border border-slate-205 font-bold py-1.5 px-3 rounded-lg text-xs flex items-center gap-1.5 cursor-pointer shadow-3xs"
+                        title="Download CSV / Excel"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        <span>Export Excel</span>
+                      </button>
+                      <span className="bg-green-55 text-green-700 text-xs font-bold px-2.5 py-1.5 rounded-full border border-green-200">
+                        Total: {brand.revenue}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="border border-slate-150 rounded-xl overflow-hidden shadow-3xs mt-2">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-50 border-b border-slate-150 text-slate-500 font-bold uppercase">
+                        <tr>
+                          <th className="p-3">Service Name</th>
+                          <th className="p-3">Category</th>
+                          <th className="p-3 text-right">Price per Ticket</th>
+                          <th className="p-3 text-center">Tickets Closed</th>
+                          <th className="p-3 text-right">Total Revenue</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-150 text-slate-700 font-semibold">
+                        {activeServices.map((service, idx) => {
+                          const serviceRevenue = service.price * service.count;
+                          return (
+                            <tr key={idx} className="hover:bg-slate-50/50">
+                              <td className="p-3 font-bold text-slate-800">{service.name}</td>
+                              <td className="p-3 text-slate-500">{service.category}</td>
+                              <td className="p-3 text-right text-slate-500">₹{service.price.toLocaleString()}</td>
+                              <td className="p-3 text-center">
+                                <span className="bg-blue-50 text-[#0D47A1] px-2.5 py-0.5 rounded-full text-[10px] font-bold">
+                                  {service.count} Tickets
+                                </span>
+                              </td>
+                              <td className="p-3 text-right text-green-600 font-black">
+                                ₹{serviceRevenue.toLocaleString()}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
 
