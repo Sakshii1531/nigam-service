@@ -30,9 +30,15 @@ import {
   FileText,
   LayoutGrid,
   Wrench,
+  Sparkles,
   DollarSign,
   Image,
-  LogOut
+  LogOut,
+  Gift,
+  Coins,
+  Ticket,
+  Award,
+  RefreshCw
 } from 'lucide-react';
 import logo from '../../assets/nigam-care.png';
 
@@ -42,10 +48,11 @@ const Sidebar = () => {
   const scrollContainerRef = useRef(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   
-  // Track Customer App Section open/close
-  const [isCustomerAppOpen, setIsCustomerAppOpen] = useState(
-    location.pathname.includes('/super-admin/customer-app-customization')
-  );
+  // Track collapsible sections open/close states
+  const [openSections, setOpenSections] = useState({
+    customerApp: location.pathname.includes('/super-admin/customer-app-customization'),
+    loyalty: location.pathname.includes('/super-admin/loyalty-program')
+  });
   
   // Track Profile Menu open/close
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
@@ -170,6 +177,7 @@ const Sidebar = () => {
     },
     {
       type: 'collapsible',
+      id: 'customerApp',
       label: 'Customer App Section',
       icon: <LayoutGrid size={18} />,
       subItems: [
@@ -181,6 +189,40 @@ const Sidebar = () => {
         { path: '/super-admin/customer-app-customization?tab=applianceservices', label: 'Appliance Repair & Service' },
         { path: '/super-admin/customer-app-customization?tab=stories', label: 'Stories Customization' }
       ]
+    },
+    {
+      type: 'header',
+      label: 'REWARDS & OFFERS'
+    },
+    {
+      type: 'link',
+      label: 'Rewards Program',
+      path: '/super-admin/loyalty-program?tab=rewards',
+      icon: <Coins size={18} />
+    },
+    {
+      type: 'link',
+      label: 'Membership Plans',
+      path: '/super-admin/loyalty-program?tab=membership',
+      icon: <Award size={18} />
+    },
+    {
+      type: 'link',
+      label: 'Spin Wheel Config',
+      path: '/super-admin/loyalty-program?tab=spinwheel',
+      icon: <RefreshCw size={18} />
+    },
+    {
+      type: 'link',
+      label: 'Referrals Program',
+      path: '/super-admin/loyalty-program?tab=referrals',
+      icon: <Users size={18} />
+    },
+    {
+      type: 'link',
+      label: 'Coupon Codes',
+      path: '/super-admin/loyalty-program?tab=coupons',
+      icon: <Ticket size={18} />
     },
     {
       type: 'header',
@@ -334,11 +376,12 @@ const Sidebar = () => {
               location.pathname + location.search === sub.path || 
               (sub.path.includes('categories') && location.pathname + location.search === '/super-admin/customer-app-customization')
             );
+            const isOpen = openSections[item.id];
             return (
               <div key={idx} className="flex flex-col">
                 <button
                   type="button"
-                  onClick={() => setIsCustomerAppOpen(prev => !prev)}
+                  onClick={() => setOpenSections(prev => ({ ...prev, [item.id]: !prev[item.id] }))}
                   className={`flex items-center justify-between w-full mx-3 py-2 text-sm font-semibold transition-colors cursor-pointer text-left rounded-lg max-w-[232px] px-3 ${
                     isAnySubActive 
                       ? 'text-[#0D47A1] bg-[#E8F0FE]' 
@@ -349,10 +392,10 @@ const Sidebar = () => {
                     <span className="flex-shrink-0">{item.icon}</span>
                     <span>{item.label}</span>
                   </div>
-                  {isCustomerAppOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                  {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                 </button>
                 
-                {isCustomerAppOpen && (
+                {isOpen && (
                   <div className="flex flex-col pl-4 border-l border-slate-200 ml-8 mb-1 mt-1 gap-1">
                     {item.subItems.map((sub, sIdx) => {
                       const isSubActive = 
@@ -385,6 +428,9 @@ const Sidebar = () => {
           }
 
           // Default link item
+          const isLinkActive = item.path.includes('?') 
+            ? location.pathname + location.search === item.path 
+            : location.pathname === item.path;
           return (
             <NavLink
               key={item.path}
@@ -394,9 +440,9 @@ const Sidebar = () => {
                   sessionStorage.setItem('super-sidebar-scroll', scrollContainerRef.current.scrollTop.toString());
                 }
               }}
-              className={({ isActive }) => `
+              className={`
                 flex items-center gap-3 mx-3 px-3 py-2 text-sm font-semibold rounded-lg transition-colors max-w-[232px]
-                ${isActive 
+                ${isLinkActive 
                   ? 'text-[#0D47A1] bg-[#E8F0FE]' 
                   : 'text-[#5F6368] hover:text-[#1E293B] hover:bg-[#EAEFF9]'}
               `}
