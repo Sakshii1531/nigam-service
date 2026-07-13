@@ -136,12 +136,6 @@ const Sidebar = () => {
       icon: <Building size={18} />
     },
     {
-      type: 'link',
-      label: 'Technical Team',
-      path: '/super-admin/technicians',
-      icon: <UserCheck size={18} />
-    },
-    {
       type: 'header',
       label: 'BUSINESS'
     },
@@ -176,19 +170,102 @@ const Sidebar = () => {
       icon: <Package size={18} />
     },
     {
-      type: 'collapsible',
-      id: 'customerApp',
-      label: 'Customer App Section',
-      icon: <LayoutGrid size={18} />,
-      subItems: [
-        { path: '/super-admin/customer-app-customization?tab=categories', label: 'Category Customization' },
-        { path: '/super-admin/customer-app-customization?tab=banners', label: 'Banner Customization' },
-        { path: '/super-admin/customer-app-customization?tab=services', label: 'Services Customization' },
-        { path: '/super-admin/customer-app-customization?tab=brands', label: 'Brands & Offers' },
-        { path: '/super-admin/customer-app-customization?tab=mostbooked', label: 'Most Booked Services' },
-        { path: '/super-admin/customer-app-customization?tab=applianceservices', label: 'Appliance Repair & Service' },
-        { path: '/super-admin/customer-app-customization?tab=stories', label: 'Stories Customization' }
-      ]
+      type: 'header',
+      label: 'CUSTOMER APP'
+    },
+    {
+      type: 'link',
+      label: 'Customers',
+      path: '/super-admin/users',
+      icon: <Users size={18} />
+    },
+    {
+      type: 'link',
+      label: 'Category Customization',
+      path: '/super-admin/customer-app-customization?tab=categories',
+      icon: <LayoutGrid size={18} />
+    },
+    {
+      type: 'link',
+      label: 'Banner Customization',
+      path: '/super-admin/customer-app-customization?tab=banners',
+      icon: <Image size={18} />
+    },
+    {
+      type: 'link',
+      label: 'Services Customization',
+      path: '/super-admin/customer-app-customization?tab=services',
+      icon: <Wrench size={18} />
+    },
+    {
+      type: 'link',
+      label: 'Brands & Offers',
+      path: '/super-admin/customer-app-customization?tab=brands',
+      icon: <Building size={18} />
+    },
+    {
+      type: 'link',
+      label: 'Most Booked Services',
+      path: '/super-admin/customer-app-customization?tab=mostbooked',
+      icon: <TrendingUp size={18} />
+    },
+    {
+      type: 'link',
+      label: 'Appliance Repair & Service',
+      path: '/super-admin/customer-app-customization?tab=applianceservices',
+      icon: <Wrench size={18} />
+    },
+    {
+      type: 'link',
+      label: 'Stories Customization',
+      path: '/super-admin/customer-app-customization?tab=stories',
+      icon: <FileText size={18} />
+    },
+    {
+      type: 'link',
+      label: 'Advertisements',
+      path: '/super-admin/advertisements',
+      icon: <Megaphone size={18} />
+    },
+    {
+      type: 'header',
+      label: 'TECHNICIAN APP'
+    },
+    {
+      type: 'link',
+      label: 'Technicians',
+      path: '/super-admin/technicians',
+      icon: <UserCheck size={18} />
+    },
+    {
+      type: 'link',
+      label: 'Banner Customization',
+      path: '/super-admin/technician-app-customization?tab=banners',
+      icon: <Image size={18} />
+    },
+    {
+      type: 'link',
+      label: 'Training & Videos',
+      path: '/super-admin/technician-app-customization?tab=training',
+      icon: <Video size={18} />
+    },
+    {
+      type: 'link',
+      label: 'Announcements',
+      path: '/super-admin/technician-app-customization?tab=announcements',
+      icon: <Bell size={18} />
+    },
+    {
+      type: 'link',
+      label: 'Skills & Certs',
+      path: '/super-admin/technician-app-customization?tab=skills',
+      icon: <Award size={18} />
+    },
+    {
+      type: 'link',
+      label: 'App Settings',
+      path: '/super-admin/technician-app-customization?tab=settings',
+      icon: <Settings size={18} />
     },
     {
       type: 'header',
@@ -226,7 +303,7 @@ const Sidebar = () => {
     },
     {
       type: 'header',
-      label: 'BRANDS'
+      label: 'BRANDS PANEL'
     },
     {
       type: 'link',
@@ -255,18 +332,6 @@ const Sidebar = () => {
     {
       type: 'header',
       label: 'MARKETING & MEDIA'
-    },
-    {
-      type: 'link',
-      label: 'Videos Management',
-      path: '/super-admin/videos',
-      icon: <Video size={18} />
-    },
-    {
-      type: 'link',
-      label: 'Advertisements',
-      path: '/super-admin/advertisements',
-      icon: <Megaphone size={18} />
     },
     {
       type: 'link',

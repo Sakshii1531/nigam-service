@@ -26,17 +26,17 @@ const Cities = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
   // Forms state
-  const [newCity, setNewCity] = useState({ name: '', area: '', techs: '0', status: 'Active' });
+  const [newCity, setNewCity] = useState({ name: '', state: '', district: '', area: '', techs: '0', status: 'Active' });
   const [editingCity, setEditingCity] = useState(null);
   const [deletingCityId, setDeletingCityId] = useState(null);
   const [activeActionsMenu, setActiveActionsMenu] = useState(null);
 
   const [cities, setCities] = useState([
-    { id: 'CIT-01', name: 'Delhi NCR', area: '1,483 sq km', techs: 450, status: 'Active' },
-    { id: 'CIT-02', name: 'Mumbai', area: '603 sq km', techs: 320, status: 'Active' },
-    { id: 'CIT-03', name: 'Bangalore', area: '709 sq km', techs: 280, status: 'Active' },
-    { id: 'CIT-04', name: 'Chennai', area: '426 sq km', techs: 150, status: 'Active' },
-    { id: 'CIT-05', name: 'Kolkata', area: '205 sq km', techs: 0, status: 'Inactive' },
+    { id: 'CIT-01', name: 'Delhi NCR', state: 'Delhi', district: 'New Delhi', area: '1,483 sq km', techs: 450, status: 'Active' },
+    { id: 'CIT-02', name: 'Mumbai', state: 'Maharashtra', district: 'Mumbai Suburban', area: '603 sq km', techs: 320, status: 'Active' },
+    { id: 'CIT-03', name: 'Bangalore', state: 'Karnataka', district: 'Bangalore Urban', area: '709 sq km', techs: 280, status: 'Active' },
+    { id: 'CIT-04', name: 'Chennai', state: 'Tamil Nadu', district: 'Chennai', area: '426 sq km', techs: 150, status: 'Active' },
+    { id: 'CIT-05', name: 'Kolkata', state: 'West Bengal', district: 'Kolkata', area: '205 sq km', techs: 0, status: 'Inactive' },
   ]);
 
   const showToast = (message) => {
@@ -54,26 +54,28 @@ const Cities = () => {
 
   const handleAddCitySubmit = (e) => {
     e.preventDefault();
-    if (!newCity.name || !newCity.area) {
+    if (!newCity.name || !newCity.state || !newCity.district || !newCity.area) {
       showToast('Please fill in all required fields.');
       return;
     }
     const addedCity = {
       id: `CIT-0${cities.length + 1}`,
       name: newCity.name,
+      state: newCity.state,
+      district: newCity.district,
       area: newCity.area.toLowerCase().includes('sq km') ? newCity.area : `${newCity.area} sq km`,
       techs: Number(newCity.techs) || 0,
       status: newCity.status
     };
     setCities([...cities, addedCity]);
-    setNewCity({ name: '', area: '', techs: '0', status: 'Active' });
+    setNewCity({ name: '', state: '', district: '', area: '', techs: '0', status: 'Active' });
     setShowAddModal(false);
     showToast(`City "${addedCity.name}" added successfully!`);
   };
 
   const handleEditCitySubmit = (e) => {
     e.preventDefault();
-    if (!editingCity.name || !editingCity.area) {
+    if (!editingCity.name || !editingCity.state || !editingCity.district || !editingCity.area) {
       showToast('Please fill in all required fields.');
       return;
     }
@@ -97,7 +99,9 @@ const Cities = () => {
 
   const filteredCities = cities.filter(c => {
     const matchesSearch = c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          c.id.toLowerCase().includes(searchQuery.toLowerCase());
+                          c.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          c.state.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          c.district.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = selectedStatus === 'All Statuses' || c.status === selectedStatus;
     return matchesSearch && matchesStatus;
   });
@@ -113,7 +117,7 @@ const Cities = () => {
         <Topbar title="Cities & Service Areas" />
 
         {/* Body */}
-        <div className="p-6 space-y-6 flex-1">
+        <div className="p-6 space-y-6 flex-1 text-left">
           
           {/* Header Actions */}
           <div className="flex justify-between items-center">
@@ -137,7 +141,7 @@ const Cities = () => {
                 <input
                   type="text"
                   className="w-full pl-10 pr-4 py-2 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] focus:border-[#0D47A1] outline-none transition-all text-sm bg-[#F8FAFC] text-slate-800"
-                  placeholder="Search City Name..."
+                  placeholder="Search City, District or State..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -164,6 +168,8 @@ const Cities = () => {
                   <tr>
                     <th className="px-6 py-4">City ID</th>
                     <th className="px-6 py-4">City Name</th>
+                    <th className="px-6 py-4">District</th>
+                    <th className="px-6 py-4">State</th>
                     <th className="px-6 py-4">Coverage Area</th>
                     <th className="px-6 py-4">Active Techs</th>
                     <th className="px-6 py-4">Status</th>
@@ -179,6 +185,8 @@ const Cities = () => {
                           <MapPin size={14} className="text-[#64748B]" /> {city.name}
                         </div>
                       </td>
+                      <td className="px-6 py-4 text-[#1E293B] font-semibold">{city.district}</td>
+                      <td className="px-6 py-4 text-[#1E293B] font-semibold">{city.state}</td>
                       <td className="px-6 py-4 text-[#64748B]">{city.area}</td>
                       <td className="px-6 py-4 font-medium text-[#1E293B]">{city.techs}</td>
                       <td className="px-6 py-4">
@@ -247,7 +255,7 @@ const Cities = () => {
                   ))}
                   {filteredCities.length === 0 && (
                     <tr>
-                      <td colSpan="6" className="text-center py-12 text-[#64748B]">
+                      <td colSpan="8" className="text-center py-12 text-[#64748B]">
                         <Map size={48} className="mx-auto mb-2 opacity-50 text-slate-400" />
                         <p className="text-sm font-medium">No cities found matching details.</p>
                       </td>
@@ -275,13 +283,38 @@ const Cities = () => {
               </button>
             </div>
 
-            <form onSubmit={handleAddCitySubmit} className="space-y-4">
+            <form onSubmit={handleAddCitySubmit} className="space-y-4 text-left">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-semibold text-[#64748B] mb-1 block">State *</label>
+                  <input
+                    type="text"
+                    className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none text-slate-800 bg-[#F8FAFC]"
+                    placeholder="e.g. Uttar Pradesh"
+                    value={newCity.state}
+                    onChange={(e) => setNewCity({ ...newCity, state: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-[#64748B] mb-1 block">District *</label>
+                  <input
+                    type="text"
+                    className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none text-slate-800 bg-[#F8FAFC]"
+                    placeholder="e.g. Gautam Buddha Nagar"
+                    value={newCity.district}
+                    onChange={(e) => setNewCity({ ...newCity, district: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+
               <div>
                 <label className="text-xs font-semibold text-[#64748B] mb-1 block">City Name *</label>
                 <input
                   type="text"
                   className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none text-slate-800 bg-[#F8FAFC]"
-                  placeholder="e.g. Hyderabad"
+                  placeholder="e.g. Noida"
                   value={newCity.name}
                   onChange={(e) => setNewCity({ ...newCity, name: e.target.value })}
                   required
@@ -360,7 +393,30 @@ const Cities = () => {
               </button>
             </div>
 
-            <form onSubmit={handleEditCitySubmit} className="space-y-4">
+            <form onSubmit={handleEditCitySubmit} className="space-y-4 text-left">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-semibold text-[#64748B] mb-1 block">State *</label>
+                  <input
+                    type="text"
+                    className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none text-slate-800 bg-[#F8FAFC]"
+                    value={editingCity.state}
+                    onChange={(e) => setEditingCity({ ...editingCity, state: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-[#64748B] mb-1 block">District *</label>
+                  <input
+                    type="text"
+                    className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none text-slate-800 bg-[#F8FAFC]"
+                    value={editingCity.district}
+                    onChange={(e) => setEditingCity({ ...editingCity, district: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+
               <div>
                 <label className="text-xs font-semibold text-[#64748B] mb-1 block">City Name *</label>
                 <input
