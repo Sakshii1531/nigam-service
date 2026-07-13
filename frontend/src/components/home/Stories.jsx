@@ -130,7 +130,7 @@ const Stories = () => {
           </div>
 
           {/* Horizontally scrollable container with snap physics */}
-          <div className="flex overflow-x-auto gap-4 pb-4 snap-x snap-mandatory no-scrollbar -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+          <div className="flex overflow-x-auto gap-4 pb-4 snap-x snap-mandatory no-scrollbar -mx-4 px-4">
             {storiesList.map((story, index) => (
               <motion.div
                 key={story.id}
