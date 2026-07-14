@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
 import {
   Search, User, Package, AlertCircle, CheckCircle2,
   Phone, Mail, MapPin, ChevronRight, Edit2, Upload,
-  ShieldCheck, ShieldOff, ArrowRight, X, FileText, Plus
+  ShieldCheck, ShieldOff, ArrowRight, X, FileText, Plus, Copy
 } from 'lucide-react';
 
 // ── Mock customer database ──
@@ -65,6 +66,7 @@ const STEPS = [
 ];
 
 const RegisterComplaint = () => {
+  const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [mobileSearch, setMobileSearch] = useState('');
   const [searchResult, setSearchResult] = useState(null);
@@ -83,6 +85,29 @@ const RegisterComplaint = () => {
   const [successModal, setSuccessModal] = useState(false);
   const [ticketId, setTicketId] = useState('');
   const [editStep, setEditStep] = useState(null);
+  const [complaintIds, setComplaintIds] = useState({ brandNo: '', nccId: '' });
+  const [copiedId, setCopiedId] = useState(null);
+
+  const fileInputRef = useRef(null);
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setComplaint(p => ({ ...p, attachment: file }));
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      setComplaint(p => ({ ...p, attachment: file }));
+    }
+  };
 
   const handleSearch = () => {
     const found = mockCustomers.find(c => c.mobile === mobileSearch.trim());
@@ -107,10 +132,42 @@ const RegisterComplaint = () => {
   };
 
   const handleRaiseTicket = () => {
-    const id = `TKT/${new Date().getFullYear()}${String(new Date().getMonth()+1).padStart(2,'0')}/${Math.floor(1000 + Math.random() * 9000)}`;
-    setTicketId(id);
+    const now = new Date();
+    const yy = String(now.getFullYear()).slice(-2);
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const dateStr = `${yy}${mm}${dd}`;
+    const randomBrand = String(Math.floor(100000 + Math.random() * 900000));
+    const randomNcc = String(Math.floor(10000 + Math.random() * 90000));
+    
+    const brandNo = `SOM-GKP-${dateStr}-${randomBrand}`;
+    const nccId = `NCC-${dateStr}-${randomNcc}`;
+    
+    setComplaintIds({ brandNo, nccId });
+    setTicketId(nccId);
     setSuccessModal(true);
   };
+
+  const handleCopy = (text, id) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const formatRegistrationDate = () => {
+    const now = new Date();
+    const day = now.getDate();
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const month = months[now.getMonth()];
+    const year = now.getFullYear();
+    let hours = now.getHours();
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    return `${day} ${month} ${year}, ${hours}:${minutes} ${ampm}`;
+  };
+
 
   const handleReset = () => {
     setStep(1);
@@ -122,6 +179,7 @@ const RegisterComplaint = () => {
     setComplaint({ warranty: 'In Warranty', type: '', issueCategory: '', description: '', priority: 'Normal', invoiceAvailable: 'Yes', attachment: null });
     setSuccessModal(false);
     setTicketId('');
+    setComplaintIds({ brandNo: '', nccId: '' });
   };
 
   const canProceed = () => {
@@ -172,143 +230,81 @@ const RegisterComplaint = () => {
 
           {/* ── STEP 1: Search Customer ── */}
           {step === 1 && (
-            <div className="grid grid-cols-12 gap-5">
-              <div className="col-span-5 bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-5 space-y-4">
-                <div>
-                  <h3 className="text-sm font-extrabold text-slate-800 flex items-center gap-2"><Search size={15} className="text-[#0D47A1]" /> Search Customer</h3>
-                  <p className="text-[10px] text-slate-400 font-medium mt-0.5">Enter the customer's registered mobile number to search</p>
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">Mobile Number *</label>
-                  <div className="flex gap-2">
-                    <div className="flex-1 flex items-center border border-[#E2E8F0] rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-[#0D47A1] bg-[#F8FAFC]">
-                      <span className="px-3 text-slate-400"><Phone size={14} /></span>
-                      <input
-                        type="tel" maxLength={10}
-                        className="flex-1 py-2.5 text-sm font-semibold text-slate-800 outline-none bg-transparent"
-                        placeholder="e.g. 9876543210"
-                        value={mobileSearch}
-                        onChange={e => { setMobileSearch(e.target.value); setSearchStatus(null); setSearchResult(null); }}
-                        onKeyDown={e => e.key === 'Enter' && handleSearch()}
-                      />
-                    </div>
-                    <button
-                      onClick={handleSearch}
-                      className="bg-[#0D47A1] hover:bg-blue-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl cursor-pointer shadow-sm transition-colors"
-                    >Search</button>
+            <div className="max-w-2xl mx-auto bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-6 space-y-4">
+              <div>
+                <h3 className="text-sm font-extrabold text-slate-800 flex items-center gap-2"><Search size={15} className="text-[#0D47A1]" /> Search Customer</h3>
+                <p className="text-[10px] text-slate-400 font-medium mt-0.5">Enter the customer's registered mobile number to search</p>
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">Mobile Number *</label>
+                <div className="flex gap-2">
+                  <div className="flex-1 flex items-center border border-[#E2E8F0] rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-[#0D47A1] bg-[#F8FAFC]">
+                    <span className="px-3 text-slate-400"><Phone size={14} /></span>
+                    <input
+                      type="tel" maxLength={10}
+                      className="flex-1 py-2.5 text-sm font-semibold text-slate-800 outline-none bg-transparent"
+                      placeholder="e.g. 9876543210"
+                      value={mobileSearch}
+                      onChange={e => { setMobileSearch(e.target.value); setSearchStatus(null); setSearchResult(null); }}
+                      onKeyDown={e => e.key === 'Enter' && handleSearch()}
+                    />
                   </div>
+                  <button
+                    onClick={handleSearch}
+                    className="bg-[#0D47A1] hover:bg-blue-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl cursor-pointer shadow-sm transition-colors"
+                  >Search</button>
                 </div>
+              </div>
 
-                {searchStatus === 'not-found' && (
-                  <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-600 font-semibold">
-                    ❌ No customer found with this number.
-                    <button className="ml-2 underline text-[#0D47A1] font-bold">+ Add New Customer</button>
+              {searchStatus === 'not-found' && (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-600 font-semibold">
+                  ❌ No customer found with this number.
+                  <button className="ml-2 underline text-[#0D47A1] font-bold">+ Add New Customer</button>
+                </div>
+              )}
+
+              {searchStatus === 'found' && searchResult && (
+                <div className="bg-green-50 border border-green-200 rounded-xl p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 size={16} className="text-green-600" />
+                    <span className="text-xs font-extrabold text-green-700">Customer Found</span>
                   </div>
-                )}
-
-                {searchStatus === 'found' && searchResult && (
-                  <div className="bg-green-50 border border-green-200 rounded-xl p-4 space-y-3">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 size={16} className="text-green-600" />
-                      <span className="text-xs font-extrabold text-green-700">Customer Found</span>
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 bg-[#0D47A1] rounded-xl flex items-center justify-center text-white font-black text-sm shrink-0">
+                      {searchResult.name.charAt(0)}
                     </div>
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 bg-[#0D47A1] rounded-xl flex items-center justify-center text-white font-black text-sm shrink-0">
-                        {searchResult.name.charAt(0)}
-                      </div>
-                      <div>
-                        <p className="text-sm font-extrabold text-slate-800">{searchResult.name}</p>
-                        <p className="text-[11px] text-slate-500 font-semibold">{searchResult.mobile}</p>
-                        <p className="text-[10px] text-slate-400 mt-0.5">{searchResult.address}, {searchResult.city}, {searchResult.state} – {searchResult.pincode}</p>
-                      </div>
-                    </div>
-
                     <div>
-                      <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1.5">Previous Products ({searchResult.products.length})</p>
-                      <div className="space-y-1.5">
-                        {searchResult.products.map(p => (
-                          <div key={p.id} className="flex items-center justify-between bg-white border border-slate-200 rounded-lg px-3 py-2">
-                            <div>
-                              <p className="text-[11px] font-bold text-slate-700">{p.name}</p>
-                              <p className="text-[9px] font-mono text-slate-400">Model: {p.model}</p>
-                            </div>
-                            <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${p.warranty === 'In Warranty' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
-                              {p.warranty}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
+                      <p className="text-sm font-extrabold text-slate-800">{searchResult.name}</p>
+                      <p className="text-[11px] text-slate-500 font-semibold">{searchResult.mobile}</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">{searchResult.address}, {searchResult.city}, {searchResult.state} – {searchResult.pincode}</p>
                     </div>
-
-                    <button
-                      onClick={() => handleSelectCustomer(searchResult)}
-                      className="w-full bg-[#0D47A1] hover:bg-blue-800 text-white text-xs font-bold py-2.5 rounded-xl cursor-pointer shadow-sm transition-colors flex items-center justify-center gap-2"
-                    >
-                      Continue with {searchResult.name} <ArrowRight size={14} />
-                    </button>
                   </div>
-                )}
-              </div>
 
-              {/* Right: Lifecycle preview */}
-              <div className="col-span-7 bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-5 space-y-4">
-                <div>
-                  <h3 className="text-sm font-extrabold text-slate-800">Ticket Lifecycle</h3>
-                  <p className="text-[10px] text-slate-400 font-medium mt-0.5">Once raised, every ticket follows this workflow</p>
+                  <div>
+                    <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1.5">Previous Products ({searchResult.products.length})</p>
+                    <div className="space-y-1.5">
+                      {searchResult.products.map(p => (
+                        <div key={p.id} className="flex items-center justify-between bg-white border border-slate-200 rounded-lg px-3 py-2">
+                          <div>
+                            <p className="text-[11px] font-bold text-slate-700">{p.name}</p>
+                            <p className="text-[9px] font-mono text-slate-400">Model: {p.model}</p>
+                          </div>
+                          <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${p.warranty === 'In Warranty' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
+                            {p.warranty}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => handleSelectCustomer(searchResult)}
+                    className="w-full bg-[#0D47A1] hover:bg-blue-800 text-white text-xs font-bold py-2.5 rounded-xl cursor-pointer shadow-sm transition-colors flex items-center justify-center gap-2"
+                  >
+                    Continue with {searchResult.name} <ArrowRight size={14} />
+                  </button>
                 </div>
-
-                {/* Row 1 */}
-                <div className="flex items-center gap-1 flex-wrap">
-                  {lifecycleSteps.map((s, i) => (
-                    <React.Fragment key={s.label}>
-                      <div className={`flex flex-col items-center gap-1 px-2.5 py-2 rounded-xl border text-center ${s.color}`} style={{minWidth:'72px'}}>
-                        <span className="text-base">{s.icon}</span>
-                        <span className="text-[9px] font-extrabold uppercase leading-tight">{s.label}</span>
-                      </div>
-                      {i < lifecycleSteps.length - 1 && <ArrowRight size={13} className="text-slate-300 shrink-0" />}
-                    </React.Fragment>
-                  ))}
-                </div>
-
-                {/* Spare path indicator */}
-                <div className="flex items-center gap-2">
-                  <div className="h-px flex-1 bg-slate-200" />
-                  <span className="text-[9px] font-black text-orange-500 uppercase tracking-widest bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-full">If Spare Parts Needed (Optional)</span>
-                  <div className="h-px flex-1 bg-slate-200" />
-                </div>
-
-                <div className="flex items-center gap-1 flex-wrap">
-                  {spareSteps.map((s, i) => (
-                    <React.Fragment key={s.label}>
-                      <div className={`flex flex-col items-center gap-1 px-2.5 py-2 rounded-xl border text-center ${s.color}`} style={{minWidth:'80px'}}>
-                        <span className="text-base">{s.icon}</span>
-                        <span className="text-[9px] font-extrabold uppercase leading-tight">{s.label}</span>
-                      </div>
-                      {i < spareSteps.length - 1 && <ArrowRight size={13} className="text-slate-300 shrink-0" />}
-                    </React.Fragment>
-                  ))}
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <div className="h-px flex-1 bg-slate-200" />
-                  <span className="text-[9px] font-black text-green-600 uppercase tracking-widest bg-green-50 border border-green-200 px-2 py-0.5 rounded-full">Closing Flow</span>
-                  <div className="h-px flex-1 bg-slate-200" />
-                </div>
-
-                <div className="flex items-center gap-1 flex-wrap">
-                  {closingSteps.map((s, i) => (
-                    <React.Fragment key={s.label}>
-                      <div className={`flex flex-col items-center gap-1 px-2.5 py-2 rounded-xl border text-center ${s.color}`} style={{minWidth:'80px'}}>
-                        <span className="text-base">{s.icon}</span>
-                        <span className="text-[9px] font-extrabold uppercase leading-tight">{s.label}</span>
-                      </div>
-                      {i < closingSteps.length - 1 && <ArrowRight size={13} className="text-slate-300 shrink-0" />}
-                    </React.Fragment>
-                  ))}
-                </div>
-
-                <p className="text-[10px] text-slate-400 italic">* Technician will raise a spare part request if needed during diagnosis. Brand panel approves the request.</p>
-              </div>
+              )}
             </div>
           )}
 
@@ -494,11 +490,44 @@ const RegisterComplaint = () => {
               {/* Attachment */}
               <div>
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">Attach Invoice / Photo (Optional)</label>
-                <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center hover:border-[#0D47A1] transition-colors cursor-pointer bg-slate-50/50">
-                  <Upload size={24} className="text-slate-300 mx-auto mb-2" />
-                  <p className="text-xs text-slate-400 font-semibold">Click to upload or drag and drop</p>
-                  <p className="text-[10px] text-slate-300 mt-1">JPG, PNG, PDF (Max 5MB)</p>
-                </div>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  className="hidden"
+                  accept=".jpg,.jpeg,.png,.pdf"
+                />
+                {!complaint.attachment ? (
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    onDragOver={handleDragOver}
+                    onDrop={handleDrop}
+                    className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center hover:border-[#0D47A1] transition-colors cursor-pointer bg-slate-50/50"
+                  >
+                    <Upload size={24} className="text-slate-300 mx-auto mb-2" />
+                    <p className="text-xs text-slate-400 font-semibold">Click to upload or drag and drop</p>
+                    <p className="text-[10px] text-slate-300 mt-1">JPG, PNG, PDF (Max 5MB)</p>
+                  </div>
+                ) : (
+                  <div className="border border-green-200 bg-green-50/50 rounded-xl p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center text-green-700 shrink-0">
+                        <FileText size={20} />
+                      </div>
+                      <div className="text-left">
+                        <p className="text-xs font-bold text-slate-700">{complaint.attachment.name}</p>
+                        <p className="text-[10px] text-slate-400">{(complaint.attachment.size / 1024).toFixed(1)} KB</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setComplaint(p => ({ ...p, attachment: null }))}
+                      className="p-1.5 hover:bg-red-50 text-red-500 rounded-lg transition-colors cursor-pointer"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -557,6 +586,15 @@ const RegisterComplaint = () => {
                     <div><p className="text-[9px] font-bold text-slate-400 uppercase">Issue</p><p className="text-sm font-bold text-slate-800">{complaint.issueCategory}</p></div>
                     <div><p className="text-[9px] font-bold text-slate-400 uppercase">Priority</p><p className={`text-sm font-black ${complaint.priority === 'Critical' ? 'text-red-600' : complaint.priority === 'High' ? 'text-orange-500' : 'text-slate-700'}`}>{complaint.priority}</p></div>
                     <div className="col-span-2"><p className="text-[9px] font-bold text-slate-400 uppercase">Remarks</p><p className="text-sm font-semibold text-slate-700">{complaint.description}</p></div>
+                    {complaint.attachment && (
+                      <div className="col-span-2">
+                        <p className="text-[9px] font-bold text-slate-400 uppercase">Attachment</p>
+                        <p className="text-xs font-semibold text-slate-700 flex items-center gap-1.5 mt-0.5">
+                          <FileText size={13} className="text-green-600" />
+                          {complaint.attachment.name} ({(complaint.attachment.size / 1024).toFixed(1)} KB)
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -614,38 +652,77 @@ const RegisterComplaint = () => {
 
       {/* ── Success Modal ── */}
       {successModal && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
-            <div className="bg-gradient-to-r from-[#0D47A1] to-[#1565C0] p-6 text-white text-center">
-              <CheckCircle2 size={48} className="mx-auto mb-2 text-green-300" />
-              <h2 className="text-lg font-extrabold">Ticket Raised Successfully!</h2>
-              <p className="text-blue-100 text-xs mt-1">Your service request has been registered</p>
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-xl shadow-2xl p-6 space-y-6 border border-slate-100 text-left">
+            {/* Header Banner */}
+            <div className="bg-[#E8F5E9] border border-[#C8E6C9] rounded-xl p-4 text-center">
+              <h2 className="text-base font-extrabold text-[#2E7D32]">Ticket Raised Successfully!</h2>
+              <p className="text-slate-600 text-xs font-semibold mt-1">Your complaint has been registered successfully.</p>
             </div>
-            <div className="p-6 space-y-4">
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-center">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Ticket ID</p>
-                <p className="text-xl font-black text-[#0D47A1] mt-1">{ticketId}</p>
-              </div>
-              <p className="text-xs text-slate-500 font-semibold text-center">
-                A technician will be assigned shortly. You can track this ticket in <span className="text-[#0D47A1] font-bold">All Complaints</span>.
-              </p>
-              {/* Mini lifecycle */}
-              <div className="bg-blue-50 rounded-xl p-3">
-                <p className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest mb-2">Next Steps</p>
-                <div className="flex items-center gap-1 text-[9px] font-bold text-slate-600 flex-wrap">
-                  {['New', 'Assigned', 'Engineer Accepted', 'Visit Scheduled', '...', 'Closed'].map((s, i, arr) => (
-                    <React.Fragment key={s}>
-                      <span className={`px-2 py-0.5 rounded-full ${i === 0 ? 'bg-[#0D47A1] text-white' : 'bg-white border border-slate-200'}`}>{s}</span>
-                      {i < arr.length - 1 && <ArrowRight size={10} className="text-slate-300 shrink-0" />}
-                    </React.Fragment>
-                  ))}
+
+            {/* IDs Grid */}
+            <div className="grid grid-cols-2 gap-4">
+              {/* Brand Complaint No */}
+              <div className="border border-slate-200 rounded-xl p-4 bg-white relative">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Brand Complaint No.</p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-black text-slate-800">{complaintIds.brandNo}</p>
+                  <button
+                    onClick={() => handleCopy(complaintIds.brandNo, 'brand')}
+                    className="text-slate-400 hover:text-[#0D47A1] p-1 rounded hover:bg-slate-100 transition-colors shrink-0 cursor-pointer"
+                    title="Copy"
+                  >
+                    {copiedId === 'brand' ? <CheckCircle2 size={14} className="text-green-600" /> : <Copy size={14} />}
+                  </button>
                 </div>
               </div>
+
+              {/* NCC Internal Ticket ID */}
+              <div className="border border-slate-200 rounded-xl p-4 bg-white relative">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">NCC Internal Ticket ID</p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-black text-slate-800">{complaintIds.nccId}</p>
+                  <button
+                    onClick={() => handleCopy(complaintIds.nccId, 'ncc')}
+                    className="text-slate-400 hover:text-[#0D47A1] p-1 rounded hover:bg-slate-100 transition-colors shrink-0 cursor-pointer"
+                    title="Copy"
+                  >
+                    {copiedId === 'ncc' ? <CheckCircle2 size={14} className="text-green-600" /> : <Copy size={14} />}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Meta Row */}
+            <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-4 px-1">
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Status</p>
+                <span className="bg-[#EEF4FF] text-[#0D47A1] text-[10px] font-extrabold px-3 py-1.5 rounded-full border border-blue-100">
+                  New Complaint Registered
+                </span>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Registered On</p>
+                <p className="text-xs font-bold text-slate-800">{formatRegistrationDate()}</p>
+              </div>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex gap-4 pt-2">
+              <button
+                onClick={() => {
+                  handleReset();
+                  navigate('/brand-admin/complaints');
+                }}
+                className="flex-1 border border-slate-300 hover:border-slate-400 bg-white text-slate-700 font-bold py-2.5 rounded-xl cursor-pointer transition-colors text-xs text-center"
+              >
+                View Ticket
+              </button>
               <button
                 onClick={handleReset}
-                className="w-full bg-[#0D47A1] text-white font-bold py-2.5 rounded-xl cursor-pointer hover:bg-blue-800 transition-colors text-sm"
+                className="flex-1 bg-[#0D47A1] hover:bg-blue-800 text-white font-bold py-2.5 rounded-xl cursor-pointer transition-colors text-xs text-center"
               >
-                Raise Another Ticket
+                Create Another
               </button>
             </div>
           </div>
