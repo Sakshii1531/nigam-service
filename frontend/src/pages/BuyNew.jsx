@@ -3,7 +3,8 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { 
   ArrowLeft, Shield, ShoppingCart, CheckCircle, ChevronRight, Check, Search, 
   Wrench, Percent, CreditCard, Lock, Landmark, Wallet, ShieldCheck, Plus, Minus, Trash2,
-  ChevronLeft, Zap, CheckCircle2, Home as HomeIcon, LayoutGrid, User, Calendar, RefreshCw
+  ChevronLeft, Zap, CheckCircle2, Home as HomeIcon, LayoutGrid, User, Calendar, RefreshCw,
+  Heart, Star, ChevronDown, SlidersHorizontal
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -121,6 +122,69 @@ const BuyNew = () => {
   // Derived list of products for category step
   const finalCategory = categoryParam || 'Water Purifier';
   const categoryProducts = productsData[finalCategory] || productsData['Water Purifier'];
+
+  // Wishlist, Sort, and Filter States
+  const [wishlist, setWishlist] = useState(() => {
+    const saved = localStorage.getItem('nigam_user_wishlist');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  // Sort By drawer and Filter page states
+  const [showSortModal, setShowSortModal] = useState(false);
+  const [showFilterPage, setShowFilterPage] = useState(false);
+  const [sortOption, setSortOption] = useState('relevance'); // 'relevance' | 'popularity' | 'low-to-high' | 'high-to-low' | 'newest'
+  const [selectedBrands, setSelectedBrands] = useState([]);
+  const [tempSelectedBrands, setTempSelectedBrands] = useState([]);
+  const [searchBrandQuery, setSearchBrandQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState('all'); // 'all' | 'discount' | 'fast'
+
+  const toggleWishlist = (product, e) => {
+    e.stopPropagation();
+    let currentWishlist = [...wishlist];
+    const exists = currentWishlist.some(p => p.id === product.id);
+    if (exists) {
+      currentWishlist = currentWishlist.filter(p => p.id !== product.id);
+    } else {
+      currentWishlist.push({ ...product, category: finalCategory });
+    }
+    setWishlist(currentWishlist);
+    localStorage.setItem('nigam_user_wishlist', JSON.stringify(currentWishlist));
+  };
+
+  const sortedAndFilteredProducts = React.useMemo(() => {
+    let list = [...categoryProducts];
+
+    // Apply Brand filter
+    if (selectedBrands.length > 0) {
+      list = list.filter(product => 
+        selectedBrands.some(brand => product.name.toLowerCase().includes(brand.toLowerCase()))
+      );
+    }
+
+    // Apply mock filter: 'discount' shows odd indexed items (simulated discount filter)
+    if (activeFilter === 'discount') {
+      list = list.filter((_, idx) => idx % 2 === 0);
+    } else if (activeFilter === 'fast') {
+      list = list.filter((_, idx) => idx % 2 !== 0);
+    }
+
+    // Apply sorting
+    if (sortOption === 'low-to-high') {
+      list.sort((a, b) => a.price - b.price);
+    } else if (sortOption === 'high-to-low') {
+      list.sort((a, b) => b.price - a.price);
+    } else if (sortOption === 'popularity') {
+      list.sort((a, b) => {
+        const ratingA = 4.0 + (a.price % 6) * 0.1;
+        const ratingB = 4.0 + (b.price % 6) * 0.1;
+        return ratingB - ratingA;
+      });
+    } else if (sortOption === 'newest') {
+      list.reverse();
+    }
+
+    return list;
+  }, [categoryProducts, sortOption, activeFilter, selectedBrands]);
   
   // Derived selected product for details step
   const finalProduct = categoryProducts.find(p => p.name === productNameParam) || categoryProducts[0];
@@ -280,40 +344,174 @@ const BuyNew = () => {
             initial={{ opacity: 0, x: 10 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.3 }}
-            className="flex flex-col gap-5"
+            className="flex flex-col gap-4 text-left"
           >
-            {/* Filter Selection (Mocked for style) */}
-            <div className="flex justify-between items-center bg-white border border-slate-200/60 rounded-2xl p-3 shadow-sm">
-              <span className="text-xs font-bold text-slate-700">Filters</span>
-              <span className="text-xs text-brand-blue font-black flex items-center gap-0.5 cursor-pointer">
-                All Brands <ChevronRight className="w-3.5 h-3.5 rotate-90" />
-              </span>
+            {/* Top Horizontal Scrollable Filters */}
+            <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
+              {/* Sort Button */}
+              <button
+                onClick={() => setShowSortModal(true)}
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-full border text-[11px] font-extrabold whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
+                  sortOption !== 'relevance' 
+                    ? 'bg-blue-50 border-brand-blue text-brand-blue' 
+                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                Sort <ChevronDown size={13} className={sortOption !== 'relevance' ? "text-brand-blue" : "text-slate-500"} />
+              </button>
+
+              {/* Filter Button */}
+              <button
+                onClick={() => {
+                  setTempSelectedBrands([...selectedBrands]);
+                  setShowFilterPage(true);
+                }}
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-full border text-[11px] font-extrabold whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
+                  selectedBrands.length > 0
+                    ? 'bg-blue-50 border-brand-blue text-brand-blue'
+                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                Filter <SlidersHorizontal size={13} className={selectedBrands.length > 0 ? "text-brand-blue" : "text-slate-500"} />
+              </button>
+
+              {/* Top Sale Discounts Filter */}
+              <button
+                onClick={() => setActiveFilter(activeFilter === 'discount' ? 'all' : 'discount')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[11px] font-extrabold whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
+                  activeFilter === 'discount'
+                    ? 'bg-blue-50 border-brand-blue text-brand-blue'
+                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                Top Sale Discounts
+              </button>
+
+              {/* Fast Delivery Filter */}
+              <button
+                onClick={() => setActiveFilter(activeFilter === 'fast' ? 'all' : 'fast')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[11px] font-extrabold whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
+                  activeFilter === 'fast'
+                    ? 'bg-blue-50 border-brand-blue text-brand-blue'
+                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                Fast Delivery
+              </button>
             </div>
 
-            {/* Products List */}
-            <div className="flex flex-col gap-4.5">
-              {categoryProducts.map((product) => (
-                <div 
-                  key={product.id}
-                  onClick={() => navigate(`/buy-new/details/${encodeURIComponent(finalCategory)}/${encodeURIComponent(product.name)}`)}
-                  className="bg-white border border-slate-200/80 rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:border-brand-blue/40 shadow-sm transition-all hover:scale-[1.005]"
-                >
-                  <div className="flex items-center gap-4.5">
-                    <div className="w-16 h-16 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center p-2 flex-shrink-0">
-                      <img 
-                        src={getApplianceImg(finalCategory)} 
-                        alt={product.name} 
-                        className="w-full h-full object-contain mix-blend-multiply" 
-                      />
+            {/* Products List (Flipkart Grid Layout) */}
+            <div className="flex flex-col gap-3">
+              {sortedAndFilteredProducts.map((product) => {
+                const isWishlisted = wishlist.some(p => p.id === product.id);
+                // Mock Rating values
+                const rating = (4.0 + (product.price % 6) * 0.1).toFixed(1);
+                const ratingCount = (1500 + (product.price % 800) * 12).toLocaleString();
+                const discount = 30 + (product.price % 18);
+                const originalPrice = Math.round(product.price * 1.5);
+                const exchangePrice = Math.round(product.price * 0.85);
+
+                return (
+                  <div 
+                    key={product.id}
+                    onClick={() => navigate(`/buy-new/details/${encodeURIComponent(finalCategory)}/${encodeURIComponent(product.name)}`)}
+                    className="bg-white border border-slate-200/80 rounded-2xl p-3 flex flex-col gap-3.5 cursor-pointer hover:border-brand-blue/30 shadow-xs hover:shadow-sm transition-all"
+                  >
+                    <div className="flex gap-4">
+                      {/* Left: Image Container with Heart Icon */}
+                      <div className="relative w-28 h-28 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center p-2.5 shrink-0">
+                        {/* Sponsored Badge */}
+                        {(product.id.includes('1') || product.id.includes('3')) && (
+                          <span className="absolute top-1.5 left-1.5 bg-black/50 text-[8px] font-extrabold text-white px-1.5 py-0.5 rounded uppercase tracking-wider scale-90 origin-top-left">
+                            Sponsored
+                          </span>
+                        )}
+
+                        <img 
+                          src={getApplianceImg(finalCategory)} 
+                          alt={product.name} 
+                          className="w-full h-full object-contain mix-blend-multiply" 
+                        />
+
+                        {/* Floating Wishlist Heart */}
+                        <button
+                          onClick={(e) => toggleWishlist(product, e)}
+                          className="absolute top-1.5 right-1.5 w-7 h-7 bg-white/95 rounded-full flex items-center justify-center shadow-xs border border-slate-100 hover:scale-110 active:scale-95 transition-all cursor-pointer"
+                        >
+                          <Heart 
+                            size={14} 
+                            fill={isWishlisted ? "#EF4444" : "none"} 
+                            className={isWishlisted ? "text-red-500" : "text-slate-400"} 
+                          />
+                        </button>
+                      </div>
+
+                      {/* Right: Product details */}
+                      <div className="flex-1 flex flex-col text-left justify-between min-w-0">
+                        <div>
+                          {/* Title & Specifications Description */}
+                          <h4 className="text-[13px] font-black text-slate-800 leading-snug truncate">
+                            {product.name}
+                          </h4>
+                          <p className="text-[10px] text-slate-400 font-semibold truncate mt-0.5">
+                            {product.specs.join(' | ')}
+                          </p>
+
+                          {/* Ratings and Assured Tag */}
+                          <div className="flex items-center gap-1.5 mt-1.5">
+                            <span className="bg-green-600 text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded flex items-center gap-0.5 shrink-0">
+                              {rating} <Star size={8} fill="currentColor" />
+                            </span>
+                            <span className="text-slate-400 text-[10px] font-semibold">
+                              ({ratingCount})
+                            </span>
+                            <span className="inline-flex items-center gap-0.5 text-[8px] font-black italic bg-[#E0F2FE] text-blue-700 border border-blue-200 px-1 rounded select-none">
+                              ★ Assured
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Price Details */}
+                        <div className="mt-2.5">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[#388E3C] font-black text-[11px]">
+                              ↓{discount}%
+                            </span>
+                            <span className="text-slate-400 line-through text-[11px] font-bold">
+                              ₹{originalPrice.toLocaleString()}
+                            </span>
+                            <span className="text-slate-800 font-extrabold text-sm">
+                              ₹{product.price.toLocaleString()}
+                            </span>
+                          </div>
+
+                          {/* Special exchange tag */}
+                          <p className="text-[10px] text-[#0A52B5] font-extrabold mt-1">
+                            wow! ₹{exchangePrice.toLocaleString()} with Exchange offer
+                          </p>
+
+                          {/* Delivery info */}
+                          <p className="text-[10px] text-slate-500 font-semibold mt-0.5">
+                            Delivery by <span className="text-slate-700 font-extrabold">Tomorrow</span> &nbsp;|&nbsp; <span className="text-green-600 font-bold">Free Shipping</span>
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="text-sm font-black text-brand-navy leading-tight">{product.name}</h4>
-                      <span className="text-sm font-bold text-brand-blue block mt-1.5">₹{product.price.toLocaleString()}</span>
+
+                    {/* Specification Badges Footer */}
+                    <div className="flex flex-wrap gap-1 border-t border-slate-100 pt-2">
+                      {product.specs.slice(0, 3).map((spec, sIdx) => (
+                        <span 
+                          key={sIdx} 
+                          className="bg-[#F1F5F9] border border-slate-200/80 text-slate-500 text-[9px] font-bold px-2 py-0.5 rounded-md"
+                        >
+                          {spec}
+                        </span>
+                      ))}
                     </div>
                   </div>
-                  <ChevronRight className="h-5 w-5 text-text-secondary flex-shrink-0" />
-                </div>
-              ))}
+                );
+              })}
             </div>
           </motion.div>
         )}
@@ -826,6 +1024,195 @@ const BuyNew = () => {
           <span className="text-xs font-semibold mt-0.5">Account</span>
         </button>
       </div>
+
+      {/* ── SORT BY BOTTOM SHEET DRAWERS ── */}
+      {showSortModal && (
+        <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-end justify-center">
+          {/* Click outside to close */}
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="absolute inset-0" 
+            onClick={() => setShowSortModal(false)} 
+          />
+          
+          <motion.div 
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ type: "spring", damping: 25, stiffness: 350 }}
+            className="bg-white rounded-t-[28px] w-full max-w-md p-5 pb-8 flex flex-col gap-4 text-left relative z-10 shadow-2xl"
+          >
+            {/* Header */}
+            <div className="border-b border-slate-100 pb-3">
+              <span className="text-slate-400 font-bold text-xs uppercase tracking-wider block">SORT BY</span>
+            </div>
+            
+            {/* Options list */}
+            <div className="flex flex-col gap-2">
+              {[
+                { value: 'relevance', label: 'Relevance' },
+                { value: 'popularity', label: 'Popularity' },
+                { value: 'low-to-high', label: 'Price -- Low to High' },
+                { value: 'high-to-low', label: 'Price -- High to Low' },
+                { value: 'newest', label: 'Newest First' }
+              ].map((opt) => (
+                <div 
+                  key={opt.value}
+                  onClick={() => {
+                    setSortOption(opt.value);
+                    setShowSortModal(false);
+                  }}
+                  className="flex justify-between items-center py-3 cursor-pointer group hover:bg-slate-50 px-2 rounded-xl transition-colors"
+                >
+                  <span className={`text-[13px] font-bold ${sortOption === opt.value ? 'text-brand-blue' : 'text-slate-800'}`}>
+                    {opt.label}
+                  </span>
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                    sortOption === opt.value ? 'border-brand-blue bg-white' : 'border-slate-300'
+                  }`}>
+                    {sortOption === opt.value && <div className="w-2.5 h-2.5 rounded-full bg-brand-blue" />}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* ── FULL-SCREEN FILTERS PAGE OVERLAY ── */}
+      {showFilterPage && (
+        <motion.div 
+          initial={{ opacity: 0, x: "100%" }}
+          animate={{ opacity: 1, x: 0 }}
+          className="fixed inset-0 bg-white z-50 flex flex-col h-full text-left"
+        >
+          {/* Header Bar */}
+          <div className="bg-white px-5 py-4 flex items-center justify-between border-b border-slate-100 shrink-0">
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => setShowFilterPage(false)}
+                className="p-1.5 hover:bg-slate-100 rounded-full transition-colors flex items-center justify-center cursor-pointer"
+              >
+                <ArrowLeft className="h-5 w-5 text-slate-700" />
+              </button>
+              <h1 className="text-sm font-extrabold text-slate-800">Filters</h1>
+            </div>
+            <button 
+              onClick={() => setTempSelectedBrands([])}
+              className="text-xs text-brand-blue font-black hover:text-blue-700 cursor-pointer"
+            >
+              Clear Filters
+            </button>
+          </div>
+
+          {/* Body Content Pane with Sidebar and Options */}
+          <div className="flex-1 flex overflow-hidden">
+            {/* Left Category Sidebar */}
+            <div className="w-1/3 bg-slate-50 border-r border-slate-100 flex flex-col overflow-y-auto">
+              {[
+                'Brand',
+                'Display Technology',
+                'Operating System',
+                'Resolution',
+                'Launch Year',
+                'Price',
+                'Customer Ratings',
+                'Smart Features',
+                'Refresh Rate',
+                'Number of USB Ports',
+                'Number of HDMI Ports'
+              ].map((category, idx) => (
+                <div 
+                  key={idx}
+                  className={`p-4 text-[11px] font-extrabold text-left border-l-4 transition-all cursor-pointer ${
+                    category === 'Brand' 
+                      ? 'bg-white border-brand-blue text-brand-blue font-black shadow-xs' 
+                      : 'border-transparent text-slate-600 hover:bg-slate-100/50'
+                  }`}
+                >
+                  {category}
+                </div>
+              ))}
+            </div>
+
+            {/* Right Options List */}
+            <div className="flex-1 bg-white p-4 flex flex-col gap-3.5 overflow-y-auto">
+              {/* Search Brand input */}
+              <div className="relative">
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                <input 
+                  type="text"
+                  placeholder="Search Brand"
+                  value={searchBrandQuery}
+                  onChange={(e) => setSearchBrandQuery(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2 text-xs font-semibold text-slate-800 focus:outline-none focus:bg-white focus:border-brand-blue/50"
+                />
+              </div>
+
+              {/* Brands Checklist */}
+              <div className="flex flex-col gap-3.5">
+                {[
+                  'SONY', 'Samsung', 'LG', 'TCL', 'XIAOMI', 
+                  'MOTOROLA', 'Thomson', 'realme TechLife', 'TOSHIBA', 'iFFALCON'
+                ]
+                  .filter(brand => brand.toLowerCase().includes(searchBrandQuery.toLowerCase()))
+                  .map((brand) => {
+                    const isChecked = tempSelectedBrands.includes(brand);
+                    return (
+                      <div 
+                        key={brand}
+                        onClick={() => {
+                          if (isChecked) {
+                            setTempSelectedBrands(tempSelectedBrands.filter(b => b !== brand));
+                          } else {
+                            setTempSelectedBrands([...tempSelectedBrands, brand]);
+                          }
+                        }}
+                        className="flex items-center gap-3 py-1 cursor-pointer group"
+                      >
+                        <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
+                          isChecked ? 'bg-[#F95F06] border-[#F95F06]' : 'border-slate-300 group-hover:border-slate-400'
+                        }`}>
+                          {isChecked && <Check size={12} className="text-white" />}
+                        </div>
+                        <span className="text-[12.5px] font-bold text-slate-700 select-none">
+                          {brand}
+                        </span>
+                      </div>
+                    );
+                  })}
+              </div>
+
+              <span className="text-[11px] text-brand-blue font-black mt-2 cursor-pointer inline-block">
+                View More
+              </span>
+            </div>
+          </div>
+
+          {/* Bottom Action Footer */}
+          <div className="border-t border-slate-100 p-4 flex items-center justify-between shrink-0 bg-white">
+            <span className="text-xs text-slate-500 font-extrabold">
+              {tempSelectedBrands.length > 0 ? (
+                `${categoryProducts.filter(product => 
+                  tempSelectedBrands.some(brand => product.name.toLowerCase().includes(brand.toLowerCase()))
+                ).length} products found`
+              ) : (
+                `${categoryProducts.length} products found`
+              )}
+            </span>
+            <button 
+              onClick={() => {
+                setSelectedBrands(tempSelectedBrands);
+                setShowFilterPage(false);
+              }}
+              className="bg-[#F95F06] hover:bg-orange-600 text-white px-8 py-2.5 rounded-xl text-xs font-black transition-colors shadow-md cursor-pointer active:scale-97"
+            >
+              Apply
+            </button>
+          </div>
+        </motion.div>
+      )}
 
       {/* Exchange Wizard Modal */}
       <ExchangeModal

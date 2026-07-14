@@ -19,7 +19,8 @@ import {
   LayoutGrid,
   Package,
   RefreshCw,
-  Ticket
+  Ticket,
+  Heart
 } from 'lucide-react';
 
 import partnerImg from '../assets/working/Gemini_Generated_Image_ahi7orahi7orahi7-removebg-preview (1).png';
@@ -28,6 +29,7 @@ const Profile = () => {
   const navigate = useNavigate();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const userCoins = parseInt(localStorage.getItem('user_coins') || '2450', 10);
+  const wishlistCount = JSON.parse(localStorage.getItem('nigam_user_wishlist') || '[]').length;
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-24">
@@ -249,6 +251,23 @@ const Profile = () => {
                 <span className="text-xs font-bold text-slate-800">My Coupons</span>
               </div>
               <ChevronRight className="h-4.5 w-4.5 text-slate-400" />
+            </div>
+
+            {/* My Wishlist */}
+            <div 
+              onClick={() => navigate('/my-wishlist')}
+              className="p-4 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer"
+            >
+              <div className="flex items-center gap-3.5">
+                <div className="p-2 bg-red-50 text-red-500 rounded-xl">
+                  <Heart className="h-4.5 w-4.5" />
+                </div>
+                <span className="text-xs font-bold text-slate-800">My Wishlist</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400 font-semibold">{wishlistCount} items</span>
+                <ChevronRight className="h-4.5 w-4.5 text-slate-400" />
+              </div>
             </div>
 
             {/* Saved Addresses */}
