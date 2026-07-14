@@ -43,6 +43,7 @@ import RateService from './pages/RateService';
 import ProductDetails from './pages/ProductDetails';
 import Rewards from './pages/Rewards';
 import Wishlist from './pages/Wishlist';
+import MyWishlist from './pages/MyWishlist';
 import Coupons from './pages/Coupons';
 import FinanceDetails from './pages/FinanceDetails';
 import MembershipPlans from './pages/MembershipPlans';
@@ -319,6 +320,7 @@ function App() {
         <Route path="/edit-profile" element={<EditProfile />} />
         <Route path="/rewards" element={<Rewards />} />
         <Route path="/wishlist" element={<Wishlist />} />
+        <Route path="/my-wishlist" element={<MyWishlist />} />
         <Route path="/coupons" element={<Coupons />} />
         <Route path="/finance/:type" element={<FinanceDetails />} />
         <Route path="/membership-plans" element={<MembershipPlans />} />
