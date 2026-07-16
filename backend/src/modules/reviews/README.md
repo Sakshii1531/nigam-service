@@ -1,3 +1,3 @@
 # reviews
 
-Phase 6/7 (created by customer, surfaced/responded to by brand-admin). `Review` with category ratings, tags, photos, tip, brand response, escalation flag. See BACKEND_CONTEXT.md §3.14.
+Model existed since Phase 1 (category ratings, tags, photos, tip, brand response, escalation flag) but had no service/routes until Phase 10, where filling this gap was needed to write a real end-to-end "book → complete → pay → review" test. One review per `ServiceRequest`, created by the customer who owns it (`POST /reviews`), publicly readable per-technician (`GET /reviews/technicians/:technicianId` — no auth), and respondable by the owning brand's admin (`PATCH /:id/respond`, cross-tenant-checked via `ServiceRequest.brand`). `tip` is captured but not paid out — no tip-settlement flow exists anywhere yet, same class of gap as the payment gateway stub. See BACKEND_CONTEXT.md §3.14 and `../../../docs/DATA_MODEL.md`'s Phase 10 addendum.

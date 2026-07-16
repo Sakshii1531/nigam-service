@@ -49,6 +49,7 @@ import { platformUserRouter } from './modules/super-admin/platformUser.routes.js
 import { superAdminClaimRouter } from './modules/super-admin/claim.routes.js';
 import { chatRouter } from './modules/chat/chat.routes.js';
 import { notificationRouter } from './modules/notifications/notification.routes.js';
+import { reviewRouter } from './modules/reviews/review.routes.js';
 import { devRouter } from './modules/shared/dev.routes.js';
 import { LOCAL_UPLOAD_DIR, isS3Configured } from './modules/shared/fileUpload.js';
 
@@ -136,6 +137,7 @@ export function createApp() {
   app.use('/api/v1/cms', cmsRouter);
   app.use('/api/v1/chat', chatRouter);
   app.use('/api/v1/notifications', notificationRouter);
+  app.use('/api/v1/reviews', reviewRouter);
   if (!isProd) app.use('/api/v1', devRouter);
 
   app.use(notFoundHandler);
