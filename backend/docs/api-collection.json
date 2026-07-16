@@ -21,7 +21,13 @@
     { "key": "orderId", "value": "" },
     { "key": "jobId", "value": "" },
     { "key": "technicianClaimId", "value": "" },
-    { "key": "amcSubscriptionId", "value": "" }
+    { "key": "amcSubscriptionId", "value": "" },
+    { "key": "brandInvoiceId", "value": "" },
+    { "key": "subBrandId", "value": "" },
+    { "key": "masterServiceId", "value": "" },
+    { "key": "teamId", "value": "" },
+    { "key": "brandRoleId", "value": "" },
+    { "key": "brandUserId", "value": "" }
   ],
   "item": [
     {
@@ -851,6 +857,363 @@
             "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
             "url": "{{baseUrl}}/tech/academy/announcements"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Brand Admin",
+      "description": "All routes require role=brand_admin (log in via the Auth folder with identifier=admin123@gmail.com, password=admin123 — or admin2@gmail.com for the second seeded brand, to manually verify cross-tenant isolation). See backend/src/modules/brand-admin/ and DATA_MODEL.md's Phase 7 addendum.",
+      "item": [
+        {
+          "name": "GET /brand/invoices",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/brand/invoices"
+          }
+        },
+        {
+          "name": "POST /brand/invoices",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/brand/invoices",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serviceRequest\": \"{{serviceRequestId}}\",\n  \"customer\": \"\",\n  \"technician\": \"\",\n  \"product\": \"AC\",\n  \"serviceCharge\": 499,\n  \"partCharge\": 0,\n  \"gst\": 89.82\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set('brandInvoiceId', pm.response.json().data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /brand/invoices/:id",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/brand/invoices/{{brandInvoiceId}}"
+          }
+        },
+        {
+          "name": "PATCH /brand/invoices/:id/status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/brand/invoices/{{brandInvoiceId}}/status",
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"Paid\"\n}" }
+          }
+        },
+        {
+          "name": "GET /brand/rate-cards",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/brand/rate-cards"
+          }
+        },
+        {
+          "name": "PUT /brand/rate-cards (upsert)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/brand/rate-cards",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category\": \"AC\",\n  \"serviceType\": \"Repair\",\n  \"laborRate\": 499,\n  \"partsMarkupPercent\": 10\n}"
+            }
+          }
+        },
+        {
+          "name": "GET /brand/replacement-approvals",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/brand/replacement-approvals"
+          }
+        },
+        {
+          "name": "POST /brand/replacement-approvals",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/brand/replacement-approvals",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serviceRequest\": \"{{serviceRequestId}}\",\n  \"product\": \"AC\",\n  \"reason\": \"Compressor dead\"\n}"
+            }
+          }
+        },
+        {
+          "name": "GET /brand/returns",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/brand/returns"
+          }
+        },
+        {
+          "name": "POST /brand/returns",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/brand/returns",
+            "body": { "mode": "raw", "raw": "{\n  \"technician\": \"\",\n  \"partName\": \"Compressor\"\n}" }
+          }
+        },
+        {
+          "name": "GET /brand/catalog/master-services",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/brand/catalog/master-services"
+          }
+        },
+        {
+          "name": "POST /brand/catalog/master-services",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/brand/catalog/master-services",
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"AC Repair\",\n  \"type\": \"Repair\",\n  \"charge\": 499\n}" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set('masterServiceId', pm.response.json().data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /brand/catalog/sub-brands",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/brand/catalog/sub-brands"
+          }
+        },
+        {
+          "name": "POST /brand/catalog/sub-brands",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/brand/catalog/sub-brands",
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"LG Appliances\",\n  \"category\": \"AC\"\n}" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set('subBrandId', pm.response.json().data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /brand/catalog/sub-brands/:subBrandId/products",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/brand/catalog/sub-brands/{{subBrandId}}/products",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"LG Split AC\",\n  \"model\": \"LS-Q18\",\n  \"services\": [\"{{masterServiceId}}\"]\n}"
+            }
+          }
+        },
+        {
+          "name": "GET /brand/catalog/sub-brands/:subBrandId/products",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/brand/catalog/sub-brands/{{subBrandId}}/products"
+          }
+        },
+        {
+          "name": "GET /brand/teams",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/brand/teams"
+          }
+        },
+        {
+          "name": "POST /brand/teams",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/brand/teams",
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Field Team A\",\n  \"department\": \"Field Service\",\n  \"region\": \"North\"\n}" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set('teamId', pm.response.json().data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /brand/teams/:id/members",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/brand/teams/{{teamId}}/members",
+            "body": { "mode": "raw", "raw": "{\n  \"userId\": \"\"\n}" }
+          }
+        },
+        {
+          "name": "GET /brand/roles",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/brand/roles"
+          }
+        },
+        {
+          "name": "POST /brand/roles",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/brand/roles",
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Support Agent\",\n  \"permissionKeys\": [\"requests:manage\"]\n}" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set('brandRoleId', pm.response.json().data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /brand/users",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/brand/users"
+          }
+        },
+        {
+          "name": "POST /brand/users (invite)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/brand/users",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Agent Smith\",\n  \"email\": \"agent1@brand1.test\",\n  \"password\": \"password123\",\n  \"assignedRoles\": [\"{{brandRoleId}}\"]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set('brandUserId', pm.response.json().data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /brand/users/:id",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/brand/users/{{brandUserId}}",
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"Suspended\"\n}" }
+          }
+        },
+        {
+          "name": "GET /brand/documents",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/brand/documents"
+          }
+        },
+        {
+          "name": "POST /brand/documents (generate)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/brand/documents",
+            "body": { "mode": "raw", "raw": "{\n  \"type\": \"Warranty Certificate\",\n  \"serviceRequest\": \"{{serviceRequestId}}\"\n}" }
           }
         }
       ]
