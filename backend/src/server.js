@@ -1,7 +1,9 @@
+import http from 'node:http';
 import { createApp } from './app.js';
 import { connectDB, ensureIndexes } from './config/db.js';
 import { registerAllModels } from './config/registerModels.js';
 import { env } from './config/env.js';
+import { initSockets } from './sockets/index.js';
 
 async function main() {
   const modelCount = await registerAllModels();
@@ -10,8 +12,11 @@ async function main() {
   await ensureIndexes();
 
   const app = createApp();
-  const server = app.listen(env.port, () => {
-    console.log(`[server] listening on :${env.port} (${env.nodeEnv})`);
+  const httpServer = http.createServer(app);
+  initSockets(httpServer);
+
+  const server = httpServer.listen(env.port, () => {
+    console.log(`[server] listening on :${env.port} (${env.nodeEnv}), Socket.IO attached`);
   });
 
   const shutdown = (signal) => {

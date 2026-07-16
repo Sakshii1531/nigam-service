@@ -11,6 +11,8 @@ import { Payment } from '../payments-wallet/payment.model.js';
 import { chargePayment } from '../payments-wallet/paymentGateway.js';
 import { computeCharges } from '../shared/pricingEngine.js';
 import { raiseTechnicianClaim } from './claim.service.js';
+import { getOrCreateConversation } from '../chat/conversation.service.js';
+import { emit as emitNotification } from '../notifications/notification.service.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { JOB_STEP_TRANSITIONS } from '../../config/constants.js';
 
@@ -144,6 +146,11 @@ export async function acceptJob(technicianId, serviceRequestId, { type, amcSubsc
   // is 'Assigned' — booking.service.js's auto-assign flow already puts it there
   // for D2C jobs; non-D2C fixtures must do the same before calling acceptJob.
   await transitionStatus(serviceRequest._id, 'Engineer Accepted', { description: 'Technician accepted the job' });
+
+  // Customer<->technician chat only makes sense once both sides of a real,
+  // verified pairing exist — this is that moment (see chat.routes.js's doc
+  // comment for why there's no client-facing "create conversation" endpoint).
+  await getOrCreateConversation({ serviceRequest: serviceRequest._id, customer: serviceRequest.user, technician: technicianId });
 
   return job;
 }
@@ -325,6 +332,9 @@ export async function collectPayment(technicianId, jobId, { paymentMethod = 'Cas
   // payment is what hands it off to the customer for final sign-off. 'Closed' itself
   // requires an actual customer confirmation action, which is out of Phase 6's scope.
   await transitionStatus(serviceRequest._id, 'Customer Confirmation', { description: 'Payment collected by technician' });
+
+  await emitNotification('payment.success', { user: serviceRequest.user, amount });
+  await emitNotification('service.completed', { user: serviceRequest.user, serviceRequestId: serviceRequest.id });
 
   return { job, payment };
 }

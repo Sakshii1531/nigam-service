@@ -1,6 +1,7 @@
 import { Escalation } from './escalation.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { parsePagination, paginationMeta } from '../../utils/pagination.js';
+import { emit as emitNotification } from '../notifications/notification.service.js';
 
 // Super-admin only ever works the 'platform' scope slice of this collection —
 // 'brand' scope belongs to a brand-admin Escalations.jsx surface that hasn't
@@ -32,7 +33,9 @@ export async function getEscalation(id) {
 }
 
 export async function createEscalation({ serviceRequest, city, reason, description, raisedBy, priority }) {
-  return Escalation.create({ scope: 'platform', serviceRequest, city, reason, description, raisedBy, priority });
+  const escalation = await Escalation.create({ scope: 'platform', serviceRequest, city, reason, description, raisedBy, priority });
+  await emitNotification('escalation.raised', { reason });
+  return escalation;
 }
 
 export async function assignManager(id, managerId) {
