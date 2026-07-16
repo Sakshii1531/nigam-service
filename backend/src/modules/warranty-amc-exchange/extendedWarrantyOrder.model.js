@@ -5,7 +5,8 @@ import { ID_PREFIXES } from '../../config/constants.js';
 const extendedWarrantyOrderSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    appliance: String,
+    appliance: { type: mongoose.Schema.Types.ObjectId, ref: 'OwnedAppliance', default: null },
+    applianceCategory: String, // e.g. "AC" — display label, kept even once `appliance` is linked
     brand: String,
     tierId: String,
     price: { type: Number, required: true },
