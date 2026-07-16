@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { applyStandardPlugins } from '../shared/plugins.js';
+import { generateHumanId } from '../shared/idGenerator.js';
 import { addressSchema } from './address.schema.js';
 import { ID_PREFIXES, ROLES } from '../../config/constants.js';
 
@@ -30,6 +31,11 @@ const userSchema = new mongoose.Schema(
 
     status: { type: String, enum: ['Active', 'Suspended', 'Pending'], default: 'Active', index: true },
     lastActiveAt: Date,
+
+    // Only meaningful for role: 'customer' (brand-admin's Customers.jsx uses CUST-###) —
+    // not wired through the generic humanIdPlugin like other models, since that plugin
+    // assumes one prefix per collection and User covers all 4 roles.
+    humanId: { type: String, unique: true, sparse: true, index: true },
   },
   { timestamps: true },
 );
@@ -37,6 +43,12 @@ const userSchema = new mongoose.Schema(
 userSchema.index({ phone: 1, role: 1 }, { unique: true, sparse: true });
 userSchema.index({ email: 1, role: 1 }, { unique: true, sparse: true });
 
-applyStandardPlugins(userSchema, { prefix: ID_PREFIXES.CUSTOMER });
+userSchema.pre('save', async function assignCustomerHumanId() {
+  if (this.isNew && !this.humanId && this.role === ROLES.CUSTOMER) {
+    this.humanId = await generateHumanId(ID_PREFIXES.CUSTOMER);
+  }
+});
+
+applyStandardPlugins(userSchema);
 
 export const User = mongoose.models.User || mongoose.model('User', userSchema);

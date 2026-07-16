@@ -77,6 +77,36 @@ export const JOB_REVISIT_STEPS = Object.freeze([
   'revisit_otp',
 ]);
 
+// Format spec per human-readable ID prefix, keyed by the prefix STRING itself (not the
+// ID_PREFIXES constant name) so idGenerator can look one up from just the prefix a model
+// was configured with. `digits` = zero-padded sequence length; `dateSegment` = null (no
+// reset) | 'YYYY' (resets yearly) | 'YYMMDD' (resets daily) — matches the exact formats
+// the frontend already assumes (BACKEND_CONTEXT.md §7.2).
+export const ID_SCHEMES = Object.freeze({
+  [ID_PREFIXES.BOOKING]: { digits: 4, dateSegment: 'YYMMDD', separator: '-' },
+  [ID_PREFIXES.WARRANTY_TICKET]: { digits: 6, dateSegment: 'YYYY', separator: '-' },
+  [ID_PREFIXES.EXTENDED_WARRANTY]: { digits: 6, dateSegment: null, separator: '' },
+  [ID_PREFIXES.AMC]: { digits: 4, dateSegment: null, separator: '' },
+  [ID_PREFIXES.ORDER]: { digits: 6, dateSegment: null, separator: '' },
+  [ID_PREFIXES.SERVICE_REQUEST]: { digits: 4, dateSegment: null, separator: '-' },
+  [ID_PREFIXES.INVOICE]: { digits: 3, dateSegment: 'YYYY', separator: '-' },
+  [ID_PREFIXES.CLAIM]: { digits: 5, dateSegment: null, separator: '' },
+  [ID_PREFIXES.AMC_RECORD]: { digits: 4, dateSegment: null, separator: '-' },
+  [ID_PREFIXES.EXCHANGE]: { digits: 4, dateSegment: null, separator: '-' },
+  [ID_PREFIXES.REPLACEMENT]: { digits: 3, dateSegment: null, separator: '-' },
+  [ID_PREFIXES.RETURN]: { digits: 4, dateSegment: null, separator: '-' },
+  [ID_PREFIXES.PART_REQUEST]: { digits: 4, dateSegment: null, separator: '-' },
+  [ID_PREFIXES.SKU]: { digits: 4, dateSegment: null, separator: '-' },
+  [ID_PREFIXES.REVIEW]: { digits: 3, dateSegment: null, separator: '-' },
+  [ID_PREFIXES.DOCUMENT]: { digits: 3, dateSegment: null, separator: '-' },
+  [ID_PREFIXES.GUIDE]: { digits: 3, dateSegment: null, separator: '-' },
+  [ID_PREFIXES.COURSE]: { digits: 3, dateSegment: null, separator: '-' },
+  [ID_PREFIXES.TECHNICIAN]: { digits: 3, dateSegment: null, separator: '-' },
+  [ID_PREFIXES.CUSTOMER]: { digits: 3, dateSegment: null, separator: '-' },
+  [ID_PREFIXES.VERIFICATION]: { digits: 4, dateSegment: null, separator: '-' },
+  [ID_PREFIXES.JOB]: { digits: 4, dateSegment: null, separator: '-' },
+});
+
 export const GST_PERCENT_DEFAULT = 18; // Confirm per-product-line rate before go-live (§9 open question).
 
 export const PAGINATION_DEFAULT = Object.freeze({ page: 1, limit: 20, maxLimit: 100 });

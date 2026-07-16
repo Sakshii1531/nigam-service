@@ -83,3 +83,11 @@ Every list-page filter pattern from `BACKEND_CONTEXT.md` §7.4 has a matching co
 
 - `Role` and `Escalation`: one collection with a `scope` discriminator instead of two separate collections (see Conventions above) — same tenant isolation, less duplication.
 - `BrandUser` (mentioned in `BACKEND_CONTEXT.md` §5): folded into the single `User` collection rather than a separate model.
+
+## Phase 2 addendum — shared services wired up
+
+- **`idGenerator`** (`src/modules/shared/idGenerator.js`) is now live: `humanIdPlugin` (`src/modules/shared/plugins.js`) calls it from a `pre('save')` hook on every model configured with a `prefix`, atomically allocating the next ID via the `Counter` collection (`ID_SCHEMES` in `src/config/constants.js` defines digits/date-reset per prefix). **`User` is the one exception** — it doesn't use the generic plugin's prefix option, since a single `User` collection spans all 4 roles and only `role: 'customer'` should ever get a `CUST-###` id; it has its own small `pre('save')` hook gated on `role`.
+- **Schema fix**: `ExtendedWarrantyOrder.appliance` was a free-text category string in Phase 1; it's now `{ appliance: ObjectId ref OwnedAppliance, applianceCategory: String }` so `warrantyEngine` can actually resolve the Extended Warranty overlay for a given appliance instead of only reading `AMCSubscription`.
+- **`warrantyEngine`** and **`pricingEngine`** (`src/modules/shared/`) are pure functions (no DB access) — callers resolve `AMCSubscription`/`ExtendedWarrantyOrder`/`RateCard` docs and pass plain values in, which is what makes them cheaply unit-testable without a database.
+- **`fileUpload`** (`src/modules/shared/fileUpload.js`): Multer buffers in memory; `storeUploadedFile` persists to local disk (`backend/uploads/`, gitignored) when `S3_*` env vars are unset, or to an S3-compatible bucket (`@aws-sdk/client-s3` — works against AWS S3 or Cloudflare R2) once they're configured. `app.js` only serves `/uploads` statically when the local backend is active.
+- **Throwaway dev routes** (`src/modules/shared/dev.routes.js`, mounted at `/api/v1/_dev/*` only when `NODE_ENV !== 'production'`) exist solely to exercise pagination/validation/upload/id-generation end-to-end per this phase's exit criterion — covered by `e2e/api/dev.spec.js`. Expect both to be deleted once Phase 4+ real routes make them redundant.
