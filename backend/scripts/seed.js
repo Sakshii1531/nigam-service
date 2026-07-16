@@ -9,6 +9,9 @@ import { Role } from '../src/modules/auth/role.model.js';
 import { User } from '../src/modules/auth/user.model.js';
 import { Technician } from '../src/modules/technician/technician.model.js';
 import { Brand } from '../src/modules/super-admin/brand.model.js';
+import { City } from '../src/modules/super-admin/city.model.js';
+import { ServicePartner } from '../src/modules/super-admin/servicePartner.model.js';
+import { AssignmentWeighting } from '../src/modules/super-admin/assignmentWeighting.model.js';
 import { Category } from '../src/modules/catalog/category.model.js';
 import { ProductType } from '../src/modules/catalog/productType.model.js';
 import { ServiceCatalogItem } from '../src/modules/catalog/serviceCatalogItem.model.js';
@@ -290,6 +293,33 @@ async function upsertTechFixtures(customer) {
   return { amcSubscription, extendedWarrantyOrder };
 }
 
+// Phase 8 platform fixtures — a City + ServicePartner the seeded technician
+// belongs to (so the real weighted assignmentEngine.js has real proximity data
+// to score against) and an explicit AssignmentWeighting doc (schema defaults,
+// written out so it's visible/editable rather than only implied).
+async function upsertPlatformFixtures() {
+  const city = await City.findOneAndUpdate(
+    { name: 'Lucknow', state: 'Uttar Pradesh' },
+    { name: 'Lucknow', state: 'Uttar Pradesh', district: 'Lucknow', coverageAreaSqkm: 350, status: 'Active' },
+    { upsert: true, new: true, setDefaultsOnInsert: true },
+  );
+
+  const servicePartner = await ServicePartner.findOneAndUpdate(
+    { name: 'NCC Lucknow Center' },
+    { name: 'NCC Lucknow Center', manager: 'Vikram Singh', city: city._id, status: 'Active' },
+    { upsert: true, new: true, setDefaultsOnInsert: true },
+  );
+
+  const weighting = await AssignmentWeighting.findOneAndUpdate(
+    {},
+    { proximityPercent: 40, skillPercent: 30, ratingPercent: 20, workloadPercent: 10 },
+    { upsert: true, new: true, setDefaultsOnInsert: true },
+  );
+
+  console.log(`[seed] city ready: ${city.name} (${city.id}), service partner ready: ${servicePartner.name} (${servicePartner.id})`);
+  return { city, servicePartner, weighting };
+}
+
 async function main() {
   await connectDB();
   await ensureIndexes();
@@ -298,6 +328,7 @@ async function main() {
   const brand = await upsertBrand();
   const secondBrand = await upsertSecondBrand();
   const { superAdminRole, brandAdminRole, secondBrandAdminRole } = await upsertRoles(permissions, brand, secondBrand);
+  const { city, servicePartner } = await upsertPlatformFixtures();
 
   const customer = await upsertUser({
     role: ROLES.CUSTOMER,
@@ -347,6 +378,8 @@ async function main() {
       status: 'Active',
       availability: 'Available',
       specs: ['AC', 'Refrigerator', 'Washing Machine'],
+      city: city._id,
+      servicePartner: servicePartner._id,
     },
     { upsert: true, new: true },
   );

@@ -8,11 +8,16 @@ import { randomUUID } from 'node:crypto';
 //
 // Every test creates its OWN category (unique key) + service + technician
 // (specs = that same unique key) rather than reusing the shared seeded 'AC'
-// category. The assignmentStub picks "first Active+Available technician whose
-// specs include the category" — with a shared category, that's nondeterministic
-// under parallel workers (the seeded technician or another test's technician can
-// win the match instead of this test's own). A unique category per test makes
-// only that test's technician eligible, so assignment is deterministic.
+// category. Phase 8's real weighted assignmentEngine.js scores every
+// Active+Available technician (not just specs-matching ones), but a specs match
+// is worth a fixed 60-point skill-score gap versus any non-matching technician —
+// with no city passed (proximity ties at 50 for everyone) and fresh
+// rating/activeJobsCount (0 for every fixture), that gap dominates every other
+// scoring factor combined, so the specialist created by this test always wins
+// regardless of what other tests' technicians are doing concurrently. A unique
+// category per test still matters: without it, a shared category means multiple
+// tests' technicians would ALL score the 100-skill bonus, and workload/tie-break
+// order between them would be genuinely nondeterministic under parallel workers.
 
 function uniquePhone() {
   return `9${String(Math.floor(Math.random() * 1_000_000_000)).padStart(9, '0')}`;

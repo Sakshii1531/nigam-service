@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import { env, isProd } from './config/env.js';
+import { env, isProd, isTest } from './config/env.js';
 import { requestLogger } from './middleware/requestLogger.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { healthRouter } from './modules/health/health.routes.js';
@@ -32,6 +32,20 @@ import { teamRouter } from './modules/brand-admin/team.routes.js';
 import { brandRoleRouter } from './modules/brand-admin/brandRole.routes.js';
 import { brandUserRouter } from './modules/brand-admin/brandUser.routes.js';
 import { generatedDocumentRouter } from './modules/brand-admin/generatedDocument.routes.js';
+import { brandRouter } from './modules/super-admin/brand.routes.js';
+import { cityRouter } from './modules/super-admin/city.routes.js';
+import { servicePartnerRouter } from './modules/super-admin/servicePartner.routes.js';
+import { asmRouter } from './modules/super-admin/asm.routes.js';
+import { assignmentWeightingRouter } from './modules/super-admin/assignmentWeighting.routes.js';
+import { platformSettingsRouter } from './modules/super-admin/platformSettings.routes.js';
+import { sparePartCatalogRouter } from './modules/super-admin/sparePartCatalog.routes.js';
+import { escalationRouter } from './modules/super-admin/escalation.routes.js';
+import { auditLogRouter } from './modules/super-admin/auditLog.routes.js';
+import { liveTrackingRouter } from './modules/super-admin/liveTracking.routes.js';
+import { cmsRouter } from './modules/super-admin/cms.routes.js';
+import { loyaltyConfigRouter } from './modules/super-admin/loyaltyConfig.routes.js';
+import { platformRoleRouter } from './modules/super-admin/platformRole.routes.js';
+import { platformUserRouter } from './modules/super-admin/platformUser.routes.js';
 import { devRouter } from './modules/shared/dev.routes.js';
 import { LOCAL_UPLOAD_DIR, isS3Configured } from './modules/shared/fileUpload.js';
 
@@ -51,15 +65,25 @@ export function createApp() {
   app.use(requestLogger);
 
   // Generous global ceiling; auth.routes.js applies a tighter one on top for its
-  // brute-force-sensitive endpoints (login, OTP).
-  app.use(
-    rateLimit({
-      windowMs: 15 * 60 * 1000,
-      limit: 600,
-      standardHeaders: true,
-      legacyHeaders: false,
-    }),
-  );
+  // brute-force-sensitive endpoints (login, OTP). Skipped in NODE_ENV=test for the
+  // same reason auth.routes.js's authRateLimit is: the E2E suite's total request
+  // volume across ~15 spec files in one server process (each with heavy multi-step
+  // fixture setup) now legitimately exceeds 600 requests inside a single test run,
+  // well before 15 minutes elapse — found by the Phase 8 addition pushing the full
+  // suite over the threshold for the first time (two tests failed with "Too many
+  // requests" instead of their real assertions). This isn't a real request-volume
+  // signal to test against; it's an artifact of Playwright reusing one long-lived
+  // server process for the whole suite.
+  if (!isTest) {
+    app.use(
+      rateLimit({
+        windowMs: 15 * 60 * 1000,
+        limit: 600,
+        standardHeaders: true,
+        legacyHeaders: false,
+      }),
+    );
+  }
 
   // Local-disk upload fallback only ever gets written to when S3 isn't configured
   // (fileUpload.js) — serving it statically here is a no-op otherwise.
@@ -92,6 +116,20 @@ export function createApp() {
   app.use('/api/v1/brand/roles', brandRoleRouter);
   app.use('/api/v1/brand/users', brandUserRouter);
   app.use('/api/v1/brand/documents', generatedDocumentRouter);
+  app.use('/api/v1/super-admin/brands', brandRouter);
+  app.use('/api/v1/super-admin/cities', cityRouter);
+  app.use('/api/v1/super-admin/service-partners', servicePartnerRouter);
+  app.use('/api/v1/super-admin/asms', asmRouter);
+  app.use('/api/v1/super-admin/assignment-weighting', assignmentWeightingRouter);
+  app.use('/api/v1/super-admin/settings', platformSettingsRouter);
+  app.use('/api/v1/super-admin/spare-parts', sparePartCatalogRouter);
+  app.use('/api/v1/super-admin/escalations', escalationRouter);
+  app.use('/api/v1/super-admin/audit-logs', auditLogRouter);
+  app.use('/api/v1/super-admin/tracking', liveTrackingRouter);
+  app.use('/api/v1/super-admin/loyalty', loyaltyConfigRouter);
+  app.use('/api/v1/super-admin/roles', platformRoleRouter);
+  app.use('/api/v1/super-admin/users', platformUserRouter);
+  app.use('/api/v1/cms', cmsRouter);
   if (!isProd) app.use('/api/v1', devRouter);
 
   app.use(notFoundHandler);
