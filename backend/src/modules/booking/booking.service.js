@@ -3,6 +3,7 @@ import { ApiError } from '../../middleware/errorHandler.js';
 import { findServiceItem } from '../catalog/catalog.service.js';
 import { findAvailableTechnician } from '../shared/assignmentEngine.js';
 import { createServiceRequest, transitionStatus } from '../service-requests/serviceRequest.service.js';
+import { emit as emitNotification } from '../notifications/notification.service.js';
 import { parsePagination, paginationMeta } from '../../utils/pagination.js';
 
 /**
@@ -57,6 +58,15 @@ export async function createBooking(userId, data) {
 
   booking.serviceRequest = serviceRequest._id;
   await booking.save();
+
+  await emitNotification('booking.created', { user: userId, category: data.category, bookingId: booking.id });
+  if (technician) {
+    await emitNotification('technician.assigned', {
+      user: userId,
+      technicianName: technician.name,
+      serviceRequestId: serviceRequest.id,
+    });
+  }
 
   return { booking, serviceRequest, technician };
 }

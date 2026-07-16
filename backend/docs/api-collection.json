@@ -35,7 +35,9 @@
     { "key": "sparePartId", "value": "" },
     { "key": "escalationId", "value": "" },
     { "key": "bannerId", "value": "" },
-    { "key": "platformRoleId", "value": "" }
+    { "key": "platformRoleId", "value": "" },
+    { "key": "conversationId", "value": "" },
+    { "key": "notificationId", "value": "" }
   ],
   "item": [
     {
@@ -1515,6 +1517,93 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
             "url": "{{baseUrl}}/cms/app-settings/technician",
             "body": { "mode": "raw", "raw": "{\n  \"key\": \"autoAssign\",\n  \"value\": true\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Chat",
+      "description": "Phase 9. REST is read-only (list conversations, read message history) — sending happens over Socket.IO, not REST. No public 'create conversation' endpoint: one is auto-created when a technician accepts a job (see backend/src/modules/technician/job.service.js's acceptJob()). See backend/src/sockets/chat.gateway.js for the real-time 'join-conversation'/'send-message' events (auth via socket.handshake.auth.token, same JWT as the Authorization header) — not representable in this REST collection, covered by backend/tests/sockets.test.js instead.",
+      "item": [
+        {
+          "name": "GET /chat/conversations",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/chat/conversations"
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 200) { const d = pm.response.json().data; if (d.length) { pm.collectionVariables.set('conversationId', d[0].id); } }"] } }]
+        },
+        {
+          "name": "GET /chat/conversations/:id",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/chat/conversations/{{conversationId}}"
+          }
+        },
+        {
+          "name": "GET /chat/conversations/:id/messages",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/chat/conversations/{{conversationId}}/messages"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "description": "Phase 9. GET /notifications includes both personally-addressed and role-broadcast (e.g. escalations) notifications. Real-time delivery pushes to the recipient's Socket.IO room on emit() — this REST surface is the fallback/history read. See backend/src/modules/notifications/.",
+      "item": [
+        {
+          "name": "GET /notifications",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/notifications"
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 200) { const d = pm.response.json().data; if (d.length) { pm.collectionVariables.set('notificationId', d[0].id); } }"] } }]
+        },
+        {
+          "name": "GET /notifications?read=false",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/notifications?read=false"
+          }
+        },
+        {
+          "name": "PATCH /notifications/:id/read",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/notifications/{{notificationId}}/read"
+          }
+        },
+        {
+          "name": "PATCH /notifications/read-all",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/notifications/read-all"
+          }
+        },
+        {
+          "name": "GET /notifications/preferences",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/notifications/preferences"
+          }
+        },
+        {
+          "name": "PUT /notifications/preferences",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/notifications/preferences",
+            "body": { "mode": "raw", "raw": "{\n  \"sms\": false\n}" }
           }
         }
       ]

@@ -46,6 +46,9 @@ import { cmsRouter } from './modules/super-admin/cms.routes.js';
 import { loyaltyConfigRouter } from './modules/super-admin/loyaltyConfig.routes.js';
 import { platformRoleRouter } from './modules/super-admin/platformRole.routes.js';
 import { platformUserRouter } from './modules/super-admin/platformUser.routes.js';
+import { superAdminClaimRouter } from './modules/super-admin/claim.routes.js';
+import { chatRouter } from './modules/chat/chat.routes.js';
+import { notificationRouter } from './modules/notifications/notification.routes.js';
 import { devRouter } from './modules/shared/dev.routes.js';
 import { LOCAL_UPLOAD_DIR, isS3Configured } from './modules/shared/fileUpload.js';
 
@@ -129,7 +132,10 @@ export function createApp() {
   app.use('/api/v1/super-admin/loyalty', loyaltyConfigRouter);
   app.use('/api/v1/super-admin/roles', platformRoleRouter);
   app.use('/api/v1/super-admin/users', platformUserRouter);
+  app.use('/api/v1/super-admin/claims', superAdminClaimRouter);
   app.use('/api/v1/cms', cmsRouter);
+  app.use('/api/v1/chat', chatRouter);
+  app.use('/api/v1/notifications', notificationRouter);
   if (!isProd) app.use('/api/v1', devRouter);
 
   app.use(notFoundHandler);
