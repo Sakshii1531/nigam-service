@@ -1,7 +1,7 @@
 import { Booking } from './booking.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { findServiceItem } from '../catalog/catalog.service.js';
-import { findAvailableTechnician } from '../shared/assignmentStub.js';
+import { findAvailableTechnician } from '../shared/assignmentEngine.js';
 import { createServiceRequest, transitionStatus } from '../service-requests/serviceRequest.service.js';
 import { parsePagination, paginationMeta } from '../../utils/pagination.js';
 
@@ -16,7 +16,7 @@ export async function createBooking(userId, data) {
   const quantity = data.quantity || 1;
   const totalPrice = serviceItem.price * quantity;
 
-  const technician = await findAvailableTechnician({ category: data.category });
+  const technician = await findAvailableTechnician({ category: data.category, city: data.address?.city });
 
   const booking = await Booking.create({
     user: userId,

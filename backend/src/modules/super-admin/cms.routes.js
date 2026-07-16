@@ -1,0 +1,199 @@
+import { Router } from 'express';
+import { validate } from '../../middleware/validate.js';
+import { requireAuth, requireRole } from '../../middleware/auth.js';
+import { ok, created } from '../../utils/respond.js';
+import { ROLES } from '../../config/constants.js';
+import * as cmsService from './cms.service.js';
+import {
+  createBannerSchema,
+  updateBannerSchema,
+  listBannersQuerySchema,
+  createStorySchema,
+  updateStorySchema,
+  createVideoSchema,
+  updateVideoSchema,
+  createAdvertisementSchema,
+  updateAdvertisementSchema,
+  upsertCmsPageSchema,
+  slugParamSchema,
+  setAppSettingSchema,
+  appParamSchema,
+  idParamSchema,
+} from './cms.validation.js';
+
+export const cmsRouter = Router();
+const requireAdmin = [requireAuth, requireRole(ROLES.SUPER_ADMIN)];
+
+// Banners
+cmsRouter.get('/banners', validate(listBannersQuerySchema, 'query'), async (req, res, next) => {
+  try {
+    ok(res, await cmsService.listBanners(req.query));
+  } catch (err) {
+    next(err);
+  }
+});
+cmsRouter.post('/banners', ...requireAdmin, validate(createBannerSchema), async (req, res, next) => {
+  try {
+    created(res, await cmsService.createBanner(req.body));
+  } catch (err) {
+    next(err);
+  }
+});
+cmsRouter.put('/banners/:id', ...requireAdmin, validate(idParamSchema, 'params'), validate(updateBannerSchema), async (req, res, next) => {
+  try {
+    ok(res, await cmsService.updateBanner(req.params.id, req.body));
+  } catch (err) {
+    next(err);
+  }
+});
+cmsRouter.delete('/banners/:id', ...requireAdmin, validate(idParamSchema, 'params'), async (req, res, next) => {
+  try {
+    await cmsService.deleteBanner(req.params.id);
+    ok(res, { deleted: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Stories
+cmsRouter.get('/stories', async (req, res, next) => {
+  try {
+    ok(res, await cmsService.listStories());
+  } catch (err) {
+    next(err);
+  }
+});
+cmsRouter.post('/stories', ...requireAdmin, validate(createStorySchema), async (req, res, next) => {
+  try {
+    created(res, await cmsService.createStory(req.body));
+  } catch (err) {
+    next(err);
+  }
+});
+cmsRouter.put('/stories/:id', ...requireAdmin, validate(idParamSchema, 'params'), validate(updateStorySchema), async (req, res, next) => {
+  try {
+    ok(res, await cmsService.updateStory(req.params.id, req.body));
+  } catch (err) {
+    next(err);
+  }
+});
+cmsRouter.delete('/stories/:id', ...requireAdmin, validate(idParamSchema, 'params'), async (req, res, next) => {
+  try {
+    await cmsService.deleteStory(req.params.id);
+    ok(res, { deleted: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Videos
+cmsRouter.get('/videos', async (req, res, next) => {
+  try {
+    ok(res, await cmsService.listVideos());
+  } catch (err) {
+    next(err);
+  }
+});
+cmsRouter.post('/videos', ...requireAdmin, validate(createVideoSchema), async (req, res, next) => {
+  try {
+    created(res, await cmsService.createVideo(req.body));
+  } catch (err) {
+    next(err);
+  }
+});
+cmsRouter.put('/videos/:id', ...requireAdmin, validate(idParamSchema, 'params'), validate(updateVideoSchema), async (req, res, next) => {
+  try {
+    ok(res, await cmsService.updateVideo(req.params.id, req.body));
+  } catch (err) {
+    next(err);
+  }
+});
+cmsRouter.delete('/videos/:id', ...requireAdmin, validate(idParamSchema, 'params'), async (req, res, next) => {
+  try {
+    await cmsService.deleteVideo(req.params.id);
+    ok(res, { deleted: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Advertisements
+cmsRouter.get('/advertisements', async (req, res, next) => {
+  try {
+    ok(res, await cmsService.listAdvertisements());
+  } catch (err) {
+    next(err);
+  }
+});
+cmsRouter.post('/advertisements', ...requireAdmin, validate(createAdvertisementSchema), async (req, res, next) => {
+  try {
+    created(res, await cmsService.createAdvertisement(req.body));
+  } catch (err) {
+    next(err);
+  }
+});
+cmsRouter.put(
+  '/advertisements/:id',
+  ...requireAdmin,
+  validate(idParamSchema, 'params'),
+  validate(updateAdvertisementSchema),
+  async (req, res, next) => {
+    try {
+      ok(res, await cmsService.updateAdvertisement(req.params.id, req.body));
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+cmsRouter.delete('/advertisements/:id', ...requireAdmin, validate(idParamSchema, 'params'), async (req, res, next) => {
+  try {
+    await cmsService.deleteAdvertisement(req.params.id);
+    ok(res, { deleted: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// CMS pages (privacy-policy, terms, faqs, ...)
+cmsRouter.get('/pages/:slug', validate(slugParamSchema, 'params'), async (req, res, next) => {
+  try {
+    ok(res, await cmsService.getCmsPage(req.params.slug));
+  } catch (err) {
+    next(err);
+  }
+});
+cmsRouter.put(
+  '/pages/:slug',
+  ...requireAdmin,
+  validate(slugParamSchema, 'params'),
+  validate(upsertCmsPageSchema),
+  async (req, res, next) => {
+    try {
+      ok(res, await cmsService.upsertCmsPage(req.params.slug, req.body));
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// App settings (flat key/value per app)
+cmsRouter.get('/app-settings/:app', validate(appParamSchema, 'params'), async (req, res, next) => {
+  try {
+    ok(res, await cmsService.getAppSettings(req.params.app));
+  } catch (err) {
+    next(err);
+  }
+});
+cmsRouter.put(
+  '/app-settings/:app',
+  ...requireAdmin,
+  validate(appParamSchema, 'params'),
+  validate(setAppSettingSchema),
+  async (req, res, next) => {
+    try {
+      ok(res, await cmsService.setAppSetting(req.params.app, req.body.key, req.body.value));
+    } catch (err) {
+      next(err);
+    }
+  },
+);

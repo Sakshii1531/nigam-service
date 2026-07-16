@@ -27,7 +27,15 @@
     { "key": "masterServiceId", "value": "" },
     { "key": "teamId", "value": "" },
     { "key": "brandRoleId", "value": "" },
-    { "key": "brandUserId", "value": "" }
+    { "key": "brandUserId", "value": "" },
+    { "key": "superAdminBrandId", "value": "" },
+    { "key": "cityId", "value": "" },
+    { "key": "servicePartnerId", "value": "" },
+    { "key": "asmId", "value": "" },
+    { "key": "sparePartId", "value": "" },
+    { "key": "escalationId", "value": "" },
+    { "key": "bannerId", "value": "" },
+    { "key": "platformRoleId", "value": "" }
   ],
   "item": [
     {
@@ -1214,6 +1222,299 @@
             ],
             "url": "{{baseUrl}}/brand/documents",
             "body": { "mode": "raw", "raw": "{\n  \"type\": \"Warranty Certificate\",\n  \"serviceRequest\": \"{{serviceRequestId}}\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Super Admin",
+      "description": "All routes require role=super_admin (log in via the Auth folder with identifier=admin123@gmail.com, password=admin123). See backend/src/modules/super-admin/ and DATA_MODEL.md's Phase 8 addendum. Finance (BillingTransaction/Revenue/PartnerPayout/GatewayTransaction) is deliberately deferred — no routes exist for it yet.",
+      "item": [
+        {
+          "name": "GET /super-admin/brands",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/super-admin/brands" }
+        },
+        {
+          "name": "POST /super-admin/brands",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/super-admin/brands",
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Voltas\",\n  \"category\": \"Appliances\"\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 201) { pm.collectionVariables.set('superAdminBrandId', pm.response.json().data.id); }"] } }]
+        },
+        {
+          "name": "PUT /super-admin/brands/:id",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/super-admin/brands/{{superAdminBrandId}}",
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"Active\"\n}" }
+          }
+        },
+        {
+          "name": "POST /super-admin/cities",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/super-admin/cities",
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Lucknow\",\n  \"state\": \"Uttar Pradesh\"\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 201) { pm.collectionVariables.set('cityId', pm.response.json().data.id); }"] } }]
+        },
+        {
+          "name": "GET /super-admin/cities",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/super-admin/cities" }
+        },
+        {
+          "name": "POST /super-admin/service-partners",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/super-admin/service-partners",
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"NCC Lucknow Center\",\n  \"city\": \"{{cityId}}\"\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 201) { pm.collectionVariables.set('servicePartnerId', pm.response.json().data.id); }"] } }]
+        },
+        {
+          "name": "POST /super-admin/asms",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/super-admin/asms",
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Vikas Kumar\",\n  \"city\": \"{{cityId}}\"\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 201) { pm.collectionVariables.set('asmId', pm.response.json().data.id); }"] } }]
+        },
+        {
+          "name": "POST /super-admin/asms/:id/partners",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/super-admin/asms/{{asmId}}/partners",
+            "body": { "mode": "raw", "raw": "{\n  \"partnerId\": \"{{servicePartnerId}}\"\n}" }
+          }
+        },
+        {
+          "name": "GET /super-admin/assignment-weighting",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/super-admin/assignment-weighting" }
+        },
+        {
+          "name": "PUT /super-admin/assignment-weighting",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/super-admin/assignment-weighting",
+            "body": { "mode": "raw", "raw": "{\n  \"proximityPercent\": 40,\n  \"skillPercent\": 30,\n  \"ratingPercent\": 20,\n  \"workloadPercent\": 10\n}" }
+          }
+        },
+        {
+          "name": "GET /super-admin/settings",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/super-admin/settings" }
+        },
+        {
+          "name": "PUT /super-admin/settings",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/super-admin/settings",
+            "body": { "mode": "raw", "raw": "{\n  \"maintenanceMode\": false,\n  \"defaultGstPercent\": 18\n}" }
+          }
+        },
+        {
+          "name": "POST /super-admin/spare-parts",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/super-admin/spare-parts",
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"AC Compressor 1.5T\",\n  \"brand\": \"LG\",\n  \"costPrice\": 3500,\n  \"markupPercent\": 15,\n  \"stock\": 10\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 201) { pm.collectionVariables.set('sparePartId', pm.response.json().data.id); }"] } }]
+        },
+        {
+          "name": "GET /super-admin/spare-parts",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/super-admin/spare-parts" }
+        },
+        {
+          "name": "POST /super-admin/escalations",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/super-admin/escalations",
+            "body": { "mode": "raw", "raw": "{\n  \"serviceRequest\": \"{{serviceRequestId}}\",\n  \"reason\": \"SLA breach\",\n  \"priority\": \"High\"\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 201) { pm.collectionVariables.set('escalationId', pm.response.json().data.id); }"] } }]
+        },
+        {
+          "name": "GET /super-admin/escalations",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/super-admin/escalations" }
+        },
+        {
+          "name": "PATCH /super-admin/escalations/:id/assign",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/super-admin/escalations/{{escalationId}}/assign",
+            "body": { "mode": "raw", "raw": "{\n  \"managerId\": \"\"\n}" }
+          }
+        },
+        {
+          "name": "PATCH /super-admin/escalations/:id/status",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/super-admin/escalations/{{escalationId}}/status",
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"Resolved\"\n}" }
+          }
+        },
+        {
+          "name": "GET /super-admin/audit-logs",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/super-admin/audit-logs" }
+        },
+        {
+          "name": "GET /super-admin/tracking",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/super-admin/tracking" }
+        },
+        {
+          "name": "PUT /super-admin/tracking",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/super-admin/tracking",
+            "body": { "mode": "raw", "raw": "{\n  \"job\": \"{{jobId}}\",\n  \"technician\": \"\",\n  \"status\": \"On the way\",\n  \"eta\": \"15 min\"\n}" }
+          }
+        },
+        {
+          "name": "GET /super-admin/loyalty/milestones",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/super-admin/loyalty/milestones" }
+        },
+        {
+          "name": "POST /super-admin/loyalty/milestones",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/super-admin/loyalty/milestones",
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Bronze\",\n  \"threshold\": 500,\n  \"benefit\": \"5% off next service\"\n}" }
+          }
+        },
+        {
+          "name": "GET /super-admin/loyalty/memberships",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/super-admin/loyalty/memberships" }
+        },
+        {
+          "name": "POST /super-admin/loyalty/memberships",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/super-admin/loyalty/memberships",
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Silver\",\n  \"price\": 499,\n  \"tierRank\": 1,\n  \"benefits\": [\"Priority booking\"]\n}" }
+          }
+        },
+        {
+          "name": "GET /super-admin/loyalty/spin-wheel",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/super-admin/loyalty/spin-wheel" }
+        },
+        {
+          "name": "PUT /super-admin/loyalty/spin-wheel",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/super-admin/loyalty/spin-wheel",
+            "body": { "mode": "raw", "raw": "{\n  \"segments\": [{ \"label\": \"10 Coins\", \"probability\": 50, \"reward\": \"10\" }, { \"label\": \"50 Coins\", \"probability\": 30, \"reward\": \"50\" }]\n}" }
+          }
+        },
+        {
+          "name": "GET /super-admin/roles/permissions",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/super-admin/roles/permissions" }
+        },
+        {
+          "name": "GET /super-admin/roles",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/super-admin/roles" }
+        },
+        {
+          "name": "POST /super-admin/roles",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/super-admin/roles",
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Support Lead\",\n  \"permissionKeys\": [\"requests:manage\"]\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 201) { pm.collectionVariables.set('platformRoleId', pm.response.json().data.id); }"] } }]
+        },
+        {
+          "name": "GET /super-admin/users",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/super-admin/users?role=technician" }
+        },
+        {
+          "name": "PATCH /super-admin/users/:id/status",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/super-admin/users/{{brandUserId}}/status",
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"Suspended\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "CMS",
+      "description": "GET routes are public (no auth) — consumed by the customer/technician apps. Write routes require role=super_admin. See backend/src/modules/super-admin/cms.routes.js.",
+      "item": [
+        {
+          "name": "GET /cms/banners",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/cms/banners" }
+        },
+        {
+          "name": "POST /cms/banners",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/cms/banners",
+            "body": { "mode": "raw", "raw": "{\n  \"imageUrl\": \"https://example.com/banner.png\",\n  \"app\": \"customer\"\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 201) { pm.collectionVariables.set('bannerId', pm.response.json().data.id); }"] } }]
+        },
+        {
+          "name": "DELETE /cms/banners/:id",
+          "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/cms/banners/{{bannerId}}" }
+        },
+        {
+          "name": "GET /cms/stories",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/cms/stories" }
+        },
+        {
+          "name": "GET /cms/videos",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/cms/videos" }
+        },
+        {
+          "name": "GET /cms/advertisements",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/cms/advertisements" }
+        },
+        {
+          "name": "GET /cms/pages/:slug",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/cms/pages/privacy-policy" }
+        },
+        {
+          "name": "PUT /cms/pages/:slug",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/cms/pages/privacy-policy",
+            "body": { "mode": "raw", "raw": "{\n  \"body\": \"We respect your privacy.\"\n}" }
+          }
+        },
+        {
+          "name": "GET /cms/app-settings/:app",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/cms/app-settings/technician" }
+        },
+        {
+          "name": "PUT /cms/app-settings/:app",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/cms/app-settings/technician",
+            "body": { "mode": "raw", "raw": "{\n  \"key\": \"autoAssign\",\n  \"value\": true\n}" }
           }
         }
       ]
