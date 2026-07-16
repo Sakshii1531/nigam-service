@@ -20,6 +20,14 @@ const orderSchema = new mongoose.Schema(
     address: addressSchema,
     exchangeRequest: { type: mongoose.Schema.Types.ObjectId, ref: 'ExchangeRequest', default: null },
     coinsRedeemed: { type: Number, default: 0 },
+    // Pricing breakdown, all computed server-side (order.service.js) — never
+    // trust a client-supplied total. subtotal - couponDiscount - exchangeDiscount
+    // - coinsValue = total (floored at 0).
+    subtotal: { type: Number, required: true },
+    couponCode: { type: String, default: null },
+    couponDiscount: { type: Number, default: 0 },
+    exchangeDiscount: { type: Number, default: 0 },
+    coinsValue: { type: Number, default: 0 },
     total: { type: Number, required: true },
     payment: { type: mongoose.Schema.Types.ObjectId, ref: 'Payment', default: null },
     status: {

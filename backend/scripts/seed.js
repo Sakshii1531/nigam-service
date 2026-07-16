@@ -12,9 +12,90 @@ import { Brand } from '../src/modules/super-admin/brand.model.js';
 import { Category } from '../src/modules/catalog/category.model.js';
 import { ProductType } from '../src/modules/catalog/productType.model.js';
 import { ServiceCatalogItem } from '../src/modules/catalog/serviceCatalogItem.model.js';
+import { Product } from '../src/modules/buy-commerce/product.model.js';
+import { Coupon } from '../src/modules/rewards-loyalty/coupon.model.js';
+import { ExchangeQuestionSet } from '../src/modules/warranty-amc-exchange/exchangeQuestionSet.model.js';
+import { ExchangeCampaign } from '../src/modules/warranty-amc-exchange/exchangeCampaign.model.js';
 import { hashPassword } from '../src/modules/auth/password.js';
 import { ROLES } from '../src/config/constants.js';
 import { CATALOG_SEED } from './catalogSeedData.js';
+
+const PRODUCTS = [
+  {
+    category: 'Refrigerator',
+    name: 'LG Double Door 260L',
+    brand: 'LG',
+    condition: 'Refurbished',
+    conditionGrade: 'Excellent',
+    originalPrice: 25000,
+    price: 14999,
+    stock: 5,
+    sku: 'REF-LG-260L',
+    warrantyMonths: 6,
+    benefits: ['6-month seller warranty', 'Free delivery & installation'],
+  },
+  {
+    category: 'Television',
+    name: 'Samsung Crystal 4K 43"',
+    brand: 'Samsung',
+    condition: 'New',
+    originalPrice: 32000,
+    price: 29999,
+    stock: 10,
+    sku: 'TV-SAM-43-4K',
+    warrantyMonths: 12,
+    benefits: ['1-year brand warranty', 'Free wall-mount kit'],
+  },
+  {
+    category: 'Washing Machine',
+    name: 'IFB Front Load 6.5kg',
+    brand: 'IFB',
+    condition: 'Refurbished',
+    conditionGrade: 'Good',
+    originalPrice: 21000,
+    price: 12499,
+    stock: 3,
+    sku: 'WM-IFB-6.5-FL',
+    warrantyMonths: 3,
+  },
+];
+
+// Mirrors frontend/src/data/exchangeMockData.js's defaultQuestionSets (q_mobile)
+// and defaultCampaigns (c1) — same category, questions, deductions, bonus.
+const EXCHANGE_QUESTION_SET = {
+  name: 'Mobile Questions',
+  category: 'Mobile',
+  questions: [
+    {
+      text: 'Does the phone turn on and function properly?',
+      type: 'Yes/No',
+      options: ['Yes', 'No'],
+      deductions: { No: 0.8 },
+    },
+    {
+      text: 'Is the screen cracked, scratched, or showing line issues?',
+      type: 'Radio',
+      options: ['Flawless (No scratches)', 'Minor Scratches', 'Cracked Screen / Lines'],
+      deductions: { 'Flawless (No scratches)': 0, 'Minor Scratches': 0.1, 'Cracked Screen / Lines': 0.4 },
+    },
+    {
+      text: 'Are original accessories (charger, box) available?',
+      type: 'Toggle',
+      options: ['Yes', 'No'],
+      deductions: { No: 0.05 },
+    },
+  ],
+};
+
+const EXCHANGE_CAMPAIGN = {
+  name: 'Independence Day Offer',
+  badgeText: 'Extra ₹1,500 Exchange Off',
+  highlightColor: '#10B981',
+  status: 'Active',
+  bonusAmount: 1500,
+};
+
+const COUPON = { code: 'WELCOME150', discount: 150, description: '₹150 off your first order', status: 'Active' };
 
 const PERMISSIONS = [
   { key: 'users:manage', description: 'Manage platform users', domain: 'users' },
@@ -121,6 +202,24 @@ async function upsertCatalog() {
   console.log(`[seed] catalog ready: ${CATALOG_SEED.length} categories`);
 }
 
+async function upsertCommerce() {
+  await Promise.all(PRODUCTS.map((p) => Product.findOneAndUpdate({ sku: p.sku }, p, { upsert: true, setDefaultsOnInsert: true })));
+  console.log(`[seed] ${PRODUCTS.length} products ready`);
+
+  await ExchangeQuestionSet.findOneAndUpdate({ category: EXCHANGE_QUESTION_SET.category }, EXCHANGE_QUESTION_SET, {
+    upsert: true,
+    setDefaultsOnInsert: true,
+  });
+  await ExchangeCampaign.findOneAndUpdate({ name: EXCHANGE_CAMPAIGN.name }, EXCHANGE_CAMPAIGN, {
+    upsert: true,
+    setDefaultsOnInsert: true,
+  });
+  console.log('[seed] exchange question set + campaign ready');
+
+  await Coupon.findOneAndUpdate({ code: COUPON.code }, COUPON, { upsert: true, setDefaultsOnInsert: true });
+  console.log(`[seed] coupon ready: ${COUPON.code}`);
+}
+
 async function main() {
   await connectDB();
   await ensureIndexes();
@@ -134,6 +233,7 @@ async function main() {
     name: 'Sakshi Dwivedi',
     phone: '9876543210',
     password: 'password123',
+    extra: { walletCoins: 500 }, // 500 Nigam Coins = ₹50 (10 coins/₹1) — enough to smoke-test redemption
   });
 
   const technicianUser = await upsertUser({
@@ -174,6 +274,7 @@ async function main() {
   console.log(`[seed] technician profile ready: ${technicianProfile.name} (${technicianProfile.id})`);
 
   await upsertCatalog();
+  await upsertCommerce();
 
   console.log(`[seed] customer ready: ${customer.name} (${customer.id})`);
   console.log('[seed] done');
