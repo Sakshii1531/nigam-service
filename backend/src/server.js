@@ -1,9 +1,13 @@
 import { createApp } from './app.js';
-import { connectDB } from './config/db.js';
+import { connectDB, ensureIndexes } from './config/db.js';
+import { registerAllModels } from './config/registerModels.js';
 import { env } from './config/env.js';
 
 async function main() {
+  const modelCount = await registerAllModels();
+  console.log(`[server] registered ${modelCount} models`);
   await connectDB();
+  await ensureIndexes();
 
   const app = createApp();
   const server = app.listen(env.port, () => {
