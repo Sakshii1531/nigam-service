@@ -85,10 +85,11 @@ if (isTest) {
     phone: z.string().optional(),
     email: z.string().optional(),
     password: z.string().min(6),
+    walletCoins: z.coerce.number().int().nonnegative().optional(), // lets commerce specs test coin redemption without a real earn flow
   });
   devRouter.post('/_dev/test-user', validate(testUserSchema), async (req, res, next) => {
     try {
-      const { role, phone, email, password } = req.body;
+      const { role, phone, email, password, walletCoins } = req.body;
       if (!phone && !email) throw new ApiError(400, 'phone or email required');
 
       await User.deleteOne({ role, ...(phone ? { phone } : {}), ...(email ? { email } : {}) });
@@ -99,6 +100,7 @@ if (isTest) {
         name: 'E2E Test User',
         passwordHash: await hashPassword(password),
         status: 'Active',
+        walletCoins,
       });
       ok(res, { id: user.id }, {}, 201);
     } catch (err) {

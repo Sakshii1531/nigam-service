@@ -10,6 +10,13 @@ import { authRouter } from './modules/auth/auth.routes.js';
 import { catalogRouter } from './modules/catalog/catalog.routes.js';
 import { bookingRouter } from './modules/booking/booking.routes.js';
 import { serviceRequestRouter } from './modules/service-requests/serviceRequest.routes.js';
+import { productRouter } from './modules/buy-commerce/product.routes.js';
+import { cartRouter } from './modules/buy-commerce/cart.routes.js';
+import { wishlistRouter } from './modules/buy-commerce/wishlist.routes.js';
+import { orderRouter } from './modules/buy-commerce/order.routes.js';
+import { couponRouter } from './modules/rewards-loyalty/coupon.routes.js';
+import { exchangeRouter } from './modules/warranty-amc-exchange/exchange.routes.js';
+import { walletRouter } from './modules/payments-wallet/wallet.routes.js';
 import { devRouter } from './modules/shared/dev.routes.js';
 import { LOCAL_UPLOAD_DIR, isS3Configured } from './modules/shared/fileUpload.js';
 
@@ -48,8 +55,15 @@ export function createApp() {
   app.use('/api/v1/catalog', catalogRouter);
   app.use('/api/v1/bookings', bookingRouter);
   app.use('/api/v1/service-requests', serviceRequestRouter);
+  app.use('/api/v1/products', productRouter);
+  app.use('/api/v1/cart', cartRouter);
+  app.use('/api/v1/wishlist', wishlistRouter);
+  app.use('/api/v1/orders', orderRouter);
+  app.use('/api/v1/coupons', couponRouter);
+  app.use('/api/v1/exchange', exchangeRouter);
+  app.use('/api/v1/wallet', walletRouter);
   if (!isProd) app.use('/api/v1', devRouter);
-  // Phase 5+: app.use('/api/v1/orders', orderRouter); etc., mounted here per module.
+  // Phase 6+: app.use('/api/v1/tech', techRouter); etc., mounted here per module.
 
   app.use(notFoundHandler);
   app.use(errorHandler);

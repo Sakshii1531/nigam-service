@@ -14,7 +14,11 @@
     { "key": "refreshToken", "value": "" },
     { "key": "categoryKey", "value": "AC" },
     { "key": "bookingId", "value": "" },
-    { "key": "serviceRequestId", "value": "" }
+    { "key": "serviceRequestId", "value": "" },
+    { "key": "productId", "value": "" },
+    { "key": "couponCode", "value": "WELCOME150" },
+    { "key": "exchangeRequestId", "value": "" },
+    { "key": "orderId", "value": "" }
   ],
   "item": [
     {
@@ -281,6 +285,294 @@
             ],
             "url": "{{baseUrl}}/service-requests/{{serviceRequestId}}/status",
             "body": { "mode": "raw", "raw": "{\n  \"status\": \"Engineer Accepted\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Products",
+      "item": [
+        {
+          "name": "GET /products",
+          "request": { "method": "GET", "url": "{{baseUrl}}/products?category=Television" }
+        },
+        {
+          "name": "GET /products/:id",
+          "request": { "method": "GET", "url": "{{baseUrl}}/products/{{productId}}" }
+        },
+        {
+          "name": "POST /products (super_admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/products",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category\": \"Television\",\n  \"name\": \"Samsung Crystal 4K 43\\\"\",\n  \"price\": 29999,\n  \"stock\": 10,\n  \"sku\": \"TV-SAM-43-4K\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) pm.collectionVariables.set('productId', pm.response.json().data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /products/:id (super_admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/products/{{productId}}",
+            "body": { "mode": "raw", "raw": "{\n  \"price\": 27999\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cart",
+      "item": [
+        {
+          "name": "GET /cart",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/cart"
+          }
+        },
+        {
+          "name": "POST /cart/items",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/cart/items",
+            "body": { "mode": "raw", "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"quantity\": 1\n}" }
+          }
+        },
+        {
+          "name": "DELETE /cart/items/:productId",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/cart/items/{{productId}}"
+          }
+        },
+        {
+          "name": "DELETE /cart (clear)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/cart"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Wishlist",
+      "item": [
+        {
+          "name": "GET /wishlist",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/wishlist"
+          }
+        },
+        {
+          "name": "POST /wishlist/:productId",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/wishlist/{{productId}}"
+          }
+        },
+        {
+          "name": "DELETE /wishlist/:productId",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/wishlist/{{productId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Coupons",
+      "item": [
+        {
+          "name": "GET /coupons",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/coupons"
+          }
+        },
+        {
+          "name": "POST /coupons (super_admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/coupons",
+            "body": { "mode": "raw", "raw": "{\n  \"code\": \"{{couponCode}}\",\n  \"discount\": 150,\n  \"description\": \"₹150 off\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Exchange",
+      "item": [
+        {
+          "name": "GET /exchange/question-sets/:category",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/exchange/question-sets/Mobile"
+          }
+        },
+        {
+          "name": "POST /exchange/question-sets (super_admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/exchange/question-sets",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Mobile Questions\",\n  \"category\": \"Mobile\",\n  \"questions\": [\n    { \"text\": \"Does the phone turn on and function properly?\", \"type\": \"Yes/No\", \"options\": [\"Yes\", \"No\"], \"deductions\": { \"No\": 0.8 } }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "POST /exchange/valuate",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/exchange/valuate",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category\": \"Mobile\",\n  \"baseValue\": 15000,\n  \"answers\": { \"Does the phone turn on and function properly?\": \"Yes\" }\n}"
+            }
+          }
+        },
+        {
+          "name": "POST /exchange/requests",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/exchange/requests",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category\": \"Mobile\",\n  \"brand\": \"Apple\",\n  \"model\": \"iPhone 12\",\n  \"baseValue\": 15000,\n  \"answers\": { \"Does the phone turn on and function properly?\": \"Yes\" }\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) pm.collectionVariables.set('exchangeRequestId', pm.response.json().data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /exchange/requests/:id",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/exchange/requests/{{exchangeRequestId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Orders (checkout: coupon + exchange + coin redemption)",
+      "item": [
+        {
+          "name": "POST /orders",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [{ \"productId\": \"{{productId}}\", \"quantity\": 1 }],\n  \"couponCode\": \"{{couponCode}}\",\n  \"exchangeRequestId\": \"{{exchangeRequestId}}\",\n  \"coinsToRedeem\": 500,\n  \"paymentMethod\": \"UPI\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) pm.collectionVariables.set('orderId', pm.response.json().data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /orders",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/orders"
+          }
+        },
+        {
+          "name": "GET /orders/:id",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/orders/{{orderId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Wallet",
+      "item": [
+        {
+          "name": "GET /wallet",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/wallet"
+          }
+        },
+        {
+          "name": "GET /wallet/ledger",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/wallet/ledger"
           }
         }
       ]

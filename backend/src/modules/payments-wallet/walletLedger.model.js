@@ -1,8 +1,11 @@
 import mongoose from 'mongoose';
 import { applyStandardPlugins } from '../shared/plugins.js';
 
-// Append-only ledger — User.walletCoins is a running cache of the sum of these,
-// kept in sync inside the same Mongo transaction as the ledger write (Phase 5).
+// Append-only ledger — User.walletCoins is a running cache kept in sync via a
+// single atomic findOneAndUpdate($inc + balance guard) in wallet.service.js,
+// immediately followed by this ledger write. Not a multi-document Mongo
+// transaction (the local dev mongod is standalone, not a replica set — see
+// DATA_MODEL.md Phase 5 addendum for the tradeoff this accepts and why).
 const walletLedgerSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
