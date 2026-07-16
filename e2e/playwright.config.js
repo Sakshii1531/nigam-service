@@ -9,6 +9,7 @@ const PORT = 4100;
 
 export default defineConfig({
   testDir: './api',
+  globalSetup: './global-setup.js',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,

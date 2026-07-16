@@ -3,8 +3,9 @@ import mongoose from 'mongoose';
 import { generateHumanId } from '../src/modules/shared/idGenerator.js';
 import { Counter } from '../src/modules/shared/counter.model.js';
 import { ID_PREFIXES } from '../src/config/constants.js';
+import { testDbUri } from './helpers/testDb.js';
 
-const TEST_DB_URI = process.env.MONGODB_TEST_URI || 'mongodb://127.0.0.1:27017/nigam_care_test';
+const TEST_DB_URI = testDbUri('idgenerator');
 
 beforeAll(async () => {
   await mongoose.connect(TEST_DB_URI);

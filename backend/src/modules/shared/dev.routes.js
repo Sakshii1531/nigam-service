@@ -12,6 +12,7 @@ import { isTest } from '../../config/env.js';
 import { getLastOtpForTesting } from '../auth/otpProvider.js';
 import { User } from '../auth/user.model.js';
 import { hashPassword } from '../auth/password.js';
+import { Technician } from '../technician/technician.model.js';
 
 // Non-production only (mounted conditionally in app.js) — exercises the Phase 2
 // shared plumbing (pagination, validation-error shape, file upload, id generation)
@@ -100,6 +101,45 @@ if (isTest) {
         status: 'Active',
       });
       ok(res, { id: user.id }, {}, 201);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Same reasoning as /_dev/test-user, one level up: booking/service-request specs
+  // need a technician that's exclusively theirs (Active+Available, specific specs),
+  // not the shared seeded one — reusing that across parallel workers would race on
+  // auto-assignment and OTP login. Creates both the User and its Technician profile.
+  const testTechnicianSchema = z.object({
+    phone: z.string().min(1),
+    password: z.string().min(6),
+    specs: z.array(z.string()).optional(),
+    availability: z.enum(['Available', 'Busy', 'Offline']).optional(),
+  });
+  devRouter.post('/_dev/test-technician', validate(testTechnicianSchema), async (req, res, next) => {
+    try {
+      const { phone, password, specs = ['AC'], availability = 'Available' } = req.body;
+
+      await User.deleteOne({ role: ROLES.TECHNICIAN, phone });
+      const user = await User.create({
+        role: ROLES.TECHNICIAN,
+        phone,
+        name: 'E2E Test Technician',
+        passwordHash: await hashPassword(password),
+        status: 'Active',
+      });
+
+      await Technician.deleteOne({ user: user._id });
+      const technician = await Technician.create({
+        user: user._id,
+        name: 'E2E Test Technician',
+        phone,
+        status: 'Active',
+        availability,
+        specs,
+      });
+
+      ok(res, { userId: user.id, technicianId: technician.id }, {}, 201);
     } catch (err) {
       next(err);
     }

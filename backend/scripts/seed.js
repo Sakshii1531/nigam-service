@@ -9,8 +9,12 @@ import { Role } from '../src/modules/auth/role.model.js';
 import { User } from '../src/modules/auth/user.model.js';
 import { Technician } from '../src/modules/technician/technician.model.js';
 import { Brand } from '../src/modules/super-admin/brand.model.js';
+import { Category } from '../src/modules/catalog/category.model.js';
+import { ProductType } from '../src/modules/catalog/productType.model.js';
+import { ServiceCatalogItem } from '../src/modules/catalog/serviceCatalogItem.model.js';
 import { hashPassword } from '../src/modules/auth/password.js';
 import { ROLES } from '../src/config/constants.js';
+import { CATALOG_SEED } from './catalogSeedData.js';
 
 const PERMISSIONS = [
   { key: 'users:manage', description: 'Manage platform users', domain: 'users' },
@@ -94,6 +98,29 @@ async function upsertUser({ role, name, phone, email, password, extra = {} }) {
   return user;
 }
 
+async function upsertCatalog() {
+  for (const entry of CATALOG_SEED) {
+    const { productTypes, services, ...categoryFields } = entry;
+    const category = await Category.findOneAndUpdate({ key: entry.key }, categoryFields, {
+      upsert: true,
+      new: true,
+      setDefaultsOnInsert: true,
+    });
+
+    await Promise.all(
+      productTypes.map((pt) =>
+        ProductType.findOneAndUpdate({ category: category._id, slug: pt.slug }, { category: category._id, ...pt }, { upsert: true }),
+      ),
+    );
+    await Promise.all(
+      services.map((s) =>
+        ServiceCatalogItem.findOneAndUpdate({ category: category._id, slug: s.slug }, { category: category._id, ...s }, { upsert: true }),
+      ),
+    );
+  }
+  console.log(`[seed] catalog ready: ${CATALOG_SEED.length} categories`);
+}
+
 async function main() {
   await connectDB();
   await ensureIndexes();
@@ -145,6 +172,8 @@ async function main() {
     { upsert: true, new: true },
   );
   console.log(`[seed] technician profile ready: ${technicianProfile.name} (${technicianProfile.id})`);
+
+  await upsertCatalog();
 
   console.log(`[seed] customer ready: ${customer.name} (${customer.id})`);
   console.log('[seed] done');

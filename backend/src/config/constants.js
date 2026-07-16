@@ -107,6 +107,27 @@ export const ID_SCHEMES = Object.freeze({
   [ID_PREFIXES.JOB]: { digits: 4, dateSegment: null, separator: '-' },
 });
 
+// Allowed next-statuses per current ServiceRequest.status — server-side transition
+// validation (Phase 4 exit criterion), not the client-trusted enum the frontend
+// mock UI uses. Terminal states (Closed, Cancelled) have no outgoing edges.
+export const SERVICE_REQUEST_TRANSITIONS = Object.freeze({
+  New: ['Assigned', 'Cancelled'],
+  Assigned: ['Engineer Accepted', 'Customer NA', 'Cancelled'],
+  'Engineer Accepted': ['Visit Scheduled', 'Cancelled'],
+  'Visit Scheduled': ['Engineer Reached', 'Reschedule', 'Customer NA', 'Cancelled'],
+  'Engineer Reached': ['Diagnosis Done', 'Customer NA'],
+  'Diagnosis Done': ['Spare Required', 'Repair Completed'],
+  'Spare Required': ['Spare Ordered'],
+  'Spare Ordered': ['Spare Received'],
+  'Spare Received': ['Repair Completed'],
+  'Repair Completed': ['Customer Confirmation'],
+  'Customer Confirmation': ['Closed'],
+  'Customer NA': ['Visit Scheduled', 'Reschedule', 'Cancelled'],
+  Reschedule: ['Visit Scheduled', 'Cancelled'],
+  Cancelled: [],
+  Closed: [],
+});
+
 export const GST_PERCENT_DEFAULT = 18; // Confirm per-product-line rate before go-live (§9 open question).
 
 export const PAGINATION_DEFAULT = Object.freeze({ page: 1, limit: 20, maxLimit: 100 });

@@ -7,6 +7,9 @@ import { requestLogger } from './middleware/requestLogger.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { healthRouter } from './modules/health/health.routes.js';
 import { authRouter } from './modules/auth/auth.routes.js';
+import { catalogRouter } from './modules/catalog/catalog.routes.js';
+import { bookingRouter } from './modules/booking/booking.routes.js';
+import { serviceRequestRouter } from './modules/service-requests/serviceRequest.routes.js';
 import { devRouter } from './modules/shared/dev.routes.js';
 import { LOCAL_UPLOAD_DIR, isS3Configured } from './modules/shared/fileUpload.js';
 
@@ -42,8 +45,11 @@ export function createApp() {
 
   app.use('/api/v1', healthRouter);
   app.use('/api/v1/auth', authRouter);
+  app.use('/api/v1/catalog', catalogRouter);
+  app.use('/api/v1/bookings', bookingRouter);
+  app.use('/api/v1/service-requests', serviceRequestRouter);
   if (!isProd) app.use('/api/v1', devRouter);
-  // Phase 4+: app.use('/api/v1/bookings', bookingRouter); etc., mounted here per module.
+  // Phase 5+: app.use('/api/v1/orders', orderRouter); etc., mounted here per module.
 
   app.use(notFoundHandler);
   app.use(errorHandler);

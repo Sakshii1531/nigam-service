@@ -11,8 +11,9 @@ import { Role } from '../src/modules/auth/role.model.js';
 import { Permission } from '../src/modules/auth/permission.model.js';
 import { hashPassword } from '../src/modules/auth/password.js';
 import { ROLES } from '../src/config/constants.js';
+import { testDbUri } from './helpers/testDb.js';
 
-const TEST_DB_URI = process.env.MONGODB_TEST_URI || 'mongodb://127.0.0.1:27017/nigam_care_test';
+const TEST_DB_URI = testDbUri('auth');
 
 let app;
 

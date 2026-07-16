@@ -21,9 +21,13 @@ npm test
 
 `playwright.config.js` boots the backend itself (`webServer`) against a dedicated
 `nigam_care_e2e` Mongo database on port 4100, so this never collides with a `npm run dev`
-instance you might have running on the default port/database.
+instance you might have running on the default port/database. `global-setup.js` runs the
+real `backend/scripts/seed.js` (idempotent) against that same database first, so
+catalog/booking specs have real categories, services, and a technician to work with —
+one seed source of truth, not a duplicated fixture.
 
 ## Structure
 
 - `api/` — HTTP-level specs, one file per backend module (grows alongside `backend/src/modules/`).
 - `ui/` — added once the frontend is wired to real APIs (Phase 13); browser-driven specs.
+- `global-setup.js` — seeds the e2e database once before the suite runs.

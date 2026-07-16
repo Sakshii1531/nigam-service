@@ -7,7 +7,7 @@ Express + MongoDB (Mongoose) API for the Nigam Care platform. Built module-by-mo
 - Node.js + Express (JavaScript, ESM — `"type": "module"`)
 - MongoDB via Mongoose (local `mongod` for dev, Atlas recommended for staging/prod — see `.env.example`)
 - JWT auth, Socket.IO (from Phase 9), Multer + S3-compatible storage (from Phase 2/10)
-- Jest + Supertest for tests, run against a local `mongod` on a dedicated `*_test` database (`MONGODB_TEST_URI`, defaults to `mongodb://127.0.0.1:27017/nigam_care_test`)
+- Jest + Supertest for tests, run against a local `mongod` — each test file gets its own dedicated `*_test_<name>` database (`tests/helpers/testDb.js`, base URI from `MONGODB_TEST_URI`, defaults to `mongodb://127.0.0.1:27017/nigam_care_test`) so files that independently `dropDatabase()` in their own `afterAll` can never race against each other
 
 ## Getting started
 

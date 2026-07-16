@@ -11,7 +11,10 @@
     { "key": "password", "value": "password123" },
     { "key": "otpCode", "value": "" },
     { "key": "accessToken", "value": "" },
-    { "key": "refreshToken", "value": "" }
+    { "key": "refreshToken", "value": "" },
+    { "key": "categoryKey", "value": "AC" },
+    { "key": "bookingId", "value": "" },
+    { "key": "serviceRequestId", "value": "" }
   ],
   "item": [
     {
@@ -138,6 +141,146 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": "{{baseUrl}}/auth/logout",
             "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Catalog",
+      "item": [
+        {
+          "name": "GET /catalog/categories",
+          "request": { "method": "GET", "url": "{{baseUrl}}/catalog/categories" }
+        },
+        {
+          "name": "GET /catalog/categories/:key",
+          "request": { "method": "GET", "url": "{{baseUrl}}/catalog/categories/{{categoryKey}}" }
+        },
+        {
+          "name": "POST /catalog/categories (super_admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/catalog/categories",
+            "body": { "mode": "raw", "raw": "{\n  \"key\": \"NewCategory\",\n  \"name\": \"New Category\"\n}" }
+          }
+        },
+        {
+          "name": "POST /catalog/categories/:key/product-types (super_admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/catalog/categories/{{categoryKey}}/product-types",
+            "body": { "mode": "raw", "raw": "{\n  \"slug\": \"split\",\n  \"name\": \"Split AC\"\n}" }
+          }
+        },
+        {
+          "name": "POST /catalog/categories/:key/services (super_admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/catalog/categories/{{categoryKey}}/services",
+            "body": { "mode": "raw", "raw": "{\n  \"slug\": \"repair\",\n  \"name\": \"Repair\",\n  \"price\": 299\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Bookings (customer role)",
+      "item": [
+        {
+          "name": "POST /bookings",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/bookings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category\": \"{{categoryKey}}\",\n  \"serviceSlug\": \"repair\",\n  \"quantity\": 1,\n  \"address\": { \"city\": \"Lucknow\", \"pincode\": \"226001\" },\n  \"fullName\": \"Sakshi Dwivedi\",\n  \"mobile\": \"9876543210\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const data = pm.response.json().data;",
+                  "  pm.collectionVariables.set('bookingId', data.booking.id);",
+                  "  pm.collectionVariables.set('serviceRequestId', data.serviceRequest.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /bookings",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/bookings"
+          }
+        },
+        {
+          "name": "GET /bookings/:id",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/bookings/{{bookingId}}"
+          }
+        },
+        {
+          "name": "POST /bookings/:id/cancel",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/bookings/{{bookingId}}/cancel"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Service Requests",
+      "item": [
+        {
+          "name": "GET /service-requests",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/service-requests"
+          }
+        },
+        {
+          "name": "GET /service-requests/:id",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/service-requests/{{serviceRequestId}}"
+          }
+        },
+        {
+          "name": "PATCH /service-requests/:id/status (assigned technician or admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/service-requests/{{serviceRequestId}}/status",
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"Engineer Accepted\"\n}" }
           }
         }
       ]
