@@ -23,6 +23,15 @@ import { claimRouter as technicianClaimRouter } from './modules/technician/claim
 import { inventoryRouter } from './modules/technician/inventory.routes.js';
 import { earningsRouter } from './modules/technician/earnings.routes.js';
 import { academyRouter } from './modules/technician/academy.routes.js';
+import { invoiceRouter } from './modules/brand-admin/invoice.routes.js';
+import { rateCardRouter } from './modules/brand-admin/rateCard.routes.js';
+import { replacementApprovalRouter } from './modules/brand-admin/replacementApproval.routes.js';
+import { reverseLogisticsReturnRouter } from './modules/brand-admin/reverseLogisticsReturn.routes.js';
+import { brandCatalogRouter } from './modules/brand-admin/brandCatalog.routes.js';
+import { teamRouter } from './modules/brand-admin/team.routes.js';
+import { brandRoleRouter } from './modules/brand-admin/brandRole.routes.js';
+import { brandUserRouter } from './modules/brand-admin/brandUser.routes.js';
+import { generatedDocumentRouter } from './modules/brand-admin/generatedDocument.routes.js';
 import { devRouter } from './modules/shared/dev.routes.js';
 import { LOCAL_UPLOAD_DIR, isS3Configured } from './modules/shared/fileUpload.js';
 
@@ -74,6 +83,15 @@ export function createApp() {
   app.use('/api/v1/tech/inventory', inventoryRouter);
   app.use('/api/v1/tech/earnings', earningsRouter);
   app.use('/api/v1/tech/academy', academyRouter);
+  app.use('/api/v1/brand/invoices', invoiceRouter);
+  app.use('/api/v1/brand/rate-cards', rateCardRouter);
+  app.use('/api/v1/brand/replacement-approvals', replacementApprovalRouter);
+  app.use('/api/v1/brand/returns', reverseLogisticsReturnRouter);
+  app.use('/api/v1/brand/catalog', brandCatalogRouter);
+  app.use('/api/v1/brand/teams', teamRouter);
+  app.use('/api/v1/brand/roles', brandRoleRouter);
+  app.use('/api/v1/brand/users', brandUserRouter);
+  app.use('/api/v1/brand/documents', generatedDocumentRouter);
   if (!isProd) app.use('/api/v1', devRouter);
 
   app.use(notFoundHandler);

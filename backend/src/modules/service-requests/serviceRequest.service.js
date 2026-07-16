@@ -49,10 +49,11 @@ export async function assignTechnician(id, technicianId) {
   return serviceRequest;
 }
 
-export async function listServiceRequests({ user, technician, status, page, limit, sort } = {}) {
+export async function listServiceRequests({ user, technician, brand, status, page, limit, sort } = {}) {
   const query = {};
   if (user) query.user = user;
   if (technician) query.technician = technician;
+  if (brand) query.brand = brand;
   if (status) query.status = status;
 
   const { skip, limit: lim, page: pg, sort: sortObj } = parsePagination({ page, limit, sort });

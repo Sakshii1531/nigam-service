@@ -131,8 +131,31 @@ async function upsertBrand() {
   return brand;
 }
 
-async function upsertRoles(permissions, brand) {
+// Second brand + its own Brand Admin role — exists purely so there are two real,
+// separately-scoped tenants to manually verify cross-tenant isolation against
+// (Phase 7 exit criterion). Automated Jest/E2E specs still build their own
+// throwaway two-brand fixtures per test, same isolation reasoning as every other
+// "asserts on specifics" test in this codebase — this is for manual smoke testing
+// and the Postman collection, not relied on by the automated suites.
+async function upsertSecondBrand() {
+  const brand = await Brand.findOneAndUpdate(
+    { name: 'Second Demo Brand' },
+    { name: 'Second Demo Brand', category: 'Electronics', status: 'Active' },
+    { upsert: true, new: true },
+  );
+  console.log(`[seed] second brand ready: ${brand.name} (${brand.id})`);
+  return brand;
+}
+
+async function upsertRoles(permissions, brand, secondBrand) {
   const permByKey = Object.fromEntries(permissions.map((p) => [p.key, p._id]));
+  const brandAdminPermissions = [
+    permByKey['requests:manage'],
+    permByKey['invoices:export'],
+    permByKey['catalog:manage'],
+    permByKey['claims:approve'],
+    permByKey['teams:manage'],
+  ];
 
   const superAdminRole = await Role.findOneAndUpdate(
     { name: 'Super Admin', scope: 'platform' },
@@ -142,23 +165,18 @@ async function upsertRoles(permissions, brand) {
 
   const brandAdminRole = await Role.findOneAndUpdate(
     { name: 'Brand Admin', scope: 'brand', brand: brand._id },
-    {
-      name: 'Brand Admin',
-      scope: 'brand',
-      brand: brand._id,
-      permissions: [
-        permByKey['requests:manage'],
-        permByKey['invoices:export'],
-        permByKey['catalog:manage'],
-        permByKey['claims:approve'],
-        permByKey['teams:manage'],
-      ],
-    },
+    { name: 'Brand Admin', scope: 'brand', brand: brand._id, permissions: brandAdminPermissions },
     { upsert: true, new: true },
   );
 
-  console.log(`[seed] roles ready: ${superAdminRole.name}, ${brandAdminRole.name}`);
-  return { superAdminRole, brandAdminRole };
+  const secondBrandAdminRole = await Role.findOneAndUpdate(
+    { name: 'Brand Admin', scope: 'brand', brand: secondBrand._id },
+    { name: 'Brand Admin', scope: 'brand', brand: secondBrand._id, permissions: brandAdminPermissions },
+    { upsert: true, new: true },
+  );
+
+  console.log(`[seed] roles ready: ${superAdminRole.name}, ${brandAdminRole.name} x2`);
+  return { superAdminRole, brandAdminRole, secondBrandAdminRole };
 }
 
 async function upsertUser({ role, name, phone, email, password, extra = {} }) {
@@ -278,7 +296,8 @@ async function main() {
 
   const permissions = await upsertPermissions();
   const brand = await upsertBrand();
-  const { superAdminRole, brandAdminRole } = await upsertRoles(permissions, brand);
+  const secondBrand = await upsertSecondBrand();
+  const { superAdminRole, brandAdminRole, secondBrandAdminRole } = await upsertRoles(permissions, brand, secondBrand);
 
   const customer = await upsertUser({
     role: ROLES.CUSTOMER,
@@ -301,6 +320,14 @@ async function main() {
     email: 'admin123@gmail.com',
     password: 'admin123',
     extra: { brand: brand._id, assignedRoles: [brandAdminRole._id] },
+  });
+
+  await upsertUser({
+    role: ROLES.BRAND_ADMIN,
+    name: 'Second Brand Admin',
+    email: 'admin2@gmail.com',
+    password: 'admin123',
+    extra: { brand: secondBrand._id, assignedRoles: [secondBrandAdminRole._id] },
   });
 
   await upsertUser({

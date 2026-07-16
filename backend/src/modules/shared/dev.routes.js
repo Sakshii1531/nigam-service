@@ -15,6 +15,7 @@ import { hashPassword } from '../auth/password.js';
 import { Technician } from '../technician/technician.model.js';
 import { AMCPlan } from '../warranty-amc-exchange/amcPlan.model.js';
 import { AMCSubscription } from '../warranty-amc-exchange/amcSubscription.model.js';
+import { Brand } from '../super-admin/brand.model.js';
 
 // Non-production only (mounted conditionally in app.js) — exercises the Phase 2
 // shared plumbing (pagination, validation-error shape, file upload, id generation)
@@ -88,10 +89,11 @@ if (isTest) {
     email: z.string().optional(),
     password: z.string().min(6),
     walletCoins: z.coerce.number().int().nonnegative().optional(), // lets commerce specs test coin redemption without a real earn flow
+    brand: z.string().optional(), // brand_admin-only — links the account to a real Brand tenant, see /_dev/test-brand
   });
   devRouter.post('/_dev/test-user', validate(testUserSchema), async (req, res, next) => {
     try {
-      const { role, phone, email, password, walletCoins } = req.body;
+      const { role, phone, email, password, walletCoins, brand } = req.body;
       if (!phone && !email) throw new ApiError(400, 'phone or email required');
 
       await User.deleteOne({ role, ...(phone ? { phone } : {}), ...(email ? { email } : {}) });
@@ -103,6 +105,7 @@ if (isTest) {
         passwordHash: await hashPassword(password),
         status: 'Active',
         walletCoins,
+        brand: brand || null,
       });
       ok(res, { id: user.id }, {}, 201);
     } catch (err) {
@@ -149,6 +152,19 @@ if (isTest) {
     }
   });
 
+  // Brand has no real CRUD surface yet (that's Phase 8 — super-admin domain), but
+  // Phase 7's brand-admin specs need real, separate Brand tenants to prove
+  // cross-tenant isolation against.
+  const testBrandSchema = z.object({ name: z.string().min(1) });
+  devRouter.post('/_dev/test-brand', validate(testBrandSchema), async (req, res, next) => {
+    try {
+      const brand = await Brand.create({ name: req.body.name, category: 'Appliances', status: 'Active' });
+      ok(res, { id: brand.id }, {}, 201);
+    } catch (err) {
+      next(err);
+    }
+  });
+
   // AMC subscription purchase is a deferred flow (Phase 5 scope decision — see
   // DATA_MODEL.md) with no real HTTP surface yet, but Phase 6's technician "AMC
   // Visit" job type needs a real subscription to link against and decrement.
@@ -190,6 +206,7 @@ if (isTest) {
     customerId: z.string().min(1),
     technicianId: z.string().min(1),
     category: z.string().min(1),
+    brand: z.string().optional(), // real Brand tenant ObjectId — no production flow sets this on a ServiceRequest yet (Brand-Warranty/AMC/EW purchase flows are deferred), needed for Phase 7 brand-scoping specs
   });
   devRouter.post('/_dev/test-service-request', validate(testServiceRequestSchema), async (req, res, next) => {
     try {
@@ -198,6 +215,7 @@ if (isTest) {
         user: req.body.customerId,
         technician: req.body.technicianId,
         category: req.body.category,
+        brand: req.body.brand || null,
         description: `${req.body.category} — E2E fixture request`,
         requestMode: 'B2C',
       });
