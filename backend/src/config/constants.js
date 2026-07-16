@@ -145,6 +145,6 @@ export const JOB_STEP_TRANSITIONS = Object.freeze({
   completed: [],
 });
 
-export const GST_PERCENT_DEFAULT = 18; // Confirm per-product-line rate before go-live (§9 open question).
+export const GST_PERCENT_DEFAULT = 18; // Confirmed flat rate everywhere (user decision) — the frontend's 10% sighting (§9) was mock-data inconsistency, not a second real rate.
 
 export const PAGINATION_DEFAULT = Object.freeze({ page: 1, limit: 20, maxLimit: 100 });
