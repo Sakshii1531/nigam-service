@@ -1,0 +1,50 @@
+import { Router } from 'express';
+import { validate } from '../../middleware/validate.js';
+import { requireAuth, requireBrandScope } from '../../middleware/auth.js';
+import { ok, created } from '../../utils/respond.js';
+import * as reviewService from './review.service.js';
+import { createReviewSchema, respondSchema, idParamSchema, technicianIdParamSchema, listQuerySchema } from './review.validation.js';
+
+export const reviewRouter = Router();
+
+// Public — customers browsing a technician's profile / brand-admin dashboards
+// read reviews without needing their own account.
+reviewRouter.get('/technicians/:technicianId', validate(technicianIdParamSchema, 'params'), validate(listQuerySchema, 'query'), async (req, res, next) => {
+  try {
+    const { items, meta } = await reviewService.listTechnicianReviews(req.params.technicianId, req.query);
+    ok(res, items, meta);
+  } catch (err) {
+    next(err);
+  }
+});
+
+reviewRouter.get('/:id', validate(idParamSchema, 'params'), async (req, res, next) => {
+  try {
+    ok(res, await reviewService.getReview(req.params.id));
+  } catch (err) {
+    next(err);
+  }
+});
+
+reviewRouter.post('/', requireAuth, validate(createReviewSchema), async (req, res, next) => {
+  try {
+    created(res, await reviewService.createReview(req.user.id, req.body));
+  } catch (err) {
+    next(err);
+  }
+});
+
+reviewRouter.patch(
+  '/:id/respond',
+  requireAuth,
+  requireBrandScope,
+  validate(idParamSchema, 'params'),
+  validate(respondSchema),
+  async (req, res, next) => {
+    try {
+      ok(res, await reviewService.respondToReview(req.user.brand, req.params.id, req.body.response));
+    } catch (err) {
+      next(err);
+    }
+  },
+);

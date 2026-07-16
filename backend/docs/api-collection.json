@@ -37,7 +37,8 @@
     { "key": "bannerId", "value": "" },
     { "key": "platformRoleId", "value": "" },
     { "key": "conversationId", "value": "" },
-    { "key": "notificationId", "value": "" }
+    { "key": "notificationId", "value": "" },
+    { "key": "reviewId", "value": "" }
   ],
   "item": [
     {
@@ -1604,6 +1605,39 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
             "url": "{{baseUrl}}/notifications/preferences",
             "body": { "mode": "raw", "raw": "{\n  \"sms\": false\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reviews",
+      "description": "Phase 10. POST requires role=customer (must own the ServiceRequest). GET routes are public. PATCH /:id/respond requires role=brand_admin, cross-tenant-checked via the ServiceRequest's brand.",
+      "item": [
+        {
+          "name": "POST /reviews",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/reviews",
+            "body": { "mode": "raw", "raw": "{\n  \"serviceRequest\": \"{{serviceRequestId}}\",\n  \"rating\": 5,\n  \"comment\": \"Great service\",\n  \"tags\": [\"On time\"]\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 201) { pm.collectionVariables.set('reviewId', pm.response.json().data.id); }"] } }]
+        },
+        {
+          "name": "GET /reviews/:id",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/reviews/{{reviewId}}" }
+        },
+        {
+          "name": "GET /reviews/technicians/:technicianId",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/reviews/technicians/{{technicianId}}" }
+        },
+        {
+          "name": "PATCH /reviews/:id/respond",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/reviews/{{reviewId}}/respond",
+            "body": { "mode": "raw", "raw": "{\n  \"response\": \"Thanks for the feedback!\"\n}" }
           }
         }
       ]
