@@ -25,6 +25,21 @@ npm run dev               # nodemon, watches src/
 
 `GET /api/v1/health` should return `{ data: { status: "up", db: "connected", ... } }` once a local `mongod` is reachable (this repo assumes one is already running via `brew services start mongodb-community`).
 
+Then seed baseline auth/RBAC data (idempotent, safe to re-run):
+
+```bash
+npm run seed
+```
+
+Creates one `User` per role you can log in as (via `POST /api/v1/auth/login` → `/auth/otp/verify`, code printed to the server console by the `stub` OTP provider):
+
+| Role | Identifier | Password |
+|---|---|---|
+| customer | `9876543210` | `password123` |
+| technician | `9000000001` | `password123` |
+| brand_admin | `admin123@gmail.com` | `admin123` |
+| super_admin | `admin123@gmail.com` | `admin123` |
+
 ## Structure
 
 Feature-module layout, not MVC-by-type — each module under `src/modules/<name>/` owns its own routes/controller/service/model/validation/tests as it's built out. See the `README.md` inside each module folder for its scope and which roadmap phase builds it. Shared plumbing lives in `src/config/`, `src/middleware/`, `src/utils/`; cross-cutting domain services (ID generation, warranty computation, pricing, file upload) live in `src/modules/shared/`.

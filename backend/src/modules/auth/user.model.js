@@ -40,8 +40,13 @@ const userSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-userSchema.index({ phone: 1, role: 1 }, { unique: true, sparse: true });
-userSchema.index({ email: 1, role: 1 }, { unique: true, sparse: true });
+// Partial, not sparse: a *compound* sparse index only excludes documents missing
+// EVERY indexed field, not just one — since `role` is always present, `sparse` here
+// would still index every phone-less user as phone:null and collide with each other.
+// An explicit partialFilterExpression is unambiguous: only documents that actually
+// have a `phone` (or `email`) participate in that unique constraint.
+userSchema.index({ phone: 1, role: 1 }, { unique: true, partialFilterExpression: { phone: { $exists: true } } });
+userSchema.index({ email: 1, role: 1 }, { unique: true, partialFilterExpression: { email: { $exists: true } } });
 
 userSchema.pre('save', async function assignCustomerHumanId() {
   if (this.isNew && !this.humanId && this.role === ROLES.CUSTOMER) {

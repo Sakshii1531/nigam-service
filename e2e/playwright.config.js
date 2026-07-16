@@ -27,6 +27,9 @@ export default defineConfig({
       MONGODB_URI: 'mongodb://127.0.0.1:27017/nigam_care_e2e',
       JWT_ACCESS_SECRET: 'e2e-access-secret',
       JWT_REFRESH_SECRET: 'e2e-refresh-secret',
+      // 'test' provider captures codes in-memory instead of console.log, readable
+      // back via GET /_dev/last-otp/:identifier (only mounted under NODE_ENV=test).
+      OTP_PROVIDER: 'test',
     },
   },
 });

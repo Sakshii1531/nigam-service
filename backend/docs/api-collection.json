@@ -1,0 +1,193 @@
+{
+  "info": {
+    "name": "Nigam Care API",
+    "description": "Grows phase by phase alongside backend/src/modules — see backend/README.md. Import into Postman/Thunder Client and set the `baseUrl` collection variable (default http://localhost:4000/api/v1).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:4000/api/v1" },
+    { "key": "role", "value": "customer" },
+    { "key": "identifier", "value": "9876543210" },
+    { "key": "password", "value": "password123" },
+    { "key": "otpCode", "value": "" },
+    { "key": "accessToken", "value": "" },
+    { "key": "refreshToken", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET /health",
+          "request": { "method": "GET", "url": "{{baseUrl}}/health" }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "POST /auth/login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"{{role}}\",\n  \"identifier\": \"{{identifier}}\",\n  \"password\": \"{{password}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Check the running server's console (stub OTP provider) for the code, then set it below or in {{otpCode}}.",
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/otp/send (resend)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/otp/send",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"{{role}}\",\n  \"identifier\": \"{{identifier}}\",\n  \"purpose\": \"login\"\n}"
+            }
+          }
+        },
+        {
+          "name": "POST /auth/otp/verify",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/otp/verify",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"{{role}}\",\n  \"identifier\": \"{{identifier}}\",\n  \"code\": \"{{otpCode}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json().data;",
+                  "  pm.collectionVariables.set('accessToken', data.accessToken);",
+                  "  pm.collectionVariables.set('refreshToken', data.refreshToken);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/forgot-password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/forgot-password",
+            "body": { "mode": "raw", "raw": "{\n  \"role\": \"{{role}}\",\n  \"identifier\": \"{{identifier}}\"\n}" }
+          }
+        },
+        {
+          "name": "POST /auth/reset-password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/reset-password",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"{{role}}\",\n  \"identifier\": \"{{identifier}}\",\n  \"code\": \"{{otpCode}}\",\n  \"newPassword\": \"newpassword123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "POST /auth/refresh",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/refresh",
+            "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json().data;",
+                  "  pm.collectionVariables.set('accessToken', data.accessToken);",
+                  "  pm.collectionVariables.set('refreshToken', data.refreshToken);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/logout",
+            "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dev (non-production only)",
+      "description": "Mounted at /_dev/* only when NODE_ENV !== 'production' (app.js). Exercises pagination/validation/upload/id-generation/RBAC end-to-end — see backend/src/modules/shared/dev.routes.js.",
+      "item": [
+        {
+          "name": "GET /_dev/whoami",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/_dev/whoami"
+          }
+        },
+        {
+          "name": "GET /_dev/admin-only",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/_dev/admin-only"
+          }
+        },
+        {
+          "name": "GET /_dev/paginate",
+          "request": { "method": "GET", "url": "{{baseUrl}}/_dev/paginate?page=1&limit=10" }
+        },
+        {
+          "name": "POST /_dev/validate",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/_dev/validate",
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Capacitor\",\n  \"amount\": 220\n}" }
+          }
+        },
+        {
+          "name": "POST /_dev/upload",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/_dev/upload",
+            "body": { "mode": "formdata", "formdata": [{ "key": "file", "type": "file", "src": "" }] }
+          }
+        },
+        {
+          "name": "POST /_dev/id/:prefixKey",
+          "request": { "method": "POST", "url": "{{baseUrl}}/_dev/id/BOOKING" }
+        }
+      ]
+    }
+  ]
+}
