@@ -13,6 +13,8 @@ import { getLastOtpForTesting } from '../auth/otpProvider.js';
 import { User } from '../auth/user.model.js';
 import { hashPassword } from '../auth/password.js';
 import { Technician } from '../technician/technician.model.js';
+import { AMCPlan } from '../warranty-amc-exchange/amcPlan.model.js';
+import { AMCSubscription } from '../warranty-amc-exchange/amcSubscription.model.js';
 
 // Non-production only (mounted conditionally in app.js) — exercises the Phase 2
 // shared plumbing (pagination, validation-error shape, file upload, id generation)
@@ -142,6 +144,75 @@ if (isTest) {
       });
 
       ok(res, { userId: user.id, technicianId: technician.id }, {}, 201);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // AMC subscription purchase is a deferred flow (Phase 5 scope decision — see
+  // DATA_MODEL.md) with no real HTTP surface yet, but Phase 6's technician "AMC
+  // Visit" job type needs a real subscription to link against and decrement.
+  // Same reasoning as /_dev/test-technician: gives specs something real to set up
+  // and read back without building the deferred purchase flow early.
+  const testAmcSubscriptionSchema = z.object({
+    customerId: z.string().min(1),
+    brand: z.string().min(1).default('LG'),
+    visitsTotal: z.coerce.number().int().positive().default(4),
+  });
+  devRouter.post('/_dev/test-amc-subscription', validate(testAmcSubscriptionSchema), async (req, res, next) => {
+    try {
+      const { customerId, brand, visitsTotal } = req.body;
+      const plan = await AMCPlan.findOneAndUpdate(
+        { name: 'E2E AMC Plan' },
+        { name: 'E2E AMC Plan', tier: 'Gold', price: 2499, visitsTotal },
+        { upsert: true, new: true, setDefaultsOnInsert: true },
+      );
+      const subscription = await AMCSubscription.create({
+        user: customerId,
+        plan: plan._id,
+        brand,
+        expiryDate: new Date(Date.now() + 300 * 24 * 60 * 60 * 1000),
+        visitsTotal,
+        visitsRemaining: visitsTotal,
+        visitNumber: 1,
+      });
+      ok(res, { id: subscription.id }, {}, 201);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Non-booking ServiceRequests (warranty/AMC complaints raised directly, not via
+  // a Booking) also have no real HTTP surface yet (same deferred-flow reasoning as
+  // above) — this creates one already 'Assigned' to a given technician so E2E specs
+  // can exercise AMC/Brand-Warranty job acceptance without a real complaint-raising flow.
+  const testServiceRequestSchema = z.object({
+    customerId: z.string().min(1),
+    technicianId: z.string().min(1),
+    category: z.string().min(1),
+  });
+  devRouter.post('/_dev/test-service-request', validate(testServiceRequestSchema), async (req, res, next) => {
+    try {
+      const { createServiceRequest, transitionStatus } = await import('../service-requests/serviceRequest.service.js');
+      let serviceRequest = await createServiceRequest({
+        user: req.body.customerId,
+        technician: req.body.technicianId,
+        category: req.body.category,
+        description: `${req.body.category} — E2E fixture request`,
+        requestMode: 'B2C',
+      });
+      serviceRequest = await transitionStatus(serviceRequest.id, 'Assigned', { description: 'E2E fixture: pre-assigned' });
+      ok(res, { id: serviceRequest.id }, {}, 201);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  devRouter.get('/_dev/amc-subscription/:id', async (req, res, next) => {
+    try {
+      const subscription = await AMCSubscription.findById(req.params.id);
+      if (!subscription) throw new ApiError(404, 'AMC subscription not found');
+      ok(res, subscription);
     } catch (err) {
       next(err);
     }

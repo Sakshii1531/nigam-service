@@ -17,6 +17,12 @@ import { orderRouter } from './modules/buy-commerce/order.routes.js';
 import { couponRouter } from './modules/rewards-loyalty/coupon.routes.js';
 import { exchangeRouter } from './modules/warranty-amc-exchange/exchange.routes.js';
 import { walletRouter } from './modules/payments-wallet/wallet.routes.js';
+import { technicianRouter } from './modules/technician/technician.routes.js';
+import { jobRouter } from './modules/technician/job.routes.js';
+import { claimRouter as technicianClaimRouter } from './modules/technician/claim.routes.js';
+import { inventoryRouter } from './modules/technician/inventory.routes.js';
+import { earningsRouter } from './modules/technician/earnings.routes.js';
+import { academyRouter } from './modules/technician/academy.routes.js';
 import { devRouter } from './modules/shared/dev.routes.js';
 import { LOCAL_UPLOAD_DIR, isS3Configured } from './modules/shared/fileUpload.js';
 
@@ -62,8 +68,13 @@ export function createApp() {
   app.use('/api/v1/coupons', couponRouter);
   app.use('/api/v1/exchange', exchangeRouter);
   app.use('/api/v1/wallet', walletRouter);
+  app.use('/api/v1/tech/profile', technicianRouter);
+  app.use('/api/v1/tech/jobs', jobRouter);
+  app.use('/api/v1/tech/claims', technicianClaimRouter);
+  app.use('/api/v1/tech/inventory', inventoryRouter);
+  app.use('/api/v1/tech/earnings', earningsRouter);
+  app.use('/api/v1/tech/academy', academyRouter);
   if (!isProd) app.use('/api/v1', devRouter);
-  // Phase 6+: app.use('/api/v1/tech', techRouter); etc., mounted here per module.
 
   app.use(notFoundHandler);
   app.use(errorHandler);

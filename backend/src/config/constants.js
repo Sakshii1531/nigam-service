@@ -128,6 +128,23 @@ export const SERVICE_REQUEST_TRANSITIONS = Object.freeze({
   Closed: [],
 });
 
+// Allowed next-steps per current Job.activeStep — same server-side-validation
+// reasoning as SERVICE_REQUEST_TRANSITIONS. Linear happy path only; the
+// JOB_REVISIT_STEPS sub-flow (re-visit scheduling after an incomplete repair)
+// is deliberately out of scope for Phase 6 (see DATA_MODEL.md Phase 6 addendum)
+// — those steps stay in the Job.activeStep enum but have no transitions here yet.
+export const JOB_STEP_TRANSITIONS = Object.freeze({
+  idle: ['details', 'assigned'],
+  details: ['assigned'],
+  assigned: ['ontheway'],
+  ontheway: ['inspection'],
+  inspection: ['spareapproval'],
+  spareapproval: ['repaircomplete'],
+  repaircomplete: ['billing'],
+  billing: ['completed'],
+  completed: [],
+});
+
 export const GST_PERCENT_DEFAULT = 18; // Confirm per-product-line rate before go-live (§9 open question).
 
 export const PAGINATION_DEFAULT = Object.freeze({ page: 1, limit: 20, maxLimit: 100 });
