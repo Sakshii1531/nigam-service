@@ -7,10 +7,9 @@ function round2(n) {
 /**
  * Computes a charge breakdown from resolved inputs (a RateCard/ServiceCatalogItem's
  * laborRate + partsMarkupPercent, plus whatever parts/extras a technician added
- * during diagnosis) — pure function, no DB access. GST defaults to 18% (see
- * GST_PERCENT_DEFAULT; BACKEND_CONTEXT.md §9 flags an 18%-vs-10% inconsistency in the
- * frontend across different checkout flows — confirm the real per-flow rule before
- * this is relied on for anything beyond D2C service billing).
+ * during diagnosis) — pure function, no DB access. GST defaults to 18% flat
+ * everywhere (GST_PERCENT_DEFAULT) — confirmed by the user; the frontend's 10%
+ * sighting (BACKEND_CONTEXT.md §9) was mock-data inconsistency, not a real second rate.
  */
 export function computeCharges({
   laborRate = 0,
