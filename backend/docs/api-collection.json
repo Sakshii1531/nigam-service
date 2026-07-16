@@ -18,7 +18,10 @@
     { "key": "productId", "value": "" },
     { "key": "couponCode", "value": "WELCOME150" },
     { "key": "exchangeRequestId", "value": "" },
-    { "key": "orderId", "value": "" }
+    { "key": "orderId", "value": "" },
+    { "key": "jobId", "value": "" },
+    { "key": "technicianClaimId", "value": "" },
+    { "key": "amcSubscriptionId", "value": "" }
   ],
   "item": [
     {
@@ -573,6 +576,281 @@
             "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
             "url": "{{baseUrl}}/wallet/ledger"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Technician",
+      "description": "All routes require role=technician (log in via the Auth folder with identifier=9000000001, the seeded technician). See backend/src/modules/technician/ and DATA_MODEL.md's Phase 6 addendum.",
+      "item": [
+        {
+          "name": "GET /tech/profile/profile",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/tech/profile/profile"
+          }
+        },
+        {
+          "name": "PUT /tech/profile/profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/tech/profile/profile",
+            "body": { "mode": "raw", "raw": "{\n  \"specs\": [\"AC\", \"Refrigerator\"]\n}" }
+          }
+        },
+        {
+          "name": "POST /tech/profile/payout-methods",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/tech/profile/payout-methods",
+            "body": { "mode": "raw", "raw": "{\n  \"type\": \"upi\",\n  \"upiId\": \"rahul@upi\",\n  \"isPrimary\": true\n}" }
+          }
+        },
+        {
+          "name": "GET /tech/jobs/available",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/tech/jobs/available"
+          }
+        },
+        {
+          "name": "GET /tech/jobs/active",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/tech/jobs/active"
+          }
+        },
+        {
+          "name": "POST /tech/jobs/accept/:serviceRequestId",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/tech/jobs/accept/{{serviceRequestId}}",
+            "body": { "mode": "raw", "raw": "{}" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  pm.collectionVariables.set('jobId', pm.response.json().data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /tech/jobs/:id",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/tech/jobs/{{jobId}}"
+          }
+        },
+        {
+          "name": "POST /tech/jobs/:id/start-travel",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/tech/jobs/{{jobId}}/start-travel"
+          }
+        },
+        {
+          "name": "POST /tech/jobs/:id/arrive",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/tech/jobs/{{jobId}}/arrive"
+          }
+        },
+        {
+          "name": "POST /tech/jobs/:id/diagnosis",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/tech/jobs/{{jobId}}/diagnosis",
+            "body": { "mode": "raw", "raw": "{\n  \"notes\": \"Gas leak found\"\n}" }
+          }
+        },
+        {
+          "name": "POST /tech/jobs/:id/spare-parts",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/tech/jobs/{{jobId}}/spare-parts",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"parts\": [{ \"name\": \"Gas Refill Kit\", \"price\": 500, \"checked\": true }],\n  \"additionalServices\": []\n}"
+            }
+          }
+        },
+        {
+          "name": "POST /tech/jobs/:id/repair-complete",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/tech/jobs/{{jobId}}/repair-complete"
+          }
+        },
+        {
+          "name": "POST /tech/jobs/:id/billing",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/tech/jobs/{{jobId}}/billing"
+          }
+        },
+        {
+          "name": "POST /tech/jobs/:id/collect-payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/tech/jobs/{{jobId}}/collect-payment",
+            "body": { "mode": "raw", "raw": "{\n  \"paymentMethod\": \"Cash\"\n}" }
+          }
+        },
+        {
+          "name": "POST /tech/claims",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/tech/claims",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"brand\": \"LG Partner Warranty\",\n  \"claimType\": \"Brand\",\n  \"item\": \"Fan Blade\",\n  \"amount\": 250,\n  \"reason\": \"Damaged in transit\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set('technicianClaimId', pm.response.json().data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /tech/claims",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/tech/claims"
+          }
+        },
+        {
+          "name": "GET /tech/claims/:id",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/tech/claims/{{technicianClaimId}}"
+          }
+        },
+        {
+          "name": "GET /tech/inventory",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/tech/inventory"
+          }
+        },
+        {
+          "name": "POST /tech/inventory/part-orders",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/tech/inventory/part-orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"partName\": \"Fan Motor\",\n  \"qty\": 1,\n  \"price\": 350,\n  \"orderSource\": \"NCC Warehouse\"\n}"
+            }
+          }
+        },
+        {
+          "name": "GET /tech/inventory/part-orders",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/tech/inventory/part-orders"
+          }
+        },
+        {
+          "name": "GET /tech/earnings/summary",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/tech/earnings/summary"
+          }
+        },
+        {
+          "name": "POST /tech/earnings/payouts",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/tech/earnings/payouts",
+            "body": { "mode": "raw", "raw": "{\n  \"amount\": 200,\n  \"payoutType\": \"Quick\"\n}" }
+          }
+        },
+        {
+          "name": "GET /tech/earnings/payouts",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/tech/earnings/payouts"
+          }
+        },
+        {
+          "name": "GET /tech/academy/courses",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/tech/academy/courses"
+          }
+        },
+        {
+          "name": "GET /tech/academy/announcements",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/tech/academy/announcements"
           }
         }
       ]

@@ -16,6 +16,9 @@ import { Product } from '../src/modules/buy-commerce/product.model.js';
 import { Coupon } from '../src/modules/rewards-loyalty/coupon.model.js';
 import { ExchangeQuestionSet } from '../src/modules/warranty-amc-exchange/exchangeQuestionSet.model.js';
 import { ExchangeCampaign } from '../src/modules/warranty-amc-exchange/exchangeCampaign.model.js';
+import { AMCPlan } from '../src/modules/warranty-amc-exchange/amcPlan.model.js';
+import { AMCSubscription } from '../src/modules/warranty-amc-exchange/amcSubscription.model.js';
+import { ExtendedWarrantyOrder } from '../src/modules/warranty-amc-exchange/extendedWarrantyOrder.model.js';
 import { hashPassword } from '../src/modules/auth/password.js';
 import { ROLES } from '../src/config/constants.js';
 import { CATALOG_SEED } from './catalogSeedData.js';
@@ -220,6 +223,55 @@ async function upsertCommerce() {
   console.log(`[seed] coupon ready: ${COUPON.code}`);
 }
 
+// AMC/Extended-Warranty purchase flows are deliberately deferred (Phase 5 scope
+// decision) — these fixtures give Phase 6's AMC-Visit/NCC-Extended-Warranty job
+// types something real to link against without building that flow early.
+async function upsertTechFixtures(customer) {
+  const amcPlan = await AMCPlan.findOneAndUpdate(
+    { name: 'AMC Gold Plan' },
+    { name: 'AMC Gold Plan', tier: 'Gold', price: 2499, visitsTotal: 4, isActive: true },
+    { upsert: true, new: true, setDefaultsOnInsert: true },
+  );
+
+  const amcSubscription = await AMCSubscription.findOneAndUpdate(
+    { user: customer._id, brand: 'LG', model: 'Double Door 260L' },
+    {
+      user: customer._id,
+      plan: amcPlan._id,
+      brand: 'LG',
+      model: 'Double Door 260L',
+      expiryDate: new Date(Date.now() + 300 * 24 * 60 * 60 * 1000),
+      status: 'Active',
+      visitsTotal: 4,
+      visitsRemaining: 4,
+      visitNumber: 1,
+    },
+    { upsert: true, new: true, setDefaultsOnInsert: true },
+  );
+
+  const extendedWarrantyOrder = await ExtendedWarrantyOrder.findOneAndUpdate(
+    { user: customer._id, applianceCategory: 'AC', brand: 'Voltas' },
+    {
+      user: customer._id,
+      applianceCategory: 'AC',
+      brand: 'Voltas',
+      tierId: 'ew-2yr',
+      price: 1999,
+      fullName: customer.name,
+      mobile: customer.phone,
+      validTill: new Date(Date.now() + 700 * 24 * 60 * 60 * 1000),
+      status: 'Active',
+      coverage: ['Compressor', 'Gas Refill', 'Electronic Parts'],
+      claimsRemaining: 3,
+      claimsTotal: 3,
+    },
+    { upsert: true, new: true, setDefaultsOnInsert: true },
+  );
+
+  console.log(`[seed] AMC subscription ready: ${amcSubscription.id}, EW order ready: ${extendedWarrantyOrder.id}`);
+  return { amcSubscription, extendedWarrantyOrder };
+}
+
 async function main() {
   await connectDB();
   await ensureIndexes();
@@ -275,6 +327,7 @@ async function main() {
 
   await upsertCatalog();
   await upsertCommerce();
+  await upsertTechFixtures(customer);
 
   console.log(`[seed] customer ready: ${customer.name} (${customer.id})`);
   console.log('[seed] done');
