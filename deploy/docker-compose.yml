@@ -1,0 +1,30 @@
+# Phase 14 — VPS migration artifact. Runs the API container on the VPS with a
+# restart policy (this repo's stand-in for a process manager — no PM2
+# dependency needed since Docker's own restart policy covers the same "come
+# back up after a crash or reboot" need). MongoDB is deliberately NOT a
+# service here — Atlas stays the database (see backend/docs/DATA_MODEL.md's
+# Phase 6 addendum on why it was decoupled from app hosting from the start);
+# this phase moves compute only, matching the roadmap's explicit scope.
+#
+# Usage on the VPS: `docker compose -f deploy/docker-compose.yml up -d --build`
+# from the repo root, with a real backend/.env already in place (never committed).
+
+services:
+  api:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    image: nigam-care-backend:latest
+    restart: unless-stopped
+    env_file:
+      - ../backend/.env
+    environment:
+      - PORT=4000
+    ports:
+      - '127.0.0.1:4000:4000' # bound to localhost only — nginx is the public entry point, see nginx.conf
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:4000/api/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
