@@ -1,0 +1,91 @@
+name: Backend CI
+
+# Phase 12 exit criterion (partial — the "auto-deploys to Render" half needs a
+# real Render account connected by the user; see backend/docs/DEPLOYMENT.md).
+# Runs lint + the full Jest suite + the Playwright E2E suite (API-only, no
+# browser binaries needed) on every PR and on push to main.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'e2e/**'
+      - '.github/workflows/backend-ci.yml'
+  pull_request:
+    paths:
+      - 'backend/**'
+      - 'e2e/**'
+      - '.github/workflows/backend-ci.yml'
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    services:
+      mongodb:
+        image: mongo:6
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ping:1})' --quiet"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: 'backend/.nvmrc'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Lint
+        working-directory: backend
+        run: npm run lint
+
+      - name: Jest — unit + integration tests
+        working-directory: backend
+        run: npm test
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: lint-and-test
+    services:
+      mongodb:
+        image: mongo:6
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ping:1})' --quiet"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: 'backend/.nvmrc'
+          cache: 'npm'
+          cache-dependency-path: |
+            backend/package-lock.json
+            e2e/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Install e2e dependencies
+        working-directory: e2e
+        run: npm ci
+
+      - name: Playwright E2E — real running server, API-only (no browser binaries needed)
+        working-directory: e2e
+        env:
+          CI: true
+        run: npx playwright test
