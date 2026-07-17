@@ -3,7 +3,7 @@ import { validate } from '../../middleware/validate.js';
 import { requireAuth } from '../../middleware/auth.js';
 import { ok, created } from '../../utils/respond.js';
 import * as orderService from './order.service.js';
-import { createOrderSchema, listOrdersQuerySchema, idParamSchema } from './order.validation.js';
+import { createOrderSchema, listOrdersQuerySchema, idParamSchema, verifyPaymentSchema } from './order.validation.js';
 
 export const orderRouter = Router();
 orderRouter.use(requireAuth);
@@ -32,3 +32,20 @@ orderRouter.get('/:id', validate(idParamSchema, 'params'), async (req, res, next
     next(err);
   }
 });
+
+// Called by the frontend after Razorpay's Checkout.js reports success — see
+// order.service.js's verifyOrderPayment() doc comment for why the order id
+// used for signature verification comes from the server's own records, not
+// anything in this request body.
+orderRouter.post(
+  '/:id/verify-payment',
+  validate(idParamSchema, 'params'),
+  validate(verifyPaymentSchema),
+  async (req, res, next) => {
+    try {
+      ok(res, await orderService.verifyOrderPayment(req.user.id, req.params.id, req.body));
+    } catch (err) {
+      next(err);
+    }
+  },
+);

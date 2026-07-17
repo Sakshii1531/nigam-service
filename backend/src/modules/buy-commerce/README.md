@@ -1,3 +1,5 @@
 # buy-commerce
 
 `Product` (new + refurbished, public browse + admin writes), `Cart`, `Wishlist`, `Order` (checkout: server-priced, applies coupon + exchange discount + capped coin redemption, best-effort-compensated non-transactional side effects — see `../../../docs/DATA_MODEL.md` Phase 5 addendum). See BACKEND_CONTEXT.md §3.8.
+
+**Two-step checkout (post-Phase-15, real Razorpay)**: `createOrder()` completes synchronously (`Order.status: 'Confirmed'`) only when `total <= 0` or `paymentMethod === 'Cash'` — no gateway involved either way. Otherwise it returns `Order.status: 'Placed'` plus a `razorpay: { orderId, amount, currency, keyId }` block for the frontend to open Checkout.js against; `POST /orders/:id/verify-payment` (`verifyOrderPayment()`) is what actually confirms it once the customer completes payment. Exchange-request marking and cart-clearing are deferred to that verify step for a gateway checkout, so an abandoned payment doesn't consume a trade-in credit or empty a cart the customer might still be editing.

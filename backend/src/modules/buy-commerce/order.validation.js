@@ -36,3 +36,8 @@ export const listOrdersQuerySchema = z.object({
 });
 
 export const idParamSchema = z.object({ id: z.string().min(1) });
+
+export const verifyPaymentSchema = z.object({
+  razorpayPaymentId: z.string().min(1),
+  razorpaySignature: z.string().min(1),
+});

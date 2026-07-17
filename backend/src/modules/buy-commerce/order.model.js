@@ -30,12 +30,20 @@ const orderSchema = new mongoose.Schema(
     coinsValue: { type: Number, default: 0 },
     total: { type: Number, required: true },
     payment: { type: mongoose.Schema.Types.ObjectId, ref: 'Payment', default: null },
+    // 'Placed' now doubles as "awaiting Razorpay Checkout confirmation" when a
+    // real gateway charge is needed (total > 0 and paymentMethod isn't Cash) —
+    // order.service.js's verifyOrderPayment() is what moves it to 'Confirmed'.
+    // Tracks whether this order emptied the cart (vs an explicit items array)
+    // so verifyOrderPayment() only clears it when that's actually correct —
+    // checkout that's still pending shouldn't clear a cart the customer might
+    // still be editing, and an items-array checkout never touched the cart at all.
     status: {
       type: String,
       enum: ['Placed', 'Confirmed', 'Shipped', 'Delivered', 'Cancelled'],
       default: 'Placed',
       index: true,
     },
+    checkedOutFromCart: { type: Boolean, default: false },
   },
   { timestamps: true },
 );

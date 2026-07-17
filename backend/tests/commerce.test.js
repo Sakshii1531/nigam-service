@@ -15,6 +15,7 @@ import { ExchangeCampaign } from '../src/modules/warranty-amc-exchange/exchangeC
 import { ExchangeRequest } from '../src/modules/warranty-amc-exchange/exchangeRequest.model.js';
 import { Payment } from '../src/modules/payments-wallet/payment.model.js';
 import { WalletLedger } from '../src/modules/payments-wallet/walletLedger.model.js';
+import { signForTesting } from '../src/modules/payments-wallet/paymentGateway.js';
 import { hashPassword } from '../src/modules/auth/password.js';
 import { ROLES } from '../src/config/constants.js';
 import { testDbUri } from './helpers/testDb.js';
@@ -227,13 +228,35 @@ describe('POST /orders — full checkout: coupon + exchange discount + coin rede
     expect(order.coinsValue).toBe(50); // 500 coins / 10
     expect(order.coinsRedeemed).toBe(500);
     expect(order.total).toBe(5000 - 100 - 2000 - 50); // 2850
-    expect(order.status).toBe('Confirmed');
     expect(order.humanId).toMatch(/^NCCO\d{6}$/);
 
-    // Side effects: stock decremented, wallet debited, exchange marked applied, payment recorded.
+    // total > 0 and a real gateway method (UPI) — checkout is NOT complete yet,
+    // it's awaiting the customer finishing Razorpay's Checkout.js.
+    expect(order.status).toBe('Placed');
+    expect(order.razorpay).toMatchObject({ amount: 285000, currency: 'INR' }); // 2850 rupees in paise
+    expect(order.razorpay.orderId).toBeTruthy();
+
+    // Nothing that should only happen on a CONFIRMED order has happened yet:
+    // stock is reserved (decremented upfront, same as before) but coins/exchange/cart are not.
     const updatedProduct = await Product.findById(product.id);
     expect(updatedProduct.stock).toBe(2);
+    const pendingExchange = await ExchangeRequest.findById(exchangeRequestId);
+    expect(pendingExchange.appliedToOrder).toBeNull();
+    const pendingPayment = await Payment.findById(order.payment);
+    expect(pendingPayment.status).toBe('Pending');
 
+    // Customer completes Checkout.js — the frontend gets back a payment id +
+    // signature from Razorpay and posts them here to confirm.
+    const razorpaySignature = signForTesting({ orderId: order.razorpay.orderId, paymentId: 'pay_test_12345' });
+    const verifyRes = await request(app)
+      .post(`/api/v1/orders/${order.id}/verify-payment`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ razorpayPaymentId: 'pay_test_12345', razorpaySignature })
+      .expect(200);
+    expect(verifyRes.body.data.status).toBe('Confirmed');
+
+    // Now the side effects fire: wallet debited (already happened at
+    // checkout-initiation, unchanged), exchange marked applied, payment recorded.
     const updatedUser = await User.findOne({ phone: '9400000006' });
     expect(updatedUser.walletCoins).toBe(0);
 
@@ -243,6 +266,29 @@ describe('POST /orders — full checkout: coupon + exchange discount + coin rede
     const payment = await Payment.findById(order.payment);
     expect(payment.status).toBe('Success');
     expect(payment.amount).toBe(order.total);
+    expect(payment.razorpayPaymentId).toBe('pay_test_12345');
+  });
+
+  it('rejects payment verification with an invalid signature, leaving the order Placed', async () => {
+    const product = await seedProduct({ price: 1000, stock: 5 });
+    const token = await loginAsCustomer('9400000014');
+
+    const orderRes = await request(app)
+      .post('/api/v1/orders')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ items: [{ productId: product.id, quantity: 1 }], paymentMethod: 'UPI' })
+      .expect(201);
+    const order = orderRes.body.data;
+    expect(order.status).toBe('Placed');
+
+    await request(app)
+      .post(`/api/v1/orders/${order.id}/verify-payment`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ razorpayPaymentId: 'pay_test_wrong', razorpaySignature: 'not-a-real-signature' })
+      .expect(400);
+
+    const stillPlaced = await Order.findById(order.id);
+    expect(stillPlaced.status).toBe('Placed');
   });
 
   it('caps coin redemption at what is actually owed rather than over-redeeming', async () => {
@@ -291,10 +337,12 @@ describe('POST /orders — full checkout: coupon + exchange discount + coin rede
     const exchangeRequestId = exchangeRes.body.data.id;
     await ExchangeRequest.findByIdAndUpdate(exchangeRequestId, { status: 'Inspection Approved' });
 
+    // Cash — completes synchronously (marks the exchange applied immediately)
+    // so the second attempt below has something real to reject reusing.
     await request(app)
       .post('/api/v1/orders')
       .set('Authorization', `Bearer ${token}`)
-      .send({ items: [{ productId: product.id, quantity: 1 }], exchangeRequestId })
+      .send({ items: [{ productId: product.id, quantity: 1 }], exchangeRequestId, paymentMethod: 'Cash' })
       .expect(201);
 
     await request(app)
@@ -331,7 +379,11 @@ describe('POST /orders — full checkout: coupon + exchange discount + coin rede
 
     await request(app).post('/api/v1/cart/items').set('Authorization', `Bearer ${token}`).send({ productId: product.id, quantity: 2 });
 
-    const res = await request(app).post('/api/v1/orders').set('Authorization', `Bearer ${token}`).send({ useCart: true }).expect(201);
+    const res = await request(app)
+      .post('/api/v1/orders')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ useCart: true, paymentMethod: 'Cash' }) // Cash — cart-clearing happens on synchronous completion
+      .expect(201);
     expect(res.body.data.subtotal).toBe(400);
 
     const cartRes = await request(app).get('/api/v1/cart').set('Authorization', `Bearer ${token}`);
