@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Local API base URL override (backend/.env.example's frontend counterpart) —
+# not secret, but keeps each dev's local backend port out of git.
+.env
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -5,15 +5,24 @@ import { ArrowLeft, ShieldCheck, Cpu } from 'lucide-react';
 
 /**
  * Reusable OTP verification screen used by all four panels.
- * Purely simulated / in-memory — any 6 digits verify successfully.
+ * Purely simulated / in-memory by default — any 6 digits verify successfully.
+ * A caller can opt into real verification via `onSubmit` (Phase 13 — currently
+ * only the customer login flow does this; technician/brand-admin/super-admin
+ * logins are unchanged, see frontend/docs/PHASE13_INTEGRATION.md).
  *
  * Props:
  *  - variant: 'mobile' (user/technician) | 'admin' (brand/super-admin)
  *  - portalLabel: eyebrow label, e.g. "Technician Portal"
  *  - destination: masked phone/email string shown to the user
- *  - onVerified: path to navigate to on successful verify
+ *  - onVerified: path to navigate to on successful verify (used as-is when no
+ *    onSubmit is given; ignored in favor of onSubmit's own navigation otherwise)
  *  - backTo: path for the back button / "Change" link
  *  - title, subtitle: optional copy overrides
+ *  - onSubmit: optional async (code) => void. Rejecting shows the thrown
+ *    Error's `message` inline instead of navigating; resolving is expected to
+ *    handle its own navigation (the code that owns the real session knows
+ *    better than this generic component where to send the user next).
+ *  - onResend: optional async () => void, called instead of the local 30s-reset demo.
  */
 const OtpVerification = ({
   variant = 'mobile',
@@ -23,11 +32,14 @@ const OtpVerification = ({
   backTo = '/login',
   title = 'Verify OTP',
   subtitle = 'Enter the 6-digit code we sent to',
+  onSubmit,
+  onResend,
 }) => {
   const navigate = useNavigate();
   const [digits, setDigits] = useState(['', '', '', '', '', '']);
   const [seconds, setSeconds] = useState(30);
   const [verifying, setVerifying] = useState(false);
+  const [error, setError] = useState('');
   const inputsRef = useRef([]);
 
   useEffect(() => {
@@ -67,17 +79,35 @@ const OtpVerification = ({
     }
   };
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     if (!filled) return;
+    setError('');
     setVerifying(true);
+    if (onSubmit) {
+      try {
+        await onSubmit(digits.join(''));
+      } catch (err) {
+        setError(err?.message || 'Incorrect code. Please try again.');
+        setVerifying(false);
+      }
+      return; // onSubmit owns navigation on success — don't also navigate here.
+    }
     setTimeout(() => navigate(onVerified), 700);
   };
 
-  const handleResend = () => {
+  const handleResend = async () => {
     if (seconds > 0) return;
-    setSeconds(30);
+    setError('');
     setDigits(['', '', '', '', '', '']);
     inputsRef.current[0]?.focus();
+    if (onResend) {
+      try {
+        await onResend();
+      } catch (err) {
+        setError(err?.message || 'Could not resend the code. Please try again.');
+      }
+    }
+    setSeconds(30);
   };
 
   const isAdmin = variant === 'admin';
@@ -104,6 +134,10 @@ const OtpVerification = ({
     </div>
   );
 
+  const errorRow = error ? (
+    <p className="text-center text-xs font-semibold text-red-600">{error}</p>
+  ) : null;
+
   const resendRow = (
     <div className="text-center text-xs text-text-secondary">
       Didn&apos;t get the code?{' '}
@@ -117,7 +151,7 @@ const OtpVerification = ({
     </div>
   );
 
-  const demoHint = (
+  const demoHint = onSubmit ? null : (
     <p className="text-center text-[11px] text-slate-400">Demo: enter any 6 digits to continue</p>
   );
 
@@ -162,6 +196,7 @@ const OtpVerification = ({
                   'Verify & Continue'
                 )}
               </button>
+              {errorRow}
               {resendRow}
               {demoHint}
               <button
@@ -225,6 +260,7 @@ const OtpVerification = ({
               'Verify & Continue'
             )}
           </button>
+          {errorRow}
           {resendRow}
           {demoHint}
         </div>
