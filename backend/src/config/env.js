@@ -35,11 +35,33 @@ export const env = {
     accessKeyId: process.env.S3_ACCESS_KEY_ID || '',
     secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || '',
   },
+  cloudinary: {
+    cloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
+    apiKey: process.env.CLOUDINARY_API_KEY || '',
+    apiSecret: process.env.CLOUDINARY_API_SECRET || '',
+    uploadFolder: process.env.CLOUDINARY_UPLOAD_FOLDER || 'nigam-care',
+  },
+  smsIndiaHub: {
+    baseUrl: process.env.SMSINDIAHUB_BASE_URL || 'https://cloud.smsindiahub.in/api/mt/SendSMS',
+    username: process.env.SMSINDIAHUB_USERNAME || '',
+    password: process.env.SMSINDIAHUB_PASSWORD || '',
+    senderId: process.env.SMSINDIAHUB_SENDER_ID || '',
+    entityId: process.env.SMSINDIAHUB_ENTITY_ID || '',
+    dltTemplateId: process.env.SMSINDIAHUB_DLT_TEMPLATE_ID || '',
+    // Must match the DLT-registered template text VERBATIM (only the {code}
+    // placeholder varies) — carriers silently drop anything that doesn't
+    // byte-match the approved template, per TRAI's DLT compliance rules.
+    otpTemplate: process.env.SMSINDIAHUB_OTP_TEMPLATE || 'Your Nigam Care OTP is {code}. Valid for 10 minutes. Do not share this code with anyone.',
+    channel: process.env.SMSINDIAHUB_CHANNEL || '2', // '2' = transactional route on SMSIndiaHub
+  },
   razorpay: {
     keyId: process.env.RAZORPAY_KEY_ID || '',
     keySecret: process.env.RAZORPAY_KEY_SECRET || '',
   },
 };
+
+export const isCloudinaryConfigured = Boolean(env.cloudinary.cloudName && env.cloudinary.apiKey && env.cloudinary.apiSecret);
+export const isSmsIndiaHubConfigured = Boolean(env.smsIndiaHub.username && env.smsIndiaHub.password && env.smsIndiaHub.senderId);
 
 export const isProd = env.nodeEnv === 'production';
 export const isTest = env.nodeEnv === 'test';
