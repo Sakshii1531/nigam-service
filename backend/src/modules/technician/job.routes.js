@@ -12,6 +12,7 @@ import {
   submitDiagnosisSchema,
   submitSparePartsSchema,
   collectPaymentSchema,
+  verifyJobPaymentSchema,
 } from './job.validation.js';
 
 export const jobRouter = Router();
@@ -121,6 +122,22 @@ jobRouter.post(
   async (req, res, next) => {
     try {
       ok(res, await jobService.collectPayment(req.technician.id, req.params.id, req.body));
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// Called after Razorpay's Checkout.js reports success (see job.service.js's
+// collectPayment doc comment for when this step is actually needed vs Cash
+// completing synchronously).
+jobRouter.post(
+  '/:id/verify-payment',
+  validate(jobIdParamSchema, 'params'),
+  validate(verifyJobPaymentSchema),
+  async (req, res, next) => {
+    try {
+      ok(res, await jobService.verifyJobPayment(req.technician.id, req.params.id, req.body));
     } catch (err) {
       next(err);
     }

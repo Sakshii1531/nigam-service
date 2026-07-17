@@ -29,3 +29,8 @@ export const submitSparePartsSchema = z.object({
 export const collectPaymentSchema = z.object({
   paymentMethod: z.enum(['Card', 'UPI', 'NetBanking', 'Cash', 'Wallet']).optional(),
 });
+
+export const verifyJobPaymentSchema = z.object({
+  razorpayPaymentId: z.string().min(1),
+  razorpaySignature: z.string().min(1),
+});

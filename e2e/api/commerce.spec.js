@@ -256,8 +256,33 @@ test.describe('POST /orders — buy with coin redemption + exchange discount', (
     expect(order.coinsValue).toBe(900);
     expect(order.coinsRedeemed).toBe(9000);
     expect(order.total).toBe(2000); // 5000 - 100 - 2000 - 900
-    expect(order.status).toBe('Confirmed');
     expect(order.humanId).toMatch(/^NCCO\d{6}$/);
+
+    // total > 0 with the default UPI method — checkout isn't complete yet,
+    // it's awaiting the customer finishing Razorpay's Checkout.js.
+    expect(order.status).toBe('Placed');
+    expect(order.razorpay.amount).toBe(200000); // 2000 rupees in paise
+    expect(order.razorpay.orderId).toBeTruthy();
+
+    // Nothing that should only happen once CONFIRMED has happened yet.
+    const walletMidway = await request.get('/api/v1/wallet', { headers: { Authorization: `Bearer ${customer.token}` } });
+    expect((await walletMidway.json()).data.coins).toBe(0); // coins are debited at checkout-initiation, unchanged
+    const productMidway = await request.get(`/api/v1/products/${product.id}`);
+    expect((await productMidway.json()).data.stock).toBe(2); // stock reserved upfront, unchanged
+
+    // Customer completes Checkout.js — the frontend gets back a payment id +
+    // signature from Razorpay and posts them here to confirm.
+    const signRes = await request.post('/api/v1/_dev/razorpay-sign', {
+      data: { orderId: order.razorpay.orderId, paymentId: 'pay_e2e_test' },
+    });
+    const { signature } = (await signRes.json()).data;
+
+    const verifyRes = await request.post(`/api/v1/orders/${order.id}/verify-payment`, {
+      headers: { Authorization: `Bearer ${customer.token}` },
+      data: { razorpayPaymentId: 'pay_e2e_test', razorpaySignature: signature },
+    });
+    expect(verifyRes.status()).toBe(200);
+    expect((await verifyRes.json()).data.status).toBe('Confirmed');
 
     const walletRes = await request.get('/api/v1/wallet', { headers: { Authorization: `Bearer ${customer.token}` } });
     expect((await walletRes.json()).data.coins).toBe(0); // 9000 - 9000
@@ -268,6 +293,7 @@ test.describe('POST /orders — buy with coin redemption + exchange discount', (
 
     const orderDetail = await request.get(`/api/v1/orders/${order.id}`, { headers: { Authorization: `Bearer ${customer.token}` } });
     expect(orderDetail.status()).toBe(200);
+    expect((await orderDetail.json()).data.status).toBe('Confirmed');
   });
 
   test('rejects reusing an exchange request already applied to a previous order', async ({ request }) => {
@@ -291,9 +317,11 @@ test.describe('POST /orders — buy with coin redemption + exchange discount', (
       data: { status: 'Inspection Approved' },
     });
 
+    // Cash — completes synchronously (marks the exchange applied immediately)
+    // so the second attempt below has something real to reject reusing.
     const firstOrder = await request.post('/api/v1/orders', {
       headers: { Authorization: `Bearer ${customer.token}` },
-      data: { items: [{ productId: product.id, quantity: 1 }], exchangeRequestId },
+      data: { items: [{ productId: product.id, quantity: 1 }], exchangeRequestId, paymentMethod: 'Cash' },
     });
     expect(firstOrder.status()).toBe(201);
 

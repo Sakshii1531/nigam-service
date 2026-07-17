@@ -9,7 +9,13 @@ const paymentSchema = new mongoose.Schema(
     amount: { type: Number, required: true },
     method: { type: String, enum: ['Card', 'UPI', 'NetBanking', 'Cash', 'Wallet'], required: true },
     status: { type: String, enum: ['Pending', 'Success', 'Failed', 'Refunded'], default: 'Pending', index: true },
-    gatewayRef: String, // Razorpay payment/order id once Phase 5 wires the real client
+    // While Pending: holds the Razorpay Order id (set at initiate time, looked
+    // up server-side at verify time — never trust a client-supplied order id
+    // for signature verification, see paymentGateway.js). Once Success: stays
+    // as the Order id for traceability; razorpayPaymentId below holds the
+    // actual payment id Razorpay returns after the customer completes Checkout.
+    gatewayRef: String,
+    razorpayPaymentId: { type: String, default: null },
     coinsRedeemed: { type: Number, default: 0 },
   },
   { timestamps: true },

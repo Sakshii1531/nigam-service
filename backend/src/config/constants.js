@@ -54,6 +54,9 @@ export const SERVICE_REQUEST_STATUS = Object.freeze([
 ]);
 
 // Technician job state machine (BACKEND_CONTEXT.md §4.3), mirrors ActiveJob.jsx.
+// 'awaitingpayment' added post-Phase-15 for the real Razorpay Checkout flow —
+// billing -> completed directly still exists for Cash / already-covered ($0)
+// jobs, which never touch a gateway at all (see job.service.js's collectPayment).
 export const JOB_STEPS = Object.freeze([
   'idle',
   'details',
@@ -63,6 +66,7 @@ export const JOB_STEPS = Object.freeze([
   'spareapproval',
   'repaircomplete',
   'billing',
+  'awaitingpayment',
   'completed',
 ]);
 
@@ -141,7 +145,8 @@ export const JOB_STEP_TRANSITIONS = Object.freeze({
   inspection: ['spareapproval'],
   spareapproval: ['repaircomplete'],
   repaircomplete: ['billing'],
-  billing: ['completed'],
+  billing: ['completed', 'awaitingpayment'],
+  awaitingpayment: ['completed'],
   completed: [],
 });
 

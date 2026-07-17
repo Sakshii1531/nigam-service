@@ -10,6 +10,7 @@ import { ID_PREFIXES, ROLES } from '../../config/constants.js';
 import { requireAuth, requireRole } from '../../middleware/auth.js';
 import { isTest } from '../../config/env.js';
 import { getLastOtpForTesting } from '../auth/otpProvider.js';
+import { signForTesting } from '../payments-wallet/paymentGateway.js';
 import { User } from '../auth/user.model.js';
 import { hashPassword } from '../auth/password.js';
 import { Technician } from '../technician/technician.model.js';
@@ -224,6 +225,15 @@ if (isTest) {
     } catch (err) {
       next(err);
     }
+  });
+
+  // e2e specs can't import backend source directly (they only speak real HTTP
+  // to a running server), so the only way to exercise the real Razorpay
+  // create-order -> verify-signature round trip end-to-end is a dev-only
+  // endpoint wrapping the same signForTesting() the Jest tests call in-process.
+  const signPaymentSchema = z.object({ orderId: z.string().min(1), paymentId: z.string().min(1) });
+  devRouter.post('/_dev/razorpay-sign', validate(signPaymentSchema), (req, res) => {
+    ok(res, { signature: signForTesting(req.body) });
   });
 
   devRouter.get('/_dev/amc-subscription/:id', async (req, res, next) => {

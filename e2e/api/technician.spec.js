@@ -119,6 +119,45 @@ test.describe('technician job lifecycle — D2C', () => {
     expect(earnings.completedTotal).toBe(1);
   });
 
+  test('collecting payment with a real gateway method (UPI) awaits Razorpay Checkout confirmation before completing the job', async ({ request }) => {
+    const { jobId, srId, tech } = await acceptedD2cJob(request);
+    const auth = { headers: { Authorization: `Bearer ${tech.token}` } };
+
+    await request.post(`/api/v1/tech/jobs/${jobId}/start-travel`, auth);
+    await request.post(`/api/v1/tech/jobs/${jobId}/arrive`, auth);
+    await request.post(`/api/v1/tech/jobs/${jobId}/diagnosis`, { ...auth, data: {} });
+    await request.post(`/api/v1/tech/jobs/${jobId}/spare-parts`, { ...auth, data: { parts: [] } });
+    await request.post(`/api/v1/tech/jobs/${jobId}/repair-complete`, auth);
+    await request.post(`/api/v1/tech/jobs/${jobId}/billing`, auth);
+
+    const initiateRes = await request.post(`/api/v1/tech/jobs/${jobId}/collect-payment`, { ...auth, data: { paymentMethod: 'UPI' } });
+    expect(initiateRes.status()).toBe(200);
+    const initiateBody = (await initiateRes.json()).data;
+    expect(initiateBody.job.activeStep).toBe('awaitingpayment');
+    expect(initiateBody.razorpay.orderId).toBeTruthy();
+
+    // Job hasn't completed yet — still awaiting the customer's Checkout.js confirmation.
+    const srMidway = await request.get(`/api/v1/service-requests/${srId}`, auth);
+    expect((await srMidway.json()).data.status).not.toBe('Customer Confirmation');
+
+    const signRes = await request.post('/api/v1/_dev/razorpay-sign', {
+      data: { orderId: initiateBody.razorpay.orderId, paymentId: 'pay_e2e_job_test' },
+    });
+    const { signature } = (await signRes.json()).data;
+
+    const verifyRes = await request.post(`/api/v1/tech/jobs/${jobId}/verify-payment`, {
+      ...auth,
+      data: { razorpayPaymentId: 'pay_e2e_job_test', razorpaySignature: signature },
+    });
+    expect(verifyRes.status()).toBe(200);
+    const verifyBody = (await verifyRes.json()).data;
+    expect(verifyBody.job.activeStep).toBe('completed');
+    expect(verifyBody.payment.status).toBe('Success');
+
+    const srRes = await request.get(`/api/v1/service-requests/${srId}`, auth);
+    expect((await srRes.json()).data.status).toBe('Customer Confirmation');
+  });
+
   test('rejects an out-of-order action (billing before repair-complete) with 400', async ({ request }) => {
     const { jobId, tech } = await acceptedD2cJob(request);
     const res = await request.post(`/api/v1/tech/jobs/${jobId}/billing`, {

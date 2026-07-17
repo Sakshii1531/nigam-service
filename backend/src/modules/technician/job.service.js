@@ -8,11 +8,12 @@ import { AMCSubscription } from '../warranty-amc-exchange/amcSubscription.model.
 import { AMCVisit } from '../warranty-amc-exchange/amcVisit.model.js';
 import { ExtendedWarrantyOrder } from '../warranty-amc-exchange/extendedWarrantyOrder.model.js';
 import { Payment } from '../payments-wallet/payment.model.js';
-import { chargePayment } from '../payments-wallet/paymentGateway.js';
+import { createRazorpayOrder, verifyRazorpaySignature } from '../payments-wallet/paymentGateway.js';
 import { computeCharges } from '../shared/pricingEngine.js';
 import { raiseTechnicianClaim } from './claim.service.js';
 import { getOrCreateConversation } from '../chat/conversation.service.js';
 import { emit as emitNotification } from '../notifications/notification.service.js';
+import { env } from '../../config/env.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { JOB_STEP_TRANSITIONS } from '../../config/constants.js';
 
@@ -273,29 +274,18 @@ export async function generateBilling(technicianId, jobId) {
 }
 
 /**
- * Terminal action: charges the customer, credits the technician's earnings
- * (atomic — same findOneAndUpdate pattern as wallet.service.js), decrements the
- * linked AMCSubscription/ExtendedWarrantyOrder if this was that kind of job, and
- * closes out the ServiceRequest. Not a multi-document transaction — same
- * documented tradeoff as order.service.js (DATA_MODEL.md Phase 5 addendum).
+ * Shared terminal-action logic once a payment is actually confirmed (either
+ * immediately for Cash/already-covered jobs, or after verifyJobPayment()
+ * confirms a real Razorpay Checkout payment below): credits the technician's
+ * earnings (atomic — same findOneAndUpdate pattern as wallet.service.js),
+ * decrements the linked AMCSubscription/ExtendedWarrantyOrder if this was
+ * that kind of job, and closes out the ServiceRequest. Not a multi-document
+ * transaction — same documented tradeoff as order.service.js (DATA_MODEL.md
+ * Phase 5 addendum).
  */
-export async function collectPayment(technicianId, jobId, { paymentMethod = 'Cash' } = {}) {
-  const job = await findOwnedJob(technicianId, jobId);
-  ensureTransition(job, 'completed');
-
+async function finalizeJobCompletion(job, payment) {
   const serviceRequest = await ServiceRequest.findById(job.serviceRequest);
-  const amount = job.billingEstimate.total;
-
-  const gatewayResult = await chargePayment({ amount, method: paymentMethod });
-  const payment = await Payment.create({
-    user: serviceRequest.user,
-    targetType: 'job',
-    targetId: job._id,
-    amount,
-    method: paymentMethod,
-    status: gatewayResult.success ? 'Success' : 'Failed',
-    gatewayRef: gatewayResult.gatewayRef,
-  });
+  const technicianId = job.technician;
 
   await EarningsTally.findOneAndUpdate(
     { technician: technicianId },
@@ -342,8 +332,98 @@ export async function collectPayment(technicianId, jobId, { paymentMethod = 'Cas
   // requires an actual customer confirmation action, which is out of Phase 6's scope.
   await transitionStatus(serviceRequest._id, 'Customer Confirmation', { description: 'Payment collected by technician' });
 
-  await emitNotification('payment.success', { user: serviceRequest.user, amount });
+  await emitNotification('payment.success', { user: serviceRequest.user, amount: payment.amount });
   await emitNotification('service.completed', { user: serviceRequest.user, serviceRequestId: serviceRequest.id });
 
   return { job, payment };
+}
+
+/**
+ * Two payment paths, same reasoning as order.service.js's createOrder()
+ * (post-Phase-15, real Razorpay integration — no legitimate gateway lets a
+ * server charge a customer with zero interaction):
+ *  - amount <= 0 (fully covered visit) or paymentMethod === 'Cash' (technician
+ *    collected cash/card-in-hand on-site — no gateway involved at all):
+ *    completes synchronously exactly as before.
+ *  - amount > 0 and a real gateway method: moves the job to 'awaitingpayment'
+ *    and returns a Razorpay order for the frontend/technician's device to open
+ *    Checkout.js against (e.g. handed to the customer to complete in person).
+ *    verifyJobPayment() below is what actually finishes the job once Checkout
+ *    reports success.
+ */
+export async function collectPayment(technicianId, jobId, { paymentMethod = 'Cash' } = {}) {
+  const job = await findOwnedJob(technicianId, jobId);
+  // Guard billingEstimate access before ensureTransition's normal check runs
+  // below — an out-of-order call (e.g. before the billing step) has no
+  // billingEstimate at all, so reading .total off it would throw a raw 500
+  // instead of the same clean 400 every other out-of-order action gets.
+  if (job.activeStep !== 'billing') {
+    throw new ApiError(400, `Cannot move from "${job.activeStep}" to "completed" (allowed: billing -> completed)`);
+  }
+  const amount = job.billingEstimate.total;
+  const needsGateway = amount > 0 && paymentMethod !== 'Cash';
+  const serviceRequest = await ServiceRequest.findById(job.serviceRequest);
+
+  if (!needsGateway) {
+    ensureTransition(job, 'completed');
+    const payment = await Payment.create({
+      user: serviceRequest.user,
+      targetType: 'job',
+      targetId: job._id,
+      amount,
+      method: paymentMethod,
+      status: 'Success',
+      gatewayRef: null,
+    });
+    const result = await finalizeJobCompletion(job, payment);
+    return { ...result, razorpay: null };
+  }
+
+  ensureTransition(job, 'awaitingpayment');
+  const razorpayOrder = await createRazorpayOrder({ amount, receipt: `job_${job.id}`, notes: { jobId: job.id } });
+  await Payment.create({
+    user: serviceRequest.user,
+    targetType: 'job',
+    targetId: job._id,
+    amount,
+    method: paymentMethod,
+    status: 'Pending',
+    gatewayRef: razorpayOrder.id,
+  });
+
+  job.activeStep = 'awaitingpayment';
+  await job.save();
+
+  return {
+    job,
+    payment: null,
+    razorpay: { orderId: razorpayOrder.id, amount: razorpayOrder.amount, currency: razorpayOrder.currency, keyId: env.razorpay.keyId },
+  };
+}
+
+/**
+ * Confirms a job's Razorpay Checkout payment. Same server-side-lookup
+ * security reasoning as order.service.js's verifyOrderPayment() — the
+ * Razorpay order id used for signature verification comes from the Pending
+ * Payment record this job's own collectPayment() created, never from the
+ * client.
+ */
+export async function verifyJobPayment(technicianId, jobId, { razorpayPaymentId, razorpaySignature }) {
+  const job = await findOwnedJob(technicianId, jobId);
+  if (job.activeStep !== 'awaitingpayment') {
+    throw new ApiError(400, `Job is not awaiting payment (current step: "${job.activeStep}")`);
+  }
+
+  const pendingPayment = await Payment.findOne({ targetType: 'job', targetId: job._id, status: 'Pending' });
+  if (!pendingPayment) throw new ApiError(400, 'No pending payment found for this job');
+
+  const valid = verifyRazorpaySignature({ orderId: pendingPayment.gatewayRef, paymentId: razorpayPaymentId, signature: razorpaySignature });
+  if (!valid) throw new ApiError(400, 'Payment signature verification failed');
+
+  pendingPayment.status = 'Success';
+  pendingPayment.razorpayPaymentId = razorpayPaymentId;
+  await pendingPayment.save();
+
+  const result = await finalizeJobCompletion(job, pendingPayment);
+  return { ...result, razorpay: null };
 }

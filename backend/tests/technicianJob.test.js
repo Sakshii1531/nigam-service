@@ -15,6 +15,7 @@ import { Job } from '../src/modules/technician/job.model.js';
 import { EarningsTally } from '../src/modules/technician/earningsTally.model.js';
 import { Payout } from '../src/modules/technician/payout.model.js';
 import { Payment } from '../src/modules/payments-wallet/payment.model.js';
+import { signForTesting } from '../src/modules/payments-wallet/paymentGateway.js';
 import { Claim } from '../src/modules/warranty-amc-exchange/claim.model.js';
 import { AMCPlan } from '../src/modules/warranty-amc-exchange/amcPlan.model.js';
 import { AMCSubscription } from '../src/modules/warranty-amc-exchange/amcSubscription.model.js';
@@ -231,6 +232,80 @@ describe('D2C job — full lifecycle to payment', () => {
     const updatedTechnician = await Technician.findById(technician._id);
     expect(updatedTechnician.activeJobsCount).toBe(0);
     expect(updatedTechnician.completedJobsCount).toBe(1);
+  });
+
+  it('collecting payment with a real gateway method (Card) moves the job to awaitingpayment and returns a Razorpay order; verifying it then completes the job and credits earnings', async () => {
+    const { jobId, srId, techToken, technician } = await createAcceptedD2CJob();
+
+    await request(app).post(`/api/v1/tech/jobs/${jobId}/start-travel`).set('Authorization', `Bearer ${techToken}`);
+    await request(app).post(`/api/v1/tech/jobs/${jobId}/arrive`).set('Authorization', `Bearer ${techToken}`);
+    await request(app).post(`/api/v1/tech/jobs/${jobId}/diagnosis`).set('Authorization', `Bearer ${techToken}`).send({});
+    await request(app).post(`/api/v1/tech/jobs/${jobId}/spare-parts`).set('Authorization', `Bearer ${techToken}`).send({ parts: [] });
+    await request(app).post(`/api/v1/tech/jobs/${jobId}/repair-complete`).set('Authorization', `Bearer ${techToken}`);
+    const billingRes = await request(app).post(`/api/v1/tech/jobs/${jobId}/billing`).set('Authorization', `Bearer ${techToken}`);
+    const expectedTotal = billingRes.body.data.billingEstimate.total;
+    expect(expectedTotal).toBeGreaterThan(0);
+
+    const initiateRes = await request(app)
+      .post(`/api/v1/tech/jobs/${jobId}/collect-payment`)
+      .set('Authorization', `Bearer ${techToken}`)
+      .send({ paymentMethod: 'Card' })
+      .expect(200);
+    expect(initiateRes.body.data.job.activeStep).toBe('awaitingpayment');
+    expect(initiateRes.body.data.payment).toBeNull();
+    expect(initiateRes.body.data.razorpay.orderId).toBeTruthy();
+
+    const pendingPayment = await Payment.findOne({ targetType: 'job', targetId: jobId });
+    expect(pendingPayment.status).toBe('Pending');
+
+    // Job stays put until the customer actually completes Checkout.js.
+    let job = await Job.findById(jobId);
+    expect(job.activeStep).toBe('awaitingpayment');
+
+    const razorpaySignature = signForTesting({ orderId: initiateRes.body.data.razorpay.orderId, paymentId: 'pay_test_job_1' });
+    const verifyRes = await request(app)
+      .post(`/api/v1/tech/jobs/${jobId}/verify-payment`)
+      .set('Authorization', `Bearer ${techToken}`)
+      .send({ razorpayPaymentId: 'pay_test_job_1', razorpaySignature })
+      .expect(200);
+    expect(verifyRes.body.data.job.activeStep).toBe('completed');
+    expect(verifyRes.body.data.payment.status).toBe('Success');
+    expect(verifyRes.body.data.payment.amount).toBeCloseTo(expectedTotal, 2);
+
+    job = await Job.findById(jobId);
+    expect(job.activeStep).toBe('completed');
+
+    const sr = await ServiceRequest.findById(srId);
+    expect(sr.status).toBe('Customer Confirmation');
+
+    const tally = await EarningsTally.findOne({ technician: technician._id });
+    expect(tally.completedTotal).toBe(1);
+  });
+
+  it('rejects verifying a job payment with an invalid signature, leaving the job at awaitingpayment', async () => {
+    const { jobId, techToken } = await createAcceptedD2CJob();
+
+    await request(app).post(`/api/v1/tech/jobs/${jobId}/start-travel`).set('Authorization', `Bearer ${techToken}`);
+    await request(app).post(`/api/v1/tech/jobs/${jobId}/arrive`).set('Authorization', `Bearer ${techToken}`);
+    await request(app).post(`/api/v1/tech/jobs/${jobId}/diagnosis`).set('Authorization', `Bearer ${techToken}`).send({});
+    await request(app).post(`/api/v1/tech/jobs/${jobId}/spare-parts`).set('Authorization', `Bearer ${techToken}`).send({ parts: [] });
+    await request(app).post(`/api/v1/tech/jobs/${jobId}/repair-complete`).set('Authorization', `Bearer ${techToken}`);
+    await request(app).post(`/api/v1/tech/jobs/${jobId}/billing`).set('Authorization', `Bearer ${techToken}`);
+
+    await request(app)
+      .post(`/api/v1/tech/jobs/${jobId}/collect-payment`)
+      .set('Authorization', `Bearer ${techToken}`)
+      .send({ paymentMethod: 'UPI' })
+      .expect(200);
+
+    await request(app)
+      .post(`/api/v1/tech/jobs/${jobId}/verify-payment`)
+      .set('Authorization', `Bearer ${techToken}`)
+      .send({ razorpayPaymentId: 'pay_test_wrong', razorpaySignature: 'not-a-real-signature' })
+      .expect(400);
+
+    const job = await Job.findById(jobId);
+    expect(job.activeStep).toBe('awaitingpayment');
   });
 
   it('rejects an out-of-order action (e.g. collect-payment before billing) with 400', async () => {
