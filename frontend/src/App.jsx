@@ -11,6 +11,7 @@ import NetBankingPayment from './pages/NetBankingPayment';
 import Booking from './pages/Booking';
 import BookingFlow from './pages/BookingFlow';
 import { BookingProvider } from './context/BookingContext';
+import { AuthProvider } from './context/AuthContext';
 import Chat from './pages/Chat';
 import AllServices from './pages/AllServices';
 import Categories from './pages/Categories';
@@ -238,6 +239,7 @@ const ScrollToTop = () => {
 function App() {
   return (
     <Router>
+      <AuthProvider>
       <BookingProvider>
       <TechProvider>
       <ScrollToTop />
@@ -444,6 +446,7 @@ function App() {
       </Routes>
       </TechProvider>
       </BookingProvider>
+      </AuthProvider>
     </Router>
   );
 }
