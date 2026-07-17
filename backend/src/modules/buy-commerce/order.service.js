@@ -72,6 +72,13 @@ export async function createOrder(userId, { items, useCart, address, couponCode,
   if (exchangeRequestId) {
     exchangeRequest = await getExchangeRequest(userId, exchangeRequestId);
     if (exchangeRequest.appliedToOrder) throw new ApiError(400, 'Exchange request has already been applied to an order');
+    // Security: a trade-in's estimatedValue is entirely self-reported by the
+    // customer at valuation time — without this check it was a free discount
+    // nobody ever verified. Only a super-admin's physical inspection
+    // (exchangeRequest.routes.js PATCH /:id/status) can advance the status.
+    if (exchangeRequest.status !== 'Inspection Approved') {
+      throw new ApiError(400, 'This exchange request has not been approved after inspection yet');
+    }
     exchangeDiscount = round2(Math.min(exchangeRequest.estimatedValue, remaining));
     remaining = round2(remaining - exchangeDiscount);
   }

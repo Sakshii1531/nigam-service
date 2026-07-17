@@ -47,6 +47,7 @@ import { loyaltyConfigRouter } from './modules/super-admin/loyaltyConfig.routes.
 import { platformRoleRouter } from './modules/super-admin/platformRole.routes.js';
 import { platformUserRouter } from './modules/super-admin/platformUser.routes.js';
 import { superAdminClaimRouter } from './modules/super-admin/claim.routes.js';
+import { superAdminExchangeRequestRouter } from './modules/super-admin/exchangeRequest.routes.js';
 import { chatRouter } from './modules/chat/chat.routes.js';
 import { notificationRouter } from './modules/notifications/notification.routes.js';
 import { reviewRouter } from './modules/reviews/review.routes.js';
@@ -134,6 +135,7 @@ export function createApp() {
   app.use('/api/v1/super-admin/roles', platformRoleRouter);
   app.use('/api/v1/super-admin/users', platformUserRouter);
   app.use('/api/v1/super-admin/claims', superAdminClaimRouter);
+  app.use('/api/v1/super-admin/exchange-requests', superAdminExchangeRequestRouter);
   app.use('/api/v1/cms', cmsRouter);
   app.use('/api/v1/chat', chatRouter);
   app.use('/api/v1/notifications', notificationRouter);

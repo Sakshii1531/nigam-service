@@ -3,6 +3,7 @@ import { ExchangeCampaign } from './exchangeCampaign.model.js';
 import { ExchangeRequest } from './exchangeRequest.model.js';
 import { computeExchangeValuation } from './exchangeValuation.js';
 import { ApiError } from '../../middleware/errorHandler.js';
+import { parsePagination, paginationMeta } from '../../utils/pagination.js';
 
 export async function getQuestionSet(category) {
   const set = await ExchangeQuestionSet.findOne({ category });
@@ -65,6 +66,42 @@ export async function markApplied(exchangeRequestId, orderId) {
   if (exchangeRequest.appliedToOrder) throw new ApiError(400, 'Exchange request has already been applied to an order');
 
   exchangeRequest.appliedToOrder = orderId;
+  await exchangeRequest.save();
+  return exchangeRequest;
+}
+
+// --- Admin (super-admin) surface below: physical inspection workflow ---
+// Added in the Phase 11 security review — a customer's self-reported trade-in
+// valuation was previously usable as a full checkout discount with nothing
+// ever verifying the device was actually received/inspected. order.service.js
+// now requires status === 'Inspection Approved' before applying the discount
+// (see createOrder), and this is the only place that transition can happen.
+
+export async function listExchangeRequestsAdmin({ status, page, limit, sort } = {}) {
+  const query = {};
+  if (status) query.status = status;
+
+  const { skip, limit: lim, page: pg, sort: sortObj } = parsePagination({ page, limit, sort });
+  const [items, total] = await Promise.all([
+    ExchangeRequest.find(query).sort(sortObj).skip(skip).limit(lim),
+    ExchangeRequest.countDocuments(query),
+  ]);
+  return { items, meta: paginationMeta({ page: pg, limit: lim, total }) };
+}
+
+async function findExchangeRequestOr404(id) {
+  const exchangeRequest = await ExchangeRequest.findById(id);
+  if (!exchangeRequest) throw new ApiError(404, 'Exchange request not found');
+  return exchangeRequest;
+}
+
+export async function getExchangeRequestAdmin(id) {
+  return findExchangeRequestOr404(id);
+}
+
+export async function updateExchangeRequestStatus(id, status) {
+  const exchangeRequest = await findExchangeRequestOr404(id);
+  exchangeRequest.status = status;
   await exchangeRequest.save();
   return exchangeRequest;
 }

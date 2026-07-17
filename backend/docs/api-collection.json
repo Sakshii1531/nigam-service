@@ -1,44 +1,146 @@
 {
   "info": {
     "name": "Nigam Care API",
-    "description": "Grows phase by phase alongside backend/src/modules — see backend/README.md. Import into Postman/Thunder Client and set the `baseUrl` collection variable (default http://localhost:4000/api/v1).",
+    "description": "Grows phase by phase alongside backend/src/modules \u2014 see backend/README.md. Import into Postman/Thunder Client and set the `baseUrl` collection variable (default http://localhost:4000/api/v1).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "baseUrl", "value": "http://localhost:4000/api/v1" },
-    { "key": "role", "value": "customer" },
-    { "key": "identifier", "value": "9876543210" },
-    { "key": "password", "value": "password123" },
-    { "key": "otpCode", "value": "" },
-    { "key": "accessToken", "value": "" },
-    { "key": "refreshToken", "value": "" },
-    { "key": "categoryKey", "value": "AC" },
-    { "key": "bookingId", "value": "" },
-    { "key": "serviceRequestId", "value": "" },
-    { "key": "productId", "value": "" },
-    { "key": "couponCode", "value": "WELCOME150" },
-    { "key": "exchangeRequestId", "value": "" },
-    { "key": "orderId", "value": "" },
-    { "key": "jobId", "value": "" },
-    { "key": "technicianClaimId", "value": "" },
-    { "key": "amcSubscriptionId", "value": "" },
-    { "key": "brandInvoiceId", "value": "" },
-    { "key": "subBrandId", "value": "" },
-    { "key": "masterServiceId", "value": "" },
-    { "key": "teamId", "value": "" },
-    { "key": "brandRoleId", "value": "" },
-    { "key": "brandUserId", "value": "" },
-    { "key": "superAdminBrandId", "value": "" },
-    { "key": "cityId", "value": "" },
-    { "key": "servicePartnerId", "value": "" },
-    { "key": "asmId", "value": "" },
-    { "key": "sparePartId", "value": "" },
-    { "key": "escalationId", "value": "" },
-    { "key": "bannerId", "value": "" },
-    { "key": "platformRoleId", "value": "" },
-    { "key": "conversationId", "value": "" },
-    { "key": "notificationId", "value": "" },
-    { "key": "reviewId", "value": "" }
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:4000/api/v1"
+    },
+    {
+      "key": "role",
+      "value": "customer"
+    },
+    {
+      "key": "identifier",
+      "value": "9876543210"
+    },
+    {
+      "key": "password",
+      "value": "password123"
+    },
+    {
+      "key": "otpCode",
+      "value": ""
+    },
+    {
+      "key": "accessToken",
+      "value": ""
+    },
+    {
+      "key": "refreshToken",
+      "value": ""
+    },
+    {
+      "key": "categoryKey",
+      "value": "AC"
+    },
+    {
+      "key": "bookingId",
+      "value": ""
+    },
+    {
+      "key": "serviceRequestId",
+      "value": ""
+    },
+    {
+      "key": "productId",
+      "value": ""
+    },
+    {
+      "key": "couponCode",
+      "value": "WELCOME150"
+    },
+    {
+      "key": "exchangeRequestId",
+      "value": ""
+    },
+    {
+      "key": "orderId",
+      "value": ""
+    },
+    {
+      "key": "jobId",
+      "value": ""
+    },
+    {
+      "key": "technicianClaimId",
+      "value": ""
+    },
+    {
+      "key": "amcSubscriptionId",
+      "value": ""
+    },
+    {
+      "key": "brandInvoiceId",
+      "value": ""
+    },
+    {
+      "key": "subBrandId",
+      "value": ""
+    },
+    {
+      "key": "masterServiceId",
+      "value": ""
+    },
+    {
+      "key": "teamId",
+      "value": ""
+    },
+    {
+      "key": "brandRoleId",
+      "value": ""
+    },
+    {
+      "key": "brandUserId",
+      "value": ""
+    },
+    {
+      "key": "superAdminBrandId",
+      "value": ""
+    },
+    {
+      "key": "cityId",
+      "value": ""
+    },
+    {
+      "key": "servicePartnerId",
+      "value": ""
+    },
+    {
+      "key": "asmId",
+      "value": ""
+    },
+    {
+      "key": "sparePartId",
+      "value": ""
+    },
+    {
+      "key": "escalationId",
+      "value": ""
+    },
+    {
+      "key": "bannerId",
+      "value": ""
+    },
+    {
+      "key": "platformRoleId",
+      "value": ""
+    },
+    {
+      "key": "conversationId",
+      "value": ""
+    },
+    {
+      "key": "notificationId",
+      "value": ""
+    },
+    {
+      "key": "reviewId",
+      "value": ""
+    }
   ],
   "item": [
     {
@@ -46,7 +148,10 @@
       "item": [
         {
           "name": "GET /health",
-          "request": { "method": "GET", "url": "{{baseUrl}}/health" }
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/health"
+          }
         }
       ]
     },
@@ -57,7 +162,12 @@
           "name": "POST /auth/login",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": "{{baseUrl}}/auth/login",
             "body": {
               "mode": "raw",
@@ -80,7 +190,12 @@
           "name": "POST /auth/otp/send (resend)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": "{{baseUrl}}/auth/otp/send",
             "body": {
               "mode": "raw",
@@ -92,7 +207,12 @@
           "name": "POST /auth/otp/verify",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": "{{baseUrl}}/auth/otp/verify",
             "body": {
               "mode": "raw",
@@ -118,16 +238,29 @@
           "name": "POST /auth/forgot-password",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": "{{baseUrl}}/auth/forgot-password",
-            "body": { "mode": "raw", "raw": "{\n  \"role\": \"{{role}}\",\n  \"identifier\": \"{{identifier}}\"\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"{{role}}\",\n  \"identifier\": \"{{identifier}}\"\n}"
+            }
           }
         },
         {
           "name": "POST /auth/reset-password",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": "{{baseUrl}}/auth/reset-password",
             "body": {
               "mode": "raw",
@@ -139,9 +272,17 @@
           "name": "POST /auth/refresh",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": "{{baseUrl}}/auth/refresh",
-            "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            }
           },
           "event": [
             {
@@ -162,9 +303,17 @@
           "name": "POST /auth/logout",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": "{{baseUrl}}/auth/logout",
-            "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            }
           }
         }
       ]
@@ -174,22 +323,37 @@
       "item": [
         {
           "name": "GET /catalog/categories",
-          "request": { "method": "GET", "url": "{{baseUrl}}/catalog/categories" }
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/catalog/categories"
+          }
         },
         {
           "name": "GET /catalog/categories/:key",
-          "request": { "method": "GET", "url": "{{baseUrl}}/catalog/categories/{{categoryKey}}" }
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/catalog/categories/{{categoryKey}}"
+          }
         },
         {
           "name": "POST /catalog/categories (super_admin)",
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": "{{baseUrl}}/catalog/categories",
-            "body": { "mode": "raw", "raw": "{\n  \"key\": \"NewCategory\",\n  \"name\": \"New Category\"\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"key\": \"NewCategory\",\n  \"name\": \"New Category\"\n}"
+            }
           }
         },
         {
@@ -197,11 +361,20 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": "{{baseUrl}}/catalog/categories/{{categoryKey}}/product-types",
-            "body": { "mode": "raw", "raw": "{\n  \"slug\": \"split\",\n  \"name\": \"Split AC\"\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"slug\": \"split\",\n  \"name\": \"Split AC\"\n}"
+            }
           }
         },
         {
@@ -209,11 +382,20 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": "{{baseUrl}}/catalog/categories/{{categoryKey}}/services",
-            "body": { "mode": "raw", "raw": "{\n  \"slug\": \"repair\",\n  \"name\": \"Repair\",\n  \"price\": 299\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"slug\": \"repair\",\n  \"name\": \"Repair\",\n  \"price\": 299\n}"
+            }
           }
         }
       ]
@@ -226,8 +408,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": "{{baseUrl}}/bookings",
             "body": {
@@ -254,7 +442,12 @@
           "name": "GET /bookings",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/bookings"
           }
         },
@@ -262,7 +455,12 @@
           "name": "GET /bookings/:id",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/bookings/{{bookingId}}"
           }
         },
@@ -270,7 +468,12 @@
           "name": "POST /bookings/:id/cancel",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/bookings/{{bookingId}}/cancel"
           }
         }
@@ -283,7 +486,12 @@
           "name": "GET /service-requests",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/service-requests"
           }
         },
@@ -291,7 +499,12 @@
           "name": "GET /service-requests/:id",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/service-requests/{{serviceRequestId}}"
           }
         },
@@ -300,11 +513,20 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": "{{baseUrl}}/service-requests/{{serviceRequestId}}/status",
-            "body": { "mode": "raw", "raw": "{\n  \"status\": \"Engineer Accepted\"\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Engineer Accepted\"\n}"
+            }
           }
         }
       ]
@@ -314,19 +536,31 @@
       "item": [
         {
           "name": "GET /products",
-          "request": { "method": "GET", "url": "{{baseUrl}}/products?category=Television" }
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/products?category=Television"
+          }
         },
         {
           "name": "GET /products/:id",
-          "request": { "method": "GET", "url": "{{baseUrl}}/products/{{productId}}" }
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/products/{{productId}}"
+          }
         },
         {
           "name": "POST /products (super_admin)",
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": "{{baseUrl}}/products",
             "body": {
@@ -350,11 +584,20 @@
           "request": {
             "method": "PUT",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": "{{baseUrl}}/products/{{productId}}",
-            "body": { "mode": "raw", "raw": "{\n  \"price\": 27999\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 27999\n}"
+            }
           }
         }
       ]
@@ -366,7 +609,12 @@
           "name": "GET /cart",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/cart"
           }
         },
@@ -375,18 +623,32 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": "{{baseUrl}}/cart/items",
-            "body": { "mode": "raw", "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"quantity\": 1\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"quantity\": 1\n}"
+            }
           }
         },
         {
           "name": "DELETE /cart/items/:productId",
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/cart/items/{{productId}}"
           }
         },
@@ -394,7 +656,12 @@
           "name": "DELETE /cart (clear)",
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/cart"
           }
         }
@@ -407,7 +674,12 @@
           "name": "GET /wishlist",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/wishlist"
           }
         },
@@ -415,7 +687,12 @@
           "name": "POST /wishlist/:productId",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/wishlist/{{productId}}"
           }
         },
@@ -423,7 +700,12 @@
           "name": "DELETE /wishlist/:productId",
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/wishlist/{{productId}}"
           }
         }
@@ -436,7 +718,12 @@
           "name": "GET /coupons",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/coupons"
           }
         },
@@ -445,11 +732,20 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": "{{baseUrl}}/coupons",
-            "body": { "mode": "raw", "raw": "{\n  \"code\": \"{{couponCode}}\",\n  \"discount\": 150,\n  \"description\": \"₹150 off\"\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"{{couponCode}}\",\n  \"discount\": 150,\n  \"description\": \"\u20b9150 off\"\n}"
+            }
           }
         }
       ]
@@ -461,7 +757,12 @@
           "name": "GET /exchange/question-sets/:category",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/exchange/question-sets/Mobile"
           }
         },
@@ -470,8 +771,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": "{{baseUrl}}/exchange/question-sets",
             "body": {
@@ -485,8 +792,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": "{{baseUrl}}/exchange/valuate",
             "body": {
@@ -500,8 +813,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": "{{baseUrl}}/exchange/requests",
             "body": {
@@ -524,7 +843,12 @@
           "name": "GET /exchange/requests/:id",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/exchange/requests/{{exchangeRequestId}}"
           }
         }
@@ -538,8 +862,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": "{{baseUrl}}/orders",
             "body": {
@@ -562,7 +892,12 @@
           "name": "GET /orders",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/orders"
           }
         },
@@ -570,7 +905,12 @@
           "name": "GET /orders/:id",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/orders/{{orderId}}"
           }
         }
@@ -583,7 +923,12 @@
           "name": "GET /wallet",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/wallet"
           }
         },
@@ -591,7 +936,12 @@
           "name": "GET /wallet/ledger",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/wallet/ledger"
           }
         }
@@ -605,7 +955,12 @@
           "name": "GET /tech/profile/profile",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/tech/profile/profile"
           }
         },
@@ -614,11 +969,20 @@
           "request": {
             "method": "PUT",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": "{{baseUrl}}/tech/profile/profile",
-            "body": { "mode": "raw", "raw": "{\n  \"specs\": [\"AC\", \"Refrigerator\"]\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"specs\": [\"AC\", \"Refrigerator\"]\n}"
+            }
           }
         },
         {
@@ -626,18 +990,32 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": "{{baseUrl}}/tech/profile/payout-methods",
-            "body": { "mode": "raw", "raw": "{\n  \"type\": \"upi\",\n  \"upiId\": \"rahul@upi\",\n  \"isPrimary\": true\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"upi\",\n  \"upiId\": \"rahul@upi\",\n  \"isPrimary\": true\n}"
+            }
           }
         },
         {
           "name": "GET /tech/jobs/available",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/tech/jobs/available"
           }
         },
@@ -645,7 +1023,12 @@
           "name": "GET /tech/jobs/active",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/tech/jobs/active"
           }
         },
@@ -654,11 +1037,20 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": "{{baseUrl}}/tech/jobs/accept/{{serviceRequestId}}",
-            "body": { "mode": "raw", "raw": "{}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
           },
           "event": [
             {
@@ -677,7 +1069,12 @@
           "name": "GET /tech/jobs/:id",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/tech/jobs/{{jobId}}"
           }
         },
@@ -685,7 +1082,12 @@
           "name": "POST /tech/jobs/:id/start-travel",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/tech/jobs/{{jobId}}/start-travel"
           }
         },
@@ -693,7 +1095,12 @@
           "name": "POST /tech/jobs/:id/arrive",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/tech/jobs/{{jobId}}/arrive"
           }
         },
@@ -702,11 +1109,20 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": "{{baseUrl}}/tech/jobs/{{jobId}}/diagnosis",
-            "body": { "mode": "raw", "raw": "{\n  \"notes\": \"Gas leak found\"\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notes\": \"Gas leak found\"\n}"
+            }
           }
         },
         {
@@ -714,8 +1130,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": "{{baseUrl}}/tech/jobs/{{jobId}}/spare-parts",
             "body": {
@@ -728,7 +1150,12 @@
           "name": "POST /tech/jobs/:id/repair-complete",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/tech/jobs/{{jobId}}/repair-complete"
           }
         },
@@ -736,7 +1163,12 @@
           "name": "POST /tech/jobs/:id/billing",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/tech/jobs/{{jobId}}/billing"
           }
         },
@@ -745,11 +1177,20 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": "{{baseUrl}}/tech/jobs/{{jobId}}/collect-payment",
-            "body": { "mode": "raw", "raw": "{\n  \"paymentMethod\": \"Cash\"\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentMethod\": \"Cash\"\n}"
+            }
           }
         },
         {
@@ -757,8 +1198,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": "{{baseUrl}}/tech/claims",
             "body": {
@@ -783,7 +1230,12 @@
           "name": "GET /tech/claims",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/tech/claims"
           }
         },
@@ -791,7 +1243,12 @@
           "name": "GET /tech/claims/:id",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/tech/claims/{{technicianClaimId}}"
           }
         },
@@ -799,7 +1256,12 @@
           "name": "GET /tech/inventory",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/tech/inventory"
           }
         },
@@ -808,8 +1270,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": "{{baseUrl}}/tech/inventory/part-orders",
             "body": {
@@ -822,7 +1290,12 @@
           "name": "GET /tech/inventory/part-orders",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/tech/inventory/part-orders"
           }
         },
@@ -830,7 +1303,12 @@
           "name": "GET /tech/earnings/summary",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/tech/earnings/summary"
           }
         },
@@ -839,18 +1317,32 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": "{{baseUrl}}/tech/earnings/payouts",
-            "body": { "mode": "raw", "raw": "{\n  \"amount\": 200,\n  \"payoutType\": \"Quick\"\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 200,\n  \"payoutType\": \"Quick\"\n}"
+            }
           }
         },
         {
           "name": "GET /tech/earnings/payouts",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/tech/earnings/payouts"
           }
         },
@@ -858,7 +1350,12 @@
           "name": "GET /tech/academy/courses",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/tech/academy/courses"
           }
         },
@@ -866,7 +1363,12 @@
           "name": "GET /tech/academy/announcements",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/tech/academy/announcements"
           }
         }
@@ -874,13 +1376,18 @@
     },
     {
       "name": "Brand Admin",
-      "description": "All routes require role=brand_admin (log in via the Auth folder with identifier=admin123@gmail.com, password=admin123 — or admin2@gmail.com for the second seeded brand, to manually verify cross-tenant isolation). See backend/src/modules/brand-admin/ and DATA_MODEL.md's Phase 7 addendum.",
+      "description": "All routes require role=brand_admin (log in via the Auth folder with identifier=admin123@gmail.com, password=admin123 \u2014 or admin2@gmail.com for the second seeded brand, to manually verify cross-tenant isolation). See backend/src/modules/brand-admin/ and DATA_MODEL.md's Phase 7 addendum.",
       "item": [
         {
           "name": "GET /brand/invoices",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/brand/invoices"
           }
         },
@@ -889,8 +1396,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": "{{baseUrl}}/brand/invoices",
             "body": {
@@ -915,7 +1428,12 @@
           "name": "GET /brand/invoices/:id",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/brand/invoices/{{brandInvoiceId}}"
           }
         },
@@ -924,18 +1442,32 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": "{{baseUrl}}/brand/invoices/{{brandInvoiceId}}/status",
-            "body": { "mode": "raw", "raw": "{\n  \"status\": \"Paid\"\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Paid\"\n}"
+            }
           }
         },
         {
           "name": "GET /brand/rate-cards",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/brand/rate-cards"
           }
         },
@@ -944,8 +1476,14 @@
           "request": {
             "method": "PUT",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": "{{baseUrl}}/brand/rate-cards",
             "body": {
@@ -958,7 +1496,12 @@
           "name": "GET /brand/replacement-approvals",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/brand/replacement-approvals"
           }
         },
@@ -967,8 +1510,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": "{{baseUrl}}/brand/replacement-approvals",
             "body": {
@@ -981,7 +1530,12 @@
           "name": "GET /brand/returns",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/brand/returns"
           }
         },
@@ -990,18 +1544,32 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": "{{baseUrl}}/brand/returns",
-            "body": { "mode": "raw", "raw": "{\n  \"technician\": \"\",\n  \"partName\": \"Compressor\"\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"technician\": \"\",\n  \"partName\": \"Compressor\"\n}"
+            }
           }
         },
         {
           "name": "GET /brand/catalog/master-services",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/brand/catalog/master-services"
           }
         },
@@ -1010,11 +1578,20 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": "{{baseUrl}}/brand/catalog/master-services",
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"AC Repair\",\n  \"type\": \"Repair\",\n  \"charge\": 499\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"AC Repair\",\n  \"type\": \"Repair\",\n  \"charge\": 499\n}"
+            }
           },
           "event": [
             {
@@ -1033,7 +1610,12 @@
           "name": "GET /brand/catalog/sub-brands",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/brand/catalog/sub-brands"
           }
         },
@@ -1042,11 +1624,20 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": "{{baseUrl}}/brand/catalog/sub-brands",
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"LG Appliances\",\n  \"category\": \"AC\"\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"LG Appliances\",\n  \"category\": \"AC\"\n}"
+            }
           },
           "event": [
             {
@@ -1066,8 +1657,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": "{{baseUrl}}/brand/catalog/sub-brands/{{subBrandId}}/products",
             "body": {
@@ -1080,7 +1677,12 @@
           "name": "GET /brand/catalog/sub-brands/:subBrandId/products",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/brand/catalog/sub-brands/{{subBrandId}}/products"
           }
         },
@@ -1088,7 +1690,12 @@
           "name": "GET /brand/teams",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/brand/teams"
           }
         },
@@ -1097,11 +1704,20 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": "{{baseUrl}}/brand/teams",
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Field Team A\",\n  \"department\": \"Field Service\",\n  \"region\": \"North\"\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Field Team A\",\n  \"department\": \"Field Service\",\n  \"region\": \"North\"\n}"
+            }
           },
           "event": [
             {
@@ -1121,18 +1737,32 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": "{{baseUrl}}/brand/teams/{{teamId}}/members",
-            "body": { "mode": "raw", "raw": "{\n  \"userId\": \"\"\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"\"\n}"
+            }
           }
         },
         {
           "name": "GET /brand/roles",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/brand/roles"
           }
         },
@@ -1141,11 +1771,20 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": "{{baseUrl}}/brand/roles",
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Support Agent\",\n  \"permissionKeys\": [\"requests:manage\"]\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Support Agent\",\n  \"permissionKeys\": [\"requests:manage\"]\n}"
+            }
           },
           "event": [
             {
@@ -1164,7 +1803,12 @@
           "name": "GET /brand/users",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/brand/users"
           }
         },
@@ -1173,8 +1817,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": "{{baseUrl}}/brand/users",
             "body": {
@@ -1200,18 +1850,32 @@
           "request": {
             "method": "PUT",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": "{{baseUrl}}/brand/users/{{brandUserId}}",
-            "body": { "mode": "raw", "raw": "{\n  \"status\": \"Suspended\"\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Suspended\"\n}"
+            }
           }
         },
         {
           "name": "GET /brand/documents",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/brand/documents"
           }
         },
@@ -1220,326 +1884,931 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": "{{baseUrl}}/brand/documents",
-            "body": { "mode": "raw", "raw": "{\n  \"type\": \"Warranty Certificate\",\n  \"serviceRequest\": \"{{serviceRequestId}}\"\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"Warranty Certificate\",\n  \"serviceRequest\": \"{{serviceRequestId}}\"\n}"
+            }
           }
         }
       ]
     },
     {
       "name": "Super Admin",
-      "description": "All routes require role=super_admin (log in via the Auth folder with identifier=admin123@gmail.com, password=admin123). See backend/src/modules/super-admin/ and DATA_MODEL.md's Phase 8 addendum. Finance (BillingTransaction/Revenue/PartnerPayout/GatewayTransaction) is deliberately deferred — no routes exist for it yet.",
+      "description": "All routes require role=super_admin (log in via the Auth folder with identifier=admin123@gmail.com, password=admin123). See backend/src/modules/super-admin/ and DATA_MODEL.md's Phase 8 addendum. Finance (BillingTransaction/Revenue/PartnerPayout/GatewayTransaction) is deliberately deferred \u2014 no routes exist for it yet.",
       "item": [
         {
           "name": "GET /super-admin/brands",
-          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/super-admin/brands" }
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/super-admin/brands"
+          }
         },
         {
           "name": "POST /super-admin/brands",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/super-admin/brands",
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Voltas\",\n  \"category\": \"Appliances\"\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Voltas\",\n  \"category\": \"Appliances\"\n}"
+            }
           },
-          "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 201) { pm.collectionVariables.set('superAdminBrandId', pm.response.json().data.id); }"] } }]
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) { pm.collectionVariables.set('superAdminBrandId', pm.response.json().data.id); }"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "PUT /super-admin/brands/:id",
           "request": {
             "method": "PUT",
-            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/super-admin/brands/{{superAdminBrandId}}",
-            "body": { "mode": "raw", "raw": "{\n  \"status\": \"Active\"\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Active\"\n}"
+            }
           }
         },
         {
           "name": "POST /super-admin/cities",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/super-admin/cities",
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Lucknow\",\n  \"state\": \"Uttar Pradesh\"\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Lucknow\",\n  \"state\": \"Uttar Pradesh\"\n}"
+            }
           },
-          "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 201) { pm.collectionVariables.set('cityId', pm.response.json().data.id); }"] } }]
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) { pm.collectionVariables.set('cityId', pm.response.json().data.id); }"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "GET /super-admin/cities",
-          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/super-admin/cities" }
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/super-admin/cities"
+          }
         },
         {
           "name": "POST /super-admin/service-partners",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/super-admin/service-partners",
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"NCC Lucknow Center\",\n  \"city\": \"{{cityId}}\"\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"NCC Lucknow Center\",\n  \"city\": \"{{cityId}}\"\n}"
+            }
           },
-          "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 201) { pm.collectionVariables.set('servicePartnerId', pm.response.json().data.id); }"] } }]
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) { pm.collectionVariables.set('servicePartnerId', pm.response.json().data.id); }"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "POST /super-admin/asms",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/super-admin/asms",
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Vikas Kumar\",\n  \"city\": \"{{cityId}}\"\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Vikas Kumar\",\n  \"city\": \"{{cityId}}\"\n}"
+            }
           },
-          "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 201) { pm.collectionVariables.set('asmId', pm.response.json().data.id); }"] } }]
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) { pm.collectionVariables.set('asmId', pm.response.json().data.id); }"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "POST /super-admin/asms/:id/partners",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/super-admin/asms/{{asmId}}/partners",
-            "body": { "mode": "raw", "raw": "{\n  \"partnerId\": \"{{servicePartnerId}}\"\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"partnerId\": \"{{servicePartnerId}}\"\n}"
+            }
           }
         },
         {
           "name": "GET /super-admin/assignment-weighting",
-          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/super-admin/assignment-weighting" }
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/super-admin/assignment-weighting"
+          }
         },
         {
           "name": "PUT /super-admin/assignment-weighting",
           "request": {
             "method": "PUT",
-            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/super-admin/assignment-weighting",
-            "body": { "mode": "raw", "raw": "{\n  \"proximityPercent\": 40,\n  \"skillPercent\": 30,\n  \"ratingPercent\": 20,\n  \"workloadPercent\": 10\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"proximityPercent\": 40,\n  \"skillPercent\": 30,\n  \"ratingPercent\": 20,\n  \"workloadPercent\": 10\n}"
+            }
           }
         },
         {
           "name": "GET /super-admin/settings",
-          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/super-admin/settings" }
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/super-admin/settings"
+          }
         },
         {
           "name": "PUT /super-admin/settings",
           "request": {
             "method": "PUT",
-            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/super-admin/settings",
-            "body": { "mode": "raw", "raw": "{\n  \"maintenanceMode\": false,\n  \"defaultGstPercent\": 18\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maintenanceMode\": false,\n  \"defaultGstPercent\": 18\n}"
+            }
           }
         },
         {
           "name": "POST /super-admin/spare-parts",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/super-admin/spare-parts",
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"AC Compressor 1.5T\",\n  \"brand\": \"LG\",\n  \"costPrice\": 3500,\n  \"markupPercent\": 15,\n  \"stock\": 10\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"AC Compressor 1.5T\",\n  \"brand\": \"LG\",\n  \"costPrice\": 3500,\n  \"markupPercent\": 15,\n  \"stock\": 10\n}"
+            }
           },
-          "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 201) { pm.collectionVariables.set('sparePartId', pm.response.json().data.id); }"] } }]
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) { pm.collectionVariables.set('sparePartId', pm.response.json().data.id); }"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "GET /super-admin/spare-parts",
-          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/super-admin/spare-parts" }
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/super-admin/spare-parts"
+          }
         },
         {
           "name": "POST /super-admin/escalations",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/super-admin/escalations",
-            "body": { "mode": "raw", "raw": "{\n  \"serviceRequest\": \"{{serviceRequestId}}\",\n  \"reason\": \"SLA breach\",\n  \"priority\": \"High\"\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serviceRequest\": \"{{serviceRequestId}}\",\n  \"reason\": \"SLA breach\",\n  \"priority\": \"High\"\n}"
+            }
           },
-          "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 201) { pm.collectionVariables.set('escalationId', pm.response.json().data.id); }"] } }]
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) { pm.collectionVariables.set('escalationId', pm.response.json().data.id); }"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "GET /super-admin/escalations",
-          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/super-admin/escalations" }
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/super-admin/escalations"
+          }
         },
         {
           "name": "PATCH /super-admin/escalations/:id/assign",
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/super-admin/escalations/{{escalationId}}/assign",
-            "body": { "mode": "raw", "raw": "{\n  \"managerId\": \"\"\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"managerId\": \"\"\n}"
+            }
           }
         },
         {
           "name": "PATCH /super-admin/escalations/:id/status",
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/super-admin/escalations/{{escalationId}}/status",
-            "body": { "mode": "raw", "raw": "{\n  \"status\": \"Resolved\"\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Resolved\"\n}"
+            }
           }
         },
         {
           "name": "GET /super-admin/audit-logs",
-          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/super-admin/audit-logs" }
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/super-admin/audit-logs"
+          }
         },
         {
           "name": "GET /super-admin/tracking",
-          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/super-admin/tracking" }
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/super-admin/tracking"
+          }
         },
         {
           "name": "PUT /super-admin/tracking",
           "request": {
             "method": "PUT",
-            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/super-admin/tracking",
-            "body": { "mode": "raw", "raw": "{\n  \"job\": \"{{jobId}}\",\n  \"technician\": \"\",\n  \"status\": \"On the way\",\n  \"eta\": \"15 min\"\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"job\": \"{{jobId}}\",\n  \"technician\": \"\",\n  \"status\": \"On the way\",\n  \"eta\": \"15 min\"\n}"
+            }
           }
         },
         {
           "name": "GET /super-admin/loyalty/milestones",
-          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/super-admin/loyalty/milestones" }
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/super-admin/loyalty/milestones"
+          }
         },
         {
           "name": "POST /super-admin/loyalty/milestones",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/super-admin/loyalty/milestones",
-            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Bronze\",\n  \"threshold\": 500,\n  \"benefit\": \"5% off next service\"\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Bronze\",\n  \"threshold\": 500,\n  \"benefit\": \"5% off next service\"\n}"
+            }
           }
         },
         {
           "name": "GET /super-admin/loyalty/memberships",
-          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/super-admin/loyalty/memberships" }
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/super-admin/loyalty/memberships"
+          }
         },
         {
           "name": "POST /super-admin/loyalty/memberships",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/super-admin/loyalty/memberships",
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Silver\",\n  \"price\": 499,\n  \"tierRank\": 1,\n  \"benefits\": [\"Priority booking\"]\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Silver\",\n  \"price\": 499,\n  \"tierRank\": 1,\n  \"benefits\": [\"Priority booking\"]\n}"
+            }
           }
         },
         {
           "name": "GET /super-admin/loyalty/spin-wheel",
-          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/super-admin/loyalty/spin-wheel" }
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/super-admin/loyalty/spin-wheel"
+          }
         },
         {
           "name": "PUT /super-admin/loyalty/spin-wheel",
           "request": {
             "method": "PUT",
-            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/super-admin/loyalty/spin-wheel",
-            "body": { "mode": "raw", "raw": "{\n  \"segments\": [{ \"label\": \"10 Coins\", \"probability\": 50, \"reward\": \"10\" }, { \"label\": \"50 Coins\", \"probability\": 30, \"reward\": \"50\" }]\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"segments\": [{ \"label\": \"10 Coins\", \"probability\": 50, \"reward\": \"10\" }, { \"label\": \"50 Coins\", \"probability\": 30, \"reward\": \"50\" }]\n}"
+            }
           }
         },
         {
           "name": "GET /super-admin/roles/permissions",
-          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/super-admin/roles/permissions" }
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/super-admin/roles/permissions"
+          }
         },
         {
           "name": "GET /super-admin/roles",
-          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/super-admin/roles" }
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/super-admin/roles"
+          }
         },
         {
           "name": "POST /super-admin/roles",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/super-admin/roles",
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Support Lead\",\n  \"permissionKeys\": [\"requests:manage\"]\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Support Lead\",\n  \"permissionKeys\": [\"requests:manage\"]\n}"
+            }
           },
-          "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 201) { pm.collectionVariables.set('platformRoleId', pm.response.json().data.id); }"] } }]
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) { pm.collectionVariables.set('platformRoleId', pm.response.json().data.id); }"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "GET /super-admin/users",
-          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/super-admin/users?role=technician" }
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/super-admin/users?role=technician"
+          }
         },
         {
           "name": "PATCH /super-admin/users/:id/status",
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/super-admin/users/{{brandUserId}}/status",
-            "body": { "mode": "raw", "raw": "{\n  \"status\": \"Suspended\"\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Suspended\"\n}"
+            }
+          }
+        },
+        {
+          "name": "GET /super-admin/claims",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/super-admin/claims"
+          }
+        },
+        {
+          "name": "GET /super-admin/claims/:id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/super-admin/claims/{{claimId}}"
+          }
+        },
+        {
+          "name": "PATCH /super-admin/claims/:id/status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/super-admin/claims/{{claimId}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Approved\"\n}"
+            }
+          }
+        },
+        {
+          "name": "GET /super-admin/exchange-requests",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/super-admin/exchange-requests?status=Pending Inspection"
+          }
+        },
+        {
+          "name": "GET /super-admin/exchange-requests/:id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/super-admin/exchange-requests/{{exchangeRequestId}}"
+          }
+        },
+        {
+          "name": "PATCH /super-admin/exchange-requests/:id/status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/super-admin/exchange-requests/{{exchangeRequestId}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Inspection Approved\"\n}"
+            }
           }
         }
       ]
     },
     {
       "name": "CMS",
-      "description": "GET routes are public (no auth) — consumed by the customer/technician apps. Write routes require role=super_admin. See backend/src/modules/super-admin/cms.routes.js.",
+      "description": "GET routes are public (no auth) \u2014 consumed by the customer/technician apps. Write routes require role=super_admin. See backend/src/modules/super-admin/cms.routes.js.",
       "item": [
         {
           "name": "GET /cms/banners",
-          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/cms/banners" }
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/cms/banners"
+          }
         },
         {
           "name": "POST /cms/banners",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/cms/banners",
-            "body": { "mode": "raw", "raw": "{\n  \"imageUrl\": \"https://example.com/banner.png\",\n  \"app\": \"customer\"\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"imageUrl\": \"https://example.com/banner.png\",\n  \"app\": \"customer\"\n}"
+            }
           },
-          "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 201) { pm.collectionVariables.set('bannerId', pm.response.json().data.id); }"] } }]
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) { pm.collectionVariables.set('bannerId', pm.response.json().data.id); }"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "DELETE /cms/banners/:id",
-          "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/cms/banners/{{bannerId}}" }
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/cms/banners/{{bannerId}}"
+          }
         },
         {
           "name": "GET /cms/stories",
-          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/cms/stories" }
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/cms/stories"
+          }
         },
         {
           "name": "GET /cms/videos",
-          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/cms/videos" }
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/cms/videos"
+          }
         },
         {
           "name": "GET /cms/advertisements",
-          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/cms/advertisements" }
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/cms/advertisements"
+          }
         },
         {
           "name": "GET /cms/pages/:slug",
-          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/cms/pages/privacy-policy" }
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/cms/pages/privacy-policy"
+          }
         },
         {
           "name": "PUT /cms/pages/:slug",
           "request": {
             "method": "PUT",
-            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/cms/pages/privacy-policy",
-            "body": { "mode": "raw", "raw": "{\n  \"body\": \"We respect your privacy.\"\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"body\": \"We respect your privacy.\"\n}"
+            }
           }
         },
         {
           "name": "GET /cms/app-settings/:app",
-          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/cms/app-settings/technician" }
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/cms/app-settings/technician"
+          }
         },
         {
           "name": "PUT /cms/app-settings/:app",
           "request": {
             "method": "PUT",
-            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/cms/app-settings/technician",
-            "body": { "mode": "raw", "raw": "{\n  \"key\": \"autoAssign\",\n  \"value\": true\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"key\": \"autoAssign\",\n  \"value\": true\n}"
+            }
           }
         }
       ]
     },
     {
       "name": "Chat",
-      "description": "Phase 9. REST is read-only (list conversations, read message history) — sending happens over Socket.IO, not REST. No public 'create conversation' endpoint: one is auto-created when a technician accepts a job (see backend/src/modules/technician/job.service.js's acceptJob()). See backend/src/sockets/chat.gateway.js for the real-time 'join-conversation'/'send-message' events (auth via socket.handshake.auth.token, same JWT as the Authorization header) — not representable in this REST collection, covered by backend/tests/sockets.test.js instead.",
+      "description": "Phase 9. REST is read-only (list conversations, read message history) \u2014 sending happens over Socket.IO, not REST. No public 'create conversation' endpoint: one is auto-created when a technician accepts a job (see backend/src/modules/technician/job.service.js's acceptJob()). See backend/src/sockets/chat.gateway.js for the real-time 'join-conversation'/'send-message' events (auth via socket.handshake.auth.token, same JWT as the Authorization header) \u2014 not representable in this REST collection, covered by backend/tests/sockets.test.js instead.",
       "item": [
         {
           "name": "GET /chat/conversations",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/chat/conversations"
           },
-          "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 200) { const d = pm.response.json().data; if (d.length) { pm.collectionVariables.set('conversationId', d[0].id); } }"] } }]
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) { const d = pm.response.json().data; if (d.length) { pm.collectionVariables.set('conversationId', d[0].id); } }"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "GET /chat/conversations/:id",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/chat/conversations/{{conversationId}}"
           }
         },
@@ -1547,7 +2816,12 @@
           "name": "GET /chat/conversations/:id/messages",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/chat/conversations/{{conversationId}}/messages"
           }
         }
@@ -1555,22 +2829,41 @@
     },
     {
       "name": "Notifications",
-      "description": "Phase 9. GET /notifications includes both personally-addressed and role-broadcast (e.g. escalations) notifications. Real-time delivery pushes to the recipient's Socket.IO room on emit() — this REST surface is the fallback/history read. See backend/src/modules/notifications/.",
+      "description": "Phase 9. GET /notifications includes both personally-addressed and role-broadcast (e.g. escalations) notifications. Real-time delivery pushes to the recipient's Socket.IO room on emit() \u2014 this REST surface is the fallback/history read. See backend/src/modules/notifications/.",
       "item": [
         {
           "name": "GET /notifications",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/notifications"
           },
-          "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 200) { const d = pm.response.json().data; if (d.length) { pm.collectionVariables.set('notificationId', d[0].id); } }"] } }]
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) { const d = pm.response.json().data; if (d.length) { pm.collectionVariables.set('notificationId', d[0].id); } }"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "GET /notifications?read=false",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/notifications?read=false"
           }
         },
@@ -1578,7 +2871,12 @@
           "name": "PATCH /notifications/:id/read",
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/notifications/{{notificationId}}/read"
           }
         },
@@ -1586,7 +2884,12 @@
           "name": "PATCH /notifications/read-all",
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/notifications/read-all"
           }
         },
@@ -1594,7 +2897,12 @@
           "name": "GET /notifications/preferences",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/notifications/preferences"
           }
         },
@@ -1602,9 +2910,21 @@
           "name": "PUT /notifications/preferences",
           "request": {
             "method": "PUT",
-            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/notifications/preferences",
-            "body": { "mode": "raw", "raw": "{\n  \"sms\": false\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sms\": false\n}"
+            }
           }
         }
       ]
@@ -1617,40 +2937,86 @@
           "name": "POST /reviews",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/reviews",
-            "body": { "mode": "raw", "raw": "{\n  \"serviceRequest\": \"{{serviceRequestId}}\",\n  \"rating\": 5,\n  \"comment\": \"Great service\",\n  \"tags\": [\"On time\"]\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serviceRequest\": \"{{serviceRequestId}}\",\n  \"rating\": 5,\n  \"comment\": \"Great service\",\n  \"tags\": [\"On time\"]\n}"
+            }
           },
-          "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 201) { pm.collectionVariables.set('reviewId', pm.response.json().data.id); }"] } }]
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) { pm.collectionVariables.set('reviewId', pm.response.json().data.id); }"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "GET /reviews/:id",
-          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/reviews/{{reviewId}}" }
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/reviews/{{reviewId}}"
+          }
         },
         {
           "name": "GET /reviews/technicians/:technicianId",
-          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/reviews/technicians/{{technicianId}}" }
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/reviews/technicians/{{technicianId}}"
+          }
         },
         {
           "name": "PATCH /reviews/:id/respond",
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/reviews/{{reviewId}}/respond",
-            "body": { "mode": "raw", "raw": "{\n  \"response\": \"Thanks for the feedback!\"\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"response\": \"Thanks for the feedback!\"\n}"
+            }
           }
         }
       ]
     },
     {
       "name": "Dev (non-production only)",
-      "description": "Mounted at /_dev/* only when NODE_ENV !== 'production' (app.js). Exercises pagination/validation/upload/id-generation/RBAC end-to-end — see backend/src/modules/shared/dev.routes.js.",
+      "description": "Mounted at /_dev/* only when NODE_ENV !== 'production' (app.js). Exercises pagination/validation/upload/id-generation/RBAC end-to-end \u2014 see backend/src/modules/shared/dev.routes.js.",
       "item": [
         {
           "name": "GET /_dev/whoami",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/_dev/whoami"
           }
         },
@@ -1658,21 +3024,37 @@
           "name": "GET /_dev/admin-only",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/_dev/admin-only"
           }
         },
         {
           "name": "GET /_dev/paginate",
-          "request": { "method": "GET", "url": "{{baseUrl}}/_dev/paginate?page=1&limit=10" }
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/_dev/paginate?page=1&limit=10"
+          }
         },
         {
           "name": "POST /_dev/validate",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": "{{baseUrl}}/_dev/validate",
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Capacitor\",\n  \"amount\": 220\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Capacitor\",\n  \"amount\": 220\n}"
+            }
           }
         },
         {
@@ -1680,12 +3062,24 @@
           "request": {
             "method": "POST",
             "url": "{{baseUrl}}/_dev/upload",
-            "body": { "mode": "formdata", "formdata": [{ "key": "file", "type": "file", "src": "" }] }
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            }
           }
         },
         {
           "name": "POST /_dev/id/:prefixKey",
-          "request": { "method": "POST", "url": "{{baseUrl}}/_dev/id/BOOKING" }
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/_dev/id/BOOKING"
+          }
         }
       ]
     }

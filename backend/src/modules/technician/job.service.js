@@ -116,6 +116,11 @@ export async function acceptJob(technicianId, serviceRequestId, { type, amcSubsc
   if (jobType === 'AMC Visit' && amcSubscriptionId) {
     const subscription = await AMCSubscription.findById(amcSubscriptionId).populate('plan');
     if (!subscription) throw new ApiError(404, 'AMC subscription not found');
+    // Security: subscriptionId is caller-supplied — without this check a technician
+    // could link (and later drain a visit from) any OTHER customer's subscription.
+    if (String(subscription.user) !== String(serviceRequest.user)) {
+      throw new ApiError(403, 'That AMC subscription does not belong to this service request\'s customer');
+    }
     jobData.amc = {
       planName: subscription.plan ? subscription.plan.name : undefined,
       amcSubscription: subscription._id,
@@ -130,6 +135,10 @@ export async function acceptJob(technicianId, serviceRequestId, { type, amcSubsc
   if (jobType === 'NCC Extended Warranty' && extendedWarrantyOrderId) {
     const ewOrder = await ExtendedWarrantyOrder.findById(extendedWarrantyOrderId);
     if (!ewOrder) throw new ApiError(404, 'Extended warranty order not found');
+    // Security: same reasoning as the AMC subscription check above.
+    if (String(ewOrder.user) !== String(serviceRequest.user)) {
+      throw new ApiError(403, 'That extended warranty order does not belong to this service request\'s customer');
+    }
     jobData.ew = {
       planName: ewOrder.tierId,
       extendedWarrantyOrder: ewOrder._id,
