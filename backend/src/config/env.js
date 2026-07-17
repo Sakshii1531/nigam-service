@@ -1,9 +1,18 @@
 import 'dotenv/config';
 
 const required = ['MONGODB_URI', 'JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET'];
+const isProdEnv = process.env.NODE_ENV === 'production';
 
+/** In production, a missing JWT secret must never silently fall back to the
+ * hardcoded dev default below — that default is public (it's in this file,
+ * in git history), so anyone could forge a valid token for any user/role,
+ * including super_admin. A console.warn alone is easy to miss in prod logs
+ * and doesn't stop the server from booting insecurely; refuse to start instead. */
 for (const key of required) {
   if (!process.env[key]) {
+    if (isProdEnv) {
+      throw new Error(`[env] FATAL: ${key} is not set. Refusing to start in production with an insecure default.`);
+    }
     console.warn(`[env] Missing ${key} — falling back to .env.example default. Set this before deploying.`);
   }
 }

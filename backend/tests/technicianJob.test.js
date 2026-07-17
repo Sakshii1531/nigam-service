@@ -334,6 +334,74 @@ describe('AMC-covered job — FOC claims and subscription decrement', () => {
     const tally = await EarningsTally.findOne({ technician: technician._id });
     expect(tally.total).toBe(150);
   });
+
+  it('rejects linking an AMC subscription that belongs to a different customer than the service request (IDOR fix)', async () => {
+    const { technician, token: techToken } = await seedTechnician();
+    const { user: srCustomer } = await seedCustomer();
+    const { user: otherCustomer } = await seedCustomer();
+
+    const plan = await AMCPlan.create({ name: 'AMC Gold Plan', tier: 'Gold', price: 2499, visitsTotal: 4 });
+    const subscription = await AMCSubscription.create({
+      user: otherCustomer._id, // belongs to a DIFFERENT customer than the service request below
+      plan: plan._id,
+      brand: 'LG',
+      model: 'Double Door 260L',
+      expiryDate: new Date(Date.now() + 300 * 24 * 60 * 60 * 1000),
+      visitsTotal: 4,
+      visitsRemaining: 4,
+      visitNumber: 1,
+    });
+
+    const sr = await ServiceRequest.create({
+      user: srCustomer._id,
+      technician: technician._id,
+      category: 'Refrigerator',
+      description: 'AMC visit',
+      status: 'Assigned',
+      timeline: [{ stepLabel: 'New', done: true }, { stepLabel: 'Assigned', done: true }],
+    });
+
+    await request(app)
+      .post(`/api/v1/tech/jobs/accept/${sr.id}`)
+      .set('Authorization', `Bearer ${techToken}`)
+      .send({ type: 'AMC Visit', amcSubscriptionId: subscription.id })
+      .expect(403);
+
+    expect(await Job.countDocuments({})).toBe(0);
+  });
+
+  it('rejects linking an Extended Warranty order that belongs to a different customer than the service request (IDOR fix)', async () => {
+    const { technician, token: techToken } = await seedTechnician();
+    const { user: srCustomer } = await seedCustomer();
+    const { user: otherCustomer } = await seedCustomer();
+
+    const ewOrder = await ExtendedWarrantyOrder.create({
+      user: otherCustomer._id, // belongs to a DIFFERENT customer than the service request below
+      applianceCategory: 'AC',
+      brand: 'LG',
+      price: 1999,
+      validTill: new Date(Date.now() + 300 * 24 * 60 * 60 * 1000),
+      claimsRemaining: 2,
+      claimsTotal: 2,
+    });
+
+    const sr = await ServiceRequest.create({
+      user: srCustomer._id,
+      technician: technician._id,
+      category: 'AC',
+      description: 'EW visit',
+      status: 'Assigned',
+      timeline: [{ stepLabel: 'New', done: true }, { stepLabel: 'Assigned', done: true }],
+    });
+
+    await request(app)
+      .post(`/api/v1/tech/jobs/accept/${sr.id}`)
+      .set('Authorization', `Bearer ${techToken}`)
+      .send({ type: 'NCC Extended Warranty', extendedWarrantyOrderId: ewOrder.id })
+      .expect(403);
+
+    expect(await Job.countDocuments({})).toBe(0);
+  });
 });
 
 describe('technician claims module', () => {

@@ -24,6 +24,7 @@ import { Membership } from '../src/modules/rewards-loyalty/membership.model.js';
 import { SpinWheelConfig } from '../src/modules/rewards-loyalty/spinWheelConfig.model.js';
 import { ServiceRequest } from '../src/modules/service-requests/serviceRequest.model.js';
 import { Category } from '../src/modules/catalog/category.model.js';
+import { ExchangeRequest } from '../src/modules/warranty-amc-exchange/exchangeRequest.model.js';
 import { hashPassword } from '../src/modules/auth/password.js';
 import { ROLES } from '../src/config/constants.js';
 import { testDbUri } from './helpers/testDb.js';
@@ -100,6 +101,7 @@ beforeEach(async () => {
     SpinWheelConfig.deleteMany({}),
     ServiceRequest.deleteMany({}),
     Category.deleteMany({}),
+    ExchangeRequest.deleteMany({}),
   ]);
 });
 
@@ -426,5 +428,48 @@ describe('exit criterion — CMS/catalog edits reflect immediately, no redeploy'
 
     const after = await request(app).get('/api/v1/catalog/categories/AC').expect(200);
     expect(after.body.data.name).toBe('Air Conditioner');
+  });
+});
+
+describe('Exchange requests — physical inspection workflow (Phase 11 security fix)', () => {
+  it('lists, gets, and approves a trade-in after inspection; rejects non-super-admin access', async () => {
+    const { token } = await seedSuperAdmin();
+    const customer = await User.create({
+      role: ROLES.CUSTOMER,
+      phone: '9700000099',
+      name: 'Trade-in Customer',
+      passwordHash: await hashPassword('password123'),
+    });
+    const exchangeRequest = await ExchangeRequest.create({
+      user: customer._id,
+      category: 'Mobile',
+      baseValue: 10000,
+      estimatedValue: 9000,
+    });
+    expect(exchangeRequest.status).toBe('Pending Inspection');
+
+    const custToken = await loginAndVerify({ role: ROLES.CUSTOMER, identifier: '9700000099', password: 'password123' });
+    await request(app).get('/api/v1/super-admin/exchange-requests').set('Authorization', `Bearer ${custToken}`).expect(403);
+
+    const listRes = await request(app)
+      .get('/api/v1/super-admin/exchange-requests?status=Pending Inspection')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+    expect(listRes.body.data).toHaveLength(1);
+
+    const getRes = await request(app)
+      .get(`/api/v1/super-admin/exchange-requests/${exchangeRequest.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+    expect(getRes.body.data.status).toBe('Pending Inspection');
+
+    const approveRes = await request(app)
+      .patch(`/api/v1/super-admin/exchange-requests/${exchangeRequest.id}/status`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ status: 'Inspection Approved' })
+      .expect(200);
+    expect(approveRes.body.data.status).toBe('Inspection Approved');
+
+    expect((await ExchangeRequest.findById(exchangeRequest.id)).status).toBe('Inspection Approved');
   });
 });

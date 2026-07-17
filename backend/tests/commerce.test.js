@@ -206,6 +206,7 @@ describe('POST /orders — full checkout: coupon + exchange discount + coin rede
       .send({ category: 'Television', baseValue: 2000, answers: { Works: 'Yes' } });
     const exchangeRequestId = exchangeRes.body.data.id;
     const exchangeValue = exchangeRes.body.data.estimatedValue; // 2000
+    await ExchangeRequest.findByIdAndUpdate(exchangeRequestId, { status: 'Inspection Approved' });
 
     const orderRes = await request(app)
       .post('/api/v1/orders')
@@ -288,6 +289,7 @@ describe('POST /orders — full checkout: coupon + exchange discount + coin rede
       .set('Authorization', `Bearer ${token}`)
       .send({ category: 'Television', baseValue: 500, answers: {} });
     const exchangeRequestId = exchangeRes.body.data.id;
+    await ExchangeRequest.findByIdAndUpdate(exchangeRequestId, { status: 'Inspection Approved' });
 
     await request(app)
       .post('/api/v1/orders')
@@ -300,6 +302,27 @@ describe('POST /orders — full checkout: coupon + exchange discount + coin rede
       .set('Authorization', `Bearer ${token}`)
       .send({ items: [{ productId: product.id, quantity: 1 }], exchangeRequestId })
       .expect(400);
+  });
+
+  it('rejects an exchange discount for a request that has not been approved after inspection yet', async () => {
+    const product = await seedProduct({ price: 1000, stock: 5 });
+    await ExchangeQuestionSet.create({ name: 'TV Questions', category: 'Television', questions: [] });
+    const token = await loginAsCustomer('9400000013');
+
+    const exchangeRes = await request(app)
+      .post('/api/v1/exchange/requests')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ category: 'Television', baseValue: 500, answers: {} });
+    const exchangeRequestId = exchangeRes.body.data.id;
+    expect((await ExchangeRequest.findById(exchangeRequestId)).status).toBe('Pending Inspection');
+
+    await request(app)
+      .post('/api/v1/orders')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ items: [{ productId: product.id, quantity: 1 }], exchangeRequestId })
+      .expect(400);
+
+    expect(await Order.countDocuments({})).toBe(0);
   });
 
   it('checks out using the cart and clears it afterward', async () => {

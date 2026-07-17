@@ -227,6 +227,15 @@ test.describe('POST /orders — buy with coin redemption + exchange discount', (
     const exchangeRequest = (await exchangeRes.json()).data;
     expect(exchangeRequest.estimatedValue).toBe(2000);
 
+    // Discount only applies once a super-admin has approved the trade-in after
+    // physical inspection (Phase 11 security fix — self-reported valuations
+    // used to be a free discount with no verification step at all).
+    const approveRes = await request.patch(`/api/v1/super-admin/exchange-requests/${exchangeRequest.id}/status`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+      data: { status: 'Inspection Approved' },
+    });
+    expect(approveRes.status()).toBe(200);
+
     const orderRes = await request.post('/api/v1/orders', {
       headers: { Authorization: `Bearer ${customer.token}` },
       data: {
@@ -277,6 +286,11 @@ test.describe('POST /orders — buy with coin redemption + exchange discount', (
     });
     const exchangeRequestId = (await exchangeRes.json()).data.id;
 
+    await request.patch(`/api/v1/super-admin/exchange-requests/${exchangeRequestId}/status`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+      data: { status: 'Inspection Approved' },
+    });
+
     const firstOrder = await request.post('/api/v1/orders', {
       headers: { Authorization: `Bearer ${customer.token}` },
       data: { items: [{ productId: product.id, quantity: 1 }], exchangeRequestId },
@@ -288,6 +302,35 @@ test.describe('POST /orders — buy with coin redemption + exchange discount', (
       data: { items: [{ productId: product.id, quantity: 1 }], exchangeRequestId },
     });
     expect(secondOrder.status()).toBe(400);
+  });
+
+  test('rejects an exchange discount for a request not yet approved after inspection, and rejects the approval endpoint for non-admins', async ({ request }) => {
+    const adminToken = await loginAsFreshAdmin(request);
+    const category = `E2E-Category-${randomUUID()}`;
+    const product = await createProduct(request, adminToken, { category, price: 1000, stock: 5 });
+    await request.post('/api/v1/exchange/question-sets', {
+      headers: { Authorization: `Bearer ${adminToken}` },
+      data: { name: 'E2E Trade-in 3', category, questions: [] },
+    });
+    const customer = await createCustomer(request);
+
+    const exchangeRes = await request.post('/api/v1/exchange/requests', {
+      headers: { Authorization: `Bearer ${customer.token}` },
+      data: { category, baseValue: 500, answers: {} },
+    });
+    const exchangeRequestId = (await exchangeRes.json()).data.id;
+
+    const rejectedOrder = await request.post('/api/v1/orders', {
+      headers: { Authorization: `Bearer ${customer.token}` },
+      data: { items: [{ productId: product.id, quantity: 1 }], exchangeRequestId },
+    });
+    expect(rejectedOrder.status()).toBe(400);
+
+    const forbiddenApprove = await request.patch(`/api/v1/super-admin/exchange-requests/${exchangeRequestId}/status`, {
+      headers: { Authorization: `Bearer ${customer.token}` },
+      data: { status: 'Inspection Approved' },
+    });
+    expect(forbiddenApprove.status()).toBe(403);
   });
 
   test('rejects checkout with insufficient stock', async ({ request }) => {

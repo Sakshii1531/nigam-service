@@ -28,3 +28,14 @@ export const createQuestionSetSchema = z.object({
   category: z.string().min(1),
   questions: z.array(questionSchema).optional().default([]),
 });
+
+const EXCHANGE_STATUSES = ['Pending Inspection', 'Inspection Approved', 'Defective Received', 'Received at WH'];
+
+export const listExchangeRequestsQuerySchema = z.object({
+  status: z.enum(EXCHANGE_STATUSES).optional(),
+  page: z.coerce.number().int().positive().optional(),
+  limit: z.coerce.number().int().positive().optional(),
+  sort: z.string().optional(),
+});
+
+export const updateExchangeRequestStatusSchema = z.object({ status: z.enum(EXCHANGE_STATUSES) });
