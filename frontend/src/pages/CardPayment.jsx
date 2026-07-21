@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, CreditCard, ShieldCheck } from 'lucide-react';
+import { apiRequest } from '../lib/apiClient';
 
 const CardPayment = () => {
   const navigate = useNavigate();
@@ -12,23 +13,84 @@ const CardPayment = () => {
   const [cvv, setCvv] = useState('');
   const [cardName, setCardName] = useState('');
 
+  const [loading, setLoading] = useState(false);
+
   // Extract navigation state
   const paymentState = location.state || {};
   const isProductBuy = !!paymentState.isApplianceBuy;
   const itemName = paymentState.productName || 'AC Deep Cleaning';
   const itemPrice = paymentState.price !== undefined ? paymentState.price : 5.00;
+  const finalPrice = paymentState.finalPrice !== undefined ? paymentState.finalPrice : itemPrice;
 
-  const handlePay = (e) => {
-    e.preventDefault();
+  const handlePay = async (e) => {
+    if (e) e.preventDefault();
     const meta = paymentState.bookingMeta;
     if (meta) {
-      const params = new URLSearchParams({ type: 'service', ...meta });
-      navigate(`/booking-success?${params.toString()}`);
-    } else if (isProductBuy) {
-      navigate(`/booking-success?service=${encodeURIComponent(itemName)}&type=product&price=${itemPrice}`);
+      setLoading(true);
+      try {
+        const result = await apiRequest('/bookings', {
+          method: 'POST',
+          body: {
+            category: meta.category,
+            productType: meta.productType,
+            serviceSlug: meta.serviceSlug,
+            brand: meta.brand,
+            quantity: meta.quantity || 1,
+            scheduledDate: new Date().toISOString(),
+            timeSlot: { date: meta.date || '', time: meta.timeGroup || '' },
+            address: meta.address,
+            fullName: meta.fullName,
+            mobile: meta.mobile,
+            paymentMode: meta.paymentMode || 'after', // or 'advance'
+          },
+          auth: true,
+        });
+
+        // Navigate to success page with real serviceRequestId returned from backend
+        const params = new URLSearchParams({
+          type: 'service',
+          serviceRequestId: result.serviceRequest?.id || result.serviceRequest?._id || '',
+          service: meta.service,
+          category: meta.category,
+          productType: meta.productType,
+          brand: meta.brand || '',
+          quantity: String(meta.quantity || 1),
+          date: meta.date || '',
+          timeGroup: meta.timeGroup || '',
+          totalPrice: String(meta.totalPrice || 0),
+          advanceAmt: String(meta.advanceAmt || 0),
+          paymentMode: meta.paymentMode || 'advance',
+        });
+        navigate(`/booking-success?${params.toString()}`);
+      } catch (err) {
+        console.error('Failed to create booking:', err);
+        navigate('/payment-failure', {
+          state: {
+            errorMessage: err.message || 'Failed to register your service booking on the server.',
+            productName: itemName,
+            price: finalPrice,
+          }
+        });
+      } finally {
+        setLoading(false);
+      }
     } else {
-      navigate(`/booking-success?service=${encodeURIComponent(itemName)}`);
+      if (isProductBuy) {
+        navigate(`/booking-success?service=${encodeURIComponent(itemName)}&type=product&price=${itemPrice}`);
+      } else {
+        navigate(`/booking-success?service=${encodeURIComponent(itemName)}`);
+      }
     }
+  };
+
+  const handleFailurePay = () => {
+    navigate('/payment-failure', {
+      state: {
+        errorMessage: 'The transaction was declined by your bank due to insufficient funds on this card.',
+        productName: itemName,
+        price: finalPrice,
+      }
+    });
   };
 
   const handleCardNumberChange = (e) => {
@@ -151,17 +213,26 @@ const CardPayment = () => {
         </div>
 
         {/* Footer */}
-        <div className="p-5 border-t border-border-color flex-shrink-0">
+        <div className="p-5 border-t border-slate-100 flex flex-col gap-2.5 flex-shrink-0 w-full">
           <button
             onClick={handlePay}
-            disabled={!cardNumber || !expiry || !cvv || !cardName}
+            disabled={loading || !cardNumber || !expiry || !cvv || !cardName}
             className={`w-full text-[#0D47A1] font-extrabold py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer ${
               !cardNumber || !expiry || !cvv || !cardName
                 ? 'bg-slate-100 border border-slate-200 text-text-secondary cursor-not-allowed shadow-none'
                 : 'bg-[#FFD600] hover:bg-yellow-400 active:scale-[0.99]'
             }`}
           >
-            Pay Securely {isProductBuy ? `₹${itemPrice.toLocaleString('en-IN')}` : `$5.00`}
+            {loading ? 'Processing Payment...' : `Authorize Card Pay (Success) ₹${finalPrice.toLocaleString('en-IN')}`}
+          </button>
+          
+          <button
+            type="button"
+            onClick={handleFailurePay}
+            disabled={loading}
+            className="w-full bg-red-50 text-red-650 hover:bg-red-100 hover:text-red-700 font-extrabold py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all border border-red-200 cursor-pointer text-xs"
+          >
+            Simulate Payment Failure
           </button>
         </div>
 

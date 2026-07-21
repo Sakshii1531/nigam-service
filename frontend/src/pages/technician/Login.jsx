@@ -1,19 +1,33 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Phone, Lock, ShieldCheck, Briefcase } from 'lucide-react';
-import logo from '../../assets/nigam-care.png'; // Reusing logo if available, or text fallback
+import logo from '../../assets/nigam-care.png';
+import { useAuth } from '../../context/AuthContext';
+import { ApiError } from '../../lib/apiClient';
 
 const TechLogin = () => {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [usePhone, setUsePhone] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
-    const raw = (form.get('identifier') || '').toString().trim();
-    const digits = raw.replace(/\D/g, '');
-    const destination = digits.length >= 6 ? `+91 ${digits.slice(0, 2)}•••••${digits.slice(-3)}` : raw || 'EMP•••45';
-    navigate('/technician/verify-otp', { state: { destination } });
+    const identifier = (form.get('identifier') || '').toString().trim();
+    const password = form.get('password');
+
+    setError('');
+    setSubmitting(true);
+    try {
+      const { destination } = await login({ role: 'technician', identifier, password });
+      navigate('/technician/verify-otp', { state: { destination, role: 'technician', identifier } });
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -45,6 +59,13 @@ const TechLogin = () => {
           <p className="text-slate-500 text-xs mt-1">Access your job dashboard and earnings</p>
         </div>
 
+        {/* Error message */}
+        {error && (
+          <div className="mb-3 p-3 bg-red-50 border border-red-150 rounded-2xl text-red-650 text-xs font-semibold text-center">
+            {error}
+          </div>
+        )}
+
         {/* Form */}
         <form onSubmit={handleLogin} className="flex flex-col gap-3">
           
@@ -59,7 +80,7 @@ const TechLogin = () => {
                 placeholder="Enter your ID or Phone"
                 className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] outline-none transition-all text-sm"
                 required
-                defaultValue="EMP12345"
+                defaultValue="9000000001"
               />
             </div>
           </div>
@@ -71,6 +92,7 @@ const TechLogin = () => {
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
               <input
                 type="password"
+                name="password"
                 placeholder="Enter Password"
                 className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] outline-none transition-all text-sm"
                 required
@@ -91,9 +113,10 @@ const TechLogin = () => {
           {/* Action Button */}
           <button
             type="submit"
-            className="w-full bg-[#FFD600] text-[#0D47A1] font-semibold py-3.5 rounded-2xl hover:bg-yellow-400 transition-all transform hover:-translate-y-0.5 mt-2 active:scale-95 shadow-md shadow-yellow-400/10"
+            disabled={submitting}
+            className="w-full bg-[#FFD600] text-[#0D47A1] font-semibold py-3.5 rounded-2xl hover:bg-yellow-400 transition-all transform hover:-translate-y-0.5 mt-2 active:scale-95 shadow-md shadow-yellow-400/10 disabled:opacity-50"
           >
-            Login to Dashboard
+            {submitting ? 'Connecting...' : 'Login to Dashboard'}
           </button>
         </form>
 
