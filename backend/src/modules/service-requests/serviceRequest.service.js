@@ -3,12 +3,21 @@ import { ApiError } from '../../middleware/errorHandler.js';
 import { SERVICE_REQUEST_TRANSITIONS } from '../../config/constants.js';
 import { parsePagination, paginationMeta } from '../../utils/pagination.js';
 
+import { emit as emitNotification } from '../notifications/notification.service.js';
+
 export async function createServiceRequest(data) {
   const serviceRequest = await ServiceRequest.create({
     ...data,
     status: 'New',
     timeline: [{ stepLabel: 'New', done: true, timestamp: new Date(), description: 'Request created' }],
   });
+
+  if (serviceRequest.brand && serviceRequest.warranty === 'In Warranty') {
+    await emitNotification('brand.warranty_claim', {
+      reason: `New Brand Warranty claim raised for Service Request ${serviceRequest.humanId || serviceRequest.id}`,
+    });
+  }
+
   return serviceRequest;
 }
 

@@ -5,6 +5,7 @@ import { findAvailableTechnician } from '../shared/assignmentEngine.js';
 import { createServiceRequest, transitionStatus } from '../service-requests/serviceRequest.service.js';
 import { emit as emitNotification } from '../notifications/notification.service.js';
 import { parsePagination, paginationMeta } from '../../utils/pagination.js';
+import { detectWarrantyForAppliance } from '../warranty-amc-exchange/warrantyDetector.service.js';
 
 /**
  * Creates a Booking + its linked ServiceRequest in one flow, matching
@@ -15,7 +16,26 @@ import { parsePagination, paginationMeta } from '../../utils/pagination.js';
 export async function createBooking(userId, data) {
   const serviceItem = await findServiceItem(data.category, data.serviceSlug);
   const quantity = data.quantity || 1;
-  const totalPrice = serviceItem.price * quantity;
+  const basePrice = serviceItem.price * quantity;
+
+  // Run automated Smart Warranty Detection pipeline
+  const {
+    warrantyStatus,
+    brandId,
+    applianceId,
+    amcSubscriptionId,
+    extendedWarrantyOrderId,
+  } = await detectWarrantyForAppliance({
+    userId,
+    category: data.category,
+    brandName: data.brand,
+    serialNo: data.serialNo,
+    purchaseDate: data.purchaseDate,
+    applianceId: data.applianceId,
+  });
+
+  // Apply pricing benefits: covered visits are free (price resolves to 0)
+  const totalPrice = warrantyStatus === 'Out of Warranty' ? basePrice : 0;
 
   const technician = await findAvailableTechnician({ category: data.category, city: data.address?.city });
 
@@ -45,6 +65,11 @@ export async function createBooking(userId, data) {
     category: data.category,
     description: `${data.category} — ${serviceItem.name}`,
     requestMode: 'B2C',
+    warranty: warrantyStatus === 'Out of Warranty' ? 'Out of Warranty' : 'In Warranty',
+    brand: brandId,
+    appliance: applianceId,
+    amcSubscription: amcSubscriptionId,
+    extendedWarrantyOrder: extendedWarrantyOrderId,
   });
 
   if (technician) {

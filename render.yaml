@@ -37,14 +37,14 @@ services:
         sync: false
       - key: OTP_PROVIDER
         value: stub
-      - key: S3_ENDPOINT
+      - key: CLOUDINARY_CLOUD_NAME
         sync: false
-      - key: S3_BUCKET
+      - key: CLOUDINARY_API_KEY
         sync: false
-      - key: S3_ACCESS_KEY_ID
+      - key: CLOUDINARY_API_SECRET
         sync: false
-      - key: S3_SECRET_ACCESS_KEY
-        sync: false
+      - key: CLOUDINARY_UPLOAD_FOLDER
+        value: nigam-care
       - key: RAZORPAY_KEY_ID
         sync: false
       - key: RAZORPAY_KEY_SECRET

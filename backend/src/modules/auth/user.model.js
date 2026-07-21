@@ -32,6 +32,11 @@ const userSchema = new mongoose.Schema(
     status: { type: String, enum: ['Active', 'Suspended', 'Pending'], default: 'Active', index: true },
     lastActiveAt: Date,
 
+    // FCM device tokens — one entry per registered device (mobile push via Firebase).
+    // Populated via POST /notifications/device-token; stale tokens are pruned
+    // automatically when FCM returns registration-token-not-registered.
+    fcmTokens: [{ type: String }],
+
     // Only meaningful for role: 'customer' (brand-admin's Customers.jsx uses CUST-###) —
     // not wired through the generic humanIdPlugin like other models, since that plugin
     // assumes one prefix per collection and User covers all 4 roles.

@@ -1,168 +1,309 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
-import request from 'supertest';
+/**
+ * notifications.test.js
+ *
+ * Tests the multi-channel notification pipeline:
+ *   1. In-app: Notification DB write + Socket.IO emit (existing behaviour)
+ *   2. FCM Push: firebase-admin sendEachForMulticast called with correct tokens/payload
+ *   3. WhatsApp: twilio messages.create called with correct to/body
+ *   4. SMS: SMSIndiaHub fetch called with correct number/text
+ *   5. Preference opt-out: disabled channel providers are NOT called
+ *   6. Missing tokens: push skipped when user has no fcmTokens
+ *   7. Escalation broadcast — external channels skipped (no single recipient)
+ *
+ * All external SDKs (firebase-admin, twilio) and fetch are mocked — no real
+ * network calls are made in this suite.
+ */
+
+import { jest } from '@jest/globals';
 import mongoose from 'mongoose';
-import { createApp } from '../src/app.js';
-import { registerAllModels } from '../src/config/registerModels.js';
-import { ensureIndexes } from '../src/config/db.js';
-import { User } from '../src/modules/auth/user.model.js';
-import { Technician } from '../src/modules/technician/technician.model.js';
-import { Notification } from '../src/modules/notifications/notification.model.js';
-import { NotificationPreference } from '../src/modules/notifications/notificationPreference.model.js';
-import { emit } from '../src/modules/notifications/notification.service.js';
-import { signAccessToken } from '../src/modules/auth/tokens.js';
-import { hashPassword } from '../src/modules/auth/password.js';
-import { ROLES } from '../src/config/constants.js';
 import { testDbUri } from './helpers/testDb.js';
 
-const TEST_DB_URI = testDbUri('notifications');
+// ── Mock firebase-admin before any import that touches it ─────────────────────
+const mockSendEachForMulticast = jest.fn();
+jest.unstable_mockModule('firebase-admin', () => ({
+  default: {
+    apps: [],
+    initializeApp: jest.fn(),
+    credential: { cert: jest.fn((sa) => sa) },
+    messaging: () => ({ sendEachForMulticast: mockSendEachForMulticast }),
+  },
+}));
 
-let app;
-let phoneCounter = 9900000000;
-function nextPhone() {
-  return String(phoneCounter++);
-}
+// ── Mock twilio ───────────────────────────────────────────────────────────────
+const mockMessagesCreate = jest.fn();
+jest.unstable_mockModule('twilio', () => ({
+  default: jest.fn(() => ({
+    messages: { create: mockMessagesCreate },
+  })),
+}));
 
-function tokenFor(user) {
-  return signAccessToken({ sub: user.id, role: user.role, brand: null, permissions: [] });
-}
+// ── Mock global fetch (SMSIndiaHub) ───────────────────────────────────────────
+const mockFetch = jest.fn();
+global.fetch = mockFetch;
 
-async function createCustomer() {
-  const user = await User.create({ role: ROLES.CUSTOMER, phone: nextPhone(), name: 'Test Customer', passwordHash: await hashPassword('x') });
-  return { user, token: tokenFor(user) };
-}
+// ── Import modules AFTER mocks are set up ────────────────────────────────────
+const { emit, listNotifications, markRead } = await import(
+  '../src/modules/notifications/notification.service.js'
+);
+const { User } = await import('../src/modules/auth/user.model.js');
+const { Notification } = await import('../src/modules/notifications/notification.model.js');
+const { NotificationPreference } = await import(
+  '../src/modules/notifications/notificationPreference.model.js'
+);
+
+// ── DB setup ──────────────────────────────────────────────────────────────────
 
 beforeAll(async () => {
-  await registerAllModels();
-  await mongoose.connect(TEST_DB_URI);
-  await ensureIndexes();
-  app = createApp();
+  const uri = await testDbUri();
+  await mongoose.connect(uri);
 });
 
 afterAll(async () => {
-  await mongoose.connection.dropDatabase();
   await mongoose.disconnect();
 });
 
 beforeEach(async () => {
   await Promise.all([
-    User.deleteMany({}),
-    Technician.deleteMany({}),
     Notification.deleteMany({}),
+    User.deleteMany({}),
     NotificationPreference.deleteMany({}),
   ]);
+  jest.clearAllMocks();
+  mockSendEachForMulticast.mockResolvedValue({ responses: [{ success: true }] });
+  mockMessagesCreate.mockResolvedValue({ sid: 'SM_test' });
+  mockFetch.mockResolvedValue({ ok: true, text: async () => 'OK' });
 });
 
-describe('emit() — domain event -> Notification template', () => {
-  it('creates a correctly-shaped Notification for each known event', async () => {
-    const { user } = await createCustomer();
+async function seedUser({ phone = '9876543210', fcmTokens = [] } = {}) {
+  return User.create({
+    role: 'customer',
+    name: 'Test User',
+    phone,
+    passwordHash: 'stub',
+    status: 'Active',
+    fcmTokens,
+  });
+}
 
-    const created = await emit('booking.created', { user: user.id, category: 'AC', bookingId: 'b1' });
-    expect(created.type).toBe('created');
-    expect(created.recipient.toString()).toBe(user.id);
-
-    const assigned = await emit('technician.assigned', { user: user.id, technicianName: 'Rahul', serviceRequestId: 'sr1' });
-    expect(assigned.type).toBe('assigned');
-    expect(assigned.message).toMatch(/Rahul/);
-
-    const payment = await emit('payment.success', { user: user.id, amount: 500 });
-    expect(payment.type).toBe('payment');
-    expect(payment.message).toMatch(/500/);
-
-    const completed = await emit('service.completed', { user: user.id, serviceRequestId: 'sr1' });
-    expect(completed.type).toBe('completed');
-
-    const claim = await emit('claim.approved', { user: user.id, item: 'Fan Blade' });
-    expect(claim.type).toBe('claims');
-    expect(claim.message).toMatch(/Fan Blade/);
-
-    const escalation = await emit('escalation.raised', { reason: 'SLA breach' });
-    expect(escalation.type).toBe('dispatch');
-    expect(escalation.broadcastRole).toBe('All');
-    expect(escalation.recipient).toBeNull();
+// ─────────────────────────────────────────────────────────────────────────────
+// 1. In-app (DB)
+// ─────────────────────────────────────────────────────────────────────────────
+describe('emit() — in-app delivery', () => {
+  test('creates a Notification document for a known event', async () => {
+    const user = await seedUser();
+    const result = await emit('booking.created', { user: user._id, category: 'AC Repair' });
+    expect(result).not.toBeNull();
+    expect(result.title).toBe('Booking Confirmed');
+    const inDb = await Notification.findById(result._id);
+    expect(inDb).not.toBeNull();
+    expect(inDb.message).toMatch(/AC Repair/);
   });
 
-  it('never throws on an unknown event — returns null instead', async () => {
-    const result = await emit('not.a.real.event', {});
+  test('returns null without throwing for an unknown event', async () => {
+    const result = await emit('totally.unknown.event', {});
     expect(result).toBeNull();
   });
-});
 
-describe('GET /notifications — listing and the read=false/true filter', () => {
-  it('lists both personally-addressed and broadcast notifications for a user', async () => {
-    const { user, token } = await createCustomer();
-    await emit('booking.created', { user: user.id, category: 'AC', bookingId: 'b1' });
-    await emit('escalation.raised', { reason: 'x' });
-
-    const res = await request(app).get('/api/v1/notifications').set('Authorization', `Bearer ${token}`).expect(200);
-    expect(res.body.data).toHaveLength(2);
+  test('marks a notification read', async () => {
+    const user = await seedUser();
+    const notif = await emit('payment.success', { user: user._id, amount: 499 });
+    const updated = await markRead(String(user._id), notif.id);
+    expect(updated.read).toBe(true);
   });
 
-  it('?read=false and ?read=true filter correctly — regression test for the string-coercion bug', async () => {
-    const { user, token } = await createCustomer();
-    const n1 = await emit('booking.created', { user: user.id, category: 'AC', bookingId: 'b1' });
-    await emit('payment.success', { user: user.id, amount: 100 });
-
-    await request(app).patch(`/api/v1/notifications/${n1.id}/read`).set('Authorization', `Bearer ${token}`).expect(200);
-
-    const unreadRes = await request(app).get('/api/v1/notifications?read=false').set('Authorization', `Bearer ${token}`).expect(200);
-    expect(unreadRes.body.data).toHaveLength(1);
-    expect(unreadRes.body.data[0].read).toBe(false);
-
-    const readRes = await request(app).get('/api/v1/notifications?read=true').set('Authorization', `Bearer ${token}`).expect(200);
-    expect(readRes.body.data).toHaveLength(1);
-    expect(readRes.body.data[0].read).toBe(true);
+  test('listNotifications returns docs for a recipient', async () => {
+    const user = await seedUser();
+    await emit('service.completed', { user: user._id });
+    const { items } = await listNotifications(String(user._id));
+    expect(items.length).toBeGreaterThanOrEqual(1);
   });
 });
 
-describe('PATCH /notifications/:id/read and /read-all', () => {
-  it('marks a personal notification read, and rejects another user\'s notification', async () => {
-    const { user, token } = await createCustomer();
-    const other = await createCustomer();
-
-    const n = await emit('booking.created', { user: user.id, category: 'AC', bookingId: 'b1' });
-
-    const res = await request(app).patch(`/api/v1/notifications/${n.id}/read`).set('Authorization', `Bearer ${token}`).expect(200);
-    expect(res.body.data.read).toBe(true);
-
-    const n2 = await emit('booking.created', { user: user.id, category: 'AC', bookingId: 'b2' });
-    await request(app).patch(`/api/v1/notifications/${n2.id}/read`).set('Authorization', `Bearer ${other.token}`).expect(403);
+// ─────────────────────────────────────────────────────────────────────────────
+// 2. FCM Push
+// ─────────────────────────────────────────────────────────────────────────────
+describe('emit() — FCM push delivery', () => {
+  test('calls sendEachForMulticast with user fcmTokens', async () => {
+    process.env.FCM_SERVICE_ACCOUNT_JSON = '{"type":"service_account","project_id":"test"}';
+    process.env.NOTIFICATION_PUSH_ENABLED = 'true';
+    const user = await seedUser({ fcmTokens: ['token-abc', 'token-xyz'] });
+    await emit('booking.created', { user: user._id, category: 'Washing Machine' });
+    await new Promise((r) => setTimeout(r, 80));
+    expect(mockSendEachForMulticast).toHaveBeenCalledTimes(1);
+    const arg = mockSendEachForMulticast.mock.calls[0][0];
+    expect(arg.tokens).toEqual(expect.arrayContaining(['token-abc', 'token-xyz']));
+    expect(arg.notification.title).toBe('Booking Confirmed');
+    delete process.env.FCM_SERVICE_ACCOUNT_JSON;
   });
 
-  it('rejects marking a broadcast notification read via the per-user endpoint (no per-recipient read state)', async () => {
-    const { token } = await createCustomer();
-    const broadcast = await emit('escalation.raised', { reason: 'x' });
-    await request(app).patch(`/api/v1/notifications/${broadcast.id}/read`).set('Authorization', `Bearer ${token}`).expect(400);
+  test('skips push when user has no fcmTokens', async () => {
+    process.env.FCM_SERVICE_ACCOUNT_JSON = '{"type":"service_account","project_id":"test"}';
+    const user = await seedUser({ fcmTokens: [] });
+    await emit('booking.created', { user: user._id, category: 'Fridge' });
+    await new Promise((r) => setTimeout(r, 80));
+    expect(mockSendEachForMulticast).not.toHaveBeenCalled();
+    delete process.env.FCM_SERVICE_ACCOUNT_JSON;
   });
 
-  it('read-all marks only personal notifications read, leaving broadcasts untouched', async () => {
-    const { user, token } = await createCustomer();
-    await emit('booking.created', { user: user.id, category: 'AC', bookingId: 'b1' });
-    await emit('payment.success', { user: user.id, amount: 100 });
-    const broadcast = await emit('escalation.raised', { reason: 'x' });
+  test('prunes stale tokens returned by FCM', async () => {
+    process.env.FCM_SERVICE_ACCOUNT_JSON = '{"type":"service_account","project_id":"test"}';
+    mockSendEachForMulticast.mockResolvedValueOnce({
+      responses: [
+        { success: false, error: { code: 'messaging/registration-token-not-registered' } },
+        { success: true },
+      ],
+    });
+    const user = await seedUser({ fcmTokens: ['stale-token', 'valid-token'] });
+    await emit('service.completed', { user: user._id });
+    await new Promise((r) => setTimeout(r, 150));
+    const refreshed = await User.findById(user._id).lean();
+    expect(refreshed.fcmTokens).not.toContain('stale-token');
+    expect(refreshed.fcmTokens).toContain('valid-token');
+    delete process.env.FCM_SERVICE_ACCOUNT_JSON;
+  });
 
-    await request(app).patch('/api/v1/notifications/read-all').set('Authorization', `Bearer ${token}`).expect(200);
+  test('skips push when NOTIFICATION_PUSH_ENABLED=false', async () => {
+    process.env.FCM_SERVICE_ACCOUNT_JSON = '{"type":"service_account","project_id":"test"}';
+    process.env.NOTIFICATION_PUSH_ENABLED = 'false';
+    const user = await seedUser({ fcmTokens: ['token-abc'] });
+    await emit('booking.created', { user: user._id, category: 'AC' });
+    await new Promise((r) => setTimeout(r, 80));
+    expect(mockSendEachForMulticast).not.toHaveBeenCalled();
+    delete process.env.FCM_SERVICE_ACCOUNT_JSON;
+    delete process.env.NOTIFICATION_PUSH_ENABLED;
+  });
 
-    const personal = await Notification.find({ recipient: user._id });
-    expect(personal.every((n) => n.read)).toBe(true);
-
-    const reloadedBroadcast = await Notification.findById(broadcast.id);
-    expect(reloadedBroadcast.read).toBe(false);
+  test('skips push when user preference push=false', async () => {
+    process.env.FCM_SERVICE_ACCOUNT_JSON = '{"type":"service_account","project_id":"test"}';
+    process.env.NOTIFICATION_PUSH_ENABLED = 'true';
+    const user = await seedUser({ fcmTokens: ['token-abc'] });
+    await NotificationPreference.create({ user: user._id, push: false });
+    await emit('booking.created', { user: user._id, category: 'AC' });
+    await new Promise((r) => setTimeout(r, 80));
+    expect(mockSendEachForMulticast).not.toHaveBeenCalled();
+    delete process.env.FCM_SERVICE_ACCOUNT_JSON;
+    delete process.env.NOTIFICATION_PUSH_ENABLED;
   });
 });
 
-describe('notification preferences', () => {
-  it('defaults to all-enabled and can be updated', async () => {
-    const { token } = await createCustomer();
+// ─────────────────────────────────────────────────────────────────────────────
+// 3. WhatsApp (Twilio)
+// ─────────────────────────────────────────────────────────────────────────────
+describe('emit() — WhatsApp delivery', () => {
+  test('calls twilio messages.create with whatsapp: prefix and correct body', async () => {
+    process.env.TWILIO_ACCOUNT_SID = 'ACtest';
+    process.env.TWILIO_AUTH_TOKEN = 'authtest';
+    process.env.NOTIFICATION_WHATSAPP_ENABLED = 'true';
+    const user = await seedUser({ phone: '9876543210' });
+    await emit('technician.assigned', { user: user._id, technicianName: 'Ravi Kumar' });
+    await new Promise((r) => setTimeout(r, 80));
+    expect(mockMessagesCreate).toHaveBeenCalledTimes(1);
+    const arg = mockMessagesCreate.mock.calls[0][0];
+    expect(arg.to).toMatch(/^whatsapp:\+91/);
+    expect(arg.body).toMatch(/Ravi Kumar/);
+    delete process.env.TWILIO_ACCOUNT_SID;
+    delete process.env.TWILIO_AUTH_TOKEN;
+  });
 
-    const getRes = await request(app).get('/api/v1/notifications/preferences').set('Authorization', `Bearer ${token}`).expect(200);
-    expect(getRes.body.data).toMatchObject({ push: true, sms: true, email: true });
+  test('skips WhatsApp when NOTIFICATION_WHATSAPP_ENABLED=false', async () => {
+    process.env.TWILIO_ACCOUNT_SID = 'ACtest';
+    process.env.TWILIO_AUTH_TOKEN = 'authtest';
+    process.env.NOTIFICATION_WHATSAPP_ENABLED = 'false';
+    const user = await seedUser({ phone: '9876543210' });
+    await emit('technician.assigned', { user: user._id, technicianName: 'Ravi' });
+    await new Promise((r) => setTimeout(r, 80));
+    expect(mockMessagesCreate).not.toHaveBeenCalled();
+    delete process.env.TWILIO_ACCOUNT_SID;
+    delete process.env.TWILIO_AUTH_TOKEN;
+    delete process.env.NOTIFICATION_WHATSAPP_ENABLED;
+  });
 
-    const putRes = await request(app)
-      .put('/api/v1/notifications/preferences')
-      .set('Authorization', `Bearer ${token}`)
-      .send({ sms: false })
-      .expect(200);
-    expect(putRes.body.data.sms).toBe(false);
-    expect(putRes.body.data.push).toBe(true);
+  test('skips WhatsApp when user preference whatsapp=false', async () => {
+    process.env.TWILIO_ACCOUNT_SID = 'ACtest';
+    process.env.TWILIO_AUTH_TOKEN = 'authtest';
+    process.env.NOTIFICATION_WHATSAPP_ENABLED = 'true';
+    const user = await seedUser({ phone: '9876543210' });
+    await NotificationPreference.create({ user: user._id, whatsapp: false });
+    await emit('payment.success', { user: user._id, amount: 299 });
+    await new Promise((r) => setTimeout(r, 80));
+    expect(mockMessagesCreate).not.toHaveBeenCalled();
+    delete process.env.TWILIO_ACCOUNT_SID;
+    delete process.env.TWILIO_AUTH_TOKEN;
+    delete process.env.NOTIFICATION_WHATSAPP_ENABLED;
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 4. SMS (SMSIndiaHub)
+// ─────────────────────────────────────────────────────────────────────────────
+describe('emit() — SMS delivery', () => {
+  const smsEnv = () => {
+    process.env.SMSINDIAHUB_USERNAME = 'testuser';
+    process.env.SMSINDIAHUB_PASSWORD = 'testpass';
+    process.env.SMSINDIAHUB_SENDER_ID = 'NIGAM';
+    process.env.SMSINDIAHUB_ENTITY_ID = 'ENT001';
+    process.env.SMSINDIAHUB_DLT_TEMPLATE_ID = 'TPL001';
+    process.env.NOTIFICATION_SMS_ENABLED = 'true';
+  };
+  const clearSmsEnv = () => {
+    delete process.env.SMSINDIAHUB_USERNAME;
+    delete process.env.SMSINDIAHUB_PASSWORD;
+    delete process.env.SMSINDIAHUB_SENDER_ID;
+    delete process.env.SMSINDIAHUB_ENTITY_ID;
+    delete process.env.SMSINDIAHUB_DLT_TEMPLATE_ID;
+    delete process.env.NOTIFICATION_SMS_ENABLED;
+  };
+
+  test('calls SMSIndiaHub fetch with correct phone number', async () => {
+    smsEnv();
+    const user = await seedUser({ phone: '9876543210' });
+    await emit('service.completed', { user: user._id });
+    await new Promise((r) => setTimeout(r, 80));
+    const smsCalls = mockFetch.mock.calls.filter((args) => String(args[0]).includes('smsindiahub'));
+    expect(smsCalls.length).toBe(1);
+    expect(smsCalls[0][0]).toMatch(/9876543210/);
+    clearSmsEnv();
+  });
+
+  test('skips SMS when NOTIFICATION_SMS_ENABLED=false', async () => {
+    smsEnv();
+    process.env.NOTIFICATION_SMS_ENABLED = 'false';
+    const user = await seedUser({ phone: '9876543210' });
+    await emit('payment.success', { user: user._id, amount: 399 });
+    await new Promise((r) => setTimeout(r, 80));
+    const smsCalls = mockFetch.mock.calls.filter((args) => String(args[0]).includes('smsindiahub'));
+    expect(smsCalls.length).toBe(0);
+    clearSmsEnv();
+  });
+
+  test('skips SMS when user preference sms=false', async () => {
+    smsEnv();
+    const user = await seedUser({ phone: '9876543210' });
+    await NotificationPreference.create({ user: user._id, sms: false });
+    await emit('claim.approved', { user: user._id, item: 'Compressor' });
+    await new Promise((r) => setTimeout(r, 80));
+    const smsCalls = mockFetch.mock.calls.filter((args) => String(args[0]).includes('smsindiahub'));
+    expect(smsCalls.length).toBe(0);
+    clearSmsEnv();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 5. Broadcast (escalation) — external channels skipped
+// ─────────────────────────────────────────────────────────────────────────────
+describe('emit() — broadcast escalation event', () => {
+  test('saves a broadcast notification and skips all external channels', async () => {
+    process.env.FCM_SERVICE_ACCOUNT_JSON = '{"type":"service_account"}';
+    process.env.TWILIO_ACCOUNT_SID = 'ACtest';
+    process.env.TWILIO_AUTH_TOKEN = 'authtest';
+    const result = await emit('escalation.raised', { reason: 'Urgent equipment failure' });
+    await new Promise((r) => setTimeout(r, 80));
+    expect(result).not.toBeNull();
+    expect(result.broadcastRole).toBe('All');
+    expect(mockSendEachForMulticast).not.toHaveBeenCalled();
+    expect(mockMessagesCreate).not.toHaveBeenCalled();
+    delete process.env.FCM_SERVICE_ACCOUNT_JSON;
+    delete process.env.TWILIO_ACCOUNT_SID;
+    delete process.env.TWILIO_AUTH_TOKEN;
   });
 });

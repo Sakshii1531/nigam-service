@@ -29,12 +29,7 @@ export const env = {
   },
   corsOrigins: (process.env.CORS_ORIGINS || 'http://localhost:5173').split(',').map((o) => o.trim()),
   otpProvider: process.env.OTP_PROVIDER || 'stub',
-  s3: {
-    endpoint: process.env.S3_ENDPOINT || '',
-    bucket: process.env.S3_BUCKET || '',
-    accessKeyId: process.env.S3_ACCESS_KEY_ID || '',
-    secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || '',
-  },
+
   cloudinary: {
     cloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
     apiKey: process.env.CLOUDINARY_API_KEY || '',
@@ -53,15 +48,47 @@ export const env = {
     // byte-match the approved template, per TRAI's DLT compliance rules.
     otpTemplate: process.env.SMSINDIAHUB_OTP_TEMPLATE || 'Your Nigam Care OTP is {code}. Valid for 10 minutes. Do not share this code with anyone.',
     channel: process.env.SMSINDIAHUB_CHANNEL || '2', // '2' = transactional route on SMSIndiaHub
+    // DLT-registered transactional notification template (non-OTP).
+    // Register this in the DLT portal with {message} as the variable slot.
+    notificationTemplate: process.env.SMSINDIAHUB_NOTIFICATION_TEMPLATE || 'Dear Customer, {message} - Nigam Care',
+    notificationDltTemplateId: process.env.SMSINDIAHUB_NOTIFICATION_DLT_TEMPLATE_ID || '',
   },
   razorpay: {
     keyId: process.env.RAZORPAY_KEY_ID || '',
     keySecret: process.env.RAZORPAY_KEY_SECRET || '',
   },
+  // Firebase Cloud Messaging — paste the entire service-account JSON as a single
+  // line (or a file path) in FCM_SERVICE_ACCOUNT_JSON. The server lazy-initialises
+  // the firebase-admin app on first use so a missing key is non-fatal in dev.
+  fcm: {
+    serviceAccountJson: process.env.FCM_SERVICE_ACCOUNT_JSON || '',
+  },
+  // Twilio — WhatsApp Business API delivery + Voice click-to-call relay
+  twilio: {
+    accountSid: process.env.TWILIO_ACCOUNT_SID || '',
+    authToken: process.env.TWILIO_AUTH_TOKEN || '',
+    whatsappFrom: process.env.TWILIO_WHATSAPP_FROM || 'whatsapp:+14155238886', // Twilio sandbox default
+    // Twilio Voice: a purchased Twilio phone number with Voice capability enabled.
+    // Neither customer nor technician will see the other's real number — both legs
+    // go through this virtual proxy. Leave blank to gracefully degrade (returns 503).
+    voiceFrom: process.env.TWILIO_VOICE_NUMBER || '',
+    callMaskingEnabled: process.env.CALL_MASKING_ENABLED !== 'false',
+  },
+  // Per-channel feature flags — set to 'false' to disable a channel without
+  // removing credentials (useful for staging / DLT-pending environments).
+  notifications: {
+    pushEnabled: process.env.NOTIFICATION_PUSH_ENABLED !== 'false',
+    smsEnabled: process.env.NOTIFICATION_SMS_ENABLED !== 'false',
+    whatsappEnabled: process.env.NOTIFICATION_WHATSAPP_ENABLED !== 'false',
+  },
 };
 
 export const isCloudinaryConfigured = Boolean(env.cloudinary.cloudName && env.cloudinary.apiKey && env.cloudinary.apiSecret);
 export const isSmsIndiaHubConfigured = Boolean(env.smsIndiaHub.username && env.smsIndiaHub.password && env.smsIndiaHub.senderId);
+export const isFcmConfigured = Boolean(env.fcm.serviceAccountJson);
+export const isTwilioConfigured = Boolean(env.twilio.accountSid && env.twilio.authToken);
+export const isTwilioVoiceConfigured = Boolean(env.twilio.accountSid && env.twilio.authToken && env.twilio.voiceFrom);
 
 export const isProd = env.nodeEnv === 'production';
 export const isTest = env.nodeEnv === 'test';
+

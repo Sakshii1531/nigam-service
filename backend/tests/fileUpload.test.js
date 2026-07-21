@@ -26,6 +26,26 @@ describe('storeUploadedFile (local-disk backend)', () => {
     fs.unlinkSync(savedPath);
   });
 
+  it('converts a valid image (PNG) to WebP format', async () => {
+    // 1x1 transparent PNG base64 representation
+    const pngBuffer = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+      'base64'
+    );
+    const file = { originalname: 'test-image.png', mimetype: 'image/png', buffer: pngBuffer };
+    const url = await storeUploadedFile(file);
+
+    expect(url).toMatch(/^\/uploads\/[\w-]+\.webp$/);
+    const savedPath = path.join(LOCAL_UPLOAD_DIR, path.basename(url));
+    expect(fs.existsSync(savedPath)).toBe(true);
+
+    const content = fs.readFileSync(savedPath);
+    expect(content.toString('utf8', 0, 4)).toBe('RIFF');
+    expect(content.toString('utf8', 8, 12)).toBe('WEBP');
+
+    fs.unlinkSync(savedPath);
+  });
+
   it('rejects when no file is provided', async () => {
     await expect(storeUploadedFile(null)).rejects.toThrow(/No file provided/);
   });

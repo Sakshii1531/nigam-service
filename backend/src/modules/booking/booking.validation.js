@@ -23,6 +23,9 @@ export const createBookingSchema = z.object({
   fullName: z.string().optional(),
   mobile: z.string().optional(),
   paymentMode: z.enum(['advance', 'after']).optional(),
+  purchaseDate: z.coerce.date().optional(),
+  serialNo: z.string().optional(),
+  applianceId: z.string().optional(),
 });
 
 export const listBookingsQuerySchema = z.object({

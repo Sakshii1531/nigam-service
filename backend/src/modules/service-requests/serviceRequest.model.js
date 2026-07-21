@@ -24,6 +24,8 @@ const serviceRequestSchema = new mongoose.Schema(
     brand: { type: mongoose.Schema.Types.ObjectId, ref: 'Brand', default: null, index: true },
     booking: { type: mongoose.Schema.Types.ObjectId, ref: 'Booking', default: null },
     appliance: { type: mongoose.Schema.Types.ObjectId, ref: 'OwnedAppliance', default: null },
+    amcSubscription: { type: mongoose.Schema.Types.ObjectId, ref: 'AMCSubscription', default: null },
+    extendedWarrantyOrder: { type: mongoose.Schema.Types.ObjectId, ref: 'ExtendedWarrantyOrder', default: null },
 
     category: String,
     model: String,

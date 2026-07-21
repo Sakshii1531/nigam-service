@@ -4,3 +4,13 @@ temp_interactive_push.bat
 .DS_Store
 # Added by code-review-graph
 .code-review-graph/
+
+# Claude Code / MCP agent tooling — local to this machine, never pushed
+.claude/
+.mcp.json
+CLAUDE.md
+
+# Stray lockfile with no corresponding root package.json (the real Node
+# projects each have their own in backend/, frontend/, e2e/) — root-anchored
+# so it doesn't accidentally ignore those legitimate lockfiles too.
+/package-lock.json
