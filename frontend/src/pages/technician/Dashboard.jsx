@@ -474,7 +474,16 @@ const Dashboard = () => {
                     return (
                       <div 
                         key={job.id}
-                        onClick={() => { selectJobForDetails(job.id); navigate('/technician/active-job'); }}
+                        onClick={() => {
+                          if (job.isAvailableRequest) {
+                            setShowAllJobs(true);
+                            setFilterTab('All');
+                            setExpandedJobId(job.id);
+                          } else {
+                            selectJobForDetails(job.id);
+                            navigate('/technician/active-job');
+                          }
+                        }}
                         className={`bg-white rounded-[20px] p-3.5 cursor-pointer hover:shadow-md transition-all shadow-[0_3px_15px_rgba(0,0,0,0.03)] flex flex-col gap-2.5 border border-slate-200 border-l-[4px] ${borderColor}`}
                       >
                         {/* Top Row: Service Category & Brand Logo */}
@@ -642,8 +651,12 @@ const Dashboard = () => {
                     <div 
                       key={job.id} 
                       onClick={() => {
-                        selectJobForDetails(job.id);
-                        navigate('/technician/active-job');
+                        if (job.isAvailableRequest) {
+                          setExpandedJobId(prev => prev === job.id ? null : job.id);
+                        } else {
+                          selectJobForDetails(job.id);
+                          navigate('/technician/active-job');
+                        }
                       }}
                       className={`bg-white rounded-3xl p-4 transition-all duration-300 flex flex-col gap-3 cursor-pointer border-l-[6px] ${borderLeftColor} ${
                         isExpanded 

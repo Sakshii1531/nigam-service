@@ -8,6 +8,7 @@ import Payment from './pages/Payment';
 import CardPayment from './pages/CardPayment';
 import UpiPayment from './pages/UpiPayment';
 import NetBankingPayment from './pages/NetBankingPayment';
+import PaymentFailure from './pages/PaymentFailure';
 import Booking from './pages/Booking';
 import BookingFlow from './pages/BookingFlow';
 import { BookingProvider } from './context/BookingContext';
@@ -309,6 +310,7 @@ function App() {
         <Route path="/payment/card" element={<CardPayment />} />
         <Route path="/payment/upi" element={<UpiPayment />} />
         <Route path="/payment/netbanking" element={<NetBankingPayment />} />
+        <Route path="/payment-failure" element={<PaymentFailure />} />
         <Route path="/refrigerator-details" element={<RefrigeratorDetails />} />
         <Route path="/service-details" element={<ServiceDetails />} />
         <Route path="/booking" element={<Booking />} />

@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { useAuth } from './AuthContext';
+import { apiRequest } from '../lib/apiClient';
 
 const TechContext = createContext(null);
 
@@ -216,10 +218,11 @@ const INITIAL_NOTIFICATIONS = [
   { id: 2, type: 'Claims', title: 'Claim Approved', message: 'LG Claim LG88421 approved', time: '15m ago', read: false },
   { id: 3, type: 'Payments', title: 'Payment Received', message: '₹2,200 received from Rohit Sharma', time: '1h ago', read: false },
   { id: 4, type: 'Claims', title: 'Low Stock Alert', message: 'Capacitor 45/5 MFD is low', time: '2h ago', read: false },
-  { id: 5, type: 'Jobs', title: 'Training Update', message: 'New course available', time: '1d ago', read: false }
+{ id: 5, type: 'Jobs', title: 'Training Update', message: 'New course available', time: '1d ago', read: false }
 ];
 
 export const TechProvider = ({ children }) => {
+  const { user } = useAuth();
   const [jobs, setJobs] = useState(INITIAL_JOBS);
   const [activeSpecs, setActiveSpecs] = useState(['AC', 'Refrigerator', 'Washing Machine']);
   const toggleSpec = useCallback((spec) => {
@@ -234,6 +237,71 @@ export const TechProvider = ({ children }) => {
     completedToday: 3,
     completedTotal: 154
   });
+
+  // Fetch real jobs from backend when logged in as technician
+  const fetchRealJobs = useCallback(async () => {
+    if (!user || user.role !== 'technician') return;
+    try {
+      const availableSRs = await apiRequest('/tech/jobs/available', { auth: true }) || [];
+      const activeJobs = await apiRequest('/tech/jobs/active', { auth: true }) || [];
+
+      const mappedAvailable = availableSRs.map((sr) => ({
+        id: sr.id || sr._id,
+        type: sr.booking?.totalPrice === 0 ? (sr.extendedWarrantyOrder ? 'NCC Extended Warranty' : sr.amcSubscription ? 'AMC Visit' : 'Brand Warranty') : 'NCC Paid Service',
+        category: `${sr.category} Repair`,
+        product: sr.description || `${sr.category} Service`,
+        brand: sr.booking?.brand || sr.category || 'Brand',
+        model: sr.model || 'Universal Model',
+        serialNo: sr.serialNo || 'SNY-12345',
+        complaint: sr.description || 'Service booking request',
+        estEarnings: sr.booking ? Math.round(sr.booking.totalPrice * 0.3) : 150,
+        price: sr.booking ? sr.booking.totalPrice : 299,
+        distance: 2.3,
+        customerName: sr.booking?.fullName || sr.user?.name || 'Customer',
+        phone: sr.booking?.mobile || sr.user?.phone || '9876543210',
+        address: sr.booking?.address ? `${sr.booking.address.house || ''}, ${sr.booking.address.landmark || ''}, ${sr.booking.address.city || ''} ${sr.booking.address.pincode || ''}` : 'Customer Address',
+        isD2C: sr.booking ? sr.booking.totalPrice > 0 : true,
+        isPriority: sr.priority === 'High' || sr.priority === 'Critical',
+        isRecommended: true,
+        isAvailableRequest: true,
+        serviceRequestId: sr.id || sr._id,
+      }));
+
+      const mappedActive = activeJobs.map((job) => {
+        const sr = job.serviceRequest;
+        return {
+          id: job.id || job._id,
+          type: job.type,
+          category: `${sr?.category || 'Service'} Repair`,
+          product: sr?.description || 'Service Job',
+          brand: sr?.booking?.brand || 'Brand',
+          model: sr?.model || 'Universal Model',
+          serialNo: sr?.serialNo || 'SNY-12345',
+          complaint: sr?.description || 'Service Job',
+          estEarnings: job.estEarnings,
+          price: job.price,
+          distance: 1.8,
+          customerName: sr?.booking?.fullName || sr?.user?.name || 'Customer',
+          phone: sr?.booking?.mobile || sr?.user?.phone || '9876543210',
+          address: sr?.booking?.address ? `${sr.booking.address.house || ''}, ${sr.booking.address.landmark || ''}, ${sr.booking.address.city || ''} ${sr.booking.address.pincode || ''}` : 'Customer Address',
+          isD2C: job.isD2C,
+          isPriority: job.isPriority,
+          isRecommended: job.isRecommended,
+          isAvailableRequest: false,
+          serviceRequestId: sr?.id || sr?._id,
+          activeStep: job.activeStep,
+        };
+      });
+
+      setJobs([...mappedActive, ...mappedAvailable, ...INITIAL_JOBS.filter(j => !mappedActive.some(ma => ma.serviceRequestId === j.id))]);
+    } catch (err) {
+      console.error('Failed to fetch real jobs for technician:', err);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    fetchRealJobs();
+  }, [fetchRealJobs]);
 
   // Active Job flow states
   // step values: 
@@ -274,22 +342,38 @@ export const TechProvider = ({ children }) => {
     setActiveStep('details');
   }, []);
 
-  const acceptJob = useCallback((id) => {
-    setActiveJobId(id);
-    setActiveStep('assigned');
-    // Add a notification
-    setNotifications(prev => [
-      {
-        id: Date.now(),
-        type: 'Jobs',
-        title: 'Job Accepted',
-        message: `You accepted job #${id} for ${jobs.find(j => j.id === id)?.customerName}.`,
-        time: 'Just now',
-        read: false
-      },
-      ...prev
-    ]);
-  }, [jobs]);
+  const acceptJob = useCallback(async (id) => {
+    const jobObj = jobs.find(j => j.id === id);
+    if (jobObj?.isAvailableRequest) {
+      try {
+        const result = await apiRequest(`/tech/jobs/accept/${jobObj.serviceRequestId}`, {
+          method: 'POST',
+          body: { type: jobObj.type },
+          auth: true,
+        });
+        await fetchRealJobs();
+        setActiveJobId(result.id || result._id);
+        setActiveStep('assigned');
+      } catch (err) {
+        console.error('Failed to accept job on backend:', err);
+        alert(`Failed to accept job: ${err.message}`);
+      }
+    } else {
+      setActiveJobId(id);
+      setActiveStep('assigned');
+      setNotifications(prev => [
+        {
+          id: Date.now(),
+          type: 'Jobs',
+          title: 'Job Accepted',
+          message: `You accepted job #${id} for ${jobs.find(j => j.id === id)?.customerName}.`,
+          time: 'Just now',
+          read: false
+        },
+        ...prev
+      ]);
+    }
+  }, [jobs, fetchRealJobs]);
 
   const advanceStep = useCallback(() => {
     setActiveStep(prev => {

@@ -4,6 +4,7 @@ import {
   ArrowLeft, Check, ChevronDown, ChevronUp, MapPin, User, Phone, CalendarDays,
   Sun, Moon, Info, ShieldCheck, ArrowRight
 } from 'lucide-react';
+import { apiRequest } from '../lib/apiClient';
 
 import { getCatalogEntry } from '../data/bookingCatalog';
 
@@ -143,6 +144,7 @@ const BookingFlow = () => {
 
   // ── State ──────────────────────────────────────────────────────────────────
   const [step, setStep] = useState(1);
+  const [submitting, setSubmitting] = useState(false);
 
   // Step 1
   const [productType, setProductType] = useState('');
@@ -227,29 +229,85 @@ const BookingFlow = () => {
     else { setStep(s => s - 1); window.scrollTo(0, 0); }
   };
 
-  const handleConfirmBooking = () => {
+  const handleConfirmBooking = async () => {
     const svcName = selectedServiceData?.name || catKey + ' Service';
-    // Navigate to payment page with booking details as state
-    navigate('/payment', {
-      state: {
-        // For Payment.jsx display
-        productName:  svcName,
-        price:        paymentMode === 'advance' ? advanceAmt : totalPrice,
-        // Booking details to carry to /booking-success
-        bookingMeta: {
-          service:     svcName,
-          category:    catKey,
+    
+    if (paymentMode === 'after') {
+      setSubmitting(true);
+      try {
+        const result = await apiRequest('/bookings', {
+          method: 'POST',
+          body: {
+            category: catKey,
+            productType: productType,
+            serviceSlug: service,
+            brand: brand,
+            quantity: quantity,
+            scheduledDate: new Date().toISOString(),
+            timeSlot: { date: selectedDate || '', time: timeGroup || '' },
+            address: address,
+            fullName: fullName,
+            mobile: mobile,
+            paymentMode: 'after',
+          },
+          auth: true,
+        });
+
+        // Navigate to success page with real serviceRequestId returned from backend
+        const params = new URLSearchParams({
+          type: 'service',
+          serviceRequestId: result.serviceRequest?.id || result.serviceRequest?._id || '',
+          service: svcName,
+          category: catKey,
           productType: productType,
-          brand:       brand,
-          quantity:    quantity,
-          date:        selectedDate,
-          timeGroup:   timeGroup,
-          totalPrice:  totalPrice,
-          advanceAmt:  advanceAmt,
-          paymentMode: paymentMode,
+          brand: brand || '',
+          quantity: String(quantity),
+          date: selectedDate || '',
+          timeGroup: timeGroup || '',
+          totalPrice: String(totalPrice),
+          advanceAmt: '0',
+          paymentMode: 'after',
+        });
+        navigate(`/booking-success?${params.toString()}`);
+      } catch (err) {
+        console.error('Failed to create booking:', err);
+        navigate('/payment-failure', {
+          state: {
+            errorMessage: err.message || 'Failed to register your service booking on the server.',
+            productName: svcName,
+            price: totalPrice,
+          }
+        });
+      } finally {
+        setSubmitting(false);
+      }
+    } else {
+      // Navigate to payment page with booking details as state
+      navigate('/payment', {
+        state: {
+          // For Payment.jsx display
+          productName:  svcName,
+          price:        paymentMode === 'advance' ? advanceAmt : totalPrice,
+          // Booking details to carry to /booking-success
+          bookingMeta: {
+            service:     svcName,
+            serviceSlug: service,
+            category:    catKey,
+            productType: productType,
+            brand:       brand,
+            quantity:    quantity,
+            date:        selectedDate,
+            timeGroup:   timeGroup,
+            totalPrice:  totalPrice,
+            advanceAmt:  advanceAmt,
+            paymentMode: paymentMode,
+            address:     address,
+            fullName:    fullName,
+            mobile:      mobile,
+          },
         },
-      },
-    });
+      });
+    }
   };
 
   // ── Validation per step ────────────────────────────────────────────────────
@@ -283,9 +341,12 @@ const BookingFlow = () => {
     if (step === 1) return 'Continue — Choose Service';
     if (step === 2) return 'Continue — Schedule Visit';
     if (step === 3) return 'Continue — Address & Payment';
+    if (submitting) return 'Booking Service...';
+    if (paymentMode === 'after') return 'Confirm Booking (Pay After Service)';
     return `Pay ₹${advanceAmt} & Confirm Booking`;
   };
   const getBarBtnDisabled = () => {
+    if (submitting) return true;
     if (step === 1) return !step1Valid;
     if (step === 2) return !step2Valid;
     if (step === 3) return !step3Valid;

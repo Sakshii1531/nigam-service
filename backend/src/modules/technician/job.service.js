@@ -34,7 +34,7 @@ function ensureTransition(job, toStep) {
 }
 
 async function findOwnedJob(technicianId, jobId) {
-  const job = await Job.findById(jobId);
+  const job = await Job.findById(jobId).populate({ path: 'serviceRequest', populate: { path: 'user booking' } });
   if (!job) throw new ApiError(404, 'Job not found');
   if (String(job.technician) !== technicianId) throw new ApiError(403, 'Not authorized to access this job');
   return job;
@@ -68,11 +68,15 @@ export async function listAvailableJobs(technicianId) {
     technician: technicianId,
     status: 'Assigned',
     _id: { $nin: acceptedServiceRequestIds },
-  }).sort({ createdAt: -1 });
+  })
+    .populate('user booking')
+    .sort({ createdAt: -1 });
 }
 
 export async function listActiveJobs(technicianId) {
-  return Job.find({ technician: technicianId, activeStep: { $ne: 'completed' } }).sort({ createdAt: -1 });
+  return Job.find({ technician: technicianId, activeStep: { $ne: 'completed' } })
+    .populate({ path: 'serviceRequest', populate: { path: 'user booking' } })
+    .sort({ createdAt: -1 });
 }
 
 export async function getJob(technicianId, id) {
