@@ -17,6 +17,7 @@ import { Technician } from '../technician/technician.model.js';
 import { AMCPlan } from '../warranty-amc-exchange/amcPlan.model.js';
 import { AMCSubscription } from '../warranty-amc-exchange/amcSubscription.model.js';
 import { Brand } from '../super-admin/brand.model.js';
+import { Job } from '../technician/job.model.js';
 
 // Non-production only (mounted conditionally in app.js) — exercises the Phase 2
 // shared plumbing (pagination, validation-error shape, file upload, id generation)
@@ -234,6 +235,46 @@ if (isTest) {
   const signPaymentSchema = z.object({ orderId: z.string().min(1), paymentId: z.string().min(1) });
   devRouter.post('/_dev/razorpay-sign', validate(signPaymentSchema), (req, res) => {
     ok(res, { signature: signForTesting(req.body) });
+  });
+
+  // Creates a minimal ServiceRequest + Job for E2E live-tracking specs so they
+  // don't need to run a full booking + acceptance flow just to get a job ID.
+  const testJobSchema = z.object({ technicianId: z.string().min(1) });
+  devRouter.post('/_dev/test-job', validate(testJobSchema), async (req, res, next) => {
+    try {
+      const tech = await Technician.findById(req.body.technicianId);
+      if (!tech) throw new ApiError(404, 'Technician not found');
+
+      // Seed a stub customer
+      const customer = await User.create({
+        role: ROLES.CUSTOMER,
+        phone: String(Date.now()),
+        name: 'E2E Tracking Customer',
+        passwordHash: 'stub',
+        status: 'Active',
+      });
+
+      const { createServiceRequest } = await import('../service-requests/serviceRequest.service.js');
+      const sr = await createServiceRequest({
+        user: customer._id,
+        technician: tech._id,
+        category: tech.specs?.[0] || 'AC',
+        description: 'E2E tracking fixture',
+        requestMode: 'B2C',
+      });
+
+      const job = await Job.create({
+        serviceRequest: sr._id,
+        technician: tech._id,
+        type: 'NCC Paid Service',
+        isD2C: true,
+        activeStep: 'ontheway',
+      });
+
+      ok(res, { jobId: job.id, serviceRequestId: sr.id }, {}, 201);
+    } catch (err) {
+      next(err);
+    }
   });
 
   devRouter.get('/_dev/amc-subscription/:id', async (req, res, next) => {

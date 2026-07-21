@@ -32,6 +32,7 @@ import { teamRouter } from './modules/brand-admin/team.routes.js';
 import { brandRoleRouter } from './modules/brand-admin/brandRole.routes.js';
 import { brandUserRouter } from './modules/brand-admin/brandUser.routes.js';
 import { generatedDocumentRouter } from './modules/brand-admin/generatedDocument.routes.js';
+import { brandEscalationRouter } from './modules/brand-admin/brandEscalation.routes.js';
 import { brandRouter } from './modules/super-admin/brand.routes.js';
 import { cityRouter } from './modules/super-admin/city.routes.js';
 import { servicePartnerRouter } from './modules/super-admin/servicePartner.routes.js';
@@ -51,6 +52,7 @@ import { superAdminExchangeRequestRouter } from './modules/super-admin/exchangeR
 import { chatRouter } from './modules/chat/chat.routes.js';
 import { notificationRouter } from './modules/notifications/notification.routes.js';
 import { reviewRouter } from './modules/reviews/review.routes.js';
+import { callRouter } from './modules/calls/call.routes.js';
 import { devRouter } from './modules/shared/dev.routes.js';
 import { LOCAL_UPLOAD_DIR, isFileStorageConfigured } from './modules/shared/fileUpload.js';
 
@@ -90,7 +92,7 @@ export function createApp() {
     );
   }
 
-  // Local-disk upload fallback only ever gets written to when S3 isn't configured
+  // Local-disk upload fallback only ever gets written to when Cloudinary isn't configured
   // (fileUpload.js) — serving it statically here is a no-op otherwise.
   if (!isFileStorageConfigured) app.use('/uploads', express.static(LOCAL_UPLOAD_DIR));
 
@@ -121,6 +123,7 @@ export function createApp() {
   app.use('/api/v1/brand/roles', brandRoleRouter);
   app.use('/api/v1/brand/users', brandUserRouter);
   app.use('/api/v1/brand/documents', generatedDocumentRouter);
+  app.use('/api/v1/brand/escalations', brandEscalationRouter);
   app.use('/api/v1/super-admin/brands', brandRouter);
   app.use('/api/v1/super-admin/cities', cityRouter);
   app.use('/api/v1/super-admin/service-partners', servicePartnerRouter);
@@ -140,6 +143,7 @@ export function createApp() {
   app.use('/api/v1/chat', chatRouter);
   app.use('/api/v1/notifications', notificationRouter);
   app.use('/api/v1/reviews', reviewRouter);
+  app.use('/api/v1/calls', callRouter);
   if (!isProd) app.use('/api/v1', devRouter);
 
   app.use(notFoundHandler);

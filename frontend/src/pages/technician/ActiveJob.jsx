@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { apiRequest } from '../../lib/apiClient';
 import { 
   ArrowLeft, Bell, Briefcase, ClipboardList, Calendar, User, Wrench, 
   MapPin, Phone, MessageSquare, Shield, Share2, MoreVertical, CheckCircle, 
@@ -168,6 +169,35 @@ const ActiveJob = () => {
     addChatMessage,
     chatMessages
   } = useTech();
+
+  // ── Click-to-call relay ────────────────────────────────────────────────────
+  // POST /api/v1/calls/initiate tells the backend to ring the customer via our
+  // Twilio virtual number — neither party's real number is exposed to the other.
+  const [callLoading, setCallLoading] = useState(false);
+
+  const handleCallCustomer = async () => {
+    if (!activeJob?.serviceRequestId && !activeJob?.id) return;
+    const srId = activeJob.serviceRequestId || activeJob.id;
+    setCallLoading(true);
+    try {
+      await apiRequest('/calls/initiate', {
+        method: 'POST',
+        body: { serviceRequestId: srId },
+        auth: true,
+      });
+      // The customer's phone will ring from the Twilio virtual number.
+      // No UI change needed — the call happens on the native phone layer.
+    } catch (err) {
+      console.error('[calls] Click-to-call failed:', err.message);
+      // Graceful degradation: if Twilio is not yet configured (503), the
+      // button just fails silently so UX is unaffected during dev/staging.
+      if (err.status !== 503) {
+        alert(`Call failed: ${err.message}`);
+      }
+    } finally {
+      setCallLoading(false);
+    }
+  };
 
   const isSpecialWarrantyJob = activeJob && (
     activeJob.type === 'AMC Visit' || 
@@ -984,12 +1014,14 @@ const ActiveJob = () => {
                     <p className="text-xs text-slate-600 mt-0.5 font-normal">{activeJob.phone}</p>
                   </div>
                   <div className="flex gap-2.5">
-                    <a
-                      href={`tel:${activeJob.phone}`}
-                      className="w-10 h-10 rounded-full bg-[#E8F1FF] flex items-center justify-center text-[#1A73E8] hover:bg-[#D4E5FF] transition-colors"
+                  <button
+                      onClick={handleCallCustomer}
+                      disabled={callLoading}
+                      title={callLoading ? 'Connecting…' : 'Call Customer (masked relay)'}
+                      className="w-10 h-10 rounded-full bg-[#E8F1FF] flex items-center justify-center text-[#1A73E8] hover:bg-[#D4E5FF] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Phone className="h-4.5 w-4.5 stroke-[2.5]" />
-                    </a>
+                    </button>
                     <button 
                       onClick={() => setChatOpen(true)} 
                       className="w-10 h-10 rounded-full bg-[#E8F1FF] flex items-center justify-center text-[#1A73E8] hover:bg-[#D4E5FF] transition-colors"

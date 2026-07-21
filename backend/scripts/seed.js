@@ -22,6 +22,7 @@ import { ExchangeCampaign } from '../src/modules/warranty-amc-exchange/exchangeC
 import { AMCPlan } from '../src/modules/warranty-amc-exchange/amcPlan.model.js';
 import { AMCSubscription } from '../src/modules/warranty-amc-exchange/amcSubscription.model.js';
 import { ExtendedWarrantyOrder } from '../src/modules/warranty-amc-exchange/extendedWarrantyOrder.model.js';
+import { Notification } from '../src/modules/notifications/notification.model.js';
 import { hashPassword } from '../src/modules/auth/password.js';
 import { ROLES } from '../src/config/constants.js';
 import { CATALOG_SEED } from './catalogSeedData.js';
@@ -323,6 +324,7 @@ async function upsertPlatformFixtures() {
 async function main() {
   await connectDB();
   await ensureIndexes();
+  await Notification.deleteMany({});
 
   const permissions = await upsertPermissions();
   const brand = await upsertBrand();

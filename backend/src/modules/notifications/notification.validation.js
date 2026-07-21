@@ -18,5 +18,10 @@ export const idParamSchema = z.object({ id: z.string().min(1) });
 export const updatePreferencesSchema = z.object({
   push: z.boolean().optional(),
   sms: z.boolean().optional(),
+  whatsapp: z.boolean().optional(),
   email: z.boolean().optional(),
+});
+
+export const deviceTokenSchema = z.object({
+  token: z.string().min(1, 'FCM device token is required'),
 });

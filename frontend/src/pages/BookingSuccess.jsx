@@ -1,14 +1,36 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   ArrowRight, Phone, Star,
   Wrench, Snowflake, Tag, Package, CalendarDays, Clock, Flame, CheckSquare,
 } from 'lucide-react';
+import { apiRequest } from '../lib/apiClient';
 
 const BookingSuccess = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const p = new URLSearchParams(location.search);
+  const [callLoading, setCallLoading] = useState(false);
+  const serviceRequestId = p.get('serviceRequestId') || p.get('bookingId');
+
+  const handleCallTechnician = async () => {
+    if (!serviceRequestId) return;
+    setCallLoading(true);
+    try {
+      await apiRequest('/calls/initiate', {
+        method: 'POST',
+        body: { serviceRequestId },
+        auth: true,
+      });
+    } catch (err) {
+      console.error('[calls] Click-to-call failed:', err.message);
+      if (err.status !== 503) {
+        alert(`Call failed: ${err.message}`);
+      }
+    } finally {
+      setCallLoading(false);
+    }
+  };
 
   const service     = p.get('service')     || 'Installation';
   const category    = p.get('category')    || 'AC';
@@ -140,7 +162,12 @@ const BookingSuccess = () => {
                 </div>
               </div>
               {/* Call button */}
-              <button className="w-10 h-10 rounded-full bg-[#EAF4FF] flex items-center justify-center flex-shrink-0 active:scale-90 transition-all">
+              <button
+                onClick={handleCallTechnician}
+                disabled={callLoading}
+                title={callLoading ? 'Connecting…' : 'Call Technician (masked relay)'}
+                className="w-10 h-10 rounded-full bg-[#EAF4FF] flex items-center justify-center flex-shrink-0 active:scale-90 transition-all disabled:opacity-50"
+              >
                 <Phone className="w-4 h-4 text-[#0D47A1]" />
               </button>
             </div>

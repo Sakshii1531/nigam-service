@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { v2 as cloudinary } from 'cloudinary';
+import sharp from 'sharp';
 import { env, isCloudinaryConfigured, isProd } from '../../config/env.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 
@@ -46,6 +47,24 @@ export const upload = multer({
   },
 });
 
+async function convertToWebpIfNeeded(file) {
+  if (file.mimetype.startsWith('image/') && file.mimetype !== 'image/webp') {
+    try {
+      const webpBuffer = await sharp(file.buffer)
+        .webp({ quality: 80 })
+        .toBuffer();
+      file.buffer = webpBuffer;
+      file.mimetype = 'image/webp';
+      const ext = path.extname(file.originalname);
+      const base = path.basename(file.originalname, ext);
+      file.originalname = `${base}.webp`;
+    } catch (err) {
+      console.error('[fileUpload] Failed to convert image to WebP format:', err.message);
+      // Fall back to original image format on error
+    }
+  }
+}
+
 async function saveLocal(file) {
   const ext = path.extname(file.originalname) || '';
   const filename = `${randomUUID()}${ext}`;
@@ -78,6 +97,7 @@ function saveToCloudinary(file) {
 
 export async function storeUploadedFile(file) {
   if (!file) throw new Error('No file provided');
+  await convertToWebpIfNeeded(file);
   if (isFileStorageConfigured) return saveToCloudinary(file);
   if (isProd) throw new ApiError(500, 'File storage is not configured — cannot accept uploads in production');
   return saveLocal(file);

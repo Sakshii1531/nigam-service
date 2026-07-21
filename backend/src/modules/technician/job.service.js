@@ -98,7 +98,19 @@ export async function acceptJob(technicianId, serviceRequestId, { type, amcSubsc
   if (existing) throw new ApiError(400, 'A job already exists for this service request');
 
   const booking = serviceRequest.booking ? await Booking.findById(serviceRequest.booking) : null;
-  const jobType = type || (booking ? 'NCC Paid Service' : 'Brand Warranty');
+
+  // Auto-infer AMC/EW references and job type from serviceRequest if not explicitly passed
+  const resolvedAmcSubId = amcSubscriptionId || serviceRequest.amcSubscription;
+  const resolvedEwOrderId = extendedWarrantyOrderId || serviceRequest.extendedWarrantyOrder;
+
+  let inferredJobType = 'Brand Warranty';
+  if (resolvedEwOrderId) inferredJobType = 'NCC Extended Warranty';
+  else if (resolvedAmcSubId) inferredJobType = 'AMC Visit';
+  else if (serviceRequest.warranty === 'In Warranty') inferredJobType = 'Brand Warranty';
+  else if (booking && booking.totalPrice > 0) inferredJobType = 'NCC Paid Service';
+  else if (booking) inferredJobType = 'NCC Paid Service';
+
+  const jobType = type || inferredJobType;
   const isD2C = jobType === 'NCC Paid Service';
   const price = booking ? booking.totalPrice : 0;
 
@@ -114,8 +126,8 @@ export async function acceptJob(technicianId, serviceRequestId, { type, amcSubsc
     activeStep: 'assigned',
   };
 
-  if (jobType === 'AMC Visit' && amcSubscriptionId) {
-    const subscription = await AMCSubscription.findById(amcSubscriptionId).populate('plan');
+  if (jobType === 'AMC Visit' && resolvedAmcSubId) {
+    const subscription = await AMCSubscription.findById(resolvedAmcSubId).populate('plan');
     if (!subscription) throw new ApiError(404, 'AMC subscription not found');
     // Security: subscriptionId is caller-supplied — without this check a technician
     // could link (and later drain a visit from) any OTHER customer's subscription.
@@ -133,8 +145,8 @@ export async function acceptJob(technicianId, serviceRequestId, { type, amcSubsc
     };
   }
 
-  if (jobType === 'NCC Extended Warranty' && extendedWarrantyOrderId) {
-    const ewOrder = await ExtendedWarrantyOrder.findById(extendedWarrantyOrderId);
+  if (jobType === 'NCC Extended Warranty' && resolvedEwOrderId) {
+    const ewOrder = await ExtendedWarrantyOrder.findById(resolvedEwOrderId);
     if (!ewOrder) throw new ApiError(404, 'Extended warranty order not found');
     // Security: same reasoning as the AMC subscription check above.
     if (String(ewOrder.user) !== String(serviceRequest.user)) {
