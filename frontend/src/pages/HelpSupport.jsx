@@ -20,7 +20,7 @@ const HelpSupport = () => {
       icon: <HelpCircle className="h-5 w-5 text-[#1565C0]" />,
       title: 'Browse FAQs',
       sub: null,
-      onClick: () => alert('Loading FAQs...'),
+      onClick: () => navigate('/faqs'),
     },
     {
       icon: <Ticket className="h-5 w-5 text-[#1565C0]" />,
@@ -60,7 +60,7 @@ const HelpSupport = () => {
       {/* Header */}
       <div className="bg-white px-5 py-4 flex items-center gap-3 sticky top-0 z-50 shadow-sm border-b border-slate-100">
         <button
-          onClick={() => navigate(-1)}
+          onClick={() => navigate('/profile')}
           className="p-1.5 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
         >
           <ArrowLeft className="h-5 w-5 text-slate-700" />
@@ -68,7 +68,7 @@ const HelpSupport = () => {
         <h1 className="text-sm font-black text-slate-900">Help & Support</h1>
       </div>
 
-      <div className="flex flex-col gap-4 px-4 pt-5">
+      <div className="flex flex-col gap-4 px-4 sm:px-6 pt-5 max-w-3xl mx-auto w-full">
 
         {/* Title */}
         <div className="text-center mb-1">
@@ -102,7 +102,7 @@ const HelpSupport = () => {
         {/* Service Areas - separate card */}
         <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-sm">
           <div
-            onClick={() => alert('Loading service areas map...')}
+            onClick={() => alert('Service area coverage is not published in the app yet — contact support for your pincode.')}
             className="px-4 py-3.5 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer"
           >
             <div className="flex items-center gap-3.5">

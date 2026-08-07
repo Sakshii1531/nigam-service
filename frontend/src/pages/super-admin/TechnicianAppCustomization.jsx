@@ -1,11 +1,41 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
-import { 
-  Sparkles, Plus, Trash2, Edit2, Check, Save, Wrench, RefreshCw, 
+import {
+  Sparkles, Plus, Trash2, Edit2, Check, Save, Wrench, RefreshCw,
   Info, Users, Image, Video, Bell, Settings, Award, FileText
 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
+import { apiRequest } from '../../lib/apiClient';
+
+const FALLBACK_BANNER_IMAGE = 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=150';
+
+// The five sections below are authored here and consumed by the technician app.
+// Each row keeps the shape the table markup already expects, so mapping happens
+// only at the API boundary.
+const toBanner = (d) => ({
+  id: d.id,
+  title: d.title || 'Untitled banner',
+  desc: d.description || '',
+  status: d.isActive ? 'Active' : 'Inactive',
+  image: d.imageUrl,
+});
+const toVideo = (d) => ({
+  id: d.id,
+  title: d.title,
+  category: d.category || 'General',
+  duration: d.duration || '—',
+  status: d.isActive ? 'Active' : 'Inactive',
+});
+const toAnnouncement = (d) => ({
+  id: d.id,
+  msg: d.message,
+  date: (d.createdAt || '').slice(0, 10),
+  // `scope` is the targeting axis ('all' | 'city' | 'role'); `region` carries
+  // the audience label the console shows.
+  scope: d.region || 'All Regions',
+});
+const toSkill = (d) => ({ id: d.id, name: d.name, code: d.code, group: d.group || 'General' });
 
 const TechnicianAppCustomization = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -24,120 +54,194 @@ const TechnicianAppCustomization = () => {
   const [showAddAnnounceModal, setShowAddAnnounceModal] = useState(false);
   const [showAddSkillModal, setShowAddSkillModal] = useState(false);
 
-  // 1. BANNERS STATE
-  const [banners, setBanners] = useState([
-    { id: 1, title: 'Safety First Protocol', desc: 'Mandatory mask & gloves on all service requests.', status: 'Active', image: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=150' },
-    { id: 2, title: 'Monsoon Incentives', desc: 'Earn 1.5x coins on bookings completed during rain.', status: 'Active', image: 'https://images.unsplash.com/photo-1534274988757-a28bf1a57c17?w=150' }
-  ]);
-  const [newBanner, setNewBanner] = useState({ title: '', desc: '' });
-
-  const handleAddBanner = (e) => {
-    e.preventDefault();
-    if (!newBanner.title) return;
-    setBanners([...banners, {
-      id: Date.now(),
-      title: newBanner.title,
-      desc: newBanner.desc || 'Technician Alert Announcement Banner',
-      status: 'Active',
-      image: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=150'
-    }]);
-    setNewBanner({ title: '', desc: '' });
-    showToast('New technician banner published!');
-  };
-
-  const handleDeleteBanner = (id) => {
-    setBanners(banners.filter(b => b.id !== id));
-    showToast('Banner removed.');
-  };
-
-  // 2. VIDEOS STATE
-  const [videos, setVideos] = useState([
-    { id: 1, title: 'Inverter AC Troubleshooting', category: 'AC Service', duration: '12 mins', status: 'Active' },
-    { id: 2, title: 'Customer Communication Tips', category: 'Soft Skills', duration: '8 mins', status: 'Active' }
-  ]);
-  const [newVideo, setNewVideo] = useState({ title: '', category: '', duration: '' });
-
-  const handleAddVideo = (e) => {
-    e.preventDefault();
-    if (!newVideo.title) return;
-    setVideos([...videos, {
-      id: Date.now(),
-      title: newVideo.title,
-      category: newVideo.category || 'General',
-      duration: newVideo.duration || '10 mins',
-      status: 'Active'
-    }]);
-    setNewVideo({ title: '', category: '', duration: '' });
-    showToast('Training video added successfully!');
-  };
-
-  const handleDeleteVideo = (id) => {
-    setVideos(videos.filter(v => v.id !== id));
-    showToast('Video deleted.');
-  };
-
-  // 3. ANNOUNCEMENTS STATE
-  const [announcements, setAnnouncements] = useState([
-    { id: 1, msg: 'App version 2.4 update release is scheduled tonight at 12:00 AM.', date: '2026-07-13', scope: 'All Cities' },
-    { id: 2, msg: 'Service Partner payout cycle has been switched to Wednesday mornings.', date: '2026-07-10', scope: 'Delhi & NCR' }
-  ]);
-  const [newAnnounce, setNewAnnounce] = useState({ msg: '', scope: '' });
-
-  const handleAddAnnounce = (e) => {
-    e.preventDefault();
-    if (!newAnnounce.msg) return;
-    setAnnouncements([...announcements, {
-      id: Date.now(),
-      msg: newAnnounce.msg,
-      date: new Date().toISOString().split('T')[0],
-      scope: newAnnounce.scope || 'All Regions'
-    }]);
-    setNewAnnounce({ msg: '', scope: '' });
-    showToast('System announcement broadcasted!');
-  };
-
-  const handleDeleteAnnounce = (id) => {
-    setAnnouncements(announcements.filter(a => a.id !== id));
-    showToast('Announcement recalled.');
-  };
-
-  // 4. SKILLS STATE
-  const [skills, setSkills] = useState([
-    { id: 1, name: 'Split AC Installation', code: 'AC-SPLIT-INST', group: 'HVAC' },
-    { id: 2, name: 'Double Door Refrigerator Repair', code: 'REF-DBL-REP', group: 'Appliances' },
-    { id: 3, name: 'RO Filter Membrane Cleaning', code: 'RO-MEM-CLN', group: 'Water Purifier' }
-  ]);
-  const [newSkill, setNewSkill] = useState({ name: '', code: '', group: '' });
-
-  const handleAddSkill = (e) => {
-    e.preventDefault();
-    if (!newSkill.name || !newSkill.code) return;
-    setSkills([...skills, {
-      id: Date.now(),
-      name: newSkill.name,
-      code: newSkill.code.toUpperCase(),
-      group: newSkill.group || 'General'
-    }]);
-    setNewSkill({ name: '', code: '', group: '' });
-    showToast('Dynamic skill tag added!');
-  };
-
-  const handleDeleteSkill = (id) => {
-    setSkills(skills.filter(s => s.id !== id));
-    showToast('Skill tag deleted.');
-  };
-
-  // 5. SETTINGS STATE
+  const [banners, setBanners] = useState([]);
+  const [videos, setVideos] = useState([]);
+  const [announcements, setAnnouncements] = useState([]);
+  const [skills, setSkills] = useState([]);
   const [settings, setSettings] = useState({
     offlineMode: true,
     autoAssign: false,
     gpsInterval: 60,
     payoutCycle: 'weekly'
   });
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
-  const handleSaveSettings = (e) => {
+  const [newBanner, setNewBanner] = useState({ title: '', desc: '' });
+  const [newVideo, setNewVideo] = useState({ title: '', category: '', duration: '' });
+  const [newAnnounce, setNewAnnounce] = useState({ msg: '', scope: '' });
+  const [newSkill, setNewSkill] = useState({ name: '', code: '', group: '' });
+
+  const loadAll = useCallback(async () => {
+    setLoading(true);
+    setLoadError('');
+    try {
+      // The console has to show inactive rows too, so banners/videos use the
+      // /admin readers rather than the publish-filtered public ones.
+      const [bannerRes, videoRes, announceRes, skillRes, settingRes] = await Promise.all([
+        apiRequest('/cms/banners/admin?app=technician', { auth: true }),
+        apiRequest('/cms/videos/admin', { auth: true }),
+        apiRequest('/cms/announcements', { auth: true }),
+        apiRequest('/cms/skills', { auth: true }),
+        apiRequest('/cms/app-settings/technician'),
+      ]);
+      setBanners((bannerRes.data || []).map(toBanner));
+      setVideos((videoRes.data || []).map(toVideo));
+      setAnnouncements((announceRes.data || []).map(toAnnouncement));
+      setSkills((skillRes.data || []).map(toSkill));
+      setSettings((prev) => ({ ...prev, ...(settingRes.data || {}) }));
+    } catch (err) {
+      setLoadError(err.message || 'Failed to load technician app content.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadAll(); }, [loadAll]);
+
+  // 1. BANNERS
+  const handleAddBanner = async (e) => {
     e.preventDefault();
-    showToast('Technician app system settings updated.');
+    if (!newBanner.title) return;
+    try {
+      const res = await apiRequest('/cms/banners', {
+        method: 'POST',
+        auth: true,
+        body: {
+          imageUrl: FALLBACK_BANNER_IMAGE,
+          title: newBanner.title,
+          description: newBanner.desc || 'Technician Alert Announcement Banner',
+          app: 'technician',
+        },
+      });
+      setBanners((prev) => [...prev, toBanner(res.data)]);
+      setNewBanner({ title: '', desc: '' });
+      showToast('New technician banner published!');
+    } catch (err) {
+      showToast(err.message || 'Could not publish banner.');
+    }
+  };
+
+  const handleDeleteBanner = async (id) => {
+    try {
+      await apiRequest(`/cms/banners/${id}`, { method: 'DELETE', auth: true });
+      setBanners((prev) => prev.filter((b) => b.id !== id));
+      showToast('Banner removed.');
+    } catch (err) {
+      showToast(err.message || 'Could not remove banner.');
+    }
+  };
+
+  // 2. VIDEOS
+  const handleAddVideo = async (e) => {
+    e.preventDefault();
+    if (!newVideo.title) return;
+    try {
+      const res = await apiRequest('/cms/videos', {
+        method: 'POST',
+        auth: true,
+        body: {
+          title: newVideo.title,
+          category: newVideo.category || 'General',
+          duration: newVideo.duration || '10 mins',
+        },
+      });
+      setVideos((prev) => [...prev, toVideo(res.data)]);
+      setNewVideo({ title: '', category: '', duration: '' });
+      showToast('Training video added successfully!');
+    } catch (err) {
+      showToast(err.message || 'Could not add video.');
+    }
+  };
+
+  const handleDeleteVideo = async (id) => {
+    try {
+      await apiRequest(`/cms/videos/${id}`, { method: 'DELETE', auth: true });
+      setVideos((prev) => prev.filter((v) => v.id !== id));
+      showToast('Video deleted.');
+    } catch (err) {
+      showToast(err.message || 'Could not delete video.');
+    }
+  };
+
+  // 3. ANNOUNCEMENTS
+  const handleAddAnnounce = async (e) => {
+    e.preventDefault();
+    if (!newAnnounce.msg) return;
+    try {
+      const region = newAnnounce.scope.trim();
+      const res = await apiRequest('/cms/announcements', {
+        method: 'POST',
+        auth: true,
+        // A named region narrows the broadcast to those cities; blank means
+        // everyone.
+        body: { message: newAnnounce.msg, scope: region ? 'city' : 'all', region },
+      });
+      setAnnouncements((prev) => [toAnnouncement(res.data), ...prev]);
+      setNewAnnounce({ msg: '', scope: '' });
+      showToast('System announcement broadcasted!');
+    } catch (err) {
+      showToast(err.message || 'Could not broadcast announcement.');
+    }
+  };
+
+  const handleDeleteAnnounce = async (id) => {
+    try {
+      await apiRequest(`/cms/announcements/${id}`, { method: 'DELETE', auth: true });
+      setAnnouncements((prev) => prev.filter((a) => a.id !== id));
+      showToast('Announcement recalled.');
+    } catch (err) {
+      showToast(err.message || 'Could not recall announcement.');
+    }
+  };
+
+  // 4. SKILLS
+  const handleAddSkill = async (e) => {
+    e.preventDefault();
+    if (!newSkill.name || !newSkill.code) return;
+    try {
+      const res = await apiRequest('/cms/skills', {
+        method: 'POST',
+        auth: true,
+        body: {
+          name: newSkill.name,
+          code: newSkill.code.toUpperCase(),
+          group: newSkill.group || 'General',
+        },
+      });
+      setSkills((prev) => [...prev, toSkill(res.data)]);
+      setNewSkill({ name: '', code: '', group: '' });
+      showToast('Dynamic skill tag added!');
+    } catch (err) {
+      showToast(err.message || 'Could not add skill.');
+    }
+  };
+
+  const handleDeleteSkill = async (id) => {
+    try {
+      await apiRequest(`/cms/skills/${id}`, { method: 'DELETE', auth: true });
+      setSkills((prev) => prev.filter((s) => s.id !== id));
+      showToast('Skill tag deleted.');
+    } catch (err) {
+      showToast(err.message || 'Could not delete skill.');
+    }
+  };
+
+  // 5. SETTINGS — stored as flat key/value rows under the 'technician' app.
+  const handleSaveSettings = async (e) => {
+    e.preventDefault();
+    try {
+      for (const [key, value] of Object.entries(settings)) {
+        await apiRequest('/cms/app-settings/technician', {
+          method: 'PUT',
+          auth: true,
+          body: { key, value },
+        });
+      }
+      showToast('Technician app system settings updated.');
+    } catch (err) {
+      showToast(err.message || 'Could not save settings.');
+    }
   };
 
   return (
@@ -157,6 +261,23 @@ const TechnicianAppCustomization = () => {
             <div className="fixed top-20 right-8 bg-[#0D47A1] text-white font-bold py-3 px-6 rounded-xl shadow-2xl z-50 animate-bounce flex items-center gap-2 text-xs">
               <Check className="h-4.5 w-4.5" />
               <span>{toastMessage}</span>
+            </div>
+          )}
+
+          {loading && (
+            <div className="bg-white border border-slate-100 rounded-xl p-4 text-xs font-bold text-slate-400">
+              Loading technician app content…
+            </div>
+          )}
+          {loadError && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center justify-between gap-4">
+              <span className="text-xs font-bold text-red-600">{loadError}</span>
+              <button
+                onClick={loadAll}
+                className="text-[11px] font-extrabold text-red-700 bg-white border border-red-200 px-3 py-1.5 rounded-lg flex items-center gap-1.5"
+              >
+                <RefreshCw className="h-3.5 w-3.5" /> Retry
+              </button>
             </div>
           )}
 

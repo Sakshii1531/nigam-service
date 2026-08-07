@@ -63,11 +63,12 @@ function getDerivedFields(tracking) {
     tracking.technician?.user?.name ||
     tracking.technician?.name ||
     'Unknown Technician';
+  const techPhone = tracking.technician?.phone || tracking.technician?.user?.phone || '';
   const customerName =
     tracking.job?.serviceRequest?.user?.name || 'Unknown Customer';
   const jobHumanId = tracking.job?.humanId || tracking.job?.id || 'N/A';
 
-  return { techName, customerName, jobHumanId };
+  return { techName, techPhone, customerName, jobHumanId };
 }
 
 const Tracking = () => {
@@ -396,7 +397,7 @@ const Tracking = () => {
 
               {/* Selected job overlay card */}
               {selectedJob && !mapError && (() => {
-                const { techName, customerName, jobHumanId } = getDerivedFields(selectedJob);
+                const { techName, techPhone, customerName, jobHumanId } = getDerivedFields(selectedJob);
                 const colors = STATUS_COLORS[selectedJob.status] || STATUS_COLORS['On the way'];
                 return (
                   <div className="absolute bottom-8 right-8 bg-white p-4 rounded-xl shadow-xl border border-[#E2E8F0] max-w-xs w-full z-20 animate-in slide-in-from-bottom-2">
@@ -425,12 +426,20 @@ const Tracking = () => {
                           )}
                         </div>
                         <div className="flex gap-2 justify-end pt-2">
-                          <button
-                            onClick={() => showToast(`Contacting ${techName}...`)}
-                            className="px-3 py-1 bg-slate-100 hover:bg-[#EEF4FF] text-[#0D47A1] text-xs font-bold rounded-lg transition-colors flex items-center gap-1 border border-slate-200"
-                          >
-                            <Phone size={12} /> Contact
-                          </button>
+                          {/* Dials the technician's real number. This used to
+                              show "Contacting <name>…" and place no call. */}
+                          {techPhone ? (
+                            <a
+                              href={`tel:${techPhone}`}
+                              className="px-3 py-1 bg-slate-100 hover:bg-[#EEF4FF] text-[#0D47A1] text-xs font-bold rounded-lg transition-colors flex items-center gap-1 border border-slate-200"
+                            >
+                              <Phone size={12} /> {techPhone}
+                            </a>
+                          ) : (
+                            <span className="px-3 py-1 bg-slate-50 text-slate-400 text-xs font-bold rounded-lg border border-slate-200 flex items-center gap-1">
+                              <Phone size={12} /> No number on file
+                            </span>
+                          )}
                           <button
                             onClick={() => setSelectedJob(null)}
                             className="px-3 py-1 bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-600 text-xs font-bold rounded-lg transition-colors border border-slate-200"

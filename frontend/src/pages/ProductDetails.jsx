@@ -4,11 +4,14 @@ import {
   ArrowLeft, ShoppingCart, Star, ShieldCheck, Check, 
   Trash2, CreditCard, ShoppingBag, Truck, Info, ChevronRight, X
 } from 'lucide-react';
+import { apiRequest } from '../lib/apiClient';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '../context/AuthContext';
 
 const ProductDetails = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
   
   // Extract product ID from URL query parameters
   const queryParams = new URLSearchParams(location.search);
@@ -23,201 +26,43 @@ const ProductDetails = () => {
   // Checkout Modal State
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [checkoutStep, setCheckoutStep] = useState('details'); // 'details', 'processing', 'success'
-  const [fullName, setFullName] = useState('Sakshi Dwivedi');
-  const [phone, setPhone] = useState('+91 98765 43210');
-  const [address, setAddress] = useState('Flat 402, Royal Residency, Civil Lines, Delhi');
+  const [checkoutError, setCheckoutError] = useState('');
+  const [placedOrder, setPlacedOrder] = useState(null);
+  const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
+
+  useEffect(() => {
+    if (user) {
+      setFullName(user.name || '');
+      setPhone(user.phone || '');
+      setAddress(user.addresses?.find(a => a.isDefault)?.house || user.addresses?.[0]?.house || '');
+    }
+  }, [user]);
 
   // Product Database matching BuyProduct.jsx but with extra detailed specifications
-  const productsDatabase = {
-    p1: {
-      id: 'p1',
-      category: 'ac',
-      name: 'Daikin 1.5 Ton 5-Star Split AC',
-      condition: 'Like New (Refurbished)',
-      conditionGrade: 'GRADE A+ (Pristine, no visible scratches, fully restored to factory specs)',
-      originalPrice: 42000,
-      price: 24999,
-      rating: 4.8,
-      reviews: 142,
-      icon: '❄️',
-      colorTheme: 'from-blue-50 to-indigo-50 border-blue-200',
-      description: 'Experience premium cooling performance with the Daikin 1.5 Ton 5-Star Split AC. Fully certified by Nigam Care, this unit has undergone a rigorous 40-point inspection. With a high energy rating and silent operating design, it provides instant chill even in scorching summer heat of up to 52°C.',
-      specs: ['Copper Condenser', '5-Star Energy Rating', 'PM 2.5 Filter'],
-      fullSpecs: {
-        'Brand': 'Daikin',
-        'Model Number': 'DK-15-5S-REF',
-        'Capacity': '1.5 Ton',
-        'Energy Rating': '5 Star (High Efficiency)',
-        'Condenser Coil': '100% Pure Copper (Anti-Corrosion)',
-        'Noise Level': '28 dB (Ultra Quiet)',
-        'Refrigerant': 'R-32 (Eco-Friendly)',
-        'Refurbished Grade': 'Superb (Like New)',
-        'Warranty': '1-Year Nigam Shield Warranty'
-      },
-      warranty: '1-Year Nigam Shield Warranty Included',
-      benefits: [
-        'Free professional installation by Nigam certified technicians',
-        'No questions asked 10-day replacement policy',
-        'Stabilizer free operation'
-      ]
-    },
-    p2: {
-      id: 'p2',
-      category: 'ref',
-      name: 'LG 242L Inverter Double Door Fridge',
-      condition: 'Pristine (Certified)',
-      conditionGrade: 'GRADE A (Excellent condition, light wear, 100% functional)',
-      originalPrice: 28999,
-      price: 16499,
-      rating: 4.7,
-      reviews: 98,
-      icon: '🧊',
-      colorTheme: 'from-purple-50 to-indigo-50 border-purple-200',
-      description: 'Keep your groceries fresh and healthy with this premium LG 242L Double Door Refrigerator. Powered by an intelligent Smart Inverter Compressor, it adjusts cooling speed dynamically to save up to 48% energy. Certified & detailed by Nigam experts with original parts replacement.',
-      specs: ['Smart Inverter Compressor', 'Convertible Box', 'Auto Defrost'],
-      fullSpecs: {
-        'Brand': 'LG',
-        'Model Number': 'GL-D242-INV',
-        'Capacity': '242 Liters',
-        'Defrost System': 'Frost Free (Auto Defrost)',
-        'Compressor Type': 'Smart Inverter Compressor',
-        'Shelves': 'Toughened Glass (Adjustable)',
-        'Refurbished Grade': 'Pristine (Certified)',
-        'Warranty': '1-Year Nigam Shield Warranty'
-      },
-      warranty: '1-Year Nigam Shield Warranty Included',
-      benefits: [
-        'Free door-step delivery & setup',
-        'Smart Diagnosis enabled',
-        'Maintains cooling up to 12 hours during power outages'
-      ]
-    },
-    p3: {
-      id: 'p3',
-      category: 'wm',
-      name: 'Samsung 7kg Fully Automatic Front Load',
-      condition: 'Excellent (Verified)',
-      conditionGrade: 'GRADE B+ (Great condition, minor visual blemishes, stellar performance)',
-      originalPrice: 34999,
-      price: 19899,
-      rating: 4.9,
-      reviews: 215,
-      icon: '🧺',
-      colorTheme: 'from-cyan-50 to-blue-50 border-cyan-200',
-      description: 'Say goodbye to tough stains with the powerful Eco Bubble technology of the Samsung 7kg Fully Automatic Front Load Washing Machine. It features a digital inverter motor for quiet and high-durability performance. Fully inspected and reconditioned by Nigam master-technicians.',
-      specs: ['Eco Bubble Tech', 'Hygiene Steam', 'Digital Inverter'],
-      fullSpecs: {
-        'Brand': 'Samsung',
-        'Model Number': 'WW-70T-INV',
-        'Washing Capacity': '7.0 kg',
-        'Max Spin Speed': '1200 RPM',
-        'Motor Type': 'Digital Inverter Motor',
-        'Energy Star Rating': '5 Star Rating',
-        'Refurbished Grade': 'Excellent (Verified)',
-        'Warranty': '1-Year Nigam Shield Warranty'
-      },
-      warranty: '1-Year Nigam Shield Warranty Included',
-      benefits: [
-        'Free high-pressure inlet pipe installation',
-        'Smart Control and child lock active',
-        'Eco Drum Clean technology'
-      ]
-    },
-    p4: {
-      id: 'p4',
-      category: 'tv',
-      name: 'Sony Bravia 43" 4K Smart Google TV',
-      condition: 'Brand New',
-      conditionGrade: 'SEALED PACK (100% Brand New in box with full manufacturer seal)',
-      originalPrice: 48990,
-      price: 38499,
-      rating: 4.9,
-      reviews: 310,
-      icon: '📺',
-      colorTheme: 'from-amber-50 to-orange-50 border-amber-200',
-      description: 'Immerse yourself in spectacular clarity and breathtaking color detail. The Sony Bravia 43-inch Smart Google TV delivers stunning 4K HDR images driven by the advanced X1 processor. Built-in Dolby Atmos delivers theater-like acoustics directly to your living room.',
-      specs: ['4K HDR Processor X1', 'Dolby Audio', 'Google Assistant'],
-      fullSpecs: {
-        'Brand': 'Sony',
-        'Model Number': 'KD-43X74K-NEW',
-        'Display Size': '43 Inches (108 cm)',
-        'Resolution': '4K Ultra HD (3840 x 2160)',
-        'Smart TV Platform': 'Google TV',
-        'Sound Output': '20W Open Baffle Speaker',
-        'HDMI Ports': '3 HDMI Ports',
-        'Refurbished Grade': 'Brand New (Factory Sealed)',
-        'Warranty': '1-Year Brand + Nigam Shield Warranty'
-      },
-      warranty: '1-Year Brand + Nigam Shield Warranty',
-      benefits: [
-        'Original brand packaging and accessories',
-        'Eligible for brand warranty and service support',
-        'Wall mount bracket included in box'
-      ]
-    },
-    p5: {
-      id: 'p5',
-      category: 'ac',
-      name: 'Voltas 1 Ton 3-Star Split AC',
-      condition: 'Good (Refurbished)',
-      conditionGrade: 'GRADE B (100% tested, minor visible wear, high value-for-money product)',
-      originalPrice: 32000,
-      price: 18200,
-      rating: 4.5,
-      reviews: 64,
-      icon: '🌬️',
-      colorTheme: 'from-sky-50 to-blue-50 border-sky-200',
-      description: 'Beat the heat economically with this classic Voltas 1 Ton 3-Star Split AC. Specifically engineered for extreme Indian climates, this unit provides powerful instant cooling and anti-dust filtration. Completely reconditioned and cleaned using our proprietary deep-foam technology.',
-      specs: ['High Ambient Cooling', 'Stabilizer Free Operation', 'Dehumidifier'],
-      fullSpecs: {
-        'Brand': 'Voltas',
-        'Model Number': 'VT-10-3S-REF',
-        'Capacity': '1.0 Ton',
-        'Energy Rating': '3 Star Rating',
-        'Condenser Coil': '100% Copper Coil',
-        'Refurbished Grade': 'Good (Refurbished)',
-        'Warranty': '1-Year Nigam Shield Warranty'
-      },
-      warranty: '1-Year Nigam Shield Warranty Included',
-      benefits: [
-        'Free 3-meter copper piping included',
-        'High dust filter pre-installed',
-        'Lowest maintenance costs in category'
-      ]
-    },
-    p6: {
-      id: 'p6',
-      category: 'ref',
-      name: 'Samsung 192L Single Door Refrigerator',
-      condition: 'Like New (Certified)',
-      conditionGrade: 'GRADE A+ (Pristine condition, barely used, certified fresh)',
-      originalPrice: 16999,
-      price: 10899,
-      rating: 4.6,
-      reviews: 120,
-      icon: '📦',
-      colorTheme: 'from-amber-50 to-yellow-50 border-amber-200',
-      description: 'Elegant and highly storage-efficient, the Samsung 192L Refrigerator features a digital inverter compressor that runs smoothly without a stabilizer. It also features a useful base drawer for storing dry items like potatoes and onions. Fully certified and warranty protected.',
-      specs: ['Digital Inverter', 'Runs on Home Inverter', 'Base Stand Drawer'],
-      fullSpecs: {
-        'Brand': 'Samsung',
-        'Model Number': 'RR-192-SINGLE',
-        'Capacity': '192 Liters',
-        'Defrost System': 'Direct Cool',
-        'Compressor Type': 'Digital Inverter Compressor',
-        'Refurbished Grade': 'Like New (Certified)',
-        'Warranty': '1-Year Nigam Shield Warranty'
-      },
-      warranty: '1-Year Nigam Shield Warranty Included',
-      benefits: [
-        'Runs on home inverter power',
-        'Extra large vegetable storage compartment',
-        'Toughened glass shelves hold up to 175kg'
-      ]
-    }
+
+  // The product comes from the real catalogue; it used to be looked up in a
+  // hardcoded object here, whose ids ('p1') no order could ever reference.
+  const [product, setProduct] = useState(null);
+  const [productError, setProductError] = useState('');
+
+  // Icon and card tint are presentation, not catalogue data — derived from the
+  // product's category rather than stored per product.
+  const CATEGORY_STYLE = {
+    ac: { icon: '❄️', colorTheme: 'from-blue-50 to-indigo-50 border-blue-200' },
+    refrigerator: { icon: '🧊', colorTheme: 'from-cyan-50 to-blue-50 border-cyan-200' },
+    television: { icon: '📺', colorTheme: 'from-slate-50 to-gray-50 border-slate-200' },
+    'washing machine': { icon: '🧺', colorTheme: 'from-teal-50 to-emerald-50 border-teal-200' },
+    'water purifier': { icon: '💧', colorTheme: 'from-sky-50 to-cyan-50 border-sky-200' },
   };
 
-  const product = productsDatabase[productId] || productsDatabase['p1'];
+  useEffect(() => {
+    if (!productId) return;
+    apiRequest(`/products/${productId}`)
+      .then((res) => setProduct(res.data))
+      .catch((err) => setProductError(err.message || 'Could not load this product.'));
+  }, [productId]);
 
   // Load cart from LocalStorage on mount
   useEffect(() => {
@@ -248,7 +93,7 @@ const ProductDetails = () => {
         id: product.id,
         name: product.name,
         price: product.price,
-        icon: product.icon,
+        icon: style.icon,
         condition: product.condition,
         quantity: 1
       });
@@ -267,12 +112,47 @@ const ProductDetails = () => {
     updateCart(updated);
   };
 
-  const handleCheckoutSubmit = () => {
+  // Places a real order. This previously just waited two seconds and showed a
+  // success screen — no order, no payment, nothing recorded.
+  const handleCheckoutSubmit = async () => {
     setCheckoutStep('processing');
-    setTimeout(() => {
+    try {
+      const orderRes = await apiRequest('/orders', {
+        method: 'POST',
+        auth: true,
+        body: {
+          items: cartItems.map((i) => ({ productId: i.id, quantity: i.quantity })),
+          address: { name: fullName, house: address },
+          paymentMethod: 'Cash',
+        },
+      });
+      setPlacedOrder(orderRes.data || null);
+      updateCart([]);
       setCheckoutStep('success');
-    }, 2000);
+    } catch (err) {
+      setCheckoutError(err.message || 'Could not place your order.');
+      setCheckoutStep('details');
+    }
   };
+
+  if (productError) {
+    return (
+      <div className="min-h-screen bg-bg-light flex items-center justify-center p-6 text-center">
+        <p className="text-sm font-semibold text-rose-600">{productError}</p>
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="min-h-screen bg-bg-light flex items-center justify-center">
+        <p className="text-sm font-semibold text-text-secondary">Loading product…</p>
+      </div>
+    );
+  }
+
+  const style = CATEGORY_STYLE[(product.category || '').toLowerCase()]
+    || { icon: '📦', colorTheme: 'from-slate-50 to-gray-50 border-slate-200' };
 
   return (
     <div className="min-h-screen bg-bg-light flex flex-col pb-28 font-sans">
@@ -330,10 +210,10 @@ const ProductDetails = () => {
       <div className="flex-1 p-6 flex flex-col gap-6 overflow-y-auto">
         
         {/* PRODUCT HERO IMAGE BOX */}
-        <div className={`bg-gradient-to-br ${product.colorTheme} border rounded-3xl p-8 flex flex-col items-center justify-center shadow-sm relative overflow-hidden h-52 group`}>
+        <div className={`bg-gradient-to-br ${style.colorTheme} border rounded-3xl p-8 flex flex-col items-center justify-center shadow-sm relative overflow-hidden h-52 group`}>
           <div className="absolute -top-10 -left-10 w-28 h-28 bg-white/30 rounded-full blur-2xl group-hover:bg-white/45 transition-all"></div>
           <span className="text-7xl drop-shadow-md select-none transform group-hover:scale-110 transition-transform duration-300">
-            {product.icon}
+            {style.icon}
           </span>
           <span className="absolute bottom-3 right-4 bg-white/80 backdrop-blur-sm text-[9px] font-bold text-text-primary border px-2 py-0.5 rounded-full uppercase">
             Certified Inspected
@@ -350,7 +230,7 @@ const ProductDetails = () => {
             <div className="flex items-center gap-1">
               <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
               <span className="text-xs font-extrabold text-text-primary">{product.rating}</span>
-              <span className="text-[10px] text-text-secondary">({product.reviews} reviews)</span>
+
             </div>
           </div>
 
@@ -595,9 +475,14 @@ const ProductDetails = () => {
               {/* Step 1: Details */}
               {checkoutStep === 'details' && (
                 <div className="flex flex-col gap-4">
+                  {checkoutError && (
+                    <p className="text-xs font-semibold text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">
+                      {checkoutError}
+                    </p>
+                  )}
                   {/* Summary */}
                   <div className="bg-[#F8F9FA] p-4.5 rounded-2xl flex items-center gap-3 border border-slate-150 shadow-inner">
-                    <span className="text-3xl">{product.icon}</span>
+                    <span className="text-3xl">{style.icon}</span>
                     <div className="flex-1 min-w-0">
                       <h4 className="font-extrabold text-xs text-text-primary truncate">{product.name}</h4>
                       <div className="flex items-baseline gap-1.5 mt-0.5">
@@ -685,25 +570,25 @@ const ProductDetails = () => {
                         </span>
                         <h4 className="font-bold text-sm mt-1.5">{product.name}</h4>
                       </div>
-                      <span className="text-2xl">{product.icon}</span>
+                      <span className="text-2xl">{style.icon}</span>
                     </div>
 
                     <div className="flex flex-col gap-2.5 text-xs">
                       <div className="flex justify-between">
                         <span className="text-white/60">Order ID:</span>
-                        <span className="font-mono font-bold">NIG-ORD-{Math.floor(100000 + Math.random() * 900000)}</span>
+                        <span className="font-mono font-bold">{placedOrder?.humanId || placedOrder?.id || '—'}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-white/60">Amount Paid:</span>
-                        <span className="font-bold text-brand-yellow">₹{product.price.toLocaleString('en-IN')}</span>
+                        <span className="font-bold text-brand-yellow">₹{(placedOrder?.total ?? product.price).toLocaleString('en-IN')}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-white/60">Delivery Address:</span>
                         <span className="font-semibold text-right max-w-[200px] truncate">{address}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-white/60">Warranty Status:</span>
-                        <span className="font-bold text-green-400">1-Yr Activated (Active)</span>
+                        <span className="text-white/60">Status:</span>
+                        <span className="font-bold text-green-400">{placedOrder?.status || 'Placed'}</span>
                       </div>
                     </div>
                   </div>

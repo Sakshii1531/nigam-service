@@ -1,25 +1,6 @@
 import { Conversation } from '../modules/chat/conversation.model.js';
 import { Message } from '../modules/chat/message.model.js';
-import { Technician } from '../modules/technician/technician.model.js';
-import { ROLES } from '../config/constants.js';
-
-async function resolveParticipant(socketUser) {
-  if (socketUser.role === ROLES.CUSTOMER) return { kind: 'customer', id: socketUser.id };
-  if (socketUser.role === ROLES.TECHNICIAN) {
-    const technician = await Technician.findOne({ user: socketUser.id });
-    return technician ? { kind: 'technician', id: technician.id } : null;
-  }
-  return null;
-}
-
-async function isParticipant(conversation, participant) {
-  if (!participant) return false;
-  if (participant.kind === 'customer') return String(conversation.customer) === participant.id;
-  if (participant.kind === 'technician') return conversation.technician && String(conversation.technician) === participant.id;
-  return false;
-}
-
-const room = (conversationId) => `conversation:${conversationId}`;
+import { resolveParticipant, isParticipant, conversationRoom as room } from '../modules/chat/participants.js';
 
 /**
  * Conversation-scoped real-time messaging — the Phase 9 exit criterion is
@@ -54,7 +35,7 @@ export function registerChatGateway(io) {
       }
     });
 
-    socket.on('send-message', async ({ conversationId, text, attachmentUrl }, ack) => {
+    socket.on('send-message', async ({ conversationId, text, attachmentUrl, attachmentName }, ack) => {
       try {
         const conversation = await Conversation.findById(conversationId);
         if (!conversation) return ack?.({ ok: false, error: 'Conversation not found' });
@@ -69,6 +50,7 @@ export function registerChatGateway(io) {
           sender: participant.kind,
           text,
           attachmentUrl,
+          attachmentName,
           status: 'sent',
         });
 

@@ -6,7 +6,7 @@ import { User } from '../src/modules/auth/user.model.js';
 import { Technician } from '../src/modules/technician/technician.model.js';
 import { City } from '../src/modules/super-admin/city.model.js';
 import { AssignmentWeighting } from '../src/modules/super-admin/assignmentWeighting.model.js';
-import { findAvailableTechnician } from '../src/modules/shared/assignmentEngine.js';
+import { findAvailableTechnician, rankTechnicians } from '../src/modules/shared/assignmentEngine.js';
 import { hashPassword } from '../src/modules/auth/password.js';
 import { ROLES } from '../src/config/constants.js';
 import { testDbUri } from './helpers/testDb.js';
@@ -123,5 +123,32 @@ describe('findAvailableTechnician — weighted scoring', () => {
 
     const result = await findAvailableTechnician({ category: 'AC' });
     expect(String(result._id)).toBe(String(leastBusy._id));
+  });
+});
+
+describe('rankTechnicians — the shortlist the assignment console shows', () => {
+  it('returns every candidate ordered by score, with the same winner as findAvailableTechnician', async () => {
+    const lucknow = await City.create({ name: 'Lucknow' });
+    const specialist = await createTechnician({ specs: ['AC'], city: lucknow._id, rating: 5 });
+    await createTechnician({ specs: ['TV'], city: lucknow._id, rating: 1 });
+    await createTechnician({ specs: ['TV'], city: lucknow._id, rating: 0, activeJobsCount: 4 });
+
+    const ranked = await rankTechnicians({ category: 'AC', city: 'Lucknow' });
+    expect(ranked).toHaveLength(3);
+    expect(String(ranked[0].technician._id)).toBe(String(specialist._id));
+    // Descending, and every entry carries the breakdown the console renders.
+    for (let i = 1; i < ranked.length; i += 1) {
+      expect(ranked[i - 1].score).toBeGreaterThanOrEqual(ranked[i].score);
+    }
+    expect(ranked[0]).toMatchObject({ proximity: 100, skill: 100 });
+
+    const best = await findAvailableTechnician({ category: 'AC', city: 'Lucknow' });
+    expect(String(best._id)).toBe(String(specialist._id));
+  });
+
+  it('excludes technicians the hard filter rejects, and returns [] when none qualify', async () => {
+    await createTechnician({ specs: ['AC'], status: 'Inactive' });
+    await createTechnician({ specs: ['AC'], availability: 'Busy' });
+    expect(await rankTechnicians({ category: 'AC' })).toEqual([]);
   });
 });

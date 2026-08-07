@@ -1,16 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Bell, Briefcase, ClipboardList, Calendar, Wrench, User, Save } from 'lucide-react';
+import { apiRequest } from '../../lib/apiClient';
 
 const PersonalInfo = () => {
   const navigate = useNavigate();
   const [showToast, setShowToast] = useState(false);
+  const [form, setForm] = useState({ name: '', email: '', phone: '', address: '' });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSave = () => {
-    setShowToast(true);
-    setTimeout(() => {
-      setShowToast(false);
-    }, 3000);
+  useEffect(() => {
+    apiRequest('/tech/profile/profile', { auth: true })
+      .then((res) => setForm({
+        name: res.data?.name || '',
+        email: res.data?.email || '',
+        phone: res.data?.phone || '',
+        address: res.data?.address || '',
+      }))
+      .catch((err) => setError(err.message || 'Could not load your profile.'));
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await apiRequest('/tech/profile/profile', { method: 'PUT', auth: true, body: form });
+      setError('');
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    } catch (err) {
+      setError(err.message || 'Could not save your profile.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -48,7 +70,8 @@ const PersonalInfo = () => {
             <label className="text-xs font-semibold text-slate-500 uppercase">Full Name</label>
             <input 
               type="text" 
-              defaultValue="Alex Rodriguez" 
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })} 
               className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl text-sm text-slate-700 focus:outline-none focus:border-[#0D47A1]"
             />
           </div>
@@ -58,7 +81,8 @@ const PersonalInfo = () => {
             <label className="text-xs font-semibold text-slate-500 uppercase">Email Address</label>
             <input 
               type="email" 
-              defaultValue="alex.r@example.com" 
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })} 
               className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl text-sm text-slate-700 focus:outline-none focus:border-[#0D47A1]"
             />
           </div>
@@ -68,7 +92,8 @@ const PersonalInfo = () => {
             <label className="text-xs font-semibold text-slate-500 uppercase">Phone Number</label>
             <input 
               type="tel" 
-              defaultValue="+91 98765 43210" 
+              value={form.phone}
+              onChange={(e) => setForm({ ...form, phone: e.target.value })} 
               className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl text-sm text-slate-700 focus:outline-none focus:border-[#0D47A1]"
             />
           </div>
@@ -77,7 +102,8 @@ const PersonalInfo = () => {
           <div className="flex flex-col gap-1">
             <label className="text-xs font-semibold text-slate-500 uppercase">Address</label>
             <textarea 
-              defaultValue="Flat 4B, Royal Residency, Gomti Nagar, Lucknow, UP 226010" 
+              value={form.address}
+              onChange={(e) => setForm({ ...form, address: e.target.value })} 
               className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl text-sm text-slate-700 focus:outline-none focus:border-[#0D47A1] resize-none h-20"
             />
           </div>
@@ -85,12 +111,19 @@ const PersonalInfo = () => {
         </div>
 
         {/* Save Button */}
-        <button 
+        {error && (
+          <div className="bg-rose-50 border border-rose-200 rounded-xl px-3 py-2 text-[11px] font-semibold text-rose-600">
+            {error}
+          </div>
+        )}
+
+        <button
           onClick={handleSave}
-          className="w-full bg-[#0D47A1] text-white font-semibold py-3 rounded-xl hover:bg-blue-800 transition-colors flex items-center justify-center gap-2"
+          disabled={saving}
+          className="w-full bg-[#0D47A1] text-white font-semibold py-3 rounded-xl hover:bg-blue-800 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
         >
           <Save className="h-5 w-5" />
-          Save Changes
+          {saving ? 'Saving…' : 'Save Changes'}
         </button>
 
       </div>

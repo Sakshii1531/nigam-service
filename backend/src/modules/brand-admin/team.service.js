@@ -2,7 +2,12 @@ import { Team } from './team.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 
 export async function listTeams(brandId) {
-  return Team.find({ brand: brandId }).sort({ name: 1 });
+  // The console lists the lead by name and shows a headcount, so resolve both
+  // refs rather than returning bare ObjectIds.
+  return Team.find({ brand: brandId })
+    .populate('lead', 'name email')
+    .populate('members', 'name')
+    .sort({ name: 1 });
 }
 
 async function findOwnedOr404(brandId, id) {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
 import { 
@@ -10,6 +10,15 @@ import {
   Check,
   CheckCircle2
 } from 'lucide-react';
+import { apiRequest } from '../../lib/apiClient';
+
+// Which settings fields each tab owns, so saving one tab never writes another
+// tab's unsaved values.
+const TAB_FIELDS = {
+  profile: ['supportEmail', 'supportPhone', 'website'],
+  service: ['autoAssignTechnician', 'requireCompletionPhoto'],
+  notifications: ['emailNotifications', 'smsAlerts'],
+};
 
 const Settings = () => {
   const [activeTab, setActiveTab] = useState('profile');
@@ -28,6 +37,9 @@ const Settings = () => {
   const [smsAlerts, setSmsAlerts] = useState(false);
 
   // Security password fields
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
 
@@ -38,6 +50,32 @@ const Settings = () => {
     { id: 'security', label: 'Security', icon: <Shield size={16} /> },
   ];
 
+  useEffect(() => {
+    let cancelled = false;
+    async function loadSettings() {
+      try {
+        const res = await apiRequest('/brand/settings', { auth: true });
+        const s = res?.data;
+        if (cancelled || !s) return;
+        // brandName is the Brand document's own, owned by super-admin.
+        setBrandName(s.brandName || '');
+        setSupportEmail(s.supportEmail || '');
+        setSupportPhone(s.supportPhone || '');
+        setWebsite(s.website || '');
+        setAutoAssign(s.autoAssignTechnician !== false);
+        setRequirePhoto(s.requireCompletionPhoto !== false);
+        setEmailNotifs(s.emailNotifications !== false);
+        setSmsAlerts(!!s.smsAlerts);
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    loadSettings();
+    return () => { cancelled = true; };
+  }, []);
+
   const showToast = (message) => {
     setSuccessMessage(message);
     setTimeout(() => {
@@ -45,28 +83,70 @@ const Settings = () => {
     }, 3000);
   };
 
-  const handleSave = () => {
-    if (activeTab === 'profile') {
-      showToast(`Profile settings for "${brandName}" updated successfully!`);
-    } else if (activeTab === 'service') {
-      showToast('Service configurations updated successfully!');
-    } else if (activeTab === 'notifications') {
-      showToast('Notification preferences saved!');
-    } else if (activeTab === 'security') {
-      if (!currentPassword || !newPassword) {
-        showToast('Please fill in password fields to update.');
+  const persistSettings = async (overrides = {}) => {
+    const res = await apiRequest('/brand/settings', {
+      method: 'PUT',
+      auth: true,
+      body: {
+        supportEmail,
+        supportPhone,
+        website,
+        autoAssignTechnician: autoAssign,
+        requireCompletionPhoto: requirePhoto,
+        emailNotifications: emailNotifs,
+        smsAlerts,
+        ...overrides,
+      },
+    });
+    return res.data;
+  };
+
+  // Every branch persists now. The security tab in particular reported
+  // "Password updated successfully!" while changing nothing — the admin kept
+  // signing in with the old password and had no way to tell.
+  const handleSave = async () => {
+    setError('');
+    try {
+      if (activeTab === 'security') {
+        if (!currentPassword || !newPassword) {
+          showToast('Please fill in password fields to update.');
+          return;
+        }
+        await apiRequest('/auth/password', {
+          method: 'PATCH',
+          auth: true,
+          body: { currentPassword, newPassword },
+        });
+        setCurrentPassword('');
+        setNewPassword('');
+        showToast('Password updated. Your other sessions have been signed out.');
         return;
       }
-      setCurrentPassword('');
-      setNewPassword('');
-      showToast('Password updated successfully!');
+
+      await persistSettings();
+      showToast(
+        activeTab === 'profile' ? 'Profile settings saved.'
+          : activeTab === 'service' ? 'Service configuration saved.'
+          : 'Notification preferences saved.',
+      );
+    } catch (err) {
+      setError(err.message || 'Could not save your settings.');
     }
   };
 
-  const handleToggle = (setting, stateSetter, currentVal) => {
+  // A toggle is a save — leaving it local meant the switch flipped back on the
+  // next page load.
+  const handleToggle = async (setting, stateSetter, currentVal, field) => {
     const newVal = !currentVal;
     stateSetter(newVal);
-    showToast(`${setting} is now ${newVal ? 'ENABLED' : 'DISABLED'}`);
+    setError('');
+    try {
+      await persistSettings({ [field]: newVal });
+      showToast(`${setting} is now ${newVal ? 'ENABLED' : 'DISABLED'}`);
+    } catch (err) {
+      stateSetter(currentVal);
+      setError(err.message || `Could not change "${setting}".`);
+    }
   };
 
   return (
@@ -163,7 +243,7 @@ const Settings = () => {
                         type="checkbox" 
                         className="sr-only peer" 
                         checked={autoAssign} 
-                        onChange={() => handleToggle('Auto-assign Technicians', setAutoAssign, autoAssign)} 
+                        onChange={() => handleToggle('Auto-assign Technicians', setAutoAssign, autoAssign, 'autoAssignTechnician')} 
                       />
                       <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0D47A1]"></div>
                     </label>
@@ -179,7 +259,7 @@ const Settings = () => {
                         type="checkbox" 
                         className="sr-only peer" 
                         checked={requirePhoto} 
-                        onChange={() => handleToggle('Require Photo Proof', setRequirePhoto, requirePhoto)} 
+                        onChange={() => handleToggle('Require Photo Proof', setRequirePhoto, requirePhoto, 'requireCompletionPhoto')} 
                       />
                       <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0D47A1]"></div>
                     </label>
@@ -203,7 +283,7 @@ const Settings = () => {
                         type="checkbox" 
                         className="sr-only peer" 
                         checked={emailNotifs} 
-                        onChange={() => handleToggle('Email Notifications', setEmailNotifs, emailNotifs)} 
+                        onChange={() => handleToggle('Email Notifications', setEmailNotifs, emailNotifs, 'emailNotifications')} 
                       />
                       <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0D47A1]"></div>
                     </label>
@@ -219,7 +299,7 @@ const Settings = () => {
                         type="checkbox" 
                         className="sr-only peer" 
                         checked={smsAlerts} 
-                        onChange={() => handleToggle('SMS Alerts', setSmsAlerts, smsAlerts)} 
+                        onChange={() => handleToggle('SMS Alerts', setSmsAlerts, smsAlerts, 'smsAlerts')} 
                       />
                       <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0D47A1]"></div>
                     </label>
@@ -257,13 +337,18 @@ const Settings = () => {
               </div>
             )}
 
+            {error && (
+              <p className="mt-6 text-xs font-semibold text-red-600 text-right">{error}</p>
+            )}
+
             {/* Save Button */}
             <div className="mt-8 flex justify-end">
-              <button 
+              <button
                 onClick={handleSave}
-                className="bg-[#0D47A1] text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2 min-w-[120px] justify-center shadow-sm"
+                disabled={loading || saving}
+                className="bg-[#0D47A1] text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2 min-w-[120px] justify-center shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                <Save size={16} /> Save Changes
+                <Save size={16} /> {saving ? 'Saving…' : 'Save Changes'}
               </button>
             </div>
 

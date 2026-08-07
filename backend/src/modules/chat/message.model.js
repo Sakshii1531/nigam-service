@@ -7,6 +7,9 @@ const messageSchema = new mongoose.Schema(
     sender: { type: String, enum: ['customer', 'technician', 'ai', 'agent'], required: true },
     text: String,
     attachmentUrl: String,
+    // The original filename, so the chat bubble can label the attachment
+    // instead of showing a bare storage URL.
+    attachmentName: String,
     status: { type: String, enum: ['sent', 'delivered', 'read'], default: 'sent' },
   },
   { timestamps: true },

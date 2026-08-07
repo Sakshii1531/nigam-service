@@ -206,7 +206,9 @@ if (isTest) {
   // can exercise AMC/Brand-Warranty job acceptance without a real complaint-raising flow.
   const testServiceRequestSchema = z.object({
     customerId: z.string().min(1),
-    technicianId: z.string().min(1),
+    // Omit to get a request still sitting in 'New' with no technician — what the
+    // assignment console works against.
+    technicianId: z.string().min(1).optional(),
     category: z.string().min(1),
     brand: z.string().optional(), // real Brand tenant ObjectId — no production flow sets this on a ServiceRequest yet (Brand-Warranty/AMC/EW purchase flows are deferred), needed for Phase 7 brand-scoping specs
   });
@@ -215,13 +217,15 @@ if (isTest) {
       const { createServiceRequest, transitionStatus } = await import('../service-requests/serviceRequest.service.js');
       let serviceRequest = await createServiceRequest({
         user: req.body.customerId,
-        technician: req.body.technicianId,
+        technician: req.body.technicianId || null,
         category: req.body.category,
         brand: req.body.brand || null,
         description: `${req.body.category} — E2E fixture request`,
         requestMode: 'B2C',
       });
-      serviceRequest = await transitionStatus(serviceRequest.id, 'Assigned', { description: 'E2E fixture: pre-assigned' });
+      if (req.body.technicianId) {
+        serviceRequest = await transitionStatus(serviceRequest.id, 'Assigned', { description: 'E2E fixture: pre-assigned' });
+      }
       ok(res, { id: serviceRequest.id }, {}, 201);
     } catch (err) {
       next(err);
@@ -248,7 +252,10 @@ if (isTest) {
       // Seed a stub customer
       const customer = await User.create({
         role: ROLES.CUSTOMER,
-        phone: String(Date.now()),
+        // `phone` is uniquely indexed and Playwright runs specs in parallel
+        // workers, so a bare Date.now() collides whenever two fixtures land in
+        // the same millisecond — hence the random suffix.
+        phone: `${Date.now()}${Math.floor(Math.random() * 1000)}`,
         name: 'E2E Tracking Customer',
         passwordHash: 'stub',
         status: 'Active',

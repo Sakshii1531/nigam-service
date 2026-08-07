@@ -7,6 +7,7 @@ import {
   Heart, Star, ChevronDown, SlidersHorizontal
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { apiRequest } from '../lib/apiClient';
 
 // Import Exchange Modal & Configs
 import { initializeExchangeConfigs } from '../data/exchangeMockData';
@@ -63,52 +64,6 @@ const BuyNew = () => {
     return tvImg;
   };
 
-  // Dataset of products in the app
-  const productsData = {
-    'Water Purifier': [
-      { id: 'wp1', name: 'Kent Grand Plus', price: 15499, specs: ['RO + UV + UF + TDS Control', '8L Storage Capacity', 'Purifies up to 20L/hr', '1 Year Warranty'] },
-      { id: 'wp2', name: 'Aquaguard Aura', price: 12999, specs: ['RO + UV + Active Copper', '7L Storage Capacity', 'Purifies up to 15L/hr', '1 Year Warranty'] },
-      { id: 'wp3', name: 'Livpure GLO Pro++', price: 13499, specs: ['RO + UV + UF + Taste Enhancer', '7L Storage Capacity', 'Purifies up to 12L/hr', '1 Year Warranty'] },
-      { id: 'wp4', name: 'Pureit Copper+ UV', price: 11999, specs: ['RO + UV + Mineral Cartridge', '8L Storage Capacity', 'Purifies up to 15L/hr', '1 Year Warranty'] }
-    ],
-    'Television': [
-      { id: 'tv1', name: 'Samsung 43" Crystal 4K', price: 28990, specs: ['Crystal Processor 4K', 'HDR 10+ Supported', '3 Dolby Digital Plus Speakers', '1 Year Warranty'] },
-      { id: 'tv2', name: 'LG 55" NanoCell 4K', price: 44990, specs: ['NanoCell Color Technology', 'α5 Gen5 AI Processor', 'WebOS Smart TV Platform', '1 Year Warranty'] },
-      { id: 'tv3', name: 'Sony Bravia 50" 4K Google TV', price: 54900, specs: ['X1 4K Processor', 'Google TV OS with Voice Search', 'Dolby Atmos Audio', '2 Years Warranty'] },
-      { id: 'tv4', name: 'OnePlus 32" Y Series HD', price: 12999, specs: ['HD Ready LED Display', 'Android TV 11 with OxygenPlay', '20W Dolby Audio Speakers', '1 Year Warranty'] }
-    ],
-    'Refrigerator': [
-      { id: 'rf1', name: 'Samsung 253L Double Door', price: 24490, specs: ['Digital Inverter Technology', 'Frost Free Operation', 'All Round Cooling', '10 Years Compressor Warranty'] },
-      { id: 'rf2', name: 'LG 190L Single Door', price: 16990, specs: ['Smart Inverter Compressor', 'Fast Ice Making', 'Stabilizer Free Operation', '5 Star Rating'] },
-      { id: 'rf3', name: 'Whirlpool 340L Triple Door', price: 32990, specs: ['Zeolite Technology', 'Active Fresh Zone', 'Moisture Retention System', '1 Year Warranty'] },
-      { id: 'rf4', name: 'Haier 531L Side-by-Side', price: 58990, specs: ['Twin Inverter Technology', 'Deo Fresh Technology', '90 Degree Auto Suspension', '10 Years Compressor Warranty'] }
-    ],
-    'Washing Machine': [
-      { id: 'wm1', name: 'Samsung 7kg Top Load', price: 15990, specs: ['Wobble Technology', 'Magic Filter', 'Eco Tub Clean', '1 Year Warranty'] },
-      { id: 'wm2', name: 'LG 8kg Front Load', price: 31990, specs: ['AI DD Technology', 'Steam Wash & Allergen Care', '6 Motion DD Technology', '10 Years Motor Warranty'] },
-      { id: 'wm3', name: 'IFB 6.5kg Front Load', price: 26490, specs: ['Aqua Energie System', 'Crescent Moon Drum', '3D Wash System', '4 Years Comprehensive Warranty'] },
-      { id: 'wm4', name: 'Bosch 7.5kg Top Load', price: 18990, specs: ['PowerWave Wash System', 'VarioDrum Design', 'Soft Closing Lid', '2 Years Warranty'] }
-    ],
-    'Air Conditioner': [
-      { id: 'ac1', name: 'Voltas 1.5 Ton 3 Star Split', price: 32990, specs: ['High Ambient Cooling', 'Active Humidifier', 'Anti-Dust Filter', '1 Year Warranty'] },
-      { id: 'ac2', name: 'Daikin 1.5 Ton 5 Star Inverter', price: 45490, specs: ['Patented Coanda Airflow', 'Neo Swing Compressor', 'Triple Display feature', '5 Years PCB Warranty'] },
-      { id: 'ac3', name: 'LG 1 Ton 3 Star Dual Inverter', price: 28990, specs: ['Dual Rotary Compressor', 'Convertible 6-in-1 Cooling', 'HD Filter with Anti-Virus', '10 Years Compressor Warranty'] },
-      { id: 'ac4', name: 'Carrier 2 Ton 5 Star Split', price: 52990, specs: ['Super hybrid Jet Cool', 'PM 2.5 Filter', 'Insta Cool mode', '1 Year Warranty'] }
-    ],
-    'Geyser': [
-      { id: 'gy1', name: 'Havells Adonia Spin 25L', price: 11990, specs: ['Feroglas Technology', 'Incoloy Glass Coated Element', 'Digital Temp Indicator', '7 Years Tank Warranty'] },
-      { id: 'gy2', name: 'AO Smith SGS 15L', price: 9990, specs: ['Blue Diamond Glass Lining', 'Glass Coated Heating Element', 'Express Fast Heating', '1 Year Warranty'] },
-      { id: 'gy3', name: 'Bajaj New Shakti 25L', price: 6499, specs: ['Titanium Armour Technology', 'Swirl Flow Technology', '8 Bar Pressure Rating', '2 Years Warranty'] },
-      { id: 'gy4', name: 'Racold CDR Swift 15L', price: 7990, specs: ['Titanium Plus Heating Element', 'Safety Valve included', 'Flexi Pipe Technology', '1 Year Warranty'] }
-    ],
-    'Microwave Oven': [
-      { id: 'mw1', name: 'Samsung 28L Convection', price: 11590, specs: ['Slim Fry Technology', 'Tandoor Technology', 'Ceramic Enamel Cavity', '1 Year Warranty'] },
-      { id: 'mw2', name: 'IFB 30L Convection', price: 14990, specs: ['101 Auto-Cook Menus', 'Express Cooking', 'Deodorize & Steam Clean', '3 Years Magnetron Warranty'] },
-      { id: 'mw3', name: 'LG 20L Solo Microwave', price: 6290, specs: ['Intellowave Technology', 'Auto Cook Menu', 'Keep Warm feature', '1 Year Warranty'] },
-      { id: 'mw4', name: 'Panasonic 23L Convection', price: 10290, specs: ['360 Heat Wrap', 'Auto Cook Menus', 'Compact Design', '1 Year Warranty'] }
-    ]
-  };
-
   // State for shopping cart (stored in localStorage to persist across route transitions)
   const [cart, setCart] = useState(() => {
     const saved = localStorage.getItem('nigam_buy_new_cart');
@@ -121,13 +76,37 @@ const BuyNew = () => {
 
   // Derived list of products for category step
   const finalCategory = categoryParam || 'Water Purifier';
-  const categoryProducts = productsData[finalCategory] || productsData['Water Purifier'];
+
+  // The catalogue is maintained in the admin console and served from /products —
+  // it used to be a hardcoded object here, which meant the storefront never
+  // reflected anything an admin actually did.
+  const [categoryProducts, setCategoryProducts] = useState([]);
+  const [productsLoading, setProductsLoading] = useState(true);
+  const [productsError, setProductsError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    setProductsLoading(true);
+    apiRequest(`/products?category=${encodeURIComponent(finalCategory)}&limit=100`)
+      .then((res) => {
+        if (cancelled) return;
+        setCategoryProducts(res.data || []);
+        setProductsError('');
+      })
+      .catch((err) => { if (!cancelled) setProductsError(err.message || 'Could not load products.'); })
+      .finally(() => { if (!cancelled) setProductsLoading(false); });
+    return () => { cancelled = true; };
+  }, [finalCategory]);
+
+
 
   // Wishlist, Sort, and Filter States
-  const [wishlist, setWishlist] = useState(() => {
-    const saved = localStorage.getItem('nigam_user_wishlist');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [wishlist, setWishlist] = useState([]);
+  useEffect(() => {
+    apiRequest('/wishlist', { auth: true })
+      .then((res) => setWishlist(res.data || []))
+      .catch((err) => console.warn('[wishlist] Could not load:', err.message));
+  }, []);
 
   // Sort By drawer and Filter page states
   const [showSortModal, setShowSortModal] = useState(false);
@@ -136,19 +115,20 @@ const BuyNew = () => {
   const [selectedBrands, setSelectedBrands] = useState([]);
   const [tempSelectedBrands, setTempSelectedBrands] = useState([]);
   const [searchBrandQuery, setSearchBrandQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState('all'); // 'all' | 'discount' | 'fast'
+  const [activeFilter, setActiveFilter] = useState('all'); // 'all' | 'discount' | 'inStock'
 
-  const toggleWishlist = (product, e) => {
+  const toggleWishlist = async (product, e) => {
     e.stopPropagation();
-    let currentWishlist = [...wishlist];
-    const exists = currentWishlist.some(p => p.id === product.id);
-    if (exists) {
-      currentWishlist = currentWishlist.filter(p => p.id !== product.id);
-    } else {
-      currentWishlist.push({ ...product, category: finalCategory });
+    const exists = wishlist.some(p => p.id === product.id);
+    try {
+      const res = await apiRequest(`/wishlist/${product.id}`, {
+        method: exists ? 'DELETE' : 'POST',
+        auth: true,
+      });
+      setWishlist(res.data || []);
+    } catch (err) {
+      console.error('[wishlist] Could not update:', err.message);
     }
-    setWishlist(currentWishlist);
-    localStorage.setItem('nigam_user_wishlist', JSON.stringify(currentWishlist));
   };
 
   const sortedAndFilteredProducts = React.useMemo(() => {
@@ -161,11 +141,13 @@ const BuyNew = () => {
       );
     }
 
-    // Apply mock filter: 'discount' shows odd indexed items (simulated discount filter)
+    // Both filters read real product fields. They used to select by even/odd
+    // index, so "Top Sale Discounts" showed full-price items and the chip state
+    // told the customer nothing about the products behind it.
     if (activeFilter === 'discount') {
-      list = list.filter((_, idx) => idx % 2 === 0);
-    } else if (activeFilter === 'fast') {
-      list = list.filter((_, idx) => idx % 2 !== 0);
+      list = list.filter((p) => p.originalPrice > p.price);
+    } else if (activeFilter === 'inStock') {
+      list = list.filter((p) => (p.stock ?? 0) > 0);
     }
 
     // Apply sorting
@@ -229,7 +211,9 @@ const BuyNew = () => {
   const [isExchangeModalOpen, setIsExchangeModalOpen] = useState(false);
 
   useEffect(() => {
-    setExchangeConfigs(initializeExchangeConfigs());
+    initializeExchangeConfigs()
+      .then(setExchangeConfigs)
+      .catch((err) => console.warn('[exchange] Could not load configs:', err.message));
   }, [location.pathname]); // Reload configuration on navigation/renders
 
   useEffect(() => {
@@ -387,28 +371,40 @@ const BuyNew = () => {
                 Top Sale Discounts
               </button>
 
-              {/* Fast Delivery Filter */}
+              {/* In-stock filter — the platform has no per-product delivery
+                  speed, so this reports what the stock count actually says. */}
               <button
-                onClick={() => setActiveFilter(activeFilter === 'fast' ? 'all' : 'fast')}
+                onClick={() => setActiveFilter(activeFilter === 'inStock' ? 'all' : 'inStock')}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[11px] font-extrabold whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
-                  activeFilter === 'fast'
+                  activeFilter === 'inStock'
                     ? 'bg-blue-50 border-brand-blue text-brand-blue'
                     : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
                 }`}
               >
-                Fast Delivery
+                In Stock
               </button>
             </div>
 
             {/* Products List (Flipkart Grid Layout) */}
+            {productsLoading && (
+              <p className="text-center text-xs font-semibold text-slate-400 py-8">Loading products…</p>
+            )}
+            {productsError && (
+              <p className="text-center text-xs font-semibold text-rose-500 py-8">{productsError}</p>
+            )}
+            {!productsLoading && !productsError && sortedAndFilteredProducts.length === 0 && (
+              <p className="text-center text-xs font-semibold text-slate-400 py-8">
+                No products available in {finalCategory} yet.
+              </p>
+            )}
             <div className="flex flex-col gap-3">
               {sortedAndFilteredProducts.map((product) => {
                 const isWishlisted = wishlist.some(p => p.id === product.id);
-                // Mock Rating values
-                const rating = (4.0 + (product.price % 6) * 0.1).toFixed(1);
-                const ratingCount = (1500 + (product.price % 800) * 12).toLocaleString();
-                const discount = 30 + (product.price % 18);
-                const originalPrice = Math.round(product.price * 1.5);
+                const rating = product.rating ? product.rating.toFixed(1) : null;
+                const originalPrice = product.originalPrice || null;
+                const discount = originalPrice && originalPrice > product.price
+                  ? Math.round(((originalPrice - product.price) / originalPrice) * 100)
+                  : null;
                 const exchangePrice = Math.round(product.price * 0.85);
 
                 return (
@@ -420,13 +416,6 @@ const BuyNew = () => {
                     <div className="flex gap-4">
                       {/* Left: Image Container with Heart Icon */}
                       <div className="relative w-28 h-28 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center p-2.5 shrink-0">
-                        {/* Sponsored Badge */}
-                        {(product.id.includes('1') || product.id.includes('3')) && (
-                          <span className="absolute top-1.5 left-1.5 bg-black/50 text-[8px] font-extrabold text-white px-1.5 py-0.5 rounded uppercase tracking-wider scale-90 origin-top-left">
-                            Sponsored
-                          </span>
-                        )}
-
                         <img 
                           src={getApplianceImg(finalCategory)} 
                           alt={product.name} 
@@ -454,17 +443,16 @@ const BuyNew = () => {
                             {product.name}
                           </h4>
                           <p className="text-[10px] text-slate-400 font-semibold truncate mt-0.5">
-                            {product.specs.join(' | ')}
+                            {(product.specs || []).join(' | ')}
                           </p>
 
-                          {/* Ratings and Assured Tag */}
+                          {/* Ratings and Assured Tag — hidden until the product is actually rated */}
                           <div className="flex items-center gap-1.5 mt-1.5">
-                            <span className="bg-green-600 text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded flex items-center gap-0.5 shrink-0">
-                              {rating} <Star size={8} fill="currentColor" />
-                            </span>
-                            <span className="text-slate-400 text-[10px] font-semibold">
-                              ({ratingCount})
-                            </span>
+                            {rating && (
+                              <span className="bg-green-600 text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded flex items-center gap-0.5 shrink-0">
+                                {rating} <Star size={8} fill="currentColor" />
+                              </span>
+                            )}
                             <span className="inline-flex items-center gap-0.5 text-[8px] font-black italic bg-[#E0F2FE] text-blue-700 border border-blue-200 px-1 rounded select-none">
                               ★ Assured
                             </span>
@@ -474,12 +462,16 @@ const BuyNew = () => {
                         {/* Price Details */}
                         <div className="mt-2.5">
                           <div className="flex items-center gap-2">
-                            <span className="text-[#388E3C] font-black text-[11px]">
-                              ↓{discount}%
-                            </span>
-                            <span className="text-slate-400 line-through text-[11px] font-bold">
-                              ₹{originalPrice.toLocaleString()}
-                            </span>
+                            {discount !== null && (
+                              <>
+                                <span className="text-[#388E3C] font-black text-[11px]">
+                                  ↓{discount}%
+                                </span>
+                                <span className="text-slate-400 line-through text-[11px] font-bold">
+                                  ₹{originalPrice.toLocaleString()}
+                                </span>
+                              </>
+                            )}
                             <span className="text-slate-800 font-extrabold text-sm">
                               ₹{product.price.toLocaleString()}
                             </span>

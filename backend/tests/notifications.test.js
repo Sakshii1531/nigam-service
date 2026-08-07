@@ -42,7 +42,7 @@ const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
 // ── Import modules AFTER mocks are set up ────────────────────────────────────
-const { emit, listNotifications, markRead } = await import(
+const { emit, listNotifications, markRead, sendAdHocPush, listBroadcasts } = await import(
   '../src/modules/notifications/notification.service.js'
 );
 const { User } = await import('../src/modules/auth/user.model.js');
@@ -54,11 +54,17 @@ const { NotificationPreference } = await import(
 // ── DB setup ──────────────────────────────────────────────────────────────────
 
 beforeAll(async () => {
-  const uri = await testDbUri();
+  // Must pass a per-file suffix — a bare testDbUri() resolves to the shared
+  // "..._undefined" database, which is exactly the cross-file collision the
+  // helper exists to prevent (see helpers/testDb.js).
+  const uri = await testDbUri('notifications');
   await mongoose.connect(uri);
 });
 
 afterAll(async () => {
+  // Drop, not just disconnect — otherwise this file's data survives the run and
+  // collides with the next one, as every other suite here already does.
+  await mongoose.connection.dropDatabase();
   await mongoose.disconnect();
 });
 
@@ -305,5 +311,30 @@ describe('emit() — broadcast escalation event', () => {
     delete process.env.FCM_SERVICE_ACCOUNT_JSON;
     delete process.env.TWILIO_ACCOUNT_SID;
     delete process.env.TWILIO_AUTH_TOKEN;
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Broadcast history — the super-admin console's composer reads this back
+// ─────────────────────────────────────────────────────────────────────────────
+describe('listBroadcasts', () => {
+  test('returns role-wide broadcasts newest-first and excludes personal notifications', async () => {
+    const user = await seedUser();
+
+    await sendAdHocPush({ recipientId: String(user._id), title: 'Just for you', body: 'personal', type: 'tech' });
+    await sendAdHocPush({ broadcastRole: 'Technicians', title: 'New payout cycle', body: 'Wednesdays', type: 'promo' });
+    await sendAdHocPush({ broadcastRole: 'All', title: 'App update tonight', body: '2 AM', type: 'promo' });
+
+    const { items, meta } = await listBroadcasts({});
+    expect(items).toHaveLength(2);
+    // A personal notification is one user's inbox, not broadcast history.
+    expect(items.every((i) => i.broadcastRole !== null)).toBe(true);
+    expect(items[0].title).toBe('App update tonight');
+    expect(meta.total).toBe(2);
+  });
+
+  test('returns an empty list when nothing has been broadcast', async () => {
+    const { items } = await listBroadcasts({});
+    expect(items).toEqual([]);
   });
 });

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
+import { apiRequest } from '../../lib/apiClient';
 import { 
   Search, 
   Filter, 
@@ -17,6 +18,30 @@ import {
   ArrowLeft
 } from 'lucide-react';
 
+const dateFormatter = new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
+function shape(c) {
+  return {
+    id: c.id,
+    name: c.name,
+    email: c.email || '—',
+    phone: c.phone || '—',
+    // The API derives customers from service requests, which carry no city of
+    // their own — the customer's address lives on their saved addresses.
+    city: '—',
+    productCount: c.productCount ?? 0,
+    complaints: c.complaints ?? 0,
+    openComplaints: c.openComplaints ?? 0,
+    warrantyStatus: c.warrantyStatus || 'Out of Warranty',
+    lastService: c.lastRequestAt ? dateFormatter.format(new Date(c.lastRequestAt)) : '—',
+    // Appliance categories this customer has raised requests for. Individual
+    // complaint text isn't part of the aggregate, so the drawer shows the open
+    // count rather than inventing a list of descriptions.
+    products: c.categories || [],
+    complaintsList: [],
+  };
+}
+
 const Customers = () => {
   const [showDrawer, setShowDrawer] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -25,12 +50,27 @@ const Customers = () => {
   const [selectedWarranty, setSelectedWarranty] = useState('Warranty Status');
   const [successMessage, setSuccessMessage] = useState('');
 
-  const customers = [
-    { id: 'CUST-001', name: 'Amit Sharma', email: 'amit@example.com', phone: '+91 98765 43210', city: 'Delhi', productCount: 2, complaints: 1, warrantyStatus: 'Under Warranty', lastService: '12 May, 2026', products: ['LG Refrigerator', 'LG Smart TV'], complaintsList: ['Cooling issue in Refrigerator'] },
-    { id: 'CUST-002', name: 'Priya Patel', email: 'priya@example.com', phone: '+91 98765 43211', city: 'Mumbai', productCount: 1, complaints: 1, warrantyStatus: 'Out of Warranty', lastService: '12 May, 2026', products: ['LG Washing Machine'], complaintsList: ['Drain blockage'] },
-    { id: 'CUST-003', name: 'Rajesh K.', email: 'rajesh@example.com', phone: '+91 98765 43212', city: 'Bangalore', productCount: 3, complaints: 0, warrantyStatus: 'Under Warranty', lastService: '11 May, 2026', products: ['LG Microwave', 'LG Water Purifier', 'LG AC'], complaintsList: [] },
-    { id: 'CUST-004', name: 'Neha Gupta', email: 'neha@example.com', phone: '+91 98765 43213', city: 'Pune', productCount: 1, complaints: 2, warrantyStatus: 'Out of Warranty', lastService: '11 May, 2026', products: ['LG Smart TV'], complaintsList: ['Lines on screen', 'Sound cracking'] },
-  ];
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadCustomers() {
+      try {
+        // Derived server-side: everyone who has raised a service request with
+        // this brand, with per-customer counts.
+        const data = await apiRequest('/brand/customers', { auth: true });
+        if (!cancelled) setCustomers((data?.data || []).map(shape));
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    loadCustomers();
+    return () => { cancelled = true; };
+  }, []);
 
   const showToast = (message) => {
     setSuccessMessage(message);
@@ -44,13 +84,27 @@ const Customers = () => {
     setShowDrawer(true);
   };
 
-  const handleSendNotification = (name) => {
-    showToast(`Notification sent successfully to ${name}!`);
+  // Actually delivers a message. This was a success toast with nothing sent —
+  // the customer received nothing and the brand had no way to tell.
+  const handleSendNotification = async (customer) => {
+    const body = window.prompt(`Message to send to ${customer.name}:`);
+    if (!body?.trim()) return;
+
+    setError('');
+    try {
+      await apiRequest('/brand/actions/notify-customer', {
+        method: 'POST',
+        auth: true,
+        body: { userId: customer.id, title: 'A message from your service brand', body: body.trim() },
+      });
+      showToast(`Notification sent to ${customer.name}.`);
+    } catch (err) {
+      setError(err.message || 'Could not send the notification.');
+    }
   };
 
   const filteredCustomers = customers.filter(cust => {
-    const matchesSearch = cust.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          cust.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    const matchesSearch = cust.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           cust.phone.includes(searchQuery) ||
                           cust.email.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCity = selectedCity === 'All Cities' || cust.city === selectedCity;
@@ -141,17 +195,19 @@ const Customers = () => {
                   <div className="flex items-center justify-between">
                     <h5 className="text-xs font-bold uppercase tracking-wider text-[#64748B]">Complaints & Tickets</h5>
                     <span className="text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-full flex items-center gap-1">
-                      <ClipboardList size={12} /> {selectedCustomer.complaintsList.length} Active
+                      <ClipboardList size={12} /> {selectedCustomer.openComplaints} Active
                     </span>
                   </div>
-                  {selectedCustomer.complaintsList.length > 0 ? (
+                  {selectedCustomer.openComplaints > 0 ? (
                     <div className="divide-y divide-[#E2E8F0] border border-[#E2E8F0] rounded-xl overflow-hidden bg-white text-sm">
-                      {selectedCustomer.complaintsList.map((comp, idx) => (
-                        <div key={idx} className="p-3 bg-red-50/20">
-                          <p className="font-medium text-red-700">{comp}</p>
-                          <p className="text-xs text-red-500">Status: In Progress</p>
-                        </div>
-                      ))}
+                      {/* Individual complaint text isn't part of the customers
+                          aggregate — the Complaints screen lists them in full. */}
+                      <div className="p-3 bg-red-50/20">
+                        <p className="font-medium text-red-700">
+                          {selectedCustomer.openComplaints} open of {selectedCustomer.complaints} total
+                        </p>
+                        <p className="text-xs text-red-500">See the Complaints screen for details</p>
+                      </div>
                     </div>
                   ) : (
                     <p className="text-xs text-green-600 bg-green-50 p-3 rounded-xl border border-green-200 font-medium">
@@ -164,7 +220,7 @@ const Customers = () => {
               {/* Footer */}
               <div className="p-4 border-t border-[#E2E8F0] bg-[#F8FAFC] flex gap-3">
                 <button 
-                  onClick={() => { handleSendNotification(selectedCustomer.name); setShowDrawer(false); }}
+                  onClick={() => { handleSendNotification(selectedCustomer); setShowDrawer(false); }}
                   className="bg-[#0D47A1] text-white px-6 py-2.5 rounded-xl text-xs font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-1"
                 >
                   <Send size={14} /> Send Message
@@ -252,6 +308,12 @@ const Customers = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E2E8F0]">
+                  {loading && (
+                    <tr><td colSpan={8} className="px-6 py-10 text-center text-[#64748B] font-semibold">Loading customers…</td></tr>
+                  )}
+                  {!loading && error && (
+                    <tr><td colSpan={8} className="px-6 py-10 text-center text-red-600 font-semibold">{error}</td></tr>
+                  )}
                   {filteredCustomers.map((cust) => (
                     <tr 
                       key={cust.id} 

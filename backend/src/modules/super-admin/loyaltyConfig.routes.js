@@ -11,6 +11,8 @@ import {
   updateMembershipSchema,
   updateSpinWheelSchema,
   idParamSchema,
+  createReferralCampaignSchema,
+  updateReferralCampaignSchema,
 } from './loyaltyConfig.validation.js';
 
 export const loyaltyConfigRouter = Router();
@@ -96,6 +98,44 @@ loyaltyConfigRouter.get('/spin-wheel', async (req, res, next) => {
 loyaltyConfigRouter.put('/spin-wheel', validate(updateSpinWheelSchema), async (req, res, next) => {
   try {
     ok(res, await loyaltyConfigService.updateSpinWheelConfig(req.body));
+  } catch (err) {
+    next(err);
+  }
+});
+
+loyaltyConfigRouter.get('/referral-campaigns', async (req, res, next) => {
+  try {
+    ok(res, await loyaltyConfigService.listReferralCampaigns());
+  } catch (err) {
+    next(err);
+  }
+});
+
+loyaltyConfigRouter.post('/referral-campaigns', validate(createReferralCampaignSchema), async (req, res, next) => {
+  try {
+    created(res, await loyaltyConfigService.createReferralCampaign(req.body));
+  } catch (err) {
+    next(err);
+  }
+});
+
+loyaltyConfigRouter.put(
+  '/referral-campaigns/:id',
+  validate(idParamSchema, 'params'),
+  validate(updateReferralCampaignSchema),
+  async (req, res, next) => {
+    try {
+      ok(res, await loyaltyConfigService.updateReferralCampaign(req.params.id, req.body));
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+loyaltyConfigRouter.delete('/referral-campaigns/:id', validate(idParamSchema, 'params'), async (req, res, next) => {
+  try {
+    await loyaltyConfigService.deleteReferralCampaign(req.params.id);
+    ok(res, { deleted: true });
   } catch (err) {
     next(err);
   }

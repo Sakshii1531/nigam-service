@@ -4,6 +4,10 @@ import { ID_PREFIXES } from '../../config/constants.js';
 
 const trainingGuideSchema = new mongoose.Schema(
   {
+    // Null means platform-wide content owned by super-admin; a brand id means
+    // the brand authored it for technicians servicing its own appliances.
+    // Technicians read both — they work across brands.
+    brand: { type: mongoose.Schema.Types.ObjectId, ref: 'Brand', default: null, index: true },
     title: { type: String, required: true },
     type: { type: String, enum: ['PDF', 'Video'], required: true },
     product: String,

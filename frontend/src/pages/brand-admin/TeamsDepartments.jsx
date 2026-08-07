@@ -1,55 +1,110 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
 import { Users, Plus, Shield, Eye, Edit2, CheckCircle2, X, Search, Building2, UserPlus, Trash2 } from 'lucide-react';
+import { apiRequest } from '../../lib/apiClient';
 
-const initialTeams = [
-  { id: 1, name: 'Delhi NCR Team A', department: 'Field Service', lead: 'Rahul Kumar', membersCount: 8, activeRequests: 14, region: 'Delhi NCR' },
-  { id: 2, name: 'Mumbai West AC Team', department: 'Field Service', lead: 'Amit Singh', membersCount: 6, activeRequests: 9, region: 'Mumbai' },
-  { id: 3, name: 'South India QA Team', department: 'Quality Assurance', lead: 'Suresh Raina', membersCount: 4, activeRequests: 3, region: 'Bangalore' },
-  { id: 4, name: 'National Remote Support', department: 'Remote Support', lead: 'Deepak Patel', membersCount: 12, activeRequests: 28, region: 'National' },
-];
+// Values must match the API's department enum exactly; the labels are only for display.
+const departmentsList = ['Field Service', 'QA', 'Remote Support', 'Installation'];
+const DEPARTMENT_LABELS = {
+  'Field Service': 'Field Service',
+  QA: 'Quality Assurance',
+  'Remote Support': 'Remote Support',
+  Installation: 'Installation Team',
+};
 
-const departmentsList = ['Field Service', 'Quality Assurance', 'Remote Support', 'Installation Team'];
+function shape(team) {
+  return {
+    id: team.id,
+    name: team.name,
+    department: team.department,
+    leadId: team.lead?.id || team.lead || '',
+    lead: team.lead?.name || 'Unassigned',
+    membersCount: team.members?.length ?? 0,
+    region: team.region || '—',
+  };
+}
 
 const TeamsDepartments = () => {
-  const [teams, setTeams] = useState(initialTeams);
+  const [teams, setTeams] = useState([]);
+  const [brandUsers, setBrandUsers] = useState([]);
   const [searchQ, setSearchQ] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [newTeam, setNewTeam] = useState({ name: '', department: 'Field Service', lead: '', region: '' });
   const [successMsg, setSuccessMsg] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   const toast = (msg) => { setSuccessMsg(msg); setTimeout(() => setSuccessMsg(''), 3000); };
 
-  const handleAddTeam = () => {
-    if (!newTeam.name.trim() || !newTeam.lead.trim() || !newTeam.region.trim()) {
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        // Team lead is a User reference, so the picker needs the brand's users.
+        const [teamData, userData] = await Promise.all([
+          apiRequest('/brand/teams', { auth: true }),
+          apiRequest('/brand/users', { auth: true }).catch(() => []),
+        ]);
+        if (cancelled) return;
+        setTeams((Array.isArray(teamData) ? teamData : []).map(shape));
+        setBrandUsers(Array.isArray(userData) ? userData : []);
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleAddTeam = async () => {
+    if (!newTeam.name.trim() || !newTeam.region.trim()) {
       toast('Please fill in all team details!');
       return;
     }
-    setTeams(prev => [
-      ...prev,
-      {
-        id: prev.length + 1,
-        ...newTeam,
-        membersCount: 1,
-        activeRequests: 0
-      }
-    ]);
-    setShowAddModal(false);
-    setNewTeam({ name: '', department: 'Field Service', lead: '', region: '' });
-    toast(`Team "${newTeam.name}" created successfully!`);
+    try {
+      const created = await apiRequest('/brand/teams', {
+        method: 'POST',
+        auth: true,
+        body: {
+          name: newTeam.name,
+          department: newTeam.department,
+          region: newTeam.region,
+          ...(newTeam.lead ? { lead: newTeam.lead } : {}),
+        },
+      });
+      // The create response returns the raw lead id; resolve it locally so the
+      // new row reads the same as the ones the list endpoint populated.
+      const lead = brandUsers.find(u => u.id === newTeam.lead);
+      setTeams(prev => [...prev, shape({ ...created, lead })]);
+      setShowAddModal(false);
+      setNewTeam({ name: '', department: 'Field Service', lead: '', region: '' });
+      toast(`Team "${created.name}" created successfully!`);
+    } catch (err) {
+      setError(`Could not create team: ${err.message}`);
+    }
   };
 
-  const handleDeleteTeam = (id, name) => {
+  const handleDeleteTeam = async (id, name) => {
+    const previous = teams;
     setTeams(prev => prev.filter(t => t.id !== id));
-    toast(`Team "${name}" deleted!`);
+    try {
+      await apiRequest(`/brand/teams/${id}`, { method: 'DELETE', auth: true });
+      toast(`Team "${name}" deleted!`);
+    } catch (err) {
+      setTeams(previous);
+      setError(`Could not delete team: ${err.message}`);
+    }
   };
 
+  const q = searchQ.toLowerCase();
   const filteredTeams = teams.filter(t =>
-    t.name.toLowerCase().includes(searchQ.toLowerCase()) ||
-    t.department.toLowerCase().includes(searchQ.toLowerCase()) ||
-    t.lead.toLowerCase().includes(searchQ.toLowerCase()) ||
-    t.region.toLowerCase().includes(searchQ.toLowerCase())
+    t.name.toLowerCase().includes(q) ||
+    (DEPARTMENT_LABELS[t.department] || t.department).toLowerCase().includes(q) ||
+    t.lead.toLowerCase().includes(q) ||
+    t.region.toLowerCase().includes(q)
   );
 
   return (
@@ -80,11 +135,16 @@ const TeamsDepartments = () => {
 
           {/* Teams Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {loading && <p className="col-span-full text-center py-10 text-xs font-semibold text-[#64748B]">Loading teams…</p>}
+            {!loading && error && <p className="col-span-full text-center py-10 text-xs font-semibold text-red-600">{error}</p>}
+            {!loading && !error && filteredTeams.length === 0 && (
+              <p className="col-span-full text-center py-10 text-xs font-semibold text-[#64748B]">No teams created yet.</p>
+            )}
             {filteredTeams.map(t => (
               <div key={t.id} className="bg-white rounded-2xl border border-[#E2E8F0] p-4 flex flex-col justify-between hover:shadow-lg transition-all duration-200">
                 <div>
                   <div className="flex justify-between items-start mb-2">
-                    <span className="bg-[#EEF4FF] text-[#0D47A1] text-[10px] font-bold px-2 py-0.5 rounded-full border border-[#D0E2FF]">{t.department}</span>
+                    <span className="bg-[#EEF4FF] text-[#0D47A1] text-[10px] font-bold px-2 py-0.5 rounded-full border border-[#D0E2FF]">{DEPARTMENT_LABELS[t.department] || t.department}</span>
                     <span className="text-[10px] text-[#64748B] font-semibold bg-[#F1F5F9] px-2 py-0.5 rounded-full">{t.region}</span>
                   </div>
                   <h3 className="font-bold text-[#1E293B] text-sm mb-3 mt-1">{t.name}</h3>
@@ -96,12 +156,11 @@ const TeamsDepartments = () => {
                     </div>
                     <div className="flex justify-between text-xs">
                       <span className="text-[#64748B]">Active Members:</span>
-                      <span className="font-semibold text-[#0D47A1]">{t.membersCount} Technicians</span>
+                      <span className="font-semibold text-[#0D47A1]">{t.membersCount} Members</span>
                     </div>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-[#64748B]">Active Complaints:</span>
-                      <span className={`font-semibold ${t.activeRequests > 15 ? 'text-red-500' : 'text-[#1E293B]'}`}>{t.activeRequests} Tickets</span>
-                    </div>
+                    {/* An "Active Complaints" figure used to sit here, but nothing
+                        links a ServiceRequest to a Team, so there is no number to
+                        show. Restore once ServiceRequest carries a team ref. */}
                   </div>
                 </div>
 
@@ -153,18 +212,25 @@ const TeamsDepartments = () => {
                   onChange={e => setNewTeam({ ...newTeam, department: e.target.value })}
                   className="w-full border border-[#E2E8F0] rounded-xl px-3 py-2 text-xs bg-[#F8FAFC] outline-none focus:ring-2 focus:ring-[#0D47A1]"
                 >
-                  {departmentsList.map(dept => <option key={dept}>{dept}</option>)}
+                  {departmentsList.map(dept => (
+                    <option key={dept} value={dept}>{DEPARTMENT_LABELS[dept]}</option>
+                  ))}
                 </select>
               </div>
               <div>
-                <label className="text-[10px] font-semibold text-[#64748B] uppercase block mb-1">Team Lead Technician</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Ramesh Kumar"
+                <label className="text-[10px] font-semibold text-[#64748B] uppercase block mb-1">Team Lead</label>
+                {/* The API keys `lead` to a User document, so this is a picker over
+                    the brand's users rather than a free-text name. */}
+                <select
                   value={newTeam.lead}
                   onChange={e => setNewTeam({ ...newTeam, lead: e.target.value })}
                   className="w-full border border-[#E2E8F0] rounded-xl px-3 py-2 text-xs bg-[#F8FAFC] outline-none focus:ring-2 focus:ring-[#0D47A1]"
-                />
+                >
+                  <option value="">No lead assigned</option>
+                  {brandUsers.map(u => (
+                    <option key={u.id} value={u.id}>{u.name}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="text-[10px] font-semibold text-[#64748B] uppercase block mb-1">Coverage Region / City</label>

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
@@ -7,31 +7,53 @@ import {
   Phone, Mail, MapPin, ChevronRight, Edit2, Upload,
   ShieldCheck, ShieldOff, ArrowRight, X, FileText, Plus, Copy
 } from 'lucide-react';
+import { apiRequest } from '../../lib/apiClient';
 
-// ── Mock customer database ──
-const mockCustomers = [
-  {
-    id: 'C001', name: 'Rahul Sharma', mobile: '9876543210',
-    alternateMobile: '9123456789', email: 'rahul.sharma@email.com',
-    address: '123, Green Park', landmark: 'Near Metro Station',
-    pincode: '226010', city: 'Lucknow', state: 'Uttar Pradesh',
-    products: [
-      { id: 'P1', name: 'Adore LED Downlight', model: 'HVL-DL-12W', serial: 'HVL10112345', brand: 'Havells', category: 'LED & Luminaires', purchaseDate: '2024-06-15', dealer: 'Havells Showroom Lucknow', warranty: 'In Warranty' },
-      { id: 'P2', name: 'Stealth Air Ceiling Fan', model: 'HVL-FAN-1200', serial: 'HVL20167890', brand: 'Havells', category: 'Fans & Appliances', purchaseDate: '2023-03-10', dealer: 'Havells Showroom Lucknow', warranty: 'Out of Warranty' },
-    ]
-  },
-  {
-    id: 'C002', name: 'Priya Verma', mobile: '9812345678',
-    alternateMobile: '', email: 'priya.verma@email.com',
-    address: '45, Sector 12, Noida', landmark: 'Near City Mall',
-    pincode: '201301', city: 'Noida', state: 'Uttar Pradesh',
-    products: [
-      { id: 'P3', name: 'Endura Pro Batten', model: 'HVL-BTN-22W', serial: 'HVL30198765', brand: 'Havells', category: 'LED & Luminaires', purchaseDate: '2024-11-20', dealer: 'Havells Noida Store', warranty: 'In Warranty' },
-    ]
-  },
-];
+// ── Customer lookup ──
+// Customers are the brand's own (everyone who has raised a request with it).
+// The aggregate exposes the appliance categories they've reported against, not
+// full per-appliance records — so a "product" here is a category the agent
+// picks, with model and serial typed in on the complaint step.
+function shapeCustomer(c) {
+  return {
+    id: c.id,
+    name: c.name,
+    mobile: c.phone || '',
+    alternateMobile: '',
+    email: c.email || '',
+    address: '',
+    landmark: '',
+    pincode: '',
+    city: '',
+    state: '',
+    products: (c.categories || []).map((category, i) => ({
+      id: `${c.id}-${i}`,
+      name: category,
+      category,
+      model: '',
+      serial: '',
+      brand: '',
+      purchaseDate: '',
+      dealer: '',
+      warranty: c.warrantyStatus === 'Under Warranty' ? 'In Warranty' : 'Out of Warranty',
+    })),
+  };
+}
 
 const complaintTypes = ['Breakdown', 'No Power / Dead', 'Noise Issue', 'Performance Degradation', 'Physical Damage', 'Intermittent Fault'];
+
+// This screen's labels are friendlier than the API's enums; map rather than
+// send the display text, which the schema would reject.
+const COMPLAINT_TYPE_MAP = {
+  'Breakdown': 'Breakdown',
+  'No Power / Dead': 'No Power',
+  'Noise Issue': 'Noise',
+  'Performance Degradation': 'Performance',
+  'Physical Damage': 'Physical Damage',
+  'Intermittent Fault': 'Intermittent',
+};
+
+const PRIORITY_MAP = { Low: 'Low', Normal: 'Medium', High: 'High', Critical: 'Critical' };
 const issueCategories = {
   'LED & Luminaires': ['Flickering', 'Not Turning On', 'Driver Failure', 'Dim Output', 'Remote Not Working'],
   'Fans & Appliances': ['Not Running', 'Noise / Vibration', 'Speed Not Working', 'Capacitor Issue', 'Blade Damage'],
@@ -87,6 +109,23 @@ const RegisterComplaint = () => {
   const [editStep, setEditStep] = useState(null);
   const [complaintIds, setComplaintIds] = useState({ brandNo: '', nccId: '' });
   const [copiedId, setCopiedId] = useState(null);
+  const [customers, setCustomers] = useState([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadCustomers() {
+      try {
+        const data = await apiRequest('/brand/customers', { auth: true });
+        if (!cancelled) setCustomers((data?.data || []).map(shapeCustomer));
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      }
+    }
+    loadCustomers();
+    return () => { cancelled = true; };
+  }, []);
 
   const fileInputRef = useRef(null);
 
@@ -110,7 +149,7 @@ const RegisterComplaint = () => {
   };
 
   const handleSearch = () => {
-    const found = mockCustomers.find(c => c.mobile === mobileSearch.trim());
+    const found = customers.find(c => c.mobile === mobileSearch.trim());
     if (found) {
       setSearchResult(found);
       setSearchStatus('found');

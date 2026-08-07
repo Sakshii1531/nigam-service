@@ -26,13 +26,37 @@ export async function redeemCoins(userId, amount, { reason = 'redeemed', payment
   return WalletLedger.create({ user: userId, delta: -amount, reason, balanceAfter: user.walletCoins, payment });
 }
 
-export async function creditCoins(userId, amount, { reason = 'earned', payment = null } = {}) {
-  if (amount <= 0) throw new ApiError(400, 'Credit amount must be positive');
+export async function creditCoins(userId, amount, { reason = 'earned', payment = null, xpToAdd = 0, claimKey = null } = {}) {
+  if (amount <= 0 && xpToAdd <= 0) throw new ApiError(400, 'Credit amount or XP must be positive');
 
-  const user = await User.findOneAndUpdate({ _id: userId }, { $inc: { walletCoins: amount } }, { new: true });
+  // Reject the repeat before touching the balance — otherwise the coins are
+  // credited and only the ledger write fails.
+  if (claimKey && (await WalletLedger.exists({ user: userId, claimKey }))) {
+    throw new ApiError(409, 'This reward has already been claimed');
+  }
+
+  const user = await User.findOneAndUpdate(
+    { _id: userId },
+    { $inc: { walletCoins: amount, xp: xpToAdd } },
+    { new: true }
+  );
   if (!user) throw new ApiError(404, 'User not found');
 
-  return WalletLedger.create({ user: userId, delta: amount, reason, balanceAfter: user.walletCoins, payment });
+  // Compute new level based on updated xp
+  const calculatedLevel = Math.floor((user.xp || 0) / 1000) + 1;
+  if (calculatedLevel > (user.level || 1)) {
+    user.level = calculatedLevel;
+    await user.save();
+  }
+
+  return WalletLedger.create({ 
+    user: userId, 
+    delta: amount, 
+    reason, 
+    balanceAfter: user.walletCoins, 
+    payment,
+    claimKey,
+  });
 }
 
 export async function getBalance(userId) {
@@ -48,4 +72,9 @@ export async function getLedger(userId, { page, limit, sort } = {}) {
     WalletLedger.countDocuments({ user: userId }),
   ]);
   return { items, meta: paginationMeta({ page: pg, limit: lim, total }) };
+}
+
+export async function listClaimKeys(userId) {
+  const entries = await WalletLedger.find({ user: userId, claimKey: { $type: 'string' } }).select('claimKey');
+  return entries.map((e) => e.claimKey);
 }

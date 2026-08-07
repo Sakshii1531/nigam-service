@@ -1,23 +1,61 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import { Search, IndianRupee, CreditCard, CheckCircle, ArrowRight } from 'lucide-react';
+import { apiRequest } from '../../lib/apiClient';
+
+const currency = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+
+function shape(payout) {
+  return {
+    id: payout.id,
+    partner: payout.partner?.name || 'Partner',
+    city: payout.city?.name || '—',
+    balance: payout.balance ?? 0,
+    lastPaid: payout.lastPaidAmount ?? 0,
+    status: payout.status || 'Pending Approval',
+  };
+}
 
 const Payouts = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  
-  const [payouts, setPayouts] = useState([
-    { id: 1, partner: 'Care Tech Solutions', city: 'Lucknow', balance: '₹42,500', lastPaid: '₹1,20,000', status: 'Pending Approval' },
-    { id: 2, partner: 'Perfect Services', city: 'Kanpur', balance: '₹0', lastPaid: '₹85,000', status: 'Paid' },
-    { id: 3, partner: 'Quick Fix India', city: 'Gorakhpur', balance: '₹28,400', lastPaid: '₹1,50,000', status: 'Pending Approval' },
-    { id: 4, partner: 'Reliable Care', city: 'Varanasi', balance: '₹0', lastPaid: '₹64,000', status: 'Paid' },
-  ]);
+  const [payouts, setPayouts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [payingId, setPayingId] = useState(null);
 
-  const handlePay = (id) => {
-    setPayouts(prev => prev.map(p => p.id === id ? { ...p, balance: '₹0', lastPaid: p.balance, status: 'Paid' } : p));
+  useEffect(() => {
+    let cancelled = false;
+    async function loadPayouts() {
+      try {
+        const data = await apiRequest('/super-admin/payouts', { auth: true });
+        if (!cancelled) setPayouts((data?.data || []).map(shape));
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    loadPayouts();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Settlement is money moving, so this waits on the server rather than
+  // optimistically zeroing the balance — a failed request must leave the row
+  // showing what is still owed.
+  const handlePay = async (id) => {
+    setPayingId(id);
+    try {
+      const updated = await apiRequest(`/super-admin/payouts/${id}/pay`, { method: 'PATCH', auth: true });
+      setPayouts(prev => prev.map(p => (p.id === id ? shape(updated) : p)));
+    } catch (err) {
+      setError(`Could not settle payout: ${err.message}`);
+    } finally {
+      setPayingId(null);
+    }
   };
 
-  const filteredPayouts = payouts.filter(p => 
+  const filteredPayouts = payouts.filter(p =>
     p.partner.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -54,15 +92,24 @@ const Payouts = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-sm">
+                {loading && (
+                  <tr><td colSpan={6} className="p-8 text-center text-slate-400 font-semibold">Loading payouts…</td></tr>
+                )}
+                {!loading && error && (
+                  <tr><td colSpan={6} className="p-8 text-center text-red-600 font-semibold">{error}</td></tr>
+                )}
+                {!loading && !error && filteredPayouts.length === 0 && (
+                  <tr><td colSpan={6} className="p-8 text-center text-slate-400 font-semibold">No partner payouts recorded.</td></tr>
+                )}
                 {filteredPayouts.map((p) => (
                   <tr key={p.id} className="hover:bg-slate-50 transition-colors">
                     <td className="p-4 pl-6">
                       <p className="font-bold text-slate-800">{p.partner}</p>
-                      <span className="text-[10px] text-slate-400 font-bold uppercase">ID: ACC-{p.id + 100}</span>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase">ID: {p.id}</span>
                     </td>
                     <td className="p-4 font-semibold text-slate-600">{p.city}</td>
-                    <td className="p-4 text-slate-800 font-black flex items-center gap-0.5"><IndianRupee size={14} className="text-blue-600" /> {p.balance}</td>
-                    <td className="p-4 text-slate-600 font-semibold">{p.lastPaid}</td>
+                    <td className="p-4 text-slate-800 font-black flex items-center gap-0.5"><IndianRupee size={14} className="text-blue-600" /> {currency.format(p.balance).replace('₹', '')}</td>
+                    <td className="p-4 text-slate-600 font-semibold">{p.lastPaid ? currency.format(p.lastPaid) : '—'}</td>
                     <td className="p-4">
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
                         p.status === 'Paid' ? 'bg-green-50 text-green-600 border border-green-100' : 'bg-yellow-50 text-yellow-600 border border-yellow-100'
@@ -72,8 +119,12 @@ const Payouts = () => {
                     </td>
                     <td className="p-4 pr-6 text-right">
                       {p.status === 'Pending Approval' ? (
-                        <button onClick={() => handlePay(p.id)} className="text-xs bg-[#0D47A1] text-white font-semibold px-2.5 py-1 rounded-lg hover:bg-blue-700 transition-colors cursor-pointer flex items-center gap-1 ml-auto">
-                          <CreditCard size={12} /> Pay Balance
+                        <button
+                          onClick={() => handlePay(p.id)}
+                          disabled={payingId === p.id || p.balance <= 0}
+                          className="text-xs bg-[#0D47A1] text-white font-semibold px-2.5 py-1 rounded-lg hover:bg-blue-700 transition-colors cursor-pointer flex items-center gap-1 ml-auto disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                          <CreditCard size={12} /> {payingId === p.id ? 'Paying…' : 'Pay Balance'}
                         </button>
                       ) : (
                         <span className="text-green-600 font-bold text-xs flex items-center justify-end gap-1"><CheckCircle size={14} /> Paid</span>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Search, Check, ChevronRight, ShoppingCart, Star, 
@@ -6,18 +6,28 @@ import {
   Tag, ShieldCheck, CheckCircle2, FileText, ShoppingBag, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '../context/AuthContext';
 
 const BuyProduct = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProductForCheckout, setSelectedProductForCheckout] = useState(null);
   const [checkoutStep, setCheckoutStep] = useState('none'); // 'none', 'details', 'processing', 'success'
   
   // Checkout address form
-  const [fullName, setFullName] = useState('Sakshi Dwivedi');
-  const [phone, setPhone] = useState('+91 98765 43210');
-  const [address, setAddress] = useState('Flat 402, Royal Residency, Civil Lines, Delhi');
+  const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
+
+  useEffect(() => {
+    if (user) {
+      setFullName(user.name || '');
+      setPhone(user.phone || '');
+      setAddress(user.addresses?.find(a => a.isDefault)?.house || user.addresses?.[0]?.house || '');
+    }
+  }, [user]);
 
   // Categories definition
   const filterCategories = [
@@ -130,8 +140,10 @@ const BuyProduct = () => {
     // Navigate to payment page with product details
     navigate('/payment', {
       state: {
+        productId: selectedProductForCheckout?.id,
         productName: selectedProductForCheckout?.name,
         price: selectedProductForCheckout?.price,
+        quantity: 1,
         isApplianceBuy: true
       }
     });

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   ChevronLeft, Trash2, Heart, Star, ShoppingCart, 
@@ -14,13 +14,19 @@ import waterPurifierImg from '../assets/categories/water_purifier.png';
 import tvImg from '../assets/categories/television.png';
 import geyserImg from '../assets/icon_3d_geyser.png';
 import ovenImg from '../assets/icon_3d_oven.png';
+import { apiRequest } from '../lib/apiClient';
 
 const MyWishlist = () => {
   const navigate = useNavigate();
-  const [wishlist, setWishlist] = useState(() => {
-    const saved = localStorage.getItem('nigam_user_wishlist');
-    return saved ? JSON.parse(saved) : [];
-  });
+  // The wishlist lives on the account, so it's the same on every device.
+  const [wishlist, setWishlist] = useState([]);
+  const [wishlistError, setWishlistError] = useState('');
+
+  useEffect(() => {
+    apiRequest('/wishlist', { auth: true })
+      .then((res) => setWishlist(res.data || []))
+      .catch((err) => setWishlistError(err.message || 'Could not load your wishlist.'));
+  }, []);
 
   const getApplianceImg = (category) => {
     const n = category?.toLowerCase() || '';
@@ -34,11 +40,14 @@ const MyWishlist = () => {
     return tvImg;
   };
 
-  const removeFromWishlist = (id, e) => {
+  const removeFromWishlist = async (id, e) => {
     e.stopPropagation();
-    const updated = wishlist.filter(item => item.id !== id);
-    setWishlist(updated);
-    localStorage.setItem('nigam_user_wishlist', JSON.stringify(updated));
+    try {
+      const res = await apiRequest(`/wishlist/${id}`, { method: 'DELETE', auth: true });
+      setWishlist(res.data || []);
+    } catch (err) {
+      setWishlistError(err.message || 'Could not remove that item.');
+    }
   };
 
   return (

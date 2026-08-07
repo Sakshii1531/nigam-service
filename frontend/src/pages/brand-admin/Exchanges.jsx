@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
+import { apiRequest } from '../../lib/apiClient';
 import { 
   Search, 
   Filter, 
@@ -16,6 +17,26 @@ import {
   ArrowLeft
 } from 'lucide-react';
 
+const currency = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+const dateFormatter = new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
+function shape(ex) {
+  return {
+    id: ex.id,
+    ref: ex.humanId || ex.id,
+    customer: ex.user?.name || 'Customer',
+    oldProduct: ex.category || '—',
+    oldBrand: ex.brand || '—',
+    oldModel: ex.model || '—',
+    condition: ex.condition || '—',
+    // Display string plus the raw number, so the tiles never re-parse currency.
+    valuation: currency.format(ex.estimatedValue || 0),
+    valuationValue: ex.estimatedValue || 0,
+    status: ex.status || 'Pending Inspection',
+    date: ex.createdAt ? dateFormatter.format(new Date(ex.createdAt)) : '—',
+  };
+}
+
 const Exchanges = () => {
   const [showDrawer, setShowDrawer] = useState(false);
   const [selectedExchange, setSelectedExchange] = useState(null);
@@ -25,28 +46,56 @@ const Exchanges = () => {
   const [selectedCondition, setSelectedCondition] = useState('All Conditions');
   const [selectedStatus, setSelectedStatus] = useState('All Status');
 
-  const [exchanges, setExchanges] = useState([
-    { id: 'EX-5001', customer: 'Amit Sharma', oldProduct: 'Refrigerator', oldBrand: 'Samsung', oldModel: 'RT28DoubleDoor', condition: 'Good', valuation: '₹4,500', status: 'Pending Inspection', date: '12 May, 2026' },
-    { id: 'EX-5002', customer: 'Priya Patel', oldProduct: 'Washing Machine', oldBrand: 'IFB', oldModel: 'SenoritaVX', condition: 'Excellent', valuation: '₹3,200', status: 'Inspection Approved', date: '12 May, 2026' },
-    { id: 'EX-5003', customer: 'Rajesh K.', oldProduct: 'Smart TV', oldBrand: 'Sony', oldModel: 'KLV-32R', condition: 'Poor', valuation: '₹1,500', status: 'Defective Received', date: '11 May, 2026' },
-    { id: 'EX-5004', customer: 'Neha Gupta', oldProduct: 'Microwave', oldBrand: 'Kenstar', oldModel: 'KEN-MW-20', condition: 'Good', valuation: '₹1,800', status: 'Pending Inspection', date: '10 May, 2026' },
-  ]);
+  const [exchanges, setExchanges] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
+  useEffect(() => {
+    let cancelled = false;
+    async function loadExchanges() {
+      try {
+        // Brand-scoped: the API resolves the caller's brand and matches trade-ins
+        // recorded against that brand name.
+        const data = await apiRequest('/exchange/requests/brand', { auth: true });
+        if (!cancelled) setExchanges((data?.data || []).map(shape));
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    loadExchanges();
+    return () => { cancelled = true; };
+  }, []);
+
+  const sumWhere = (predicate) => exchanges.filter(predicate).reduce((acc, e) => acc + e.valuationValue, 0);
   const stats = [
-    { title: 'Exchange Requests', value: (exchanges.length + 82).toString(), icon: <RefreshCw size={20} />, color: 'bg-blue-600' },
-    { title: 'Avg. Valuation', value: '₹3,400', icon: <IndianRupee size={20} />, color: 'bg-emerald-600' },
-    { title: 'Discounts Approved', value: '₹1.8L', icon: <CheckCircle2 size={20} />, color: 'bg-indigo-600' },
-    { title: 'Received at WH', value: '42 pcs', icon: <PackageOpen size={20} />, color: 'bg-yellow-500' },
+    { title: 'Exchange Requests', value: String(exchanges.length), icon: <RefreshCw size={20} />, color: 'bg-blue-600' },
+    {
+      title: 'Avg. Valuation',
+      value: exchanges.length ? currency.format(Math.round(sumWhere(() => true) / exchanges.length)) : '—',
+      icon: <IndianRupee size={20} />, color: 'bg-emerald-600',
+    },
+    {
+      // Only approved trade-ins become a real checkout discount (order.service.js
+      // requires 'Inspection Approved' before applying one).
+      title: 'Discounts Approved',
+      value: currency.format(sumWhere(e => e.status === 'Inspection Approved')),
+      icon: <CheckCircle2 size={20} />, color: 'bg-indigo-600',
+    },
+    {
+      title: 'Received at WH',
+      value: `${exchanges.filter(e => e.status === 'Received at WH').length} pcs`,
+      icon: <PackageOpen size={20} />, color: 'bg-yellow-500',
+    },
   ];
 
+  // Only super-admin can drive the inspection workflow (PATCH
+  // /super-admin/exchange-requests/:id/status) — that restriction exists because
+  // an approved trade-in becomes a checkout discount. This screen is read-only.
   const updateExchangeStatus = (id, newStatus) => {
-    setExchanges(exchanges.map(ex => ex.id === id ? { ...ex, status: newStatus } : ex));
-    if (selectedExchange && selectedExchange.id === id) {
-      setSelectedExchange({ ...selectedExchange, status: newStatus });
-    }
-    setSuccessMessage(`Exchange status updated successfully to: ${newStatus}`);
     setShowDrawer(false);
-    setTimeout(() => setSuccessMessage(''), 3000);
+    setError(`Only a super-admin can move a trade-in to "${newStatus}" — no change was saved.`);
   };
 
   const handleDispute = (id) => {
@@ -62,7 +111,7 @@ const Exchanges = () => {
 
   const filteredExchanges = exchanges.filter(ex => {
     const matchesSearch = ex.customer.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          ex.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          ex.ref.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           ex.oldProduct.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCondition = selectedCondition === 'All Conditions' || ex.condition === selectedCondition;
     const matchesStatus = selectedStatus === 'All Status' || ex.status === selectedStatus;
@@ -91,7 +140,7 @@ const Exchanges = () => {
               <div className="p-6 border-b border-[#E2E8F0] flex justify-between items-center bg-[#F8FAFC]">
                 <div>
                   <h2 className="text-lg font-bold text-[#1E293B]">Exchange Details</h2>
-                  <p className="text-sm text-[#0D47A1] font-medium">{selectedExchange.id}</p>
+                  <p className="text-sm text-[#0D47A1] font-medium">{selectedExchange.ref}</p>
                 </div>
               </div>
 
@@ -253,13 +302,22 @@ const Exchanges = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E2E8F0]">
+                  {loading && (
+                    <tr><td colSpan={8} className="px-6 py-10 text-center text-[#64748B] font-semibold">Loading trade-ins…</td></tr>
+                  )}
+                  {!loading && error && (
+                    <tr><td colSpan={8} className="px-6 py-10 text-center text-red-600 font-semibold">{error}</td></tr>
+                  )}
+                  {!loading && !error && filteredExchanges.length === 0 && (
+                    <tr><td colSpan={8} className="px-6 py-10 text-center text-[#64748B] font-semibold">No trade-in requests for this brand.</td></tr>
+                  )}
                   {filteredExchanges.map((ex) => (
                     <tr 
                       key={ex.id} 
                       className="hover:bg-[#F8FAFC] transition-colors cursor-pointer"
                       onClick={() => handleRowClick(ex)}
                     >
-                      <td className="px-6 py-4 font-medium text-[#0D47A1]">{ex.id}</td>
+                      <td className="px-6 py-4 font-medium text-[#0D47A1]">{ex.ref}</td>
                       <td className="px-6 py-4 text-[#1E293B]">{ex.customer}</td>
                       <td className="px-6 py-4">
                         <div>

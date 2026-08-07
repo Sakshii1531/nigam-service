@@ -123,18 +123,11 @@ const Topbar = ({ title, subtitle, showFilters = false }) => {
           </>
         )}
 
-        {/* Search Icon Button */}
-        <button 
-          onClick={() => triggerToast('Opening search panel')}
-          className="p-2 text-[#64748B] hover:text-[#1E293B] hover:bg-[#F8FAFC] rounded-full transition-colors cursor-pointer"
-        >
-          <Search size={18} />
-        </button>
-
         {/* Notifications Icon Button with Badge */}
         <button 
-          onClick={() => triggerToast('Opening notifications')}
+          onClick={() => navigate('/super-admin/notifications')}
           className="relative p-2 text-[#64748B] hover:text-[#1E293B] hover:bg-[#F8FAFC] rounded-full transition-colors cursor-pointer"
+          title="Super Admin Notifications"
         >
           <Bell size={18} />
           <span className="absolute top-0.5 right-0.5 w-4 h-4 bg-red-500 text-[9px] font-extrabold text-white rounded-full flex items-center justify-center border border-white">

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
 import {
@@ -15,6 +15,39 @@ import {
   CheckCircle,
   CheckCircle2
 } from 'lucide-react';
+import { io } from 'socket.io-client';
+import { apiRequest, getStoredTokens } from '../../lib/apiClient';
+
+// Messages are sent over Socket.IO, not REST — the chat gateway owns delivery
+// (chat.gateway.js). REST is used only to list threads and load history.
+const SOCKET_URL = import.meta.env.VITE_API_BASE_URL
+  ? import.meta.env.VITE_API_BASE_URL.replace('/api/v1', '')
+  : 'http://localhost:4000';
+
+const timeFormatter = new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit' });
+
+function shapeMessage(m) {
+  return {
+    id: m.id,
+    // The brand desk sends as 'agent'; everything else is the counterparty.
+    sender: m.sender === 'agent' ? 'brand' : 'user',
+    text: m.text || '',
+    time: m.createdAt ? timeFormatter.format(new Date(m.createdAt)) : '',
+  };
+}
+
+function shapeConversation(c) {
+  return {
+    id: c.id,
+    ticketId: c.serviceRequest || '—',
+    name: c.customer?.name || 'Customer',
+    role: 'Customer',
+    product: c.kind === 'support' ? 'Support thread' : 'Job chat',
+    status: c.status || 'Open',
+    lastSeen: '',
+    messages: [],
+  };
+}
 
 const Chat = () => {
   const [activeChannel, setActiveChannel] = useState('cust-1'); // 'cust-1', 'tech-1'
@@ -22,38 +55,83 @@ const Chat = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   
-  const [conversations, setConversations] = useState({
-    'cust-1': {
-      id: 'cust-1',
-      ticketId: 'SR-8901',
-      name: 'Amit Sharma',
-      role: 'Customer',
-      product: 'Smart TV',
-      status: 'In Progress',
-      lastSeen: 'Online',
-      messages: [
-        { id: 1, sender: 'user', text: 'Hello, the technician was supposed to visit today. Any updates?', time: '10:00 AM' },
-        { id: 2, sender: 'brand', text: 'Hi Amit, technician Rahul Kumar has been assigned and is on his way to your location.', time: '10:05 AM' },
-        { id: 3, sender: 'user', text: 'Great, thanks for the update! Will he carry the display board with him?', time: '10:08 AM' },
-      ]
-    },
-    'tech-1': {
-      id: 'tech-1',
-      ticketId: 'SR-8902',
-      name: 'Amit Singh',
-      role: 'Technician',
-      product: 'Refrigerator',
-      status: 'Pending',
-      lastSeen: 'Last seen 5m ago',
-      messages: [
-        { id: 1, sender: 'user', text: 'Hi support team, I checked the Refrigerator model LG-REF-450. The compressor is faulty and needs replacement under warranty.', time: '09:30 AM' },
-        { id: 2, sender: 'brand', text: 'Noted Amit. Please raise a spare part request from your technician app claims tab.', time: '09:35 AM' },
-        { id: 3, sender: 'user', text: 'Already raised claim #PR-1002. Please approve it so I can fetch it from the hub.', time: '09:38 AM' },
-      ]
-    }
-  });
+  const [conversations, setConversations] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const socketRef = useRef(null);
 
-  const activeChat = conversations[activeChannel] || conversations['cust-1'];
+  // One socket for the page; the room is switched by joining/leaving as the
+  // operator moves between threads.
+  useEffect(() => {
+    const { accessToken } = getStoredTokens();
+    if (!accessToken) return undefined;
+
+    const socket = io(SOCKET_URL, { auth: { token: accessToken }, transports: ['websocket'] });
+    socketRef.current = socket;
+
+    socket.on('message:new', (message) => {
+      setConversations((prev) => {
+        const chat = prev[message.conversation];
+        if (!chat) return prev;
+        // The gateway echoes to every socket in the room, including the sender,
+        // so drop anything already present rather than double-rendering it.
+        if (chat.messages.some((m) => m.id === message.id)) return prev;
+        return { ...prev, [message.conversation]: { ...chat, messages: [...chat.messages, shapeMessage(message)] } };
+      });
+    });
+    socket.on('connect_error', (err) => setError(`Chat connection failed: ${err.message}`));
+
+    return () => socket.disconnect();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadConversations() {
+      try {
+        const data = await apiRequest('/chat/conversations', { auth: true });
+        if (cancelled) return;
+        const list = data?.data || [];
+        setConversations(Object.fromEntries(list.map((c) => [c.id, shapeConversation(c)])));
+        if (list.length) setActiveChannel(list[0].id);
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    loadConversations();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Load history and join the room whenever the selected thread changes.
+  useEffect(() => {
+    const socket = socketRef.current;
+    if (!activeChannel || !socket) return undefined;
+
+    socket.emit('join-conversation', { conversationId: activeChannel }, (ack) => {
+      if (!ack?.ok) setError(ack?.error || 'Could not join this conversation.');
+    });
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const msgs = await apiRequest(`/chat/conversations/${activeChannel}/messages`, { auth: true });
+        if (cancelled) return;
+        setConversations((prev) => prev[activeChannel]
+          ? { ...prev, [activeChannel]: { ...prev[activeChannel], messages: (Array.isArray(msgs) ? msgs : []).map(shapeMessage) } }
+          : prev);
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      socket.emit('leave-conversation', { conversationId: activeChannel });
+    };
+  }, [activeChannel]);
+
+  const activeChat = conversations[activeChannel] || null;
 
   const handleSendMessage = (e) => {
     e.preventDefault();
@@ -157,6 +235,13 @@ const Chat = () => {
           </div>
 
           {/* Center Panel: Active Conversation */}
+          {/* activeChat is null until a thread is selected (or when the brand has
+              none at all), so the whole pane is guarded rather than every field. */}
+          {!activeChat ? (
+            <div className="flex-1 flex items-center justify-center bg-[#F8FAFC] text-sm font-semibold text-[#64748B]">
+              {loading ? 'Loading conversations…' : error || 'No conversations yet.'}
+            </div>
+          ) : (
           <div className="flex-1 flex flex-col bg-[#F8FAFC] relative">
             {/* Active Header */}
             <div className="bg-white border-b border-[#E2E8F0] px-6 py-4 flex justify-between items-center shadow-sm">
@@ -250,8 +335,10 @@ const Chat = () => {
               </button>
             </form>
           </div>
+          )}
 
           {/* Right Panel: Ticket Info */}
+          {activeChat && (
           <div className="w-64 bg-white border-l border-[#E2E8F0] p-5 space-y-6 overflow-y-auto">
             <div>
               <h4 className="text-xs uppercase text-[#94A3B8] font-bold tracking-wider mb-3">Ticket Information</h4>
@@ -286,6 +373,7 @@ const Chat = () => {
               </div>
             </div>
           </div>
+          )}
 
         </div>
       </div>

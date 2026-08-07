@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import StoryViewer from './StoryViewer';
 
@@ -17,6 +17,7 @@ import electricianImg2 from '../../assets/story_electrician_2.png';
 import electricianImg3 from '../../assets/story_electrician_3.png';
 import salonImg2 from '../../assets/story_salon_2.png';
 import salonImg3 from '../../assets/story_salon_3.png';
+import { apiRequest } from '../../lib/apiClient';
 
 const DEFAULT_STORIES = [
   {
@@ -113,8 +114,35 @@ const Stories = () => {
   const [viewerOpen, setViewerOpen] = useState(false);
   const [startStoryIndex, setStartStoryIndex] = useState(0);
 
-  const savedStories = localStorage.getItem('custom_stories');
-  const storiesList = savedStories ? JSON.parse(savedStories) : DEFAULT_STORIES;
+  // Published stories come from the CMS (public read). The bundled set is the
+  // fallback when nothing has been published yet or the API is unreachable.
+  const [stories, setStories] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await apiRequest('/cms/stories');
+        if (!cancelled) setStories(data?.data || []);
+      } catch {
+        if (!cancelled) setStories([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const storiesList = stories?.length
+    ? stories.map((story) => ({
+        id: story.id,
+        title: story.title,
+        image: story.mediaUrl || story.slides?.[0]?.image,
+        // The viewer pages through slides; fall back to a single cover slide so
+        // a story published without any still opens.
+        slides: story.slides?.length
+          ? story.slides
+          : [{ image: story.mediaUrl, caption: story.title, subCaption: '' }],
+      }))
+    : DEFAULT_STORIES;
 
   const openStory = (index) => {
     setStartStoryIndex(index);

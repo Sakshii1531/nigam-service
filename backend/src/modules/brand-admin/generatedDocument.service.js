@@ -8,7 +8,18 @@ export async function listDocuments(brandId, { type, page, limit, sort } = {}) {
 
   const { skip, limit: lim, page: pg, sort: sortObj } = parsePagination({ page, limit, sort });
   const [items, total] = await Promise.all([
-    GeneratedDocument.find(query).sort(sortObj).skip(skip).limit(lim),
+    // The recent-documents table names the customer, the appliance and who ran
+    // the generation, so resolve those refs rather than returning bare ids.
+    GeneratedDocument.find(query)
+      .populate({
+        path: 'serviceRequest',
+        select: 'humanId category',
+        populate: { path: 'user', select: 'name' },
+      })
+      .populate('generatedBy', 'name')
+      .sort(sortObj)
+      .skip(skip)
+      .limit(lim),
     GeneratedDocument.countDocuments(query),
   ]);
   return { items, meta: paginationMeta({ page: pg, limit: lim, total }) };

@@ -1,29 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { CheckCircle, AlertTriangle, Clock, ChevronRight } from 'lucide-react';
+import { apiRequest } from '../../../lib/apiClient';
 
-// Mocked AMC service history — in production this comes from backend
-const AMC_HISTORY = [
-  {
-    id: 'visit-1',
-    type: 'scheduled',
-    visitNumber: 1,
-    date: '14 Mar 2026',
-    label: 'Visit 1 of 4 — Scheduled',
-    tasks: ['Pre-Filter Change', 'TDS Check (280 → 140 ppm)', 'General Cleaning'],
-    technician: 'Rahul S.',
-    status: 'completed',
-  },
-  {
-    id: 'unscheduled-1',
-    type: 'unscheduled',
-    date: '28 Apr 2026',
-    label: 'Unscheduled — Breakdown Visit',
-    complaint: '"Water flow very low"',
-    action: 'Inlet valve blockage cleared',
-    technician: 'Amir K.',
-    status: 'completed',
-  },
-];
+// The visit history behind this contract, read from the server. This file used
+// to ship two invented visits — including a TDS reading and the technician
+// names "Rahul S." and "Amir K." — that were shown for every AMC job against
+// real customers.
 
 const statusIcon = (type, status) => {
   if (status === 'completed' && type === 'scheduled') {
@@ -36,17 +18,44 @@ const statusIcon = (type, status) => {
 };
 
 const AMCHistoryDrawer = ({ job, onStartVisit }) => {
-  const currentVisitNum = job?.amcVisitNumber || 2;
-  const currentVisitsRemaining = job?.amcVisitsRemaining ?? 3;
-  const totalVisits = job?.amcVisitsTotal || 4;
+  const [history, setHistory] = useState({ subscription: null, visits: [] });
+  const [loadError, setLoadError] = useState('');
+
+  useEffect(() => {
+    if (!job?.id) return;
+    let cancelled = false;
+    apiRequest(`/tech/jobs/${job.id}/amc-history`, { auth: true })
+      .then((res) => { if (!cancelled) setHistory(res.data || { subscription: null, visits: [] }); })
+      .catch((err) => { if (!cancelled) setLoadError(err.message || 'Could not load the AMC history.'); });
+    return () => { cancelled = true; };
+  }, [job?.id]);
+
+  const AMC_HISTORY = history.visits.map((v) => ({
+    id: v.id,
+    type: 'scheduled',
+    visitNumber: v.visitNumber,
+    date: v.scheduledDate ? new Date(v.scheduledDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Not scheduled',
+    label: `Visit ${v.visitNumber}${history.subscription?.visitsTotal ? ` of ${history.subscription.visitsTotal}` : ''} — ${v.status}`,
+    tasks: v.tasks,
+    technician: v.technician || 'Unassigned',
+    status: v.status === 'Completed' ? 'completed' : 'pending',
+    notes: v.notes,
+  }));
+
+  const totalVisits = history.subscription?.visitsTotal ?? job?.amcVisitsTotal ?? 0;
+  const currentVisitsRemaining = history.subscription?.visitsRemaining ?? job?.amcVisitsRemaining ?? 0;
+  const currentVisitNum = AMC_HISTORY.length + 1;
 
   // Months remaining calc
-  const expiryDate = job?.amcPlanExpiry ? new Date(job.amcPlanExpiry) : new Date('2027-01-15');
+  const expiryDate = history.subscription?.expiryDate
+    ? new Date(history.subscription.expiryDate)
+    : job?.amcPlanExpiry ? new Date(job.amcPlanExpiry) : null;
   const now = new Date();
-  const monthsLeft = Math.max(
-    0,
-    (expiryDate.getFullYear() - now.getFullYear()) * 12 + (expiryDate.getMonth() - now.getMonth())
-  );
+  // Null when no expiry is recorded — the screens must say so rather than
+  // measure against a hardcoded 2027 date, which is what this used to do.
+  const monthsLeft = expiryDate
+    ? Math.max(0, (expiryDate.getFullYear() - now.getFullYear()) * 12 + (expiryDate.getMonth() - now.getMonth()))
+    : null;
 
   return (
     <div className="fixed inset-0 bg-[#052355]/50 backdrop-blur-sm z-50 flex items-end justify-center">
@@ -72,7 +81,7 @@ const AMCHistoryDrawer = ({ job, onStartVisit }) => {
                 {job?.amcPlanName || 'AMC Gold Plan'}
               </span>
               <span className="text-[10px] text-amber-600 font-normal block mt-0.5">
-                {monthsLeft}m left · {currentVisitsRemaining}/{totalVisits} visits left
+                {monthsLeft === null ? 'Expiry not recorded' : `${monthsLeft}m left`} · {currentVisitsRemaining}/{totalVisits} visits left
               </span>
             </div>
           </div>
@@ -81,7 +90,15 @@ const AMCHistoryDrawer = ({ job, onStartVisit }) => {
         {/* Timeline — scrollable */}
         <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4">
 
-          {/* Past visits from mock history */}
+          {/* Past visits recorded against this contract */}
+          {loadError && (
+            <p className="text-[11px] font-bold text-red-600 px-1 py-2">{loadError}</p>
+          )}
+          {!loadError && AMC_HISTORY.length === 0 && (
+            <p className="text-[11px] font-semibold text-slate-400 px-1 py-4 text-center">
+              No previous visits recorded on this contract.
+            </p>
+          )}
           {AMC_HISTORY.map((entry, idx) => (
             <div key={entry.id} className="flex gap-3.5 relative">
               {/* Connector line */}

@@ -49,3 +49,12 @@ productRouter.put(
     }
   },
 );
+
+productRouter.delete('/:id', requireAdmin, validate(idParamSchema, 'params'), async (req, res, next) => {
+  try {
+    await productService.deactivateProduct(req.params.id);
+    ok(res, { deleted: true });
+  } catch (err) {
+    next(err);
+  }
+});

@@ -8,6 +8,7 @@ import { registerAllModels } from '../src/config/registerModels.js';
 import { ensureIndexes } from '../src/config/db.js';
 import { User } from '../src/modules/auth/user.model.js';
 import { Technician } from '../src/modules/technician/technician.model.js';
+import { Brand } from '../src/modules/super-admin/brand.model.js';
 import { Conversation } from '../src/modules/chat/conversation.model.js';
 import { Message } from '../src/modules/chat/message.model.js';
 import { Job } from '../src/modules/technician/job.model.js';
@@ -41,6 +42,18 @@ async function createTechnician() {
   const user = await User.create({ role: ROLES.TECHNICIAN, phone, name: 'Test Technician', passwordHash: await hashPassword('x') });
   const technician = await Technician.create({ user: user._id, name: 'Test Technician', phone, status: 'Active', availability: 'Available', specs: ['AC'] });
   return { user, technician, token: tokenFor(user) };
+}
+
+async function createBrandAdmin(name) {
+  const brand = await Brand.create({ name, category: 'Appliances', status: 'Active' });
+  const user = await User.create({
+    role: ROLES.BRAND_ADMIN,
+    email: `ba-${nextPhone()}@test.local`,
+    name: `${name} Admin`,
+    brand: brand._id,
+    passwordHash: await hashPassword('x'),
+  });
+  return { brand, user, token: tokenFor(user) };
 }
 
 async function createSuperAdmin() {
@@ -94,6 +107,7 @@ beforeEach(async () => {
     Technician.deleteMany({}),
     Conversation.deleteMany({}),
     Message.deleteMany({}),
+    Brand.deleteMany({}),
     Job.deleteMany({}),
     ServiceRequest.deleteMany({}),
     LiveTracking.deleteMany({}),
@@ -249,5 +263,111 @@ describe('live tracking', () => {
     expect(ack.ok).toBe(false);
 
     socket.disconnect();
+  });
+});
+
+describe('chat — a brand support agent is a real participant', () => {
+  it('lets a brand agent join its own support thread and exchange messages with the customer', async () => {
+    const { brand, token: agentToken } = await createBrandAdmin('Socket Brand A');
+    const { user: customer, token: customerToken } = await createCustomer();
+
+    const conversation = await Conversation.create({ customer: customer._id, brand: brand._id, status: 'Open' });
+
+    const agent = await connectClient(agentToken);
+    const client = await connectClient(customerToken);
+
+    expect(await emitAck(agent, 'join-conversation', { conversationId: conversation.id })).toEqual({ ok: true });
+    expect(await emitAck(client, 'join-conversation', { conversationId: conversation.id })).toEqual({ ok: true });
+
+    // The customer receives what the agent sends, attributed to 'agent'.
+    const delivered = new Promise((resolve) => client.on('message:new', resolve));
+    const ack = await emitAck(agent, 'send-message', { conversationId: conversation.id, text: 'How can we help?' });
+    expect(ack.ok).toBe(true);
+    expect(ack.message.sender).toBe('agent');
+
+    const received = await delivered;
+    expect(received.text).toBe('How can we help?');
+
+    agent.disconnect();
+    client.disconnect();
+  });
+
+  it('refuses a brand agent on another brand\'s thread', async () => {
+    const a = await createBrandAdmin('Socket Brand B');
+    const b = await createBrandAdmin('Socket Brand C');
+    const { user: customer } = await createCustomer();
+
+    const conversation = await Conversation.create({ customer: customer._id, brand: a.brand._id, status: 'Open' });
+
+    const intruder = await connectClient(b.token);
+    const joinRes = await emitAck(intruder, 'join-conversation', { conversationId: conversation.id });
+    expect(joinRes.ok).toBe(false);
+
+    // And cannot send even without joining.
+    const sendRes = await emitAck(intruder, 'send-message', { conversationId: conversation.id, text: 'leak' });
+    expect(sendRes.ok).toBe(false);
+    expect(await Message.countDocuments()).toBe(0);
+
+    intruder.disconnect();
+  });
+
+  it('refuses a brand agent on a job chat their brand is not part of', async () => {
+    const { token } = await createBrandAdmin('Socket Brand D');
+    const { user: customer } = await createCustomer();
+    const { technician } = await createTechnician();
+
+    // A customer<->technician thread has no brand at all.
+    const conversation = await Conversation.create({ customer: customer._id, technician: technician._id, status: 'Open' });
+
+    const agent = await connectClient(token);
+    const res = await emitAck(agent, 'join-conversation', { conversationId: conversation.id });
+    expect(res.ok).toBe(false);
+
+    agent.disconnect();
+  });
+});
+
+describe('chat — the platform help desk', () => {
+  it('lets super-admin answer a support thread, attributed to the desk', async () => {
+    const { token: adminToken } = await createSuperAdmin();
+    const { user: customer, token: customerToken } = await createCustomer();
+
+    const conversation = await Conversation.create({ customer: customer._id, platformSupport: true, status: 'Open' });
+
+    const admin = await connectClient(adminToken);
+    const client = await connectClient(customerToken);
+
+    expect(await emitAck(admin, 'join-conversation', { conversationId: conversation.id })).toEqual({ ok: true });
+    expect(await emitAck(client, 'join-conversation', { conversationId: conversation.id })).toEqual({ ok: true });
+
+    const delivered = new Promise((resolve) => client.on('message:new', resolve));
+    const ack = await emitAck(admin, 'send-message', { conversationId: conversation.id, text: 'Looking into it now.' });
+    expect(ack.ok).toBe(true);
+    expect(ack.message.sender).toBe('agent');
+    expect((await delivered).text).toBe('Looking into it now.');
+
+    admin.disconnect();
+    client.disconnect();
+  });
+
+  it('refuses super-admin on a job chat, and a brand agent on a support thread', async () => {
+    const { token: adminToken } = await createSuperAdmin();
+    const b = await createBrandAdmin('Desk Brand A');
+    const { user: customer } = await createCustomer();
+    const { technician } = await createTechnician();
+
+    const jobChat = await Conversation.create({ customer: customer._id, technician: technician._id, status: 'Open' });
+    const supportThread = await Conversation.create({ customer: customer._id, platformSupport: true, status: 'Open' });
+
+    const admin = await connectClient(adminToken);
+    // The help desk is not a back door into private job chats.
+    expect((await emitAck(admin, 'join-conversation', { conversationId: jobChat.id })).ok).toBe(false);
+
+    const brandAgent = await connectClient(b.token);
+    // A brand desk is not the platform desk.
+    expect((await emitAck(brandAgent, 'join-conversation', { conversationId: supportThread.id })).ok).toBe(false);
+
+    admin.disconnect();
+    brandAgent.disconnect();
   });
 });

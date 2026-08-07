@@ -1,18 +1,53 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import { Search, Plus, Filter, Wrench, Settings, ArrowUpRight } from 'lucide-react';
+import { apiRequest } from '../../lib/apiClient';
 
 const SpareParts = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  
-  // State for spare parts (made mutable)
-  const [parts, setParts] = useState([
-    { id: 1, name: 'AC Compressor 1.5T', brand: 'LG', code: 'SP-AC-COMP-01', costPrice: '₹2,800', markup: '15%', retailPrice: '₹3,220', stock: 15, status: 'In Stock' },
-    { id: 2, name: 'RO Carbon Membrane', brand: 'Kent', code: 'SP-RO-MEMB-05', costPrice: '₹600', markup: '20%', retailPrice: '₹720', stock: 40, status: 'In Stock' },
-    { id: 3, name: 'Fridge Fan Motor 12V', brand: 'Samsung', code: 'SP-RF-MOT-09', costPrice: '₹450', markup: '25%', retailPrice: '₹562', stock: 5, status: 'Low Stock' },
-    { id: 4, name: 'WM Drain Pump Motor', brand: 'IFB', code: 'SP-WM-PMP-11', costPrice: '₹800', markup: '15%', retailPrice: '₹920', stock: 0, status: 'Out of Stock' },
-  ]);
+  const [parts, setParts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  // The default markup is a platform setting, not a display constant.
+  const [defaultMarkup, setDefaultMarkup] = useState(null);
+
+  useEffect(() => {
+    apiRequest('/super-admin/settings', { auth: true })
+      .then((res) => setDefaultMarkup(res.data?.defaultSparePartMarkupPercent ?? null))
+      .catch((err) => console.warn('[spare-parts] Could not load platform settings:', err.message));
+  }, []);
+
+  useEffect(() => {
+    const fetchParts = async () => {
+      try {
+        const data = await apiRequest('/super-admin/spare-parts', { auth: true });
+        const list = Array.isArray(data?.data) ? data.data : [];
+        setParts(list.map(p => {
+          const cost = Number(p.costPrice || p.cost || 0);
+          const markup = Number(p.markupPercent || p.markup || 15);
+          const retail = Math.round(cost * (1 + markup / 100));
+          const qty = p.stock ?? p.quantity ?? 0;
+          return {
+            id: p._id || p.id || p.partCode,
+            name: p.name || p.partName || 'Part',
+            brand: p.brand || 'N/A',
+            code: p.partCode || p.skuCode || `SP-${Math.floor(Math.random()*9999)}`,
+            costPrice: `₹${cost.toLocaleString('en-IN')}`,
+            markup: `${markup}%`,
+            retailPrice: `₹${retail.toLocaleString('en-IN')}`,
+            stock: qty,
+            status: qty === 0 ? 'Out of Stock' : qty <= (p.reorderLevel || 5) ? 'Low Stock' : 'In Stock'
+          };
+        }));
+      } catch (err) {
+        setLoadError(err.message || 'Could not load spare parts.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchParts();
+  }, []);
 
   // Modal Form States
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -64,6 +99,12 @@ const SpareParts = () => {
       <Sidebar />
       <div className="flex-1 ml-64 min-h-screen flex flex-col">
         <Topbar title="Spare Parts Control" subtitle="Configure spare parts pricing, markups, and stock controls" />
+
+        {loadError && (
+          <div className="mx-6 mt-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-xs font-bold text-red-700">
+            {loadError}
+          </div>
+        )}
         <div className="p-6 space-y-6 flex-1 bg-[#F8FAFC]">
           
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -85,7 +126,7 @@ const SpareParts = () => {
             </div>
             <div className="bg-white p-5 rounded-2xl border border-[#E2E8F0] shadow-sm">
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Default Platform Markup</p>
-              <p className="text-2xl font-black text-blue-600 mt-2">20%</p>
+              <p className="text-2xl font-black text-blue-600 mt-2">{defaultMarkup != null ? `${defaultMarkup}%` : '—'}</p>
             </div>
           </div>
 

@@ -23,5 +23,6 @@ export const listQuerySchema = z.object({
 
 export const assignManagerSchema = z.object({ managerId: z.string().min(1) });
 export const updateStatusSchema = z.object({ status: z.enum(STATUSES) });
+export const updatePrioritySchema = z.object({ priority: z.enum(PRIORITIES) });
 
 export const idParamSchema = z.object({ id: z.string().min(1) });

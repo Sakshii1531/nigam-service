@@ -10,246 +10,42 @@ export const useTech = () => {
   return ctx;
 };
 
-const INITIAL_JOBS = [
-  {
-    id: '8842',
-    type: 'NCC Paid Service',
-    category: 'AC Repair',
-    product: 'Split AC Gas Charging',
-    brand: 'Voltas',
-    model: 'Voltas Split AC 1.5 Ton Inverter',
-    serialNo: 'VLT18GN123348X',
-    installDate: '12 Jan 2023',
-    warrantyStatus: 'Out of Warranty',
-    complaint: 'AC not cooling properly',
-    estEarnings: 850,
-    price: 2200,
-    distance: 1.6,
-    customerName: 'Rohit Sharma',
-    phone: '9876543210',
-    address: '124 Oak Street, Apartment 4B, Lucknow, UP 226001',
-    isD2C: true,
-    isPriority: true,
-    isRecommended: true
-  },
-  {
-    id: '8843',
-    type: 'Brand Warranty',
-    category: 'Refrigerator Repair',
-    product: 'LG Refrigerator',
-    brand: 'LG',
-    model: 'LG Double Door 260L',
-    serialNo: 'LG-REF-99201X',
-    installDate: '10 May 2024',
-    warrantyStatus: 'In Warranty',
-    complaint: 'Noise from freezer compartment',
-    estEarnings: 0,
-    price: 0,
-    distance: 3.1,
-    customerName: 'Mrs. Neha Verma',
-    phone: '9988776655',
-    address: 'Sector 15, Gomti Nagar, Lucknow, UP 226010',
-    isPartner: true,
-    isPriority: false,
-    isRecommended: true
-  },
-  {
-    id: '8844',
-    type: 'NCC Extended Warranty',
-    category: 'AC Repair',
-    product: 'Split AC Claim',
-    brand: 'Carrier',
-    model: 'Carrier 1.5 Ton 3 Star',
-    serialNo: 'CAR-AC-7762X',
-    installDate: '22 Feb 2022',
-    warrantyStatus: 'Extended Warranty',
-    complaint: 'Water leakage from indoor unit',
-    estEarnings: 0,
-    price: 0,
-    distance: 4.2,
-    customerName: 'Mr. Anil Mehta',
-    phone: '8877665544',
-    address: 'Flat 302, Royal Residency, Lucknow, UP 226016',
-    isNCCEW: true,
-    isPriority: true,
-    isRecommended: false,
-    // Extended Warranty specific
-    ewPlanName: 'NCC Protect Plus',
-    ewValidTill: '15 Jan 2028',
-    ewClaimsRemaining: 2,
-    ewClaimsTotal: 3
-  },
-  {
-    id: '8845',
-    type: 'AMC Visit',
-    category: 'Washing Machine Repair',
-    product: 'Quarterly Service Visit',
-    brand: 'Samsung',
-    model: 'Samsung Front Load 8kg',
-    serialNo: 'SAM-WM-8822X',
-    installDate: '15 Sep 2023',
-    warrantyStatus: 'In Warranty',
-    complaint: 'Vibration during spin cycle',
-    estEarnings: 0,
-    price: 0,
-    distance: 2.8,
-    customerName: 'Miss Neha Sen',
-    phone: '7766554433',
-    address: 'C-42, Aliganj, Lucknow, UP 226024',
-    isPartner: true,
-    isPriority: false,
-    isRecommended: true,
-    // AMC specific
-    amcPlanName: 'AMC Gold Plan',
-    amcId: 'NCCAMC289412',
-    amcVisitsTotal: 4,
-    amcVisitsRemaining: 3,
-    amcVisitNumber: 2,
-    amcPlanExpiry: '15 Jan 2027',
-    amcPlanType: 'Quarterly'
-  },
-  {
-    id: '8846',
-    type: 'NCC Extended Warranty',
-    category: 'Microwave Oven Repair',
-    product: 'Microwave Oven',
-    brand: 'IFB',
-    model: 'IFB 30L Convection',
-    serialNo: 'IFB-MW-3301X',
-    installDate: '01 Nov 2021',
-    warrantyStatus: 'Extended Warranty',
-    complaint: 'Touch panel not responding',
-    estEarnings: 280,
-    price: 150,
-    distance: 4.7,
-    customerName: 'Mrs. Indu Mishra',
-    phone: '6655443322',
-    address: 'B-10, Indira Nagar, Lucknow, UP 226016',
-    isNCCEW: true,
-    isPriority: true,
-    isRecommended: false,
-    ewPlanName: 'NCC Shield Basic',
-    ewValidTill: '01 Nov 2027',
-    ewClaimsRemaining: 1,
-    ewClaimsTotal: 2
-  },
-  {
-    id: '8847',
-    type: 'NCC Paid Service',
-    category: 'RO',
-    product: 'RO Water Purifier Service',
-    brand: 'Kent',
-    model: 'Kent Grand Plus RO',
-    serialNo: 'KNT-RO-88122',
-    installDate: '10 Feb 2023',
-    warrantyStatus: 'Out of Warranty',
-    complaint: 'Water taste is bitter / filter change needed',
-    estEarnings: 450,
-    price: 950,
-    distance: 1.2,
-    customerName: 'Sanjay Kumar',
-    phone: '9882233445',
-    address: 'A-24, Sector 4, Vikas Nagar, Lucknow, UP 226022',
-    isD2C: true,
-    isPriority: false,
-    isRecommended: true
-  },
-  {
-    id: '8848',
-    type: 'Brand Warranty',
-    category: 'TV',
-    product: 'LED TV Panel Repair',
-    brand: 'Sony',
-    model: 'Sony Bravia 43" 4K Smart LED',
-    serialNo: 'SNY-TV-55102',
-    installDate: '14 Jun 2025',
-    warrantyStatus: 'In Warranty',
-    complaint: 'Horizontal line on display screen',
-    estEarnings: 650,
-    price: 0,
-    distance: 3.8,
-    customerName: 'Vikram Singh',
-    phone: '9443322110',
-    address: 'Flat 502, Orchid Heights, Hazratganj, Lucknow, UP 226001',
-    isPartner: true,
-    isPriority: true,
-    isRecommended: false
-  },
-  {
-    id: '8849',
-    type: 'NCC Paid Service',
-    category: 'Chimney',
-    product: 'Kitchen Chimney Deep Cleaning',
-    brand: 'Faber',
-    model: 'Faber 60cm Auto Clean Chimney',
-    serialNo: 'FBR-CH-99321',
-    installDate: '05 Sep 2024',
-    warrantyStatus: 'Out of Warranty',
-    complaint: 'Suction power is low / heavy oil deposition',
-    estEarnings: 550,
-    price: 1450,
-    distance: 2.1,
-    customerName: 'Priya Sharma',
-    phone: '9556677889',
-    address: 'C-12, Sector B, Aliganj, Lucknow, UP 226024',
-    isD2C: true,
-    isPriority: false,
-    isRecommended: true
-  }
-];
-
-const INITIAL_INVENTORY = [
-  { id: 'inv-1', name: 'Capacitor 45/5 MFD', sku: 'CP-45/5', qty: 6, status: 'In Stock', price: 220 },
-  { id: 'inv-2', name: 'Gas Refill Kit (R410A)', sku: 'GRK-410', qty: 1, status: 'Low Stock', price: 850 },
-  { id: 'inv-3', name: 'Outdoor Fan Motor', sku: 'FM-10W', qty: 0, status: 'Out of Stock', price: 1230 },
-  { id: 'inv-4', name: 'PCB Board (Universal)', sku: 'PCB-U01', qty: 3, status: 'In Stock', price: 1500 }
-];
-
-const INITIAL_CLAIMS = [
-  { id: 'claim-1', brand: 'NCC Warehouse Order', claimId: 'NC10617', item: 'Capacitor 45/5 MFD', status: 'Pending Approval', amount: 220, date: 'Just now' },
-  { id: 'claim-2', brand: 'NCC Warehouse Order', claimId: 'NC95345', item: 'Capacitor 45/5 MFD', status: 'Pending Approval', amount: 220, date: 'Just now' },
-  { id: 'claim-3', brand: 'LG Partner Warranty', claimId: 'LG88204', item: 'Washing Machine Motor', status: 'Pending Approval', amount: 1850, date: '12 May 2026' },
-  { id: 'claim-4', brand: 'Samsung Warranty', claimId: 'SM87712', item: 'PCB Board', status: 'Approved', amount: 2450, date: '10 May 2026' },
-  { id: 'claim-5', brand: 'NCC EW Claim', claimId: 'NC00501', item: 'Compressor Coil', status: 'Rejected', amount: 2200, date: '08 May 2026' }
-];
-
-const INITIAL_NOTIFICATIONS = [
-  { id: 1, type: 'Jobs', title: 'New job assigned', message: '#8843 has been assigned', time: '2m ago', read: false },
-  { id: 2, type: 'Claims', title: 'Claim Approved', message: 'LG Claim LG88421 approved', time: '15m ago', read: false },
-  { id: 3, type: 'Payments', title: 'Payment Received', message: '₹2,200 received from Rohit Sharma', time: '1h ago', read: false },
-  { id: 4, type: 'Claims', title: 'Low Stock Alert', message: 'Capacitor 45/5 MFD is low', time: '2h ago', read: false },
-{ id: 5, type: 'Jobs', title: 'Training Update', message: 'New course available', time: '1d ago', read: false }
-];
-
 export const TechProvider = ({ children }) => {
   const { user } = useAuth();
-  const [jobs, setJobs] = useState(INITIAL_JOBS);
+  const [jobs, setJobs] = useState([]);
   const [activeSpecs, setActiveSpecs] = useState(['AC', 'Refrigerator', 'Washing Machine']);
   const toggleSpec = useCallback((spec) => {
     setActiveSpecs(prev => prev.includes(spec) ? prev.filter(s => s !== spec) : [...prev, spec]);
   }, []);
-  const [inventory, setInventory] = useState(INITIAL_INVENTORY);
-  const [claims, setClaims] = useState(INITIAL_CLAIMS);
-  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
+  const [inventory, setInventory] = useState([]);
+  const [claims, setClaims] = useState([]);
+  const [notifications, setNotifications] = useState([]);
   const [earningsTally, setEarningsTally] = useState({
-    today: 2450,
-    total: 245600,
-    completedToday: 3,
-    completedTotal: 154
+    today: 0,
+    total: 0,
+    completedToday: 0,
+    completedTotal: 0,
+    available: 0,
+    paidOut: 0,
+    lifetimeEarned: 0,
+    split: { quick: { amount: 0, jobs: 0 }, invoice: { amount: 0, jobs: 0 } },
   });
 
-  // Fetch real jobs from backend when logged in as technician
+  // Fetch real jobs, inventory, claims, and earnings from backend when logged in as technician
   const fetchRealJobs = useCallback(async () => {
     if (!user || user.role !== 'technician') return;
     try {
-      const availableSRs = await apiRequest('/tech/jobs/available', { auth: true }) || [];
-      const activeJobs = await apiRequest('/tech/jobs/active', { auth: true }) || [];
+      // 1. Fetch jobs
+      const availableRes = await apiRequest('/tech/jobs/available', { auth: true });
+      const activeRes = await apiRequest('/tech/jobs/active', { auth: true });
+      const availableSRs = availableRes?.data || [];
+      const activeJobs = activeRes?.data || [];
 
       const mappedAvailable = availableSRs.map((sr) => ({
         id: sr.id || sr._id,
         type: sr.booking?.totalPrice === 0 ? (sr.extendedWarrantyOrder ? 'NCC Extended Warranty' : sr.amcSubscription ? 'AMC Visit' : 'Brand Warranty') : 'NCC Paid Service',
-        category: `${sr.category} Repair`,
-        product: sr.description || `${sr.category} Service`,
+        category: `${sr.category || 'Service'} Repair`,
+        product: sr.description || `${sr.category || 'Appliance'} Service`,
         brand: sr.booking?.brand || sr.category || 'Brand',
         model: sr.model || 'Universal Model',
         serialNo: sr.serialNo || 'SNY-12345',
@@ -271,31 +67,94 @@ export const TechProvider = ({ children }) => {
         const sr = job.serviceRequest;
         return {
           id: job.id || job._id,
-          type: job.type,
+          type: job.type || 'NCC Paid Service',
           category: `${sr?.category || 'Service'} Repair`,
           product: sr?.description || 'Service Job',
           brand: sr?.booking?.brand || 'Brand',
           model: sr?.model || 'Universal Model',
           serialNo: sr?.serialNo || 'SNY-12345',
           complaint: sr?.description || 'Service Job',
-          estEarnings: job.estEarnings,
-          price: job.price,
+          estEarnings: job.estEarnings || 200,
+          invoiceUrl: sr?.attachments?.[0] || sr?.appliance?.invoiceFileUrl || null,
+          invoiceAvailable: Boolean(sr?.invoiceAvailable),
+          price: job.price || 500,
           distance: 1.8,
           customerName: sr?.booking?.fullName || sr?.user?.name || 'Customer',
           phone: sr?.booking?.mobile || sr?.user?.phone || '9876543210',
           address: sr?.booking?.address ? `${sr.booking.address.house || ''}, ${sr.booking.address.landmark || ''}, ${sr.booking.address.city || ''} ${sr.booking.address.pincode || ''}` : 'Customer Address',
-          isD2C: job.isD2C,
-          isPriority: job.isPriority,
-          isRecommended: job.isRecommended,
+          isD2C: job.isD2C ?? true,
+          isPriority: job.isPriority ?? false,
+          isRecommended: job.isRecommended ?? true,
           isAvailableRequest: false,
           serviceRequestId: sr?.id || sr?._id,
-          activeStep: job.activeStep,
+          activeStep: job.activeStep || 'details',
         };
       });
 
-      setJobs([...mappedActive, ...mappedAvailable, ...INITIAL_JOBS.filter(j => !mappedActive.some(ma => ma.serviceRequestId === j.id))]);
+      const combinedJobs = [...mappedActive, ...mappedAvailable];
+      setJobs(combinedJobs);
+
+      // 2. Fetch real inventory
+      try {
+        const invRes = await apiRequest('/tech/inventory', { auth: true });
+        if (Array.isArray(invRes?.data)) {
+          setInventory(invRes.data.map(item => ({
+            id: item._id || item.id,
+            name: item.name || item.partName || 'Spare Part',
+            sku: item.sku || item.partCode || 'SKU-000',
+            qty: item.stock ?? item.quantity ?? 0,
+            status: (item.stock ?? item.quantity ?? 0) === 0 ? 'Out of Stock' : (item.stock ?? item.quantity ?? 0) <= 2 ? 'Low Stock' : 'In Stock',
+            price: item.price || item.retailPrice || 0
+          })));
+        }
+      } catch (e) {
+        console.warn('Technician inventory fetch warning:', e.message);
+      }
+
+      // 3. Fetch real claims
+      try {
+        const claimsRes = await apiRequest('/tech/claims', { auth: true });
+        if (Array.isArray(claimsRes?.data)) {
+          setClaims(claimsRes.data.map(c => ({
+            id: c._id || c.id,
+            brand: c.brand || 'Partner Warranty',
+            claimId: c.claimNumber || `NC${Math.floor(10000 + Math.random()*90000)}`,
+            item: c.partName || c.item || 'Part Claim',
+            status: c.status || 'Pending Approval',
+            amount: c.amount || 0,
+            date: c.createdAt ? new Date(c.createdAt).toLocaleDateString() : 'Today'
+          })));
+        }
+      } catch (e) {
+        console.warn('Technician claims fetch warning:', e.message);
+      }
+
+      // 4. Fetch real earnings summary
+      try {
+        // The breakdown endpoint carries the tally plus the withdrawable balance
+        // and the Quick/Invoice split. The field names here are the API's own —
+        // this previously read `totalEarnings`/`todayEarnings`, which the API has
+        // never returned, so the tally was permanently zero.
+        const earnRes = await apiRequest('/tech/earnings/breakdown', { auth: true });
+        if (earnRes?.data) {
+          const d = earnRes.data;
+          setEarningsTally({
+            today: d.today || 0,
+            total: d.lifetimeEarned || 0,
+            completedToday: d.completedToday || 0,
+            completedTotal: d.completedTotal || 0,
+            available: d.available || 0,
+            paidOut: d.paidOut || 0,
+            lifetimeEarned: d.lifetimeEarned || 0,
+            split: d.split || { quick: { amount: 0, jobs: 0 }, invoice: { amount: 0, jobs: 0 } },
+          });
+        }
+      } catch (e) {
+        console.warn('Technician earnings summary fetch warning:', e.message);
+      }
+
     } catch (err) {
-      console.error('Failed to fetch real jobs for technician:', err);
+      console.error('Failed to fetch real jobs for technician:', err.message);
     }
   }, [user]);
 
@@ -331,8 +190,9 @@ export const TechProvider = ({ children }) => {
   const [partsCart, setPartsCart] = useState([]);
   
   // AI assistant messages
+  // Greets by the signed-in technician's name, not a hardcoded "Alex".
   const [chatMessages, setChatMessages] = useState([
-    { id: 1, sender: 'ai', text: 'Hello Alex! I am your AI Assistant. How can I help you today?' }
+    { id: 1, sender: 'ai', text: 'Hello! I am your AI assistant. How can I help with this job?' }
   ]);
 
   const activeJob = jobs.find(j => j.id === activeJobId) || null;
@@ -420,28 +280,61 @@ export const TechProvider = ({ children }) => {
   }, []);
 
   const collectPayment = useCallback(() => {
-    if (activeJob) {
-      setEarningsTally(prev => ({
-        ...prev,
-        today: prev.today + (activeJob.estEarnings || 850),
-        total: prev.total + (activeJob.estEarnings || 850),
-        completedToday: prev.completedToday + 1,
-        completedTotal: prev.completedTotal + 1
-      }));
-      // Keep the job in nearby list for mock demo purposes
-      // setJobs(prev => prev.filter(j => j.id !== activeJob.id));
-      setActiveStep('completed');
-    }
+    if (!activeJob) return;
+    setActiveStep('completed');
+    // The server credits the tally as part of completing the job — read it back
+    // rather than guessing the delta here.
+    apiRequest('/tech/earnings/breakdown', { auth: true })
+      .then((res) => {
+        const d = res.data;
+        if (!d) return;
+        setEarningsTally({
+          today: d.today || 0,
+          total: d.lifetimeEarned || 0,
+          completedToday: d.completedToday || 0,
+          completedTotal: d.completedTotal || 0,
+          available: d.available || 0,
+          paidOut: d.paidOut || 0,
+          lifetimeEarned: d.lifetimeEarned || 0,
+          split: d.split || { quick: { amount: 0, jobs: 0 }, invoice: { amount: 0, jobs: 0 } },
+        });
+      })
+      .catch((err) => console.warn('[tech] Could not refresh earnings:', err.message));
   }, [activeJob]);
 
-  const creditTravelFee = useCallback(() => {
-    setEarningsTally(prev => ({
-      ...prev,
-      today: prev.today + 150,
-      total: prev.total + 150,
-      completedToday: prev.completedToday + 1,
-      completedTotal: prev.completedTotal + 1
-    }));
+  // Credits the visit fee for a job the technician travelled to but could not
+  // complete. The server owns the amount (PlatformSettings.visitFeeAmount) and
+  // the idempotency — an earlier version added ₹150 client-side, showing the
+  // technician earnings the platform had no record of. Returns the credited
+  // amount so the summary screen can show the real figure.
+  const creditTravelFee = useCallback(async (jobId) => {
+    let credited = null;
+    if (jobId) {
+      try {
+        const res = await apiRequest(`/tech/earnings/visit-fee/${jobId}`, { method: 'POST', auth: true });
+        credited = res.data;
+      } catch (err) {
+        console.warn('[tech] Could not credit visit fee:', err.message);
+      }
+    }
+    await apiRequest('/tech/earnings/breakdown', { auth: true })
+      .then((res) => {
+        const d = res.data;
+        if (!d) return;
+        setEarningsTally((prev) => ({
+          ...prev,
+          today: d.today || 0,
+          total: d.lifetimeEarned || 0,
+          completedToday: d.completedToday || 0,
+          completedTotal: d.completedTotal || 0,
+          available: d.available || 0,
+          paidOut: d.paidOut || 0,
+          lifetimeEarned: d.lifetimeEarned || 0,
+          split: d.split || prev.split,
+        }));
+      })
+      .catch((err) => console.warn('[tech] Could not refresh earnings:', err.message));
+    return credited;
   }, []);
 
   const addPartToCart = useCallback((part) => {
@@ -499,33 +392,51 @@ export const TechProvider = ({ children }) => {
     ]);
   }, []);
 
-  const markAllNotificationsRead = useCallback(() => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  // Marking read is persisted — the local-only version reverted on next load.
+  const dismissJob = useCallback((jobId) => {
+    setJobs((prev) => prev.filter((j) => j.id !== jobId));
   }, []);
 
-  const addChatMessage = useCallback((text, sender = 'user') => {
-    setChatMessages(prev => [
-      ...prev,
-      { id: Date.now(), sender, text }
-    ]);
+  const markAllNotificationsRead = useCallback(async () => {
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    try {
+      await apiRequest('/notifications/read-all', { method: 'PATCH', auth: true });
+    } catch (err) {
+      console.warn('[tech] Could not mark notifications read:', err.message);
+    }
+  }, []);
 
-    if (sender === 'user') {
-      // Auto reply simulation after 800ms
-      setTimeout(() => {
-        let reply = "I can assist you with diagnostics or part locations. What issues are you experiencing?";
-        const lowerText = text.toLowerCase();
-        if (lowerText.includes('part') || lowerText.includes('capacitor')) {
-          reply = "The Capacitor 45/5 MFD (SKU: CP-45/5) is currently in stock at NCC Warehouse Gurugram. Do you want to order it?";
-        } else if (lowerText.includes('cool') || lowerText.includes('diagnostic')) {
-          reply = "For AC not cooling, check the capacitor ratings and compressor amp draw. These are the top causes (72% probability for capacitor failure).";
-        } else if (lowerText.includes('warranty')) {
-          reply = "You can verify warranty using the customer's purchase invoice or serial number. Standard brand coverage applies for LG/Samsung/Voltas.";
-        }
-        setChatMessages(curr => [
-          ...curr,
-          { id: Date.now() + 1, sender: 'ai', text: reply }
-        ]);
-      }, 800);
+  // Routes the in-job assistant through the same grounded /tech/assistant
+  // endpoint the AIAssistant screen uses. It used to be a keyword matcher that
+  // stated a specific SKU as "in stock at NCC Warehouse Gurugram" and a "72%
+  // probability" of capacitor failure — figures nothing produced.
+  const addChatMessage = useCallback(async (text, sender = 'user') => {
+    const entry = { id: Date.now(), sender, text };
+    setChatMessages((prev) => [...prev, entry]);
+    if (sender !== 'user') return;
+
+    let history = [];
+    setChatMessages((prev) => { history = prev; return prev; });
+
+    try {
+      const res = await apiRequest('/tech/assistant', {
+        method: 'POST',
+        auth: true,
+        body: {
+          messages: [...history, entry]
+            .filter((m) => m.text)
+            .map((m) => ({ role: m.sender === 'user' ? 'user' : 'assistant', content: m.text })),
+        },
+      });
+      setChatMessages((prev) => [...prev, { id: Date.now() + 1, sender: 'ai', text: res.data.reply }]);
+    } catch (err) {
+      setChatMessages((prev) => [...prev, {
+        id: Date.now() + 1,
+        sender: 'ai',
+        text: err.status === 503
+          ? "The assistant isn't available on this deployment. For stock check Inventory, and for anything else contact Technical Support."
+          : err.message || 'Could not reach the assistant.',
+      }]);
     }
   }, []);
 
@@ -561,6 +472,7 @@ export const TechProvider = ({ children }) => {
       placePartsOrder,
       raiseClaim,
       markAllNotificationsRead,
+    dismissJob,
       addChatMessage,
       activeSpecs,
       toggleSpec

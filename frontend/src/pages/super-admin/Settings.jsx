@@ -1,25 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
-import { 
-  Bell, 
-  Lock, 
-  Globe, 
-  CreditCard, 
+import { apiRequest } from '../../lib/apiClient';
+import {
+  Bell,
+  Lock,
+  Globe,
+  CreditCard,
   Percent,
   Save,
   CheckCircle2
 } from 'lucide-react';
 
+// Which settings fields each tab owns. Save sends only the active tab's fields
+// so switching tabs without saving never writes stale values from another tab.
+const TAB_FIELDS = {
+  App: ['platformName', 'supportEmail', 'maintenanceMode'],
+  Notifications: ['emailNotifications', 'smsNotifications', 'pushNotifications'],
+  Security: ['twoFactorEnabled'],
+  Payment: ['razorpayKeyId'],
+  Tax: ['defaultGstPercent'],
+};
+
 const Settings = () => {
   const [activeTab, setActiveTab] = useState('App');
   const [successMessage, setSuccessMessage] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   // Form input states
-  const [platformName, setPlatformName] = useState('Nigam Care Company');
-  const [supportEmail, setSupportEmail] = useState('support@nigamcare.com');
+  const [platformName, setPlatformName] = useState('');
+  const [supportEmail, setSupportEmail] = useState('');
   const [maintenanceMode, setMaintenanceMode] = useState(false);
-  const [razorpayKey, setRazorpayKey] = useState('rzp_live_****************');
+  const [razorpayKey, setRazorpayKey] = useState('');
   const [defaultGst, setDefaultGst] = useState('18');
   const [twoFactor, setTwoFactor] = useState(false);
 
@@ -27,6 +40,38 @@ const Settings = () => {
   const [emailNotif, setEmailNotif] = useState(true);
   const [smsAlert, setSmsAlert] = useState(true);
   const [pushNotif, setPushNotif] = useState(true);
+
+  const showToast = (message) => {
+    setSuccessMessage(message);
+    setTimeout(() => {
+      setSuccessMessage('');
+    }, 3000);
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadSettings() {
+      try {
+        const s = await apiRequest('/super-admin/settings', { auth: true });
+        if (cancelled || !s) return;
+        setPlatformName(s.platformName || '');
+        setSupportEmail(s.supportEmail || '');
+        setMaintenanceMode(!!s.maintenanceMode);
+        setRazorpayKey(s.razorpayKeyId || '');
+        setDefaultGst(String(s.defaultGstPercent ?? 18));
+        setTwoFactor(!!s.twoFactorEnabled);
+        setEmailNotif(s.emailNotifications !== false);
+        setSmsAlert(s.smsNotifications !== false);
+        setPushNotif(s.pushNotifications !== false);
+      } catch (err) {
+        if (!cancelled) showToast(`Could not load settings: ${err.message}`);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    loadSettings();
+    return () => { cancelled = true; };
+  }, []);
 
   const tabs = [
     { name: 'App', icon: <Globe size={16} /> },
@@ -36,15 +81,37 @@ const Settings = () => {
     { name: 'Tax', icon: <Percent size={16} /> },
   ];
 
-  const showToast = (message) => {
-    setSuccessMessage(message);
-    setTimeout(() => {
-      setSuccessMessage('');
-    }, 3000);
-  };
+  const handleSave = async () => {
+    const all = {
+      platformName,
+      supportEmail,
+      maintenanceMode,
+      emailNotifications: emailNotif,
+      smsNotifications: smsAlert,
+      pushNotifications: pushNotif,
+      twoFactorEnabled: twoFactor,
+      razorpayKeyId: razorpayKey,
+      // The GST input is a text field; the API validates a number 0-100.
+      defaultGstPercent: Number(defaultGst),
+    };
 
-  const handleSave = () => {
-    showToast(`${activeTab} settings saved successfully!`);
+    const body = {};
+    for (const field of TAB_FIELDS[activeTab] || []) body[field] = all[field];
+
+    if (activeTab === 'Tax' && !Number.isFinite(body.defaultGstPercent)) {
+      showToast('Enter a valid GST percentage.');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await apiRequest('/super-admin/settings', { method: 'PUT', auth: true, body });
+      showToast(`${activeTab} settings saved successfully!`);
+    } catch (err) {
+      showToast(`Could not save ${activeTab} settings: ${err.message}`);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -266,11 +333,12 @@ const Settings = () => {
 
             {/* Footer */}
             <div className="p-6 border-t border-[#E2E8F0] flex justify-end bg-[#F8FAFC]">
-              <button 
+              <button
                 onClick={handleSave}
-                className="bg-[#0D47A1] text-white px-6 py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-sm"
+                disabled={loading || saving}
+                className="bg-[#0D47A1] text-white px-6 py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                <Save size={16} /> Save Changes
+                <Save size={16} /> {saving ? 'Saving…' : 'Save Changes'}
               </button>
             </div>
           </div>

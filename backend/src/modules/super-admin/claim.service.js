@@ -15,7 +15,9 @@ export async function listClaims({ status, page, limit, sort } = {}) {
 
   const { skip, limit: lim, page: pg, sort: sortObj } = parsePagination({ page, limit, sort });
   const [items, total] = await Promise.all([
-    Claim.find(query).sort(sortObj).skip(skip).limit(lim),
+    // The raiser is populated so the console can show who actually raised the
+    // claim — refPath resolves to a User or a Technician document.
+    Claim.find(query).populate('raisedBy', 'name phone email').populate('serviceRequest', 'humanId category').sort(sortObj).skip(skip).limit(lim),
     Claim.countDocuments(query),
   ]);
   return { items, meta: paginationMeta({ page: pg, limit: lim, total }) };
@@ -28,7 +30,11 @@ async function findOr404(id) {
 }
 
 export async function getClaim(id) {
-  return findOr404(id);
+  const claim = await Claim.findById(id)
+    .populate('raisedBy', 'name phone email')
+    .populate('serviceRequest', 'humanId category description');
+  if (!claim) throw new ApiError(404, 'Claim not found');
+  return claim;
 }
 
 /** Resolves the claim's raiser to a real User id for notification purposes —

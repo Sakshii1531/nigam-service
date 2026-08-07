@@ -26,6 +26,9 @@ const bookingSchema = new mongoose.Schema(
     mobile: String,
     paymentMode: { type: String, enum: ['advance', 'after'], default: 'after' },
     advanceAmount: { type: Number, default: 0 },
+    // Set only once the gateway signature has verified — the advance used to be
+    // recorded as an amount with nothing tracking whether it was ever collected.
+    advancePaid: { type: Boolean, default: false },
     totalPrice: { type: Number, required: true },
     status: {
       type: String,

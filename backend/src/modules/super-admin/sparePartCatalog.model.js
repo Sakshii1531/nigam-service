@@ -9,9 +9,16 @@ const sparePartCatalogSchema = new mongoose.Schema(
     name: { type: String, required: true },
     brand: String,
     code: String,
+    category: String,
     costPrice: { type: Number, required: true },
     markupPercent: { type: Number, default: 0 },
     stock: { type: Number, default: 0 },
+    // Re-order controls. The console rendered a fixed "Authorized Distributor:
+    // Nigam Spares Ltd / 2-3 business days" block for every part; these are the
+    // fields that make that panel say something true, per part.
+    reorderThreshold: { type: Number, default: 5 },
+    supplier: String,
+    leadTimeDays: Number,
   },
   { timestamps: true },
 );
@@ -23,7 +30,7 @@ sparePartCatalogSchema.virtual('retailPrice').get(function retailPrice() {
 });
 sparePartCatalogSchema.virtual('status').get(function status() {
   if (this.stock <= 0) return 'Out of Stock';
-  if (this.stock <= 5) return 'Low Stock';
+  if (this.stock <= (this.reorderThreshold ?? 5)) return 'Low Stock';
   return 'In Stock';
 });
 

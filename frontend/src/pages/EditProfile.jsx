@@ -1,18 +1,35 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, User, Phone, Mail, MapPin, Camera } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { apiRequest } from '../lib/apiClient';
 
 const EditProfile = () => {
   const navigate = useNavigate();
+  const { user, updateUser } = useAuth();
   const fileInputRef = useRef(null);
   const [avatar, setAvatar] = useState(null);
   const [form, setForm] = useState({
-    name: 'Sakshi Dwivedi',
-    phone: '+91 98765 43210',
-    email: 'sakshi.dwivedi@gmail.com',
-    address: 'Civil Lines, Delhi - 110054',
+    name: '',
+    phone: '',
+    email: '',
+    address: '',
   });
+
+  useEffect(() => {
+    if (user) {
+      setForm({
+        name: user.name || '',
+        phone: user.phone || '',
+        email: user.email || '',
+        address: user.addresses?.find(a => a.isDefault)?.house || user.addresses?.[0]?.house || '',
+      });
+    }
+  }, [user]);
+
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
   const handleAvatarChange = (e) => {
     const file = e.target.files[0];
@@ -27,13 +44,29 @@ const EditProfile = () => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSave = (e) => {
+  // This previously just flashed "Saved" and navigated away without persisting
+  // anything — the edits were lost the moment the page unmounted.
+  const handleSave = async (e) => {
     e.preventDefault();
-    setSaved(true);
-    setTimeout(() => {
-      setSaved(false);
-      navigate('/profile');
-    }, 1200);
+    setSaving(true);
+    setError('');
+    try {
+      const res = await apiRequest('/auth/me', {
+        method: 'PATCH',
+        auth: true,
+        body: { name: form.name, phone: form.phone, email: form.email },
+      });
+      if (res.data) updateUser(res.data);
+      setSaved(true);
+      setTimeout(() => {
+        setSaved(false);
+        navigate('/profile');
+      }, 900);
+    } catch (err) {
+      setError(err.message || 'Could not save your profile.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -152,15 +185,22 @@ const EditProfile = () => {
         </div>
 
         {/* Save Button */}
+        {error && (
+          <p className="text-xs font-semibold text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">
+            {error}
+          </p>
+        )}
+
         <button
           type="submit"
-          className={`w-full font-bold py-4 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-md mt-2 text-sm ${
+          disabled={saving}
+          className={`w-full font-bold py-4 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-md mt-2 text-sm disabled:opacity-60 ${
             saved
               ? 'bg-green-500 text-white'
               : 'bg-[#FFD600] text-[#0D47A1] hover:bg-yellow-400'
           }`}
         >
-          {saved ? '✓ Saved! Redirecting...' : 'Save Changes'}
+          {saved ? '✓ Saved! Redirecting...' : saving ? 'Saving…' : 'Save Changes'}
         </button>
 
       </form>

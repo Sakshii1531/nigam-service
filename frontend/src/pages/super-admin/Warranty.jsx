@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import { 
@@ -19,6 +19,7 @@ import {
   CreditCard,
   ArrowLeft
 } from 'lucide-react';
+import { apiRequest } from '../../lib/apiClient';
 
 const Warranty = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -28,15 +29,40 @@ const Warranty = () => {
   // Modals state
   const [selectedClaim, setSelectedClaim] = useState(null);
   const [showDrawer, setShowDrawer] = useState(false);
-  const [selectedInvoice, setSelectedInvoice] = useState(null);
-  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [claims, setClaims] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
-  const [claims, setClaims] = useState([
-    { id: 'WRN-101', customer: 'Amit Sharma', product: 'Smart TV', brand: 'LG', invoice: 'INV-2026-001', status: 'Pending', date: '12 May, 2026', issue: 'Main circuit board damaged due to voltage fluctuation. Need screen display panel check.', coverage: '1 Year Brand Warranty', phone: '+91 98765 43210' },
-    { id: 'WRN-102', customer: 'Priya Patel', product: 'Refrigerator', brand: 'Samsung', invoice: 'INV-2026-002', status: 'Approved', date: '12 May, 2026', issue: 'Cooling gas leakage in compressor unit. Requires replacement.', coverage: '5 Years Compressor Warranty', phone: '+91 98765 43211' },
-    { id: 'WRN-103', customer: 'Rajesh K.', product: 'Washing Machine', brand: 'Whirlpool', invoice: 'INV-2026-003', status: 'Rejected', date: '11 May, 2026', issue: 'Drum spinner physical damage due to heavy overload loading. Out of coverage.', coverage: '2 Years Manufacturer Warranty', phone: '+91 98765 43212' },
-    { id: 'WRN-104', customer: 'Neha Gupta', product: 'Microwave', brand: 'LG', invoice: 'INV-2026-004', status: 'Approved', date: '11 May, 2026', issue: 'Touch panel controls unresponsive. Sensor board faulty.', coverage: '1 Year Brand Warranty', phone: '+91 98765 43213' },
-  ]);
+  useEffect(() => {
+    const fetchClaims = async () => {
+      try {
+        const data = await apiRequest('/super-admin/claims', { auth: true });
+        const list = Array.isArray(data?.data) ? data.data : [];
+        // Field names are the Claim schema's — the previous mapping read
+        // c.user / c.invoiceNumber / c.issueDescription, none of which exist,
+        // so every row showed "Customer", "N/A" and a generic issue string.
+        setClaims(list.map(c => ({
+          id: c.id,
+          humanId: c.humanId || c.id,
+          customer: c.raisedBy?.name || 'Unknown',
+          phone: c.raisedBy?.phone || 'N/A',
+          product: c.item || c.serviceRequest?.category || 'Appliance',
+          brand: c.brand || 'N/A',
+          amount: c.amount || 0,
+          serviceRequest: c.serviceRequest?.humanId || null,
+          status: c.status || 'Pending Approval',
+          date: c.createdAt ? new Date(c.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A',
+          issue: c.reason || 'No reason recorded',
+          coverage: c.claimType || 'D2C',
+        })));
+      } catch (err) {
+        setLoadError(err.message || 'Could not load warranty claims.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchClaims();
+  }, []);
 
   const showToast = (message) => {
     setSuccessMessage(message);
@@ -45,22 +71,49 @@ const Warranty = () => {
     }, 3000);
   };
 
-  const handleStatusChange = (id, newStatus) => {
-    setClaims(claims.map(c => {
-      if (c.id === id) {
-        const updated = { ...c, status: newStatus };
-        if (selectedClaim && selectedClaim.id === id) {
-          setSelectedClaim(updated);
-        }
-        return updated;
-      }
-      return c;
-    }));
-    showToast(`Warranty Claim ${id} status updated to ${newStatus}`);
+  // Persists the decision. This used to only mutate local state and show a
+  // success toast, so an approval vanished on the next page load — and the
+  // customer was never notified, since the notification fires server-side.
+  const handleStatusChange = async (id, newStatus) => {
+    const previous = claims;
+    setClaims(claims.map(c => (c.id === id ? { ...c, status: newStatus } : c)));
+    if (selectedClaim?.id === id) setSelectedClaim({ ...selectedClaim, status: newStatus });
+
+    try {
+      await apiRequest(`/super-admin/claims/${id}/status`, {
+        method: 'PATCH',
+        auth: true,
+        body: { status: newStatus },
+      });
+      showToast(`Warranty claim status updated to ${newStatus}`);
+    } catch (err) {
+      setClaims(previous);
+      if (selectedClaim?.id === id) setSelectedClaim(previous.find(c => c.id === id) || null);
+      setLoadError(err.message || 'Could not update the claim status.');
+    }
   };
 
+  // Writes the rows actually on screen to a CSV the browser downloads. The
+  // previous version only showed a "Download complete!" toast and produced no file.
   const handleExport = () => {
-    showToast('Exporting warranty claim registers to Excel... Download complete!');
+    if (!filteredClaims.length) {
+      setLoadError('There are no claims matching the current filters to export.');
+      return;
+    }
+    const header = ['Claim ID', 'Customer', 'Phone', 'Item', 'Brand', 'Amount', 'Coverage', 'Status', 'Raised On', 'Reason'];
+    const escape = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const csv = [
+      header.join(','),
+      ...filteredClaims.map(c => [c.humanId, c.customer, c.phone, c.product, c.brand, c.amount, c.coverage, c.status, c.date, c.issue].map(escape).join(',')),
+    ].join('\n');
+
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `warranty-claims-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    showToast(`Exported ${filteredClaims.length} claim(s) to CSV.`);
   };
 
   const filteredClaims = claims.filter(c => {
@@ -71,17 +124,6 @@ const Warranty = () => {
     return matchesSearch && matchesStatus;
   });
 
-  const getInvoiceDetails = (invoiceNo) => {
-    // Mock details
-    const mapping = {
-      'INV-2026-001': { no: 'INV-2026-001', date: '15 Jan, 2026', customer: 'Amit Sharma', phone: '+91 98765 43210', items: [{ name: 'LG 55" OLED Smart TV', price: 62000, qty: 1 }], tax: 11160, total: 73160, method: 'HDFC Credit Card' },
-      'INV-2026-002': { no: 'INV-2026-002', date: '22 Feb, 2026', customer: 'Priya Patel', phone: '+91 98765 43211', items: [{ name: 'Samsung Double Door Fridge 320L', price: 34500, qty: 1 }], tax: 6210, total: 40710, method: 'UPI Payment' },
-      'INV-2026-003': { no: 'INV-2026-003', date: '04 Mar, 2026', customer: 'Rajesh K.', phone: '+91 98765 43212', items: [{ name: 'Whirlpool 7kg Washing Machine', price: 18900, qty: 1 }], tax: 3402, total: 22302, method: 'Net Banking' },
-      'INV-2026-004': { no: 'INV-2026-004', date: '10 Apr, 2026', customer: 'Neha Gupta', phone: '+91 98765 43213', items: [{ name: 'LG Convection Microwave 28L', price: 12500, qty: 1 }], tax: 2250, total: 14750, method: 'UPI Payment' },
-    };
-    return mapping[invoiceNo] || { no: invoiceNo, date: 'N/A', customer: 'N/A', items: [], tax: 0, total: 0, method: 'Cash' };
-  };
-
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex relative text-slate-800">
       {/* Sidebar */}
@@ -91,6 +133,12 @@ const Warranty = () => {
       <div className="flex-1 ml-64 min-h-screen flex flex-col">
         {/* Topbar */}
         <Topbar title="Warranty Management" />
+
+        {loadError && (
+          <div className="mx-6 mt-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-xs font-bold text-red-700">
+            {loadError}
+          </div>
+        )}
 
         {/* Body */}
         {showDrawer && selectedClaim ? (
@@ -127,12 +175,12 @@ const Warranty = () => {
                     <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider flex items-center gap-1.5"><FileCheck size={14} /> Product Coverage</h4>
                     <div className="flex justify-between">
                       <span className="text-[#1E293B] font-bold">{selectedClaim.product} ({selectedClaim.brand})</span>
-                      <span className="text-[#0D47A1] font-semibold hover:underline cursor-pointer" onClick={() => {
-                        setSelectedInvoice(getInvoiceDetails(selectedClaim.invoice));
-                        setShowInvoiceModal(true);
-                      }}>{selectedClaim.invoice}</span>
+                      <span className="text-[#0D47A1] font-semibold">₹{Number(selectedClaim.amount).toLocaleString('en-IN')}</span>
                     </div>
-                    <p className="text-slate-700 font-semibold bg-blue-50 text-[#0D47A1] p-2 rounded-lg">Warranty: {selectedClaim.coverage}</p>
+                    <p className="text-slate-700 font-semibold bg-blue-50 text-[#0D47A1] p-2 rounded-lg">Claim type: {selectedClaim.coverage}</p>
+                    {selectedClaim.serviceRequest && (
+                      <p className="text-slate-600">Raised against service request <strong className="text-[#1E293B]">{selectedClaim.serviceRequest}</strong></p>
+                    )}
                   </div>
 
                   <div className="p-4 border border-[#E2E8F0] rounded-xl space-y-2.5 text-xs">
@@ -147,7 +195,7 @@ const Warranty = () => {
               </div>
 
               <div className="p-4 border-t border-[#E2E8F0] bg-[#F8FAFC] flex gap-3">
-                {selectedClaim.status === 'Pending' ? (
+                {selectedClaim.status === 'Pending Approval' ? (
                   <>
                     <button
                       onClick={() => handleStatusChange(selectedClaim.id, 'Rejected')}
@@ -212,7 +260,7 @@ const Warranty = () => {
                 className="text-sm text-[#1E293B] border border-[#E2E8F0] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#0D47A1] bg-[#F8FAFC]"
               >
                 <option>All Status</option>
-                <option>Pending</option>
+                <option>Pending Approval</option>
                 <option>Approved</option>
                 <option>Rejected</option>
               </select>
@@ -238,25 +286,15 @@ const Warranty = () => {
                 <tbody className="divide-y divide-[#E2E8F0]">
                   {filteredClaims.map((claim) => (
                     <tr key={claim.id} className="hover:bg-[#F8FAFC] transition-colors">
-                      <td className="px-6 py-4 font-semibold text-[#0D47A1]">{claim.id}</td>
+                      <td className="px-6 py-4 font-semibold text-[#0D47A1]">{claim.humanId}</td>
                       <td className="px-6 py-4 text-[#1E293B] font-bold">{claim.customer}</td>
                       <td className="px-6 py-4 text-[#1E293B] font-medium">{claim.product}</td>
                       <td className="px-6 py-4 text-[#1E293B] font-semibold">{claim.brand}</td>
-                      <td className="px-6 py-4">
-                        <button 
-                          onClick={() => {
-                            setSelectedInvoice(getInvoiceDetails(claim.invoice));
-                            setShowInvoiceModal(true);
-                          }}
-                          className="text-[#0D47A1] font-bold flex items-center gap-1 hover:underline"
-                        >
-                          {claim.invoice} <ExternalLink size={12} />
-                        </button>
-                      </td>
+                      <td className="px-6 py-4 text-[#0D47A1] font-bold">₹{Number(claim.amount).toLocaleString('en-IN')}</td>
                       <td className="px-6 py-4">
                         <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
                           claim.status === 'Approved' ? 'bg-green-50 text-green-600' :
-                          claim.status === 'Pending' ? 'bg-yellow-50 text-yellow-600' :
+                          claim.status === 'Pending Approval' ? 'bg-yellow-50 text-yellow-600' :
                           'bg-red-50 text-red-600'
                         }`}>
                           {claim.status}
@@ -276,7 +314,7 @@ const Warranty = () => {
                             <Eye size={16} />
                           </button>
                           
-                          {claim.status === 'Pending' && (
+                          {claim.status === 'Pending Approval' && (
                             <>
                               <button 
                                 onClick={() => handleStatusChange(claim.id, 'Approved')}
@@ -318,76 +356,6 @@ const Warranty = () => {
 
 
       {/* Invoice Preview Modal */}
-      {showInvoiceModal && selectedInvoice && (
-        <div className="fixed inset-0 bg-black/55 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-2xl max-w-md w-full p-6 space-y-4">
-            <div className="flex justify-between items-center border-b border-[#E2E8F0] pb-3">
-              <div className="flex items-center gap-2 text-[#0D47A1]">
-                <Building size={20} />
-                <span className="font-black text-slate-800 text-base">Invoice Receipt</span>
-              </div>
-              <button 
-                onClick={() => {
-                  setShowInvoiceModal(false);
-                  setSelectedInvoice(null);
-                }}
-                className="text-[#64748B] hover:text-[#1E293B] p-1 rounded-full hover:bg-slate-100"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            {/* Simulated invoice details */}
-            <div className="space-y-4 text-xs">
-              <div className="flex justify-between font-semibold">
-                <div>
-                  <p className="text-[#64748B]">Invoice Number:</p>
-                  <p className="text-sm font-bold text-[#1E293B]">{selectedInvoice.no}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-[#64748B]">Purchase Date:</p>
-                  <p className="text-sm font-bold text-slate-700">{selectedInvoice.date}</p>
-                </div>
-              </div>
-
-              <div className="border-t border-b border-dashed border-[#E2E8F0] py-3 space-y-1.5 font-medium">
-                <p className="text-[#64748B] font-bold">Billed To:</p>
-                <p className="text-slate-800 font-bold">{selectedInvoice.customer}</p>
-                <p className="text-slate-600">{selectedInvoice.phone}</p>
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-[#64748B] font-bold uppercase tracking-wider">Line Items</p>
-                {selectedInvoice.items.map((item, idx) => (
-                  <div key={idx} className="flex justify-between items-center p-2 bg-slate-50 border border-[#E2E8F0] rounded-lg font-semibold">
-                    <div>
-                      <p className="text-slate-800">{item.name}</p>
-                      <p className="text-[10px] text-slate-500">Qty: {item.qty}</p>
-                    </div>
-                    <span className="text-slate-800">₹{item.price.toLocaleString()}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="border-t border-[#E2E8F0] pt-3 space-y-1.5 text-right font-medium">
-                <div className="flex justify-between">
-                  <span className="text-[#64748B]">GST/TAX (18%):</span>
-                  <span className="text-slate-700">₹{selectedInvoice.tax.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between border-t border-dashed border-[#E2E8F0] pt-1.5 font-bold text-sm">
-                  <span className="text-[#1E293B]">Grand Total:</span>
-                  <span className="text-[#0D47A1] text-base font-black">₹{selectedInvoice.total.toLocaleString()}</span>
-                </div>
-              </div>
-
-              <div className="bg-blue-50 border border-blue-100 rounded-lg p-2.5 flex items-center justify-between text-[11px] text-[#0D47A1] font-bold">
-                <span className="flex items-center gap-1"><CreditCard size={14} /> Paid via {selectedInvoice.method}</span>
-                <span>Success</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Success Toast */}
       {successMessage && (

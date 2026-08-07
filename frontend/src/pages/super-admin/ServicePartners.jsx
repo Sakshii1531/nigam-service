@@ -1,20 +1,39 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import { Search, Filter, Building, Mail, Phone, MapPin, UserCheck } from 'lucide-react';
+import { apiRequest } from '../../lib/apiClient';
 
 const ServicePartners = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('All Statuses');
 
-  const [partners] = useState([
-    { id: 1, name: 'Care Tech Solutions', manager: 'Sunil Gupta', email: 'sunil.caretech@gmail.com', phone: '+91 95555 44433', city: 'Lucknow', technicians: 12, rating: 4.6, status: 'Active' },
-    { id: 2, name: 'Perfect Services', manager: 'Vikas Mishra', email: 'vikas.perfect@gmail.com', phone: '+91 94444 33322', city: 'Kanpur', technicians: 8, rating: 4.5, status: 'Active' },
-    { id: 3, name: 'Quick Fix India', manager: 'Anil Sen', email: 'anil.quickfix@gmail.com', phone: '+91 93333 22211', city: 'Gorakhpur', technicians: 15, rating: 4.7, status: 'Active' },
-    { id: 4, name: 'Reliable Care', manager: 'Rita Dey', email: 'rita.reliable@gmail.com', phone: '+91 92222 11100', city: 'Varanasi', technicians: 7, rating: 4.2, status: 'Active' },
-    { id: 5, name: 'Tech Seva Point', manager: 'Vijay Ray', email: 'vijay.techsevapoint@gmail.com', phone: '+91 91111 00099', city: 'Patna', technicians: 10, rating: 4.8, status: 'Active' },
-    { id: 6, name: 'Apex Electrics', manager: 'Ganesh Pal', email: 'ganesh.apex@gmail.com', phone: '+91 90000 99988', city: 'Delhi', technicians: 11, rating: 3.9, status: 'Suspended' },
-  ]);
+  const [partners, setPartners] = useState([]);
+  const [loadError, setLoadError] = useState('');
+
+  useEffect(() => {
+    async function fetchPartners() {
+      try {
+        // Same envelope bug as Brands.jsx: the real list was always discarded
+        // in favour of six invented partners.
+        const res = await apiRequest('/super-admin/service-partners?limit=200', { auth: true });
+        setPartners((res.data || []).map((item) => ({
+          id: item.id,
+          name: item.name,
+          manager: item.managerName || item.contactPerson || '—',
+          email: item.email || '—',
+          phone: item.phone || '—',
+          city: item.city?.name || '—',
+          technicians: item.techniciansCount ?? 0,
+          rating: item.rating ?? null,
+          status: item.status || 'Active',
+        })));
+      } catch (err) {
+        setLoadError(err.message || 'Could not load service partners.');
+      }
+    }
+    fetchPartners();
+  }, []);
 
   const filteredPartners = partners.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -96,7 +115,7 @@ const ServicePartners = () => {
                       <span className="flex items-center gap-1 text-slate-700 font-bold text-xs"><MapPin size={12} className="text-[#0D47A1]" /> {p.city}</span>
                     </td>
                     <td className="p-4 text-slate-800 font-bold">{p.technicians} Techs</td>
-                    <td className="p-4 font-bold text-xs text-amber-500">★ {p.rating}</td>
+                    <td className="p-4 font-bold text-xs text-amber-500">{p.rating == null ? '—' : `★ ${p.rating}`}</td>
                     <td className="p-4 pr-6">
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
                         p.status === 'Active' ? 'bg-green-50 text-green-600 border border-green-100' : 'bg-red-50 text-red-600 border border-red-100'

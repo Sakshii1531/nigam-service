@@ -86,8 +86,10 @@ const Wishlist = () => {
                   <button 
                     onClick={() => navigate('/buy-product', {
                       state: {
+                        productId: item.id,
                         productName: item.name,
                         price: item.price,
+                        quantity: 1,
                         isApplianceBuy: true
                       }
                     })}

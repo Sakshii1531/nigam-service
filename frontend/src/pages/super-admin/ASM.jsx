@@ -1,56 +1,105 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import { Users, UserPlus, Search, Mail, Phone, Star, MapPin } from 'lucide-react';
+import { apiRequest } from '../../lib/apiClient';
+
+function shape(asm) {
+  return {
+    id: asm.id,
+    name: asm.name,
+    email: asm.email || '—',
+    phone: asm.phone || '—',
+    city: asm.city?.name || '—',
+    rating: asm.rating ?? 0,
+    partners: asm.partners?.length ?? 0,
+    activeJobs: asm.activeJobs ?? 0,
+  };
+}
 
 const ASM = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCity, setSelectedCity] = useState('All Cities');
-  
-  // State for ASM list (made mutable)
-  const [asms, setAsms] = useState([
-    { id: 1, name: 'Rajesh Kumar', email: 'rajesh.lko@ncc.com', phone: '+91 98765 43210', city: 'Lucknow', rating: 4.8, partners: 14, activeJobs: 8 },
-    { id: 2, name: 'Amit Singh', email: 'amit.kanpur@ncc.com', phone: '+91 99887 76655', city: 'Kanpur', rating: 4.5, partners: 10, activeJobs: 5 },
-    { id: 3, name: 'Suresh Yadav', email: 'suresh.gkp@ncc.com', phone: '+91 91234 56789', city: 'Gorakhpur', rating: 4.7, partners: 12, activeJobs: 7 },
-    { id: 4, name: 'Pooja Verma', email: 'pooja.vns@ncc.com', phone: '+91 94567 89012', city: 'Varanasi', rating: 4.6, partners: 9, activeJobs: 4 },
-    { id: 5, name: 'Vikram Singh', email: 'vikram.patna@ncc.com', phone: '+91 93456 78901', city: 'Patna', rating: 4.9, partners: 16, activeJobs: 11 },
-  ]);
+  const [asms, setAsms] = useState([]);
+  const [cities, setCities] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newAsmName, setNewAsmName] = useState('');
   const [newAsmEmail, setNewAsmEmail] = useState('');
   const [newAsmPhone, setNewAsmPhone] = useState('');
-  const [newAsmCity, setNewAsmCity] = useState('Lucknow');
+  // Holds a City id, not a name — the API keys ASMs to a City document.
+  const [newAsmCity, setNewAsmCity] = useState('');
 
-  const handleAddAsm = (e) => {
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const [asmData, cityData] = await Promise.all([
+          apiRequest('/super-admin/asms', { auth: true }),
+          apiRequest('/super-admin/cities', { auth: true }),
+        ]);
+        if (cancelled) return;
+        setAsms((Array.isArray(asmData) ? asmData : []).map(shape));
+        const cityList = Array.isArray(cityData) ? cityData : [];
+        setCities(cityList);
+        if (cityList.length) setNewAsmCity(cityList[0].id);
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleAddAsm = async (e) => {
     e.preventDefault();
-    const newAsm = {
-      id: asms.length + 1,
-      name: newAsmName,
-      email: newAsmEmail,
-      phone: newAsmPhone,
-      city: newAsmCity,
-      rating: 5.0, // default rating for new ASM
-      partners: 0,
-      activeJobs: 0
-    };
-    setAsms([...asms, newAsm]);
-    
-    // Clear inputs and close modal
-    setNewAsmName('');
-    setNewAsmEmail('');
-    setNewAsmPhone('');
-    setNewAsmCity('Lucknow');
-    setIsModalOpen(false);
+    if (!newAsmCity) {
+      setError('Create a city first — an ASM must be assigned to one.');
+      return;
+    }
+    setSaving(true);
+    try {
+      const created = await apiRequest('/super-admin/asms', {
+        method: 'POST',
+        auth: true,
+        body: { name: newAsmName, email: newAsmEmail, phone: newAsmPhone, city: newAsmCity },
+      });
+      // The create response returns the raw city id; resolve it locally so the
+      // new row reads the same as the ones the list endpoint populated.
+      const city = cities.find(c => c.id === newAsmCity);
+      setAsms(prev => [...prev, shape({ ...created, city })]);
+
+      setNewAsmName('');
+      setNewAsmEmail('');
+      setNewAsmPhone('');
+      setNewAsmCity(cities[0]?.id || '');
+      setIsModalOpen(false);
+      setError('');
+    } catch (err) {
+      setError(`Could not create ASM: ${err.message}`);
+    } finally {
+      setSaving(false);
+    }
   };
 
+  const q = searchQuery.toLowerCase();
   const filteredAsms = asms.filter(asm => {
-    const matchesSearch = asm.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          asm.email.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = asm.name.toLowerCase().includes(q) || asm.email.toLowerCase().includes(q);
     const matchesCity = selectedCity === 'All Cities' || asm.city === selectedCity;
     return matchesSearch && matchesCity;
   });
+
+  const activeCities = new Set(asms.map(a => a.city).filter(c => c !== '—')).size;
+  const totalPartners = asms.reduce((acc, a) => acc + a.partners, 0);
+  const avgRating = asms.length
+    ? (asms.reduce((acc, a) => acc + a.rating, 0) / asms.length).toFixed(1)
+    : '0.0';
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex text-slate-800">
@@ -66,18 +115,16 @@ const ASM = () => {
             </div>
             <div className="bg-white p-5 rounded-2xl border border-[#E2E8F0] shadow-sm">
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Active Cities</p>
-              <p className="text-2xl font-black text-slate-800 mt-2">5</p>
+              <p className="text-2xl font-black text-slate-800 mt-2">{activeCities}</p>
             </div>
             <div className="bg-white p-5 rounded-2xl border border-[#E2E8F0] shadow-sm">
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Partners Monitored</p>
-              <p className="text-2xl font-black text-slate-800 mt-2">
-                {asms.reduce((acc, current) => acc + current.partners, 0)}
-              </p>
+              <p className="text-2xl font-black text-slate-800 mt-2">{totalPartners}</p>
             </div>
             <div className="bg-white p-5 rounded-2xl border border-[#E2E8F0] shadow-sm">
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Avg ASM Performance</p>
               <p className="text-2xl font-black text-green-600 mt-2 flex items-center gap-1">
-                {(asms.reduce((acc, curr) => acc + curr.rating, 0) / asms.length).toFixed(1)} <Star size={18} className="fill-green-600 text-green-600" />
+                {avgRating} <Star size={18} className="fill-green-600 text-green-600" />
               </p>
             </div>
           </div>
@@ -100,11 +147,9 @@ const ASM = () => {
                 className="text-sm border border-[#E2E8F0] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#0D47A1] bg-[#F8FAFC]"
               >
                 <option>All Cities</option>
-                <option>Lucknow</option>
-                <option>Kanpur</option>
-                <option>Gorakhpur</option>
-                <option>Varanasi</option>
-                <option>Patna</option>
+                {cities.map(city => (
+                  <option key={city.id} value={city.name}>{city.name}</option>
+                ))}
               </select>
             </div>
             <button 
@@ -132,7 +177,7 @@ const ASM = () => {
                   <tr key={asm.id} className="hover:bg-slate-50 transition-colors">
                     <td className="p-4 pl-6">
                       <p className="font-bold text-slate-800">{asm.name}</p>
-                      <span className="text-[10px] text-slate-400 font-bold uppercase">ID: ASM-{asm.id + 100}</span>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase">ID: {asm.id}</span>
                     </td>
                     <td className="p-4 space-y-0.5">
                       <p className="flex items-center gap-1.5 text-xs text-slate-600 font-semibold"><Mail size={12} /> {asm.email}</p>
@@ -152,7 +197,13 @@ const ASM = () => {
                 ))}
               </tbody>
             </table>
-            {filteredAsms.length === 0 && (
+            {loading && (
+              <div className="text-center py-12 text-[#64748B]">Loading ASMs…</div>
+            )}
+            {!loading && error && (
+              <div className="text-center py-12 text-red-600 font-semibold">{error}</div>
+            )}
+            {!loading && !error && filteredAsms.length === 0 && (
               <div className="text-center py-12 text-[#64748B]">No ASMs found matching filters.</div>
             )}
           </div>
@@ -218,11 +269,10 @@ const ASM = () => {
                   value={newAsmCity}
                   onChange={(e) => setNewAsmCity(e.target.value)}
                 >
-                  <option value="Lucknow">Lucknow</option>
-                  <option value="Kanpur">Kanpur</option>
-                  <option value="Gorakhpur">Gorakhpur</option>
-                  <option value="Varanasi">Varanasi</option>
-                  <option value="Patna">Patna</option>
+                  {cities.length === 0 && <option value="">No cities configured</option>}
+                  {cities.map(city => (
+                    <option key={city.id} value={city.id}>{city.name}</option>
+                  ))}
                 </select>
               </div>
               
@@ -234,11 +284,12 @@ const ASM = () => {
                 >
                   Cancel
                 </button>
-                <button 
-                  type="submit" 
-                  className="px-4 py-2 text-xs font-bold bg-[#0D47A1] text-white rounded-xl hover:bg-blue-700 transition-colors cursor-pointer shadow-sm"
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="px-4 py-2 text-xs font-bold bg-[#0D47A1] text-white rounded-xl hover:bg-blue-700 transition-colors cursor-pointer shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  Save ASM
+                  {saving ? 'Saving…' : 'Save ASM'}
                 </button>
               </div>
             </form>

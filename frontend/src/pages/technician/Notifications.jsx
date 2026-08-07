@@ -112,10 +112,7 @@ const Notifications = () => {
 
         {filteredNotifications.length > 0 && (
           <button 
-            onClick={() => {
-              markAllNotificationsRead();
-              alert('All notifications marked as read.');
-            }}
+            onClick={() => markAllNotificationsRead()}
             className="w-full bg-white border border-[#0D47A1]/30 hover:border-[#0D47A1] text-[#0D47A1] font-normal py-3.5 rounded-2xl text-xs transition-all shadow-sm mt-6 text-center"
           >
             Mark all as read

@@ -1,19 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import { Search, Package, Plus, Edit2, Trash2 } from 'lucide-react';
+import { apiRequest } from '../../lib/apiClient';
 
 const Products = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   // State for products (made mutable)
-  const [products, setProducts] = useState([
-    { id: 1, name: 'Premium AC Service Kit', sku: 'SKU-AC-202', category: 'Air Conditioner', price: '₹499', stock: 120, warranty: 'None', image: null },
-    { id: 2, name: 'RO Carbon Sediment Filter', sku: 'SKU-RO-503', category: 'Water Purifier', price: '₹1,200', stock: 45, warranty: '6 Months', image: null },
-    { id: 3, name: 'Refrigerator Compressor 250L', sku: 'SKU-RF-904', category: 'Refrigerator', price: '₹4,500', stock: 18, warranty: '1 Year', image: null },
-    { id: 4, name: 'Washing Machine Drainage Pipe', sku: 'SKU-WM-301', category: 'Washing Machine', price: '₹250', stock: 200, warranty: 'None', image: null },
-    { id: 5, name: 'Washing Machine Motor', sku: 'SKU-WM-708', category: 'Washing Machine', price: '₹3,200', stock: 15, warranty: '2 Years', image: null },
-  ]);
+  const [products, setProducts] = useState([]);
+  const [loadError, setLoadError] = useState('');
+
+  // The storefront catalogue. This screen shipped a `defaultProducts` array and
+  // then checked `Array.isArray(data)` on the response envelope — which is an
+  // object — so the real catalogue was never used and an admin always saw five
+  // invented products.
+  const toRow = (item) => ({
+    id: item.id,
+    name: item.name,
+    sku: item.sku || '—',
+    category: item.category || 'General',
+    price: `₹${Number(item.price || 0).toLocaleString('en-IN')}`,
+    stock: item.stock ?? 0,
+    warranty: item.warrantyMonths ? `${item.warrantyMonths} Months` : 'None',
+    image: item.imageUrl || null,
+  });
+
+  useEffect(() => {
+    apiRequest('/products?limit=200')
+      .then((res) => setProducts((res.data || []).map(toRow)))
+      .catch((err) => setLoadError(err.message || 'Could not load the product catalogue.'));
+  }, []);
 
   // Modal Form States
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -25,34 +42,47 @@ const Products = () => {
   const [newWarranty, setNewWarranty] = useState('None');
   const [newImage, setNewImage] = useState(null);
 
-  const handleAddProduct = (e) => {
+  const handleAddProduct = async (e) => {
     e.preventDefault();
-    const formattedPrice = newPrice.startsWith('₹') ? newPrice : `₹${newPrice}`;
-    const newProd = {
-      id: products.length + 1,
-      name: newName,
-      sku: newSku || `SKU-PROD-${Math.floor(100 + Math.random() * 900)}`,
-      category: newCategory,
-      price: formattedPrice,
-      stock: parseInt(newStock) || 0,
-      warranty: newWarranty,
-      image: newImage
-    };
-    setProducts([...products, newProd]);
+    setLoadError('');
+    try {
+      const res = await apiRequest('/products', {
+        method: 'POST',
+        auth: true,
+        body: {
+          name: newName,
+          sku: newSku || undefined,
+          category: newCategory,
+          price: Number(String(newPrice).replace(/[₹,]/g, '')) || 0,
+          stock: parseInt(newStock, 10) || 0,
+          warrantyMonths: newWarranty === 'None' ? undefined : parseInt(newWarranty, 10) || undefined,
+          imageUrl: newImage || undefined,
+        },
+      });
+      setProducts((prev) => [...prev, toRow(res.data)]);
 
-    // Clear form inputs and close modal
-    setNewName('');
-    setNewSku('');
-    setNewCategory('Air Conditioner');
-    setNewPrice('');
-    setNewStock('');
-    setNewWarranty('None');
-    setNewImage(null);
-    setIsModalOpen(false);
+      setNewName('');
+      setNewSku('');
+      setNewCategory('Air Conditioner');
+      setNewPrice('');
+      setNewStock('');
+      setNewWarranty('None');
+      setNewImage(null);
+      setIsModalOpen(false);
+    } catch (err) {
+      setLoadError(err.message || 'Could not add the product.');
+    }
   };
 
-  const handleDelete = (id) => {
-    setProducts(prev => prev.filter(p => p.id !== id));
+  const handleDelete = async (id) => {
+    const previous = products;
+    setProducts((prev) => prev.filter((p) => p.id !== id));
+    try {
+      await apiRequest(`/products/${id}`, { method: 'DELETE', auth: true });
+    } catch (err) {
+      setProducts(previous);
+      setLoadError(err.message || 'Could not delete the product.');
+    }
   };
 
   const filteredProducts = products.filter(p => 

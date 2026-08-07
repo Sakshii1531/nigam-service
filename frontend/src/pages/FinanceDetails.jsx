@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, ShieldCheck, Check, Sparkles, Building, Landmark } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const FinanceDetails = () => {
   const navigate = useNavigate();
   const { type } = useParams();
+  const { user } = useAuth();
   
   // Dynamic contents based on the sub-route type
   const isPersonalLoan = type === 'personal-loan';
@@ -207,7 +209,7 @@ const FinanceDetails = () => {
                 <Check className="h-8 w-8" />
               </div>
               <div>
-                <h3 className="font-extrabold text-[#212121] text-base">Congratulations, Sakshi!</h3>
+                <h3 className="font-extrabold text-[#212121] text-base">Congratulations, {user?.name ? user.name.split(' ')[0] : 'Customer'}!</h3>
                 <p className="text-xs text-text-secondary mt-1 max-w-[280px] mx-auto leading-relaxed">
                   Your eligibility is pre-approved by our CIBIL validation system!
                 </p>

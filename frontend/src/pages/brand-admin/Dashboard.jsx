@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
@@ -8,6 +8,10 @@ import {
   Search, Truck, ShieldCheck, FileText, RefreshCcw, BarChart2,
   PhoneCall, X
 } from 'lucide-react';
+import { apiRequest } from '../../lib/apiClient';
+
+const currency = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+const number = new Intl.NumberFormat('en-IN');
 
 /* ── KPI Card ── */
 const KPICard = ({ title, value, icon, iconBg, trend, trendUp, link, onLink }) => (
@@ -16,14 +20,9 @@ const KPICard = ({ title, value, icon, iconBg, trend, trendUp, link, onLink }) =
       <div className={`w-10 h-10 ${iconBg} rounded-xl flex items-center justify-center text-white flex-shrink-0`}>
         {icon}
       </div>
-      <div className={`flex items-center text-xs font-semibold ${trendUp ? 'text-green-600' : 'text-red-500'}`}>
-        {trend}
-        {trendUp ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />}
-      </div>
     </div>
     <p className="text-[11px] font-semibold text-[#64748B] mb-0.5">{title}</p>
     <p className="text-xl font-black text-[#1E293B]">{value}</p>
-    <p className="text-[10px] text-[#94A3B8] mt-0.5">vs last 7 days</p>
     <button onClick={onLink} className="text-[10px] font-semibold text-[#0D47A1] hover:underline mt-1 flex items-center gap-0.5">
       View Details <ArrowUpRight size={10} />
     </button>
@@ -67,62 +66,115 @@ const Dashboard = () => {
 
   const handleTrendClick = () => {
     if (activeTrendIndex !== null) {
+      if (trendData[activeTrendIndex] === undefined) return;
       toast(`Complaints on ${trendLabels[activeTrendIndex]}: ${trendData[activeTrendIndex].toLocaleString()}`);
     }
   };
 
   /* ── KPI data ── */
+  const [metrics, setMetrics] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const [recent, setRecent] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadDashboard() {
+      try {
+        const [dash, recent] = await Promise.all([
+          apiRequest('/brand/dashboard', { auth: true }),
+          apiRequest('/brand/requests?limit=5&sort=-createdAt', { auth: true }),
+        ]);
+        if (cancelled) return;
+        // apiRequest resolves the { data, error, meta } envelope — storing the
+        // envelope itself meant every KPI on this page read zero.
+        setMetrics(dash?.data || null);
+        setRecent((recent?.data || []).map((r) => ({
+          id: r.humanId || r.id,
+          customer: r.user?.name || 'Customer',
+          product: r.category || '—',
+          status: r.status || 'New',
+          date: r.createdAt ? new Date(r.createdAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—',
+        })));
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    loadDashboard();
+    return () => { cancelled = true; };
+  }, []);
+
+  // The `trend` percentages that sat on each card are gone — nothing stores a
+  // prior-period snapshot, so there is no comparison to compute.
   const kpis = [
-    { title: 'Total Complaints', value: '12,568', icon: <ClipboardList size={18} />, iconBg: 'bg-blue-500', trend: '+12.5%', trendUp: true, path: '/brand-admin/complaints' },
-    { title: 'Completed Calls', value: '10,523', icon: <CheckCircle2 size={18} />, iconBg: 'bg-green-500', trend: '+15.2%', trendUp: true, path: '/brand-admin/complaints' },
-    { title: 'In Progress', value: '1,248', icon: <Clock size={18} />, iconBg: 'bg-orange-500', trend: '+5.6%', trendUp: true, path: '/brand-admin/complaint-monitoring' },
-    { title: 'Escalations', value: '156', icon: <AlertTriangle size={18} />, iconBg: 'bg-red-500', trend: '+18.3%', trendUp: false, path: '/brand-admin/escalations' },
-    { title: 'Total Invoice Value', value: '₹48,75,230', icon: <IndianRupee size={18} />, iconBg: 'bg-purple-500', trend: '+13.7%', trendUp: true, path: '/brand-admin/invoices' },
-    { title: 'FOC Parts Approved', value: '2,356', icon: <Package size={18} />, iconBg: 'bg-teal-500', trend: '+10.9%', trendUp: true, path: '/brand-admin/warranty-claims' },
+    { title: 'Total Complaints', value: number.format(metrics?.totalComplaints || 0), icon: <ClipboardList size={18} />, iconBg: 'bg-blue-500', path: '/brand-admin/complaints' },
+    { title: 'Completed Calls', value: number.format(metrics?.completed || 0), icon: <CheckCircle2 size={18} />, iconBg: 'bg-green-500', path: '/brand-admin/complaints' },
+    { title: 'In Progress', value: number.format(metrics?.inProgress || 0), icon: <Clock size={18} />, iconBg: 'bg-orange-500', path: '/brand-admin/complaint-monitoring' },
+    { title: 'Escalations', value: number.format(metrics?.escalations || 0), icon: <AlertTriangle size={18} />, iconBg: 'bg-red-500', path: '/brand-admin/escalations' },
+    { title: 'Total Invoice Value', value: currency.format(metrics?.totalInvoiceValue || 0), icon: <IndianRupee size={18} />, iconBg: 'bg-purple-500', path: '/brand-admin/invoices' },
+    { title: 'FOC Parts Approved', value: number.format(metrics?.focPartsApproved || 0), icon: <Package size={18} />, iconBg: 'bg-teal-500', path: '/brand-admin/warranty-claims' },
   ];
 
   /* ── Donut chart segments ── */
-  const statusSegments = [
-    { label: 'Completed', value: 10523, pct: 83.8, color: '#22C55E' },
-    { label: 'In Progress', value: 1248, pct: 9.9, color: '#3B82F6' },
-    { label: 'Customer Not Available', value: 342, pct: 2.7, color: '#F59E0B' },
-    { label: 'Tomorrow / Reschedule', value: 215, pct: 1.7, color: '#8B5CF6' },
-    { label: 'Out of Warranty', value: 180, pct: 1.4, color: '#EF4444' },
-    { label: 'Cancelled', value: 60, pct: 0.5, color: '#94A3B8' },
+  // "Out of Warranty" was a slice here, but warranty is a property of a request
+  // rather than a status — it can't be a segment of a status breakdown.
+  const statusParts = [
+    { label: 'Completed', value: metrics?.completed || 0, color: '#22C55E' },
+    { label: 'In Progress', value: metrics?.inProgress || 0, color: '#3B82F6' },
+    { label: 'Open', value: metrics?.open || 0, color: '#0EA5E9' },
+    { label: 'Customer Not Available', value: metrics?.customerNotAvailable || 0, color: '#F59E0B' },
+    { label: 'Tomorrow / Reschedule', value: metrics?.reschedule || 0, color: '#8B5CF6' },
+    { label: 'Cancelled', value: metrics?.cancelled || 0, color: '#94A3B8' },
   ];
+  const statusTotal = statusParts.reduce((sum, p) => sum + p.value, 0);
+  const statusSegments = statusParts.map((p) => ({
+    ...p,
+    pct: statusTotal ? Number(((p.value / statusTotal) * 100).toFixed(1)) : 0,
+  }));
 
-  /* ── Trend line data (simulated) ── */
-  const trendData = [1456, 1523, 1389, 1565, 1842, 2178, 2515];
-  const trendLabels = ['15 May', '16 May', '17 May', '18 May', '19 May', '20 May', '21 May'];
-  const maxTrend = Math.max(...trendData);
+  /* ── Trend line: real requests per day over the last week. This was a fixed
+     seven-point series labelled 15–21 May that never moved. ── */
+  const trend = metrics?.trend || [];
+  const trendData = trend.map((t) => t.count);
+  const trendLabels = trend.map((t) => new Date(t.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }));
+  const maxTrend = Math.max(1, ...trendData);
 
-  /* ── Product wise ── */
-  const productWise = [
-    { name: 'Refrigerator', value: 4125, pct: 32.8, color: '#3B82F6' },
-    { name: 'Washing Machine', value: 2854, pct: 22.7, color: '#10B981' },
-    { name: 'Air Conditioner', value: 2315, pct: 18.4, color: '#F59E0B' },
-    { name: 'Television', value: 1876, pct: 14.9, color: '#8B5CF6' },
-    { name: 'Microwave Oven', value: 1398, pct: 11.1, color: '#EF4444' },
-  ];
+  /* ── Product wise: real category breakdown, previously a fixed five-row
+     table with invented counts and percentages. ── */
+  const PRODUCT_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EF4444', '#0EA5E9'];
+  const productWise = (metrics?.byProduct || []).map((p, i) => ({
+    ...p,
+    color: PRODUCT_COLORS[i % PRODUCT_COLORS.length],
+  }));
 
   /* ── Quick stats ── */
+  // Only the counts the dashboard endpoint really reports. The rows for
+  // "No Invoice / Bill Available", "Document Pending" and "Repeat Calls" had
+  // fixed numbers behind them and nothing tracks those states, so they are gone
+  // rather than shown as fiction.
   const quickStats = [
-    { label: 'Customer Not Available', value: 342, color: 'bg-blue-100', path: '/brand-admin/complaint-monitoring' },
-    { label: 'Call Tomorrow/Reschedule', value: 215, color: 'bg-yellow-100', path: '/brand-admin/complaint-monitoring' },
-    { label: 'Out of Warranty (Chargeable)', value: 160, color: 'bg-red-100', path: '/brand-admin/complaints' },
-    { label: 'No Invoice / Bill Available', value: 98, color: 'bg-purple-100', path: '/brand-admin/complaints' },
-    { label: 'Document Pending', value: 76, color: 'bg-orange-100', path: '/brand-admin/documents' },
-    { label: 'Repeat Calls', value: 132, color: 'bg-teal-100', path: '/brand-admin/complaints' },
+    { label: 'Customer Not Available', value: metrics?.customerNotAvailable || 0, color: 'bg-blue-100', path: '/brand-admin/complaint-monitoring' },
+    { label: 'Call Tomorrow/Reschedule', value: metrics?.reschedule || 0, color: 'bg-yellow-100', path: '/brand-admin/complaint-monitoring' },
+    { label: 'Open Escalations', value: metrics?.escalations || 0, color: 'bg-red-100', path: '/brand-admin/escalations' },
+    { label: 'FOC Parts Approved', value: metrics?.focPartsApproved || 0, color: 'bg-teal-100', path: '/brand-admin/warranty-claims' },
   ];
 
-  /* ── Recent complaints ── */
-  const recentComplaints = [
-    { id: 'TKT/250521/001756', customer: 'Amit Sharma', product: 'Refrigerator', status: 'In Progress', statusColor: 'bg-blue-100 text-blue-700', date: '21 May 2025, 10:30 AM' },
-    { id: 'TKT/250521/001351', customer: 'Priya Verma', product: 'Washing Machine', status: 'Completed', statusColor: 'bg-green-100 text-green-700', date: '21 May 2025, 09:45 AM' },
-    { id: 'TKT/250521/001354', customer: 'Rohit Kumar', product: 'Air Conditioner', status: 'Customer NA', statusColor: 'bg-yellow-100 text-yellow-700', date: '21 May 2025, 09:12 AM' },
-    { id: 'TKT/250521/001253', customer: 'Neha Singh', product: 'Television', status: 'Out of Warranty', statusColor: 'bg-red-100 text-red-700', date: '21 May 2025, 08:50 AM' },
-    { id: 'TKT/250521/001052', customer: 'Vikas Yadav', product: 'Microwave Oven', status: 'Tomorrow Call', statusColor: 'bg-purple-100 text-purple-700', date: '21 May 2025, 08:20 AM' },
-  ];
+  /* ── Recent complaints: the brand's real latest requests. This was five
+     hardcoded tickets with invented customers and May-2025 timestamps. ── */
+  const STATUS_COLORS = {
+    'In Progress': 'bg-blue-100 text-blue-700',
+    Closed: 'bg-green-100 text-green-700',
+    'Customer NA': 'bg-yellow-100 text-yellow-700',
+    Cancelled: 'bg-red-100 text-red-700',
+    Reschedule: 'bg-purple-100 text-purple-700',
+  };
+  const recentComplaints = recent.map((r) => ({
+    ...r,
+    statusColor: STATUS_COLORS[r.status] || 'bg-slate-100 text-slate-700',
+  }));
 
   /* ── Quick actions ── */
   const quickActions = [

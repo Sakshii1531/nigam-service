@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   initializeExchangeConfigs, initializeQuestionSets, initializeCampaigns, defaultCategories 
 } from '../../data/exchangeMockData';
+import { apiRequest } from '../../lib/apiClient';
 
 const ExchangeOffers = () => {
   const [activeTab, setActiveTab] = useState('products');
@@ -46,11 +47,49 @@ const ExchangeOffers = () => {
     bonusAmount: 1000
   });
 
-  // Load all configurations
+  const [exchangeRequests, setExchangeRequests] = useState([]);
+  const [requestsLoading, setRequestsLoading] = useState(true);
+
+  // Load all configurations + real exchange requests
   useEffect(() => {
-    setConfigs(initializeExchangeConfigs());
-    setQuestionSets(initializeQuestionSets());
-    setCampaigns(initializeCampaigns());
+    Promise.all([initializeExchangeConfigs(), initializeQuestionSets(), initializeCampaigns()])
+      .then(([c, q, camps]) => { setConfigs(c); setQuestionSets(q); setCampaigns(camps); })
+      .catch(err => showToast(err.message || 'Could not load exchange configuration.'));
+
+    apiRequest('/products?limit=200')
+      .then((res) => setProductsList((res.data || []).map((p) => ({
+        id: p.id,
+        name: p.name,
+        category: p.category,
+        price: p.price,
+        status: p.isActive === false ? 'Inactive' : 'Active',
+      }))))
+      .catch((err) => showToast(err.message || 'Could not load the product catalogue.'));
+
+    // Fetch real exchange requests from backend
+    const fetchRequests = async () => {
+      try {
+        const data = await apiRequest('/super-admin/exchange-requests', { auth: true });
+        const list = Array.isArray(data?.data) ? data.data : [];
+        setExchangeRequests(list.map(r => ({
+          id: r._id || r.id,
+          customer: r.user?.name || 'Customer',
+          phone: r.user?.phone || 'N/A',
+          category: r.category || 'Appliance',
+          brand: r.brand || 'N/A',
+          model: r.modelName || 'N/A',
+          condition: r.condition || 'N/A',
+          estimatedValue: r.estimatedValue || 0,
+          status: r.status || 'Pending',
+          date: r.createdAt ? new Date(r.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'
+        })));
+      } catch (err) {
+        console.warn('Exchange requests API error:', err.message);
+      } finally {
+        setRequestsLoading(false);
+      }
+    };
+    fetchRequests();
   }, []);
 
   const showToast = (msg) => {
@@ -58,18 +97,10 @@ const ExchangeOffers = () => {
     setTimeout(() => setSuccessMessage(''), 3000);
   };
 
-  // Mock list of all store products
-  const productsList = [
-    { id: 'wp1', name: 'Kent Grand Plus', category: 'Water Purifier', price: 15499, status: 'Active' },
-    { id: 'wp2', name: 'Aquaguard Aura', category: 'Water Purifier', price: 12999, status: 'Active' },
-    { id: 'tv1', name: 'Samsung 43" Crystal 4K', category: 'Television', price: 28990, status: 'Active' },
-    { id: 'tv2', name: 'LG 55" NanoCell 4K', category: 'Television', price: 44990, status: 'Active' },
-    { id: 'rf1', name: 'Samsung 253L Double Door', category: 'Refrigerator', price: 24490, status: 'Active' },
-    { id: 'rf2', name: 'LG 190L Single Door', category: 'Refrigerator', price: 16990, status: 'Active' },
-    { id: 'wm1', name: 'Samsung 7kg Top Load', category: 'Washing Machine', price: 15990, status: 'Active' },
-    { id: 'ac1', name: 'Voltas 1.5 Ton 3 Star Split', category: 'Air Conditioner', price: 32990, status: 'Active' },
-    { id: 'gy1', name: 'Havells Adonia Spin 25L', category: 'Geyser', price: 11990, status: 'Active' }
-  ];
+  // The storefront's real catalogue — this was a hardcoded array, so the
+  // exchange configs an admin saved here keyed on product ids ('wp1', 'tv2')
+  // that no Product document has ever had.
+  const [productsList, setProductsList] = useState([]);
 
   // ── SAVE PRODUCT EXCHANGE CONFIGURATION ──
   const handleOpenConfigure = (product) => {
@@ -86,18 +117,27 @@ const ExchangeOffers = () => {
     setConfigForm({ ...currentConfig });
   };
 
-  const handleSaveConfig = () => {
-    const updatedConfigs = {
-      ...configs,
-      [editingProduct.id]: {
-        ...configForm,
-        productId: editingProduct.id
-      }
-    };
-    setConfigs(updatedConfigs);
-    localStorage.setItem('nigam_exchange_configs', JSON.stringify(updatedConfigs));
-    setEditingProduct(null);
-    showToast(`Exchange settings updated for ${editingProduct.name}`);
+  const handleSaveConfig = async () => {
+    try {
+      await apiRequest('/exchange/product-configs', {
+        method: 'PUT',
+        auth: true,
+        body: {
+          product: editingProduct.id,
+          exchangeEnabled: configForm.exchangeEnabled,
+          supportedCategories: configForm.supportedCategories || [],
+          questionSet: configForm.questionSetId || null,
+          badgeText: configForm.badgeText || '',
+          campaign: configForm.campaignId || null,
+          maxValue: Number(configForm.maxVal) || 0,
+        },
+      });
+      setConfigs(await initializeExchangeConfigs());
+      setEditingProduct(null);
+      showToast(`Exchange settings updated for ${editingProduct.name}`);
+    } catch (err) {
+      showToast(err.message || 'Could not save exchange settings.');
+    }
   };
 
   const handleToggleCategory = (cat) => {
@@ -116,37 +156,38 @@ const ExchangeOffers = () => {
   };
 
   // ── QUESTION SET ACTIONS ──
-  const handleSaveQuestionSet = (e) => {
+  const handleSaveQuestionSet = async (e) => {
     e.preventDefault();
     if (!editingQuestionSet.name) return;
 
-    let updatedSets;
-    if (editingQuestionSet.id) {
-      // Edit existing
-      updatedSets = questionSets.map(set => set.id === editingQuestionSet.id ? editingQuestionSet : set);
-      showToast(`Question set "${editingQuestionSet.name}" updated`);
-    } else {
-      // Create new
-      const newSet = {
-        ...editingQuestionSet,
-        id: `q_${Date.now()}`,
-        questions: editingQuestionSet.questions || []
-      };
-      updatedSets = [...questionSets, newSet];
-      showToast(`Question set "${newSet.name}" created`);
+    const body = {
+      name: editingQuestionSet.name,
+      category: editingQuestionSet.category,
+      questions: editingQuestionSet.questions || [],
+    };
+    try {
+      if (editingQuestionSet.id) {
+        await apiRequest(`/exchange/question-sets/${editingQuestionSet.id}`, { method: 'PUT', auth: true, body });
+        showToast(`Question set "${editingQuestionSet.name}" updated`);
+      } else {
+        await apiRequest('/exchange/question-sets', { method: 'POST', auth: true, body });
+        showToast(`Question set "${editingQuestionSet.name}" created`);
+      }
+      setQuestionSets(await initializeQuestionSets());
+      setShowQuestionSetModal(false);
+    } catch (err) {
+      showToast(err.message || 'Could not save question set.');
     }
-
-    setQuestionSets(updatedSets);
-    localStorage.setItem('nigam_exchange_questions', JSON.stringify(updatedSets));
-    setShowQuestionSetModal(false);
   };
 
-  const handleDeleteQuestionSet = (setId) => {
-    if (window.confirm('Are you sure you want to delete this question set?')) {
-      const updatedSets = questionSets.filter(set => set.id !== setId);
-      setQuestionSets(updatedSets);
-      localStorage.setItem('nigam_exchange_questions', JSON.stringify(updatedSets));
+  const handleDeleteQuestionSet = async (setId) => {
+    if (!window.confirm('Are you sure you want to delete this question set?')) return;
+    try {
+      await apiRequest(`/exchange/question-sets/${setId}`, { method: 'DELETE', auth: true });
+      setQuestionSets(await initializeQuestionSets());
       showToast('Question set deleted');
+    } catch (err) {
+      showToast(err.message || 'Could not delete question set.');
     }
   };
 
@@ -180,15 +221,11 @@ const ExchangeOffers = () => {
       text: newQuestionText,
       type: newQuestionType,
       options: optionsArray,
-      deductions: {} // Mock default deductions map
+      // Every option starts at zero deduction. These used to be auto-filled with
+      // 10% × option-index "for testing", so a set saved without review priced
+      // real trade-ins off numbers nobody chose.
+      deductions: Object.fromEntries(optionsArray.map((opt) => [opt, 0])),
     };
-
-    // Auto assign mock deductions for testing
-    optionsArray.forEach((opt, idx) => {
-      if (idx > 0) {
-        newQuestion.deductions[opt] = 0.1 * idx; // 10% * index deduction
-      }
-    });
 
     setEditingQuestionSet({
       ...editingQuestionSet,
@@ -209,36 +246,40 @@ const ExchangeOffers = () => {
   };
 
   // ── CAMPAIGN ACTIONS ──
-  const handleSaveCampaign = (e) => {
+  const handleSaveCampaign = async (e) => {
     e.preventDefault();
     if (!campaignForm.name || !campaignForm.badgeText) return;
 
-    let updatedCampaigns;
-    if (editingCampaign) {
-      // Edit
-      updatedCampaigns = campaigns.map(c => c.id === editingCampaign.id ? { ...campaignForm, id: c.id } : c);
-      showToast(`Campaign "${campaignForm.name}" updated`);
-    } else {
-      // Add
-      const newCamp = {
-        ...campaignForm,
-        id: `c_${Date.now()}`
-      };
-      updatedCampaigns = [...campaigns, newCamp];
-      showToast(`Campaign "${newCamp.name}" launched`);
+    const body = {
+      name: campaignForm.name,
+      badgeText: campaignForm.badgeText,
+      highlightColor: campaignForm.highlightColor,
+      status: campaignForm.status,
+      bonusAmount: Number(campaignForm.bonusAmount) || 0,
+    };
+    try {
+      if (editingCampaign) {
+        await apiRequest(`/exchange/campaigns/${editingCampaign.id}`, { method: 'PUT', auth: true, body });
+        showToast(`Campaign "${body.name}" updated`);
+      } else {
+        await apiRequest('/exchange/campaigns', { method: 'POST', auth: true, body });
+        showToast(`Campaign "${body.name}" launched`);
+      }
+      setCampaigns(await initializeCampaigns());
+      setShowCampaignModal(false);
+    } catch (err) {
+      showToast(err.message || 'Could not save campaign.');
     }
-
-    setCampaigns(updatedCampaigns);
-    localStorage.setItem('nigam_exchange_campaigns', JSON.stringify(updatedCampaigns));
-    setShowCampaignModal(false);
   };
 
-  const handleDeleteCampaign = (campaignId) => {
-    if (window.confirm('Are you sure you want to delete this campaign?')) {
-      const updatedCampaigns = campaigns.filter(c => c.id !== campaignId);
-      setCampaigns(updatedCampaigns);
-      localStorage.setItem('nigam_exchange_campaigns', JSON.stringify(updatedCampaigns));
+  const handleDeleteCampaign = async (campaignId) => {
+    if (!window.confirm('Are you sure you want to delete this campaign?')) return;
+    try {
+      await apiRequest(`/exchange/campaigns/${campaignId}`, { method: 'DELETE', auth: true });
+      setCampaigns(await initializeCampaigns());
       showToast('Campaign deleted');
+    } catch (err) {
+      showToast(err.message || 'Could not delete campaign.');
     }
   };
 

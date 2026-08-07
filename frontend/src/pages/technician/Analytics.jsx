@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Menu, MoreVertical, ChevronDown, TrendingUp, Briefcase, 
@@ -6,12 +6,42 @@ import {
   ArrowLeft
 } from 'lucide-react';
 import techAvatar from '../../assets/tech_avatar.png';
+import { apiRequest } from '../../lib/apiClient';
+
+const TIMEFRAME_DAYS = { 'Last 7 Days': 7, 'Last 30 Days': 30, 'Last 90 Days': 90 };
+const SLICE_COLORS = ['#0D47A1', '#2E7D32', '#7B1FA2', '#FFB300', '#EF6C00', '#00838F'];
+const DONUT_CIRCUMFERENCE = 2 * Math.PI * 45;
 
 const Analytics = () => {
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [selectedTimeframe, setSelectedTimeframe] = useState('This Week');
+  // The old options ('This Week'/'This Month'/'This Year') did not correspond to
+  // anything the API measures; these map directly onto its rolling windows.
+  const [selectedTimeframe, setSelectedTimeframe] = useState('Last 30 Days');
+  const [stats, setStats] = useState(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const days = TIMEFRAME_DAYS[selectedTimeframe] || 30;
+    let cancelled = false;
+    apiRequest(`/tech/earnings/analytics?days=${days}`, { auth: true })
+      .then((res) => { if (!cancelled) { setStats(res.data); setError(''); } })
+      .catch((err) => { if (!cancelled) setError(err.message || 'Could not load your analytics.'); });
+    return () => { cancelled = true; };
+  }, [selectedTimeframe]);
+
+  // Donut slices are laid out by accumulating each category's arc length.
+  const slices = [];
+  let offset = 0;
+  for (const [i, c] of (stats?.byCategory || []).entries()) {
+    const length = (c.percent / 100) * DONUT_CIRCUMFERENCE;
+    slices.push({ ...c, color: SLICE_COLORS[i % SLICE_COLORS.length], length, offset: -offset });
+    offset += length;
+  }
+
+  const changeTone = (v) => (v == null ? 'text-slate-400' : v >= 0 ? 'text-[#2E7D32]' : 'text-red-600');
+  const changeLabel = (v) => (v == null ? '—' : `${v >= 0 ? '+' : ''}${v}%`);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-24 max-w-md mx-auto border-x border-slate-200 shadow-xl relative font-sans">
@@ -41,13 +71,19 @@ const Analytics = () => {
               onChange={(e) => setSelectedTimeframe(e.target.value)}
               className="appearance-none bg-white border border-slate-200 rounded-xl px-4 py-2.5 pr-9 text-xs font-normal text-slate-600 focus:outline-none focus:border-slate-300 shadow-sm"
             >
-              <option>This Week</option>
-              <option>This Month</option>
-              <option>This Year</option>
+              <option>Last 7 Days</option>
+              <option>Last 30 Days</option>
+              <option>Last 90 Days</option>
             </select>
             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-600 pointer-events-none" />
           </div>
         </div>
+
+        {error && (
+          <div className="bg-rose-50 border border-rose-200 rounded-xl px-3 py-2 text-[11px] font-semibold text-rose-600">
+            {error}
+          </div>
+        )}
 
         {/* 2x2 Metric Cards Grid */}
         <div className="grid grid-cols-2 gap-4">
@@ -55,40 +91,42 @@ const Analytics = () => {
           {/* Earnings Card */}
           <div className="bg-white rounded-2xl p-3.5 border border-slate-200 shadow-sm text-left">
             <span className="text-[10px] font-medium text-slate-600 uppercase tracking-wide block">Earnings</span>
-            <p className="text-lg font-medium text-[#052355] mt-1.5">₹18,450</p>
-            <div className="flex items-center gap-1 mt-1 text-[#2E7D32]">
-              <TrendingUp className="h-3 w-3 text-[#2E7D32]" />
-              <span className="text-[10px] font-normal">+12.5%</span>
+            <p className="text-lg font-medium text-[#052355] mt-1.5">₹{(stats?.earnings || 0).toLocaleString('en-IN')}</p>
+            <div className={`flex items-center gap-1 mt-1 ${changeTone(stats?.earningsChangePercent)}`}>
+              <TrendingUp className="h-3 w-3" />
+              <span className="text-[10px] font-normal">{changeLabel(stats?.earningsChangePercent)}</span>
             </div>
           </div>
 
           {/* Jobs Completed Card */}
           <div className="bg-white rounded-2xl p-3.5 border border-slate-200 shadow-sm text-left">
             <span className="text-[10px] font-medium text-slate-600 uppercase tracking-wide block">Jobs Completed</span>
-            <p className="text-lg font-medium text-[#052355] mt-1.5">18</p>
-            <div className="flex items-center gap-1 mt-1 text-[#2E7D32]">
-              <TrendingUp className="h-3 w-3 text-[#2E7D32]" />
-              <span className="text-[10px] font-normal">+8.3%</span>
+            <p className="text-lg font-medium text-[#052355] mt-1.5">{stats?.completedCount ?? 0}</p>
+            <div className={`flex items-center gap-1 mt-1 ${changeTone(stats?.completedChangePercent)}`}>
+              <TrendingUp className="h-3 w-3" />
+              <span className="text-[10px] font-normal">{changeLabel(stats?.completedChangePercent)}</span>
             </div>
           </div>
 
           {/* Completion Rate Card */}
           <div className="bg-white rounded-2xl p-3.5 border border-slate-200 shadow-sm text-left">
             <span className="text-[10px] font-medium text-slate-600 uppercase tracking-wide block">Completion Rate</span>
-            <p className="text-lg font-medium text-[#052355] mt-1.5">92%</p>
-            <div className="flex items-center gap-1 mt-1 text-[#2E7D32]">
-              <TrendingUp className="h-3 w-3 text-[#2E7D32]" />
-              <span className="text-[10px] font-normal">+5.2%</span>
+            <p className="text-lg font-medium text-[#052355] mt-1.5">
+              {stats?.completionRate != null ? `${stats.completionRate}%` : '—'}
+            </p>
+            <div className="flex items-center gap-1 mt-1 text-slate-400">
+              <span className="text-[10px] font-normal">
+                {stats?.previousCompletionRate != null ? `was ${stats.previousCompletionRate}%` : 'no prior data'}
+              </span>
             </div>
           </div>
 
           {/* Customer Rating Card */}
           <div className="bg-white rounded-2xl p-3.5 border border-slate-200 shadow-sm text-left">
             <span className="text-[10px] font-medium text-slate-600 uppercase tracking-wide block">Customer Rating</span>
-            <p className="text-lg font-medium text-[#052355] mt-1.5">4.9</p>
-            <div className="flex items-center gap-1 mt-1 text-[#2E7D32]">
-              <TrendingUp className="h-3 w-3 text-[#2E7D32]" />
-              <span className="text-[10px] font-normal">+0.1</span>
+            <p className="text-lg font-medium text-[#052355] mt-1.5">{stats?.rating ? stats.rating.toFixed(1) : '—'}</p>
+            <div className="flex items-center gap-1 mt-1 text-slate-400">
+              <span className="text-[10px] font-normal">lifetime average</span>
             </div>
           </div>
 
@@ -105,59 +143,39 @@ const Analytics = () => {
               <svg width="110" height="110" viewBox="0 0 110 110" className="transform -rotate-90">
                 {/* Background circle */}
                 <circle cx="55" cy="55" r="45" fill="transparent" stroke="#F1F5F9" strokeWidth="12" />
-                {/* AC Repair - Blue - 45% (Circumference C = 2*pi*45 = 282.74) */}
-                <circle cx="55" cy="55" r="45" fill="transparent" stroke="#0D47A1" strokeWidth="12"
-                  strokeDasharray="127.23 282.74" strokeDashoffset="0" />
-                {/* Washing Machine - Green - 25% (282.74 * 0.25 = 70.69) */}
-                <circle cx="55" cy="55" r="45" fill="transparent" stroke="#2E7D32" strokeWidth="12"
-                  strokeDasharray="70.69 282.74" strokeDashoffset="-127.23" />
-                {/* Refrigerator - Purple - 20% (282.74 * 0.20 = 56.55) */}
-                <circle cx="55" cy="55" r="45" fill="transparent" stroke="#7B1FA2" strokeWidth="12"
-                  strokeDasharray="56.55 282.74" strokeDashoffset="-197.92" />
-                {/* Others - Yellow/Orange - 10% (282.74 * 0.10 = 28.27) */}
-                <circle cx="55" cy="55" r="45" fill="transparent" stroke="#FFB300" strokeWidth="12"
-                  strokeDasharray="28.27 282.74" strokeDashoffset="-254.47" />
+                {slices.map((sl) => (
+                  <circle
+                    key={sl.label}
+                    cx="55" cy="55" r="45"
+                    fill="transparent"
+                    stroke={sl.color}
+                    strokeWidth="12"
+                    strokeDasharray={`${sl.length.toFixed(2)} ${DONUT_CIRCUMFERENCE.toFixed(2)}`}
+                    strokeDashoffset={sl.offset.toFixed(2)}
+                  />
+                ))}
               </svg>
               {/* Inner hole overlay for text */}
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <span className="text-[10px] font-medium text-slate-600 uppercase">Jobs</span>
-                <span className="text-base font-medium text-[#052355]">18</span>
+                <span className="text-base font-medium text-[#052355]">{stats?.completedCount ?? 0}</span>
               </div>
             </div>
 
             {/* Legend List */}
             <div className="flex-1 flex flex-col gap-2.5">
-              <div className="flex items-center justify-between text-xs font-normal">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#0D47A1] inline-block"></span>
-                  <span className="text-slate-500 font-normal text-[11px]">AC Repair</span>
+              {slices.length === 0 && (
+                <span className="text-[11px] text-slate-400 font-normal">No completed jobs in this period.</span>
+              )}
+              {slices.map((sl) => (
+                <div key={sl.label} className="flex items-center justify-between text-xs font-normal">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: sl.color }}></span>
+                    <span className="text-slate-500 font-normal text-[11px]">{sl.label}</span>
+                  </div>
+                  <span className="text-[#052355] text-[11px]">{sl.percent}%</span>
                 </div>
-                <span className="text-[#052355] text-[11px]">45%</span>
-              </div>
-
-              <div className="flex items-center justify-between text-xs font-normal">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#2E7D32] inline-block"></span>
-                  <span className="text-slate-500 font-normal text-[11px]">Washing Machine</span>
-                </div>
-                <span className="text-[#052355] text-[11px]">25%</span>
-              </div>
-
-              <div className="flex items-center justify-between text-xs font-normal">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#7B1FA2] inline-block"></span>
-                  <span className="text-slate-500 font-normal text-[11px]">Refrigerator</span>
-                </div>
-                <span className="text-[#052355] text-[11px]">20%</span>
-              </div>
-
-              <div className="flex items-center justify-between text-xs font-normal">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#FFB300] inline-block"></span>
-                  <span className="text-slate-500 font-normal text-[11px]">Others</span>
-                </div>
-                <span className="text-[#052355] text-[11px]">10%</span>
-              </div>
+              ))}
             </div>
 
           </div>

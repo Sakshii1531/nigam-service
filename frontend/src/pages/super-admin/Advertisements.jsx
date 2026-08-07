@@ -1,23 +1,51 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import { Search, Megaphone, Plus, Trash2, BarChart2 } from 'lucide-react';
+import { apiRequest } from '../../lib/apiClient';
+
+const currency = new Intl.NumberFormat('en-IN', {
+  style: 'currency',
+  currency: 'INR',
+  maximumFractionDigits: 0,
+});
 
 const Advertisements = () => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [ads, setAds] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const [ads, setAds] = useState([
-    { id: 1, name: 'Home Deep Cleaning Summer Ad', type: 'App Header Banner', budget: '₹5,000/mo', clicks: 1204, status: 'Running' },
-    { id: 2, name: 'Free AC Filter Upgrade Pop-up', type: 'Category Popup', budget: '₹2,000/mo', clicks: 840, status: 'Running' },
-    { id: 3, name: 'Washing Machine Repair Promo', type: 'Cart Bottom Banner', budget: '₹1,500/mo', clicks: 310, status: 'Paused' },
-  ]);
+  useEffect(() => {
+    let cancelled = false;
+    async function loadAds() {
+      try {
+        // /admin, not the public reader — the console must see Paused campaigns too.
+        const data = await apiRequest('/cms/advertisements/admin', { auth: true });
+        if (!cancelled) setAds(data?.data || []);
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    loadAds();
+    return () => { cancelled = true; };
+  }, []);
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
+    const previous = ads;
     setAds(prev => prev.filter(ad => ad.id !== id));
+    try {
+      await apiRequest(`/cms/advertisements/${id}`, { method: 'DELETE', auth: true });
+    } catch (err) {
+      setAds(previous);
+      setError(`Could not delete advertisement: ${err.message}`);
+    }
   };
 
-  const filteredAds = ads.filter(ad => 
-    ad.name.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredAds = ads.filter(ad =>
+    (ad.name || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -56,15 +84,24 @@ const Advertisements = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-sm">
+                {loading && (
+                  <tr><td colSpan={6} className="p-8 text-center text-slate-400 font-semibold">Loading campaigns…</td></tr>
+                )}
+                {!loading && error && (
+                  <tr><td colSpan={6} className="p-8 text-center text-red-600 font-semibold">{error}</td></tr>
+                )}
+                {!loading && !error && filteredAds.length === 0 && (
+                  <tr><td colSpan={6} className="p-8 text-center text-slate-400 font-semibold">No campaigns yet.</td></tr>
+                )}
                 {filteredAds.map((ad) => (
                   <tr key={ad.id} className="hover:bg-slate-50 transition-colors">
                     <td className="p-4 pl-6">
                       <p className="font-bold text-slate-800 flex items-center gap-1.5"><Megaphone size={14} className="text-slate-400" /> {ad.name}</p>
-                      <span className="text-[10px] text-slate-400 font-bold uppercase">ID: CAM-{ad.id + 100}</span>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase">ID: {ad.id}</span>
                     </td>
                     <td className="p-4 font-semibold text-slate-600">{ad.type}</td>
-                    <td className="p-4 text-xs font-bold text-slate-700">{ad.budget}</td>
-                    <td className="p-4 text-slate-700 font-bold flex items-center gap-1"><BarChart2 size={12} /> {ad.clicks} clicks</td>
+                    <td className="p-4 text-xs font-bold text-slate-700">{ad.budget != null ? `${currency.format(ad.budget)}/mo` : '—'}</td>
+                    <td className="p-4 text-slate-700 font-bold flex items-center gap-1"><BarChart2 size={12} /> {ad.clicks ?? 0} clicks</td>
                     <td className="p-4">
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
                         ad.status === 'Running' ? 'bg-green-50 text-green-600 border border-green-100' : 'bg-slate-100 text-slate-500'

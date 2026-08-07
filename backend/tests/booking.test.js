@@ -14,29 +14,16 @@ import { ServiceRequest } from '../src/modules/service-requests/serviceRequest.m
 import { hashPassword } from '../src/modules/auth/password.js';
 import { ROLES } from '../src/config/constants.js';
 import { testDbUri } from './helpers/testDb.js';
+import { readOtpCode } from './helpers/otp.js';
 
 const TEST_DB_URI = testDbUri('booking');
 
 let app;
 
-function captureConsoleLog() {
-  const original = console.log;
-  const lines = [];
-  console.log = (...args) => lines.push(args.join(' '));
-  return {
-    code: () => {
-      console.log = original;
-      const match = lines.join('\n').match(/code for [^:]+: (\d{6})/);
-      if (!match) throw new Error(`No OTP code found: ${lines.join('\n')}`);
-      return match[1];
-    },
-  };
-}
 
 async function loginAndVerify({ role, identifier, password }) {
-  const capture = captureConsoleLog();
   await request(app).post('/api/v1/auth/login').send({ role, identifier, password }).expect(200);
-  const code = capture.code();
+  const code = readOtpCode(identifier);
   const res = await request(app).post('/api/v1/auth/otp/verify').send({ role, identifier, code }).expect(200);
   return res.body.data.accessToken;
 }
@@ -70,10 +57,11 @@ beforeAll(async () => {
   await registerAllModels();
   await mongoose.connect(TEST_DB_URI);
   await ensureIndexes();
-  app = createApp();
+  app = createApp().listen(0);
 });
 
 afterAll(async () => {
+  await new Promise((resolve) => app.close(resolve));
   await mongoose.connection.dropDatabase();
   await mongoose.disconnect();
 });
@@ -312,5 +300,107 @@ describe('service request status transitions — server-side state machine', () 
       .set('Authorization', `Bearer ${techToken}`)
       .send({ status: 'New' })
       .expect(400);
+  });
+});
+
+describe('manual assignment from the super-admin console', () => {
+  async function seedSuperAdmin() {
+    const email = 'assign-admin@test.com';
+    await User.create({ role: ROLES.SUPER_ADMIN, name: 'Super Admin', email, passwordHash: await hashPassword('password123'), status: 'Active' });
+    return loginAndVerify({ role: ROLES.SUPER_ADMIN, identifier: email, password: 'password123' });
+  }
+
+  // A request with no technician: created directly rather than through /bookings,
+  // which auto-assigns on the way in.
+  async function seedUnassignedRequest() {
+    const customer = await User.create({
+      role: ROLES.CUSTOMER, phone: '9200000031', name: 'Unassigned Customer', passwordHash: await hashPassword('password123'),
+    });
+    return ServiceRequest.create({ user: customer._id, category: 'AC', description: 'Not cooling' });
+  }
+
+  it('ranks candidates and assigns the chosen one, moving the request to Assigned', async () => {
+    const adminToken = await seedSuperAdmin();
+    const { technician } = await seedTechnician({ phone: '9300000031' });
+    const sr = await seedUnassignedRequest();
+
+    const suggestRes = await request(app)
+      .get(`/api/v1/service-requests/${sr.id}/technician-suggestions`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(suggestRes.body.data[0]).toMatchObject({ id: technician.id, name: 'Test Technician' });
+    expect(typeof suggestRes.body.data[0].score).toBe('number');
+    expect(suggestRes.body.data[0].breakdown).toBeDefined();
+
+    const assignRes = await request(app)
+      .patch(`/api/v1/service-requests/${sr.id}/assign`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ technician: technician.id })
+      .expect(200);
+    expect(assignRes.body.data.status).toBe('Assigned');
+    expect(assignRes.body.data.technician.name).toBe('Test Technician');
+    expect(assignRes.body.data.timeline.map((t) => t.stepLabel)).toContain('Assigned');
+  });
+
+  it('falls back to the weighted engine when no technician is named', async () => {
+    const adminToken = await seedSuperAdmin();
+    const { technician } = await seedTechnician({ phone: '9300000032' });
+    const sr = await seedUnassignedRequest();
+
+    const res = await request(app)
+      .patch(`/api/v1/service-requests/${sr.id}/assign`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({})
+      .expect(200);
+    expect(String(res.body.data.technician.id)).toBe(String(technician.id));
+  });
+
+  it('409s when there is nobody available to auto-assign to', async () => {
+    const adminToken = await seedSuperAdmin();
+    const sr = await seedUnassignedRequest();
+
+    const res = await request(app)
+      .patch(`/api/v1/service-requests/${sr.id}/assign`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({})
+      .expect(409);
+    expect(res.body.error.message).toMatch(/No available technician/);
+  });
+
+  it('refuses to re-route a request that is already underway', async () => {
+    const adminToken = await seedSuperAdmin();
+    const { technician } = await seedTechnician({ phone: '9300000033' });
+    const sr = await seedUnassignedRequest();
+    sr.status = 'Engineer Reached';
+    await sr.save();
+
+    const res = await request(app)
+      .patch(`/api/v1/service-requests/${sr.id}/assign`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ technician: technician.id })
+      .expect(409);
+    expect(res.body.error.message).toMatch(/Engineer Reached/);
+  });
+
+  it('rejects an inactive technician and a non-super-admin caller', async () => {
+    const adminToken = await seedSuperAdmin();
+    const { technician } = await seedTechnician({ phone: '9300000034' });
+    const custToken = await seedCustomer('9200000034');
+    const sr = await seedUnassignedRequest();
+
+    await Technician.findByIdAndUpdate(technician.id, { status: 'Inactive' });
+    const res = await request(app)
+      .patch(`/api/v1/service-requests/${sr.id}/assign`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ technician: technician.id })
+      .expect(409);
+    expect(res.body.error.message).toMatch(/not Active/);
+
+    await request(app)
+      .patch(`/api/v1/service-requests/${sr.id}/assign`)
+      .set('Authorization', `Bearer ${custToken}`)
+      .send({})
+      .expect(403);
+    await request(app).get(`/api/v1/service-requests/${sr.id}/technician-suggestions`).expect(401);
   });
 });

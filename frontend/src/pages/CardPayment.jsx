@@ -1,17 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, CreditCard, ShieldCheck } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { apiRequest } from '../lib/apiClient';
+import { payWithRazorpay } from '../lib/razorpayCheckout';
 
 const CardPayment = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Input states for simulator
-  const [cardNumber, setCardNumber] = useState('');
-  const [expiry, setExpiry] = useState('');
-  const [cvv, setCvv] = useState('');
-  const [cardName, setCardName] = useState('');
 
   const [loading, setLoading] = useState(false);
 
@@ -42,9 +38,21 @@ const CardPayment = () => {
             fullName: meta.fullName,
             mobile: meta.mobile,
             paymentMode: meta.paymentMode || 'after', // or 'advance'
+            paymentMethod: 'Card',
           },
           auth: true,
         });
+
+        // Collect the advance for real before showing the success screen. A
+        // cancelled or declined payment must not look like a completed booking.
+        if (result.razorpay) {
+          await payWithRazorpay({
+            razorpay: result.razorpay,
+            verifyPath: `/bookings/${result.booking.id}/verify-payment`,
+            description: meta.service || meta.category,
+            prefill: { name: meta.fullName, contact: meta.mobile },
+          });
+        }
 
         // Navigate to success page with real serviceRequestId returned from backend
         const params = new URLSearchParams({
@@ -74,29 +82,49 @@ const CardPayment = () => {
       } finally {
         setLoading(false);
       }
+    } else if (isProductBuy && paymentState.productId) {
+      // Product purchases go through the real order + gateway path. This branch
+      // used to jump straight to the success page, creating no order and taking
+      // no money.
+      setLoading(true);
+      try {
+        const orderRes = await apiRequest('/orders', {
+          method: 'POST',
+          auth: true,
+          body: {
+            items: [{ productId: paymentState.productId, quantity: paymentState.quantity || 1 }],
+            address: paymentState.address,
+            couponCode: paymentState.couponCode,
+            exchangeRequestId: paymentState.exchangeRequestId,
+            coinsToRedeem: paymentState.coinsToRedeem || 0,
+            paymentMethod: 'Card',
+          },
+        });
+        const order = orderRes.data;
+        if (order.razorpay) {
+          await payWithRazorpay({
+            razorpay: order.razorpay,
+            verifyPath: `/orders/${order.id}/verify-payment`,
+            description: itemName,
+          });
+        }
+        navigate(`/booking-success?service=${encodeURIComponent(itemName)}&type=product&price=${itemPrice}&orderId=${order.id}`);
+      } catch (err) {
+        navigate('/payment-failure', {
+          state: { errorMessage: err.message || 'The purchase could not be completed.', productName: itemName, price: finalPrice },
+        });
+      } finally {
+        setLoading(false);
+      }
     } else {
-      if (isProductBuy) {
-        navigate(`/booking-success?service=${encodeURIComponent(itemName)}&type=product&price=${itemPrice}`);
-      } else {
-        navigate(`/booking-success?service=${encodeURIComponent(itemName)}`);
-      }
+      navigate('/payment-failure', {
+        state: {
+          errorMessage: 'This checkout is missing the details needed to place an order. Please start again from the product page.',
+          productName: itemName,
+          price: finalPrice,
+        },
+      });
     }
-  };
-
-  const handleFailurePay = () => {
-    navigate('/payment-failure', {
-      state: {
-        errorMessage: 'The transaction was declined by your bank due to insufficient funds on this card.',
-        productName: itemName,
-        price: finalPrice,
-      }
-    });
-  };
-
-  const handleCardNumberChange = (e) => {
-    const value = e.target.value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
-    const formattedValue = value.match(/.{1,4}/g)?.join(' ') || value;
-    if (formattedValue.length <= 19) setCardNumber(formattedValue);
   };
 
   return (
@@ -118,97 +146,26 @@ const CardPayment = () => {
         <div className="flex-1 p-5 flex flex-col gap-5 overflow-y-auto">
           
           {/* Card Visual representation */}
+          {/* Card details are entered inside Razorpay Checkout, which is PCI-DSS
+              compliant. This screen used to collect the card number, expiry and
+              CVV itself — putting raw card data through our own app for no
+              reason, since Checkout asks for them again anyway. */}
           <div className="bg-gradient-to-br from-[#072C63] via-[#0A3D80] to-[#0D47A1] rounded-2xl p-5 text-white shadow-lg relative overflow-hidden flex flex-col justify-between h-40">
             <div className="absolute -top-10 -right-10 w-28 h-28 bg-[#FFD400]/10 rounded-full blur-2xl"></div>
             <div className="flex justify-between items-start">
-              <div>
-                <span className="text-[8px] bg-[#FFD400] text-black font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wider">
-                  Secure Card Pay
-                </span>
-              </div>
+              <span className="text-[8px] bg-[#FFD400] text-black font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wider">
+                Secure Card Pay
+              </span>
               <span className="text-xs italic font-bold text-[#FFD400]">NIGAM SHIELD</span>
             </div>
             <div className="my-2">
-              <span className="font-mono text-base tracking-widest block h-6">
-                {cardNumber || '•••• •••• •••• ••••'}
-              </span>
+              <span className="text-sm font-bold block">{itemName}</span>
+              <span className="text-2xl font-black block mt-1">₹{finalPrice.toLocaleString('en-IN')}</span>
             </div>
-            <div className="flex justify-between text-[10px] uppercase font-bold text-white/80">
-              <div>
-                <span className="text-[8px] text-white/50 block font-normal uppercase">Cardholder</span>
-                <span className="truncate block max-w-[150px]">{cardName || 'YOUR FULL NAME'}</span>
-              </div>
-              <div>
-                <span className="text-[8px] text-white/50 block font-normal uppercase">Expires</span>
-                <span>{expiry || 'MM/YY'}</span>
-              </div>
-            </div>
+            <span className="text-[10px] text-white/70">
+              You'll enter your card details on the secure payment screen.
+            </span>
           </div>
-
-          {/* Form Input fields */}
-          <form onSubmit={handlePay} className="flex flex-col gap-4">
-            <div>
-              <label className="text-[10px] font-bold text-text-secondary block mb-1">CARDHOLDER NAME</label>
-              <input 
-                type="text" 
-                placeholder="Enter Cardholder Name"
-                value={cardName}
-                onChange={(e) => setCardName(e.target.value.toUpperCase())}
-                required
-                className="w-full bg-slate-50 border border-slate-200 px-3 py-2.5 rounded-xl text-xs font-bold text-text-primary focus:border-[#0D47A1] focus:bg-white outline-none transition-all"
-              />
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-text-secondary block mb-1">CARD NUMBER</label>
-              <input 
-                type="text" 
-                placeholder="4111 2222 3333 4444"
-                value={cardNumber}
-                onChange={handleCardNumberChange}
-                required
-                className="w-full bg-slate-50 border border-slate-200 px-3 py-2.5 rounded-xl text-xs font-mono font-bold text-text-primary focus:border-[#0D47A1] focus:bg-white outline-none transition-all"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-[10px] font-bold text-text-secondary block mb-1">EXPIRY DATE</label>
-                <input 
-                  type="text" 
-                  placeholder="MM/YY"
-                  value={expiry}
-                  onChange={(e) => {
-                    let val = e.target.value.replace(/[^0-9]/g, '');
-                    if (val.length >= 2) val = val.slice(0,2) + '/' + val.slice(2,4);
-                    if (val.length <= 5) setExpiry(val);
-                  }}
-                  required
-                  className="w-full bg-slate-50 border border-slate-200 px-3 py-2.5 rounded-xl text-xs font-bold text-text-primary focus:border-[#0D47A1] focus:bg-white outline-none transition-all text-center"
-                />
-              </div>
-              <div>
-                <label className="text-[10px] font-bold text-text-secondary block mb-1">CVV CODE</label>
-                <input 
-                  type="password" 
-                  placeholder="•••"
-                  value={cvv}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/[^0-9]/g, '');
-                    if (val.length <= 3) setCvv(val);
-                  }}
-                  required
-                  className="w-full bg-slate-50 border border-slate-200 px-3 py-2.5 rounded-xl text-xs font-bold text-text-primary focus:border-[#0D47A1] focus:bg-white outline-none transition-all text-center"
-                />
-              </div>
-            </div>
-
-            {/* Secure Trust Badge */}
-            <div className="bg-blue-50/40 border border-blue-50 p-2.5 rounded-xl flex items-center gap-2 mt-1">
-              <ShieldCheck className="h-4 w-4 text-[#0D47A1] flex-shrink-0" />
-              <span className="text-[9px] font-bold text-[#0D47A1] leading-relaxed">
-                Your payment details are 100% secured by Nigam Shield Payment Protection Protocol.
-              </span>
-            </div>
-          </form>
 
         </div>
 
@@ -216,23 +173,14 @@ const CardPayment = () => {
         <div className="p-5 border-t border-slate-100 flex flex-col gap-2.5 flex-shrink-0 w-full">
           <button
             onClick={handlePay}
-            disabled={loading || !cardNumber || !expiry || !cvv || !cardName}
+            disabled={loading}
             className={`w-full text-[#0D47A1] font-extrabold py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer ${
-              !cardNumber || !expiry || !cvv || !cardName
+              loading
                 ? 'bg-slate-100 border border-slate-200 text-text-secondary cursor-not-allowed shadow-none'
                 : 'bg-[#FFD600] hover:bg-yellow-400 active:scale-[0.99]'
             }`}
           >
-            {loading ? 'Processing Payment...' : `Authorize Card Pay (Success) ₹${finalPrice.toLocaleString('en-IN')}`}
-          </button>
-          
-          <button
-            type="button"
-            onClick={handleFailurePay}
-            disabled={loading}
-            className="w-full bg-red-50 text-red-650 hover:bg-red-100 hover:text-red-700 font-extrabold py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all border border-red-200 cursor-pointer text-xs"
-          >
-            Simulate Payment Failure
+            {loading ? 'Opening secure checkout…' : `Pay ₹${finalPrice.toLocaleString('en-IN')} Securely`}
           </button>
         </div>
 

@@ -4,10 +4,8 @@ import {
   AlertCircle, HelpCircle, CheckCircle2, ChevronDown, RefreshCw 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  defaultBrands, defaultModels, modelBaseValues, 
-  initializeQuestionSets, initializeCampaigns 
-} from '../../data/exchangeMockData';
+import { initializeQuestionSets, initializeCampaigns } from '../../data/exchangeMockData';
+import { apiRequest } from '../../lib/apiClient';
 
 const ExchangeModal = ({ 
   isOpen, 
@@ -35,16 +33,16 @@ const ExchangeModal = ({
   const [totalSavings, setTotalSavings] = useState(0);
   const [finalPrice, setFinalPrice] = useState(product?.price || 0);
 
-  // Load custom configurations from LocalStorage
+  // Question sets and campaigns come from the super-admin console via the API —
+  // the customer's browser has never authored them.
   const [allQuestionSets, setAllQuestionSets] = useState([]);
   const [allCampaigns, setAllCampaigns] = useState([]);
 
   useEffect(() => {
     if (isOpen) {
-      const qSets = initializeQuestionSets();
-      const camps = initializeCampaigns();
-      setAllQuestionSets(qSets);
-      setAllCampaigns(camps);
+      Promise.all([initializeQuestionSets(), initializeCampaigns()])
+        .then(([qSets, camps]) => { setAllQuestionSets(qSets); setAllCampaigns(camps); })
+        .catch((err) => console.error('[exchange] Could not load exchange configuration:', err.message));
       
       const category = product?.category || 'Water Purifier';
 
@@ -63,11 +61,16 @@ const ExchangeModal = ({
       setTotalSavings(0);
       setFinalPrice(product?.price || 0);
 
-      // Find matching question set for this category
-      const qSet = qSets.find(set => set.category === category) || qSets[0];
-      setQuestions(qSet?.questions || []);
     }
   }, [isOpen, product]);
+
+  // Question set is chosen once the sets have loaded, not during the open handler.
+  useEffect(() => {
+    if (!isOpen || allQuestionSets.length === 0) return;
+    const category = product?.category || 'Water Purifier';
+    const qSet = allQuestionSets.find((set) => set.category === category) || allQuestionSets[0];
+    setQuestions(qSet?.questions || []);
+  }, [isOpen, product, allQuestionSets]);
 
   // Derived list of exchange categories supported by the current product configuration
   const supportedCategories = config?.supportedCategories || ['Mobile'];
@@ -81,8 +84,22 @@ const ExchangeModal = ({
     setStep(2);
   };
 
-  // Filter Brands based on Category and Search
-  const availableBrands = defaultBrands[selectedCategory] || [];
+  // Brands, models and base values all come from the admin-managed base-value
+  // catalogue. They used to be three objects bundled into the customer app, so
+  // the trade-in money offered was fixed in the browser build.
+  const [catalogue, setCatalogue] = useState([]);
+  const [catalogueError, setCatalogueError] = useState('');
+
+  useEffect(() => {
+    if (!selectedCategory) return;
+    let cancelled = false;
+    apiRequest(`/exchange/base-values?category=${encodeURIComponent(selectedCategory)}`, { auth: true })
+      .then((res) => { if (!cancelled) { setCatalogue(res.data || []); setCatalogueError(''); } })
+      .catch((err) => { if (!cancelled) { setCatalogue([]); setCatalogueError(err.message || 'Could not load exchange values.'); } });
+    return () => { cancelled = true; };
+  }, [selectedCategory]);
+
+  const availableBrands = [...new Set(catalogue.filter((r) => r.isActive).map((r) => r.brand))];
   const filteredBrands = availableBrands.filter(b => 
     b.toLowerCase().includes(brandSearch.toLowerCase())
   );
@@ -93,15 +110,16 @@ const ExchangeModal = ({
   };
 
   // Filter Models based on Brand and Search
-  const availableModels = defaultModels[`${selectedCategory}_${selectedBrand}`] || [];
+  const availableModels = catalogue.filter((r) => r.isActive && r.brand === selectedBrand).map((r) => r.model);
   const filteredModels = availableModels.filter(m => 
     m.toLowerCase().includes(modelSearch.toLowerCase())
   );
 
   const handleSelectModel = (model) => {
     setSelectedModel(model);
-    const baseVal = modelBaseValues[model] || 5000;
-    setBaseValue(baseVal);
+    // No silent 5000 fallback: an unpriced model must not be quoted at all.
+    const row = catalogue.find((r) => r.model === model && r.brand === selectedBrand);
+    setBaseValue(row ? row.baseValue : 0);
     
     // Initialize default answers
     const initialAnswers = {};
@@ -349,7 +367,9 @@ const ExchangeModal = ({
                     </button>
                   ))}
                   {filteredModels.length === 0 && (
-                    <p className="text-center text-xs text-slate-400 py-6 font-semibold">No models match your search.</p>
+                    <p className="text-center text-xs text-slate-400 py-6 font-semibold">
+                      {catalogueError || 'No models match your search.'}
+                    </p>
                   )}
                 </div>
               </div>

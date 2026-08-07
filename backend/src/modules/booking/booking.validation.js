@@ -23,6 +23,9 @@ export const createBookingSchema = z.object({
   fullName: z.string().optional(),
   mobile: z.string().optional(),
   paymentMode: z.enum(['advance', 'after']).optional(),
+  // How the advance is collected. 'Cash' (or omitting it) means no gateway
+  // order is created — the technician collects on site.
+  paymentMethod: z.enum(['Card', 'UPI', 'NetBanking', 'Cash', 'Wallet']).optional(),
   purchaseDate: z.coerce.date().optional(),
   serialNo: z.string().optional(),
   applianceId: z.string().optional(),
@@ -36,3 +39,8 @@ export const listBookingsQuerySchema = z.object({
 });
 
 export const idParamSchema = z.object({ id: z.string().min(1) });
+
+export const verifyBookingPaymentSchema = z.object({
+  razorpayPaymentId: z.string().min(1),
+  razorpaySignature: z.string().min(1),
+});

@@ -2,6 +2,7 @@ import { LoyaltyMilestone } from '../rewards-loyalty/loyaltyMilestone.model.js';
 import { Membership } from '../rewards-loyalty/membership.model.js';
 import { SpinWheelConfig } from '../rewards-loyalty/spinWheelConfig.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
+import { ReferralCampaign } from '../rewards-loyalty/referralCampaign.model.js';
 
 // Super-admin authoring layer for loyalty config (BACKEND_CONTEXT.md §6.3) —
 // milestone thresholds, membership tier definitions, spin-wheel segment odds.
@@ -61,4 +62,23 @@ export async function updateSpinWheelConfig({ segments, isActive }) {
   if (isActive !== undefined) config.isActive = isActive;
   await config.save();
   return config;
+}
+
+// Referral offers — the customer app's refer-and-earn screen reads the Active
+// one; individual redemptions are recorded separately as Referral rows.
+
+export async function listReferralCampaigns() {
+  return ReferralCampaign.find().sort({ createdAt: -1 });
+}
+export async function createReferralCampaign(data) {
+  return ReferralCampaign.create(data);
+}
+export async function updateReferralCampaign(id, updates) {
+  const doc = await ReferralCampaign.findByIdAndUpdate(id, updates, { new: true });
+  if (!doc) throw new ApiError(404, 'Referral campaign not found');
+  return doc;
+}
+export async function deleteReferralCampaign(id) {
+  const doc = await ReferralCampaign.findByIdAndDelete(id);
+  if (!doc) throw new ApiError(404, 'Referral campaign not found');
 }

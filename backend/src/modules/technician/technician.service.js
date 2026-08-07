@@ -7,7 +7,7 @@ export async function getProfile(technicianId) {
   return technician;
 }
 
-const EDITABLE_FIELDS = ['name', 'phone', 'email', 'specs'];
+const EDITABLE_FIELDS = ['name', 'phone', 'email', 'address', 'specs'];
 
 export async function updateProfile(technicianId, data) {
   const updates = {};

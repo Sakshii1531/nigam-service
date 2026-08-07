@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, CreditCard, Landmark, Wallet, ChevronRight, Coins, Check } from 'lucide-react';
+import { apiRequest } from '../lib/apiClient';
 
 const Payment = () => {
   const navigate = useNavigate();
@@ -14,18 +15,23 @@ const Payment = () => {
   const itemName = paymentState.productName || 'AC Deep Cleaning';
   const itemPrice = paymentState.price !== undefined ? paymentState.price : 5.00;
 
-  const availableCoins = parseInt(localStorage.getItem('user_coins') || '2450', 10);
+  // The coin balance is the wallet's, not a number kept in this browser — a
+  // localStorage default of 2450 let anyone "redeem" coins they never earned.
+  const [availableCoins, setAvailableCoins] = useState(0);
+  useEffect(() => {
+    apiRequest('/wallet', { auth: true })
+      .then((res) => setAvailableCoins(res.data?.coins ?? 0))
+      .catch((err) => console.warn('[payment] Could not load wallet balance:', err.message));
+  }, []);
   // Conversion: 10 coins = ₹1 (or $1 for services)
   const coinsRate = 10;
   const maxCoinsToRedeem = Math.min(availableCoins, Math.floor((isProductBuy ? itemPrice : 5.00) * coinsRate));
   const coinDiscountValue = redeemCoins ? (maxCoinsToRedeem / coinsRate) : 0;
   const finalPrice = Math.max(0, (isProductBuy ? itemPrice : 5.00) - coinDiscountValue);
 
+  // Redemption is debited server-side as part of the order, not by writing a
+  // smaller number into this browser.
   const handlePay = () => {
-    if (redeemCoins) {
-      const current = parseInt(localStorage.getItem('user_coins') || '2450', 10);
-      localStorage.setItem('user_coins', Math.max(0, current - maxCoinsToRedeem).toString());
-    }
     if (selectedMethod === 'card') {
       navigate('/payment/card', { state: { ...paymentState, finalPrice } });
     } else if (selectedMethod === 'upi') {

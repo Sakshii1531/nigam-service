@@ -1,16 +1,47 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
 import { BarChart2, Clock, Zap, PhoneCall, RefreshCcw, AlertTriangle, CheckCircle2, X, Search, Filter } from 'lucide-react';
+import { apiRequest } from '../../lib/apiClient';
 
-const complaints = [
-  { id: 'TKT/250521/001756', customer: 'Amit Sharma', mobile: '9876543210', product: 'Refrigerator', model: 'GL-T292SBS', tech: 'Rahul Kumar', status: 'In Progress', sla: '2h 30m', priority: 'High', zone: 'Delhi' },
-  { id: 'TKT/250521/001351', customer: 'Priya Verma', mobile: '9823456781', product: 'Washing Machine', model: 'FHM1408BDL', tech: 'Amit Singh', status: 'Customer NA', sla: '5h 10m', priority: 'Medium', zone: 'Mumbai' },
-  { id: 'TKT/250521/001354', customer: 'Rohit Kumar', mobile: '9901234567', product: 'Air Conditioner', model: '5 Star 1.5T', tech: 'Suresh Raina', status: 'SLA Breached', sla: '0m', priority: 'Critical', zone: 'Bangalore' },
-  { id: 'TKT/250521/001253', customer: 'Neha Singh', mobile: '9845678901', product: 'Television', model: 'OLED 55"', tech: 'Vikram Batra', status: 'In Progress', sla: '1h 00m', priority: 'High', zone: 'Chennai' },
-  { id: 'TKT/250521/001052', customer: 'Vikas Yadav', mobile: '9812345670', product: 'Microwave Oven', model: 'MC3286BRUM', tech: 'Deepak Patel', status: 'Scheduled', sla: '4h 45m', priority: 'Low', zone: 'Pune' },
-  { id: 'TKT/250521/000945', customer: 'Sanjana Mehta', mobile: '9867890123', product: 'Refrigerator', model: 'GN-H702HLHQ', tech: 'Unassigned', status: 'Pending', sla: '6h 20m', priority: 'Medium', zone: 'Hyderabad' },
-];
+// SLA is reported as time left against slaDueAt; once that passes the row is
+// surfaced as breached, which is the state this screen exists to catch.
+function slaFor(request) {
+  if (!request.slaDueAt) return { label: '—', breached: false };
+  const msLeft = new Date(request.slaDueAt) - Date.now();
+  if (msLeft <= 0) return { label: '0m', breached: true };
+  const hours = Math.floor(msLeft / 3600000);
+  const minutes = Math.floor((msLeft % 3600000) / 60000);
+  return { label: hours ? `${hours}h ${minutes}m` : `${minutes}m`, breached: false };
+}
+
+// 'SLA Breached' is not an API status — it's derived. Everything else maps
+// straight through from the service-request status.
+function displayStatus(request, breached) {
+  if (breached && request.status !== 'Closed' && request.status !== 'Cancelled') return 'SLA Breached';
+  if (request.status === 'New') return 'Pending';
+  if (request.status === 'Closed') return 'Completed';
+  if (request.status === 'Visit Scheduled') return 'Scheduled';
+  if (request.status === 'Customer NA') return 'Customer NA';
+  return 'In Progress';
+}
+
+function shape(request) {
+  const sla = slaFor(request);
+  return {
+    id: request.id,
+    ref: request.humanId || request.brandTicketNo || request.id,
+    customer: request.user?.name || 'Customer',
+    mobile: request.user?.phone || '—',
+    product: request.category || '—',
+    model: request.model || '—',
+    tech: request.technician?.name || 'Unassigned',
+    status: displayStatus(request, sla.breached),
+    sla: sla.label,
+    priority: request.priority || 'Medium',
+    zone: request.zone || '—',
+  };
+}
 
 const statusColors = {
   'In Progress': 'bg-blue-100 text-blue-700',
@@ -34,19 +65,45 @@ const ComplaintMonitoring = () => {
   const [selectedComplaint, setSelectedComplaint] = useState(null);
   const [successMsg, setSuccessMsg] = useState('');
 
+  const [complaints, setComplaints] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
   const toast = (msg) => { setSuccessMsg(msg); setTimeout(() => setSuccessMsg(''), 3000); };
 
+  useEffect(() => {
+    let cancelled = false;
+    async function loadComplaints() {
+      try {
+        // Brand-scoped server-side — the API forces `brand = req.user.brand`.
+        const data = await apiRequest('/service-requests', { auth: true });
+        if (!cancelled) setComplaints((data?.data || []).map(shape));
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    loadComplaints();
+    return () => { cancelled = true; };
+  }, []);
+
+  const q = searchQ.toLowerCase();
   const filtered = complaints.filter(c => {
-    const matchSearch = c.customer.toLowerCase().includes(searchQ.toLowerCase()) || c.id.toLowerCase().includes(searchQ.toLowerCase());
+    const matchSearch = c.customer.toLowerCase().includes(q) || c.ref.toLowerCase().includes(q);
     const matchStatus = filterStatus === 'All' || c.status === filterStatus;
     return matchSearch && matchStatus;
   });
 
+  // "Avg Resolution Time" and "First-Call Resolution" used to sit here as fixed
+  // strings. Neither is derivable from what a ServiceRequest records, so they're
+  // replaced with figures this data actually supports.
+  const countBy = (predicate) => complaints.filter(predicate).length;
   const kpis = [
-    { label: "Today's Complaints", value: '189', icon: <BarChart2 size={18} />, bg: 'bg-blue-600' },
-    { label: 'SLA Breached', value: '12', icon: <AlertTriangle size={18} />, bg: 'bg-red-600' },
-    { label: 'Avg Resolution Time', value: '3h 24m', icon: <Clock size={18} />, bg: 'bg-purple-600' },
-    { label: 'First-Call Resolution', value: '74.5%', icon: <Zap size={18} />, bg: 'bg-green-600' },
+    { label: 'Open Complaints', value: String(countBy(c => c.status !== 'Completed')), icon: <BarChart2 size={18} />, bg: 'bg-blue-600' },
+    { label: 'SLA Breached', value: String(countBy(c => c.status === 'SLA Breached')), icon: <AlertTriangle size={18} />, bg: 'bg-red-600' },
+    { label: 'Unassigned', value: String(countBy(c => c.tech === 'Unassigned')), icon: <Clock size={18} />, bg: 'bg-purple-600' },
+    { label: 'Completed', value: String(countBy(c => c.status === 'Completed')), icon: <Zap size={18} />, bg: 'bg-green-600' },
   ];
 
   return (
@@ -107,15 +164,24 @@ const ComplaintMonitoring = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#F1F5F9]">
-                  {filtered.map((c, i) => (
-                    <tr key={i} className="hover:bg-[#F8FAFC] transition-colors">
+                  {loading && (
+                    <tr><td colSpan={9} className="px-3 py-10 text-center text-[#64748B] font-semibold">Loading complaints…</td></tr>
+                  )}
+                  {!loading && error && (
+                    <tr><td colSpan={9} className="px-3 py-10 text-center text-red-600 font-semibold">{error}</td></tr>
+                  )}
+                  {!loading && !error && filtered.length === 0 && (
+                    <tr><td colSpan={9} className="px-3 py-10 text-center text-[#64748B] font-semibold">No complaints found.</td></tr>
+                  )}
+                  {filtered.map((c) => (
+                    <tr key={c.id} className="hover:bg-[#F8FAFC] transition-colors">
                       <td className="px-3 py-3">
                         <div className="flex items-center gap-1.5">
                           <span className={`w-2 h-2 rounded-full ${priorityColors[c.priority]}`} />
                           <span className="text-[10px] font-semibold text-[#64748B]">{c.priority}</span>
                         </div>
                       </td>
-                      <td className="px-3 py-3 text-[#0D47A1] font-semibold">{c.id}</td>
+                      <td className="px-3 py-3 text-[#0D47A1] font-semibold">{c.ref}</td>
                       <td className="px-3 py-3">
                         <p className="font-semibold text-[#1E293B]">{c.customer}</p>
                         <p className="text-[#94A3B8] text-[9px]">{c.mobile}</p>
@@ -135,8 +201,8 @@ const ComplaintMonitoring = () => {
                       <td className="px-3 py-3">
                         <div className="flex gap-1.5">
                           <button onClick={() => toast(`Calling ${c.customer}...`)} title="Call Customer" className="p-1.5 text-[#0D47A1] hover:bg-[#EEF4FF] rounded-lg transition-colors"><PhoneCall size={13} /></button>
-                          <button onClick={() => toast(`Reassigning complaint ${c.id}...`)} title="Reassign" className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"><RefreshCcw size={13} /></button>
-                          <button onClick={() => toast(`Resolving complaint ${c.id}...`)} title="Mark Resolved" className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors"><CheckCircle2 size={13} /></button>
+                          <button onClick={() => toast(`Reassignment is not supported by the API yet — ${c.ref} unchanged.`)} title="Reassign" className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"><RefreshCcw size={13} /></button>
+                          <button onClick={() => toast(`Resolve ${c.ref} from the Complaints screen — this view is read-only.`)} title="Mark Resolved" className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors"><CheckCircle2 size={13} /></button>
                         </div>
                       </td>
                     </tr>

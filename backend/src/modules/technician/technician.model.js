@@ -32,6 +32,8 @@ const technicianSchema = new mongoose.Schema(
     name: { type: String, required: true },
     phone: String,
     email: String,
+    // Home address as entered on the technician's Personal Info screen.
+    address: String,
     city: { type: mongoose.Schema.Types.ObjectId, ref: 'City', default: null, index: true },
     specs: [String], // active specializations, e.g. ['AC', 'Refrigerator', 'Washing Machine'] — drives job-feed filtering
     skills: [skillSchema],
@@ -45,7 +47,13 @@ const technicianSchema = new mongoose.Schema(
       aadharStatus: { type: String, enum: ['Verified', 'Pending', 'Rejected'], default: 'Pending' },
       panStatus: { type: String, enum: ['Verified', 'Pending', 'Rejected'], default: 'Pending' },
       backgroundCheckStatus: { type: String, enum: ['Verified', 'Pending', 'Rejected'], default: 'Pending' },
+      // Uploaded at registration; the console reviewer opens these to decide.
+      aadharFrontUrl: String,
+      aadharBackUrl: String,
     },
+    // Weekly earnings goal shown on the Earnings screen. 0 means no target set,
+    // in which case the app hides the progress card rather than inventing one.
+    weeklyTargetAmount: { type: Number, default: 0 },
     trustScore: { type: Number, default: 0 },
     tier: { type: String, enum: ['TSP', 'SP', 'Senior SP'], default: 'TSP' }, // job-count-based ladder, recomputed in Phase 6 service layer
     servicePartner: { type: mongoose.Schema.Types.ObjectId, ref: 'ServicePartner', default: null, index: true },

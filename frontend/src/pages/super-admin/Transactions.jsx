@@ -1,22 +1,71 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import { Search, CreditCard, ArrowDownRight, ArrowUpRight, Clock } from 'lucide-react';
+import { apiRequest } from '../../lib/apiClient';
+
+const currency = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+const dateFormatter = new Intl.DateTimeFormat('en-IN', {
+  day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+});
+
+// The gateway enum is coarse (UPI / Card / NetBanking); the log records the rail,
+// not the specific app or issuer, so these are the only labels available.
+const GATEWAY_LABELS = { UPI: 'UPI', Card: 'Card', NetBanking: 'Net Banking' };
+
+function shape(txn) {
+  return {
+    id: txn.id,
+    ref: txn.ref,
+    customer: txn.customer?.name || 'Customer',
+    date: txn.createdAt ? dateFormatter.format(new Date(txn.createdAt)) : '—',
+    amount: currency.format(txn.amount || 0),
+    gateway: GATEWAY_LABELS[txn.gateway] || txn.gateway,
+    status: txn.status,
+  };
+}
 
 const Transactions = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('All');
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [refundingId, setRefundingId] = useState(null);
 
-  const [transactions] = useState([
-    { id: 1, ref: 'TXN-982103482', customer: 'Amit Sharma', date: '12 May, 2026 - 11:30 AM', amount: '₹1,250', gateway: 'UPI (GPay)', status: 'Success' },
-    { id: 2, ref: 'TXN-092810349', customer: 'Jyoti Singh', date: '12 May, 2026 - 11:12 AM', amount: '₹4,999', gateway: 'Visa Credit Card', status: 'Success' },
-    { id: 3, ref: 'TXN-872910348', customer: 'Rohan Sen', date: '11 May, 2026 - 10:20 AM', amount: '₹850', gateway: 'Net Banking', status: 'Failed' },
-    { id: 4, ref: 'TXN-562910347', customer: 'Sunita Pal', date: '10 May, 2026 - 04:45 PM', amount: '₹2,499', gateway: 'UPI (PhonePe)', status: 'Refunded' },
-  ]);
+  useEffect(() => {
+    let cancelled = false;
+    async function loadTransactions() {
+      try {
+        const data = await apiRequest('/super-admin/transactions', { auth: true });
+        if (!cancelled) setTransactions((data?.data || []).map(shape));
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    loadTransactions();
+    return () => { cancelled = true; };
+  }, []);
 
+  // Refunds move money, so this waits on the server. Only Success rows can be
+  // refunded — the API rejects anything else.
+  const handleRefund = async (id) => {
+    setRefundingId(id);
+    try {
+      const updated = await apiRequest(`/super-admin/transactions/${id}/refund`, { method: 'PATCH', auth: true });
+      setTransactions(prev => prev.map(t => (t.id === id ? shape(updated) : t)));
+    } catch (err) {
+      setError(`Could not refund transaction: ${err.message}`);
+    } finally {
+      setRefundingId(null);
+    }
+  };
+
+  const q = searchQuery.toLowerCase();
   const filteredTxns = transactions.filter(t => {
-    const matchesSearch = t.ref.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          t.customer.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = t.ref.toLowerCase().includes(q) || t.customer.toLowerCase().includes(q);
     const matchesStatus = selectedStatus === 'All' || t.status === selectedStatus;
     return matchesSearch && matchesStatus;
   });
@@ -62,10 +111,20 @@ const Transactions = () => {
                   <th className="p-4">Timestamp</th>
                   <th className="p-4">Paid Amount</th>
                   <th className="p-4">Gateway Source</th>
-                  <th className="p-4 pr-6">Status</th>
+                  <th className="p-4">Status</th>
+                  <th className="p-4 pr-6 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-sm">
+                {loading && (
+                  <tr><td colSpan={7} className="p-8 text-center text-slate-400 font-semibold">Loading transactions…</td></tr>
+                )}
+                {!loading && error && (
+                  <tr><td colSpan={7} className="p-8 text-center text-red-600 font-semibold">{error}</td></tr>
+                )}
+                {!loading && !error && filteredTxns.length === 0 && (
+                  <tr><td colSpan={7} className="p-8 text-center text-slate-400 font-semibold">No gateway transactions.</td></tr>
+                )}
                 {filteredTxns.map((t) => (
                   <tr key={t.id} className="hover:bg-slate-50 transition-colors">
                     <td className="p-4 pl-6 font-mono text-xs font-bold text-slate-600 flex items-center gap-1.5">
@@ -75,7 +134,7 @@ const Transactions = () => {
                     <td className="p-4 text-xs font-semibold text-slate-400 flex items-center gap-1"><Clock size={12} /> {t.date}</td>
                     <td className="p-4 text-slate-800 font-black">{t.amount}</td>
                     <td className="p-4 text-xs text-slate-500 font-semibold">{t.gateway}</td>
-                    <td className="p-4 pr-6">
+                    <td className="p-4">
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
                         t.status === 'Success' ? 'bg-green-50 text-green-600 border border-green-100' :
                         t.status === 'Failed' ? 'bg-red-50 text-red-600 border border-red-100' :
@@ -83,6 +142,21 @@ const Transactions = () => {
                       }`}>
                         {t.status}
                       </span>
+                    </td>
+                    <td className="p-4 pr-6 text-right">
+                      {/* A failed charge never collected anything, and a refunded
+                          one is already reversed — neither can be refunded. */}
+                      {t.status === 'Success' ? (
+                        <button
+                          onClick={() => handleRefund(t.id)}
+                          disabled={refundingId === t.id}
+                          className="text-xs bg-red-600 text-white font-semibold px-2.5 py-1 rounded-lg hover:bg-red-700 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                          {refundingId === t.id ? 'Refunding…' : 'Refund'}
+                        </button>
+                      ) : (
+                        <span className="text-slate-400 text-xs font-semibold">—</span>
+                      )}
                     </td>
                   </tr>
                 ))}

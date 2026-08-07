@@ -39,3 +39,11 @@ export async function decrementStock(id, qty) {
   if (!product) throw new ApiError(400, 'Insufficient stock');
   return product;
 }
+
+// Soft-delete: orders reference products, so removing the document would break
+// their history. Deactivating hides it from the storefront's listProducts.
+export async function deactivateProduct(id) {
+  const product = await Product.findByIdAndUpdate(id, { isActive: false }, { new: true });
+  if (!product) throw new ApiError(404, 'Product not found');
+  return product;
+}

@@ -1,18 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Bell, Briefcase, ClipboardList, Calendar, Wrench, User,
   CreditCard, Plus, X, Building2, CheckCircle, ChevronRight
 } from 'lucide-react';
+import { apiRequest } from '../../lib/apiClient';
 
 const PayoutSettings = () => {
   const navigate = useNavigate();
 
-  const [accounts, setAccounts] = useState([
-    { id: 1, type: 'bank', name: 'HDFC Bank', detail: '•••• •••• 4321', primary: true },
-    { id: 2, type: 'upi', name: 'alex.rod@okaxis', detail: 'Verified', primary: false },
-    { id: 3, type: 'bank', name: 'ICICI Bank', detail: '•••• •••• 9876', primary: false },
-  ]);
+  // Payout methods live on the technician's profile — they have to survive a
+  // reinstall and be the same account payouts actually settle to.
+  const [accounts, setAccounts] = useState([]);
+  const [error, setError] = useState('');
+
+  const loadAccounts = React.useCallback(async () => {
+    try {
+      const res = await apiRequest('/tech/profile/profile', { auth: true });
+      setAccounts((res.data?.payoutMethods || []).map((m) => ({
+        id: m._id || m.id,
+        type: m.type,
+        name: m.name || m.upiId || (m.type === 'bank' ? 'Bank Account' : 'UPI'),
+        detail: m.detail || (m.type === 'upi' ? m.upiId : ''),
+        primary: Boolean(m.isPrimary),
+      })));
+      setError('');
+    } catch (err) {
+      setError(err.message || 'Could not load payout methods.');
+    }
+  }, []);
+
+  useEffect(() => { loadAccounts(); }, [loadAccounts]);
 
   // Modal states
   const [showMethodPicker, setShowMethodPicker] = useState(false);
@@ -36,29 +54,48 @@ const PayoutSettings = () => {
     setUpiId('');
   };
 
-  const handleAddBank = () => {
+  const handleAddBank = async () => {
     if (!bankForm.bankName || !bankForm.accountNo || !bankForm.ifsc || !bankForm.holderName) return;
-    setAccounts(prev => [
-      ...prev,
-      {
-        id: prev.length + 1,
-        type: 'bank',
-        name: bankForm.bankName,
-        detail: `•••• •••• ${bankForm.accountNo.slice(-4)}`,
-        primary: false,
-      }
-    ]);
+    if (bankForm.accountNo !== bankForm.confirmAccountNo) {
+      setError('Account numbers do not match.');
+      return;
+    }
+    try {
+      await apiRequest('/tech/profile/payout-methods', {
+        method: 'POST',
+        auth: true,
+        body: {
+          type: 'bank',
+          name: bankForm.bankName,
+          accountNo: bankForm.accountNo,
+          ifsc: bankForm.ifsc,
+          holderName: bankForm.holderName,
+          isPrimary: accounts.length === 0,
+        },
+      });
+      await loadAccounts();
+    } catch (err) {
+      setError(err.message || 'Could not add bank account.');
+      return;
+    }
     resetAll();
     setShowSuccess(true);
     setTimeout(() => setShowSuccess(false), 2500);
   };
 
-  const handleAddUpi = () => {
+  const handleAddUpi = async () => {
     if (!upiId.includes('@')) return;
-    setAccounts(prev => [
-      ...prev,
-      { id: prev.length + 1, type: 'upi', name: upiId, detail: 'Verified', primary: false }
-    ]);
+    try {
+      await apiRequest('/tech/profile/payout-methods', {
+        method: 'POST',
+        auth: true,
+        body: { type: 'upi', name: upiId, upiId, isPrimary: accounts.length === 0 },
+      });
+      await loadAccounts();
+    } catch (err) {
+      setError(err.message || 'Could not add UPI ID.');
+      return;
+    }
     resetAll();
     setShowSuccess(true);
     setTimeout(() => setShowSuccess(false), 2500);
@@ -86,10 +123,19 @@ const PayoutSettings = () => {
       {/* Main Content */}
       <div className="flex-1 p-4 flex flex-col gap-4">
 
+        {error && (
+          <div className="bg-rose-50 border border-rose-200 rounded-xl px-3 py-2 text-[11px] font-semibold text-rose-600">
+            {error}
+          </div>
+        )}
+
         {/* Payment Methods */}
         <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
           <h3 className="text-sm font-semibold text-slate-900 mb-3">Payment Methods</h3>
           <div className="flex flex-col gap-3">
+            {accounts.length === 0 && (
+              <p className="text-[11px] text-slate-400 font-medium">No payout method added yet.</p>
+            )}
             {accounts.map((acc) => (
               <div key={acc.id} className="bg-slate-50 border border-slate-100 rounded-xl p-4 flex justify-between items-center">
                 <div className="flex items-center gap-3">

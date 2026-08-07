@@ -5,6 +5,13 @@ const cmsPageSchema = new mongoose.Schema(
   {
     slug: { type: String, required: true, unique: true }, // e.g. "privacy-policy", "terms", "faqs"
     body: String,
+    faqs: [
+      {
+        question: { type: String, required: true },
+        answer: { type: String, required: true },
+        category: { type: String, default: 'General' },
+      },
+    ],
     publishedAt: Date,
   },
   { timestamps: true },

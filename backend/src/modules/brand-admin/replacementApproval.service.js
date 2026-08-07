@@ -8,7 +8,14 @@ export async function listReplacementApprovals(brandId, { status, page, limit, s
 
   const { skip, limit: lim, page: pg, sort: sortObj } = parsePagination({ page, limit, sort });
   const [items, total] = await Promise.all([
-    ReplacementApproval.find(query).sort(sortObj).skip(skip).limit(lim),
+    // The approvals queue is decided on at a glance, so it needs the originating
+    // ticket, who raised it and which customer it affects — not bare refs.
+    ReplacementApproval.find(query)
+      .populate({ path: 'serviceRequest', select: 'humanId', populate: { path: 'user', select: 'name' } })
+      .populate('technician', 'name')
+      .sort(sortObj)
+      .skip(skip)
+      .limit(lim),
     ReplacementApproval.countDocuments(query),
   ]);
   return { items, meta: paginationMeta({ page: pg, limit: lim, total }) };

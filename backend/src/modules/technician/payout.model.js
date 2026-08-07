@@ -8,7 +8,7 @@ const payoutSchema = new mongoose.Schema(
     baseAmount: { type: Number, required: true },
     platformFee: { type: Number, default: 0 },
     netAmount: { type: Number, required: true },
-    payoutType: { type: String, enum: ['Quick', 'Invoice'], default: 'Quick' },
+    payoutType: { type: String, enum: ['Quick', 'Invoice', 'Visit'], default: 'Quick' },
     status: { type: String, enum: ['Settled', 'Pending'], default: 'Pending', index: true },
     creditedTo: String, // masked bank/UPI detail, snapshot at payout time
     transactionId: String,

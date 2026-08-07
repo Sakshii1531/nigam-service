@@ -11,6 +11,9 @@ const amcSubscriptionSchema = new mongoose.Schema(
     model: String,
     expiryDate: Date,
     status: { type: String, enum: ['Active', 'Expiring Soon', 'Expired'], default: 'Active', index: true },
+    // Same reasoning as ExtendedWarrantyOrder.paid — a subscription was granted
+    // its full visit allowance without a rupee changing hands.
+    paid: { type: Boolean, default: false, index: true },
     visitsTotal: { type: Number, required: true },
     visitsRemaining: { type: Number, required: true },
     visitNumber: { type: Number, default: 1 },

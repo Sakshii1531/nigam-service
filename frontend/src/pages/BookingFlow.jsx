@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { apiRequest } from '../lib/apiClient';
 
-import { getCatalogEntry } from '../data/bookingCatalog';
+import { getCatalogEntry, preloadCatalogOverrides } from '../data/bookingCatalog';
 
 import electricianBanner from '../assets/electrician_banner.png';
 import plumbingBanner from '../assets/plumbing_banner.png';
@@ -136,11 +136,19 @@ const TimeGroupRow = ({ emoji, label, timeRange, selected, onClick }) => (
 const BookingFlow = () => {
   const navigate = useNavigate();
   const { category } = useParams();
-  const catalog = getCatalog(category);
+  // Admin overrides are fetched once, then getCatalog reads them synchronously.
+  // Redirecting on a missing catalog has to wait for that — otherwise a category
+  // that only exists as an admin override would bounce to the dashboard.
+  const [overridesLoaded, setOverridesLoaded] = useState(false);
+  useEffect(() => {
+    preloadCatalogOverrides().finally(() => setOverridesLoaded(true));
+  }, []);
+
+  const catalog = overridesLoaded ? getCatalog(category) : null;
 
   useEffect(() => {
-    if (!catalog) navigate('/dashboard', { replace: true });
-  }, [catalog, navigate]);
+    if (overridesLoaded && !catalog) navigate('/dashboard', { replace: true });
+  }, [overridesLoaded, catalog, navigate]);
 
   // ── State ──────────────────────────────────────────────────────────────────
   const [step, setStep] = useState(1);
@@ -172,6 +180,13 @@ const BookingFlow = () => {
   // Ref for hidden native date input
   const dateInputRef = useRef(null);
 
+  if (!overridesLoaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <p className="text-sm font-semibold text-slate-400">Loading services…</p>
+      </div>
+    );
+  }
   if (!catalog) return null;
 
   const { key: catKey, data } = catalog;
@@ -266,6 +281,7 @@ const BookingFlow = () => {
           timeGroup: timeGroup || '',
           totalPrice: String(totalPrice),
           advanceAmt: '0',
+          customerName: fullName || 'Customer',
           paymentMode: 'after',
         });
         navigate(`/booking-success?${params.toString()}`);

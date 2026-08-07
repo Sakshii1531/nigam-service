@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
+import { apiRequest } from '../../lib/apiClient';
 import { 
   Search, 
   Filter, 
@@ -15,6 +16,24 @@ import {
   ArrowLeft
 } from 'lucide-react';
 
+const dateFormatter = new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
+function shape(ret) {
+  return {
+    id: ret.id,
+    ref: ret.humanId || ret.id,
+    technician: ret.technician?.name || 'Unknown',
+    partName: ret.partName,
+    sku: ret.sku || '—',
+    ticketId: ret.serviceRequest?.humanId || '—',
+    replaceDate: ret.replaceDate ? dateFormatter.format(new Date(ret.replaceDate)) : '—',
+    transitStatus: ret.transitStatus || 'Replaced',
+    status: ret.status || 'Pending Verification',
+    trackingNo: ret.trackingNo || 'N/A',
+    damageFlag: !!ret.damageFlag,
+  };
+}
+
 const ReverseLogistics = () => {
   const [showDrawer, setShowDrawer] = useState(false);
   const [selectedReturn, setSelectedReturn] = useState(null);
@@ -24,12 +43,39 @@ const ReverseLogistics = () => {
   const [selectedTransit, setSelectedTransit] = useState('All Transit Status');
   const [selectedVerification, setSelectedVerification] = useState('All Verification Status');
 
-  const [returns, setReturns] = useState([
-    { id: 'RET-4001', technician: 'Rahul Kumar', partName: 'Faulty Compressor', sku: 'CP-45/5', ticketId: 'SR-8901', replaceDate: '12 May, 2026', transitStatus: 'In Transit', status: 'Pending Verification', trackingNo: 'BD-982143', damageFlag: false },
-    { id: 'RET-4002', technician: 'Amit Singh', partName: 'Burnt Drain Pump', sku: 'GRK-410', ticketId: 'SR-8902', replaceDate: '12 May, 2026', transitStatus: 'Replaced', status: 'Pending Return Shipment', trackingNo: 'N/A', damageFlag: false },
-    { id: 'RET-4003', technician: 'Suresh Raina', partName: 'Burnt Magnetron', sku: 'FM-10W', ticketId: 'SR-8903', replaceDate: '11 May, 2026', transitStatus: 'Delivered', status: 'Verified & Scrapped', trackingNo: 'BD-883201', damageFlag: false },
-    { id: 'RET-4004', technician: 'Vikram Batra', partName: 'Cracked LED TV Panel', sku: 'PCB-U01', ticketId: 'SR-8904', replaceDate: '10 May, 2026', transitStatus: 'Delivered', status: 'Transit Damaged', trackingNo: 'BD-776211', damageFlag: true },
-  ]);
+  const [returns, setReturns] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadReturns() {
+      try {
+        const data = await apiRequest('/brand/returns', { auth: true });
+        if (!cancelled) setReturns((data?.data || []).map(shape));
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    loadReturns();
+    return () => { cancelled = true; };
+  }, []);
+
+  const updateReturn = async (id, patch) => {
+    const previous = returns;
+    setReturns(prev => prev.map(r => (r.id === id ? { ...r, ...patch } : r)));
+    try {
+      const updated = await apiRequest(`/brand/returns/${id}`, { method: 'PATCH', auth: true, body: patch });
+      setReturns(prev => prev.map(r => (r.id === id ? shape({ ...updated, technician: { name: r.technician } }) : r)));
+      setSuccessMessage('Return updated.');
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (err) {
+      setReturns(previous);
+      setError(`Could not update return: ${err.message}`);
+    }
+  };
 
   const stats = [
     { title: 'Pending Returns', value: returns.filter(r => r.status === 'Pending Verification' || r.status === 'Pending Return Shipment').length.toString() + ' pcs', icon: <RotateCcw size={20} />, color: 'bg-yellow-500' },
@@ -43,28 +89,22 @@ const ReverseLogistics = () => {
     setShowDrawer(true);
   };
 
-  const handleVerify = (id) => {
-    setReturns(returns.map(r => r.id === id ? { ...r, transitStatus: 'Delivered', status: 'Verified & Scrapped' } : r));
-    if (selectedReturn && selectedReturn.id === id) {
-      setSelectedReturn({ ...selectedReturn, transitStatus: 'Delivered', status: 'Verified & Scrapped' });
-    }
-    setSuccessMessage(`Defective part return ${id} verified and logged into scrap disposal ledger.`);
+  const handleVerify = async (id) => {
+    const patch = { transitStatus: 'Delivered', status: 'Verified & Scrapped' };
+    if (selectedReturn && selectedReturn.id === id) setSelectedReturn({ ...selectedReturn, ...patch });
     setShowDrawer(false);
-    setTimeout(() => setSuccessMessage(''), 3000);
+    await updateReturn(id, patch);
   };
 
-  const handleFlagDamage = (id) => {
-    setReturns(returns.map(r => r.id === id ? { ...r, transitStatus: 'Delivered', status: 'Transit Damaged', damageFlag: true } : r));
-    if (selectedReturn && selectedReturn.id === id) {
-      setSelectedReturn({ ...selectedReturn, transitStatus: 'Delivered', status: 'Transit Damaged', damageFlag: true });
-    }
-    setSuccessMessage(`Logistics dispute successfully raised for return ${id}.`);
+  const handleFlagDamage = async (id) => {
+    const patch = { transitStatus: 'Delivered', status: 'Transit Damaged', damageFlag: true };
+    if (selectedReturn && selectedReturn.id === id) setSelectedReturn({ ...selectedReturn, ...patch });
     setShowDrawer(false);
-    setTimeout(() => setSuccessMessage(''), 3000);
+    await updateReturn(id, patch);
   };
 
   const filteredReturns = returns.filter(ret => {
-    const matchesSearch = ret.id.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    const matchesSearch = ret.ref.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           ret.partName.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           ret.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           ret.technician.toLowerCase().includes(searchQuery.toLowerCase());
@@ -95,7 +135,7 @@ const ReverseLogistics = () => {
               <div className="p-6 border-b border-[#E2E8F0] flex justify-between items-center bg-[#F8FAFC]">
                 <div>
                   <h2 className="text-lg font-bold text-[#1E293B]">Return Defective Part</h2>
-                  <p className="text-sm text-[#0D47A1] font-medium">{selectedReturn.id}</p>
+                  <p className="text-sm text-[#0D47A1] font-medium">{selectedReturn.ref}</p>
                 </div>
               </div>
 
@@ -250,13 +290,22 @@ const ReverseLogistics = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E2E8F0]">
+                  {loading && (
+                    <tr><td colSpan={9} className="px-6 py-10 text-center text-[#64748B] font-semibold">Loading returns…</td></tr>
+                  )}
+                  {!loading && error && (
+                    <tr><td colSpan={9} className="px-6 py-10 text-center text-red-600 font-semibold">{error}</td></tr>
+                  )}
+                  {!loading && !error && filteredReturns.length === 0 && (
+                    <tr><td colSpan={9} className="px-6 py-10 text-center text-[#64748B] font-semibold">No defective-part returns logged.</td></tr>
+                  )}
                   {filteredReturns.map((ret) => (
                     <tr 
                       key={ret.id} 
                       className="hover:bg-[#F8FAFC] transition-colors cursor-pointer"
                       onClick={() => handleRowClick(ret)}
                     >
-                      <td className="px-6 py-4 font-medium text-[#0D47A1]">{ret.id}</td>
+                      <td className="px-6 py-4 font-medium text-[#0D47A1]">{ret.ref}</td>
                       <td className="px-6 py-4 text-[#1E293B]">{ret.technician}</td>
                       <td className="px-6 py-4">
                         <div>

@@ -7,7 +7,9 @@ export async function listAuditLogs({ type, page, limit, sort } = {}) {
 
   const { skip, limit: lim, page: pg, sort: sortObj } = parsePagination({ page, limit, sort });
   const [items, total] = await Promise.all([
-    AuditLog.find(query).sort(sortObj).skip(skip).limit(lim),
+    // The log viewer shows who acted, so resolve the actor rather than returning
+    // a bare ObjectId. `user` is null for system-generated entries.
+    AuditLog.find(query).populate('user', 'name role').sort(sortObj).skip(skip).limit(lim),
     AuditLog.countDocuments(query),
   ]);
   return { items, meta: paginationMeta({ page: pg, limit: lim, total }) };

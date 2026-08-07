@@ -6,12 +6,31 @@ export async function getPreferences(userId) {
   return prefs;
 }
 
-export async function updatePreferences(userId, { push, sms, whatsapp, email }) {
+export async function updatePreferences(userId, updateData) {
   const prefs = await getPreferences(userId);
-  if (push !== undefined) prefs.push = push;
-  if (sms !== undefined) prefs.sms = sms;
-  if (whatsapp !== undefined) prefs.whatsapp = whatsapp;
-  if (email !== undefined) prefs.email = email;
+  
+  const fields = [
+    'push',
+    'sms',
+    'whatsapp',
+    'email',
+    'pushNotifications',
+    'bookingUpdates',
+    'whatsAppPromo',
+    'emailPromo',
+    'securityAlerts',
+  ];
+
+  fields.forEach((field) => {
+    if (updateData[field] !== undefined) {
+      prefs[field] = updateData[field];
+    }
+  });
+
+  if (updateData.pushNotifications !== undefined) prefs.push = updateData.pushNotifications;
+  if (updateData.whatsAppPromo !== undefined) prefs.whatsapp = updateData.whatsAppPromo;
+  if (updateData.emailPromo !== undefined) prefs.email = updateData.emailPromo;
+
   await prefs.save();
   return prefs;
 }

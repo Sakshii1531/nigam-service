@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Search, Bell, MapPin, Wrench, Zap, Droplet, Thermometer, Shield, Home as HomeIcon, Calendar, MessageSquare, User, Star, X, Wind, WashingMachine, Refrigerator, Droplets, Sparkles, ShoppingCart, Tv, Flame, MousePointerClick, LayoutGrid } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import PushPermissionPrompt from '../components/PushPermissionPrompt';
+import { apiRequest } from '../lib/apiClient';
 import acBanner from '../assets/ac_service_banner.png';
 import electricianBanner from '../assets/electrician_banner.png';
 import plumbingBanner from '../assets/plumbing_banner.png';
@@ -53,8 +54,7 @@ const Dashboard = ({ defaultType }) => {
   const bannerRef = useRef(null);
   const [activeType, setActiveType] = useState(defaultType || 'non-warranty'); // 'non-warranty' or 'in-warranty'
 
-  const customCategoriesSaved = localStorage.getItem('custom_categories');
-  const dashboardCategories = customCategoriesSaved ? JSON.parse(customCategoriesSaved) : [
+  const dashboardCategories = tilesFor('category', [
     { name: 'For You', icon: 'sparkles', isForYou: true },
     { name: 'AC', icon: 'ac', service: 'AC Repair' },
     { name: 'Washing Machine', icon: 'washing', service: 'Washing Machine' },
@@ -63,42 +63,104 @@ const Dashboard = ({ defaultType }) => {
     { name: 'RO Water Purifier', icon: 'ro', service: 'Water Purifier RO Service' },
     { name: 'Geyser', icon: 'geyser', service: 'Geyser Service & Repair' },
     { name: 'More', icon: 'more', isMore: true }
-  ];
+  ], (t) => ({ name: t.title, icon: t.icon, service: t.service }));
 
-  // Load custom sliding banners dynamically from localStorage
-  const savedNonWarrantyBanners = localStorage.getItem('custom_banners_non_warranty');
-  const regularBanners = savedNonWarrantyBanners ? JSON.parse(savedNonWarrantyBanners) : [
+  // Banners come from the CMS (public read, no auth) so what super-admin
+  // publishes actually reaches customers. The bundled images remain the
+  // fallback for a first run with nothing configured yet.
+  const FALLBACK_REGULAR = [
     { id: 1, image: acBanner },
     { id: 2, image: electricianBanner },
     { id: 3, image: plumbingBanner }
   ];
-
-  const savedWarrantyBanners = localStorage.getItem('custom_banners_warranty');
-  const warrantyBannersList = savedWarrantyBanners ? JSON.parse(savedWarrantyBanners) : [
+  const FALLBACK_WARRANTY = [
     { id: 1, image: warrantyBanner1 },
     { id: 2, image: warrantyBanner2 }
   ];
 
-  // Load custom most booked services
-  const savedMostBooked = localStorage.getItem('custom_most_booked_services');
-  const mostBookedServices = savedMostBooked ? JSON.parse(savedMostBooked) : [
+  const [cmsBanners, setCmsBanners] = useState(null);
+  // Home-screen merchandising: one request covers every placement.
+  const [cmsTiles, setCmsTiles] = useState(null);
+  // Which services have a configured detail page — decides whether a tile opens
+  // the rich /book/:service page or the generic booking flow.
+  const [configuredServices, setConfiguredServices] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await apiRequest('/cms/service-pages');
+        if (!cancelled) setConfiguredServices((data?.data || []).map((c) => c.serviceKey));
+      } catch {
+        if (!cancelled) setConfiguredServices([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const hasServicePage = (title) => configuredServices.includes(title);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await apiRequest('/cms/home-tiles');
+        if (!cancelled) setCmsTiles(data?.data || []);
+      } catch {
+        if (!cancelled) setCmsTiles([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Falls back to the bundled set when a placement has nothing published, so
+  // the home screen is never empty on a fresh install.
+  const tilesFor = (placement, fallback, map) => {
+    if (!cmsTiles) return fallback;
+    const rows = cmsTiles.filter((t) => t.placement === placement);
+    return rows.length ? rows.map(map) : fallback;
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await apiRequest('/cms/banners?app=customer');
+        if (!cancelled) setCmsBanners(data?.data || []);
+      } catch {
+        // Offline or unreachable — fall back to the bundled artwork rather than
+        // rendering an empty carousel.
+        if (!cancelled) setCmsBanners([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const fromCms = (segment, fallback) => {
+    if (!cmsBanners) return fallback;
+    const rows = cmsBanners.filter((b) => (segment === 'warranty' ? b.segment === 'warranty' : b.segment !== 'warranty'));
+    return rows.length ? rows.map((b) => ({ id: b.id, image: b.imageUrl })) : fallback;
+  };
+
+  const regularBanners = fromCms('non-warranty', FALLBACK_REGULAR);
+  const warrantyBannersList = fromCms('warranty', FALLBACK_WARRANTY);
+
+  const mostBookedServices = tilesFor('most-booked', [
     { id: 1, title: "Foam-jet AC service", image: mostBookedAc1, rating: 4.76, price: 649, badge: "Instant" },
     { id: 2, title: "AC repair", image: mostBookedAc2, rating: 4.74, price: 299, badge: "Instant" },
     { id: 3, title: "Washing Machine", image: mostBookedWm, rating: 4.85, price: 499, badge: "Instant" },
     { id: 4, title: "Home Cleaning", image: mostBookedCleaning, rating: 4.90, price: 999, badge: "Trending" },
     { id: 5, title: "Women Salon", image: mostBookedSalon, rating: 4.80, price: 799, badge: "Best Seller" }
-  ];
+  ], (t) => ({ id: t.id, title: t.title, image: t.imageUrl, rating: t.rating, price: t.price, badge: t.badge }));
 
-  // Load custom appliance services
-  const savedApplianceServices = localStorage.getItem('custom_appliance_services');
-  const applianceServices = savedApplianceServices ? JSON.parse(savedApplianceServices) : [
+  const applianceServices = tilesFor('appliance-service', [
     { id: 1, title: "Foam-jet AC service", image: mostBookedAc1, rating: 4.76, price: 649, badge: "Instant", path: '/booking' },
     { id: 2, title: "AC repair", image: mostBookedAc2, rating: 4.74, price: 299, badge: "Instant", path: '/booking' },
     { id: 3, title: "Washing Machine", image: mostBookedWm, rating: 4.85, price: 499, badge: "Instant", path: '/booking' },
     { id: 4, title: "Refrigerator Repair & Service", image: applianceFridge, rating: 4.80, price: 899, badge: "Instant", path: '/refrigerator-details' },
     { id: 5, title: "Deep Clean AC", image: mostBookedAc1, rating: 4.76, price: 1198, badge: "2 ACs", path: '/booking' },
     { id: 6, title: "WM Checkup", image: mostBookedWm, rating: 4.85, price: 199, badge: "Instant", path: '/booking' }
-  ];
+  ], (t) => ({ id: t.id, title: t.title, image: t.imageUrl, rating: t.rating, price: t.price, badge: t.badge, path: t.link || '/booking' }));
 
   useEffect(() => {
     if (defaultType === 'in-warranty') {
@@ -127,8 +189,7 @@ const Dashboard = ({ defaultType }) => {
     return () => clearInterval(interval);
   }, []);
 
-  const savedDashboardServices = localStorage.getItem('custom_dashboard_services');
-  const services = savedDashboardServices ? JSON.parse(savedDashboardServices) : [
+  const services = tilesFor('dashboard-service', [
     { id: 1, name: 'AC Repair', img: acImg },
     { id: 2, name: 'Washing Machine', img: wasingImg },
     { id: 3, name: 'Electrician', img: electricianImg },
@@ -136,10 +197,9 @@ const Dashboard = ({ defaultType }) => {
     { id: 5, name: 'Full Home Cleaning', img: cleaningImg },
     { id: 6, name: 'Salon for Women', img: saloonImg },
     { id: 7, name: 'Spa & Massage', img: spaImg },
-  ];
+  ], (t) => ({ id: t.id, name: t.title, img: t.imageUrl }));
 
-  const savedBrands = localStorage.getItem('custom_brand_cards');
-  const brandCards = savedBrands ? JSON.parse(savedBrands) : [
+  const brandCards = tilesFor('brand-card', [
     {
       id: 1,
       brandName: 'LLOYD',
@@ -188,7 +248,18 @@ const Dashboard = ({ defaultType }) => {
       gradient: 'from-[#FCE4EC] via-[#FFF1F3] to-[#F8BBD0]',
       textColor: '#C30F42'
     }
-  ];
+  ], (t) => ({
+    id: t.id,
+    brandName: t.brandName,
+    title: t.title,
+    subtitle: t.subtitle,
+    image: t.imageUrl,
+    buttonText: t.buttonText,
+    actionUrl: t.link,
+    badgeText: t.badgeText,
+    gradient: t.gradient,
+    textColor: t.textColor,
+  }));
 
   const getBrandsForCategory = (cat) => {
     const norm = cat?.toLowerCase() || '';
@@ -391,11 +462,11 @@ const Dashboard = ({ defaultType }) => {
           />
         </div>
         {/* Horizontal Categories */}
-        <div className="flex overflow-x-auto gap-6 mt-2 pb-1.5 snap-x no-scrollbar">
+        <div className="flex overflow-x-auto gap-3 mt-2 pb-1.5 snap-x no-scrollbar">
           {dashboardCategories.map((cat, index) => (
             <div 
               key={index}
-              className="flex flex-col items-center gap-0.5 cursor-pointer flex-shrink-0 snap-start group"
+              className="flex flex-col items-center gap-1 cursor-pointer flex-shrink-0 snap-start group w-[58px]"
               onClick={() => {
                 if (cat.isForYou) {
                   navigate('/dashboard');
@@ -488,7 +559,7 @@ const Dashboard = ({ defaultType }) => {
                   </>
                 )}
               </div>
-              <span className="text-[10px] font-black text-brand-blue uppercase tracking-tighter text-center max-w-[80px]">
+              <span className="text-[9px] font-black text-brand-blue uppercase tracking-tighter text-center w-full leading-tight">
                 {cat.name}
               </span>
             </div>
@@ -708,9 +779,7 @@ const Dashboard = ({ defaultType }) => {
                     setShowWarrantyModal(true);
                   } else {
                     // Check if there is a custom catalog config saved for this exact title
-                    const savedConfigs = localStorage.getItem('custom_service_details_configs');
-                    const configs = savedConfigs ? JSON.parse(savedConfigs) : {};
-                    if (configs[service.title]) {
+                    if (hasServicePage(service.title)) {
                       navigate(`/book/${encodeURIComponent(service.title)}`);
                     } else {
                       navigate(`/booking?service=${encodeURIComponent(service.title)}&price=${service.price}`);
@@ -764,10 +833,7 @@ const Dashboard = ({ defaultType }) => {
                   const isFridge = titleNorm.includes('refrigerator') || titleNorm.includes('fridge');
                   
                   // Check if there is a custom catalog config saved for this exact title
-                  const savedConfigs = localStorage.getItem('custom_service_details_configs');
-                  const configs = savedConfigs ? JSON.parse(savedConfigs) : {};
-                  
-                  if (configs[service.title]) {
+                  if (hasServicePage(service.title)) {
                     navigate(`/book/${encodeURIComponent(service.title)}`);
                   } else if (service.path && service.path !== '/booking' && service.path !== '/book/AC' && service.path !== '/book/Washing Machine' && service.path !== '/book/Refrigerator') {
                     navigate(service.path);

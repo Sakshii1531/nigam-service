@@ -4,7 +4,7 @@ import { registerAllModels } from '../src/config/registerModels.js';
 import { ensureIndexes } from '../src/config/db.js';
 import { User } from '../src/modules/auth/user.model.js';
 import { WalletLedger } from '../src/modules/payments-wallet/walletLedger.model.js';
-import { redeemCoins, creditCoins, getBalance } from '../src/modules/payments-wallet/wallet.service.js';
+import { redeemCoins, creditCoins, getBalance, listClaimKeys } from '../src/modules/payments-wallet/wallet.service.js';
 import { ROLES } from '../src/config/constants.js';
 import { hashPassword } from '../src/modules/auth/password.js';
 import { testDbUri } from './helpers/testDb.js';
@@ -100,5 +100,42 @@ describe('creditCoins', () => {
     const user = await createUser(0);
     await Promise.all(Array.from({ length: 10 }, () => creditCoins(user.id, 10, { reason: 'earned' })));
     expect(await getBalance(user.id)).toBe(100);
+  });
+});
+
+describe('one-time reward claims', () => {
+  it('credits the first claim and rejects a repeat with 409, leaving the balance alone', async () => {
+    const user = await createUser(0);
+
+    await creditCoins(user._id, 50, { reason: 'earned', claimKey: 'book_service' });
+    expect(await getBalance(user._id)).toBe(50);
+
+    await expect(creditCoins(user._id, 50, { reason: 'earned', claimKey: 'book_service' })).rejects.toMatchObject({
+      statusCode: 409,
+    });
+    // The guard runs before the $inc, so no coins leaked out on the failed attempt.
+    expect(await getBalance(user._id)).toBe(50);
+    expect(await WalletLedger.countDocuments({ user: user._id, claimKey: 'book_service' })).toBe(1);
+  });
+
+  it('keeps claims separate per key and per user', async () => {
+    const alice = await createUser(0);
+    const bob = await createUser(0);
+
+    await creditCoins(alice._id, 50, { claimKey: 'book_service' });
+    await creditCoins(alice._id, 20, { claimKey: 'write_review' });
+    // Bob's claim of the same task is his own.
+    await creditCoins(bob._id, 50, { claimKey: 'book_service' });
+
+    expect((await listClaimKeys(alice._id)).sort()).toEqual(['book_service', 'write_review']);
+    expect(await listClaimKeys(bob._id)).toEqual(['book_service']);
+  });
+
+  it('leaves ordinary credits unrestricted — only keyed claims are once-per-user', async () => {
+    const user = await createUser(0);
+    await creditCoins(user._id, 10, { reason: 'earned' });
+    await creditCoins(user._id, 10, { reason: 'earned' });
+    expect(await getBalance(user._id)).toBe(20);
+    expect(await listClaimKeys(user._id)).toEqual([]);
   });
 });

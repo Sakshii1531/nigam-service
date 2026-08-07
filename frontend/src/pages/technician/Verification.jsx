@@ -1,9 +1,34 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Bell, Briefcase, ClipboardList, Calendar, Wrench, User, Shield, Check } from 'lucide-react';
+import { apiRequest } from '../../lib/apiClient';
+
+const TONE = {
+  Verified: 'text-green-600 bg-green-50',
+  Pending: 'text-amber-600 bg-amber-50',
+  Rejected: 'text-rose-600 bg-rose-50',
+};
 
 const Verification = () => {
   const navigate = useNavigate();
+  const [documents, setDocuments] = useState([]);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    apiRequest('/tech/profile/profile', { auth: true })
+      .then((res) => {
+        const v = res.data?.verification || {};
+        setDocuments([
+          { label: 'Aadhar Card', status: v.aadharStatus || 'Pending' },
+          { label: 'PAN Card', status: v.panStatus || 'Pending' },
+          { label: 'Criminal Background Check', status: v.backgroundCheckStatus || 'Pending' },
+        ]);
+      })
+      .catch((err) => setError(err.message || 'Could not load your verification status.'));
+  }, []);
+
+  const allVerified = documents.length > 0 && documents.every((d) => d.status === 'Verified');
+
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-24 max-w-md mx-auto border-x border-slate-100 shadow-sm relative">
@@ -25,52 +50,47 @@ const Verification = () => {
       {/* Main Content */}
       <div className="flex-1 p-4 flex flex-col gap-4">
 
-        {/* Status Header */}
+        {/* Status Header — reflects the technician's real verification record,
+            which used to read "Verified Partner" for everyone. */}
         <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm flex flex-col items-center gap-2">
-          <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center">
-            <Shield className="h-8 w-8 text-green-500" />
+          <div className={`w-16 h-16 rounded-full flex items-center justify-center ${allVerified ? 'bg-green-50' : 'bg-amber-50'}`}>
+            <Shield className={`h-8 w-8 ${allVerified ? 'text-green-500' : 'text-amber-500'}`} />
           </div>
-          <h2 className="text-lg font-semibold text-slate-900">Verified Partner</h2>
-          <p className="text-xs text-slate-500 text-center">Your documents are verified. You are eligible for premium jobs.</p>
+          <h2 className="text-lg font-semibold text-slate-900">
+            {allVerified ? 'Verified Partner' : 'Verification In Progress'}
+          </h2>
+          <p className="text-xs text-slate-500 text-center">
+            {allVerified
+              ? 'Your documents are verified. You are eligible for premium jobs.'
+              : 'Some documents are still being reviewed. You will be notified once they clear.'}
+          </p>
         </div>
+
+        {error && (
+          <div className="bg-rose-50 border border-rose-200 rounded-xl px-3 py-2 text-[11px] font-semibold text-rose-600">
+            {error}
+          </div>
+        )}
 
         {/* Documents List */}
         <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
           <h3 className="text-sm font-semibold text-slate-900 mb-3">Submitted Documents</h3>
-          
+
           <div className="flex flex-col gap-3">
-            {/* Doc 1 */}
-            <div className="flex justify-between items-center border-b border-slate-50 pb-3 last:border-b-0 last:pb-0">
-              <div>
-                <h4 className="text-sm font-semibold text-slate-900">Aadhar Card</h4>
-                <p className="text-xs text-slate-500">Uploaded on Oct 12, 2023</p>
+            {documents.map((doc) => (
+              <div key={doc.label} className="flex justify-between items-center border-b border-slate-50 pb-3 last:border-b-0 last:pb-0">
+                <div>
+                  <h4 className="text-sm font-semibold text-slate-900">{doc.label}</h4>
+                  <p className="text-xs text-slate-500">
+                    {doc.status === 'Verified' ? 'Verified by the platform' : doc.status === 'Rejected' ? 'Rejected — please re-submit' : 'Awaiting review'}
+                  </p>
+                </div>
+                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 ${TONE[doc.status] || TONE.Pending}`}>
+                  {doc.status === 'Verified' ? <Check className="h-3 w-3" /> : null}
+                  {doc.status}
+                </span>
               </div>
-              <span className="text-xs font-semibold text-green-600 bg-green-50 px-2 py-0.5 rounded-full flex items-center gap-1">
-                <Check className="h-3 w-3" /> Verified
-              </span>
-            </div>
-
-            {/* Doc 2 */}
-            <div className="flex justify-between items-center border-b border-slate-50 pb-3 last:border-b-0 last:pb-0">
-              <div>
-                <h4 className="text-sm font-semibold text-slate-900">PAN Card</h4>
-                <p className="text-xs text-slate-500">Uploaded on Oct 12, 2023</p>
-              </div>
-              <span className="text-xs font-semibold text-green-600 bg-green-50 px-2 py-0.5 rounded-full flex items-center gap-1">
-                <Check className="h-3 w-3" /> Verified
-              </span>
-            </div>
-
-            {/* Doc 3 */}
-            <div className="flex justify-between items-center">
-              <div>
-                <h4 className="text-sm font-semibold text-slate-900">Criminal Background Check</h4>
-                <p className="text-xs text-slate-500">Expires on Oct 12, 2024</p>
-              </div>
-              <span className="text-xs font-semibold text-green-600 bg-green-50 px-2 py-0.5 rounded-full flex items-center gap-1">
-                <Check className="h-3 w-3" /> Verified
-              </span>
-            </div>
+            ))}
           </div>
         </div>
 

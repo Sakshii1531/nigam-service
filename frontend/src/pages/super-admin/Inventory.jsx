@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import { 
@@ -16,6 +16,7 @@ import {
   ChevronRight,
   ArrowLeft
 } from 'lucide-react';
+import { apiRequest } from '../../lib/apiClient';
 
 const Inventory = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -32,13 +33,43 @@ const Inventory = () => {
   const [newPart, setNewPart] = useState({ name: '', brand: 'LG', category: 'Refrigerator', stock: '', threshold: '', price: '', status: 'In Stock' });
   const [editingPart, setEditingPart] = useState(null);
   const [selectedPart, setSelectedPart] = useState(null);
-  
-  const [parts, setParts] = useState([
-    { id: 'PRT-001', name: 'LG Compressor X', brand: 'LG', category: 'Refrigerator', stock: 45, threshold: 10, price: '₹3,500', status: 'In Stock' },
-    { id: 'PRT-002', name: 'Samsung Display Panel', brand: 'Samsung', category: 'TV', stock: 8, threshold: 5, price: '₹8,200', status: 'Low Stock' },
-    { id: 'PRT-003', name: 'Whirlpool Drain Pump', brand: 'Whirlpool', category: 'Washing Machine', stock: 2, threshold: 5, price: '₹1,200', status: 'Low Stock' },
-    { id: 'PRT-004', name: 'Havells Motor', brand: 'Havells', category: 'Fan', stock: 0, threshold: 3, price: '₹900', status: 'Out of Stock' },
-  ]);
+  const [parts, setParts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+
+  // Presentation shape for a SparePartCatalog document. `status` and
+  // `retailPrice` are schema virtuals — the server owns both.
+  const toPartRow = (p) => ({
+    id: p.id,
+    humanId: p.humanId || p.id,
+    name: p.name,
+    brand: p.brand || 'N/A',
+    category: p.category || 'General',
+    code: p.code || '',
+    stock: p.stock ?? 0,
+    threshold: p.reorderThreshold ?? 5,
+    costPrice: p.costPrice ?? 0,
+    markupPercent: p.markupPercent ?? 0,
+    supplier: p.supplier || '',
+    leadTimeDays: p.leadTimeDays ?? null,
+    price: p.retailPrice != null ? `₹${Number(p.retailPrice).toLocaleString('en-IN')}` : 'N/A',
+    status: p.status || 'In Stock',
+  });
+
+  useEffect(() => {
+    const fetchParts = async () => {
+      try {
+        const data = await apiRequest('/super-admin/spare-parts', { auth: true });
+        const list = Array.isArray(data?.data) ? data.data : [];
+        setParts(list.map(toPartRow));
+      } catch (err) {
+        setLoadError(err.message || 'Could not load inventory.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchParts();
+  }, []);
 
   const showToast = (message) => {
     setSuccessMessage(message);
@@ -53,55 +84,68 @@ const Inventory = () => {
     return 'In Stock';
   };
 
-  const handleAddPartSubmit = (e) => {
+  // Persists to the catalogue. Both handlers used to mutate local state only, so
+  // a part "added" here disappeared on reload and no technician ever saw it.
+  const handleAddPartSubmit = async (e) => {
     e.preventDefault();
-    if (!newPart.name || !newPart.stock || !newPart.price) {
+    if (!newPart.name || newPart.stock === '' || !newPart.price) {
       showToast('Please fill in all required fields.');
       return;
     }
-    
-    const stockNum = Number(newPart.stock) || 0;
-    const thresholdNum = Number(newPart.threshold) || 5;
 
-    const addedPart = {
-      id: `PRT-0${parts.length + 1}`,
-      name: newPart.name,
-      brand: newPart.brand,
-      category: newPart.category,
-      stock: stockNum,
-      threshold: thresholdNum,
-      price: newPart.price.startsWith('₹') ? newPart.price : `₹${newPart.price}`,
-      status: getStatus(stockNum, thresholdNum)
-    };
-
-    setParts([...parts, addedPart]);
-    setNewPart({ name: '', brand: 'LG', category: 'Refrigerator', stock: '', threshold: '', price: '', status: 'In Stock' });
-    setShowAddModal(false);
-    showToast(`Spare Part "${addedPart.name}" added successfully!`);
+    try {
+      const res = await apiRequest('/super-admin/spare-parts', {
+        method: 'POST',
+        auth: true,
+        body: {
+          name: newPart.name,
+          brand: newPart.brand,
+          category: newPart.category,
+          costPrice: Number(String(newPart.price).replace(/[₹,]/g, '')) || 0,
+          stock: Number(newPart.stock) || 0,
+          reorderThreshold: Number(newPart.threshold) || 5,
+        },
+      });
+      setParts((prev) => [...prev, toPartRow(res.data)]);
+      setNewPart({ name: '', brand: 'LG', category: 'Refrigerator', stock: '', threshold: '', price: '', status: 'In Stock' });
+      setShowAddModal(false);
+      showToast(`Spare part "${res.data.name}" added.`);
+    } catch (err) {
+      setLoadError(err.message || 'Could not add the spare part.');
+    }
   };
 
-  const handleEditPartSubmit = (e) => {
+  const handleEditPartSubmit = async (e) => {
     e.preventDefault();
-    if (!editingPart.name || editingPart.stock === '' || !editingPart.price) {
+    if (!editingPart.name || editingPart.stock === '' || editingPart.price === '') {
       showToast('Please fill in all required fields.');
       return;
     }
 
-    const stockNum = Number(editingPart.stock) || 0;
-    const thresholdNum = Number(editingPart.threshold) || 0;
-
-    const updatedParts = parts.map(p => p.id === editingPart.id ? {
-      ...editingPart,
-      stock: stockNum,
-      threshold: thresholdNum,
-      price: editingPart.price.startsWith('₹') ? editingPart.price : `₹${editingPart.price}`,
-      status: getStatus(stockNum, thresholdNum)
-    } : p);
-
-    setParts(updatedParts);
-    setShowEditModal(false);
-    setEditingPart(null);
-    showToast(`Inventory details for "${editingPart.name}" updated!`);
+    try {
+      const res = await apiRequest(`/super-admin/spare-parts/${editingPart.id}`, {
+        method: 'PUT',
+        auth: true,
+        body: {
+          name: editingPart.name,
+          brand: editingPart.brand,
+          category: editingPart.category,
+          costPrice: Number(String(editingPart.price).replace(/[₹,]/g, '')) || 0,
+          stock: Number(editingPart.stock) || 0,
+          reorderThreshold: Number(editingPart.threshold) || 5,
+          supplier: editingPart.supplier || undefined,
+          leadTimeDays: editingPart.leadTimeDays ? Number(editingPart.leadTimeDays) : undefined,
+        },
+      });
+      const updated = toPartRow(res.data);
+      setParts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+      if (selectedPart?.id === updated.id) setSelectedPart(updated);
+      setShowEditModal(false);
+      setEditingPart(null);
+      showToast(`Inventory details for "${updated.name}" updated.`);
+    } catch (err) {
+      setLoadError(err.message || 'Could not update the spare part.');
+    }
   };
 
   const filteredParts = parts.filter(p => {
@@ -124,6 +168,12 @@ const Inventory = () => {
       <div className="flex-1 ml-64 min-h-screen flex flex-col">
         {/* Topbar */}
         <Topbar title="Spare Parts & Inventory" />
+
+        {loadError && (
+          <div className="mx-6 mt-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-xs font-bold text-red-700">
+            {loadError}
+          </div>
+        )}
 
         {/* Body */}
         {showDetailsDrawer && selectedPart ? (
@@ -179,10 +229,15 @@ const Inventory = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider">Mock Supplier Status</h4>
+                    <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider">Supply</h4>
                     <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl">
-                      <p className="text-xs text-[#0D47A1] font-bold">Authorized Distributor: Nigam Spares Ltd</p>
-                      <p className="text-xs text-slate-600 mt-1">Lead time: 2-3 business days. Re-order threshold is active.</p>
+                      <p className="text-xs text-[#0D47A1] font-bold">
+                        {selectedPart.supplier ? `Supplier: ${selectedPart.supplier}` : 'No supplier recorded for this part'}
+                      </p>
+                      <p className="text-xs text-slate-600 mt-1">
+                        {selectedPart.leadTimeDays != null ? `Lead time: ${selectedPart.leadTimeDays} day(s). ` : 'Lead time not recorded. '}
+                        Re-order threshold: {selectedPart.threshold} unit(s).
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -191,7 +246,7 @@ const Inventory = () => {
               <div className="p-4 border-t border-[#E2E8F0] bg-[#F8FAFC] flex gap-3">
                 <button
                   onClick={() => {
-                    setEditingPart(selectedPart);
+                    setEditingPart({ ...selectedPart, price: String(selectedPart.costPrice) });
                     setShowDetailsDrawer(false);
                     setShowEditModal(true);
                   }}
@@ -330,7 +385,7 @@ const Inventory = () => {
                           </button>
                           <button 
                             onClick={() => {
-                              setEditingPart(part);
+                              setEditingPart({ ...part, price: String(part.costPrice) });
                               setShowEditModal(true);
                             }}
                             className="p-1.5 text-[#64748B] hover:text-[#0D47A1] hover:bg-[#EEF4FF] rounded transition-colors" 
@@ -452,6 +507,29 @@ const Inventory = () => {
                 />
               </div>
 
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-semibold text-[#64748B] mb-1 block">Supplier</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Nigam Spares Ltd"
+                    className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none text-slate-800 bg-[#F8FAFC]"
+                    value={editingPart.supplier || ''}
+                    onChange={(e) => setEditingPart({ ...editingPart, supplier: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-[#64748B] mb-1 block">Lead Time (days)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none text-slate-800 bg-[#F8FAFC]"
+                    value={editingPart.leadTimeDays ?? ''}
+                    onChange={(e) => setEditingPart({ ...editingPart, leadTimeDays: e.target.value })}
+                  />
+                </div>
+              </div>
+
               <div className="pt-4 border-t border-[#E2E8F0] flex gap-3 justify-end text-sm">
                 <button 
                   type="button"
@@ -524,14 +602,16 @@ const Inventory = () => {
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-[#64748B] mb-1 block">Unit Price (₹) *</label>
+                <label className="text-xs font-semibold text-[#64748B] mb-1 block">Cost Price (₹) *</label>
                 <input
-                  type="text"
+                  type="number"
+                  min="0"
                   className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none text-slate-800 bg-[#F8FAFC]"
                   value={editingPart.price}
                   onChange={(e) => setEditingPart({ ...editingPart, price: e.target.value })}
                   required
                 />
+                <p className="text-[10px] text-slate-500 mt-1">Retail price is derived from cost + {editingPart.markupPercent || 0}% markup.</p>
               </div>
 
               <div className="pt-4 border-t border-[#E2E8F0] flex gap-3 justify-end text-sm">

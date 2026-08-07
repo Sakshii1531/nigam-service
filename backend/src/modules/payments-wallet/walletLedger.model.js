@@ -17,9 +17,15 @@ const walletLedgerSchema = new mongoose.Schema(
     },
     balanceAfter: { type: Number, required: true },
     payment: { type: mongoose.Schema.Types.ObjectId, ref: 'Payment', default: null },
+    // Identifies a once-per-user reward (e.g. 'book_service'). Uniquely indexed
+    // with `user` so the same task can never be claimed twice — the client used
+    // to track this in localStorage, which clearing it defeated.
+    claimKey: { type: String, default: null },
   },
   { timestamps: true },
 );
+
+walletLedgerSchema.index({ user: 1, claimKey: 1 }, { unique: true, partialFilterExpression: { claimKey: { $type: 'string' } } });
 
 applyStandardPlugins(walletLedgerSchema);
 

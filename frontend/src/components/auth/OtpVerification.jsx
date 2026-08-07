@@ -5,17 +5,16 @@ import { ArrowLeft, ShieldCheck, Cpu } from 'lucide-react';
 
 /**
  * Reusable OTP verification screen used by all four panels.
- * Purely simulated / in-memory by default — any 6 digits verify successfully.
- * A caller can opt into real verification via `onSubmit` (Phase 13 — currently
- * only the customer login flow does this; technician/brand-admin/super-admin
- * logins are unchanged, see frontend/docs/PHASE13_INTEGRATION.md).
+ *
+ * `onSubmit` is required: it performs the real /auth/otp/verify call. There used
+ * to be a fallback that navigated to the dashboard after any six digits when no
+ * handler was given, which let a direct visit to /verify-otp walk into a signed-
+ * in view without a session.
  *
  * Props:
  *  - variant: 'mobile' (user/technician) | 'admin' (brand/super-admin)
  *  - portalLabel: eyebrow label, e.g. "Technician Portal"
  *  - destination: masked phone/email string shown to the user
- *  - onVerified: path to navigate to on successful verify (used as-is when no
- *    onSubmit is given; ignored in favor of onSubmit's own navigation otherwise)
  *  - backTo: path for the back button / "Change" link
  *  - title, subtitle: optional copy overrides
  *  - onSubmit: optional async (code) => void. Rejecting shows the thrown
@@ -28,12 +27,12 @@ const OtpVerification = ({
   variant = 'mobile',
   portalLabel = '',
   destination = '+91 98•••••210',
-  onVerified = '/dashboard',
   backTo = '/login',
   title = 'Verify OTP',
   subtitle = 'Enter the 6-digit code we sent to',
   onSubmit,
   onResend,
+  onBackClick,
 }) => {
   const navigate = useNavigate();
   const [digits, setDigits] = useState(['', '', '', '', '', '']);
@@ -83,16 +82,19 @@ const OtpVerification = ({
     if (!filled) return;
     setError('');
     setVerifying(true);
-    if (onSubmit) {
-      try {
-        await onSubmit(digits.join(''));
-      } catch (err) {
-        setError(err?.message || 'Incorrect code. Please try again.');
-        setVerifying(false);
-      }
-      return; // onSubmit owns navigation on success — don't also navigate here.
+    if (!onSubmit) {
+      setError('This verification link is no longer valid. Please sign in again.');
+      setVerifying(false);
+      return;
     }
-    setTimeout(() => navigate(onVerified), 700);
+
+    try {
+      await onSubmit(digits.join(''));
+    } catch (err) {
+      setError(err?.message || 'Incorrect code. Please try again.');
+      setVerifying(false);
+    }
+    // onSubmit owns navigation on success — don't also navigate here.
   };
 
   const handleResend = async () => {
@@ -151,9 +153,7 @@ const OtpVerification = ({
     </div>
   );
 
-  const demoHint = onSubmit ? null : (
-    <p className="text-center text-[11px] text-slate-400">Demo: enter any 6 digits to continue</p>
-  );
+  const demoHint = null;
 
   // ---------- ADMIN VARIANT (brand / super-admin) ----------
   if (isAdmin) {
@@ -200,7 +200,7 @@ const OtpVerification = ({
               {resendRow}
               {demoHint}
               <button
-                onClick={() => navigate(backTo)}
+                onClick={onBackClick || (() => navigate(backTo))}
                 className="w-full text-center text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors"
               >
                 ← Change email / back to login
@@ -225,7 +225,7 @@ const OtpVerification = ({
       <div className="w-full max-w-md bg-white/80 backdrop-blur-xl rounded-[30px] shadow-[0_20px_50px_rgba(13,71,161,0.05)] border border-white/50 flex flex-col p-6 relative z-10">
         <div className="flex items-center mb-2">
           <button
-            onClick={() => navigate(backTo)}
+            onClick={onBackClick || (() => navigate(backTo))}
             className="p-2 hover:bg-white rounded-full transition-all shadow-sm border border-transparent hover:border-slate-100"
           >
             <ArrowLeft className="h-5 w-5 text-[#0D47A1]" />

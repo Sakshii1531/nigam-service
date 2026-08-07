@@ -13,7 +13,14 @@ export async function listInvoices(brandId, { status, page, limit, sort } = {}) 
 
   const { skip, limit: lim, page: pg, sort: sortObj } = parsePagination({ page, limit, sort });
   const [items, total] = await Promise.all([
-    Invoice.find(query).sort(sortObj).skip(skip).limit(lim),
+    // The billing table lists who was charged and who did the work, so resolve
+    // both refs here instead of leaving the client with bare ObjectIds.
+    Invoice.find(query)
+      .populate('customer', 'name email')
+      .populate('technician', 'name')
+      .sort(sortObj)
+      .skip(skip)
+      .limit(lim),
     Invoice.countDocuments(query),
   ]);
   return { items, meta: paginationMeta({ page: pg, limit: lim, total }) };

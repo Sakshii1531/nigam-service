@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import { 
@@ -14,6 +14,7 @@ import {
   Clock,
   ArrowLeft
 } from 'lucide-react';
+import { apiRequest } from '../../lib/apiClient';
 
 const Complaints = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -22,13 +23,37 @@ const Complaints = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [selectedComplaint, setSelectedComplaint] = useState(null);
   const [showDrawer, setShowDrawer] = useState(false);
+  const [complaints, setComplaints] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
-  const [complaints, setComplaints] = useState([
-    { id: 'CMP-301', user: 'Amit Sharma', subject: 'Technician did not arrive', priority: 'High', status: 'Pending', date: '12 May, 2026', description: 'Technician Rahul Kumar was scheduled to arrive at 10 AM for LG TV repair. He has not arrived yet and is not picking up calls.' },
-    { id: 'CMP-302', user: 'Priya Patel', subject: 'Overcharged for part', priority: 'Medium', status: 'In Progress', date: '12 May, 2026', description: 'Charged INR 2500 for Refrigerator filter which was listed as 1200 on the brand panel catalog.' },
-    { id: 'CMP-303', user: 'Rajesh K.', subject: 'Bad behavior by tech', priority: 'High', status: 'Pending', date: '11 May, 2026', description: 'Technician used inappropriate language when asked to show identity proof.' },
-    { id: 'CMP-304', user: 'Neha Gupta', subject: 'Appliance not working after repair', priority: 'High', status: 'Resolved', date: '10 May, 2026', description: 'Washing machine dryer motor stopped spinning again just 2 hours after technician left.' },
-  ]);
+  // Field names are the Escalation schema's — `raisedBy` is a role label
+  // ('Customer' | 'Technician' | …), not a populated user, and there is no
+  // `subject`/`details` field, so those reads always fell through to defaults.
+  const shapeComplaint = (c) => ({
+    id: c.id,
+    humanId: c.humanId || c.id,
+    user: c.raisedBy || 'Customer',
+    subject: c.reason || 'Escalation',
+    priority: c.priority || 'Medium',
+    status: c.status || 'Open',
+    date: c.createdAt ? new Date(c.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A',
+    description: c.description || 'No details provided',
+  });
+
+  useEffect(() => {
+    const fetchComplaints = async () => {
+      try {
+        const data = await apiRequest('/super-admin/escalations?limit=200', { auth: true });
+        setComplaints((data?.data || []).map(shapeComplaint));
+      } catch (err) {
+        setLoadError(err.message || 'Could not load complaints.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchComplaints();
+  }, []);
 
   const showToast = (message) => {
     setSuccessMessage(message);
@@ -37,21 +62,31 @@ const Complaints = () => {
     }, 3000);
   };
 
-  const handleStatusChange = (id, newStatus) => {
-    setComplaints(complaints.map(c => c.id === id ? { ...c, status: newStatus } : c));
-    if (selectedComplaint && selectedComplaint.id === id) {
-      setSelectedComplaint({ ...selectedComplaint, status: newStatus });
+  // Both handlers persist now. They used to change browser state only, so an
+  // investigation or a priority bump vanished on reload and no one else saw it.
+  const applyUpdate = async (id, path, body, message, optimistic) => {
+    const previous = complaints;
+    setComplaints(complaints.map(c => (c.id === id ? { ...c, ...optimistic } : c)));
+    if (selectedComplaint?.id === id) setSelectedComplaint({ ...selectedComplaint, ...optimistic });
+
+    try {
+      const res = await apiRequest(`/super-admin/escalations/${id}/${path}`, { method: 'PATCH', auth: true, body });
+      const updated = shapeComplaint(res.data);
+      setComplaints((prev) => prev.map((c) => (c.id === id ? updated : c)));
+      if (selectedComplaint?.id === id) setSelectedComplaint(updated);
+      showToast(message);
+    } catch (err) {
+      setComplaints(previous);
+      if (selectedComplaint?.id === id) setSelectedComplaint(previous.find((c) => c.id === id) || null);
+      setLoadError(err.message || 'Could not update this escalation.');
     }
-    showToast(`Complaint ${id} status updated to ${newStatus}`);
   };
 
-  const handleEscalate = (id) => {
-    setComplaints(complaints.map(c => c.id === id ? { ...c, priority: 'High' } : c));
-    if (selectedComplaint && selectedComplaint.id === id) {
-      setSelectedComplaint({ ...selectedComplaint, priority: 'High' });
-    }
-    showToast(`Complaint ${id} has been escalated to HIGH priority!`);
-  };
+  const handleStatusChange = (id, newStatus) =>
+    applyUpdate(id, 'status', { status: newStatus }, `Escalation status updated to ${newStatus}`, { status: newStatus });
+
+  const handleEscalate = (id) =>
+    applyUpdate(id, 'priority', { priority: 'High' }, 'Escalation raised to HIGH priority.', { priority: 'High' });
 
   const handleRowClick = (cmp) => {
     setSelectedComplaint(cmp);
@@ -68,7 +103,7 @@ const Complaints = () => {
   });
 
   const highPriorityCount = complaints.filter(c => c.priority === 'High' && c.status !== 'Resolved').length;
-  const pendingCount = complaints.filter(c => c.status === 'Pending').length;
+  const pendingCount = complaints.filter(c => !['Resolved'].includes(c.status)).length;
   const resolvedCount = complaints.filter(c => c.status === 'Resolved').length;
 
   return (
@@ -80,6 +115,12 @@ const Complaints = () => {
       <div className="flex-1 ml-64 min-h-screen flex flex-col">
         {/* Topbar */}
         <Topbar title="Complaints & Escalations" />
+
+        {loadError && (
+          <div className="mx-6 mt-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-xs font-bold text-red-700">
+            {loadError}
+          </div>
+        )}
 
         {/* Body */}
         {showDrawer && selectedComplaint ? (
@@ -236,6 +277,7 @@ const Complaints = () => {
                 className="text-sm text-[#1E293B] border border-[#E2E8F0] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#0D47A1] bg-[#F8FAFC]"
               >
                 <option>All Priority</option>
+                <option>Critical</option>
                 <option>High</option>
                 <option>Medium</option>
                 <option>Low</option>
@@ -247,8 +289,11 @@ const Complaints = () => {
                 className="text-sm text-[#1E293B] border border-[#E2E8F0] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#0D47A1] bg-[#F8FAFC]"
               >
                 <option>All Status</option>
-                <option>Pending</option>
+                <option>Open</option>
+                <option>Unassigned</option>
+                <option>Under Review</option>
                 <option>In Progress</option>
+                <option>Assigned to Senior</option>
                 <option>Resolved</option>
               </select>
             </div>

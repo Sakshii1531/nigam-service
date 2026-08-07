@@ -7,6 +7,7 @@ import {
   AlertTriangle, Clock, Pencil
 } from 'lucide-react';
 import { useTech } from '../../context/TechContext';
+import { useAuth } from '../../context/AuthContext';
 import techAvatar from '../../assets/tech_avatar.png';
 
 const recentEarnings = [
@@ -19,6 +20,7 @@ const recentEarnings = [
 
 const ProfilePage = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { earningsTally, notifications } = useTech();
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -26,7 +28,7 @@ const ProfilePage = () => {
   const [chatOpen, setChatOpen] = useState(false);
   const [chatInput, setChatInput] = useState('');
   const [chatMessages, setChatMessages] = useState([
-    { id: 1, sender: 'ai', text: 'Hello Alex! I am your AI Assistant. How can I help you today?' }
+    { id: 1, sender: 'ai', text: `Hello ${user?.name || 'Technician'}! I am your AI Assistant. How can I help you today?` }
   ]);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
@@ -93,7 +95,7 @@ const ProfilePage = () => {
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
-                <h2 className="text-base font-semibold text-[#052355] leading-tight">Alex Rodriguez</h2>
+                <h2 className="text-base font-semibold text-[#052355] leading-tight">{user?.name || 'Technician'}</h2>
                 <button onClick={() => navigate('/technician/personal-info')} className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-full text-slate-500 hover:text-slate-700 transition-colors">
                   <Pencil className="h-3.5 w-3.5" />
                 </button>
@@ -123,7 +125,7 @@ const ProfilePage = () => {
           <p className="text-[10px] text-blue-300 font-medium uppercase tracking-widest mb-1">Wallet Balance</p>
           <div className="flex items-end justify-between">
             <div>
-              <p className="text-3xl font-bold text-white leading-none">₹12,450</p>
+              <p className="text-3xl font-bold text-white leading-none">₹{earningsTally.available.toLocaleString('en-IN')}</p>
               <div className="mt-2 inline-flex items-center gap-1.5 bg-green-500 px-2.5 py-1 rounded-full">
                 <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></div>
                 <span className="text-[10px] font-semibold text-white">Available to Withdraw</span>
@@ -186,9 +188,9 @@ const ProfilePage = () => {
               </div>
               <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
             </div>
-            <p className="text-sm font-bold text-[#0D47A1]">₹8,200</p>
+            <p className="text-sm font-bold text-[#0D47A1]">₹{earningsTally.split.quick.amount.toLocaleString('en-IN')}</p>
             <div className="flex items-center justify-between mt-1">
-              <p className="text-[9px] text-slate-400">24 Jobs</p>
+              <p className="text-[9px] text-slate-400">{earningsTally.split.quick.jobs} Jobs</p>
               <span className="text-[9px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-1 py-0.5 rounded-full">Instant Credit</span>
             </div>
           </button>
@@ -210,9 +212,9 @@ const ProfilePage = () => {
               </div>
               <ChevronRight className="h-3.5 w-3.5 text-blue-300" />
             </div>
-            <p className="text-sm font-bold text-white">₹4,250</p>
+            <p className="text-sm font-bold text-white">₹{earningsTally.split.invoice.amount.toLocaleString('en-IN')}</p>
             <div className="flex items-center justify-between mt-1">
-              <p className="text-[9px] text-blue-300">18 Jobs</p>
+              <p className="text-[9px] text-blue-300">{earningsTally.split.invoice.jobs} Jobs</p>
               <span className="text-[9px] font-semibold text-orange-300 bg-orange-500/20 border border-orange-400/30 px-1 py-0.5 rounded-full">Approval Pending</span>
             </div>
           </button>

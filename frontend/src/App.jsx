@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
+import { usePageTitle } from './hooks/usePageTitle';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -57,7 +58,9 @@ import ReferEarn from './pages/ReferEarn';
 import ServicePartner from './pages/ServicePartner';
 import PaymentMethods from './pages/PaymentMethods';
 import NotificationSettings from './pages/NotificationSettings';
+import Faqs from './pages/Faqs';
 import AboutNCC from './pages/AboutNCC';
+import CmsDocViewer from './pages/CmsDocViewer';
 import AllBrands from './pages/AllBrands';
 import Onboarding from './pages/Onboarding';
 import TechLogin from './pages/technician/Login';
@@ -192,10 +195,31 @@ const PageHandler = () => {
   );
 };
 
+import { useAuth } from './context/AuthContext';
+
 const ScrollToTop = () => {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const { user } = useAuth();
 
   useEffect(() => {
+    // Role protection redirect
+    if (pathname.startsWith('/super-admin') && 
+        !['/super-admin/login', '/super-admin/verify-otp', '/super-admin/forgot-password'].includes(pathname)) {
+      if (!user || user.role !== 'super_admin') {
+        navigate('/super-admin/login', { replace: true });
+        return;
+      }
+    }
+
+    if (pathname.startsWith('/brand-admin') && 
+        !['/brand-admin/login', '/brand-admin/verify-otp', '/brand-admin/forgot-password'].includes(pathname)) {
+      if (!user || user.role !== 'brand_admin') {
+        navigate('/brand-admin/login', { replace: true });
+        return;
+      }
+    }
+
     // Toggle application specific styling class on body
     if (pathname.startsWith('/technician')) {
       document.body.classList.add('tech-app-active');
@@ -232,10 +256,16 @@ const ScrollToTop = () => {
     resetScroll();
     const timer = setTimeout(resetScroll, 100);
     return () => clearTimeout(timer);
-  }, [pathname]);
+  }, [pathname, user, navigate]);
 
   return null;
 };
+
+// Runs inside Router so useLocation is available
+function PageTitleManager() {
+  usePageTitle();
+  return null;
+}
 
 function App() {
   return (
@@ -243,6 +273,7 @@ function App() {
       <AuthProvider>
       <BookingProvider>
       <TechProvider>
+      <PageTitleManager />
       <ScrollToTop />
       <Routes>
         <Route path="/" element={<Login />} />
@@ -320,6 +351,9 @@ function App() {
         <Route path="/booking-success" element={<BookingSuccess />} />
         <Route path="/chat" element={<Chat />} />
         <Route path="/help-support" element={<HelpSupport />} />
+        <Route path="/faqs" element={<Faqs />} />
+        <Route path="/privacy-policy" element={<CmsDocViewer />} />
+        <Route path="/terms-and-conditions" element={<CmsDocViewer />} />
         <Route path="/saved-addresses" element={<SavedAddresses />} />
         <Route path="/edit-profile" element={<EditProfile />} />
         <Route path="/rewards" element={<Rewards />} />

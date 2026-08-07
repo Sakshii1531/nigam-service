@@ -4,7 +4,7 @@ import { applyStandardPlugins } from '../shared/plugins.js';
 const paymentSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    targetType: { type: String, enum: ['booking', 'order', 'extended_warranty', 'amc', 'job'], required: true },
+    targetType: { type: String, enum: ['booking', 'order', 'extended_warranty', 'amc', 'job', 'membership'], required: true },
     targetId: { type: mongoose.Schema.Types.ObjectId, required: true },
     amount: { type: Number, required: true },
     method: { type: String, enum: ['Card', 'UPI', 'NetBanking', 'Cash', 'Wallet'], required: true },

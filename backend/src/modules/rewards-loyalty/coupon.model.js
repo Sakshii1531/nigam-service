@@ -7,7 +7,12 @@ const couponSchema = new mongoose.Schema(
     discount: { type: Number, required: true },
     description: String,
     expiry: Date,
-    status: { type: String, enum: ['Active', 'Expired'], default: 'Active', index: true },
+    status: { type: String, enum: ['Active', 'Expired', 'Inactive'], default: 'Active', index: true },
+    applicableOn: { 
+      type: [String], 
+      enum: ['product', 'service', 'plan'], 
+      default: ['product', 'service', 'plan'] 
+    },
   },
   { timestamps: true },
 );

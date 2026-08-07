@@ -1,10 +1,55 @@
 import { ASM } from './asm.model.js';
+import { Technician } from '../technician/technician.model.js';
+import { ServiceRequest } from '../service-requests/serviceRequest.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
+
+// A request stops counting against an ASM's workload once it reaches a terminal
+// state; everything before that is still live work in their region.
+const TERMINAL_STATUSES = ['Closed', 'Cancelled'];
+
+/**
+ * Adds `activeJobs` to each ASM: open service requests handled by technicians
+ * employed at any service partner this ASM oversees.
+ *
+ * Done in three batched queries for the whole list rather than per-ASM — the
+ * console renders every ASM at once, so a per-row lookup would be N+1.
+ */
+async function withActiveJobCounts(asms) {
+  const partnerIds = asms.flatMap((asm) => asm.partners || []);
+  if (partnerIds.length === 0) {
+    return asms.map((asm) => ({ ...asm.toJSON(), activeJobs: 0 }));
+  }
+
+  const technicians = await Technician.find({ servicePartner: { $in: partnerIds } })
+    .select('_id servicePartner')
+    .lean();
+
+  const openCounts = await ServiceRequest.aggregate([
+    { $match: { technician: { $in: technicians.map((t) => t._id) }, status: { $nin: TERMINAL_STATUSES } } },
+    { $group: { _id: '$technician', count: { $sum: 1 } } },
+  ]);
+  const countByTechnician = new Map(openCounts.map((row) => [String(row._id), row.count]));
+
+  const countByPartner = new Map();
+  for (const tech of technicians) {
+    const partner = String(tech.servicePartner);
+    const open = countByTechnician.get(String(tech._id)) || 0;
+    countByPartner.set(partner, (countByPartner.get(partner) || 0) + open);
+  }
+
+  return asms.map((asm) => ({
+    ...asm.toJSON(),
+    activeJobs: (asm.partners || []).reduce((sum, p) => sum + (countByPartner.get(String(p)) || 0), 0),
+  }));
+}
 
 export async function listAsms({ city } = {}) {
   const query = {};
   if (city) query.city = city;
-  return ASM.find(query).sort({ name: 1 });
+  // The console shows the region name and a live workload figure, so resolve the
+  // city ref and fold in open-job counts rather than returning bare ids.
+  const asms = await ASM.find(query).populate('city', 'name').sort({ name: 1 });
+  return withActiveJobCounts(asms);
 }
 
 async function findOr404(id) {

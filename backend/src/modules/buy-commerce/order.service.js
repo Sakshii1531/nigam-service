@@ -11,8 +11,17 @@ import { createRazorpayOrder, verifyRazorpaySignature } from '../payments-wallet
 import { env } from '../../config/env.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { parsePagination, paginationMeta } from '../../utils/pagination.js';
+import { PlatformSettings } from '../super-admin/platformSettings.model.js';
 
-const COINS_PER_RUPEE = 10; // 10 Nigam Coins = ₹1 (BACKEND_CONTEXT.md §3.10)
+// Default only — the live rate is PlatformSettings.coinConversionRate, which the
+// super-admin Loyalty console edits. Hardcoding it here meant that setting had
+// no effect on what a customer's coins were actually worth at checkout.
+const DEFAULT_COINS_PER_RUPEE = 10; // 10 Nigam Coins = ₹1 (BACKEND_CONTEXT.md §3.10)
+
+async function coinsPerRupee() {
+  const settings = await PlatformSettings.findOne();
+  return settings?.coinConversionRate || DEFAULT_COINS_PER_RUPEE;
+}
 
 function round2(n) {
   return Math.round((n + Number.EPSILON) * 100) / 100;
@@ -82,7 +91,7 @@ export async function createOrder(userId, { items, useCart, address, couponCode,
   let coupon = null;
   let couponDiscount = 0;
   if (couponCode) {
-    coupon = await resolveCoupon(couponCode);
+    coupon = await resolveCoupon(couponCode, 'product');
     couponDiscount = round2(Math.min(coupon.discount, remaining));
     remaining = round2(remaining - couponDiscount);
   }
@@ -107,10 +116,11 @@ export async function createOrder(userId, { items, useCart, address, couponCode,
   // value than needed to zero out the order.
   let coinsValue = 0;
   let actualCoinsRedeemed = 0;
+  const rate = await coinsPerRupee();
   if (coinsToRedeem > 0) {
-    const requestedValue = coinsToRedeem / COINS_PER_RUPEE;
+    const requestedValue = coinsToRedeem / rate;
     coinsValue = round2(Math.min(requestedValue, remaining));
-    actualCoinsRedeemed = Math.round(coinsValue * COINS_PER_RUPEE);
+    actualCoinsRedeemed = Math.round(coinsValue * rate);
     remaining = round2(remaining - coinsValue);
   }
 

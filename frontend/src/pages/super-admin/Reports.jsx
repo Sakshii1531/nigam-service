@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import { 
@@ -11,11 +11,48 @@ import {
   CheckCircle2,
   RefreshCw
 } from 'lucide-react';
+import { apiRequest } from '../../lib/apiClient';
+import { exportCsv } from '../../lib/exportCsv';
 
 const Reports = () => {
   const [successMessage, setSuccessMessage] = useState('');
+  const [retention, setRetention] = useState(null);
+
+  useEffect(() => {
+    apiRequest('/super-admin/analytics/retention', { auth: true })
+      .then((res) => setRetention(res.data))
+      .catch((err) => console.warn('[reports] Could not load retention:', err.message));
+  }, []);
   const [isPdfExporting, setIsPdfExporting] = useState(false);
   const [isExcelExporting, setIsExcelExporting] = useState(false);
+  const [report, setReport] = useState({ requestsByCity: [], requestsByCategory: [], requestsByStatus: [], revenueBySource: [], requestsWithoutTechnician: 0 });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadReport() {
+      try {
+        const data = await apiRequest('/super-admin/analytics/reports', { auth: true });
+        if (!cancelled && data) setReport(data);
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    loadReport();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Requests carry no city of their own — the location comes from the assigned
+  // technician, so unassigned requests are necessarily outside this split.
+  const cityMax = Math.max(1, ...report.requestsByCity.map((c) => c.count));
+  const cityBars = report.requestsByCity.map((c) => ({
+    label: c.label,
+    count: c.count,
+    pct: Math.round((c.count / cityMax) * 100),
+  }));
   
   const [activeRevenueBar, setActiveRevenueBar] = useState(null);
   const [activeTechBar, setActiveTechBar] = useState(null);
@@ -27,19 +64,30 @@ const Reports = () => {
     }, 3000);
   };
 
+  // No server-side PDF renderer exists, so this opens the browser's print
+  // dialog (which offers "Save as PDF"). It used to wait on a timer and then
+  // claim a download that never happened.
   const handleExportPDF = () => {
     setIsPdfExporting(true);
     setTimeout(() => {
       setIsPdfExporting(false);
-      showToast('PDF Performance Report downloaded successfully!');
+      window.print();
     }, 1500);
   };
 
+  // Writes a real CSV of the figures on screen (openable in Excel).
   const handleExportExcel = () => {
     setIsExcelExporting(true);
     setTimeout(() => {
       setIsExcelExporting(false);
-      showToast('Excel Billing Ledger downloaded successfully!');
+      const rows = [
+        ...report.requestsByCity.map((r) => ['Requests by city', r.city || r._id || '—', r.count]),
+        ...report.requestsByCategory.map((r) => ['Requests by category', r.category || r._id || '—', r.count]),
+        ...report.requestsByStatus.map((r) => ['Requests by status', r.status || r._id || '—', r.count]),
+        ...report.revenueBySource.map((r) => ['Revenue by source', r.source || r._id || '—', r.total ?? r.amount ?? 0]),
+      ];
+      const written = exportCsv('platform-report', ['Section', 'Label', 'Value'], rows);
+      showToast(written ? 'Report exported as CSV.' : 'There is no report data to export yet.');
     }, 1500);
   };
 
@@ -153,20 +201,25 @@ const Reports = () => {
             {/* Service Success Rate */}
             <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] shadow-sm">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="font-bold text-[#1E293B]">Service Success Rate</h3>
-                <span className="text-green-600 text-sm font-bold bg-green-50 px-2 py-0.5 rounded">94% Average</span>
+                {/* Was "Service Success Rate" with a fixed 94% — no
+                    success/failure outcome is recorded per request. This is the
+                    request volume each city actually handled. */}
+                <h3 className="font-bold text-[#1E293B]">Requests by City</h3>
+                <span className="text-[#64748B] text-xs font-semibold bg-slate-50 px-2 py-0.5 rounded">
+                  {report.requestsWithoutTechnician} unassigned
+                </span>
               </div>
               <div className="space-y-4">
-                {[
-                  { label: 'Delhi', pct: 95 },
-                  { label: 'Mumbai', pct: 92 },
-                  { label: 'Bangalore', pct: 96 },
-                  { label: 'Chennai', pct: 88 },
-                ].map((item, i) => (
+                {cityBars.length === 0 && (
+                  <p className="text-xs font-semibold text-[#64748B]">
+                    {loading ? 'Loading…' : error || 'No assigned requests yet.'}
+                  </p>
+                )}
+                {cityBars.map((item, i) => (
                   <div 
                     key={i} 
                     className="space-y-1 cursor-pointer group p-1.5 rounded-lg hover:bg-slate-50 transition-all"
-                    onClick={() => showToast(`Service Success Rate in ${item.label}: ${item.pct}%`)}
+                    onClick={() => showToast(`${item.label}: ${item.count} requests`)}
                   >
                     <div className="flex justify-between text-xs font-semibold">
                       <span className="text-[#1E293B] group-hover:text-[#0D47A1] transition-colors">{item.label}</span>
@@ -225,14 +278,14 @@ const Reports = () => {
             <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] shadow-sm">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="font-bold text-[#1E293B]">Customer Retention</h3>
-                <span className="text-[#0D47A1] text-sm font-bold bg-blue-50 px-2 py-0.5 rounded">78% Return Rate</span>
+                <span className="text-[#0D47A1] text-sm font-bold bg-blue-50 px-2 py-0.5 rounded">{retention?.returnRatePercent != null ? `${retention.returnRatePercent}% Return Rate` : 'No bookings yet'}</span>
               </div>
               <div className="flex items-center justify-center h-48">
-                <div className="relative w-32 h-32 cursor-pointer group hover:scale-105 transition-all duration-300" onClick={() => showToast('Customer Retention is up 3.4% this quarter!')}>
+                <div className="relative w-32 h-32 cursor-pointer group hover:scale-105 transition-all duration-300" onClick={() => showToast(retention?.returnRatePercent != null ? `${retention.returning} of ${retention.customers} customers have booked more than once` : 'No bookings recorded yet')}>
                   <div className="absolute inset-0 rounded-full border-[12px] border-[#EEF4FF]"></div>
                   <div className="absolute inset-0 rounded-full border-[12px] border-[#0D47A1] border-t-transparent border-r-transparent rotate-45 transition-transform group-hover:rotate-90 duration-500"></div>
                   <div className="absolute inset-0 flex items-center justify-center flex-col">
-                    <span className="text-xl font-black text-[#1E293B]">78%</span>
+                    <span className="text-xl font-black text-[#1E293B]">{retention?.returnRatePercent != null ? `${retention.returnRatePercent}%` : '—'}</span>
                     <span className="text-xs text-[#64748B] font-semibold">Loyal</span>
                   </div>
                 </div>

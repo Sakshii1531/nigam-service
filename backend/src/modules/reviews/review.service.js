@@ -44,6 +44,36 @@ export async function listTechnicianReviews(technicianId, { page, limit, sort } 
   return { items, meta: paginationMeta({ page: pg, limit: lim, total }) };
 }
 
+/**
+ * Every review a brand can see: those left on its own service requests.
+ *
+ * Review has no direct brand ref — ownership runs through
+ * ServiceRequest.brand, the same link respondToReview authorises against — so
+ * this resolves the brand's requests first and matches reviews against them.
+ */
+export async function listBrandReviews(brandId, { status, page, limit, sort } = {}) {
+  const brandRequests = await ServiceRequest.find({ brand: brandId }).select('_id').lean();
+  if (brandRequests.length === 0) {
+    return { items: [], meta: paginationMeta({ page: 1, limit: 20, total: 0 }) };
+  }
+
+  const query = { serviceRequest: { $in: brandRequests.map((sr) => sr._id) } };
+  if (status) query.status = status;
+
+  const { skip, limit: lim, page: pg, sort: sortObj } = parsePagination({ page, limit, sort });
+  const [items, total] = await Promise.all([
+    Review.find(query)
+      .populate('user', 'name')
+      .populate('technician', 'name')
+      .populate('serviceRequest', 'humanId applianceCategory')
+      .sort(sortObj)
+      .skip(skip)
+      .limit(lim),
+    Review.countDocuments(query),
+  ]);
+  return { items, meta: paginationMeta({ page: pg, limit: lim, total }) };
+}
+
 /** Brand-admin responds to a review left on one of their brand's service
  * requests. Same cross-tenant check pattern as invoice.service.js: 403 if the
  * review's underlying ServiceRequest.brand doesn't match the caller's brand. */

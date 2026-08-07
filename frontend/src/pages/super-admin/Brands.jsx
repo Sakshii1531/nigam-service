@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
+import { apiRequest } from '../../lib/apiClient';
 import { 
   Building, 
   Search, 
@@ -29,17 +30,62 @@ const Brands = () => {
   const [selectedStatus, setSelectedStatus] = useState('All Status');
   const [successMessage, setSuccessMessage] = useState('');
   const [selectedBrandProfile, setSelectedBrandProfile] = useState(null);
+  // SLA figures are per-brand and derived server-side; loaded when a profile opens.
+  const [brandSla, setBrandSla] = useState(null);
+
+  useEffect(() => {
+    if (!selectedBrandProfile?.id) { setBrandSla(null); return; }
+    let cancelled = false;
+    apiRequest(`/super-admin/brands/${selectedBrandProfile.id}/sla`, { auth: true })
+      .then((res) => { if (!cancelled) setBrandSla(res.data); })
+      .catch((err) => console.warn('[brands] Could not load SLA figures:', err.message));
+    return () => { cancelled = true; };
+  }, [selectedBrandProfile?.id]);
+
+  // Real billed work for the brand being viewed, grouped by service category.
+  const [serviceRevenue, setServiceRevenue] = useState([]);
+
+  useEffect(() => {
+    if (!selectedBrandProfile?.id) { setServiceRevenue([]); return; }
+    let cancelled = false;
+    apiRequest(`/super-admin/brands/${selectedBrandProfile.id}/service-revenue`, { auth: true })
+      .then((res) => { if (!cancelled) setServiceRevenue(res.data || []); })
+      .catch((err) => { if (!cancelled) { setServiceRevenue([]); console.warn('[brands] Could not load service revenue:', err.message); } });
+    return () => { cancelled = true; };
+  }, [selectedBrandProfile?.id]);
 
   const [showModal, setShowModal] = useState(false);
   const [newBrand, setNewBrand] = useState({ name: '', category: 'Home Appliances', activeCases: '0', spareStock: '0', status: 'Active', revenue: '₹0' });
 
-  const [brands, setBrands] = useState([
-    { id: 'BRD-001', name: 'LG Electronics', category: 'Home Appliances', activeCases: 45, spareStock: 1200, status: 'Active', revenue: '₹4.5L' },
-    { id: 'BRD-002', name: 'Samsung', category: 'Electronics & Appliances', activeCases: 32, spareStock: 850, status: 'Active', revenue: '₹3.2L' },
-    { id: 'BRD-003', name: 'Whirlpool', category: 'White Goods', activeCases: 12, spareStock: 450, status: 'Active', revenue: '₹2.1L' },
-    { id: 'BRD-004', name: 'Havells', category: 'Small Appliances', activeCases: 8, spareStock: 300, status: 'Active', revenue: '₹1.4L' },
-    { id: 'BRD-005', name: 'Godrej', category: 'Home Appliances', activeCases: 0, spareStock: 0, status: 'Pending', revenue: '₹0' },
-  ]);
+  const [brands, setBrands] = useState([]);
+  const [loadError, setLoadError] = useState('');
+
+  useEffect(() => {
+    async function fetchBrands() {
+      try {
+        // `apiRequest` resolves the whole { data, error, meta } envelope, so the
+        // old `Array.isArray(data)` guard was never true and this screen always
+        // showed five invented brands instead of the real ones.
+        const res = await apiRequest('/super-admin/brands?limit=200', { auth: true });
+        setBrands((res.data || []).map((item) => ({
+          id: item.id,
+          humanId: item.humanId || item.id,
+          name: item.name,
+          category: item.category || '—',
+          activeCases: item.activeCases ?? 0,
+          spareStock: item.spareStock ?? 0,
+          status: item.status || 'Pending',
+          revenue: item.revenue != null ? `₹${Number(item.revenue).toLocaleString('en-IN')}` : '₹0',
+          supportEmail: item.supportEmail || '',
+          supportPhone: item.supportPhone || '',
+          createdAt: item.createdAt || null,
+        })));
+      } catch (err) {
+        setLoadError(err.message || 'Could not load the brand list.');
+      }
+    }
+    fetchBrands();
+  }, []);
 
   useEffect(() => {
     if (location.search.includes('add=true')) {
@@ -55,43 +101,64 @@ const Brands = () => {
     }, 3000);
   };
 
-  const handleStatusChange = (id, newStatus) => {
-    setBrands(brands.map(b => b.id === id ? { ...b, status: newStatus } : b));
-    showToast(`Brand status updated to ${newStatus}`);
+  // Persists. This only changed browser state, so a brand "activated" here was
+  // still Pending for everyone else and could not be assigned work.
+  const handleStatusChange = async (id, newStatus) => {
+    const previous = brands;
+    setBrands(brands.map(b => (b.id === id ? { ...b, status: newStatus } : b)));
+    setLoadError('');
+    try {
+      await apiRequest(`/super-admin/brands/${id}`, { method: 'PUT', auth: true, body: { status: newStatus } });
+      showToast(`Brand status updated to ${newStatus}`);
+    } catch (err) {
+      setBrands(previous);
+      setLoadError(err.message || 'Could not update the brand status.');
+    }
   };
 
-  const handleAddBrandSubmit = (e) => {
+  const handleAddBrandSubmit = async (e) => {
     e.preventDefault();
     if (!newBrand.name) {
       showToast('Please enter a brand name.');
       return;
     }
 
-    const addedBrand = {
-      id: `BRD-0${brands.length + 1}`,
-      name: newBrand.name,
-      category: newBrand.category,
-      activeCases: Number(newBrand.activeCases) || 0,
-      spareStock: Number(newBrand.spareStock) || 0,
-      status: newBrand.status,
-      revenue: newBrand.revenue.startsWith('₹') ? newBrand.revenue : `₹${newBrand.revenue}`
-    };
-
-    setBrands([addedBrand, ...brands]);
-    setNewBrand({ name: '', category: 'Home Appliances', activeCases: '0', spareStock: '0', status: 'Active', revenue: '₹0' });
-    setShowModal(false);
-    showToast(`Brand "${addedBrand.name}" registered successfully!`);
+    setLoadError('');
+    try {
+      const res = await apiRequest('/super-admin/brands', {
+        method: 'POST',
+        auth: true,
+        body: {
+          name: newBrand.name,
+          category: newBrand.category,
+          status: newBrand.status,
+        },
+      });
+      setBrands((prev) => [{
+        id: res.data.id,
+        humanId: res.data.humanId || res.data.id,
+        name: res.data.name,
+        category: res.data.category || '—',
+        activeCases: 0,
+        spareStock: 0,
+        status: res.data.status,
+        revenue: '₹0',
+      }, ...prev]);
+      setNewBrand({ name: '', category: 'Home Appliances', activeCases: '0', spareStock: '0', status: 'Active', revenue: '₹0' });
+      setShowModal(false);
+      showToast(`Brand "${res.data.name}" registered.`);
+    } catch (err) {
+      setLoadError(err.message || 'Could not register the brand.');
+    }
   };
 
-  const handleExportCSV = (brandName, services) => {
-    const headers = ["Service Name", "Category", "Price per Ticket (INR)", "Tickets Closed", "Total Revenue (INR)"];
-    const rows = services.map(s => [
-      s.name,
-      s.category,
-      s.price,
-      s.count,
-      s.price * s.count
-    ]);
+  const handleExportCSV = (brandName, rowsIn) => {
+    if (!rowsIn.length) {
+      setLoadError('There is no billed work for this brand to export.');
+      return;
+    }
+    const headers = ["Category", "Avg per Ticket (INR)", "Tickets Closed", "Total Revenue (INR)"];
+    const rows = rowsIn.map(r => [r.category, r.averageTicket, r.count, r.revenue]);
     const csvContent = [
       headers.join(","),
       ...rows.map(row => row.map(val => `"${val.toString().replace(/"/g, '""')}"`).join(","))
@@ -119,40 +186,6 @@ const Brands = () => {
 
   const renderFullPageBrand = () => {
     const brand = selectedBrandProfile;
-    const mockEmail = `support@${brand.name.toLowerCase().replace(' ', '')}.com`;
-    const mockPhone = "+91 1800 " + brand.id.replace('BRD-00', '') + "24 680";
-    const mockJoinedDate = "10 Dec 2024";
-    
-    const brandServicesData = {
-      'BRD-001': [
-        { name: "Refrigerator Compressor Replacement", category: "Appliance Repair", price: 6000, count: 45 },
-        { name: "Washing Machine Tub Assembly", category: "Appliance Repair", price: 4000, count: 30 },
-        { name: "Smart OLED TV Panel Replacement", category: "OLED TV Service", price: 5000, count: 12 }
-      ],
-      'BRD-002': [
-        { name: "AC Condenser Leak Repair", category: "HVAC Repair", price: 4500, count: 40 },
-        { name: "Double Door Defrost Timer Change", category: "Appliance Repair", price: 2500, count: 20 },
-        { name: "Microwave Magnetron Fitting", category: "Appliance Repair", price: 2500, count: 36 }
-      ],
-      'BRD-003': [
-        { name: "Washing Machine Gear Box Change", category: "Appliance Repair", price: 4500, count: 20 },
-        { name: "Single Door Gasket Fitting", category: "Appliance Repair", price: 1500, count: 40 },
-        { name: "AC Gas Charging (R32)", category: "HVAC Repair", price: 4000, count: 15 }
-      ],
-      'BRD-004': [
-        { name: "Geyser Heating Element Fitting", category: "Appliance Repair", price: 2500, count: 30 },
-        { name: "Kitchen Chimney Filter Cleaning", category: "Maintenance", price: 1300, count: 50 }
-      ],
-      'BRD-005': [
-        { name: "AC General Wet Service", category: "Maintenance", price: 1500, count: 0 },
-        { name: "Direct Cool Refrigerator Defrosting", category: "Appliance Repair", price: 1200, count: 0 }
-      ]
-    };
-
-    const activeServices = brandServicesData[brand.id] || [
-      { name: "General Diagnostics & Inspection", category: "Inspection", price: 499, count: 0 }
-    ];
-    
     return (
       <div className="p-6 space-y-6 flex-1 bg-[#F8FAFC]">
         {/* Back navigation & Header */}
@@ -227,15 +260,15 @@ const Brands = () => {
                   <div className="space-y-3.5 text-sm">
                     <div className="flex items-center gap-3 text-slate-700">
                       <Mail size={16} className="text-[#64748B] flex-shrink-0" />
-                      <span className="truncate">{mockEmail}</span>
+                      <span className="truncate">{brand.supportEmail || 'No support email recorded'}</span>
                     </div>
                     <div className="flex items-center gap-3 text-slate-700">
                       <PhoneIcon size={16} className="text-[#64748B] flex-shrink-0" />
-                      <span>{mockPhone}</span>
+                      <span>{brand.supportPhone || 'No support number recorded'}</span>
                     </div>
                     <div className="flex items-center gap-3 text-slate-700">
                       <CalendarIcon size={16} className="text-[#64748B] flex-shrink-0" />
-                      <span>Partnered {mockJoinedDate}</span>
+                      <span>{brand.createdAt ? `Partnered ${new Date(brand.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}` : 'Partnership date not recorded'}</span>
                     </div>
                   </div>
                 </div>
@@ -245,15 +278,21 @@ const Brands = () => {
                   <div className="space-y-3 text-xs">
                     <div className="flex justify-between py-1 border-b border-slate-100">
                       <span className="text-[#64748B] font-medium">Avg Resolution Time</span>
-                      <span className="text-slate-800 font-semibold">24.5 Hrs</span>
+                      <span className="text-slate-800 font-semibold">
+                        {brandSla?.avgResolutionHours != null ? `${brandSla.avgResolutionHours} Hrs` : '—'}
+                      </span>
                     </div>
                     <div className="flex justify-between py-1 border-b border-slate-100">
                       <span className="text-[#64748B] font-medium">SLA Adherence Rate</span>
-                      <span className="text-green-600 font-semibold">97.8%</span>
+                      <span className="text-green-600 font-semibold">
+                        {brandSla?.slaAdherencePercent != null ? `${brandSla.slaAdherencePercent}%` : '—'}
+                      </span>
                     </div>
                     <div className="flex justify-between py-1">
                       <span className="text-[#64748B] font-medium">Customer Sat Score</span>
-                      <span className="text-amber-500 font-semibold">4.7 / 5.0</span>
+                      <span className="text-amber-500 font-semibold">
+                        {brandSla?.avgRating != null ? `${brandSla.avgRating} / 5.0` : '—'}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -293,7 +332,7 @@ const Brands = () => {
                     </div>
                     <div className="flex items-center gap-2">
                       <button 
-                        onClick={() => handleExportCSV(brand.name, activeServices)}
+                        onClick={() => handleExportCSV(brand.name, serviceRevenue)}
                         className="bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-800 border border-slate-205 font-bold py-1.5 px-3 rounded-lg text-xs flex items-center gap-1.5 cursor-pointer shadow-3xs"
                         title="Download CSV / Excel"
                       >
@@ -318,24 +357,28 @@ const Brands = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-150 text-slate-700 font-semibold">
-                        {activeServices.map((service, idx) => {
-                          const serviceRevenue = service.price * service.count;
-                          return (
-                            <tr key={idx} className="hover:bg-slate-50/50">
-                              <td className="p-3 font-bold text-slate-800">{service.name}</td>
-                              <td className="p-3 text-slate-500">{service.category}</td>
-                              <td className="p-3 text-right text-slate-500">₹{service.price.toLocaleString()}</td>
-                              <td className="p-3 text-center">
-                                <span className="bg-blue-50 text-[#0D47A1] px-2.5 py-0.5 rounded-full text-[10px] font-bold">
-                                  {service.count} Tickets
-                                </span>
-                              </td>
-                              <td className="p-3 text-right text-green-600 font-black">
-                                ₹{serviceRevenue.toLocaleString()}
-                              </td>
-                            </tr>
-                          );
-                        })}
+                        {serviceRevenue.length === 0 && (
+                          <tr>
+                            <td colSpan={5} className="p-6 text-center text-xs font-semibold text-slate-400">
+                              No completed work billed for this brand yet.
+                            </td>
+                          </tr>
+                        )}
+                        {serviceRevenue.map((row) => (
+                          <tr key={row.category} className="hover:bg-slate-50/50">
+                            <td className="p-3 font-bold text-slate-800">{row.category}</td>
+                            <td className="p-3 text-slate-500">Service</td>
+                            <td className="p-3 text-right text-slate-500">₹{row.averageTicket.toLocaleString('en-IN')}</td>
+                            <td className="p-3 text-center">
+                              <span className="bg-blue-50 text-[#0D47A1] px-2.5 py-0.5 rounded-full text-[10px] font-bold">
+                                {row.count} Tickets
+                              </span>
+                            </td>
+                            <td className="p-3 text-right text-green-600 font-black">
+                              ₹{row.revenue.toLocaleString('en-IN')}
+                            </td>
+                          </tr>
+                        ))}
                       </tbody>
                     </table>
                   </div>

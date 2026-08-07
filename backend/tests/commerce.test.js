@@ -13,30 +13,19 @@ import { Coupon } from '../src/modules/rewards-loyalty/coupon.model.js';
 import { ExchangeQuestionSet } from '../src/modules/warranty-amc-exchange/exchangeQuestionSet.model.js';
 import { ExchangeCampaign } from '../src/modules/warranty-amc-exchange/exchangeCampaign.model.js';
 import { ExchangeRequest } from '../src/modules/warranty-amc-exchange/exchangeRequest.model.js';
+import { ExchangeProductConfig } from '../src/modules/warranty-amc-exchange/exchangeProductConfig.model.js';
 import { Payment } from '../src/modules/payments-wallet/payment.model.js';
 import { WalletLedger } from '../src/modules/payments-wallet/walletLedger.model.js';
 import { signForTesting } from '../src/modules/payments-wallet/paymentGateway.js';
 import { hashPassword } from '../src/modules/auth/password.js';
 import { ROLES } from '../src/config/constants.js';
 import { testDbUri } from './helpers/testDb.js';
+import { readOtpCode } from './helpers/otp.js';
 
 const TEST_DB_URI = testDbUri('commerce');
 
 let app;
 
-function captureConsoleLog() {
-  const original = console.log;
-  const lines = [];
-  console.log = (...args) => lines.push(args.join(' '));
-  return {
-    code: () => {
-      console.log = original;
-      const match = lines.join('\n').match(/code for [^:]+: (\d{6})/);
-      if (!match) throw new Error(`No OTP code found: ${lines.join('\n')}`);
-      return match[1];
-    },
-  };
-}
 
 async function loginAsCustomer(phone, walletCoins = 0) {
   await User.create({
@@ -46,9 +35,8 @@ async function loginAsCustomer(phone, walletCoins = 0) {
     passwordHash: await hashPassword('password123'),
     walletCoins,
   });
-  const capture = captureConsoleLog();
   await request(app).post('/api/v1/auth/login').send({ role: ROLES.CUSTOMER, identifier: phone, password: 'password123' });
-  const code = capture.code();
+  const code = readOtpCode(phone);
   const res = await request(app).post('/api/v1/auth/otp/verify').send({ role: ROLES.CUSTOMER, identifier: phone, code });
   return res.body.data.accessToken;
 }
@@ -61,10 +49,11 @@ beforeAll(async () => {
   await registerAllModels();
   await mongoose.connect(TEST_DB_URI);
   await ensureIndexes();
-  app = createApp();
+  app = createApp().listen(0);
 });
 
 afterAll(async () => {
+  await new Promise((resolve) => app.close(resolve));
   await mongoose.connection.dropDatabase();
   await mongoose.disconnect();
 });
@@ -80,6 +69,7 @@ beforeEach(async () => {
     ExchangeQuestionSet.deleteMany({}),
     ExchangeCampaign.deleteMany({}),
     ExchangeRequest.deleteMany({}),
+    ExchangeProductConfig.deleteMany({}),
     Payment.deleteMany({}),
     WalletLedger.deleteMany({}),
   ]);
@@ -405,5 +395,94 @@ describe('POST /orders — full checkout: coupon + exchange discount + coin rede
       .get(`/api/v1/orders/${orderRes.body.data.id}`)
       .set('Authorization', `Bearer ${intruderToken}`)
       .expect(403);
+  });
+});
+
+describe('exchange merchandising config — authored by admin, read by the app', () => {
+  async function loginAsSuperAdmin() {
+    const email = 'exchange-admin@test.com';
+    await User.create({ role: ROLES.SUPER_ADMIN, name: 'Super Admin', email, passwordHash: await hashPassword('password123'), status: 'Active' });
+    await request(app).post('/api/v1/auth/login').send({ role: ROLES.SUPER_ADMIN, identifier: email, password: 'password123' });
+    const code = readOtpCode(email);
+    const res = await request(app).post('/api/v1/auth/otp/verify').send({ role: ROLES.SUPER_ADMIN, identifier: email, code });
+    return res.body.data.accessToken;
+  }
+
+  it('creates a campaign the customer app can then read', async () => {
+    const adminToken = await loginAsSuperAdmin();
+    const custToken = await loginAsCustomer('9200000501');
+
+    const createRes = await request(app)
+      .post('/api/v1/exchange/campaigns')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: 'Monsoon Bonus', badgeText: 'Extra ₹3,000', bonusAmount: 3000 })
+      .expect(201);
+
+    const listed = await request(app)
+      .get('/api/v1/exchange/campaigns')
+      .set('Authorization', `Bearer ${custToken}`)
+      .expect(200);
+    expect(listed.body.data[0].name).toBe('Monsoon Bonus');
+
+    // A customer cannot author them.
+    await request(app)
+      .post('/api/v1/exchange/campaigns')
+      .set('Authorization', `Bearer ${custToken}`)
+      .send({ name: 'Self-serve bonus', badgeText: 'x' })
+      .expect(403);
+
+    await request(app)
+      .delete(`/api/v1/exchange/campaigns/${createRes.body.data.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(await ExchangeCampaign.countDocuments()).toBe(0);
+  });
+
+  it('upserts one product config per product rather than duplicating', async () => {
+    const adminToken = await loginAsSuperAdmin();
+    const product = await seedProduct();
+
+    await request(app)
+      .put('/api/v1/exchange/product-configs')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ product: product.id, exchangeEnabled: true, maxValue: 6000, badgeText: 'Save with Exchange' })
+      .expect(200);
+
+    const second = await request(app)
+      .put('/api/v1/exchange/product-configs')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ product: product.id, exchangeEnabled: false, maxValue: 9000 })
+      .expect(200);
+
+    expect(second.body.data.maxValue).toBe(9000);
+    expect(second.body.data.exchangeEnabled).toBe(false);
+    expect(await ExchangeProductConfig.countDocuments({ product: product.id })).toBe(1);
+  });
+
+  it('lists question sets for the console and keeps writes admin-only', async () => {
+    const adminToken = await loginAsSuperAdmin();
+    const custToken = await loginAsCustomer('9200000502');
+
+    const created = await request(app)
+      .post('/api/v1/exchange/question-sets')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: 'AC Condition', category: 'AC', questions: [{ text: 'Is it cooling?', type: 'Yes/No', deductions: { No: 0.3 } }] })
+      .expect(201);
+
+    const listed = await request(app)
+      .get('/api/v1/exchange/question-sets')
+      .set('Authorization', `Bearer ${custToken}`)
+      .expect(200);
+    expect(listed.body.data.some((q) => q.id === created.body.data.id)).toBe(true);
+
+    await request(app)
+      .delete(`/api/v1/exchange/question-sets/${created.body.data.id}`)
+      .set('Authorization', `Bearer ${custToken}`)
+      .expect(403);
+
+    await request(app)
+      .delete(`/api/v1/exchange/question-sets/${created.body.data.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
   });
 });

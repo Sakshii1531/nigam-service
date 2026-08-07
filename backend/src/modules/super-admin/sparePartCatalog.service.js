@@ -21,7 +21,7 @@ export async function createSparePart(data) {
   return SparePartCatalog.create(data);
 }
 
-const EDITABLE_FIELDS = ['name', 'brand', 'code', 'costPrice', 'markupPercent', 'stock'];
+const EDITABLE_FIELDS = ['name', 'brand', 'code', 'category', 'costPrice', 'markupPercent', 'stock', 'reorderThreshold', 'supplier', 'leadTimeDays'];
 
 export async function updateSparePart(id, updates) {
   const part = await findOr404(id);
@@ -30,4 +30,9 @@ export async function updateSparePart(id, updates) {
   }
   await part.save();
   return part;
+}
+
+export async function deleteSparePart(id) {
+  const part = await findOr404(id);
+  await part.deleteOne();
 }

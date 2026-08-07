@@ -25,9 +25,9 @@ function clamp0to100(n) {
  * Weighted by the admin-configurable AssignmentWeighting singleton (defaults
  * 40/30/20/10 if none exists yet, matching the model's schema defaults).
  */
-export async function findAvailableTechnician({ category, city } = {}) {
+export async function rankTechnicians({ category, city } = {}) {
   const candidates = await Technician.find({ status: 'Active', availability: 'Available' }).populate('city');
-  if (candidates.length === 0) return null;
+  if (candidates.length === 0) return [];
 
   const weighting = (await AssignmentWeighting.findOne()) || {
     proximityPercent: 40,
@@ -36,7 +36,7 @@ export async function findAvailableTechnician({ category, city } = {}) {
     workloadPercent: 10,
   };
 
-  function score(tech) {
+  function breakdown(tech) {
     let proximity = 50;
     if (city && tech.city && tech.city.name) {
       proximity = tech.city.name.toLowerCase().trim() === city.toLowerCase().trim() ? 100 : 0;
@@ -45,23 +45,24 @@ export async function findAvailableTechnician({ category, city } = {}) {
     const rating = clamp0to100((tech.rating / 5) * 100);
     const workload = clamp0to100(100 - tech.activeJobsCount * 20);
 
-    return (
+    const score =
       (proximity * weighting.proximityPercent +
         skill * weighting.skillPercent +
         rating * weighting.ratingPercent +
         workload * weighting.workloadPercent) /
-      100
-    );
+      100;
+
+    return { proximity, skill, rating, workload, score };
   }
 
-  let best = candidates[0];
-  let bestScore = score(best);
-  for (const candidate of candidates.slice(1)) {
-    const candidateScore = score(candidate);
-    if (candidateScore > bestScore) {
-      best = candidate;
-      bestScore = candidateScore;
-    }
-  }
-  return best;
+  // The console shows the whole ranked shortlist with the same numbers auto-assign
+  // uses, so an operator overriding the top pick can see exactly why it ranked first.
+  return candidates
+    .map((technician) => ({ technician, ...breakdown(technician) }))
+    .sort((a, b) => b.score - a.score);
+}
+
+export async function findAvailableTechnician({ category, city } = {}) {
+  const [best] = await rankTechnicians({ category, city });
+  return best ? best.technician : null;
 }

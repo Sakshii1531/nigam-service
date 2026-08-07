@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
+import { apiRequest } from '../../lib/apiClient';
 import {
   Search, UserPlus, MapPin, Star, Clock, ClipboardList, CheckCircle2,
-  Zap, SlidersHorizontal, Save, Sparkles,
+  Zap, SlidersHorizontal, Save, Sparkles, AlertCircle
 } from 'lucide-react';
 
 const WEIGHT_META = [
@@ -13,98 +14,193 @@ const WEIGHT_META = [
   { key: 'rating', label: 'Rating' },
   { key: 'workload', label: 'Workload (fewer jobs)' },
 ];
-const MAX_JOBS = 5;
 
 const Assignment = () => {
   const location = useLocation();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
-  const [mode, setMode] = useState('auto'); // 'auto' | 'manual'
+  const [mode, setMode] = useState('manual'); // 'auto' | 'manual'
   const [weights, setWeights] = useState({ proximity: 40, skill: 30, rating: 20, workload: 10 });
 
-  const [requests, setRequests] = useState([
-    { id: 'SR-8901', customer: 'Amit Sharma', product: 'Smart TV', brand: 'LG', city: 'Delhi', date: '12 May, 2026' },
-    { id: 'SR-8906', customer: 'Sonal J.', product: 'Washing Machine', brand: 'LG', city: 'Delhi', date: '12 May, 2026' },
-  ]);
-
-  const [techs, setTechs] = useState([
-    { id: 'TECH-001', name: 'Rahul Kumar', skill: 'All Appliances', rating: 4.8, activeJobs: 2, distance: '3.2 km' },
-    { id: 'TECH-006', name: 'Manish S.', skill: 'TV & Sound', rating: 4.5, activeJobs: 0, distance: '1.5 km' },
-    { id: 'TECH-007', name: 'Kapil Dev', skill: 'Washing Machine', rating: 4.2, activeJobs: 1, distance: '4.0 km' },
-  ]);
+  const [requests, setRequests] = useState([]);
+  const [techs, setTechs] = useState([]);
 
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [selectedTech, setSelectedTech] = useState(null);
 
   const showToast = (message) => {
     setSuccessMessage(message);
-    setTimeout(() => setSuccessMessage(''), 3000);
+    setTimeout(() => setSuccessMessage(''), 4000);
   };
+
+  const [loadError, setLoadError] = useState('');
+  const [assigning, setAssigning] = useState(false);
+
+  // Requests still waiting on a technician, plus the admin-configured weighting
+  // the scoring engine uses. The technician shortlist is per-request and is
+  // fetched when one is selected.
+  const loadData = React.useCallback(async () => {
+    try {
+      const res = await apiRequest('/service-requests?limit=200&sort=-createdAt', { auth: true });
+      const unassigned = (res.data || [])
+        .filter(item => !item.technician && !['Closed', 'Cancelled'].includes(item.status))
+        .map(item => ({
+          id: item.id,
+          ref: item.humanId || item.id,
+          customer: item.user?.name || 'Customer',
+          product: item.category || 'Appliance Repair',
+          brand: item.brand?.name || 'Nigam Care',
+          city: item.zone || '—',
+          date: item.createdAt
+            ? new Date(item.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+            : '—',
+          status: item.status,
+          technician: 'Unassigned',
+        }));
+      setRequests(unassigned);
+      setLoadError('');
+    } catch (err) {
+      setLoadError(err.message || 'Could not load service requests.');
+    }
+
+    try {
+      const w = await apiRequest('/super-admin/assignment-weighting', { auth: true });
+      if (w.data) {
+        setWeights({
+          proximity: w.data.proximityPercent,
+          skill: w.data.skillPercent,
+          rating: w.data.ratingPercent,
+          workload: w.data.workloadPercent,
+        });
+      }
+    } catch (err) {
+      console.warn('[assignment] Could not load weighting:', err.message);
+    }
+  }, []);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
+  // The shortlist is scored server-side by the same engine auto-assign uses, so
+  // the console can't drift from what the platform would actually pick.
+  useEffect(() => {
+    if (!selectedRequest) { setTechs([]); return; }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiRequest(`/service-requests/${selectedRequest.id}/technician-suggestions`, { auth: true });
+        if (cancelled) return;
+        setTechs((res.data || []).map(t => ({
+          id: t.id,
+          name: t.name,
+          skill: t.specs?.length ? t.specs.join(', ') : 'All Appliances',
+          rating: t.rating || 0,
+          activeJobs: t.activeJobsCount || 0,
+          city: t.city || '—',
+          score: t.score,
+        })));
+      } catch (err) {
+        if (!cancelled) {
+          setTechs([]);
+          setLoadError(err.message || 'Could not load technician suggestions.');
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedRequest]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const reqId = params.get('req');
-    if (reqId) {
-      const match = requests.find((r) => r.id === reqId);
+    if (reqId && requests.length > 0) {
+      const match = requests.find((r) => r.id === reqId || r.ref === reqId);
       if (match) {
         setSelectedRequest(match);
-        showToast(`Request ${reqId} pre-selected for assignment`);
+        showToast(`Request ${match.ref} pre-selected for manual assignment`);
       }
     }
-  }, [location]);
+  }, [location, requests]);
 
-  // ---- scoring engine (simulated assignment logic) ----
-  const parseKm = (d) => parseFloat(d) || 0;
-  const skillMatch = (tech, product) => {
-    if (!product) return 0.7;
-    const s = tech.skill.toLowerCase();
-    if (s.includes('all')) return 0.9;
-    const p = product.toLowerCase();
-    if (p.includes('tv') && s.includes('tv')) return 1;
-    if (p.includes('washing') && s.includes('washing')) return 1;
-    return 0.45;
-  };
-  const scoreTech = (tech) => {
-    const total = weights.proximity + weights.skill + weights.rating + weights.workload || 1;
-    const prox = 1 - Math.min(parseKm(tech.distance) / 6, 1);
-    const skill = skillMatch(tech, selectedRequest?.product);
-    const rating = tech.rating / 5;
-    const workload = 1 - Math.min(tech.activeJobs / MAX_JOBS, 1);
-    const raw = weights.proximity * prox + weights.skill * skill + weights.rating * rating + weights.workload * workload;
-    return Math.round((raw / total) * 100);
+  const saveWeights = async () => {
+    try {
+      await apiRequest('/super-admin/assignment-weighting', {
+        method: 'PUT',
+        auth: true,
+        body: {
+          proximityPercent: weights.proximity,
+          skillPercent: weights.skill,
+          ratingPercent: weights.rating,
+          workloadPercent: weights.workload,
+        },
+      });
+      showToast('Assignment weighting saved — it applies to every future assignment.');
+    } catch (err) {
+      showToast(err.message || 'Could not save weighting.');
+    }
   };
 
-  const ranked = [...techs].map((t) => ({ ...t, score: scoreTech(t) })).sort((a, b) => b.score - a.score);
-  const recommended = ranked[0];
+  // Auto-assignment sends no technician, which tells the server to use the
+  // engine's top-ranked candidate for each request.
+  const runAutoAssignment = async () => {
+    if (requests.length === 0) {
+      showToast('No unassigned requests available for auto-assignment.');
+      return;
+    }
+    setAssigning(true);
+    let assigned = 0;
+    const failures = [];
+    for (const req of requests) {
+      try {
+        await apiRequest(`/service-requests/${req.id}/assign`, { method: 'PATCH', auth: true, body: {} });
+        assigned += 1;
+      } catch (err) {
+        failures.push(`${req.ref}: ${err.message}`);
+      }
+    }
+    setAssigning(false);
+    setSelectedRequest(null);
+    setSelectedTech(null);
+    await loadData();
+    showToast(
+      failures.length
+        ? `Auto-assigned ${assigned} request(s); ${failures.length} could not be assigned.`
+        : `Auto-assigned ${assigned} request(s) to the best-matching technicians.`,
+    );
+    if (failures.length) console.warn('[assignment] Unassigned:', failures);
+  };
 
-  const handleAssign = () => {
+  const handleModeChange = (newMode) => {
+    setMode(newMode);
+    if (newMode === 'auto') runAutoAssignment();
+  };
+
+  const handleAssign = async () => {
     if (!selectedRequest || !selectedTech) {
-      showToast('Please select both a request and a technician.');
+      showToast('Please select a request from the left and a technician from the right.');
       return;
     }
-    showToast(`Assigned ${selectedTech.name} to Request ${selectedRequest.id} successfully!`);
-    setRequests(requests.filter((r) => r.id !== selectedRequest.id));
-    setSelectedRequest(null);
-    setSelectedTech(null);
-  };
-
-  const handleAutoAssign = () => {
-    const target = selectedRequest || requests[0];
-    if (!target) {
-      showToast('No pending requests to auto-assign.');
-      return;
+    setAssigning(true);
+    try {
+      await apiRequest(`/service-requests/${selectedRequest.id}/assign`, {
+        method: 'PATCH',
+        auth: true,
+        body: { technician: selectedTech.id },
+      });
+      showToast(`Assigned ${selectedTech.name} to request ${selectedRequest.ref}`);
+      setSelectedRequest(null);
+      setSelectedTech(null);
+      await loadData();
+    } catch (err) {
+      showToast(err.message || 'Could not assign technician.');
+    } finally {
+      setAssigning(false);
     }
-    showToast(`Auto-assigned ${recommended.name} (score ${recommended.score}) to ${target.id}`);
-    setRequests((prev) => prev.filter((r) => r.id !== target.id));
-    setSelectedRequest(null);
-    setSelectedTech(null);
   };
 
   const filteredRequests = requests.filter(
     (r) =>
       r.customer.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      r.ref.toLowerCase().includes(searchQuery.toLowerCase()) ||
       r.product.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -132,17 +228,17 @@ const Assignment = () => {
               {/* Mode toggle */}
               <div className="flex bg-[#F1F5F9] rounded-xl p-1">
                 <button
-                  onClick={() => setMode('auto')}
+                  onClick={() => handleModeChange('auto')}
                   className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-                    mode === 'auto' ? 'bg-white text-[#0D47A1] shadow-sm' : 'text-[#64748B]'
+                    mode === 'auto' ? 'bg-[#0D47A1] text-white shadow-sm' : 'text-[#64748B]'
                   }`}
                 >
                   <Zap size={14} /> Auto-assign
                 </button>
                 <button
-                  onClick={() => setMode('manual')}
+                  onClick={() => handleModeChange('manual')}
                   className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-                    mode === 'manual' ? 'bg-white text-[#0D47A1] shadow-sm' : 'text-[#64748B]'
+                    mode === 'manual' ? 'bg-[#0D47A1] text-white shadow-sm' : 'text-[#64748B]'
                   }`}
                 >
                   <UserPlus size={14} /> Manual
@@ -154,6 +250,13 @@ const Assignment = () => {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Weight sliders */}
                 <div className="space-y-4">
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-start gap-2.5">
+                    <Sparkles className="w-4 h-4 text-[#0D47A1] flex-shrink-0 mt-0.5" />
+                    <p className="text-xs text-[#0D47A1] font-medium leading-relaxed">
+                      <strong>Automated Assignment Mode Active:</strong> Incoming service requests are evaluated against location proximity, rating, skills, and workload, and automatically assigned without requiring admin intervention.
+                    </p>
+                  </div>
+
                   {WEIGHT_META.map(({ key, label }) => (
                     <div key={key}>
                       <div className="flex justify-between text-xs font-semibold text-[#1E293B] mb-1.5">
@@ -171,70 +274,56 @@ const Assignment = () => {
                     </div>
                   ))}
                   <button
-                    onClick={() => showToast('Assignment rules saved successfully!')}
+                    onClick={saveWeights}
                     className="mt-2 flex items-center gap-2 px-4 py-2.5 bg-[#0D47A1] text-white text-xs font-bold rounded-xl hover:bg-blue-700 transition-colors"
                   >
                     <Save size={15} /> Save Rules
                   </button>
                 </div>
 
-                {/* Recommended preview */}
-                <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl p-5">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Sparkles size={16} className="text-[#0D47A1]" />
-                    <h4 className="text-sm font-bold text-[#1E293B]">
-                      Recommended {selectedRequest ? `for ${selectedRequest.id}` : '(top match)'}
-                    </h4>
-                  </div>
+                {/* Auto-Assignment status box */}
+                <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl p-5 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Zap size={18} className="text-green-600" />
+                      <h4 className="text-sm font-bold text-[#1E293B]">Automatic Dispatch System</h4>
+                    </div>
 
-                  <div className="space-y-2.5">
-                    {ranked.map((t, i) => (
-                      <div
-                        key={t.id}
-                        className={`flex items-center gap-3 p-3 rounded-xl border ${
-                          i === 0 ? 'border-[#0D47A1] bg-[#EEF4FF]' : 'border-[#E2E8F0] bg-white'
-                        }`}
-                      >
-                        <div className="w-9 h-9 bg-[#0D47A1] text-white rounded-full flex items-center justify-center font-bold text-xs shrink-0">
-                          {t.name.split(' ').map((n) => n[0]).join('')}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="font-bold text-[#1E293B] text-sm truncate">{t.name}</p>
-                            {i === 0 && (
-                              <span className="text-[10px] font-bold text-[#0D47A1] bg-white border border-[#0D47A1] px-1.5 py-0.5 rounded-full">
-                                BEST
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 text-[11px] text-[#64748B] mt-0.5">
-                            <span className="flex items-center gap-0.5"><Star size={10} fill="currentColor" className="text-amber-500" /> {t.rating}</span>
-                            <span className="flex items-center gap-0.5"><MapPin size={10} /> {t.distance}</span>
-                            <span>{t.activeJobs} jobs</span>
-                          </div>
-                        </div>
-                        <div className="text-right shrink-0">
-                          <div className="w-16 h-1.5 bg-slate-200 rounded-full overflow-hidden mb-1">
-                            <div className="h-full bg-[#0D47A1]" style={{ width: `${t.score}%` }} />
-                          </div>
-                          <span className="text-xs font-bold text-[#0D47A1]">{t.score}</span>
-                        </div>
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                      When Auto-Assignment is enabled, the system continuously pairs incoming service requests with the highest-scoring technician based on proximity, ratings, and workload balance.
+                    </p>
+
+                    <div className="mt-4 p-4 bg-white border border-slate-200 rounded-xl space-y-2">
+                      <div className="flex justify-between text-xs font-semibold text-slate-700">
+                        <span>System Mode:</span>
+                        <span className="text-green-600 font-bold uppercase tracking-wider">Fully Autonomous</span>
                       </div>
-                    ))}
+                      <div className="flex justify-between text-xs font-semibold text-slate-700">
+                        <span>Pending Unassigned Requests:</span>
+                        <span className="font-bold text-[#0D47A1]">{requests.length}</span>
+                      </div>
+                      <div className="flex justify-between text-xs font-semibold text-slate-700">
+                        <span>Available Technicians:</span>
+                        <span className="font-bold text-green-600">{techs.length} Online</span>
+                      </div>
+                    </div>
                   </div>
 
                   <button
-                    onClick={handleAutoAssign}
+                    onClick={runAutoAssignment}
                     className="w-full mt-4 py-3 bg-[#0D47A1] text-white text-sm font-bold rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
                   >
-                    <Zap size={16} /> Auto-Assign Best Match
+                    <Zap size={16} /> Run Auto-Assign Now ({requests.length} Pending)
                   </button>
                 </div>
               </div>
             ) : (
-              <p className="text-sm text-[#64748B]">
-                Manual mode is on. Pick a request and a technician below to assign directly.
-              </p>
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center gap-2">
+                <UserPlus className="w-4 h-4 text-slate-600 flex-shrink-0" />
+                <p className="text-xs text-slate-600 font-medium">
+                  <strong>Manual Assignment Mode Active:</strong> Select an unassigned request from the left column and pick an available technician from the right column to pair directly.
+                </p>
+              </div>
             )}
           </div>
 
@@ -271,7 +360,7 @@ const Assignment = () => {
                   >
                     <div className="flex justify-between items-start">
                       <div>
-                        <p className="font-bold text-[#1E293B]">{req.id}</p>
+                        <p className="font-bold text-[#1E293B]">{req.ref}</p>
                         <p className="text-sm text-[#64748B]">{req.customer}</p>
                       </div>
                       <span className="text-xs text-[#64748B] flex items-center gap-1"><Clock size={12} /> {req.date}</span>
@@ -322,7 +411,7 @@ const Assignment = () => {
                         <span className="text-sm font-bold text-amber-500 flex items-center gap-0.5 justify-end">
                           <Star size={14} fill="currentColor" /> {tech.rating}
                         </span>
-                        <span className="text-xs text-[#64748B]">{tech.distance} away</span>
+                        <span className="text-xs text-[#64748B]">{tech.city}</span>
                       </div>
                     </div>
                     <div className="mt-2 flex justify-between items-center text-xs text-[#64748B]">
@@ -337,7 +426,7 @@ const Assignment = () => {
                 <div className="flex justify-between text-sm mb-4">
                   <div>
                     <p className="text-[#64748B] text-xs">Selected Request:</p>
-                    <p className="font-bold text-[#1E293B]">{selectedRequest ? selectedRequest.id : 'None'}</p>
+                    <p className="font-bold text-[#1E293B]">{selectedRequest ? selectedRequest.ref : 'None'}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-[#64748B] text-xs">Selected Tech:</p>
@@ -346,18 +435,25 @@ const Assignment = () => {
                 </div>
                 <button
                   onClick={handleAssign}
-                  disabled={!selectedRequest || !selectedTech}
+                  disabled={!selectedRequest || !selectedTech || assigning}
                   className={`w-full py-3 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 ${
-                    selectedRequest && selectedTech ? 'bg-[#0D47A1] text-white hover:bg-blue-700' : 'bg-[#F1F5F9] text-[#64748B] cursor-not-allowed'
+                    selectedRequest && selectedTech && !assigning ? 'bg-[#0D47A1] text-white hover:bg-blue-700' : 'bg-[#F1F5F9] text-[#64748B] cursor-not-allowed'
                   }`}
                 >
-                  <UserPlus size={18} /> Assign Technician
+                  <UserPlus size={18} /> {assigning ? 'Assigning…' : 'Assign Technician'}
                 </button>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      {loadError && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-rose-600 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg flex items-center gap-2">
+          <AlertCircle className="h-4 w-4" />
+          {loadError}
+        </div>
+      )}
 
       {successMessage && (
         <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-green-600 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg flex items-center gap-2 animate-bounce">

@@ -2,11 +2,43 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Bell, ArrowLeft, Shield, Calendar, TrendingUp, ChevronDown, Check, Clock, Briefcase, ClipboardList, User, Wrench, Zap, FileText } from 'lucide-react';
 import { useTech } from '../../context/TechContext';
+import { apiRequest } from '../../lib/apiClient';
 
 const EarningsPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { earningsTally, notifications } = useTech();
+  const [stats, setStats] = useState(null);
+  const [payouts, setPayouts] = useState([]);
+  const [trendDays, setTrendDays] = useState(7);
+
+  useEffect(() => {
+    apiRequest(`/tech/earnings/analytics?days=${trendDays}`, { auth: true })
+      .then((res) => setStats(res.data))
+      .catch((err) => console.warn('[earnings] Could not load analytics:', err.message));
+  }, [trendDays]);
+
+  useEffect(() => {
+    apiRequest('/tech/earnings/payouts?limit=20', { auth: true })
+      .then((res) => setPayouts(res.data || []))
+      .catch((err) => console.warn('[earnings] Could not load payouts:', err.message));
+  }, []);
+
+  // Earned so far this week, against the technician's configured target.
+  // Payout.payoutType is 'Quick' | 'Invoice'; the tabs use lowercase keys.
+  const visiblePayouts = payouts
+    .filter((p) => (p.payoutType || 'Quick').toLowerCase() === activeTab)
+    .map((p) => ({
+      id: p.id,
+      job: p.job ? `#${String(p.job).slice(-4)}` : '—',
+      date: p.createdAt ? new Date(p.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—',
+      amount: `+₹${(p.netAmount || 0).toLocaleString('en-IN')}`,
+      status: (p.status || 'Pending').toUpperCase(),
+    }));
+
+  const weekEarned = (stats?.daily || []).slice(-7).reduce((sum, d) => sum + d.amount, 0);
+  const weeklyTarget = stats?.weeklyTargetAmount || 0;
+  const targetPercent = weeklyTarget > 0 ? Math.min(Math.round((weekEarned / weeklyTarget) * 100), 100) : null;
   const [withdrawableBalance, setWithdrawableBalance] = useState(12450);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [withdrawStep, setWithdrawStep] = useState('confirm'); // 'confirm', 'success'
@@ -143,7 +175,7 @@ const EarningsPage = () => {
               Withdraw Funds
             </button>
             <button 
-              onClick={() => alert('Earnings statement report download started...')}
+              onClick={() => navigate('/technician/recent-earnings')}
               className="w-full bg-white/10 border border-white/20 text-white font-semibold py-3.5 rounded-2xl hover:bg-white/20 transition-colors"
             >
               Download Report
@@ -199,8 +231,8 @@ const EarningsPage = () => {
                 <p className="text-[10px] text-amber-600">Instant credit after job completion</p>
               </div>
             </div>
-            <p className="text-2xl font-bold text-[#0D47A1] mt-1">₹8,200</p>
-            <p className="text-[10px] text-slate-500 mt-0.5">24 Jobs • Instant Credit</p>
+            <p className="text-2xl font-bold text-[#0D47A1] mt-1">₹{earningsTally.split.quick.amount.toLocaleString('en-IN')}</p>
+            <p className="text-[10px] text-slate-500 mt-0.5">{earningsTally.split.quick.jobs} Jobs • Instant Credit</p>
           </div>
         ) : (
           <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 shadow-sm text-left">
@@ -213,33 +245,41 @@ const EarningsPage = () => {
                 <p className="text-[10px] text-blue-500">Settled after approval from NCC</p>
               </div>
             </div>
-            <p className="text-2xl font-bold text-[#0D47A1] mt-1">₹4,250</p>
-            <p className="text-[10px] text-slate-500 mt-0.5">18 Jobs • Approval Pending</p>
+            <p className="text-2xl font-bold text-[#0D47A1] mt-1">₹{earningsTally.split.invoice.amount.toLocaleString('en-IN')}</p>
+            <p className="text-[10px] text-slate-500 mt-0.5">{earningsTally.split.invoice.jobs} Jobs • Approval Pending</p>
           </div>
         )}
 
-        {/* Weekly Target progress */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm text-left">
-          <div className="flex justify-between items-center">
-            <span className="text-xs font-semibold text-slate-500">Weekly Target Progress</span>
-            <span className="text-xs font-bold text-[#0D47A1]">70%</span>
+        {/* Weekly Target progress — hidden unless a target has been set */}
+        {targetPercent !== null && (
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm text-left">
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-semibold text-slate-500">Weekly Target Progress</span>
+              <span className="text-xs font-bold text-[#0D47A1]">{targetPercent}%</span>
+            </div>
+            <p className="text-xl font-semibold text-slate-900 mt-1">
+              ₹{weekEarned.toLocaleString('en-IN')} / ₹{weeklyTarget.toLocaleString('en-IN')}
+            </p>
+
+            {/* Progress Bar */}
+            <div className="w-full h-2 bg-slate-100 rounded-full mt-4 overflow-hidden">
+              <div className="h-full bg-[#0D47A1] rounded-full transition-all duration-500" style={{ width: `${targetPercent}%` }}></div>
+            </div>
           </div>
-          <p className="text-xl font-semibold text-slate-900 mt-1">₹14,500 / ₹20,000</p>
-          
-          {/* Progress Bar */}
-          <div className="w-full h-2 bg-slate-100 rounded-full mt-4 overflow-hidden">
-            <div className="h-full bg-[#0D47A1] rounded-full transition-all duration-500" style={{ width: '70%' }}></div>
-          </div>
-        </div>
+        )}
 
         {/* Income Trends */}
         <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm text-left">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-sm font-semibold text-[#052355] uppercase tracking-wider">Income Trends</h3>
             <div className="relative">
-              <select className="appearance-none bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-600 focus:outline-none pr-8">
-                <option>Last 7 Days</option>
-                <option>Last 30 Days</option>
+              <select
+                value={trendDays}
+                onChange={(e) => setTrendDays(Number(e.target.value))}
+                className="appearance-none bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-600 focus:outline-none pr-8"
+              >
+                <option value={7}>Last 7 Days</option>
+                <option value={30}>Last 30 Days</option>
               </select>
               <div className="absolute inset-y-0 right-2 flex items-center pointer-events-none">
                 <ChevronDown className="h-4 w-4 text-slate-400" />
@@ -247,26 +287,27 @@ const EarningsPage = () => {
             </div>
           </div>
           
-          {/* Bar Chart Placeholder */}
+          {/* Income Trends chart */}
           <div className="flex justify-between items-end h-40 gap-2.5 px-2">
-            {[
-              { day: 'Mon', val: 40 },
-              { day: 'Tue', val: 20 },
-              { day: 'Wed', val: 60 },
-              { day: 'Thu', val: 30 },
-              { day: 'Fri', val: 80 },
-              { day: 'Sat', val: 10 },
-              { day: 'Sun', val: 50 },
-            ].map((d) => (
-              <div key={d.day} className="flex-1 flex flex-col items-center gap-2">
-                <div 
-                  className="w-full bg-[#E3ECF9] rounded-t-md hover:bg-[#0D47A1] transition-colors cursor-pointer" 
-                  style={{ height: `${d.val}%` }}
-                  title={`${d.day}: ₹${d.val * 50}`}
-                ></div>
-                <span className="text-[10px] text-slate-500 font-semibold">{d.day}</span>
-              </div>
-            ))}
+            {(stats?.daily || []).length === 0 && (
+              <p className="text-[11px] text-slate-400 font-normal w-full text-center self-center">No earnings in this period.</p>
+            )}
+            {(() => {
+              const daily = stats?.daily || [];
+              const max = Math.max(...daily.map((d) => d.amount), 1);
+              return daily.map((d) => (
+                <div key={d.date} className="flex-1 flex flex-col items-center gap-2">
+                  <div
+                    className="w-full bg-[#E3ECF9] rounded-t-md hover:bg-[#0D47A1] transition-colors cursor-pointer"
+                    style={{ height: `${Math.round((d.amount / max) * 100)}%` }}
+                    title={`${new Date(d.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}: ₹${d.amount.toLocaleString('en-IN')}`}
+                  ></div>
+                  <span className="text-[10px] text-slate-500 font-semibold">
+                    {new Date(d.date).toLocaleDateString('en-IN', { weekday: 'short' })}
+                  </span>
+                </div>
+              ));
+            })()}
           </div>
         </div>
 
@@ -275,7 +316,7 @@ const EarningsPage = () => {
           <div className="p-4 flex justify-between items-center border-b border-slate-200 bg-slate-50/50">
             <h3 className="text-sm font-semibold text-[#052355] uppercase tracking-wider">Recent Payouts</h3>
             <button 
-              onClick={() => alert('Viewing all payouts...')}
+              onClick={() => navigate('/technician/recent-earnings')}
               className="text-xs text-[#0D47A1] font-semibold hover:text-blue-800 transition-colors"
             >
               View All
@@ -283,12 +324,10 @@ const EarningsPage = () => {
           </div>
 
           <div className="flex flex-col">
-            {[
-              { id: 1, job: '#8842', date: 'Nov 14, 2023', amount: '+₹850.00', status: 'SETTLED', type: 'quick' },
-              { id: 2, job: '#8831', date: 'Nov 13, 2023', amount: '+₹650.50', status: 'SETTLED', type: 'quick' },
-              { id: 3, job: '#8844', date: 'Nov 12, 2023', amount: '+₹1,210.00', status: 'PENDING', type: 'invoice' },
-              { id: 4, job: '#8822', date: 'Nov 11, 2023', amount: '+₹920.00', status: 'SETTLED', type: 'invoice' },
-            ].filter(p => p.type === activeTab).map((p) => (
+            {visiblePayouts.length === 0 && (
+              <p className="p-4 text-[11px] text-slate-400 font-normal">No {activeTab === 'quick' ? 'quick' : 'invoice'} payouts yet.</p>
+            )}
+            {visiblePayouts.map((p) => (
               <div key={p.id} className="p-4 flex justify-between items-center border-b border-slate-100 last:border-b-0 hover:bg-slate-55 transition-colors">
                 <div className="flex items-center gap-3">
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center ${

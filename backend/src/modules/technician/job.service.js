@@ -16,12 +16,29 @@ import { emit as emitNotification } from '../notifications/notification.service.
 import { env } from '../../config/env.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { JOB_STEP_TRANSITIONS } from '../../config/constants.js';
+import { RateCard } from '../brand-admin/rateCard.model.js';
+import { PlatformSettings } from '../super-admin/platformSettings.model.js';
 
-const TECH_EARNINGS_SHARE = 0.3; // 30% of the D2C subtotal — matches the frontend's BillingEstimate.jsx note
-// Flat per-visit payout for warranty/AMC/EW jobs — there's no brand RateCard yet
-// (that's Phase 7 scope) to price a technician's visit fee on covered work, so
-// this is a placeholder flat rate rather than a real computed one.
-const FLAT_COVERED_VISIT_EARNINGS = 150;
+// Default only — the live share is PlatformSettings.technicianCommissionPercent.
+const DEFAULT_TECH_EARNINGS_SHARE = 0.3; // 30% of the D2C subtotal
+
+async function technicianShare() {
+  const settings = await PlatformSettings.findOne();
+  const percent = settings?.technicianCommissionPercent;
+  return percent != null ? percent / 100 : DEFAULT_TECH_EARNINGS_SHARE;
+}
+
+// Covered work (Brand Warranty / AMC / EW) is priced from the brand's RateCard
+// for that appliance category. This used to be a flat 150 because no RateCard
+// existed; it does now, so the flat value is only the fallback for a brand that
+// has not configured a card for the category.
+const DEFAULT_COVERED_VISIT_EARNINGS = 150;
+
+async function coveredVisitEarnings(serviceRequest) {
+  if (!serviceRequest?.brand || !serviceRequest?.category) return DEFAULT_COVERED_VISIT_EARNINGS;
+  const card = await RateCard.findOne({ brand: serviceRequest.brand, category: serviceRequest.category });
+  return card?.laborRate ?? DEFAULT_COVERED_VISIT_EARNINGS;
+}
 
 function ensureTransition(job, toStep) {
   const allowed = JOB_STEP_TRANSITIONS[job.activeStep] || [];
@@ -118,6 +135,9 @@ export async function acceptJob(technicianId, serviceRequestId, { type, amcSubsc
   const isD2C = jobType === 'NCC Paid Service';
   const price = booking ? booking.totalPrice : 0;
 
+  const coveredEarnings = isD2C ? 0 : await coveredVisitEarnings(serviceRequest);
+  const share = await technicianShare();
+
   const jobData = {
     serviceRequest: serviceRequest._id,
     technician: technicianId,
@@ -126,7 +146,7 @@ export async function acceptJob(technicianId, serviceRequestId, { type, amcSubsc
     isPartner: !isD2C,
     isNccEw: jobType === 'NCC Extended Warranty',
     price,
-    estEarnings: isD2C ? Math.round(price * TECH_EARNINGS_SHARE) : FLAT_COVERED_VISIT_EARNINGS,
+    estEarnings: isD2C ? Math.round(price * share) : coveredEarnings,
     activeStep: 'assigned',
   };
 
@@ -274,7 +294,8 @@ export async function generateBilling(technicianId, jobId) {
   const additionalServicesTotal = job.additionalServices.filter((s) => s.checked).reduce((sum, s) => sum + s.price, 0);
 
   const charges = computeCharges({ laborRate: serviceCharge, partsCost: sparePartsTotal, additionalCharges: additionalServicesTotal });
-  const technicianEarnings = job.isD2C ? Math.round(charges.subtotal * TECH_EARNINGS_SHARE) : job.estEarnings;
+  const billingShare = await technicianShare();
+  const technicianEarnings = job.isD2C ? Math.round(charges.subtotal * billingShare) : job.estEarnings;
 
   job.billingEstimate = {
     serviceCharge,
@@ -442,4 +463,43 @@ export async function verifyJobPayment(technicianId, jobId, { razorpayPaymentId,
 
   const result = await finalizeJobCompletion(job, pendingPayment);
   return { ...result, razorpay: null };
+}
+
+/**
+ * The AMC visit history behind this job, so the technician arriving on site can
+ * see what was actually done before. The drawer used to render two invented
+ * visits ("TDS Check (280 → 140 ppm)", technicians "Rahul S." and "Amir K.")
+ * for every AMC job, against real customers.
+ */
+export async function getJobAmcHistory(technicianId, jobId) {
+  const job = await findOwnedJob(technicianId, jobId);
+  if (!job.amcSubscription) return { subscription: null, visits: [] };
+
+  const [subscription, visits] = await Promise.all([
+    AMCSubscription.findById(job.amcSubscription).populate('plan', 'name visitsTotal'),
+    AMCVisit.find({ subscription: job.amcSubscription })
+      .populate('technician', 'name')
+      .sort({ visitNumber: 1 }),
+  ]);
+
+  return {
+    subscription: subscription
+      ? {
+          id: subscription.id,
+          planName: subscription.plan?.name || null,
+          visitsTotal: subscription.visitsTotal,
+          visitsRemaining: subscription.visitsRemaining,
+          expiryDate: subscription.expiryDate,
+        }
+      : null,
+    visits: visits.map((v) => ({
+      id: v.id,
+      visitNumber: v.visitNumber,
+      scheduledDate: v.scheduledDate,
+      status: v.status,
+      technician: v.technician?.name || null,
+      tasks: (v.tasks || []).map((t) => t.label).filter(Boolean),
+      notes: v.notes || null,
+    })),
+  };
 }

@@ -5,16 +5,12 @@ import { useTech } from '../../context/TechContext';
 
 const Schedule = () => {
   const navigate = useNavigate();
-  const { notifications, selectJobForDetails, acceptJob } = useTech();
+  const { jobs, notifications, selectJobForDetails, acceptJob, earningsTally } = useTech();
 
-  // Selected date defaults to 'Tue 14' as shown in the mockup
-  const [selectedDate, setSelectedDate] = useState('Tue 14');
-  
-  // Sidebar drawer open state
+  const [selectedDate, setSelectedDate] = useState('Today');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
-  // Days list for the horizontal date selector ribbon (Mockup: Sun 12, Mon 13, Tue 14, Wed 15, Thu 16, Fri 17, Sat 18, Sun 19)
   const calendarDays = [
     { day: 'Sun', num: '12', current: false },
     { day: 'Mon', num: '13', current: true },
@@ -26,33 +22,14 @@ const Schedule = () => {
     { day: 'Sun', num: '19', current: true }
   ];
 
-  // Schedule timeline slots for Tue 14 (matching the mockup)
-  const TueSchedules = [
-    {
-      id: '8842', // Rohit Sharma AC Repair
-      time: '09:00 AM',
-      category: 'Split AC Repair',
-      customer: 'Rohit Sharma',
-      address: '124 Oak Street',
-      status: 'Confirmed'
-    },
-    {
-      id: '8845', // Neha Sen Washing Machine
-      time: '12:30 PM',
-      category: 'Washing Machine',
-      customer: 'Neha Verma',
-      address: 'Sector 12, Lucknow',
-      status: 'Confirmed'
-    },
-    {
-      id: '8843', // Mrs Neha Verma Refrigerator (mapped to Anil Mehta in mockup slot 3)
-      time: '04:00 PM',
-      category: 'Refrigerator Repair',
-      customer: 'Anil Mehta',
-      address: 'Gomti Nagar',
-      status: 'Pending'
-    }
-  ];
+  const activeSchedules = jobs.map(j => ({
+    id: j.id,
+    time: '09:00 AM',
+    category: j.category || j.product,
+    customer: j.customerName || 'Customer',
+    address: j.address || 'Location',
+    status: j.isAvailableRequest ? 'Pending' : 'Confirmed'
+  }));
 
   const handleJobClick = (jobId, status) => {
     if (status === 'Confirmed') {
@@ -127,13 +104,13 @@ const Schedule = () => {
 
         {/* Timeline Slot List */}
         <div className="flex-1 flex flex-col relative min-h-[360px]">
-          {selectedDate === 'Tue 14' ? (
+          {activeSchedules.length > 0 ? (
             <div className="flex flex-col gap-6 relative pl-4 mt-2">
               
               {/* Blue Vertical Timeline Line */}
               <div className="absolute left-[108px] top-[22px] bottom-[22px] w-[2px] bg-[#B9D1F9]"></div>
 
-              {TueSchedules.map((item, idx) => (
+              {activeSchedules.map((item, idx) => (
                 <div key={item.id} className="flex gap-4 items-start relative">
                   
                   {/* Left Side: Time column */}
@@ -181,7 +158,7 @@ const Schedule = () => {
               <Calendar className="h-10 w-10 text-slate-300" />
               <div>
                 <h4 className="text-sm font-bold text-[#052355]">No appointments scheduled</h4>
-                <p className="text-xs text-slate-400 mt-1">Please select Tue 14 to view mockup appointments.</p>
+                <p className="text-xs text-slate-400 mt-1">Bookings made from customer app will appear here when assigned.</p>
               </div>
             </div>
           )}
@@ -193,18 +170,18 @@ const Schedule = () => {
           
           <div className="grid grid-cols-3 gap-3 text-center">
             <div className="flex flex-col items-center justify-center">
-              <span className="text-2xl font-black text-[#052355]">3</span>
+              <span className="text-2xl font-black text-[#052355]">{activeSchedules.length}</span>
               <span className="text-[10px] font-bold text-slate-450 uppercase mt-1">Jobs</span>
             </div>
             
             <div className="flex flex-col items-center justify-center border-x border-slate-200">
-              <span className="text-2xl font-black text-[#052355]">₹2,450</span>
+              <span className="text-2xl font-black text-[#052355]">₹{earningsTally.today.toLocaleString('en-IN')}</span>
               <span className="text-[10px] font-bold text-slate-450 uppercase mt-1">Earnings</span>
             </div>
             
             <div className="flex flex-col items-center justify-center">
-              <span className="text-2xl font-black text-[#052355]">85%</span>
-              <span className="text-[10px] font-bold text-slate-450 uppercase mt-1">Target</span>
+              <span className="text-2xl font-black text-[#052355]">{earningsTally.completedToday}</span>
+              <span className="text-[10px] font-bold text-slate-450 uppercase mt-1">Completed</span>
             </div>
           </div>
         </div>
