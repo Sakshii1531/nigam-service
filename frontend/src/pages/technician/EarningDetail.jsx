@@ -1,150 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft, Zap, FileText, CheckCircle, Clock, AlertCircle, ShieldCheck,
   Calendar, Briefcase, User, MapPin, CreditCard, Building2, Copy, ChevronRight
 } from 'lucide-react';
-
-const ALL_EARNINGS = [
-  {
-    id: '1',
-    title: 'Electrician Repair',
-    tag: 'QuickPayout',
-    date: '16 May 2026, 02:20 PM',
-    amount: 400,
-    status: 'Credited',
-    icon: 'zap',
-    jobId: '#EC-2026-001',
-    customer: 'Rohit Sharma',
-    address: 'Sector 15, Gomti Nagar, Lucknow',
-    category: 'Electrician',
-    description: 'Electrical wiring repair and switchboard replacement',
-    baseAmount: 380,
-    platformFee: 20,
-    netAmount: 400,
-    payoutType: 'QuickPayout',
-    payoutNote: 'Instant credit after job completion',
-    creditedTo: 'Wallet',
-    transactionId: 'TXN202605161001',
-    timeline: [
-      { label: 'Job Assigned', time: '16 May 2026, 10:00 AM', done: true },
-      { label: 'Job Completed', time: '16 May 2026, 01:45 PM', done: true },
-      { label: 'Payout Initiated', time: '16 May 2026, 01:50 PM', done: true },
-      { label: 'Amount Credited', time: '16 May 2026, 02:20 PM', done: true },
-    ],
-  },
-  {
-    id: '2',
-    title: 'Plumbing Service',
-    tag: 'QuickPayout',
-    date: '16 May 2026, 11:15 AM',
-    amount: 350,
-    status: 'Credited',
-    icon: 'zap',
-    jobId: '#PL-2026-002',
-    customer: 'Neha Verma',
-    address: 'Hazratganj, Lucknow',
-    category: 'Plumbing',
-    description: 'Kitchen sink blockage and pipe repair',
-    baseAmount: 330,
-    platformFee: 20,
-    netAmount: 350,
-    payoutType: 'QuickPayout',
-    payoutNote: 'Instant credit after job completion',
-    creditedTo: 'Wallet',
-    transactionId: 'TXN202605160902',
-    timeline: [
-      { label: 'Job Assigned', time: '16 May 2026, 08:00 AM', done: true },
-      { label: 'Job Completed', time: '16 May 2026, 10:50 AM', done: true },
-      { label: 'Payout Initiated', time: '16 May 2026, 10:55 AM', done: true },
-      { label: 'Amount Credited', time: '16 May 2026, 11:15 AM', done: true },
-    ],
-  },
-  {
-    id: '3',
-    title: 'LG Refrigerator – Warranty Claim',
-    tag: 'InvoicePayout',
-    date: '17 May 2026, 04:20 PM',
-    amount: 450,
-    status: 'Approval Pending',
-    icon: 'file',
-    jobId: '#WC-2026-003',
-    customer: 'Anil Mehta',
-    address: 'Alambagh, Lucknow',
-    category: 'Refrigerator Repair',
-    description: 'Warranty repair — compressor cooling issue, in-warranty claim',
-    baseAmount: 450,
-    platformFee: 0,
-    netAmount: 450,
-    payoutType: 'InvoicePayout',
-    payoutNote: 'Settled after NCC approval. Usually within 3–5 business days.',
-    creditedTo: 'Bank Account (SBI ••••4521)',
-    transactionId: 'INV202605170033',
-    timeline: [
-      { label: 'Job Assigned', time: '17 May 2026, 11:00 AM', done: true },
-      { label: 'Job Completed', time: '17 May 2026, 03:30 PM', done: true },
-      { label: 'Invoice Submitted', time: '17 May 2026, 03:45 PM', done: true },
-      { label: 'Approval Pending', time: '17 May 2026, 04:20 PM', done: true },
-      { label: 'Amount Credited', time: 'Awaiting approval', done: false },
-    ],
-  },
-  {
-    id: '4',
-    title: 'NCC AMC – Quarterly Visit',
-    tag: 'InvoicePayout',
-    date: '17 May 2026, 10:30 AM',
-    amount: 250,
-    status: 'Approved',
-    icon: 'file',
-    jobId: '#AMC-2026-004',
-    customer: 'Sunita Gupta',
-    address: 'Indira Nagar, Lucknow',
-    category: 'AMC Service',
-    description: 'NCC AMC quarterly preventive maintenance visit — AC servicing',
-    baseAmount: 250,
-    platformFee: 0,
-    netAmount: 250,
-    payoutType: 'InvoicePayout',
-    payoutNote: 'Approved. Credit will be initiated in 1–2 business days.',
-    creditedTo: 'Bank Account (SBI ••••4521)',
-    transactionId: 'INV202605170024',
-    timeline: [
-      { label: 'Job Assigned', time: '17 May 2026, 08:00 AM', done: true },
-      { label: 'Job Completed', time: '17 May 2026, 09:45 AM', done: true },
-      { label: 'Invoice Submitted', time: '17 May 2026, 09:50 AM', done: true },
-      { label: 'Approved by NCC', time: '17 May 2026, 10:30 AM', done: true },
-      { label: 'Amount Credited', time: 'Scheduled', done: false },
-    ],
-  },
-  {
-    id: '5',
-    title: 'Voltas AC Service (Partner Brand)',
-    tag: 'InvoicePayout',
-    date: '16 May 2026, 03:45 PM',
-    amount: 600,
-    status: 'Verification',
-    icon: 'file',
-    jobId: '#PB-2026-005',
-    customer: 'Ramesh Yadav',
-    address: 'Vikas Nagar, Lucknow',
-    category: 'AC Service',
-    description: 'Partner brand service — Voltas AC deep cleaning and gas top-up',
-    baseAmount: 600,
-    platformFee: 0,
-    netAmount: 600,
-    payoutType: 'InvoicePayout',
-    payoutNote: 'Under verification by NCC team. Payout after verification.',
-    creditedTo: 'Bank Account (SBI ••••4521)',
-    transactionId: 'INV202605160055',
-    timeline: [
-      { label: 'Job Assigned', time: '16 May 2026, 12:00 PM', done: true },
-      { label: 'Job Completed', time: '16 May 2026, 03:00 PM', done: true },
-      { label: 'Invoice Submitted', time: '16 May 2026, 03:15 PM', done: true },
-      { label: 'Under Verification', time: '16 May 2026, 03:45 PM', done: true },
-      { label: 'Amount Credited', time: 'Pending verification', done: false },
-    ],
-  },
-];
+import { apiRequest } from '../../lib/apiClient';
 
 const statusConfig = {
   'Credited':          { color: 'text-green-600',  bg: 'bg-green-50',  border: 'border-green-200', icon: <CheckCircle className="h-4 w-4 text-green-600" /> },
@@ -156,7 +16,56 @@ const statusConfig = {
 const EarningDetailPage = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-  const earning = ALL_EARNINGS.find(e => e.id === id);
+  const [earning, setEarning] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Built from the job itself — the breakdown, the customer and the timeline all
+  // come off the Job record rather than a lookup table in this file.
+  useEffect(() => {
+    apiRequest(`/tech/jobs/${id}`, { auth: true })
+      .then((res) => {
+        const job = res.data;
+        if (!job) return;
+        const bill = job.billingEstimate || {};
+        const sr = job.serviceRequest || {};
+        const quick = job.type === 'NCC Paid Service';
+        setEarning({
+          title: sr.category ? `${sr.category} — ${job.type}` : job.type,
+          tag: quick ? 'QuickPayout' : 'InvoicePayout',
+          status: job.activeStep === 'completed' ? 'Credited' : 'Pending',
+          date: job.updatedAt
+            ? new Date(job.updatedAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+            : '—',
+          jobId: sr.humanId || job.id,
+          customer: sr.user?.name || '—',
+          address: sr.booking?.address || sr.zone || '—',
+          description: sr.description || '—',
+          baseAmount: bill.serviceCharge || 0,
+          platformFee: Math.max((bill.serviceCharge || 0) - (bill.technicianEarnings || 0), 0),
+          netAmount: bill.technicianEarnings || 0,
+          creditedTo: 'Earnings balance',
+          payoutNote: quick
+            ? 'Credited to your balance on job completion'
+            : 'Settles on the brand invoice cycle',
+          transactionId: job.id,
+          timeline: (job.serviceRequest?.timeline || []).map((t) => ({
+            label: t.stepLabel,
+            time: t.timestamp ? new Date(t.timestamp).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '',
+            done: Boolean(t.done),
+          })),
+        });
+      })
+      .catch(() => setEarning(null))
+      .finally(() => setLoading(false));
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#F4F6FA] flex items-center justify-center max-w-md mx-auto">
+        <p className="text-sm text-slate-500">Loading…</p>
+      </div>
+    );
+  }
 
   if (!earning) {
     return (

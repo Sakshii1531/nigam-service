@@ -1,13 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Wrench } from 'lucide-react';
-
-const bookingsData = [
-  { id: '#NCCP123456', service: 'AC Service', date: '12 May 2025, 10:00 AM', status: 'Upcoming' },
-  { id: '#NCCP123455', service: 'Washing Machine Repair', date: '10 May 2025, 02:00 PM', status: 'Completed' },
-  { id: '#NCCP123454', service: 'RO Service', date: '08 May 2025, 11:00 AM', status: 'Completed' },
-  { id: '#NCCP123453', service: 'Refrigerator Service', date: '05 May 2025, 04:00 PM', status: 'Cancelled' },
-];
+import { apiRequest } from '../lib/apiClient';
 
 const tabs = ['All', 'Upcoming', 'Completed', 'Cancelled'];
 
@@ -15,15 +9,42 @@ const statusStyles = {
   Upcoming: 'text-[#1565C0] font-extrabold',
   Completed: 'text-[#2E7D32] font-extrabold',
   Cancelled: 'text-rose-600 font-extrabold',
+  Pending: 'text-[#1565C0] font-extrabold',
 };
 
 const MyBookings = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('All');
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const loadBookings = async () => {
+      setLoading(true);
+      try {
+        const res = await apiRequest('/bookings', { auth: true });
+        const listToMap = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+        const apiList = listToMap.map(b => ({
+          id: b.bookingId || b.id || `#NCC${b._id?.slice(-6)}`,
+          service: b.serviceName || b.service || 'Service Request',
+          date: b.scheduledDate ? new Date(b.scheduledDate).toLocaleDateString() : 'Scheduled',
+          status: b.status === 'Pending' ? 'Upcoming' : (b.status || 'Upcoming')
+        }));
+
+        setBookings(apiList);
+      } catch (err) {
+        setBookings([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadBookings();
+  }, []);
 
   const filtered = activeTab === 'All'
-    ? bookingsData
-    : bookingsData.filter((b) => b.status === activeTab);
+    ? bookings
+    : bookings.filter((b) => b.status === activeTab);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-10">
@@ -57,7 +78,20 @@ const MyBookings = () => {
 
       {/* Bookings List */}
       <div className="flex flex-col divide-y divide-slate-100">
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="animate-pulse p-5 space-y-4">
+            {[1, 2, 3].map((n) => (
+              <div key={n} className="bg-white border border-slate-100 rounded-xl p-4 flex flex-col gap-2">
+                <div className="flex justify-between items-center">
+                  <div className="h-4 bg-slate-200 rounded w-1/4"></div>
+                  <div className="h-4 bg-slate-200 rounded-full w-1/5"></div>
+                </div>
+                <div className="h-3.5 bg-slate-200 rounded w-1/2"></div>
+                <div className="h-3 bg-slate-200 rounded w-1/3"></div>
+              </div>
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3 text-center px-6">
             <div className="w-14 h-14 bg-slate-100 rounded-full flex items-center justify-center">
               <Wrench className="h-6 w-6 text-slate-400" />

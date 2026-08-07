@@ -1,14 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
 import { RefreshCcw, Clock, CheckCircle2, X, Search, Download, Eye, MessageSquare } from 'lucide-react';
-
-const replacements = [
-  { id: 'RPL-001', complaintId: 'TKT/250521/001354', customer: 'Rohit Kumar', product: 'Air Conditioner', model: '5 Star 1.5T', reason: 'Motor burnt — beyond repair', techNotes: 'Tried 3 times, issue persists in compressor unit', tech: 'Suresh Raina', date: '21 May 2025', status: 'Pending' },
-  { id: 'RPL-002', complaintId: 'TKT/250520/000812', customer: 'Meena Joshi', product: 'Television', model: 'OLED 55"', reason: 'Panel cracked — manufacturing defect', techNotes: 'Customer reported on second day of purchase. Panel replaced but recurred.', tech: 'Vikram Batra', date: '20 May 2025', status: 'Pending' },
-  { id: 'RPL-003', complaintId: 'TKT/250519/000654', customer: 'Sunita Sharma', product: 'Washing Machine', model: 'FHM1408BDL', reason: 'PCB failure — part unavailable', techNotes: 'PCB not in stock, ETA 30+ days. Customer cannot wait.', tech: 'Amit Singh', date: '19 May 2025', status: 'Approved' },
-  { id: 'RPL-004', complaintId: 'TKT/250518/000321', customer: 'Anil Tiwari', product: 'Refrigerator', model: 'GL-T292SBS', reason: 'Cooling not achieved after 2 compressor replacements', techNotes: 'Product appears to have systemic defect in this batch.', tech: 'Rahul Kumar', date: '18 May 2025', status: 'Rejected' },
-];
+import { apiRequest } from '../../lib/apiClient';
 
 const statusColors = {
   Pending: 'bg-yellow-100 text-yellow-700',
@@ -17,23 +11,71 @@ const statusColors = {
   'Info Requested': 'bg-blue-100 text-blue-700',
 };
 
+const dateFormatter = new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
+function shape(approval) {
+  return {
+    // The API id is what mutations address; humanId is the operator-facing code.
+    id: approval.id,
+    ref: approval.humanId || approval.id,
+    complaintId: approval.serviceRequest?.humanId || '—',
+    customer: approval.serviceRequest?.user?.name || 'Customer',
+    product: approval.product || 'Product',
+    model: approval.model || '—',
+    reason: approval.reason || '—',
+    techNotes: approval.techNotes || '—',
+    tech: approval.technician?.name || 'Unassigned',
+    date: approval.createdAt ? dateFormatter.format(new Date(approval.createdAt)) : '—',
+    status: approval.status || 'Pending',
+  };
+}
+
 const ReplacementApprovals = () => {
-  const [data, setData] = useState(replacements);
+  const [data, setData] = useState([]);
   const [searchQ, setSearchQ] = useState('');
   const [selectedItem, setSelectedItem] = useState(null);
   const [successMsg, setSuccessMsg] = useState('');
   const [filterStatus, setFilterStatus] = useState('All');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   const toast = (msg) => { setSuccessMsg(msg); setTimeout(() => setSuccessMsg(''), 3000); };
 
-  const updateStatus = (id, newStatus) => {
-    setData(d => d.map(r => r.id === id ? { ...r, status: newStatus } : r));
+  useEffect(() => {
+    let cancelled = false;
+    async function loadApprovals() {
+      try {
+        const res = await apiRequest('/brand/replacement-approvals', { auth: true });
+        if (!cancelled) setData((res?.data || []).map(shape));
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    loadApprovals();
+    return () => { cancelled = true; };
+  }, []);
+
+  const updateStatus = async (id, newStatus) => {
+    const previous = data;
+    const row = data.find(r => r.id === id);
+    setData(d => d.map(r => (r.id === id ? { ...r, status: newStatus } : r)));
     setSelectedItem(null);
-    toast(`Replacement request ${id} ${newStatus}!`);
+    try {
+      await apiRequest(`/brand/replacement-approvals/${id}/status`, {
+        method: 'PATCH', auth: true, body: { status: newStatus },
+      });
+      toast(`Replacement request ${row?.ref || id} ${newStatus}!`);
+    } catch (err) {
+      setData(previous);
+      setError(`Could not update request: ${err.message}`);
+    }
   };
 
+  const q = searchQ.toLowerCase();
   const filtered = data.filter(r => {
-    const matchSearch = r.customer.toLowerCase().includes(searchQ.toLowerCase()) || r.id.toLowerCase().includes(searchQ.toLowerCase());
+    const matchSearch = r.customer.toLowerCase().includes(q) || r.ref.toLowerCase().includes(q);
     const matchStatus = filterStatus === 'All' || r.status === filterStatus;
     return matchSearch && matchStatus;
   });
@@ -82,12 +124,17 @@ const ReplacementApprovals = () => {
             </div>
 
             <div className="space-y-3">
-              {filtered.map((r, i) => (
-                <div key={i} className="border border-[#E2E8F0] rounded-xl p-4 hover:shadow-sm transition-all">
+              {loading && <p className="text-center py-10 text-xs font-semibold text-[#64748B]">Loading replacement requests…</p>}
+              {!loading && error && <p className="text-center py-10 text-xs font-semibold text-red-600">{error}</p>}
+              {!loading && !error && filtered.length === 0 && (
+                <p className="text-center py-10 text-xs font-semibold text-[#64748B]">No replacement requests found.</p>
+              )}
+              {filtered.map((r) => (
+                <div key={r.id} className="border border-[#E2E8F0] rounded-xl p-4 hover:shadow-sm transition-all">
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="font-bold text-[#0D47A1] text-xs">{r.id}</span>
+                        <span className="font-bold text-[#0D47A1] text-xs">{r.ref}</span>
                         <span className="text-[#94A3B8] text-[10px]">→</span>
                         <span className="text-[10px] text-[#64748B]">{r.complaintId}</span>
                         <span className={`ml-2 px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusColors[r.status]}`}>{r.status}</span>

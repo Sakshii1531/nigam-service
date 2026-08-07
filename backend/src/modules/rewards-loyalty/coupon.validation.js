@@ -5,4 +5,5 @@ export const createCouponSchema = z.object({
   discount: z.coerce.number().positive(),
   description: z.string().optional(),
   expiry: z.coerce.date().optional(),
+  applicableOn: z.array(z.enum(['product', 'service', 'plan'])).optional(),
 });

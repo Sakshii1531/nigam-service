@@ -1,25 +1,47 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import { Search, Image, Plus, Trash2, Eye } from 'lucide-react';
+import { apiRequest } from '../../lib/apiClient';
 
 const Stories = () => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [stories, setStories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const [stories, setStories] = useState([
-    { id: 1, title: 'AC Servicing Special Discount', type: 'Promo Banner', aspect: '16:9', clicks: 420, active: 'Active' },
-    { id: 2, title: 'Safe Deep Cleaning Service', type: 'Customer Help Slider', aspect: '4:3', clicks: 128, active: 'Active' },
-    { id: 3, title: 'Winter Appliance Care Guidelines', type: 'Informational', aspect: '1:1', clicks: 350, active: 'Active' },
-    { id: 4, title: 'Special Monsoon Offers', type: 'Promo Banner', aspect: '16:9', clicks: 0, active: 'Scheduled' },
-  ]);
+  useEffect(() => {
+    let cancelled = false;
+    async function loadStories() {
+      try {
+        // /admin, not the public reader — the console must see Scheduled stories too.
+        const data = await apiRequest('/cms/stories/admin', { auth: true });
+        if (!cancelled) setStories(data?.data || []);
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    loadStories();
+    return () => { cancelled = true; };
+  }, []);
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
+    const previous = stories;
     setStories(prev => prev.filter(s => s.id !== id));
+    try {
+      await apiRequest(`/cms/stories/${id}`, { method: 'DELETE', auth: true });
+    } catch (err) {
+      setStories(previous);
+      setError(`Could not delete story: ${err.message}`);
+    }
   };
 
-  const filteredStories = stories.filter(s => 
-    s.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    s.type.toLowerCase().includes(searchQuery.toLowerCase())
+  const q = searchQuery.toLowerCase();
+  const filteredStories = stories.filter(s =>
+    (s.title || '').toLowerCase().includes(q) ||
+    (s.type || '').toLowerCase().includes(q)
   );
 
   return (
@@ -58,20 +80,29 @@ const Stories = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-sm">
+                {loading && (
+                  <tr><td colSpan={6} className="p-8 text-center text-slate-400 font-semibold">Loading stories…</td></tr>
+                )}
+                {!loading && error && (
+                  <tr><td colSpan={6} className="p-8 text-center text-red-600 font-semibold">{error}</td></tr>
+                )}
+                {!loading && !error && filteredStories.length === 0 && (
+                  <tr><td colSpan={6} className="p-8 text-center text-slate-400 font-semibold">No stories yet.</td></tr>
+                )}
                 {filteredStories.map((story) => (
                   <tr key={story.id} className="hover:bg-slate-50 transition-colors">
                     <td className="p-4 pl-6">
                       <p className="font-bold text-slate-800 flex items-center gap-1.5"><Image size={14} className="text-slate-400" /> {story.title}</p>
-                      <span className="text-[10px] text-slate-400 font-bold uppercase">ID: STY-{story.id + 100}</span>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase">ID: {story.id}</span>
                     </td>
                     <td className="p-4 font-semibold text-slate-600">{story.type}</td>
-                    <td className="p-4 text-xs font-bold text-[#0D47A1]">{story.aspect}</td>
-                    <td className="p-4 text-slate-700 font-bold flex items-center gap-1"><Eye size={12} /> {story.clicks}</td>
+                    <td className="p-4 text-xs font-bold text-[#0D47A1]">{story.aspectRatio || '—'}</td>
+                    <td className="p-4 text-slate-700 font-bold flex items-center gap-1"><Eye size={12} /> {story.clicks ?? 0}</td>
                     <td className="p-4">
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
-                        story.active === 'Active' ? 'bg-green-50 text-green-600 border border-green-100' : 'bg-yellow-50 text-yellow-600 border border-yellow-100'
+                        story.status === 'Active' ? 'bg-green-50 text-green-600 border border-green-100' : 'bg-yellow-50 text-yellow-600 border border-yellow-100'
                       }`}>
-                        {story.active}
+                        {story.status}
                       </span>
                     </td>
                     <td className="p-4 pr-6 text-right space-x-2">

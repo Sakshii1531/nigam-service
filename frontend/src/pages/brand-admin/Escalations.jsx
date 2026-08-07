@@ -129,9 +129,20 @@ const Escalations = () => {
         <Topbar title="Escalations" subtitle="Manage critical and high-priority escalated complaints" />
         
         {loading ? (
-          <div className="p-5 flex-1 flex flex-col justify-center items-center text-sm font-semibold text-[#64748B]">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0D47A1] mb-2"></div>
-            Loading escalations...
+          <div className="p-5 flex-1 animate-pulse space-y-5">
+            {/* Skeletons KPIs */}
+            <div className="grid grid-cols-4 gap-4">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="bg-white rounded-2xl border border-[#E2E8F0] p-4 h-20"></div>
+              ))}
+            </div>
+            {/* Skeletons Table/List */}
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] p-6 space-y-4">
+              <div className="h-5 bg-slate-200 rounded w-1/4"></div>
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-12 bg-slate-100 rounded-xl w-full"></div>
+              ))}
+            </div>
           </div>
         ) : error ? (
           <div className="p-5 flex-1 flex flex-col justify-center items-center text-sm font-semibold text-red-600">

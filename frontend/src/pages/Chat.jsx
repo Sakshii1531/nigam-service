@@ -1,68 +1,116 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Send, Paperclip, Check, CheckCheck, X, ShieldOff, Image as ImageIcon } from 'lucide-react';
+import { io } from 'socket.io-client';
+import { apiRequest, getStoredTokens } from '../lib/apiClient';
 
-const CANNED_REPLIES = [
-  'Sure, I will take care of that.',
-  'Okay, noted. See you soon!',
-  'I am carrying the required spare parts.',
-  'Please keep the appliance accessible, thanks.',
-];
+const SOCKET_URL = import.meta.env.VITE_API_BASE_URL
+  ? import.meta.env.VITE_API_BASE_URL.replace('/api/v1', '')
+  : 'http://localhost:4000';
 
 const Chat = () => {
   const navigate = useNavigate();
   const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState([
-    { id: 1, from: 'technician', text: 'I am on my way, will reach in 10 mins.', time: '10:45 AM' },
-    { id: 2, from: 'user', text: 'Great, I am at home.', time: '10:46 AM', status: 'read' },
-  ]);
-  const [techTyping, setTechTyping] = useState(false);
+  // A real conversation over the same chat gateway the technician app uses.
+  // This screen used to seed two invented messages and answer with a rotating
+  // list of canned technician replies, so a customer believed they were talking
+  // to their engineer when nothing was sent anywhere.
+  const [messages, setMessages] = useState([]);
+  const [conversationId, setConversationId] = useState(null);
+  const [chatError, setChatError] = useState('');
+  const [techTyping] = useState(false);
   const [attachment, setAttachment] = useState(null);
+  const [uploading, setUploading] = useState(false);
   const [sessionEnded, setSessionEnded] = useState(false);
   const bottomRef = useRef(null);
-  const replyIdx = useRef(0);
+  const socketRef = useRef(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const res = await apiRequest('/chat/conversations/support', { method: 'POST', auth: true });
+        const convo = res.data;
+        if (cancelled || !convo) return;
+        setConversationId(convo.id);
+        setSessionEnded(convo.status === 'Closed');
+
+        const history = await apiRequest(`/chat/conversations/${convo.id}/messages`, { auth: true });
+        if (cancelled) return;
+        setMessages((history.data || []).map((m) => ({
+          id: m.id,
+          from: m.sender === 'customer' ? 'user' : 'technician',
+          text: m.text,
+          attachment: m.attachmentUrl ? { name: m.attachmentName || 'Attachment', url: m.attachmentUrl } : null,
+          time: new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          status: 'read',
+        })));
+
+        const { accessToken } = getStoredTokens();
+        const socket = io(SOCKET_URL, { auth: { token: accessToken }, transports: ['websocket'] });
+        socketRef.current = socket;
+        socket.on('connect', () => socket.emit('join-conversation', { conversationId: convo.id }));
+        socket.on('message:new', (m) => {
+          setMessages((prev) => (prev.some((x) => x.id === m.id) ? prev : [...prev, {
+            id: m.id,
+            from: m.sender === 'customer' ? 'user' : 'technician',
+            text: m.text,
+            time: new Date(m.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            status: 'read',
+          }]));
+        });
+        socket.on('connect_error', () => setChatError('Lost connection to chat.'));
+      } catch (err) {
+        if (!cancelled) setChatError(err.message || 'Could not open this conversation.');
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => () => { socketRef.current?.disconnect(); }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, techTyping]);
 
-  const nowTime = () =>
-    new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
   const handleSend = (e) => {
     e.preventDefault();
     if (sessionEnded) return;
-    if (!message.trim() && !attachment) return;
+    const text = message.trim();
+    if (!text && !attachment) return;
+    if (!socketRef.current || !conversationId) {
+      setChatError('Chat is not connected yet. Please wait a moment and try again.');
+      return;
+    }
 
-    const newMsg = {
-      id: Date.now(),
-      from: 'user',
-      text: message.trim(),
-      attachment,
-      time: nowTime(),
-      status: 'sent',
-    };
-    setMessages((prev) => [...prev, newMsg]);
+    socketRef.current.emit(
+      'send-message',
+      { conversationId, text, attachmentUrl: attachment?.url, attachmentName: attachment?.name },
+      (ack) => { if (!ack?.ok) setChatError(ack?.error || 'Message could not be sent.'); },
+    );
     setMessage('');
     setAttachment(null);
-
-    // simulate delivery -> read, then a typing reply
-    setTimeout(() => {
-      setMessages((prev) => prev.map((m) => (m.id === newMsg.id ? { ...m, status: 'read' } : m)));
-      setTechTyping(true);
-    }, 900);
-
-    setTimeout(() => {
-      setTechTyping(false);
-      const reply = CANNED_REPLIES[replyIdx.current % CANNED_REPLIES.length];
-      replyIdx.current += 1;
-      setMessages((prev) => [...prev, { id: Date.now() + 1, from: 'technician', text: reply, time: nowTime() }]);
-    }, 2600);
   };
 
-  const handleAttach = () => {
-    // simulated file pick
-    setAttachment({ name: `work_photo_${Math.floor(Math.random() * 90 + 10)}.jpg` });
+  // A real upload — the previous version invented a filename like
+  // "work_photo_42.jpg" and attached nothing.
+  const handleAttach = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setChatError('');
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const res = await apiRequest('/uploads', { method: 'POST', auth: true, body: form });
+      setAttachment({ name: res.data.name, url: res.data.url });
+    } catch (err) {
+      setChatError(err.message || 'Could not attach that file.');
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
@@ -73,24 +121,19 @@ const Chat = () => {
           <ArrowLeft className="h-6 w-6 text-[#0D47A1]" />
         </button>
         <div className="flex items-center gap-3 ml-2 flex-1">
-          <div className="w-10 h-10 bg-[#0D47A1] rounded-full flex items-center justify-center text-white font-bold">R</div>
+          <div className="w-10 h-10 bg-[#0D47A1] rounded-full flex items-center justify-center text-white font-bold">N</div>
           <div>
-            <h1 className="text-sm font-bold text-text-primary">Rahul Sharma</h1>
+            <h1 className="text-sm font-bold text-text-primary">Nigam Care Support</h1>
             <span className="text-xs font-semibold text-green-500">
-              {techTyping ? 'typing…' : sessionEnded ? 'session closed' : 'Online'}
+              {sessionEnded ? 'session closed' : conversationId ? 'Connected' : 'Connecting…'}
             </span>
           </div>
         </div>
-        {!sessionEnded && (
-          <button
-            onClick={() => setSessionEnded(true)}
-            title="Simulate job completion"
-            className="ml-2 p-2.5 rounded-full hover:bg-slate-100 transition-colors text-text-secondary"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        )}
       </div>
+
+      {chatError && (
+        <p className="mx-4 mt-3 bg-red-50 border border-red-200 rounded-xl px-3 py-2 text-[11px] font-bold text-red-700">{chatError}</p>
+      )}
 
       {/* Messages */}
       <div className="flex-1 p-4 flex flex-col gap-3 overflow-y-auto bg-slate-50">
@@ -169,9 +212,10 @@ const Chat = () => {
         </div>
       ) : (
         <form onSubmit={handleSend} className="p-4 border-t border-border-color bg-white flex items-center gap-3">
-          <button type="button" onClick={handleAttach} className="p-3 text-text-secondary hover:text-[#0D47A1] transition-colors">
-            <Paperclip className="h-5 w-5" />
-          </button>
+          <label className="p-3 text-text-secondary hover:text-[#0D47A1] transition-colors cursor-pointer">
+            <Paperclip className={`h-5 w-5 ${uploading ? 'opacity-40' : ''}`} />
+            <input type="file" accept="image/*,application/pdf" onChange={handleAttach} className="hidden" disabled={uploading} />
+          </label>
           <input
             type="text"
             placeholder="Type a message..."

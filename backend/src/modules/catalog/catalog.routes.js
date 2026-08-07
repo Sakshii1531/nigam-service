@@ -4,6 +4,7 @@ import { requireAuth, requireRole } from '../../middleware/auth.js';
 import { ok, created } from '../../utils/respond.js';
 import { ROLES } from '../../config/constants.js';
 import * as catalogService from './catalog.service.js';
+import { Brand } from '../super-admin/brand.model.js';
 import {
   createCategorySchema,
   updateCategorySchema,
@@ -20,6 +21,18 @@ const requireAdmin = [requireAuth, requireRole(ROLES.SUPER_ADMIN)];
 catalogRouter.get('/categories', async (req, res, next) => {
   try {
     ok(res, await catalogService.listCategories());
+  } catch (err) {
+    next(err);
+  }
+});
+
+// The brands a customer can pick when registering an appliance. The full Brand
+// record is super-admin-only; this exposes just the labels the picker needs, so
+// customer screens stop shipping their own hardcoded brand list.
+catalogRouter.get('/brands', async (req, res, next) => {
+  try {
+    const brands = await Brand.find({ status: 'Active' }).select('name category').sort({ name: 1 });
+    ok(res, brands);
   } catch (err) {
     next(err);
   }

@@ -9,6 +9,7 @@ import {
   listQuerySchema,
   assignManagerSchema,
   updateStatusSchema,
+  updatePrioritySchema,
   idParamSchema,
 } from './escalation.validation.js';
 
@@ -60,6 +61,19 @@ escalationRouter.patch(
   async (req, res, next) => {
     try {
       ok(res, await escalationService.updateStatus(req.params.id, req.body.status));
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+escalationRouter.patch(
+  '/:id/priority',
+  validate(idParamSchema, 'params'),
+  validate(updatePrioritySchema),
+  async (req, res, next) => {
+    try {
+      ok(res, await escalationService.updatePriority(req.params.id, req.body.priority));
     } catch (err) {
       next(err);
     }

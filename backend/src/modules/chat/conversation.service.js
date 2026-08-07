@@ -26,6 +26,8 @@ async function assembleConversation(conversation) {
   const json = conversation.toJSON();
   return {
     ...json,
+    // 'support' is a customer<->brand thread; 'job' is customer<->technician.
+    kind: conversation.platformSupport ? 'platform-support' : conversation.brand ? 'support' : 'job',
     customer: customer ? { id: customer.id, name: customer.name, phone: maskIdentifier(customer.phone || '') } : null,
     technician: technician ? { id: technician.id, name: technician.name, phone: maskIdentifier(technician.phone || '') } : null,
   };
@@ -41,11 +43,52 @@ export async function getOrCreateConversation({ serviceRequest, customer, techni
   return assembleConversation(conversation);
 }
 
+/**
+ * Open (or reuse) a brand's support thread with one of its customers.
+ *
+ * Keyed on (customer, brand) with technician null, so a support thread is
+ * always distinct from the job chat that customer may also have with a
+ * technician — they must not collapse into one another.
+ */
+export async function getOrCreateBrandConversation(brandId, customerId) {
+  const customer = await User.findById(customerId);
+  if (!customer) throw new ApiError(404, 'Customer not found');
+  if (customer.role !== ROLES.CUSTOMER) throw new ApiError(400, 'Support threads can only be opened with a customer');
+
+  const conversation = await Conversation.findOneAndUpdate(
+    { customer: customerId, brand: brandId, technician: null },
+    { customer: customerId, brand: brandId, technician: null, status: 'Open' },
+    { upsert: true, new: true, setDefaultsOnInsert: true },
+  );
+  return assembleConversation(conversation);
+}
+
+/**
+ * Open (or reuse) the caller's own platform help-desk thread.
+ *
+ * One thread per user, not one per query: the desk is a running conversation,
+ * so a customer with an unanswered question does not accumulate duplicates.
+ * Technicians raise theirs against their own User account, same as customers.
+ */
+export async function getOrCreateSupportConversation(userId) {
+  const conversation = await Conversation.findOneAndUpdate(
+    { customer: userId, platformSupport: true },
+    { customer: userId, platformSupport: true, technician: null, brand: null, status: 'Open' },
+    { upsert: true, new: true, setDefaultsOnInsert: true },
+  );
+  return assembleConversation(conversation);
+}
+
 export async function listConversations(reqUser) {
   const query = {};
   if (reqUser.role === ROLES.CUSTOMER) query.customer = reqUser.id;
   else if (reqUser.role === ROLES.TECHNICIAN) query.technician = await requestingTechnicianId(reqUser);
-  else throw new ApiError(403, 'Only customers and technicians have conversations');
+  // A brand admin sees only their own brand's support threads.
+  else if (reqUser.role === ROLES.BRAND_ADMIN && reqUser.brand) query.brand = reqUser.brand;
+  // Super-admin sees the platform help-desk queue, not every conversation on
+  // the platform — job and brand threads stay private to their participants.
+  else if (reqUser.role === ROLES.SUPER_ADMIN) query.platformSupport = true;
+  else throw new ApiError(403, 'This account has no conversations');
 
   const conversations = await Conversation.find(query).sort({ updatedAt: -1 });
   return Promise.all(conversations.map(assembleConversation));
@@ -58,7 +101,9 @@ async function findOwnedOr404(reqUser, id) {
   const technicianId = await requestingTechnicianId(reqUser);
   const isOwner =
     (reqUser.role === ROLES.CUSTOMER && String(conversation.customer) === reqUser.id) ||
-    (reqUser.role === ROLES.TECHNICIAN && technicianId && String(conversation.technician) === technicianId);
+    (reqUser.role === ROLES.TECHNICIAN && technicianId && String(conversation.technician) === technicianId) ||
+    (reqUser.role === ROLES.BRAND_ADMIN && conversation.brand && String(conversation.brand) === reqUser.brand) ||
+    (reqUser.role === ROLES.SUPER_ADMIN && conversation.platformSupport);
   if (!isOwner) throw new ApiError(403, 'Not a participant of this conversation');
 
   return conversation;

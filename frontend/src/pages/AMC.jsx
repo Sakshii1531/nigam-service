@@ -7,6 +7,8 @@ import {
   Lock, Landmark, Wallet, Percent, Home as HomeIcon, LayoutGrid, User
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { apiRequest } from '../lib/apiClient';
+import { payWithRazorpay } from '../lib/razorpayCheckout';
 
 import fridgeImg from '../assets/appliance_fridge.png';
 import washingImg from '../assets/categories/wasing.png';
@@ -37,6 +39,7 @@ const AMC = () => {
 
   // Form states
   const [selectedBrand, setSelectedBrand] = useState('');
+  const [purchaseError, setPurchaseError] = useState('');
   const [modelNumber, setModelNumber] = useState('');
   const [installationDate, setInstallationDate] = useState('');
   const [pincode, setPincode] = useState('');
@@ -847,12 +850,44 @@ const AMC = () => {
             {/* Pay Button */}
             <div className="flex flex-col gap-2.5 mt-2">
               <button
-                onClick={() => navigate(`/buy/amc/success/${encodeURIComponent(selectedAppliance || '')}/${selectedPlanIndex}`)}
+                // A failed subscription must not reach the success screen — the
+                // customer would believe they were covered with no contract on file.
+                onClick={async () => {
+                  setPurchaseError('');
+                  try {
+                    const res = await apiRequest('/warranty-amc/amc/subscriptions', {
+                      method: 'POST',
+                      auth: true,
+                      body: {
+                        planName: selectedPlan?.title || 'Annual Protection Plan',
+                        category: selectedAppliance || 'Appliance',
+                        brand: selectedBrand || 'Nigam Care',
+                        model: modelNumber || undefined,
+                      },
+                    });
+
+                    // Not covered until the payment clears.
+                    if (res.data.razorpay) {
+                      await payWithRazorpay({
+                        razorpay: res.data.razorpay,
+                        verifyPath: `/warranty-amc/amc/subscriptions/${res.data.subscription.id}/verify-payment`,
+                        description: selectedPlan?.title,
+                      });
+                    }
+                  } catch (err) {
+                    setPurchaseError(err.message || 'We could not activate this plan. You have not been charged — please try again.');
+                    return;
+                  }
+                  navigate(`/buy/amc/success/${encodeURIComponent(selectedAppliance || '')}/${selectedPlanIndex}`);
+                }}
                 className="w-full bg-brand-yellow hover:bg-yellow-400 text-brand-navy font-black py-4 rounded-2xl transition-all shadow-md text-sm cursor-pointer active:scale-98 flex items-center justify-center gap-2"
               >
                 <Lock className="h-4 w-4" />
                 Pay ₹{Math.round(selectedPlan.price * 1.18)} Securely
               </button>
+              {purchaseError && (
+                <p className="text-[11px] font-bold text-red-600 text-center px-2">{purchaseError}</p>
+              )}
               <div className="flex items-center justify-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                 <ShieldCheck className="h-4 w-4 text-green-600" />
                 100% Secure Payment

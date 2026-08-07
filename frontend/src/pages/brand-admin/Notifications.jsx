@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
+import { apiRequest } from '../../lib/apiClient';
 import { 
   Bell, 
   ClipboardList, 
@@ -11,6 +12,30 @@ import {
   Trash2,
   Check
 } from 'lucide-react';
+
+const relative = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
+
+function timeAgo(iso) {
+  if (!iso) return '—';
+  const seconds = (new Date(iso) - Date.now()) / 1000;
+  for (const [unit, size] of [['day', 86400], ['hour', 3600], ['minute', 60]]) {
+    if (Math.abs(seconds) >= size) return relative.format(Math.round(seconds / size), unit);
+  }
+  return 'just now';
+}
+
+// The model's `priority` is Low/Medium/High; this screen styles on lowercase.
+function shape(n) {
+  return {
+    id: n.id,
+    type: n.type,
+    title: n.title,
+    message: n.message || n.detail || '',
+    time: timeAgo(n.createdAt),
+    read: !!n.read,
+    priority: (n.priority || 'Medium').toLowerCase(),
+  };
+}
 
 const Notifications = () => {
   const [activeTab, setActiveTab] = useState('all');
@@ -23,12 +48,25 @@ const Notifications = () => {
     { id: 'dispatch', label: 'Dispatch Alerts' },
   ];
 
-  const [notifications, setNotifications] = useState([
-    { id: 1, type: 'service', title: 'New Service Request', message: 'Customer Amit Sharma raised a new request for Smart TV.', time: '10 mins ago', read: false, priority: 'high' },
-    { id: 2, type: 'tech', title: 'Technician Assigned', message: 'Rahul Kumar has been assigned to Request #SR-8902.', time: '25 mins ago', read: true, priority: 'medium' },
-    { id: 3, type: 'dispatch', title: 'Part Dispatched', message: 'Compressor for Request #SR-8901 has been dispatched.', time: '1 hour ago', read: false, priority: 'medium' },
-    { id: 4, type: 'service', title: 'Service Completed', message: 'Request #SR-8903 has been marked as completed.', time: '4 hours ago', read: true, priority: 'low' },
-  ]);
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadNotifications() {
+      try {
+        const data = await apiRequest('/notifications', { auth: true });
+        if (!cancelled) setNotifications((data?.data || []).map(shape));
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    loadNotifications();
+    return () => { cancelled = true; };
+  }, []);
 
   const showToast = (message) => {
     setSuccessMessage(message);
@@ -37,23 +75,39 @@ const Notifications = () => {
     }, 3000);
   };
 
-  const handleMarkAsRead = (id) => {
-    setNotifications(notifications.map(n => n.id === id ? { ...n, read: true } : n));
-    showToast('Notification marked as read');
+  const handleMarkAsRead = async (id) => {
+    const previous = notifications;
+    setNotifications(prev => prev.map(n => (n.id === id ? { ...n, read: true } : n)));
+    try {
+      await apiRequest(`/notifications/${id}/read`, { method: 'PATCH', auth: true });
+      showToast('Notification marked as read');
+    } catch (err) {
+      setNotifications(previous);
+      setError(`Could not mark as read: ${err.message}`);
+    }
   };
 
-  const handleMarkAllRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, read: true })));
-    showToast('All notifications marked as read');
+  const handleMarkAllRead = async () => {
+    const previous = notifications;
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    try {
+      await apiRequest('/notifications/read-all', { method: 'PATCH', auth: true });
+      showToast('All notifications marked as read');
+    } catch (err) {
+      setNotifications(previous);
+      setError(`Could not mark all as read: ${err.message}`);
+    }
   };
 
+  // The API has no delete endpoint for notifications, so this only dismisses the
+  // row locally — it will reappear on reload. Marking read is the durable action.
   const handleDelete = (id) => {
-    setNotifications(notifications.filter(n => n.id !== id));
-    showToast('Notification deleted');
+    setNotifications(prev => prev.filter(n => n.id !== id));
+    showToast('Notification dismissed for this session');
   };
 
-  const filteredNotifications = activeTab === 'all' 
-    ? notifications 
+  const filteredNotifications = activeTab === 'all'
+    ? notifications
     : notifications.filter(n => n.type === activeTab);
 
   const getIcon = (type) => {
@@ -163,9 +217,23 @@ const Notifications = () => {
               </div>
             ))}
 
-            {filteredNotifications.length === 0 && (
-              <div className="text-center py-12 bg-white rounded-xl border border-[#E2E8F0] animate-in fade-in duration-200">
+            {loading && (
+              <div className="text-center py-12 bg-white rounded-xl border border-[#E2E8F0]">
                 <Bell size={48} className="text-[#64748B] mx-auto mb-4 animate-pulse" />
+                <p className="text-sm text-[#64748B] font-semibold">Loading notifications…</p>
+              </div>
+            )}
+
+            {!loading && error && (
+              <div className="text-center py-12 bg-white rounded-xl border border-[#E2E8F0]">
+                <AlertTriangle size={48} className="text-red-500 mx-auto mb-4" />
+                <p className="text-sm text-red-600 font-semibold">{error}</p>
+              </div>
+            )}
+
+            {!loading && !error && filteredNotifications.length === 0 && (
+              <div className="text-center py-12 bg-white rounded-xl border border-[#E2E8F0] animate-in fade-in duration-200">
+                <Bell size={48} className="text-[#64748B] mx-auto mb-4" />
                 <h3 className="text-lg font-bold text-[#1E293B] mb-1">No Notifications</h3>
                 <p className="text-sm text-[#64748B]">You have no notifications in this category.</p>
               </div>

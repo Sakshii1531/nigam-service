@@ -1,22 +1,54 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
 import { IndianRupee, Clock, CheckCircle2, Download, Search, Filter } from 'lucide-react';
+import { apiRequest } from '../../lib/apiClient';
 
-const customerPayments = [
-  { id: 'PAY-001', party: 'Amit Sharma', complaintId: 'LG/250521/001756', amount: '₹2,596', mode: 'UPI', date: '21 May 2025', status: 'Paid' },
-  { id: 'PAY-002', party: 'Priya Verma', complaintId: 'LG/250521/001351', amount: '₹944', mode: 'Cash', date: '21 May 2025', status: 'Paid' },
-  { id: 'PAY-003', party: 'Rohit Kumar', complaintId: 'LG/250521/001354', amount: '₹6,726', mode: 'Card', date: '21 May 2025', status: 'Pending' },
-  { id: 'PAY-004', party: 'Neha Singh', complaintId: 'LG/250521/001253', amount: '₹3,186', mode: 'UPI', date: '20 May 2025', status: 'Overdue' },
-  { id: 'PAY-005', party: 'Vikas Yadav', complaintId: 'LG/250521/001052', amount: '₹1,200', mode: 'Net Banking', date: '20 May 2025', status: 'Paid' },
-];
+const currency = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+const dateFormatter = new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
-const techPayouts = [
-  { id: 'TPY-001', party: 'Rahul Kumar', jobsCompleted: 12, amount: '₹9,600', mode: 'Bank Transfer', date: '20 May 2025', status: 'Paid' },
-  { id: 'TPY-002', party: 'Amit Singh', jobsCompleted: 9, amount: '₹7,200', mode: 'Bank Transfer', date: '20 May 2025', status: 'Pending' },
-  { id: 'TPY-003', party: 'Suresh Raina', jobsCompleted: 15, amount: '₹12,000', mode: 'Bank Transfer', date: '19 May 2025', status: 'Paid' },
-  { id: 'TPY-004', party: 'Vikram Batra', jobsCompleted: 7, amount: '₹5,600', mode: 'Bank Transfer', date: '19 May 2025', status: 'Pending' },
-];
+// Payment.status is Success/Failed/Refunded/Pending; this screen's badges speak
+// Paid/Pending/Failed, so 'Success' maps onto 'Paid'.
+const PAYMENT_STATUS = { Success: 'Paid', Pending: 'Pending', Failed: 'Failed', Refunded: 'Refunded' };
+
+function shapePayment(p) {
+  return {
+    id: p.id,
+    party: p.user?.name || 'Customer',
+    complaintId: '—',
+    amount: currency.format(p.amount || 0),
+    mode: p.method,
+    date: p.createdAt ? dateFormatter.format(new Date(p.createdAt)) : '—',
+    status: PAYMENT_STATUS[p.status] || p.status,
+  };
+}
+
+function shapePayout(p) {
+  return {
+    id: p.id,
+    party: p.technician?.name || 'Technician',
+    complaintId: p.job?.serviceRequest?.humanId || '—',
+    jobsCompleted: 1,
+    amount: currency.format(p.netAmount || 0),
+    mode: p.payoutType === 'Invoice' ? 'Bank Transfer' : 'UPI',
+    date: p.createdAt ? dateFormatter.format(new Date(p.createdAt)) : '—',
+    status: p.status === 'Settled' ? 'Paid' : 'Pending',
+  };
+}
+
+function shapeDue(i) {
+  return {
+    id: i.id,
+    party: i.customer?.name || 'Customer',
+    complaintId: i.serviceRequest?.humanId || '—',
+    amount: currency.format(i.total || 0),
+    mode: '—',
+    date: i.createdAt ? dateFormatter.format(new Date(i.createdAt)) : '—',
+    status: i.status,
+  };
+}
+
+
 
 const statusColors = {
   Paid: 'bg-green-100 text-green-700',
@@ -39,13 +71,45 @@ const Payments = () => {
   const [filterStatus, setFilterStatus] = useState('All');
   const [successMsg, setSuccessMsg] = useState('');
 
+  const [customerPayments, setCustomerPayments] = useState([]);
+  const [techPayouts, setTechPayouts] = useState([]);
+  const [dues, setDues] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
   const toast = (msg) => { setSuccessMsg(msg); setTimeout(() => setSuccessMsg(''), 3000); };
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadPayments() {
+      try {
+        // Three separate views, each resolved server-side through
+        // Job -> ServiceRequest.brand (or Invoice.brand for dues).
+        const [pay, out, due] = await Promise.all([
+          apiRequest('/brand/payments/customer', { auth: true }),
+          apiRequest('/brand/payments/payouts', { auth: true }),
+          apiRequest('/brand/payments/dues', { auth: true }),
+        ]);
+        if (cancelled) return;
+        setCustomerPayments((Array.isArray(pay) ? pay : []).map(shapePayment));
+        setTechPayouts((Array.isArray(out) ? out : []).map(shapePayout));
+        setDues((Array.isArray(due) ? due : []).map(shapeDue));
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    loadPayments();
+    return () => { cancelled = true; };
+  }, []);
 
   const tabs = ['Customer Payments', 'Technician Payouts', 'Pending Dues'];
 
+  // Pending Dues is its own server-side view (unsettled invoices), not a
+  // client-side filter over the other two tabs.
   const activeData = tab === 'Customer Payments' ? customerPayments :
-    tab === 'Technician Payouts' ? techPayouts :
-    [...customerPayments.filter(p => p.status !== 'Paid'), ...techPayouts.filter(p => p.status !== 'Paid')];
+    tab === 'Technician Payouts' ? techPayouts : dues;
 
   const filtered = activeData.filter(p => {
     const matchSearch = p.party.toLowerCase().includes(searchQ.toLowerCase()) || p.id.toLowerCase().includes(searchQ.toLowerCase());
@@ -120,6 +184,15 @@ const Payments = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#F1F5F9]">
+                  {loading && (
+                    <tr><td colSpan={8} className="px-3 py-10 text-center text-[#64748B] font-semibold">Loading payments…</td></tr>
+                  )}
+                  {!loading && error && (
+                    <tr><td colSpan={8} className="px-3 py-10 text-center text-red-600 font-semibold">{error}</td></tr>
+                  )}
+                  {!loading && !error && filtered.length === 0 && (
+                    <tr><td colSpan={8} className="px-3 py-10 text-center text-[#64748B] font-semibold">Nothing to show for this view.</td></tr>
+                  )}
                   {filtered.map((p, i) => (
                     <tr key={i} className="hover:bg-[#F8FAFC] transition-colors">
                       <td className="px-3 py-3 text-[#0D47A1] font-semibold">{p.id}</td>

@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Wallet, ShieldCheck, QrCode } from 'lucide-react';
+import { ArrowLeft, Wallet, ShieldCheck } from 'lucide-react';
 import { apiRequest } from '../lib/apiClient';
+import { payWithRazorpay } from '../lib/razorpayCheckout';
+import { useAuth } from '../context/AuthContext';
 
 const UpiPayment = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
 
   const [upiId, setUpiId] = useState('');
 
@@ -41,6 +44,17 @@ const UpiPayment = () => {
           auth: true,
         });
 
+        // Collect the advance for real before showing the success screen. A
+        // cancelled or declined payment must not look like a completed booking.
+        if (result.razorpay) {
+          await payWithRazorpay({
+            razorpay: result.razorpay,
+            verifyPath: `/bookings/${result.booking.id}/verify-payment`,
+            description: meta.service || meta.category,
+            prefill: { name: meta.fullName, contact: meta.mobile },
+          });
+        }
+
         // Navigate to success page with real serviceRequestId returned from backend
         const params = new URLSearchParams({
           type: 'service',
@@ -69,23 +83,49 @@ const UpiPayment = () => {
       } finally {
         setLoading(false);
       }
+    } else if (isProductBuy && paymentState.productId) {
+      // Product purchases go through the real order + gateway path. This branch
+      // used to jump straight to the success page, creating no order and taking
+      // no money.
+      setLoading(true);
+      try {
+        const orderRes = await apiRequest('/orders', {
+          method: 'POST',
+          auth: true,
+          body: {
+            items: [{ productId: paymentState.productId, quantity: paymentState.quantity || 1 }],
+            address: paymentState.address,
+            couponCode: paymentState.couponCode,
+            exchangeRequestId: paymentState.exchangeRequestId,
+            coinsToRedeem: paymentState.coinsToRedeem || 0,
+            paymentMethod: 'UPI',
+          },
+        });
+        const order = orderRes.data;
+        if (order.razorpay) {
+          await payWithRazorpay({
+            razorpay: order.razorpay,
+            verifyPath: `/orders/${order.id}/verify-payment`,
+            description: itemName,
+          });
+        }
+        navigate(`/booking-success?service=${encodeURIComponent(itemName)}&type=product&price=${itemPrice}&orderId=${order.id}`);
+      } catch (err) {
+        navigate('/payment-failure', {
+          state: { errorMessage: err.message || 'The purchase could not be completed.', productName: itemName, price: finalPrice },
+        });
+      } finally {
+        setLoading(false);
+      }
     } else {
-      if (isProductBuy) {
-        navigate(`/booking-success?service=${encodeURIComponent(itemName)}&type=product&price=${itemPrice}`);
-      } else {
-        navigate(`/booking-success?service=${encodeURIComponent(itemName)}`);
-      }
+      navigate('/payment-failure', {
+        state: {
+          errorMessage: 'This checkout is missing the details needed to place an order. Please start again from the product page.',
+          productName: itemName,
+          price: finalPrice,
+        },
+      });
     }
-  };
-
-  const handleFailurePay = () => {
-    navigate('/payment-failure', {
-      state: {
-        errorMessage: 'UPI payment request timed out / declined by the user in their payment app.',
-        productName: itemName,
-        price: finalPrice,
-      }
-    });
   };
 
   return (
@@ -106,18 +146,9 @@ const UpiPayment = () => {
         {/* Content */}
         <div className="flex-1 p-5 flex flex-col gap-5 overflow-y-auto items-center">
           
-          {/* Simulated QR Code Scan */}
-          <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl flex flex-col items-center gap-2.5 relative shadow-inner w-full max-w-[280px]">
-            <div className="p-3 bg-white rounded-xl shadow border border-slate-100 relative overflow-hidden group">
-              <QrCode className="h-28 w-28 text-[#0D47A1]" />
-              {/* Dynamic laser scan line */}
-              <div className="absolute top-0 left-0 right-0 h-0.5 bg-[#FFD600] shadow-md animate-[bounce_2s_infinite]"></div>
-            </div>
-            <span className="text-[9px] font-extrabold text-[#2E7D32] bg-[#EBF7EE] px-2.5 py-0.5 rounded-full uppercase tracking-wider animate-pulse">
-              Scan QR to Pay Instantly
-            </span>
-          </div>
-
+          {/* The decorative QR that used to sit here was not a payment code —
+              scanning it did nothing. Razorpay Checkout shows a real, scannable
+              UPI QR when the customer picks UPI, so there is nothing to draw. */}
           <div className="w-full border-t border-dashed border-slate-200 my-1"></div>
 
           {/* UPI ID Form */}
@@ -132,8 +163,9 @@ const UpiPayment = () => {
                 className="flex-1 bg-slate-50 border border-slate-200 px-3 py-2.5 rounded-xl text-xs font-bold text-text-primary focus:border-[#0D47A1] focus:bg-white outline-none transition-all"
               />
               <button 
+                type="button"
                 className="bg-[#0D47A1] text-white px-3.5 rounded-xl text-xs font-bold hover:bg-blue-900 transition-all cursor-pointer"
-                onClick={() => setUpiId('sakshi@paytm')}
+                onClick={() => setUpiId(`${user?.name ? user.name.split(' ')[0].toLowerCase() : 'customer'}@paytm`)}
               >
                 Verify
               </button>
@@ -158,16 +190,7 @@ const UpiPayment = () => {
             disabled={loading}
             className="w-full bg-[#FFD600] text-[#0D47A1] font-extrabold py-3.5 rounded-2xl flex items-center justify-center gap-2 hover:bg-yellow-400 active:scale-[0.99] transition-all shadow-md cursor-pointer text-xs"
           >
-            {loading ? 'Processing Payment...' : `Authorize UPI Pay (Success) ₹${finalPrice.toLocaleString('en-IN')}`}
-          </button>
-          
-          <button
-            type="button"
-            onClick={handleFailurePay}
-            disabled={loading}
-            className="w-full bg-red-50 text-red-650 hover:bg-red-100 hover:text-red-700 font-extrabold py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all border border-red-200 cursor-pointer text-xs"
-          >
-            Simulate Payment Failure
+            {loading ? 'Processing Payment...' : `Authorize UPI Pay ₹${finalPrice.toLocaleString('en-IN')}`}
           </button>
         </div>
 

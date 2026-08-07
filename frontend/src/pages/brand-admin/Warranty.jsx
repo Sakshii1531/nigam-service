@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
 import { 
@@ -15,6 +15,30 @@ import {
   X,
   Camera
 } from 'lucide-react';
+import { apiRequest } from '../../lib/apiClient';
+
+const dateFormatter = new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
+// Coverage is decided by the policy's own end date, not by a stored label —
+// a registration written months ago would otherwise still read "Active".
+function coverageOf(order) {
+  if (!order.validTill) return 'Unknown';
+  return new Date(order.validTill) >= new Date() ? 'Valid' : 'Expired';
+}
+
+function shape(order) {
+  return {
+    id: order.humanId || order.id,
+    invoice: order.invoiceFileUrl ? 'Uploaded' : 'Not uploaded',
+    customer: order.fullName || order.user?.name || 'Customer',
+    phone: order.mobile || order.user?.phone || '',
+    model: order.modelNumber || '',
+    category: order.applianceCategory || '',
+    date: order.validTill ? dateFormatter.format(new Date(order.validTill)) : '—',
+    status: coverageOf(order),
+    verificationStatus: order.verificationStatus || 'Pending',
+  };
+}
 
 const Warranty = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -22,11 +46,26 @@ const Warranty = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [showQRModal, setShowQRModal] = useState(false);
 
-  const [history, setHistory] = useState([
-    { id: 'VR-1001', invoice: 'INV-2026-001', customer: 'Amit Sharma', date: '12 May, 2026', status: 'Valid' },
-    { id: 'VR-1002', invoice: 'INV-2026-002', customer: 'Priya Patel', date: '12 May, 2026', status: 'Expired' },
-    { id: 'VR-1003', invoice: 'INV-2026-003', customer: 'Rajesh K.', date: '11 May, 2026', status: 'Valid' },
-  ]);
+  const [history, setHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [match, setMatch] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadRegistrations() {
+      try {
+        const data = await apiRequest('/brand/warranty-registrations', { auth: true });
+        if (!cancelled) setHistory((data?.data || []).map(shape));
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    loadRegistrations();
+    return () => { cancelled = true; };
+  }, []);
 
   const showToast = (message) => {
     setSuccessMessage(message);
@@ -35,73 +74,92 @@ const Warranty = () => {
     }, 3000);
   };
 
-  const handleSearch = (e) => {
-    if (e) e.preventDefault();
-    const query = searchQuery.trim();
-    if (!query) {
-      showToast('Please enter an invoice number or customer mobile.');
+  // Real lookup against the brand's registered appliances. The previous version
+  // matched on the literal strings "123"/"456" and returned invented customers.
+  const [lookup, setLookup] = useState(null);
+  const [searching, setSearching] = useState(false);
+
+  const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—');
+
+  // Raises a real ServiceRequest against the looked-up appliance. Both of the
+  // buttons below used to be success toasts — "Technician assigned
+  // successfully!" and "Paid service request created successfully!" — with no
+  // ticket created and no technician assigned.
+  const raiseRequest = async (warranty) => {
+    if (!lookup?.customer?.id) {
+      setError('This record has no linked customer account, so a request cannot be raised against it.');
       return;
     }
 
-    if (query.includes('123') || query.toLowerCase().includes('inv-2026-001')) {
-      setResult('active');
-      const nextId = `VR-${1000 + history.length + 1}`;
-      const newRecord = {
-        id: nextId,
-        invoice: 'INV-2026-001',
-        customer: 'Amit Sharma',
-        date: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
-        status: 'Valid'
-      };
-      setHistory([newRecord, ...history]);
-      showToast('Warranty Active record found.');
-    } else if (query.includes('456') || query.toLowerCase().includes('inv-2026-002')) {
-      setResult('expired');
-      const nextId = `VR-${1000 + history.length + 1}`;
-      const newRecord = {
-        id: nextId,
-        invoice: 'INV-2026-002',
-        customer: 'Priya Patel',
-        date: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
-        status: 'Expired'
-      };
-      setHistory([newRecord, ...history]);
-      showToast('Warranty Expired record found.');
-    } else {
-      setResult('not_found');
-      showToast('No record found.');
+    setError('');
+    try {
+      const res = await apiRequest('/service-requests', {
+        method: 'POST',
+        auth: true,
+        body: {
+          user: lookup.customer.id,
+          category: lookup.appliance.category,
+          model: lookup.appliance.model || undefined,
+          serialNo: lookup.appliance.serialNumber || undefined,
+          warranty,
+          description: `Raised from warranty lookup (${lookup.status})`,
+        },
+      });
+      showToast(`Service request ${res.data.humanId || res.data.id} created.`);
+      setResult(null);
+    } catch (err) {
+      setError(err.message || 'Could not create the service request.');
     }
   };
 
-  const handleQRScanSimulate = (mockType) => {
-    setShowQRModal(false);
-    if (mockType === 'active') {
-      setSearchQuery('INV-2026-001');
-      setResult('active');
-      const nextId = `VR-${1000 + history.length + 1}`;
-      const newRecord = {
-        id: nextId,
-        invoice: 'INV-2026-001',
-        customer: 'Amit Sharma',
-        date: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
-        status: 'Valid'
-      };
-      setHistory([newRecord, ...history]);
-      showToast('QR Code Scanned: Active Device Detected.');
-    } else {
-      setSearchQuery('INV-2026-002');
-      setResult('expired');
-      const nextId = `VR-${1000 + history.length + 1}`;
-      const newRecord = {
-        id: nextId,
-        invoice: 'INV-2026-002',
-        customer: 'Priya Patel',
-        date: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
-        status: 'Expired'
-      };
-      setHistory([newRecord, ...history]);
-      showToast('QR Code Scanned: Expired Device Detected.');
+  const runLookup = async (query) => {
+    if (!query) {
+      showToast('Please enter a serial number or customer mobile.');
+      return;
     }
+    setSearching(true);
+    try {
+      const res = await apiRequest(`/brand/warranty-lookup?query=${encodeURIComponent(query)}`, { auth: true });
+      const data = res.data;
+      if (!data?.found) {
+        setLookup(null);
+        setResult('not_found');
+        showToast('No record found.');
+        return;
+      }
+      setLookup(data);
+      setResult(data.covered ? 'active' : 'expired');
+      setHistory((prev) => [{
+        id: data.appliance.id,
+        invoice: data.appliance.serialNumber || '—',
+        customer: data.customer.name || '—',
+        date: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
+        status: data.covered ? 'Valid' : 'Expired',
+      }, ...prev]);
+      showToast(data.covered ? `Covered — ${data.status}.` : 'Warranty expired.');
+    } catch (err) {
+      setResult(null);
+      showToast(err.message || 'Lookup failed.');
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleSearch = (e) => {
+    if (e) e.preventDefault();
+    runLookup(searchQuery.trim());
+  };
+
+  const [scanInput, setScanInput] = useState('');
+
+  // Manual entry of the code printed on the appliance — the camera scanner is
+  // not wired up, so the operator types what they read.
+  const handleQRScanEntry = (scannedCode) => {
+    if (!scannedCode) return;
+    setShowQRModal(false);
+    setScanInput('');
+    setSearchQuery(scannedCode);
+    runLookup(scannedCode);
   };
 
   return (
@@ -162,21 +220,21 @@ const Warranty = () => {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
                     <div className="bg-white p-4 rounded-xl border border-[#E2E8F0]">
                       <p className="text-xs text-[#64748B] mb-1 flex items-center gap-1"><User size={14} /> Customer</p>
-                      <p className="text-sm font-medium text-[#1E293B]">Amit Sharma</p>
+                      <p className="text-sm font-medium text-[#1E293B]">{lookup?.customer?.name || '—'}</p>
                     </div>
                     <div className="bg-white p-4 rounded-xl border border-[#E2E8F0]">
                       <p className="text-xs text-[#64748B] mb-1 flex items-center gap-1"><Calendar size={14} /> Purchase Date</p>
-                      <p className="text-sm font-medium text-[#1E293B]">10 May, 2025</p>
+                      <p className="text-sm font-medium text-[#1E293B]">{fmtDate(lookup?.appliance?.purchaseDate)}</p>
                     </div>
                     <div className="bg-white p-4 rounded-xl border border-[#E2E8F0]">
                       <p className="text-xs text-[#64748B] mb-1 flex items-center gap-1"><Clock size={14} /> Expiry Date</p>
-                      <p className="text-sm font-medium text-[#1E293B]">09 May, 2027</p>
+                      <p className="text-sm font-medium text-[#1E293B]">{fmtDate(lookup?.appliance?.expiryDate)}</p>
                     </div>
                   </div>
                   
                   <div className="mt-4 flex justify-end">
                     <button 
-                      onClick={() => { showToast('Technician assigned successfully!'); setResult(null); }}
+                      onClick={() => raiseRequest('In Warranty')}
                       className="bg-[#0D47A1] text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
                     >
                       Assign Technician
@@ -202,11 +260,13 @@ const Warranty = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
                     <div className="bg-white p-4 rounded-xl border border-[#E2E8F0]">
                       <p className="text-xs text-[#64748B] mb-1">Expiry Date</p>
-                      <p className="text-sm font-medium text-[#1E293B]">09 May, 2025</p>
+                      <p className="text-sm font-medium text-[#1E293B]">{fmtDate(lookup?.appliance?.expiryDate)}</p>
                     </div>
                     <div className="bg-white p-4 rounded-xl border border-[#E2E8F0]">
-                      <p className="text-xs text-[#64748B] mb-1">Estimated Repair Cost</p>
-                      <p className="text-sm font-bold text-[#1E293B]">₹2,500 + Parts</p>
+                      <p className="text-xs text-[#64748B] mb-1">Appliance</p>
+                      <p className="text-sm font-bold text-[#1E293B]">
+                        {[lookup?.appliance?.brand, lookup?.appliance?.model].filter(Boolean).join(' ') || '—'}
+                      </p>
                     </div>
                   </div>
                   
@@ -218,7 +278,7 @@ const Warranty = () => {
                       Ignore
                     </button>
                     <button 
-                      onClick={() => { showToast('Paid service request created successfully!'); setResult(null); }}
+                      onClick={() => raiseRequest('Out of Warranty')}
                       className="bg-[#0D47A1] text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
                     >
                       Create Paid Request
@@ -255,6 +315,15 @@ const Warranty = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E2E8F0]">
+                  {loading && (
+                    <tr><td colSpan={5} className="px-6 py-10 text-center text-[#64748B] font-semibold">Loading registrations…</td></tr>
+                  )}
+                  {!loading && error && (
+                    <tr><td colSpan={5} className="px-6 py-10 text-center text-red-600 font-semibold">{error}</td></tr>
+                  )}
+                  {!loading && !error && history.length === 0 && (
+                    <tr><td colSpan={5} className="px-6 py-10 text-center text-[#64748B] font-semibold">No warranty registrations for this brand.</td></tr>
+                  )}
                   {history.map((item) => (
                     <tr key={item.id} className="hover:bg-[#F8FAFC] transition-colors">
                       <td className="px-6 py-4 font-medium text-[#0D47A1]">{item.id}</td>
@@ -278,7 +347,7 @@ const Warranty = () => {
 
         </div>
 
-        {/* QR Scanner Simulation Modal */}
+        {/* Manual code entry modal */}
         {showQRModal && (
           <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-30 flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
@@ -300,21 +369,27 @@ const Warranty = () => {
                   <QrCode size={64} className="text-[#64748B]" />
                   <span className="text-[10px] uppercase font-semibold tracking-wider text-[#64748B] mt-2">Position QR code here</span>
                 </div>
-                <p className="text-xs text-[#64748B]">Simulate a QR scan by selecting one of the demo devices below:</p>
-                <div className="grid grid-cols-2 gap-3">
+                {/* Camera scanning is not implemented — the code is keyed in and
+                    goes through the same lookup as the search box. */}
+                <p className="text-xs text-[#64748B]">Enter the serial number printed under the QR code:</p>
+                <form
+                  onSubmit={(e) => { e.preventDefault(); handleQRScanEntry(scanInput.trim()); }}
+                  className="flex gap-2"
+                >
+                  <input
+                    value={scanInput}
+                    onChange={(e) => setScanInput(e.target.value)}
+                    placeholder="Serial number"
+                    className="flex-1 border border-[#E2E8F0] rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#0D47A1]"
+                  />
                   <button
-                    onClick={() => handleQRScanSimulate('active')}
-                    className="p-3 bg-green-50 border border-green-200 rounded-xl hover:bg-green-100 transition-colors text-xs font-semibold text-green-700"
+                    type="submit"
+                    disabled={!scanInput.trim()}
+                    className="bg-[#0D47A1] text-white px-4 py-2 rounded-lg text-xs font-semibold disabled:opacity-40"
                   >
-                    Active Device
+                    Look up
                   </button>
-                  <button
-                    onClick={() => handleQRScanSimulate('expired')}
-                    className="p-3 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 transition-colors text-xs font-semibold text-red-700"
-                  >
-                    Expired Device
-                  </button>
-                </div>
+                </form>
               </div>
               <div className="p-4 border-t border-[#E2E8F0] bg-[#F8FAFC] flex justify-end">
                 <button

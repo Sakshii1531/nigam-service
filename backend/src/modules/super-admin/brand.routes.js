@@ -40,3 +40,19 @@ brandRouter.put('/:id', validate(idParamSchema, 'params'), validate(updateBrandS
     next(err);
   }
 });
+
+brandRouter.get('/:id/sla', validate(idParamSchema, 'params'), async (req, res, next) => {
+  try {
+    ok(res, await brandService.getBrandSla(req.params.id));
+  } catch (err) {
+    next(err);
+  }
+});
+
+brandRouter.get('/:id/service-revenue', validate(idParamSchema, 'params'), async (req, res, next) => {
+  try {
+    ok(res, await brandService.getBrandServiceRevenue(req.params.id));
+  } catch (err) {
+    next(err);
+  }
+});

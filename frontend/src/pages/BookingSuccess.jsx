@@ -43,15 +43,29 @@ const BookingSuccess = () => {
   const advanceAmt  = p.get('advanceAmt')  || '49';
   const paymentMode = p.get('paymentMode') || 'advance';
 
-  // Generate booking ID
-  const bookingId = React.useMemo(() => {
-    const d = new Date();
-    const yy = String(d.getFullYear()).slice(2);
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    const rand = Math.floor(1000 + Math.random() * 9000);
-    return `NCC-${yy}${mm}${dd}-${rand}`;
-  }, []);
+  // The platform's SR-#### id is assigned server-side on create, so read it back
+  // rather than inventing one here — this is the reference the customer quotes
+  // to support and the one the admin console lists.
+  const [bookingId, setBookingId] = useState('');
+  const [technician, setTechnician] = useState(null);
+  React.useEffect(() => {
+    if (!serviceRequestId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiRequest(`/service-requests/${serviceRequestId}`, { auth: true });
+        if (cancelled) return;
+        setBookingId(res.data?.humanId || serviceRequestId);
+        // A fresh booking is usually unassigned — the panel below only appears
+        // once assignment has actually happened.
+        setTechnician(res.data?.technician || null);
+      } catch (err) {
+        console.error('[booking] Could not load booking reference:', err.message);
+        if (!cancelled) setBookingId(serviceRequestId);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [serviceRequestId]);
 
   // Time slot display
   const timeSlotDisplay = {
@@ -104,7 +118,7 @@ const BookingSuccess = () => {
           {/* ── Booking ID ── */}
           <div className="bg-white rounded-2xl px-4 py-3 shadow-sm border border-slate-100 flex items-center justify-between">
             <span className="text-[11px] text-slate-500 font-semibold">Booking ID</span>
-            <span className="text-[12px] font-extrabold text-slate-900 tracking-wider">{bookingId}</span>
+            <span className="text-[12px] font-extrabold text-slate-900 tracking-wider">{bookingId || '—'}</span>
           </div>
 
           {/* ── Booking Details Table ── */}
@@ -141,40 +155,52 @@ const BookingSuccess = () => {
           </div>
 
           {/* ── Assigned Technician ── */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
-            <div className="flex items-center gap-3">
-              {/* Avatar */}
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#0D47A1] to-[#1565C0] flex items-center justify-center flex-shrink-0 text-white text-lg font-extrabold shadow-md">
-                R
-              </div>
-              {/* Info */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="text-[13px] font-extrabold text-slate-900">Rahul Sharma</p>
-                  <span className="text-[9px] bg-[#0D47A1] text-white font-extrabold px-2 py-0.5 rounded-full">
-                    Expert
-                  </span>
+          {technician ? (
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
+              <div className="flex items-center gap-3">
+                {/* Avatar */}
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#0D47A1] to-[#1565C0] flex items-center justify-center flex-shrink-0 text-white text-lg font-extrabold shadow-md">
+                  {(technician.name || '?').charAt(0).toUpperCase()}
                 </div>
-                <div className="flex items-center gap-1 mt-0.5">
-                  <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
-                  <span className="text-[11px] font-extrabold text-slate-700">4.8</span>
-                  <span className="text-[10px] text-slate-400 font-medium">(128 jobs completed)</span>
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-[13px] font-extrabold text-slate-900">{technician.name || 'Technician'}</p>
+                    {technician.specs?.[0] && (
+                      <span className="text-[9px] bg-[#0D47A1] text-white font-extrabold px-2 py-0.5 rounded-full">
+                        {technician.specs[0]}
+                      </span>
+                    )}
+                  </div>
+                  {technician.rating > 0 && (
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
+                      <span className="text-[11px] font-extrabold text-slate-700">{technician.rating}</span>
+                    </div>
+                  )}
                 </div>
+                {/* Call button */}
+                <button
+                  onClick={handleCallTechnician}
+                  disabled={callLoading}
+                  title={callLoading ? 'Connecting…' : 'Call Technician (masked relay)'}
+                  className="w-10 h-10 rounded-full bg-[#EAF4FF] flex items-center justify-center flex-shrink-0 active:scale-90 transition-all disabled:opacity-50"
+                >
+                  <Phone className="w-4 h-4 text-[#0D47A1]" />
+                </button>
               </div>
-              {/* Call button */}
-              <button
-                onClick={handleCallTechnician}
-                disabled={callLoading}
-                title={callLoading ? 'Connecting…' : 'Call Technician (masked relay)'}
-                className="w-10 h-10 rounded-full bg-[#EAF4FF] flex items-center justify-center flex-shrink-0 active:scale-90 transition-all disabled:opacity-50"
-              >
-                <Phone className="w-4 h-4 text-[#0D47A1]" />
-              </button>
+              <p className="text-[10px] text-slate-400 font-medium mt-3 text-center">
+                Assigned Technician
+              </p>
             </div>
-            <p className="text-[10px] text-slate-400 font-medium mt-3 text-center">
-              Assigned Technician
-            </p>
-          </div>
+          ) : (
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 text-center">
+              <p className="text-[12px] font-bold text-slate-600">Technician being assigned</p>
+              <p className="text-[10px] text-slate-400 font-medium mt-1">
+                We'll notify you as soon as an expert picks up your booking.
+              </p>
+            </div>
+          )}
 
           {/* ── Action Buttons ── */}
           <button

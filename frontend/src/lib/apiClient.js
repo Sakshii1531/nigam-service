@@ -34,13 +34,18 @@ export function clearTokens() {
 }
 
 async function rawRequest(path, { method = 'GET', body, accessToken } = {}) {
+  // A FormData body is sent as-is: the browser must set its own multipart
+  // Content-Type (with the boundary), and JSON.stringify would turn the file
+  // into "{}". This is what file uploads (invoices, ID proofs) go through.
+  const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
+
   const res = await fetch(`${BASE_URL}${path}`, {
     method,
     headers: {
-      'Content-Type': 'application/json',
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
       ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
     },
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    body: body === undefined ? undefined : isFormData ? body : JSON.stringify(body),
   });
 
   let json;

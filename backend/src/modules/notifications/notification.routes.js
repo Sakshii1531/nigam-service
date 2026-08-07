@@ -1,12 +1,20 @@
 import { Router } from 'express';
 import { validate } from '../../middleware/validate.js';
-import { requireAuth } from '../../middleware/auth.js';
-import { ok } from '../../utils/respond.js';
+import { requireAuth, requireRole } from '../../middleware/auth.js';
+import { ok, created } from '../../utils/respond.js';
+import { ROLES } from '../../config/constants.js';
 import { User } from '../auth/user.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import * as notificationService from './notification.service.js';
 import * as preferenceService from './notificationPreference.service.js';
-import { listQuerySchema, idParamSchema, updatePreferencesSchema, deviceTokenSchema } from './notification.validation.js';
+import {
+  listQuerySchema,
+  idParamSchema,
+  updatePreferencesSchema,
+  deviceTokenSchema,
+  adHocPushSchema,
+  adHocSmsSchema,
+} from './notification.validation.js';
 
 export const notificationRouter = Router();
 notificationRouter.use(requireAuth);
@@ -38,6 +46,35 @@ notificationRouter.patch('/:id/read', validate(idParamSchema, 'params'), async (
     next(err);
   }
 });
+
+// ── Admin ad-hoc dispatch ─────────────────────────────────────────────────────
+// Super-admin console composes one-off pushes/SMS (e.g. technician approval).
+
+notificationRouter.post(
+  '/push',
+  requireRole(ROLES.SUPER_ADMIN),
+  validate(adHocPushSchema),
+  async (req, res, next) => {
+    try {
+      created(res, await notificationService.sendAdHocPush(req.body));
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+notificationRouter.post(
+  '/sms',
+  requireRole(ROLES.SUPER_ADMIN),
+  validate(adHocSmsSchema),
+  async (req, res, next) => {
+    try {
+      ok(res, await notificationService.sendAdHocSms(req.body));
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 // ── Channel preferences ───────────────────────────────────────────────────────
 
@@ -88,6 +125,34 @@ notificationRouter.delete('/device-token', validate(deviceTokenSchema), async (r
       { $pull: { fcmTokens: token } },
     );
     ok(res, { removed: result.modifiedCount > 0 });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Broadcast history for the super-admin console's composer screen.
+notificationRouter.get('/broadcasts', requireRole(ROLES.SUPER_ADMIN), async (req, res, next) => {
+  try {
+    const { items, meta } = await notificationService.listBroadcasts(req.query);
+    ok(res, items, meta);
+  } catch (err) {
+    next(err);
+  }
+});
+
+notificationRouter.get('/push-stats', requireRole(ROLES.SUPER_ADMIN), async (req, res, next) => {
+  try {
+    ok(res, await notificationService.getPushStats());
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Registered last on purpose: a `/:id` route declared above the literal paths
+// below would capture "/preferences" and "/broadcasts" as ids.
+notificationRouter.get('/:id', validate(idParamSchema, 'params'), async (req, res, next) => {
+  try {
+    ok(res, await notificationService.getNotification(req.user, req.params.id));
   } catch (err) {
     next(err);
   }

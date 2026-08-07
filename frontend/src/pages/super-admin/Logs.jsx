@@ -1,36 +1,64 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
-import { 
-  Clock, 
-  Search, 
-  Filter, 
-  User, 
-  Shield, 
-  CreditCard, 
+import { apiRequest } from '../../lib/apiClient';
+import {
+  Clock,
+  Search,
+  Filter,
+  User,
+  Shield,
+  CreditCard,
   Package,
   AlertTriangle
 } from 'lucide-react';
 
+const dateFormatter = new Intl.DateTimeFormat('en-IN', {
+  day: 'numeric', month: 'short', year: 'numeric',
+  hour: '2-digit', minute: '2-digit',
+});
+
 const Logs = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState('All Types');
-  
-  const [logs, setLogs] = useState([
-    { id: 1, user: 'Super Admin', action: 'Approved Brand LG', type: 'System', date: '12 May, 2026 - 11:30 AM' },
-    { id: 2, user: 'Support Mgr', action: 'Resolved Complaint CMP-304', type: 'Support', date: '12 May, 2026 - 10:15 AM' },
-    { id: 3, user: 'Super Admin', action: 'Banned User USR-1003', type: 'User', date: '11 May, 2026 - 04:20 PM' },
-    { id: 4, user: 'Finance Mgr', action: 'Processed Payout for Tech Rahul', type: 'Finance', date: '11 May, 2026 - 02:00 PM' },
-    { id: 5, user: 'System', action: 'Low stock alert for Refrigerator Compressor', type: 'Inventory', date: '10 May, 2026 - 09:00 AM' },
-  ]);
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const filteredLogs = logs.filter(log => {
-    const matchesSearch = log.user.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          log.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          log.type.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesType = selectedType === 'All Types' || log.type === selectedType;
-    return matchesSearch && matchesType;
-  });
+  // The type filter is applied server-side so paging stays correct; the free-text
+  // search stays client-side (the API has no search parameter).
+  useEffect(() => {
+    let cancelled = false;
+    async function loadLogs() {
+      setLoading(true);
+      try {
+        const qs = selectedType === 'All Types' ? '' : `?type=${encodeURIComponent(selectedType)}`;
+        const data = await apiRequest(`/super-admin/audit-logs${qs}`, { auth: true });
+        if (cancelled) return;
+        setLogs((data?.data || []).map(entry => ({
+          id: entry.id,
+          user: entry.user?.name || 'System',
+          action: entry.action,
+          type: entry.type,
+          date: entry.createdAt ? dateFormatter.format(new Date(entry.createdAt)) : '—',
+        })));
+        setError('');
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    loadLogs();
+    return () => { cancelled = true; };
+  }, [selectedType]);
+
+  const q = searchQuery.toLowerCase();
+  const filteredLogs = logs.filter(log =>
+    log.user.toLowerCase().includes(q) ||
+    log.action.toLowerCase().includes(q) ||
+    log.type.toLowerCase().includes(q)
+  );
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex">
@@ -105,7 +133,21 @@ const Logs = () => {
                 </div>
               ))}
 
-              {filteredLogs.length === 0 && (
+              {loading && (
+                <div className="text-center py-12 text-[#64748B]">
+                  <Clock size={48} className="mx-auto mb-2 opacity-50 text-slate-400" />
+                  <p className="text-sm font-medium">Loading activity…</p>
+                </div>
+              )}
+
+              {!loading && error && (
+                <div className="text-center py-12 text-red-600">
+                  <AlertTriangle size={48} className="mx-auto mb-2 opacity-50" />
+                  <p className="text-sm font-medium">{error}</p>
+                </div>
+              )}
+
+              {!loading && !error && filteredLogs.length === 0 && (
                 <div className="text-center py-12 text-[#64748B]">
                   <Clock size={48} className="mx-auto mb-2 opacity-50 text-slate-400" />
                   <p className="text-sm font-medium">No logs found matching your criteria.</p>

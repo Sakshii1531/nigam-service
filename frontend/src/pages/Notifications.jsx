@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Settings, UserCheck, FileText, CreditCard, CheckCircle2, Bell, ChevronRight,
 } from 'lucide-react';
-import { USER_NOTIFICATIONS } from '../data/userNotifications';
+import { apiRequest } from '../lib/apiClient';
+import { relativeTime } from '../lib/relativeTime';
 
 const ICONS = {
   assigned: { Icon: UserCheck, bg: 'bg-[#E8F5E9]', color: 'text-[#2E7D32]' },
@@ -14,15 +15,42 @@ const ICONS = {
 
 const Notifications = () => {
   const navigate = useNavigate();
-  const [items, setItems] = useState(USER_NOTIFICATIONS);
+  // The feed used to be a bundled USER_NOTIFICATIONS array, so nothing the
+  // platform actually emitted ever reached the customer, and "mark read" only
+  // changed local state.
+  const [items, setItems] = useState([]);
+  const [loadError, setLoadError] = useState('');
   const unread = items.filter((n) => !n.read).length;
 
-  const open = (n) => {
+  useEffect(() => {
+    apiRequest('/notifications?limit=50', { auth: true })
+      .then((res) => setItems(res.data || []))
+      .catch((err) => setLoadError(err.message || 'Could not load your notifications.'));
+  }, []);
+
+  const open = async (n) => {
     setItems((prev) => prev.map((x) => (x.id === n.id ? { ...x, read: true } : x)));
     navigate(`/notifications/${n.id}`);
+    if (!n.read) {
+      try {
+        await apiRequest(`/notifications/${n.id}/read`, { method: 'PATCH', auth: true });
+      } catch {
+        // The detail screen marks it read too; a failure here is not worth
+        // interrupting navigation for.
+      }
+    }
   };
 
-  const markAllRead = () => setItems((prev) => prev.map((x) => ({ ...x, read: true })));
+  const markAllRead = async () => {
+    const previous = items;
+    setItems((prev) => prev.map((x) => ({ ...x, read: true })));
+    try {
+      await apiRequest('/notifications/read-all', { method: 'PATCH', auth: true });
+    } catch (err) {
+      setItems(previous);
+      setLoadError(err.message || 'Could not mark your notifications as read.');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-10">
@@ -52,7 +80,14 @@ const Notifications = () => {
         )}
       </div>
 
+      {loadError && (
+        <p className="mx-4 mt-3 bg-red-50 border border-red-200 rounded-xl px-3 py-2 text-[11px] font-bold text-red-700">{loadError}</p>
+      )}
+
       <div className="flex flex-col gap-2.5 px-4 pt-3">
+        {!loadError && items.length === 0 && (
+          <p className="text-center text-xs font-semibold text-slate-400 py-10">You have no notifications yet.</p>
+        )}
         {items.map((n) => {
           const { Icon, bg, color } = ICONS[n.type] || { Icon: Bell, bg: 'bg-slate-100', color: 'text-slate-500' };
           return (
@@ -73,7 +108,7 @@ const Notifications = () => {
                 </div>
                 <p className="text-xs text-slate-500 leading-relaxed mt-0.5 line-clamp-2">{n.message}</p>
                 <div className="flex items-center justify-between mt-2">
-                  <span className="text-[11px] text-slate-400">{n.time}</span>
+                  <span className="text-[11px] text-slate-400">{relativeTime(n.createdAt)}</span>
                   {n.cta && (
                     <span className="flex items-center gap-0.5 text-[11px] font-semibold text-[#0D47A1]">
                       {n.cta.label} <ChevronRight className="h-3.5 w-3.5" />

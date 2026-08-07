@@ -1,58 +1,122 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
 import { Phone, Plus, Edit2, CheckCircle2, Trash2, Save, X } from 'lucide-react';
+import { apiRequest } from '../../lib/apiClient';
 
-const initialRates = [
-  { id: 1, category: 'Air Conditioner', serviceType: 'Inspection / Gas Refill', laborRate: 800, partsMarkup: 15, totalBase: 920 },
-  { id: 2, category: 'Air Conditioner', serviceType: 'Compressor Replacement', laborRate: 1500, partsMarkup: 12, totalBase: 1680 },
-  { id: 3, category: 'Refrigerator', serviceType: 'Inspection / Cooling Issue', laborRate: 600, partsMarkup: 10, totalBase: 660 },
-  { id: 4, category: 'Refrigerator', serviceType: 'Compressor Replacement', laborRate: 1200, partsMarkup: 12, totalBase: 1344 },
-  { id: 5, category: 'Washing Machine', serviceType: 'Inspection / Drum Issue', laborRate: 500, partsMarkup: 10, totalBase: 550 },
-  { id: 6, category: 'Washing Machine', serviceType: 'PCB Replacement', laborRate: 900, partsMarkup: 15, totalBase: 1035 },
-  { id: 7, category: 'Television', serviceType: 'Panel Inspection', laborRate: 500, partsMarkup: 10, totalBase: 550 },
-  { id: 8, category: 'Microwave Oven', serviceType: 'Magnetron Replacement', laborRate: 700, partsMarkup: 12, totalBase: 784 },
-];
+const FALLBACK_CATEGORIES = ['Air Conditioner', 'Refrigerator', 'Washing Machine', 'Television', 'Microwave Oven'];
 
-const categories = ['All', 'Air Conditioner', 'Refrigerator', 'Washing Machine', 'Television', 'Microwave Oven'];
+// The API stores partsMarkupPercent and derives totalBase as a virtual; this page
+// has always called those partsMarkup/totalBase.
+function shape(card) {
+  return {
+    id: card.id,
+    category: card.category,
+    serviceType: card.serviceType,
+    laborRate: card.laborRate,
+    partsMarkup: card.partsMarkupPercent ?? 0,
+    totalBase: Math.round(card.totalBase ?? card.laborRate),
+  };
+}
 
 const CallRatesCharges = () => {
-  const [rates, setRates] = useState(initialRates);
+  const [rates, setRates] = useState([]);
   const [filterCat, setFilterCat] = useState('All');
   const [editingId, setEditingId] = useState(null);
   const [editData, setEditData] = useState({});
   const [showAddModal, setShowAddModal] = useState(false);
   const [newRate, setNewRate] = useState({ category: 'Air Conditioner', serviceType: '', laborRate: '', partsMarkup: '' });
   const [successMsg, setSuccessMsg] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   const toast = (msg) => { setSuccessMsg(msg); setTimeout(() => setSuccessMsg(''), 3000); };
 
+  useEffect(() => {
+    let cancelled = false;
+    async function loadRates() {
+      try {
+        const data = await apiRequest('/brand/rate-cards', { auth: true });
+        if (!cancelled) setRates((data?.data || []).map(shape));
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    loadRates();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Categories come from whatever rate cards exist, falling back to the standard
+  // appliance list so the "add" form is usable before any card is configured.
+  const knownCategories = Array.from(new Set([...rates.map(r => r.category), ...FALLBACK_CATEGORIES]));
+  const categories = ['All', ...knownCategories];
+
   const startEdit = (r) => { setEditingId(r.id); setEditData({ ...r }); };
-  const saveEdit = (id) => {
-    const lr = parseFloat(editData.laborRate) || 0;
-    const pm = parseFloat(editData.partsMarkup) || 0;
-    setRates(prev => prev.map(r => r.id === id ? { ...editData, totalBase: Math.round(lr * (1 + pm / 100)) } : r));
-    setEditingId(null);
-    toast('Rate updated successfully!');
+
+  // The API upserts on (category, serviceType), so both create and edit go
+  // through the same PUT — an edit that renames serviceType writes a new card
+  // rather than mutating in place, which is why the list is refetched after.
+  const persistRate = async ({ category, serviceType, laborRate, partsMarkup }) => {
+    await apiRequest('/brand/rate-cards', {
+      method: 'PUT',
+      auth: true,
+      body: {
+        category,
+        serviceType,
+        laborRate: Number(laborRate) || 0,
+        partsMarkupPercent: Number(partsMarkup) || 0,
+      },
+    });
+    const data = await apiRequest('/brand/rate-cards', { auth: true });
+    setRates((data?.data || []).map(shape));
   };
 
-  const handleAddRate = () => {
-    const lr = parseFloat(newRate.laborRate) || 0;
-    const pm = parseFloat(newRate.partsMarkup) || 0;
-    const next = { ...newRate, id: rates.length + 1, laborRate: lr, partsMarkup: pm, totalBase: Math.round(lr * (1 + pm / 100)) };
-    setRates(prev => [...prev, next]);
-    setShowAddModal(false);
-    setNewRate({ category: 'Air Conditioner', serviceType: '', laborRate: '', partsMarkup: '' });
-    toast('New rate card added!');
+  const saveEdit = async () => {
+    try {
+      await persistRate(editData);
+      setEditingId(null);
+      toast('Rate updated successfully!');
+    } catch (err) {
+      setError(`Could not update rate: ${err.message}`);
+    }
+  };
+
+  const handleAddRate = async () => {
+    if (!newRate.serviceType.trim()) {
+      toast('Enter a service type.');
+      return;
+    }
+    try {
+      await persistRate(newRate);
+      setShowAddModal(false);
+      setNewRate({ category: 'Air Conditioner', serviceType: '', laborRate: '', partsMarkup: '' });
+      toast('New rate card added!');
+    } catch (err) {
+      setError(`Could not add rate: ${err.message}`);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    const previous = rates;
+    setRates(prev => prev.filter(r => r.id !== id));
+    try {
+      await apiRequest(`/brand/rate-cards/${id}`, { method: 'DELETE', auth: true });
+      toast('Rate card removed.');
+    } catch (err) {
+      setRates(previous);
+      setError(`Could not delete rate: ${err.message}`);
+    }
   };
 
   const filtered = rates.filter(r => filterCat === 'All' || r.category === filterCat);
 
   const summaryStats = [
     { label: 'Total Rate Cards', value: rates.length },
-    { label: 'Avg Labor Rate', value: '₹' + Math.round(rates.reduce((a, r) => a + r.laborRate, 0) / rates.length) },
-    { label: 'Avg Parts Markup', value: Math.round(rates.reduce((a, r) => a + r.partsMarkup, 0) / rates.length) + '%' },
-    { label: 'Max Base Charge', value: '₹' + Math.max(...rates.map(r => r.totalBase)) },
+    { label: 'Avg Labor Rate', value: rates.length ? '₹' + Math.round(rates.reduce((a, r) => a + r.laborRate, 0) / rates.length) : '—' },
+    { label: 'Avg Parts Markup', value: rates.length ? Math.round(rates.reduce((a, r) => a + r.partsMarkup, 0) / rates.length) + '%' : '—' },
+    { label: 'Max Base Charge', value: rates.length ? '₹' + Math.max(...rates.map(r => r.totalBase)) : '—' },
   ];
 
   return (
@@ -127,7 +191,7 @@ const CallRatesCharges = () => {
                           </td>
                           <td className="px-3 py-2">
                             <div className="flex gap-1">
-                              <button onClick={() => saveEdit(r.id)} className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg"><Save size={13} /></button>
+                              <button onClick={saveEdit} className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg"><Save size={13} /></button>
                               <button onClick={() => setEditingId(null)} className="p-1.5 text-[#64748B] hover:bg-[#F8FAFC] rounded-lg"><X size={13} /></button>
                             </div>
                           </td>
@@ -140,12 +204,24 @@ const CallRatesCharges = () => {
                           <td className="px-3 py-3 text-[#64748B]">{r.partsMarkup}%</td>
                           <td className="px-3 py-3 font-bold text-green-700">₹{r.totalBase}</td>
                           <td className="px-3 py-3">
-                            <button onClick={() => startEdit(r)} className="p-1.5 text-[#0D47A1] hover:bg-[#EEF4FF] rounded-lg"><Edit2 size={13} /></button>
+                            <div className="flex gap-1">
+                              <button onClick={() => startEdit(r)} className="p-1.5 text-[#0D47A1] hover:bg-[#EEF4FF] rounded-lg"><Edit2 size={13} /></button>
+                              <button onClick={() => handleDelete(r.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={13} /></button>
+                            </div>
                           </td>
                         </>
                       )}
                     </tr>
                   ))}
+                  {loading && (
+                    <tr><td colSpan={6} className="px-3 py-10 text-center text-[#64748B] font-semibold">Loading rate cards…</td></tr>
+                  )}
+                  {!loading && error && (
+                    <tr><td colSpan={6} className="px-3 py-10 text-center text-red-600 font-semibold">{error}</td></tr>
+                  )}
+                  {!loading && !error && filtered.length === 0 && (
+                    <tr><td colSpan={6} className="px-3 py-10 text-center text-[#64748B] font-semibold">No rate cards configured yet.</td></tr>
+                  )}
                 </tbody>
               </table>
             </div>

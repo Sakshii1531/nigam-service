@@ -8,6 +8,7 @@ import {
   Percent, Upload, LayoutGrid
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { apiRequest } from '../lib/apiClient';
 
 // Import premium cutout assets for high-fidelity rendering
 import fridgeImg from '../assets/appliance_fridge.png';
@@ -122,6 +123,34 @@ const Buy = () => {
   const [claimTime, setClaimTime] = useState("10:00 AM - 1:00 PM");
   const [submittedTicketId, setSubmittedTicketId] = useState("");
 
+  const [warranties, setWarranties] = useState([]);
+  const [amcs, setAmcs] = useState([]);
+  const [plansLoading, setPlansLoading] = useState(false);
+
+  useEffect(() => {
+    if (step === 8) {
+      const fetchPlans = async () => {
+        setPlansLoading(true);
+        try {
+          const wRes = await apiRequest('/warranty-amc/extended-warranty/orders', { auth: true });
+          const aRes = await apiRequest('/warranty-amc/amc/subscriptions', { auth: true });
+          
+          if (wRes && wRes.data) {
+            setWarranties(wRes.data);
+          }
+          if (aRes && aRes.data) {
+            setAmcs(aRes.data);
+          }
+        } catch (err) {
+          console.warn('Error loading protection plans:', err);
+        } finally {
+          setPlansLoading(false);
+        }
+      };
+      fetchPlans();
+    }
+  }, [step]);
+
   // Product-specific brands per appliance
   const getBrandsForAppliance = (appliance) => {
     const n = appliance?.toLowerCase() || '';
@@ -226,7 +255,7 @@ const Buy = () => {
               else if (step === 5) navigate(`/buy/select-tier/${encodeURIComponent(selectedAppliance || '')}`);
               else if (step === 4) navigate(`/buy/enter-details/${encodeURIComponent(selectedAppliance || '')}/${selectedTierIndex}`);
               else if (step === 6) navigate(`/buy/review/${encodeURIComponent(selectedAppliance || '')}/${selectedTierIndex}`);
-              else if (step === 8) navigate('/buy');
+              else if (step === 8) navigate(-1);
               else if (step === 9) navigate('/buy/select-appliance');
               else if (step === 10) navigate('/buy/my-warranty');
               else if (step === 11) navigate('/buy');
@@ -1335,7 +1364,13 @@ const Buy = () => {
               })}
             </div>
 
-            {activePlanSection === 'Extended Warranties' ? (
+            {plansLoading ? (
+              <div className="animate-pulse space-y-4">
+                {[1, 2].map((n) => (
+                  <div key={n} className="bg-white border border-slate-200 rounded-3xl p-4.5 flex gap-4 h-36"></div>
+                ))}
+              </div>
+            ) : activePlanSection === 'Extended Warranties' ? (
               <>
                 {/* Tab selection row */}
                 <div className="flex gap-2 bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200/40">
@@ -1358,242 +1393,203 @@ const Buy = () => {
                 </div>
 
                 {/* List based on active tab */}
-                {activeWarrantyTab === 'Active' ? (
-                  <div className="flex flex-col gap-4">
-                    
-                    {/* Television Warranty Card */}
-                    <div className="bg-white border border-slate-200 rounded-3xl p-4.5 flex gap-4 shadow-sm relative overflow-hidden text-left">
-                      <div className="w-18 h-18 bg-slate-50 rounded-2xl flex items-center justify-center p-1 border border-slate-100 flex-shrink-0">
-                        <img src={tvImg} alt="Television" className="w-full h-full object-contain mix-blend-multiply" />
-                      </div>
-                      <div className="flex-1 flex flex-col gap-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <h4 className="text-sm font-black text-brand-navy leading-tight truncate">Television</h4>
-                          <span className="bg-green-50 text-green-700 border border-green-200 text-[9px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                            Active
-                          </span>
-                        </div>
-                        <span className="text-[11px] text-slate-500 font-bold">Samsung</span>
-                        <span className="text-[10px] text-brand-blue font-extrabold block">1 Year Extended Warranty</span>
-                        
-                        <div className="flex flex-col gap-0.5 mt-2 text-[10px] text-slate-500 font-semibold border-t border-slate-100 pt-2">
-                          <div className="flex justify-between">
-                            <span>Order ID:</span>
-                            <strong className="text-slate-800 font-extrabold">NCCEW123456</strong>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Valid Till:</span>
-                            <strong className="text-slate-800 font-extrabold">12 May 2026</strong>
-                          </div>
-                        </div>
-                        
-                        <button 
-                          onClick={() => {
-                            setSelectedWarranty({
-                              title: "Television",
-                              brand: "Samsung",
-                              plan: "1 Year Extended Warranty",
-                              orderId: "NCCEW123456",
-                              validTill: "12 May 2026",
-                              status: "Active",
-                              img: tvImg,
-                              coverage: [
-                                "Screen panel failures and screen burn-in",
-                                "Internal circuit board (motherboard) errors",
-                                "Remote receiver or sensor issues",
-                                "Power supply and voltage adapter failures",
-                                "Speaker and audio driver malfunctioning"
-                              ],
-                              terms: "Mirrors the manufacturer's original coverage. Does not cover any accidental physical damage, liquid spills, or services performed by unauthorized local workshops."
-                            });
-                            setStep(10);
-                          }}
-                          className="w-full border border-[#0B4EA2]/30 hover:border-[#0B4EA2]/60 hover:bg-blue-50/20 text-[#0B4EA2] font-black text-xs py-2.5 rounded-xl mt-3 transition-colors cursor-pointer"
-                        >
-                          View Details
-                        </button>
-                      </div>
-                    </div>
+                {(() => {
+                  const filteredWarranties = warranties.filter(w => {
+                    const daysLeft = (new Date(w.validTill) - new Date()) / (1000 * 60 * 60 * 24);
+                    if (activeWarrantyTab === 'Active') {
+                      return w.status === 'Active' && daysLeft > 30;
+                    }
+                    if (activeWarrantyTab === 'Expiring Soon') {
+                      return w.status === 'Active' && daysLeft <= 30 && daysLeft > 0;
+                    }
+                    if (activeWarrantyTab === 'Expired') {
+                      return w.status === 'Expired' || daysLeft <= 0;
+                    }
+                    return true;
+                  });
 
-                    {/* Air Conditioner Warranty Card */}
-                    <div className="bg-white border border-slate-200 rounded-3xl p-4.5 flex gap-4 shadow-sm relative overflow-hidden text-left">
-                      <div className="w-18 h-18 bg-slate-50 rounded-2xl flex items-center justify-center p-1 border border-slate-100 flex-shrink-0">
-                        <img src={splitAcImg} alt="Air Conditioner" className="w-full h-full object-contain mix-blend-multiply" />
-                      </div>
-                      <div className="flex-1 flex flex-col gap-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <h4 className="text-sm font-black text-brand-navy leading-tight truncate">Air Conditioner</h4>
-                          <span className="bg-green-50 text-green-700 border border-green-200 text-[9px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                            Active
-                          </span>
+                  if (filteredWarranties.length === 0) {
+                    return (
+                      <div className="bg-white border border-slate-150 rounded-2xl p-8 flex flex-col items-center justify-center gap-3 text-center shadow-sm">
+                        <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center text-slate-400">
+                          <Shield className="h-6 w-6" />
                         </div>
-                        <span className="text-[11px] text-slate-500 font-bold">LG</span>
-                        <span className="text-[10px] text-brand-blue font-extrabold block">1 Year Extended Warranty</span>
-                        
-                        <div className="flex flex-col gap-0.5 mt-2 text-[10px] text-slate-500 font-semibold border-t border-slate-100 pt-2">
-                          <div className="flex justify-between">
-                            <span>Order ID:</span>
-                            <strong className="text-slate-800 font-extrabold">NCCEW987654</strong>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Valid Till:</span>
-                            <strong className="text-slate-800 font-extrabold">10 Apr 2026</strong>
-                          </div>
-                        </div>
-                        
-                        <button 
-                          onClick={() => {
-                            setSelectedWarranty({
-                              title: "Air Conditioner",
-                              brand: "LG",
-                              plan: "1 Year Extended Warranty",
-                              orderId: "NCCEW987654",
-                              validTill: "10 Apr 2026",
-                              status: "Active",
-                              img: splitAcImg,
-                              coverage: [
-                                "Compressor faults and failure replacement",
-                                "Gas leakage detection and refrigerant recharging",
-                                "Cooling coil or condenser unit failure",
-                                "Internal fan motor or blower breakdown",
-                                "PCB remote sensor and electronic kit replacement"
-                              ],
-                              terms: "Mirrors the manufacturer's original coverage. Does not cover physical aesthetic damage, external voltage fluctuation damage, or unauthorized handling."
-                            });
-                            setStep(10);
-                          }}
-                          className="w-full border border-[#0B4EA2]/30 hover:border-[#0B4EA2]/60 hover:bg-blue-50/20 text-[#0B4EA2] font-black text-xs py-2.5 rounded-xl mt-3 transition-colors cursor-pointer"
-                        >
-                          View Details
-                        </button>
+                        <span className="text-xs font-black text-brand-navy">No Warranties Found</span>
+                        <span className="text-[10px] text-slate-400 font-semibold max-w-[200px] leading-relaxed">
+                          There are no warranties recorded in this category.
+                        </span>
                       </div>
-                    </div>
+                    );
+                  }
 
-                  </div>
-                ) : (
-                  <div className="bg-white border border-slate-150 rounded-2xl p-8 flex flex-col items-center justify-center gap-3 text-center shadow-sm">
-                    <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center text-slate-400">
-                      <Shield className="h-6 w-6" />
+                  return (
+                    <div className="flex flex-col gap-4">
+                      {filteredWarranties.map((w, idx) => {
+                        const img = (() => {
+                          const cat = w.category?.toLowerCase() || '';
+                          if (cat.includes('tv') || cat.includes('television')) return tvImg;
+                          if (cat.includes('ac') || cat.includes('air conditioner') || cat.includes('conditioner')) return splitAcImg;
+                          if (cat.includes('fridge') || cat.includes('refrigerator')) return fridgeImg;
+                          if (cat.includes('water') || cat.includes('purifier') || cat.includes('ro')) return waterPurifierImg;
+                          if (cat.includes('wash') || cat.includes('washing')) return washingImg;
+                          return kitchenApplianceImg;
+                        })();
+
+                        const orderId = w.policyId || w.id || `#NCCEW${w._id?.slice(-6)}`;
+                        const validTillStr = new Date(w.validTill).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+
+                        return (
+                          <div key={w._id || idx} className="bg-white border border-slate-200 rounded-3xl p-4.5 flex gap-4 shadow-sm relative overflow-hidden text-left">
+                            <div className="w-18 h-18 bg-slate-50 rounded-2xl flex items-center justify-center p-1 border border-slate-100 flex-shrink-0">
+                              <img src={img} alt={w.category} className="w-full h-full object-contain mix-blend-multiply" />
+                            </div>
+                            <div className="flex-1 flex flex-col gap-1 min-w-0">
+                              <div className="flex items-center justify-between gap-2">
+                                <h4 className="text-sm font-black text-brand-navy leading-tight truncate">{w.category || 'Appliance'}</h4>
+                                <span className="bg-green-50 text-green-700 border border-green-200 text-[9px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                                  {w.status}
+                                </span>
+                              </div>
+                              <span className="text-[11px] text-slate-500 font-bold">{w.brand}</span>
+                              <span className="text-[10px] text-brand-blue font-extrabold block">{w.planDurationYears || 1} Year Extended Warranty</span>
+                              
+                              <div className="flex flex-col gap-0.5 mt-2 text-[10px] text-slate-500 font-semibold border-t border-slate-100 pt-2">
+                                <div className="flex justify-between">
+                                  <span>Order ID:</span>
+                                  <strong className="text-slate-800 font-extrabold">{orderId}</strong>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span>Valid Till:</span>
+                                  <strong className="text-slate-800 font-extrabold">{validTillStr}</strong>
+                                </div>
+                              </div>
+                              
+                              <button 
+                                onClick={() => {
+                                  setSelectedWarranty({
+                                    title: w.category || 'Appliance',
+                                    brand: w.brand || 'N/A',
+                                    plan: `${w.planDurationYears || 1} Year Extended Warranty`,
+                                    orderId,
+                                    validTill: validTillStr,
+                                    status: w.status,
+                                    img,
+                                    coverage: [
+                                      "Screen panel failures and screen burn-in",
+                                      "Internal circuit board (motherboard) errors",
+                                      "Remote receiver or sensor issues",
+                                      "Power supply and voltage adapter failures",
+                                      "Speaker and audio driver malfunctioning"
+                                    ],
+                                    terms: "Mirrors the manufacturer's original coverage. Does not cover any accidental physical damage, liquid spills, or services performed by unauthorized local workshops."
+                                  });
+                                  setStep(10);
+                                }}
+                                className="w-full border border-[#0B4EA2]/30 hover:border-[#0B4EA2]/60 hover:bg-blue-50/20 text-[#0B4EA2] font-black text-xs py-2.5 rounded-xl mt-3 transition-colors cursor-pointer"
+                              >
+                                View Details
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                    <span className="text-xs font-black text-brand-navy">No Warranties Found</span>
-                    <span className="text-[10px] text-slate-400 font-semibold max-w-[200px] leading-relaxed">
-                      There are no warranties recorded in this category.
-                    </span>
-                  </div>
-                )}
+                  );
+                })()}
               </>
             ) : (
               // AMC Plans List
-              <div className="flex flex-col gap-4">
-                
-                {/* Water Purifier AMC Card */}
-                <div className="bg-white border border-slate-200 rounded-3xl p-4.5 flex gap-4 shadow-sm relative overflow-hidden text-left">
-                  <div className="w-18 h-18 bg-slate-50 rounded-2xl flex items-center justify-center p-1 border border-slate-100 flex-shrink-0">
-                    <img src={waterPurifierImg} alt="Water Purifier" className="w-full h-full object-contain mix-blend-multiply" />
-                  </div>
-                  <div className="flex-1 flex flex-col gap-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <h4 className="text-sm font-black text-brand-navy leading-tight truncate">Water Purifier</h4>
-                      <span className="bg-green-50 text-green-700 border border-green-200 text-[9px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                        Active
+              (() => {
+                const activeAmcs = amcs.filter(a => a.status === 'Active');
+
+                if (activeAmcs.length === 0) {
+                  return (
+                    <div className="bg-white border border-slate-150 rounded-2xl p-8 flex flex-col items-center justify-center gap-3 text-center shadow-sm">
+                      <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center text-slate-400">
+                        <Wrench className="h-6 w-6" />
+                      </div>
+                      <span className="text-xs font-black text-brand-navy">No AMC Subscriptions Found</span>
+                      <span className="text-[10px] text-slate-400 font-semibold max-w-[200px] leading-relaxed">
+                        You don't have any active AMC plans at the moment.
                       </span>
                     </div>
-                    <span className="text-[11px] text-slate-500 font-bold">Tata Swach</span>
-                    <span className="text-[10px] text-brand-blue font-extrabold block">Comprehensive AMC Plan</span>
-                    
-                    <div className="flex flex-col gap-0.5 mt-2 text-[10px] text-slate-500 font-semibold border-t border-slate-100 pt-2">
-                      <div className="flex justify-between">
-                        <span>Order ID:</span>
-                        <strong className="text-slate-800 font-extrabold">NCCAMC9876</strong>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Valid Till:</span>
-                        <strong className="text-slate-800 font-extrabold">20 Aug 2026</strong>
-                      </div>
-                    </div>
-                    
-                    <button 
-                      onClick={() => {
-                        setSelectedAMC({
-                          title: "Water Purifier",
-                          brand: "Tata Swach",
-                          plan: "Comprehensive AMC Plan",
-                          orderId: "NCCAMC9876",
-                          validTill: "20 Aug 2026",
-                          status: "Active",
-                          img: waterPurifierImg,
-                          coverage: [
-                            "RO Membrane and Carbon filter replacement",
-                            "Free Sediment and Pre-filter candle replacement",
-                            "Unlimited breakdown service calls",
-                            "Zero repair labor charges",
-                            "Water TDS check and pH balancing"
-                          ],
-                          terms: "Includes replacement of consumable filters once per contract year. Excludes booster pump motor replacement or physical tank breakage."
-                        });
-                        setStep(13);
-                      }}
-                      className="w-full border border-[#0B4EA2]/30 hover:border-[#0B4EA2]/60 hover:bg-blue-50/20 text-[#0B4EA2] font-black text-xs py-2.5 rounded-xl mt-3 transition-colors cursor-pointer"
-                    >
-                      View Details
-                    </button>
-                  </div>
-                </div>
+                  );
+                }
 
-                {/* Washing Machine AMC Card */}
-                <div className="bg-white border border-slate-200 rounded-3xl p-4.5 flex gap-4 shadow-sm relative overflow-hidden text-left">
-                  <div className="w-18 h-18 bg-slate-50 rounded-2xl flex items-center justify-center p-1 border border-slate-100 flex-shrink-0">
-                    <img src={washingImg} alt="Washing Machine" className="w-full h-full object-contain mix-blend-multiply" />
-                  </div>
-                  <div className="flex-1 flex flex-col gap-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <h4 className="text-sm font-black text-brand-navy leading-tight truncate">Washing Machine</h4>
-                      <span className="bg-green-50 text-green-700 border border-green-200 text-[9px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                        Active
-                      </span>
-                    </div>
-                    <span className="text-[11px] text-slate-500 font-bold">IFB</span>
-                    <span className="text-[10px] text-brand-blue font-extrabold block">Essential AMC Plan</span>
-                    
-                    <div className="flex flex-col gap-0.5 mt-2 text-[10px] text-slate-500 font-semibold border-t border-slate-100 pt-2">
-                      <div className="flex justify-between">
-                        <span>Order ID:</span>
-                        <strong className="text-slate-800 font-extrabold">NCCAMC5432</strong>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Valid Till:</span>
-                        <strong className="text-slate-800 font-extrabold">15 Sep 2026</strong>
-                      </div>
-                    </div>
-                    
-                    <button 
-                      onClick={() => {
-                        setSelectedAMC({
-                          title: "Washing Machine",
-                          brand: "IFB",
-                          plan: "Essential AMC Plan",
-                          orderId: "NCCAMC5432",
-                          validTill: "15 Sep 2026",
-                          status: "Active",
-                          img: washingImg,
-                          coverage: [
-                            "Preventive drum descaling and checkup",
-                            "Motor and spin belt check-up",
-                            "Water inlet valve testing",
-                            "Zero diagnostic service charges"
-                          ],
-                          terms: "Excludes main motor rewinding, drum spin basket replacement, or outer body cabinet rust-proofing."
-                        });
-                        setStep(13);
-                      }}
-                      className="w-full border border-[#0B4EA2]/30 hover:border-[#0B4EA2]/60 hover:bg-blue-50/20 text-[#0B4EA2] font-black text-xs py-2.5 rounded-xl mt-3 transition-colors cursor-pointer"
-                    >
-                      View Details
-                    </button>
-                  </div>
-                </div>
+                return (
+                  <div className="flex flex-col gap-4">
+                    {activeAmcs.map((a, idx) => {
+                      const img = (() => {
+                        const cat = a.category?.toLowerCase() || '';
+                        if (cat.includes('tv') || cat.includes('television')) return tvImg;
+                        if (cat.includes('ac') || cat.includes('air conditioner') || cat.includes('conditioner')) return splitAcImg;
+                        if (cat.includes('fridge') || cat.includes('refrigerator')) return fridgeImg;
+                        if (cat.includes('water') || cat.includes('purifier') || cat.includes('ro')) return waterPurifierImg;
+                        if (cat.includes('wash') || cat.includes('washing')) return washingImg;
+                        return kitchenApplianceImg;
+                      })();
 
-              </div>
+                      const orderId = a.contractNo || a.id || `#NCCAMC${a._id?.slice(-6)}`;
+                      const expiryDateStr = new Date(a.expiryDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+
+                      return (
+                        <div key={a._id || idx} className="bg-white border border-slate-200 rounded-3xl p-4.5 flex gap-4 shadow-sm relative overflow-hidden text-left">
+                          <div className="w-18 h-18 bg-slate-50 rounded-2xl flex items-center justify-center p-1 border border-slate-100 flex-shrink-0">
+                            <img src={img} alt={a.category} className="w-full h-full object-contain mix-blend-multiply" />
+                          </div>
+                          <div className="flex-1 flex flex-col gap-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2">
+                              <h4 className="text-sm font-black text-brand-navy leading-tight truncate">{a.category || 'Appliance'}</h4>
+                              <span className="bg-green-50 text-green-700 border border-green-200 text-[9px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                                {a.status}
+                              </span>
+                            </div>
+                            <span className="text-[11px] text-slate-500 font-bold">{a.brand}</span>
+                            <span className="text-[10px] text-brand-blue font-extrabold block">{a.planName || 'Comprehensive AMC Plan'}</span>
+                            
+                            <div className="flex flex-col gap-0.5 mt-2 text-[10px] text-slate-500 font-semibold border-t border-slate-100 pt-2">
+                              <div className="flex justify-between">
+                                <span>Order ID:</span>
+                                <strong className="text-slate-800 font-extrabold">{orderId}</strong>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Valid Till:</span>
+                                <strong className="text-slate-800 font-extrabold">{expiryDateStr}</strong>
+                              </div>
+                            </div>
+                            
+                            <button 
+                              onClick={() => {
+                                setSelectedAMC({
+                                  title: a.category || 'Appliance',
+                                  brand: a.brand || 'N/A',
+                                  plan: a.planName || 'Comprehensive AMC Plan',
+                                  orderId,
+                                  validTill: expiryDateStr,
+                                  status: a.status,
+                                  img,
+                                  coverage: [
+                                    "RO Membrane and Carbon filter replacement",
+                                    "Free Sediment and Pre-filter candle replacement",
+                                    "Unlimited breakdown service calls",
+                                    "Zero repair labor charges",
+                                    "Water TDS check and pH balancing"
+                                  ],
+                                  terms: "Includes replacement of consumable filters once per contract year. Excludes booster pump motor replacement or physical tank breakage."
+                                });
+                                setStep(13);
+                              }}
+                              className="w-full border border-[#0B4EA2]/30 hover:border-[#0B4EA2]/60 hover:bg-blue-50/20 text-[#0B4EA2] font-black text-xs py-2.5 rounded-xl mt-3 transition-colors cursor-pointer"
+                            >
+                              View Details
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()
             )}
           </motion.div>
         )}
@@ -1862,7 +1858,7 @@ const Buy = () => {
               
               <button
                 onClick={() => {
-                  alert("Digital Warranty Certificate downloaded successfully!");
+                  alert("Your warranty certificate will be emailed once the purchase is confirmed.");
                 }}
                 className="w-full bg-slate-100 hover:bg-slate-200 text-brand-navy font-bold py-3 rounded-xl transition-all text-xs cursor-pointer"
               >
@@ -1904,9 +1900,8 @@ const Buy = () => {
                       } else if (item.isMore) {
                         setStep(12);
                       } else {
-                        setSelectedAppliance(item.appliance);
-                        setSelectedTierIndex(0);
-                        setStep(3);
+                        // Appliance and tier live in the URL; goTo writes them there.
+                        goTo(3, item.appliance, 0);
                       }
                     }}
                   >
@@ -2011,7 +2006,7 @@ const Buy = () => {
                 {/* View All Button */}
                 <button 
                   className="flex-shrink-0 flex items-center gap-1 text-[10px] font-extrabold text-[#0B4EA2] hover:underline cursor-pointer bg-blue-50/50 border border-blue-100 rounded-2xl px-3 py-3 h-12"
-                  onClick={() => alert("Loading all partner brands...")}
+                  onClick={() => navigate('/buy-new')}
                 >
                   View All <ChevronRight className="h-3 w-3" />
                 </button>
@@ -2036,11 +2031,7 @@ const Buy = () => {
                   <div 
                     key={idx}
                     className="flex-shrink-0 w-[110px] bg-white border border-slate-200/80 rounded-2xl p-3 flex flex-col gap-2 shadow-sm hover:border-[#0B4EA2]/30 transition-all cursor-pointer snap-start"
-                    onClick={() => {
-                      setSelectedAppliance(item.appliance);
-                      setSelectedTierIndex(0);
-                      setStep(3);
-                    }}
+                    onClick={() => goTo(3, item.appliance, 0)}
                   >
                     <div className="w-full h-18 bg-slate-50/50 border border-slate-100 rounded-xl flex items-center justify-center p-1.5">
                       <img src={item.img} alt={item.name} className="w-full h-full object-contain mix-blend-multiply" />
@@ -2073,7 +2064,7 @@ const Buy = () => {
                     <div 
                       key={idx}
                       className="flex-shrink-0 w-[110px] bg-white border border-slate-200/80 rounded-2xl p-3 flex flex-col gap-2 shadow-sm hover:border-[#0B4EA2]/30 transition-all cursor-pointer snap-start"
-                      onClick={() => alert(`Ordering accessory: ${item.name}`)}
+                      onClick={() => navigate('/buy-new')}
                     >
                       <div className="w-full h-18 bg-slate-50/50 border border-slate-100 rounded-xl flex items-center justify-center p-1.5">
                         <img src={item.img} alt={item.name} className="w-full h-full object-contain mix-blend-multiply" />
@@ -2151,11 +2142,7 @@ const Buy = () => {
               ].map((item, idx) => (
                 <div 
                   key={idx}
-                  onClick={() => {
-                    setSelectedAppliance(item.name);
-                    setSelectedTierIndex(0);
-                    setStep(3);
-                  }}
+                  onClick={() => goTo(3, item.name, 0)}
                   className="bg-white border border-slate-200/80 rounded-3xl p-4 flex flex-col items-center justify-center gap-3.5 cursor-pointer hover:border-brand-blue/40 shadow-sm hover:scale-[1.02] transition-all text-center min-h-[135px]"
                 >
                   <div className="w-13 h-13 bg-slate-50/70 border border-slate-100 rounded-2xl flex items-center justify-center p-2.5 overflow-hidden">
@@ -2281,7 +2268,7 @@ const Buy = () => {
               
               <button
                 onClick={() => {
-                  alert("Digital Certificate downloaded successfully!");
+                  alert("Your certificate will be emailed once the purchase is confirmed.");
                 }}
                 className="w-full bg-slate-100 hover:bg-slate-200 text-brand-navy font-bold py-3 rounded-xl transition-all text-xs cursor-pointer"
               >
@@ -2505,9 +2492,7 @@ const Buy = () => {
         <button 
           onClick={() => {
             setShowSuccess(false);
-            setSelectedAppliance(null);
-            setSelectedTierIndex(0);
-            setStep(1);
+            goTo(1);
           }}
           className="flex flex-col items-center text-brand-blue cursor-pointer transition-colors"
         >

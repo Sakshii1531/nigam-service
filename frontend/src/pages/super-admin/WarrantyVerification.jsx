@@ -1,24 +1,66 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import { Search, CheckCircle, XCircle, FileText, Calendar, User } from 'lucide-react';
+import { apiRequest } from '../../lib/apiClient';
+
+const dateFormatter = new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+
+function shape(order) {
+  return {
+    id: order.id,
+    customer: order.fullName || order.user?.name || 'Customer',
+    email: order.email || order.user?.email || '—',
+    // The registration records a category and model rather than a product name.
+    product: [order.brand, order.applianceCategory, order.modelNumber].filter(Boolean).join(' ') || 'Appliance',
+    brand: order.brand || '—',
+    date: order.createdAt ? dateFormatter.format(new Date(order.createdAt)) : '—',
+    invoiceUrl: order.invoiceFileUrl || '',
+    // The uploaded dealer invoice is a file, not a number — link to it when present.
+    invoice: order.invoiceFileUrl ? 'View invoice' : 'Not uploaded',
+    status: order.verificationStatus || 'Pending',
+  };
+}
 
 const WarrantyVerification = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [claims, setClaims] = useState([
-    { id: 1, customer: 'Anil Kumar', email: 'anil@gmail.com', product: 'LG 1.5 Ton Split AC', brand: 'LG', date: '10 May, 2026', invoice: 'INV-LG-9823', status: 'Pending' },
-    { id: 2, customer: 'Jyoti Sharma', email: 'jyoti@gmail.com', product: 'Samsung Front Load WM', brand: 'Samsung', date: '08 May, 2026', invoice: 'INV-SS-0012', status: 'Pending' },
-    { id: 3, customer: 'Manish Pal', email: 'manish@gmail.com', product: 'Whirlpool Double Door Fridge', brand: 'Whirlpool', date: '07 May, 2026', invoice: 'INV-WP-5432', status: 'Approved' },
-    { id: 4, customer: 'Kunal Sen', email: 'kunal@gmail.com', product: 'Havells Water Purifier', brand: 'Havells', date: '05 May, 2026', invoice: 'INV-HV-1122', status: 'Rejected' },
-  ]);
+  const [claims, setClaims] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const handleVerify = (id, newStatus) => {
-    setClaims(prev => prev.map(c => c.id === id ? { ...c, status: newStatus } : c));
+  useEffect(() => {
+    let cancelled = false;
+    async function loadRegistrations() {
+      try {
+        const data = await apiRequest('/super-admin/warranty-registrations', { auth: true });
+        if (!cancelled) setClaims((data?.data || []).map(shape));
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    loadRegistrations();
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleVerify = async (id, newStatus) => {
+    const previous = claims;
+    setClaims(prev => prev.map(c => (c.id === id ? { ...c, status: newStatus } : c)));
+    try {
+      await apiRequest(`/super-admin/warranty-registrations/${id}/verification`, {
+        method: 'PATCH', auth: true, body: { verificationStatus: newStatus },
+      });
+    } catch (err) {
+      setClaims(previous);
+      setError(`Could not ${newStatus === 'Approved' ? 'verify' : 'reject'} registration: ${err.message}`);
+    }
   };
 
-  const filteredClaims = claims.filter(c => 
-    c.customer.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    c.product.toLowerCase().includes(searchQuery.toLowerCase())
+  const q = searchQuery.toLowerCase();
+  const filteredClaims = claims.filter(c =>
+    c.customer.toLowerCase().includes(q) ||
+    c.product.toLowerCase().includes(q)
   );
 
   return (
@@ -54,6 +96,15 @@ const WarrantyVerification = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-sm">
+                {loading && (
+                  <tr><td colSpan={6} className="p-8 text-center text-slate-400 font-semibold">Loading registrations…</td></tr>
+                )}
+                {!loading && error && (
+                  <tr><td colSpan={6} className="p-8 text-center text-red-600 font-semibold">{error}</td></tr>
+                )}
+                {!loading && !error && filteredClaims.length === 0 && (
+                  <tr><td colSpan={6} className="p-8 text-center text-slate-400 font-semibold">No warranty registrations to verify.</td></tr>
+                )}
                 {filteredClaims.map((c) => (
                   <tr key={c.id} className="hover:bg-slate-50 transition-colors">
                     <td className="p-4 pl-6">
@@ -64,7 +115,15 @@ const WarrantyVerification = () => {
                       <p className="font-bold text-slate-700">{c.product}</p>
                       <p className="text-[10px] text-[#0D47A1] font-bold uppercase">{c.brand}</p>
                     </td>
-                    <td className="p-4 font-mono text-xs font-bold text-slate-600 flex items-center gap-1"><FileText size={12} /> {c.invoice}</td>
+                    <td className="p-4 font-mono text-xs font-bold text-slate-600">
+                      {c.invoiceUrl ? (
+                        <a href={c.invoiceUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-[#0D47A1] hover:underline">
+                          <FileText size={12} /> {c.invoice}
+                        </a>
+                      ) : (
+                        <span className="flex items-center gap-1 text-slate-400"><FileText size={12} /> {c.invoice}</span>
+                      )}
+                    </td>
                     <td className="p-4 text-slate-500 font-semibold flex items-center gap-1"><Calendar size={12} /> {c.date}</td>
                     <td className="p-4">
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${

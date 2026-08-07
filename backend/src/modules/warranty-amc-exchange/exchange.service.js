@@ -1,6 +1,8 @@
 import { ExchangeQuestionSet } from './exchangeQuestionSet.model.js';
 import { ExchangeCampaign } from './exchangeCampaign.model.js';
 import { ExchangeRequest } from './exchangeRequest.model.js';
+import { ExchangeProductConfig } from './exchangeProductConfig.model.js';
+import { ExchangeBaseValue } from './exchangeBaseValue.model.js';
 import { computeExchangeValuation } from './exchangeValuation.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { parsePagination, paginationMeta } from '../../utils/pagination.js';
@@ -70,6 +72,38 @@ export async function markApplied(exchangeRequestId, orderId) {
   return exchangeRequest;
 }
 
+export async function listExchangeRequestsCustomer(userId, { status } = {}) {
+  const query = { user: userId };
+  if (status) query.status = status;
+  return ExchangeRequest.find(query).sort({ createdAt: -1 });
+}
+
+/**
+ * Trade-ins offered against a given brand's appliances.
+ *
+ * ExchangeRequest.brand is a free-text String (the label the customer picked
+ * during valuation), not a Brand ref — so this matches on the brand's name,
+ * case-insensitively and anchored so "LG" doesn't also pull in "LG Electronics
+ * Spares". Tightening this to a real ref is the durable fix; until then a brand
+ * renamed in the Brand collection stops matching its historical trade-ins.
+ */
+export async function listExchangeRequestsForBrand(brandName, { status, page, limit, sort } = {}) {
+  const escaped = brandName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const query = { brand: new RegExp(`^${escaped}$`, 'i') };
+  if (status) query.status = status;
+
+  const { skip, limit: lim, page: pg, sort: sortObj } = parsePagination({ page, limit, sort });
+  const [items, total] = await Promise.all([
+    ExchangeRequest.find(query)
+      .populate('user', 'name email phone')
+      .sort(sortObj)
+      .skip(skip)
+      .limit(lim),
+    ExchangeRequest.countDocuments(query),
+  ]);
+  return { items, meta: paginationMeta({ page: pg, limit: lim, total }) };
+}
+
 // --- Admin (super-admin) surface below: physical inspection workflow ---
 // Added in the Phase 11 security review — a customer's self-reported trade-in
 // valuation was previously usable as a full checkout discount with nothing
@@ -104,4 +138,98 @@ export async function updateExchangeRequestStatus(id, status) {
   exchangeRequest.status = status;
   await exchangeRequest.save();
   return exchangeRequest;
+}
+
+// ── Exchange merchandising config ─────────────────────────────────────────────
+// Authored in the super-admin ExchangeOffers console and read by the customer
+// app's ExchangeModal, which is why the readers are open to any signed-in user
+// while the writers are super-admin-only (see exchange.routes.js).
+
+export async function listQuestionSets() {
+  return ExchangeQuestionSet.find().sort({ category: 1 });
+}
+
+export async function updateQuestionSet(id, updates) {
+  const doc = await ExchangeQuestionSet.findByIdAndUpdate(id, updates, { new: true });
+  if (!doc) throw new ApiError(404, 'Question set not found');
+  return doc;
+}
+
+export async function deleteQuestionSet(id) {
+  const doc = await ExchangeQuestionSet.findByIdAndDelete(id);
+  if (!doc) throw new ApiError(404, 'Question set not found');
+}
+
+export async function listCampaigns() {
+  return ExchangeCampaign.find().sort({ createdAt: -1 });
+}
+
+export async function createCampaign(data) {
+  return ExchangeCampaign.create(data);
+}
+
+export async function updateCampaign(id, updates) {
+  const doc = await ExchangeCampaign.findByIdAndUpdate(id, updates, { new: true });
+  if (!doc) throw new ApiError(404, 'Campaign not found');
+  return doc;
+}
+
+export async function deleteCampaign(id) {
+  const doc = await ExchangeCampaign.findByIdAndDelete(id);
+  if (!doc) throw new ApiError(404, 'Campaign not found');
+}
+
+export async function listProductConfigs() {
+  return ExchangeProductConfig.find().populate('questionSet', 'name category').populate('campaign', 'name badgeText');
+}
+
+/** One config per product, so this upserts on `product` rather than creating duplicates. */
+export async function upsertProductConfig({ product, ...updates }) {
+  return ExchangeProductConfig.findOneAndUpdate(
+    { product },
+    { product, ...updates },
+    { upsert: true, new: true, setDefaultsOnInsert: true },
+  );
+}
+
+export async function deleteProductConfig(id) {
+  const doc = await ExchangeProductConfig.findByIdAndDelete(id);
+  if (!doc) throw new ApiError(404, 'Product exchange config not found');
+}
+
+// ── Trade-in base values ──────────────────────────────────────────────────────
+
+export async function listBaseValues({ category, brand } = {}) {
+  const query = {};
+  if (category) query.category = category;
+  if (brand) query.brand = brand;
+  return ExchangeBaseValue.find(query).sort({ category: 1, brand: 1, model: 1 });
+}
+
+/**
+ * The base value the customer's device is quoted from. Returns null when the
+ * model has no published value — the caller must then say the device cannot be
+ * valued online rather than fall back to a guess.
+ */
+export async function getBaseValue({ category, brand, model }) {
+  const escape = (v) => String(v).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return ExchangeBaseValue.findOne({
+    category,
+    brand: new RegExp(`^${escape(brand)}$`, 'i'),
+    model: new RegExp(`^${escape(model)}$`, 'i'),
+    isActive: true,
+  });
+}
+
+export async function upsertBaseValue({ category, brand, model, ...updates }) {
+  return ExchangeBaseValue.findOneAndUpdate(
+    { category, brand, model },
+    { category, brand, model, ...updates },
+    { upsert: true, new: true, setDefaultsOnInsert: true },
+  );
+}
+
+export async function deleteBaseValue(id) {
+  const doc = await ExchangeBaseValue.findByIdAndDelete(id);
+  if (!doc) throw new ApiError(404, 'Base value not found');
 }

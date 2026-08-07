@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Bell, Globe, Lock, Briefcase, ClipboardList, Calendar, Wrench, User, ChevronRight, Eye, EyeOff } from 'lucide-react';
+import { apiRequest } from '../../lib/apiClient';
 
 const Toggle = ({ enabled, onToggle }) => (
   <button
@@ -233,7 +234,7 @@ const TechSettings = () => {
             </div>
 
             <button
-              onClick={() => {
+              onClick={async () => {
                 if (!currentPassword || !newPassword || !confirmPassword) {
                   setErrorMsg('Please fill in all fields.');
                   setSuccessMsg('');
@@ -250,15 +251,29 @@ const TechSettings = () => {
                   return;
                 }
 
+                // Verified server-side against the current password; a wrong one
+                // comes back 401 instead of the screen claiming success.
+                try {
+                  await apiRequest('/auth/password', {
+                    method: 'PATCH',
+                    auth: true,
+                    body: { currentPassword, newPassword },
+                  });
+                } catch (err) {
+                  setSuccessMsg('');
+                  setErrorMsg(err.message || 'Could not update your password.');
+                  return;
+                }
+
                 setErrorMsg('');
-                setSuccessMsg('Password updated successfully!');
+                setSuccessMsg('Password updated. You will need to sign in again on other devices.');
                 setTimeout(() => {
                   setIsChangingPassword(false);
                   setCurrentPassword('');
                   setNewPassword('');
                   setConfirmPassword('');
                   setSuccessMsg('');
-                }, 1500);
+                }, 1800);
               }}
               className="w-full bg-[#0D47A1] text-white font-medium py-3 rounded-xl hover:bg-[#0b3c8a] transition-all transform hover:-translate-y-0.5 mt-4 active:scale-95 shadow-sm"
             >

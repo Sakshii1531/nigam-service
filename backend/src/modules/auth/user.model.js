@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import { applyStandardPlugins } from '../shared/plugins.js';
 import { generateHumanId } from '../shared/idGenerator.js';
 import { addressSchema } from './address.schema.js';
+import { paymentMethodSchema } from './paymentMethod.schema.js';
 import { ID_PREFIXES, ROLES } from '../../config/constants.js';
 
 const userSchema = new mongoose.Schema(
@@ -13,10 +14,14 @@ const userSchema = new mongoose.Schema(
     passwordHash: { type: String, required: true, select: false },
     avatarUrl: String,
     addresses: [addressSchema],
+    paymentMethods: [paymentMethodSchema],
 
     // Customer-only fields — harmless left unused for other roles, avoids a fragile
     // discriminator hierarchy for what's currently a handful of extra fields.
     walletCoins: { type: Number, default: 0 },
+    level: { type: Number, default: 1 },
+    xp: { type: Number, default: 0 },
+    spinsLeft: { type: Number, default: 3 },
     referralCode: { type: String, unique: true, sparse: true },
     referredBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     membershipTier: { type: String, enum: ['Silver', 'Gold', 'Plus Gold', 'Diamond', 'Platinum'], default: null },

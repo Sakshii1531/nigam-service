@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft, UserCheck, FileText, CreditCard, CheckCircle2, Bell, ChevronRight,
 } from 'lucide-react';
-import { USER_NOTIFICATIONS } from '../data/userNotifications';
+import { apiRequest } from '../lib/apiClient';
+import { relativeTime } from '../lib/relativeTime';
 
 const ICONS = {
   assigned: { Icon: UserCheck, bg: 'bg-[#E8F5E9]', color: 'text-[#2E7D32]' },
@@ -15,8 +16,39 @@ const ICONS = {
 const NotificationDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-  const n = USER_NOTIFICATIONS.find((x) => x.id === id) || USER_NOTIFICATIONS[0];
-  const { Icon, bg, color } = ICONS[n.type] || { Icon: Bell, bg: 'bg-slate-100', color: 'text-slate-500' };
+  // Reads the real notification and marks it read server-side. It used to fall
+  // back to the first item of a bundled array, so an unknown id silently showed
+  // someone else's notification text.
+  const [n, setN] = useState(null);
+  const [loadError, setLoadError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    apiRequest(`/notifications/${id}`, { auth: true })
+      .then((res) => {
+        if (cancelled) return;
+        setN(res.data);
+        // Broadcasts have no per-user read state, so this is best-effort.
+        if (!res.data.read && res.data.recipient) {
+          apiRequest(`/notifications/${id}/read`, { method: 'PATCH', auth: true }).catch(() => {});
+        }
+      })
+      .catch((err) => { if (!cancelled) setLoadError(err.message || 'Could not load this notification.'); });
+    return () => { cancelled = true; };
+  }, [id]);
+
+  const { Icon, bg, color } = ICONS[n?.type] || { Icon: Bell, bg: 'bg-slate-100', color: 'text-slate-500' };
+
+  if (!n) {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-6">
+        <p className="text-sm font-semibold text-slate-500 text-center">{loadError || 'Loading…'}</p>
+        <button onClick={() => navigate('/notifications')} className="mt-4 text-xs font-bold text-[#0D47A1] hover:underline">
+          Back to all notifications
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col">
@@ -33,8 +65,8 @@ const NotificationDetail = () => {
             <Icon className={`h-8 w-8 ${color}`} />
           </div>
           <h2 className="text-lg font-bold text-slate-900 mt-4">{n.title}</h2>
-          <span className="text-xs text-slate-400 mt-1">{n.time}</span>
-          <p className="text-sm text-slate-600 leading-relaxed mt-4">{n.detail}</p>
+          <span className="text-xs text-slate-400 mt-1">{relativeTime(n.createdAt)}</span>
+          <p className="text-sm text-slate-600 leading-relaxed mt-4">{n.detail || n.message}</p>
         </div>
 
         {n.cta && (

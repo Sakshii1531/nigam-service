@@ -1,40 +1,73 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, HelpCircle, Phone, MessageSquare, ChevronRight, Send } from 'lucide-react';
+import { io } from 'socket.io-client';
+import { apiRequest, getStoredTokens } from '../../lib/apiClient';
+
+const SOCKET_URL = import.meta.env.VITE_API_BASE_URL
+  ? import.meta.env.VITE_API_BASE_URL.replace('/api/v1', '')
+  : 'http://localhost:4000';
 
 const TechnicalSupport = () => {
   const navigate = useNavigate();
   const [supportChatOpen, setSupportChatOpen] = useState(false);
   const [supportChatInput, setSupportChatInput] = useState('');
-  const [supportChatMessages, setSupportChatMessages] = useState([
-    { id: 1, sender: 'agent', text: 'Hello Alex! I am Rahul from the NCC Technical Support Team. How can I help you on-site today?' }
-  ]);
+  const [supportChatMessages, setSupportChatMessages] = useState([]);
+  const [conversationId, setConversationId] = useState(null);
+  const [chatError, setChatError] = useState('');
+  const socketRef = useRef(null);
+
+  // A real support conversation with the platform desk, over the same chat
+  // gateway the rest of the app uses. This screen previously ran a keyword
+  // matcher that invented technical answers and stock levels.
+  useEffect(() => {
+    if (!supportChatOpen || conversationId) return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const res = await apiRequest('/chat/conversations/support', { method: 'POST', auth: true });
+        const convo = res.data;
+        if (cancelled || !convo) return;
+        setConversationId(convo.id);
+
+        const history = await apiRequest(`/chat/conversations/${convo.id}/messages`, { auth: true });
+        if (cancelled) return;
+        setSupportChatMessages((history.data || []).map((m) => ({
+          id: m.id,
+          sender: m.sender === 'technician' ? 'user' : 'agent',
+          text: m.text,
+        })));
+
+        const { accessToken } = getStoredTokens();
+        const socket = io(SOCKET_URL, { auth: { token: accessToken }, transports: ['websocket'] });
+        socketRef.current = socket;
+        socket.on('connect', () => socket.emit('join-conversation', { conversationId: convo.id }));
+        socket.on('message:new', (m) => {
+          setSupportChatMessages((prev) => (
+            prev.some((x) => x.id === m.id)
+              ? prev
+              : [...prev, { id: m.id, sender: m.sender === 'technician' ? 'user' : 'agent', text: m.text }]
+          ));
+        });
+        socket.on('connect_error', () => setChatError('Lost connection to support.'));
+      } catch (err) {
+        if (!cancelled) setChatError(err.message || 'Could not reach support.');
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [supportChatOpen, conversationId]);
+
+  useEffect(() => () => { socketRef.current?.disconnect(); }, []);
 
   const handleSendSupportMessage = () => {
-    if (!supportChatInput.trim()) return;
-    setSupportChatMessages(prev => [
-      ...prev,
-      { id: Date.now(), sender: 'user', text: supportChatInput }
-    ]);
-    
-    const userText = supportChatInput;
+    const text = supportChatInput.trim();
+    if (!text || !socketRef.current || !conversationId) return;
+    socketRef.current.emit('send-message', { conversationId, text }, (ack) => {
+      if (!ack?.ok) setChatError(ack?.error || 'Message could not be sent.');
+    });
     setSupportChatInput('');
-
-    setTimeout(() => {
-      let reply = "Got it. Let me check the technical guidelines for that issue. What model or brand is the unit?";
-      const lowerText = userText.toLowerCase();
-      if (lowerText.includes('leak') || lowerText.includes('water')) {
-        reply = "For water leakage in split ACs, first check if the drain pipe is clogged or if the indoor unit is tilted. Clean the drain tray using a pressurized pump.";
-      } else if (lowerText.includes('gas') || lowerText.includes('pressure') || lowerText.includes('charge')) {
-        reply = "Standard suction pressure for R32 refrigerant should be around 110-130 PSI. Make sure to perform vacuuming before charging gas.";
-      } else if (lowerText.includes('capacitor') || lowerText.includes('compressor')) {
-        reply = "If the compressor is drawing high starting current (LRA) but not starting, check if the start capacitor is weak or needs a hard start kit.";
-      }
-      setSupportChatMessages(curr => [
-        ...curr,
-        { id: Date.now() + 1, sender: 'agent', text: reply }
-      ]);
-    }, 1000);
   };
 
   return (

@@ -11,10 +11,11 @@
     "start": "node src/server.js",
     "seed": "node scripts/seed.js",
     "loadtest": "node scripts/loadtest.js",
-    "test": "cross-env NODE_ENV=test node --experimental-vm-modules node_modules/.bin/jest --runInBand",
+    "test": "cross-env NODE_ENV=test OTP_PROVIDER=test node --experimental-vm-modules node_modules/.bin/jest --runInBand",
     "lint": "eslint ."
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.115.0",
     "bcryptjs": "^2.4.3",
     "cloudinary": "^2.10.0",
     "cors": "^2.8.5",

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
 import { 
@@ -17,6 +17,42 @@ import {
   Check,
   ArrowLeft
 } from 'lucide-react';
+import { apiRequest } from '../../lib/apiClient';
+
+const currency = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+const dateFormatter = new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
+function shapeClaim(c) {
+  return {
+    id: c.id,
+    ref: c.humanId || c.id,
+    // raisedBy is polymorphic — a technician for FOC parts, a customer otherwise.
+    technician: c.raisedByModel === 'Technician' ? (c.raisedBy?.name || 'Technician') : 'Customer-raised',
+    item: c.item || '—',
+    claimType: c.claimType || 'D2C',
+    amount: currency.format(c.amount || 0),
+    amountValue: c.amount || 0,
+    status: c.status || 'Pending Approval',
+    date: c.createdAt ? dateFormatter.format(new Date(c.createdAt)) : '—',
+    customer: c.serviceRequest?.humanId || '—',
+    serial: c.serviceRequest?.category || '—',
+    reason: c.reason || '—',
+  };
+}
+
+function shapeRegistration(o) {
+  return {
+    regId: o.humanId || o.id,
+    customer: o.fullName || o.user?.name || 'Customer',
+    product: o.applianceCategory || '—',
+    brand: o.brand || '—',
+    model: o.modelNumber || '—',
+    planName: o.tierId || 'Extended Warranty',
+    validity: o.validTill ? dateFormatter.format(new Date(o.validTill)) : '—',
+    status: o.status || 'Active',
+    verificationStatus: o.verificationStatus || 'Pending',
+  };
+}
 
 const WarrantyClaims = () => {
   const [activeTab, setActiveTab] = useState('claims'); // 'claims' or 'extended'
@@ -30,24 +66,39 @@ const WarrantyClaims = () => {
 
   const [extendedSearchQuery, setExtendedSearchQuery] = useState('');
 
-  const [claims, setClaims] = useState([
-    { id: 'CLM-8801', technician: 'Rahul Kumar', item: 'Washing Machine Motor', claimType: 'Brand Warranty', amount: '₹1,850', status: 'Pending Approval', date: '12 May, 2026', customer: 'Mrs. Neha Verma', serial: 'REF-99201X', reason: 'Motor windings burnt out' },
-    { id: 'CLM-8802', technician: 'Amit Singh', item: 'PCB Board', claimType: 'Extended Warranty', amount: '₹2,450', status: 'Approved', date: '10 May, 2026', customer: 'Mr. Anil Mehta', serial: 'AC-7762X', reason: 'PCB relay failure' },
-    { id: 'CLM-8803', technician: 'Suresh Raina', item: 'Compressor Coil', claimType: 'Brand Warranty', amount: '₹2,200', status: 'Rejected', date: '08 May, 2026', customer: 'Mrs. Indu Mishra', serial: 'MW-3301X', reason: 'Coil damage due to external impact' },
-    { id: 'CLM-8804', technician: 'Vikram Batra', item: 'LED TV Panel', claimType: 'Extended Warranty', amount: '₹8,500', status: 'Pending Approval', date: '07 May, 2026', customer: 'Vikram Singh', serial: 'TV-55102', reason: 'Vertical lines on display' },
-  ]);
+  const [claims, setClaims] = useState([]);
 
-  const [extendedWarrantyReg, setExtendedWarrantyReg] = useState([
-    { regId: 'EW-101', customer: 'Karan Johar', product: 'Split AC', brand: 'Generic', model: 'AC-1.5T', planName: 'NCC Protect Plus', validity: '15 Jan 2028', status: 'Active' },
-    { regId: 'EW-102', customer: 'Shilpa Shetty', product: 'Washing Machine', brand: 'Generic', model: 'WM-FrontLoad', planName: 'NCC Shield Basic', validity: '01 Nov 2027', status: 'Active' },
-    { regId: 'EW-103', customer: 'Rajkumar Hirani', product: 'Microwave', brand: 'Generic', model: 'MW-Convection', planName: 'NCC Shield Basic', validity: '12 Apr 2026', status: 'Expired' },
-  ]);
+  const [extendedWarrantyReg, setExtendedWarrantyReg] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const [claimData, regData] = await Promise.all([
+          apiRequest('/brand/claims', { auth: true }),
+          apiRequest('/brand/warranty-registrations', { auth: true }),
+        ]);
+        if (cancelled) return;
+        setClaims((Array.isArray(claimData) ? claimData : []).map(shapeClaim));
+        setExtendedWarrantyReg((Array.isArray(regData) ? regData : []).map(shapeRegistration));
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, []);
+
+  const sumWhere = (p) => claims.filter(p).reduce((acc, c) => acc + c.amountValue, 0);
   const stats = [
-    { title: 'Total Claims', value: (claims.length + 144).toString(), icon: <FileCheck size={20} />, color: 'bg-blue-600' },
-    { title: 'Approved Payouts', value: '₹2.4L', icon: <IndianRupee size={20} />, color: 'bg-emerald-600' },
-    { title: 'Pending Approval', value: '₹28,500', icon: <Clock size={20} />, color: 'bg-yellow-500' },
-    { title: 'Rejection Rate', value: '4.2%', icon: <AlertTriangle size={20} />, color: 'bg-red-650' },
+    { title: 'Total Claims', value: String(claims.length), icon: <FileCheck size={20} />, color: 'bg-blue-600' },
+    { title: 'Approved Payouts', value: currency.format(sumWhere(c => c.status === 'Approved')), icon: <IndianRupee size={20} />, color: 'bg-emerald-600' },
+    { title: 'Pending Approval', value: currency.format(sumWhere(c => c.status === 'Pending Approval')), icon: <Clock size={20} />, color: 'bg-yellow-500' },
+    { title: 'Rejected', value: String(claims.filter(c => c.status === 'Rejected').length), icon: <AlertTriangle size={20} />, color: 'bg-red-650' },
   ];
 
   const handleRowClick = (claim) => {
@@ -55,14 +106,12 @@ const WarrantyClaims = () => {
     setShowDrawer(true);
   };
 
+  // Claim approval sits with super-admin (PATCH /super-admin/claims/:id/status).
+  // Claim.brand is a free-text label rather than a real ref, so there is no
+  // brand-scoped authority to approve against — see claim.service.js.
   const updateClaimStatus = (id, newStatus) => {
-    setClaims(claims.map(c => c.id === id ? { ...c, status: newStatus } : c));
-    if (selectedClaim && selectedClaim.id === id) {
-      setSelectedClaim({ ...selectedClaim, status: newStatus });
-    }
-    setSuccessMessage(`Claim status updated to: ${newStatus}`);
     setShowDrawer(false);
-    setTimeout(() => setSuccessMessage(''), 3000);
+    setError(`Approving or rejecting a claim is done by the platform team — "${newStatus}" was not saved.`);
   };
 
   const filteredClaims = claims.filter(c => {
@@ -283,11 +332,11 @@ const WarrantyClaims = () => {
                     <tbody className="divide-y divide-[#E2E8F0]">
                       {filteredClaims.map((claim) => (
                         <tr 
-                          key={claim.id} 
+                          key={claim.ref} 
                           className="hover:bg-[#F8FAFC] transition-colors cursor-pointer"
                           onClick={() => handleRowClick(claim)}
                         >
-                          <td className="px-6 py-4 font-medium text-[#0D47A1]">{claim.id}</td>
+                          <td className="px-6 py-4 font-medium text-[#0D47A1]">{claim.ref}</td>
                           <td className="px-6 py-4 text-[#1E293B]">{claim.technician}</td>
                           <td className="px-6 py-4 text-[#1E293B]">{claim.item}</td>
                           <td className="px-6 py-4 text-[#64748B]">

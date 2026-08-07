@@ -23,3 +23,27 @@ couponRouter.post('/', requireAuth, requireRole(ROLES.SUPER_ADMIN), validate(cre
     next(err);
   }
 });
+
+couponRouter.get('/admin', requireAuth, requireRole(ROLES.SUPER_ADMIN), async (req, res, next) => {
+  try {
+    ok(res, await couponService.listAllCoupons());
+  } catch (err) {
+    next(err);
+  }
+});
+
+couponRouter.patch('/:id', requireAuth, requireRole(ROLES.SUPER_ADMIN), async (req, res, next) => {
+  try {
+    ok(res, await couponService.updateCoupon(req.params.id, req.body));
+  } catch (err) {
+    next(err);
+  }
+});
+
+couponRouter.delete('/:id', requireAuth, requireRole(ROLES.SUPER_ADMIN), async (req, res, next) => {
+  try {
+    ok(res, await couponService.deleteCoupon(req.params.id));
+  } catch (err) {
+    next(err);
+  }
+});

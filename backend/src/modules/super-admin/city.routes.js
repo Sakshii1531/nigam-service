@@ -7,6 +7,17 @@ import * as cityService from './city.service.js';
 import { createCitySchema, updateCitySchema, idParamSchema } from './city.validation.js';
 
 export const cityRouter = Router();
+
+// ── Public route: list active cities (used by technician registration) ──────
+cityRouter.get('/public', async (req, res, next) => {
+  try {
+    ok(res, await cityService.listActiveCities());
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── All routes below require Super Admin auth ────────────────────────────────
 cityRouter.use(requireAuth, requireRole(ROLES.SUPER_ADMIN));
 
 cityRouter.get('/', async (req, res, next) => {
@@ -36,6 +47,14 @@ cityRouter.get('/:id', validate(idParamSchema, 'params'), async (req, res, next)
 cityRouter.put('/:id', validate(idParamSchema, 'params'), validate(updateCitySchema), async (req, res, next) => {
   try {
     ok(res, await cityService.updateCity(req.params.id, req.body));
+  } catch (err) {
+    next(err);
+  }
+});
+
+cityRouter.delete('/:id', validate(idParamSchema, 'params'), async (req, res, next) => {
+  try {
+    ok(res, await cityService.deleteCity(req.params.id));
   } catch (err) {
     next(err);
   }

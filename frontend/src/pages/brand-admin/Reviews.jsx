@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
+import { apiRequest } from '../../lib/apiClient';
 import { 
   Search, 
   Filter, 
@@ -16,6 +17,23 @@ import {
   CheckCircle2
 } from 'lucide-react';
 
+const dateFormatter = new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
+function shape(review) {
+  return {
+    id: review.id,
+    ref: review.humanId || review.id,
+    ticketId: review.serviceRequest?.humanId || '—',
+    customer: review.user?.name || 'Customer',
+    rating: review.rating,
+    date: review.createdAt ? dateFormatter.format(new Date(review.createdAt)) : '—',
+    comment: review.comment || '',
+    technician: review.technician?.name || 'Unassigned',
+    status: review.status || 'Reviewed',
+    response: review.brandResponse || '',
+  };
+}
+
 const Reviews = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectedReview, setSelectedReview] = useState(null);
@@ -26,33 +44,64 @@ const Reviews = () => {
   const [selectedRating, setSelectedRating] = useState('All Ratings');
   const [selectedStatus, setSelectedStatus] = useState('All Status');
 
-  const [reviews, setReviews] = useState([
-    { id: 'REV-001', ticketId: 'SR-8901', customer: 'Amit Sharma', rating: 5, date: '12 May, 2026', comment: 'Excellent repair service! Rahul Kumar was extremely professional, identified the screen panel connection issue quickly, and got my Smart TV working in under 30 minutes.', technician: 'Rahul Kumar', status: 'Reviewed', response: '' },
-    { id: 'REV-002', ticketId: 'SR-8902', customer: 'Priya Patel', rating: 4, date: '12 May, 2026', comment: 'The Refrigerator technician Amit Singh arrived slightly late but did a thorough repair on the freezer compartment fans. Solid work, noise has stopped.', technician: 'Amit Singh', status: 'Responded', response: 'Thank you for your feedback Priya! We apologize for the delay, we will work with Amit to improve timeliness.' },
-    { id: 'REV-003', ticketId: 'SR-8904', customer: 'Neha Gupta', rating: 2, date: '10 May, 2026', comment: 'Disappointed with the microwave service. The technician Vikram Batra did not have the magnetron part in stock, and the repair took 4 days to finish. Service cost is high.', technician: 'Vikram Batra', status: 'Reviewed', response: '' },
-  ]);
+  const [reviews, setReviews] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadReviews() {
+      try {
+        const data = await apiRequest('/reviews/brand', { auth: true });
+        if (!cancelled) setReviews((data?.data || []).map(shape));
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    loadReviews();
+    return () => { cancelled = true; };
+  }, []);
+
+  const averageRating = reviews.length
+    ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1)
+    : '0.0';
+  // "Positive" is 4★ and above — the same cut the sentiment icons use below.
+  const positivePercent = reviews.length
+    ? Math.round((reviews.filter(r => r.rating >= 4).length / reviews.length) * 100)
+    : 0;
 
   const stats = [
-    { title: 'Average Rating', value: '4.6 / 5.0', icon: <Star size={20} className="fill-amber-500 text-amber-500" />, color: 'bg-amber-50 border-amber-200' },
-    { title: 'Total Reviews', value: (reviews.length + 381).toString(), icon: <MessageSquare size={20} />, color: 'bg-blue-50 border-blue-200' },
-    { title: 'Positive Sentiment', value: '92%', icon: <Smile size={20} className="text-green-600" />, color: 'bg-green-50 border-green-200' },
+    { title: 'Average Rating', value: `${averageRating} / 5.0`, icon: <Star size={20} className="fill-amber-500 text-amber-500" />, color: 'bg-amber-50 border-amber-200' },
+    { title: 'Total Reviews', value: reviews.length.toString(), icon: <MessageSquare size={20} />, color: 'bg-blue-50 border-blue-200' },
+    { title: 'Positive Sentiment', value: `${positivePercent}%`, icon: <Smile size={20} className="text-green-600" />, color: 'bg-green-50 border-green-200' },
     { title: 'Escalated Cases', value: reviews.filter(r => r.status === 'Escalated').length.toString(), icon: <AlertTriangle size={20} className="text-red-600" />, color: 'bg-red-50 border-red-200' },
   ];
 
-  const handleResponseSubmit = (e) => {
+  const handleResponseSubmit = async (e) => {
     e.preventDefault();
     if (!responseMsg) return;
-    setReviews(reviews.map(r => r.id === selectedReview.id ? { ...r, status: 'Responded', response: responseMsg } : r));
-    setResponseMsg('');
-    setShowModal(false);
-    setSuccessMessage('Response posted successfully and sent to customer!');
-    setTimeout(() => setSuccessMessage(''), 3000);
+    const id = selectedReview.id;
+    try {
+      await apiRequest(`/reviews/${id}/respond`, {
+        method: 'PATCH', auth: true, body: { response: responseMsg },
+      });
+      setReviews(prev => prev.map(r => (r.id === id ? { ...r, status: 'Responded', response: responseMsg } : r)));
+      setResponseMsg('');
+      setShowModal(false);
+      setSuccessMessage('Response posted successfully and sent to customer!');
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (err) {
+      setError(`Could not post response: ${err.message}`);
+    }
   };
 
+  // 'Escalated' is a valid Review status, but the API only exposes /respond —
+  // there is no endpoint that sets it, so this stays local and says so.
   const handleEscalate = (id) => {
-    setReviews(reviews.map(r => r.id === id ? { ...r, status: 'Escalated' } : r));
-    setSuccessMessage('Review escalated to regional partner manager for immediate followup.');
-    setTimeout(() => setSuccessMessage(''), 3000);
+    setReviews(prev => prev.map(r => (r.id === id ? { ...r, status: 'Escalated' } : r)));
+    setError('Escalation is not persisted — the API exposes no endpoint to set this status yet.');
   };
 
   const filteredReviews = reviews.filter(rev => {
@@ -137,6 +186,15 @@ const Reviews = () => {
 
           {/* Reviews List */}
           <div className="space-y-6 max-w-4xl">
+            {loading && (
+              <div className="bg-white p-10 rounded-2xl border border-[#E2E8F0] text-center text-sm font-semibold text-[#64748B]">Loading reviews…</div>
+            )}
+            {!loading && error && (
+              <div className="bg-white p-10 rounded-2xl border border-[#E2E8F0] text-center text-sm font-semibold text-red-600">{error}</div>
+            )}
+            {!loading && !error && filteredReviews.length === 0 && (
+              <div className="bg-white p-10 rounded-2xl border border-[#E2E8F0] text-center text-sm font-semibold text-[#64748B]">No reviews yet.</div>
+            )}
             {filteredReviews.map((rev) => (
               <div key={rev.id} className="bg-white p-6 rounded-2xl border border-[#E2E8F0] space-y-4 hover:shadow-md transition-shadow">
                 <div className="flex justify-between items-start">

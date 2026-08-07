@@ -22,6 +22,11 @@ import { ExchangeCampaign } from '../src/modules/warranty-amc-exchange/exchangeC
 import { AMCPlan } from '../src/modules/warranty-amc-exchange/amcPlan.model.js';
 import { AMCSubscription } from '../src/modules/warranty-amc-exchange/amcSubscription.model.js';
 import { ExtendedWarrantyOrder } from '../src/modules/warranty-amc-exchange/extendedWarrantyOrder.model.js';
+import { ExtendedWarrantyPlan } from '../src/modules/warranty-amc-exchange/extendedWarrantyPlan.model.js';
+import { ExchangeBaseValue } from '../src/modules/warranty-amc-exchange/exchangeBaseValue.model.js';
+import { Membership } from '../src/modules/rewards-loyalty/membership.model.js';
+import { EXCHANGE_BASE_VALUES } from './exchangeBaseValueSeedData.js';
+import { OwnedAppliance } from '../src/modules/service-requests/ownedAppliance.model.js';
 import { Notification } from '../src/modules/notifications/notification.model.js';
 import { hashPassword } from '../src/modules/auth/password.js';
 import { ROLES } from '../src/config/constants.js';
@@ -239,7 +244,29 @@ async function upsertCommerce() {
     upsert: true,
     setDefaultsOnInsert: true,
   });
-  console.log('[seed] exchange question set + campaign ready');
+  // Membership tiers — the plans page sells these, and the purchase endpoint
+  // prices from them, so an empty catalogue means nothing is buyable.
+  const MEMBERSHIPS = [
+    { name: 'Silver Plan', price: 499, tierRank: 1, benefits: ['Flat ₹100 off visiting charge', '5% off all services', 'Priority booking'] },
+    { name: 'Gold Plan', price: 999, tierRank: 2, benefits: ['Flat ₹200 off visiting charge', '10% off all services', 'Priority booking', 'Free health check (1/year)'] },
+    { name: 'Diamond Plan', price: 1999, tierRank: 3, benefits: ['Free visiting charge', '15% off all services', 'Priority booking', 'Free health check (2/year)', 'Dedicated relationship manager'] },
+  ];
+  for (const plan of MEMBERSHIPS) {
+    await Membership.findOneAndUpdate({ tierRank: plan.tierRank }, plan, { upsert: true, setDefaultsOnInsert: true });
+  }
+
+  // Trade-in base values — without these, no model can be valued online.
+  await ExchangeBaseValue.bulkWrite(
+    EXCHANGE_BASE_VALUES.map((row) => ({
+      updateOne: {
+        filter: { category: row.category, brand: row.brand, model: row.model },
+        update: { $set: row },
+        upsert: true,
+      },
+    })),
+  );
+
+  console.log(`[seed] exchange question set + campaign ready, ${EXCHANGE_BASE_VALUES.length} base values`);
 
   await Coupon.findOneAndUpdate({ code: COUPON.code }, COUPON, { upsert: true, setDefaultsOnInsert: true });
   console.log(`[seed] coupon ready: ${COUPON.code}`);
@@ -267,6 +294,52 @@ async function upsertTechFixtures(customer) {
       visitsTotal: 4,
       visitsRemaining: 4,
       visitNumber: 1,
+    },
+    { upsert: true, new: true, setDefaultsOnInsert: true },
+  );
+
+  // The purchasable extension packs — ExtendWarranty.jsx reads these, and the
+  // order endpoint prices from them, so an empty catalogue means nothing is
+  // buyable rather than a silent default price.
+  await ExtendedWarrantyPlan.findOneAndUpdate(
+    { name: '1-Year Extension Pack' },
+    {
+      name: '1-Year Extension Pack',
+      durationYears: 1,
+      price: 799,
+      description: 'Extends coverage by 1 full year from your current expiry date.',
+      features: ['Full repair cover', 'Genuine brand parts', 'Zero inspection fee'],
+      claimsTotal: 2,
+      isActive: true,
+    },
+    { upsert: true, new: true, setDefaultsOnInsert: true },
+  );
+  await ExtendedWarrantyPlan.findOneAndUpdate(
+    { name: '2-Year Gold Extension Pack' },
+    {
+      name: '2-Year Gold Extension Pack',
+      durationYears: 2,
+      price: 1399,
+      description: 'Extends coverage by 2 full years from your current expiry date.',
+      features: ['2 years peace of mind', 'Priority technician booking', 'Comprehensive repair cover', 'Gas charging included'],
+      claimsTotal: 3,
+      isActive: true,
+    },
+    { upsert: true, new: true, setDefaultsOnInsert: true },
+  );
+
+  // A registered appliance for the seeded customer, so the extend-warranty and
+  // warranty-status screens have a real unit (with a real purchase date) to read.
+  await OwnedAppliance.findOneAndUpdate(
+    { user: customer._id, serialNumber: 'SEED-AC-0001' },
+    {
+      user: customer._id,
+      category: 'AC',
+      brand: 'Voltas',
+      model: '1.5 Ton 3 Star Split',
+      modelNumber: 'SAC-183V',
+      serialNumber: 'SEED-AC-0001',
+      purchaseDate: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000),
     },
     { upsert: true, new: true, setDefaultsOnInsert: true },
   );

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
+import { apiRequest } from '../../lib/apiClient';
 import { 
   Search, 
   Filter, 
@@ -16,6 +17,26 @@ import {
   ArrowLeft
 } from 'lucide-react';
 
+const currency = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+const dateFormatter = new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
+function shape(txn) {
+  return {
+    id: txn.id,
+    ref: txn.humanId || txn.id,
+    user: txn.user?.name || 'Unknown',
+    userRole: txn.user?.role || '',
+    // Both forms: the display string for the table, and the raw number so the
+    // summary tiles never have to parse currency formatting back out.
+    amount: currency.format(txn.amount || 0),
+    amountValue: txn.amount || 0,
+    type: txn.type,
+    status: txn.status,
+    date: txn.createdAt ? dateFormatter.format(new Date(txn.createdAt)) : '—',
+    description: txn.description || '',
+  };
+}
+
 const Billing = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState('All Types');
@@ -24,12 +45,25 @@ const Billing = () => {
   const [selectedTxn, setSelectedTxn] = useState(null);
   const [showDrawer, setShowDrawer] = useState(false);
 
-  const [transactions, setTransactions] = useState([
-    { id: 'TXN-9001', user: 'Amit Sharma', amount: '₹1,500', type: 'Service Fee', status: 'Paid', date: '12 May, 2026', description: 'Convenience and technician visit charges collected for LG TV display repair.' },
-    { id: 'TXN-9002', user: 'Tech Rahul', amount: '₹800', type: 'Payout', status: 'Pending', date: '12 May, 2026', description: 'Pending payout share for completing job #SR-8902.' },
-    { id: 'TXN-9003', user: 'Brand LG', amount: '₹12,000', type: 'Brand Share', status: 'Paid', date: '11 May, 2026', description: 'Spare parts commission settlement for month of May.' },
-    { id: 'TXN-9004', user: 'Priya Patel', amount: '₹500', type: 'Refund', status: 'Failed', date: '10 May, 2026', description: 'Refund attempt failed due to customer account verification issues.' },
-  ]);
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadTransactions() {
+      try {
+        const data = await apiRequest('/super-admin/billing', { auth: true });
+        if (!cancelled) setTransactions((data?.data || []).map(shape));
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    loadTransactions();
+    return () => { cancelled = true; };
+  }, []);
 
   const showToast = (message) => {
     setSuccessMessage(message);
@@ -38,13 +72,21 @@ const Billing = () => {
     }, 3000);
   };
 
-  const handleReleasePayout = (id) => {
-    setTransactions(transactions.map(t => t.id === id ? { ...t, status: 'Paid' } : t));
-    if (selectedTxn && selectedTxn.id === id) {
-      setSelectedTxn({ ...selectedTxn, status: 'Paid' });
+  // Settling is one-way — the API refuses to re-open a Paid row — so this waits
+  // on the server rather than flipping the badge optimistically.
+  const handleReleasePayout = async (id) => {
+    try {
+      const updated = await apiRequest(`/super-admin/billing/${id}/status`, {
+        method: 'PATCH', auth: true, body: { status: 'Paid' },
+      });
+      const next = shape(updated);
+      setTransactions(prev => prev.map(t => (t.id === id ? next : t)));
+      if (selectedTxn && selectedTxn.id === id) setSelectedTxn(next);
+      showToast(`Payout ${next.ref} released successfully!`);
+      setShowDrawer(false);
+    } catch (err) {
+      setError(`Could not release payout: ${err.message}`);
     }
-    showToast(`Payout ${id} released successfully!`);
-    setShowDrawer(false);
   };
 
   const handleExport = () => {
@@ -53,7 +95,7 @@ const Billing = () => {
 
   const filteredTxns = transactions.filter(t => {
     const matchesSearch = t.user.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          t.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          t.ref.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           t.type.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesType = selectedType === 'All Types' || t.type === selectedType;
     const matchesStatus = selectedStatus === 'All Status' || t.status === selectedStatus;
@@ -62,11 +104,15 @@ const Billing = () => {
 
   const paidAmount = transactions
     .filter(t => t.status === 'Paid' && t.type !== 'Payout')
-    .reduce((acc, curr) => acc + parseInt(curr.amount.replace(/[^0-9]/g, ''), 10), 0);
+    .reduce((acc, curr) => acc + curr.amountValue, 0);
 
   const pendingAmount = transactions
     .filter(t => t.status === 'Pending')
-    .reduce((acc, curr) => acc + parseInt(curr.amount.replace(/[^0-9]/g, ''), 10), 0);
+    .reduce((acc, curr) => acc + curr.amountValue, 0);
+
+  const refundedAmount = transactions
+    .filter(t => t.type === 'Refund' && t.status === 'Paid')
+    .reduce((acc, curr) => acc + curr.amountValue, 0);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex relative">
@@ -93,7 +139,7 @@ const Billing = () => {
             <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden flex flex-col">
               <div className="p-6 border-b border-[#E2E8F0] bg-[#F8FAFC]">
                 <h3 className="text-lg font-bold text-[#1E293B]">Transaction Details</h3>
-                <p className="text-xs text-[#0D47A1] font-semibold">{selectedTxn.id}</p>
+                <p className="text-xs text-[#0D47A1] font-semibold">{selectedTxn.ref}</p>
               </div>
 
               <div className="p-6 space-y-6 flex-1 overflow-y-auto">
@@ -143,7 +189,7 @@ const Billing = () => {
                   </button>
                 )}
                 <button 
-                  onClick={() => { showToast(`Generating invoice download for ${selectedTxn.id}...`); setShowDrawer(false); }}
+                  onClick={() => { showToast(`Generating invoice download for ${selectedTxn.ref}...`); setShowDrawer(false); }}
                   className="bg-white text-[#1E293B] border border-[#E2E8F0] px-4 py-2 rounded-lg text-xs font-semibold hover:bg-[#F8FAFC] transition-colors"
                 >
                   Download Invoice
@@ -161,8 +207,8 @@ const Billing = () => {
                 <IndianRupee size={20} />
               </div>
               <div>
-                <p className="text-xs font-medium text-[#64748B]">Analyzed Paid Revenue</p>
-                <p className="text-2xl font-bold text-[#1E293B]">₹{(paidAmount + 12000).toLocaleString()}</p>
+                <p className="text-xs font-medium text-[#64748B]">Paid Revenue</p>
+                <p className="text-2xl font-bold text-[#1E293B]">₹{paidAmount.toLocaleString('en-IN')}</p>
               </div>
             </div>
             <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] flex items-center gap-4 shadow-sm">
@@ -171,7 +217,7 @@ const Billing = () => {
               </div>
               <div>
                 <p className="text-xs font-medium text-[#64748B]">Pending Payouts</p>
-                <p className="text-2xl font-bold text-[#1E293B]">₹{(pendingAmount + 44000).toLocaleString()}</p>
+                <p className="text-2xl font-bold text-[#1E293B]">₹{pendingAmount.toLocaleString('en-IN')}</p>
               </div>
             </div>
             <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] flex items-center gap-4 shadow-sm">
@@ -180,7 +226,7 @@ const Billing = () => {
               </div>
               <div>
                 <p className="text-xs font-medium text-[#64748B]">Refunds Processed</p>
-                <p className="text-2xl font-bold text-[#1E293B]">₹8,500</p>
+                <p className="text-2xl font-bold text-[#1E293B]">₹{refundedAmount.toLocaleString('en-IN')}</p>
               </div>
             </div>
           </div>
@@ -264,13 +310,22 @@ const Billing = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E2E8F0]">
+                  {loading && (
+                    <tr><td colSpan={7} className="px-6 py-10 text-center text-[#64748B] font-semibold">Loading transactions…</td></tr>
+                  )}
+                  {!loading && error && (
+                    <tr><td colSpan={7} className="px-6 py-10 text-center text-red-600 font-semibold">{error}</td></tr>
+                  )}
+                  {!loading && !error && filteredTxns.length === 0 && (
+                    <tr><td colSpan={7} className="px-6 py-10 text-center text-[#64748B] font-semibold">No billing transactions.</td></tr>
+                  )}
                   {filteredTxns.map((txn) => (
                     <tr 
                       key={txn.id} 
                       className="hover:bg-[#F8FAFC] transition-colors cursor-pointer"
                       onClick={() => { setSelectedTxn(txn); setShowDrawer(true); }}
                     >
-                      <td className="px-6 py-4 font-medium text-[#0D47A1]">{txn.id}</td>
+                      <td className="px-6 py-4 font-medium text-[#0D47A1]">{txn.ref}</td>
                       <td className="px-6 py-4 text-[#1E293B] font-medium">{txn.user}</td>
                       <td className="px-6 py-4 font-bold text-[#1E293B]">{txn.amount}</td>
                       <td className="px-6 py-4 text-[#64748B]">{txn.type}</td>

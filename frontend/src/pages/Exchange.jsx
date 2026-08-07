@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft, Shield, Check, ChevronRight, ShoppingCart,
@@ -7,6 +7,7 @@ import {
   Lock, Landmark, Wallet, Percent, ChevronLeft, Home as HomeIcon, LayoutGrid, User
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { apiRequest } from '../lib/apiClient';
 
 // Import assets
 import fridgeImg from '../assets/appliance_fridge.png';
@@ -88,89 +89,13 @@ const Exchange = () => {
     return ['Basic Model A', 'Standard Model B', 'Premium Model C'];
   };
 
-  // Pricing configuration for calculations
-  const getBasePrice = (category, model) => {
-    const cat = category?.toLowerCase() || '';
-    const mod = model?.toLowerCase() || '';
-
-    if (cat.includes('television') || cat.includes('tv')) {
-      if (mod.includes('32')) return 2500;
-      if (mod.includes('43')) return 4500;
-      if (mod.includes('55')) return 7500;
-      if (mod.includes('65')) return 11000;
-      return 2500;
-    }
-    if (cat.includes('refrigerator') || cat.includes('fridge')) {
-      if (mod.includes('single')) return 2500;
-      if (mod.includes('250l')) return 4500;
-      if (mod.includes('350l')) return 6000;
-      if (mod.includes('side')) return 10000;
-      return 2500;
-    }
-    if (cat.includes('washing') || cat.includes('machine')) {
-      if (mod.includes('semi')) return 1800;
-      if (mod.includes('top')) return 3200;
-      if (mod.includes('front')) return 5500;
-      if (mod.includes('washer')) return 8500;
-      return 2000;
-    }
-    if (cat.includes('ac') || cat.includes('conditioner')) {
-      if (mod.includes('1 ton')) return 4000;
-      if (mod.includes('1.5 ton split')) return 6000;
-      if (mod.includes('2 ton')) return 8000;
-      if (mod.includes('window')) return 3500;
-      return 4000;
-    }
-    if (cat.includes('purifier') || cat.includes('water')) {
-      if (mod.includes('ro water')) return 1500;
-      if (mod.includes('uv')) return 800;
-      if (mod.includes('gravity')) return 400;
-      if (mod.includes('alkaline')) return 2200;
-      return 1200;
-    }
-    if (cat.includes('geyser')) {
-      if (mod.includes('10l')) return 1000;
-      if (mod.includes('15l')) return 1500;
-      if (mod.includes('25l')) return 2000;
-      if (mod.includes('instant')) return 800;
-      return 1000;
-    }
-    if (cat.includes('microwave') || cat.includes('oven')) {
-      if (mod.includes('solo')) return 1200;
-      if (mod.includes('grill')) return 1800;
-      if (mod.includes('28l')) return 3000;
-      if (mod.includes('32l')) return 4200;
-      return 1500;
-    }
-    return 2000;
-  };
-
-  const getNewProductPrice = (category) => {
-    const cat = category?.toLowerCase() || '';
-    if (cat.includes('television') || cat.includes('tv')) return 21999;
-    if (cat.includes('refrigerator') || cat.includes('fridge')) return 27499;
-    if (cat.includes('washing') || cat.includes('machine')) return 19999;
-    if (cat.includes('ac') || cat.includes('conditioner')) return 38999;
-    if (cat.includes('purifier') || cat.includes('water')) return 14999;
-    if (cat.includes('geyser')) return 9499;
-    if (cat.includes('microwave') || cat.includes('oven')) return 12999;
-    return 21999;
-  };
-
-  const getConditionMultiplier = (cond) => {
-    const c = cond?.toLowerCase() || '';
-    if (c === 'excellent') return 1.25;
-    if (c === 'good') return 1.0;
-    if (c === 'average') return 0.6;
-    if (c === 'not working') return 0.24;
-    return 1.0;
-  };
-
   // State values for Step 2 select product form
   const currentBrands = categoryParam ? getBrandsForCategory(categoryParam) : [];
   const currentModels = categoryParam ? getModelsForCategory(categoryParam) : [];
   
   const [selectedBrand, setSelectedBrand] = useState(brandParam || currentBrands[0] || '');
+  const [purchaseError, setPurchaseError] = useState('');
+  const [createdRequest, setCreatedRequest] = useState(null);
   const [selectedModel, setSelectedModel] = useState(modelParam || currentModels[0] || '');
   const [selectedCondition, setSelectedCondition] = useState(conditionParam || 'Good');
   
@@ -192,11 +117,74 @@ const Exchange = () => {
   const finalModel = modelParam || selectedModel || '32 Inch LED TV';
   const finalCondition = conditionParam || selectedCondition || 'Good';
 
-  const baseExchangeVal = getBasePrice(finalCategory, finalModel);
-  const multiplier = getConditionMultiplier(finalCondition);
-  const exchangeValue = Math.round(baseExchangeVal * multiplier);
-  const newProductPrice = getNewProductPrice(finalCategory);
-  const payableAmount = newProductPrice - exchangeValue;
+  // The trade-in value and the new product's price both come from the server.
+  // They used to be three hardcoded lookup tables in this file, so the money a
+  // customer was offered was decided by the browser and an admin could not
+  // change it without a redeploy.
+  const [quote, setQuote] = useState(null);
+  const [quoteError, setQuoteError] = useState('');
+
+  useEffect(() => {
+    if (!finalCategory || !finalBrand || !finalModel) return;
+    let cancelled = false;
+
+    (async () => {
+      setQuoteError('');
+      try {
+        const lookup = await apiRequest(
+          `/exchange/base-values/lookup?category=${encodeURIComponent(finalCategory)}&brand=${encodeURIComponent(finalBrand)}&model=${encodeURIComponent(finalModel)}`,
+          { auth: true },
+        );
+        if (cancelled) return;
+
+        if (!lookup.data.found) {
+          setQuote(null);
+          setQuoteError('We do not have a published trade-in value for this model yet. Please contact support for a manual valuation.');
+          return;
+        }
+
+        // The condition deductions live in the admin-managed question set, so
+        // the valuation itself is computed server-side.
+        const valuation = await apiRequest('/exchange/valuate', {
+          method: 'POST',
+          auth: true,
+          body: {
+            category: finalCategory,
+            baseValue: lookup.data.baseValue,
+            answers: { condition: finalCondition },
+          },
+        });
+        if (cancelled) return;
+        setQuote(valuation.data);
+      } catch (err) {
+        if (!cancelled) {
+          setQuote(null);
+          setQuoteError(err.message || 'Could not value this device right now.');
+        }
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [finalCategory, finalBrand, finalModel, finalCondition]);
+
+  // The product being exchanged against, when the caller identified one. The
+  // price used to be guessed from the category alone, which quoted a customer a
+  // "you pay" figure for a product they had never picked.
+  const [newProduct, setNewProduct] = useState(null);
+  const productId = searchParams.get('product');
+
+  useEffect(() => {
+    if (!productId) return;
+    let cancelled = false;
+    apiRequest(`/products/${productId}`)
+      .then((res) => { if (!cancelled) setNewProduct(res.data); })
+      .catch(() => { if (!cancelled) setNewProduct(null); });
+    return () => { cancelled = true; };
+  }, [productId]);
+
+  const exchangeValue = quote?.estimatedValue ?? 0;
+  const newProductPrice = newProduct?.price ?? null;
+  const payableAmount = newProductPrice === null ? null : Math.max(newProductPrice - exchangeValue, 0);
 
   return (
     <div className="min-h-screen bg-bg-light flex flex-col pb-24 relative">
@@ -407,7 +395,10 @@ const Exchange = () => {
 
               <div className="w-full border-t border-dashed border-slate-200 pt-4 text-center">
                 <span className="text-xs text-text-secondary font-semibold block">Estimated Exchange Price</span>
-                <span className="text-3xl font-black text-green-600 block mt-1">₹{exchangeValue.toLocaleString()}</span>
+                <span className="text-3xl font-black text-green-600 block mt-1">
+                  {quoteError ? '—' : `₹${exchangeValue.toLocaleString()}`}
+                </span>
+                {quoteError && <p className="text-[11px] font-bold text-red-600 mt-1">{quoteError}</p>}
               </div>
             </div>
 
@@ -476,7 +467,7 @@ const Exchange = () => {
                   <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Payable Amount</span>
                   <span className="text-xs text-text-secondary font-medium mt-0.5">After instant exchange reduction</span>
                 </div>
-                <span className="text-xl font-black text-brand-navy">₹{payableAmount.toLocaleString()}</span>
+                <span className="text-xl font-black text-brand-navy">{payableAmount === null ? 'Select a product' : `₹${payableAmount.toLocaleString()}`}</span>
               </div>
             </div>
 
@@ -579,7 +570,7 @@ const Exchange = () => {
             <div className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between shadow-sm mt-2">
               <div>
                 <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider block">Total Payable</span>
-                <span className="text-lg font-black text-brand-navy block mt-0.5">₹{payableAmount.toLocaleString()}</span>
+                <span className="text-lg font-black text-brand-navy block mt-0.5">{payableAmount === null ? 'Select a product' : `₹${payableAmount.toLocaleString()}`}</span>
               </div>
               <span className="text-xs font-bold text-brand-blue hover:underline cursor-pointer">View Details</span>
             </div>
@@ -587,12 +578,36 @@ const Exchange = () => {
             {/* Pay Button */}
             <div className="flex flex-col gap-2.5 mt-2">
               <button
-                onClick={() => navigate(`/buy/exchange/success/${encodeURIComponent(finalCategory)}/${encodeURIComponent(finalBrand)}/${encodeURIComponent(finalModel)}/${encodeURIComponent(finalCondition)}`)}
+                // The trade-in has to exist server-side before the customer is
+                // told it was accepted — the valuation is what a later checkout
+                // discount is drawn from.
+                onClick={async () => {
+                  setPurchaseError('');
+                  try {
+                    await apiRequest('/exchange/requests', {
+                      method: 'POST',
+                      body: {
+                        category: finalCategory,
+                        brand: finalBrand,
+                        model: finalModel,
+                        condition: finalCondition,
+                      },
+                      auth: true
+                    });
+                  } catch (err) {
+                    setPurchaseError(err.message || 'We could not register this exchange. You have not been charged — please try again.');
+                    return;
+                  }
+                  navigate(`/buy/exchange/success/${encodeURIComponent(finalCategory)}/${encodeURIComponent(finalBrand)}/${encodeURIComponent(finalModel)}/${encodeURIComponent(finalCondition)}`);
+                }}
                 className="w-full bg-[#FFD400] hover:bg-yellow-400 text-brand-navy font-black py-4 rounded-2xl transition-all shadow-md text-sm cursor-pointer active:scale-98 flex items-center justify-center gap-2"
               >
                 <Lock className="h-4 w-4" />
-                Pay ₹{payableAmount.toLocaleString()} Securely
+                {payableAmount === null ? 'Choose a product to continue' : `Pay ₹${payableAmount.toLocaleString()} Securely`}
               </button>
+              {purchaseError && (
+                <p className="text-[11px] font-bold text-red-600 text-center px-2">{purchaseError}</p>
+              )}
               <div className="flex items-center justify-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                 <ShieldCheck className="h-4 w-4 text-green-600" />
                 100% Secure Payment
@@ -642,17 +657,17 @@ const Exchange = () => {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-white/60">Exchange ID:</span>
-                  <span className="font-mono tracking-wider font-semibold">NCCEXC{Math.floor(100000 + Math.random() * 900000)}</span>
+                  <span className="font-mono tracking-wider font-semibold">{createdRequest?.humanId || createdRequest?.id || '—'}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-white/60">Status:</span>
                   <span className="font-bold text-green-400 bg-green-500/10 px-2 py-0.5 rounded border border-green-400/20 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span> Confirmed
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span> {createdRequest?.status || 'Pending Inspection'}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-white/60">Amount Paid:</span>
-                  <span className="font-bold text-white">₹{payableAmount.toLocaleString()}</span>
+                  <span className="font-bold text-white">{payableAmount === null ? 'Select a product' : `₹${payableAmount.toLocaleString()}`}</span>
                 </div>
               </div>
             </div>

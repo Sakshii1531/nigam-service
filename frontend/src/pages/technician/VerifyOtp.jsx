@@ -15,7 +15,6 @@ const VerifyOtp = () => {
       variant="mobile"
       portalLabel="Technician Portal"
       destination={state?.destination || '+91 90•••••001'}
-      onVerified="/technician/dashboard"
       backTo="/technician/login"
       onSubmit={
         hasRealSession

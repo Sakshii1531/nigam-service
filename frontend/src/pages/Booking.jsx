@@ -30,11 +30,12 @@ const Booking = () => {
 
   // Date and Time selection drawer state
   const [showDateTimeDrawer, setShowDateTimeDrawer] = useState(false);
-  const [selectedDate, setSelectedDate] = useState('Thu 28');
+  const [selectedDate, setSelectedDate] = useState('Today');
   const [selectedTimeSlot, setSelectedTimeSlot] = useState('09:00 AM');
 
   // Payment Options page state
   const [upiExpanded, setUpiExpanded] = useState(true);
+  const [showOffersDrawer, setShowOffersDrawer] = useState(false);
 
   // Receipt calculations
   const price = initialPrice;
@@ -59,7 +60,17 @@ const Booking = () => {
   };
 
   const handlePaymentSuccess = () => {
-    navigate(`/booking-success?service=${encodeURIComponent(preSelectedService)}`);
+    const params = new URLSearchParams({
+      service: preSelectedService,
+      totalPrice: String(total),
+      advanceAmt: String(advance),
+      quantity: String(qty),
+      date: selectedDate,
+      timeGroup: selectedTimeSlot,
+      customerName: name || 'Customer',
+      paymentMode: 'advance'
+    });
+    navigate(`/booking-success?${params.toString()}`);
   };
 
   // ─── VIEW 2: PAYMENT GATEWAY INTERFACE (checkoutStep === 3) ─────────────────
@@ -106,7 +117,7 @@ const Booking = () => {
                 </span>
               </div>
               <button 
-                onClick={() => alert('Viewing NeuCard Offers')}
+                onClick={() => setShowOffersDrawer(true)}
                 className="text-[#0D47A1] text-[11px] font-extrabold flex items-center hover:underline"
               >
                 View all
@@ -249,6 +260,68 @@ const Booking = () => {
             Continue
           </button>
         </div>
+
+        {/* Offers Modal Drawer */}
+        {showOffersDrawer && (
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
+            <div className="bg-white w-full max-w-md rounded-t-3xl p-5 shadow-2xl animate-slide-up flex flex-col gap-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 className="text-[14px] font-extrabold text-slate-900">NeuCard & Payment Offers</h3>
+                <button
+                  onClick={() => setShowOffersDrawer(false)}
+                  className="p-1 rounded-full hover:bg-slate-100 text-slate-500"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="flex flex-col gap-3 max-h-[60vh] overflow-y-auto pr-1">
+                {/* Offer 1 */}
+                <div className="p-3.5 border border-blue-100 bg-blue-50/50 rounded-2xl flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-extrabold text-[#0D47A1] bg-blue-100 px-2 py-0.5 rounded-md uppercase">
+                      NeuCard Exclusive
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-400">Code: NEU150</span>
+                  </div>
+                  <p className="text-[12px] font-bold text-slate-900">Get up to 1.5% savings on all NeuCard UPI transactions</p>
+                  <p className="text-[10px] text-slate-500">Applicable automatically on checkout when paying via Tata NeuCard UPI.</p>
+                </div>
+
+                {/* Offer 2 */}
+                <div className="p-3.5 border border-slate-100 bg-slate-50 rounded-2xl flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-extrabold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md uppercase">
+                      UPI Cashback
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-400">Code: UPIPAY</span>
+                  </div>
+                  <p className="text-[12px] font-bold text-slate-900">Flat ₹50 Instant Cashback on Google Pay / Paytm UPI</p>
+                  <p className="text-[10px] text-slate-500">Valid on minimum booking value of ₹299. Once per user.</p>
+                </div>
+
+                {/* Offer 3 */}
+                <div className="p-3.5 border border-slate-100 bg-slate-50 rounded-2xl flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-extrabold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-md uppercase">
+                      First Service
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-400">Code: WELCOME100</span>
+                  </div>
+                  <p className="text-[12px] font-bold text-slate-900">Save ₹100 on your first Nigambox Service</p>
+                  <p className="text-[10px] text-slate-500">Valid across all home service categories.</p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowOffersDrawer(false)}
+                className="w-full bg-[#0D47A1] text-white py-3 rounded-2xl text-[13px] font-bold mt-1"
+              >
+                Close Offers
+              </button>
+            </div>
+          </div>
+        )}
 
       </div>
     );
@@ -450,7 +523,7 @@ const Booking = () => {
             <div className="px-5 pt-5 pb-3 flex items-center justify-between border-b border-slate-100">
               <h2 className="text-[14px] font-extrabold text-slate-900">Confirm Your Address</h2>
               <button 
-                onClick={() => alert('Change address option selected')}
+                onClick={() => navigate('/saved-addresses')}
                 className="text-[#0D47A1] text-[12px] font-extrabold hover:underline"
               >
                 Change

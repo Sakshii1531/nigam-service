@@ -8,6 +8,8 @@ const segmentSchema = new mongoose.Schema(
   {
     label: { type: String, required: true },
     probability: { type: Number, required: true },
+    winningType: { type: String, enum: ['money', 'coins', 'spin', 'none'], default: 'none' },
+    value: { type: Number, default: 0 },
     reward: String,
   },
   { _id: false },

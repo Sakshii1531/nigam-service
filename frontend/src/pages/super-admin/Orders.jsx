@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import { 
@@ -17,6 +17,7 @@ import {
   Activity,
   ArrowLeft
 } from 'lucide-react';
+import { apiRequest } from '../../lib/apiClient';
 
 const Orders = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -25,12 +26,40 @@ const Orders = () => {
   
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showDrawer, setShowDrawer] = useState(false);
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
-  const [orders, setOrders] = useState([
-    { id: 'ORD-5001', requester: 'Tech Rahul', part: 'LG Compressor X', quantity: 1, priority: 'High', status: 'Pending', date: '12 May, 2026', address: '12, Connaught Place, New Delhi - 110001', trackingNo: 'N/A', courier: 'N/A' },
-    { id: 'ORD-5002', requester: 'Brand Samsung', part: 'Display Panel', quantity: 5, priority: 'Medium', status: 'Dispatched', date: '12 May, 2026', address: 'Samsung Warehouse Hub, Sec-62 Noida - 201301', trackingNo: 'TRK-SAM-89210', courier: 'Delhivery' },
-    { id: 'ORD-5003', requester: 'Tech Amit', part: 'Drain Pump', quantity: 2, priority: 'Low', status: 'Delivered', date: '11 May, 2026', address: 'B-45, Andheri East, Mumbai - 400069', trackingNo: 'TRK-WHI-32019', courier: 'BlueDart' },
-  ]);
+  const shapeOrder = (o) => ({
+    id: o.id,
+    humanId: o.humanId || o.id,
+    requester: o.user?.name || 'Customer',
+    part: (o.items || []).map((i) => i.name).join(', ') || 'Product',
+    quantity: (o.items || []).reduce((sum, i) => sum + (i.quantity || 1), 0) || 1,
+    priority: o.priority || 'Medium',
+    status: o.status || 'Placed',
+    date: o.createdAt ? new Date(o.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A',
+    address: [o.address?.house, o.address?.city].filter(Boolean).join(', ') || 'N/A',
+    trackingNo: o.trackingNumber || '—',
+    courier: o.courierPartner || '—',
+  });
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        // The admin-scoped list. This called the customer-scoped GET /orders,
+        // which filters on the caller's own user id — so an admin saw only
+        // orders they had personally placed.
+        const data = await apiRequest('/super-admin/orders?limit=200', { auth: true });
+        setOrders((data?.data || []).map(shapeOrder));
+      } catch (err) {
+        setLoadError(err.message || 'Could not load orders.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchOrders();
+  }, []);
 
   const showToast = (message) => {
     setSuccessMessage(message);
@@ -39,22 +68,30 @@ const Orders = () => {
     }, 3000);
   };
 
-  const handleStatusChange = (id, newStatus) => {
-    let updatedOrders = orders.map(o => {
-      if (o.id === id) {
-        const trk = newStatus === 'Dispatched' ? `TRK-EXP-${Math.floor(100000 + Math.random() * 900000)}` : o.trackingNo;
-        const cour = newStatus === 'Dispatched' ? 'Express Logistics' : o.courier;
-        const updated = { ...o, status: newStatus, trackingNo: trk, courier: cour };
-        if (selectedOrder && selectedOrder.id === id) {
-          setSelectedOrder(updated);
-        }
-        return updated;
-      }
-      return o;
-    });
+  // Persists the fulfilment transition. This only changed browser state and
+  // invented a "TRK-EXP-<random>" tracking number with the courier "Express
+  // Logistics" — a number that tracks nothing, shown to a real customer.
+  const handleStatusChange = async (id, newStatus) => {
+    const body = { status: newStatus };
 
-    setOrders(updatedOrders);
-    showToast(`Order ${id} status updated to ${newStatus}`);
+    if (newStatus === 'Shipped') {
+      const trackingNumber = window.prompt('Tracking number from the courier:');
+      if (trackingNumber === null) return;
+      const courierPartner = window.prompt('Courier partner:');
+      if (courierPartner === null) return;
+      body.trackingNumber = trackingNumber.trim();
+      body.courierPartner = courierPartner.trim();
+    }
+
+    try {
+      const res = await apiRequest(`/super-admin/orders/${id}/status`, { method: 'PATCH', auth: true, body });
+      const updated = shapeOrder(res.data);
+      setOrders((prev) => prev.map((o) => (o.id === id ? updated : o)));
+      if (selectedOrder?.id === id) setSelectedOrder(updated);
+      showToast(`Order status updated to ${newStatus}`);
+    } catch (err) {
+      setLoadError(err.message || 'Could not update the order status.');
+    }
   };
 
   const filteredOrders = orders.filter(o => {
@@ -74,6 +111,12 @@ const Orders = () => {
       <div className="flex-1 ml-64 min-h-screen flex flex-col">
         {/* Topbar */}
         <Topbar title="Orders & Dispatch" />
+
+        {loadError && (
+          <div className="mx-6 mt-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-xs font-bold text-red-700">
+            {loadError}
+          </div>
+        )}
 
         {/* Body */}
         {showDrawer && selectedOrder ? (
@@ -142,7 +185,7 @@ const Orders = () => {
                       <span className="text-[#64748B] font-bold">Delivery Status:</span>
                       <span className={`px-2 py-0.5 rounded text-xs font-bold ${
                         selectedOrder.status === 'Delivered' ? 'bg-green-50 text-green-600' :
-                        selectedOrder.status === 'Dispatched' ? 'bg-blue-50 text-blue-600' :
+                        selectedOrder.status === 'Shipped' ? 'bg-blue-50 text-blue-600' :
                         'bg-yellow-50 text-yellow-600'
                       }`}>
                         {selectedOrder.status}
@@ -153,16 +196,16 @@ const Orders = () => {
               </div>
 
               <div className="p-4 border-t border-[#E2E8F0] bg-[#F8FAFC] flex gap-3">
-                {selectedOrder.status === 'Pending' && (
+                {['Placed', 'Confirmed'].includes(selectedOrder.status) && (
                   <button
-                    onClick={() => handleStatusChange(selectedOrder.id, 'Dispatched')}
+                    onClick={() => handleStatusChange(selectedOrder.id, 'Shipped')}
                     className="bg-[#0D47A1] text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors shadow-sm text-center flex items-center justify-center gap-2"
                   >
                     <Truck size={16} /> Dispatch Order Now
                   </button>
                 )}
 
-                {selectedOrder.status === 'Dispatched' && (
+                {selectedOrder.status === 'Shipped' && (
                   <button
                     onClick={() => handleStatusChange(selectedOrder.id, 'Delivered')}
                     className="bg-green-600 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-green-700 transition-colors shadow-sm text-center flex items-center justify-center gap-2"
@@ -211,9 +254,11 @@ const Orders = () => {
                 className="text-sm text-[#1E293B] border border-[#E2E8F0] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#0D47A1] bg-[#F8FAFC]"
               >
                 <option>All Statuses</option>
-                <option>Pending</option>
-                <option>Dispatched</option>
+                <option>Placed</option>
+                <option>Confirmed</option>
+                <option>Shipped</option>
                 <option>Delivered</option>
+                <option>Cancelled</option>
               </select>
             </div>
           </div>
@@ -253,7 +298,7 @@ const Orders = () => {
                       <td className="px-6 py-4">
                         <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
                           order.status === 'Delivered' ? 'bg-green-50 text-green-600' :
-                          order.status === 'Dispatched' ? 'bg-blue-50 text-blue-600' :
+                          order.status === 'Shipped' ? 'bg-blue-50 text-blue-600' :
                           'bg-yellow-50 text-yellow-600'
                         }`}>
                           {order.status}
@@ -273,9 +318,9 @@ const Orders = () => {
                             <Eye size={16} />
                           </button>
                           
-                          {order.status === 'Pending' && (
+                          {['Placed', 'Confirmed'].includes(order.status) && (
                             <button 
-                              onClick={() => handleStatusChange(order.id, 'Dispatched')}
+                              onClick={() => handleStatusChange(order.id, 'Shipped')}
                               className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors" 
                               title="Dispatch Now"
                             >
@@ -283,7 +328,7 @@ const Orders = () => {
                             </button>
                           )}
 
-                          {order.status === 'Dispatched' && (
+                          {order.status === 'Shipped' && (
                             <button 
                               onClick={() => handleStatusChange(order.id, 'Delivered')}
                               className="p-1.5 text-green-600 hover:bg-green-50 rounded transition-colors" 

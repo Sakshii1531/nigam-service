@@ -53,7 +53,7 @@ const HelpSupport = () => {
         {/* Contact Options */}
         <div className="grid grid-cols-2 gap-4">
           <button 
-            onClick={() => alert('Opening chat support...')}
+            onClick={() => navigate('/technician/technical-support')}
             className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm flex flex-col items-center gap-2 hover:bg-slate-50 transition-colors"
           >
             <div className="w-10 h-10 bg-[#E3ECF9] rounded-full flex items-center justify-center">
@@ -63,7 +63,7 @@ const HelpSupport = () => {
             <span className="text-xs text-slate-500">Fastest response</span>
           </button>
           <button 
-            onClick={() => alert('Calling support...')}
+            onClick={() => { window.location.href = 'tel:+18006228324'; }}
             className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm flex flex-col items-center gap-2 hover:bg-slate-50 transition-colors"
           >
             <div className="w-10 h-10 bg-[#E3ECF9] rounded-full flex items-center justify-center">

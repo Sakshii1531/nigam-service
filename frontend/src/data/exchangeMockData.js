@@ -1,3 +1,4 @@
+import { apiRequest } from '../lib/apiClient';
 export const defaultCategories = [
   'Mobile', 'Laptop', 'Tablet', 'Smartwatch',
   'Television', 'Refrigerator', 'Washing Machine', 'Air Conditioner', 'Water Purifier', 'Geyser', 'Microwave Oven'
@@ -487,73 +488,33 @@ export const defaultCampaigns = [
   }
 ];
 
-// Initialize default products mapping
-export const initializeExchangeConfigs = () => {
-  const configs = {
-    'wp1': {
-      productId: 'wp1',
-      exchangeEnabled: true,
-      supportedCategories: ['Water Purifier'],
-      questionSetId: 'q_wp',
-      badgeText: 'Get Extra ₹3,000 Bonus',
-      campaignId: 'c2',
-      maxVal: 8000
+export const initializeExchangeConfigs = async () => {
+  // Configs, question sets and campaigns are authored in the super-admin
+  // ExchangeOffers console and stored server-side — the customer's ExchangeModal
+  // and the console must see the same data, which per-browser localStorage never
+  // did. The bundled defaults above remain only as a seed for a fresh install.
+  const res = await apiRequest('/exchange/product-configs', { auth: true });
+  return Object.fromEntries((res.data || []).map((c) => [
+    c.product,
+    {
+      id: c.id,
+      productId: c.product,
+      exchangeEnabled: c.exchangeEnabled,
+      supportedCategories: c.supportedCategories || [],
+      questionSetId: c.questionSet?.id || c.questionSet || null,
+      badgeText: c.badgeText || '',
+      campaignId: c.campaign?.id || c.campaign || null,
+      maxVal: c.maxValue || 0,
     },
-    'tv1': {
-      productId: 'tv1',
-      exchangeEnabled: true,
-      supportedCategories: ['Television'],
-      questionSetId: 'q_tv',
-      badgeText: 'Exchange Offer Active',
-      campaignId: 'c1',
-      maxVal: 15000
-    },
-    'rf1': {
-      productId: 'rf1',
-      exchangeEnabled: true,
-      supportedCategories: ['Refrigerator'],
-      questionSetId: 'q_fridge',
-      badgeText: 'Exchange up to ₹12,000',
-      campaignId: 'c2',
-      maxVal: 12000
-    },
-    'ac1': {
-      productId: 'ac1',
-      exchangeEnabled: false,
-      supportedCategories: ['Air Conditioner'],
-      questionSetId: 'q_ac',
-      badgeText: 'Save with Exchange',
-      campaignId: 'c1',
-      maxVal: 6000
-    }
-  };
-
-  const saved = localStorage.getItem('nigam_exchange_configs');
-  if (!saved) {
-    localStorage.setItem('nigam_exchange_configs', JSON.stringify(configs));
-    return configs;
-  }
-  return JSON.parse(saved);
+  ]));
 };
 
-export const initializeQuestionSets = () => {
-  const saved = localStorage.getItem('nigam_exchange_questions');
-  let currentSets = saved ? JSON.parse(saved) : [];
-  
-  // If we don't have Geyser questions (which is in the new expanded list), re-initialize
-  const hasGeyserSet = currentSets.some(set => set.category === 'Geyser');
-  if (!saved || !hasGeyserSet) {
-    localStorage.setItem('nigam_exchange_questions', JSON.stringify(defaultQuestionSets));
-    return defaultQuestionSets;
-  }
-  return currentSets;
+export const initializeQuestionSets = async () => {
+  const res = await apiRequest('/exchange/question-sets', { auth: true });
+  return res.data || [];
 };
 
-export const initializeCampaigns = () => {
-  const saved = localStorage.getItem('nigam_exchange_campaigns');
-  if (!saved) {
-    localStorage.setItem('nigam_exchange_campaigns', JSON.stringify(defaultCampaigns));
-    return defaultCampaigns;
-  }
-  return JSON.parse(saved);
+export const initializeCampaigns = async () => {
+  const res = await apiRequest('/exchange/campaigns', { auth: true });
+  return res.data || [];
 };

@@ -4,7 +4,7 @@
 
 export const DEFAULT_BRAND_WARRANTY_MONTHS = 12;
 
-function addMonths(date, months) {
+export function addMonths(date, months) {
   const d = new Date(date);
   d.setMonth(d.getMonth() + months);
   return d;

@@ -3,7 +3,15 @@ import { validate } from '../../middleware/validate.js';
 import { requireAuth, requireBrandScope } from '../../middleware/auth.js';
 import { ok, created } from '../../utils/respond.js';
 import * as reviewService from './review.service.js';
-import { createReviewSchema, respondSchema, idParamSchema, technicianIdParamSchema, listQuerySchema } from './review.validation.js';
+import { Review } from './review.model.js';
+import {
+  createReviewSchema,
+  respondSchema,
+  idParamSchema,
+  technicianIdParamSchema,
+  listQuerySchema,
+  brandListQuerySchema,
+} from './review.validation.js';
 
 export const reviewRouter = Router();
 
@@ -17,6 +25,22 @@ reviewRouter.get('/technicians/:technicianId', validate(technicianIdParamSchema,
     next(err);
   }
 });
+
+// Declared before `/:id` — otherwise Express matches "brand" as an id.
+reviewRouter.get(
+  '/brand',
+  requireAuth,
+  requireBrandScope,
+  validate(brandListQuerySchema, 'query'),
+  async (req, res, next) => {
+    try {
+      const { items, meta } = await reviewService.listBrandReviews(req.user.brand, req.query);
+      ok(res, items, meta);
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 reviewRouter.get('/:id', validate(idParamSchema, 'params'), async (req, res, next) => {
   try {
@@ -48,3 +72,12 @@ reviewRouter.patch(
     }
   },
 );
+
+reviewRouter.get('/user/reviews', requireAuth, async (req, res, next) => {
+  try {
+    const items = await Review.find({ user: req.user.id });
+    ok(res, items);
+  } catch (err) {
+    next(err);
+  }
+});

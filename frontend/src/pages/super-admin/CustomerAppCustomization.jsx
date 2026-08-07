@@ -1,3 +1,4 @@
+import { apiRequest } from '../../lib/apiClient';
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import Sidebar from '../../components/super-admin/Sidebar';
@@ -64,6 +65,221 @@ const AVAILABLE_ICONS = [
   { id: 'geyser', label: 'Geyser' },
   { id: 'more', label: 'More (Grid/Chevron)' }
 ];
+
+// The API stores imageUrl/segment; this screen has always spoken image/title.
+// ── Category booking-config storage ───────────────────────────────────────────
+// Same storage swap as the tiles: a synchronous mirror keeps the existing
+// editors working while writes go to /cms/category-configs, which the booking
+// flow can now read. This config was previously written and never read by
+// anything.
+const categoryConfigCache = {};
+
+async function hydrateCategoryConfigs() {
+  try {
+    const rows = await apiRequest('/cms/category-configs');
+    for (const row of Array.isArray(rows) ? rows : []) {
+      categoryConfigCache[row.categoryName] = {
+        productTypes: row.productTypes || [],
+        services: row.services || {},
+        brands: row.brands || [],
+        whyBrandPoints: row.whyBrandPoints || [],
+        categoryNote: row.categoryNote || '',
+      };
+    }
+  } catch (err) {
+    console.warn('Could not load category booking configs:', err.message);
+  }
+}
+
+function readCategoryConfigs() {
+  return Object.keys(categoryConfigCache).length ? JSON.stringify(categoryConfigCache) : null;
+}
+
+function writeCategoryConfigs(configs) {
+  const removed = Object.keys(categoryConfigCache).filter((k) => !(k in configs));
+  const changed = Object.keys(configs).filter(
+    (k) => JSON.stringify(configs[k]) !== JSON.stringify(categoryConfigCache[k]),
+  );
+
+  for (const key of Object.keys(categoryConfigCache)) delete categoryConfigCache[key];
+  Object.assign(categoryConfigCache, configs);
+
+  changed.forEach((key) =>
+    apiRequest(`/cms/category-configs/${encodeURIComponent(key)}`, { method: 'PUT', auth: true, body: configs[key] })
+      .catch((err) => console.warn(`Could not save category "${key}":`, err.message)),
+  );
+  removed.forEach((key) =>
+    apiRequest(`/cms/category-configs/${encodeURIComponent(key)}`, { method: 'DELETE', auth: true })
+      .catch((err) => console.warn(`Could not delete category "${key}":`, err.message)),
+  );
+}
+
+// ── Home-tile storage ─────────────────────────────────────────────────────────
+// Same approach as the service-page editors: the five tile lists were written
+// against synchronous localStorage across ~25 sites, so the storage layer is
+// swapped rather than each editor rewritten. Every list maps onto one
+// `placement` of /cms/home-tiles, which the customer app reads directly.
+const TILE_PLACEMENTS = {
+  categories: 'category',
+  services: 'dashboard-service',
+  mostBooked: 'most-booked',
+  applianceServices: 'appliance-service',
+  brandCards: 'brand-card',
+};
+
+const tileCache = {};
+
+// Each list has its own field names; these translate to and from the shared
+// HomeTile shape so the editors keep working unchanged.
+const TILE_ADAPTERS = {
+  categories: {
+    toApi: (t) => ({ title: t.name, icon: t.icon, service: t.service }),
+    fromApi: (t) => ({ id: t.id, name: t.title, icon: t.icon, service: t.service }),
+  },
+  services: {
+    toApi: (t) => ({ title: t.name, imageUrl: t.img }),
+    fromApi: (t) => ({ id: t.id, name: t.title, img: t.imageUrl }),
+  },
+  mostBooked: {
+    toApi: (t) => ({ title: t.title, imageUrl: t.image, rating: t.rating, price: t.price, badge: t.badge }),
+    fromApi: (t) => ({ id: t.id, title: t.title, image: t.imageUrl, rating: t.rating, price: t.price, badge: t.badge }),
+  },
+  applianceServices: {
+    toApi: (t) => ({ title: t.title, imageUrl: t.image, rating: t.rating, price: t.price, badge: t.badge, link: t.path }),
+    fromApi: (t) => ({ id: t.id, title: t.title, image: t.imageUrl, rating: t.rating, price: t.price, badge: t.badge, path: t.link }),
+  },
+  brandCards: {
+    toApi: (t) => ({
+      title: t.title, imageUrl: t.image, brandName: t.brandName, subtitle: t.subtitle,
+      buttonText: t.buttonText, link: t.actionUrl, badgeText: t.badgeText,
+      gradient: t.gradient, textColor: t.textColor,
+    }),
+    fromApi: (t) => ({
+      id: t.id, title: t.title, image: t.imageUrl, brandName: t.brandName, subtitle: t.subtitle,
+      buttonText: t.buttonText, actionUrl: t.link, badgeText: t.badgeText,
+      gradient: t.gradient, textColor: t.textColor,
+    }),
+  },
+};
+
+async function hydrateTiles() {
+  try {
+    const rows = await apiRequest('/cms/home-tiles/admin', { auth: true });
+    for (const [key, placement] of Object.entries(TILE_PLACEMENTS)) {
+      tileCache[key] = (Array.isArray(rows) ? rows : [])
+        .filter((t) => t.placement === placement)
+        .map(TILE_ADAPTERS[key].fromApi);
+    }
+  } catch (err) {
+    console.warn('Could not load home tiles:', err.message);
+  }
+}
+
+function readTiles(key) {
+  return tileCache[key]?.length ? JSON.stringify(tileCache[key]) : null;
+}
+
+/**
+ * Diffs the incoming list against the cache and issues only the calls that
+ * changed — a full delete-and-recreate would churn ids the customer app uses
+ * as React keys.
+ */
+async function writeTiles(key, list) {
+  const previous = tileCache[key] || [];
+  tileCache[key] = list;
+  const { toApi } = TILE_ADAPTERS[key];
+  const placement = TILE_PLACEMENTS[key];
+
+  try {
+    for (const [i, tile] of list.entries()) {
+      const body = { ...toApi(tile), placement, sortOrder: i };
+      if (tile.id && previous.some((p) => p.id === tile.id)) {
+        await apiRequest(`/cms/home-tiles/${tile.id}`, { method: 'PUT', auth: true, body });
+      } else {
+        const created = await apiRequest('/cms/home-tiles', { method: 'POST', auth: true, body });
+        tileCache[key][i] = { ...tile, id: created.id };
+      }
+    }
+    for (const gone of previous.filter((prev) => !list.some((t) => t.id === prev.id))) {
+      await apiRequest(`/cms/home-tiles/${gone.id}`, { method: 'DELETE', auth: true });
+    }
+  } catch (err) {
+    console.warn(`Could not save ${key}:`, err.message);
+  }
+}
+
+// ── Service-page storage ──────────────────────────────────────────────────────
+// These editors were written against a synchronous localStorage API, and there
+// are ~40 read/write sites across the sub-sections. Rather than rewrite each,
+// the storage layer underneath them is swapped: a module-level mirror keeps the
+// synchronous reads working, and every write is pushed to /cms/service-pages so
+// the customer app sees it. Hero copy and catalog live in one document per
+// service, so a write to either syncs the merged pair.
+const servicePageCache = { configs: {}, catalogs: {} };
+
+async function hydrateServicePages() {
+  try {
+    const rows = await apiRequest('/cms/service-pages');
+    for (const row of Array.isArray(rows) ? rows : []) {
+      servicePageCache.configs[row.serviceKey] = {
+        tagline: row.tagline || '',
+        subtitle: row.subtitle || '',
+        subServices: row.subServices || '',
+      };
+      if (row.catalog?.length) servicePageCache.catalogs[row.serviceKey] = row.catalog;
+    }
+  } catch (err) {
+    console.warn('Could not load service page configs:', err.message);
+  }
+}
+
+function syncServicePage(serviceKey) {
+  const config = servicePageCache.configs[serviceKey] || {};
+  const catalog = servicePageCache.catalogs[serviceKey];
+  return apiRequest(`/cms/service-pages/${encodeURIComponent(serviceKey)}`, {
+    method: 'PUT',
+    auth: true,
+    body: { ...config, ...(catalog ? { catalog } : {}) },
+  }).catch((err) => console.warn(`Could not save "${serviceKey}":`, err.message));
+}
+
+function writeServiceConfigs(configs) {
+  const changed = Object.keys(configs).filter(
+    (k) => JSON.stringify(configs[k]) !== JSON.stringify(servicePageCache.configs[k]),
+  );
+  servicePageCache.configs = configs;
+  changed.forEach(syncServicePage);
+}
+
+function writeServiceCatalogs(catalogs) {
+  const changed = Object.keys(catalogs).filter(
+    (k) => JSON.stringify(catalogs[k]) !== JSON.stringify(servicePageCache.catalogs[k]),
+  );
+  servicePageCache.catalogs = catalogs;
+  changed.forEach(syncServicePage);
+}
+
+function readServiceConfigs() {
+  return Object.keys(servicePageCache.configs).length ? JSON.stringify(servicePageCache.configs) : null;
+}
+
+function readServiceCatalogs() {
+  return Object.keys(servicePageCache.catalogs).length ? JSON.stringify(servicePageCache.catalogs) : null;
+}
+
+function shapeStory(s) {
+  return {
+    id: s.id,
+    title: s.title,
+    type: s.type,
+    image: s.mediaUrl || s.slides?.[0]?.image || '',
+    slides: (s.slides || []).map((sl, i) => ({ id: i + 1, ...sl })),
+  };
+}
+
+function shapeBanner(b) {
+  return { id: b.id, image: b.imageUrl, title: b.title || '', sortOrder: b.sortOrder ?? 0 };
+}
 
 const DEFAULT_NON_WARRANTY = [
   { id: 1, image: acBanner, title: 'AC Service Banner' },
@@ -424,81 +640,85 @@ const CustomerAppCustomization = () => {
 
   useEffect(() => {
     // Load Categories
-    const savedCats = localStorage.getItem('custom_categories');
+    const savedCats = readTiles('categories');
     if (savedCats) {
       setCategories(JSON.parse(savedCats));
     } else {
       setCategories(DEFAULT_CATEGORIES);
-      localStorage.setItem('custom_categories', JSON.stringify(DEFAULT_CATEGORIES));
+      writeTiles('categories', DEFAULT_CATEGORIES);
     }
 
     // Load Banners
-    const savedNon = localStorage.getItem('custom_banners_non_warranty');
-    if (savedNon) {
-      setNonWarrantyBanners(JSON.parse(savedNon));
-    } else {
-      setNonWarrantyBanners(DEFAULT_NON_WARRANTY);
-      localStorage.setItem('custom_banners_non_warranty', JSON.stringify(DEFAULT_NON_WARRANTY));
-    }
-
-    const savedWar = localStorage.getItem('custom_banners_warranty');
-    if (savedWar) {
-      setWarrantyBanners(JSON.parse(savedWar));
-    } else {
-      setWarrantyBanners(DEFAULT_WARRANTY);
-      localStorage.setItem('custom_banners_warranty', JSON.stringify(DEFAULT_WARRANTY));
-    }
+    // Banners are real server-side content (/cms/banners), not local state —
+    // the customer app reads the same endpoint, so what an admin publishes here
+    // actually reaches users.
+    (async () => {
+      try {
+        const all = await apiRequest('/cms/banners/admin?app=customer', { auth: true });
+        const list = Array.isArray(all) ? all : [];
+        setNonWarrantyBanners(list.filter(b => b.segment !== 'warranty').map(shapeBanner));
+        setWarrantyBanners(list.filter(b => b.segment === 'warranty').map(shapeBanner));
+      } catch (err) {
+        console.warn('Could not load banners:', err.message);
+      }
+    })();
 
     // Load Services
-    const savedServices = localStorage.getItem('custom_dashboard_services');
+    const savedServices = readTiles('services');
     if (savedServices) {
       setServices(JSON.parse(savedServices));
     } else {
       setServices(DEFAULT_SERVICES);
-      localStorage.setItem('custom_dashboard_services', JSON.stringify(DEFAULT_SERVICES));
+      writeTiles('services', DEFAULT_SERVICES);
     }
 
     // Load Brands & Offers
-    const savedBrands = localStorage.getItem('custom_brand_cards');
+    const savedBrands = readTiles('brandCards');
     if (savedBrands) {
       setBrandCards(JSON.parse(savedBrands));
     } else {
       setBrandCards(DEFAULT_BRAND_CARDS);
-      localStorage.setItem('custom_brand_cards', JSON.stringify(DEFAULT_BRAND_CARDS));
+      writeTiles('brandCards', DEFAULT_BRAND_CARDS);
     }
 
     // Load Most Booked
-    const savedMost = localStorage.getItem('custom_most_booked_services');
+    const savedMost = readTiles('mostBooked');
     if (savedMost) {
       setMostBookedList(JSON.parse(savedMost));
     } else {
       setMostBookedList(DEFAULT_MOST_BOOKED);
-      localStorage.setItem('custom_most_booked_services', JSON.stringify(DEFAULT_MOST_BOOKED));
+      writeTiles('mostBooked', DEFAULT_MOST_BOOKED);
     }
 
     // Load Appliance Services
-    const savedAppliance = localStorage.getItem('custom_appliance_services');
+    const savedAppliance = readTiles('applianceServices');
     if (savedAppliance) {
       setApplianceServicesList(JSON.parse(savedAppliance));
     } else {
       setApplianceServicesList(DEFAULT_APPLIANCE_SERVICES);
-      localStorage.setItem('custom_appliance_services', JSON.stringify(DEFAULT_APPLIANCE_SERVICES));
+      writeTiles('applianceServices', DEFAULT_APPLIANCE_SERVICES);
     }
 
-    // Load Stories
-    const savedStories = localStorage.getItem('custom_stories');
-    if (savedStories) {
-      setStoriesList(JSON.parse(savedStories));
-    } else {
-      setStoriesList(DEFAULT_STORIES);
-      localStorage.setItem('custom_stories', JSON.stringify(DEFAULT_STORIES));
-    }
+    hydrateTiles();
+    hydrateCategoryConfigs();
+    hydrateServicePages();
+
+    // Stories are server-side content the customer app reads from the same
+    // endpoint — /admin so Scheduled ones are visible here too.
+    (async () => {
+      try {
+        const data = await apiRequest('/cms/stories/admin', { auth: true });
+        setStoriesList((data?.data || []).map(shapeStory));
+      } catch (err) {
+        console.warn('Could not load stories:', err.message);
+      }
+    })();
 
     // Pre-populate default catalogs and configs if not exists
-    const savedCatalogs = localStorage.getItem('custom_service_catalogs');
+    const savedCatalogs = readServiceCatalogs();
     const catalogs = savedCatalogs ? JSON.parse(savedCatalogs) : {};
     
-    const savedConfigs = localStorage.getItem('custom_service_details_configs');
+    const savedConfigs = readServiceConfigs();
     const configs = savedConfigs ? JSON.parse(savedConfigs) : {};
 
     const defaultServiceNames = [
@@ -549,8 +769,8 @@ const CustomerAppCustomization = () => {
     });
 
     if (changed) {
-      localStorage.setItem('custom_service_catalogs', JSON.stringify(catalogs));
-      localStorage.setItem('custom_service_details_configs', JSON.stringify(configs));
+      writeServiceCatalogs(catalogs);
+      writeServiceConfigs(configs);
     }
   }, []);
 
@@ -593,7 +813,7 @@ const CustomerAppCustomization = () => {
     setEditIndex(index);
     const cat = categories[index];
     
-    const savedCatalogs = localStorage.getItem('custom_booking_catalog');
+    const savedCatalogs = readCategoryConfigs();
     const customCatalogs = savedCatalogs ? JSON.parse(savedCatalogs) : {};
     
     let config = customCatalogs[cat.name] || {};
@@ -689,13 +909,13 @@ const CustomerAppCustomization = () => {
     if (window.confirm(`Are you sure you want to delete "${catName}"?`)) {
       const updated = categories.filter((_, i) => i !== index);
       setCategories(updated);
-      localStorage.setItem('custom_categories', JSON.stringify(updated));
+      writeTiles('categories', updated);
 
-      const savedCatalogs = localStorage.getItem('custom_booking_catalog');
+      const savedCatalogs = readCategoryConfigs();
       if (savedCatalogs) {
         const customCatalogs = JSON.parse(savedCatalogs);
         delete customCatalogs[catName];
-        localStorage.setItem('custom_booking_catalog', JSON.stringify(customCatalogs));
+        writeCategoryConfigs(customCatalogs);
       }
 
       showToast('Category deleted successfully.');
@@ -735,9 +955,9 @@ const CustomerAppCustomization = () => {
     }
 
     setCategories(updated);
-    localStorage.setItem('custom_categories', JSON.stringify(updated));
+    writeTiles('categories', updated);
 
-    const savedCatalogs = localStorage.getItem('custom_booking_catalog');
+    const savedCatalogs = readCategoryConfigs();
     const customCatalogs = savedCatalogs ? JSON.parse(savedCatalogs) : {};
 
     const typesArray = categoryForm.productTypes.trim()
@@ -758,7 +978,7 @@ const CustomerAppCustomization = () => {
       whyBrandPoints: ['Brand certified expert technicians', 'Correct parts calibration', 'Genuine brand replacement parts'],
       categoryNote: categoryForm.categoryNote
     };
-    localStorage.setItem('custom_booking_catalog', JSON.stringify(customCatalogs));
+    writeCategoryConfigs(customCatalogs);
 
     setShowAddModal(false);
     showToast('Category and booking settings saved successfully.');
@@ -767,8 +987,8 @@ const CustomerAppCustomization = () => {
   const handleResetCategories = () => {
     if (window.confirm('Reset categories to default customer app dashboard options?')) {
       setCategories(DEFAULT_CATEGORIES);
-      localStorage.setItem('custom_categories', JSON.stringify(DEFAULT_CATEGORIES));
-      localStorage.removeItem('custom_booking_catalog');
+      writeTiles('categories', DEFAULT_CATEGORIES);
+      writeCategoryConfigs({});
       showToast('Restored default categories.');
     }
   };
@@ -828,7 +1048,7 @@ const CustomerAppCustomization = () => {
     setEditServiceIndex(index);
     const srv = services[index];
     
-    const savedConfigs = localStorage.getItem('custom_service_details_configs');
+    const savedConfigs = readServiceConfigs();
     const configs = savedConfigs ? JSON.parse(savedConfigs) : {};
     const config = configs[srv.name] || DEFAULT_SERVICE_CONFIGS[srv.name] || {
       tagline: 'Expert Help at Your Door',
@@ -837,7 +1057,7 @@ const CustomerAppCustomization = () => {
       productTypes: []
     };
 
-    const savedCatalogs = localStorage.getItem('custom_service_catalogs');
+    const savedCatalogs = readServiceCatalogs();
     const catalogs = savedCatalogs ? JSON.parse(savedCatalogs) : {};
     const catalog = catalogs[srv.name] || DEFAULT_CATALOG_TEMPLATE;
 
@@ -879,20 +1099,20 @@ const CustomerAppCustomization = () => {
     if (window.confirm(`Are you sure you want to delete "${srvName}"?`)) {
       const updated = services.filter((_, i) => i !== index);
       setServices(updated);
-      localStorage.setItem('custom_dashboard_services', JSON.stringify(updated));
+      writeTiles('services', updated);
 
-      const savedConfigs = localStorage.getItem('custom_service_details_configs');
+      const savedConfigs = readServiceConfigs();
       if (savedConfigs) {
         const configs = JSON.parse(savedConfigs);
         delete configs[srvName];
-        localStorage.setItem('custom_service_details_configs', JSON.stringify(configs));
+        writeServiceConfigs(configs);
       }
 
-      const savedCatalogs = localStorage.getItem('custom_service_catalogs');
+      const savedCatalogs = readServiceCatalogs();
       if (savedCatalogs) {
         const catalogs = JSON.parse(savedCatalogs);
         delete catalogs[srvName];
-        localStorage.setItem('custom_service_catalogs', JSON.stringify(catalogs));
+        writeServiceCatalogs(catalogs);
       }
 
       showToast('Service deleted successfully.');
@@ -937,9 +1157,9 @@ const CustomerAppCustomization = () => {
     }
 
     setServices(updated);
-    localStorage.setItem('custom_dashboard_services', JSON.stringify(updated));
+    writeTiles('services', updated);
 
-    const savedConfigs = localStorage.getItem('custom_service_details_configs');
+    const savedConfigs = readServiceConfigs();
     const configs = savedConfigs ? JSON.parse(savedConfigs) : {};
     configs[serviceForm.name] = {
       tagline: serviceForm.tagline,
@@ -948,12 +1168,12 @@ const CustomerAppCustomization = () => {
       subServices: Array.from(new Set(servicePackages.map(p => p.section.trim()).filter(Boolean))),
       productTypes: serviceTypes.map(t => t.trim()).filter(Boolean)
     };
-    localStorage.setItem('custom_service_details_configs', JSON.stringify(configs));
+    writeServiceConfigs(configs);
 
-    const savedCatalogs = localStorage.getItem('custom_service_catalogs');
+    const savedCatalogs = readServiceCatalogs();
     const catalogs = savedCatalogs ? JSON.parse(savedCatalogs) : {};
     catalogs[serviceForm.name] = parsedCatalog;
-    localStorage.setItem('custom_service_catalogs', JSON.stringify(catalogs));
+    writeServiceCatalogs(catalogs);
 
     setShowServiceModal(false);
     showToast('Service details saved successfully!');
@@ -962,9 +1182,9 @@ const CustomerAppCustomization = () => {
   const handleResetServices = () => {
     if (window.confirm('Reset dashboard services and all customized details pages to original defaults?')) {
       setServices(DEFAULT_SERVICES);
-      localStorage.setItem('custom_dashboard_services', JSON.stringify(DEFAULT_SERVICES));
-      localStorage.removeItem('custom_service_details_configs');
-      localStorage.removeItem('custom_service_catalogs');
+      writeTiles('services', DEFAULT_SERVICES);
+      writeServiceConfigs({});
+      writeServiceCatalogs({});
       showToast('Restored original defaults.');
     }
   };
@@ -981,61 +1201,57 @@ const CustomerAppCustomization = () => {
     }
   };
 
-  const handleAddBanner = (e) => {
+  const handleAddBanner = async (e) => {
     e.preventDefault();
     if (!newBannerFile) return;
 
-    const title = newBannerTitle.trim() || `Banner ${Date.now()}`;
-    const newBanner = {
-      id: Date.now(),
-      image: newBannerFile,
-      title: title
-    };
+    try {
+      const created = await apiRequest('/cms/banners', {
+        method: 'POST',
+        auth: true,
+        body: {
+          imageUrl: newBannerFile,
+          app: 'customer',
+          segment: bannerType === 'warranty' ? 'warranty' : 'non-warranty',
+        },
+      });
+      const banner = shapeBanner(created);
+      if (bannerType === 'non-warranty') setNonWarrantyBanners((prev) => [...prev, banner]);
+      else setWarrantyBanners((prev) => [...prev, banner]);
 
-    if (bannerType === 'non-warranty') {
-      const updated = [...nonWarrantyBanners, newBanner];
-      setNonWarrantyBanners(updated);
-      localStorage.setItem('custom_banners_non_warranty', JSON.stringify(updated));
-    } else {
-      const updated = [...warrantyBanners, newBanner];
-      setWarrantyBanners(updated);
-      localStorage.setItem('custom_banners_warranty', JSON.stringify(updated));
-    }
-
-    setNewBannerTitle('');
-    setNewBannerFile('');
-    const fileInput = document.getElementById('banner-file-input-sub');
-    if (fileInput) fileInput.value = '';
-
-    showToast('New dashboard banner uploaded successfully!');
-  };
-
-  const handleDeleteBanner = (id) => {
-    if (window.confirm('Are you sure you want to delete this banner?')) {
-      if (bannerType === 'non-warranty') {
-        const updated = nonWarrantyBanners.filter(b => b.id !== id);
-        setNonWarrantyBanners(updated);
-        localStorage.setItem('custom_banners_non_warranty', JSON.stringify(updated));
-      } else {
-        const updated = warrantyBanners.filter(b => b.id !== id);
-        setWarrantyBanners(updated);
-        localStorage.setItem('custom_banners_warranty', JSON.stringify(updated));
-      }
-      showToast('Banner deleted successfully.');
+      setNewBannerTitle('');
+      setNewBannerFile('');
+      const fileInput = document.getElementById('banner-file-input-sub');
+      if (fileInput) fileInput.value = '';
+      showToast('Banner published — it is now live in the customer app.');
+    } catch (err) {
+      showToast(`Could not publish the banner: ${err.message}`);
     }
   };
 
+  const handleDeleteBanner = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this banner?')) return;
+
+    const prevNon = nonWarrantyBanners;
+    const prevWar = warrantyBanners;
+    if (bannerType === 'non-warranty') setNonWarrantyBanners((p) => p.filter((b) => b.id !== id));
+    else setWarrantyBanners((p) => p.filter((b) => b.id !== id));
+
+    try {
+      await apiRequest(`/cms/banners/${id}`, { method: 'DELETE', auth: true });
+      showToast('Banner removed from the customer app.');
+    } catch (err) {
+      setNonWarrantyBanners(prevNon);
+      setWarrantyBanners(prevWar);
+      showToast(`Could not delete the banner: ${err.message}`);
+    }
+  };
+
+  // Banners now live on the server and are shared by every customer, so there is
+  // no local default to restore to — resetting would mean deleting real content
+  // for everyone. Removed deliberately rather than left as a no-op button.
   const handleResetBanners = () => {
-    if (window.confirm('Reset all banners of the current type to original defaults?')) {
-      if (bannerType === 'non-warranty') {
-        setNonWarrantyBanners(DEFAULT_NON_WARRANTY);
-        localStorage.setItem('custom_banners_non_warranty', JSON.stringify(DEFAULT_NON_WARRANTY));
-      } else {
-        setWarrantyBanners(DEFAULT_WARRANTY);
-        localStorage.setItem('custom_banners_warranty', JSON.stringify(DEFAULT_WARRANTY));
-      }
-      showToast('Restored default banners.');
-    }
+    showToast('Banners are live content — delete individual banners instead of resetting.');
   };
 
   const currentBanners = bannerType === 'non-warranty' ? nonWarrantyBanners : warrantyBanners;
@@ -1090,7 +1306,7 @@ const CustomerAppCustomization = () => {
     if (window.confirm(`Are you sure you want to delete this brand card?`)) {
       const updated = brandCards.filter((_, i) => i !== index);
       setBrandCards(updated);
-      localStorage.setItem('custom_brand_cards', JSON.stringify(updated));
+      writeTiles('brandCards', updated);
       showToast('Brand offer card deleted successfully.');
     }
   };
@@ -1120,7 +1336,7 @@ const CustomerAppCustomization = () => {
     }
 
     setBrandCards(updated);
-    localStorage.setItem('custom_brand_cards', JSON.stringify(updated));
+    writeTiles('brandCards', updated);
     setShowBrandModal(false);
     showToast('Brand offer card saved successfully!');
   };
@@ -1128,7 +1344,7 @@ const CustomerAppCustomization = () => {
   const handleResetBrands = () => {
     if (window.confirm('Reset Brands & Offers to original defaults?')) {
       setBrandCards(DEFAULT_BRAND_CARDS);
-      localStorage.setItem('custom_brand_cards', JSON.stringify(DEFAULT_BRAND_CARDS));
+      writeTiles('brandCards', DEFAULT_BRAND_CARDS);
       showToast('Restored brand offers defaults.');
     }
   };
@@ -1167,7 +1383,7 @@ const CustomerAppCustomization = () => {
     const mb = mostBookedList[index];
 
     // Load custom service details configs & catalogs under this service title
-    const savedConfigs = localStorage.getItem('custom_service_details_configs');
+    const savedConfigs = readServiceConfigs();
     const configs = savedConfigs ? JSON.parse(savedConfigs) : {};
     const config = configs[mb.title] || {
       tagline: 'Expert Help at Your Door',
@@ -1176,7 +1392,7 @@ const CustomerAppCustomization = () => {
       productTypes: []
     };
 
-    const savedCatalogs = localStorage.getItem('custom_service_catalogs');
+    const savedCatalogs = readServiceCatalogs();
     const catalogs = savedCatalogs ? JSON.parse(savedCatalogs) : {};
     const catalog = catalogs[mb.title] || DEFAULT_CATALOG_TEMPLATE;
 
@@ -1218,21 +1434,21 @@ const CustomerAppCustomization = () => {
     if (window.confirm(`Are you sure you want to delete "${title}" from most booked list?`)) {
       const updated = mostBookedList.filter((_, i) => i !== index);
       setMostBookedList(updated);
-      localStorage.setItem('custom_most_booked_services', JSON.stringify(updated));
+      writeTiles('mostBooked', updated);
 
       // delete configs & catalogs too
-      const savedConfigs = localStorage.getItem('custom_service_details_configs');
+      const savedConfigs = readServiceConfigs();
       if (savedConfigs) {
         const configs = JSON.parse(savedConfigs);
         delete configs[title];
-        localStorage.setItem('custom_service_details_configs', JSON.stringify(configs));
+        writeServiceConfigs(configs);
       }
 
-      const savedCatalogs = localStorage.getItem('custom_service_catalogs');
+      const savedCatalogs = readServiceCatalogs();
       if (savedCatalogs) {
         const catalogs = JSON.parse(savedCatalogs);
         delete catalogs[title];
-        localStorage.setItem('custom_service_catalogs', JSON.stringify(catalogs));
+        writeServiceCatalogs(catalogs);
       }
 
       showToast('Most booked service deleted successfully.');
@@ -1281,10 +1497,10 @@ const CustomerAppCustomization = () => {
     }
 
     setMostBookedList(updated);
-    localStorage.setItem('custom_most_booked_services', JSON.stringify(updated));
+    writeTiles('mostBooked', updated);
 
     // Save configurations
-    const savedConfigs = localStorage.getItem('custom_service_details_configs');
+    const savedConfigs = readServiceConfigs();
     const configs = savedConfigs ? JSON.parse(savedConfigs) : {};
     configs[mostBookedForm.title] = {
       tagline: 'Expert Help at Your Door',
@@ -1294,12 +1510,12 @@ const CustomerAppCustomization = () => {
       brands: ['LG', 'Samsung', 'Whirlpool', 'Panasonic'],
       categoryNote: 'Prices shown are indicative.'
     };
-    localStorage.setItem('custom_service_details_configs', JSON.stringify(configs));
+    writeServiceConfigs(configs);
 
-    const savedCatalogs = localStorage.getItem('custom_service_catalogs');
+    const savedCatalogs = readServiceCatalogs();
     const catalogs = savedCatalogs ? JSON.parse(savedCatalogs) : {};
     catalogs[mostBookedForm.title] = parsedCatalog;
-    localStorage.setItem('custom_service_catalogs', JSON.stringify(catalogs));
+    writeServiceCatalogs(catalogs);
 
     setShowMostBookedModal(false);
     showToast('Most booked service saved successfully!');
@@ -1308,7 +1524,7 @@ const CustomerAppCustomization = () => {
   const handleResetMostBooked = () => {
     if (window.confirm('Reset Most Booked Services list to original defaults?')) {
       setMostBookedList(DEFAULT_MOST_BOOKED);
-      localStorage.setItem('custom_most_booked_services', JSON.stringify(DEFAULT_MOST_BOOKED));
+      writeTiles('mostBooked', DEFAULT_MOST_BOOKED);
       showToast('Restored most booked defaults.');
     }
   };
@@ -1348,7 +1564,7 @@ const CustomerAppCustomization = () => {
     const app = applianceServicesList[index];
 
     // Load custom service details configs & catalogs under this service title
-    const savedConfigs = localStorage.getItem('custom_service_details_configs');
+    const savedConfigs = readServiceConfigs();
     const configs = savedConfigs ? JSON.parse(savedConfigs) : {};
     const config = configs[app.title] || {
       tagline: 'Expert Help at Your Door',
@@ -1357,7 +1573,7 @@ const CustomerAppCustomization = () => {
       productTypes: []
     };
 
-    const savedCatalogs = localStorage.getItem('custom_service_catalogs');
+    const savedCatalogs = readServiceCatalogs();
     const catalogs = savedCatalogs ? JSON.parse(savedCatalogs) : {};
     const catalog = catalogs[app.title] || DEFAULT_CATALOG_TEMPLATE;
 
@@ -1400,21 +1616,21 @@ const CustomerAppCustomization = () => {
     if (window.confirm(`Are you sure you want to delete "${title}" from appliance services list?`)) {
       const updated = applianceServicesList.filter((_, i) => i !== index);
       setApplianceServicesList(updated);
-      localStorage.setItem('custom_appliance_services', JSON.stringify(updated));
+      writeTiles('applianceServices', updated);
 
       // delete configs & catalogs too
-      const savedConfigs = localStorage.getItem('custom_service_details_configs');
+      const savedConfigs = readServiceConfigs();
       if (savedConfigs) {
         const configs = JSON.parse(savedConfigs);
         delete configs[title];
-        localStorage.setItem('custom_service_details_configs', JSON.stringify(configs));
+        writeServiceConfigs(configs);
       }
 
-      const savedCatalogs = localStorage.getItem('custom_service_catalogs');
+      const savedCatalogs = readServiceCatalogs();
       if (savedCatalogs) {
         const catalogs = JSON.parse(savedCatalogs);
         delete catalogs[title];
-        localStorage.setItem('custom_service_catalogs', JSON.stringify(catalogs));
+        writeServiceCatalogs(catalogs);
       }
 
       showToast('Appliance service card deleted successfully.');
@@ -1464,10 +1680,10 @@ const CustomerAppCustomization = () => {
     }
 
     setApplianceServicesList(updated);
-    localStorage.setItem('custom_appliance_services', JSON.stringify(updated));
+    writeTiles('applianceServices', updated);
 
     // Save configurations
-    const savedConfigs = localStorage.getItem('custom_service_details_configs');
+    const savedConfigs = readServiceConfigs();
     const configs = savedConfigs ? JSON.parse(savedConfigs) : {};
     configs[applianceForm.title] = {
       tagline: 'Expert Help at Your Door',
@@ -1477,12 +1693,12 @@ const CustomerAppCustomization = () => {
       brands: ['LG', 'Samsung', 'Whirlpool', 'Panasonic'],
       categoryNote: 'Prices shown are indicative.'
     };
-    localStorage.setItem('custom_service_details_configs', JSON.stringify(configs));
+    writeServiceConfigs(configs);
 
-    const savedCatalogs = localStorage.getItem('custom_service_catalogs');
+    const savedCatalogs = readServiceCatalogs();
     const catalogs = savedCatalogs ? JSON.parse(savedCatalogs) : {};
     catalogs[applianceForm.title] = parsedCatalog;
-    localStorage.setItem('custom_service_catalogs', JSON.stringify(catalogs));
+    writeServiceCatalogs(catalogs);
 
     setShowApplianceModal(false);
     showToast('Appliance service saved successfully!');
@@ -1491,7 +1707,7 @@ const CustomerAppCustomization = () => {
   const handleResetAppliance = () => {
     if (window.confirm('Reset Appliance Repair & Services list to original defaults?')) {
       setApplianceServicesList(DEFAULT_APPLIANCE_SERVICES);
-      localStorage.setItem('custom_appliance_services', JSON.stringify(DEFAULT_APPLIANCE_SERVICES));
+      writeTiles('applianceServices', DEFAULT_APPLIANCE_SERVICES);
       showToast('Restored appliance services defaults.');
     }
   };
@@ -1540,17 +1756,22 @@ const CustomerAppCustomization = () => {
     setShowStoryModal(true);
   };
 
-  const handleDeleteStory = (index) => {
-    const title = storiesList[index].title;
-    if (window.confirm(`Are you sure you want to delete story "${title}"?`)) {
-      const updated = storiesList.filter((_, i) => i !== index);
-      setStoriesList(updated);
-      localStorage.setItem('custom_stories', JSON.stringify(updated));
-      showToast('Story deleted successfully.');
+  const handleDeleteStory = async (index) => {
+    const story = storiesList[index];
+    if (!window.confirm(`Are you sure you want to delete story "${story.title}"?`)) return;
+
+    const previous = storiesList;
+    setStoriesList(storiesList.filter((_, i) => i !== index));
+    try {
+      await apiRequest(`/cms/stories/${story.id}`, { method: 'DELETE', auth: true });
+      showToast('Story removed from the customer app.');
+    } catch (err) {
+      setStoriesList(previous);
+      showToast(`Could not delete the story: ${err.message}`);
     }
   };
 
-  const handleSaveStory = (e) => {
+  const handleSaveStory = async (e) => {
     e.preventDefault();
     if (!storyForm.title.trim()) return;
 
@@ -1561,32 +1782,33 @@ const CustomerAppCustomization = () => {
       subCaption: slide.subCaption || ''
     }));
 
-    let updated = [...storiesList];
-    const newStory = {
-      id: isEditingStory ? storiesList[editStoryIndex].id : Date.now(),
+    const body = {
       title: storyForm.title,
-      image: storyForm.image || parsedSlides[0]?.image || '',
-      slides: parsedSlides
+      type: storyForm.type || 'Customer Help Slider',
+      mediaUrl: storyForm.image || parsedSlides[0]?.image || '',
+      slides: parsedSlides.map(({ image, caption, subCaption }) => ({ image, caption, subCaption })),
     };
 
-    if (isEditingStory) {
-      updated[editStoryIndex] = newStory;
-    } else {
-      updated.push(newStory);
+    try {
+      if (isEditingStory) {
+        const existing = storiesList[editStoryIndex];
+        const saved = await apiRequest(`/cms/stories/${existing.id}`, { method: 'PUT', auth: true, body });
+        setStoriesList(storiesList.map((s2, i) => (i === editStoryIndex ? shapeStory(saved) : s2)));
+      } else {
+        const saved = await apiRequest('/cms/stories', { method: 'POST', auth: true, body });
+        setStoriesList([...storiesList, shapeStory(saved)]);
+      }
+      setShowStoryModal(false);
+      showToast('Story published to the customer app.');
+    } catch (err) {
+      showToast(`Could not save the story: ${err.message}`);
     }
-
-    setStoriesList(updated);
-    localStorage.setItem('custom_stories', JSON.stringify(updated));
-    setShowStoryModal(false);
-    showToast('Story saved successfully!');
   };
 
+  // Same reasoning as banners: stories are live shared content, so there is no
+  // local default to restore without deleting real content for every customer.
   const handleResetStories = () => {
-    if (window.confirm('Reset Stories list to original defaults?')) {
-      setStoriesList(DEFAULT_STORIES);
-      localStorage.setItem('custom_stories', JSON.stringify(DEFAULT_STORIES));
-      showToast('Restored stories defaults.');
-    }
+    showToast('Stories are live content — delete individual stories instead of resetting.');
   };
 
   return (

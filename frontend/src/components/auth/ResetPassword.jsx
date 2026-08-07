@@ -1,15 +1,20 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { apiRequest } from '../../lib/apiClient';
 import { ArrowLeft, Lock, Eye, EyeOff, CheckCircle2, ShieldCheck } from 'lucide-react';
 
 /**
- * Reusable "set new password" screen (mobile variant). Simulated: on submit
- * it shows a success state and routes back to login.
+ * Reusable "set new password" screen (mobile variant). Calls
+ * POST /auth/reset-password with the role/identifier/code carried in
+ * navigation state from the OTP step. It used to show a success state and
+ * route back to login without changing the password at all.
  *
  * Props: portalLabel, backTo (login path)
  */
 const ResetPassword = ({ portalLabel = '', backTo = '/login' }) => {
   const navigate = useNavigate();
+  const { state } = useLocation();
+  const [submitting, setSubmitting] = useState(false);
   const [pwd, setPwd] = useState('');
   const [confirm, setConfirm] = useState('');
   const [show, setShow] = useState(false);
@@ -27,7 +32,7 @@ const ResetPassword = ({ portalLabel = '', backTo = '/login' }) => {
   const strengthLabel = ['Too weak', 'Weak', 'Fair', 'Good', 'Strong'][strength];
   const strengthColor = ['bg-slate-200', 'bg-red-400', 'bg-orange-400', 'bg-yellow-400', 'bg-green-500'][strength];
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (pwd.length < 8) {
       setError('Password must be at least 8 characters.');
@@ -37,9 +42,25 @@ const ResetPassword = ({ portalLabel = '', backTo = '/login' }) => {
       setError('Passwords do not match.');
       return;
     }
+    if (!state?.role || !state?.identifier || !state?.code) {
+      setError('This reset link is no longer valid. Please start the reset again from the login screen.');
+      return;
+    }
+
     setError('');
-    setDone(true);
-    setTimeout(() => navigate(backTo), 1600);
+    setSubmitting(true);
+    try {
+      await apiRequest('/auth/reset-password', {
+        method: 'POST',
+        body: { role: state.role, identifier: state.identifier, code: state.code, newPassword: pwd },
+      });
+      setDone(true);
+      setTimeout(() => navigate(backTo), 1600);
+    } catch (err) {
+      setError(err.message || 'Could not reset your password. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -128,9 +149,10 @@ const ResetPassword = ({ portalLabel = '', backTo = '/login' }) => {
 
               <button
                 type="submit"
-                className="w-full bg-gradient-to-r from-[#FFD600] to-[#FFCA00] text-[#0D47A1] font-bold py-3 rounded-2xl hover:shadow-lg hover:shadow-yellow-400/20 transition-all transform hover:-translate-y-0.5 active:scale-95 mt-1"
+                disabled={submitting}
+                className="w-full bg-gradient-to-r from-[#FFD600] to-[#FFCA00] text-[#0D47A1] font-bold py-3 rounded-2xl hover:shadow-lg hover:shadow-yellow-400/20 disabled:opacity-60 transition-all transform hover:-translate-y-0.5 active:scale-95 mt-1"
               >
-                Update Password
+                {submitting ? 'Updating…' : 'Update Password'}
               </button>
             </form>
           </>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
 import { 
@@ -15,14 +15,49 @@ import {
   X,
   CheckCircle2
 } from 'lucide-react';
+import { apiRequest } from '../../lib/apiClient';
+
+const currency = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+
+// Rows are aggregated per SKU across the technicians serving this brand, so
+// there is no single owning technician — `technicians` is how many carry it.
+function shape(item) {
+  return {
+    id: item.sku,
+    name: item.name,
+    category: '—',
+    compatible: `${item.technicians} technician${item.technicians === 1 ? '' : 's'}`,
+    stock: item.totalQty,
+    price: currency.format(item.price || 0),
+    status: item.status,
+  };
+}
 
 const Inventory = () => {
-  const [parts, setParts] = useState([
-    { id: 'SKU-9001', name: 'Compressor', category: 'Refrigerator', compatible: 'LG-REF-450', stock: 15, price: '₹4,500', status: 'In Stock' },
-    { id: 'SKU-9002', name: 'Drain Pump', category: 'Washing Machine', compatible: 'LG-WM-70', stock: 3, price: '₹1,200', status: 'Low Stock' },
-    { id: 'SKU-9003', name: 'Magnetron', category: 'Microwave', compatible: 'LG-MW-20', stock: 0, price: '₹2,100', status: 'Out of Stock' },
-    { id: 'SKU-9004', name: 'Display Panel', category: 'Smart TV', compatible: 'LG-55OLEDEV', stock: 8, price: '₹12,000', status: 'In Stock' },
-  ]);
+  const [parts, setParts] = useState([]);
+  const STOCK_READ_ONLY =
+    'Stock belongs to each technician\'s own van inventory — a brand console can view it but not change it.';
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadInventory() {
+      try {
+        // Stock held by the technicians who work this brand's jobs — a brand
+        // does not own parts, so this is the closest real answer.
+        const data = await apiRequest('/brand/inventory', { auth: true });
+        if (!cancelled) setParts((data?.data || []).map(shape));
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    loadInventory();
+    return () => { cancelled = true; };
+  }, []);
 
   const [showModal, setShowModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -50,69 +85,28 @@ const Inventory = () => {
       return;
     }
 
-    setParts(parts.map(p => {
-      if (p.id === id) {
-        const newStock = p.stock - 1;
-        return { 
-          ...p, 
-          stock: newStock,
-          status: newStock === 0 ? 'Out of Stock' : newStock < 5 ? 'Low Stock' : 'In Stock'
-        };
-      }
-      return p;
-    }));
-    showToast(`Dispatched 1 pc of SKU ${id} successfully!`);
+    setError(STOCK_READ_ONLY);
   };
 
+  // Adding a part here only ever pushed a row into browser state — this view
+  // is an aggregate of what the brand's technicians carry in their vans, not a
+  // catalogue the brand owns, so there is nothing to add to.
   const handleAddPartSubmit = (e) => {
     e.preventDefault();
-    if (!newPart.name || !newPart.compatible || !newPart.price) {
-      showToast('Please fill out all fields.');
-      return;
-    }
-    const qty = Number(newPart.stock) || 0;
-    const formattedPrice = newPart.price.startsWith('₹') ? newPart.price : `₹${Number(newPart.price).toLocaleString()}`;
-    const addedPart = {
-      id: `SKU-${9000 + parts.length + 1}`,
-      name: newPart.name,
-      category: newPart.category,
-      compatible: newPart.compatible,
-      stock: qty,
-      price: formattedPrice,
-      status: qty === 0 ? 'Out of Stock' : qty < 5 ? 'Low Stock' : 'In Stock'
-    };
-    setParts([addedPart, ...parts]);
-    setNewPart({ name: '', category: 'Refrigerator', compatible: '', stock: '', price: '' });
     setShowModal(false);
-    showToast('Spare part added to inventory successfully!');
+    setError(STOCK_READ_ONLY);
   };
 
   const handleEditStockClick = (part) => {
     setSelectedPart(part);
-    setEditStockValue(part.stock.toString());
+    setEditStockValue(String(part.stock));
     setShowEditModal(true);
   };
 
   const handleEditStockSubmit = (e) => {
     e.preventDefault();
-    const qty = Number(editStockValue);
-    if (isNaN(qty) || qty < 0) {
-      showToast('Please enter a valid stock quantity.');
-      return;
-    }
-
-    setParts(parts.map(p => {
-      if (p.id === selectedPart.id) {
-        return {
-          ...p,
-          stock: qty,
-          status: qty === 0 ? 'Out of Stock' : qty < 5 ? 'Low Stock' : 'In Stock'
-        };
-      }
-      return p;
-    }));
     setShowEditModal(false);
-    showToast(`Stock updated for ${selectedPart.name} successfully!`);
+    setError(STOCK_READ_ONLY);
   };
 
   const filteredParts = parts.filter(part => {
@@ -128,11 +122,13 @@ const Inventory = () => {
   const lowStockCount = parts.filter(p => p.status === 'Low Stock').length;
   const outOfStockCount = parts.filter(p => p.status === 'Out of Stock').length;
 
+  // "Dispatch Pending" belonged to part orders, not stock — it lives on the
+  // Part Requests screen, which has the real figure.
   const stats = [
-    { title: 'Total Inventory', value: (totalPartsCount + 1394).toString(), icon: <Package size={20} />, color: 'bg-blue-600' },
-    { title: 'Low Stock Items', value: (lowStockCount + 10).toString(), icon: <AlertTriangle size={20} />, color: 'bg-yellow-600' },
-    { title: 'Out of Stock', value: (outOfStockCount + 4).toString(), icon: <XCircle size={20} />, color: 'bg-red-600' },
-    { title: 'Dispatch Pending', value: '24', icon: <Truck size={20} />, color: 'bg-purple-600' },
+    { title: 'Total Inventory', value: String(totalPartsCount), icon: <Package size={20} />, color: 'bg-blue-600' },
+    { title: 'Low Stock Items', value: String(lowStockCount), icon: <AlertTriangle size={20} />, color: 'bg-yellow-600' },
+    { title: 'Out of Stock', value: String(outOfStockCount), icon: <XCircle size={20} />, color: 'bg-red-600' },
+    { title: 'Distinct SKUs', value: String(parts.length), icon: <Truck size={20} />, color: 'bg-purple-600' },
   ];
 
   return (
@@ -242,6 +238,15 @@ const Inventory = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E2E8F0]">
+                  {loading && (
+                    <tr><td colSpan={8} className="px-6 py-10 text-center text-[#64748B] font-semibold">Loading inventory…</td></tr>
+                  )}
+                  {!loading && error && (
+                    <tr><td colSpan={8} className="px-6 py-10 text-center text-red-600 font-semibold">{error}</td></tr>
+                  )}
+                  {!loading && !error && filteredParts.length === 0 && (
+                    <tr><td colSpan={8} className="px-6 py-10 text-center text-[#64748B] font-semibold">No stock held by technicians serving this brand.</td></tr>
+                  )}
                   {filteredParts.map((part) => (
                     <tr key={part.id} className="hover:bg-[#F8FAFC] transition-colors">
                       <td className="px-6 py-4">

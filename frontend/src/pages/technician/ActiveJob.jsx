@@ -167,7 +167,8 @@ const ActiveJob = () => {
     proofs,
     setProofs,
     addChatMessage,
-    chatMessages
+    chatMessages,
+    inventory
   } = useTech();
 
   // ── Click-to-call relay ────────────────────────────────────────────────────
@@ -230,7 +231,13 @@ const ActiveJob = () => {
   const [activeTab, setActiveTab] = useState('Overview'); // 'Overview', 'Diagnosis', 'Parts', 'Notes', 'History'
   const [showAIModal, setShowAIModal] = useState(false);
   const [showSignaturePad, setShowSignaturePad] = useState(false);
-  const [notesText, setNotesText] = useState('AC compressor draws high current initially. Fan motor runs, but cooling is zero. Suspect run capacitor degradation.');
+  const [notesText, setNotesText] = useState('');
+  const [notesSaved, setNotesSaved] = useState(false);
+  const [notesError, setNotesError] = useState('');
+
+  useEffect(() => {
+    setNotesText(activeJob?.diagnosis?.notes || '');
+  }, [activeJob?.id, activeJob?.diagnosis?.notes]);
   const [enteredInspection, setEnteredInspection] = useState(false);
   const [inspectionDiagnosed, setInspectionDiagnosed] = useState(false);
   const [selectedDiagnosis, setSelectedDiagnosis] = useState('confirmed'); // 'confirmed', 'different', 'none'
@@ -266,6 +273,35 @@ const ActiveJob = () => {
   const [showOtherDetails, setShowOtherDetails] = useState(false);
   const [revisitRepairStatus, setRevisitRepairStatus] = useState('completed'); // 'completed', 'unable', 'cancelled'
   const [revisitReason, setRevisitReason] = useState('');
+
+  // The brand's decision on the FOC parts claim for this job. Polled while the
+  // approval step is on screen, so the technician sees the real outcome rather
+  // than being able to wave the job through themselves.
+  const [approvalClaimStatus, setApprovalClaimStatus] = useState(null);
+
+  useEffect(() => {
+    if (activeStep !== 'spareapproval' || !activeJob?.serviceRequestId) return;
+    let cancelled = false;
+
+    const poll = async () => {
+      try {
+        const res = await apiRequest('/tech/claims', { auth: true });
+        if (cancelled) return;
+        const claim = (res.data || []).find(
+          (c) => String(c.serviceRequest?.id || c.serviceRequest) === String(activeJob.serviceRequestId),
+        );
+        setApprovalClaimStatus(claim ? claim.status : null);
+      } catch {
+        // Leave the last known status on screen rather than implying a decision.
+      }
+    };
+
+    poll();
+    const timer = setInterval(poll, 15000);
+    return () => { cancelled = true; clearInterval(timer); };
+  }, [activeStep, activeJob?.serviceRequestId]);
+  // What the server actually credited for this visit — null until it answers.
+  const [travelPayout, setTravelPayout] = useState(null);
   const [revisitPaymentMethod, setRevisitPaymentMethod] = useState('upi');
 
   const [revisitOtp, setRevisitOtp] = useState(['8', '7', '4', '5']);
@@ -333,11 +369,25 @@ const ActiveJob = () => {
   });
 
   // Recommended Parts cart matching Screen 7
-  const [partsCartChecked, setPartsCartChecked] = useState([
-    { id: 'part-1', name: 'Capacitor 45/5 MFD', sku: 'CP-45/5', price: 220, match: 79, checked: true, image: capacitorImg },
-    { id: 'part-2', name: 'Gas Refill Kit (R410A)', sku: 'GRK-410', price: 850, match: 60, checked: true, image: gasRefillImg },
-    { id: 'part-3', name: 'Outdoor Fan Motor', sku: 'PM-18V', price: 1250, match: 40, checked: false, image: fanMotorImg }
-  ]);
+  // Parts offered here come from the technician's own stock. They were three
+  // hardcoded items whose prices went straight onto the customer's invoice.
+  const [partsCartChecked, setPartsCartChecked] = useState([]);
+
+  useEffect(() => {
+    setPartsCartChecked(
+      (inventory || [])
+        .filter((item) => item.qty > 0)
+        .map((item) => ({
+          id: item.id,
+          name: item.name,
+          sku: item.sku,
+          price: item.price,
+          stock: item.qty,
+          checked: false,
+          image: capacitorImg,
+        })),
+    );
+  }, [inventory]);
 
   // AI Chat Drawer State (Screen 16)
   const [chatOpen, setChatOpen] = useState(false);
@@ -350,23 +400,26 @@ const ActiveJob = () => {
     activeJob.type === 'AMC Visit' || activeJob.type === 'AMC VISIT'
   );
 
-  const selectedSparePart = spareParts.find(p => p.checked) || { name: 'Compressor', price: 4500 };
+  const selectedSparePart = spareParts.find(p => p.checked) || { name: 'No part used', price: 0 };
   const dynamicPartName = selectedSparePart.name;
   const dynamicPartPrice = isWarrantyOrAMC ? 0 : selectedSparePart.price;
 
-  const revisitServiceCharge = isWarrantyOrAMC ? 0 : 2200;
+  // The server prices the visit; a covered job charges nothing for the base visit.
+  const jobServiceCharge = activeJob?.billingEstimate?.serviceCharge ?? activeJob?.price ?? 0;
+  const gstPercent = activeJob?.billingEstimate?.gstPercent ?? 18;
+  const revisitServiceCharge = isWarrantyOrAMC ? 0 : jobServiceCharge;
   const revisitSparePartPrice = dynamicPartPrice;
   const revisitAdditionalServicesPrice = additionalServices
     .filter(s => s.checked)
     .reduce((sum, s) => sum + s.price, 0);
   
   const revisitTaxableAmount = revisitServiceCharge + revisitSparePartPrice + revisitAdditionalServicesPrice;
-  const revisitTax = Math.round(revisitTaxableAmount * 0.18);
+  const revisitTax = Math.round(revisitTaxableAmount * (gstPercent / 100));
   const revisitTotal = revisitTaxableAmount + revisitTax;
 
-  const finalAmountCollected = spareParts.some(p => p.checked) 
-    ? revisitTotal 
-    : (isWarrantyOrAMC ? 942 : 2112);
+  const finalAmountCollected = activeJob?.billingEstimate?.total != null
+    ? Math.round(activeJob.billingEstimate.total)
+    : revisitTotal;
 
   useEffect(() => {
     if (chatEndRef.current) {
@@ -964,13 +1017,18 @@ const ActiveJob = () => {
                             <FileIcon className="w-6 h-6 text-slate-500" />
                           </div>
                           <div className="text-left">
-                            <p className="text-xs font-semibold text-[#052355] truncate max-w-[150px]">invoice_voltas_ac.pdf</p>
-                            <p className="text-[10px] text-slate-500 font-normal">PDF • 420 KB</p>
+                            <p className="text-xs font-semibold text-[#052355] truncate max-w-[150px]">
+                              {activeJob?.invoiceUrl ? activeJob.invoiceUrl.split('/').pop() : 'No invoice uploaded'}
+                            </p>
+                            <p className="text-[10px] text-slate-500 font-normal">
+                              {activeJob?.invoiceAvailable ? 'Customer confirmed invoice available' : 'Not provided by the customer'}
+                            </p>
                           </div>
                         </div>
-                        <button 
+                        <button
                           onClick={() => setShowInvoicePdfModal(true)}
-                          className="bg-[#EEF4FE] text-[#1E6BDB] hover:bg-[#DCE7FC] px-5 py-2 rounded-full text-xs font-semibold transition-colors"
+                          disabled={!activeJob?.invoiceUrl}
+                          className="bg-[#EEF4FE] text-[#1E6BDB] hover:bg-[#DCE7FC] px-5 py-2 rounded-full text-xs font-semibold transition-colors disabled:opacity-40"
                         >
                           View
                         </button>
@@ -1156,13 +1214,25 @@ const ActiveJob = () => {
               <div className="bg-white rounded-3xl p-3.5 border border-slate-200 shadow-sm flex flex-col gap-4">
                 <h3 className="text-base font-normal text-[#052355]">En-Route to Client</h3>
                 
-                <div className="h-44 bg-slate-100 rounded-2xl overflow-hidden border border-slate-200 flex items-center justify-center relative">
+                {/* Opens real turn-by-turn directions in the device's maps app.
+                    This used to be a static panel captioned "Simulated
+                    Navigation Route" that navigated nowhere. */}
+                <a
+                  href={activeJob?.address ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(activeJob.address)}` : undefined}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={`h-44 bg-slate-100 rounded-2xl overflow-hidden border border-slate-200 flex items-center justify-center relative ${activeJob?.address ? 'cursor-pointer hover:border-blue-400' : 'pointer-events-none'}`}
+                >
                   <div className="absolute inset-0 bg-blue-50/20 flex flex-col items-center justify-center text-center p-4">
                     <MapPin className="h-10 w-10 text-red-500 animate-bounce mb-2" />
-                    <span className="text-xs font-normal text-[#052355]">Simulated Navigation Route</span>
-                    <span className="text-[10px] text-slate-600 mt-0.5">Alex is 0.4 km away from Rohit Sharma</span>
+                    <span className="text-xs font-normal text-[#052355]">
+                      {activeJob?.address ? 'Open navigation' : 'No address on this job'}
+                    </span>
+                    <span className="text-[10px] text-slate-600 mt-0.5 px-4">
+                      {activeJob?.address || `On the way to ${activeJob?.customerName || 'the customer'}`}
+                    </span>
                   </div>
-                </div>
+                </a>
 
                 <button 
                   onClick={() => {
@@ -1750,50 +1820,10 @@ const ActiveJob = () => {
                           </p>
                         </div>
 
-                        {/* Card 2: AI Analysis */}
+                        {/* Card 3: Standard checks — a fixed reminder list, not a
+                            per-job recommendation. */}
                         <div className="bg-white rounded-3xl p-3.5 border border-slate-200 shadow-sm flex flex-col gap-3 text-left">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <h4 className="text-sm font-medium text-[#052355]">AI Analysis</h4>
-                              <p className="text-[10px] text-slate-600 font-normal mt-0.5 leading-relaxed">
-                                Based on similar cases, these could be the possible issues.
-                              </p>
-                            </div>
-                            <span className="text-[9px] font-normal text-slate-600 uppercase tracking-wider pt-1">Probability</span>
-                          </div>
-
-                          {/* Probability items */}
-                          <div className="flex flex-col mt-2">
-                            {/* Capacitor Fault */}
-                            <div className="flex justify-between items-center py-2.5 border-b border-slate-200">
-                              <span className="text-xs font-medium text-[#052355]">Capacitor Fault</span>
-                              <div className="flex items-center gap-3">
-                                <div className="w-12 h-1 bg-[#FFA000] rounded-full"></div>
-                                <span className="text-xs font-medium text-[#FFA000]">75%</span>
-                              </div>
-                            </div>
-                            {/* Low Refrigerant */}
-                            <div className="flex justify-between items-center py-2.5 border-b border-slate-200">
-                              <span className="text-xs font-medium text-[#052355]">Low Refrigerant</span>
-                              <div className="flex items-center gap-3">
-                                <div className="w-12 h-1 bg-[#4CAF50] rounded-full"></div>
-                                <span className="text-xs font-medium text-[#4CAF50]">60%</span>
-                              </div>
-                            </div>
-                            {/* Fan Motor Issue */}
-                            <div className="flex justify-between items-center py-2.5">
-                              <span className="text-xs font-medium text-[#052355]">Fan Motor Issue</span>
-                              <div className="flex items-center gap-3">
-                                <div className="w-12 h-1 bg-[#81C784] rounded-full"></div>
-                                <span className="text-xs font-medium text-[#81C784]">40%</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Card 3: Suggested Actions */}
-                        <div className="bg-white rounded-3xl p-3.5 border border-slate-200 shadow-sm flex flex-col gap-3 text-left">
-                          <h4 className="text-sm font-medium text-[#052355]">Suggested Actions</h4>
+                          <h4 className="text-sm font-medium text-[#052355]">Standard Checks</h4>
                           
                           <div className="flex flex-col gap-3.5 mt-1">
                             <div className="flex items-center gap-3">
@@ -1902,55 +1932,6 @@ const ActiveJob = () => {
                           </div>
                         </div>
 
-                        {/* Not Covered Under Warranty Card (Mockup) */}
-                        <div className="bg-white rounded-3xl p-4 border border-red-200/60 shadow-sm flex flex-col gap-3 text-left">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center text-red-600">
-                              <AlertTriangle className="w-4 h-4" />
-                            </div>
-                            <span className="text-xs font-bold text-red-600 uppercase tracking-wide">Not Covered Under Warranty</span>
-                          </div>
-
-                          <div className="border-t border-slate-100 pt-3 flex flex-col gap-2">
-                            <div className="flex justify-between items-center">
-                              <span className="text-xs font-semibold text-[#052355]">Seat Cover (AC)</span>
-                              <span className="bg-red-50 text-red-600 text-[9px] font-semibold px-2 py-0.5 rounded-md uppercase tracking-wider">
-                                Not Covered
-                              </span>
-                            </div>
-
-                            <div className="space-y-1.5 text-[11px] mt-1">
-                              <div className="flex justify-between items-center">
-                                <span className="text-slate-500 font-normal">Reason</span>
-                                <span className="text-slate-700 font-semibold">Physical Damage / Wear & Tear</span>
-                              </div>
-                              <div className="flex justify-between items-center">
-                                <span className="text-slate-500 font-normal">Customer Payable</span>
-                                <span className="text-xs font-bold text-[#052355]">₹850</span>
-                              </div>
-                              <div className="flex justify-between items-center">
-                                <span className="text-slate-500 font-normal">Availability</span>
-                                <span className="bg-green-50 text-green-600 text-[9px] font-semibold px-2 py-0.5 rounded-md uppercase tracking-wider">
-                                  In Stock
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-
-                          <button 
-                            type="button"
-                            onClick={() => {
-                              alert('Seat Cover (AC) added to customer invoice payable!');
-                              const seatCoverPart = { id: 'part-seat-cover', name: 'Seat Cover (AC)', sku: 'SC-AC-99', price: 850, checked: true, image: gasRefillImg };
-                              if (!partsCartChecked.find(p => p.id === 'part-seat-cover')) {
-                                setPartsCartChecked([...partsCartChecked, seatCoverPart]);
-                              }
-                            }}
-                            className="w-full py-2.5 border border-[#1E6BDB] hover:bg-blue-50/40 text-[#1E6BDB] rounded-xl text-xs font-semibold text-center transition-colors mt-1"
-                          >
-                            Add to Invoice
-                          </button>
-                        </div>
 
                         {/* Add selected to Cart */}
                         <button 
@@ -2143,11 +2124,28 @@ const ActiveJob = () => {
                       placeholder="Add diagnostic comments, client concerns, or parts details..."
                     />
                     <button 
-                      onClick={() => alert('Notes saved successfully!')}
+                      onClick={async () => {
+                        // Diagnosis notes belong on the job, not in a toast.
+                        if (!activeJob?.id || !notesText.trim()) return;
+                        try {
+                          await apiRequest(`/tech/jobs/${activeJob.id}/diagnosis`, {
+                            method: 'POST',
+                            auth: true,
+                            body: { notes: notesText },
+                          });
+                          setNotesSaved(true);
+                          setTimeout(() => setNotesSaved(false), 2500);
+                        } catch (err) {
+                          setNotesError(err.message || 'Could not save your notes.');
+                        }
+                      }}
                       className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-normal py-3 rounded-2xl text-xs transition-all"
                     >
-                      Save Notes
+                      {notesSaved ? 'Saved' : 'Save Notes'}
                     </button>
+                    {notesError && (
+                      <p className="text-[11px] font-semibold text-rose-600">{notesError}</p>
+                    )}
                   </div>
                 )}
 
@@ -2215,12 +2213,27 @@ const ActiveJob = () => {
                     ))}
                   </div>
 
-                  <button 
-                    onClick={() => advanceStep()}
-                    className={`w-full ${approvalColor} text-white font-normal py-4 rounded-2xl text-sm transition-all shadow-md mt-2`}
-                  >
-                    Simulate Approval (Next Step)
-                  </button>
+                  {/* Advancing is gated on the brand's real decision. This was a
+                      "Simulate Approval (Next Step)" button, so a technician
+                      could self-approve FOC parts the brand never authorised. */}
+                  {approvalClaimStatus === 'Approved' ? (
+                    <button
+                      onClick={() => advanceStep()}
+                      className={`w-full ${approvalColor} text-white font-normal py-4 rounded-2xl text-sm transition-all shadow-md mt-2`}
+                    >
+                      Approved — Continue
+                    </button>
+                  ) : approvalClaimStatus === 'Rejected' ? (
+                    <div className="w-full bg-red-50 border border-red-200 text-red-700 font-semibold py-3 rounded-2xl text-xs mt-2 px-3">
+                      The claim was rejected. Bill these parts to the customer or contact Technical Support.
+                    </div>
+                  ) : (
+                    <div className="w-full bg-slate-50 border border-slate-200 text-slate-500 font-semibold py-3 rounded-2xl text-xs mt-2 px-3">
+                      {approvalClaimStatus === null
+                        ? 'No claim has been raised for these parts yet.'
+                        : 'Waiting for the brand to approve. This screen updates automatically.'}
+                    </div>
+                  )}
                 </div>
               );
             })()}
@@ -2383,7 +2396,7 @@ const ActiveJob = () => {
                     
                     {/* Greeting */}
                     <div className="text-left space-y-2 mt-1">
-                      <p className="text-sm font-semibold text-[#052355]">Hi {activeJob?.customerName || 'Rohit Sharma'},</p>
+                      <p className="text-sm font-semibold text-[#052355]">Hi {activeJob?.customerName || 'there'},</p>
                       <p className="text-xs text-slate-600 font-normal leading-relaxed">
                         During inspection, the following part is required:
                       </p>
@@ -2915,6 +2928,7 @@ const ActiveJob = () => {
                         setActiveStep('unable_to_fix_summary');
                       } else if (revisitRepairStatus === 'cancelled') {
                         setActiveStep('cancellation_summary');
+                        creditTravelFee(activeJob?.id).then((res) => setTravelPayout(res || { amount: 0 }));
                       }
                     }}
                     className={`w-full text-white font-bold py-4 rounded-2xl text-sm transition-all shadow-md mt-6 mb-6 text-center ${
@@ -2984,13 +2998,11 @@ const ActiveJob = () => {
                         <span className="text-slate-550 font-normal">Cancellation Reason</span>
                         <span className="text-slate-700 font-semibold text-right max-w-[200px] truncate">{revisitReason}</span>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-slate-500 font-normal">Prepaid Visit Fee</span>
-                        <span className="text-[#052355] font-semibold">₹150</span>
-                      </div>
                       <div className="flex justify-between items-center border-t border-slate-100 pt-3">
-                        <span className="text-xs font-bold text-[#052355]">Travel Payout Credited</span>
-                        <span className="text-sm font-bold text-green-600">₹150</span>
+                        <span className="text-xs font-bold text-[#052355]">Travel Payout</span>
+                        <span className="text-xs font-semibold text-slate-500">
+                          {travelPayout === null ? 'Crediting…' : travelPayout.amount > 0 ? `₹${travelPayout.amount} credited` : 'Not applicable'}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -2998,14 +3010,13 @@ const ActiveJob = () => {
                   <div className="bg-amber-50 border border-amber-200/60 rounded-2xl p-4 flex gap-3 items-start">
                     <Info className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
                     <p className="text-[11px] text-amber-800 leading-relaxed font-normal">
-                      Since the customer paid the visiting charges upfront, no payment collection is required. The travel payout of <strong>₹150</strong> is credited to your dashboard wallet immediately.
+                      Since the customer paid the visiting charges upfront, no payment collection is required. {travelPayout?.amount > 0 ? `Your travel payout of ₹${travelPayout.amount} has been added to your pending earnings and will be released with your next payout cycle.` : 'Your travel payout will be confirmed on your earnings screen.'}
                     </p>
                   </div>
 
                   {/* Complete Button */}
                   <button 
                     onClick={() => {
-                      creditTravelFee();
                       setActiveStep('idle');
                       resetActiveJob();
                       navigate('/technician/dashboard');
@@ -3667,7 +3678,7 @@ const ActiveJob = () => {
                             style={{ fontFamily: "'Brush Script MT', 'Dancing Script', 'Pacifico', 'Caveat', cursive" }}
                             className="text-[34px] text-slate-300 italic font-medium opacity-80"
                           >
-                            Rohit Sharma
+                            {activeJob?.customerName || '—'}
                           </span>
                         </div>
                       )}
@@ -3707,13 +3718,13 @@ const ActiveJob = () => {
                     D2C Paid Service
                   </span>
                   <h3 className="text-base font-medium text-[#052355] mt-2">Billing & Estimate</h3>
-                  <p className="text-xs text-slate-600 font-normal">Estimate breakdown for Rohit Sharma</p>
+                  <p className="text-xs text-slate-600 font-normal">Estimate breakdown for {activeJob?.customerName || 'the customer'}</p>
                 </div>
 
                 <div className="flex flex-col gap-3.5 border-b border-slate-200 pb-4 text-xs font-normal text-slate-600">
                   <div className="flex justify-between">
                     <span className="text-slate-600">Service Charge</span>
-                    <span className="text-[#052355]">₹500</span>
+                    <span className="text-[#052355]">₹{revisitServiceCharge.toLocaleString('en-IN')}</span>
                   </div>
                   
                   {selectedParts.map(part => (
@@ -3724,8 +3735,8 @@ const ActiveJob = () => {
                   ))}
 
                   <div className="flex justify-between">
-                    <span className="text-slate-600">Tax (18% GST)</span>
-                    <span className="text-[#052355]">₹282</span>
+                    <span className="text-slate-600">Tax ({gstPercent}% GST)</span>
+                    <span className="text-[#052355]">₹{revisitTax.toLocaleString('en-IN')}</span>
                   </div>
                 </div>
 
@@ -3733,7 +3744,7 @@ const ActiveJob = () => {
                 <div className="flex flex-col gap-2">
                   <div className="flex justify-between items-center py-1">
                     <span className="text-xs font-normal text-slate-500">Customer Payable</span>
-                    <span className="text-xl font-medium text-green-600">₹2,112</span>
+                    <span className="text-xl font-medium text-green-600">₹{finalAmountCollected.toLocaleString('en-IN')}</span>
                   </div>
                   <div className="flex justify-between items-center py-1">
                     <span className="text-xs font-normal text-slate-500">Technician Earnings</span>
@@ -3898,7 +3909,7 @@ const ActiveJob = () => {
               </div>
               <div className="flex justify-between items-center text-xs font-normal">
                 <span className="text-slate-500">You Earned</span>
-                <span className="text-[#052355] font-bold text-sm">₹850</span>
+                <span className="text-[#052355] font-bold text-sm">₹{(activeJob?.estEarnings || 0).toLocaleString('en-IN')}</span>
               </div>
               <div className="flex justify-between items-center text-xs font-normal">
                 <span className="text-slate-500">Status</span>
@@ -4084,7 +4095,7 @@ const ActiveJob = () => {
                 </div>
                 <div className="flex justify-between border-b border-slate-100 pb-2">
                   <span>Customer:</span>
-                  <span className="font-semibold text-[#052355]">{activeJob?.customerName || 'Rohit Sharma'}</span>
+                  <span className="font-semibold text-[#052355]">{activeJob?.customerName || '—'}</span>
                 </div>
                 <div className="flex justify-between border-b border-slate-100 pb-2">
                   <span>Product:</span>
@@ -4208,205 +4219,51 @@ const ActiveJob = () => {
         </div>
       )}
 
-      {/* Purchase Invoice PDF Preview Modal */}
+      {/* Purchase Invoice viewer — opens the customer's actual uploaded file.
+          This used to render a fabricated retail invoice with invented line
+          items and a print handler that regenerated it as a "real" PDF. */}
       {showInvoicePdfModal && (
         <div className="fixed inset-0 bg-[#052355]/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-[2rem] w-full max-w-sm p-6 shadow-2xl flex flex-col gap-4 border border-slate-100 animate-in fade-in zoom-in-95 duration-200 max-h-[85vh] overflow-y-auto">
-            {/* Modal Header */}
             <div className="flex justify-between items-center pb-2 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <FileIcon className="h-5 w-5 text-[#0D47A1]" />
-                <span className="text-sm font-semibold text-[#052355]">invoice_voltas_ac.pdf</span>
+                <span className="text-sm font-semibold text-[#052355] truncate max-w-[200px]">
+                  {activeJob?.invoiceUrl ? activeJob.invoiceUrl.split('/').pop() : 'No invoice'}
+                </span>
               </div>
-              <button 
+              <button
                 onClick={() => setShowInvoicePdfModal(false)}
-                className="text-slate-400 hover:text-slate-655 text-xs font-semibold hover:underline"
+                className="text-slate-400 hover:text-slate-600 text-xs font-semibold hover:underline"
               >
                 Close
               </button>
             </div>
 
-            {/* Styled Mock PDF Invoice Content */}
-            <div className="bg-slate-55 border border-slate-200 rounded-2xl p-4 text-left flex flex-col gap-3.5 text-xs text-slate-600 font-sans shadow-inner">
-              {/* Logo / Company */}
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="text-sm font-bold text-[#052355] tracking-wide">Croma Electronics</h3>
-                  <p className="text-[10px] text-slate-500 font-normal">Lucknow Retail Store, Hazratganj</p>
-                </div>
-                <div className="text-right">
-                  <span className="text-[9px] font-bold bg-[#E8F5E9] text-green-700 px-2 py-0.5 rounded uppercase">PAID</span>
-                </div>
-              </div>
-
-              <div className="h-[1px] bg-slate-200 w-full"></div>
-
-              {/* Invoice Meta */}
-              <div className="grid grid-cols-2 gap-2 text-[10px] font-normal leading-relaxed">
-                <div>
-                  <span className="text-slate-400 block uppercase font-medium">Invoice Number</span>
-                  <span className="text-[#052355] font-semibold">CRM-2023-889120</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block uppercase font-medium">Date</span>
-                  <span className="text-[#052355] font-semibold">12 Jan 2023</span>
-                </div>
-                <div className="mt-1">
-                  <span className="text-slate-400 block uppercase font-medium">Customer</span>
-                  <span className="text-[#052355] font-semibold">Rohit Sharma</span>
-                </div>
-                <div className="mt-1">
-                  <span className="text-slate-400 block uppercase font-medium">Payment Mode</span>
-                  <span className="text-[#052355] font-semibold">Credit Card (Visa)</span>
-                </div>
-              </div>
-
-              <div className="h-[1px] bg-slate-200 w-full"></div>
-
-              {/* Table details */}
-              <div className="flex flex-col gap-2">
-                <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Line Items</span>
-                <div className="flex justify-between items-center text-[11px]">
-                  <div className="text-left">
-                    <p className="font-semibold text-[#052355]">Voltas Split AC 1.5 Ton</p>
-                    <p className="text-[9px] text-slate-500 font-normal">Model: VLT18GN123348X • Inverter 3-Star</p>
-                  </div>
-                  <span className="font-semibold text-[#052355]">₹38,990</span>
-                </div>
-                <div className="flex justify-between items-center text-[11px] mt-1">
-                  <div className="text-left">
-                    <p className="font-semibold text-[#052355]">Standard Installation Service</p>
-                    <p className="text-[9px] text-slate-500 font-normal">Nigam Care verified partner installation</p>
-                  </div>
-                  <span className="font-semibold text-[#052355]">₹1,500</span>
-                </div>
-              </div>
-
-              <div className="h-[1px] bg-slate-200 w-full"></div>
-
-              {/* Totals */}
-              <div className="flex flex-col gap-1.5 text-xs">
-                <div className="flex justify-between">
-                  <span>Subtotal</span>
-                  <span className="font-semibold text-[#052355]">₹40,490</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>GST (18%)</span>
-                  <span className="font-semibold text-[#052355]">₹7,288</span>
-                </div>
-                <div className="flex justify-between text-sm font-bold text-[#052355] pt-1.5 border-t border-slate-200">
-                  <span>Grand Total</span>
-                  <span className="text-green-600">₹47,778</span>
-                </div>
-              </div>
-
-            </div>
-
-            {/* Action button */}
-            <button 
-              onClick={() => {
-                const printWindow = window.open('', '_blank');
-                printWindow.document.write(`
-                  <html>
-                    <head>
-                      <title>Purchase Invoice - CRM-2023-889120</title>
-                      <style>
-                        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; color: #333; max-width: 600px; margin: auto; }
-                        .header { border-bottom: 2px solid #052355; padding-bottom: 15px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; }
-                        .brand { font-size: 22px; color: #052355; font-weight: bold; }
-                        .status { font-size: 11px; background: #e8f5e9; color: #2e7d32; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-family: sans-serif; }
-                        .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 30px; font-size: 13px; }
-                        .details-label { color: #888; text-transform: uppercase; font-size: 10px; font-weight: bold; }
-                        .details-value { font-weight: 600; color: #052355; margin-top: 2px; }
-                        .items-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-                        .items-table th { border-bottom: 2px solid #eee; padding: 10px 5px; text-align: left; font-size: 11px; color: #888; text-transform: uppercase; }
-                        .items-table td { border-bottom: 1px solid #eee; padding: 12px 5px; font-size: 13px; }
-                        .item-desc { font-weight: bold; color: #052355; }
-                        .item-sub { font-size: 10px; color: #666; margin-top: 2px; }
-                        .totals-section { margin-top: 25px; border-top: 1px solid #eee; padding-top: 15px; font-size: 13px; }
-                        .totals-row { display: flex; justify-content: space-between; margin-bottom: 8px; }
-                        .grand-total { font-size: 16px; font-weight: bold; color: #052355; border-top: 2px solid #052355; padding-top: 12px; margin-top: 10px; }
-                      </style>
-                    </head>
-                    <body>
-                      <div class="header">
-                        <div>
-                          <div class="brand">Croma Electronics</div>
-                          <div style="font-size: 11px; color: #666; margin-top: 2px;">Lucknow Retail Store, Hazratganj</div>
-                        </div>
-                        <div class="status">PAID</div>
-                      </div>
-                      <div class="details-grid">
-                        <div>
-                          <div class="details-label">Invoice Number</div>
-                          <div class="details-value">CRM-2023-889120</div>
-                        </div>
-                        <div>
-                          <div class="details-label">Date</div>
-                          <div class="details-value">12 Jan 2023</div>
-                        </div>
-                        <div>
-                          <div class="details-label">Customer</div>
-                          <div class="details-value">Rohit Sharma</div>
-                        </div>
-                        <div>
-                          <div class="details-label">Payment Mode</div>
-                          <div class="details-value">Credit Card (Visa)</div>
-                        </div>
-                      </div>
-                      <table class="items-table">
-                        <thead>
-                          <tr>
-                            <th>Item Description</th>
-                            <th style="text-align: right;">Amount</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr>
-                            <td>
-                              <div class="item-desc">Voltas Split AC 1.5 Ton</div>
-                              <div class="item-sub">Model: VLT18GN123348X • Inverter 3-Star</div>
-                            </td>
-                            <td style="text-align: right; font-weight: 600; color: #052355;">₹38,990</td>
-                          </tr>
-                          <tr>
-                            <td>
-                              <div class="item-desc">Standard Installation Service</div>
-                              <div class="item-sub">Nigam Care verified partner installation</div>
-                            </td>
-                            <td style="text-align: right; font-weight: 600; color: #052355;">₹1,500</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                      <div class="totals-section">
-                        <div class="totals-row">
-                          <span>Subtotal</span>
-                          <span style="font-weight: 600; color: #052355;">₹40,490</span>
-                        </div>
-                        <div class="totals-row">
-                          <span>GST (18%)</span>
-                          <span style="font-weight: 600; color: #052355;">₹7,288</span>
-                        </div>
-                        <div class="totals-row grand-total">
-                          <span>Grand Total</span>
-                          <span style="color: #2e7d32;">₹47,778</span>
-                        </div>
-                      </div>
-                      <script>
-                        window.onload = function() { window.print(); }
-                      </script>
-                    </body>
-                  </html>
-                `);
-                printWindow.document.close();
-              }}
-              className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-semibold py-3.5 rounded-2xl text-xs transition-all shadow-md"
-            >
-              Download PDF Invoice
-            </button>
+            {activeJob?.invoiceUrl ? (
+              <>
+                <p className="text-[11px] text-slate-500 font-normal text-left">
+                  Purchase invoice uploaded by the customer. Check the purchase date against the
+                  warranty period before proceeding.
+                </p>
+                <a
+                  href={activeJob.invoiceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full bg-[#0D47A1] text-white font-semibold py-3 rounded-xl text-xs text-center"
+                >
+                  Open Invoice
+                </a>
+              </>
+            ) : (
+              <p className="text-[11px] text-slate-500 font-normal text-left">
+                The customer has not uploaded a purchase invoice for this appliance.
+              </p>
+            )}
           </div>
         </div>
       )}
+
 
       {/* AMC Service History Drawer — shown after "Mark as Inspection Arrived" for AMC jobs */}
       {showAmcHistoryDrawer && (

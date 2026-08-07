@@ -38,3 +38,12 @@ sparePartCatalogRouter.put(
     }
   },
 );
+
+sparePartCatalogRouter.delete('/:id', validate(idParamSchema, 'params'), async (req, res, next) => {
+  try {
+    await sparePartCatalogService.deleteSparePart(req.params.id);
+    ok(res, { deleted: true });
+  } catch (err) {
+    next(err);
+  }
+});

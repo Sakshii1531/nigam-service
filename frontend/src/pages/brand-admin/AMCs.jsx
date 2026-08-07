@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
 import { 
@@ -14,6 +14,32 @@ import {
   Bell,
   ArrowLeft
 } from 'lucide-react';
+import { apiRequest } from '../../lib/apiClient';
+
+const currency = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+const dateFormatter = new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
+function shape(sub) {
+  const total = sub.visitsTotal ?? sub.plan?.visitsTotal ?? 0;
+  const remaining = sub.visitsRemaining ?? 0;
+  return {
+    id: sub.id,
+    ref: sub.humanId || sub.id,
+    customer: sub.user?.name || 'Customer',
+    // AMC subscriptions record the appliance brand/model, not a product name.
+    product: sub.model || sub.brand || '—',
+    planName: sub.plan?.name || 'AMC Plan',
+    cost: sub.plan?.price != null ? currency.format(sub.plan.price) : '—',
+    costValue: sub.plan?.price || 0,
+    // Displayed as used/total, which is what the operator reads.
+    visits: `${Math.max(total - remaining, 0)}/${total}`,
+    visitsRemaining: remaining,
+    status: sub.status || 'Active',
+    expiryDate: sub.expiryDate ? dateFormatter.format(new Date(sub.expiryDate)) : '—',
+    brand: sub.brand || '—',
+    model: sub.model || '—',
+  };
+}
 
 const AMCs = () => {
   const [showDrawer, setShowDrawer] = useState(false);
@@ -24,12 +50,25 @@ const AMCs = () => {
   const [selectedPlan, setSelectedPlan] = useState('All Plans');
   const [selectedStatus, setSelectedStatus] = useState('All Status');
 
-  const [amcs, setAmcs] = useState([
-    { id: 'AMC-9001', customer: 'Amit Sharma', product: 'Smart TV', planName: 'Essential AMC', cost: '₹599', visits: '1/3', status: 'Active', expiryDate: '12 May, 2027', brand: 'LG', model: 'LG-55OLEDEV' },
-    { id: 'AMC-9002', customer: 'Priya Patel', product: 'Refrigerator', planName: 'Comprehensive AMC', cost: '₹1,999', visits: '0/4', status: 'Active', expiryDate: '10 May, 2027', brand: 'LG', model: 'LG-REF-450' },
-    { id: 'AMC-9003', customer: 'Rajesh K.', product: 'Washing Machine', planName: 'Essential AMC', cost: '₹699', visits: '3/3', status: 'Expired', expiryDate: '11 May, 2026', brand: 'LG', model: 'LG-WM-70' },
-    { id: 'AMC-9004', customer: 'Neha Gupta', product: 'Microwave', planName: 'Comprehensive AMC', cost: '₹1,499', visits: '2/4', status: 'Expiring Soon', expiryDate: '22 Jul, 2026', brand: 'LG', model: 'LG-MW-20' },
-  ]);
+  const [amcs, setAmcs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadAmcs() {
+      try {
+        const data = await apiRequest('/brand/amc-subscriptions', { auth: true });
+        if (!cancelled) setAmcs((data?.data || []).map(shape));
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    loadAmcs();
+    return () => { cancelled = true; };
+  }, []);
 
   const showToast = (message) => {
     setSuccessMessage(message);
@@ -43,30 +82,40 @@ const AMCs = () => {
     setShowDrawer(true);
   };
 
-  const triggerRenewalReminder = (amcId) => {
-    showToast(`Renewal reminder email & SMS sent successfully for subscription ${amcId}!`);
-    setShowDrawer(false);
+  // Both actions reach the customer now. They used to be success toasts only:
+  // no reminder was sent, and "scheduling" a visit just incremented a counter
+  // in the browser while no AMCVisit was ever created.
+  const triggerRenewalReminder = async (amcId) => {
+    setError('');
+    try {
+      await apiRequest(`/brand/actions/amc/${amcId}/renewal-reminder`, { method: 'POST', auth: true });
+      showToast('Renewal reminder sent to the customer.');
+      setShowDrawer(false);
+    } catch (err) {
+      setError(err.message || 'Could not send the renewal reminder.');
+    }
   };
 
-  const triggerScheduleVisit = (amcId) => {
-    // Increment visit completion count as visual feedback
-    setAmcs(amcs.map(a => {
-      if (a.id === amcId) {
-        const parts = a.visits.split('/');
-        const current = parseInt(parts[0], 10);
-        const total = parseInt(parts[1], 10);
-        if (current < total) {
-          return { ...a, visits: `${current + 1}/${total}` };
-        }
-      }
-      return a;
-    }));
-    showToast(`Maintenance visit scheduled successfully for subscription ${amcId}!`);
-    setShowDrawer(false);
+  const triggerScheduleVisit = async (amcId) => {
+    const date = window.prompt('Visit date (YYYY-MM-DD):');
+    if (!date) return;
+
+    setError('');
+    try {
+      await apiRequest(`/brand/actions/amc/${amcId}/visits`, {
+        method: 'POST',
+        auth: true,
+        body: { scheduledDate: date },
+      });
+      showToast('Maintenance visit scheduled and the customer notified.');
+      setShowDrawer(false);
+    } catch (err) {
+      setError(err.message || 'Could not schedule the visit.');
+    }
   };
 
   const filteredAmcs = amcs.filter(amc => {
-    const matchesSearch = amc.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    const matchesSearch = amc.ref.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           amc.customer.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           amc.product.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesPlan = selectedPlan === 'All Plans' || amc.planName === selectedPlan;
@@ -76,11 +125,14 @@ const AMCs = () => {
 
   const activeAmcCount = amcs.filter(a => a.status === 'Active' || a.status === 'Expiring Soon').length;
 
+  // "Renewal Rate" is gone — nothing records whether a subscription replaced an
+  // earlier one, so it cannot be derived. Visits remaining is real and is the
+  // figure that actually drives scheduling.
   const stats = [
-    { title: 'Active AMCs', value: (activeAmcCount + 410).toString(), icon: <Wrench size={20} />, color: 'bg-blue-600' },
-    { title: 'AMC Revenue', value: '₹5.8L', icon: <IndianRupee size={20} />, color: 'bg-emerald-600' },
-    { title: 'Visits Scheduled', value: '34', icon: <Calendar size={20} />, color: 'bg-yellow-500' },
-    { title: 'Renewal Rate', value: '88%', icon: <TrendingUp size={20} />, color: 'bg-indigo-600' },
+    { title: 'Active AMCs', value: String(activeAmcCount), icon: <Wrench size={20} />, color: 'bg-blue-600' },
+    { title: 'AMC Revenue', value: currency.format(amcs.reduce((acc, a) => acc + a.costValue, 0)), icon: <IndianRupee size={20} />, color: 'bg-emerald-600' },
+    { title: 'Visits Remaining', value: String(amcs.reduce((acc, a) => acc + a.visitsRemaining, 0)), icon: <Calendar size={20} />, color: 'bg-yellow-500' },
+    { title: 'Expiring Soon', value: String(amcs.filter(a => a.status === 'Expiring Soon').length), icon: <TrendingUp size={20} />, color: 'bg-indigo-600' },
   ];
 
   return (
@@ -273,13 +325,19 @@ const AMCs = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E2E8F0]">
+                  {loading && (
+                    <tr><td colSpan={9} className="px-6 py-10 text-center text-[#64748B] font-semibold">Loading AMC subscriptions…</td></tr>
+                  )}
+                  {!loading && error && (
+                    <tr><td colSpan={9} className="px-6 py-10 text-center text-red-600 font-semibold">{error}</td></tr>
+                  )}
                   {filteredAmcs.map((amc) => (
                     <tr 
                       key={amc.id} 
                       className="hover:bg-[#F8FAFC] transition-colors cursor-pointer"
                       onClick={() => handleRowClick(amc)}
                     >
-                      <td className="px-6 py-4 font-medium text-[#0D47A1]">{amc.id}</td>
+                      <td className="px-6 py-4 font-medium text-[#0D47A1]">{amc.ref}</td>
                       <td className="px-6 py-4 text-[#1E293B]">{amc.customer}</td>
                       <td className="px-6 py-4 text-[#1E293B]">{amc.product}</td>
                       <td className="px-6 py-4 text-[#64748B]">{amc.planName}</td>

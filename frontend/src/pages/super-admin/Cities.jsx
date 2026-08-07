@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
+import { apiRequest } from '../../lib/apiClient';
 import { 
   Map, 
   Plus, 
@@ -30,14 +31,47 @@ const Cities = () => {
   const [editingCity, setEditingCity] = useState(null);
   const [deletingCityId, setDeletingCityId] = useState(null);
   const [activeActionsMenu, setActiveActionsMenu] = useState(null);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, right: 0 });
+  const [menuCity, setMenuCity] = useState(null);
 
-  const [cities, setCities] = useState([
-    { id: 'CIT-01', name: 'Delhi NCR', state: 'Delhi', district: 'New Delhi', area: '1,483 sq km', techs: 450, status: 'Active' },
-    { id: 'CIT-02', name: 'Mumbai', state: 'Maharashtra', district: 'Mumbai Suburban', area: '603 sq km', techs: 320, status: 'Active' },
-    { id: 'CIT-03', name: 'Bangalore', state: 'Karnataka', district: 'Bangalore Urban', area: '709 sq km', techs: 280, status: 'Active' },
-    { id: 'CIT-04', name: 'Chennai', state: 'Tamil Nadu', district: 'Chennai', area: '426 sq km', techs: 150, status: 'Active' },
-    { id: 'CIT-05', name: 'Kolkata', state: 'West Bengal', district: 'Kolkata', area: '205 sq km', techs: 0, status: 'Inactive' },
-  ]);
+  const [cities, setCities] = useState([]);
+  const [loadingCities, setLoadingCities] = useState(true);
+
+  const formatCity = (item) => ({
+    id: item._id || item.id,
+    cityId: item.cityId || '—',
+    name: item.name,
+    state: item.state || '—',
+    district: item.district || item.name,
+    area: item.coverageAreaSqkm ? `${item.coverageAreaSqkm} sq km` : (item.area || '—'),
+    techs: item.techniciansCount || item.techs || 0,
+    status: item.status || 'Active'
+  });
+
+  const fetchCities = async () => {
+    setLoadingCities(true);
+    try {
+      let data;
+      try {
+        data = await apiRequest('/super-admin/cities', { auth: true });
+      } catch (authErr) {
+        console.warn('Super Admin cities endpoint error, using public endpoint fallback:', authErr.message);
+        data = await apiRequest('/super-admin/cities/public');
+      }
+      const rawList = data?.data || [];
+      if (rawList && Array.isArray(rawList)) {
+        setCities(rawList.map(formatCity));
+      }
+    } catch (err) {
+      console.warn('Failed to load cities:', err.message);
+    } finally {
+      setLoadingCities(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCities();
+  }, []);
 
   const showToast = (message) => {
     setSuccessMessage(message);
@@ -46,62 +80,107 @@ const Cities = () => {
     }, 3000);
   };
 
-  const handleStatusChange = (id, newStatus) => {
-    setCities(cities.map(c => c.id === id ? { ...c, status: newStatus } : c));
-    showToast(`City status updated to ${newStatus}`);
-    setActiveActionsMenu(null);
-  };
-
-  const handleAddCitySubmit = (e) => {
+  const handleAddCitySubmit = async (e) => {
     e.preventDefault();
-    if (!newCity.name || !newCity.state || !newCity.district || !newCity.area) {
+    const cityName = (newCity.name || '').trim();
+    if (!cityName || !newCity.state || !newCity.district) {
       showToast('Please fill in all required fields.');
       return;
     }
-    const addedCity = {
-      id: `CIT-0${cities.length + 1}`,
-      name: newCity.name,
-      state: newCity.state,
-      district: newCity.district,
-      area: newCity.area.toLowerCase().includes('sq km') ? newCity.area : `${newCity.area} sq km`,
-      techs: Number(newCity.techs) || 0,
-      status: newCity.status
-    };
-    setCities([...cities, addedCity]);
-    setNewCity({ name: '', state: '', district: '', area: '', techs: '0', status: 'Active' });
-    setShowAddModal(false);
-    showToast(`City "${addedCity.name}" added successfully!`);
+
+    // Client-side duplicate check
+    const isDuplicate = cities.some(
+      c => (c.name || '').toLowerCase().trim() === cityName.toLowerCase()
+    );
+    if (isDuplicate) {
+      showToast(`City "${cityName}" already exists in operational cities!`);
+      return;
+    }
+
+    try {
+      const payload = {
+        name: cityName,
+        state: newCity.state.trim(),
+        district: newCity.district.trim(),
+        coverageAreaSqkm: newCity.area ? Number(String(newCity.area).replace(/[^0-9.]/g, '')) || undefined : undefined,
+        status: newCity.status,
+      };
+      await apiRequest('/super-admin/cities', { method: 'POST', auth: true, body: payload });
+      setNewCity({ name: '', state: '', district: '', area: '', techs: '0', status: 'Active' });
+      setShowAddModal(false);
+      showToast(`City "${payload.name}" added successfully!`);
+      await fetchCities();
+    } catch (err) {
+      showToast(err?.message || 'Failed to add city.');
+    }
   };
 
-  const handleEditCitySubmit = (e) => {
+  const handleEditCitySubmit = async (e) => {
     e.preventDefault();
-    if (!editingCity.name || !editingCity.state || !editingCity.district || !editingCity.area) {
+    const cityName = (editingCity.name || '').trim();
+    if (!cityName || !editingCity.state || !editingCity.district) {
       showToast('Please fill in all required fields.');
       return;
     }
-    setCities(cities.map(c => c.id === editingCity.id ? {
-      ...editingCity,
-      area: editingCity.area.toLowerCase().includes('sq km') ? editingCity.area : `${editingCity.area} sq km`,
-      techs: Number(editingCity.techs) || 0
-    } : c));
-    setShowEditModal(false);
-    setEditingCity(null);
-    showToast(`City details updated successfully!`);
+
+    // Client-side duplicate check for edit
+    const isDuplicate = cities.some(
+      c => c.id !== editingCity.id && (c.name || '').toLowerCase().trim() === cityName.toLowerCase()
+    );
+    if (isDuplicate) {
+      showToast(`City "${cityName}" already exists in operational cities!`);
+      return;
+    }
+
+    try {
+      const payload = {
+        name: cityName,
+        state: editingCity.state.trim(),
+        district: editingCity.district.trim(),
+        coverageAreaSqkm: editingCity.area ? Number(String(editingCity.area).replace(/[^0-9.]/g, '')) || undefined : undefined,
+        status: editingCity.status,
+      };
+      await apiRequest(`/super-admin/cities/${editingCity.id}`, { method: 'PUT', auth: true, body: payload });
+      setShowEditModal(false);
+      setEditingCity(null);
+      showToast('City updated successfully!');
+      await fetchCities();
+    } catch (err) {
+      showToast(err?.message || 'Failed to update city.');
+    }
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     const city = cities.find(c => c.id === deletingCityId);
-    setCities(cities.filter(c => c.id !== deletingCityId));
-    setShowDeleteConfirm(false);
-    setDeletingCityId(null);
-    showToast(`City "${city ? city.name : ''}" deleted successfully!`);
+    try {
+      await apiRequest(`/super-admin/cities/${deletingCityId}`, { method: 'DELETE', auth: true });
+      setShowDeleteConfirm(false);
+      setDeletingCityId(null);
+      showToast(`City "${city ? city.name : ''}" deleted successfully!`);
+      await fetchCities();
+    } catch (err) {
+      showToast(err?.message || 'Failed to delete city.');
+    }
+  };
+
+  const handleStatusChange = async (id, newStatus) => {
+    try {
+      await apiRequest(`/super-admin/cities/${id}`, { method: 'PUT', auth: true, body: { status: newStatus } });
+      showToast(`City status updated to ${newStatus}`);
+      setActiveActionsMenu(null);
+      await fetchCities();
+    } catch (err) {
+      showToast(err?.message || 'Failed to update status.');
+    }
   };
 
   const filteredCities = cities.filter(c => {
-    const matchesSearch = c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          c.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          c.state.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          c.district.toLowerCase().includes(searchQuery.toLowerCase());
+    const query = (searchQuery || '').toLowerCase();
+    const matchesSearch = (c.name || '').toLowerCase().includes(query) ||
+                          (c.cityId || '').toLowerCase().includes(query) ||
+                          (c.id || '').toLowerCase().includes(query) ||
+                          (c.state || '').toLowerCase().includes(query) ||
+                          (c.district || '').toLowerCase().includes(query);
     const matchesStatus = selectedStatus === 'All Statuses' || c.status === selectedStatus;
     return matchesSearch && matchesStatus;
   });
@@ -161,8 +240,8 @@ const Cities = () => {
           </div>
 
           {/* Table */}
-          <div className="bg-white rounded-2xl border border-[#E2E8F0] overflow-hidden shadow-sm">
-            <div className="overflow-x-auto">
+          <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm">
+            <div className="overflow-x-auto overflow-y-visible">
               <table className="w-full text-sm text-left">
                 <thead className="bg-[#F8FAFC] text-[#64748B] text-xs uppercase border-b border-[#E2E8F0]">
                   <tr>
@@ -177,9 +256,21 @@ const Cities = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E2E8F0]">
-                  {filteredCities.map((city) => (
+                  {loadingCities ? (
+                    <tr>
+                      <td colSpan={8} className="px-6 py-10 text-center text-sm text-slate-400 font-medium">
+                        Loading cities from database...
+                      </td>
+                    </tr>
+                  ) : filteredCities.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="px-6 py-10 text-center text-sm text-slate-400 font-medium">
+                        No operational cities found. Click <strong>+ Add City</strong> to get started.
+                      </td>
+                    </tr>
+                  ) : filteredCities.map((city) => (
                     <tr key={city.id} className="hover:bg-[#F8FAFC] transition-colors relative">
-                      <td className="px-6 py-4 font-medium text-[#0D47A1]">{city.id}</td>
+                      <td className="px-6 py-4 font-mono font-bold text-[#0D47A1] text-xs tracking-wide">{city.cityId}</td>
                       <td className="px-6 py-4 text-[#1E293B] font-medium">
                         <div className="flex items-center gap-1.5">
                           <MapPin size={14} className="text-[#64748B]" /> {city.name}
@@ -197,8 +288,8 @@ const Cities = () => {
                           {city.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex gap-2 items-center relative">
+                      <td className="px-6 py-4 relative">
+                        <div className="flex gap-2 items-center">
                           {city.status === 'Active' ? (
                             <button 
                               onClick={() => handleStatusChange(city.id, 'Inactive')}
@@ -218,49 +309,22 @@ const Cities = () => {
                           )}
                           
                           <button 
-                            onClick={() => setActiveActionsMenu(activeActionsMenu === city.id ? null : city.id)}
+                            onClick={(e) => {
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              setMenuPosition({ top: rect.bottom + 6, right: window.innerWidth - rect.right });
+                              setMenuCity(city);
+                              setActiveActionsMenu(activeActionsMenu === city.id ? null : city.id);
+                            }}
                             className="p-1.5 text-[#64748B] hover:text-[#1E293B] hover:bg-slate-100 rounded transition-colors"
                           >
                             <MoreVertical size={16} />
                           </button>
 
-                          {/* Popover Action Menu */}
-                          {activeActionsMenu === city.id && (
-                            <div className="absolute right-0 top-8 z-30 bg-white border border-[#E2E8F0] rounded-xl shadow-lg py-1.5 w-36 text-sm text-left">
-                              <button 
-                                onClick={() => {
-                                  setEditingCity(city);
-                                  setShowEditModal(true);
-                                  setActiveActionsMenu(null);
-                                }}
-                                className="w-full px-4 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2"
-                              >
-                                <Edit2 size={14} /> Edit City
-                              </button>
-                              <button 
-                                onClick={() => {
-                                  setDeletingCityId(city.id);
-                                  setShowDeleteConfirm(true);
-                                  setActiveActionsMenu(null);
-                                }}
-                                className="w-full px-4 py-2 hover:bg-red-50 text-red-600 flex items-center gap-2"
-                              >
-                                <Trash2 size={14} /> Delete City
-                              </button>
-                            </div>
-                          )}
                         </div>
                       </td>
                     </tr>
                   ))}
-                  {filteredCities.length === 0 && (
-                    <tr>
-                      <td colSpan="8" className="text-center py-12 text-[#64748B]">
-                        <Map size={48} className="mx-auto mb-2 opacity-50 text-slate-400" />
-                        <p className="text-sm font-medium">No cities found matching details.</p>
-                      </td>
-                    </tr>
-                  )}
+
                 </tbody>
               </table>
             </div>
@@ -268,6 +332,44 @@ const Cities = () => {
 
         </div>
       </div>
+
+      {/* Fixed-position action dropdown — rendered outside table overflow context */}
+      {activeActionsMenu && menuCity && (
+        <>
+          {/* Backdrop to close on outside click */}
+          <div
+            className="fixed inset-0 z-[998]"
+            onClick={() => { setActiveActionsMenu(null); setMenuCity(null); }}
+          />
+          <div
+            className="fixed z-[999] bg-white border border-[#E2E8F0] rounded-xl shadow-2xl py-1.5 min-w-[160px] text-sm text-left"
+            style={{ top: menuPosition.top, right: menuPosition.right }}
+          >
+            <button
+              onClick={() => {
+                setEditingCity(menuCity);
+                setShowEditModal(true);
+                setActiveActionsMenu(null);
+                setMenuCity(null);
+              }}
+              className="w-full px-4 py-2.5 hover:bg-slate-50 text-slate-700 flex items-center gap-2.5 transition-colors"
+            >
+              <Edit2 size={14} /> Edit City
+            </button>
+            <button
+              onClick={() => {
+                setDeletingCityId(menuCity.id);
+                setShowDeleteConfirm(true);
+                setActiveActionsMenu(null);
+                setMenuCity(null);
+              }}
+              className="w-full px-4 py-2.5 hover:bg-red-50 text-red-600 flex items-center gap-2.5 transition-colors"
+            >
+              <Trash2 size={14} /> Delete City
+            </button>
+          </div>
+        </>
+      )}
 
       {/* Add City Modal */}
       {showAddModal && (

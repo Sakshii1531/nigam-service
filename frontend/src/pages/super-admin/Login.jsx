@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Mail, Lock, ArrowRight, Shield, Cpu } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 const Login = () => {
   const navigate = useNavigate();
+  const { login: authLogin } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -22,18 +24,24 @@ const Login = () => {
     setIsLoading(true);
     setError('');
     
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const res = await authLogin({
+        role: 'super_admin',
+        identifier: formData.email,
+        password: formData.password
+      });
+      navigate('/super-admin/verify-otp', {
+        state: { 
+          destination: res.destination || formData.email,
+          identifier: formData.email,
+          role: 'super_admin'
+        },
+      });
+    } catch (err) {
+      setError(err.message || 'Invalid credentials.');
+    } finally {
       setIsLoading(false);
-      if (formData.email === 'admin123@gmail.com' && formData.password === 'admin123') {
-        const [name, domain] = formData.email.split('@');
-        navigate('/super-admin/verify-otp', {
-          state: { destination: `${name.slice(0, 5)}•••@${domain}` },
-        });
-      } else {
-        setError('Invalid credentials. Please use the default master credentials.');
-      }
-    }, 1000);
+    }
   };
 
   return (

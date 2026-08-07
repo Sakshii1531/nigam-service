@@ -1,17 +1,32 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ChevronRight, Zap, FileText } from 'lucide-react';
+import { apiRequest } from '../../lib/apiClient';
 
-const recentEarnings = [
-  { id: 1, title: 'Electrician Repair', tag: 'QuickPayout', date: '16 May 2026, 02:20 PM', amount: 400, status: 'Credited', statusColor: 'text-green-500', icon: 'zap' },
-  { id: 2, title: 'Plumbing Service', tag: 'QuickPayout', date: '16 May 2026, 11:15 AM', amount: 350, status: 'Credited', statusColor: 'text-green-500', icon: 'zap' },
-  { id: 3, title: 'LG Refrigerator – Warranty Claim', tag: 'InvoicePayout', date: '17 May 2026, 04:20 PM', amount: 450, status: 'Approval Pending', statusColor: 'text-orange-500', icon: 'file' },
-  { id: 4, title: 'NCC AMC – Quarterly Visit', tag: 'InvoicePayout', date: '17 May 2026, 10:30 AM', amount: 250, status: 'Approved', statusColor: 'text-green-500', icon: 'file' },
-  { id: 5, title: 'Voltas AC Service (Partner Brand)', tag: 'InvoicePayout', date: '16 May 2026, 03:45 PM', amount: 600, status: 'Verification', statusColor: 'text-blue-500', icon: 'file' },
-];
 
 const RecentEarnings = () => {
   const navigate = useNavigate();
+  const [earnings, setEarnings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    apiRequest('/tech/earnings/recent?limit=50', { auth: true })
+      .then((res) => setEarnings((res.data || []).map((e) => ({
+        id: e.id,
+        title: e.title,
+        // 'NCC Paid Service' is settled directly to the technician; the other
+        // job types are billed through and settle on the invoice cycle.
+        tag: e.type === 'NCC Paid Service' ? 'QuickPayout' : 'InvoicePayout',
+        icon: e.type === 'NCC Paid Service' ? 'zap' : 'file',
+        date: e.completedAt
+          ? new Date(e.completedAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+          : '—',
+        amount: e.amount,
+      }))))
+      .catch((err) => setError(err.message || 'Could not load your earnings.'))
+      .finally(() => setLoading(false));
+  }, []);
 
   return (
     <div className="tech-app-container min-h-screen bg-[#F4F6FA] flex flex-col pb-24 max-w-md mx-auto border-x border-slate-200 shadow-xl relative font-sans">
@@ -28,9 +43,15 @@ const RecentEarnings = () => {
 
       {/* Earnings List */}
       <div className="flex-1 p-3 flex flex-col gap-3">
+        {loading && <p className="text-[11px] text-slate-400 font-semibold py-6 text-center">Loading earnings…</p>}
+        {error && <p className="text-[11px] text-rose-500 font-semibold py-6 text-center">{error}</p>}
+        {!loading && !error && earnings.length === 0 && (
+          <p className="text-[11px] text-slate-400 font-semibold py-6 text-center">No completed jobs yet.</p>
+        )}
+
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="divide-y divide-slate-100">
-            {recentEarnings.map((item) => (
+            {earnings.map((item) => (
               <button
                 key={item.id}
                 onClick={() => navigate(`/technician/earning-detail/${item.id}`)}
@@ -52,8 +73,7 @@ const RecentEarnings = () => {
                   </div>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <p className="text-xs font-black text-[#052355]">₹{item.amount}</p>
-                  <p className={`text-[9px] font-bold mt-0.5 ${item.statusColor}`}>{item.status} •</p>
+                  <p className="text-xs font-black text-[#052355]">₹{item.amount.toLocaleString('en-IN')}</p>
                 </div>
                 <ChevronRight className="h-4.5 w-4.5 text-slate-300 flex-shrink-0" />
               </button>

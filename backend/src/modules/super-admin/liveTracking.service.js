@@ -13,7 +13,8 @@ export async function listActiveTracking() {
     })
     .populate({
       path: 'technician',
-      populate: { path: 'user', select: 'name' },
+      select: 'name phone user',
+      populate: { path: 'user', select: 'name phone' },
     });
 }
 
@@ -28,7 +29,8 @@ export async function getTrackingForJob(jobId) {
     })
     .populate({
       path: 'technician',
-      populate: { path: 'user', select: 'name' },
+      select: 'name phone user',
+      populate: { path: 'user', select: 'name phone' },
     });
   if (!tracking) throw new ApiError(404, 'No tracking record for this job');
   return tracking;

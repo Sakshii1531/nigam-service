@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Search, Star, Tag, CreditCard, ChevronRight, Menu, X, CheckCircle2 } from 'lucide-react';
 
@@ -22,6 +22,7 @@ import roImg from '../assets/categories/water_purifier.png';
 import techImg1 from '../assets/working/Gemini_Generated_Image_h5cyvch5cyvch5cy-removebg-preview.png';
 import techImg2 from '../assets/working/Gemini_Generated_Image_kutaj9kutaj9kuta-removebg-preview.png';
 import techImg3 from '../assets/working/Gemini_Generated_Image_p3wn1kp3wn1kp3wn-removebg-preview.png';
+import { apiRequest } from '../lib/apiClient';
 
 // ─── Service config ───────────────────────────────────────────────────────────
 const SERVICE_CONFIG = {
@@ -182,35 +183,39 @@ const CatalogCard = ({ item, navigate, serviceName, onViewDetails, quantity = 0,
           </div>
         </div>
         {/* Right image + Add / Numbering Selector */}
-        <div className="flex flex-col items-center gap-2 flex-shrink-0">
+        <div className="flex-shrink-0 relative pb-4">
           <div className="w-20 h-16 rounded-xl overflow-hidden bg-slate-50 border border-slate-100">
             <img src={item.img} alt={item.name} className="w-full h-full object-contain p-1" />
           </div>
-          {quantity > 0 ? (
-            <div className="w-20 flex items-center justify-between border border-[#0D47A1] bg-white rounded-xl text-[12px] font-extrabold overflow-hidden h-8">
+          {/* Button pinned to bottom of image, overlapping slightly */}
+          <div className="absolute -bottom-0 left-1/2 -translate-x-1/2 w-20">
+            {quantity > 0 ? (
+              <div className="w-20 flex items-center justify-between border border-[#0D47A1] bg-white rounded-xl text-[12px] font-extrabold overflow-hidden h-8 shadow-sm">
+                <button
+                  onClick={() => onQuantityChange(quantity - 1)}
+                  className="w-7 h-full flex items-center justify-center text-[#0D47A1] hover:bg-slate-50 active:bg-slate-100 transition-colors"
+                >
+                  -
+                </button>
+                <span className="text-[#0D47A1] flex-1 text-center select-none">{quantity}</span>
+                <button
+                  onClick={() => onQuantityChange(quantity + 1)}
+                  className="w-7 h-full flex items-center justify-center text-[#0D47A1] hover:bg-slate-50 active:bg-slate-100 transition-colors"
+                >
+                  +
+                </button>
+              </div>
+            ) : (
               <button
-                onClick={() => onQuantityChange(quantity - 1)}
-                className="w-7 h-full flex items-center justify-center text-[#0D47A1] hover:bg-slate-50 active:bg-slate-100 transition-colors"
+                onClick={() => onQuantityChange(1)}
+                className="w-20 py-1.5 rounded-xl text-[11px] font-extrabold border bg-white text-[#0D47A1] border-[#0D47A1] hover:bg-[#EAF4FF] transition-all shadow-sm"
               >
-                -
+                Add
               </button>
-              <span className="text-[#0D47A1] flex-1 text-center select-none">{quantity}</span>
-              <button
-                onClick={() => onQuantityChange(quantity + 1)}
-                className="w-7 h-full flex items-center justify-center text-[#0D47A1] hover:bg-slate-50 active:bg-slate-100 transition-colors"
-              >
-                +
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => onQuantityChange(1)}
-              className="w-20 py-1.5 rounded-xl text-[11px] font-extrabold border bg-white text-[#0D47A1] border-[#0D47A1] hover:bg-[#EAF4FF] transition-all"
-            >
-              Add
-            </button>
-          )}
+            )}
+          </div>
         </div>
+
       </div>
       {/* Bullets */}
       <ul className="mt-3 flex flex-col gap-1">
@@ -252,10 +257,31 @@ const ServiceDetails = () => {
   const params = new URLSearchParams(location.search);
   const serviceName = params.get('service') || 'Electrician';
 
-  // Load configuration dynamically
-  const savedConfigs = localStorage.getItem('custom_service_details_configs');
-  const detailsConfigs = savedConfigs ? JSON.parse(savedConfigs) : SERVICE_CONFIG;
-  const rawConfig = detailsConfigs[serviceName] || DEFAULT_CONFIG;
+  // Hero copy and catalog both come from this service's CMS page config; the
+  // bundled constants remain the fallback when nothing is published for it.
+  const [pageConfig, setPageConfig] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await apiRequest(`/cms/service-pages/${encodeURIComponent(serviceName)}`);
+        if (!cancelled) setPageConfig(data || null);
+      } catch {
+        // 404 simply means this service has no configured page yet.
+        if (!cancelled) setPageConfig(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [serviceName]);
+
+  const rawConfig = pageConfig
+    ? {
+        tagline: pageConfig.tagline,
+        subtitle: pageConfig.subtitle,
+        subServices: pageConfig.subServices,
+      }
+    : SERVICE_CONFIG[serviceName] || DEFAULT_CONFIG;
 
   // Resolve subServices with preset icons if necessary
   const resolvedSubServices = (rawConfig.subServices || []).map(sub => {
@@ -283,9 +309,7 @@ const ServiceDetails = () => {
   const [cart, setCart] = useState({});
 
   // Load catalog dynamically
-  const savedCatalogs = localStorage.getItem('custom_service_catalogs');
-  const serviceCatalogs = savedCatalogs ? JSON.parse(savedCatalogs) : null;
-  const currentCatalog = (serviceCatalogs && serviceCatalogs[serviceName]) ? serviceCatalogs[serviceName] : SERVICE_CATALOG;
+  const currentCatalog = pageConfig?.catalog?.length ? pageConfig.catalog : SERVICE_CATALOG;
 
   const allCatalogItems = currentCatalog.flatMap(group => group.items);
 

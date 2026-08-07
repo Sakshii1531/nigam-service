@@ -1,23 +1,52 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import { Search, Video, Plus, Trash2, Eye } from 'lucide-react';
+import { apiRequest } from '../../lib/apiClient';
+
+// The API stores raw bytes; the table shows a human-readable size.
+function formatSize(bytes) {
+  if (!bytes) return '—';
+  const mb = bytes / (1024 * 1024);
+  return mb >= 1 ? `${mb.toFixed(0)} MB` : `${(bytes / 1024).toFixed(0)} KB`;
+}
 
 const Videos = () => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [videos, setVideos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const [videos, setVideos] = useState([
-    { id: 1, title: 'How to clean RO Filters at Home', duration: '3:45', size: '14 MB', views: 1240, active: 'Active' },
-    { id: 2, title: 'AC Installation Guidelines Video', duration: '5:20', size: '28 MB', views: 890, active: 'Active' },
-    { id: 3, title: 'Technician Training Onboarding Module 1', duration: '12:10', size: '84 MB', views: 342, active: 'Active' },
-  ]);
+  useEffect(() => {
+    let cancelled = false;
+    async function loadVideos() {
+      try {
+        // /admin, not the public reader — the console must see deactivated videos too.
+        const data = await apiRequest('/cms/videos/admin', { auth: true });
+        if (!cancelled) setVideos(data?.data || []);
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    loadVideos();
+    return () => { cancelled = true; };
+  }, []);
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
+    const previous = videos;
     setVideos(prev => prev.filter(v => v.id !== id));
+    try {
+      await apiRequest(`/cms/videos/${id}`, { method: 'DELETE', auth: true });
+    } catch (err) {
+      setVideos(previous);
+      setError(`Could not delete video: ${err.message}`);
+    }
   };
 
-  const filteredVideos = videos.filter(v => 
-    v.title.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredVideos = videos.filter(v =>
+    (v.title || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -56,18 +85,29 @@ const Videos = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-sm">
+                {loading && (
+                  <tr><td colSpan={6} className="p-8 text-center text-slate-400 font-semibold">Loading videos…</td></tr>
+                )}
+                {!loading && error && (
+                  <tr><td colSpan={6} className="p-8 text-center text-red-600 font-semibold">{error}</td></tr>
+                )}
+                {!loading && !error && filteredVideos.length === 0 && (
+                  <tr><td colSpan={6} className="p-8 text-center text-slate-400 font-semibold">No videos yet.</td></tr>
+                )}
                 {filteredVideos.map((video) => (
                   <tr key={video.id} className="hover:bg-slate-50 transition-colors">
                     <td className="p-4 pl-6">
                       <p className="font-bold text-slate-800 flex items-center gap-1.5"><Video size={14} className="text-slate-400" /> {video.title}</p>
-                      <span className="text-[10px] text-slate-400 font-bold uppercase">ID: VID-{video.id + 100}</span>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase">ID: {video.id}</span>
                     </td>
-                    <td className="p-4 font-semibold text-slate-600">{video.duration} min</td>
-                    <td className="p-4 text-xs font-bold text-slate-500">{video.size}</td>
-                    <td className="p-4 text-slate-700 font-bold flex items-center gap-1"><Eye size={12} /> {video.views}</td>
+                    <td className="p-4 font-semibold text-slate-600">{video.duration || '—'}</td>
+                    <td className="p-4 text-xs font-bold text-slate-500">{formatSize(video.sizeBytes)}</td>
+                    <td className="p-4 text-slate-700 font-bold flex items-center gap-1"><Eye size={12} /> {video.views ?? 0}</td>
                     <td className="p-4">
-                      <span className="bg-green-50 text-green-600 border border-green-100 px-2 py-0.5 rounded-full text-[10px] font-black uppercase">
-                        {video.active}
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                        video.isActive ? 'bg-green-50 text-green-600 border border-green-100' : 'bg-slate-100 text-slate-500 border border-slate-200'
+                      }`}>
+                        {video.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
                     <td className="p-4 pr-6 text-right space-x-2">

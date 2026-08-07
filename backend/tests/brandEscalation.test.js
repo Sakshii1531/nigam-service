@@ -13,6 +13,7 @@ import { createServiceRequest } from '../src/modules/service-requests/serviceReq
 import { hashPassword } from '../src/modules/auth/password.js';
 import { ROLES } from '../src/config/constants.js';
 import { testDbUri } from './helpers/testDb.js';
+import { readOtpCode } from './helpers/otp.js';
 
 const TEST_DB_URI = testDbUri('brandEscalations');
 
@@ -26,24 +27,10 @@ function nextEmail() {
   return `brand-esc-admin-${emailCounter++}@test.local`;
 }
 
-function captureConsoleLog() {
-  const original = console.log;
-  const lines = [];
-  console.log = (...args) => lines.push(args.join(' '));
-  return {
-    code: () => {
-      console.log = original;
-      const match = lines.join('\n').match(/code for [^:]+: (\d{6})/);
-      if (!match) throw new Error(`No OTP code found: ${lines.join('\n')}`);
-      return match[1];
-    },
-  };
-}
 
 async function loginAndVerify({ role, identifier, password }) {
-  const capture = captureConsoleLog();
   await request(app).post('/api/v1/auth/login').send({ role, identifier, password }).expect(200);
-  const code = capture.code();
+  const code = readOtpCode(identifier);
   const res = await request(app).post('/api/v1/auth/otp/verify').send({ role, identifier, code }).expect(200);
   return res.body.data.accessToken;
 }
@@ -86,10 +73,11 @@ beforeAll(async () => {
   await registerAllModels();
   await mongoose.connect(TEST_DB_URI);
   await ensureIndexes();
-  app = createApp();
+  app = createApp().listen(0);
 });
 
 afterAll(async () => {
+  await new Promise((resolve) => app.close(resolve));
   await mongoose.connection.dropDatabase();
   await mongoose.disconnect();
 });

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
 import { 
@@ -16,14 +16,45 @@ import {
   X,
   CheckCircle2
 } from 'lucide-react';
+import { apiRequest } from '../../lib/apiClient';
+
+function shape(t) {
+  return {
+    id: t.id,
+    name: t.name,
+    phone: t.phone || '—',
+    skill: t.skill || 'General Repair',
+    city: t.city || '—',
+    rating: t.rating ?? 0,
+    // Scoped to this brand by the API — not the technician's platform-wide totals.
+    activeJobs: t.activeJobs ?? 0,
+    completedJobs: t.completedJobs ?? 0,
+    status: t.status || 'Active',
+    availability: t.availability || 'Offline',
+  };
+}
 
 const Technicians = () => {
-  const [technicians, setTechnicians] = useState([
-    { id: 'TECH-001', name: 'Rahul Kumar', skill: 'AC & Refrigerator', city: 'Delhi', rating: 4.8, activeJobs: 2, completedJobs: 145, status: 'Active', availability: 'Available' },
-    { id: 'TECH-002', name: 'Amit Singh', skill: 'Washing Machine', city: 'Mumbai', rating: 4.5, activeJobs: 1, completedJobs: 98, status: 'Active', availability: 'Busy' },
-    { id: 'TECH-003', name: 'Suresh Raina', skill: 'Microwave & TV', city: 'Bangalore', rating: 4.9, activeJobs: 0, completedJobs: 210, status: 'Active', availability: 'Available' },
-    { id: 'TECH-004', name: 'Vikram Batra', skill: 'All Appliances', city: 'Pune', rating: 4.2, activeJobs: 3, completedJobs: 67, status: 'Inactive', availability: 'Offline' },
-  ]);
+  const [technicians, setTechnicians] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadTechnicians() {
+      try {
+        // Technicians who have actually worked this brand's requests.
+        const data = await apiRequest('/brand/technicians', { auth: true });
+        if (!cancelled) setTechnicians((data?.data || []).map(shape));
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    loadTechnicians();
+    return () => { cancelled = true; };
+  }, []);
 
   const [showModal, setShowModal] = useState(false);
   const [editingTech, setEditingTech] = useState(null);
@@ -42,75 +73,30 @@ const Technicians = () => {
   const [selectedCity, setSelectedCity] = useState('All Cities');
   const [selectedAvailability, setSelectedAvailability] = useState('All Availabilities');
 
+  const countAvail = (a) => technicians.filter(t => t.availability === a).length;
   const stats = [
-    { title: 'Total Technicians', value: (technicians.length + 120).toString(), icon: <Users size={20} />, color: 'bg-blue-600' },
-    { title: 'Active (On Duty)', value: (technicians.filter(t => t.availability === 'Available').length + 84).toString(), icon: <UserCheck size={20} />, color: 'bg-green-600' },
-    { title: 'Busy (In Job)', value: (technicians.filter(t => t.availability === 'Busy').length + 53).toString(), icon: <Briefcase size={20} />, color: 'bg-yellow-600' },
-    { title: 'Offline', value: (technicians.filter(t => t.availability === 'Offline').length + 37).toString(), icon: <UserX size={20} />, color: 'bg-gray-500' },
+    { title: 'Total Technicians', value: String(technicians.length), icon: <Users size={20} />, color: 'bg-blue-600' },
+    { title: 'Active (On Duty)', value: String(countAvail('Available')), icon: <UserCheck size={20} />, color: 'bg-green-600' },
+    { title: 'Busy (In Job)', value: String(countAvail('Busy')), icon: <Briefcase size={20} />, color: 'bg-yellow-600' },
+    { title: 'Offline', value: String(countAvail('Offline')), icon: <UserX size={20} />, color: 'bg-gray-500' },
   ];
 
-  const handleSuspend = (id) => {
-    setTechnicians(technicians.map(t => {
-      if (t.id === id) {
-        const isOffline = t.availability === 'Offline';
-        return { 
-          ...t, 
-          availability: isOffline ? 'Available' : 'Offline',
-          status: isOffline ? 'Active' : 'Inactive'
-        };
-      }
-      return t;
-    }));
+  // Technicians belong to the platform, not to a brand — a brand admin sees who
+  // has worked their requests but cannot change a technician's account. Those
+  // actions live on super-admin's own technician directory
+  // (PATCH /super-admin/technicians/:id/status).
+  const READ_ONLY_NOTICE =
+    'Technician accounts are managed by the platform — this view is read-only.';
+
+  const handleSuspend = () => {
+    setError(READ_ONLY_NOTICE);
   };
 
   const handleFormSubmit = (e) => {
     e.preventDefault();
-    if (editingTech) {
-      setTechnicians(technicians.map(t => {
-        if (t.id === editingTech.id) {
-          return {
-            ...t,
-            name: newTech.name,
-            skill: newTech.skill,
-            city: newTech.city,
-            rating: parseFloat(newTech.rating) || 5.0,
-            availability: newTech.availability,
-            status: newTech.availability === 'Offline' ? 'Inactive' : 'Active'
-          };
-        }
-        return t;
-      }));
-      setSuccessMessage(`Technician "${newTech.name}" updated successfully!`);
-      setEditingTech(null);
-    } else {
-      const nextIdNum = technicians.length + 1;
-      const formattedId = `TECH-0${nextIdNum < 10 ? '0' + nextIdNum : nextIdNum}`;
-      
-      const newTechnician = {
-        id: formattedId,
-        name: newTech.name,
-        skill: newTech.skill,
-        city: newTech.city,
-        rating: parseFloat(newTech.rating) || 5.0,
-        activeJobs: 0,
-        completedJobs: 0,
-        status: newTech.availability === 'Offline' ? 'Inactive' : 'Active',
-        availability: newTech.availability
-      };
-
-      setTechnicians([newTechnician, ...technicians]);
-      setSuccessMessage(`Technician "${newTech.name}" added successfully!`);
-    }
-    
     setShowModal(false);
-    setNewTech({
-      name: '',
-      skill: 'AC & Refrigerator',
-      city: 'Delhi',
-      rating: 5.0,
-      availability: 'Available'
-    });
-    setTimeout(() => setSuccessMessage(''), 3000);
+    setEditingTech(null);
+    setError(READ_ONLY_NOTICE);
   };
 
   const filteredTechnicians = technicians.filter(tech => {
@@ -243,6 +229,15 @@ const Technicians = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E2E8F0]">
+                  {loading && (
+                    <tr><td colSpan={9} className="px-6 py-10 text-center text-[#64748B] font-semibold">Loading technicians…</td></tr>
+                  )}
+                  {!loading && error && (
+                    <tr><td colSpan={9} className="px-6 py-10 text-center text-red-600 font-semibold">{error}</td></tr>
+                  )}
+                  {!loading && !error && filteredTechnicians.length === 0 && (
+                    <tr><td colSpan={9} className="px-6 py-10 text-center text-[#64748B] font-semibold">No technicians have worked this brand's requests yet.</td></tr>
+                  )}
                   {filteredTechnicians.map((tech) => (
                     <tr key={tech.id} className="hover:bg-[#F8FAFC] transition-colors">
                       <td className="px-6 py-4">
@@ -370,8 +365,7 @@ const Technicians = () => {
                                   <button
                                     onClick={() => {
                                       setOpenMenuTechId(null);
-                                      setTechnicians(technicians.filter(t => t.id !== tech.id));
-                                      setSuccessMessage(`Technician "${tech.name}" deleted successfully!`);
+                                      setError(READ_ONLY_NOTICE);
                                       setTimeout(() => setSuccessMessage(''), 3000);
                                     }}
                                     className="w-full text-left px-3 py-2 text-xs text-red-600 hover:bg-red-50 flex items-center gap-2 border-t border-[#F1F5F9]"

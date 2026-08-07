@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
 import { 
@@ -12,6 +12,29 @@ import {
   X,
   Check
 } from 'lucide-react';
+import { apiRequest } from '../../lib/apiClient';
+
+const currency = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+const dateFormatter = new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
+function shape(o) {
+  return {
+    id: o.id,
+    ref: o.humanId || o.id,
+    technician: o.technician?.name || 'Technician',
+    // The appliance comes from the service request the job was raised for.
+    product: o.job?.serviceRequest?.category || '—',
+    ticket: o.job?.serviceRequest?.humanId || '—',
+    part: o.partName,
+    sku: o.sku || '—',
+    qty: o.qty ?? 1,
+    price: currency.format(o.price || 0),
+    // A part order records no free-text reason; the source is what it does carry.
+    reason: o.orderSource,
+    status: o.status || 'Pending',
+    date: o.createdAt ? dateFormatter.format(new Date(o.createdAt)) : '—',
+  };
+}
 
 const PartRequests = () => {
   const [showModal, setShowModal] = useState(false);
@@ -21,12 +44,26 @@ const PartRequests = () => {
   const [selectedWarranty, setSelectedWarranty] = useState('Warranty');
   const [successMessage, setSuccessMessage] = useState('');
 
-  const [requests, setRequests] = useState([
-    { id: 'PR-1001', technician: 'Rahul Kumar', product: 'Refrigerator', part: 'Compressor', reason: 'Leakage in coil', warranty: 'Under Warranty', cost: '₹4,500', status: 'Pending' },
-    { id: 'PR-1002', technician: 'Amit Singh', product: 'Washing Machine', part: 'Drain Pump', reason: 'Motor burnt', warranty: 'Out of Warranty', cost: '₹1,200', status: 'Approved' },
-    { id: 'PR-1003', technician: 'Suresh Raina', product: 'Microwave', part: 'Magnetron', reason: 'Not heating', warranty: 'Under Warranty', cost: '₹2,100', status: 'Dispatched' },
-    { id: 'PR-1004', technician: 'Vikram Batra', product: 'Smart TV', part: 'Display Panel', reason: 'Cracked screen', warranty: 'Out of Warranty', cost: '₹12,000', status: 'Rejected' },
-  ]);
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadRequests() {
+      try {
+        // Resolved server-side through PartOrder -> Job -> ServiceRequest.brand.
+        const data = await apiRequest('/brand/part-orders', { auth: true });
+        if (!cancelled) setRequests((data?.data || []).map(shape));
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    loadRequests();
+    return () => { cancelled = true; };
+  }, []);
 
   const showToast = (message) => {
     setSuccessMessage(message);
@@ -35,12 +72,11 @@ const PartRequests = () => {
     }, 3000);
   };
 
+  // No endpoint exists to approve or dispatch a part order — the technician-side
+  // module exposes only create and read (/tech/inventory/part-orders). Say so
+  // rather than flip the badge for a change that was never saved.
   const updateStatus = (id, newStatus) => {
-    setRequests(requests.map(r => r.id === id ? { ...r, status: newStatus } : r));
-    if (selectedRequest && selectedRequest.id === id) {
-      setSelectedRequest({ ...selectedRequest, status: newStatus });
-    }
-    showToast(`Request ${id} status updated to ${newStatus} successfully!`);
+    setError(`Moving a part request to "${newStatus}" is not supported by the API yet — no change was saved.`);
   };
 
   const handleRowClick = (req) => {
@@ -49,7 +85,7 @@ const PartRequests = () => {
   };
 
   const filteredRequests = requests.filter(req => {
-    const matchesSearch = req.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    const matchesSearch = req.ref.toLowerCase().includes(searchQuery.toLowerCase()) ||
       req.part.toLowerCase().includes(searchQuery.toLowerCase()) ||
       req.technician.toLowerCase().includes(searchQuery.toLowerCase()) ||
       req.product.toLowerCase().includes(searchQuery.toLowerCase());
@@ -66,10 +102,10 @@ const PartRequests = () => {
   const rejectedCount = requests.filter(r => r.status === 'Rejected').length;
 
   const stats = [
-    { title: 'Pending Approval', value: (pendingCount + 17).toString(), icon: <Clock size={20} />, color: 'bg-yellow-500' },
-    { title: 'Approved', value: (approvedCount + 44).toString(), icon: <CheckCircle2 size={20} />, color: 'bg-blue-600' },
-    { title: 'Dispatched', value: (dispatchedCount + 31).toString(), icon: <Truck size={20} />, color: 'bg-teal-600' },
-    { title: 'Rejected', value: (rejectedCount + 3).toString(), icon: <XCircle size={20} />, color: 'bg-[#EF4444]' },
+    { title: 'Pending Approval', value: String(pendingCount), icon: <Clock size={20} />, color: 'bg-yellow-500' },
+    { title: 'Approved', value: String(approvedCount), icon: <CheckCircle2 size={20} />, color: 'bg-blue-600' },
+    { title: 'Dispatched', value: String(dispatchedCount), icon: <Truck size={20} />, color: 'bg-teal-600' },
+    { title: 'Rejected', value: String(rejectedCount), icon: <XCircle size={20} />, color: 'bg-[#EF4444]' },
   ];
 
   return (
@@ -170,13 +206,22 @@ const PartRequests = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E2E8F0]">
+                  {loading && (
+                    <tr><td colSpan={9} className="px-6 py-10 text-center text-[#64748B] font-semibold">Loading part requests…</td></tr>
+                  )}
+                  {!loading && error && (
+                    <tr><td colSpan={9} className="px-6 py-10 text-center text-red-600 font-semibold">{error}</td></tr>
+                  )}
+                  {!loading && !error && filteredRequests.length === 0 && (
+                    <tr><td colSpan={9} className="px-6 py-10 text-center text-[#64748B] font-semibold">No part requests raised on this brand's jobs.</td></tr>
+                  )}
                   {filteredRequests.map((req) => (
                     <tr 
                       key={req.id} 
                       className="hover:bg-[#F8FAFC] transition-colors cursor-pointer"
                       onClick={() => handleRowClick(req)}
                     >
-                      <td className="px-6 py-4 font-medium text-[#0D47A1]">{req.id}</td>
+                      <td className="px-6 py-4 font-medium text-[#0D47A1]">{req.ref}</td>
                       <td className="px-6 py-4 text-[#1E293B]">{req.technician}</td>
                       <td className="px-6 py-4">
                         <div>

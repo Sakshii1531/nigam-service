@@ -38,7 +38,8 @@ import {
   Coins,
   Ticket,
   Award,
-  RefreshCw
+  RefreshCw,
+  Search
 } from 'lucide-react';
 import logo from '../../assets/nigam-care.png';
 
@@ -83,6 +84,8 @@ const Sidebar = () => {
       if (timer) clearTimeout(timer);
     };
   }, []);
+
+  const [searchQuery, setSearchQuery] = useState('');
 
   const menuSections = [
     {
@@ -403,19 +406,51 @@ const Sidebar = () => {
     }
   ];
 
+  // Filter sections by search query
+  const filteredSections = searchQuery.trim() === '' 
+    ? menuSections 
+    : menuSections.filter(item => {
+        if (item.type === 'link') {
+          return item.label.toLowerCase().includes(searchQuery.toLowerCase());
+        }
+        return false;
+      });
+
   return (
     <div className="w-64 bg-[#F4F7FE] h-screen border-r border-[#E2E8F0] flex flex-col fixed left-0 top-0 z-20">
       {/* Premium Logo Header */}
-      <div className="p-5 border-b border-[#E2E8F0] bg-white flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <img src={logo} alt="Nigam Care Logo" className="h-9 w-9 object-contain" />
-          <div>
-            <div className="flex items-center">
-              <span className="text-base font-extrabold text-[#0D47A1] tracking-tight">NIGAM</span>
-              <span className="text-base font-extrabold text-[#FFB300] tracking-tight ml-1">CARE</span>
+      <div className="p-4 border-b border-[#E2E8F0] bg-white flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img src={logo} alt="Nigam Care Logo" className="h-9 w-9 object-contain" />
+            <div>
+              <div className="flex items-center">
+                <span className="text-base font-extrabold text-[#0D47A1] tracking-tight">NIGAM</span>
+                <span className="text-base font-extrabold text-[#FFB300] tracking-tight ml-1">CARE</span>
+              </div>
+              <p className="text-[10px] text-[#64748B] font-bold tracking-wider leading-none mt-0.5">SUPER ADMIN</p>
             </div>
-            <p className="text-[10px] text-[#64748B] font-bold tracking-wider leading-none mt-0.5">SUPER ADMIN</p>
           </div>
+        </div>
+
+        {/* Sidebar Navigation Search Bar */}
+        <div className="relative w-full">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search menu sections..."
+            className="w-full pl-9 pr-3 py-1.5 bg-slate-100 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] transition-all"
+          />
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 hover:text-slate-600"
+            >
+              ✕
+            </button>
+          )}
         </div>
       </div>
 
@@ -424,7 +459,12 @@ const Sidebar = () => {
         ref={scrollContainerRef}
         className="flex-1 overflow-y-auto py-4 space-y-1 scrollbar-thin scrollbar-thumb-slate-200"
       >
-        {menuSections.map((item, idx) => {
+        {filteredSections.length === 0 ? (
+          <div className="px-6 py-8 text-center text-xs text-slate-400 font-medium">
+            No sections match "{searchQuery}"
+          </div>
+        ) : (
+          filteredSections.map((item, idx) => {
           if (item.type === 'header') {
             return (
               <div 
@@ -516,7 +556,8 @@ const Sidebar = () => {
               <span className="truncate">{item.label}</span>
             </NavLink>
           );
-        })}
+        })
+      )}
       </div>
 
       {/* Profile Box Footer with popup options */}

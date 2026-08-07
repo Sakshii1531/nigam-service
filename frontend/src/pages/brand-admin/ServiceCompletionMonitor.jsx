@@ -1,15 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
 import { CheckCircle2, Clock, Star, Search, Download, Eye, X } from 'lucide-react';
+import { apiRequest } from '../../lib/apiClient';
 
-const jobs = [
-  { id: 'TKT/250521/001351', customer: 'Priya Verma', product: 'Washing Machine', tech: 'Amit Singh', completedAt: '21 May 2025, 11:30 AM', qcStatus: 'QC Passed', feedbackStatus: 'Received', rating: 4.8 },
-  { id: 'TKT/250521/001046', customer: 'Kavya Reddy', product: 'Refrigerator', tech: 'Rahul Kumar', completedAt: '21 May 2025, 10:15 AM', qcStatus: 'Pending QC', feedbackStatus: 'Pending', rating: null },
-  { id: 'TKT/250521/000923', customer: 'Suresh Patel', product: 'Air Conditioner', tech: 'Deepak Patel', completedAt: '21 May 2025, 09:45 AM', qcStatus: 'QC Passed', feedbackStatus: 'Pending', rating: null },
-  { id: 'TKT/250521/000812', customer: 'Meena Joshi', product: 'Television', tech: 'Vikram Batra', completedAt: '21 May 2025, 08:30 AM', qcStatus: 'QC Failed', feedbackStatus: 'Pending', rating: null },
-  { id: 'TKT/250521/000645', customer: 'Anand Mishra', product: 'Microwave Oven', tech: 'Suresh Raina', completedAt: '21 May 2025, 07:55 AM', qcStatus: 'QC Passed', feedbackStatus: 'Received', rating: 5.0 },
-];
+const dateFormatter = new Intl.DateTimeFormat('en-IN', {
+  day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+});
+
+// There is no QC field on a service request, so "QC" here reflects how far the
+// request has actually travelled: Closed means the customer signed it off,
+// anything earlier is still awaiting confirmation.
+function qcFor(status) {
+  return status === 'Closed' ? 'QC Passed' : 'Pending QC';
+}
+
+function shape(r) {
+  return {
+    id: r.id,
+    ref: r.humanId || r.id,
+    customer: r.user?.name || 'Customer',
+    product: r.category || '—',
+    tech: r.technician?.name || 'Unassigned',
+    completedAt: r.updatedAt ? dateFormatter.format(new Date(r.updatedAt)) : '—',
+    qcStatus: qcFor(r.status),
+    feedbackStatus: r.feedbackStatus || 'Pending',
+    rating: r.rating ?? null,
+  };
+}
 
 const qcColors = {
   'QC Passed': 'bg-green-100 text-green-700',
@@ -23,23 +41,49 @@ const ServiceCompletionMonitor = () => {
   const [selectedJob, setSelectedJob] = useState(null);
   const [successMsg, setSuccessMsg] = useState('');
 
+  const [jobs, setJobs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
   const toast = (msg) => { setSuccessMsg(msg); setTimeout(() => setSuccessMsg(''), 3000); };
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadCompletions() {
+      try {
+        const data = await apiRequest('/brand/completions', { auth: true });
+        if (!cancelled) setJobs((data?.data || []).map(shape));
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    loadCompletions();
+    return () => { cancelled = true; };
+  }, []);
 
   const tabs = ['All', 'Completed Today', 'Pending QC', 'Feedback Pending'];
 
   const filtered = jobs.filter(j => {
-    const matchSearch = j.customer.toLowerCase().includes(searchQ.toLowerCase()) || j.id.toLowerCase().includes(searchQ.toLowerCase());
+    const matchSearch = j.customer.toLowerCase().includes(searchQ.toLowerCase()) || j.ref.toLowerCase().includes(searchQ.toLowerCase());
     if (tab === 'Pending QC') return matchSearch && j.qcStatus === 'Pending QC';
     if (tab === 'Feedback Pending') return matchSearch && j.feedbackStatus === 'Pending';
     if (tab === 'Completed Today') return matchSearch;
     return matchSearch;
   });
 
+  const rated = jobs.filter(j => j.rating != null);
+  const avgRating = rated.length
+    ? (rated.reduce((acc, j) => acc + j.rating, 0) / rated.length).toFixed(1)
+    : '—';
+  // "Avg Resolution Time" was a fixed string; a request records no start-to-finish
+  // duration, so it's replaced with the feedback gap, which this data supports.
   const kpis = [
-    { label: 'Jobs Completed Today', value: '189', icon: <CheckCircle2 size={18} />, bg: 'bg-green-600' },
-    { label: 'Pending QC', value: '12', icon: <Clock size={18} />, bg: 'bg-yellow-600' },
-    { label: 'Avg Resolution Time', value: '2h 48m', icon: <Clock size={18} />, bg: 'bg-blue-600' },
-    { label: 'Avg Customer Rating', value: '4.7 ★', icon: <Star size={18} />, bg: 'bg-purple-600' },
+    { label: 'Jobs Completed', value: String(jobs.length), icon: <CheckCircle2 size={18} />, bg: 'bg-green-600' },
+    { label: 'Pending QC', value: String(jobs.filter(j => j.qcStatus === 'Pending QC').length), icon: <Clock size={18} />, bg: 'bg-yellow-600' },
+    { label: 'Feedback Pending', value: String(jobs.filter(j => j.feedbackStatus === 'Pending').length), icon: <Clock size={18} />, bg: 'bg-blue-600' },
+    { label: 'Avg Customer Rating', value: avgRating === '—' ? '—' : `${avgRating} ★`, icon: <Star size={18} />, bg: 'bg-purple-600' },
   ];
 
   return (
@@ -98,9 +142,18 @@ const ServiceCompletionMonitor = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#F1F5F9]">
+                  {loading && (
+                    <tr><td colSpan={8} className="px-3 py-10 text-center text-[#64748B] font-semibold">Loading completions…</td></tr>
+                  )}
+                  {!loading && error && (
+                    <tr><td colSpan={8} className="px-3 py-10 text-center text-red-600 font-semibold">{error}</td></tr>
+                  )}
+                  {!loading && !error && filtered.length === 0 && (
+                    <tr><td colSpan={8} className="px-3 py-10 text-center text-[#64748B] font-semibold">No completed jobs yet.</td></tr>
+                  )}
                   {filtered.map((j, i) => (
                     <tr key={i} className="hover:bg-[#F8FAFC] transition-colors">
-                      <td className="px-3 py-3 text-[#0D47A1] font-semibold">{j.id}</td>
+                      <td className="px-3 py-3 text-[#0D47A1] font-semibold">{j.ref}</td>
                       <td className="px-3 py-3 font-semibold text-[#1E293B]">{j.customer}</td>
                       <td className="px-3 py-3 text-[#64748B]">{j.product}</td>
                       <td className="px-3 py-3 text-[#64748B]">{j.tech}</td>

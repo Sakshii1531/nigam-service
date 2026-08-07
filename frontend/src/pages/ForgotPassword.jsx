@@ -2,7 +2,7 @@ import React from 'react';
 import ForgotPasswordScreen from '../components/auth/ForgotPassword';
 
 const ForgotPassword = () => (
-  <ForgotPasswordScreen variant="mobile" backTo="/login" resetTo="/reset-password" />
+  <ForgotPasswordScreen role="customer" variant="mobile" backTo="/login" />
 );
 
 export default ForgotPassword;

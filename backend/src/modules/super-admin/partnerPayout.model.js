@@ -9,6 +9,10 @@ const partnerPayoutSchema = new mongoose.Schema(
     city: { type: mongoose.Schema.Types.ObjectId, ref: 'City', default: null },
     balance: { type: Number, required: true },
     lastPaidAt: Date,
+    // What was actually disbursed on the last settlement. Recorded alongside
+    // lastPaidAt because the payouts ledger reports an amount, not just a date,
+    // and the balance is zeroed on settlement so it cannot be recovered after.
+    lastPaidAmount: { type: Number, default: 0 },
     status: { type: String, enum: ['Pending Approval', 'Paid'], default: 'Pending Approval', index: true },
   },
   { timestamps: true },

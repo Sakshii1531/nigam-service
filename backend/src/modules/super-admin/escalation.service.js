@@ -15,7 +15,15 @@ export async function listEscalations({ status, priority, city, page, limit, sor
 
   const { skip, limit: lim, page: pg, sort: sortObj } = parsePagination({ page, limit, sort });
   const [items, total] = await Promise.all([
-    Escalation.find(query).sort(sortObj).skip(skip).limit(lim),
+    // The desk renders region, owning manager and the originating ticket, so
+    // resolve those refs here rather than making the client fetch each one.
+    Escalation.find(query)
+      .populate('city', 'name')
+      .populate('manager', 'name')
+      .populate('serviceRequest', 'humanId status')
+      .sort(sortObj)
+      .skip(skip)
+      .limit(lim),
     Escalation.countDocuments(query),
   ]);
   return { items, meta: paginationMeta({ page: pg, limit: lim, total }) };
@@ -42,6 +50,17 @@ export async function assignManager(id, managerId) {
   const escalation = await findPlatformOr404(id);
   escalation.manager = managerId;
   if (escalation.status === 'Unassigned' || escalation.status === 'Open') escalation.status = 'In Progress';
+  await escalation.save();
+  return escalation;
+}
+
+// Re-prioritising is a separate action from a status change: the Complaints
+// console's "Escalate" button raised priority in browser state only, so the
+// escalation stayed at its original priority for everyone else.
+export async function updatePriority(id, priority) {
+  const escalation = await Escalation.findById(id);
+  if (!escalation) throw new ApiError(404, 'Escalation not found');
+  escalation.priority = priority;
   await escalation.save();
   return escalation;
 }

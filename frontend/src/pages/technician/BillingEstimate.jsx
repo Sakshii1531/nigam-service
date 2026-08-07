@@ -25,10 +25,26 @@ const BillingEstimate = () => {
   const isExtendedWarranty = activeJob?.type === 'NCC Extended Warranty' || activeJob?.type === 'NCC EXTENDED WARRANTY';
   const isPaid = !isAMC && !isBrandWarranty && !isExtendedWarranty;
 
-  // Mocked extras total for warranty/AMC jobs (in production this comes from context/state)
-  const extrasTotal = 798; // Deep Cleaning ₹599 + Drain Pipe Cleaning ₹199
-  const gst = Math.round(extrasTotal * 0.18);
+  // The line items are whatever the technician actually recorded on this job at
+  // the spare-parts step; only checked items are billable.
+  const billing = activeJob?.billingEstimate || {};
+  const billedParts = (activeJob?.spareParts || []).filter((i) => i.checked);
+  const billedServices = (activeJob?.additionalServices || []).filter((i) => i.checked);
+  const gstPercent = billing.gstPercent ?? 18;
+
+  // For AMC/warranty jobs the base visit is covered, so the customer only pays
+  // for extras beyond scope.
+  const extrasTotal = billedServices.reduce((sum, i) => sum + (i.price || 0), 0)
+    + billedParts.reduce((sum, i) => sum + (i.price || 0), 0);
+  const gst = Math.round(extrasTotal * (gstPercent / 100));
   const extrasGrandTotal = extrasTotal + gst;
+
+  const serviceCharge = billing.serviceCharge || 0;
+  const paidSubtotal = serviceCharge + extrasTotal;
+  const paidTax = Math.round(paidSubtotal * (gstPercent / 100));
+  const paidTotal = billing.total != null ? Math.round(billing.total) : paidSubtotal + paidTax;
+
+  const money = (n) => `₹${Math.round(n || 0).toLocaleString('en-IN')}`;
 
   const handleCollectPayment = () => {
     if (activeJob) {
@@ -82,9 +98,8 @@ const BillingEstimate = () => {
           <div class="task-row"><span class="check">✓</span> TDS Level: 180 ppm (Normal Range)</div>
           <div class="task-row"><span class="followup">↻</span> Water Flow Verified — Follow-up Clear</div>
           <div class="section-title" style="margin-top: 24px;">Additional Charges (Beyond AMC Scope)</div>
-          <div class="total-row"><span>Deep Cleaning</span><span>₹599</span></div>
-          <div class="total-row"><span>Drain Pipe Cleaning</span><span>₹199</span></div>
-          <div class="total-row"><span>GST (18%)</span><span>₹${gst}</span></div>
+          ${[...billedServices, ...billedParts].map((i) => `<div class="total-row"><span>${i.name}</span><span>₹${i.price}</span></div>`).join('')}
+          <div class="total-row"><span>GST (${gstPercent}%)</span><span>₹${gst}</span></div>
           <div class="grand-total"><span>Customer Payable</span><span>₹${extrasGrandTotal}</span></div>
           <script>window.onload = function() { window.print(); }</script>
         </body>
@@ -130,9 +145,8 @@ const BillingEstimate = () => {
             <span class="covered">₹0 — COVERED</span>
           </div>
           <div class="section-title">Additional Chargeable Services</div>
-          <div class="line-row"><span>Deep Cleaning</span><span>₹599</span></div>
-          <div class="line-row"><span>Drain Pipe Cleaning</span><span>₹199</span></div>
-          <div class="line-row"><span>GST (18%)</span><span>₹${gst}</span></div>
+          ${[...billedServices, ...billedParts].map((i) => `<div class="line-row"><span>${i.name}</span><span>₹${i.price}</span></div>`).join('')}
+          <div class="line-row"><span>GST (${gstPercent}%)</span><span>₹${gst}</span></div>
           <div class="grand-total"><span>Customer Payable</span><span>₹${extrasGrandTotal}</span></div>
           <script>window.onload = function() { window.print(); }</script>
         </body>
@@ -202,17 +216,21 @@ const BillingEstimate = () => {
                   <span>AMC Base Visit</span>
                   <span className="text-green-600 font-semibold bg-green-50 px-2 py-0.5 rounded-md">₹0 (Covered)</span>
                 </div>
+                {[...billedServices, ...billedParts].length === 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-400">No chargeable extras</span>
+                    <span className="text-[#052355] font-medium">₹0</span>
+                  </div>
+                )}
+                {[...billedServices, ...billedParts].map((item, i) => (
+                  <div key={`${item.name}-${i}`} className="flex justify-between items-center">
+                    <span>{item.name}</span>
+                    <span className="text-[#052355] font-medium">{money(item.price)}</span>
+                  </div>
+                ))}
                 <div className="flex justify-between items-center">
-                  <span>Deep Cleaning</span>
-                  <span className="text-[#052355] font-medium">₹599</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span>Drain Pipe Cleaning</span>
-                  <span className="text-[#052355] font-medium">₹199</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span>GST (18%)</span>
-                  <span className="text-[#052355] font-medium">₹{gst}</span>
+                  <span>GST ({gstPercent}%)</span>
+                  <span className="text-[#052355] font-medium">{money(gst)}</span>
                 </div>
               </div>
               <div className="border-t border-dashed border-slate-200 my-1" />
@@ -238,7 +256,7 @@ const BillingEstimate = () => {
                 Generate Report PDF
               </button>
               <button
-                onClick={() => alert('Service report link sent on WhatsApp.')}
+                onClick={() => alert('Sharing over WhatsApp is not available yet — use the print/PDF option.')}
                 className="bg-[#E6F4EA]/70 hover:bg-[#E6F4EA] text-green-700 font-normal py-3.5 rounded-2xl text-xs transition-all flex items-center justify-center gap-2 shadow-sm border border-transparent"
               >
                 <WhatsAppIcon />
@@ -273,17 +291,21 @@ const BillingEstimate = () => {
                   </span>
                 </div>
                 {/* Extras */}
+                {[...billedServices, ...billedParts].length === 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-400">No chargeable extras</span>
+                    <span className="text-[#052355] font-medium">₹0</span>
+                  </div>
+                )}
+                {[...billedServices, ...billedParts].map((item, i) => (
+                  <div key={`${item.name}-${i}`} className="flex justify-between items-center">
+                    <span>{item.name}</span>
+                    <span className="text-[#052355] font-medium">{money(item.price)}</span>
+                  </div>
+                ))}
                 <div className="flex justify-between items-center">
-                  <span>Deep Cleaning</span>
-                  <span className="text-[#052355] font-medium">₹599</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span>Drain Pipe Cleaning</span>
-                  <span className="text-[#052355] font-medium">₹199</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span>GST (18% on extras)</span>
-                  <span className="text-[#052355] font-medium">₹{gst}</span>
+                  <span>GST ({gstPercent}% on extras)</span>
+                  <span className="text-[#052355] font-medium">{money(gst)}</span>
                 </div>
               </div>
 
@@ -319,7 +341,7 @@ const BillingEstimate = () => {
                 Generate PDF
               </button>
               <button
-                onClick={() => alert('Invoice link sent on WhatsApp.')}
+                onClick={() => alert('Sharing over WhatsApp is not available yet — use the print/PDF option.')}
                 className="bg-[#E6F4EA]/70 hover:bg-[#E6F4EA] text-green-700 font-normal py-3.5 rounded-2xl text-xs transition-all flex items-center justify-center gap-2 shadow-sm border border-transparent"
               >
                 <WhatsAppIcon />
@@ -341,19 +363,17 @@ const BillingEstimate = () => {
               <div className="flex flex-col gap-3.5 text-xs font-normal text-slate-600 mt-2">
                 <div className="flex justify-between items-center">
                   <span className="text-slate-600 font-normal">Service Charge</span>
-                  <span className="text-[#052355] font-medium">₹500</span>
+                  <span className="text-[#052355] font-medium">{money(serviceCharge)}</span>
                 </div>
+                {[...billedParts, ...billedServices].map((item, i) => (
+                  <div key={`${item.name}-${i}`} className="flex justify-between items-center">
+                    <span className="text-slate-600 font-normal">{item.name}</span>
+                    <span className="text-[#052355] font-medium">{money(item.price)}</span>
+                  </div>
+                ))}
                 <div className="flex justify-between items-center">
-                  <span className="text-slate-600 font-normal">Spare Part (Capacitor)</span>
-                  <span className="text-[#052355] font-medium">₹440</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-600 font-normal">Spare Part (Gas Kit)</span>
-                  <span className="text-[#052355] font-medium">₹850</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-600 font-normal">Tax (18%)</span>
-                  <span className="text-[#052355] font-medium">₹322</span>
+                  <span className="text-slate-600 font-normal">Tax ({gstPercent}%)</span>
+                  <span className="text-[#052355] font-medium">{money(paidTax)}</span>
                 </div>
               </div>
 
@@ -361,7 +381,7 @@ const BillingEstimate = () => {
 
               <div className="flex justify-between items-center py-1">
                 <span className="text-xs font-normal text-[#0D47A1]">Customer Payable</span>
-                <span className="text-xl font-medium text-[#00C853]">₹2,112</span>
+                <span className="text-xl font-medium text-[#00C853]">{money(paidTotal)}</span>
               </div>
             </div>
 
@@ -372,14 +392,14 @@ const BillingEstimate = () => {
 
             <div className="grid grid-cols-2 gap-4 mt-1">
               <button
-                onClick={() => alert('PDF Estimate invoice generated.')}
+                onClick={() => window.print()}
                 className="bg-[#E8F0FE]/70 hover:bg-[#E8F0FE] text-[#0D47A1] font-normal py-3.5 rounded-2xl text-xs transition-all flex items-center justify-center gap-2 shadow-sm border border-transparent"
               >
                 <FileText className="h-4.5 w-4.5 text-[#0D47A1]" />
                 Generate PDF
               </button>
               <button
-                onClick={() => alert('Estimate invoice link sent on WhatsApp.')}
+                onClick={() => alert('Sharing over WhatsApp is not available yet — use the print/PDF option.')}
                 className="bg-[#E6F4EA]/70 hover:bg-[#E6F4EA] text-green-700 font-normal py-3.5 rounded-2xl text-xs transition-all flex items-center justify-center gap-2 shadow-sm border border-transparent"
               >
                 <WhatsAppIcon />

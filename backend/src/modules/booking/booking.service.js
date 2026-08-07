@@ -6,6 +6,10 @@ import { createServiceRequest, transitionStatus } from '../service-requests/serv
 import { emit as emitNotification } from '../notifications/notification.service.js';
 import { parsePagination, paginationMeta } from '../../utils/pagination.js';
 import { detectWarrantyForAppliance } from '../warranty-amc-exchange/warrantyDetector.service.js';
+import { PlatformSettings } from '../super-admin/platformSettings.model.js';
+import { Payment } from '../payments-wallet/payment.model.js';
+import { createRazorpayOrder, verifyRazorpaySignature } from '../payments-wallet/paymentGateway.js';
+import { env } from '../../config/env.js';
 
 /**
  * Creates a Booking + its linked ServiceRequest in one flow, matching
@@ -17,6 +21,12 @@ export async function createBooking(userId, data) {
   const serviceItem = await findServiceItem(data.category, data.serviceSlug);
   const quantity = data.quantity || 1;
   const basePrice = serviceItem.price * quantity;
+
+  // How much of the total an "advance" booking collects up front, from the
+  // super-admin Settings console. The reference below was added without this
+  // lookup, so every advance booking failed with a 500.
+  const settings = await PlatformSettings.findOne();
+  const advancePercent = settings?.bookingAdvancePercent ?? 20;
 
   // Run automated Smart Warranty Detection pipeline
   const {
@@ -52,7 +62,7 @@ export async function createBooking(userId, data) {
     fullName: data.fullName,
     mobile: data.mobile,
     paymentMode: data.paymentMode || 'after',
-    advanceAmount: data.paymentMode === 'advance' ? Math.round(totalPrice * 0.2) : 0,
+    advanceAmount: data.paymentMode === 'advance' ? Math.round(totalPrice * (advancePercent / 100)) : 0,
     totalPrice,
     technician: technician ? technician._id : null,
     status: 'Upcoming',
@@ -93,7 +103,63 @@ export async function createBooking(userId, data) {
     });
   }
 
-  return { booking, serviceRequest, technician };
+  // An advance booking has to actually be charged. The advance amount was
+  // computed and stored, but nothing ever collected it — the payment screens
+  // navigated straight to the success page, so every "paid" booking was unpaid.
+  let razorpay = null;
+  if (booking.advanceAmount > 0 && data.paymentMethod && data.paymentMethod !== 'Cash') {
+    const gatewayOrder = await createRazorpayOrder({
+      amount: booking.advanceAmount,
+      receipt: `booking_${booking.id}`,
+      notes: { bookingId: booking.id },
+    });
+    await Payment.create({
+      user: userId,
+      targetType: 'booking',
+      targetId: booking._id,
+      amount: booking.advanceAmount,
+      method: data.paymentMethod,
+      status: 'Pending',
+      gatewayRef: gatewayOrder.id,
+    });
+    razorpay = {
+      orderId: gatewayOrder.id,
+      amount: gatewayOrder.amount,
+      currency: gatewayOrder.currency,
+      keyId: env.razorpay.keyId,
+    };
+  }
+
+  return { booking, serviceRequest, technician, razorpay };
+}
+
+/**
+ * Confirms a booking advance paid through Razorpay Checkout. The order id used
+ * for signature verification is read from the Pending Payment this booking
+ * created — never taken from the client (same reasoning as
+ * order.service.js's verifyOrderPayment).
+ */
+export async function verifyBookingPayment(userId, bookingId, { razorpayPaymentId, razorpaySignature }) {
+  const booking = await findOwnedOr404(userId, bookingId);
+
+  const pendingPayment = await Payment.findOne({ targetType: 'booking', targetId: booking._id, status: 'Pending' });
+  if (!pendingPayment) throw new ApiError(400, 'No pending payment found for this booking');
+
+  const valid = verifyRazorpaySignature({
+    orderId: pendingPayment.gatewayRef,
+    paymentId: razorpayPaymentId,
+    signature: razorpaySignature,
+  });
+  if (!valid) throw new ApiError(400, 'Payment signature verification failed');
+
+  pendingPayment.status = 'Success';
+  pendingPayment.razorpayPaymentId = razorpayPaymentId;
+  await pendingPayment.save();
+
+  booking.advancePaid = true;
+  await booking.save();
+
+  return { booking, payment: pendingPayment };
 }
 
 async function findOwnedOr404(userId, id) {

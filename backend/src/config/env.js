@@ -28,6 +28,9 @@ export const env = {
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d',
   },
   corsOrigins: (process.env.CORS_ORIGINS || 'http://localhost:5173').split(',').map((o) => o.trim()),
+  anthropic: {
+    apiKey: process.env.ANTHROPIC_API_KEY || '',
+  },
   otpProvider: process.env.OTP_PROVIDER || 'stub',
 
   cloudinary: {
@@ -82,6 +85,10 @@ export const env = {
     whatsappEnabled: process.env.NOTIFICATION_WHATSAPP_ENABLED !== 'false',
   },
 };
+
+// The technician assistant refuses rather than fabricating when unconfigured —
+// same posture as Cloudinary/Twilio/FCM below.
+export const isAnthropicConfigured = Boolean(env.anthropic.apiKey);
 
 export const isCloudinaryConfigured = Boolean(env.cloudinary.cloudName && env.cloudinary.apiKey && env.cloudinary.apiSecret);
 export const isSmsIndiaHubConfigured = Boolean(env.smsIndiaHub.username && env.smsIndiaHub.password && env.smsIndiaHub.senderId);

@@ -4,6 +4,7 @@ import {
   ChevronLeft, Mic, Send, Search, Sparkles, ShieldCheck, Calculator, Compass
 } from 'lucide-react';
 import robotImg from '../../assets/ai_assistant_robot.png';
+import { apiRequest } from '../../lib/apiClient';
 
 const AIAssistant = () => {
   const navigate = useNavigate();
@@ -18,41 +19,53 @@ const AIAssistant = () => {
     }
   }, [messages]);
 
-  const handleSendMessage = (text) => {
-    if (!text.trim()) return;
+  const [sending, setSending] = useState(false);
 
-    // Add user message
-    const userMsg = { id: Date.now(), sender: 'user', text };
-    setMessages(prev => [...prev, userMsg]);
+  // The assistant answers from this technician's real job and van stock, which
+  // the server assembles per request. It replaced a keyword matcher that stated
+  // invented stock levels and a named customer's warranty date.
+  const handleSendMessage = async (text) => {
+    const trimmed = text.trim();
+    if (!trimmed || sending) return;
+
+    const history = [...messages, { id: Date.now(), sender: 'user', text: trimmed }];
+    setMessages(history);
     setInputValue('');
+    setSending(true);
 
-    // Trigger AI response
-    setTimeout(() => {
-      let replyText = "I'm checking that for you. Is there anything specific about it you need to know?";
-      const lower = text.toLowerCase();
-      
-      if (lower.includes('part') || lower.includes('spare')) {
-        replyText = "🔍 Inventory Search: Capacitor 45/5 MFD is currently in stock at the Lucknow Hub (6 units remaining). Outdoor Fan Motor is out of stock.";
-      } else if (lower.includes('diagnos') || lower.includes('help')) {
-        replyText = "🔧 Diagnostic Guide: For Voltas Split AC 'E6' error, check the indoor-outdoor communication cable. For LG Refrigerator noise, inspect the evaporator fan blade.";
-      } else if (lower.includes('warranty') || lower.includes('check')) {
-        replyText = "🛡️ Warranty Status: Job #8843 for LG Refrigerator is under Active Partner Warranty. Mrs. Neha Verma's unit is covered until May 2027.";
-      } else if (lower.includes('estimate') || lower.includes('cost')) {
-        replyText = "📊 Price Estimator: Split AC Repair standard D2C rate is ₹2,200 (including gas check). Your estimated payout is ₹850.";
-      } else if (lower.includes('hello') || lower.includes('hi')) {
-        replyText = "Hello! I am your HVAC assistant. Ask me about diagnostics, spare parts inventory, or job estimates!";
-      }
-
-      const aiMsg = { id: Date.now() + 1, sender: 'ai', text: replyText };
-      setMessages(prev => [...prev, aiMsg]);
-    }, 800);
+    try {
+      const res = await apiRequest('/tech/assistant', {
+        method: 'POST',
+        auth: true,
+        body: {
+          messages: history.map((m) => ({
+            role: m.sender === 'user' ? 'user' : 'assistant',
+            content: m.text,
+          })),
+        },
+      });
+      setMessages((prev) => [...prev, { id: Date.now() + 1, sender: 'ai', text: res.data.reply }]);
+    } catch (err) {
+      // 503 means the assistant isn't configured on this deployment; anything
+      // else is a real failure. Either way, offer the human desk.
+      setMessages((prev) => [...prev, {
+        id: Date.now() + 1,
+        sender: 'ai',
+        text: err.status === 503
+          ? "The assistant isn't available on this deployment yet."
+          : err.message || 'Could not reach the assistant.',
+        offerSupport: true,
+      }]);
+    } finally {
+      setSending(false);
+    }
   };
 
   const quickPrompts = [
-    { label: 'Find Spare Part', icon: <Search className="h-4 w-4 text-[#0D47A1]" /> },
-    { label: 'Diagnostic Help', icon: <Sparkles className="h-4 w-4 text-[#0D47A1]" /> },
-    { label: 'Warranty Check', icon: <ShieldCheck className="h-4 w-4 text-[#0D47A1]" /> },
-    { label: 'Estimate Help', icon: <Calculator className="h-4 w-4 text-[#0D47A1]" /> }
+    { label: 'Find Spare Part', icon: <Search className="h-4 w-4 text-[#0D47A1]" />, prompt: 'What spare parts do I have in my van stock right now?' },
+    { label: 'Diagnostic Help', icon: <Sparkles className="h-4 w-4 text-[#0D47A1]" />, prompt: 'Help me diagnose the issue on my current job.' },
+    { label: 'Warranty Check', icon: <ShieldCheck className="h-4 w-4 text-[#0D47A1]" />, prompt: 'Is my current job covered under warranty?' },
+    { label: 'Estimate Help', icon: <Calculator className="h-4 w-4 text-[#0D47A1]" />, prompt: 'Help me put together an estimate for my current job.' }
   ];
 
   return (
@@ -98,7 +111,7 @@ const AIAssistant = () => {
               {quickPrompts.map((p, idx) => (
                 <button
                   key={idx}
-                  onClick={() => handleSendMessage(p.label)}
+                  onClick={() => handleSendMessage(p.prompt)}
                   className="bg-white border border-slate-200 rounded-2xl p-3.5 flex items-center gap-2.5 shadow-sm hover:shadow-sm hover:border-slate-200 transition-all text-left group"
                 >
                   <div className="p-2 bg-slate-50 group-hover:bg-[#E3ECF9]/40 rounded-xl transition-colors">
@@ -126,6 +139,14 @@ const AIAssistant = () => {
                     : 'bg-white text-[#052355] border border-slate-200 rounded-tl-none'
                 }`}>
                   {msg.text}
+                  {msg.offerSupport && (
+                    <button
+                      onClick={() => navigate('/technician/technical-support')}
+                      className="mt-2 block w-full bg-[#0D47A1] text-white font-semibold text-[11px] py-2 rounded-xl"
+                    >
+                      Open Technical Support
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -150,13 +171,14 @@ const AIAssistant = () => {
           {inputValue.trim() ? (
             <button 
               onClick={() => handleSendMessage(inputValue)}
+              disabled={sending}
               className="w-9 h-9 bg-[#0D47A1] text-white rounded-full flex items-center justify-center shadow-sm hover:bg-blue-700 transition-colors"
             >
               <Send className="h-4.5 w-4.5 stroke-[2.5]" />
             </button>
           ) : (
             <button 
-              onClick={() => handleSendMessage("Help me diagnose a Split AC issue")}
+              onClick={() => navigate('/technician/technical-support')}
               className="w-9 h-9 bg-[#0D47A1] text-white rounded-full flex items-center justify-center shadow-sm hover:bg-blue-700 transition-colors"
             >
               <Mic className="h-4.5 w-4.5 stroke-[2.5]" />

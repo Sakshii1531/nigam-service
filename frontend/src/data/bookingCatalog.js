@@ -27,6 +27,28 @@ import iconRo      from '../assets/icon_3d_ro.png';
 import iconOven    from '../assets/icon_3d_oven.png';
 import iconChimney from '../assets/icon_3d_chimney.png';
 import iconCooler  from '../assets/icon_3d_cooler.png';
+import { apiRequest } from '../lib/apiClient';
+
+// Admin overrides live server-side (ServicePageConfig + CategoryBookingConfig).
+// getCatalogEntry stays synchronous — BookingFlow reads it during render — so
+// the overrides are fetched once into these caches and preloadCatalogOverrides()
+// is awaited before the first read. An empty cache simply means "no override",
+// which falls through to the bundled defaults below.
+let servicePageOverrides = {};
+let categoryOverrides = {};
+
+export async function preloadCatalogOverrides() {
+  try {
+    const [servicePages, categories] = await Promise.all([
+      apiRequest('/cms/service-pages'),
+      apiRequest('/cms/category-configs'),
+    ]);
+    servicePageOverrides = Object.fromEntries((servicePages.data || []).map(c => [c.serviceKey, c]));
+    categoryOverrides = Object.fromEntries((categories.data || []).map(c => [c.categoryName, c]));
+  } catch (err) {
+    console.warn('[catalog] Could not load admin overrides, using defaults:', err.message);
+  }
+}
 
 // ─── Booking Catalog ───────────────────────────────────────────────────────────
 export const BOOKING_CATALOG = {
@@ -326,11 +348,7 @@ export const getCatalogEntry = (category) => {
   const decodedNorm = decoded.toLowerCase();
 
   // 1. Look up in Services Customization data (from Services tab)
-  const savedConfigs = localStorage.getItem('custom_service_details_configs');
-  const serviceConfigs = savedConfigs ? JSON.parse(savedConfigs) : {};
-
-  const savedCatalogs = localStorage.getItem('custom_service_catalogs');
-  const serviceCatalogs = savedCatalogs ? JSON.parse(savedCatalogs) : {};
+  const serviceConfigs = servicePageOverrides;
 
   let matchedServiceKey = null;
   Object.keys(serviceConfigs).forEach(key => {
@@ -342,9 +360,12 @@ export const getCatalogEntry = (category) => {
 
   if (matchedServiceKey) {
     const config = serviceConfigs[matchedServiceKey] || {};
-    const catalog = serviceCatalogs[matchedServiceKey] || [];
+    const catalog = config.catalog || [];
+    // Product types and brands are a property of the category, not the service
+    // page, so they come from the category config when one exists.
+    const categoryConfig = categoryOverrides[matchedServiceKey] || categoryOverrides[decoded] || {};
 
-    const productTypes = (config.productTypes || []).map(t => ({
+    const productTypes = (categoryConfig.productTypes || []).map(t => ({
       id: t.toLowerCase().replace(/ /g, '_'),
       name: t,
       icon: '⚡',
@@ -369,7 +390,7 @@ export const getCatalogEntry = (category) => {
 
     const staticDefault = BOOKING_CATALOG[decoded] || BOOKING_CATALOG[Object.keys(BOOKING_CATALOG).find(k => k.toLowerCase() === decodedNorm)] || {};
 
-    const mockData = {
+    const resolved = {
       icon: staticDefault.icon || null,
       color: staticDefault.color || '#0D47A1',
       lightBg: staticDefault.lightBg || '#EAF4FF',
@@ -377,22 +398,21 @@ export const getCatalogEntry = (category) => {
       services: {
         default: servicesList
       },
-      brands: config.brands || staticDefault.brands || ['LG', 'Samsung', 'Whirlpool', 'Panasonic'],
-      whyBrandPoints: staticDefault.whyBrandPoints || ['Brand certified expert technicians', 'Correct parts calibration', 'Genuine brand replacement parts'],
-      categoryNote: config.categoryNote || staticDefault.categoryNote || 'Prices shown are indicative.',
+      brands: categoryConfig.brands?.length ? categoryConfig.brands : (staticDefault.brands || ['LG', 'Samsung', 'Whirlpool', 'Panasonic']),
+      whyBrandPoints: categoryConfig.whyBrandPoints?.length
+        ? categoryConfig.whyBrandPoints
+        : (staticDefault.whyBrandPoints || ['Brand certified expert technicians', 'Correct parts calibration', 'Genuine brand replacement parts']),
+      categoryNote: categoryConfig.categoryNote || staticDefault.categoryNote || 'Prices shown are indicative.',
       bannerImg: config.bannerImg || '',
       tagline: config.tagline || '',
       subtitle: config.subtitle || ''
     };
 
-    return { key: decoded, data: mockData };
+    return { key: decoded, data: resolved };
   }
 
   // 2. Otherwise, fall back to Category Customization / Static defaults
-  const savedBookingCatalogs = localStorage.getItem('custom_booking_catalog');
-  const customBookingCatalog = savedBookingCatalogs ? JSON.parse(savedBookingCatalogs) : {};
-
-  const unifiedCatalog = { ...BOOKING_CATALOG, ...customBookingCatalog };
+  const unifiedCatalog = { ...BOOKING_CATALOG, ...categoryOverrides };
 
   const key = Object.keys(unifiedCatalog).find(
     (k) => k.toLowerCase() === decodedNorm

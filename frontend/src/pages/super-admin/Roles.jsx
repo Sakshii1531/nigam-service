@@ -1,33 +1,86 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
-import { 
-  Lock, 
-  Plus, 
-  Check, 
-  X, 
-  Shield, 
-  UserCheck, 
-  Building, 
-  Headphones, 
+import { apiRequest } from '../../lib/apiClient';
+import {
+  Lock,
+  Plus,
+  Check,
+  X,
+  Shield,
+  UserCheck,
+  Building,
+  Headphones,
   CreditCard,
   CheckCircle2,
   LockKeyhole,
   Info
 } from 'lucide-react';
 
+// The matrix below is the five domains this screen exposes. Each maps to the
+// seeded `<domain>:manage` permission key. A role may also hold keys outside
+// these five (requests, invoices, claims…) — those are carried through
+// untouched on every save so this screen never silently revokes them.
+const MATRIX = [
+  { key: 'users', label: 'Manage Users', desc: 'Can view, edit, suspend, and delete customers.' },
+  { key: 'techs', label: 'Manage Technicians', desc: 'Can approve, suspend, and assign jobs to techs.' },
+  { key: 'brands', label: 'Manage Brands', desc: 'Can approve brands and manage their requests.' },
+  { key: 'billing', label: 'Manage Billing', desc: 'Can view transactions, process refunds, and payouts.' },
+  { key: 'settings', label: 'Manage System Settings', desc: 'Full access to app configuration and logs.' },
+];
+const MATRIX_KEYS = MATRIX.map(m => m.key);
+const permissionKeyFor = (domain) => `${domain}:manage`;
+
+// Backend stores `icon`/`color` as plain strings; render a component from a map.
+const ICONS = { shield: Shield, headphones: Headphones, card: CreditCard, user: UserCheck, building: Building };
+function roleIcon(name) {
+  const Icon = ICONS[name] || LockKeyhole;
+  return <Icon size={16} />;
+}
+
+function shape(role) {
+  const held = (role.permissions || []).map(p => (typeof p === 'string' ? p : p.key));
+  return {
+    id: role.id,
+    name: role.name,
+    icon: roleIcon(role.icon),
+    color: role.color || 'bg-purple-50 text-purple-600',
+    // Every key the role holds, including ones this screen doesn't render.
+    permissionKeys: held,
+    permissions: Object.fromEntries(
+      MATRIX_KEYS.map(k => [k, held.includes(permissionKeyFor(k))])
+    ),
+  };
+}
+
 const Roles = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [newRole, setNewRole] = useState({ name: '', description: '', users: false, techs: false, brands: false, billing: false, settings: false });
 
-  const [roles, setRoles] = useState([
-    { id: 1, name: 'Super Admin', icon: <Shield size={16} />, color: 'bg-red-50 text-red-600', permissions: { users: true, techs: true, brands: true, billing: true, settings: true } },
-    { id: 2, name: 'Support Manager', icon: <Headphones size={16} />, color: 'bg-blue-50 text-blue-600', permissions: { users: true, techs: true, brands: false, billing: false, settings: false } },
-    { id: 3, name: 'Finance Manager', icon: <CreditCard size={16} />, color: 'bg-green-50 text-green-600', permissions: { users: false, techs: false, brands: true, billing: true, settings: false } },
-  ]);
+  const [roles, setRoles] = useState([]);
+  const [selectedRole, setSelectedRole] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const [selectedRole, setSelectedRole] = useState(roles[0]);
+  useEffect(() => {
+    let cancelled = false;
+    async function loadRoles() {
+      try {
+        const data = await apiRequest('/super-admin/roles', { auth: true });
+        if (cancelled) return;
+        const shaped = (data?.data || []).map(shape);
+        setRoles(shaped);
+        setSelectedRole(shaped[0] || null);
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    loadRoles();
+    return () => { cancelled = true; };
+  }, []);
 
   const showToast = (message) => {
     setSuccessMessage(message);
@@ -36,55 +89,55 @@ const Roles = () => {
     }, 3000);
   };
 
-  const togglePermission = (roleId, permissionKey) => {
-    let updatedPermName = '';
-    const updated = roles.map(r => {
-      if (r.id === roleId) {
-        const updatedPerms = { ...r.permissions, [permissionKey]: !r.permissions[permissionKey] };
-        const newPermState = updatedPerms[permissionKey] ? 'Granted' : 'Revoked';
-        updatedPermName = `${permissionKey.charAt(0).toUpperCase() + permissionKey.slice(1)} permission ${newPermState} for ${r.name}`;
-        
-        const newRoleObj = { ...r, permissions: updatedPerms };
-        if (selectedRole.id === roleId) {
-          setSelectedRole(newRoleObj);
-        }
-        return newRoleObj;
-      }
-      return r;
-    });
+  const togglePermission = async (roleId, permissionKey) => {
+    const role = roles.find(r => r.id === roleId);
+    if (!role) return;
 
-    setRoles(updated);
-    if (updatedPermName) {
-      showToast(updatedPermName);
+    const granting = !role.permissions[permissionKey];
+    const key = permissionKeyFor(permissionKey);
+    const nextKeys = granting
+      ? [...role.permissionKeys, key]
+      : role.permissionKeys.filter(k => k !== key);
+
+    try {
+      const updated = await apiRequest(`/super-admin/roles/${roleId}`, {
+        method: 'PUT', auth: true, body: { permissionKeys: nextKeys },
+      });
+      const shaped = shape(updated);
+      setRoles(prev => prev.map(r => (r.id === roleId ? shaped : r)));
+      if (selectedRole?.id === roleId) setSelectedRole(shaped);
+      showToast(
+        `${permissionKey.charAt(0).toUpperCase() + permissionKey.slice(1)} permission ${granting ? 'Granted' : 'Revoked'} for ${role.name}`
+      );
+    } catch (err) {
+      showToast(`Could not update permission: ${err.message}`);
     }
   };
 
-  const handleCreateRoleSubmit = (e) => {
+  const handleCreateRoleSubmit = async (e) => {
     e.preventDefault();
     if (!newRole.name) {
       showToast('Please enter a role name.');
       return;
     }
 
-    const created = {
-      id: roles.length + 1,
-      name: newRole.name,
-      icon: <LockKeyhole size={16} />,
-      color: 'bg-purple-50 text-purple-600',
-      permissions: {
-        users: newRole.users,
-        techs: newRole.techs,
-        brands: newRole.brands,
-        billing: newRole.billing,
-        settings: newRole.settings
-      }
-    };
+    const permissionKeys = MATRIX_KEYS.filter(k => newRole[k]).map(permissionKeyFor);
 
-    setRoles([...roles, created]);
-    setSelectedRole(created);
-    setNewRole({ name: '', description: '', users: false, techs: false, brands: false, billing: false, settings: false });
-    setShowAddModal(false);
-    showToast(`Role "${created.name}" created and configured successfully!`);
+    try {
+      const created = await apiRequest('/super-admin/roles', {
+        method: 'POST',
+        auth: true,
+        body: { name: newRole.name, permissionKeys, color: 'bg-purple-50 text-purple-600' },
+      });
+      const shaped = shape(created);
+      setRoles(prev => [...prev, shaped]);
+      setSelectedRole(shaped);
+      setNewRole({ name: '', description: '', users: false, techs: false, brands: false, billing: false, settings: false });
+      setShowAddModal(false);
+      showToast(`Role "${shaped.name}" created and configured successfully!`);
+    } catch (err) {
+      showToast(`Could not create role: ${err.message}`);
+    }
   };
 
   return (
@@ -118,6 +171,11 @@ const Roles = () => {
               <h3 className="font-bold text-[#1E293B] mb-4">Available Roles</h3>
               
               <div className="space-y-3 flex-1 overflow-y-auto">
+                {loading && <p className="text-sm text-[#64748B] font-semibold">Loading roles…</p>}
+                {!loading && error && <p className="text-sm text-red-600 font-semibold">{error}</p>}
+                {!loading && !error && roles.length === 0 && (
+                  <p className="text-sm text-[#64748B] font-semibold">No platform roles defined yet.</p>
+                )}
                 {roles.map((role) => (
                   <div 
                     key={role.id}
@@ -153,13 +211,7 @@ const Roles = () => {
 
                   {/* Matrix */}
                   <div className="space-y-4 flex-1 overflow-y-auto p-2">
-                    {[
-                      { key: 'users', label: 'Manage Users', desc: 'Can view, edit, suspend, and delete customers.' },
-                      { key: 'techs', label: 'Manage Technicians', desc: 'Can approve, suspend, and assign jobs to techs.' },
-                      { key: 'brands', label: 'Manage Brands', desc: 'Can approve brands and manage their requests.' },
-                      { key: 'billing', label: 'Manage Billing', desc: 'Can view transactions, process refunds, and payouts.' },
-                      { key: 'settings', label: 'Manage System Settings', desc: 'Full access to app configuration and logs.' },
-                    ].map((perm) => (
+                    {MATRIX.map((perm) => (
                       <div key={perm.key} className="flex justify-between items-center p-4 border border-[#E2E8F0] rounded-xl hover:bg-[#F8FAFC] transition-colors">
                         <div>
                           <p className="font-bold text-[#1E293B] text-sm">{perm.label}</p>

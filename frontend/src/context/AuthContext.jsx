@@ -46,8 +46,26 @@ export const AuthProvider = ({ children }) => {
     return data.user;
   }, []);
 
-  const resendOtp = useCallback(async ({ role, identifier }) => {
-    return apiRequest('/auth/otp/send', { method: 'POST', body: { role, identifier } });
+  const resendOtp = useCallback(async ({ role, identifier, purpose }) => {
+    return apiRequest('/auth/otp/send', { method: 'POST', body: { role, identifier, purpose } });
+  }, []);
+
+  const signupCheck = useCallback(async ({ name, phone, email, password, confirmPassword, address, referralCode }) => {
+    return apiRequest('/auth/signup/check', {
+      method: 'POST',
+      body: { name, phone, email, password, confirmPassword, address, referralCode }
+    });
+  }, []);
+
+  const signupVerify = useCallback(async ({ name, phone, email, password, address, referralCode, code }) => {
+    const data = await apiRequest('/auth/signup/verify', {
+      method: 'POST',
+      body: { name, phone, email, password, address, referralCode, code }
+    });
+    storeTokens(data);
+    localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+    setUser(data.user);
+    return data.user;
   }, []);
 
   const logout = useCallback(async () => {
@@ -65,7 +83,16 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   }, []);
 
-  const value = { user, isAuthenticated: !!user, login, verifyOtp, resendOtp, logout };
+  const updateUser = useCallback((updates) => {
+    setUser((prev) => {
+      if (!prev) return null;
+      const updated = { ...prev, ...updates };
+      localStorage.setItem(USER_KEY, JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
+  const value = { user, isAuthenticated: !!user, login, verifyOtp, resendOtp, signupCheck, signupVerify, logout, updateUser };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

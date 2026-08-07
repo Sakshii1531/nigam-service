@@ -5,11 +5,13 @@ import {
   Clock, Shield, Star, GraduationCap, MessageSquare, Megaphone, Scan, CheckCircle, RotateCw, X, LogOut, Sparkles, CreditCard, ShieldCheck, Award, Settings, HelpCircle, ArrowLeft
 } from 'lucide-react';
 import { useTech } from '../../context/TechContext';
+import { useAuth } from '../../context/AuthContext';
 import PushPermissionPrompt from '../../components/PushPermissionPrompt';
 import techAvatar from '../../assets/tech_avatar.png';
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { 
     jobs, 
     earningsTally, 
@@ -18,7 +20,8 @@ const Dashboard = () => {
     setActiveStep,
     notifications,
     activeSpecs,
-    toggleSpec
+    toggleSpec,
+    dismissJob
   } = useTech();
 
   const [showAllJobs, setShowAllJobs] = useState(false);
@@ -192,7 +195,7 @@ const Dashboard = () => {
             {/* Greeting Column */}
             <div>
               <h2 className="text-lg font-bold text-white flex items-center gap-1.5">
-                Good Morning, Alex 👋
+                Good Morning, {user?.name?.split(' ')[0] || 'Technician'} 👋
               </h2>
               <p className="text-slate-300 text-[10px] mt-0.5 font-medium">Proud to be a part of NCC Service Network</p>
             </div>
@@ -254,7 +257,7 @@ const Dashboard = () => {
                   <div className="w-6.5 h-6.5 rounded-full bg-[#E8F5E9] flex items-center justify-center flex-shrink-0">
                     <Wrench className="w-3.5 h-3.5 text-[#2E7D32]" />
                   </div>
-                  <span className="text-[14px] font-black text-[#2E7D32]">3</span>
+                  <span className="text-[14px] font-black text-[#2E7D32]">{jobs.filter(j => !j.isAvailableRequest).length}</span>
                 </div>
                 <span className="text-[9.5px] font-bold text-slate-500 leading-tight mt-1">Active Jobs</span>
                 <button 
@@ -271,7 +274,7 @@ const Dashboard = () => {
                   <div className="w-6.5 h-6.5 rounded-full bg-[#FFF3E0] flex items-center justify-center flex-shrink-0">
                     <RotateCw className="w-3.5 h-3.5 text-[#E65100]" />
                   </div>
-                  <span className="text-[14px] font-black text-[#E65100]">2</span>
+                  <span className="text-[14px] font-black text-[#E65100]">0</span>
                 </div>
                 <span className="text-[9.5px] font-bold text-slate-500 leading-tight mt-1">Revisit Jobs</span>
                 <button 
@@ -288,7 +291,7 @@ const Dashboard = () => {
                   <div className="w-6.5 h-6.5 rounded-full bg-[#F3E5F5] flex items-center justify-center flex-shrink-0">
                     <CheckCircle className="w-3.5 h-3.5 text-[#6A1B9A]" />
                   </div>
-                  <span className="text-[14px] font-black text-[#6A1B9A]">5</span>
+                  <span className="text-[14px] font-black text-[#6A1B9A]">{earningsTally.completedToday || 0}</span>
                 </div>
                 <span className="text-[9.5px] font-bold text-slate-500 leading-tight mt-1">Completed Today</span>
                 <button 
@@ -307,86 +310,13 @@ const Dashboard = () => {
                   <RotateCw className="w-4 h-4 text-[#E65100]" />
                   <h3 className="text-sm font-bold text-[#052355]">Revisit Schedule</h3>
                 </div>
-                <button 
-                  onClick={() => { setShowAllJobs(true); setFilterTab('All'); }}
-                  className="text-[10.5px] font-bold text-[#E65100] hover:underline"
-                >
-                  View All
-                </button>
               </div>
               <p className="text-[10px] text-slate-500">Pending jobs requiring spare parts or follow-up visit</p>
 
-              {/* Redesigned Revisit Card */}
-              <div className="bg-[#FFFDF9] border border-[#FFE0B2] rounded-2xl p-3 shadow-sm flex flex-col gap-2.5 mt-1.5 hover:shadow-md transition-shadow">
-                {/* Row 1: Brand details and Action button */}
-                <div className="flex justify-between items-start gap-2.5">
-                  {/* Left Block: Brand Box & Details */}
-                  <div className="flex items-start gap-2.5 min-w-0">
-                    <div className="flex flex-col items-center flex-shrink-0">
-                      <div className="w-9 h-9 bg-[#FF9800] rounded-xl flex items-center justify-center shadow-sm">
-                        <svg className="w-5.5 h-5.5 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                          <rect x="5" y="3" width="14" height="18" rx="2" />
-                          <circle cx="12" cy="13" r="4" />
-                          <circle cx="12" cy="13" r="1.5" />
-                          <line x1="8" y1="6" x2="8.01" y2="6" strokeWidth="3.5" strokeLinecap="round" />
-                          <line x1="12" y1="6" x2="12.01" y2="6" strokeWidth="3.5" strokeLinecap="round" />
-                        </svg>
-                      </div>
-                      <span className="text-[#0A2C74] font-extrabold text-[7px] tracking-widest mt-1">SAMSUNG</span>
-                    </div>
-
-                    <div className="min-w-0">
-                      <h4 className="text-[11px] font-semibold text-[#052355] truncate">Washing Machine</h4>
-                      <p className="text-[9px] text-slate-500 mt-0.5 font-normal whitespace-nowrap">Customer: <span className="text-[#052355] font-semibold">Amit Singh</span></p>
-                      <p className="text-[9px] text-slate-500 mt-0.5 font-normal whitespace-nowrap">Job ID: <span className="text-[#052355] font-semibold">NCC12345</span></p>
-                      <div className="flex items-center gap-1 text-[8.5px] text-slate-500 mt-1 font-normal whitespace-nowrap">
-                        <MapPin className="w-3 h-3 text-slate-400" />
-                        <span>2.6 km away</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right Block: Actions */}
-                  <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-                    <button 
-                      onClick={() => { 
-                        selectJobForDetails('8842'); 
-                        setActiveStep('revisit_complete'); 
-                        navigate('/technician/active-job'); 
-                      }}
-                      className="border border-[#FF9800] text-[#FF9800] hover:bg-[#FF9800]/5 text-[8px] font-bold py-1 px-2 rounded tracking-wide transition-all shadow-xs whitespace-nowrap"
-                    >
-                      START REVISIT
-                    </button>
-                    <span className="bg-[#FFF3E0] text-[#E65100] text-[8px] font-bold py-0.5 px-2 rounded-full text-center whitespace-nowrap">
-                      Visit #2
-                    </span>
-                  </div>
-                </div>
-
-                {/* Divider Line */}
-                <div className="h-[1px] bg-slate-100 my-2"></div>
-
-                {/* Row 2: Columns (Reason, Part Status, Revisit Date) */}
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <span className="text-[7.5px] text-slate-400 font-bold uppercase tracking-wider block">Reason</span>
-                    <span className="text-[9px] font-semibold text-slate-700 block mt-0.5 leading-snug">Awaiting Drain Pump</span>
-                  </div>
-                  <div>
-                    <span className="text-[7.5px] text-slate-400 font-bold uppercase tracking-wider block">Part Status</span>
-                    <span className="text-[9px] font-semibold text-slate-700 flex items-center gap-0.5 mt-0.5 leading-snug flex-wrap">
-                      Spare Part Recd.
-                      <svg className="w-3 h-3 text-green-600 fill-green-150 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                      </svg>
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-[7.5px] text-slate-400 font-bold uppercase tracking-wider block">Revisit Date</span>
-                    <span className="text-[9px] font-semibold text-slate-700 block mt-0.5 leading-snug">Tomorrow 11:00 AM</span>
-                  </div>
-                </div>
+              <div className="bg-[#FFFDF9] border border-[#FFE0B2] rounded-2xl p-4 shadow-sm flex flex-col items-center justify-center text-center gap-1.5 mt-1.5">
+                <RotateCw className="w-6 h-6 text-amber-400" />
+                <p className="text-xs font-bold text-slate-700">No Revisit Jobs Scheduled</p>
+                <p className="text-[10px] text-slate-400">Revisit requests assigned to you will appear here.</p>
               </div>
             </div>
 
@@ -722,7 +652,8 @@ const Dashboard = () => {
                             Accept
                           </button>
                           <button 
-                            onClick={() => alert(`Job #${job.id} declined.`)}
+                            onClick={() => dismissJob(job.id)}
+                            title="Hide this request — it stays available to other technicians"
                             className="flex-1 bg-white hover:bg-slate-50 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition-all border border-slate-300"
                           >
                             Decline

@@ -12,6 +12,7 @@ import { Permission } from '../src/modules/auth/permission.model.js';
 import { hashPassword } from '../src/modules/auth/password.js';
 import { ROLES } from '../src/config/constants.js';
 import { testDbUri } from './helpers/testDb.js';
+import { readOtpCode } from './helpers/otp.js';
 
 const TEST_DB_URI = testDbUri('auth');
 
@@ -20,28 +21,14 @@ let app;
 // The 'stub' OTP provider just console.logs the code — capturing it here avoids
 // needing ESM module-mocking gymnastics just to read a value the service already
 // hands to console.log in plaintext before hashing it.
-function captureConsoleLog() {
-  const original = console.log;
-  const lines = [];
-  console.log = (...args) => lines.push(args.join(' '));
-  return {
-    code: () => {
-      console.log = original;
-      const match = lines.join('\n').match(/code for [^:]+: (\d{6})/);
-      if (!match) throw new Error(`No OTP code found in captured output: ${lines.join('\n')}`);
-      return match[1];
-    },
-  };
-}
 
 async function createUser({ role, phone, email, password, extra = {} }) {
   return User.create({ role, phone, email, name: 'Test User', passwordHash: await hashPassword(password), ...extra });
 }
 
 async function loginAndVerify(app_, { role, identifier, password }) {
-  const capture = captureConsoleLog();
   await request(app_).post('/api/v1/auth/login').send({ role, identifier, password }).expect(200);
-  const code = capture.code();
+  const code = readOtpCode(identifier);
   const res = await request(app_).post('/api/v1/auth/otp/verify').send({ role, identifier, code }).expect(200);
   return res.body.data;
 }
@@ -50,10 +37,11 @@ beforeAll(async () => {
   await registerAllModels();
   await mongoose.connect(TEST_DB_URI);
   await ensureIndexes(); // uniqueness (e.g. User's compound phone+role index) must be enforced before these tests rely on it
-  app = createApp();
+  app = createApp().listen(0);
 });
 
 afterAll(async () => {
+  await new Promise((resolve) => app.close(resolve));
   await mongoose.connection.dropDatabase();
   await mongoose.disconnect();
 });
@@ -221,9 +209,8 @@ describe('forgot / reset password', () => {
     await createUser({ role: ROLES.CUSTOMER, phone: '9000000017', password: 'oldpassword' });
     const oldSession = await loginAndVerify(app, { role: ROLES.CUSTOMER, identifier: '9000000017', password: 'oldpassword' });
 
-    const capture = captureConsoleLog();
     await request(app).post('/api/v1/auth/forgot-password').send({ role: ROLES.CUSTOMER, identifier: '9000000017' }).expect(200);
-    const code = capture.code();
+    const code = readOtpCode('9000000017');
 
     await request(app)
       .post('/api/v1/auth/reset-password')
@@ -259,9 +246,8 @@ describe('resend OTP', () => {
     await createUser({ role: ROLES.CUSTOMER, phone: '9000000018', password: 'password123' });
     await request(app).post('/api/v1/auth/login').send({ role: ROLES.CUSTOMER, identifier: '9000000018', password: 'password123' });
 
-    const capture = captureConsoleLog();
     await request(app).post('/api/v1/auth/otp/send').send({ role: ROLES.CUSTOMER, identifier: '9000000018' }).expect(200);
-    const freshCode = capture.code();
+    const freshCode = readOtpCode('9000000018');
 
     expect(await Otp.countDocuments({ identifier: '9000000018', verified: false })).toBe(1);
 
@@ -269,5 +255,202 @@ describe('resend OTP', () => {
       .post('/api/v1/auth/otp/verify')
       .send({ role: ROLES.CUSTOMER, identifier: '9000000018', code: freshCode })
       .expect(200);
+  });
+});
+
+describe('customer signup flow', () => {
+  const signupPayload = {
+    name: 'New Customer',
+    phone: '9999999900',
+    email: 'newcustomer@example.com',
+    password: 'password123',
+    confirmPassword: 'password123',
+    address: '123, Civil Lines, Delhi',
+    referralCode: '',
+  };
+
+  it('fails check validation when name contains numbers', async () => {
+    await request(app)
+      .post('/api/v1/auth/signup/check')
+      .send({ ...signupPayload, name: 'New Customer 123' })
+      .expect(400);
+  });
+
+  it('fails check validation when phone is not 10 digits', async () => {
+    await request(app)
+      .post('/api/v1/auth/signup/check')
+      .send({ ...signupPayload, phone: '999999990' })
+      .expect(400);
+  });
+
+  it('fails check validation when passwords do not match', async () => {
+    await request(app)
+      .post('/api/v1/auth/signup/check')
+      .send({ ...signupPayload, confirmPassword: 'differentpassword' })
+      .expect(400);
+  });
+
+  it('detects duplicate phone number', async () => {
+    await createUser({ role: ROLES.CUSTOMER, phone: '9999999901', email: 'otheremail@example.com', password: 'password123' });
+    const res = await request(app)
+      .post('/api/v1/auth/signup/check')
+      .send({ ...signupPayload, phone: '9999999901', email: 'unique@example.com' })
+      .expect(409);
+    expect(res.body.error.details.errorType).toBe('phone');
+  });
+
+  it('detects duplicate email address', async () => {
+    await createUser({ role: ROLES.CUSTOMER, phone: '9999999902', email: 'duplicate@example.com', password: 'password123' });
+    const res = await request(app)
+      .post('/api/v1/auth/signup/check')
+      .send({ ...signupPayload, phone: '9999999903', email: 'duplicate@example.com' })
+      .expect(409);
+    expect(res.body.error.details.errorType).toBe('email');
+  });
+
+  it('detects duplicate both phone and email', async () => {
+    await createUser({ role: ROLES.CUSTOMER, phone: '9999999904', email: 'both@example.com', password: 'password123' });
+    const res = await request(app)
+      .post('/api/v1/auth/signup/check')
+      .send({ ...signupPayload, phone: '9999999904', email: 'both@example.com' })
+      .expect(409);
+    expect(res.body.error.details.errorType).toBe('both');
+  });
+
+  it('passes check and verifies signup with correct OTP, saving default address', async () => {
+    await request(app)
+      .post('/api/v1/auth/signup/check')
+      .send(signupPayload)
+      .expect(200);
+
+    const code = readOtpCode(signupPayload.phone);
+
+    // Verify with invalid OTP first
+    await request(app)
+      .post('/api/v1/auth/signup/verify')
+      .send({ ...signupPayload, code: '000000' })
+      .expect(400);
+
+    // Verify with correct OTP
+    const res = await request(app)
+      .post('/api/v1/auth/signup/verify')
+      .send({ ...signupPayload, code })
+      .expect(200);
+
+    // Verify user object and address schema
+    const data = res.body.data;
+    expect(data.accessToken).toBeTruthy();
+    expect(data.user.name).toBe('New Customer');
+    expect(data.user.phone).toBe('9999999900');
+    expect(data.user.email).toBe('newcustomer@example.com');
+    expect(data.user.addresses.length).toBe(1);
+    expect(data.user.addresses[0].house).toBe('123, Civil Lines, Delhi');
+    expect(data.user.addresses[0].isDefault).toBe(true);
+  });
+});
+
+describe('PATCH /auth/password — authenticated self-service change', () => {
+  it('changes the password, revokes existing sessions, and lets the new one sign in', async () => {
+    const phone = '9500000901';
+    await User.create({ role: ROLES.CUSTOMER, phone, name: 'PW User', passwordHash: await hashPassword('password123') });
+    const { accessToken: token } = await loginAndVerify(app, { role: ROLES.CUSTOMER, identifier: phone, password: 'password123' });
+
+    await request(app)
+      .patch('/api/v1/auth/password')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ currentPassword: 'password123', newPassword: 'newpassword456' })
+      .expect(200);
+
+    // Old refresh tokens are revoked — a change is useless if other sessions live on.
+    const user = await User.findOne({ phone });
+    expect(await RefreshToken.countDocuments({ user: user._id, revoked: false })).toBe(0);
+
+    // The new password works.
+    await request(app)
+      .post('/api/v1/auth/login')
+      .send({ role: ROLES.CUSTOMER, identifier: phone, password: 'newpassword456' })
+      .expect(200);
+    // The old one does not.
+    await request(app)
+      .post('/api/v1/auth/login')
+      .send({ role: ROLES.CUSTOMER, identifier: phone, password: 'password123' })
+      .expect(401);
+  });
+
+  it('rejects a wrong current password with 401 and leaves the password unchanged', async () => {
+    const phone = '9500000902';
+    await User.create({ role: ROLES.CUSTOMER, phone, name: 'PW User 2', passwordHash: await hashPassword('password123') });
+    const { accessToken: token } = await loginAndVerify(app, { role: ROLES.CUSTOMER, identifier: phone, password: 'password123' });
+
+    await request(app)
+      .patch('/api/v1/auth/password')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ currentPassword: 'notmypassword', newPassword: 'newpassword456' })
+      .expect(401);
+
+    await request(app)
+      .post('/api/v1/auth/login')
+      .send({ role: ROLES.CUSTOMER, identifier: phone, password: 'password123' })
+      .expect(200);
+  });
+
+  it('rejects a too-short password, an unchanged password, and an unauthenticated call', async () => {
+    const phone = '9500000903';
+    await User.create({ role: ROLES.CUSTOMER, phone, name: 'PW User 3', passwordHash: await hashPassword('password123') });
+    const { accessToken: token } = await loginAndVerify(app, { role: ROLES.CUSTOMER, identifier: phone, password: 'password123' });
+    const auth = { Authorization: `Bearer ${token}` };
+
+    await request(app).patch('/api/v1/auth/password').set(auth).send({ currentPassword: 'password123', newPassword: 'short' }).expect(400);
+    await request(app).patch('/api/v1/auth/password').set(auth).send({ currentPassword: 'password123', newPassword: 'password123' }).expect(400);
+    await request(app).patch('/api/v1/auth/password').send({ currentPassword: 'password123', newPassword: 'newpassword456' }).expect(401);
+  });
+});
+
+describe('PATCH /auth/me — self-service profile update', () => {
+  it('updates the caller\'s own name and email', async () => {
+    const phone = '9500000911';
+    await User.create({ role: ROLES.CUSTOMER, phone, name: 'Old Name', passwordHash: await hashPassword('password123') });
+    const { accessToken: token } = await loginAndVerify(app, { role: ROLES.CUSTOMER, identifier: phone, password: 'password123' });
+
+    const res = await request(app)
+      .patch('/api/v1/auth/me')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'New Name', email: 'new.name@test.com' })
+      .expect(200);
+
+    expect(res.body.data.name).toBe('New Name');
+    const stored = await User.findOne({ phone });
+    expect(stored.name).toBe('New Name');
+    expect(stored.email).toBe('new.name@test.com');
+  });
+
+  it('refuses a phone already registered to another account in the same role', async () => {
+    const mine = '9500000912';
+    const theirs = '9500000913';
+    await User.create({ role: ROLES.CUSTOMER, phone: mine, name: 'Mine', passwordHash: await hashPassword('password123') });
+    await User.create({ role: ROLES.CUSTOMER, phone: theirs, name: 'Theirs', passwordHash: await hashPassword('password123') });
+    const { accessToken: token } = await loginAndVerify(app, { role: ROLES.CUSTOMER, identifier: mine, password: 'password123' });
+
+    const res = await request(app)
+      .patch('/api/v1/auth/me')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ phone: theirs })
+      .expect(409);
+    expect(res.body.error.message).toMatch(/already registered/);
+
+    // The clash must not have partially applied.
+    expect((await User.findOne({ name: 'Mine' })).phone).toBe(mine);
+  });
+
+  it('allows re-submitting your own unchanged identifier, and rejects a bad email or no auth', async () => {
+    const phone = '9500000914';
+    await User.create({ role: ROLES.CUSTOMER, phone, name: 'Same', passwordHash: await hashPassword('password123') });
+    const { accessToken: token } = await loginAndVerify(app, { role: ROLES.CUSTOMER, identifier: phone, password: 'password123' });
+    const auth = { Authorization: `Bearer ${token}` };
+
+    // Sending back the value you already have is not a clash with yourself.
+    await request(app).patch('/api/v1/auth/me').set(auth).send({ phone, name: 'Same Two' }).expect(200);
+    await request(app).patch('/api/v1/auth/me').set(auth).send({ email: 'not-an-email' }).expect(400);
+    await request(app).patch('/api/v1/auth/me').send({ name: 'Nope' }).expect(401);
   });
 });

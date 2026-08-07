@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Mail, Lock, ArrowRight, Shield, Cpu } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 const Login = () => {
   const navigate = useNavigate();
+  const { login: authLogin } = useAuth();
   const [formData, setFormData] = useState({
     email: 'admin123@gmail.com',
     password: 'admin123',
@@ -22,19 +24,24 @@ const Login = () => {
     setIsLoading(true);
     setError('');
     
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const res = await authLogin({
+        role: 'brand_admin',
+        identifier: formData.email,
+        password: formData.password
+      });
+      navigate('/brand-admin/verify-otp', {
+        state: { 
+          destination: res.destination || formData.email,
+          identifier: formData.email,
+          role: 'brand_admin'
+        },
+      });
+    } catch (err) {
+      setError(err.message || 'Invalid credentials.');
+    } finally {
       setIsLoading(false);
-      // Using same credentials as Super Admin for consistency
-      if (formData.email === 'admin123@gmail.com' && formData.password === 'admin123') {
-        const [name, domain] = formData.email.split('@');
-        navigate('/brand-admin/verify-otp', {
-          state: { destination: `${name.slice(0, 5)}•••@${domain}` },
-        });
-      } else {
-        setError('Invalid credentials. Please use the default credentials.');
-      }
-    }, 1000);
+    }
   };
 
   return (

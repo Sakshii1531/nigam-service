@@ -1,40 +1,53 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, RefreshCw, ChevronRight } from 'lucide-react';
-
-const exchangesData = [
-  {
-    id: '#NCCE987654',
-    oldAppliance: 'Voltas 1.5 Ton Split AC (3-Star, 2021)',
-    newAppliance: 'LG 1.5 Ton Dual Inverter Split AC',
-    offeredValue: '₹7,800',
-    date: '03 July 2026, 02:45 PM',
-    status: 'Valuation Approved'
-  },
-  {
-    id: '#NCCE987653',
-    oldAppliance: 'Whirlpool 190L Single Door Refrigerator',
-    newAppliance: 'Samsung 253L Double Door Refrigerator',
-    offeredValue: '₹3,500',
-    date: '20 June 2026, 10:00 AM',
-    status: 'Completed'
-  }
-];
+import { apiRequest } from '../lib/apiClient';
 
 const tabs = ['All', 'Valuation Approved', 'Completed'];
 
 const statusStyles = {
   'Valuation Approved': 'text-blue-600 bg-blue-50 border-blue-100',
+  'Inspection Approved': 'text-blue-600 bg-blue-50 border-blue-100',
   Completed: 'text-emerald-600 bg-emerald-50 border-emerald-100',
+  Pending: 'text-amber-600 bg-amber-50 border-amber-100',
+  'Inspection Scheduled': 'text-indigo-600 bg-indigo-50 border-indigo-100',
+  'Inspection Rejected': 'text-rose-600 bg-rose-50 border-rose-100'
 };
 
 const ExchangeDetails = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('All');
+  const [exchanges, setExchanges] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchExchanges = async () => {
+      setLoading(true);
+      try {
+        // apiRequest resolves the whole envelope — the previous
+        // `Array.isArray(res)` guard was never true, so this screen showed no
+        // trade-ins no matter how many the customer had.
+        const res = await apiRequest('/exchange/requests', { auth: true });
+        setExchanges((res?.data || []).map(e => ({
+          id: e.humanId || e.id,
+          oldAppliance: `${e.brand} ${e.category} (${e.condition || 'Used'})`,
+          newAppliance: e.model || 'Replacement Device',
+          offeredValue: `₹${e.estimatedValue}`,
+          date: new Date(e.createdAt).toLocaleString(),
+          status: e.status === 'Inspection Approved' ? 'Valuation Approved' : e.status,
+        })));
+      } catch (err) {
+        console.warn('Could not fetch exchange requests:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchExchanges();
+  }, []);
 
   const filtered = activeTab === 'All'
-    ? exchangesData
-    : exchangesData.filter((e) => e.status === activeTab);
+    ? exchanges
+    : exchanges.filter((e) => e.status === activeTab);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-10">
@@ -68,7 +81,23 @@ const ExchangeDetails = () => {
 
       {/* Exchanges List */}
       <div className="flex flex-col divide-y divide-slate-100">
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="animate-pulse p-5 space-y-4">
+            {[1, 2].map((n) => (
+              <div key={n} className="bg-white border border-slate-100 rounded-xl p-4.5 flex flex-col gap-3">
+                <div className="flex justify-between items-center">
+                  <div className="h-4 bg-slate-200 rounded w-1/4"></div>
+                  <div className="h-4 bg-slate-200 rounded-full w-1/5"></div>
+                </div>
+                <div className="space-y-2">
+                  <div className="h-3.5 bg-slate-200 rounded w-2/3"></div>
+                  <div className="h-3 bg-slate-200 rounded w-1/2"></div>
+                </div>
+                <div className="h-4 bg-slate-200 rounded w-1/3"></div>
+              </div>
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3 text-center px-6">
             <div className="w-14 h-14 bg-slate-100 rounded-full flex items-center justify-center">
               <RefreshCw className="h-6 w-6 text-slate-400" />

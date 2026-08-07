@@ -44,6 +44,11 @@ const orderSchema = new mongoose.Schema(
       index: true,
     },
     checkedOutFromCart: { type: Boolean, default: false },
+    // Recorded by the admin console when an order ships. It used to generate a
+    // "TRK-EXP-<random>" number and the courier name "Express Logistics" in the
+    // browser, so a customer could be given a tracking id that tracks nothing.
+    trackingNumber: String,
+    courierPartner: String,
   },
   { timestamps: true },
 );

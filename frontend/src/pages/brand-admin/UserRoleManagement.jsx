@@ -1,56 +1,123 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
 import { Users, Plus, Shield, Eye, Edit2, CheckCircle2, X, Search, ToggleLeft, ToggleRight } from 'lucide-react';
+import { apiRequest } from '../../lib/apiClient';
 
-const rolesInfo = [
-  { role: 'Brand Admin', permissions: ['All Access', 'User Management', 'Financial Reports', 'Settings'], color: 'bg-red-100 text-red-700', count: 2 },
-  { role: 'Support Agent', permissions: ['View Complaints', 'Register Complaint', 'Monitor Complaints', 'Chat'], color: 'bg-blue-100 text-blue-700', count: 5 },
-  { role: 'Finance', permissions: ['Invoices', 'Payments', 'Reports'], color: 'bg-green-100 text-green-700', count: 2 },
-  { role: 'Viewer', permissions: ['View Only — No Actions'], color: 'bg-gray-100 text-gray-700', count: 3 },
-];
+const ROLE_PALETTE = ['bg-red-100 text-red-700', 'bg-blue-100 text-blue-700', 'bg-green-100 text-green-700', 'bg-gray-100 text-gray-700'];
 
-const initialUsers = [
-  { id: 1, name: 'Rajiv Kapoor', email: 'rajiv@brand.com', role: 'Brand Admin', lastLogin: '21 May 2025, 09:30 AM', active: true },
-  { id: 2, name: 'Sunita Mehta', email: 'sunita@brand.com', role: 'Support Agent', lastLogin: '21 May 2025, 10:15 AM', active: true },
-  { id: 3, name: 'Arjun Verma', email: 'arjun@brand.com', role: 'Finance', lastLogin: '20 May 2025, 04:30 PM', active: true },
-  { id: 4, name: 'Preeti Singh', email: 'preeti@brand.com', role: 'Support Agent', lastLogin: '19 May 2025, 02:00 PM', active: false },
-  { id: 5, name: 'Aman Tiwari', email: 'aman@brand.com', role: 'Viewer', lastLogin: '18 May 2025, 11:45 AM', active: true },
-];
+const dateFormatter = new Intl.DateTimeFormat('en-IN', {
+  day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+});
 
-const roleColors = {
-  'Brand Admin': 'bg-red-100 text-red-700',
-  'Support Agent': 'bg-blue-100 text-blue-700',
-  Finance: 'bg-green-100 text-green-700',
-  Viewer: 'bg-gray-100 text-gray-700',
-};
+function shape(user) {
+  const assigned = user.assignedRoles || [];
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email || user.phone || '—',
+    // A user can hold several brand roles; the table shows one, so name the first
+    // and note the rest in the title attribute.
+    role: assigned[0]?.name || 'No role assigned',
+    allRoles: assigned.map(r => r.name).join(', '),
+    added: user.createdAt ? dateFormatter.format(new Date(user.createdAt)) : '—',
+    active: user.status === 'Active',
+  };
+}
 
 const UserRoleManagement = () => {
-  const [users, setUsers] = useState(initialUsers);
+  const [users, setUsers] = useState([]);
+  const [roles, setRoles] = useState([]);
   const [searchQ, setSearchQ] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newUser, setNewUser] = useState({ name: '', email: '', role: 'Support Agent' });
+  const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: '' });
   const [successMsg, setSuccessMsg] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   const toast = (msg) => { setSuccessMsg(msg); setTimeout(() => setSuccessMsg(''), 3000); };
 
-  const toggleActive = (id) => {
-    setUsers(u => u.map(user => user.id === id ? { ...user, active: !user.active } : user));
-    toast('User status updated!');
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const [userData, roleData] = await Promise.all([
+          apiRequest('/brand/users', { auth: true }),
+          apiRequest('/brand/roles', { auth: true }).catch(() => []),
+        ]);
+        if (cancelled) return;
+        setUsers((Array.isArray(userData) ? userData : []).map(shape));
+        const roleList = Array.isArray(roleData) ? roleData : [];
+        setRoles(roleList);
+        if (roleList.length) setNewUser(prev => ({ ...prev, role: roleList[0].id }));
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Role cards are derived from the brand's actual roles and current headcount,
+  // not a fixed list — a brand defines whatever roles it needs.
+  const rolesInfo = roles.map((r, i) => ({
+    role: r.name,
+    permissions: (r.permissions || []).map(p => (typeof p === 'string' ? p : p.key)),
+    color: ROLE_PALETTE[i % ROLE_PALETTE.length],
+    count: users.filter(u => u.allRoles.split(', ').includes(r.name)).length,
+  }));
+
+  const roleColors = Object.fromEntries(rolesInfo.map(r => [r.role, r.color]));
+
+  const toggleActive = async (id) => {
+    const user = users.find(u => u.id === id);
+    if (!user) return;
+    const nextActive = !user.active;
+    const previous = users;
+    setUsers(u => u.map(x => (x.id === id ? { ...x, active: nextActive } : x)));
+    try {
+      await apiRequest(`/brand/users/${id}`, {
+        method: 'PUT', auth: true, body: { status: nextActive ? 'Active' : 'Suspended' },
+      });
+      toast('User status updated!');
+    } catch (err) {
+      setUsers(previous);
+      setError(`Could not update user: ${err.message}`);
+    }
   };
 
-  const handleAddUser = () => {
+  const handleAddUser = async () => {
     if (!newUser.name.trim() || !newUser.email.trim()) { toast('Please fill all fields!'); return; }
-    setUsers(u => [...u, { id: u.length + 1, ...newUser, lastLogin: 'Never', active: true }]);
-    setShowAddModal(false);
-    setNewUser({ name: '', email: '', role: 'Support Agent' });
-    toast(`User ${newUser.name} added successfully!`);
+    // The API creates the account directly with an initial password — there is
+    // no email-invite flow yet, so one has to be supplied here.
+    if (newUser.password.length < 6) { toast('Password must be at least 6 characters.'); return; }
+    try {
+      const created = await apiRequest('/brand/users', {
+        method: 'POST',
+        auth: true,
+        body: {
+          name: newUser.name,
+          email: newUser.email,
+          password: newUser.password,
+          ...(newUser.role ? { assignedRoles: [newUser.role] } : {}),
+        },
+      });
+      setUsers(u => [...u, shape(created)]);
+      setShowAddModal(false);
+      setNewUser({ name: '', email: '', password: '', role: roles[0]?.id || '' });
+      toast(`User ${created.name} added successfully!`);
+    } catch (err) {
+      setError(`Could not add user: ${err.message}`);
+    }
   };
 
+  const q = searchQ.toLowerCase();
   const filtered = users.filter(u =>
-    u.name.toLowerCase().includes(searchQ.toLowerCase()) ||
-    u.email.toLowerCase().includes(searchQ.toLowerCase()) ||
-    u.role.toLowerCase().includes(searchQ.toLowerCase())
+    u.name.toLowerCase().includes(q) ||
+    u.email.toLowerCase().includes(q) ||
+    u.role.toLowerCase().includes(q)
   );
 
   return (
@@ -100,12 +167,21 @@ const UserRoleManagement = () => {
                     <th className="px-4 py-3">Name</th>
                     <th className="px-4 py-3">Email</th>
                     <th className="px-4 py-3">Role</th>
-                    <th className="px-4 py-3">Last Login</th>
+                    <th className="px-4 py-3">Added</th>
                     <th className="px-4 py-3">Status</th>
                     <th className="px-4 py-3">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#F1F5F9]">
+                  {loading && (
+                    <tr><td colSpan={6} className="px-4 py-10 text-center text-[#64748B] font-semibold">Loading users…</td></tr>
+                  )}
+                  {!loading && error && (
+                    <tr><td colSpan={6} className="px-4 py-10 text-center text-red-600 font-semibold">{error}</td></tr>
+                  )}
+                  {!loading && !error && filtered.length === 0 && (
+                    <tr><td colSpan={6} className="px-4 py-10 text-center text-[#64748B] font-semibold">No brand users yet.</td></tr>
+                  )}
                   {filtered.map((u) => (
                     <tr key={u.id} className="hover:bg-[#F8FAFC] transition-colors">
                       <td className="px-4 py-3">
@@ -118,9 +194,9 @@ const UserRoleManagement = () => {
                       </td>
                       <td className="px-4 py-3 text-[#64748B]">{u.email}</td>
                       <td className="px-4 py-3">
-                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${roleColors[u.role]}`}>{u.role}</span>
+                        <span title={u.allRoles || u.role} className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${roleColors[u.role] || 'bg-gray-100 text-gray-700'}`}>{u.role}</span>
                       </td>
-                      <td className="px-4 py-3 text-[#64748B]">{u.lastLogin}</td>
+                      <td className="px-4 py-3 text-[#64748B]">{u.added}</td>
                       <td className="px-4 py-3">
                         <button onClick={() => toggleActive(u.id)} className="flex items-center gap-1.5">
                           {u.active
@@ -154,6 +230,7 @@ const UserRoleManagement = () => {
               {[
                 { label: 'Full Name', key: 'name', type: 'text', placeholder: 'e.g. Rajiv Kapoor' },
                 { label: 'Email Address', key: 'email', type: 'email', placeholder: 'rajiv@brand.com' },
+                { label: 'Initial Password', key: 'password', type: 'password', placeholder: 'Min. 6 characters' },
               ].map(f => (
                 <div key={f.key}>
                   <label className="text-[10px] font-semibold text-[#64748B] uppercase block mb-1">{f.label}</label>
@@ -166,7 +243,8 @@ const UserRoleManagement = () => {
                 <label className="text-[10px] font-semibold text-[#64748B] uppercase block mb-1">Role</label>
                 <select value={newUser.role} onChange={e => setNewUser({ ...newUser, role: e.target.value })}
                   className="w-full border border-[#E2E8F0] rounded-xl px-3 py-2 text-xs bg-[#F8FAFC] outline-none focus:ring-2 focus:ring-[#0D47A1]">
-                  {['Brand Admin', 'Support Agent', 'Finance', 'Viewer'].map(r => <option key={r}>{r}</option>)}
+                  {roles.length === 0 && <option value="">No roles defined for this brand</option>}
+                  {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                 </select>
               </div>
               <div className="flex gap-2 pt-2">

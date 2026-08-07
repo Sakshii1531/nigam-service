@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import { 
@@ -9,47 +9,118 @@ import {
   Clock,
   X
 } from 'lucide-react';
+import { io } from 'socket.io-client';
+import { apiRequest, getStoredTokens } from '../../lib/apiClient';
+
+// Replies go over Socket.IO (chat.gateway.js), the same transport the customer
+// and technician apps use. REST lists the queue and loads history.
+const SOCKET_URL = import.meta.env.VITE_API_BASE_URL
+  ? import.meta.env.VITE_API_BASE_URL.replace('/api/v1', '')
+  : 'http://localhost:4000';
+
+const timeFormatter = new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit' });
+const dateFormatter = new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short' });
+
+function shapeChat(m) {
+  return {
+    id: m.id,
+    // The desk answers as 'agent'; anything else is the person who wrote in.
+    sender: m.sender === 'agent' ? 'admin' : 'user',
+    text: m.text || '',
+    time: m.createdAt ? timeFormatter.format(new Date(m.createdAt)) : '',
+  };
+}
+
+function shapeTicket(c) {
+  return {
+    id: c.id,
+    user: c.customer?.name || 'User',
+    message: '',
+    status: c.status === 'Closed' ? 'Resolved' : 'Open',
+    date: c.updatedAt ? dateFormatter.format(new Date(c.updatedAt)) : '—',
+    chats: [],
+  };
+}
 
 const Support = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [reply, setReply] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
-  const [tickets, setTickets] = useState([
-    { 
-      id: 'TKT-101', 
-      user: 'Amit Sharma', 
-      message: 'I need to change my address for the booking.', 
-      status: 'Open', 
-      date: '12 May',
-      chats: [
-        { sender: 'user', text: 'I need to change my address for the booking.', time: '10:30 AM' },
-        { sender: 'admin', text: 'Hello, we are looking into this. Please give us a few minutes.', time: '10:32 AM' }
-      ]
-    },
-    { 
-      id: 'TKT-102', 
-      user: 'Priya Patel', 
-      message: 'Payment failed but money deducted.', 
-      status: 'Pending', 
-      date: '12 May',
-      chats: [
-        { sender: 'user', text: 'Payment failed but money deducted.', time: '09:15 AM' }
-      ]
-    },
-    { 
-      id: 'TKT-103', 
-      user: 'Tech Rahul', 
-      message: 'App is crashing on job complete.', 
-      status: 'Open', 
-      date: '11 May',
-      chats: [
-        { sender: 'user', text: 'App is crashing on job complete.', time: '04:10 PM' }
-      ]
-    },
-  ]);
+  const [tickets, setTickets] = useState([]);
+  const [selectedTicketId, setSelectedTicketId] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const socketRef = useRef(null);
 
-  const [selectedTicketId, setSelectedTicketId] = useState('TKT-101');
+  useEffect(() => {
+    const { accessToken } = getStoredTokens();
+    if (!accessToken) return undefined;
+
+    const socket = io(SOCKET_URL, { auth: { token: accessToken }, transports: ['websocket'] });
+    socketRef.current = socket;
+
+    socket.on('message:new', (message) => {
+      setTickets((prev) => prev.map((t) => {
+        if (t.id !== message.conversation) return t;
+        // The room echoes back to the sender too, so skip anything already held.
+        if (t.chats.some((c) => c.id === message.id)) return t;
+        return { ...t, chats: [...t.chats, shapeChat(message)] };
+      }));
+    });
+    socket.on('connect_error', (err) => setError(`Support chat connection failed: ${err.message}`));
+
+    return () => socket.disconnect();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadQueue() {
+      try {
+        // Super-admin's conversation list is the help-desk queue — job and brand
+        // threads are not included.
+        const data = await apiRequest('/chat/conversations', { auth: true });
+        if (cancelled) return;
+        const list = (data?.data || []).map(shapeTicket);
+        setTickets(list);
+        if (list.length) setSelectedTicketId(list[0].id);
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    loadQueue();
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    const socket = socketRef.current;
+    if (!selectedTicketId || !socket) return undefined;
+
+    socket.emit('join-conversation', { conversationId: selectedTicketId }, (ack) => {
+      if (!ack?.ok) setError(ack?.error || 'Could not open this ticket.');
+    });
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const msgs = await apiRequest(`/chat/conversations/${selectedTicketId}/messages`, { auth: true });
+        if (cancelled) return;
+        const chats = (Array.isArray(msgs) ? msgs : []).map(shapeChat);
+        setTickets((prev) => prev.map((t) => (t.id === selectedTicketId
+          ? { ...t, chats, message: chats.find((c) => c.sender === 'user')?.text || '' }
+          : t)));
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      socket.emit('leave-conversation', { conversationId: selectedTicketId });
+    };
+  }, [selectedTicketId]);
   const selectedTicket = tickets.find(t => t.id === selectedTicketId);
 
   const showToast = (message) => {
@@ -59,31 +130,53 @@ const Support = () => {
     }, 3000);
   };
 
-  const handleSendReply = (e) => {
+  // The reply reaches the customer now. It used to be appended to browser
+  // state only, so the admin saw their answer in the thread and the person who
+  // raised the ticket received nothing.
+  const handleSendReply = async (e) => {
     if (e) e.preventDefault();
-    if (!reply.trim() || !selectedTicketId) return;
+    const text = reply.trim();
+    if (!text || !selectedTicketId) return;
 
-    setTickets(tickets.map(t => {
-      if (t.id === selectedTicketId) {
-        return {
-          ...t,
-          status: 'Pending',
-          chats: [
-            ...t.chats,
-            { sender: 'admin', text: reply.trim(), time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
-          ]
-        };
-      }
-      return t;
-    }));
-
-    showToast(`Reply sent to ${selectedTicket?.user}`);
-    setReply('');
+    setError('');
+    try {
+      const res = await apiRequest(`/chat/conversations/${selectedTicketId}/messages`, {
+        method: 'POST',
+        auth: true,
+        body: { text },
+      });
+      const sent = res.data;
+      setTickets(tickets.map(t => (t.id === selectedTicketId ? {
+        ...t,
+        status: 'Pending',
+        chats: [...t.chats, {
+          sender: 'admin',
+          text: sent.text,
+          time: new Date(sent.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        }],
+      } : t)));
+      setReply('');
+      showToast(`Reply sent to ${selectedTicket?.user}`);
+    } catch (err) {
+      setError(err.message || 'Could not send the reply.');
+    }
   };
 
-  const handleMarkResolved = (id) => {
-    setTickets(tickets.map(t => t.id === id ? { ...t, status: 'Resolved' } : t));
-    showToast(`Ticket ${id} marked as Resolved!`);
+  const handleMarkResolved = async (id) => {
+    const previous = tickets;
+    setTickets(tickets.map(t => (t.id === id ? { ...t, status: 'Resolved' } : t)));
+    setError('');
+    try {
+      await apiRequest(`/chat/conversations/${id}/status`, {
+        method: 'PATCH',
+        auth: true,
+        body: { status: 'Closed' },
+      });
+      showToast('Ticket marked as resolved.');
+    } catch (err) {
+      setTickets(previous);
+      setError(err.message || 'Could not resolve this ticket.');
+    }
   };
 
   const filteredTickets = tickets.filter(t => 

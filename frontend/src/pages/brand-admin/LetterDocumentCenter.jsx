@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
 import { FileText, Download, Printer, CheckCircle2, Search, Clock } from 'lucide-react';
+import { apiRequest } from '../../lib/apiClient';
 
+// `name` must match the API's document-type enum exactly — it is sent as-is.
 const docTypes = [
   { id: 'service-completion', name: 'Service Completion Letter', icon: '✅', desc: 'Confirms the service/repair is completed successfully' },
   { id: 'warranty-certificate', name: 'Warranty Certificate', icon: '🛡️', desc: 'Official warranty certificate for the product' },
@@ -11,34 +13,90 @@ const docTypes = [
   { id: 'customer-bill', name: 'Customer Bill Copy', icon: '🧾', desc: 'Detailed invoice/bill for the customer' },
 ];
 
-const recentDocs = [
-  { id: 'DOC-001', type: 'Service Completion Letter', customer: 'Amit Sharma', product: 'Refrigerator', generatedOn: '21 May 2025, 11:30 AM', generatedBy: 'Brand Admin' },
-  { id: 'DOC-002', type: 'FOC Approval Letter', customer: 'Priya Verma', product: 'Washing Machine', generatedOn: '21 May 2025, 10:15 AM', generatedBy: 'Brand Admin' },
-  { id: 'DOC-003', type: 'Warranty Certificate', customer: 'Rohit Kumar', product: 'Air Conditioner', generatedOn: '20 May 2025, 04:30 PM', generatedBy: 'Brand Admin' },
-  { id: 'DOC-004', type: 'Replacement Authorization', customer: 'Sunita Sharma', product: 'Washing Machine', generatedOn: '19 May 2025, 02:15 PM', generatedBy: 'Brand Admin' },
-];
+const dateFormatter = new Intl.DateTimeFormat('en-IN', {
+  day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+});
+
+function shape(doc) {
+  return {
+    id: doc.id,
+    ref: doc.humanId || doc.id,
+    type: doc.type,
+    customer: doc.serviceRequest?.user?.name || 'Customer',
+    product: doc.serviceRequest?.category || '—',
+    ticket: doc.serviceRequest?.humanId || '—',
+    generatedOn: doc.createdAt ? dateFormatter.format(new Date(doc.createdAt)) : '—',
+    generatedBy: doc.generatedBy?.name || 'Brand Admin',
+    pdfUrl: doc.pdfUrl || '',
+  };
+}
 
 const LetterDocumentCenter = () => {
   const [selectedDocType, setSelectedDocType] = useState(docTypes[0]);
+  // Holds a ServiceRequest id — the API keys documents to the request document,
+  // not to the ticket code the operator reads.
   const [ticketId, setTicketId] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [preview, setPreview] = useState(false);
   const [searchQ, setSearchQ] = useState('');
+  const [recentDocs, setRecentDocs] = useState([]);
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   const toast = (msg) => { setSuccessMsg(msg); setTimeout(() => setSuccessMsg(''), 3000); };
 
-  const handleGenerate = () => {
-    if (!ticketId.trim()) { toast('Please enter a Ticket ID!'); return; }
-    setPreview(true);
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const [docData, reqData] = await Promise.all([
+          apiRequest('/brand/documents', { auth: true }),
+          apiRequest('/service-requests', { auth: true }).catch(() => []),
+        ]);
+        if (cancelled) return;
+        setRecentDocs((Array.isArray(docData) ? docData : []).map(shape));
+        setRequests(Array.isArray(reqData) ? reqData : []);
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleGenerate = async () => {
+    if (!ticketId) { toast('Please select a service request!'); return; }
+    try {
+      const created = await apiRequest('/brand/documents', {
+        method: 'POST',
+        auth: true,
+        body: { type: selectedDocType.name, serviceRequest: ticketId },
+      });
+      // Re-fetch so the new row carries the populated customer/appliance the
+      // create response returns only as ids.
+      const docData = await apiRequest('/brand/documents', { auth: true });
+      setRecentDocs((Array.isArray(docData) ? docData : []).map(shape));
+      setPreview(true);
+      toast(`${created.type} generated.`);
+    } catch (err) {
+      setError(`Could not generate document: ${err.message}`);
+    }
   };
 
   const handlePrint = () => toast('Document sent to printer!');
   const handleDownload = () => toast(`${selectedDocType.name} downloaded as PDF!`);
 
+  // The request the preview letter is rendered against.
+  const previewRequest = requests.find(r => r.id === ticketId);
+
+  const q = searchQ.toLowerCase();
   const filteredDocs = recentDocs.filter(d =>
-    d.customer.toLowerCase().includes(searchQ.toLowerCase()) ||
-    d.id.toLowerCase().includes(searchQ.toLowerCase()) ||
-    d.type.toLowerCase().includes(searchQ.toLowerCase())
+    d.customer.toLowerCase().includes(q) ||
+    d.ref.toLowerCase().includes(q) ||
+    d.type.toLowerCase().includes(q)
   );
 
   return (
@@ -80,13 +138,25 @@ const LetterDocumentCenter = () => {
               {!preview ? (
                 <div className="space-y-3">
                   <div>
-                    <label className="text-[10px] font-semibold text-[#64748B] uppercase block mb-1">Complaint / Ticket ID</label>
-                    <input
+                    <label className="text-[10px] font-semibold text-[#64748B] uppercase block mb-1">Complaint / Ticket</label>
+                    {/* A picker rather than free text: the API references the
+                        service request document, and only this brand's requests
+                        are selectable anyway. */}
+                    <select
                       value={ticketId}
                       onChange={e => setTicketId(e.target.value)}
-                      placeholder="e.g. TKT/250521/001756"
                       className="w-full border border-[#E2E8F0] rounded-xl px-3 py-2 text-xs bg-[#F8FAFC] outline-none focus:ring-2 focus:ring-[#0D47A1]"
-                    />
+                    >
+                      <option value="">Select a service request…</option>
+                      {requests.map(r => (
+                        <option key={r.id} value={r.id}>
+                          {r.humanId || r.id} — {r.category || 'Appliance'} ({r.status})
+                        </option>
+                      ))}
+                    </select>
+                    {requests.length === 0 && !loading && (
+                      <p className="text-[10px] text-[#94A3B8] mt-1">No service requests available for this brand.</p>
+                    )}
                   </div>
                   <button onClick={handleGenerate} className="w-full bg-[#0D47A1] text-white py-2.5 rounded-xl text-xs font-bold hover:bg-blue-700 flex items-center justify-center gap-2">
                     <FileText size={14} /> Generate Document Preview
@@ -103,17 +173,17 @@ const LetterDocumentCenter = () => {
                         <p className="text-[9px] text-[#64748B]">Toll Free: 1800-123-4567</p>
                       </div>
                       <div className="text-right text-[10px]">
-                        <p className="text-[#64748B]">Date: 21 May 2025</p>
-                        <p className="text-[#64748B]">Ref: {ticketId}</p>
+                        <p className="text-[#64748B]">Date: {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                        <p className="text-[#64748B]">Ref: {previewRequest?.humanId || '—'}</p>
                       </div>
                     </div>
                     <p className="font-bold text-[#1E293B] mb-2 text-xs">{selectedDocType.name.toUpperCase()}</p>
-                    <p className="text-[#1E293B] mb-2">Dear <strong>Amit Sharma</strong>,</p>
+                    <p className="text-[#1E293B] mb-2">Dear <strong>{previewRequest?.user?.name || 'Customer'}</strong>,</p>
                     <p className="text-[#1E293B] mb-2">
-                      This letter is to inform you that the <strong>service request</strong> for your <strong>Smart Refrigerator</strong> (Model: GL-T292SBS, Serial: SN123456789) has been successfully resolved by our authorized service partner.
+                      This letter is to inform you that the <strong>service request</strong> for your <strong>{previewRequest?.category || 'appliance'}</strong> has been successfully resolved by our authorized service partner.
                     </p>
                     <p className="text-[#1E293B] mb-2">
-                      Our technician <strong>Rahul Kumar</strong> completed the repair on <strong>21 May 2025</strong>. The issue has been resolved to satisfaction under warranty coverage.
+                      Current request status: <strong>{previewRequest?.status || '—'}</strong>.
                     </p>
                     <p className="text-[#1E293B] mt-3">Thank you for choosing us.</p>
                     <div className="mt-4 pt-3 border-t border-[#E2E8F0] flex justify-between">
@@ -160,9 +230,18 @@ const LetterDocumentCenter = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#F1F5F9]">
-                  {filteredDocs.map((d, i) => (
-                    <tr key={i} className="hover:bg-[#F8FAFC] transition-colors">
-                      <td className="px-3 py-3 text-[#0D47A1] font-semibold">{d.id}</td>
+                  {loading && (
+                    <tr><td colSpan={7} className="px-3 py-10 text-center text-[#64748B] font-semibold">Loading documents…</td></tr>
+                  )}
+                  {!loading && error && (
+                    <tr><td colSpan={7} className="px-3 py-10 text-center text-red-600 font-semibold">{error}</td></tr>
+                  )}
+                  {!loading && !error && filteredDocs.length === 0 && (
+                    <tr><td colSpan={7} className="px-3 py-10 text-center text-[#64748B] font-semibold">No documents generated yet.</td></tr>
+                  )}
+                  {filteredDocs.map((d) => (
+                    <tr key={d.id} className="hover:bg-[#F8FAFC] transition-colors">
+                      <td className="px-3 py-3 text-[#0D47A1] font-semibold">{d.ref}</td>
                       <td className="px-3 py-3 text-[#1E293B] font-medium">{d.type}</td>
                       <td className="px-3 py-3 text-[#64748B]">{d.customer}</td>
                       <td className="px-3 py-3 text-[#64748B]">{d.product}</td>
@@ -170,8 +249,8 @@ const LetterDocumentCenter = () => {
                       <td className="px-3 py-3 text-[#64748B]">{d.generatedBy}</td>
                       <td className="px-3 py-3">
                         <div className="flex gap-1.5">
-                          <button onClick={() => toast(`Downloading ${d.id}...`)} className="p-1.5 text-[#0D47A1] hover:bg-[#EEF4FF] rounded-lg"><Download size={13} /></button>
-                          <button onClick={() => toast(`Printing ${d.id}...`)} className="p-1.5 text-[#64748B] hover:bg-[#F8FAFC] rounded-lg"><Printer size={13} /></button>
+                          <button onClick={() => toast(`Downloading ${d.ref}...`)} className="p-1.5 text-[#0D47A1] hover:bg-[#EEF4FF] rounded-lg"><Download size={13} /></button>
+                          <button onClick={() => toast(`Printing ${d.ref}...`)} className="p-1.5 text-[#64748B] hover:bg-[#F8FAFC] rounded-lg"><Printer size={13} /></button>
                         </div>
                       </td>
                     </tr>

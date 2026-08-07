@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
+import { apiRequest } from '../../lib/apiClient';
 import { 
   Search, 
   Filter, 
@@ -17,10 +18,45 @@ import {
   ArrowLeft
 } from 'lucide-react';
 
+const dateFormatter = new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
+// This screen groups the API's fifteen service-request statuses into the four
+// buckets it filters and reports on. Anything not named here is treated as
+// in-flight work, so a newly added API status shows up rather than disappearing.
+const PENDING_STATUSES = ['New'];
+const COMPLETED_STATUSES = ['Closed'];
+const CLOSED_OTHER_STATUSES = ['Cancelled', 'Customer NA'];
+
+function toBucket(status) {
+  if (PENDING_STATUSES.includes(status)) return 'Pending';
+  if (COMPLETED_STATUSES.includes(status)) return 'Completed';
+  if (CLOSED_OTHER_STATUSES.includes(status)) return 'Cancelled';
+  return 'In Progress';
+}
+
+function shape(req) {
+  return {
+    id: req.id,
+    ref: req.humanId || req.id,
+    customer: req.user?.name || 'Customer',
+    product: req.category || '—',
+    model: req.model || '—',
+    // ServiceRequest records only whether an invoice exists, not its number.
+    invoice: req.invoiceAvailable ? 'Provided' : 'Not provided',
+    warranty: req.warranty || 'Unknown',
+    technician: req.technician?.name || 'Unassigned',
+    priority: req.priority || 'Medium',
+    // Keep the API's own status alongside the coarse bucket the UI filters on.
+    apiStatus: req.status,
+    status: toBucket(req.status),
+    date: req.createdAt ? dateFormatter.format(new Date(req.createdAt)) : '—',
+  };
+}
+
 const Requests = () => {
   const [showDrawer, setShowDrawer] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
-  
+
   const [successMessage, setSuccessMessage] = useState('');
   const [showReassignModal, setShowReassignModal] = useState(false);
   const [reassignTechName, setReassignTechName] = useState('Rahul Kumar');
@@ -31,42 +67,66 @@ const Requests = () => {
   const [selectedPriority, setSelectedPriority] = useState('Priority');
 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 3;
+  const itemsPerPage = 10;
 
-  const [requests, setRequests] = useState([
-    { id: 'SR-8901', customer: 'Amit Sharma', product: 'Smart TV', model: 'TV-55OLEDEV', invoice: 'INV-2026-001', warranty: 'Under Warranty', technician: 'Rahul Kumar', priority: 'High', status: 'In Progress', date: '12 May, 2026' },
-    { id: 'SR-8902', customer: 'Priya Patel', product: 'Refrigerator', model: 'REF-450', invoice: 'INV-2026-002', warranty: 'Out of Warranty', technician: 'Amit Singh', priority: 'Medium', status: 'Pending', date: '12 May, 2026' },
-    { id: 'SR-8903', customer: 'Rajesh K.', product: 'Washing Machine', model: 'WM-70', invoice: 'INV-2026-003', warranty: 'Under Warranty', technician: 'Suresh Raina', priority: 'Low', status: 'Completed', date: '11 May, 2026' },
-    { id: 'SR-8904', customer: 'Neha Gupta', product: 'Microwave', model: 'MW-20', invoice: 'INV-2026-004', warranty: 'Out of Warranty', technician: 'Vikram Batra', priority: 'High', status: 'Escalated', date: '11 May, 2026' },
-  ]);
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
+  useEffect(() => {
+    let cancelled = false;
+    async function loadRequests() {
+      try {
+        // Brand-scoped server-side: the API forces `brand = req.user.brand`.
+        const data = await apiRequest('/service-requests', { auth: true });
+        if (!cancelled) setRequests((data?.data || []).map(shape));
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    loadRequests();
+    return () => { cancelled = true; };
+  }, []);
+
+  const countBucket = (bucket) => requests.filter(r => r.status === bucket).length;
   const summaryCards = [
-    { title: 'Pending Complaints', value: (requests.filter(r => r.status === 'Pending').length + 123).toString(), icon: <Clock size={20} />, color: 'bg-yellow-500' },
-    { title: 'Active Complaints', value: (requests.filter(r => r.status === 'In Progress').length + 85).toString(), icon: <ClipboardList size={20} />, color: 'bg-blue-600' },
-    { title: 'Escalated Cases', value: (requests.filter(r => r.status === 'Escalated').length + 11).toString(), icon: <AlertTriangle size={20} />, color: 'bg-red-500' },
-    { title: 'Completed Calls', value: (requests.filter(r => r.status === 'Completed').length + 863).toString(), icon: <CheckCircle2 size={20} />, color: 'bg-green-600' },
+    { title: 'Pending Complaints', value: String(countBucket('Pending')), icon: <Clock size={20} />, color: 'bg-yellow-500' },
+    { title: 'Active Complaints', value: String(countBucket('In Progress')), icon: <ClipboardList size={20} />, color: 'bg-blue-600' },
+    { title: 'Cancelled / NA', value: String(countBucket('Cancelled')), icon: <AlertTriangle size={20} />, color: 'bg-red-500' },
+    { title: 'Completed Calls', value: String(countBucket('Completed')), icon: <CheckCircle2 size={20} />, color: 'bg-green-600' },
   ];
 
-  const updateRequestStatus = (id, newStatus) => {
-    setRequests(requests.map(r => r.id === id ? { ...r, status: newStatus } : r));
-    if (selectedRequest && selectedRequest.id === id) {
-      setSelectedRequest({ ...selectedRequest, status: newStatus });
+  // `apiStatus` is what the server validates against SERVICE_REQUEST_TRANSITIONS,
+  // so transitions are expressed in the API's vocabulary, not the UI's buckets.
+  const updateRequestStatus = async (id, apiStatus) => {
+    const row = requests.find(r => r.id === id);
+    try {
+      const updated = await apiRequest(`/service-requests/${id}/status`, {
+        method: 'PATCH', auth: true, body: { status: apiStatus },
+      });
+      const next = { apiStatus: updated.status, status: toBucket(updated.status) };
+      setRequests(prev => prev.map(r => (r.id === id ? { ...r, ...next } : r)));
+      if (selectedRequest && selectedRequest.id === id) {
+        setSelectedRequest({ ...selectedRequest, ...next });
+      }
+      setShowDrawer(false);
+      setSuccessMessage(`Request ${row?.ref || id} moved to "${updated.status}".`);
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (err) {
+      setError(`Could not update request: ${err.message}`);
     }
-    setShowDrawer(false);
-    setSuccessMessage(`Warranty request ${id} approved and marked "${newStatus}"!`);
-    setTimeout(() => setSuccessMessage(''), 3000);
   };
 
+  // No endpoint exists to reassign a service request's technician — the API
+  // exposes only a status transition. Kept as a local no-op with an explicit
+  // notice rather than pretending the change was saved.
   const handleReassignSubmit = (e) => {
     e.preventDefault();
-    setRequests(requests.map(r => r.id === selectedRequest.id ? { ...r, technician: reassignTechName } : r));
-    if (selectedRequest) {
-      setSelectedRequest({ ...selectedRequest, technician: reassignTechName });
-    }
     setShowReassignModal(false);
     setShowDrawer(false);
-    setSuccessMessage(`Technician reassigned successfully to ${reassignTechName}!`);
-    setTimeout(() => setSuccessMessage(''), 3000);
+    setError('Reassigning a technician is not supported by the API yet — no change was saved.');
   };
 
   const handleRowClick = (req) => {
@@ -76,7 +136,7 @@ const Requests = () => {
 
   const filteredRequests = requests.filter(req => {
     const matchesSearch = req.customer.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          req.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          req.ref.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           req.product.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = selectedStatus === 'All Status' || req.status === selectedStatus;
     const matchesWarranty = selectedWarranty === 'Warranty Status' || req.warranty === selectedWarranty;
@@ -113,7 +173,7 @@ const Requests = () => {
               <div className="p-6 border-b border-[#E2E8F0] flex justify-between items-center bg-[#F8FAFC]">
                 <div>
                   <h2 className="text-lg font-bold text-[#1E293B]">Request Details</h2>
-                  <p className="text-sm text-[#0D47A1] font-medium">{selectedRequest.id}</p>
+                  <p className="text-sm text-[#0D47A1] font-medium">{selectedRequest.ref}</p>
                 </div>
               </div>
 
@@ -195,7 +255,7 @@ const Requests = () => {
                 </button>
                 {selectedRequest.status === 'Pending' && (
                   <button 
-                    onClick={() => updateRequestStatus(selectedRequest.id, 'In Progress')}
+                    onClick={() => updateRequestStatus(selectedRequest.id, 'Assigned')}
                     className="bg-[#0D47A1] text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
                   >
                     Approve Warranty
@@ -249,7 +309,7 @@ const Requests = () => {
                 <option>Pending</option>
                 <option>In Progress</option>
                 <option>Completed</option>
-                <option>Escalated</option>
+                <option>Cancelled</option>
               </select>
 
               <select 
@@ -314,13 +374,22 @@ const Requests = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E2E8F0]">
+                  {loading && (
+                    <tr><td colSpan={10} className="px-6 py-10 text-center text-[#64748B] font-semibold">Loading complaints…</td></tr>
+                  )}
+                  {!loading && error && (
+                    <tr><td colSpan={10} className="px-6 py-10 text-center text-red-600 font-semibold">{error}</td></tr>
+                  )}
+                  {!loading && !error && paginatedRequests.length === 0 && (
+                    <tr><td colSpan={10} className="px-6 py-10 text-center text-[#64748B] font-semibold">No complaints found.</td></tr>
+                  )}
                   {paginatedRequests.map((req) => (
                     <tr 
                       key={req.id} 
                       className="hover:bg-[#F8FAFC] transition-colors cursor-pointer"
                       onClick={() => handleRowClick(req)}
                     >
-                      <td className="px-6 py-4 font-medium text-[#0D47A1]">{req.id}</td>
+                      <td className="px-6 py-4 font-medium text-[#0D47A1]">{req.ref}</td>
                       <td className="px-6 py-4 text-[#1E293B]">{req.customer}</td>
                       <td className="px-6 py-4">
                         <div>
@@ -413,7 +482,7 @@ const Requests = () => {
               <div className="p-6 border-b border-[#E2E8F0] flex justify-between items-center bg-[#F8FAFC]">
                 <div>
                   <h3 className="text-lg font-bold text-[#1E293B]">Reassign Technician</h3>
-                  <p className="text-xs text-[#64748B]">Select a new service partner for ticket {selectedRequest.id}</p>
+                  <p className="text-xs text-[#64748B]">Select a new service partner for ticket {selectedRequest.ref}</p>
                 </div>
                 <button onClick={() => setShowReassignModal(false)} className="text-[#64748B] hover:text-[#1E293B] p-2 hover:bg-[#EEF2F6] rounded-full">
                   <X size={20} />

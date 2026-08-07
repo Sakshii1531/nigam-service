@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
+import { apiRequest } from '../../lib/apiClient';
 import { 
   Search, 
   Filter, 
@@ -18,24 +19,79 @@ import {
   ArrowLeft
 } from 'lucide-react';
 
+// The console groups the platform's 15 service-request statuses into the four
+// buckets the summary tiles and row colours are built around. The raw status is
+// still what's displayed — this only drives grouping.
+const STATUS_BUCKET = {
+  New: 'Pending',
+  Reschedule: 'Pending',
+  'Customer NA': 'Pending',
+  Assigned: 'Assigned',
+  'Engineer Accepted': 'In Progress',
+  'Visit Scheduled': 'In Progress',
+  'Engineer Reached': 'In Progress',
+  'Diagnosis Done': 'In Progress',
+  'Spare Required': 'In Progress',
+  'Spare Ordered': 'In Progress',
+  'Spare Received': 'In Progress',
+  'Repair Completed': 'In Progress',
+  'Customer Confirmation': 'In Progress',
+  Closed: 'Completed',
+  Cancelled: 'Cancelled',
+};
+
 const Requests = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('All Status');
   const [selectedBrand, setSelectedBrand] = useState('All Brands');
   const [selectedMode, setSelectedMode] = useState('All Modes');
+  const [selectedSort, setSelectedSort] = useState('Newest First');
   const [successMessage, setSuccessMessage] = useState('');
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [showDrawer, setShowDrawer] = useState(false);
   const [successCardData, setSuccessCardData] = useState(null);
 
-  const [requests, setRequests] = useState([
-    { id: 'SR-8901', customer: 'Amit Sharma', product: 'Smart TV', brand: 'LG', status: 'Pending', priority: 'High', date: '12 May, 2026', technician: 'Unassigned', description: 'Cracked screen display after delivery.', mode: 'B2B' },
-    { id: 'SR-8902', customer: 'Priya Patel', product: 'Refrigerator', brand: 'Samsung', status: 'Assigned', priority: 'Medium', date: '12 May, 2026', technician: 'Rahul Kumar', description: 'Cooling coil not working, making weird sounds.', mode: 'B2C' },
-    { id: 'SR-8903', customer: 'Rajesh K.', product: 'Washing Machine', brand: 'Whirlpool', status: 'Completed', priority: 'Low', date: '11 May, 2026', technician: 'Suresh Raina', description: 'Scheduled quarterly preventive clean maintenance.', mode: 'B2B' },
-    { id: 'SR-8904', customer: 'Neha Gupta', product: 'Microwave', brand: 'LG', status: 'Escalated', priority: 'High', date: '11 May, 2026', technician: 'Vikram Batra', description: 'Device spark when turned on. Crucial safety issue.', mode: 'B2C' },
-    { id: 'SR-8905', customer: 'Vikram S.', product: 'AC', brand: 'Samsung', status: 'In Progress', priority: 'Medium', date: '10 May, 2026', technician: 'Amit Singh', description: 'Gas refill service required for Split AC.', mode: 'B2C' },
-  ]);
+  const [requests, setRequests] = useState([]);
+  const [openEscalations, setOpenEscalations] = useState(0);
+  const [loadError, setLoadError] = useState('');
+
+  const loadRequests = React.useCallback(async () => {
+    try {
+      // apiRequest returns the full envelope — the rows are under `.data`.
+      const res = await apiRequest('/service-requests?limit=200&sort=-createdAt', { auth: true });
+      setRequests((res.data || []).map(item => ({
+        id: item.id,
+        ref: item.humanId || item.brandTicketNo || item.id,
+        customer: item.user?.name || 'Customer',
+        product: item.category || 'Appliance Service',
+        brand: item.brand?.name || 'Nigam Care',
+        status: item.status,
+        bucket: STATUS_BUCKET[item.status] || item.status,
+        priority: item.priority || 'Medium',
+        date: item.createdAt
+          ? new Date(item.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+          : '—',
+        technician: item.technician?.name || 'Unassigned',
+        description: item.description || '—',
+        mode: item.requestMode || 'B2C',
+      })));
+      setLoadError('');
+    } catch (err) {
+      setLoadError(err.message || 'Could not load service requests.');
+    }
+
+    // No service-request status is ever 'Escalated' — escalations are their own
+    // entity, so the tile counts unresolved ones from that module.
+    try {
+      const esc = await apiRequest('/super-admin/escalations?limit=200', { auth: true });
+      setOpenEscalations((esc.data || []).filter(e => e.status !== 'Resolved').length);
+    } catch (err) {
+      console.warn('[requests] Could not load escalation count:', err.message);
+    }
+  }, []);
+
+  useEffect(() => { loadRequests(); }, [loadRequests]);
 
   const showToast = (message) => {
     setSuccessMessage(message);
@@ -44,29 +100,71 @@ const Requests = () => {
     }, 3000);
   };
 
-  const handleStatusChange = (id, newStatus) => {
-    setRequests(requests.map(r => r.id === id ? { ...r, status: newStatus } : r));
-    if (selectedRequest && selectedRequest.id === id) {
-      setSelectedRequest({ ...selectedRequest, status: newStatus });
+  // Transitions are validated server-side against SERVICE_REQUEST_TRANSITIONS —
+  // an illegal move comes back 400 and is surfaced rather than applied locally.
+  const handleStatusChange = async (id, newStatus) => {
+    try {
+      const res = await apiRequest(`/service-requests/${id}/status`, {
+        method: 'PATCH',
+        auth: true,
+        body: { status: newStatus },
+      });
+      const status = res.data?.status || newStatus;
+      setRequests(prev => prev.map(r => (
+        r.id === id ? { ...r, status, bucket: STATUS_BUCKET[status] || status } : r
+      )));
+      if (selectedRequest && selectedRequest.id === id) {
+        setSelectedRequest({ ...selectedRequest, status, bucket: STATUS_BUCKET[status] || status });
+      }
+      showToast(`Request updated to ${status}`);
+    } catch (err) {
+      showToast(err.message || 'Could not update status.');
     }
-    showToast(`Request ${id} status updated to ${newStatus}`);
   };
 
-  const filteredRequests = requests.filter(r => {
-    const matchesSearch = r.customer.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          r.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          r.product.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          r.brand.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = selectedStatus === 'All Status' || r.status === selectedStatus;
-    const matchesBrand = selectedBrand === 'All Brands' || r.brand === selectedBrand;
-    const matchesMode = selectedMode === 'All Modes' || r.mode === selectedMode;
-    return matchesSearch && matchesStatus && matchesBrand && matchesMode;
-  });
+  const priorityOrder = { High: 3, Medium: 2, Low: 1 };
 
-  const pendingCount = requests.filter(r => r.status === 'Pending').length;
-  const activeCount = requests.filter(r => r.status === 'In Progress' || r.status === 'Assigned').length;
-  const escalatedCount = requests.filter(r => r.status === 'Escalated').length;
-  const completedCount = requests.filter(r => r.status === 'Completed').length;
+  const filteredRequests = requests
+    .filter(r => {
+      const cust = String(r?.customer || '');
+      const reqId = String(r?.ref || '');
+      const prod = String(r?.product || '');
+      const brnd = String(r?.brand || '');
+      const q = searchQuery.toLowerCase();
+
+      const matchesSearch = cust.toLowerCase().includes(q) ||
+                            reqId.toLowerCase().includes(q) ||
+                            prod.toLowerCase().includes(q) ||
+                            brnd.toLowerCase().includes(q);
+      const matchesStatus = selectedStatus === 'All Status'
+        || r?.status === selectedStatus
+        || r?.bucket === selectedStatus;
+      const matchesBrand = selectedBrand === 'All Brands' || r?.brand === selectedBrand;
+      const matchesMode = selectedMode === 'All Modes' || r?.mode === selectedMode;
+      return matchesSearch && matchesStatus && matchesBrand && matchesMode;
+    })
+    .sort((a, b) => {
+      // The list arrives newest-first from the API; ids are opaque ObjectIds, so
+      // ordering keys off the reference number rather than the raw id.
+      const aRef = String(a?.ref || '');
+      const bRef = String(b?.ref || '');
+      if (selectedSort === 'Newest First') return bRef.localeCompare(aRef);
+      if (selectedSort === 'Oldest First') return aRef.localeCompare(bRef);
+      if (selectedSort === 'Priority (High to Low)') {
+        return (priorityOrder[b?.priority] || 0) - (priorityOrder[a?.priority] || 0);
+      }
+      if (selectedSort === 'Priority (Low to High)') {
+        return (priorityOrder[a?.priority] || 0) - (priorityOrder[b?.priority] || 0);
+      }
+      if (selectedSort === 'Customer (A to Z)') {
+        return String(a?.customer || '').localeCompare(String(b?.customer || ''));
+      }
+      return 0;
+    });
+
+  const pendingCount = requests.filter(r => r.bucket === 'Pending').length;
+  const activeCount = requests.filter(r => r.bucket === 'In Progress' || r.bucket === 'Assigned').length;
+  const completedCount = requests.filter(r => r.bucket === 'Completed').length;
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex relative">
@@ -93,7 +191,7 @@ const Requests = () => {
             <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden flex flex-col">
               <div className="p-6 border-b border-[#E2E8F0] bg-[#F8FAFC]">
                 <h3 className="text-lg font-bold text-[#1E293B]">Service Ticket Info</h3>
-                <p className="text-xs text-[#0D47A1] font-semibold">{selectedRequest.id}</p>
+                <p className="text-xs text-[#0D47A1] font-semibold">{selectedRequest.ref}</p>
               </div>
 
               <div className="p-6 space-y-6 flex-1 overflow-y-auto">
@@ -130,9 +228,9 @@ const Requests = () => {
                     <div>
                       <span className="text-xs font-semibold text-[#64748B] uppercase block">Ticket Status</span>
                       <span className={`inline-block mt-1 px-2.5 py-1 rounded-full text-xs font-medium ${
-                        selectedRequest.status === 'Completed' ? 'bg-green-50 text-green-600' :
-                        selectedRequest.status === 'In Progress' ? 'bg-blue-50 text-blue-600' :
-                        selectedRequest.status === 'Pending' ? 'bg-yellow-50 text-yellow-600' :
+                        selectedRequest.bucket === 'Completed' ? 'bg-green-50 text-green-600' :
+                        selectedRequest.bucket === 'In Progress' ? 'bg-blue-50 text-blue-600' :
+                        selectedRequest.bucket === 'Pending' ? 'bg-yellow-50 text-yellow-600' :
                         'bg-red-50 text-red-600'
                       }`}>
                         {selectedRequest.status}
@@ -143,14 +241,14 @@ const Requests = () => {
               </div>
 
               <div className="p-4 border-t border-[#E2E8F0] bg-[#F8FAFC] flex gap-3">
-                {selectedRequest.status === 'Pending' && (
+                {selectedRequest.bucket === 'Pending' && (
                   <button 
                     onClick={() => {
                       setShowDrawer(false);
                       setSuccessCardData({
                         title: "Initiating Assignment",
                         message: "Preparing redirection to the technician assignment console for Ticket ID:",
-                        ticketId: selectedRequest.id,
+                        ticketId: selectedRequest.ref,
                         onClose: () => {
                           navigate(`/super-admin/assignment?req=${selectedRequest.id}`);
                         }
@@ -163,22 +261,6 @@ const Requests = () => {
                     className="bg-[#0D47A1] text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-1.5 shadow-sm"
                   >
                     <UserPlus size={14} /> Assign Technician
-                  </button>
-                )}
-                {selectedRequest.status === 'Escalated' && (
-                  <button 
-                    onClick={() => { 
-                      handleStatusChange(selectedRequest.id, 'In Progress'); 
-                      setShowDrawer(false); 
-                      setSuccessCardData({
-                        title: "Escalation Resolved",
-                        message: "The escalation status has been resolved to 'In Progress' for Ticket ID:",
-                        ticketId: selectedRequest.id
-                      });
-                    }}
-                    className="bg-[#0D47A1] text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors shadow-sm"
-                  >
-                    Re-assign / Resolve
                   </button>
                 )}
                 <button 
@@ -218,8 +300,8 @@ const Requests = () => {
                 <AlertTriangle size={20} />
               </div>
               <div>
-                <p className="text-xs font-medium text-[#64748B]">Escalated</p>
-                <p className="text-2xl font-bold text-[#1E293B]">{escalatedCount + 11}</p>
+                <p className="text-xs font-medium text-[#64748B]">Open Escalations</p>
+                <p className="text-2xl font-bold text-[#1E293B]">{openEscalations}</p>
               </div>
             </div>
             <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] flex items-center gap-4 shadow-sm">
@@ -261,7 +343,7 @@ const Requests = () => {
                 <option>Assigned</option>
                 <option>In Progress</option>
                 <option>Completed</option>
-                <option>Escalated</option>
+                <option>Cancelled</option>
               </select>
 
               <select 
@@ -284,20 +366,42 @@ const Requests = () => {
                 <option>B2B</option>
                 <option>B2C</option>
               </select>
+
+              <select 
+                value={selectedSort}
+                onChange={(e) => setSelectedSort(e.target.value)}
+                className="text-sm font-semibold text-[#0D47A1] border border-[#0D47A1]/30 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#0D47A1] bg-[#F0F4FF]"
+              >
+                <option>Newest First</option>
+                <option>Oldest First</option>
+                <option>Priority (High to Low)</option>
+                <option>Priority (Low to High)</option>
+                <option>Customer (A to Z)</option>
+              </select>
             </div>
 
-            <button 
-              onClick={() => {
-                setSearchQuery('');
-                setSelectedStatus('All Status');
-                setSelectedBrand('All Brands');
-                setSelectedMode('All Modes');
-                showToast('Filters reset successfully');
-              }}
-              className="bg-white text-[#1E293B] border border-[#E2E8F0] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#F8FAFC] transition-colors"
-            >
-              Reset Filters
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => { loadRequests(); showToast('Service requests refreshed'); }}
+                className="bg-white text-[#0D47A1] border border-[#0D47A1]/30 px-3.5 py-2 rounded-lg text-sm font-semibold hover:bg-[#F0F4FF] transition-colors"
+              >
+                Refresh
+              </button>
+
+              <button 
+                onClick={() => {
+                  setSearchQuery('');
+                  setSelectedStatus('All Status');
+                  setSelectedBrand('All Brands');
+                  setSelectedMode('All Modes');
+                  setSelectedSort('Newest First');
+                  showToast('Filters reset successfully');
+                }}
+                className="bg-white text-[#1E293B] border border-[#E2E8F0] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#F8FAFC] transition-colors"
+              >
+                Reset Filters
+              </button>
+            </div>
           </div>
 
           {/* Table */}
@@ -324,7 +428,7 @@ const Requests = () => {
                       className="hover:bg-[#F8FAFC] transition-colors cursor-pointer"
                       onClick={() => { setSelectedRequest(req); setShowDrawer(true); }}
                     >
-                      <td className="px-6 py-4 font-medium text-[#0D47A1]">{req.id}</td>
+                      <td className="px-6 py-4 font-medium text-[#0D47A1]">{req.ref}</td>
                       <td className="px-6 py-4 text-[#1E293B] font-medium">
                         <div className="flex items-center gap-2">
                           <span>{req.customer}</span>
@@ -349,10 +453,10 @@ const Requests = () => {
                       </td>
                       <td className="px-6 py-4">
                         <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                          req.status === 'Completed' ? 'bg-green-50 text-green-600' :
-                          req.status === 'In Progress' ? 'bg-blue-50 text-blue-600' :
-                          req.status === 'Assigned' ? 'bg-indigo-50 text-indigo-600' :
-                          req.status === 'Pending' ? 'bg-yellow-50 text-yellow-600' :
+                          req.bucket === 'Completed' ? 'bg-green-50 text-green-600' :
+                          req.bucket === 'In Progress' ? 'bg-blue-50 text-blue-600' :
+                          req.bucket === 'Assigned' ? 'bg-indigo-50 text-indigo-600' :
+                          req.bucket === 'Pending' ? 'bg-yellow-50 text-yellow-600' :
                           'bg-red-50 text-red-600'
                         }`}>
                           {req.status}
@@ -370,13 +474,13 @@ const Requests = () => {
                             <Eye size={16} />
                           </button>
                           
-                          {req.status === 'Pending' ? (
+                          {req.bucket === 'Pending' ? (
                             <button 
                               onClick={() => {
                                 setSuccessCardData({
                                   title: "Initiating Assignment",
                                   message: "Preparing redirection to the technician assignment console for Ticket ID:",
-                                  ticketId: req.id,
+                                  ticketId: req.ref,
                                   onClose: () => {
                                     navigate(`/super-admin/assignment?req=${req.id}`);
                                   }
@@ -390,21 +494,6 @@ const Requests = () => {
                               title="Assign Technician"
                             >
                               <UserPlus size={16} />
-                            </button>
-                          ) : req.status === 'Escalated' ? (
-                            <button 
-                              onClick={() => {
-                                handleStatusChange(req.id, 'In Progress');
-                                setSuccessCardData({
-                                  title: "Escalation Resolved",
-                                  message: "The escalation status has been resolved to 'In Progress' for Ticket ID:",
-                                  ticketId: req.id
-                                });
-                              }}
-                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors" 
-                              title="Resolve / Assign"
-                            >
-                              <CheckCircle size={16} />
                             </button>
                           ) : (
                             <div className="w-[28px]" />
@@ -431,6 +520,13 @@ const Requests = () => {
       </div>
 
       {/* Success Toast */}
+      {loadError && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-rose-600 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg flex items-center gap-2">
+          <AlertTriangle className="h-4 w-4" />
+          {loadError}
+        </div>
+      )}
+
       {successMessage && (
         <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-green-600 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg flex items-center gap-2 animate-bounce">
           <CheckCircle2 className="h-4 w-4" />

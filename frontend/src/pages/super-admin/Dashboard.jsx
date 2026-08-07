@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
@@ -6,7 +6,7 @@ import {
   Users, 
   UserCheck, 
   Building, 
-  ClipboardList, 
+  ClipboardList,
   Clock, 
   FileCheck, 
   IndianRupee, 
@@ -37,6 +37,32 @@ import {
   FileText,
   Package
 } from 'lucide-react';
+import { apiRequest } from '../../lib/apiClient';
+
+const currency = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+const number = new Intl.NumberFormat('en-IN');
+
+// The donuts are hand-drawn SVG arcs, so each slice needs a stroke-dasharray and
+// a running offset. Circumference is 2πr for the r=40 circles the markup uses.
+const CIRCUMFERENCE = 251.2;
+
+function buildSegments(parts) {
+  const total = parts.reduce((sum, p) => sum + p.count, 0);
+  let consumed = 0;
+  return parts.map((part) => {
+    const fraction = total ? part.count / total : 0;
+    const length = fraction * CIRCUMFERENCE;
+    const segment = {
+      ...part,
+      value: number.format(part.count),
+      pct: Math.round(fraction * 100),
+      dashArray: `${length.toFixed(1)} ${CIRCUMFERENCE}`,
+      dashOffset: `${(-consumed).toFixed(1)}`,
+    };
+    consumed += length;
+    return segment;
+  });
+}
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -53,15 +79,46 @@ const Dashboard = () => {
   const [activeRequestBar, setActiveRequestBar] = useState(null);
   const [activeTechSegment, setActiveTechSegment] = useState(null);
 
-  const revenuePoints = [
-    { x: 10, y: 90, date: '15 May', value: '₹35,40,000' },
-    { x: 73, y: 73, date: '16 May', value: '₹42,10,000' },
-    { x: 130, y: 85, date: '17 May', value: '₹38,50,000' },
-    { x: 190, y: 65, date: '18 May', value: '₹45,80,000' },
-    { x: 250, y: 50, date: '19 May', value: '₹41,20,000' },
-    { x: 310, y: 38, date: '20 May', value: '₹48,90,000' },
-    { x: 390, y: 25, date: '21 May', value: '₹50,60,600' }
-  ];
+  // Revenue trend comes from /analytics/revenue-trend; the SVG coordinates are
+  // derived from it rather than being the source of truth as they were before.
+  const [revenueTrend, setRevenueTrend] = useState(null);
+  const [requestTrend, setRequestTrend] = useState(null);
+
+  useEffect(() => {
+    const days = activeTabRevenue === '30days' ? 30 : 7;
+    let cancelled = false;
+    Promise.all([
+      apiRequest(`/super-admin/analytics/revenue-trend?days=${days}`, { auth: true }),
+      apiRequest(`/super-admin/analytics/request-trend?days=${days}`, { auth: true }),
+    ])
+      .then(([rev, req]) => {
+        if (cancelled) return;
+        setRevenueTrend(rev.data);
+        setRequestTrend(req.data);
+      })
+      .catch((err) => console.error('[dashboard] Trend load failed:', err.message));
+    return () => { cancelled = true; };
+  }, [activeTabRevenue]);
+
+  const revenuePoints = React.useMemo(() => {
+    const pts = revenueTrend?.points || [];
+    if (!pts.length) return [];
+    // Scale into the 400x130 viewBox. A flat series (max === 0) would divide by
+    // zero, so it pins to the baseline instead.
+    const max = Math.max(...pts.map((p) => p.gross), 0);
+    const span = pts.length > 1 ? pts.length - 1 : 1;
+    return pts.map((p, i) => ({
+      x: 10 + (i / span) * 380,
+      y: max > 0 ? 115 - (p.gross / max) * 90 : 115,
+      date: new Date(p.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
+      value: currency.format(p.gross),
+    }));
+  }, [revenueTrend]);
+
+  const revenuePath = React.useMemo(
+    () => revenuePoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' '),
+    [revenuePoints],
+  );
 
   const handleRevenueMouseMove = (e) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -85,19 +142,40 @@ const Dashboard = () => {
     }
   };
 
-  const doughnutSegments = [
-    { label: 'Open', value: '1,632', pct: 28, stroke: '#0D47A1', dashArray: "70.3 251.2", dashOffset: "0", routeVal: 'open' },
-    { label: 'Completed', value: '1,820', pct: 32, stroke: '#10B981', dashArray: "80.4 251.2", dashOffset: "-70.3", routeVal: 'completed' },
-    { label: 'Assigned', value: '1,054', pct: 18, stroke: '#38BDF8', dashArray: "45.2 251.2", dashOffset: "-150.7", routeVal: 'assigned' },
-    { label: 'In-Progress', value: '712', pct: 12, stroke: '#F59E0B', dashArray: "30.1 251.2", dashOffset: "-195.9", routeVal: 'in-progress' },
-    { label: 'Cancelled', value: '112', pct: 10, stroke: '#EF4444', dashArray: "25.2 251.2", dashOffset: "-226", routeVal: 'cancelled' },
-  ];
+  // Top KPI Metrics
+  const [metrics, setMetrics] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const techSegments = [
-    { label: 'Online', value: '824', pct: 64, stroke: '#10B981', dashArray: "160.7 251.2", dashOffset: "0", statusKey: 'online' },
-    { label: 'On Job', value: '312', pct: 24, stroke: '#0D47A1', dashArray: "60.3 251.2", dashOffset: "-160.7", statusKey: 'on-job' },
-    { label: 'Offline', value: '148', pct: 12, stroke: '#94A3B8', dashArray: "30.2 251.2", dashOffset: "-221", statusKey: 'offline' },
-  ];
+  useEffect(() => {
+    let cancelled = false;
+    async function loadDashboard() {
+      try {
+        const data = await apiRequest('/super-admin/analytics/dashboard', { auth: true });
+        if (!cancelled) setMetrics(data);
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    loadDashboard();
+    return () => { cancelled = true; };
+  }, []);
+
+  const doughnutSegments = buildSegments([
+    { label: 'Open', count: metrics?.requests?.open || 0, stroke: '#0D47A1', routeVal: 'open' },
+    { label: 'Completed', count: metrics?.requests?.completed || 0, stroke: '#10B981', routeVal: 'completed' },
+    { label: 'Assigned', count: metrics?.requests?.assigned || 0, stroke: '#38BDF8', routeVal: 'assigned' },
+    { label: 'In-Progress', count: metrics?.requests?.inProgress || 0, stroke: '#F59E0B', routeVal: 'in-progress' },
+    { label: 'Cancelled', count: metrics?.requests?.cancelled || 0, stroke: '#EF4444', routeVal: 'cancelled' },
+  ]);
+
+  const techSegments = buildSegments([
+    { label: 'Online', count: metrics?.technicians?.Available || 0, stroke: '#10B981', statusKey: 'online' },
+    { label: 'On Job', count: metrics?.technicians?.Busy || 0, stroke: '#0D47A1', statusKey: 'on-job' },
+    { label: 'Offline', count: metrics?.technicians?.Offline || 0, stroke: '#94A3B8', statusKey: 'offline' },
+  ]);
 
   const showToast = (message) => {
     setSuccessMessage(message);
@@ -106,18 +184,19 @@ const Dashboard = () => {
     }, 3000);
   };
 
-  // Top KPI Metrics
+  // The per-card `trend` strings ("18.6% vs last 7 days") are gone: nothing
+  // stores a prior-period snapshot, so no comparison can be computed. The same
+  // goes for "Today's Revenue", "Active Cities", "Active Service Partners" and
+  // "Customer Satisfaction" — each needed a figure this API does not produce.
   const stats = [
-    { title: 'Total Revenue', value: '₹2,84,50,600', trend: '18.6% vs last 7 days', positive: true, icon: <IndianRupee size={16} />, iconColor: 'text-[#0D47A1] bg-[#E8F0FE]', path: '/super-admin/revenue' },
-    { title: "Today's Revenue", value: '₹12,45,300', trend: '12.3% vs yesterday', positive: true, icon: <IndianRupee size={16} />, iconColor: 'text-green-600 bg-green-50', path: '/super-admin/revenue' },
-    { title: 'Active Requests', value: '1,632', trend: '8.5% vs yesterday', positive: false, icon: <ClipboardList size={16} />, iconColor: 'text-red-500 bg-red-50', path: '/super-admin/requests' },
-    { title: 'AMC Customers', value: '24,850', trend: '15.2% vs last 7 days', positive: true, icon: <Users size={16} />, iconColor: 'text-purple-600 bg-purple-50', path: '/super-admin/amc' },
-    { title: 'NCC Shield Customers', value: '18,320', trend: '9.7% vs last 7 days', positive: true, icon: <Shield size={16} />, iconColor: 'text-orange-600 bg-orange-50', path: '/super-admin/warranty' },
-    { title: 'Product Orders', value: '512', trend: '14.8% vs yesterday', positive: true, icon: <Briefcase size={16} />, iconColor: 'text-pink-600 bg-pink-50', path: '/super-admin/orders' },
-    { title: 'Open Escalations', value: '74', trend: '6.3% vs yesterday', positive: false, icon: <AlertTriangle size={16} />, iconColor: 'text-red-600 bg-red-50', path: '/super-admin/escalation-desk' },
-    { title: 'Active Cities', value: '52', trend: 'No change', neutral: true, icon: <MapPin size={16} />, iconColor: 'text-blue-500 bg-blue-50', path: '/super-admin/cities' },
-    { title: 'Active Service Partners', value: '1,284', trend: '11.4% vs yesterday', positive: true, icon: <Building size={16} />, iconColor: 'text-emerald-600 bg-emerald-50', path: '/super-admin/service-partners' },
-    { title: 'Customer Satisfaction', value: '4.7 / 5', trend: '0.2 vs last 7 days', positive: true, icon: <Star size={16} />, iconColor: 'text-yellow-600 bg-yellow-50', path: '/super-admin/reports' }
+    { title: 'Total Revenue', value: currency.format(metrics?.revenue?.gross || 0), icon: <IndianRupee size={16} />, iconColor: 'text-[#0D47A1] bg-[#E8F0FE]', path: '/super-admin/revenue' },
+    { title: 'Platform Net Share', value: currency.format(metrics?.revenue?.net || 0), icon: <IndianRupee size={16} />, iconColor: 'text-green-600 bg-green-50', path: '/super-admin/revenue' },
+    { title: 'Active Requests', value: number.format(metrics?.activeRequests || 0), icon: <ClipboardList size={16} />, iconColor: 'text-red-500 bg-red-50', path: '/super-admin/requests' },
+    { title: 'AMC Customers', value: number.format(metrics?.amcCustomers || 0), icon: <Users size={16} />, iconColor: 'text-purple-600 bg-purple-50', path: '/super-admin/amc' },
+    { title: 'NCC Shield Customers', value: number.format(metrics?.extendedWarrantyCustomers || 0), icon: <Shield size={16} />, iconColor: 'text-orange-600 bg-orange-50', path: '/super-admin/warranty' },
+    { title: 'Product Orders', value: number.format(metrics?.productOrders || 0), icon: <Briefcase size={16} />, iconColor: 'text-pink-600 bg-pink-50', path: '/super-admin/orders' },
+    { title: 'Open Escalations', value: number.format(metrics?.openEscalations || 0), icon: <AlertTriangle size={16} />, iconColor: 'text-red-600 bg-red-50', path: '/super-admin/escalation-desk' },
+    { title: 'Total Requests', value: number.format(metrics?.requests?.total || 0), icon: <BarChart3 size={16} />, iconColor: 'text-blue-500 bg-blue-50', path: '/super-admin/requests' },
   ];
 
   // Quick Action List
@@ -161,21 +240,11 @@ const Dashboard = () => {
                   <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${stat.iconColor}`}>
                     {stat.icon}
                   </div>
-                  {!stat.neutral ? (
-                    <span className={`text-[10px] font-bold flex items-center gap-0.5 ${stat.positive ? 'text-green-600' : 'text-red-500'}`}>
-                      {stat.positive ? '↑' : '↓'} {stat.trend.split(' ')[0]}
-                    </span>
-                  ) : (
-                    <span className="text-[10px] font-bold text-slate-400">
-                      —
-                    </span>
-                  )}
                 </div>
                 <div className="mt-3.5">
                   <p className="text-[11px] font-semibold text-[#64748B] mb-0.5">{stat.title}</p>
-                  <p className="text-lg font-black text-[#1E293B] tracking-tight">{stat.value}</p>
-                  <p className="text-[9px] text-slate-400 font-medium mt-0.5">
-                    {stat.neutral ? 'No change' : `vs ${stat.trend.substring(stat.trend.indexOf('vs') + 3 || 0)}`}
+                  <p className="text-lg font-black text-[#1E293B] tracking-tight">
+                    {loading ? '…' : stat.value}
                   </p>
                 </div>
               </div>
@@ -191,8 +260,17 @@ const Dashboard = () => {
                 <div>
                   <h3 className="font-extrabold text-sm text-[#1E293B] tracking-tight">Revenue Trend</h3>
                   <div className="flex items-baseline gap-2 mt-1">
-                    <span className="text-xl font-black text-[#1E293B]">₹2,84,50,600</span>
-                    <span className="text-[10px] font-bold text-green-600 flex items-center">↑ 18.6% <span className="text-slate-400 font-medium ml-1">vs last 7 days</span></span>
+                    <span className="text-xl font-black text-[#1E293B]">
+                      {currency.format(revenueTrend?.total || 0)}
+                    </span>
+                    {revenueTrend?.changePercent !== null && revenueTrend?.changePercent !== undefined && (
+                      <span className={`text-[10px] font-bold flex items-center ${revenueTrend.changePercent >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {revenueTrend.changePercent >= 0 ? '↑' : '↓'} {Math.abs(revenueTrend.changePercent)}%
+                        <span className="text-slate-400 font-medium ml-1">
+                          vs previous {revenueTrend.days} days
+                        </span>
+                      </span>
+                    )}
                   </div>
                 </div>
                 <select 
@@ -229,19 +307,23 @@ const Dashboard = () => {
                   <line x1="0" y1="110" x2="400" y2="110" stroke="#F1F5F9" strokeWidth="1" />
                   
                   {/* Shaded Area */}
-                  <path 
-                    d="M 10 90 Q 70 70 130 85 T 250 50 T 310 38 T 390 25 L 390 120 L 10 120 Z" 
-                    fill="url(#revenue-gradient)" 
-                  />
-                  
+                  {revenuePoints.length > 1 && (
+                    <path
+                      d={`${revenuePath} L ${revenuePoints[revenuePoints.length - 1].x.toFixed(1)} 120 L ${revenuePoints[0].x.toFixed(1)} 120 Z`}
+                      fill="url(#revenue-gradient)"
+                    />
+                  )}
+
                   {/* Line Path */}
-                  <path 
-                    d="M 10 90 Q 70 70 130 85 T 250 50 T 310 38 T 390 25" 
-                    fill="none" 
-                    stroke="#0D47A1" 
-                    strokeWidth="2.5" 
-                    strokeLinecap="round"
-                  />
+                  {revenuePoints.length > 1 && (
+                    <path
+                      d={revenuePath}
+                      fill="none"
+                      stroke="#0D47A1"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                    />
+                  )}
                   
                   {/* Node Circles */}
                   {revenuePoints.map((pt, i) => (
@@ -400,8 +482,17 @@ const Dashboard = () => {
                 <div>
                   <h3 className="font-extrabold text-sm text-[#1E293B] tracking-tight">Request Trend</h3>
                   <div className="flex items-baseline gap-2 mt-1">
-                    <span className="text-xl font-black text-[#1E293B]">4,568</span>
-                    <span className="text-[10px] font-bold text-green-600 flex items-center">↑ 16.2% <span className="text-slate-400 font-medium ml-1">vs last 7 days</span></span>
+                    <span className="text-xl font-black text-[#1E293B]">
+                      {number.format(requestTrend?.total || 0)}
+                    </span>
+                    {requestTrend?.changePercent !== null && requestTrend?.changePercent !== undefined && (
+                      <span className={`text-[10px] font-bold flex items-center ${requestTrend.changePercent >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {requestTrend.changePercent >= 0 ? '↑' : '↓'} {Math.abs(requestTrend.changePercent)}%
+                        <span className="text-slate-400 font-medium ml-1">
+                          vs previous {requestTrend.days} days
+                        </span>
+                      </span>
+                    )}
                   </div>
                 </div>
                 <select 
@@ -416,10 +507,13 @@ const Dashboard = () => {
 
               {/* Bar Chart bars */}
               <div className="flex items-end justify-between h-40 pt-4 px-2">
-                {[600, 800, 700, 900, 850, 950, 900].map((val, i) => {
-                  const maxVal = 1000;
+                {(requestTrend?.points || []).map((pt, i) => {
+                  const val = pt.count;
+                  // Scale to the tallest bar in the window; an all-zero window
+                  // renders flat rather than dividing by zero.
+                  const maxVal = Math.max(...(requestTrend?.points || []).map((p) => p.count), 1);
                   const heightPct = (val / maxVal) * 100;
-                  const day = 15 + i;
+                  const day = new Date(pt.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
                   return (
                     <div 
                       key={i} 
@@ -428,7 +522,7 @@ const Dashboard = () => {
                       onMouseLeave={() => setActiveRequestBar(null)}
                       onClick={() => {
                         setActiveRequestBar(i);
-                        showToast(`Requests on ${day} May: ${val}`);
+                        showToast(`Requests on ${day}: ${val}`);
                       }}
                     >
                       {/* Tooltip */}

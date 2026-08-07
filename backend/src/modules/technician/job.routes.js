@@ -143,3 +143,11 @@ jobRouter.post(
     }
   },
 );
+
+jobRouter.get('/:id/amc-history', validate(jobIdParamSchema, 'params'), async (req, res, next) => {
+  try {
+    ok(res, await jobService.getJobAmcHistory(req.technician.id, req.params.id));
+  } catch (err) {
+    next(err);
+  }
+});

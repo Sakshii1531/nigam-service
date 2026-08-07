@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
+import { apiRequest } from '../../lib/apiClient';
 import { 
   Plus, 
   Trash2, 
@@ -19,53 +20,50 @@ import {
 const Catalog = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [activeTab, setActiveTab] = useState('services');
-  const [selectedSubBrandId, setSelectedSubBrandId] = useState('SUB-301');
+  const [selectedSubBrandId, setSelectedSubBrandId] = useState('');
 
   // Master Services List
-  const [masterServices, setMasterServices] = useState([
-    { id: 'MSVC-1', name: 'Fan Installation & Wiring', type: 'Installation', charge: 600 },
-    { id: 'MSVC-2', name: 'LED Panel Replacement', type: 'Repair', charge: 850 },
-    { id: 'MSVC-3', name: 'Annual Electrical Safety Check', type: 'Inspection', charge: 1200 },
-    { id: 'MSVC-4', name: 'MCB & Switchgear Servicing', type: 'Maintenance', charge: 950 },
-  ]);
+  const [masterServices, setMasterServices] = useState([]);
   const [showAddServiceModal, setShowAddServiceModal] = useState(false);
   const [newMasterService, setNewMasterService] = useState({ name: '', type: 'Installation', charge: '' });
 
-  const [subBrands, setSubBrands] = useState([
-    { id: 'SUB-301', name: 'Havells Lighting', category: 'LED & Luminaires', products: [
-      { 
-        id: 'SUBPROD-1', 
-        name: 'Adore LED Downlight', 
-        model: 'HVL-DL-12W', 
-        services: [
-          { id: 'SVC-1', name: 'LED Panel Fitting & Wiring', type: 'Installation', charge: 600 },
-          { id: 'SVC-2', name: 'Driver Unit Replacement', type: 'Repair', charge: 750 },
-          { id: 'SVC-3', name: 'Luminaire Output Inspection', type: 'Inspection', charge: 500 }
-        ]
-      },
-      { 
-        id: 'SUBPROD-2', 
-        name: 'Endura Pro Batten', 
-        model: 'HVL-BTN-22W', 
-        services: [
-          { id: 'SVC-4', name: 'Batten Mounting & Connection', type: 'Installation', charge: 450 },
-          { id: 'SVC-5', name: 'Flicker & Fault Diagnosis', type: 'Inspection', charge: 400 }
-        ]
+  // Sub-brands, each with its products folded in. The API keeps the two apart
+  // (products hang off /sub-brands/:id/products), so they're joined here.
+  const [subBrands, setSubBrands] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  async function loadCatalog() {
+    const [services, subs] = await Promise.all([
+      apiRequest('/brand/catalog/master-services', { auth: true }),
+      apiRequest('/brand/catalog/sub-brands', { auth: true }),
+    ]);
+    const subList = Array.isArray(subs) ? subs : [];
+    const withProducts = await Promise.all(
+      subList.map(async (sub) => ({
+        ...sub,
+        products: (await apiRequest(`/brand/catalog/sub-brands/${sub.id}/products`, { auth: true })) || [],
+      })),
+    );
+    setMasterServices(Array.isArray(services) ? services : []);
+    setSubBrands(withProducts);
+    return withProducts;
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const subs = await loadCatalog();
+        if (!cancelled && subs.length) setSelectedSubBrandId(prev => prev || subs[0].id);
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-    ]},
-    { id: 'SUB-302', name: 'Havells Appliances', category: 'Fans & Small Appliances', products: [
-      { 
-        id: 'SUBPROD-3', 
-        name: 'Stealth Air Ceiling Fan', 
-        model: 'HVL-FAN-1200', 
-        services: [
-          { id: 'SVC-6', name: 'Ceiling Fan Installation & Balancing', type: 'Installation', charge: 600 },
-          { id: 'SVC-7', name: 'Capacitor & Regulator Replacement', type: 'Repair', charge: 450 },
-          { id: 'SVC-8', name: 'Motor Bearing Lubrication', type: 'Maintenance', charge: 350 }
-        ]
-      }
-    ]}
-  ]);
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const [expandedProductId, setExpandedProductId] = useState(null);
 
@@ -80,111 +78,132 @@ const Catalog = () => {
   // Map Service modal
   const [showMapServiceModal, setShowMapServiceModal] = useState(false);
   const [mappingProductId, setMappingProductId] = useState(null);
-  const [newService, setNewService] = useState({ name: '', type: 'Installation', charge: '' });
+  // `id` is the MasterService being mapped; the other fields are vestigial.
+  const [newService, setNewService] = useState({ id: '', name: '', type: 'Installation', charge: '' });
 
   const selectedSub = subBrands.find(s => s.id === selectedSubBrandId) || null;
 
-  const handleAddSubBrandSubmit = (e) => {
+  const toast = (msg, ms = 3000) => {
+    setSuccessMessage(msg);
+    setTimeout(() => setSuccessMessage(''), ms);
+  };
+
+  // Sub-brand/product/service edits all change the same nested tree, so each
+  // mutation refetches rather than trying to splice the response into place.
+  const afterMutation = async (message) => {
+    try {
+      await loadCatalog();
+      toast(message);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleAddSubBrandSubmit = async (e) => {
     e.preventDefault();
     if (!newSubBrand.name) return;
-    const addedSub = {
-      id: `SUB-${Date.now()}`,
-      name: newSubBrand.name,
-      category: newSubBrand.category || 'General',
-      products: []
-    };
-    setSubBrands([...subBrands, addedSub]);
-    setSelectedSubBrandId(addedSub.id);
-    setNewSubBrand({ name: '', category: '' });
-    setShowAddSubBrandModal(false);
-    setSuccessMessage(`Sub-brand "${addedSub.name}" created!`);
-    setTimeout(() => setSuccessMessage(''), 3000);
+    try {
+      const created = await apiRequest('/brand/catalog/sub-brands', {
+        method: 'POST',
+        auth: true,
+        body: { name: newSubBrand.name, category: newSubBrand.category || 'General' },
+      });
+      setNewSubBrand({ name: '', category: '' });
+      setShowAddSubBrandModal(false);
+      await loadCatalog();
+      setSelectedSubBrandId(created.id);
+      toast(`Sub-brand "${created.name}" created!`);
+    } catch (err) {
+      setError(`Could not create sub-brand: ${err.message}`);
+    }
   };
 
-  const handleAddSubProductSubmit = (e) => {
+  const handleAddSubProductSubmit = async (e) => {
     e.preventDefault();
-    if (!newSubProduct.name || !newSubProduct.model) return;
-    const initialServices = newSubProduct.configureDefaultServices ? [
-      { id: `SVC-${Date.now()}-1`, name: 'Standard Installation Support', type: 'Installation', charge: 1500 },
-      { id: `SVC-${Date.now()}-2`, name: 'General Inspection & Diagnosis', type: 'Inspection', charge: 500 }
-    ] : [];
-    const updatedSubs = subBrands.map(sub => {
-      if (sub.id === selectedSubBrandId) {
-        return { ...sub, products: [...(sub.products || []), { id: `SUBPROD-${Date.now()}`, name: newSubProduct.name, model: newSubProduct.model, services: initialServices }] };
-      }
-      return sub;
-    });
-    setSubBrands(updatedSubs);
-    setNewSubProduct({ name: '', model: '', configureDefaultServices: true });
-    setShowAddSubProductModal(false);
-    setSuccessMessage(`Product "${newSubProduct.name}" added!`);
-    setTimeout(() => setSuccessMessage(''), 3000);
+    if (!newSubProduct.name || !newSubProduct.model || !selectedSubBrandId) return;
+    try {
+      await apiRequest(`/brand/catalog/sub-brands/${selectedSubBrandId}/products`, {
+        method: 'POST',
+        auth: true,
+        // Services are mapped afterwards from the master list — a product cannot
+        // invent its own, they must be existing MasterService documents.
+        body: { name: newSubProduct.name, model: newSubProduct.model, services: [] },
+      });
+      setNewSubProduct({ name: '', model: '', configureDefaultServices: true });
+      setShowAddSubProductModal(false);
+      await afterMutation(`Product "${newSubProduct.name}" added!`);
+    } catch (err) {
+      setError(`Could not add product: ${err.message}`);
+    }
   };
 
-  const handleMapServiceSubmit = (e) => {
+  // `newService.id` holds the chosen MasterService id — this maps an existing
+  // service onto the product rather than creating a new one.
+  const handleMapServiceSubmit = async (e) => {
     e.preventDefault();
-    if (!newService.name || !newService.charge) return;
-    const updatedSubs = subBrands.map(sub => {
-      if (sub.id === selectedSubBrandId) {
-        return {
-          ...sub,
-          products: (sub.products || []).map(prod => {
-            if (prod.id === mappingProductId) {
-              return { ...prod, services: [...(prod.services || []), { id: `SVC-${Date.now()}`, name: newService.name, type: newService.type, charge: Number(newService.charge) }] };
-            }
-            return prod;
-          })
-        };
-      }
-      return sub;
-    });
-    setSubBrands(updatedSubs);
-    setNewService({ name: '', type: 'Installation', charge: '' });
-    setShowMapServiceModal(false);
-    setSuccessMessage('Service mapped to product successfully!');
-    setTimeout(() => setSuccessMessage(''), 3000);
+    if (!newService.id || !mappingProductId) return;
+    const product = (selectedSub?.products || []).find(p => p.id === mappingProductId);
+    if (!product) return;
+
+    const nextServiceIds = [...(product.services || []).map(s => s.id), newService.id];
+    try {
+      await apiRequest(`/brand/catalog/products/${mappingProductId}`, {
+        method: 'PUT', auth: true, body: { services: nextServiceIds },
+      });
+      setNewService({ id: '', name: '', type: 'Installation', charge: '' });
+      setShowMapServiceModal(false);
+      await afterMutation('Service mapped to product successfully!');
+    } catch (err) {
+      setError(`Could not map service: ${err.message}`);
+    }
   };
 
-  const handleDeleteService = (productId, serviceId) => {
-    const updatedSubs = subBrands.map(sub => {
-      if (sub.id === selectedSubBrandId) {
-        return {
-          ...sub,
-          products: (sub.products || []).map(prod => {
-            if (prod.id === productId) {
-              return { ...prod, services: (prod.services || []).filter(s => s.id !== serviceId) };
-            }
-            return prod;
-          })
-        };
-      }
-      return sub;
-    });
-    setSubBrands(updatedSubs);
-    setSuccessMessage('Service removed.');
-    setTimeout(() => setSuccessMessage(''), 2000);
+  const handleDeleteService = async (productId, serviceId) => {
+    const product = (selectedSub?.products || []).find(p => p.id === productId);
+    if (!product) return;
+    const nextServiceIds = (product.services || []).map(s => s.id).filter(id => id !== serviceId);
+    try {
+      await apiRequest(`/brand/catalog/products/${productId}`, {
+        method: 'PUT', auth: true, body: { services: nextServiceIds },
+      });
+      await afterMutation('Service removed.');
+    } catch (err) {
+      setError(`Could not unmap service: ${err.message}`);
+    }
   };
 
-  const handleAddServiceSubmit = (e) => {
+  const handleAddServiceSubmit = async (e) => {
     e.preventDefault();
     if (!newMasterService.name || !newMasterService.charge) return;
-    const added = {
-      id: `MSVC-${Date.now()}`,
-      name: newMasterService.name,
-      type: newMasterService.type,
-      charge: Number(newMasterService.charge)
-    };
-    setMasterServices([...masterServices, added]);
-    setNewMasterService({ name: '', type: 'Installation', charge: '' });
-    setShowAddServiceModal(false);
-    setSuccessMessage(`Service "${added.name}" created!`);
-    setTimeout(() => setSuccessMessage(''), 3000);
+    try {
+      const added = await apiRequest('/brand/catalog/master-services', {
+        method: 'POST',
+        auth: true,
+        body: {
+          name: newMasterService.name,
+          type: newMasterService.type,
+          charge: Number(newMasterService.charge),
+        },
+      });
+      setMasterServices(prev => [...prev, added]);
+      setNewMasterService({ name: '', type: 'Installation', charge: '' });
+      setShowAddServiceModal(false);
+      toast(`Service "${added.name}" created!`);
+    } catch (err) {
+      setError(`Could not create service: ${err.message}`);
+    }
   };
 
-  const handleDeleteMasterService = (id) => {
-    setMasterServices(masterServices.filter(s => s.id !== id));
-    setSuccessMessage('Service deleted.');
-    setTimeout(() => setSuccessMessage(''), 2000);
+  const handleDeleteMasterService = async (id) => {
+    const previous = masterServices;
+    setMasterServices(prev => prev.filter(s => s.id !== id));
+    try {
+      await apiRequest(`/brand/catalog/master-services/${id}`, { method: 'DELETE', auth: true });
+      toast('Service deleted.', 2000);
+    } catch (err) {
+      setMasterServices(previous);
+      setError(`Could not delete service: ${err.message}`);
+    }
   };
 
   const serviceTypeColors = {
@@ -662,41 +681,38 @@ const Catalog = () => {
                 </button>
               </div>
               <form onSubmit={handleMapServiceSubmit} className="p-5 space-y-4 text-sm">
+                {/* A product's services are references to master services, so
+                    this picks from that list rather than defining a new one.
+                    Services already mapped to this product are filtered out. */}
                 <div>
-                  <label className="text-xs font-bold text-slate-500 mb-1.5 block uppercase tracking-wider">Service Name *</label>
-                  <input
-                    type="text" required
-                    className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-xl focus:ring-2 focus:ring-[#0D47A1] outline-none text-slate-800 bg-[#F8FAFC] text-sm"
-                    placeholder="e.g. Standard Layout Grouting"
-                    value={newService.name}
-                    onChange={(e) => setNewService({ ...newService, name: e.target.value })}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-bold text-slate-500 mb-1.5 block uppercase tracking-wider">Service Type *</label>
-                    <select
-                      className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-xl focus:ring-2 focus:ring-[#0D47A1] outline-none text-slate-800 bg-[#F8FAFC] text-sm"
-                      value={newService.type}
-                      onChange={(e) => setNewService({ ...newService, type: e.target.value })}
-                    >
-                      <option>Installation</option>
-                      <option>Repair</option>
-                      <option>Maintenance</option>
-                      <option>Inspection</option>
-                      <option>Finishing</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-slate-500 mb-1.5 block uppercase tracking-wider">Charge (INR) *</label>
-                    <input
-                      type="number" required
-                      className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-xl focus:ring-2 focus:ring-[#0D47A1] outline-none text-slate-800 bg-[#F8FAFC] text-sm"
-                      placeholder="e.g. 1200"
-                      value={newService.charge}
-                      onChange={(e) => setNewService({ ...newService, charge: e.target.value })}
-                    />
-                  </div>
+                  <label className="text-xs font-bold text-slate-500 mb-1.5 block uppercase tracking-wider">Master Service *</label>
+                  {(() => {
+                    const product = (selectedSub?.products || []).find(p => p.id === mappingProductId);
+                    const mapped = new Set((product?.services || []).map(s => s.id));
+                    const available = masterServices.filter(s => !mapped.has(s.id));
+                    return (
+                      <>
+                        <select
+                          required
+                          className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-xl focus:ring-2 focus:ring-[#0D47A1] outline-none text-slate-800 bg-[#F8FAFC] text-sm"
+                          value={newService.id || ''}
+                          onChange={(e) => setNewService({ ...newService, id: e.target.value })}
+                        >
+                          <option value="">Select a service…</option>
+                          {available.map(s => (
+                            <option key={s.id} value={s.id}>{s.name} — {s.type} (₹{s.charge})</option>
+                          ))}
+                        </select>
+                        {available.length === 0 && (
+                          <p className="text-[10px] text-slate-400 mt-1.5">
+                            {masterServices.length === 0
+                              ? 'No master services defined yet — create one on the Services tab first.'
+                              : 'Every master service is already mapped to this product.'}
+                          </p>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
                 <div className="pt-3 border-t border-[#E2E8F0] flex gap-3 justify-end">
                   <button type="button" onClick={() => setShowMapServiceModal(false)} className="px-4 py-2 rounded-xl text-sm font-semibold text-slate-600 border border-slate-200 hover:bg-slate-50 cursor-pointer">Cancel</button>

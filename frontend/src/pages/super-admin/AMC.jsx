@@ -1,19 +1,46 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import { Search, Shield, ShieldAlert, Award, FileText, ClipboardList } from 'lucide-react';
+import { apiRequest } from '../../lib/apiClient';
 
 const AMC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPlan, setSelectedPlan] = useState('All Plans');
+  const [subscriptions, setSubscriptions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [summary, setSummary] = useState(null);
 
-  const [subscriptions] = useState([
-    { id: 1, customer: 'Neha Gupta', phone: '+91 95555 12345', plan: 'Gold AMC', product: 'AC Maintenance', expires: '15 June 2027', price: '₹4,999', status: 'Active' },
-    { id: 2, customer: 'Rohan Sharma', phone: '+91 94444 67890', plan: 'Platinum AMC', product: 'Full Home Appliances', expires: '10 May 2027', price: '₹9,999', status: 'Active' },
-    { id: 3, customer: 'Pooja Kapoor', phone: '+91 93333 54321', plan: 'Silver AMC', product: 'Fridge + Washing Machine', expires: '28 Dec 2026', price: '₹2,999', status: 'Active' },
-    { id: 4, customer: 'Sanjay Dutt', phone: '+91 92222 98765', plan: 'Gold AMC', product: 'AC Maintenance', expires: '10 Feb 2026', price: '₹4,999', status: 'Expired' },
-    { id: 5, customer: 'Aman Varma', phone: '+91 91111 23456', plan: 'Silver AMC', product: 'Washing Machine', expires: '12 Jan 2027', price: '₹2,499', status: 'Active' },
-  ]);
+  useEffect(() => {
+    const fetchSubs = async () => {
+      try {
+        // The customer-facing /warranty-amc route is scoped to req.user, so the
+        // console reads the platform-wide super-admin view instead.
+        const [listRes, summaryRes] = await Promise.all([
+          apiRequest('/super-admin/amc/subscriptions?limit=200', { auth: true }),
+          apiRequest('/super-admin/amc/summary', { auth: true }),
+        ]);
+        setSummary(summaryRes.data || null);
+        setSubscriptions((listRes.data || []).map(s => ({
+          id: s.id,
+          ref: s.humanId || s.id,
+          customer: s.user?.name || 'Customer',
+          phone: s.user?.phone || '—',
+          plan: s.plan?.name || 'AMC Plan',
+          product: [s.brand, s.model].filter(Boolean).join(' ') || 'Appliance',
+          expires: s.expiryDate ? new Date(s.expiryDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—',
+          price: s.plan?.price ? `₹${s.plan.price.toLocaleString('en-IN')}` : '—',
+          status: s.status || 'Active'
+        })));
+      } catch (err) {
+        setLoadError(err.message || 'Could not load AMC subscriptions.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSubs();
+  }, []);
 
   const filteredSubscriptions = subscriptions.filter(sub => {
     const matchesSearch = sub.customer.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -27,6 +54,12 @@ const AMC = () => {
       <Sidebar />
       <div className="flex-1 ml-64 min-h-screen flex flex-col">
         <Topbar title="NCC AMC Contracts" subtitle="View and manage Annual Maintenance Contracts (AMC)" />
+
+        {loadError && (
+          <div className="mx-6 mt-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-xs font-bold text-red-700">
+            {loadError}
+          </div>
+        )}
         <div className="p-6 space-y-6 flex-1">
           
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -36,7 +69,9 @@ const AMC = () => {
               </div>
               <div>
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Sales</p>
-                <p className="text-xl font-black text-slate-800 mt-1">₹12,45,000</p>
+                <p className="text-xl font-black text-slate-800 mt-1">
+                  ₹{(summary?.totalSales || 0).toLocaleString('en-IN')}
+                </p>
               </div>
             </div>
             <div className="bg-white p-5 rounded-2xl border border-[#E2E8F0] shadow-sm flex items-center gap-4">
@@ -45,7 +80,9 @@ const AMC = () => {
               </div>
               <div>
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Active Contracts</p>
-                <p className="text-xl font-black text-slate-800 mt-1">24,850</p>
+                <p className="text-xl font-black text-slate-800 mt-1">
+                  {(summary?.activeContracts || 0).toLocaleString('en-IN')}
+                </p>
               </div>
             </div>
             <div className="bg-white p-5 rounded-2xl border border-[#E2E8F0] shadow-sm flex items-center gap-4">
@@ -54,7 +91,7 @@ const AMC = () => {
               </div>
               <div>
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Most Sold</p>
-                <p className="text-xl font-black text-slate-800 mt-1">Gold AMC (AC)</p>
+                <p className="text-xl font-black text-slate-800 mt-1">{summary?.mostSoldPlan || '—'}</p>
               </div>
             </div>
             <div className="bg-white p-5 rounded-2xl border border-[#E2E8F0] shadow-sm flex items-center gap-4">
@@ -62,8 +99,12 @@ const AMC = () => {
                 <ShieldAlert size={20} />
               </div>
               <div>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Expiring in 7 Days</p>
-                <p className="text-xl font-black text-red-600 mt-1">265</p>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                  Expiring in {summary?.expiringWindowDays || 7} Days
+                </p>
+                <p className="text-xl font-black text-red-600 mt-1">
+                  {(summary?.expiringSoon || 0).toLocaleString('en-IN')}
+                </p>
               </div>
             </div>
           </div>

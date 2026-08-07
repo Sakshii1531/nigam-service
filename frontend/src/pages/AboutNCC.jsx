@@ -18,7 +18,7 @@ const AboutNCC = () => {
         <h1 className="text-sm font-black text-slate-900">About NCC</h1>
       </div>
 
-      <div className="flex flex-col items-center px-5 pt-8 gap-6 flex-1">
+      <div className="flex flex-col items-center px-4 sm:px-6 pt-8 gap-6 flex-1 max-w-3xl mx-auto w-full text-left">
         
         {/* App Logo Indicator */}
         <div className="flex flex-col items-center text-center gap-3">
@@ -32,7 +32,7 @@ const AboutNCC = () => {
         </div>
 
         {/* Short Bio */}
-        <p className="text-[11px] text-slate-500 font-bold text-center leading-relaxed max-w-sm px-4">
+        <p className="text-[11px] text-slate-500 font-bold text-center leading-relaxed max-w-md px-4">
           Nigam Care Center (NCC) is a next-generation client service platform delivering premium appliance diagnostic, cleaning, repair, and warranty solutions right to your doorstep.
         </p>
 
@@ -40,7 +40,10 @@ const AboutNCC = () => {
         <div className="w-full bg-white border border-slate-100 rounded-[24px] overflow-hidden shadow-xs flex flex-col divide-y divide-slate-100 mt-2">
           
           {/* Terms of Service */}
-          <div className="p-4 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => alert('Terms of Service Page coming soon!')}>
+          <div 
+            className="p-4 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer" 
+            onClick={() => navigate('/terms-and-conditions')}
+          >
             <div className="flex items-center gap-3.5">
               <div className="p-2 bg-slate-50 text-slate-600 rounded-xl">
                 <FileText className="h-4.5 w-4.5" />
@@ -51,7 +54,10 @@ const AboutNCC = () => {
           </div>
 
           {/* Privacy Policy */}
-          <div className="p-4 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => alert('Privacy Policy Page coming soon!')}>
+          <div 
+            className="p-4 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer" 
+            onClick={() => navigate('/privacy-policy')}
+          >
             <div className="flex items-center gap-3.5">
               <div className="p-2 bg-blue-50 text-[#0D47A1] rounded-xl">
                 <ShieldCheck className="h-4.5 w-4.5" />
@@ -62,7 +68,7 @@ const AboutNCC = () => {
           </div>
 
           {/* Version Info / Licenses */}
-          <div className="p-4 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => alert('Software Licenses: React, Vite, TailwindCSS, Lucide Icons.')}>
+          <div className="p-4 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => alert('Software Licenses: React 19, Vite 8, TailwindCSS 4, Lucide Icons.')}>
             <div className="flex items-center gap-3.5">
               <div className="p-2 bg-purple-50 text-purple-600 rounded-xl">
                 <Info className="h-4.5 w-4.5" />

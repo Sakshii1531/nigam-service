@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
+import { apiRequest } from '../../lib/apiClient';
+import { exportCsv } from '../../lib/exportCsv';
 import { 
   Receipt, 
   Clock, 
@@ -17,6 +19,34 @@ import {
   ArrowLeft
 } from 'lucide-react';
 
+const currency = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+
+// Indian-format short scale for the summary tiles (₹4.2L, ₹1.3Cr).
+function compactRupees(amount) {
+  if (!amount) return '₹0';
+  if (amount >= 1e7) return `₹${(amount / 1e7).toFixed(1)}Cr`;
+  if (amount >= 1e5) return `₹${(amount / 1e5).toFixed(1)}L`;
+  if (amount >= 1e3) return `₹${Math.round(amount / 1e3)}K`;
+  return currency.format(amount);
+}
+
+function shape(invoice) {
+  return {
+    id: invoice.id,
+    ref: invoice.humanId || invoice.id,
+    customer: invoice.customer?.name || 'Customer',
+    technician: invoice.technician?.name || 'Unassigned',
+    product: invoice.product || '—',
+    // Keep the raw total alongside the display string so the tiles can sum it.
+    totalAmount: invoice.total || 0,
+    serviceCharge: currency.format(invoice.serviceCharge || 0),
+    partCharge: currency.format(invoice.partCharge || 0),
+    gst: currency.format(invoice.gst || 0),
+    total: currency.format(invoice.total || 0),
+    status: invoice.status || 'Pending',
+  };
+}
+
 const Invoices = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [showDrawer, setShowDrawer] = useState(false);
@@ -25,17 +55,31 @@ const Invoices = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('All Status');
 
-  const [invoices, setInvoices] = useState([
-    { id: 'INV-2026-001', customer: 'Amit Sharma', technician: 'Rahul Kumar', product: 'Smart TV', serviceCharge: '₹800', partCharge: '₹0', gst: '₹144', total: '₹944', status: 'Paid' },
-    { id: 'INV-2026-002', customer: 'Priya Patel', technician: 'Amit Singh', product: 'Refrigerator', serviceCharge: '₹1,200', partCharge: '₹4,500', gst: '₹1,026', total: '₹6,726', status: 'Pending' },
-    { id: 'INV-2026-003', customer: 'Rajesh K.', technician: 'Suresh Raina', product: 'Washing Machine', serviceCharge: '₹1,000', partCharge: '₹1,200', gst: '₹396', total: '₹2,596', status: 'Paid' },
-    { id: 'INV-2026-004', customer: 'Neha Gupta', technician: 'Vikram Batra', product: 'Microwave', serviceCharge: '₹600', partCharge: '₹2,100', gst: '₹486', total: '₹3,186', status: 'Failed' },
-  ]);
+  const [invoices, setInvoices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
+  useEffect(() => {
+    let cancelled = false;
+    async function loadInvoices() {
+      try {
+        const data = await apiRequest('/brand/invoices', { auth: true });
+        if (!cancelled) setInvoices((data?.data || []).map(shape));
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    loadInvoices();
+    return () => { cancelled = true; };
+  }, []);
+
+  const sumWhere = (predicate) => invoices.filter(predicate).reduce((acc, i) => acc + i.totalAmount, 0);
   const stats = [
-    { title: 'Monthly Revenue', value: '₹4.2L', icon: <IndianRupee size={20} />, color: 'bg-emerald-600' },
-    { title: 'Paid Amount', value: '₹3.8L', icon: <CheckCircle2 size={20} />, color: 'bg-green-600' },
-    { title: 'Pending Payments', value: '₹40K', icon: <Clock size={20} />, color: 'bg-yellow-600' },
+    { title: 'Total Billed', value: compactRupees(sumWhere(() => true)), icon: <IndianRupee size={20} />, color: 'bg-emerald-600' },
+    { title: 'Paid Amount', value: compactRupees(sumWhere(i => i.status === 'Paid')), icon: <CheckCircle2 size={20} />, color: 'bg-green-600' },
+    { title: 'Pending Payments', value: compactRupees(sumWhere(i => i.status === 'Pending')), icon: <Clock size={20} />, color: 'bg-yellow-600' },
   ];
 
   const handleRowClick = (inv) => {
@@ -43,18 +87,27 @@ const Invoices = () => {
     setShowDrawer(true);
   };
 
+  // Writes a real file. Both of these used to be success messages with no
+  // download of any kind.
   const triggerExport = () => {
-    setSuccessMessage('Billing summary successfully exported as CSV!');
+    const written = exportCsv(
+      'brand-invoices',
+      ['Invoice', 'Customer', 'Technician', 'Product', 'Service Charge', 'Part Charge', 'GST', 'Total', 'Status'],
+      filteredInvoices.map((i) => [i.ref, i.customer, i.technician, i.product, i.serviceCharge, i.partCharge, i.gst, i.total, i.status]),
+    );
+    setSuccessMessage(written ? 'Billing summary exported as CSV.' : 'There are no invoices matching the current filters.');
     setTimeout(() => setSuccessMessage(''), 3000);
   };
 
-  const triggerPdfDownload = (id) => {
-    setSuccessMessage(`Invoice PDF download initiated for ${id}!`);
-    setTimeout(() => setSuccessMessage(''), 3000);
+  // There is no server-side PDF renderer, so this opens the browser's print
+  // dialog (which offers "Save as PDF") instead of claiming a download that
+  // never started.
+  const triggerPdfDownload = () => {
+    window.print();
   };
 
   const filteredInvoices = invoices.filter(inv => {
-    const matchesSearch = inv.id.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    const matchesSearch = inv.ref.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           inv.customer.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           inv.product.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           inv.technician.toLowerCase().includes(searchQuery.toLowerCase());
@@ -88,7 +141,7 @@ const Invoices = () => {
               <div className="p-6 border-b border-[#E2E8F0] flex justify-between items-center bg-[#F8FAFC]">
                 <div>
                   <h2 className="text-lg font-bold text-[#1E293B]">Invoice Breakdown</h2>
-                  <p className="text-sm text-[#0D47A1] font-medium">{selectedInvoice.id}</p>
+                  <p className="text-sm text-[#0D47A1] font-medium">{selectedInvoice.ref}</p>
                 </div>
               </div>
 
@@ -149,7 +202,7 @@ const Invoices = () => {
 
               <div className="p-6 border-t border-[#E2E8F0] flex gap-3 bg-[#F8FAFC]">
                 <button 
-                  onClick={() => triggerPdfDownload(selectedInvoice.id)}
+                  onClick={() => triggerPdfDownload(selectedInvoice.ref)}
                   className="bg-[#0D47A1] text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-1.5 shadow-sm"
                 >
                   <FileText size={16} /> Download PDF Invoice
@@ -230,13 +283,22 @@ const Invoices = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E2E8F0]">
+                  {loading && (
+                    <tr><td colSpan={8} className="px-6 py-10 text-center text-[#64748B] font-semibold">Loading invoices…</td></tr>
+                  )}
+                  {!loading && error && (
+                    <tr><td colSpan={8} className="px-6 py-10 text-center text-red-600 font-semibold">{error}</td></tr>
+                  )}
+                  {!loading && !error && filteredInvoices.length === 0 && (
+                    <tr><td colSpan={8} className="px-6 py-10 text-center text-[#64748B] font-semibold">No invoices found.</td></tr>
+                  )}
                   {filteredInvoices.map((inv) => (
                     <tr 
                       key={inv.id} 
                       className="hover:bg-[#F8FAFC] transition-colors cursor-pointer"
                       onClick={() => handleRowClick(inv)}
                     >
-                      <td className="px-6 py-4 font-medium text-[#0D47A1]">{inv.id}</td>
+                      <td className="px-6 py-4 font-medium text-[#0D47A1]">{inv.ref}</td>
                       <td className="px-6 py-4">
                         <div>
                           <p className="text-[#1E293B] font-medium">{inv.customer}</p>
@@ -266,7 +328,7 @@ const Invoices = () => {
                             <Eye size={16} />
                           </button>
                           <button 
-                            onClick={() => triggerPdfDownload(inv.id)}
+                            onClick={() => triggerPdfDownload(inv.ref)}
                             className="p-1.5 text-[#64748B] hover:text-[#0D47A1] rounded hover:bg-[#EEF2F6]" 
                             title="Download PDF"
                           >

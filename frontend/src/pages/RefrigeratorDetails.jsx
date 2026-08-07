@@ -1,13 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Star, Check, Shield, Award, Clock, X } from 'lucide-react';
 import applianceFridge from '../assets/appliance_fridge.png';
+import { apiRequest } from '../lib/apiClient';
 
 const RefrigeratorDetails = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const brandName = searchParams.get('brand') || '';
+  // The out-of-warranty visit charge comes from the Refrigerator service
+  // catalogue rather than being fixed at ₹499 in this page.
+  const [servicePrice, setServicePrice] = useState(null);
+
+  useEffect(() => {
+    apiRequest('/catalog/categories/Refrigerator')
+      .then((res) => {
+        const services = res.data?.services || [];
+        const repair = services.find((sv) => /repair|service/i.test(sv.name)) || services[0];
+        setServicePrice(repair?.price ?? null);
+      })
+      .catch((err) => console.warn('[refrigerator] Could not load service price:', err.message));
+  }, []);
+
   const [selectedIssue, setSelectedIssue] = useState('');
   const [showWarrantyModal, setShowWarrantyModal] = useState(false);
   const [isUnderWarranty, setIsUnderWarranty] = useState(null);
@@ -87,7 +102,7 @@ const RefrigeratorDetails = () => {
               <button 
                 onClick={() => {
                   setShowWarrantyModal(false);
-                  navigate(`/booking?service=Refrigerator Service&price=499`);
+                  navigate(`/booking?service=Refrigerator Service&price=${servicePrice ?? 0}`);
                 }}
                 className="flex-1 bg-slate-100 text-text-primary font-semibold py-2 rounded-xl hover:bg-slate-200 transition-colors text-sm"
               >
@@ -193,7 +208,9 @@ const RefrigeratorDetails = () => {
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-border-color shadow-lg flex justify-between items-center z-10">
         <div>
           <span className="text-xs text-text-secondary block">Total</span>
-          <span className="text-base font-bold text-text-primary">₹499</span>
+          <span className="text-base font-bold text-text-primary">
+            {servicePrice != null ? `₹${servicePrice.toLocaleString('en-IN')}` : '—'}
+          </span>
         </div>
         <button
           onClick={() => setShowWarrantyModal(true)}

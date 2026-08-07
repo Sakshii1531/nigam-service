@@ -279,3 +279,59 @@ test.describe('earnings + payouts', () => {
     expect(res.status()).toBe(400);
   });
 });
+
+test.describe('visit fee for a job the technician could not complete', () => {
+  test('credits the fee once over real HTTP and refuses a second credit', async ({ request }) => {
+    const { jobId, tech } = await acceptedD2cJob(request);
+    const auth = { headers: { Authorization: `Bearer ${tech.token}` } };
+
+    const before = (await (await request.get('/api/v1/tech/earnings/breakdown', auth)).json()).data;
+
+    const first = await request.post(`/api/v1/tech/earnings/visit-fee/${jobId}`, { ...auth, data: {} });
+    expect(first.status()).toBe(200);
+    const credit = (await first.json()).data;
+    expect(credit.credited).toBe(true);
+    expect(credit.amount).toBeGreaterThan(0);
+
+    const second = await request.post(`/api/v1/tech/earnings/visit-fee/${jobId}`, { ...auth, data: {} });
+    expect(second.status()).toBe(200);
+    expect((await second.json()).data).toMatchObject({ credited: false, alreadyCredited: true });
+
+    // The technician's real balance moved by exactly one fee, not two.
+    const after = (await (await request.get('/api/v1/tech/earnings/breakdown', auth)).json()).data;
+    expect(after.lifetimeEarned - before.lifetimeEarned).toBe(credit.amount);
+  });
+
+  test('rejects a job belonging to another technician', async ({ request }) => {
+    const { jobId } = await acceptedD2cJob(request);
+    const other = await createTechnician(request, { specs: ['AC'] });
+
+    const res = await request.post(`/api/v1/tech/earnings/visit-fee/${jobId}`, {
+      headers: { Authorization: `Bearer ${other.token}` },
+      data: {},
+    });
+    expect(res.status()).toBe(403);
+  });
+});
+
+test.describe('technician AI assistant', () => {
+  test('refuses rather than fabricating when no model key is configured, and is technician-only', async ({ request }) => {
+    const { tech } = await acceptedD2cJob(request);
+    const customer = await createCustomer(request);
+
+    const res = await request.post('/api/v1/tech/assistant', {
+      headers: { Authorization: `Bearer ${tech.token}` },
+      data: { messages: [{ role: 'user', content: 'What spare parts do I have?' }] },
+    });
+    // 200 if the deployment has ANTHROPIC_API_KEY set, 503 if not — never a
+    // fabricated answer, and never a 404/500.
+    expect([200, 503]).toContain(res.status());
+    if (res.status() === 200) expect((await res.json()).data.reply).toBeTruthy();
+
+    const asCustomer = await request.post('/api/v1/tech/assistant', {
+      headers: { Authorization: `Bearer ${customer.token}` },
+      data: { messages: [{ role: 'user', content: 'hello' }] },
+    });
+    expect(asCustomer.status()).toBe(403);
+  });
+});

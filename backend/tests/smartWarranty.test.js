@@ -27,11 +27,17 @@ describe('Smart Warranty Detection Pipeline', () => {
   let category;
 
   beforeAll(async () => {
-    const uri = await testDbUri();
+    // Per-file suffix, not a bare testDbUri() — that resolves to the shared
+    // "..._undefined" database (see helpers/testDb.js), which this file was
+    // silently sharing with notifications.test.js.
+    const uri = await testDbUri('smartWarranty');
     await mongoose.connect(uri);
   });
 
   afterAll(async () => {
+    // Drop, not just disconnect — otherwise this file's data survives the run
+    // and collides with the next one, as every other suite here already does.
+    await mongoose.connection.dropDatabase();
     await mongoose.disconnect();
   });
 

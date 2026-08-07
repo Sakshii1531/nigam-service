@@ -13,27 +13,45 @@ import { useAuth } from '../context/AuthContext';
 const VerifyOtp = () => {
   const { state } = useLocation();
   const navigate = useNavigate();
-  const { verifyOtp, resendOtp } = useAuth();
+  const { verifyOtp, resendOtp, signupVerify } = useAuth();
 
   const hasRealSession = state?.role && state?.identifier;
+  const isSignup = state?.purpose === 'signup';
+
+  const handleVerify = async (code) => {
+    if (isSignup) {
+      await signupVerify({ ...state.signupData, code });
+      navigate('/dashboard');
+    } else {
+      await verifyOtp({ role: state.role, identifier: state.identifier, code });
+      navigate('/dashboard');
+    }
+  };
+
+  const handleResend = async () => {
+    await resendOtp({
+      role: state.role,
+      identifier: state.identifier,
+      purpose: state.purpose || 'login'
+    });
+  };
+
+  const handleBack = () => {
+    if (isSignup) {
+      navigate('/login', { state: { signupData: state.signupData, isSignup: true } });
+    } else {
+      navigate('/login');
+    }
+  };
 
   return (
     <OtpVerification
       variant="mobile"
       destination={state?.destination || '+91 98•••••210'}
-      onVerified="/dashboard"
       backTo="/login"
-      onSubmit={
-        hasRealSession
-          ? async (code) => {
-              await verifyOtp({ role: state.role, identifier: state.identifier, code });
-              navigate('/dashboard');
-            }
-          : undefined
-      }
-      onResend={
-        hasRealSession ? async () => resendOtp({ role: state.role, identifier: state.identifier }) : undefined
-      }
+      onBackClick={handleBack}
+      onSubmit={hasRealSession ? handleVerify : undefined}
+      onResend={hasRealSession ? handleResend : undefined}
     />
   );
 };

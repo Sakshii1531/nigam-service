@@ -5,17 +5,25 @@ import { ApiError } from './errorHandler.js';
  * req.user — stateless (no DB hit), so permissions reflect a snapshot from token
  * issuance time (stale for up to JWT_ACCESS_EXPIRES_IN, currently 15m). */
 export function requireAuth(req, res, next) {
+  let token = '';
   const header = req.headers.authorization || '';
-  const [scheme, token] = header.split(' ');
-  if (scheme !== 'Bearer' || !token) {
-    return next(new ApiError(401, 'Missing or malformed Authorization header'));
+  const [scheme, parsedToken] = header.split(' ');
+  
+  if (scheme === 'Bearer' && parsedToken) {
+    token = parsedToken;
+  } else if (req.query.token) {
+    token = req.query.token;
+  }
+
+  if (!token) {
+    return next(new ApiError(401, 'Missing or malformed Authorization header or token query parameter'));
   }
 
   try {
     const payload = verifyAccessToken(token);
     req.user = { id: payload.sub, role: payload.role, brand: payload.brand, permissions: payload.permissions || [] };
     next();
-  } catch {
+  } catch (err) {
     next(new ApiError(401, 'Invalid or expired access token'));
   }
 }

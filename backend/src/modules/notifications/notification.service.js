@@ -84,10 +84,13 @@ const EVENT_TEMPLATES = {
  * Delivers push + SMS + WhatsApp for a personally-addressed notification.
  * Uses Promise.allSettled so any single channel failure never affects others.
  * Never throws — logs errors silently.
+ *
+ * Push is driven by the notification's own title/message, so it runs for any
+ * template. SMS and WhatsApp each require their body on the template — that's
+ * how a template opts out of those two channels (ad-hoc admin pushes pass {}).
  */
 async function deliverExternal(notification, template, recipientId) {
   if (!recipientId) return; // broadcast notifications have no resolvable recipient
-  if (!template.smsBody && !template.whatsappBody) return; // template opted out
 
   try {
     const [user, prefs] = await Promise.all([
@@ -96,10 +99,29 @@ async function deliverExternal(notification, template, recipientId) {
     ]);
     if (!user) return;
 
-    // Default: all channels enabled if no preference doc exists yet
-    const pushEnabled = prefs?.push !== false && process.env.NOTIFICATION_PUSH_ENABLED !== 'false';
-    const smsEnabled = prefs?.sms !== false && process.env.NOTIFICATION_SMS_ENABLED !== 'false';
-    const whatsappEnabled = prefs?.whatsapp !== false && process.env.NOTIFICATION_WHATSAPP_ENABLED !== 'false';
+    // Check category preferences
+    const notifType = notification.type || '';
+    const isPromotional = notifType === 'promo' || notifType === 'promotional' || notifType === 'offer' || Boolean(template?.isPromotional);
+    const isBookingUpdate = notifType === 'created' || notifType === 'assigned' || notifType === 'status' || notifType === 'completed' || notifType === 'payment';
+    const isSecurityAlert = notifType === 'security' || notifType === 'login';
+
+    let pushEnabled = prefs?.push !== false && prefs?.pushNotifications !== false && process.env.NOTIFICATION_PUSH_ENABLED !== 'false';
+    if (isPromotional && (prefs?.pushNotifications === false || (prefs?.whatsAppPromo === false && prefs?.emailPromo === false))) {
+      pushEnabled = false;
+    }
+    if (isBookingUpdate && prefs?.bookingUpdates === false) {
+      pushEnabled = false;
+    }
+    if (isSecurityAlert && prefs?.securityAlerts === false) {
+      pushEnabled = false;
+    }
+
+    let whatsappEnabled = prefs?.whatsapp !== false && process.env.NOTIFICATION_WHATSAPP_ENABLED !== 'false';
+    if (isPromotional && prefs?.whatsAppPromo === false) {
+      whatsappEnabled = false;
+    }
+
+    let smsEnabled = prefs?.sms !== false && process.env.NOTIFICATION_SMS_ENABLED !== 'false';
 
     const tasks = [];
 
@@ -112,7 +134,6 @@ async function deliverExternal(notification, template, recipientId) {
           body: notification.message,
           data: { notificationId: String(notification._id) },
           onStaleTokens: (stale) => {
-            // Fire-and-forget prune — non-critical if this fails
             User.updateOne(
               { _id: recipientId },
               { $pull: { fcmTokens: { $in: stale } } },
@@ -191,6 +212,73 @@ export async function emit(event, payload) {
   }
 }
 
+// ── Admin ad-hoc dispatch ─────────────────────────────────────────────────────
+// The super-admin console composes one-off messages (technician approval, a
+// campaign blast) that map to no domain event, so they carry their own copy
+// instead of going through EVENT_TEMPLATES. Delivery reuses the same plumbing
+// as emit() — DB write, Socket.IO, then FCM via deliverExternal.
+
+/**
+ * Send an ad-hoc push to one user or to a whole role.
+ * Unlike emit(), this throws — an admin pressing "send" gets a real error back
+ * rather than a silent no-op.
+ */
+export async function sendAdHocPush({ recipientId, broadcastRole, title, body, type = 'tech', priority = 'Medium', cta }) {
+  if (!recipientId && !broadcastRole) {
+    throw new ApiError(400, 'Either recipientId or broadcastRole is required');
+  }
+  if (recipientId && broadcastRole) {
+    throw new ApiError(400, 'Provide recipientId or broadcastRole, not both');
+  }
+
+  if (recipientId) {
+    const exists = await User.exists({ _id: recipientId });
+    if (!exists) throw new ApiError(404, 'Recipient not found');
+  }
+
+  const notification = await Notification.create({
+    recipient: recipientId || null,
+    broadcastRole: broadcastRole || null,
+    type,
+    title,
+    message: body,
+    priority,
+    cta,
+  });
+
+  const io = getIO();
+  if (io) {
+    const json = notification.toJSON();
+    if (recipientId) io.to(`user:${recipientId}`).emit('notification:new', json);
+    if (broadcastRole) io.to(`broadcast:${broadcastRole}`).emit('notification:new', json);
+  }
+
+  // Empty template => push only; SMS/WhatsApp are dispatched by their own endpoint.
+  await deliverExternal(notification, {}, recipientId ? String(recipientId) : null);
+
+  return notification;
+}
+
+/**
+ * Send an ad-hoc transactional SMS. Resolves the destination from an explicit
+ * phone number, or from a user id when the console only has the former.
+ */
+export async function sendAdHocSms({ recipientId, phone, message, templateId }) {
+  let to = phone;
+
+  if (!to) {
+    if (!recipientId) throw new ApiError(400, 'Either phone or recipientId is required');
+    const user = await User.findById(recipientId).select('phone').lean();
+    if (!user) throw new ApiError(404, 'Recipient not found');
+    to = user.phone;
+  }
+  if (!to) throw new ApiError(400, 'Recipient has no phone number on record');
+
+  await sendSms({ to, body: message, templateId });
+
+  return { sent: true, to };
+}
+
 export async function listNotifications(userId, { read, page, limit, sort } = {}) {
   const query = { $or: [{ recipient: userId }, { broadcastRole: 'All' }] };
   if (read !== undefined) query.read = read;
@@ -209,6 +297,22 @@ export async function listNotifications(userId, { read, page, limit, sort } = {}
  * would flip it to read for every recipient at once, so this only ever
  * touches personally-addressed notifications; broadcast read-state is a known
  * gap, not silently mishandled. */
+/**
+ * One notification the user is entitled to see — their own, or a broadcast
+ * aimed at their role. Separate from markRead because broadcasts have no
+ * per-user read state and must still be openable.
+ */
+export async function getNotification(user, id) {
+  const notification = await Notification.findById(id);
+  if (!notification) throw new ApiError(404, 'Notification not found');
+
+  const isOwn = notification.recipient && String(notification.recipient) === user.id;
+  const isBroadcast = Boolean(notification.broadcastRole);
+  if (!isOwn && !isBroadcast) throw new ApiError(403, 'Not authorized to view this notification');
+
+  return notification;
+}
+
 export async function markRead(userId, id) {
   const notification = await Notification.findById(id);
   if (!notification) throw new ApiError(404, 'Notification not found');
@@ -222,4 +326,37 @@ export async function markRead(userId, id) {
 
 export async function markAllRead(userId) {
   await Notification.updateMany({ recipient: userId, read: false }, { read: true });
+}
+
+/**
+ * The super-admin console's broadcast history — every role-wide notification
+ * ever composed, newest first. Distinct from listNotifications, which is a
+ * single user's inbox.
+ */
+export async function listBroadcasts({ page, limit } = {}) {
+  const { skip, limit: lim, page: pg, sort } = parsePagination({ page, limit, sort: '-createdAt' });
+  const [items, total] = await Promise.all([
+    Notification.find({ broadcastRole: { $ne: null } }).sort(sort).skip(skip).limit(lim),
+    Notification.countDocuments({ broadcastRole: { $ne: null } }),
+  ]);
+  return { items, meta: paginationMeta({ page: pg, limit: lim, total }) };
+}
+
+/**
+ * Reach stats for the console's notification composer. Only what is actually
+ * recorded: how many accounts hold a live FCM token, and how many broadcasts
+ * have been sent. Delivery/open rates would need per-message receipts from FCM,
+ * which nothing here stores.
+ */
+export async function getPushStats() {
+  const [activeDevices, deviceHolders, broadcasts] = await Promise.all([
+    User.aggregate([
+      { $match: { fcmTokens: { $exists: true, $ne: [] } } },
+      { $group: { _id: null, total: { $sum: { $size: '$fcmTokens' } } } },
+    ]),
+    User.countDocuments({ fcmTokens: { $exists: true, $ne: [] } }),
+    Notification.countDocuments({ broadcastRole: { $ne: null } }),
+  ]);
+
+  return { activeDevices: activeDevices[0]?.total || 0, deviceHolders, broadcasts };
 }

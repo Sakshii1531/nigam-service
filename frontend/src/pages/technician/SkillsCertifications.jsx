@@ -1,21 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Award, CheckCircle, Clock, Briefcase, ClipboardList, Calendar, Wrench, User } from 'lucide-react';
-
-const skills = [
-  { name: 'HVAC Installation & Repair', level: 'Expert', years: '5 yrs' },
-  { name: 'Air Conditioning Service', level: 'Expert', years: '5 yrs' },
-  { name: 'Refrigeration Systems', level: 'Advanced', years: '4 yrs' },
-  { name: 'Electrical Wiring & Diagnosis', level: 'Advanced', years: '3 yrs' },
-  { name: 'Washing Machine Repair', level: 'Intermediate', years: '2 yrs' },
-];
-
-const certifications = [
-  { name: 'HVAC Excellence Certificate', issuer: 'NCC Skill Academy', date: 'Mar 2022', status: 'Active' },
-  { name: 'Refrigeration Specialist', issuer: 'ASHRAE India', date: 'Aug 2021', status: 'Active' },
-  { name: 'Electrical Safety Level 2', issuer: 'BEE India', date: 'Jan 2020', status: 'Active' },
-  { name: 'AC Inverter Technology', issuer: 'LG Partner Program', date: 'Nov 2023', status: 'Active' },
-];
+import { apiRequest } from '../../lib/apiClient';
 
 const levelColor = {
   Expert: 'bg-[#E3ECF9] text-[#0D47A1]',
@@ -25,6 +11,30 @@ const levelColor = {
 
 const SkillsCertifications = () => {
   const navigate = useNavigate();
+  // Skills and certifications are part of the technician's own profile record.
+  const [skills, setSkills] = useState([]);
+  const [certifications, setCertifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    apiRequest('/tech/profile/profile', { auth: true })
+      .then((res) => {
+        setSkills((res.data?.skills || []).map((sk) => ({
+          name: sk.name,
+          level: sk.level,
+          years: sk.years ? `${sk.years} yr${sk.years === 1 ? '' : 's'}` : null,
+        })));
+        setCertifications((res.data?.certifications || []).map((c) => ({
+          name: c.name,
+          issuer: c.issuer,
+          date: c.date ? new Date(c.date).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : '—',
+          status: c.status,
+        })));
+      })
+      .catch((err) => setError(err.message || 'Could not load your profile.'))
+      .finally(() => setLoading(false));
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-24 max-w-md mx-auto border-x border-slate-100 shadow-sm relative font-sans">
@@ -37,6 +47,12 @@ const SkillsCertifications = () => {
         <h1 className="text-base font-medium text-[#052355] flex-1 text-center pr-8">Skills & Certifications</h1>
       </div>
 
+      {error && (
+        <div className="mx-4 mt-4 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2 text-[11px] font-semibold text-rose-600">
+          {error}
+        </div>
+      )}
+
       {/* Content */}
       <div className="flex-1 p-3.5 flex flex-col gap-4">
 
@@ -47,13 +63,16 @@ const SkillsCertifications = () => {
             My Skills
           </h3>
           <div className="flex flex-col gap-3">
+            {!loading && skills.length === 0 && (
+              <p className="text-[11px] text-slate-400 font-normal">No skills recorded yet.</p>
+            )}
             {skills.map((skill, i) => (
               <div key={i} className="flex items-center justify-between border-b border-slate-100 pb-3 last:border-b-0 last:pb-0">
                 <div>
                   <p className="text-xs font-medium text-[#052355]">{skill.name}</p>
-                  <p className="text-[10px] text-slate-500 font-normal mt-0.5">{skill.years} experience</p>
+                  {skill.years && <p className="text-[10px] text-slate-500 font-normal mt-0.5">{skill.years} experience</p>}
                 </div>
-                <span className={`text-[9px] font-medium px-2 py-0.5 rounded-full ${levelColor[skill.level]}`}>
+                <span className={`text-[9px] font-medium px-2 py-0.5 rounded-full ${levelColor[skill.level] || 'bg-slate-100 text-slate-600'}`}>
                   {skill.level}
                 </span>
               </div>
@@ -68,6 +87,9 @@ const SkillsCertifications = () => {
             Certifications
           </h3>
           <div className="flex flex-col gap-3">
+            {!loading && certifications.length === 0 && (
+              <p className="text-[11px] text-slate-400 font-normal">No certifications recorded yet.</p>
+            )}
             {certifications.map((cert, i) => (
               <div key={i} className="flex items-start justify-between border-b border-slate-100 pb-3 last:border-b-0 last:pb-0">
                 <div className="flex-1 min-w-0 pr-2">
@@ -77,8 +99,11 @@ const SkillsCertifications = () => {
                     <Clock className="h-3 w-3" /> Issued {cert.date}
                   </p>
                 </div>
-                <span className="text-[9px] font-medium px-2 py-0.5 rounded-full bg-green-50 text-green-700 shrink-0 flex items-center gap-1 whitespace-nowrap">
-                  <CheckCircle className="h-3 w-3" /> {cert.status}
+                <span className={`text-[9px] font-medium px-2 py-0.5 rounded-full shrink-0 flex items-center gap-1 whitespace-nowrap ${
+                  cert.status === 'Verified' ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'
+                }`}>
+                  {cert.status === 'Verified' ? <CheckCircle className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
+                  {cert.status}
                 </span>
               </div>
             ))}

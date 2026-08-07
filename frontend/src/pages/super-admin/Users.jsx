@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
+import { apiRequest, getStoredTokens } from '../../lib/apiClient';
 import { 
   Users as UsersIcon, 
   Search, 
@@ -23,7 +24,13 @@ import {
   Mail,
   Phone,
   ArrowLeft,
-  Info
+  Info,
+  Download,
+  Gift,
+  ShoppingBag,
+  Shield,
+  FileText,
+  RefreshCw
 } from 'lucide-react';
 
 const Users = () => {
@@ -36,6 +43,8 @@ const Users = () => {
   // Modals / Drawer state
   const [selectedUser, setSelectedUser] = useState(null);
   const [showDrawer, setShowDrawer] = useState(false);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+  const [activeTab, setActiveTab] = useState('overview');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletingUserId, setDeletingUserId] = useState(null);
   const [showExtraFilters, setShowExtraFilters] = useState(false);
@@ -45,16 +54,70 @@ const Users = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const entriesPerPage = 4;
 
-  const [users, setUsers] = useState([
-    { id: 'USR-1001', name: 'Amit Sharma', email: 'amit@example.com', phone: '+91 98765 43210', appliances: 3, services: 5, status: 'Active', lastActive: '2 hours ago', addresses: ['H-44, Sector 6, Noida', 'B-102, Mansarovar Garden, Delhi'], applianceList: [{ type: 'TV', brand: 'LG', model: 'OLED55' }, { type: 'Refrigerator', brand: 'Samsung', model: 'Double Door 320L' }], source: 'B2B' },
-    { id: 'USR-1002', name: 'Priya Patel', email: 'priya@example.com', phone: '+91 98765 43211', appliances: 1, services: 2, status: 'Active', lastActive: '1 day ago', addresses: ['504, Windsor Heights, Mumbai'], applianceList: [{ type: 'Washing Machine', brand: 'Whirlpool', model: 'Fully Auto 7kg' }], source: 'B2C' },
-    { id: 'USR-1003', name: 'Rajesh Kumar', email: 'rajesh@example.com', phone: '+91 98765 43212', appliances: 2, services: 0, status: 'Suspended', lastActive: '3 days ago', addresses: ['Flat 12B, Green Glen Layout, Bangalore'], applianceList: [{ type: 'AC', brand: 'LG', model: '1.5 Ton Split' }], source: 'AMC' },
-    { id: 'USR-1004', name: 'Neha Gupta', email: 'neha@example.com', phone: '+91 98765 43213', appliances: 4, services: 12, status: 'Active', lastActive: '10 mins ago', addresses: ['Pocket 1, Sector 9, Rohini, Delhi'], applianceList: [{ type: 'Microwave', brand: 'LG', model: 'Convection 28L' }, { type: 'Chimney', brand: 'Havells', model: 'Auto Clean 90cm' }], source: 'Extended Warranty' },
-    { id: 'USR-1005', name: 'Vikram Singh', email: 'vikram@example.com', phone: '+91 98765 43214', appliances: 0, services: 0, status: 'Pending', lastActive: 'New', addresses: ['C-12, Gomti Nagar, Lucknow'], applianceList: [], source: 'B2C' },
-    { id: 'USR-1006', name: 'Sanjay Verma', email: 'sanjay@example.com', phone: '+91 98765 43215', appliances: 2, services: 3, status: 'Active', lastActive: '5 hours ago', addresses: ['A-5, Sector 15, Dwarka, Delhi'], applianceList: [], source: 'B2B' },
-    { id: 'USR-1007', name: 'Anjali Desai', email: 'anjali@example.com', phone: '+91 98765 43216', appliances: 1, services: 1, status: 'Active', lastActive: '12 hours ago', addresses: ['703, Pearl Towers, Pune'], applianceList: [], source: 'AMC' },
-    { id: 'USR-1008', name: 'Rohit Mehta', email: 'rohit@example.com', phone: '+91 98765 43217', appliances: 5, services: 8, status: 'Active', lastActive: 'Yesterday', addresses: ['Flat 401, Sapphire Residency, Hyderabad'], applianceList: [], source: 'Extended Warranty' }
-  ]);
+  const [users, setUsers] = useState([]);
+  const [loadError, setLoadError] = useState('');
+
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api/v1';
+
+  const handleViewProfile = async (user) => {
+    setSelectedUser(user);
+    setShowDrawer(true);
+    setActiveTab('overview');
+    setLoadingDetails(true);
+    try {
+      const fullUser = await apiRequest(`/super-admin/users/${user._id || user.id}`, { auth: true });
+      if (fullUser) {
+        const formatted = {
+          _id: fullUser._id,
+          id: fullUser.humanId || user.id,
+          name: fullUser.name,
+          email: fullUser.email,
+          phone: fullUser.phone,
+          status: fullUser.status,
+          referralCode: fullUser.referralCode || '—',
+          addresses: fullUser.addresses ? fullUser.addresses.map(a => `${a.house || ''}, ${a.landmark || ''}, ${a.city || ''} ${a.pincode || ''}`) : [],
+          applianceList: fullUser.ownedAppliances || [],
+          source: fullUser.source || user.source || 'B2C',
+          referrals: fullUser.referrals || [],
+          amcSubscriptions: fullUser.amcSubscriptions || [],
+          warrantyOrders: fullUser.warrantyOrders || [],
+          serviceRequests: fullUser.serviceRequests || [],
+          orders: fullUser.orders || [],
+          exchangeRequests: fullUser.exchangeRequests || []
+        };
+        setSelectedUser(formatted);
+      }
+    } catch (err) {
+      console.warn("Could not load complete customer profile, using list item:", err);
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
+
+  useEffect(() => {
+    async function fetchUsers() {
+      try {
+        const res = await apiRequest('/super-admin/users?role=customer&limit=200', { auth: true });
+        setUsers((res.data || []).map((item) => ({
+          _id: item.id,
+          id: item.humanId || item.id,
+          name: item.name || 'User',
+          email: item.email || '—',
+          phone: item.phone || '—',
+          appliances: item.appliancesCount ?? 0,
+          services: item.servicesCount ?? 0,
+          status: item.status || 'Active',
+          lastActive: item.updatedAt ? new Date(item.updatedAt).toLocaleDateString('en-IN') : '—',
+          addresses: (item.addresses || []).map(a => [a.house, a.landmark, a.city].filter(Boolean).join(', ')),
+          applianceList: item.ownedAppliances || [],
+          source: item.source || 'B2C',
+        })));
+      } catch (err) {
+        setLoadError(err.message || 'Could not load the user list.');
+      }
+    }
+    fetchUsers();
+  }, []);
 
   const showToast = (message) => {
     setSuccessMessage(message);
@@ -63,18 +126,28 @@ const Users = () => {
     }, 3000);
   };
 
-  const handleStatusChange = (id, newStatus) => {
-    setUsers(users.map(u => {
-      if (u.id === id) {
-        const updated = { ...u, status: newStatus };
-        if (selectedUser && selectedUser.id === id) {
-          setSelectedUser(updated);
-        }
-        return updated;
-      }
-      return u;
-    }));
-    showToast(`User status updated to ${newStatus}`);
+  // Persists the change. This was local-only, so suspending an account showed a
+  // success toast while the user stayed signed in and fully active.
+  const handleStatusChange = async (id, newStatus) => {
+    const target = users.find(u => u.id === id);
+    if (!target) return;
+    const previous = users;
+
+    setUsers(users.map(u => (u.id === id ? { ...u, status: newStatus } : u)));
+    if (selectedUser?.id === id) setSelectedUser({ ...selectedUser, status: newStatus });
+
+    try {
+      await apiRequest(`/super-admin/users/${target._id}/status`, {
+        method: 'PATCH',
+        auth: true,
+        body: { status: newStatus },
+      });
+      showToast(`User status updated to ${newStatus}`);
+    } catch (err) {
+      setUsers(previous);
+      if (selectedUser?.id === id) setSelectedUser(previous.find(u => u.id === id) || null);
+      setLoadError(err.message || 'Could not update the user status.');
+    }
   };
 
   const handleDeleteClick = (id) => {
@@ -82,16 +155,27 @@ const Users = () => {
     setShowDeleteConfirm(true);
   };
 
-  const handleDeleteConfirm = () => {
+  // Closing an account suspends it and revokes its sessions server-side. It is
+  // not a hard delete: orders, service requests and invoices reference the user,
+  // and the console used to claim a "permanent delete" that removed nothing.
+  const handleDeleteConfirm = async () => {
     const user = users.find(u => u.id === deletingUserId);
-    setUsers(users.filter(u => u.id !== deletingUserId));
-    setShowDeleteConfirm(false);
-    setDeletingUserId(null);
-    if (selectedUser && selectedUser.id === deletingUserId) {
-      setSelectedUser(null);
-      setShowDrawer(false);
+    if (!user) return;
+
+    try {
+      await apiRequest(`/super-admin/users/${user._id}`, { method: 'DELETE', auth: true });
+      setUsers(users.map(u => (u.id === deletingUserId ? { ...u, status: 'Suspended' } : u)));
+      if (selectedUser?.id === deletingUserId) {
+        setSelectedUser(null);
+        setShowDrawer(false);
+      }
+      showToast(`Account for "${user.name}" was closed and signed out.`);
+    } catch (err) {
+      setLoadError(err.message || 'Could not close the account.');
+    } finally {
+      setShowDeleteConfirm(false);
+      setDeletingUserId(null);
     }
-    showToast(`User "${user ? user.name : ''}" account permanently deleted.`);
   };
 
   // Filter and Sort logic
@@ -151,65 +235,417 @@ const Users = () => {
               </button>
             </div>
 
-            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden flex flex-col">
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden flex flex-col min-h-[500px]">
+              {/* Header */}
               <div className="p-6 border-b border-[#E2E8F0] bg-[#F8FAFC] flex justify-between items-center">
                 <div>
-                  <span className="text-xs font-bold text-[#0D47A1]">{selectedUser.id}</span>
-                  <h3 className="text-lg font-black text-[#1E293B]">Customer Profile</h3>
+                  <h3 className="text-lg font-black text-[#1E293B]">Customer Details</h3>
                 </div>
               </div>
 
-              <div className="p-6 space-y-6 flex-1 overflow-y-auto">
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-14 h-14 bg-[#EEF4FF] text-[#0D47A1] rounded-full flex items-center justify-center font-bold text-xl">
-                      {selectedUser.name.split(' ').map(n => n[0]).join('')}
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-[#1E293B] text-base">{selectedUser.name}</h4>
-                      <span className={`px-2 py-0.5 rounded text-xs font-bold ${
-                        selectedUser.status === 'Active' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'
-                      }`}>{selectedUser.status}</span>
-                    </div>
-                  </div>
+              {/* Tab Navigation */}
+              <div className="flex bg-[#F8FAFC] border-b border-[#E2E8F0] px-6 overflow-x-auto">
+                {[
+                  { id: 'overview', label: 'Overview & Addresses' },
+                  { id: 'appliances', label: 'Appliances & Plans' },
+                  { id: 'services', label: 'Service History' },
+                  { id: 'orders', label: 'Orders & Exchanges' },
+                  { id: 'referrals', label: 'Referral Network' }
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`py-3 px-4 font-bold text-xs border-b-2 transition-all whitespace-nowrap ${
+                      activeTab === tab.id
+                        ? 'border-[#0D47A1] text-[#0D47A1]'
+                        : 'border-transparent text-slate-500 hover:text-slate-800'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
 
-                  <div className="space-y-2 text-xs border border-[#E2E8F0] rounded-xl p-3.5 bg-slate-50 font-medium">
-                    <p className="flex items-center gap-2 text-slate-700"><Mail size={14} className="text-[#64748B]" /> {selectedUser.email}</p>
-                    <p className="flex items-center gap-2 text-slate-700 mt-1.5"><Phone size={14} className="text-[#64748B]" /> {selectedUser.phone}</p>
-                    <p className="flex items-center gap-2 text-slate-700 mt-1.5"><Info size={14} className="text-[#64748B]" /> Source: {selectedUser.source || 'B2C'}</p>
-                    <div className="flex gap-2 items-start text-slate-700 mt-1.5">
-                      <MapPin size={14} className="text-[#64748B] flex-shrink-0 mt-0.5" /> 
-                      <div className="space-y-1">
-                        {selectedUser.addresses.map((addr, idx) => (
-                          <p key={idx} className="bg-white px-2 py-0.5 border border-[#E2E8F0] rounded text-slate-600">{addr}</p>
-                        ))}
+              {/* Tab Content */}
+              <div className="p-6 flex-1 overflow-y-auto max-h-[600px]">
+                {loadingDetails ? (
+                  <div className="animate-pulse space-y-6">
+                    {/* Skeleton Overview */}
+                    <div className="flex items-center gap-3">
+                      <div className="w-14 h-14 bg-slate-200 rounded-full"></div>
+                      <div className="space-y-2 flex-1">
+                        <div className="h-4 bg-slate-200 rounded w-1/3"></div>
+                        <div className="h-3 bg-slate-200 rounded w-1/5"></div>
+                      </div>
+                    </div>
+                    {/* Skeleton Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-3 border border-slate-100 rounded-xl p-4 bg-slate-50">
+                        <div className="h-3 bg-slate-200 rounded w-3/4"></div>
+                        <div className="h-3 bg-slate-200 rounded w-1/2"></div>
+                        <div className="h-3 bg-slate-200 rounded w-2/3"></div>
+                      </div>
+                      <div className="space-y-3">
+                        <div className="h-3.5 bg-slate-200 rounded w-1/3"></div>
+                        <div className="h-10 bg-slate-200 rounded-xl w-full"></div>
+                        <div className="h-10 bg-slate-200 rounded-xl w-full"></div>
                       </div>
                     </div>
                   </div>
+                ) : (
+                  <>
+                    {/* Tab 1: Overview & Addresses */}
+                    {activeTab === 'overview' && (
+                      <div className="space-y-5">
+                        <div className="flex items-center gap-3">
+                          <div className="w-14 h-14 bg-[#EEF4FF] text-[#0D47A1] rounded-full flex items-center justify-center font-bold text-xl">
+                            {selectedUser.name.split(' ').map(n => n[0]).join('')}
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-[#1E293B] text-base">{selectedUser.name}</h4>
+                            <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                              selectedUser.status === 'Active' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'
+                            }`}>{selectedUser.status}</span>
+                          </div>
+                        </div>
 
-                  <div className="space-y-3">
-                    <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider">Registered Appliances ({selectedUser.appliances})</h4>
-                    <div className="space-y-2">
-                      {selectedUser.applianceList.map((app, idx) => (
-                        <div key={idx} className="p-3 border border-[#E2E8F0] rounded-xl flex items-center justify-between">
-                          <div className="flex items-center gap-2.5">
-                            <div className="p-2 bg-slate-100 rounded-lg text-[#0D47A1]">
-                              {app.type === 'TV' ? <Tv size={16} /> : <Refrigerator size={16} />}
-                            </div>
-                            <div>
-                              <p className="text-xs font-bold text-[#1E293B]">{app.brand} {app.type}</p>
-                              <p className="text-[10px] text-slate-500 font-semibold">{app.model}</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2.5 text-xs border border-[#E2E8F0] rounded-xl p-4 bg-slate-50 font-medium">
+                            <p className="flex items-center gap-2 text-slate-700"><Mail size={14} className="text-[#64748B]" /> {selectedUser.email}</p>
+                            <p className="flex items-center gap-2 text-slate-700 mt-1.5"><Phone size={14} className="text-[#64748B]" /> {selectedUser.phone}</p>
+                            <p className="flex items-center gap-2 text-slate-700 mt-1.5"><Info size={14} className="text-[#64748B]" /> Source: {selectedUser.source || 'B2C'}</p>
+                          </div>
+
+                          <div className="space-y-3">
+                            <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider flex items-center gap-1.5">
+                              <MapPin size={14} className="text-[#0D47A1]" /> Saved Addresses ({selectedUser.addresses?.length || 0})
+                            </h4>
+                            <div className="space-y-2">
+                              {selectedUser.addresses?.map((addr, idx) => (
+                                <p key={idx} className="bg-white text-xs p-3 border border-[#E2E8F0] rounded-xl text-slate-600 font-semibold shadow-xs">
+                                  {addr}
+                                </p>
+                              ))}
+                              {(!selectedUser.addresses || selectedUser.addresses.length === 0) && (
+                                <p className="text-xs text-slate-500 italic">No addresses saved yet.</p>
+                              )}
                             </div>
                           </div>
-                          <span className="text-[10px] text-[#0D47A1] font-bold bg-[#EEF4FF] px-2 py-0.5 rounded-full">Covered</span>
                         </div>
-                      ))}
-                      {selectedUser.applianceList.length === 0 && (
-                        <p className="text-xs text-[#64748B] italic">No appliances registered yet.</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                      </div>
+                    )}
+
+                    {/* Tab 2: Appliances & Plans */}
+                    {activeTab === 'appliances' && (
+                      <div className="space-y-6">
+                        {/* Appliances */}
+                        <div className="space-y-3">
+                          <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider">Registered Appliances ({selectedUser.applianceList?.length || 0})</h4>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {selectedUser.applianceList?.map((app, idx) => (
+                              <div key={idx} className="p-3 border border-[#E2E8F0] rounded-xl flex items-center justify-between bg-white shadow-xs">
+                                <div className="flex items-center gap-2.5">
+                                  <div className="p-2 bg-slate-100 rounded-lg text-[#0D47A1]">
+                                    {app.type === 'TV' ? <Tv size={16} /> : <Refrigerator size={16} />}
+                                  </div>
+                                  <div>
+                                    <p className="text-xs font-bold text-[#1E293B]">{app.brand} {app.type}</p>
+                                    <p className="text-[10px] text-slate-500 font-semibold">{app.model || '—'}</p>
+                                  </div>
+                                </div>
+                                <span className="text-[10px] text-[#0D47A1] font-bold bg-[#EEF4FF] px-2 py-0.5 rounded-full">Active</span>
+                              </div>
+                            ))}
+                            {(!selectedUser.applianceList || selectedUser.applianceList.length === 0) && (
+                              <p className="text-xs text-slate-500 italic">No registered appliances.</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Purchased Plans (AMC & Extended Warranty) */}
+                        <div className="space-y-4">
+                          <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider">Purchased Subscriptions & Policies</h4>
+                          
+                          {/* AMC Plans */}
+                          <div className="space-y-2">
+                            <span className="text-[10px] font-black text-[#0D47A1] uppercase tracking-widest bg-blue-50 px-2 py-1 rounded-md">AMC Plans ({selectedUser.amcSubscriptions?.length || 0})</span>
+                            <div className="grid grid-cols-1 gap-2 mt-1">
+                              {selectedUser.amcSubscriptions?.map((sub, idx) => (
+                                <div key={idx} className="p-3.5 border border-[#E2E8F0] rounded-xl bg-white flex flex-wrap justify-between items-center gap-3">
+                                  <div>
+                                    <p className="text-xs font-bold text-[#1E293B]">{sub.planName || sub.plan?.name || 'Annual Maintenance Plan'}</p>
+                                    <p className="text-[10px] text-[#64748B] font-semibold mt-0.5">Contract: {sub.contractNo} | Appliance: {sub.brand || '—'} {sub.category || ''}</p>
+                                    <p className="text-[9px] text-[#94A3B8] font-bold mt-0.5">Valid: {new Date(sub.startDate).toLocaleDateString()} - {new Date(sub.expiryDate).toLocaleDateString()}</p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="text-xs font-bold text-[#0D47A1]">₹{sub.amountPaid || 1499}</p>
+                                    <span className="text-[9px] font-bold bg-green-50 text-green-600 px-1.5 py-0.5 rounded mt-1 inline-block uppercase tracking-wider">{sub.status}</span>
+                                  </div>
+                                </div>
+                              ))}
+                              {(!selectedUser.amcSubscriptions || selectedUser.amcSubscriptions.length === 0) && (
+                                <p className="text-xs text-slate-500 italic pl-1">No active AMC subscriptions.</p>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Extended Warranties */}
+                          <div className="space-y-2">
+                            <span className="text-[10px] font-black text-indigo-700 uppercase tracking-widest bg-indigo-50 px-2 py-1 rounded-md">Extended Warranties ({selectedUser.warrantyOrders?.length || 0})</span>
+                            <div className="grid grid-cols-1 gap-2 mt-1">
+                              {selectedUser.warrantyOrders?.map((policy, idx) => (
+                                <div key={idx} className="p-3.5 border border-slate-100 rounded-xl bg-white flex flex-wrap justify-between items-center gap-3">
+                                  <div>
+                                    <p className="text-xs font-bold text-[#1E293B]">{policy.brand} {policy.applianceCategory || 'Appliance'} Warranty</p>
+                                    <p className="text-[10px] text-[#64748B] font-semibold mt-0.5">Policy: {policy.policyId} | Model: {policy.modelNumber || '—'}</p>
+                                    <p className="text-[9px] text-[#94A3B8] font-bold mt-0.5">Valid Till: {new Date(policy.validTill).toLocaleDateString()}</p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="text-xs font-bold text-indigo-700">₹{policy.price}</p>
+                                    <span className="text-[9px] font-bold bg-green-50 text-green-600 px-1.5 py-0.5 rounded mt-1 inline-block uppercase tracking-wider">{policy.status}</span>
+                                  </div>
+                                </div>
+                              ))}
+                              {(!selectedUser.warrantyOrders || selectedUser.warrantyOrders.length === 0) && (
+                                <p className="text-xs text-slate-500 italic pl-1">No active extended warranty policies.</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Tab 3: Service Requests */}
+                    {activeTab === 'services' && (
+                      <div className="space-y-4">
+                        <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider">Service Booking History ({selectedUser.serviceRequests?.length || 0})</h4>
+                        <div className="space-y-3">
+                          {selectedUser.serviceRequests?.map((req) => {
+                            const { accessToken } = getStoredTokens();
+                            const receiptUrl = `${API_BASE_URL}/super-admin/users/${selectedUser._id}/service-receipt/${req._id}?token=${accessToken}`;
+                            
+                            return (
+                              <div key={req._id} className="p-4 border border-[#E2E8F0] rounded-xl bg-white shadow-xs space-y-3">
+                                <div className="flex justify-between items-start flex-wrap gap-2">
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs font-bold text-[#0D47A1]">{req.humanId}</span>
+                                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                        req.status === 'Completed' ? 'bg-green-50 text-green-600' : 'bg-blue-50 text-blue-600'
+                                      }`}>{req.status}</span>
+                                    </div>
+                                    <p className="text-[10px] text-slate-400 font-bold mt-1">Booked: {new Date(req.createdAt).toLocaleString()}</p>
+                                  </div>
+                                  <a
+                                    href={receiptUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="flex items-center gap-1.5 bg-[#EEF4FF] text-[#0D47A1] font-bold px-3 py-1.5 rounded-lg text-xs hover:bg-[#D5E4F7] transition-all"
+                                  >
+                                    <Download size={13} />
+                                    Download Receipt
+                                  </a>
+                                </div>
+
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs border-t border-slate-100 pt-2 font-semibold">
+                                  <div>
+                                    <span className="text-[10px] text-slate-400 block font-normal">APPLIANCE</span>
+                                    {req.appliance?.brand || req.brand} {req.appliance?.type || req.category}
+                                  </div>
+                                  <div>
+                                    <span className="text-[10px] text-slate-400 block font-normal">COMPLAINT TYPE</span>
+                                    {req.complaintType}
+                                  </div>
+                                  <div>
+                                    <span className="text-[10px] text-slate-400 block font-normal">TECHNICIAN</span>
+                                    {req.technician?.name || 'Not Assigned'}
+                                  </div>
+                                </div>
+
+                                {req.description && (
+                                  <p className="text-xs text-slate-600 italic bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                                    "{req.description}"
+                                  </p>
+                                )}
+                              </div>
+                            );
+                          })}
+                          {(!selectedUser.serviceRequests || selectedUser.serviceRequests.length === 0) && (
+                            <p className="text-xs text-slate-500 italic text-center py-6">No service requests found for this customer.</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Tab 4: Orders & Exchanges */}
+                    {activeTab === 'orders' && (
+                      <div className="space-y-6">
+                        {/* E-Commerce Product Orders */}
+                        <div className="space-y-3">
+                          <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider">Product Purchase Orders ({selectedUser.orders?.length || 0})</h4>
+                          <div className="space-y-3">
+                            {selectedUser.orders?.map((ord) => {
+                              const { accessToken } = getStoredTokens();
+                              const orderReceiptUrl = `${API_BASE_URL}/super-admin/users/${selectedUser._id}/product-receipt/${ord._id}?token=${accessToken}`;
+                              
+                              return (
+                                <div key={ord._id} className="p-4 border border-[#E2E8F0] rounded-xl bg-white shadow-xs space-y-3">
+                                  <div className="flex justify-between items-start flex-wrap gap-2">
+                                    <div>
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-xs font-bold text-[#0D47A1]">{ord.humanId || ord._id}</span>
+                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-50 text-green-600">{ord.status}</span>
+                                      </div>
+                                      <p className="text-[10px] text-slate-400 font-bold mt-1">Ordered: {new Date(ord.createdAt).toLocaleDateString()}</p>
+                                    </div>
+                                    <a
+                                      href={orderReceiptUrl}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="flex items-center gap-1.5 bg-[#EEF4FF] text-[#0D47A1] font-bold px-3 py-1.5 rounded-lg text-xs hover:bg-[#D5E4F7] transition-all"
+                                    >
+                                      <Download size={13} />
+                                      Download Invoice
+                                    </a>
+                                  </div>
+
+                                  {/* Items list */}
+                                  <div className="border-t border-slate-100 pt-2 text-xs font-semibold">
+                                    <span className="text-[10px] text-slate-400 block font-normal mb-1.5">ITEMS</span>
+                                    <div className="space-y-1.5">
+                                      {ord.items?.map((item, i) => (
+                                        <div key={i} className="flex justify-between text-slate-700">
+                                          <span>{item.name} <span className="text-slate-400 font-normal">x{item.quantity}</span></span>
+                                          <span>₹{(item.price * item.quantity).toFixed(2)}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                    <div className="flex justify-between border-t border-slate-50 mt-2.5 pt-2 text-slate-800 font-black">
+                                      <span>Grand Total:</span>
+                                      <span>₹{ord.total.toFixed(2)}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                            {(!selectedUser.orders || selectedUser.orders.length === 0) && (
+                              <p className="text-xs text-slate-500 italic pl-1">No orders placed yet.</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Exchange Valuation Requests */}
+                        <div className="space-y-3">
+                          <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider">Device Exchange Valuations ({selectedUser.exchangeRequests?.length || 0})</h4>
+                          <div className="space-y-3">
+                            {selectedUser.exchangeRequests?.map((exch) => {
+                              const { accessToken } = getStoredTokens();
+                              const exchangeReceiptUrl = `${API_BASE_URL}/super-admin/users/${selectedUser._id}/exchange-receipt/${exch._id}?token=${accessToken}`;
+                              
+                              return (
+                                <div key={exch._id} className="p-4 border border-[#E2E8F0] rounded-xl bg-white shadow-xs space-y-3">
+                                  <div className="flex justify-between items-start flex-wrap gap-2">
+                                    <div>
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-xs font-bold text-[#0D47A1]">{exch.humanId || exch._id}</span>
+                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-600">{exch.status}</span>
+                                      </div>
+                                      <p className="text-[10px] text-slate-400 font-bold mt-1">Submitted: {new Date(exch.createdAt).toLocaleDateString()}</p>
+                                    </div>
+                                    <a
+                                      href={exchangeReceiptUrl}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="flex items-center gap-1.5 bg-[#EEF4FF] text-[#0D47A1] font-bold px-3 py-1.5 rounded-lg text-xs hover:bg-[#D5E4F7] transition-all"
+                                    >
+                                      <Download size={13} />
+                                      Valuation Report
+                                    </a>
+                                  </div>
+
+                                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs border-t border-slate-100 pt-2 font-semibold">
+                                    <div>
+                                      <span className="text-[10px] text-slate-400 block font-normal">APPLIANCE</span>
+                                      {exch.brand} {exch.category}
+                                    </div>
+                                    <div>
+                                      <span className="text-[10px] text-slate-400 block font-normal">MODEL</span>
+                                      {exch.model || '—'}
+                                    </div>
+                                    <div>
+                                      <span className="text-[10px] text-slate-400 block font-normal">CONDITION</span>
+                                      {exch.condition}
+                                    </div>
+                                    <div className="text-right">
+                                      <span className="text-[10px] text-slate-400 block font-normal">EST. VALUE</span>
+                                      <span className="text-[#22C55E]">₹{exch.estimatedValue}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                            {(!selectedUser.exchangeRequests || selectedUser.exchangeRequests.length === 0) && (
+                              <p className="text-xs text-slate-500 italic pl-1">No exchange requests submitted.</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Tab 5: Referral Network */}
+                    {activeTab === 'referrals' && (
+                      <div className="space-y-5">
+                        {/* Referral Code Display */}
+                        <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl flex items-center justify-between">
+                          <div>
+                            <span className="text-[10px] font-extrabold text-[#0D47A1] uppercase tracking-wider">Referral Code</span>
+                            <p className="text-lg font-black text-slate-800 tracking-wider mt-0.5">{selectedUser.referralCode || '—'}</p>
+                          </div>
+                          <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-[#0D47A1] shadow-xs">
+                            <Gift size={22} />
+                          </div>
+                        </div>
+
+                        {/* Referred Signups */}
+                        <div className="space-y-3">
+                          <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider">Referred Signups Network ({selectedUser.referrals?.length || 0})</h4>
+                          <div className="space-y-2">
+                            {selectedUser.referrals?.map((ref) => {
+                              const refUserObj = ref.referredUser || {};
+                              return (
+                                <div key={ref._id} className="p-3 border border-[#E2E8F0] rounded-xl flex items-center justify-between bg-white shadow-xs">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-9 h-9 bg-slate-100 rounded-full flex items-center justify-center text-slate-600 font-bold text-sm">
+                                      {refUserObj.name ? refUserObj.name.split(' ').map(n => n[0]).join('') : 'U'}
+                                    </div>
+                                    <div className="text-left">
+                                      {/* Deep Link to Referred User Profile */}
+                                      <button
+                                        type="button"
+                                        onClick={() => handleViewProfile(refUserObj)}
+                                        className="text-[#0D47A1] text-xs font-bold hover:underline block text-left"
+                                      >
+                                        {refUserObj.name || 'Anonymous User'}
+                                      </button>
+                                      <span className="text-[10px] text-slate-400 font-bold block">{refUserObj.phone || '—'}</span>
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="text-[10px] text-slate-500 font-bold">Reward Bonus</p>
+                                    <span className="text-xs font-bold text-green-600">₹{ref.bonusAmount || 100}</span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                            {(!selectedUser.referrals || selectedUser.referrals.length === 0) && (
+                              <p className="text-xs text-slate-500 italic pl-1">No signups registered with this referral code yet.</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
 
               <div className="p-4 border-t border-[#E2E8F0] bg-[#F8FAFC] flex gap-3">
@@ -404,10 +840,7 @@ const Users = () => {
                       <td className="px-6 py-4">
                         <div className="flex gap-2">
                           <button 
-                            onClick={() => {
-                              setSelectedUser(user);
-                              setShowDrawer(true);
-                            }}
+                            onClick={() => handleViewProfile(user)}
                             className="p-1.5 text-[#64748B] hover:text-[#0D47A1] hover:bg-[#EEF4FF] rounded transition-colors" 
                             title="View Profile"
                           >
@@ -502,8 +935,8 @@ const Users = () => {
               <Trash2 size={24} />
             </div>
             <div className="space-y-1">
-              <h3 className="font-bold text-[#1E293B] text-lg">Delete Customer Account?</h3>
-              <p className="text-sm text-[#64748B]">This action is permanent and will wipe out all service ticket histories, registered warranty configurations, and addresses associated with this user.</p>
+              <h3 className="font-bold text-[#1E293B] text-lg">Close Customer Account?</h3>
+              <p className="text-sm text-[#64748B]">The account is suspended and signed out immediately. Service history, warranty registrations and invoices are kept — they are referenced by past orders and cannot be removed.</p>
             </div>
 
             <div className="flex gap-3 justify-center text-sm pt-2">

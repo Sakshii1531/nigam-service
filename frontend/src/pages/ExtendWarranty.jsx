@@ -1,14 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Award, CreditCard, Lock, CheckCircle, ChevronRight, Check, Shield, Upload, Search, FileText
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { apiRequest } from '../lib/apiClient';
+import { payWithRazorpay } from '../lib/razorpayCheckout';
 
 const ExtendWarranty = () => {
   const navigate = useNavigate();
 
-  // Wizard steps: 'select_appliance', 'plans', 'payment', 'payment_upi', 'payment_card', 'success'
+  // Wizard steps: 'select_appliance', 'plans', 'payment', 'success'
+  // (payment method selection is Razorpay Checkout's own screen)
   const [step, setStep] = useState('select_appliance'); 
 
   // Wizard mode for Step 1
@@ -31,64 +34,50 @@ const ExtendWarranty = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isVerifying, setIsVerifying] = useState(false);
 
-  // Categories & Brands
-  const categories = [
-    { id: 'ac', name: 'Air Conditioner', icon: '❄️' },
-    { id: 'wm', name: 'Washing Machine', icon: '🧺' },
-    { id: 'ref', name: 'Refrigerator', icon: '🧊' },
-    { id: 'tv', name: 'Television', icon: '📺' }
-  ];
+  // Catalogue and the customer's own records — all server-owned. These were
+  // hardcoded arrays, so the screen offered categories and brands the platform
+  // did not actually service.
+  const [categories, setCategories] = useState([]);
+  const [brands, setBrands] = useState([]);
+  const [existingWarranties, setExistingWarranties] = useState([]);
+  const [extendWarrantyPlans, setExtendWarrantyPlans] = useState([]);
+  const [loadError, setLoadError] = useState('');
 
-  const brands = ['Voltas', 'LG', 'Samsung', 'Daikin', 'Lloyd', 'Panasonic', 'Sony', 'Hitachi', 'Blue Star'];
 
-  // Payment states
-  const [upiId, setUpiId] = useState('');
-  const [cardNumber, setCardNumber] = useState('');
-  const [cardExpiry, setCardExpiry] = useState('');
-  const [cardCvv, setCardCvv] = useState('');
-  const [cardName, setCardName] = useState('');
+  // Presentation shape for an OwnedAppliance from GET /appliances.
+  const toApplianceCard = (a) => ({
+    id: a.id,
+    humanId: a.humanId || a.id,
+    productName: [a.brand, a.model || a.modelNumber].filter(Boolean).join(' ') || a.category,
+    category: a.category,
+    brand: a.brand,
+    purchaseDate: a.purchaseDate ? new Date(a.purchaseDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Not recorded',
+    expiryDate: a.warrantyExpiresOn ? new Date(a.warrantyExpiresOn).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Not recorded',
+    rawExpiry: a.warrantyExpiresOn || null,
+    status: a.warrantyStatus,
+  });
 
-  // User's active appliances
-  const existingWarranties = [
-    {
-      id: 'WAR-VOL-19028',
-      productName: 'Voltas Split AC 1.5 Ton',
-      category: 'Air Conditioner',
-      brand: 'Voltas',
-      purchaseDate: '15 Aug 2024',
-      expiryDate: '15 Aug 2027',
-      status: 'Active',
-      color: 'from-blue-50 to-indigo-50 border-blue-200'
-    },
-    {
-      id: 'WAR-LG-83021',
-      productName: 'LG Front Load Washing Machine',
-      category: 'Washing Machine',
-      brand: 'LG',
-      purchaseDate: '10 Nov 2023',
-      expiryDate: '10 Nov 2026',
-      status: 'Active',
-      color: 'from-purple-50 to-pink-50 border-purple-200'
-    }
-  ];
-
-  // Renewal plans
-  const extendWarrantyPlans = [
-    {
-      id: 'ext_1',
-      name: '1-Year Extension Pack',
-      price: 799,
-      description: 'Extends coverage by 1 full year from your current expiry date.',
-      features: ['Full repair cover', 'Genuine brand parts', 'Zero inspection fee']
-    },
-    {
-      id: 'ext_2',
-      name: '2-Year Gold Extension Pack',
-      price: 1399,
-      description: 'Extends coverage by 2 full years from your current expiry date.',
-      features: ['2 Years peace of mind', 'Priority technician booking', 'Comprehensive repair cover', 'Gas charging included']
-    }
-  ];
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [catRes, brandRes, appRes, planRes] = await Promise.all([
+          apiRequest('/catalog/categories'),
+          apiRequest('/catalog/brands').catch(() => ({ data: [] })),
+          apiRequest('/appliances', { auth: true }),
+          apiRequest('/warranty-amc/extended-warranty/plans', { auth: true }),
+        ]);
+        if (cancelled) return;
+        setCategories((catRes.data || []).map((c) => ({ id: c.key || c.id, name: c.name, icon: c.icon || '🔧' })));
+        setBrands((brandRes.data || []).map((b) => b.name || b));
+        setExistingWarranties((appRes.data || []).map(toApplianceCard));
+        setExtendWarrantyPlans(planRes.data || []);
+      } catch (err) {
+        if (!cancelled) setLoadError(err.message || 'Could not load your appliances and plans.');
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const getExtendedExpiryDate = (currentExpiryStr, yearsToAdd) => {
     try {
@@ -102,86 +91,128 @@ const ExtendWarranty = () => {
     }
   };
 
-  const triggerMockUpload = () => {
+  // Uploads the dealer invoice for real and keeps the returned URL — the
+  // previous version animated a progress bar and stored nothing, so a
+  // "verified" registration had no invoice behind it.
+  const [invoiceUrl, setInvoiceUrl] = useState('');
+
+  const handleInvoiceUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setInvoiceFile(file);
     setIsUploading(true);
     setUploadProgress(0);
-    setInvoiceFile({ name: 'manufacturer_invoice.pdf' });
-    const interval = setInterval(() => {
-      setUploadProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setIsUploading(false);
-          return 100;
-        }
-        return prev + 20;
-      });
-    }, 150);
-  };
-
-  const handleInvoiceUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setInvoiceFile(file);
-      setIsUploading(true);
-      setUploadProgress(0);
-      
-      const interval = setInterval(() => {
-        setUploadProgress(prev => {
-          if (prev >= 100) {
-            clearInterval(interval);
-            setIsUploading(false);
-            return 100;
-          }
-          return prev + 25;
-        });
-      }, 200);
-    } else {
-      triggerMockUpload();
+    setLoadError('');
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const res = await apiRequest('/uploads', { method: 'POST', auth: true, body: form });
+      setInvoiceUrl(res.data.url);
+      setUploadProgress(100);
+    } catch (err) {
+      setInvoiceFile(null);
+      setLoadError(err.message || 'Invoice upload failed. Please try again.');
+    } finally {
+      setIsUploading(false);
     }
   };
 
-  const handleVerifyBrandWarranty = () => {
+  // Looks the unit up in the customer's own registry and, if it isn't there
+  // yet, registers it with the purchase date THEY entered. It used to invent a
+  // purchase date six months back and a matching expiry, so every date the
+  // customer saw on this screen was fiction.
+  const handleVerifyBrandWarranty = async () => {
     if (!modelNo || !serialNo) {
-      alert('Please enter both Model Number and Serial Number.');
+      setLoadError('Please enter both Model Number and Serial Number.');
+      return;
+    }
+    if (!purchaseDate) {
+      setLoadError('Please enter the purchase date from your invoice — warranty cover is calculated from it.');
       return;
     }
 
     setIsVerifying(true);
-    setTimeout(() => {
-      setIsVerifying(false);
-      
-      // Mock purchase date to be 6 months ago dynamically
-      const pDate = new Date();
-      pDate.setMonth(pDate.getMonth() - 6);
-      
-      // Auto-generate registered appliance data
-      const mockRegisteredAppliance = {
-        id: `WAR-${selectedBrand?.toUpperCase().slice(0, 3)}-${Math.floor(10000 + Math.random() * 90000)}`,
-        productName: `${selectedBrand} ${selectedCategory === 'ac' ? 'Split AC' : selectedCategory === 'wm' ? 'Front Load Washing Machine' : selectedCategory === 'ref' ? 'Double Door Refrigerator' : 'Smart LED TV'}`,
-        category: categories.find(c => c.id === selectedCategory)?.name || 'Appliance',
-        brand: selectedBrand,
-        purchaseDate: pDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-        expiryDate: new Date(new Date(pDate).setFullYear(pDate.getFullYear() + 1)).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-        status: 'Active',
-        color: 'from-amber-50 to-orange-50 border-amber-200'
-      };
+    setLoadError('');
+    try {
+      const lookup = await apiRequest(
+        `/appliances/lookup?modelNumber=${encodeURIComponent(modelNo)}&serialNumber=${encodeURIComponent(serialNo)}`,
+        { auth: true },
+      );
 
-      setSelectedAppliance(mockRegisteredAppliance);
+      const appliance = lookup.data.found
+        ? lookup.data.appliance
+        : (await apiRequest('/appliances', {
+            method: 'POST',
+            auth: true,
+            body: {
+              category: categories.find((c) => c.id === selectedCategory)?.name || selectedCategory,
+              brand: selectedBrand,
+              modelNumber: modelNo,
+              serialNumber: serialNo,
+              purchaseDate,
+              invoiceFileUrl: invoiceUrl || undefined,
+            },
+          })).data;
+
+      setSelectedAppliance(toApplianceCard(appliance));
+      setExistingWarranties((prev) => {
+        const card = toApplianceCard(appliance);
+        return prev.some((a) => a.id === card.id) ? prev.map((a) => (a.id === card.id ? card : a)) : [card, ...prev];
+      });
       setStep('plans');
-    }, 2500);
+    } catch (err) {
+      setLoadError(err.message || 'Could not verify this appliance.');
+    } finally {
+      setIsVerifying(false);
+    }
   };
 
-  const handlePayment = () => {
+  // A failed policy purchase must not land on the success screen — the customer
+  // would believe they were covered when no policy exists.
+  const handlePayment = async () => {
     setPaymentProcessing(true);
-    setTimeout(() => {
-      setPaymentProcessing(false);
+    setLoadError('');
+    try {
+      const res = await apiRequest('/warranty-amc/extended-warranty/orders', {
+        method: 'POST',
+        auth: true,
+        body: {
+          plan: selectedPlan?.id,
+          appliance: selectedAppliance?.id,
+          category: selectedAppliance?.category || categories.find((c) => c.id === selectedCategory)?.name,
+          brand: selectedAppliance?.brand || selectedBrand,
+          modelName: modelNo || selectedAppliance?.productName,
+          purchaseDate: purchaseDate || undefined,
+          invoiceFileUrl: invoiceUrl || undefined,
+        },
+      });
+
+      // The policy is only shown as bought once the gateway has taken the money.
+      if (res.data.razorpay) {
+        await payWithRazorpay({
+          razorpay: res.data.razorpay,
+          verifyPath: `/warranty-amc/extended-warranty/orders/${res.data.order.id}/verify-payment`,
+          description: selectedPlan?.name,
+        });
+      }
       setStep('success');
-    }, 2000);
+    } catch (err) {
+      setLoadError(err.message || 'We could not activate this policy. You have not been charged — please try again.');
+      setStep('plans');
+    } finally {
+      setPaymentProcessing(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-bg-light flex flex-col pb-20">
       
+      {loadError && (
+        <div className="mx-6 mt-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-xs font-semibold text-red-700">
+          {loadError}
+        </div>
+      )}
+
       {/* HEADER */}
       <div className="bg-[#E3ECF9] p-6 rounded-b-[30px] shadow-sm flex items-center gap-4">
         <button 
@@ -197,7 +228,6 @@ const ExtendWarranty = () => {
             }
             else if (step === 'plans') setStep('select_appliance');
             else if (step === 'payment') setStep('plans');
-            else if (step === 'payment_upi' || step === 'payment_card') setStep('payment');
             else if (step === 'success') navigate('/dashboard/in-warranty');
           }}
           className="p-2 bg-white rounded-full shadow-sm hover:bg-slate-50 transition-colors"
@@ -432,13 +462,43 @@ const ExtendWarranty = () => {
                         />
                       </div>
 
+                      {/* Warranty cover is measured from this date, so the customer
+                          supplies it from their invoice — it is not inferred. */}
+                      <div>
+                        <label className="text-xs font-semibold text-text-primary mb-1.5 block">Purchase Date (from your invoice)</label>
+                        <input
+                          type="date"
+                          value={purchaseDate}
+                          max={new Date().toISOString().slice(0, 10)}
+                          onChange={(e) => setPurchaseDate(e.target.value)}
+                          className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-semibold text-text-primary mb-1.5 block">Dealer Invoice (optional)</label>
+                        <label className="flex items-center gap-3 p-3 bg-slate-50 border border-dashed border-slate-300 rounded-xl cursor-pointer hover:border-brand-blue">
+                          <Upload className="h-4 w-4 text-slate-500 flex-shrink-0" />
+                          <span className="text-xs text-text-secondary truncate">
+                            {isUploading ? `Uploading… ${uploadProgress}%` : invoiceFile ? invoiceFile.name : 'Attach the purchase invoice'}
+                          </span>
+                          <input type="file" accept="image/*,application/pdf" onChange={handleInvoiceUpload} className="hidden" />
+                        </label>
+                        {invoiceUrl && (
+                          <a href={invoiceUrl} target="_blank" rel="noreferrer" className="text-[10px] font-bold text-brand-blue mt-1.5 inline-flex items-center gap-1">
+                            <FileText className="h-3 w-3" /> View uploaded invoice
+                          </a>
+                        )}
+                      </div>
+
                     </div>
 
                     <button
                       onClick={handleVerifyBrandWarranty}
-                      className="w-full bg-[#0D47A1] hover:bg-blue-900 text-white font-bold py-3.5 rounded-xl transition-all shadow-md text-sm cursor-pointer mt-2"
+                      disabled={isVerifying || isUploading}
+                      className="w-full bg-[#0D47A1] hover:bg-blue-900 disabled:opacity-60 text-white font-bold py-3.5 rounded-xl transition-all shadow-md text-sm cursor-pointer mt-2"
                     >
-                      Verify Active Brand Warranty
+                      {isVerifying ? 'Verifying…' : 'Verify Active Brand Warranty'}
                     </button>
                   </div>
                 )}
@@ -476,7 +536,7 @@ const ExtendWarranty = () => {
                       : 'border-slate-200 hover:border-slate-400'
                   }`}
                 >
-                  {plan.id === 'ext_2' && (
+                  {plan.durationYears >= 2 && (
                     <span className="absolute top-4 right-4 text-[10px] bg-brand-yellow text-black font-bold px-2 py-0.5 rounded-full">
                       Recommended
                     </span>
@@ -493,7 +553,7 @@ const ExtendWarranty = () => {
                   </div>
 
                   <div className="border-t border-slate-100 pt-3 flex flex-col gap-2">
-                    {plan.features.map((feat, i) => (
+                    {(plan.features || []).map((feat, i) => (
                       <div key={i} className="flex gap-2 items-center">
                         <Check className="h-3.5 w-3.5 text-green-600 flex-shrink-0" />
                         <span className="text-xs text-text-secondary">{feat}</span>
@@ -534,18 +594,13 @@ const ExtendWarranty = () => {
                 <span className="font-bold text-amber-600">₹{selectedPlan?.price}</span>
               </div>
               
+              {/* The amount charged is the catalogue price the server bills.
+                  This used to add an 18% GST line the server never applied, so
+                  the customer was quoted more than they were charged. */}
               <div className="border-t border-slate-100 pt-3 flex flex-col gap-2 text-xs">
-                <div className="flex justify-between text-text-secondary">
-                  <span>Base Renewal Price</span>
-                  <span>₹{selectedPlan?.price}.00</span>
-                </div>
-                <div className="flex justify-between text-text-secondary">
-                  <span>GST (18%)</span>
-                  <span>₹{Math.round(selectedPlan?.price * 0.18)}.00</span>
-                </div>
-                <div className="flex justify-between font-bold text-sm text-text-primary border-t border-slate-100 pt-2.5">
-                  <span>Grand Total</span>
-                  <span className="text-amber-600">₹{Math.round(selectedPlan?.price * 1.18)}.00</span>
+                <div className="flex justify-between font-bold text-sm text-text-primary pt-1">
+                  <span>Amount payable</span>
+                  <span className="text-amber-600">₹{Number(selectedPlan?.price || 0).toLocaleString('en-IN')}</span>
                 </div>
               </div>
             </div>
@@ -558,178 +613,16 @@ const ExtendWarranty = () => {
               </div>
             </div>
 
-            <div className="flex flex-col gap-2">
-              <span className="text-xs font-bold text-text-secondary">Select Payment Mode</span>
-              <div className="bg-white rounded-xl border border-border-color overflow-hidden flex flex-col">
-                <div 
-                  onClick={() => setStep('payment_upi')}
-                  className="p-3.5 border-b border-border-color hover:bg-slate-50 cursor-pointer flex justify-between items-center"
-                >
-                  <div className="flex items-center gap-3">
-                    <CreditCard className="h-5 w-5 text-brand-blue" />
-                    <span className="text-xs font-bold text-text-primary">UPI / GooglePay / PhonePe</span>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-text-secondary" />
-                </div>
-                <div 
-                  onClick={() => setStep('payment_card')}
-                  className="p-3.5 border-b border-border-color hover:bg-slate-50 cursor-pointer flex justify-between items-center"
-                >
-                  <div className="flex items-center gap-3">
-                    <CreditCard className="h-5 w-5 text-brand-blue" />
-                    <span className="text-xs font-bold text-text-primary">Credit / Debit Card</span>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-text-secondary" />
-                </div>
-              </div>
-            </div>
-
-            <AnimatePresence>
-              {paymentProcessing && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center flex-col gap-4">
-                  <div className="w-16 h-16 border-4 border-white/20 border-t-brand-yellow rounded-full animate-spin"></div>
-                  <span className="text-white text-sm font-bold tracking-wide animate-pulse">Processing secure renewal...</span>
-                </div>
-              )}
-            </AnimatePresence>
-          </div>
-        )}
-
-        {/* STEP 3A: UPI PAYMENT SCREEN */}
-        {step === 'payment_upi' && (
-          <div className="flex flex-col gap-4">
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-border-color flex flex-col items-center gap-5">
-              {/* Mock QR Code */}
-              <div className="bg-slate-50 p-4 rounded-xl border border-dashed border-slate-200 flex flex-col items-center justify-center gap-2">
-                <div className="w-40 h-40 bg-slate-200 rounded-lg flex items-center justify-center relative overflow-hidden">
-                  <svg className="w-32 h-32 text-slate-800" viewBox="0 0 100 100" fill="currentColor">
-                    <rect x="0" y="0" width="30" height="30" />
-                    <rect x="5" y="5" width="20" height="20" fill="white" />
-                    <rect x="10" y="10" width="10" height="10" />
-                    
-                    <rect x="70" y="0" width="30" height="30" />
-                    <rect x="75" y="5" width="20" height="20" fill="white" />
-                    <rect x="80" y="10" width="10" height="10" />
-                    
-                    <rect x="0" y="70" width="30" height="30" />
-                    <rect x="5" y="75" width="20" height="20" fill="white" />
-                    <rect x="10" y="80" width="10" height="10" />
-
-                    <rect x="40" y="40" width="20" height="20" />
-                    <rect x="70" y="70" width="15" height="15" />
-                    <rect x="85" y="85" width="15" height="15" />
-                    <rect x="50" y="70" width="10" height="10" />
-                    <rect x="70" y="50" width="10" height="10" />
-                  </svg>
-                  <div className="absolute inset-0 bg-[#FFD600]/10 animate-pulse"></div>
-                </div>
-                <span className="text-[10px] text-text-secondary font-semibold">Scan QR Code using any UPI App</span>
-              </div>
-
-              <div className="w-full text-center">
-                <span className="text-xs text-text-secondary">OR</span>
-              </div>
-
-              <div className="w-full">
-                <label className="text-xs font-semibold text-text-primary mb-1.5 block">Enter UPI ID</label>
-                <input 
-                  type="text" 
-                  value={upiId}
-                  onChange={(e) => setUpiId(e.target.value)}
-                  placeholder="e.g. mobileNumber@upi"
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue"
-                />
-              </div>
-            </div>
-
+            {/* Razorpay Checkout presents UPI / cards / net-banking itself.
+                The two screens that used to sit here drew a decorative QR and a
+                card form that collected details nothing ever charged. */}
             <button
               onClick={handlePayment}
-              className="w-full bg-brand-yellow hover:bg-yellow-400 text-black font-bold py-3.5 rounded-xl transition-all shadow-md text-sm cursor-pointer"
+              disabled={paymentProcessing}
+              className="w-full bg-brand-yellow hover:bg-yellow-400 disabled:opacity-60 text-brand-navy font-black py-4 rounded-2xl transition-all shadow-md text-sm flex items-center justify-center gap-2"
             >
-              Verify & Pay ₹{Math.round(selectedPlan?.price * 1.18)}
-            </button>
-          </div>
-        )}
-
-        {/* STEP 3B: CARD DETAILS SCREEN */}
-        {step === 'payment_card' && (
-          <div className="flex flex-col gap-4">
-            <div className="bg-white p-5 rounded-2xl shadow-sm border border-border-color flex flex-col gap-4">
-              {/* Virtual Plastic Card Preview */}
-              <div className="bg-gradient-to-tr from-[#0D47A1] to-[#3B82F6] rounded-xl p-4 text-white shadow-md flex flex-col justify-between h-36">
-                <div className="flex justify-between items-start">
-                  <span className="text-[10px] font-bold italic text-white/80">Premium Shield Debit</span>
-                  <div className="w-8 h-6 bg-white/20 rounded-md"></div>
-                </div>
-                <div className="my-2">
-                  <span className="text-sm font-mono tracking-widest block">
-                    {cardNumber ? cardNumber.replace(/(\d{4})/g, '$1 ').trim() : '•••• •••• •••• ••••'}
-                  </span>
-                </div>
-                <div className="flex justify-between items-end text-[10px]">
-                  <div>
-                    <span className="text-white/60 block text-[8px] uppercase">Card Holder</span>
-                    <span className="font-semibold">{cardName ? cardName.toUpperCase() : 'YOUR NAME'}</span>
-                  </div>
-                  <div>
-                    <span className="text-white/60 block text-[8px] uppercase">Expires</span>
-                    <span className="font-semibold">{cardExpiry ? cardExpiry : 'MM/YY'}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Form Input fields */}
-              <div>
-                <label className="text-xs font-semibold text-text-primary mb-1.5 block">Card Number</label>
-                <input 
-                  type="text" 
-                  value={cardNumber}
-                  onChange={(e) => setCardNumber(e.target.value.replace(/\D/g, '').slice(0, 16))}
-                  placeholder="0000 0000 0000 0000"
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue font-mono"
-                />
-              </div>
-
-              <div className="flex gap-4">
-                <div className="flex-1">
-                  <label className="text-xs font-semibold text-text-primary mb-1.5 block">Expiry Date</label>
-                  <input 
-                    type="text" 
-                    value={cardExpiry}
-                    onChange={(e) => setCardExpiry(e.target.value.slice(0, 5))}
-                    placeholder="MM/YY"
-                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue"
-                  />
-                </div>
-                <div className="w-24">
-                  <label className="text-xs font-semibold text-text-primary mb-1.5 block">CVV</label>
-                  <input 
-                    type="password" 
-                    value={cardCvv}
-                    onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, '').slice(0, 3))}
-                    placeholder="***"
-                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue font-mono"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-text-primary mb-1.5 block">Cardholder Name</label>
-                <input 
-                  type="text" 
-                  value={cardName}
-                  onChange={(e) => setCardName(e.target.value)}
-                  placeholder="e.g. John Doe"
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue"
-                />
-              </div>
-            </div>
-
-            <button
-              onClick={handlePayment}
-              className="w-full bg-[#0D47A1] hover:bg-blue-900 text-white font-bold py-3.5 rounded-xl transition-all shadow-md text-sm cursor-pointer"
-            >
-              Pay Securely ₹{Math.round(selectedPlan?.price * 1.18)}
+              <Lock className="h-4 w-4" />
+              {paymentProcessing ? 'Opening secure checkout…' : `Pay ₹${Number(selectedPlan?.price || 0).toLocaleString('en-IN')} Securely`}
             </button>
           </div>
         )}
@@ -777,7 +670,7 @@ const ExtendWarranty = () => {
                 <div className="flex justify-between items-center">
                   <span className="text-text-secondary">Updated Coverage Expiry:</span>
                   <strong className="text-green-700 bg-green-50 px-2 py-0.5 rounded border border-green-200">
-                    {selectedPlan?.id === 'ext_1' ? getExtendedExpiryDate(selectedAppliance?.expiryDate, 1) : getExtendedExpiryDate(selectedAppliance?.expiryDate, 2)}
+                    {getExtendedExpiryDate(selectedAppliance?.rawExpiry, selectedPlan?.durationYears || 1)}
                   </strong>
                 </div>
                 <div className="flex justify-between items-center mt-1 pt-1.5 border-t border-slate-200/50">
@@ -815,7 +708,7 @@ const ExtendWarranty = () => {
               <div className="flex justify-between text-[#374151] border-t border-slate-200/50 pt-2 font-bold">
                 <span>Updated Expiry Date</span>
                 <span className="text-green-700">
-                  {selectedPlan?.id === 'ext_1' ? getExtendedExpiryDate(selectedAppliance?.expiryDate, 1) : getExtendedExpiryDate(selectedAppliance?.expiryDate, 2)}
+                  {getExtendedExpiryDate(selectedAppliance?.rawExpiry, selectedPlan?.durationYears || 1)}
                 </span>
               </div>
             </div>

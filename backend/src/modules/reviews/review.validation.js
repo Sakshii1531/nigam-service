@@ -28,3 +28,7 @@ export const listQuerySchema = z.object({
   limit: z.coerce.number().int().positive().optional(),
   sort: z.string().optional(),
 });
+
+export const brandListQuerySchema = listQuerySchema.extend({
+  status: z.enum(['Reviewed', 'Responded', 'Escalated']).optional(),
+});

@@ -44,9 +44,10 @@ beforeAll(async () => {
   await registerAllModels();
   await mongoose.connect(TEST_DB_URI);
   await ensureIndexes();
-  app = createApp();
+  app = createApp().listen(0);
 });
 afterAll(async () => {
+  await new Promise((resolve) => app.close(resolve));
   await mongoose.connection.dropDatabase();
   await mongoose.disconnect();
 });

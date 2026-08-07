@@ -8,7 +8,14 @@ export async function listReturns(brandId, { status, page, limit, sort } = {}) {
 
   const { skip, limit: lim, page: pg, sort: sortObj } = parsePagination({ page, limit, sort });
   const [items, total] = await Promise.all([
-    ReverseLogisticsReturn.find(query).sort(sortObj).skip(skip).limit(lim),
+    // The returns table names the technician who sent the part back and the
+    // ticket it came off, so resolve both refs here.
+    ReverseLogisticsReturn.find(query)
+      .populate('technician', 'name')
+      .populate('serviceRequest', 'humanId')
+      .sort(sortObj)
+      .skip(skip)
+      .limit(lim),
     ReverseLogisticsReturn.countDocuments(query),
   ]);
   return { items, meta: paginationMeta({ page: pg, limit: lim, total }) };

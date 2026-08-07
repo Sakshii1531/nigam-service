@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
 import { 
@@ -15,6 +15,31 @@ import {
   CheckCircle2,
   Users
 } from 'lucide-react';
+import { apiRequest } from '../../lib/apiClient';
+
+const dateFormatter = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+
+function shapeGuide(g) {
+  return {
+    id: g.id,
+    title: g.title,
+    type: g.type,
+    product: g.product || '—',
+    date: g.createdAt ? dateFormatter.format(new Date(g.createdAt)) : '—',
+    downloads: g.downloads ?? 0,
+  };
+}
+
+function shapeCourse(c) {
+  return {
+    id: c.id,
+    name: c.name,
+    modules: c.modules?.length ?? 0,
+    testRequired: c.testRequired ? 'Yes' : 'No',
+    minScore: c.minScore != null ? `${c.minScore}%` : 'N/A',
+    status: c.status || 'Draft',
+  };
+}
 
 const Academy = () => {
   const [activeTab, setActiveTab] = useState('guides'); // 'guides' or 'courses'
@@ -23,47 +48,104 @@ const Academy = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const [guides, setGuides] = useState([
-    { id: 'GD-101', title: 'OLED TV Display Panel Assembly Guide', type: 'PDF', product: 'Smart TV', date: '12 May, 2026', downloads: 68 },
-    { id: 'GD-102', title: 'Inverter Refrigerator Error Codes Sheet', type: 'PDF', product: 'Refrigerator', date: '10 May, 2026', downloads: 142 },
-    { id: 'GD-103', title: 'Direct Drive Motor Repair Tutorial', type: 'Video', product: 'Washing Machine', date: '08 May, 2026', downloads: 95 },
-  ]);
+  const [guides, setGuides] = useState([]);
 
-  const [courses, setCourses] = useState([
-    { id: 'CRS-201', name: 'LG OLED Smart TV Expert Repair Course', modules: 6, testRequired: 'Yes', minScore: '85%', status: 'Active' },
-    { id: 'CRS-202', name: 'Dual Inverter Compressor Servicing', modules: 4, testRequired: 'Yes', minScore: '80%', status: 'Active' },
-    { id: 'CRS-203', name: 'Micro-controller board diagnostics', modules: 8, testRequired: 'No', minScore: 'N/A', status: 'Draft' },
-  ]);
+  const [courses, setCourses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [guideFile, setGuideFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadAcademy() {
+      try {
+        // This brand's own library — platform-wide content is authored by
+        // super-admin and is not editable here.
+        const [g, c] = await Promise.all([
+          apiRequest('/brand/academy/guides', { auth: true }),
+          apiRequest('/brand/academy/courses', { auth: true }),
+        ]);
+        if (cancelled) return;
+        // apiRequest resolves the { data, error, meta } envelope — the previous
+        // Array.isArray guard was never true, so the library always rendered empty.
+        setGuides((g?.data || []).map(shapeGuide));
+        setCourses((c?.data || []).map(shapeCourse));
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    loadAcademy();
+    return () => { cancelled = true; };
+  }, []);
 
   const stats = [
-    { title: 'Training Guides', value: (guides.length + 21).toString(), icon: <BookOpen size={20} />, color: 'bg-blue-600' },
-    { title: 'Active Courses', value: courses.length.toString(), icon: <GraduationCap size={20} />, color: 'bg-indigo-600' },
-    { title: 'Certified Techs', value: '86', icon: <Users size={20} />, color: 'bg-emerald-600' },
-    { title: 'Completions', value: '312', icon: <CheckCircle2 size={20} />, color: 'bg-yellow-500' },
+    // "Certified Techs" and "Completions" are gone — no model records a
+    // technician's progress through a course, so neither figure exists.
+    { title: 'Training Guides', value: String(guides.length), icon: <BookOpen size={20} />, color: 'bg-blue-600' },
+    { title: 'Active Courses', value: String(courses.filter(c => c.status === 'Active').length), icon: <GraduationCap size={20} />, color: 'bg-indigo-600' },
+    { title: 'Draft Courses', value: String(courses.filter(c => c.status === 'Draft').length), icon: <Users size={20} />, color: 'bg-emerald-600' },
+    { title: 'Total Downloads', value: String(guides.reduce((acc, g) => acc + g.downloads, 0)), icon: <CheckCircle2 size={20} />, color: 'bg-yellow-500' },
   ];
 
-  const handleUploadSubmit = (e) => {
+  // The file is uploaded and the guide is stored, so it really does reach the
+  // technician Academy. This used to push a row into browser state and claim
+  // the manual was "made available on Technician Academy app" — no file was
+  // ever uploaded and no technician saw anything.
+  const handleUploadSubmit = async (e) => {
     e.preventDefault();
     if (!newGuide.title) return;
-    const addedGuide = {
-      id: `GD-${100 + guides.length + 1}`,
-      title: newGuide.title,
-      type: newGuide.type,
-      product: newGuide.product,
-      date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-      downloads: 0
-    };
-    setGuides([addedGuide, ...guides]);
-    setNewGuide({ title: '', type: 'PDF', product: 'Smart TV' });
-    setShowUploadModal(false);
-    setSuccessMessage('Training manual uploaded and made available on Technician Academy app!');
-    setTimeout(() => setSuccessMessage(''), 3000);
+    if (!guideFile) {
+      setError('Please choose the manual file to upload.');
+      return;
+    }
+
+    setError('');
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append('file', guideFile);
+      const upload = await apiRequest('/uploads', { method: 'POST', auth: true, body: form });
+
+      const res = await apiRequest('/brand/academy/guides', {
+        method: 'POST',
+        auth: true,
+        body: {
+          title: newGuide.title,
+          type: newGuide.type,
+          product: newGuide.product,
+          url: upload.data.url,
+        },
+      });
+
+      setGuides((prev) => [shapeGuide(res.data), ...prev]);
+      setNewGuide({ title: '', type: 'PDF', product: 'Smart TV' });
+      setGuideFile(null);
+      setShowUploadModal(false);
+      setSuccessMessage('Training manual uploaded and published to the Technician Academy.');
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (err) {
+      setError(err.message || 'Could not upload the manual.');
+    } finally {
+      setUploading(false);
+    }
   };
 
-  const deleteGuide = (id) => {
+  const deleteGuide = async (id) => {
     const guide = guides.find(g => g.id === id);
+    const previous = guides;
     setGuides(guides.filter(g => g.id !== id));
-    setSuccessMessage(`Guide "${guide ? guide.title : id}" deleted successfully.`);
+    setError('');
+    try {
+      await apiRequest(`/brand/academy/guides/${id}`, { method: 'DELETE', auth: true });
+    } catch (err) {
+      setGuides(previous);
+      setError(err.message || 'Could not delete this guide.');
+      return;
+    }
+    setSuccessMessage(`Guide "${guide ? guide.title : id}" deleted.`);
     setTimeout(() => setSuccessMessage(''), 3000);
   };
 
@@ -302,7 +384,9 @@ const Academy = () => {
                       onChange={(e) => {
                         const file = e.target.files[0];
                         if (file) {
-                          showToast(`Selected file: ${file.name}`);
+                          setGuideFile(file);
+                          setSuccessMessage(`Selected file: ${file.name}`);
+                          setTimeout(() => setSuccessMessage(''), 3000);
                         }
                       }}
                       className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
@@ -325,9 +409,10 @@ const Academy = () => {
                   </button>
                   <button 
                     type="submit"
-                    className="bg-[#0D47A1] text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-1.5"
+                    disabled={uploading}
+                    className="bg-[#0D47A1] text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-60 transition-colors shadow-sm flex items-center gap-1.5"
                   >
-                    <UploadCloud size={14} /> Upload Manual
+                    <UploadCloud size={14} /> {uploading ? 'Uploading…' : 'Upload Manual'}
                   </button>
                 </div>
               </form>

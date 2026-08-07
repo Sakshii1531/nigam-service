@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Landmark, ShieldCheck } from 'lucide-react';
 import { apiRequest } from '../lib/apiClient';
+import { payWithRazorpay } from '../lib/razorpayCheckout';
 
 const NetBankingPayment = () => {
   const navigate = useNavigate();
@@ -41,6 +42,17 @@ const NetBankingPayment = () => {
           auth: true,
         });
 
+        // Collect the advance for real before showing the success screen. A
+        // cancelled or declined payment must not look like a completed booking.
+        if (result.razorpay) {
+          await payWithRazorpay({
+            razorpay: result.razorpay,
+            verifyPath: `/bookings/${result.booking.id}/verify-payment`,
+            description: meta.service || meta.category,
+            prefill: { name: meta.fullName, contact: meta.mobile },
+          });
+        }
+
         // Navigate to success page with real serviceRequestId returned from backend
         const params = new URLSearchParams({
           type: 'service',
@@ -69,23 +81,49 @@ const NetBankingPayment = () => {
       } finally {
         setLoading(false);
       }
+    } else if (isProductBuy && paymentState.productId) {
+      // Product purchases go through the real order + gateway path. This branch
+      // used to jump straight to the success page, creating no order and taking
+      // no money.
+      setLoading(true);
+      try {
+        const orderRes = await apiRequest('/orders', {
+          method: 'POST',
+          auth: true,
+          body: {
+            items: [{ productId: paymentState.productId, quantity: paymentState.quantity || 1 }],
+            address: paymentState.address,
+            couponCode: paymentState.couponCode,
+            exchangeRequestId: paymentState.exchangeRequestId,
+            coinsToRedeem: paymentState.coinsToRedeem || 0,
+            paymentMethod: 'NetBanking',
+          },
+        });
+        const order = orderRes.data;
+        if (order.razorpay) {
+          await payWithRazorpay({
+            razorpay: order.razorpay,
+            verifyPath: `/orders/${order.id}/verify-payment`,
+            description: itemName,
+          });
+        }
+        navigate(`/booking-success?service=${encodeURIComponent(itemName)}&type=product&price=${itemPrice}&orderId=${order.id}`);
+      } catch (err) {
+        navigate('/payment-failure', {
+          state: { errorMessage: err.message || 'The purchase could not be completed.', productName: itemName, price: finalPrice },
+        });
+      } finally {
+        setLoading(false);
+      }
     } else {
-      if (isProductBuy) {
-        navigate(`/booking-success?service=${encodeURIComponent(itemName)}&type=product&price=${itemPrice}`);
-      } else {
-        navigate(`/booking-success?service=${encodeURIComponent(itemName)}`);
-      }
+      navigate('/payment-failure', {
+        state: {
+          errorMessage: 'This checkout is missing the details needed to place an order. Please start again from the product page.',
+          productName: itemName,
+          price: finalPrice,
+        },
+      });
     }
-  };
-
-  const handleFailurePay = () => {
-    navigate('/payment-failure', {
-      state: {
-        errorMessage: `The Net Banking transaction via ${selectedBank || 'your bank'} was cancelled by the user / failed during authentication.`,
-        productName: itemName,
-        price: finalPrice,
-      }
-    });
   };
 
   return (
@@ -172,16 +210,7 @@ const NetBankingPayment = () => {
                 : 'bg-[#FFD600] hover:bg-yellow-400 active:scale-[0.99]'
             }`}
           >
-            {loading ? 'Processing Payment...' : `Proceed to Bank Login (Success) ₹${finalPrice.toLocaleString('en-IN')}`}
-          </button>
-          
-          <button
-            type="button"
-            onClick={handleFailurePay}
-            disabled={loading}
-            className="w-full bg-red-50 text-red-650 hover:bg-red-100 hover:text-red-700 font-extrabold py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all border border-red-200 cursor-pointer text-xs"
-          >
-            Simulate Payment Failure
+            {loading ? 'Processing Payment...' : `Proceed to Bank Login ₹${finalPrice.toLocaleString('en-IN')}`}
           </button>
         </div>
 

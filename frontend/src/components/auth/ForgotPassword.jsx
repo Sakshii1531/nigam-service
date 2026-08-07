@@ -2,66 +2,183 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Mail, Phone, KeyRound, CheckCircle2, Cpu, ShieldCheck } from 'lucide-react';
+import { apiRequest } from '../../lib/apiClient';
 
 /**
- * Reusable "forgot password" screen. Simulated: submitting shows an inline
- * success state. If `resetTo` is provided a "Reset Password" CTA appears.
+ * Reusable "forgot password" screen, wired to POST /auth/forgot-password and
+ * POST /auth/reset-password.
+ *
+ * Both steps live here rather than handing off to a separate reset route: the
+ * reset call needs the role, identifier, code and new password together, and
+ * carrying identifier across a navigation would be lost on a page refresh.
  *
  * Props:
+ *  - role: 'customer' | 'technician' | 'brand_admin' | 'super_admin'
  *  - variant: 'mobile' | 'admin'
- *  - portalLabel, backTo, resetTo (optional)
+ *  - portalLabel, backTo
  */
-const ForgotPassword = ({ variant = 'mobile', portalLabel = '', backTo = '/login', resetTo = null }) => {
+const ForgotPassword = ({ role = 'customer', variant = 'mobile', portalLabel = '', backTo = '/login' }) => {
   const navigate = useNavigate();
   const [usePhone, setUsePhone] = useState(true);
   const [value, setValue] = useState('');
   const [sent, setSent] = useState(false);
+  const [destination, setDestination] = useState('');
+  const [code, setCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [done, setDone] = useState(false);
 
   const isAdmin = variant === 'admin';
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!value.trim()) return;
-    setSent(true);
+    setSubmitting(true);
+    setError('');
+    try {
+      // The API answers identically whether or not the account exists, so this
+      // never reveals which identifiers are registered.
+      const res = await apiRequest('/auth/forgot-password', {
+        method: 'POST',
+        body: { role, identifier: value.trim() },
+      });
+      setDestination(res?.destination || value.trim());
+      setSent(true);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const successBlock = (
+  const handleReset = async (e) => {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+    if (newPassword.length < 6) {
+      setError('Password must be at least 6 characters.');
+      return;
+    }
+    setSubmitting(true);
+    setError('');
+    try {
+      await apiRequest('/auth/reset-password', {
+        method: 'POST',
+        body: { role, identifier: value.trim(), code, newPassword },
+      });
+      setDone(true);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const resendCode = async () => {
+    setError('');
+    try {
+      await apiRequest('/auth/forgot-password', {
+        method: 'POST',
+        body: { role, identifier: value.trim() },
+      });
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const primaryBtn = isAdmin
+    ? 'w-full mt-2 bg-[#0D47A1] text-white font-semibold py-2.5 rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed'
+    : 'w-full mt-2 bg-gradient-to-r from-[#FFD600] to-[#FFCA00] text-[#0D47A1] font-bold py-3 rounded-2xl hover:shadow-lg transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed';
+
+  const fieldCls =
+    'w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] outline-none transition-all text-sm';
+
+  const errorBlock = error ? (
+    <p className="text-xs font-semibold text-red-600 text-center">{error}</p>
+  ) : null;
+
+  // Step 3 — password actually changed.
+  const doneBlock = (
     <div className="flex flex-col items-center text-center gap-3 py-2">
       <div className="w-14 h-14 bg-green-50 rounded-2xl flex items-center justify-center">
         <CheckCircle2 className="h-7 w-7 text-green-600" />
       </div>
       <h2 className={isAdmin ? 'text-xl font-semibold text-gray-800' : 'text-lg font-bold text-text-primary'}>
-        Check your {usePhone ? 'phone' : 'inbox'}
+        Password updated
       </h2>
       <p className="text-xs text-text-secondary max-w-xs">
-        We&apos;ve sent a reset code to <span className="font-semibold text-text-primary">{value}</span>. Follow the
-        instructions to set a new password.
+        You can now sign in with your new password.
       </p>
-      {resetTo ? (
-        <button
-          onClick={() => navigate(resetTo)}
-          className={
-            isAdmin
-              ? 'w-full mt-2 bg-[#0D47A1] text-white font-semibold py-2.5 rounded-xl hover:bg-blue-700 transition-colors'
-              : 'w-full mt-2 bg-gradient-to-r from-[#FFD600] to-[#FFCA00] text-[#0D47A1] font-bold py-3 rounded-2xl hover:shadow-lg transition-all active:scale-95'
-          }
-        >
-          Enter Code & Reset
-        </button>
-      ) : (
-        <button
-          onClick={() => navigate(backTo)}
-          className={
-            isAdmin
-              ? 'w-full mt-2 bg-[#0D47A1] text-white font-semibold py-2.5 rounded-xl hover:bg-blue-700 transition-colors'
-              : 'w-full mt-2 bg-gradient-to-r from-[#FFD600] to-[#FFCA00] text-[#0D47A1] font-bold py-3 rounded-2xl hover:shadow-lg transition-all active:scale-95'
-          }
-        >
-          Back to Login
-        </button>
-      )}
+      <button onClick={() => navigate(backTo)} className={primaryBtn}>
+        Back to Login
+      </button>
     </div>
   );
+
+  // Step 2 — code was sent; collect it along with the new password. The API
+  // verifies the code and sets the password in a single call.
+  const resetBlock = (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col items-center text-center gap-2 mb-1">
+        <div className="w-14 h-14 bg-green-50 rounded-2xl flex items-center justify-center">
+          <CheckCircle2 className="h-7 w-7 text-green-600" />
+        </div>
+        <h2 className={isAdmin ? 'text-xl font-semibold text-gray-800' : 'text-lg font-bold text-text-primary'}>
+          Check your {usePhone ? 'phone' : 'inbox'}
+        </h2>
+        <p className="text-xs text-text-secondary max-w-xs">
+          We&apos;ve sent a reset code to{' '}
+          <span className="font-semibold text-text-primary">{destination}</span>.
+        </p>
+      </div>
+
+      <form onSubmit={handleReset} className="flex flex-col gap-3">
+        <input
+          type="text"
+          inputMode="numeric"
+          placeholder="6-digit reset code"
+          value={code}
+          onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+          required
+          className={fieldCls}
+        />
+        <input
+          type="password"
+          placeholder="New password"
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+          required
+          className={fieldCls}
+        />
+        <input
+          type="password"
+          placeholder="Confirm new password"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          required
+          className={fieldCls}
+        />
+        {errorBlock}
+        <button type="submit" disabled={submitting} className={primaryBtn}>
+          {submitting ? 'Updating…' : 'Set New Password'}
+        </button>
+      </form>
+
+      <button
+        type="button"
+        onClick={resendCode}
+        className="text-xs font-semibold text-[#0D47A1] hover:underline"
+      >
+        Resend code
+      </button>
+    </div>
+  );
+
+  const successBlock = done ? doneBlock : resetBlock;
 
   const toggle = (
     <div className="flex bg-slate-100/80 rounded-2xl p-1 border border-slate-100">
@@ -136,11 +253,13 @@ const ForgotPassword = ({ variant = 'mobile', portalLabel = '', backTo = '/login
                 <form onSubmit={handleSubmit} className="space-y-5">
                   {toggle}
                   {inputField}
+                  {errorBlock}
                   <button
                     type="submit"
-                    className="w-full bg-[#0D47A1] text-white font-semibold py-2.5 rounded-xl hover:bg-blue-700 transition-colors shadow-sm flex items-center justify-center gap-2"
+                    disabled={submitting}
+                    className="w-full bg-[#0D47A1] text-white font-semibold py-2.5 rounded-xl hover:bg-blue-700 transition-colors shadow-sm flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    <KeyRound size={16} /> Send Reset Code
+                    <KeyRound size={16} /> {submitting ? 'Sending…' : 'Send Reset Code'}
                   </button>
                 </form>
               </>
@@ -192,11 +311,13 @@ const ForgotPassword = ({ variant = 'mobile', portalLabel = '', backTo = '/login
             <form onSubmit={handleSubmit} className="flex flex-col gap-3">
               {toggle}
               {inputField}
+              {errorBlock}
               <button
                 type="submit"
-                className="w-full bg-gradient-to-r from-[#FFD600] to-[#FFCA00] text-[#0D47A1] font-bold py-3 rounded-2xl hover:shadow-lg hover:shadow-yellow-400/20 transition-all transform hover:-translate-y-0.5 active:scale-95 mt-1"
+                disabled={submitting}
+                className="w-full bg-gradient-to-r from-[#FFD600] to-[#FFCA00] text-[#0D47A1] font-bold py-3 rounded-2xl hover:shadow-lg hover:shadow-yellow-400/20 transition-all transform hover:-translate-y-0.5 active:scale-95 mt-1 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Send Reset Code
+                {submitting ? 'Sending…' : 'Send Reset Code'}
               </button>
             </form>
           </>
