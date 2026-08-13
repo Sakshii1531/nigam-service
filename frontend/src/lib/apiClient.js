@@ -11,8 +11,10 @@ const REFRESH_TOKEN_KEY = 'ncc_refresh_token';
 export class ApiError extends Error {
   constructor(status, message, details) {
     super(message);
+    this.name = 'ApiError';
     this.status = status;
     this.details = details;
+    Object.setPrototypeOf(this, ApiError.prototype);
   }
 }
 

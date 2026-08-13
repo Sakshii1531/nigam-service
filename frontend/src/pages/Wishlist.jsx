@@ -1,30 +1,25 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { apiRequest } from '../lib/apiClient';
 import { ArrowLeft, ShoppingCart, Star, Heart } from 'lucide-react';
 
 const Wishlist = () => {
   const navigate = useNavigate();
 
-  const wishlistItems = [
-    {
-      id: 'ref-double-door',
-      name: 'Samsung 253L Double Door Refrigerator',
-      price: 24999,
-      originalPrice: 28999,
-      rating: 4.8,
-      reviews: 1420,
-      image: 'https://images.unsplash.com/photo-1571175452281-014d7e35753e?w=500&auto=format&fit=crop&q=60'
-    },
-    {
-      id: 'ac-split-invertor',
-      name: 'LG 1.5 Ton 5 Star Split Inverter AC',
-      price: 37999,
-      originalPrice: 45999,
-      rating: 4.9,
-      reviews: 840,
-      image: 'https://images.unsplash.com/photo-1621905252507-b354bc25edac?w=500&auto=format&fit=crop&q=60'
-    }
-  ];
+  // The customer's real wishlist. This page shipped three invented products
+  // (with 1,420 and 840 "reviews" and Unsplash stock photos) that no order
+  // could reference — MyWishlist.jsx already reads the real list.
+  const [wishlistItems, setWishlistItems] = useState([]);
+  const [loadError, setLoadError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    apiRequest('/wishlist', { auth: true })
+      .then((res) => { if (!cancelled) setWishlistItems(res.data || []); })
+      .catch((err) => { if (!cancelled) setLoadError(err.message || 'Could not load your wishlist.'); });
+    return () => { cancelled = true; };
+  }, []);
+
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-4">
@@ -52,7 +47,7 @@ const Wishlist = () => {
               {/* Image & Favorite Toggle badge */}
               <div className="h-40 bg-slate-50 relative overflow-hidden">
                 <img 
-                  src={item.image} 
+                  src={item.imageUrl || item.image} 
                   alt={item.name} 
                   className="w-full h-full object-cover group-hover:scale-105 transition-all duration-300"
                 />
@@ -65,13 +60,14 @@ const Wishlist = () => {
               <div className="p-4 flex flex-col gap-3">
                 <div>
                   <h3 className="font-extrabold text-xs text-text-primary leading-snug line-clamp-2">{item.name}</h3>
-                  <div className="flex items-center gap-1 mt-1.5">
-                    <div className="flex items-center gap-0.5 text-amber-500 bg-amber-50 px-1.5 py-0.5 rounded-md text-[9px] font-extrabold">
-                      <Star className="h-2.5 w-2.5 fill-amber-500 text-amber-500" />
-                      <span>{item.rating}</span>
+                  {item.rating ? (
+                    <div className="flex items-center gap-1 mt-1.5">
+                      <div className="flex items-center gap-0.5 text-amber-500 bg-amber-50 px-1.5 py-0.5 rounded-md text-[9px] font-extrabold">
+                        <Star className="h-2.5 w-2.5 fill-amber-500 text-amber-500" />
+                        <span>{item.rating}</span>
+                      </div>
                     </div>
-                    <span className="text-[9px] text-text-secondary">({item.reviews} verified reviews)</span>
-                  </div>
+                  ) : null}
                 </div>
 
                 <div className="flex justify-between items-center border-t border-slate-100 pt-3">
@@ -79,7 +75,9 @@ const Wishlist = () => {
                     <span className="text-[10px] text-text-secondary block">Price</span>
                     <div className="flex items-baseline gap-1.5 mt-0.5">
                       <span className="font-black text-sm text-[#0D47A1]">₹{item.price.toLocaleString('en-IN')}</span>
-                      <span className="text-[10px] text-text-secondary line-through">₹{item.originalPrice.toLocaleString('en-IN')}</span>
+                      {item.originalPrice > item.price && (
+                        <span className="text-[10px] text-text-secondary line-through">₹{item.originalPrice.toLocaleString('en-IN')}</span>
+                      )}
                     </div>
                   </div>
 

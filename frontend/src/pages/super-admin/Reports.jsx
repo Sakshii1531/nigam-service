@@ -81,10 +81,11 @@ const Reports = () => {
     setTimeout(() => {
       setIsExcelExporting(false);
       const rows = [
-        ...report.requestsByCity.map((r) => ['Requests by city', r.city || r._id || '—', r.count]),
-        ...report.requestsByCategory.map((r) => ['Requests by category', r.category || r._id || '—', r.count]),
-        ...report.requestsByStatus.map((r) => ['Requests by status', r.status || r._id || '—', r.count]),
-        ...report.revenueBySource.map((r) => ['Revenue by source', r.source || r._id || '—', r.total ?? r.amount ?? 0]),
+        ...report.requestsByCity.map((r) => ['Requests by city', r.label, r.count]),
+        ...report.requestsByCategory.map((r) => ['Requests by category', r.label, r.count]),
+        ...report.requestsByStatus.map((r) => ['Requests by status', r.label, r.count]),
+        ...report.revenueBySource.map((r) => ['Revenue by source (gross)', r.label, r.gross]),
+        ...report.revenueBySource.map((r) => ['Revenue by source (net)', r.label, r.net]),
       ];
       const written = exportCsv('platform-report', ['Section', 'Label', 'Value'], rows);
       showToast(written ? 'Report exported as CSV.' : 'There is no report data to export yet.');

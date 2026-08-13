@@ -84,7 +84,7 @@ const Dashboard = () => {
       try {
         const [dash, recent] = await Promise.all([
           apiRequest('/brand/dashboard', { auth: true }),
-          apiRequest('/brand/requests?limit=5&sort=-createdAt', { auth: true }),
+          apiRequest('/service-requests?limit=5&sort=-createdAt', { auth: true }),
         ]);
         if (cancelled) return;
         // apiRequest resolves the { data, error, meta } envelope — storing the

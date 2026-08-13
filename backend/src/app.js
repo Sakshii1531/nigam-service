@@ -86,7 +86,16 @@ export function createApp() {
   app.use(helmet());
   app.use(
     cors({
-      origin: env.corsOrigins,
+      origin: (origin, callback) => {
+        if (!origin) return callback(null, true);
+        if (!isProd && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+          return callback(null, true);
+        }
+        if (env.corsOrigins.includes(origin) || env.corsOrigins.includes('*')) {
+          return callback(null, true);
+        }
+        callback(new Error(`CORS origin ${origin} not allowed`));
+      },
       credentials: true,
     }),
   );

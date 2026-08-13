@@ -85,6 +85,7 @@ const Dashboard = () => {
   const [requestTrend, setRequestTrend] = useState(null);
 
   useEffect(() => {
+    setActiveRevenueIndex(null);
     const days = activeTabRevenue === '30days' ? 30 : 7;
     let cancelled = false;
     Promise.all([
@@ -121,6 +122,7 @@ const Dashboard = () => {
   );
 
   const handleRevenueMouseMove = (e) => {
+    if (!revenuePoints.length) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const relativeX = (e.clientX - rect.left) / rect.width;
     const viewBoxX = relativeX * 400;
@@ -137,7 +139,7 @@ const Dashboard = () => {
   };
 
   const handleRevenueClick = () => {
-    if (activeRevenueIndex !== null) {
+    if (activeRevenueIndex !== null && revenuePoints[activeRevenueIndex]) {
       showToast(`Revenue on ${revenuePoints[activeRevenueIndex].date}: ${revenuePoints[activeRevenueIndex].value}`);
     }
   };
@@ -340,7 +342,7 @@ const Dashboard = () => {
                   ))}
 
                   {/* Active Tooltip and Guide */}
-                  {activeRevenueIndex !== null && (() => {
+                  {activeRevenueIndex !== null && revenuePoints[activeRevenueIndex] && (() => {
                     const activePt = revenuePoints[activeRevenueIndex];
                     const tooltipY = activePt.y > 50 ? activePt.y - 45 : activePt.y + 15;
                     return (

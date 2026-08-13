@@ -20,7 +20,7 @@ const ServicePartners = () => {
         setPartners((res.data || []).map((item) => ({
           id: item.id,
           name: item.name,
-          manager: item.managerName || item.contactPerson || '—',
+          manager: item.manager || '—',
           email: item.email || '—',
           phone: item.phone || '—',
           city: item.city?.name || '—',

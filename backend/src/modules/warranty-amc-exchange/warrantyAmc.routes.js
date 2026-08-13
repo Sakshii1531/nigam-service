@@ -98,6 +98,21 @@ router.post('/extended-warranty/check-eligibility', (req, res) => {
 });
 
 /**
+ * @route   GET /api/v1/warranty-amc/amc/plans
+ * @desc    The purchasable AMC plans. The customer app shipped its own
+ *          per-appliance price list, so the plans on offer could not be changed
+ *          without a redeploy and did not have to match what was charged.
+ */
+router.get('/amc/plans', async (req, res) => {
+  try {
+    const plans = await AMCPlan.find({ isActive: true }).sort({ price: 1 });
+    return res.json({ data: plans });
+  } catch (err) {
+    return res.status(500).json({ error: { message: err.message } });
+  }
+});
+
+/**
  * @route   GET /api/v1/warranty-amc/extended-warranty/plans
  * @desc    The purchasable extension packs (super-admin managed catalogue)
  */

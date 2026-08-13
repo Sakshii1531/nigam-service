@@ -25,6 +25,7 @@ import { ExtendedWarrantyOrder } from '../src/modules/warranty-amc-exchange/exte
 import { ExtendedWarrantyPlan } from '../src/modules/warranty-amc-exchange/extendedWarrantyPlan.model.js';
 import { ExchangeBaseValue } from '../src/modules/warranty-amc-exchange/exchangeBaseValue.model.js';
 import { Membership } from '../src/modules/rewards-loyalty/membership.model.js';
+import { HomeTile } from '../src/modules/super-admin/homeTile.model.js';
 import { EXCHANGE_BASE_VALUES } from './exchangeBaseValueSeedData.js';
 import { OwnedAppliance } from '../src/modules/service-requests/ownedAppliance.model.js';
 import { Notification } from '../src/modules/notifications/notification.model.js';
@@ -229,7 +230,23 @@ async function upsertCatalog() {
       ),
     );
   }
-  console.log(`[seed] catalog ready: ${CATALOG_SEED.length} categories`);
+  // Home-screen tiles, built from the catalogue just seeded. The customer app
+  // falls back to a bundled list when none exist — and that list carried
+  // invented star ratings (4.76, 4.90) and prices, so a fresh install showed
+  // customers satisfaction scores no review had ever produced.
+  const serviceItems = await ServiceCatalogItem.find({ isActive: true }).limit(6);
+  for (const [i, item] of serviceItems.entries()) {
+    const link = `/booking?service=${encodeURIComponent(item.name)}&price=${item.price}`;
+    for (const placement of ['most-booked', 'appliance-service']) {
+      await HomeTile.findOneAndUpdate(
+        { placement, title: item.name },
+        { placement, title: item.name, price: item.price, service: item.slug, link, sortOrder: i, isActive: true },
+        { upsert: true, setDefaultsOnInsert: true },
+      );
+    }
+  }
+
+  console.log(`[seed] catalog ready: ${CATALOG_SEED.length} categories, ${serviceItems.length * 2} home tiles`);
 }
 
 async function upsertCommerce() {
@@ -276,6 +293,15 @@ async function upsertCommerce() {
 // decision) — these fixtures give Phase 6's AMC-Visit/NCC-Extended-Warranty job
 // types something real to link against without building that flow early.
 async function upsertTechFixtures(customer) {
+  // A plan per tier — the customer AMC screen sells from this catalogue, which
+  // replaced a per-appliance price list hardcoded in the app bundle.
+  for (const plan of [
+    { name: 'AMC Silver Plan', tier: 'Silver', price: 999, visitsTotal: 2, isActive: true },
+    { name: 'AMC Platinum Plan', tier: 'Platinum', price: 3999, visitsTotal: 6, isActive: true },
+  ]) {
+    await AMCPlan.findOneAndUpdate({ name: plan.name }, plan, { upsert: true, setDefaultsOnInsert: true });
+  }
+
   const amcPlan = await AMCPlan.findOneAndUpdate(
     { name: 'AMC Gold Plan' },
     { name: 'AMC Gold Plan', tier: 'Gold', price: 2499, visitsTotal: 4, isActive: true },

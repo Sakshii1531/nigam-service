@@ -77,11 +77,6 @@ const DEFAULT_CONFIG = {
   ],
 };
 
-const PROVIDERS = [
-  { name: 'Rajesh Kumar', exp: '5 yrs exp', rating: 4.4, reviews: 38, img: techImg1, price: '₹299', badge: 'Top Rated' },
-  { name: 'Amit Sharma', exp: '3 yrs exp', rating: 4.6, reviews: 52, img: techImg2, price: '₹349', badge: 'Verified' },
-  { name: 'Sunil Verma', exp: '7 yrs exp', rating: 4.8, reviews: 120, img: techImg3, price: '₹399', badge: 'Expert' },
-];
 
 // ─── Service Catalog (detailed cards shown on scroll) ────────────────────────
 const SERVICE_CATALOG = [
@@ -90,8 +85,6 @@ const SERVICE_CATALOG = [
     items: [
       {
         name: 'Electrician Consultancy',
-        rating: 4.4,
-        reviews: 38,
         price: '₹149',
         time: '1 hrs',
         bullets: [
@@ -107,8 +100,6 @@ const SERVICE_CATALOG = [
     items: [
       {
         name: 'Socket & Switchboard Repair/Installation',
-        rating: 4.5,
-        reviews: 30,
         price: '₹299',
         time: '1 hrs',
         bullets: [
@@ -119,8 +110,6 @@ const SERVICE_CATALOG = [
       },
       {
         name: 'Fan Installation & Repair',
-        rating: 4.6,
-        reviews: 32,
         price: '₹299',
         time: '1 hrs',
         bullets: [
@@ -136,8 +125,6 @@ const SERVICE_CATALOG = [
     items: [
       {
         name: 'Wiring & Short Circuit Repair',
-        rating: 4.7,
-        reviews: 45,
         price: '₹399',
         time: '1-2 hrs',
         bullets: [
@@ -148,8 +135,6 @@ const SERVICE_CATALOG = [
       },
       {
         name: 'MCB / DB Box Repair',
-        rating: 4.5,
-        reviews: 22,
         price: '₹349',
         time: '1 hrs',
         bullets: [
@@ -171,11 +156,13 @@ const CatalogCard = ({ item, navigate, serviceName, onViewDetails, quantity = 0,
         {/* Left info */}
         <div className="flex-1 min-w-0">
           <p className="text-[13px] font-extrabold text-slate-900 leading-snug">{item.name}</p>
-          <div className="flex items-center gap-1 mt-1">
-            <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-            <span className="text-[11px] font-bold text-slate-800">{item.rating}</span>
-            <span className="text-[10px] text-slate-400">({item.reviews} reviews)</span>
-          </div>
+          {item.rating ? (
+            <div className="flex items-center gap-1 mt-1">
+              <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+              <span className="text-[11px] font-bold text-slate-800">{item.rating}</span>
+              {item.reviews ? <span className="text-[10px] text-slate-400">({item.reviews} reviews)</span> : null}
+            </div>
+          ) : null}
           <div className="flex items-center gap-2 mt-1">
             <span className="text-[12px] font-extrabold text-slate-900">{item.price}</span>
             <span className="text-slate-300 text-xs">•</span>
@@ -574,11 +561,13 @@ const ServiceDetails = () => {
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <h2 className="text-[15px] font-extrabold text-slate-900 leading-snug">{detailItem.name}</h2>
-                    <div className="flex items-center gap-1 mt-1">
-                      <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                      <span className="text-[11px] font-bold text-slate-800">{detailItem.rating}</span>
-                      <span className="text-[10px] text-slate-400">({detailItem.reviews} reviews)</span>
-                    </div>
+                    {detailItem.rating ? (
+                      <div className="flex items-center gap-1 mt-1">
+                        <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                        <span className="text-[11px] font-bold text-slate-800">{detailItem.rating}</span>
+                        {detailItem.reviews ? <span className="text-[10px] text-slate-400">({detailItem.reviews} reviews)</span> : null}
+                      </div>
+                    ) : null}
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-[13px] font-extrabold text-slate-900">{detailItem.price}</span>
                       <span className="text-slate-300">•</span>
@@ -739,11 +728,13 @@ const ServiceDetails = () => {
                   onClick={() => setShowReviewsModal(true)}
                 >
                   <div className="flex items-center gap-4 mb-4">
-                    <div className="flex flex-col items-center">
-                      <Star className="h-6 w-6 fill-amber-400 text-amber-400 mb-1" />
-                      <span className="text-[22px] font-extrabold text-slate-900 leading-none">{detailItem.rating}</span>
-                      <span className="text-[10px] text-slate-400 mt-0.5">({detailItem.reviews} reviews)</span>
-                    </div>
+                    {detailItem.rating ? (
+                      <div className="flex flex-col items-center">
+                        <Star className="h-6 w-6 fill-amber-400 text-amber-400 mb-1" />
+                        <span className="text-[22px] font-extrabold text-slate-900 leading-none">{detailItem.rating}</span>
+                        {detailItem.reviews ? <span className="text-[10px] text-slate-400 mt-0.5">({detailItem.reviews} reviews)</span> : null}
+                      </div>
+                    ) : null}
                     <div className="flex-1 flex flex-col gap-1">
                       {[
                         { star: 5, count: Math.round(detailItem.reviews * 0.83) },

@@ -1,22 +1,61 @@
-import React from 'react';
-import { ArrowLeft, Star } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { apiRequest } from '../lib/apiClient';
 import mostBookedAc1 from '../assets/most_booked_ac_1.png';
 import mostBookedAc2 from '../assets/most_booked_ac_2.png';
 import mostBookedWm from '../assets/most_booked_wm.png';
 import applianceFridge from '../assets/appliance_fridge.png';
 
+// Illustration per category — artwork, not data.
+const CATEGORY_IMAGES = [mostBookedAc1, mostBookedAc2, mostBookedWm, applianceFridge];
+
 const AllApplianceServices = () => {
   const navigate = useNavigate();
 
-  const services = [
-    { id: 1, title: "Foam-jet AC service", image: mostBookedAc1, rating: 4.76, price: 649, badge: "Instant" },
-    { id: 2, title: "AC repair", image: mostBookedAc2, rating: 4.74, price: 299, badge: "Instant" },
-    { id: 3, title: "Washing Machine", image: mostBookedWm, rating: 4.85, price: 499, badge: "Instant" },
-    { id: 4, title: "Refrigerator Repair", image: applianceFridge, rating: 4.80, price: 899, badge: "Instant" },
-    { id: 5, title: "Deep Clean AC", image: mostBookedAc1, rating: 4.76, price: 1198, badge: "2 ACs" },
-    { id: 6, title: "WM Checkup", image: mostBookedWm, rating: 4.85, price: 199, badge: "Instant" }
-  ];
+  // The real catalogue. This page listed six services with hardcoded prices and
+  // star ratings (4.76, 4.74, …) that no review ever produced, and every card
+  // navigated to a generic /booking regardless of which service was tapped.
+  const [services, setServices] = useState([]);
+  const [loadError, setLoadError] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const catRes = await apiRequest('/catalog/categories');
+        const categories = catRes.data || [];
+
+        const detailed = await Promise.all(
+          categories.map((c) => apiRequest(`/catalog/categories/${encodeURIComponent(c.key)}`).catch(() => null)),
+        );
+        if (cancelled) return;
+
+        const rows = [];
+        detailed.forEach((res, i) => {
+          const category = categories[i];
+          (res?.data?.services || []).forEach((svc) => {
+            rows.push({
+              id: `${category.key}:${svc.id}`,
+              categoryKey: category.key,
+              slug: svc.id,
+              title: svc.name,
+              price: svc.price,
+              unit: svc.unit,
+              image: CATEGORY_IMAGES[i % CATEGORY_IMAGES.length],
+            });
+          });
+        });
+        setServices(rows);
+      } catch (err) {
+        if (!cancelled) setLoadError(err.message || 'Could not load services.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   return (
     <div className="min-h-screen bg-bg-light flex flex-col pb-20">
@@ -30,29 +69,31 @@ const AllApplianceServices = () => {
 
       {/* Services Grid */}
       <div className="p-6">
+        {loadError && (
+          <p className="mb-4 bg-red-50 border border-red-200 rounded-xl px-3 py-2 text-[11px] font-bold text-red-700">{loadError}</p>
+        )}
+        {!loading && !loadError && services.length === 0 && (
+          <p className="text-center text-xs font-semibold text-slate-400 py-10">No services published yet.</p>
+        )}
+
         <div className="grid grid-cols-2 gap-4">
           {services.map((service) => (
             <div 
               key={service.id}
-              onClick={() => navigate('/booking')}
+              onClick={() => navigate(`/booking?service=${encodeURIComponent(service.title)}&price=${service.price}`)}
               className="flex flex-col gap-2 cursor-pointer border border-border-color rounded-2xl p-2 bg-white hover:border-[#0D47A1] transition-all"
             >
               <div className="w-full h-32 bg-white rounded-xl flex items-center justify-center overflow-hidden relative">
                 <img src={service.image} alt={service.title} className="w-full h-full object-cover" />
-                <span className={`absolute top-2 right-2 text-xs font-bold px-2 py-0.5 rounded-full ${service.badge === "2 ACs" ? "bg-[#5C0632] text-white" : "bg-[#E8F5E9] text-[#2E7D32]"}`}>
-                  {service.badge}
-                </span>
+
               </div>
               <div className="flex flex-col gap-0.5">
                 <span className="text-sm font-semibold text-text-primary truncate">
                   {service.title}
                 </span>
-                <div className="flex items-center gap-1">
-                  <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
-                  <span className="text-xs text-text-secondary">{service.rating}</span>
-                </div>
+                <span className="text-[10px] text-text-secondary truncate">{service.categoryKey}</span>
                 <span className="text-sm font-bold text-[#0D47A1]">
-                  ₹{service.price}
+                  ₹{Number(service.price || 0).toLocaleString('en-IN')}{service.unit ? ` ${service.unit}` : ''}
                 </span>
               </div>
             </div>

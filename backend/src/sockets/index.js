@@ -7,7 +7,19 @@ import { setIO } from './io.js';
 
 export function initSockets(httpServer) {
   const io = new Server(httpServer, {
-    cors: { origin: env.corsOrigins, credentials: true },
+    cors: {
+      origin: (origin, callback) => {
+        if (!origin) return callback(null, true);
+        if (process.env.NODE_ENV !== 'production' && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+          return callback(null, true);
+        }
+        if (env.corsOrigins.includes(origin) || env.corsOrigins.includes('*')) {
+          return callback(null, true);
+        }
+        callback(new Error(`Socket CORS origin ${origin} not allowed`));
+      },
+      credentials: true,
+    },
   });
 
   io.use(socketAuth);

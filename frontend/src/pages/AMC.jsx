@@ -40,6 +40,7 @@ const AMC = () => {
   // Form states
   const [selectedBrand, setSelectedBrand] = useState('');
   const [purchaseError, setPurchaseError] = useState('');
+  const [createdSubscription, setCreatedSubscription] = useState(null);
   const [modelNumber, setModelNumber] = useState('');
   const [installationDate, setInstallationDate] = useState('');
   const [pincode, setPincode] = useState('');
@@ -55,80 +56,25 @@ const AMC = () => {
     }
   }, [location]);
 
-  // AMC Plans per appliance
-  const getAMCPlans = (appliance) => {
-    const n = appliance?.toLowerCase() || '';
-    if (n.includes('water purifier') || n.includes('purifier') || n.includes('ro')) {
-      return [
-        {
-          id: 'wp1', name: 'Essential AMC', price: 999, popular: true,
-          benefits: ['3 Pre-Filters Change', 'Water TDS Check-up', 'Free Service Charges (Worth ₹499)']
-        },
-        {
-          id: 'wp2', name: 'Comprehensive AMC', price: 4999,
-          benefits: ['Full Filter Kit Change (RO+UF+Post Carbon)', 'Water TDS Check-up', 'Free Service Charges (Worth ₹499)']
-        }
-      ];
-    }
-    if (n.includes('ac') || n.includes('conditioner') || n.includes('air conditioner')) {
-      return [
-        {
-          id: 'ac1', name: 'Essential AMC', price: 999, popular: true,
-          benefits: ['AC Filter Cleaning', 'Gas Pressure Check-up', 'Free Service Charges (Worth ₹499)']
-        },
-        {
-          id: 'ac2', name: 'Comprehensive AMC', price: 2499,
-          benefits: ['Deep Coil Cleaning', 'Full Gas Recharge', 'PCB Check-up', 'Free Service Charges']
-        }
-      ];
-    }
-    if (n.includes('refrigerator') || n.includes('fridge')) {
-      return [
-        {
-          id: 'rf1', name: 'Essential AMC', price: 799, popular: true,
-          benefits: ['Cooling Check-up', 'Gasket Inspection', 'Free Service Charges (Worth ₹399)']
-        },
-        {
-          id: 'rf2', name: 'Comprehensive AMC', price: 1999,
-          benefits: ['Gas Recharge if Needed', 'Thermostat Check', 'Deep Cleaning', 'Free Service Charges']
-        }
-      ];
-    }
-    if (n.includes('washing') || n.includes('machine')) {
-      return [
-        {
-          id: 'wm1', name: 'Essential AMC', price: 699, popular: true,
-          benefits: ['Drum Cleaning', 'Motor Inspection', 'Free Service Charges (Worth ₹399)']
-        },
-        {
-          id: 'wm2', name: 'Comprehensive AMC', price: 1799,
-          benefits: ['Full Disassembly Clean', 'Water Inlet Check', 'Motor Deep Check', 'Free Service Charges']
-        }
-      ];
-    }
-    if (n.includes('television') || n.includes('tv')) {
-      return [
-        {
-          id: 'tv1', name: 'Essential AMC', price: 599, popular: true,
-          benefits: ['Screen & Port Cleaning', 'Picture Quality Check', 'Free Service Charges (Worth ₹299)']
-        },
-        {
-          id: 'tv2', name: 'Comprehensive AMC', price: 1499,
-          benefits: ['Full Internal Cleaning', 'Speaker Check', 'Software Update', 'Free Service Charges']
-        }
-      ];
-    }
-    return [
-      {
-        id: 'd1', name: 'Essential AMC', price: 799, popular: true,
-        benefits: ['Annual Inspection', 'Basic Service', 'Free Service Charges']
-      },
-      {
-        id: 'd2', name: 'Comprehensive AMC', price: 1999,
-        benefits: ['Full Service', 'Parts Check', 'Deep Cleaning', 'Free Service Charges']
-      }
-    ];
-  };
+  // The purchasable AMC plans, from the admin-managed catalogue. This screen
+  // shipped its own per-appliance price list, so the plans on offer could not
+  // be changed without a redeploy and did not have to match what was charged.
+  const [amcPlans, setAmcPlans] = useState([]);
+  const [plansError, setPlansError] = useState('');
+
+  useEffect(() => {
+    apiRequest('/warranty-amc/amc/plans', { auth: true })
+      .then((res) => setAmcPlans((res.data || []).map((p) => ({
+        id: p.id,
+        name: p.name,
+        price: p.price,
+        tier: p.tier,
+        visitsTotal: p.visitsTotal,
+        popular: p.tier === 'Gold',
+        benefits: [`${p.visitsTotal} scheduled visit(s)`, 'Priority booking', 'Free service charges on covered visits'],
+      }))))
+      .catch((err) => setPlansError(err.message || 'Could not load AMC plans.'));
+  }, []);
 
   const getBrandsForAppliance = (appliance) => {
     const n = appliance?.toLowerCase() || '';
@@ -170,13 +116,19 @@ const AMC = () => {
     return waterPurifierImg;
   };
 
-  const amcPlans = getAMCPlans(selectedAppliance);
-  const selectedPlan = amcPlans[selectedPlanIndex] || amcPlans[0];
+  const selectedPlan = amcPlans[selectedPlanIndex] || amcPlans[0] || null;
   const applianceBrands = getBrandsForAppliance(selectedAppliance);
   const activeBrand = selectedBrand || applianceBrands[0];
 
   return (
     <div className="min-h-screen bg-bg-light flex flex-col pb-24 relative">
+
+      {plansError && (
+        <p className="mx-6 mt-4 bg-red-50 border border-red-200 rounded-xl px-3 py-2 text-[11px] font-bold text-red-700">{plansError}</p>
+      )}
+      {!plansError && amcPlans.length === 0 && step > 1 && (
+        <p className="mx-6 mt-4 text-[11px] font-semibold text-slate-500">Loading AMC plans…</p>
+      )}
 
       {/* Header for sub-steps */}
       {step > 1 && step !== 6 && (
@@ -528,7 +480,7 @@ const AMC = () => {
         )}
 
         {/* ── STEP 2: SELECT AMC PLAN ── */}
-        {step === 2 && (
+        {step === 2 && selectedPlan && (
           <motion.div
             initial={{ opacity: 0, x: 10 }}
             animate={{ opacity: 1, x: 0 }}
@@ -594,7 +546,7 @@ const AMC = () => {
         )}
 
         {/* ── STEP 3: ENTER DETAILS ── */}
-        {step === 3 && (
+        {step === 3 && selectedPlan && (
           <motion.div
             initial={{ opacity: 0, x: 10 }}
             animate={{ opacity: 1, x: 0 }}
@@ -697,7 +649,7 @@ const AMC = () => {
         )}
 
         {/* ── STEP 4: REVIEW & CONFIRM ── */}
-        {step === 4 && (
+        {step === 4 && selectedPlan && (
           <motion.div
             initial={{ opacity: 0, x: 10 }}
             animate={{ opacity: 1, x: 0 }}
@@ -730,12 +682,15 @@ const AMC = () => {
                 <span className="font-bold text-text-primary">₹{selectedPlan.price}</span>
               </div>
               <div className="flex justify-between items-center text-sm">
-                <span className="text-text-secondary">GST (18%)</span>
-                <span className="font-bold text-text-primary">₹{Math.round(selectedPlan.price * 0.18)}</span>
+                {/* The server charges the catalogue price. An 18% GST line was
+                    added here that was never applied, so the customer was quoted
+                    more than they were actually billed. */}
+                <span className="text-text-secondary">Taxes</span>
+                <span className="font-bold text-text-primary">Included</span>
               </div>
               <div className="border-t border-slate-100 pt-3 flex justify-between items-center">
                 <span className="text-base font-black text-text-primary">Total Amount</span>
-                <span className="text-xl font-black text-brand-blue">₹{Math.round(selectedPlan.price * 1.18)}</span>
+                <span className="text-xl font-black text-brand-blue">₹{Number(selectedPlan.price || 0).toLocaleString('en-IN')}</span>
               </div>
             </div>
 
@@ -842,7 +797,7 @@ const AMC = () => {
             <div className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between shadow-sm mt-2">
               <div>
                 <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider block">Total Payable</span>
-                <span className="text-lg font-black text-brand-navy block mt-0.5">₹{Math.round(selectedPlan.price * 1.18)}</span>
+                <span className="text-lg font-black text-brand-navy block mt-0.5">₹{Number(selectedPlan.price || 0).toLocaleString('en-IN')}</span>
               </div>
               <span className="text-xs font-bold text-brand-blue hover:underline cursor-pointer">View Details</span>
             </div>
@@ -859,19 +814,22 @@ const AMC = () => {
                       method: 'POST',
                       auth: true,
                       body: {
-                        planName: selectedPlan?.title || 'Annual Protection Plan',
+                        plan: selectedPlan?.id,
+                        planName: selectedPlan?.name,
                         category: selectedAppliance || 'Appliance',
                         brand: selectedBrand || 'Nigam Care',
                         model: modelNumber || undefined,
                       },
                     });
 
+                    setCreatedSubscription(res.data.subscription);
+
                     // Not covered until the payment clears.
                     if (res.data.razorpay) {
                       await payWithRazorpay({
                         razorpay: res.data.razorpay,
                         verifyPath: `/warranty-amc/amc/subscriptions/${res.data.subscription.id}/verify-payment`,
-                        description: selectedPlan?.title,
+                        description: selectedPlan?.name,
                       });
                     }
                   } catch (err) {
@@ -883,7 +841,7 @@ const AMC = () => {
                 className="w-full bg-brand-yellow hover:bg-yellow-400 text-brand-navy font-black py-4 rounded-2xl transition-all shadow-md text-sm cursor-pointer active:scale-98 flex items-center justify-center gap-2"
               >
                 <Lock className="h-4 w-4" />
-                Pay ₹{Math.round(selectedPlan.price * 1.18)} Securely
+                Pay ₹{Number(selectedPlan.price || 0).toLocaleString('en-IN')} Securely
               </button>
               {purchaseError && (
                 <p className="text-[11px] font-bold text-red-600 text-center px-2">{purchaseError}</p>
@@ -930,12 +888,15 @@ const AMC = () => {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-white/60">AMC ID:</span>
-                  <span className="font-mono tracking-wider font-semibold">NCCAMC{Math.floor(100000 + Math.random() * 900000)}</span>
+                  {/* The real subscription reference. A random NCCAMC###### was
+                      shown here, so a customer quoting it to support named a
+                      contract that does not exist. */}
+                  <span className="font-mono tracking-wider font-semibold">{createdSubscription?.humanId || createdSubscription?.id || '—'}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-white/60">Status:</span>
                   <span className="font-bold text-green-400 bg-green-500/10 px-2 py-0.5 rounded border border-green-400/20 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span> Active
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span> {createdSubscription?.status || 'Active'}
                   </span>
                 </div>
                 <div className="flex justify-between">

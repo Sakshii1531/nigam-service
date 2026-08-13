@@ -13,10 +13,9 @@ const PaymentFailure = () => {
   const itemName = paymentState.productName || 'AC Service';
   const price = paymentState.price !== undefined ? paymentState.price : 199;
 
-  // Retrieve transaction reference
-  const txnId = React.useMemo(() => {
-    return `TXN-${Math.floor(10000000 + Math.random() * 90000000)}`;
-  }, []);
+  // Only a reference the gateway actually returned. This invented a
+  // "TXN-########" that support could never look up.
+  const txnId = paymentState.transactionId || null;
 
   return (
     <div className="min-h-screen bg-[#FFF5F5] flex flex-col items-center justify-center p-4">
@@ -49,9 +48,11 @@ const PaymentFailure = () => {
 
           <div className="text-center">
             <h2 className="text-[20px] font-black text-slate-900 leading-tight">Payment Declined</h2>
-            <p className="text-[12px] text-slate-400 font-bold mt-1 uppercase tracking-wider">
-              Transaction ID: {txnId}
-            </p>
+            {txnId && (
+              <p className="text-[12px] text-slate-400 font-bold mt-1 uppercase tracking-wider">
+                Transaction ID: {txnId}
+              </p>
+            )}
           </div>
 
           {/* Error Message Box */}

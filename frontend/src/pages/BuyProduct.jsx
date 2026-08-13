@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { apiRequest } from '../lib/apiClient';
 import { 
   ArrowLeft, Search, Check, ChevronRight, ShoppingCart, Star, 
   Home as HomeIcon, Calendar, LayoutGrid, User, Sparkles, Filter, 
@@ -38,100 +39,45 @@ const BuyProduct = () => {
     { id: 'tv', label: 'Televisions' }
   ];
 
-  // Verified Appliances Product Database
-  const products = [
-    {
-      id: 'p1',
-      category: 'ac',
-      name: 'Daikin 1.5 Ton 5-Star Split AC',
-      condition: 'Like New (Refurbished)',
-      originalPrice: 42000,
-      price: 24999,
-      rating: 4.8,
-      reviews: 142,
-      icon: '❄️',
-      specs: ['Copper Condenser', '5-Star Energy Rating', 'PM 2.5 Filter'],
-      warranty: '1-Year Nigam Shield Warranty Included',
-      mostRelevant: true
-    },
-    {
-      id: 'p2',
-      category: 'ref',
-      name: 'LG 242L Inverter Double Door Fridge',
-      condition: 'Pristine (Certified)',
-      originalPrice: 28999,
-      price: 16499,
-      rating: 4.7,
-      reviews: 98,
-      icon: '🧊',
-      specs: ['Smart Inverter Compressor', 'Convertible Box', 'Auto Defrost'],
-      warranty: '1-Year Nigam Shield Warranty Included',
-      mostRelevant: true
-    },
-    {
-      id: 'p3',
-      category: 'wm',
-      name: 'Samsung 7kg Fully Automatic Front Load',
-      condition: 'Excellent (Verified)',
-      originalPrice: 34999,
-      price: 19899,
-      rating: 4.9,
-      reviews: 215,
-      icon: '🧺',
-      specs: ['Eco Bubble Tech', 'Hygiene Steam', 'Digital Inverter'],
-      warranty: '1-Year Nigam Shield Warranty Included',
-      mostRelevant: true
-    },
-    {
-      id: 'p4',
-      category: 'tv',
-      name: 'Sony Bravia 43" 4K Smart Google TV',
-      condition: 'Brand New',
-      originalPrice: 48990,
-      price: 38499,
-      rating: 4.9,
-      reviews: 310,
-      icon: '📺',
-      specs: ['4K HDR Processor X1', 'Dolby Audio', 'Google Assistant'],
-      warranty: '1-Year Brand + Nigam Shield Warranty',
-      mostRelevant: false
-    },
-    {
-      id: 'p5',
-      category: 'ac',
-      name: 'Voltas 1 Ton 3-Star Split AC',
-      condition: 'Good (Refurbished)',
-      originalPrice: 32000,
-      price: 18200,
-      rating: 4.5,
-      reviews: 64,
-      icon: '🌬️',
-      specs: ['High Ambient Cooling', 'Stabilizer Free Operation', 'Dehumidifier'],
-      warranty: '1-Year Nigam Shield Warranty Included',
-      mostRelevant: false
-    },
-    {
-      id: 'p6',
-      category: 'ref',
-      name: 'Samsung 192L Single Door Refrigerator',
-      condition: 'Like New (Certified)',
-      originalPrice: 16999,
-      price: 10899,
-      rating: 4.6,
-      reviews: 120,
-      icon: '📦',
-      specs: ['Digital Inverter', 'Runs on Home Inverter', 'Base Stand Drawer'],
-      warranty: '1-Year Nigam Shield Warranty Included',
-      mostRelevant: false
-    }
-  ];
+  // The real catalogue. This page shipped its own product list with ids like
+  // 'p1' — the same ids ProductDetails.jsx used to carry — so the checkout it
+  // handed off to posted a product id no Product document has, and the order
+  // would 404. Ratings and review counts were invented per row too.
+  const [products, setProducts] = useState([]);
+  const [loadError, setLoadError] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    apiRequest('/products?limit=100')
+      .then((res) => {
+        if (cancelled) return;
+        setProducts((res.data || []).map((p) => ({
+          id: p.id,
+          category: p.category,
+          name: p.name,
+          condition: p.conditionGrade || p.condition || 'New',
+          originalPrice: p.originalPrice || null,
+          price: p.price,
+          rating: p.rating || null,
+          specs: p.specs || [],
+          warranty: p.warrantyMonths ? `${p.warrantyMonths}-month warranty included` : null,
+          imageUrl: p.imageUrl || null,
+          mostRelevant: false,
+        })));
+      })
+      .catch((err) => { if (!cancelled) setLoadError(err.message || 'Could not load products.'); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
 
   // Filtering & Sorting products (Most Relevant / Best Match first)
   const filteredProducts = products
     .filter(product => {
       const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
       const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                            product.specs.some(spec => spec.toLowerCase().includes(searchQuery.toLowerCase()));
+                            (product.specs || []).some(spec => spec.toLowerCase().includes(searchQuery.toLowerCase()));
       return matchesCategory && matchesSearch;
     })
     .sort((a, b) => (b.mostRelevant ? 1 : 0) - (a.mostRelevant ? 1 : 0));
@@ -227,17 +173,17 @@ const BuyProduct = () => {
                     <ShieldCheck className="h-2.5 w-2.5" /> {prod.condition}
                   </span>
                 </div>
-                <div className="flex items-center gap-0.5">
-                  <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                  <span className="text-[11px] font-bold text-text-primary">{prod.rating}</span>
-                  <span className="text-[9px] text-text-secondary">({prod.reviews})</span>
-                </div>
+                {prod.rating ? (
+                  <div className="flex items-center gap-0.5">
+                    <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                    <span className="text-[11px] font-bold text-text-primary">{prod.rating}</span>
+                  </div>
+                ) : null}
               </div>
 
               {/* Product Info Block */}
               <div className="flex gap-3 items-center">
                 <div className="w-11 h-11 bg-[#F8F9FA] rounded-xl flex items-center justify-center text-2xl shadow-inner group-hover:scale-105 transition-all flex-shrink-0">
-                  {prod.icon}
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-extrabold text-text-primary text-sm leading-tight">{prod.name}</h3>
@@ -246,26 +192,34 @@ const BuyProduct = () => {
 
               {/* Specs & Features tags */}
               <div className="flex flex-wrap gap-1 pt-0">
-                {prod.specs.map((spec, i) => (
+                {(prod.specs || []).map((spec, i) => (
                   <span key={i} className="bg-bg-light text-text-secondary text-[9px] font-semibold px-1.5 py-0.5 rounded">
                     {spec}
                   </span>
                 ))}
               </div>
 
-              {/* Warranty Card Badge */}
-              <div className="bg-[#E3F2FD]/50 p-2 rounded-lg border border-blue-50 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-brand-blue animate-pulse flex-shrink-0"></span>
-                <span className="text-[10px] font-bold text-brand-blue leading-none">{prod.warranty}</span>
-              </div>
+              {/* Warranty Card Badge — only when the product records one */}
+              {prod.warranty ? (
+                <div className="bg-[#E3F2FD]/50 p-2 rounded-lg border border-blue-50 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-brand-blue animate-pulse flex-shrink-0"></span>
+                  <span className="text-[10px] font-bold text-brand-blue leading-none">{prod.warranty}</span>
+                </div>
+              ) : null}
 
               {/* Pricing & Checkout */}
               <div className="flex justify-between items-center pt-2 border-t border-dashed border-border-color">
                 <div className="flex flex-col">
-                  <span className="text-[10px] text-text-secondary line-through">₹{prod.originalPrice.toLocaleString('en-IN')}</span>
+                  {/* A struck-through price and "% OFF" only where the product
+                      actually records a higher original price. */}
+                  {prod.originalPrice > prod.price && (
+                    <span className="text-[10px] text-text-secondary line-through">₹{prod.originalPrice.toLocaleString('en-IN')}</span>
+                  )}
                   <div className="flex items-baseline gap-1">
                     <span className="text-base font-extrabold text-brand-navy">₹{prod.price.toLocaleString('en-IN')}</span>
-                    <span className="text-green-600 text-[9px] font-bold">({Math.round(((prod.originalPrice - prod.price) / prod.originalPrice) * 100)}% OFF)</span>
+                    {prod.originalPrice > prod.price && (
+                      <span className="text-green-600 text-[9px] font-bold">({Math.round(((prod.originalPrice - prod.price) / prod.originalPrice) * 100)}% OFF)</span>
+                    )}
                   </div>
                 </div>
                 <button 

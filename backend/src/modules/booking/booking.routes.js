@@ -5,9 +5,8 @@ import { ok, created } from '../../utils/respond.js';
 import { ROLES } from '../../config/constants.js';
 import * as bookingService from './booking.service.js';
 import { createBookingSchema, listBookingsQuerySchema, idParamSchema, verifyBookingPaymentSchema } from './booking.validation.js';
-
 export const bookingRouter = Router();
-bookingRouter.use(requireAuth, requireRole(ROLES.CUSTOMER));
+bookingRouter.use(requireAuth);
 
 bookingRouter.post('/', validate(createBookingSchema), async (req, res, next) => {
   try {

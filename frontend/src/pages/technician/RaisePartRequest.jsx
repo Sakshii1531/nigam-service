@@ -26,6 +26,8 @@ const RaisePartRequest = () => {
   const urlTab = queryParams.get('tab');
   
   const [activeTab, setActiveTab] = useState('inventory'); // 'inventory', 'order', 'claims'
+  const [actionError, setActionError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [stockFilter, setStockFilter] = useState('All'); // 'All', 'In Stock', 'Low Stock', 'Out of Stock'
   const [claimFilter, setClaimFilter] = useState('Pending'); // 'Pending', 'Approved', 'Rejected'
@@ -95,23 +97,43 @@ const RaisePartRequest = () => {
     }
   };
 
-  const handlePlaceOrder = () => {
+  // Both handlers wait on the server now — the confirmation screen only appears
+  // once the order or claim actually exists.
+  const handlePlaceOrder = async () => {
     if (partsCart.length === 0) {
-      alert('Cart is empty! Add items from inventory first.');
+      setActionError('Cart is empty — add items from inventory first.');
       return;
     }
     const sourceLabel = orderSource === 'warehouse' ? 'NCC Warehouse' : orderSource === 'brand' ? 'Partner Brand' : 'Nearby Store';
-    placePartsOrder(sourceLabel);
+
+    setActionError('');
+    setSubmitting(true);
+    const result = await placePartsOrder(sourceLabel);
+    setSubmitting(false);
+
+    if (!result?.ok) {
+      setActionError(result?.error || 'Could not place the parts order.');
+      return;
+    }
     setPlacedSource(sourceLabel);
   };
 
-  const handleCreateClaim = (e) => {
+  const handleCreateClaim = async (e) => {
     e.preventDefault();
     if (!newClaim.item || !newClaim.amount) {
-      alert('Please fill all fields.');
+      setActionError('Please fill all fields.');
       return;
     }
-    raiseClaim(newClaim);
+
+    setActionError('');
+    setSubmitting(true);
+    const result = await raiseClaim(newClaim);
+    setSubmitting(false);
+
+    if (!result?.ok) {
+      setActionError(result?.error || 'Could not raise the claim.');
+      return;
+    }
     setNewClaim({ brand: 'LG Partner Warranty', item: '', amount: '' });
     setShowClaimModal(false);
   };
@@ -426,12 +448,17 @@ const RaisePartRequest = () => {
               )}
             </div>
 
+            {actionError && (
+              <p className="text-[11px] font-bold text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{actionError}</p>
+            )}
+
             {partsCart.length > 0 && (
               <button 
                 onClick={handlePlaceOrder}
-                className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-normal py-4 rounded-2xl text-sm transition-all shadow-md mt-2"
+                disabled={submitting}
+                className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] disabled:opacity-60 text-white font-normal py-4 rounded-2xl text-sm transition-all shadow-md mt-2"
               >
-                Place Order (₹{calculateCartTotal()})
+                {submitting ? 'Placing order…' : `Place Order (₹${calculateCartTotal()})`}
               </button>
             )}
 
@@ -537,6 +564,9 @@ const RaisePartRequest = () => {
             <h3 className="text-base font-medium text-[#052355] mt-1 pr-8">New FOC Claim</h3>
             
             <form onSubmit={handleCreateClaim} className="flex flex-col gap-4 mt-2">
+              {actionError && (
+                <p className="text-[11px] font-bold text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{actionError}</p>
+              )}
               <div className="flex flex-col gap-1.5">
                 <label className="text-[10px] font-normal text-slate-600 uppercase tracking-wide">Brand Partner</label>
                 <select 

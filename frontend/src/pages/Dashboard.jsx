@@ -53,17 +53,9 @@ const Dashboard = ({ defaultType }) => {
   const navigate = useNavigate();
   const bannerRef = useRef(null);
   const [activeType, setActiveType] = useState(defaultType || 'non-warranty'); // 'non-warranty' or 'in-warranty'
-
-  const dashboardCategories = tilesFor('category', [
-    { name: 'For You', icon: 'sparkles', isForYou: true },
-    { name: 'AC', icon: 'ac', service: 'AC Repair' },
-    { name: 'Washing Machine', icon: 'washing', service: 'Washing Machine' },
-    { name: 'Refrigerator', icon: 'fridge', isFridge: true },
-    { name: 'TV', icon: 'tv', service: 'Smart TV Service & Repair' },
-    { name: 'RO Water Purifier', icon: 'ro', service: 'Water Purifier RO Service' },
-    { name: 'Geyser', icon: 'geyser', service: 'Geyser Service & Repair' },
-    { name: 'More', icon: 'more', isMore: true }
-  ], (t) => ({ name: t.title, icon: t.icon, service: t.service }));
+  const [cmsBanners, setCmsBanners] = useState(null);
+  const [cmsTiles, setCmsTiles] = useState(null);
+  const [configuredServices, setConfiguredServices] = useState([]);
 
   // Banners come from the CMS (public read, no auth) so what super-admin
   // publishes actually reaches customers. The bundled images remain the
@@ -78,12 +70,30 @@ const Dashboard = ({ defaultType }) => {
     { id: 2, image: warrantyBanner2 }
   ];
 
-  const [cmsBanners, setCmsBanners] = useState(null);
-  // Home-screen merchandising: one request covers every placement.
-  const [cmsTiles, setCmsTiles] = useState(null);
-  // Which services have a configured detail page — decides whether a tile opens
-  // the rich /book/:service page or the generic booking flow.
-  const [configuredServices, setConfiguredServices] = useState([]);
+  // Falls back to the bundled set when a placement has nothing published, so
+  // the home screen is never empty on a fresh install.
+  function tilesFor(placement, fallback, map) {
+    if (!cmsTiles) return fallback;
+    const rows = cmsTiles.filter((t) => t.placement === placement);
+    return rows.length ? rows.map(map) : fallback;
+  }
+
+  function fromCms(segment, fallback) {
+    if (!cmsBanners) return fallback;
+    const rows = cmsBanners.filter((b) => (segment === 'warranty' ? b.segment === 'warranty' : b.segment !== 'warranty'));
+    return rows.length ? rows.map((b) => ({ id: b.id, image: b.imageUrl })) : fallback;
+  }
+
+  const dashboardCategories = tilesFor('category', [
+    { name: 'For You', icon: 'sparkles', isForYou: true },
+    { name: 'AC', icon: 'ac', service: 'AC Repair' },
+    { name: 'Washing Machine', icon: 'washing', service: 'Washing Machine' },
+    { name: 'Refrigerator', icon: 'fridge', isFridge: true },
+    { name: 'TV', icon: 'tv', service: 'Smart TV Service & Repair' },
+    { name: 'RO Water Purifier', icon: 'ro', service: 'Water Purifier RO Service' },
+    { name: 'Geyser', icon: 'geyser', service: 'Geyser Service & Repair' },
+    { name: 'More', icon: 'more', isMore: true }
+  ], (t) => ({ name: t.title, icon: t.icon, service: t.service }));
 
   useEffect(() => {
     let cancelled = false;
@@ -98,8 +108,6 @@ const Dashboard = ({ defaultType }) => {
     return () => { cancelled = true; };
   }, []);
 
-  const hasServicePage = (title) => configuredServices.includes(title);
-
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -113,13 +121,7 @@ const Dashboard = ({ defaultType }) => {
     return () => { cancelled = true; };
   }, []);
 
-  // Falls back to the bundled set when a placement has nothing published, so
-  // the home screen is never empty on a fresh install.
-  const tilesFor = (placement, fallback, map) => {
-    if (!cmsTiles) return fallback;
-    const rows = cmsTiles.filter((t) => t.placement === placement);
-    return rows.length ? rows.map(map) : fallback;
-  };
+  const hasServicePage = (title) => configuredServices.includes(title);
 
   useEffect(() => {
     let cancelled = false;
@@ -136,30 +138,24 @@ const Dashboard = ({ defaultType }) => {
     return () => { cancelled = true; };
   }, []);
 
-  const fromCms = (segment, fallback) => {
-    if (!cmsBanners) return fallback;
-    const rows = cmsBanners.filter((b) => (segment === 'warranty' ? b.segment === 'warranty' : b.segment !== 'warranty'));
-    return rows.length ? rows.map((b) => ({ id: b.id, image: b.imageUrl })) : fallback;
-  };
-
   const regularBanners = fromCms('non-warranty', FALLBACK_REGULAR);
   const warrantyBannersList = fromCms('warranty', FALLBACK_WARRANTY);
 
   const mostBookedServices = tilesFor('most-booked', [
-    { id: 1, title: "Foam-jet AC service", image: mostBookedAc1, rating: 4.76, price: 649, badge: "Instant" },
-    { id: 2, title: "AC repair", image: mostBookedAc2, rating: 4.74, price: 299, badge: "Instant" },
-    { id: 3, title: "Washing Machine", image: mostBookedWm, rating: 4.85, price: 499, badge: "Instant" },
-    { id: 4, title: "Home Cleaning", image: mostBookedCleaning, rating: 4.90, price: 999, badge: "Trending" },
-    { id: 5, title: "Women Salon", image: mostBookedSalon, rating: 4.80, price: 799, badge: "Best Seller" }
+    { id: 1, title: "Foam-jet AC service", image: mostBookedAc1, price: 649, badge: "Instant" },
+    { id: 2, title: "AC repair", image: mostBookedAc2, price: 299, badge: "Instant" },
+    { id: 3, title: "Washing Machine", image: mostBookedWm, price: 499, badge: "Instant" },
+    { id: 4, title: "Home Cleaning", image: mostBookedCleaning, price: 999, badge: "Trending" },
+    { id: 5, title: "Women Salon", image: mostBookedSalon, price: 799, badge: "Best Seller" }
   ], (t) => ({ id: t.id, title: t.title, image: t.imageUrl, rating: t.rating, price: t.price, badge: t.badge }));
 
   const applianceServices = tilesFor('appliance-service', [
-    { id: 1, title: "Foam-jet AC service", image: mostBookedAc1, rating: 4.76, price: 649, badge: "Instant", path: '/booking' },
-    { id: 2, title: "AC repair", image: mostBookedAc2, rating: 4.74, price: 299, badge: "Instant", path: '/booking' },
-    { id: 3, title: "Washing Machine", image: mostBookedWm, rating: 4.85, price: 499, badge: "Instant", path: '/booking' },
-    { id: 4, title: "Refrigerator Repair & Service", image: applianceFridge, rating: 4.80, price: 899, badge: "Instant", path: '/refrigerator-details' },
-    { id: 5, title: "Deep Clean AC", image: mostBookedAc1, rating: 4.76, price: 1198, badge: "2 ACs", path: '/booking' },
-    { id: 6, title: "WM Checkup", image: mostBookedWm, rating: 4.85, price: 199, badge: "Instant", path: '/booking' }
+    { id: 1, title: "Foam-jet AC service", image: mostBookedAc1, price: 649, badge: "Instant", path: '/booking' },
+    { id: 2, title: "AC repair", image: mostBookedAc2, price: 299, badge: "Instant", path: '/booking' },
+    { id: 3, title: "Washing Machine", image: mostBookedWm, price: 499, badge: "Instant", path: '/booking' },
+    { id: 4, title: "Refrigerator Repair & Service", image: applianceFridge, price: 899, badge: "Instant", path: '/refrigerator-details' },
+    { id: 5, title: "Deep Clean AC", image: mostBookedAc1, price: 1198, badge: "2 ACs", path: '/booking' },
+    { id: 6, title: "WM Checkup", image: mostBookedWm, price: 199, badge: "Instant", path: '/booking' }
   ], (t) => ({ id: t.id, title: t.title, image: t.imageUrl, rating: t.rating, price: t.price, badge: t.badge, path: t.link || '/booking' }));
 
   useEffect(() => {
@@ -798,10 +794,12 @@ const Dashboard = ({ defaultType }) => {
                   <span className="text-sm font-semibold text-text-primary truncate">
                     {service.title}
                   </span>
-                  <div className="flex items-center gap-1">
-                    <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
-                    <span className="text-xs text-text-secondary">{service.rating}</span>
-                  </div>
+                  {service.rating ? (
+                    <div className="flex items-center gap-1">
+                      <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
+                      <span className="text-xs text-text-secondary">{service.rating}</span>
+                    </div>
+                  ) : null}
                   <span className={`text-sm font-bold ${activeType === 'in-warranty' ? 'text-green-600' : 'text-[#0B4EA2]'}`}>
                     {activeType === 'in-warranty' ? '₹0 (Warranty)' : `₹${service.price}`}
                   </span>
@@ -862,10 +860,12 @@ const Dashboard = ({ defaultType }) => {
                   <span className="text-sm font-semibold text-text-primary truncate">
                     {service.title}
                   </span>
-                  <div className="flex items-center gap-1">
-                    <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
-                    <span className="text-xs text-text-secondary">{service.rating}</span>
-                  </div>
+                  {service.rating ? (
+                    <div className="flex items-center gap-1">
+                      <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
+                      <span className="text-xs text-text-secondary">{service.rating}</span>
+                    </div>
+                  ) : null}
                   <span className={`text-sm font-bold ${activeType === 'in-warranty' ? 'text-green-600' : 'text-[#0B4EA2]'}`}>
                     {activeType === 'in-warranty' ? '₹0 (Warranty)' : `₹${service.price}`}
                   </span>
@@ -888,11 +888,11 @@ const Dashboard = ({ defaultType }) => {
           </div>
           <div className="flex gap-4 overflow-x-auto pb-4 -mx-2 px-2 snap-x no-scrollbar">
             {[
-              { id: 1, title: 'Pre-Filter Candle', desc: 'RO Outer Candle', price: 199, image: roPreFilterImg, rating: 4.80, badge: 'Genuine' },
-              { id: 2, title: 'RO Membrane', desc: 'High TDS Membrane', price: 899, image: roMembraneImg, rating: 4.92, badge: 'Best Seller' },
-              { id: 3, title: 'Sediment Filter', desc: 'RO Inner Filter', price: 249, image: roSedimentImg, rating: 4.75, badge: 'Genuine' },
-              { id: 4, title: 'Carbon Filter', desc: 'Active Carbon', price: 299, image: roCarbonImg, rating: 4.86, badge: 'Trending' },
-              { id: 5, title: 'Post Carbon', desc: 'Taste Enhancer', price: 249, image: roPostCarbonImg, rating: 4.78, badge: 'Genuine' }
+              { id: 1, title: 'Pre-Filter Candle', desc: 'RO Outer Candle', price: 199, image: roPreFilterImg, badge: 'Genuine' },
+              { id: 2, title: 'RO Membrane', desc: 'High TDS Membrane', price: 899, image: roMembraneImg, badge: 'Best Seller' },
+              { id: 3, title: 'Sediment Filter', desc: 'RO Inner Filter', price: 249, image: roSedimentImg, badge: 'Genuine' },
+              { id: 4, title: 'Carbon Filter', desc: 'Active Carbon', price: 299, image: roCarbonImg, badge: 'Trending' },
+              { id: 5, title: 'Post Carbon', desc: 'Taste Enhancer', price: 249, image: roPostCarbonImg, badge: 'Genuine' }
             ].map((item) => (
               <div 
                 key={item.id}
