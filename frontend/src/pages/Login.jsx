@@ -1,28 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Phone, Mail, Lock, ShieldCheck, User, Gift, MapPin, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, Phone, Mail, Lock, ShieldCheck, User, Gift, Eye, EyeOff } from 'lucide-react';
 import logo from '../assets/nigam-care.png';
 import { useAuth } from '../context/AuthContext';
 import { ApiError } from '../lib/apiClient';
-
-const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-
-function loadGoogleMaps() {
-  if (window.google?.maps) return Promise.resolve(window.google.maps);
-  return new Promise((resolve, reject) => {
-    const callbackName = '__googleMapsReadyLogin__';
-    window[callbackName] = () => {
-      delete window[callbackName];
-      resolve(window.google.maps);
-    };
-    const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&callback=${callbackName}&loading=async`;
-    script.async = true;
-    script.defer = true;
-    script.onerror = () => reject(new Error('Failed to load Google Maps'));
-    document.head.appendChild(script);
-  });
-}
 
 const STATE_CITIES = {
   'Delhi NCR': ['Delhi', 'Noida', 'Gurgaon', 'Ghaziabad'],
@@ -46,9 +27,6 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Fetch location state
-  const [fetchingLocation, setFetchingLocation] = useState(false);
-
   // Signup form fields state
   const [signupForm, setSignupForm] = useState({
     name: location.state?.signupData?.name || '',
@@ -71,122 +49,6 @@ const Login = () => {
     confirmPassword: '',
     address: ''
   });
-
-  const handleFetchLocation = async () => {
-    setFetchingLocation(true);
-    setError('');
-    
-    if (!navigator.geolocation) {
-      setError('Geolocation is not supported by your browser');
-      setFetchingLocation(false);
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        try {
-          const lat = position.coords.latitude;
-          const lng = position.coords.longitude;
-
-          // Load Google Maps API
-          let maps;
-          try {
-            maps = await loadGoogleMaps();
-          } catch (e) {
-            console.warn("Could not load Google Maps script. Falling back to public API...");
-          }
-
-          if (maps) {
-            const geocoder = new maps.Geocoder();
-            geocoder.geocode({ location: { lat, lng } }, (results, status) => {
-              if (status === 'OK' && results[0]) {
-                const formatted = results[0].formatted_address;
-                setSignupForm(prev => ({ ...prev, address: formatted }));
-                // Try to match administrative boundaries to state/city
-                const addressComponents = results[0].address_components;
-                let foundCity = '';
-                let foundState = '';
-                for (const component of addressComponents) {
-                  if (component.types.includes('locality')) {
-                    foundCity = component.long_name;
-                  }
-                  if (component.types.includes('administrative_area_level_1')) {
-                    foundState = component.long_name;
-                  }
-                }
-                updateStateAndCityFromGeocode(foundState, foundCity);
-              } else {
-                setError('Google Maps could not resolve coordinates. Please select manually.');
-              }
-              setFetchingLocation(false);
-            });
-          } else {
-            // Fallback: public Nominatim geocoder
-            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
-            if (res.ok) {
-              const data = await res.json();
-              setSignupForm(prev => ({ ...prev, address: data.display_name || `${lat}, ${lng}` }));
-              const city = data.address?.city || data.address?.town || data.address?.village || '';
-              const state = data.address?.state || '';
-              updateStateAndCityFromGeocode(state, city);
-            } else {
-              setSignupForm(prev => ({ ...prev, address: `Coordinates: ${lat.toFixed(5)}, ${lng.toFixed(5)}` }));
-            }
-            setFetchingLocation(false);
-          }
-        } catch (err) {
-          console.error(err);
-          setError('Failed to fetch location. Please enter manually.');
-          setFetchingLocation(false);
-        }
-      },
-      (err) => {
-        console.error(err);
-        setError('Location permission denied or timed out. Please enter manually.');
-        setFetchingLocation(false);
-      },
-      { timeout: 8000 }
-    );
-  };
-
-  const updateStateAndCityFromGeocode = (stateName, cityName) => {
-    if (!stateName) return;
-    let matchedState = '';
-    let matchedCity = '';
-
-    for (const st of Object.keys(STATE_CITIES)) {
-      if (stateName.toLowerCase().includes(st.toLowerCase()) || st.toLowerCase().includes(stateName.toLowerCase())) {
-        matchedState = st;
-        break;
-      }
-    }
-    if (matchedState) {
-      if (cityName) {
-        for (const ct of STATE_CITIES[matchedState]) {
-          if (cityName.toLowerCase().includes(ct.toLowerCase()) || ct.toLowerCase().includes(cityName.toLowerCase())) {
-            matchedCity = ct;
-            break;
-          }
-        }
-      }
-      if (!matchedCity) matchedCity = STATE_CITIES[matchedState][0];
-    } else if (cityName) {
-      for (const st of Object.keys(STATE_CITIES)) {
-        for (const ct of STATE_CITIES[st]) {
-          if (cityName.toLowerCase().includes(ct.toLowerCase()) || ct.toLowerCase().includes(cityName.toLowerCase())) {
-            matchedState = st;
-            matchedCity = ct;
-            break;
-          }
-        }
-        if (matchedState) break;
-      }
-    }
-
-    if (matchedState && matchedCity) {
-      setSignupForm(prev => ({ ...prev, state: matchedState, city: matchedCity }));
-    }
-  };
 
   const validateSignupForm = () => {
     const errors = {};
@@ -249,7 +111,7 @@ const Login = () => {
       const { destination } = await login({ role: 'customer', identifier, password });
       navigate('/verify-otp', { state: { destination, role: 'customer', identifier } });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.');
+      setError(err?.message || 'Something went wrong. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -295,30 +157,29 @@ const Login = () => {
         });
       }
     } catch (err) {
-      if (err instanceof ApiError) {
-        const errType = err.details?.errorType;
-        if (errType === 'both') {
-          setError('User already exists, kindly login or enter other details');
-          setFieldErrors(prev => ({
-            ...prev,
-            phone: 'This phone is already registered',
-            email: 'This email is already registered'
-          }));
-        } else if (errType === 'phone') {
-          setFieldErrors(prev => ({
-            ...prev,
-            phone: 'This number is already registered, kindly login or use another number'
-          }));
-        } else if (errType === 'email') {
-          setFieldErrors(prev => ({
-            ...prev,
-            email: 'This email already exists, kindly login or enter a different email'
-          }));
-        } else {
-          setError(err.message);
-        }
+      const errType = err?.details?.errorType;
+      const errMsg = err?.message || 'Something went wrong. Please try again.';
+      if (errType === 'both') {
+        setError(errMsg);
+        setFieldErrors(prev => ({
+          ...prev,
+          phone: 'This phone is already registered',
+          email: 'This email is already registered'
+        }));
+      } else if (errType === 'phone') {
+        setError(errMsg);
+        setFieldErrors(prev => ({
+          ...prev,
+          phone: 'This number is already registered, kindly login or use another number'
+        }));
+      } else if (errType === 'email') {
+        setError(errMsg);
+        setFieldErrors(prev => ({
+          ...prev,
+          email: 'This email already exists, kindly login or enter a different email'
+        }));
       } else {
-        setError('Something went wrong. Please try again.');
+        setError(errMsg);
       }
     } finally {
       setSubmitting(false);
@@ -559,15 +420,6 @@ const Login = () => {
             <div className="bg-slate-50 border border-slate-100 rounded-2xl p-3.5 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-extrabold text-[#0D47A1] uppercase tracking-wider">Location & Address</span>
-                <button
-                  type="button"
-                  onClick={handleFetchLocation}
-                  disabled={fetchingLocation}
-                  className="flex items-center gap-1.5 bg-[#E3ECF9] text-[#0D47A1] font-bold px-3 py-1.5 rounded-xl text-[10px] hover:bg-[#D5E4F7] transition-all disabled:opacity-50"
-                >
-                  <MapPin size={12} className={fetchingLocation ? "animate-bounce" : ""} />
-                  {fetchingLocation ? 'Fetching...' : 'Detect via GPS'}
-                </button>
               </div>
 
               {/* State & City Dropdowns */}

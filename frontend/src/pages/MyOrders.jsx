@@ -25,7 +25,7 @@ const MyOrders = () => {
         const res = await apiRequest('/orders', { auth: true });
         if (res && res.data) {
           const formatted = res.data.map(o => ({
-            id: o.humanId || o.id || `#NCCO${o._id?.slice(-6)}`,
+            id: o.humanId || o.id,
             item: o.items?.map(it => `${it.name} (x${it.quantity})`).join(', ') || 'Product Purchase',
             type: o.items?.[0] ? 'Buy New' : 'Order',
             price: `₹${o.total.toFixed(2)}`,

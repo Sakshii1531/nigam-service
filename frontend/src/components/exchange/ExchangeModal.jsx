@@ -211,19 +211,50 @@ const ExchangeModal = ({
 
   }, [answers, baseValue, questions, config, allCampaigns, product]);
 
-  const handleApplyExchange = () => {
-    const exchangeDetails = {
-      category: selectedCategory,
-      brand: selectedBrand,
-      model: selectedModel,
-      estimatedValue: estimatedValue,
-      bonus: bonusAmount,
-      totalSavings: totalSavings,
-      originalPrice: product.price,
-      finalPrice: finalPrice
-    };
-    onApply(exchangeDetails);
-    onClose();
+  const [applying, setApplying] = useState(false);
+  const [applyError, setApplyError] = useState('');
+
+  // Registers the trade-in server-side. The valuation was computed here and
+  // handed straight to the cart, so nothing was queued for inspection and the
+  // "saving" existed only in this browser. The server recomputes the value from
+  // the admin-managed question set and stores it — that stored figure is what a
+  // later checkout can draw on, once a super-admin has inspected the device.
+  const handleApplyExchange = async () => {
+    setApplyError('');
+    setApplying(true);
+    try {
+      const res = await apiRequest('/exchange/requests', {
+        method: 'POST',
+        auth: true,
+        body: {
+          category: selectedCategory,
+          brand: selectedBrand,
+          model: selectedModel,
+          baseValue,
+          answers,
+        },
+      });
+      const created = res.data;
+
+      onApply({
+        requestId: created.id,
+        humanId: created.humanId || created.id,
+        status: created.status,
+        category: selectedCategory,
+        brand: selectedBrand,
+        model: selectedModel,
+        // The server's valuation, not this component's arithmetic.
+        estimatedValue: created.estimatedValue,
+        bonus: created.bonusAmount ?? bonusAmount,
+        totalSavings: created.estimatedValue,
+        originalPrice: product.price,
+      });
+      onClose();
+    } catch (err) {
+      setApplyError(err.message || 'Could not register this exchange.');
+    } finally {
+      setApplying(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -532,11 +563,15 @@ const ExchangeModal = ({
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-3.5 mt-4">
+                  {applyError && (
+                    <p className="w-full text-[11px] font-bold text-red-600 mb-2">{applyError}</p>
+                  )}
                   <button
                     onClick={handleApplyExchange}
-                    className="flex-1 bg-[#10B981] hover:bg-emerald-600 text-white font-black py-4 rounded-2xl transition-all shadow-md text-sm cursor-pointer"
+                    disabled={applying || baseValue <= 0}
+                    className="flex-1 bg-[#10B981] hover:bg-emerald-600 disabled:opacity-60 text-white font-black py-4 rounded-2xl transition-all shadow-md text-sm cursor-pointer"
                   >
-                    Apply Exchange
+                    {applying ? 'Registering…' : 'Apply Exchange'}
                   </button>
                   <button
                     onClick={() => setStep(4)}

@@ -118,7 +118,7 @@ export const TechProvider = ({ children }) => {
           setClaims(claimsRes.data.map(c => ({
             id: c._id || c.id,
             brand: c.brand || 'Partner Warranty',
-            claimId: c.claimNumber || `NC${Math.floor(10000 + Math.random()*90000)}`,
+            claimId: c.humanId || c.id,
             item: c.partName || c.item || 'Part Claim',
             status: c.status || 'Pending Approval',
             amount: c.amount || 0,
@@ -355,41 +355,63 @@ export const TechProvider = ({ children }) => {
     setPartsCart([]);
   }, []);
 
-  const placePartsOrder = useCallback((sourceName) => {
-    // Deduct stock or place order logic
-    // Add claims or request items
-    const claimId = `NC${Math.floor(10000 + Math.random() * 90000)}`;
-    partsCart.forEach(item => {
-      // Add FOC claims or parts requests
-      setClaims(prev => [
-        {
-          id: `claim-${Date.now()}-${item.id}`,
-          brand: 'NCC Warehouse Order',
-          claimId: claimId,
-          item: item.name,
-          status: 'Pending Approval',
-          amount: item.price * item.qty,
-          date: 'Just now'
+  // Places real part orders. This only pushed rows into browser state with an
+  // invented "NC#####" reference, so nothing was ordered and the number the
+  // technician quoted matched no record.
+  const placePartsOrder = useCallback(async (sourceName) => {
+    if (!partsCart.length) return { ok: false, error: 'Your parts cart is empty.' };
+
+    const orderSource = sourceName === 'Partner Brand' || sourceName === 'Nearby Store' ? sourceName : 'NCC Warehouse';
+
+    try {
+      const placed = await Promise.all(partsCart.map((item) => apiRequest('/tech/inventory/part-orders', {
+        method: 'POST',
+        auth: true,
+        body: {
+          partName: item.name,
+          sku: item.sku || undefined,
+          qty: item.qty || 1,
+          price: item.price,
+          orderSource,
         },
-        ...prev
-      ]);
-    });
-    setPartsCart([]);
+      })));
+
+      setPartsCart([]);
+      return { ok: true, orders: placed.map((r) => r.data) };
+    } catch (err) {
+      return { ok: false, error: err.message || 'Could not place the parts order.' };
+    }
   }, [partsCart]);
 
-  const raiseClaim = useCallback((claimData) => {
-    setClaims(prev => [
-      {
-        id: `claim-${Date.now()}`,
-        brand: claimData.brand || 'D2C Claim',
-        claimId: `NC${Math.floor(10000 + Math.random() * 90000)}`,
-        item: claimData.item || 'Generic Spare Part',
-        status: 'Pending Approval',
-        amount: Number(claimData.amount) || 500,
-        date: 'Just now'
-      },
-      ...prev
-    ]);
+  // Raises the claim server-side so the brand can actually see and decide it.
+  const raiseClaim = useCallback(async (claimData) => {
+    try {
+      const res = await apiRequest('/tech/claims', {
+        method: 'POST',
+        auth: true,
+        body: {
+          serviceRequest: claimData.serviceRequest || undefined,
+          brand: claimData.brand || 'D2C Claim',
+          claimType: claimData.claimType || 'D2C',
+          item: claimData.item || 'Spare part',
+          amount: Number(claimData.amount) || 0,
+          reason: claimData.reason || undefined,
+        },
+      });
+      const c = res.data;
+      setClaims((prev) => [{
+        id: c.id,
+        brand: c.brand,
+        claimId: c.humanId || c.id,
+        item: c.item,
+        status: c.status,
+        amount: c.amount,
+        date: new Date(c.createdAt).toLocaleDateString(),
+      }, ...prev]);
+      return { ok: true, claim: c };
+    } catch (err) {
+      return { ok: false, error: err.message || 'Could not raise the claim.' };
+    }
   }, []);
 
   // Marking read is persisted — the local-only version reverted on next load.

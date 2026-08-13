@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { apiRequest } from '../lib/apiClient';
+import { payWithRazorpay } from '../lib/razorpayCheckout';
 
 // Import premium cutout assets for high-fidelity rendering
 import fridgeImg from '../assets/appliance_fridge.png';
@@ -192,52 +193,65 @@ const Buy = () => {
   };
 
   // Dynamic pricing tiers by product category
-  const getApplianceTiers = (applianceName) => {
-    const nameNorm = applianceName?.toLowerCase() || '';
-    if (nameNorm.includes('television') || nameNorm.includes('tv')) {
-      return [
-        { id: 't1', label: 'Below ₹15,000', price: 999 },
-        { id: 't2', label: '₹15,000 - ₹30,000', price: 1299 },
-        { id: 't3', label: '₹30,000 - ₹50,000', price: 1699 },
-        { id: 't4', label: 'Above ₹50,000', price: 2199 }
-      ];
-    }
-    if (nameNorm.includes('refrigerator') || nameNorm.includes('fridge')) {
-      return [
-        { id: 'r1', label: 'Below ₹20,000', price: 999 },
-        { id: 'r2', label: '₹20,000 - ₹45,000', price: 1399 },
-        { id: 'r3', label: 'Above ₹45,000', price: 1899 }
-      ];
-    }
-    if (nameNorm.includes('washing') || nameNorm.includes('wm') || nameNorm.includes('machine')) {
-      return [
-        { id: 'w1', label: 'Semi-Automatic', price: 699 },
-        { id: 'w2', label: 'Fully Automatic Top Load', price: 999 },
-        { id: 'w3', label: 'Fully Automatic Front Load', price: 1499 }
-      ];
-    }
-    if (nameNorm.includes('ac') || nameNorm.includes('conditioner')) {
-      return [
-        { id: 'a1', label: 'Up to 1.5 Ton AC', price: 1199 },
-        { id: 'a2', label: '2.0 Ton AC', price: 1499 }
-      ];
-    }
-    if (nameNorm.includes('purifier')) {
-      return [
-        { id: 'p1', label: 'UV / UF Water Purifier', price: 599 },
-        { id: 'p2', label: 'RO Water Purifier', price: 899 },
-        { id: 'p3', label: 'RO + UV + Copper Purifier', price: 1199 }
-      ];
-    }
-    // Default fallback
-    return [
-      { id: 'd1', label: 'Standard Category Pack', price: 999 },
-      { id: 'd2', label: 'Premium Category Pack', price: 1499 }
-    ];
-  };
+  // The purchasable extension packs, from the admin-managed catalogue. This
+  // screen carried its own per-appliance price tables, so the packs on offer
+  // could not be changed without a redeploy — and the "Pay" button below simply
+  // navigated to a success page, creating no policy and taking no money.
+  const [ewPlans, setEwPlans] = useState([]);
+  const [plansError, setPlansError] = useState('');
 
-  const selectedTiers = getApplianceTiers(selectedAppliance);
-  const selectedTier = selectedTiers[selectedTierIndex] || selectedTiers[0] || { label: 'Standard Category Pack', price: 999 };
+  useEffect(() => {
+    apiRequest('/warranty-amc/extended-warranty/plans', { auth: true })
+      .then((res) => setEwPlans((res.data || []).map((pl) => ({
+        id: pl.id,
+        label: pl.name,
+        price: pl.price,
+        durationYears: pl.durationYears,
+        features: pl.features || [],
+      }))))
+      .catch((err) => setPlansError(err.message || 'Could not load warranty plans.'));
+  }, []);
+
+  const [buying, setBuying] = useState(false);
+  const [buyError, setBuyError] = useState('');
+  const [boughtOrder, setBoughtOrder] = useState(null);
+
+  const selectedTiers = ewPlans;
+  const selectedTier = selectedTiers[selectedTierIndex] || selectedTiers[0] || null;
+
+  // Creates the policy and collects payment before the success screen. It used
+  // to navigate straight to /buy/success — no policy, no charge.
+  const handleBuyWarranty = async () => {
+    if (!selectedTier) return;
+    setBuyError('');
+    setBuying(true);
+    try {
+      const res = await apiRequest('/warranty-amc/extended-warranty/orders', {
+        method: 'POST',
+        auth: true,
+        body: {
+          plan: selectedTier.id,
+          category: selectedAppliance,
+          brand: activeBrand,
+          modelName: modelNumber || undefined,
+        },
+      });
+
+      if (res.data.razorpay) {
+        await payWithRazorpay({
+          razorpay: res.data.razorpay,
+          verifyPath: `/warranty-amc/extended-warranty/orders/${res.data.order.id}/verify-payment`,
+          description: selectedTier.label,
+        });
+      }
+      setBoughtOrder(res.data.order);
+      navigate(`/buy/success/${encodeURIComponent(selectedAppliance || '')}/${selectedTierIndex}`);
+    } catch (err) {
+      setBuyError(err.message || 'The policy could not be activated. You have not been charged.');
+    } finally {
+      setBuying(false);
+    }
+  };
   const applianceBrands = getBrandsForAppliance(selectedAppliance);
   const defaultBrand = applianceBrands[0] || 'Samsung';
   const activeBrand = selectedBrand || defaultBrand;
@@ -873,7 +887,7 @@ const Buy = () => {
               </div>
               <div>
                 <h4 className="text-sm font-black text-brand-navy leading-tight">{selectedAppliance}</h4>
-                <p className="text-xs text-text-secondary mt-0.5">{selectedTier.label}</p>
+                <p className="text-xs text-text-secondary mt-0.5">{selectedTier?.label}</p>
                 <span className="text-xs text-text-secondary font-medium block mt-0.5">1 Year Extended Warranty</span>
               </div>
             </div>
@@ -882,15 +896,17 @@ const Buy = () => {
             <div className="bg-white border border-slate-200/80 rounded-2xl p-4 flex flex-col gap-3 shadow-sm">
               <div className="flex justify-between items-center text-sm">
                 <span className="text-text-secondary">Warranty Price (1 Year)</span>
-                <span className="font-bold text-text-primary">₹{selectedTier.price}</span>
+                <span className="font-bold text-text-primary">₹{selectedTier?.price}</span>
               </div>
               <div className="flex justify-between items-center text-sm">
-                <span className="text-text-secondary">GST (10%)</span>
-                <span className="font-bold text-text-primary">₹{Math.round(selectedTier.price * 0.10)}</span>
+                {/* Same as AMC: the server bills the tier price, so a 10% line
+                    here quoted the customer more than they were charged. */}
+                <span className="text-text-secondary">Taxes</span>
+                <span className="font-bold text-text-primary">Included</span>
               </div>
               <div className="border-t border-slate-100 pt-3 flex justify-between items-center">
                 <span className="text-base font-black text-text-primary">Total Amount</span>
-                <span className="text-xl font-black text-brand-blue">₹{Math.round(selectedTier.price * 1.10)}</span>
+                <span className="text-xl font-black text-brand-blue">₹{Number(selectedTier.price || 0).toLocaleString('en-IN')}</span>
               </div>
             </div>
 
@@ -1228,7 +1244,7 @@ const Buy = () => {
             <div className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between shadow-sm mt-2">
               <div>
                 <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider block">Total Payable</span>
-                <span className="text-lg font-black text-brand-navy block mt-0.5">₹{Math.round(selectedTier.price * 1.10)}</span>
+                <span className="text-lg font-black text-brand-navy block mt-0.5">₹{Number(selectedTier.price || 0).toLocaleString('en-IN')}</span>
               </div>
               <span className="text-xs font-bold text-brand-blue hover:underline cursor-pointer">
                 View Details
@@ -1238,12 +1254,16 @@ const Buy = () => {
             {/* Action Pay Button */}
             <div className="flex flex-col gap-2.5 mt-2">
               <button 
-                onClick={() => navigate(`/buy/success/${encodeURIComponent(selectedAppliance || '')}/${selectedTierIndex}`)}
-                className="w-full bg-brand-yellow hover:bg-yellow-400 text-brand-navy font-black py-4 rounded-2xl transition-all shadow-md text-sm cursor-pointer active:scale-98 flex items-center justify-center gap-2"
+                onClick={handleBuyWarranty}
+                disabled={buying || !selectedTier}
+                className="w-full bg-brand-yellow hover:bg-yellow-400 disabled:opacity-60 text-brand-navy font-black py-4 rounded-2xl transition-all shadow-md text-sm cursor-pointer active:scale-98 flex items-center justify-center gap-2"
               >
                 <Lock className="h-4.5 w-4.5" />
-                Pay ₹{Math.round(selectedTier.price * 1.10)} Securely
+                {buying ? 'Opening secure checkout…' : `Pay ₹${Number(selectedTier?.price || 0).toLocaleString('en-IN')} Securely`}
               </button>
+              {buyError && (
+                <p className="text-[11px] font-bold text-red-600 text-center px-2">{buyError}</p>
+              )}
               <div className="flex items-center justify-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                 <ShieldCheck className="h-4 w-4 text-green-600" />
                 100% Secure Payment
@@ -1288,11 +1308,13 @@ const Buy = () => {
               <div className="flex flex-col gap-3.5 border-t border-white/10 pt-4 text-xs">
                 <div className="flex justify-between">
                   <span className="text-white/60">Policy Plan:</span>
-                  <span className="font-bold text-brand-yellow">{selectedTier.label}</span>
+                  <span className="font-bold text-brand-yellow">{selectedTier?.label}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-white/60">Policy ID:</span>
-                  <span className="font-mono tracking-wider font-semibold">NCCEW{Math.floor(100000 + Math.random() * 900000)}</span>
+                  {/* The real policy reference — a random NCCEW###### was shown
+                      here, so the number the customer kept matched no policy. */}
+                  <span className="font-mono tracking-wider font-semibold">{boughtOrder?.humanId || boughtOrder?.id || '—'}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-white/60">Coverage Status:</span>
@@ -1435,7 +1457,7 @@ const Buy = () => {
                           return kitchenApplianceImg;
                         })();
 
-                        const orderId = w.policyId || w.id || `#NCCEW${w._id?.slice(-6)}`;
+                        const orderId = w.humanId || w.id;
                         const validTillStr = new Date(w.validTill).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 
                         return (
@@ -1529,7 +1551,7 @@ const Buy = () => {
                         return kitchenApplianceImg;
                       })();
 
-                      const orderId = a.contractNo || a.id || `#NCCAMC${a._id?.slice(-6)}`;
+                      const orderId = a.humanId || a.id;
                       const expiryDateStr = new Date(a.expiryDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 
                       return (

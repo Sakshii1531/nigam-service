@@ -24,11 +24,14 @@ const MyBookings = () => {
       try {
         const res = await apiRequest('/bookings', { auth: true });
         const listToMap = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+        // Field names are the Booking schema's: there is no `bookingId` or
+        // `serviceName`, and `service` is an object — reading it directly would
+        // have rendered "[object Object]".
         const apiList = listToMap.map(b => ({
-          id: b.bookingId || b.id || `#NCC${b._id?.slice(-6)}`,
-          service: b.serviceName || b.service || 'Service Request',
+          id: b.humanId || b.id,
+          service: b.service?.name || b.category || 'Service Request',
           date: b.scheduledDate ? new Date(b.scheduledDate).toLocaleDateString() : 'Scheduled',
-          status: b.status === 'Pending' ? 'Upcoming' : (b.status || 'Upcoming')
+          status: b.status || 'Upcoming',
         }));
 
         setBookings(apiList);

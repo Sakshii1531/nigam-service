@@ -12,6 +12,7 @@ import { ExtendedWarrantyOrder } from '../src/modules/warranty-amc-exchange/exte
 import { SparePartCatalog } from '../src/modules/super-admin/sparePartCatalog.model.js';
 import { Claim } from '../src/modules/warranty-amc-exchange/claim.model.js';
 import { ExchangeBaseValue } from '../src/modules/warranty-amc-exchange/exchangeBaseValue.model.js';
+import { ExchangeRequest } from '../src/modules/warranty-amc-exchange/exchangeRequest.model.js';
 import { Booking } from '../src/modules/booking/booking.model.js';
 import { Payment } from '../src/modules/payments-wallet/payment.model.js';
 import { Category } from '../src/modules/catalog/category.model.js';
@@ -89,6 +90,7 @@ beforeEach(async () => {
     SparePartCatalog.deleteMany({}),
     Claim.deleteMany({}),
     ExchangeBaseValue.deleteMany({}),
+    ExchangeRequest.deleteMany({}),
     Booking.deleteMany({}),
     Payment.deleteMany({}),
     Category.deleteMany({}),
@@ -819,5 +821,128 @@ describe('warranty and AMC purchases are charged', () => {
       .send({ razorpayPaymentId: 'pay_x', razorpaySignature: signature })
       .expect(403);
     expect((await ExtendedWarrantyOrder.findById(order.id)).paid).toBe(false);
+  });
+});
+
+describe('super-admin user list counts', () => {
+  it('returns real appliance and service counts per customer', async () => {
+    const withHistory = await seedCustomer();
+    const withoutHistory = await seedCustomer();
+    const adminToken = await seedSuperAdmin();
+
+    await OwnedAppliance.create([
+      { user: withHistory.user._id, category: 'AC' },
+      { user: withHistory.user._id, category: 'Refrigerator' },
+    ]);
+    await ServiceRequest.create({
+      user: withHistory.user._id,
+      category: 'AC',
+      description: 'Past job',
+      requestMode: 'B2C',
+    });
+
+    const res = await request(app)
+      .get('/api/v1/super-admin/users?role=customer')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    const busy = res.body.data.find((u) => u.id === withHistory.user.id);
+    const quiet = res.body.data.find((u) => u.id === withoutHistory.user.id);
+
+    // Both columns used to read zero for everyone — they were never returned.
+    expect(busy.appliancesCount).toBe(2);
+    expect(busy.servicesCount).toBe(1);
+    expect(quiet.appliancesCount).toBe(0);
+    expect(quiet.servicesCount).toBe(0);
+
+    // Still no password material in the payload.
+    expect(busy.passwordHash).toBeUndefined();
+  });
+});
+
+describe('exchange credit only applies after inspection', () => {
+  async function seedProduct(price = 30000) {
+    return Product.create({ category: 'AC', name: 'Split AC', price, stock: 10 });
+  }
+
+  it('refuses an un-inspected trade-in rather than discounting the order', async () => {
+    const { user, token } = await seedCustomer();
+    const product = await seedProduct();
+
+    const exchange = await ExchangeRequest.create({
+      user: user._id,
+      category: 'Mobile',
+      brand: 'Apple',
+      model: 'iPhone 14',
+      estimatedValue: 25000,
+      baseValue: 25000,
+      status: 'Pending Inspection',
+    });
+
+    const res = await request(app)
+      .post('/api/v1/orders')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ items: [{ productId: product.id, quantity: 1 }], exchangeRequestId: exchange.id, paymentMethod: 'Cash' })
+      .expect(400);
+    expect(res.body.error.message).toMatch(/inspection/i);
+
+    // No order was created, so no discount leaked through.
+    expect(await Order.countDocuments()).toBe(0);
+  });
+
+  it('applies the stored valuation once inspection is approved, and only once', async () => {
+    const { user, token } = await seedCustomer();
+    const auth = { Authorization: `Bearer ${token}` };
+    const product = await seedProduct(30000);
+
+    const exchange = await ExchangeRequest.create({
+      user: user._id,
+      category: 'Mobile',
+      brand: 'Apple',
+      model: 'iPhone 14',
+      estimatedValue: 25000,
+      baseValue: 25000,
+      status: 'Inspection Approved',
+    });
+
+    const first = await request(app)
+      .post('/api/v1/orders')
+      .set(auth)
+      .send({ items: [{ productId: product.id, quantity: 1 }], exchangeRequestId: exchange.id, paymentMethod: 'Cash' })
+      .expect(201);
+
+    // The discount is the server's stored valuation, not anything the client sent.
+    expect(first.body.data.exchangeDiscount).toBe(25000);
+    expect(first.body.data.total).toBe(5000);
+
+    // The same trade-in cannot be spent twice.
+    await request(app)
+      .post('/api/v1/orders')
+      .set(auth)
+      .send({ items: [{ productId: product.id, quantity: 1 }], exchangeRequestId: exchange.id, paymentMethod: 'Cash' })
+      .expect(400);
+  });
+});
+
+describe('AMC plan catalogue', () => {
+  it('is served to customers and prices the subscription from it', async () => {
+    const { token } = await seedCustomer();
+    const auth = { Authorization: `Bearer ${token}` };
+    const plan = await AMCPlan.create({ name: 'Gold AMC', tier: 'Gold', price: 2499, visitsTotal: 4 });
+    await AMCPlan.create({ name: 'Retired AMC', tier: 'Silver', price: 99, visitsTotal: 1, isActive: false });
+
+    const listed = await request(app).get('/api/v1/warranty-amc/amc/plans').set(auth).expect(200);
+    // Only live plans are offered.
+    expect(listed.body.data.map((p) => p.name)).toEqual(['Gold AMC']);
+
+    const res = await request(app)
+      .post('/api/v1/warranty-amc/amc/subscriptions')
+      .set(auth)
+      .send({ plan: plan.id, brand: 'LG' })
+      .expect(201);
+
+    // The visit allowance and the charge both come from the plan.
+    expect(res.body.data.subscription.visitsTotal).toBe(4);
+    expect(res.body.data.razorpay.amount).toBe(2499 * 100);
   });
 });

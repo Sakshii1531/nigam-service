@@ -11,11 +11,11 @@ const AllCleaningServices = () => {
   const navigate = useNavigate();
 
   const services = [
-    { id: 1, title: "Intense cleaning (2 bathrooms)", image: cleaningBathroom1, rating: 4.80, price: 872, originalPrice: 1038, badge: "8% OFF" },
-    { id: 2, title: "Classic cleaning (2 bathrooms)", image: cleaningBathroom2, rating: 4.82, price: 794, originalPrice: 858, badge: "7% OFF" },
-    { id: 3, title: "Sofa Deep Cleaning", image: cleaningSofa, rating: 4.75, price: 569, originalPrice: 699, badge: "18% OFF" },
-    { id: 4, title: "Carpet Cleaning", image: cleaningCarpet, rating: 4.70, price: 899, originalPrice: 1199, badge: "25% OFF" },
-    { id: 5, title: "Kitchen Deep Cleaning", image: cleaningKitchen, rating: 4.88, price: 1299, originalPrice: 1599, badge: "18% OFF" }
+    { id: 1, title: "Intense cleaning (2 bathrooms)", image: cleaningBathroom1, price: 872, originalPrice: 1038, badge: "8% OFF" },
+    { id: 2, title: "Classic cleaning (2 bathrooms)", image: cleaningBathroom2, price: 794, originalPrice: 858, badge: "7% OFF" },
+    { id: 3, title: "Sofa Deep Cleaning", image: cleaningSofa, price: 569, originalPrice: 699, badge: "18% OFF" },
+    { id: 4, title: "Carpet Cleaning", image: cleaningCarpet, price: 899, originalPrice: 1199, badge: "25% OFF" },
+    { id: 5, title: "Kitchen Deep Cleaning", image: cleaningKitchen, price: 1299, originalPrice: 1599, badge: "18% OFF" }
   ];
 
   return (
@@ -47,10 +47,12 @@ const AllCleaningServices = () => {
                 <span className="text-sm font-semibold text-text-primary truncate">
                   {service.title}
                 </span>
-                <div className="flex items-center gap-1">
-                  <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
-                  <span className="text-xs text-text-secondary">{service.rating}</span>
-                </div>
+                {service.rating ? (
+                  <div className="flex items-center gap-1">
+                    <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
+                    <span className="text-xs text-text-secondary">{service.rating}</span>
+                  </div>
+                ) : null}
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-bold text-[#0D47A1]">
                     ₹{service.price}

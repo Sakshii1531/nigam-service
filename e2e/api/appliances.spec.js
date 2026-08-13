@@ -220,3 +220,54 @@ test.describe('customer payments actually reach the gateway', () => {
     expect((await me.json()).data).toBeNull();
   });
 });
+
+// A frontend screen calling a path the server does not serve fails silently at
+// runtime — the list renders empty and nothing in CI notices. Two such calls
+// (/brand/requests and /catalog/services) shipped before this check existed.
+test.describe('endpoints the consoles depend on exist', () => {
+  const PATHS = [
+    '/api/v1/catalog/categories',
+    '/api/v1/catalog/brands',
+    '/api/v1/cms/home-tiles?placement=dashboard-service',
+    '/api/v1/memberships/plans',
+  ];
+
+  for (const path of PATHS) {
+    test(`GET ${path} is served`, async ({ request }) => {
+      const res = await request.get(path);
+      expect(res.status(), `${path} should not 404`).not.toBe(404);
+    });
+  }
+
+  const AUTHED_PATHS = [
+    '/api/v1/service-requests?limit=5',
+    '/api/v1/brand/dashboard',
+    '/api/v1/brand/reports',
+    '/api/v1/brand/customers',
+    '/api/v1/brand/amc-subscriptions',
+    '/api/v1/brand/academy/guides',
+    '/api/v1/brand/settings',
+  ];
+
+  test('brand console endpoints are all served', async ({ request }) => {
+    const email = `brand-paths-${randomUUID()}@e2e.test`;
+    const brandName = `E2E-Paths-${randomUUID()}`;
+    const adminToken = await createSuperAdmin(request);
+
+    const brandRes = await request.post('/api/v1/super-admin/brands', {
+      headers: { Authorization: `Bearer ${adminToken}` },
+      data: { name: brandName, category: 'Appliances', status: 'Active' },
+    });
+    const brand = (await brandRes.json()).data;
+
+    await request.post('/api/v1/_dev/test-user', {
+      data: { role: 'brand_admin', email, password: 'password123', brand: brand.id },
+    });
+    const token = await loginAndVerify(request, { role: 'brand_admin', identifier: email, password: 'password123' });
+
+    for (const path of AUTHED_PATHS) {
+      const res = await request.get(path, { headers: { Authorization: `Bearer ${token}` } });
+      expect(res.status(), `${path} should not 404`).not.toBe(404);
+    }
+  });
+});

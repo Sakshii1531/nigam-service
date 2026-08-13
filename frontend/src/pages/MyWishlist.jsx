@@ -88,9 +88,15 @@ const MyWishlist = () => {
         ) : (
           <div className="flex flex-col gap-3">
             {wishlist.map((item) => {
-              const rating = (4.0 + (item.price % 6) * 0.1).toFixed(1);
-              const originalPrice = Math.round(item.price * 1.5);
-              const discount = 30 + (item.price % 18);
+              // All three were derived from the price: a star rating from
+              // `price % 6`, a struck-through "original price" of 1.5x, and a
+              // discount percentage from `price % 18`. That is an invented
+              // saving shown against a price that was never charged.
+              const rating = item.rating ? Number(item.rating).toFixed(1) : null;
+              const originalPrice = item.originalPrice && item.originalPrice > item.price ? item.originalPrice : null;
+              const discount = originalPrice
+                ? Math.round(((originalPrice - item.price) / originalPrice) * 100)
+                : null;
 
               return (
                 <div 
@@ -117,9 +123,11 @@ const MyWishlist = () => {
                       
                       {/* Rating */}
                       <div className="flex items-center gap-1.5 mt-1">
-                        <span className="bg-green-600 text-white text-[8px] font-extrabold px-1 py-0.2 rounded flex items-center gap-0.5">
-                          {rating} <Star size={7} fill="currentColor" />
-                        </span>
+                        {rating && (
+                          <span className="bg-green-600 text-white text-[8px] font-extrabold px-1 py-0.2 rounded flex items-center gap-0.5">
+                            {rating} <Star size={7} fill="currentColor" />
+                          </span>
+                        )}
                         <span className="inline-flex items-center gap-0.5 text-[7px] font-black italic bg-blue-50 text-blue-700 px-1 rounded border border-blue-100">
                           ★ Assured
                         </span>
@@ -130,12 +138,16 @@ const MyWishlist = () => {
                       <span className="text-slate-800 font-extrabold text-xs">
                         ₹{item.price.toLocaleString()}
                       </span>
-                      <span className="text-slate-400 line-through text-[10px] font-semibold">
-                        ₹{originalPrice.toLocaleString()}
-                      </span>
-                      <span className="text-[#388E3C] font-extrabold text-[9px]">
-                        ↓{discount}%
-                      </span>
+                      {originalPrice && (
+                        <>
+                          <span className="text-slate-400 line-through text-[10px] font-semibold">
+                            ₹{originalPrice.toLocaleString()}
+                          </span>
+                          <span className="text-[#388E3C] font-extrabold text-[9px]">
+                            ↓{discount}%
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
 

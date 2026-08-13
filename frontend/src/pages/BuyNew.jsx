@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { apiRequest } from '../lib/apiClient';
+import { payWithRazorpay } from '../lib/razorpayCheckout';
 
 // Import Exchange Modal & Configs
 import { initializeExchangeConfigs } from '../data/exchangeMockData';
@@ -157,8 +158,10 @@ const BuyNew = () => {
       list.sort((a, b) => b.price - a.price);
     } else if (sortOption === 'popularity') {
       list.sort((a, b) => {
-        const ratingA = 4.0 + (a.price % 6) * 0.1;
-        const ratingB = 4.0 + (b.price % 6) * 0.1;
+        // Real ratings; these were synthesised from `price % 6`, so "sort by
+        // rating" was really sorting by an arithmetic quirk of the price.
+        const ratingA = a.rating || 0;
+        const ratingB = b.rating || 0;
         return ratingB - ratingA;
       });
     } else if (sortOption === 'newest') {
@@ -229,12 +232,66 @@ const BuyNew = () => {
   const isExchangeActiveForProduct = productExchangeConfig?.exchangeEnabled;
   const isCurrentExchangeApplied = exchangeApplied && exchangeApplied.productId === finalProduct?.id;
 
-  // Cart pricing details
+  // Cart pricing details.
+  //
+  // A trade-in is only honoured once a super-admin has physically inspected the
+  // device (order.service.js refuses the discount otherwise), so the amount
+  // payable today is the full price. This used to subtract the estimate from
+  // the total on screen while the order was still priced at full — the customer
+  // was quoted less than they would have been charged.
   const cartSubtotalBeforeExchange = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
-  const totalExchangeSavings = cart.reduce((sum, item) => sum + (item.exchange ? item.exchange.totalSavings * item.qty : 0), 0);
-  const cartSubtotal = cartSubtotalBeforeExchange - totalExchangeSavings;
+  const approvedExchangeSavings = cart.reduce(
+    (sum, item) => sum + (item.exchange?.status === 'Inspection Approved' ? item.exchange.totalSavings * item.qty : 0),
+    0,
+  );
+  const pendingExchangeSavings = cart.reduce(
+    (sum, item) => sum + (item.exchange && item.exchange.status !== 'Inspection Approved' ? item.exchange.totalSavings * item.qty : 0),
+    0,
+  );
+  const totalExchangeSavings = approvedExchangeSavings;
+  const cartSubtotal = cartSubtotalBeforeExchange - approvedExchangeSavings;
   const deliveryCharges = 0;
   const cartTotal = cartSubtotal + deliveryCharges;
+
+  const placedOrder = location.state?.order || null;
+  const [placingOrder, setPlacingOrder] = useState(false);
+  const [orderError, setOrderError] = useState('');
+
+  const handlePlaceOrder = async () => {
+    if (!cart.length) return;
+    setOrderError('');
+    setPlacingOrder(true);
+
+    try {
+      const res = await apiRequest('/orders', {
+        method: 'POST',
+        auth: true,
+        body: {
+          items: cart.map((item) => ({ productId: item.id, quantity: item.qty || 1 })),
+          // Only an inspected-and-approved trade-in is accepted by the server;
+          // sending a pending one would 400 the whole checkout.
+          exchangeRequestId: cart.find((i) => i.exchange?.status === 'Inspection Approved')?.exchange?.requestId,
+          paymentMethod: 'UPI',
+        },
+      });
+      const order = res.data;
+
+      if (order.razorpay) {
+        await payWithRazorpay({
+          razorpay: order.razorpay,
+          verifyPath: `/orders/${order.id}/verify-payment`,
+          description: `${cart.length} item(s)`,
+        });
+      }
+
+      clearCart();
+      navigate('/buy-new/success', { state: { order } });
+    } catch (err) {
+      setOrderError(err.message || 'The order could not be placed. You have not been charged.');
+    } finally {
+      setPlacingOrder(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-bg-light flex flex-col pb-24 relative">
@@ -405,7 +462,6 @@ const BuyNew = () => {
                 const discount = originalPrice && originalPrice > product.price
                   ? Math.round(((originalPrice - product.price) / originalPrice) * 100)
                   : null;
-                const exchangePrice = Math.round(product.price * 0.85);
 
                 return (
                   <div 
@@ -477,9 +533,11 @@ const BuyNew = () => {
                             </span>
                           </div>
 
-                          {/* Special exchange tag */}
+                          {/* The trade-in value depends on the customer's own
+                              device, so it cannot be quoted on a product card.
+                              This showed a flat 15% off as an "exchange offer". */}
                           <p className="text-[10px] text-[#0A52B5] font-extrabold mt-1">
-                            wow! ₹{exchangePrice.toLocaleString()} with Exchange offer
+                            Exchange offer available
                           </p>
 
                           {/* Delivery info */}
@@ -533,10 +591,16 @@ const BuyNew = () => {
               {isCurrentExchangeApplied ? (
                 <div className="flex flex-col gap-0.5">
                   <div className="flex items-baseline gap-2.5">
-                    <span className="text-2xl font-black text-green-600">₹{(finalProduct.price - exchangeApplied.totalSavings).toLocaleString()}</span>
-                    <span className="text-sm font-bold text-slate-400 line-through">₹{finalProduct.price.toLocaleString()}</span>
+                    <span className="text-2xl font-black text-green-600">₹{finalProduct.price.toLocaleString()}</span>
                   </div>
-                  <span className="text-[10px] font-black text-[#10B981] bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 self-start">Exchange Offer Applied</span>
+                  {/* The estimate is not a discount until the device is
+                      inspected, so it is labelled as an estimate rather than
+                      struck through the price. */}
+                  <span className="text-[10px] font-black text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 self-start">
+                    {exchangeApplied.status === 'Inspection Approved'
+                      ? `Exchange credit ₹${exchangeApplied.totalSavings?.toLocaleString()} approved`
+                      : `Trade-in registered · est. ₹${exchangeApplied.totalSavings?.toLocaleString()} after inspection`}
+                  </span>
                 </div>
               ) : (
                 <span className="text-2xl font-black text-green-600">₹{finalProduct.price.toLocaleString()}</span>
@@ -604,14 +668,17 @@ const BuyNew = () => {
                       <div className="flex gap-2">
                         <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
                         <div>
-                          <span className="text-xs font-black text-emerald-800 block">Exchange Applied</span>
+                          <span className="text-xs font-black text-emerald-800 block">
+                            {exchangeApplied.status === 'Inspection Approved' ? 'Exchange Approved' : 'Trade-in Registered'}
+                          </span>
                           <span className="text-[10px] text-slate-500 font-bold block mt-0.5">
                             {exchangeApplied.brand} {exchangeApplied.model}
                           </span>
                         </div>
                       </div>
                       <span className="text-xs font-black text-[#10B981]">
-                        - ₹{exchangeApplied.totalSavings?.toLocaleString()}
+                        {exchangeApplied.status === 'Inspection Approved' ? '- ' : '≈ '}
+                        ₹{exchangeApplied.totalSavings?.toLocaleString()}
                       </span>
                     </div>
                     
@@ -773,10 +840,24 @@ const BuyNew = () => {
                     <span>₹{cartSubtotalBeforeExchange.toLocaleString()}</span>
                   </div>
 
-                  {totalExchangeSavings > 0 && (
+                  {approvedExchangeSavings > 0 && (
                     <div className="flex justify-between items-center text-xs text-green-600 font-bold">
                       <span>Exchange Discount</span>
-                      <span>- ₹{totalExchangeSavings.toLocaleString()}</span>
+                      <span>- ₹{approvedExchangeSavings.toLocaleString()}</span>
+                    </div>
+                  )}
+
+                  {/* A pending trade-in is shown as what it is — an estimate
+                      awaiting inspection — not deducted from today's total. */}
+                  {pendingExchangeSavings > 0 && (
+                    <div className="flex flex-col gap-0.5 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                      <div className="flex justify-between items-center text-xs text-amber-800 font-bold">
+                        <span>Trade-in (pending inspection)</span>
+                        <span>≈ ₹{pendingExchangeSavings.toLocaleString()}</span>
+                      </div>
+                      <span className="text-[10px] text-amber-700 leading-snug">
+                        Credited after our technician inspects your old device at pickup. Today you pay the full price.
+                      </span>
                     </div>
                   )}
                   
@@ -887,16 +968,20 @@ const BuyNew = () => {
 
             {/* Pay Button */}
             <div className="flex flex-col gap-2.5 mt-2">
+              {/* Places a real order and takes the money. This used to clear the
+                  cart and jump to the success screen — no order was created and
+                  nothing was charged, yet the customer was told it was placed. */}
               <button
-                onClick={() => {
-                  clearCart();
-                  navigate('/buy-new/success');
-                }}
-                className="w-full bg-[#FFD400] hover:bg-yellow-400 text-brand-navy font-black py-4 rounded-2xl transition-all shadow-md text-sm cursor-pointer active:scale-98 flex items-center justify-center gap-2"
+                onClick={handlePlaceOrder}
+                disabled={placingOrder || cart.length === 0}
+                className="w-full bg-[#FFD400] hover:bg-yellow-400 disabled:opacity-60 text-brand-navy font-black py-4 rounded-2xl transition-all shadow-md text-sm cursor-pointer active:scale-98 flex items-center justify-center gap-2"
               >
                 <Lock className="h-4 w-4" />
-                Pay ₹{cartTotal.toLocaleString()} Securely
+                {placingOrder ? 'Opening secure checkout…' : `Pay ₹${cartTotal.toLocaleString()} Securely`}
               </button>
+              {orderError && (
+                <p className="text-[11px] font-bold text-red-600 text-center px-2">{orderError}</p>
+              )}
               <div className="flex items-center justify-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                 <ShieldCheck className="h-4 w-4 text-green-600" />
                 100% Secure Payment
@@ -942,7 +1027,9 @@ const BuyNew = () => {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-white/60">Order ID:</span>
-                  <span className="font-mono tracking-wider font-semibold">NCCORD{Math.floor(100000 + Math.random() * 900000)}</span>
+                  {/* The real order reference. A random NCCORD###### was shown
+                      here, so the number the customer wrote down matched no order. */}
+                  <span className="font-mono tracking-wider font-semibold">{placedOrder?.humanId || placedOrder?.id || '—'}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-white/60">Status:</span>

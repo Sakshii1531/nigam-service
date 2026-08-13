@@ -1,5 +1,6 @@
 import { User } from '../auth/user.model.js';
 import { RefreshToken } from '../auth/refreshToken.model.js';
+import { OwnedAppliance } from '../service-requests/ownedAppliance.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { parsePagination, paginationMeta } from '../../utils/pagination.js';
 import { Referral } from '../rewards-loyalty/referral.model.js';
@@ -21,7 +22,25 @@ export async function listUsers({ role, status, page, limit, sort } = {}) {
     User.find(query).sort(sortObj).skip(skip).limit(lim),
     User.countDocuments(query),
   ]);
-  return { items, meta: paginationMeta({ page: pg, limit: lim, total }) };
+
+  // The console shows (and sorts by) an appliance and service count per row.
+  // Neither was returned, so both columns read zero for every customer and the
+  // "minimum appliances" filter matched nobody.
+  const ids = items.map((u) => u._id);
+  const [applianceRows, serviceRows] = await Promise.all([
+    OwnedAppliance.aggregate([{ $match: { user: { $in: ids } } }, { $group: { _id: '$user', count: { $sum: 1 } } }]),
+    ServiceRequest.aggregate([{ $match: { user: { $in: ids } } }, { $group: { _id: '$user', count: { $sum: 1 } } }]),
+  ]);
+  const applianceCount = new Map(applianceRows.map((r) => [String(r._id), r.count]));
+  const serviceCount = new Map(serviceRows.map((r) => [String(r._id), r.count]));
+
+  const withCounts = items.map((u) => ({
+    ...u.toJSON(),
+    appliancesCount: applianceCount.get(String(u._id)) || 0,
+    servicesCount: serviceCount.get(String(u._id)) || 0,
+  }));
+
+  return { items: withCounts, meta: paginationMeta({ page: pg, limit: lim, total }) };
 }
 
 async function findOr404(id) {
