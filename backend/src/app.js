@@ -91,10 +91,14 @@ export function createApp() {
         if (!isProd && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
           return callback(null, true);
         }
-        if (env.corsOrigins.includes(origin) || env.corsOrigins.includes('*')) {
+        if (
+          env.corsOrigins.includes(origin) ||
+          env.corsOrigins.includes('*') ||
+          /\.vercel\.app$/.test(origin)
+        ) {
           return callback(null, true);
         }
-        callback(new Error(`CORS origin ${origin} not allowed`));
+        callback(null, false);
       },
       credentials: true,
     }),
