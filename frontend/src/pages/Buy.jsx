@@ -10,6 +10,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { apiRequest } from '../lib/apiClient';
 import { payWithRazorpay } from '../lib/razorpayCheckout';
+import { useAuth } from '../context/AuthContext';
 
 // Import premium cutout assets for high-fidelity rendering
 import fridgeImg from '../assets/appliance_fridge.png';
@@ -98,12 +99,16 @@ const Buy = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Form states for Step 5 & 6 & 8
+  // Form states for Step 5 & 6 & 8. These used to default to a fake persona
+  // ("Rahul Sharma", "9876543210", "rahulsharma@gmail.com", "110054") — a
+  // customer who didn't notice and overwrite it would have their extended
+  // warranty registered under a stranger's contact details.
+  const { user } = useAuth();
   const [showSuccess, setShowSuccess] = useState(false);
-  const [fullName, setFullName] = useState("Rahul Sharma");
-  const [mobileNumber, setMobileNumber] = useState("9876543210");
-  const [email, setEmail] = useState("rahulsharma@gmail.com");
-  const [pincode, setPincode] = useState("110054");
+  const [fullName, setFullName] = useState(user?.name || '');
+  const [mobileNumber, setMobileNumber] = useState(user?.phone || '');
+  const [email, setEmail] = useState(user?.email || '');
+  const [pincode, setPincode] = useState('');
   const [selectedBrand, setSelectedBrand] = useState("");
   const [modelNumber, setModelNumber] = useState("");
   const [purchaseDate, setPurchaseDate] = useState("");

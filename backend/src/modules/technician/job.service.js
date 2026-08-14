@@ -79,6 +79,16 @@ async function simpleTransition(technicianId, jobId, toStep, srStatus) {
   return job;
 }
 
+// Populated on the pre-accept ServiceRequest so the "AMC Plan Details" /
+// "Extended Warranty" cards on the job screen show the customer's real
+// coverage before the technician has accepted. Those cards used to be
+// hardcoded — "AMC Gold Plan", "15 Jan 2027", "3" visits remaining — for every
+// AMC job regardless of which plan (or how many visits) the customer actually
+// had left. Once accepted, acceptJob() below snapshots this same data onto the
+// Job document itself (job.amc / job.ew), so listActiveJobs needs no populate.
+const AMC_POPULATE = { path: 'amcSubscription', populate: { path: 'plan', select: 'name' } };
+const EW_POPULATE = { path: 'extendedWarrantyOrder' };
+
 export async function listAvailableJobs(technicianId) {
   const acceptedServiceRequestIds = await Job.find({ technician: technicianId }).distinct('serviceRequest');
   return ServiceRequest.find({
@@ -87,6 +97,8 @@ export async function listAvailableJobs(technicianId) {
     _id: { $nin: acceptedServiceRequestIds },
   })
     .populate('user booking')
+    .populate(AMC_POPULATE)
+    .populate(EW_POPULATE)
     .sort({ createdAt: -1 });
 }
 

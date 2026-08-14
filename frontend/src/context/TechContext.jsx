@@ -48,19 +48,34 @@ export const TechProvider = ({ children }) => {
         product: sr.description || `${sr.category || 'Appliance'} Service`,
         brand: sr.booking?.brand || sr.category || 'Brand',
         model: sr.model || 'Universal Model',
-        serialNo: sr.serialNo || 'SNY-12345',
+        // No fake fallbacks: a fabricated serial confuses warranty/diagnostic
+        // lookups, a fabricated distance misleads which job a technician picks
+        // to accept, and a fabricated phone number is actively dangerous — it
+        // used to be dialled/WhatsApped as if it were the real customer.
+        serialNo: sr.serialNo || null,
         complaint: sr.description || 'Service booking request',
         estEarnings: sr.booking ? Math.round(sr.booking.totalPrice * 0.3) : 150,
         price: sr.booking ? sr.booking.totalPrice : 299,
-        distance: 2.3,
+        distance: null,
         customerName: sr.booking?.fullName || sr.user?.name || 'Customer',
-        phone: sr.booking?.mobile || sr.user?.phone || '9876543210',
+        phone: sr.booking?.mobile || sr.user?.phone || null,
         address: sr.booking?.address ? `${sr.booking.address.house || ''}, ${sr.booking.address.landmark || ''}, ${sr.booking.address.city || ''} ${sr.booking.address.pincode || ''}` : 'Customer Address',
         isD2C: sr.booking ? sr.booking.totalPrice > 0 : true,
         isPriority: sr.priority === 'High' || sr.priority === 'Critical',
         isRecommended: true,
         isAvailableRequest: true,
         serviceRequestId: sr.id || sr._id,
+        // Real scheduled slot — the dashboard card used to show a fixed
+        // "Today, 02:00 PM" under every job regardless of when it was booked.
+        scheduledTime: sr.booking?.timeSlot?.time || null,
+        scheduledDateLabel: sr.booking?.timeSlot?.date || null,
+        amcPlanName: sr.amcSubscription?.plan?.name || null,
+        amcVisitsRemaining: sr.amcSubscription?.visitsRemaining ?? null,
+        amcVisitsTotal: sr.amcSubscription?.visitsTotal ?? null,
+        amcPlanExpiry: sr.amcSubscription?.expiryDate || null,
+        ewValidTill: sr.extendedWarrantyOrder?.validTill || null,
+        ewClaimsRemaining: sr.extendedWarrantyOrder?.claimsRemaining ?? null,
+        ewClaimsTotal: sr.extendedWarrantyOrder?.claimsTotal ?? null,
       }));
 
       const mappedActive = activeJobs.map((job) => {
@@ -72,15 +87,32 @@ export const TechProvider = ({ children }) => {
           product: sr?.description || 'Service Job',
           brand: sr?.booking?.brand || 'Brand',
           model: sr?.model || 'Universal Model',
-          serialNo: sr?.serialNo || 'SNY-12345',
+          serialNo: sr?.serialNo || null,
           complaint: sr?.description || 'Service Job',
           estEarnings: job.estEarnings || 200,
           invoiceUrl: sr?.attachments?.[0] || sr?.appliance?.invoiceFileUrl || null,
           invoiceAvailable: Boolean(sr?.invoiceAvailable),
           price: job.price || 500,
-          distance: 1.8,
+          distance: null,
           customerName: sr?.booking?.fullName || sr?.user?.name || 'Customer',
-          phone: sr?.booking?.mobile || sr?.user?.phone || '9876543210',
+          phone: sr?.booking?.mobile || sr?.user?.phone || null,
+          // The real coverage behind an AMC/EW job — see job.service.js's
+          // listActiveJobs/listAvailableJobs populate. These cards used to be
+          // hardcoded ("AMC Gold Plan", "15 Jan 2027", "3" visits remaining)
+          // for every job of that type, regardless of the customer's real plan.
+          scheduledTime: sr?.booking?.timeSlot?.time || null,
+          scheduledDateLabel: sr?.booking?.timeSlot?.date || null,
+          // acceptJob() snapshots the plan onto job.amc/job.ew at accept time —
+          // that snapshot is the source once a job exists; sr.amcSubscription
+          // (populated on the pre-accept list) is only a fallback for the brief
+          // window before a Job document exists.
+          amcPlanName: job.amc?.planName || sr?.amcSubscription?.plan?.name || null,
+          amcVisitsRemaining: job.amc?.visitsRemaining ?? sr?.amcSubscription?.visitsRemaining ?? null,
+          amcVisitsTotal: job.amc?.visitsTotal ?? sr?.amcSubscription?.visitsTotal ?? null,
+          amcPlanExpiry: job.amc?.planExpiry || sr?.amcSubscription?.expiryDate || null,
+          ewValidTill: job.ew?.validTill || sr?.extendedWarrantyOrder?.validTill || null,
+          ewClaimsRemaining: job.ew?.claimsRemaining ?? sr?.extendedWarrantyOrder?.claimsRemaining ?? null,
+          ewClaimsTotal: job.ew?.claimsTotal ?? sr?.extendedWarrantyOrder?.claimsTotal ?? null,
           address: sr?.booking?.address ? `${sr.booking.address.house || ''}, ${sr.booking.address.landmark || ''}, ${sr.booking.address.city || ''} ${sr.booking.address.pincode || ''}` : 'Customer Address',
           isD2C: job.isD2C ?? true,
           isPriority: job.isPriority ?? false,

@@ -230,7 +230,7 @@ const Complaints = () => {
               </div>
               <div>
                 <p className="text-xs font-medium text-[#64748B]">Active High Priority</p>
-                <p className="text-2xl font-bold text-[#1E293B]">{highPriorityCount + 4}</p>
+                <p className="text-2xl font-bold text-[#1E293B]">{highPriorityCount}</p>
               </div>
             </div>
             <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] flex items-center gap-4 shadow-sm">
@@ -239,7 +239,7 @@ const Complaints = () => {
               </div>
               <div>
                 <p className="text-xs font-medium text-[#64748B]">Pending Resolution</p>
-                <p className="text-2xl font-bold text-[#1E293B]">{pendingCount + 10}</p>
+                <p className="text-2xl font-bold text-[#1E293B]">{pendingCount}</p>
               </div>
             </div>
             <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] flex items-center gap-4 shadow-sm">
@@ -248,7 +248,7 @@ const Complaints = () => {
               </div>
               <div>
                 <p className="text-xs font-medium text-[#64748B]">Resolved Total</p>
-                <p className="text-2xl font-bold text-[#1E293B]">{resolvedCount + 7}</p>
+                <p className="text-2xl font-bold text-[#1E293B]">{resolvedCount}</p>
               </div>
             </div>
           </div>

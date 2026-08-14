@@ -894,7 +894,11 @@ const ActiveJob = () => {
                     </span>
                   </div>
 
-                  {/* AMC Plan Details Card */}
+                  {/* AMC Plan Details Card — the customer's real subscription.
+                      This used to be a fixed "AMC Gold Plan / 15 Jan 2027 / 3
+                      visits remaining / Quarterly" for every AMC job, regardless
+                      of which plan (or how many visits) the customer actually
+                      had left. */}
                   <div className="bg-white rounded-3xl p-4 border border-slate-200/60 shadow-sm flex flex-col gap-3.5 text-left">
                     <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">AMC Plan Details</h3>
                     <div className="flex items-center gap-4">
@@ -902,20 +906,20 @@ const ActiveJob = () => {
                         <CrownIcon className="w-8 h-8" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="text-base font-semibold text-[#052355]">AMC Gold Plan</h4>
-                        
+                        <h4 className="text-base font-semibold text-[#052355]">{activeJob.amcPlanName || 'AMC Plan'}</h4>
+
                         <div className="mt-3 space-y-2">
                           <div className="flex justify-between items-center text-xs">
                             <span className="text-slate-500 font-normal">Expiry Date</span>
-                            <span className="text-[#052355] font-semibold">15 Jan 2027</span>
+                            <span className="text-[#052355] font-semibold">
+                              {activeJob.amcPlanExpiry ? new Date(activeJob.amcPlanExpiry).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Not recorded'}
+                            </span>
                           </div>
                           <div className="flex justify-between items-center text-xs">
                             <span className="text-slate-500 font-normal">Visits Remaining</span>
-                            <span className="text-[#052355] font-semibold">3</span>
-                          </div>
-                          <div className="flex justify-between items-center text-xs">
-                            <span className="text-slate-500 font-normal">Plan Type</span>
-                            <span className="text-[#052355] font-semibold">Quarterly</span>
+                            <span className="text-[#052355] font-semibold">
+                              {activeJob.amcVisitsRemaining != null ? `${activeJob.amcVisitsRemaining}${activeJob.amcVisitsTotal != null ? ` / ${activeJob.amcVisitsTotal}` : ''}` : 'Not recorded'}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -937,7 +941,9 @@ const ActiveJob = () => {
                     </span>
                   </div>
 
-                  {/* Coverage Details Card */}
+                  {/* Coverage Details Card — the customer's real policy. This
+                      used to be a fixed "NCC Protect Plus / 15 Jan 2028 / 2
+                      claims remaining" for every extended-warranty job. */}
                   <div className="bg-white rounded-3xl p-4 border border-slate-200/60 shadow-sm flex flex-col gap-3.5 text-left">
                     <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Coverage Details</h3>
                     <div className="flex items-center gap-4">
@@ -945,20 +951,20 @@ const ActiveJob = () => {
                         <ShieldCheckIcon className="w-8 h-8" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="text-base font-semibold text-[#052355]">NCC Protect Plus</h4>
-                        
+                        <h4 className="text-base font-semibold text-[#052355]">Extended Warranty</h4>
+
                         <div className="mt-3 space-y-2">
                           <div className="flex justify-between items-center text-xs">
-                            <span className="text-slate-500 font-normal">Plan Name</span>
-                            <span className="text-[#052355] font-semibold">NCC Protect Plus</span>
-                          </div>
-                          <div className="flex justify-between items-center text-xs">
                             <span className="text-slate-500 font-normal">Valid Till</span>
-                            <span className="text-[#052355] font-semibold">15 Jan 2028</span>
+                            <span className="text-[#052355] font-semibold">
+                              {activeJob.ewValidTill ? new Date(activeJob.ewValidTill).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Not recorded'}
+                            </span>
                           </div>
                           <div className="flex justify-between items-center text-xs">
                             <span className="text-slate-500 font-normal">Claims Remaining</span>
-                            <span className="text-[#052355] font-semibold">2</span>
+                            <span className="text-[#052355] font-semibold">
+                              {activeJob.ewClaimsRemaining != null ? `${activeJob.ewClaimsRemaining}${activeJob.ewClaimsTotal != null ? ` / ${activeJob.ewClaimsTotal}` : ''}` : 'Not recorded'}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -1069,7 +1075,7 @@ const ActiveJob = () => {
                   <div>
                     <span className="text-[10px] font-normal text-slate-600 uppercase tracking-wider block">Customer</span>
                     <p className="text-base font-medium text-[#052355] mt-1">{activeJob.customerName}</p>
-                    <p className="text-xs text-slate-600 mt-0.5 font-normal">{activeJob.phone}</p>
+                    <p className="text-xs text-slate-600 mt-0.5 font-normal">{activeJob.phone || 'No phone on file'}</p>
                   </div>
                   <div className="flex gap-2.5">
                   <button
@@ -1097,9 +1103,13 @@ const ActiveJob = () => {
                   <span className="text-[10px] font-normal text-slate-600 uppercase tracking-wider block">Service Address</span>
                   <p className="text-sm font-normal text-[#052355] mt-1 leading-relaxed">{activeJob.address}</p>
 
-                  <div className="flex items-center mt-3 pt-3 border-t border-slate-200">
-                    <span className="text-[11px] font-normal text-slate-600">• {activeJob.distance} km away</span>
-                  </div>
+                  {/* No live location feed exists yet to compute this — it used
+                      to be a flat "2.3 km away" for every job. */}
+                  {activeJob.distance != null && (
+                    <div className="flex items-center mt-3 pt-3 border-t border-slate-200">
+                      <span className="text-[11px] font-normal text-slate-600">• {activeJob.distance} km away</span>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -1578,7 +1588,7 @@ const ActiveJob = () => {
                   const sparePartsTotal = spareParts
                     .filter(p => p.checked)
                     .reduce((sum, p) => sum + p.price, 0);
-                  const baseServicePrice = activeJob && activeJob.price > 0 ? activeJob.price : 2200;
+                  const baseServicePrice = activeJob && activeJob.price > 0 ? activeJob.price : 0;
                   const totalAmount = baseServicePrice + additionalServicesTotal + sparePartsTotal;
 
                   const selectedAddons = additionalServices.filter(s => s.checked);
@@ -1599,9 +1609,12 @@ const ActiveJob = () => {
                             className="w-16 h-16 object-contain rounded-xl border border-slate-200 p-1"
                           />
                           <div className="text-left flex-1">
-                            <h5 className="text-sm font-medium text-[#052355]">{activeJob.brand} Split AC 1.5 Ton Inverter</h5>
-                            <p className="text-xs text-slate-600 font-normal mt-0.5">Model: {activeJob.model || 'Voltas Split AC 1.5 Ton Inverter'}</p>
-                            <p className="text-[10px] text-slate-600 font-mono mt-0.5">S/N: {activeJob.serialNo || 'VLT18GN123348X'}</p>
+                            {/* The product title, model, and serial were a fixed
+                                "Voltas Split AC 1.5 Ton Inverter" / "VLT18GN123348X"
+                                for every job, regardless of the actual appliance. */}
+                            <h5 className="text-sm font-medium text-[#052355]">{activeJob.brand} {activeJob.product}</h5>
+                            <p className="text-xs text-slate-600 font-normal mt-0.5">Model: {activeJob.model || 'Not recorded'}</p>
+                            <p className="text-[10px] text-slate-600 font-mono mt-0.5">S/N: {activeJob.serialNo || 'Not recorded'}</p>
                           </div>
                         </div>
 
@@ -3762,7 +3775,7 @@ const ActiveJob = () => {
                       const sparePartsTotal = spareParts
                         .filter(p => p.checked)
                         .reduce((sum, p) => sum + p.price, 0);
-                      const baseServicePrice = activeJob && activeJob.price > 0 ? activeJob.price : 2200;
+                      const baseServicePrice = activeJob && activeJob.price > 0 ? activeJob.price : 0;
                       const totalAmount = baseServicePrice + additionalServicesTotal + sparePartsTotal;
 
                       const printWindow = window.open('', '_blank');
@@ -3788,7 +3801,7 @@ const ActiveJob = () => {
                             </div>
                             <div class="details">
                               <strong>Customer:</strong> ${activeJob.customerName}<br>
-                              <strong>Phone:</strong> ${activeJob.phone}<br>
+                              <strong>Phone:</strong> ${activeJob.phone || 'Not recorded'}<br>
                               <strong>Product:</strong> ${activeJob.brand} ${activeJob.product}<br>
                               <strong>Status:</strong> Paid / Closed
                             </div>
@@ -3830,11 +3843,18 @@ const ActiveJob = () => {
                       const sparePartsTotal = spareParts
                         .filter(p => p.checked)
                         .reduce((sum, p) => sum + p.price, 0);
-                      const baseServicePrice = activeJob && activeJob.price > 0 ? activeJob.price : 2200;
+                      const baseServicePrice = activeJob && activeJob.price > 0 ? activeJob.price : 0;
                       const totalAmount = baseServicePrice + additionalServicesTotal + sparePartsTotal;
 
+                      // No fallback number: this used to WhatsApp the invoice to
+                      // a hardcoded 9876543210 whenever the real phone was
+                      // missing — messaging a stranger, not the customer.
+                      if (!activeJob.phone) {
+                        window.alert('No phone number on file for this customer — cannot send WhatsApp.');
+                        return;
+                      }
                       const whatsappText = `Hi ${activeJob.customerName || 'Customer'}, here is the invoice of ₹${totalAmount.toLocaleString('en-IN')} for your ${activeJob.brand} ${activeJob.product} service: http://nccpartner.com/invoice/INV-${activeJob.id}`;
-                      const whatsappUrl = `https://api.whatsapp.com/send?phone=91${activeJob.phone || '9876543210'}&text=${encodeURIComponent(whatsappText)}`;
+                      const whatsappUrl = `https://api.whatsapp.com/send?phone=91${activeJob.phone}&text=${encodeURIComponent(whatsappText)}`;
                       window.open(whatsappUrl, '_blank');
                     }}
                     className="bg-slate-50 hover:bg-slate-100 text-green-600 font-normal py-3 rounded-2xl text-xs transition-all border border-slate-200 flex items-center justify-center gap-1.5 shadow-sm"
@@ -4069,7 +4089,7 @@ const ActiveJob = () => {
         const sparePartsTotal = spareParts
           .filter(p => p.checked)
           .reduce((sum, p) => sum + p.price, 0);
-        const baseServicePrice = activeJob && activeJob.price > 0 ? activeJob.price : 2200;
+        const baseServicePrice = activeJob && activeJob.price > 0 ? activeJob.price : 0;
         const totalAmount = baseServicePrice + additionalServicesTotal + sparePartsTotal;
 
         return (
