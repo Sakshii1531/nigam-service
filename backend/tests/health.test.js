@@ -38,6 +38,15 @@ describe('GET /api/v1/health', () => {
   });
 });
 
+describe('GET /health (fallback without /api/v1 prefix)', () => {
+  it('rewrites and returns 200 with db connected', async () => {
+    const res = await request(app).get('/health');
+    expect(res.status).toBe(200);
+    expect(res.body.data.status).toBe('up');
+    expect(res.body.data.db).toBe('connected');
+  });
+});
+
 describe('unknown route', () => {
   it('returns a consistent 404 envelope', async () => {
     const res = await request(app).get('/api/v1/does-not-exist');

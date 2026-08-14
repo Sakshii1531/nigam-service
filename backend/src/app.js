@@ -132,6 +132,14 @@ export function createApp() {
   // (fileUpload.js) — serving it statically here is a no-op otherwise.
   if (!isFileStorageConfigured) app.use('/uploads', express.static(LOCAL_UPLOAD_DIR));
 
+  // Seamless fallback for requests sent without /api/v1 prefix (e.g. /auth/login -> /api/v1/auth/login)
+  app.use((req, res, next) => {
+    if (!req.path.startsWith('/api/') && !req.path.startsWith('/uploads')) {
+      req.url = '/api/v1' + req.url;
+    }
+    next();
+  });
+
   app.use('/api/v1', healthRouter);
   app.use('/api/v1/auth', authRouter);
   app.use('/api/v1/catalog', catalogRouter);
