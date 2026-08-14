@@ -5,7 +5,22 @@ import { ApiError } from '../../middleware/errorHandler.js';
 export async function listServicePartners({ city } = {}) {
   const query = {};
   if (city) query.city = city;
-  return ServicePartner.find(query).sort({ name: 1 });
+
+  // The console's table reads city.name and a per-row technician count, and
+  // its summary tiles need both an "Active" tally and a technician total — none
+  // of which this returned before: city was an unpopulated ObjectId (every row
+  // showed "—" for Region) and technicianCount only existed on the single-item
+  // getServicePartner, so the list always read 0 regardless of headcount.
+  const [partners, countRows] = await Promise.all([
+    ServicePartner.find(query).sort({ name: 1 }).populate('city', 'name'),
+    Technician.aggregate([{ $group: { _id: '$servicePartner', count: { $sum: 1 } } }]),
+  ]);
+  const countByPartner = new Map(countRows.map((r) => [String(r._id), r.count]));
+
+  return partners.map((p) => ({
+    ...p.toJSON(),
+    technicianCount: countByPartner.get(String(p._id)) || 0,
+  }));
 }
 
 async function findOr404(id) {

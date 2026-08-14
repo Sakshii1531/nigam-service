@@ -6,7 +6,7 @@ import { ROLES } from '../../config/constants.js';
 import * as bookingService from './booking.service.js';
 import { createBookingSchema, listBookingsQuerySchema, idParamSchema, verifyBookingPaymentSchema } from './booking.validation.js';
 export const bookingRouter = Router();
-bookingRouter.use(requireAuth);
+bookingRouter.use(requireAuth, requireRole(ROLES.CUSTOMER));
 
 bookingRouter.post('/', validate(createBookingSchema), async (req, res, next) => {
   try {

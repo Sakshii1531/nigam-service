@@ -54,6 +54,11 @@ const Requests = () => {
 
   const [requests, setRequests] = useState([]);
   const [openEscalations, setOpenEscalations] = useState(0);
+  // The tiles above the table are platform-wide totals, so they read from the
+  // dashboard aggregation rather than counting the (limit=200) page of rows
+  // the table shows — a status count derived from a capped page would
+  // undercount once there are more than 200 requests.
+  const [stats, setStats] = useState({ open: 0, assigned: 0, inProgress: 0, completed: 0 });
   const [loadError, setLoadError] = useState('');
 
   const loadRequests = React.useCallback(async () => {
@@ -81,13 +86,12 @@ const Requests = () => {
       setLoadError(err.message || 'Could not load service requests.');
     }
 
-    // No service-request status is ever 'Escalated' — escalations are their own
-    // entity, so the tile counts unresolved ones from that module.
     try {
-      const esc = await apiRequest('/super-admin/escalations?limit=200', { auth: true });
-      setOpenEscalations((esc.data || []).filter(e => e.status !== 'Resolved').length);
+      const dash = await apiRequest('/super-admin/analytics/dashboard', { auth: true });
+      setStats(dash.data?.requests || { open: 0, assigned: 0, inProgress: 0, completed: 0 });
+      setOpenEscalations(dash.data?.openEscalations ?? 0);
     } catch (err) {
-      console.warn('[requests] Could not load escalation count:', err.message);
+      console.warn('[requests] Could not load dashboard stats:', err.message);
     }
   }, []);
 
@@ -162,9 +166,9 @@ const Requests = () => {
       return 0;
     });
 
-  const pendingCount = requests.filter(r => r.bucket === 'Pending').length;
-  const activeCount = requests.filter(r => r.bucket === 'In Progress' || r.bucket === 'Assigned').length;
-  const completedCount = requests.filter(r => r.bucket === 'Completed').length;
+  const pendingCount = stats.open;
+  const activeCount = stats.assigned + stats.inProgress;
+  const completedCount = stats.completed;
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex relative">
@@ -283,7 +287,7 @@ const Requests = () => {
               </div>
               <div>
                 <p className="text-xs font-medium text-[#64748B]">Pending</p>
-                <p className="text-2xl font-bold text-[#1E293B]">{pendingCount + 123}</p>
+                <p className="text-2xl font-bold text-[#1E293B]">{pendingCount}</p>
               </div>
             </div>
             <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] flex items-center gap-4 shadow-sm">
@@ -292,7 +296,7 @@ const Requests = () => {
               </div>
               <div>
                 <p className="text-xs font-medium text-[#64748B]">Active</p>
-                <p className="text-2xl font-bold text-[#1E293B]">{activeCount + 84}</p>
+                <p className="text-2xl font-bold text-[#1E293B]">{activeCount}</p>
               </div>
             </div>
             <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] flex items-center gap-4 shadow-sm">
@@ -310,7 +314,7 @@ const Requests = () => {
               </div>
               <div>
                 <p className="text-xs font-medium text-[#64748B]">Completed</p>
-                <p className="text-2xl font-bold text-[#1E293B]">{completedCount + 862}</p>
+                <p className="text-2xl font-bold text-[#1E293B]">{completedCount}</p>
               </div>
             </div>
           </div>

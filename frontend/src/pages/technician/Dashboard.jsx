@@ -438,8 +438,17 @@ const Dashboard = () => {
                               Customer: <span className="text-[#052355] font-black">{job.customerName}</span>
                             </p>
                             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[8.5px] text-slate-400 mt-1.5 font-bold">
-                              <span className="flex items-center gap-1"><Clock className="w-3 h-3 text-slate-300" /> Today, 02:00 PM</span>
-                              <span className="flex items-center gap-1"><MapPin className="w-3 h-3 text-slate-300" /> {job.distance} km away</span>
+                              {/* Both used to be fixed: "Today, 02:00 PM" and a
+                                  flat distance for every job. */}
+                              {(job.scheduledDateLabel || job.scheduledTime) && (
+                                <span className="flex items-center gap-1">
+                                  <Clock className="w-3 h-3 text-slate-300" />
+                                  {[job.scheduledDateLabel, job.scheduledTime].filter(Boolean).join(', ')}
+                                </span>
+                              )}
+                              {job.distance != null && (
+                                <span className="flex items-center gap-1"><MapPin className="w-3 h-3 text-slate-300" /> {job.distance} km away</span>
+                              )}
                             </div>
                           </div>
 
@@ -615,8 +624,12 @@ const Dashboard = () => {
                           {/* Location Pin Row */}
                           <div className="flex items-center gap-1.5 text-slate-500 text-xs font-medium mt-3">
                             <MapPin className="h-4 w-4 text-slate-400" />
-                            <span>{job.distance} km</span>
-                            <span className="text-slate-300">•</span>
+                            {job.distance != null && (
+                              <>
+                                <span>{job.distance} km</span>
+                                <span className="text-slate-300">•</span>
+                              </>
+                            )}
                             <span>{job.customerName}</span>
                           </div>
                         </div>

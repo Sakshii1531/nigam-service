@@ -28,6 +28,10 @@ import { Product } from '../src/modules/buy-commerce/product.model.js';
 import { Escalation } from '../src/modules/super-admin/escalation.model.js';
 import { AMCPlan } from '../src/modules/warranty-amc-exchange/amcPlan.model.js';
 import { AMCSubscription } from '../src/modules/warranty-amc-exchange/amcSubscription.model.js';
+import { ServicePartner } from '../src/modules/super-admin/servicePartner.model.js';
+import { City } from '../src/modules/super-admin/city.model.js';
+import { Technician } from '../src/modules/technician/technician.model.js';
+import { Job } from '../src/modules/technician/job.model.js';
 import { hashPassword } from '../src/modules/auth/password.js';
 import { ROLES } from '../src/config/constants.js';
 import { testDbUri } from './helpers/testDb.js';
@@ -105,8 +109,20 @@ beforeEach(async () => {
     Escalation.deleteMany({}),
     AMCPlan.deleteMany({}),
     AMCSubscription.deleteMany({}),
+    ServicePartner.deleteMany({}),
+    City.deleteMany({}),
+    Technician.deleteMany({}),
+    Job.deleteMany({}),
   ]);
 });
+
+async function seedTechnician({ servicePartner } = {}) {
+  const phone = nextPhone();
+  const user = await User.create({ role: ROLES.TECHNICIAN, phone, name: 'Test Technician', passwordHash: await hashPassword('password123') });
+  const technician = await Technician.create({ user: user._id, name: 'Test Technician', phone, status: 'Active', servicePartner: servicePartner || undefined });
+  const token = await loginAndVerify({ role: ROLES.TECHNICIAN, identifier: phone, password: 'password123' });
+  return { user, technician, token };
+}
 
 describe('customer appliance registry', () => {
   it('registers an appliance and derives its warranty from the recorded purchase date', async () => {
@@ -944,5 +960,108 @@ describe('AMC plan catalogue', () => {
     // The visit allowance and the charge both come from the plan.
     expect(res.body.data.subscription.visitsTotal).toBe(4);
     expect(res.body.data.razorpay.amount).toBe(2499 * 100);
+  });
+});
+
+describe('super-admin service partner console', () => {
+  it('reports a real technician count and populated city, and rolls both into no fabricated tile numbers', async () => {
+    const adminToken = await seedSuperAdmin();
+    const auth = { Authorization: `Bearer ${adminToken}` };
+    const city = await City.create({ name: 'Kanpur', state: 'UP' });
+
+    const busyPartner = await ServicePartner.create({ name: 'NCC Kanpur', city: city._id, status: 'Active' });
+    const quietPartner = await ServicePartner.create({ name: 'NCC Idle Center', city: city._id, status: 'Inactive' });
+
+    await seedTechnician({ servicePartner: busyPartner._id });
+    await seedTechnician({ servicePartner: busyPartner._id });
+    await seedTechnician({ servicePartner: quietPartner._id });
+
+    const res = await request(app)
+      .get('/api/v1/super-admin/service-partners')
+      .set(auth)
+      .expect(200);
+
+    const busy = res.body.data.find((p) => p.id === busyPartner.id);
+    const quiet = res.body.data.find((p) => p.id === quietPartner.id);
+
+    // Both used to read 0 — the list endpoint never computed a per-partner
+    // technician count, and never populated city, unlike the single-item route.
+    expect(busy.technicianCount).toBe(2);
+    expect(quiet.technicianCount).toBe(1);
+    expect(busy.city.name).toBe('Kanpur');
+  });
+});
+
+describe('technician job screen shows the real AMC/EW coverage', () => {
+  it('snapshots the AMC subscription and its plan onto the job at accept time', async () => {
+    const customer = await seedCustomer();
+    const { technician, token } = await seedTechnician();
+    const plan = await AMCPlan.create({ name: 'Gold AMC', tier: 'Gold', price: 2499, visitsTotal: 4 });
+    const subscription = await AMCSubscription.create({
+      user: customer.user._id,
+      plan: plan._id,
+      status: 'Active',
+      visitsTotal: 4,
+      visitsRemaining: 3,
+      expiryDate: new Date('2027-01-15'),
+    });
+    const sr = await ServiceRequest.create({
+      user: customer.user._id,
+      technician: technician._id,
+      category: 'AC',
+      description: 'AMC visit',
+      requestMode: 'B2C',
+      status: 'Assigned',
+    });
+
+    await request(app)
+      .post(`/api/v1/tech/jobs/accept/${sr.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ type: 'AMC Visit', amcSubscriptionId: subscription.id })
+      .expect(200);
+
+    const res = await request(app)
+      .get('/api/v1/tech/jobs/active')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    const job = res.body.data[0];
+    // The card used to be hardcoded to "AMC Gold Plan / 15 Jan 2027 / 3 visits
+    // remaining" for every job — this is the real subscription behind THIS job.
+    expect(job.amc.planName).toBe('Gold AMC');
+    expect(job.amc.visitsRemaining).toBe(3);
+    expect(new Date(job.amc.planExpiry).getFullYear()).toBe(2027);
+  });
+
+  it("refuses to accept as an AMC job using another customer's subscription", async () => {
+    const owner = await seedCustomer();
+    const stranger = await seedCustomer();
+    const { technician, token } = await seedTechnician();
+    const plan = await AMCPlan.create({ name: 'Gold AMC', tier: 'Gold', price: 2499, visitsTotal: 4 });
+    const subscription = await AMCSubscription.create({
+      user: owner.user._id,
+      plan: plan._id,
+      status: 'Active',
+      visitsTotal: 4,
+      visitsRemaining: 4,
+      expiryDate: new Date('2027-01-15'),
+    });
+    const sr = await ServiceRequest.create({
+      user: stranger.user._id,
+      technician: technician._id,
+      category: 'AC',
+      description: 'AMC visit',
+      requestMode: 'B2C',
+      status: 'Assigned',
+    });
+
+    // Assigned to this technician, so the assignment check passes — the
+    // subscription-ownership check is what must reject it.
+    const res = await request(app)
+      .post(`/api/v1/tech/jobs/accept/${sr.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ type: 'AMC Visit', amcSubscriptionId: subscription.id })
+      .expect(403);
+    expect(res.body.error.message).toMatch(/does not belong/i);
   });
 });

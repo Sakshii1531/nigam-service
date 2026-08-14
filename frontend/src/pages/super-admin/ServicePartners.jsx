@@ -24,7 +24,7 @@ const ServicePartners = () => {
           email: item.email || '—',
           phone: item.phone || '—',
           city: item.city?.name || '—',
-          technicians: item.techniciansCount ?? 0,
+          technicians: item.technicianCount ?? 0,
           rating: item.rating ?? null,
           status: item.status || 'Active',
         })));
@@ -34,6 +34,9 @@ const ServicePartners = () => {
     }
     fetchPartners();
   }, []);
+
+  const activeCentersCount = partners.filter(p => p.status === 'Active').length;
+  const totalTechniciansCount = partners.reduce((sum, p) => sum + (p.technicians || 0), 0);
 
   const filteredPartners = partners.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -56,11 +59,11 @@ const ServicePartners = () => {
             </div>
             <div className="bg-white p-5 rounded-2xl border border-[#E2E8F0] shadow-sm">
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Active Centers</p>
-              <p className="text-2xl font-black text-green-600 mt-2">5</p>
+              <p className="text-2xl font-black text-green-600 mt-2">{activeCentersCount}</p>
             </div>
             <div className="bg-white p-5 rounded-2xl border border-[#E2E8F0] shadow-sm">
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Technicians Employed</p>
-              <p className="text-2xl font-black text-slate-800 mt-2">63</p>
+              <p className="text-2xl font-black text-slate-800 mt-2">{totalTechniciansCount}</p>
             </div>
           </div>
 

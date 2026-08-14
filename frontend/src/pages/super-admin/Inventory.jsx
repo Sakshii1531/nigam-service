@@ -30,7 +30,7 @@ const Inventory = () => {
   const [showDetailsDrawer, setShowDetailsDrawer] = useState(false);
 
   // Forms state
-  const [newPart, setNewPart] = useState({ name: '', brand: 'LG', category: 'Refrigerator', stock: '', threshold: '', price: '', status: 'In Stock' });
+  const [newPart, setNewPart] = useState({ name: '', brand: 'LG', category: 'Refrigerator', stock: '', threshold: '', price: '', supplier: '', leadTimeDays: '', status: 'In Stock' });
   const [editingPart, setEditingPart] = useState(null);
   const [selectedPart, setSelectedPart] = useState(null);
   const [parts, setParts] = useState([]);
@@ -104,10 +104,12 @@ const Inventory = () => {
           costPrice: Number(String(newPart.price).replace(/[₹,]/g, '')) || 0,
           stock: Number(newPart.stock) || 0,
           reorderThreshold: Number(newPart.threshold) || 5,
+          supplier: newPart.supplier || undefined,
+          leadTimeDays: newPart.leadTimeDays ? Number(newPart.leadTimeDays) : undefined,
         },
       });
       setParts((prev) => [...prev, toPartRow(res.data)]);
-      setNewPart({ name: '', brand: 'LG', category: 'Refrigerator', stock: '', threshold: '', price: '', status: 'In Stock' });
+      setNewPart({ name: '', brand: 'LG', category: 'Refrigerator', stock: '', threshold: '', price: '', supplier: '', leadTimeDays: '', status: 'In Stock' });
       setShowAddModal(false);
       showToast(`Spare part "${res.data.name}" added.`);
     } catch (err) {
@@ -514,8 +516,8 @@ const Inventory = () => {
                     type="text"
                     placeholder="e.g. Nigam Spares Ltd"
                     className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none text-slate-800 bg-[#F8FAFC]"
-                    value={editingPart.supplier || ''}
-                    onChange={(e) => setEditingPart({ ...editingPart, supplier: e.target.value })}
+                    value={newPart.supplier}
+                    onChange={(e) => setNewPart({ ...newPart, supplier: e.target.value })}
                   />
                 </div>
                 <div>
@@ -524,21 +526,21 @@ const Inventory = () => {
                     type="number"
                     min="0"
                     className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none text-slate-800 bg-[#F8FAFC]"
-                    value={editingPart.leadTimeDays ?? ''}
-                    onChange={(e) => setEditingPart({ ...editingPart, leadTimeDays: e.target.value })}
+                    value={newPart.leadTimeDays}
+                    onChange={(e) => setNewPart({ ...newPart, leadTimeDays: e.target.value })}
                   />
                 </div>
               </div>
 
               <div className="pt-4 border-t border-[#E2E8F0] flex gap-3 justify-end text-sm">
-                <button 
+                <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
                   className="bg-white text-[#64748B] border border-[#E2E8F0] px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-[#F8FAFC] transition-colors"
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   type="submit"
                   className="bg-[#0D47A1] text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm"
                 >
