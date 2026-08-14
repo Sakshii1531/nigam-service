@@ -3,7 +3,16 @@
 // backend/src/middleware/errorHandler.js). Deliberately no axios dependency —
 // native fetch covers everything this needs.
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api/v1';
+function getBaseUrl() {
+  let url = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api/v1').trim();
+  url = url.replace(/\/+$/, '');
+  if (!url.endsWith('/api/v1')) {
+    url += '/api/v1';
+  }
+  return url;
+}
+
+const BASE_URL = getBaseUrl();
 
 const ACCESS_TOKEN_KEY = 'ncc_access_token';
 const REFRESH_TOKEN_KEY = 'ncc_refresh_token';
