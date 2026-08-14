@@ -203,19 +203,49 @@ const ScrollToTop = () => {
   const { user } = useAuth();
 
   useEffect(() => {
-    // Role protection redirect
-    if (pathname.startsWith('/super-admin') && 
-        !['/super-admin/login', '/super-admin/verify-otp', '/super-admin/forgot-password'].includes(pathname)) {
-      if (!user || user.role !== 'super_admin') {
+    // Strict Role-Based Portal Protection Guard
+    const superAdminAuthPages = ['/super-admin/login', '/super-admin/verify-otp', '/super-admin/forgot-password'];
+    const brandAdminAuthPages = ['/brand-admin/login', '/brand-admin/verify-otp', '/brand-admin/forgot-password'];
+    const techAuthPages = ['/technician/login', '/technician/verify-otp', '/technician/forgot-password', '/technician/apply'];
+    const customerAuthPages = ['/', '/login', '/verify-otp', '/forgot-password', '/reset-password'];
+
+    const role = user?.role;
+
+    if (role === 'super_admin') {
+      if (!pathname.startsWith('/super-admin') || superAdminAuthPages.includes(pathname)) {
+        navigate('/super-admin/dashboard', { replace: true });
+        return;
+      }
+    } else if (role === 'brand_admin') {
+      if (!pathname.startsWith('/brand-admin') || brandAdminAuthPages.includes(pathname)) {
+        navigate('/brand-admin/dashboard', { replace: true });
+        return;
+      }
+    } else if (role === 'technician') {
+      if (!pathname.startsWith('/technician') || (techAuthPages.includes(pathname) && pathname !== '/technician/apply')) {
+        navigate('/technician/dashboard', { replace: true });
+        return;
+      }
+    } else if (role === 'customer') {
+      if (pathname.startsWith('/super-admin') || pathname.startsWith('/brand-admin') || (pathname.startsWith('/technician') && pathname !== '/technician/apply')) {
+        navigate('/dashboard', { replace: true });
+        return;
+      }
+      if (customerAuthPages.includes(pathname)) {
+        navigate('/dashboard', { replace: true });
+        return;
+      }
+    } else {
+      if (pathname.startsWith('/super-admin') && !superAdminAuthPages.includes(pathname)) {
         navigate('/super-admin/login', { replace: true });
         return;
       }
-    }
-
-    if (pathname.startsWith('/brand-admin') && 
-        !['/brand-admin/login', '/brand-admin/verify-otp', '/brand-admin/forgot-password'].includes(pathname)) {
-      if (!user || user.role !== 'brand_admin') {
+      if (pathname.startsWith('/brand-admin') && !brandAdminAuthPages.includes(pathname)) {
         navigate('/brand-admin/login', { replace: true });
+        return;
+      }
+      if (pathname.startsWith('/technician') && !techAuthPages.includes(pathname)) {
+        navigate('/technician/login', { replace: true });
         return;
       }
     }

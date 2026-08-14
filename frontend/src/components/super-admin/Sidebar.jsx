@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import { 
   LayoutDashboard, 
   Users, 
@@ -46,6 +47,7 @@ import logo from '../../assets/nigam-care.png';
 const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { logout } = useAuth();
   const scrollContainerRef = useRef(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   
@@ -622,8 +624,9 @@ const Sidebar = () => {
                 Cancel
               </button>
               <button
-                onClick={() => {
+                onClick={async () => {
                   setShowLogoutConfirm(false);
+                  await logout();
                   navigate('/super-admin/login');
                 }}
                 className="flex-1 bg-red-600 hover:bg-red-700 text-white text-[10.5px] font-black py-2.5 rounded-xl transition-colors cursor-pointer shadow-sm"

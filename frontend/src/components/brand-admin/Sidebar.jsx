@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard,
   ClipboardList,
@@ -28,6 +29,7 @@ const Sidebar = () => {
   const scrollContainerRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
+  const { logout } = useAuth();
   
   const [sparePartsOpen, setSparePartsOpen] = useState(
     location.pathname === '/brand-admin/part-requests' ||
@@ -258,8 +260,9 @@ const Sidebar = () => {
                 Cancel
               </button>
               <button
-                onClick={() => {
+                onClick={async () => {
                   setShowLogoutConfirm(false);
+                  await logout();
                   navigate('/brand-admin/login');
                 }}
                 className="flex-1 bg-red-600 hover:bg-red-700 text-white text-[10.5px] font-black py-2.5 rounded-xl transition-colors cursor-pointer shadow-sm"
