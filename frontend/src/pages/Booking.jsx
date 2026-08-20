@@ -716,24 +716,42 @@ const Booking = () => {
 
               {/* Time slots Selector */}
               <div className="flex flex-col gap-2.5">
-                <span className="text-[12px] font-black text-slate-800">Select time</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-[12px] font-black text-slate-800">Select time</span>
+                  <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                    ⚡ Instant Available
+                  </span>
+                </div>
                 <div className="grid grid-cols-3 gap-2.5">
                   {[
-                    '8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM',
+                    'Right Now (ASAP)', '8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM',
                     '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM', '6:00 PM'
                   ].map((timeText) => {
                     const isActive = selectedTimeSlot === timeText;
+                    const isAsap = timeText === 'Right Now (ASAP)';
                     return (
                       <button
                         key={timeText}
-                        onClick={() => setSelectedTimeSlot(timeText)}
+                        onClick={() => {
+                          setSelectedTimeSlot(timeText);
+                          if (isAsap) {
+                            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                            const today = new Date();
+                            setSelectedDate(`${days[today.getDay()]} ${today.getDate()} ${months[today.getMonth()]}`);
+                          }
+                        }}
                         className={`py-3 rounded-xl border text-[11px] font-bold text-center transition-all ${
-                          isActive
+                          isAsap
+                            ? isActive
+                              ? 'border-amber-500 bg-amber-500 text-white shadow-md col-span-3'
+                              : 'border-amber-400 bg-amber-50 text-amber-900 col-span-3 hover:bg-amber-100'
+                            : isActive
                             ? 'border-[#2F80ED] bg-[#EAF4FF] text-[#0D47A1] shadow-sm'
                             : 'border-slate-150 bg-white text-slate-700 hover:border-slate-300'
                         }`}
                       >
-                        {timeText}
+                        {isAsap ? '⚡ Service Needed Right Now (ASAP)' : timeText}
                       </button>
                     );
                   })}

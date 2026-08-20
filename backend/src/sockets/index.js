@@ -3,6 +3,7 @@ import { env } from '../config/env.js';
 import { socketAuth } from './socketAuth.js';
 import { registerChatGateway } from './chat.gateway.js';
 import { registerTrackingGateway } from './tracking.gateway.js';
+import { registerInstantBookingGateway } from './instantBooking.gateway.js';
 import { setIO } from './io.js';
 
 export function initSockets(httpServer) {
@@ -35,6 +36,7 @@ export function initSockets(httpServer) {
 
   registerChatGateway(io);
   registerTrackingGateway(io);
+  registerInstantBookingGateway(io);
 
   setIO(io);
   return io;

@@ -109,8 +109,20 @@ export async function apiRequest(path, { method = 'GET', body, auth = false } = 
     return await rawRequest(path, { method, body, accessToken });
   } catch (err) {
     if (err instanceof ApiError && err.status === 401 && accessToken) {
-      const refreshed = await refreshAccessToken();
-      return rawRequest(path, { method, body, accessToken: refreshed.accessToken });
+      try {
+        const refreshed = await refreshAccessToken();
+        return await rawRequest(path, { method, body, accessToken: refreshed.accessToken });
+      } catch (refreshErr) {
+        clearTokens();
+        localStorage.removeItem('ncc_user');
+        window.dispatchEvent(new Event('auth:unauthorized'));
+        throw refreshErr;
+      }
+    }
+    if (err instanceof ApiError && (err.status === 401 || err.status === 404)) {
+      clearTokens();
+      localStorage.removeItem('ncc_user');
+      window.dispatchEvent(new Event('auth:unauthorized'));
     }
     throw err;
   }

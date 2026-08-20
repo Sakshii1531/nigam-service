@@ -32,6 +32,7 @@ import { Notification } from '../src/modules/notifications/notification.model.js
 import { hashPassword } from '../src/modules/auth/password.js';
 import { ROLES } from '../src/config/constants.js';
 import { CATALOG_SEED } from './catalogSeedData.js';
+import { seedDemoEntities } from './demoSeedData.js';
 
 const PRODUCTS = [
   {
@@ -489,6 +490,7 @@ async function main() {
   await upsertCatalog();
   await upsertCommerce();
   await upsertTechFixtures(customer);
+  await seedDemoEntities();
 
   console.log(`[seed] customer ready: ${customer.name} (${customer.id})`);
   console.log('[seed] done');

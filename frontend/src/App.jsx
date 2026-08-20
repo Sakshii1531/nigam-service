@@ -207,7 +207,7 @@ const ScrollToTop = () => {
     const superAdminAuthPages = ['/super-admin/login', '/super-admin/verify-otp', '/super-admin/forgot-password'];
     const brandAdminAuthPages = ['/brand-admin/login', '/brand-admin/verify-otp', '/brand-admin/forgot-password'];
     const techAuthPages = ['/technician/login', '/technician/verify-otp', '/technician/forgot-password', '/technician/apply'];
-    const customerAuthPages = ['/', '/login', '/verify-otp', '/forgot-password', '/reset-password'];
+    const customerAuthPages = ['/', '/login', '/app/login', '/app', '/verify-otp', '/forgot-password', '/reset-password'];
 
     const role = user?.role;
 
@@ -236,17 +236,30 @@ const ScrollToTop = () => {
         return;
       }
     } else {
-      if (pathname.startsWith('/super-admin') && !superAdminAuthPages.includes(pathname)) {
-        navigate('/super-admin/login', { replace: true });
-        return;
-      }
-      if (pathname.startsWith('/brand-admin') && !brandAdminAuthPages.includes(pathname)) {
-        navigate('/brand-admin/login', { replace: true });
-        return;
-      }
-      if (pathname.startsWith('/technician') && !techAuthPages.includes(pathname)) {
-        navigate('/technician/login', { replace: true });
-        return;
+      // Unauthenticated visitor (not logged in)
+      if (pathname.startsWith('/super-admin')) {
+        if (!superAdminAuthPages.includes(pathname)) {
+          navigate('/super-admin/login', { replace: true });
+          return;
+        }
+      } else if (pathname.startsWith('/brand-admin')) {
+        if (!brandAdminAuthPages.includes(pathname)) {
+          navigate('/brand-admin/login', { replace: true });
+          return;
+        }
+      } else if (pathname.startsWith('/technician')) {
+        if (!techAuthPages.includes(pathname)) {
+          navigate('/technician/login', { replace: true });
+          return;
+        }
+      } else {
+        // Customer app: Protect ALL app routes (dashboard, booking, buy, categories, profile, etc.)
+        // Only allow auth pages (login, verify-otp, etc.) and public info pages (about-ncc)
+        const publicInfoPages = ['/about-ncc'];
+        if (!customerAuthPages.includes(pathname) && !publicInfoPages.includes(pathname)) {
+          navigate('/login', { replace: true });
+          return;
+        }
       }
     }
 
@@ -309,6 +322,8 @@ function App() {
         <Route path="/" element={<Login />} />
         <Route path="/home" element={<Home />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/app/login" element={<Navigate to="/login" replace />} />
+        <Route path="/app" element={<Navigate to="/login" replace />} />
         <Route path="/verify-otp" element={<VerifyOtp />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
