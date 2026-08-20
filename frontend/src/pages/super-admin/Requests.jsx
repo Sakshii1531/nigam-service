@@ -16,12 +16,10 @@ import {
   ClipboardList,
   CheckCircle2,
   X,
-  ArrowLeft
+  ArrowLeft,
+  Zap,
 } from 'lucide-react';
 
-// The console groups the platform's 15 service-request statuses into the four
-// buckets the summary tiles and row colours are built around. The raw status is
-// still what's displayed — this only drives grouping.
 const STATUS_BUCKET = {
   New: 'Pending',
   Reschedule: 'Pending',
@@ -46,6 +44,7 @@ const Requests = () => {
   const [selectedStatus, setSelectedStatus] = useState('All Status');
   const [selectedBrand, setSelectedBrand] = useState('All Brands');
   const [selectedMode, setSelectedMode] = useState('All Modes');
+  const [selectedInstantFilter, setSelectedInstantFilter] = useState('All');
   const [selectedSort, setSelectedSort] = useState('Newest First');
   const [successMessage, setSuccessMessage] = useState('');
   const [selectedRequest, setSelectedRequest] = useState(null);
@@ -80,6 +79,8 @@ const Requests = () => {
         technician: item.technician?.name || 'Unassigned',
         description: item.description || '—',
         mode: item.requestMode || 'B2C',
+        isInstant: Boolean(item.isInstant || item.instantStatus || item.booking?.isInstant),
+        instantStatus: item.instantStatus || item.booking?.instantStatus || null,
       })));
       setLoadError('');
     } catch (err) {
@@ -145,7 +146,9 @@ const Requests = () => {
         || r?.bucket === selectedStatus;
       const matchesBrand = selectedBrand === 'All Brands' || r?.brand === selectedBrand;
       const matchesMode = selectedMode === 'All Modes' || r?.mode === selectedMode;
-      return matchesSearch && matchesStatus && matchesBrand && matchesMode;
+      const matchesInstant = selectedInstantFilter === 'All'
+        || (selectedInstantFilter === '⚡ Instant Only' ? r?.isInstant : !r?.isInstant);
+      return matchesSearch && matchesStatus && matchesBrand && matchesMode && matchesInstant;
     })
     .sort((a, b) => {
       // The list arrives newest-first from the API; ids are opaque ObjectIds, so
@@ -372,6 +375,16 @@ const Requests = () => {
               </select>
 
               <select 
+                value={selectedInstantFilter}
+                onChange={(e) => setSelectedInstantFilter(e.target.value)}
+                className="text-sm font-semibold text-amber-700 border border-amber-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-amber-500 bg-amber-50"
+              >
+                <option value="All">All Service Types</option>
+                <option value="⚡ Instant Only">⚡ Instant / ASAP Only</option>
+                <option value="Scheduled Only">Scheduled Only</option>
+              </select>
+
+              <select 
                 value={selectedSort}
                 onChange={(e) => setSelectedSort(e.target.value)}
                 className="text-sm font-semibold text-[#0D47A1] border border-[#0D47A1]/30 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#0D47A1] bg-[#F0F4FF]"
@@ -432,7 +445,16 @@ const Requests = () => {
                       className="hover:bg-[#F8FAFC] transition-colors cursor-pointer"
                       onClick={() => { setSelectedRequest(req); setShowDrawer(true); }}
                     >
-                      <td className="px-6 py-4 font-medium text-[#0D47A1]">{req.ref}</td>
+                      <td className="px-6 py-4 font-medium text-[#0D47A1]">
+                        <div className="flex items-center gap-1.5">
+                          <span>{req.ref}</span>
+                          {req.isInstant && (
+                            <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-amber-500 text-white animate-pulse tracking-wider">
+                              ⚡ INSTANT
+                            </span>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-6 py-4 text-[#1E293B] font-medium">
                         <div className="flex items-center gap-2">
                           <span>{req.customer}</span>

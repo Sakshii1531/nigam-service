@@ -476,9 +476,10 @@ const ProfilePage = () => {
                 Cancel
               </button>
               <button
-                onClick={() => {
+                onClick={async () => {
                   setShowLogoutConfirm(false);
-                  navigate('/technician/login');
+                  await logout();
+                  navigate('/technician/login', { replace: true });
                 }}
                 className="flex-1 bg-red-600 hover:bg-red-700 text-white text-[10.5px] font-black py-2.5 rounded-xl transition-colors cursor-pointer shadow-sm"
               >

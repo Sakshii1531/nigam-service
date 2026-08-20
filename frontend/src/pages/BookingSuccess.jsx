@@ -67,12 +67,15 @@ const BookingSuccess = () => {
     return () => { cancelled = true; };
   }, [serviceRequestId]);
 
+  const isInstant = p.get('isInstant') === 'true' || timeGroup === 'ASAP' || timeGroup.includes('ASAP');
+  const [instantStatus, setInstantStatus] = useState(isInstant ? 'SEARCHING' : null);
+
   // Time slot display
-  const timeSlotDisplay = {
+  const timeSlotDisplay = isInstant ? '⚡ Right Now (Instant ASAP Service)' : ({
     Morning:   '8 AM – 11 AM',
     Afternoon: '12 PM – 3 PM',
     Evening:   '4 PM – 7 PM',
-  }[timeGroup] || timeGroup;
+  }[timeGroup] || timeGroup);
 
   // Rows for the booking summary table
   const rows = [
@@ -153,6 +156,33 @@ const BookingSuccess = () => {
               );
             })}
           </div>
+
+          {/* ── Instant Service Live Tracker ── */}
+          {isInstant && (
+            <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-2xl p-4 shadow-md shadow-amber-500/20">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-black uppercase tracking-wider bg-white/20 px-2 py-0.5 rounded-full">
+                  ⚡ Live Express Dispatch
+                </span>
+                <span className="text-[11px] font-extrabold animate-pulse">
+                  {technician ? 'Technician En Route' : 'Searching Nearby Tech...'}
+                </span>
+              </div>
+              <div className="flex items-center gap-3 mt-3">
+                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl font-bold">
+                  ⏱️
+                </div>
+                <div className="flex-1">
+                  <p className="text-[13px] font-extrabold leading-tight">
+                    {technician ? `On the way to your doorstep!` : 'Connecting with nearest certified technician'}
+                  </p>
+                  <p className="text-[10px] text-white/90 font-medium mt-0.5">
+                    Estimated arrival: within 30-45 minutes
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* ── Assigned Technician ── */}
           {technician ? (

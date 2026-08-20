@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Bell, Briefcase, ClipboardList, Calendar, Wrench, User, MapPin, ChevronRight, Menu,
-  Clock, Shield, Star, GraduationCap, MessageSquare, Megaphone, Scan, CheckCircle, RotateCw, X, LogOut, Sparkles, CreditCard, ShieldCheck, Award, Settings, HelpCircle, ArrowLeft
+  Clock, Shield, Star, GraduationCap, MessageSquare, Megaphone, Scan, CheckCircle, RotateCw, X, LogOut, Sparkles, CreditCard, ShieldCheck, Award, Settings, HelpCircle, ArrowLeft, Zap
 } from 'lucide-react';
 import { useTech } from '../../context/TechContext';
 import { useAuth } from '../../context/AuthContext';
@@ -30,6 +30,26 @@ const Dashboard = () => {
   const [expandedJobId, setExpandedJobId] = useState('8842'); // default to D2C Paid Service job ID
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [instantAlertJob, setInstantAlertJob] = useState(null);
+  const [countdown, setCountdown] = useState(60);
+
+  // Auto-detect instant booking requests from job list
+  React.useEffect(() => {
+    const instantJob = jobs.find(j => j.isInstant || j.scheduledTime === 'ASAP' || j.scheduledTime?.includes('ASAP'));
+    if (instantJob && !instantAlertJob) {
+      setInstantAlertJob(instantJob);
+      setCountdown(60);
+    }
+  }, [jobs]);
+
+  // Countdown timer for instant job alert
+  React.useEffect(() => {
+    if (!instantAlertJob || countdown <= 0) return;
+    const timer = setInterval(() => {
+      setCountdown(prev => prev - 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [instantAlertJob, countdown]);
 
   const unreadNotificationsCount = notifications.filter(n => !n.read).length;
 
@@ -878,6 +898,63 @@ const Dashboard = () => {
                 className="flex-1 bg-red-600 hover:bg-red-700 text-white text-[10.5px] font-black py-2.5 rounded-xl transition-colors cursor-pointer shadow-sm"
               >
                 Yes, Log Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ⚡ Emergency / Instant Request Broadcast Modal */}
+      {instantAlertJob && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-[110] animate-fade-in">
+          <div className="bg-white border-2 border-amber-500 rounded-[28px] p-6 max-w-sm w-full flex flex-col gap-4 shadow-2xl relative overflow-hidden">
+            {/* Header banner */}
+            <div className="bg-gradient-to-r from-amber-500 to-orange-500 -mx-6 -mt-6 p-4 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Zap className="w-5 h-5 fill-white animate-bounce" />
+                <span className="text-xs font-black tracking-wider uppercase">⚡ INSTANT SERVICE DISPATCH</span>
+              </div>
+              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-xs font-black">
+                {countdown}s
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2 mt-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-extrabold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                  URGENT / ASAP REQUEST
+                </span>
+                <span className="text-xs font-black text-slate-900">Est. ₹{instantAlertJob.estEarnings || 250}</span>
+              </div>
+              <h3 className="text-base font-black text-slate-900">{instantAlertJob.product || instantAlertJob.category}</h3>
+              <p className="text-xs font-medium text-slate-600 flex items-center gap-1">
+                <MapPin className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                {instantAlertJob.address || 'Nearby Customer Location'}
+              </p>
+            </div>
+
+            <div className="bg-slate-50 rounded-2xl p-3 border border-slate-100 flex justify-between items-center text-xs font-bold text-slate-700">
+              <span>Customer: {instantAlertJob.customerName || 'Customer'}</span>
+              <span className="text-amber-600">Arrival in &lt; 45 mins</span>
+            </div>
+
+            <div className="flex gap-2.5 w-full mt-2">
+              <button
+                onClick={() => setInstantAlertJob(null)}
+                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold py-3 rounded-xl transition-colors cursor-pointer"
+              >
+                Decline
+              </button>
+              <button
+                onClick={() => {
+                  acceptJob(instantAlertJob.id);
+                  setInstantAlertJob(null);
+                  navigate('/technician/dashboard');
+                }}
+                className="flex-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-black py-3 rounded-xl transition-all cursor-pointer shadow-lg shadow-amber-500/30 flex items-center justify-center gap-1.5"
+              >
+                <Zap className="w-4 h-4 fill-white" />
+                Accept Instant Job
               </button>
             </div>
           </div>

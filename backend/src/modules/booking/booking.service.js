@@ -17,10 +17,14 @@ import { env } from '../../config/env.js';
  * (BACKEND_CONTEXT.md §3.5). Price is resolved server-side from the catalog —
  * never trust a client-supplied price for what's actually charged.
  */
+import { getIO } from '../../sockets/io.js';
+
 export async function createBooking(userId, data) {
   const serviceItem = await findServiceItem(data.category, data.serviceSlug);
   const quantity = data.quantity || 1;
   const basePrice = serviceItem.price * quantity;
+
+  const isInstant = Boolean(data.isInstant || data.timeGroup === 'ASAP' || data.timeSlot?.time === 'ASAP' || data.timeSlot?.time?.includes('ASAP'));
 
   // How much of the total an "advance" booking collects up front, from the
   // super-admin Settings console. The reference below was added without this
@@ -49,6 +53,8 @@ export async function createBooking(userId, data) {
 
   const technician = await findAvailableTechnician({ category: data.category, city: data.address?.city });
 
+  const initialInstantStatus = isInstant ? (technician ? 'ASSIGNED' : 'SEARCHING') : null;
+
   const booking = await Booking.create({
     user: userId,
     category: data.category,
@@ -56,8 +62,8 @@ export async function createBooking(userId, data) {
     service: { slug: serviceItem.slug, name: serviceItem.name, price: serviceItem.price, desc: serviceItem.desc, unit: serviceItem.unit },
     brand: data.brand,
     quantity,
-    scheduledDate: data.scheduledDate,
-    timeSlot: data.timeSlot,
+    scheduledDate: isInstant ? new Date() : data.scheduledDate,
+    timeSlot: isInstant ? { date: 'Today (ASAP)', time: 'ASAP (Right Now)' } : data.timeSlot,
     address: data.address,
     fullName: data.fullName,
     mobile: data.mobile,
@@ -65,7 +71,10 @@ export async function createBooking(userId, data) {
     advanceAmount: data.paymentMode === 'advance' ? Math.round(totalPrice * (advancePercent / 100)) : 0,
     totalPrice,
     technician: technician ? technician._id : null,
-    status: 'Upcoming',
+    status: isInstant ? 'Ongoing' : 'Upcoming',
+    isInstant,
+    instantStatus: initialInstantStatus,
+    instantRequestedAt: isInstant ? new Date() : null,
   });
 
   let serviceRequest = await createServiceRequest({
@@ -80,14 +89,13 @@ export async function createBooking(userId, data) {
     appliance: applianceId,
     amcSubscription: amcSubscriptionId,
     extendedWarrantyOrder: extendedWarrantyOrderId,
+    isInstant,
+    instantStatus: initialInstantStatus,
   });
 
   if (technician) {
-    // transitionStatus returns the updated doc — must be captured, not discarded,
-    // or the response (and the `serviceRequest` this function returns) would still
-    // show status "New" despite the DB itself correctly being "Assigned".
     serviceRequest = await transitionStatus(serviceRequest.id, 'Assigned', {
-      description: `Auto-assigned to ${technician.name}`,
+      description: isInstant ? `Instant auto-assigned to ${technician.name}` : `Auto-assigned to ${technician.name}`,
     });
   }
 
@@ -101,6 +109,24 @@ export async function createBooking(userId, data) {
       technicianName: technician.name,
       serviceRequestId: serviceRequest.id,
     });
+  }
+
+  // Broadcast instant booking event via Socket.IO if instant request
+  if (isInstant) {
+    const io = getIO();
+    if (io) {
+      io.emit('instant:new_request', {
+        bookingId: booking.id,
+        serviceRequestId: serviceRequest.id,
+        category: data.category,
+        serviceName: serviceItem.name,
+        address: data.address,
+        fullName: data.fullName,
+        mobile: data.mobile,
+        assignedTechnicianId: technician ? String(technician._id) : null,
+        instantStatus: initialInstantStatus,
+      });
+    }
   }
 
   // An advance booking has to actually be charged. The advance amount was

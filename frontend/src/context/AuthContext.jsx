@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { apiRequest, getStoredTokens, storeTokens, clearTokens } from '../lib/apiClient';
 
 // Phase 13 — real session state backed by the backend's two-step
@@ -68,19 +68,53 @@ export const AuthProvider = ({ children }) => {
     return data.user;
   }, []);
 
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      clearTokens();
+      localStorage.removeItem(USER_KEY);
+      setUser(null);
+    };
+
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+    return () => window.removeEventListener('auth:unauthorized', handleUnauthorized);
+  }, []);
+
+  useEffect(() => {
+    // Validate stored user session against backend on mount
+    const { accessToken } = getStoredTokens();
+    if (accessToken) {
+      apiRequest('/auth/me', { auth: true })
+        .then((freshUser) => {
+          if (freshUser) {
+            localStorage.setItem(USER_KEY, JSON.stringify(freshUser));
+            setUser(freshUser);
+          }
+        })
+        .catch((err) => {
+          if (err?.status === 401 || err?.status === 404) {
+            clearTokens();
+            localStorage.removeItem(USER_KEY);
+            setUser(null);
+          }
+        });
+    }
+  }, []);
+
   const logout = useCallback(async () => {
     const { refreshToken } = getStoredTokens();
+    
+    // Clear local tokens & state synchronously FIRST so UI & route guards update instantly
+    clearTokens();
+    localStorage.removeItem(USER_KEY);
+    setUser(null);
+
     if (refreshToken) {
       try {
         await apiRequest('/auth/logout', { method: 'POST', body: { refreshToken } });
       } catch {
-        // Best-effort — still clear local state even if the server call fails
-        // (e.g. token already expired), so the user isn't stuck "logged in" locally.
+        // Best-effort server notification
       }
     }
-    clearTokens();
-    localStorage.removeItem(USER_KEY);
-    setUser(null);
   }, []);
 
   const updateUser = useCallback((updates) => {

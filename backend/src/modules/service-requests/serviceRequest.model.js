@@ -46,6 +46,12 @@ const serviceRequestSchema = new mongoose.Schema(
 
     slaDueAt: Date,
     zone: String,
+    isInstant: { type: Boolean, default: false },
+    instantStatus: {
+      type: String,
+      enum: ['SEARCHING', 'ASSIGNED', 'EN_ROUTE', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'],
+      default: null,
+    },
   },
   { timestamps: true },
 );

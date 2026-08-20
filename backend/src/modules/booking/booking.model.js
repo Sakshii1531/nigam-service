@@ -38,6 +38,13 @@ const bookingSchema = new mongoose.Schema(
     },
     technician: { type: mongoose.Schema.Types.ObjectId, ref: 'Technician', default: null, index: true },
     serviceRequest: { type: mongoose.Schema.Types.ObjectId, ref: 'ServiceRequest', default: null },
+    isInstant: { type: Boolean, default: false },
+    instantStatus: {
+      type: String,
+      enum: ['SEARCHING', 'ASSIGNED', 'EN_ROUTE', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'],
+      default: null,
+    },
+    instantRequestedAt: Date,
   },
   { timestamps: true },
 );
