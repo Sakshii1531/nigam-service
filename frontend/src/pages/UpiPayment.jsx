@@ -101,7 +101,7 @@ const UpiPayment = () => {
             paymentMethod: 'UPI',
           },
         });
-        const order = orderRes.data;
+        const order = orderRes;
         if (order.razorpay) {
           await payWithRazorpay({
             razorpay: order.razorpay,

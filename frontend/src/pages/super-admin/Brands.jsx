@@ -37,7 +37,7 @@ const Brands = () => {
     if (!selectedBrandProfile?.id) { setBrandSla(null); return; }
     let cancelled = false;
     apiRequest(`/super-admin/brands/${selectedBrandProfile.id}/sla`, { auth: true })
-      .then((res) => { if (!cancelled) setBrandSla(res.data); })
+      .then((res) => { if (!cancelled) setBrandSla(res); })
       .catch((err) => console.warn('[brands] Could not load SLA figures:', err.message));
     return () => { cancelled = true; };
   }, [selectedBrandProfile?.id]);
@@ -49,7 +49,7 @@ const Brands = () => {
     if (!selectedBrandProfile?.id) { setServiceRevenue([]); return; }
     let cancelled = false;
     apiRequest(`/super-admin/brands/${selectedBrandProfile.id}/service-revenue`, { auth: true })
-      .then((res) => { if (!cancelled) setServiceRevenue(res.data || []); })
+      .then((res) => { if (!cancelled) setServiceRevenue(res || []); })
       .catch((err) => { if (!cancelled) { setServiceRevenue([]); console.warn('[brands] Could not load service revenue:', err.message); } });
     return () => { cancelled = true; };
   }, [selectedBrandProfile?.id]);
@@ -63,11 +63,12 @@ const Brands = () => {
   useEffect(() => {
     async function fetchBrands() {
       try {
-        // `apiRequest` resolves the whole { data, error, meta } envelope, so the
-        // old `Array.isArray(data)` guard was never true and this screen always
-        // showed five invented brands instead of the real ones.
+        // `apiRequest` returns the envelope's `data` payload directly (apiClient's
+        // rawRequest ends in `return json.data`), so this is already the array.
+        // Unwrapping it a second time yielded undefined and this screen showed
+        // five invented brands instead of the real ones.
         const res = await apiRequest('/super-admin/brands?limit=200', { auth: true });
-        setBrands((res.data || []).map((item) => ({
+        setBrands((res || []).map((item) => ({
           id: item.id,
           humanId: item.humanId || item.id,
           name: item.name,
@@ -135,18 +136,18 @@ const Brands = () => {
         },
       });
       setBrands((prev) => [{
-        id: res.data.id,
-        humanId: res.data.humanId || res.data.id,
-        name: res.data.name,
-        category: res.data.category || '—',
+        id: res.id,
+        humanId: res.humanId || res.id,
+        name: res.name,
+        category: res.category || '—',
         activeCases: 0,
         spareStock: 0,
-        status: res.data.status,
+        status: res.status,
         revenue: '₹0',
       }, ...prev]);
       setNewBrand({ name: '', category: 'Home Appliances', activeCases: '0', spareStock: '0', status: 'Active', revenue: '₹0' });
       setShowModal(false);
-      showToast(`Brand "${res.data.name}" registered.`);
+      showToast(`Brand "${res.name}" registered.`);
     } catch (err) {
       setLoadError(err.message || 'Could not register the brand.');
     }

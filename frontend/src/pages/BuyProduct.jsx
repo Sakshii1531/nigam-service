@@ -52,7 +52,7 @@ const BuyProduct = () => {
     apiRequest('/products?limit=100')
       .then((res) => {
         if (cancelled) return;
-        setProducts((res.data || []).map((p) => ({
+        setProducts((res || []).map((p) => ({
           id: p.id,
           category: p.category,
           name: p.name,

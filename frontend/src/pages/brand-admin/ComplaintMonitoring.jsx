@@ -77,7 +77,7 @@ const ComplaintMonitoring = () => {
       try {
         // Brand-scoped server-side — the API forces `brand = req.user.brand`.
         const data = await apiRequest('/service-requests', { auth: true });
-        if (!cancelled) setComplaints((data?.data || []).map(shape));
+        if (!cancelled) setComplaints((data || []).map(shape));
       } catch (err) {
         if (!cancelled) setError(err.message);
       } finally {

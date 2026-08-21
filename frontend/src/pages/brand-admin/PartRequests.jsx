@@ -54,7 +54,7 @@ const PartRequests = () => {
       try {
         // Resolved server-side through PartOrder -> Job -> ServiceRequest.brand.
         const data = await apiRequest('/brand/part-orders', { auth: true });
-        if (!cancelled) setRequests((data?.data || []).map(shape));
+        if (!cancelled) setRequests((data || []).map(shape));
       } catch (err) {
         if (!cancelled) setError(err.message);
       } finally {

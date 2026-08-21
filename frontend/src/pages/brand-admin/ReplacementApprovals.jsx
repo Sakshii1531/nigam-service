@@ -46,7 +46,7 @@ const ReplacementApprovals = () => {
     async function loadApprovals() {
       try {
         const res = await apiRequest('/brand/replacement-approvals', { auth: true });
-        if (!cancelled) setData((res?.data || []).map(shape));
+        if (!cancelled) setData((res || []).map(shape));
       } catch (err) {
         if (!cancelled) setError(err.message);
       } finally {

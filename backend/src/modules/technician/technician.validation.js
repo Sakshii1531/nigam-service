@@ -19,3 +19,7 @@ export const addPayoutMethodSchema = z.object({
 });
 
 export const methodIdParamSchema = z.object({ methodId: z.string().min(1) });
+
+export const setAvailabilitySchema = z.object({
+  availability: z.enum(['Available', 'Busy', 'Offline']),
+});

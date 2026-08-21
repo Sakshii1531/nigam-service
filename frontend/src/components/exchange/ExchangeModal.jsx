@@ -94,7 +94,7 @@ const ExchangeModal = ({
     if (!selectedCategory) return;
     let cancelled = false;
     apiRequest(`/exchange/base-values?category=${encodeURIComponent(selectedCategory)}`, { auth: true })
-      .then((res) => { if (!cancelled) { setCatalogue(res.data || []); setCatalogueError(''); } })
+      .then((res) => { if (!cancelled) { setCatalogue(res || []); setCatalogueError(''); } })
       .catch((err) => { if (!cancelled) { setCatalogue([]); setCatalogueError(err.message || 'Could not load exchange values.'); } });
     return () => { cancelled = true; };
   }, [selectedCategory]);
@@ -234,7 +234,7 @@ const ExchangeModal = ({
           answers,
         },
       });
-      const created = res.data;
+      const created = res;
 
       onApply({
         requestId: created.id,

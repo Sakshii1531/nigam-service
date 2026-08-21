@@ -40,7 +40,7 @@ const SavedAddresses = () => {
     try {
       if (user) {
         const res = await apiRequest('/auth/addresses', { auth: true });
-        const list = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+        const list = Array.isArray(res) ? res : [];
         setAddresses(list);
         updateUser({ addresses: list });
       } else {
@@ -107,7 +107,7 @@ const SavedAddresses = () => {
           auth: true,
           body: payload
         });
-        const updatedList = Array.isArray(res) ? res : (res?.data || []);
+        const updatedList = Array.isArray(res) ? res : (res || []);
         setAddresses(updatedList);
         updateUser({ addresses: updatedList });
         showToast('Address updated successfully!');
@@ -118,7 +118,7 @@ const SavedAddresses = () => {
           auth: true,
           body: payload
         });
-        const updatedList = Array.isArray(res) ? res : (res?.data || []);
+        const updatedList = Array.isArray(res) ? res : (res || []);
         setAddresses(updatedList);
         updateUser({ addresses: updatedList });
         showToast('New address saved!');
@@ -139,7 +139,7 @@ const SavedAddresses = () => {
         method: 'DELETE',
         auth: true
       });
-      const updatedList = Array.isArray(res) ? res : (res?.data || []);
+      const updatedList = Array.isArray(res) ? res : (res || []);
       setAddresses(updatedList);
       updateUser({ addresses: updatedList });
       showToast('Address removed');
@@ -155,7 +155,7 @@ const SavedAddresses = () => {
         method: 'PATCH',
         auth: true
       });
-      const updatedList = Array.isArray(res) ? res : (res?.data || []);
+      const updatedList = Array.isArray(res) ? res : (res || []);
       setAddresses(updatedList);
       updateUser({ addresses: updatedList });
       showToast('Default address updated!');

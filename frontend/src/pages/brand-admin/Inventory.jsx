@@ -48,7 +48,7 @@ const Inventory = () => {
         // Stock held by the technicians who work this brand's jobs — a brand
         // does not own parts, so this is the closest real answer.
         const data = await apiRequest('/brand/inventory', { auth: true });
-        if (!cancelled) setParts((data?.data || []).map(shape));
+        if (!cancelled) setParts((data || []).map(shape));
       } catch (err) {
         if (!cancelled) setError(err.message);
       } finally {

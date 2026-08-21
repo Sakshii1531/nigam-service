@@ -24,7 +24,7 @@ const Notifications = () => {
 
   useEffect(() => {
     apiRequest('/notifications?limit=50', { auth: true })
-      .then((res) => setItems(res.data || []))
+      .then((res) => setItems(res || []))
       .catch((err) => setLoadError(err.message || 'Could not load your notifications.'));
   }, []);
 

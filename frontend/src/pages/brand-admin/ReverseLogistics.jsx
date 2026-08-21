@@ -52,7 +52,7 @@ const ReverseLogistics = () => {
     async function loadReturns() {
       try {
         const data = await apiRequest('/brand/returns', { auth: true });
-        if (!cancelled) setReturns((data?.data || []).map(shape));
+        if (!cancelled) setReturns((data || []).map(shape));
       } catch (err) {
         if (!cancelled) setError(err.message);
       } finally {

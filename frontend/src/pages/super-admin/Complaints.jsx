@@ -45,7 +45,7 @@ const Complaints = () => {
     const fetchComplaints = async () => {
       try {
         const data = await apiRequest('/super-admin/escalations?limit=200', { auth: true });
-        setComplaints((data?.data || []).map(shapeComplaint));
+        setComplaints((data || []).map(shapeComplaint));
       } catch (err) {
         setLoadError(err.message || 'Could not load complaints.');
       } finally {
@@ -71,7 +71,7 @@ const Complaints = () => {
 
     try {
       const res = await apiRequest(`/super-admin/escalations/${id}/${path}`, { method: 'PATCH', auth: true, body });
-      const updated = shapeComplaint(res.data);
+      const updated = shapeComplaint(res);
       setComplaints((prev) => prev.map((c) => (c.id === id ? updated : c)));
       if (selectedComplaint?.id === id) setSelectedComplaint(updated);
       showToast(message);

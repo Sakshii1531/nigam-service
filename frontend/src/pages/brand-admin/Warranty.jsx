@@ -56,7 +56,7 @@ const Warranty = () => {
     async function loadRegistrations() {
       try {
         const data = await apiRequest('/brand/warranty-registrations', { auth: true });
-        if (!cancelled) setHistory((data?.data || []).map(shape));
+        if (!cancelled) setHistory((data || []).map(shape));
       } catch (err) {
         if (!cancelled) setError(err.message);
       } finally {
@@ -105,7 +105,7 @@ const Warranty = () => {
           description: `Raised from warranty lookup (${lookup.status})`,
         },
       });
-      showToast(`Service request ${res.data.humanId || res.data.id} created.`);
+      showToast(`Service request ${res.humanId || res.id} created.`);
       setResult(null);
     } catch (err) {
       setError(err.message || 'Could not create the service request.');
@@ -120,7 +120,7 @@ const Warranty = () => {
     setSearching(true);
     try {
       const res = await apiRequest(`/brand/warranty-lookup?query=${encodeURIComponent(query)}`, { auth: true });
-      const data = res.data;
+      const data = res;
       if (!data?.found) {
         setLookup(null);
         setResult('not_found');

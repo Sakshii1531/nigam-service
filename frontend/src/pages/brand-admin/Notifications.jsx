@@ -57,7 +57,7 @@ const Notifications = () => {
     async function loadNotifications() {
       try {
         const data = await apiRequest('/notifications', { auth: true });
-        if (!cancelled) setNotifications((data?.data || []).map(shape));
+        if (!cancelled) setNotifications((data || []).map(shape));
       } catch (err) {
         if (!cancelled) setError(err.message);
       } finally {

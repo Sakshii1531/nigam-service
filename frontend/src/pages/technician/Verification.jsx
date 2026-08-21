@@ -17,7 +17,7 @@ const Verification = () => {
   useEffect(() => {
     apiRequest('/tech/profile/profile', { auth: true })
       .then((res) => {
-        const v = res.data?.verification || {};
+        const v = res?.verification || {};
         setDocuments([
           { label: 'Aadhar Card', status: v.aadharStatus || 'Pending' },
           { label: 'PAN Card', status: v.panStatus || 'Pending' },

@@ -17,7 +17,7 @@ const Faqs = () => {
     setLoading(true);
     try {
       const res = await apiRequest('/cms/pages/faqs');
-      const pageData = res?.data || res || {};
+      const pageData = res || {};
       const list = Array.isArray(pageData.faqs) ? pageData.faqs : [];
       setFaqs(list);
     } catch (err) {

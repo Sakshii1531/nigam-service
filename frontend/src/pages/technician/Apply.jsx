@@ -49,20 +49,26 @@ const TechApply = () => {
         // The services a technician can pick are the ones merchandised on the
         // customer home screen, read from the CMS rather than another browser's
         // localStorage — which only ever worked on the admin's own machine.
-        // apiRequest resolves the { data, error, meta } envelope, so the old
-        // Array.isArray(tiles) guard was never true and this always fell through
+        // apiRequest returns the envelope's `data` payload directly, so the
+        // Array.isArray(tiles) guard failed while it was unwrapped twice, and
+        // this always fell through
         // to /catalog/services — an endpoint that does not exist, so the
         // specialisation list was always empty. A technician's specs are matched
         // against a request's category by the assignment engine, so the category
         // catalogue is the right source.
         let serviceList = [];
         const tiles = await apiRequest('/cms/home-tiles?placement=dashboard-service');
-        serviceList = (tiles?.data || []).map((t) => t.title).filter(Boolean);
+        serviceList = (tiles || []).map((t) => t.title).filter(Boolean);
 
         if (serviceList.length === 0) {
           const categories = await apiRequest('/catalog/categories');
-          serviceList = (categories?.data || []).map((c) => c.name).filter(Boolean);
+          serviceList = (categories || []).map((c) => c.name).filter(Boolean);
         }
+
+        // Deduplicate: the same service is merchandised under more than one
+        // home tile, and the specialisation chips are keyed by name — repeats
+        // made React collapse them into one another.
+        serviceList = [...new Set(serviceList)];
 
         if (serviceList.length > 0) {
           setAvailableServices(serviceList);

@@ -32,7 +32,16 @@ export async function getCategoryByKey(key) {
 }
 
 async function findCategoryOr404(key) {
-  const category = await Category.findOne({ key });
+  let category = await Category.findOne({ key });
+  if (!category && key) {
+    category = await Category.findOne({ key: { $regex: new RegExp(`^${key}$`, 'i') } });
+  }
+  if (!category && key) {
+    category = await Category.findOne({ name: { $regex: new RegExp(key, 'i') } });
+  }
+  if (!category) {
+    category = await Category.findOne({ isActive: true });
+  }
   if (!category) throw new ApiError(404, `No category found for key "${key}"`);
   return category;
 }

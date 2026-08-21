@@ -69,7 +69,7 @@ const Roles = () => {
       try {
         const data = await apiRequest('/super-admin/roles', { auth: true });
         if (cancelled) return;
-        const shaped = (data?.data || []).map(shape);
+        const shaped = (data || []).map(shape);
         setRoles(shaped);
         setSelectedRole(shaped[0] || null);
       } catch (err) {

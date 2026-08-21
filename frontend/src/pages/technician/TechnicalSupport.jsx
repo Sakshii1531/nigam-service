@@ -27,13 +27,13 @@ const TechnicalSupport = () => {
     (async () => {
       try {
         const res = await apiRequest('/chat/conversations/support', { method: 'POST', auth: true });
-        const convo = res.data;
+        const convo = res;
         if (cancelled || !convo) return;
         setConversationId(convo.id);
 
         const history = await apiRequest(`/chat/conversations/${convo.id}/messages`, { auth: true });
         if (cancelled) return;
-        setSupportChatMessages((history.data || []).map((m) => ({
+        setSupportChatMessages((history || []).map((m) => ({
           id: m.id,
           sender: m.sender === 'technician' ? 'user' : 'agent',
           text: m.text,

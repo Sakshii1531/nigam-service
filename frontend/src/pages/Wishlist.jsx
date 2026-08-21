@@ -15,7 +15,7 @@ const Wishlist = () => {
   useEffect(() => {
     let cancelled = false;
     apiRequest('/wishlist', { auth: true })
-      .then((res) => { if (!cancelled) setWishlistItems(res.data || []); })
+      .then((res) => { if (!cancelled) setWishlistItems(res || []); })
       .catch((err) => { if (!cancelled) setLoadError(err.message || 'Could not load your wishlist.'); });
     return () => { cancelled = true; };
   }, []);
@@ -39,6 +39,27 @@ const Wishlist = () => {
         {/* Content */}
         <div className="flex-1 p-5 flex flex-col gap-4 overflow-y-auto pb-10">
           
+          {loadError && (
+            <p className="text-sm font-semibold text-rose-600 text-center py-6">{loadError}</p>
+          )}
+
+          {/* Without this the page rendered as a bare header — nothing told the
+              customer whether their wishlist was empty or still loading. */}
+          {!loadError && wishlistItems.length === 0 && (
+            <div className="flex-1 flex flex-col items-center justify-center text-center py-16 gap-2">
+              <p className="text-sm font-bold text-[#0D47A1]">Your wishlist is empty</p>
+              <p className="text-xs text-slate-500 max-w-[240px]">
+                Tap the heart on any product to save it here for later.
+              </p>
+              <button
+                onClick={() => navigate('/buy')}
+                className="mt-3 bg-[#0D47A1] hover:bg-[#0A3F91] text-white text-xs font-bold px-5 py-2.5 rounded-full transition-colors"
+              >
+                Browse Products
+              </button>
+            </div>
+          )}
+
           {wishlistItems.map((item) => (
             <div 
               key={item.id}

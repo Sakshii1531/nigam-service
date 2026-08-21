@@ -123,7 +123,7 @@ const Stories = () => {
     (async () => {
       try {
         const data = await apiRequest('/cms/stories');
-        if (!cancelled) setStories(data?.data || []);
+        if (!cancelled) setStories(data || []);
       } catch {
         if (!cancelled) setStories([]);
       }

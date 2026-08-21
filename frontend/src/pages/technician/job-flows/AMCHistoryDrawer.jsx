@@ -25,7 +25,7 @@ const AMCHistoryDrawer = ({ job, onStartVisit }) => {
     if (!job?.id) return;
     let cancelled = false;
     apiRequest(`/tech/jobs/${job.id}/amc-history`, { auth: true })
-      .then((res) => { if (!cancelled) setHistory(res.data || { subscription: null, visits: [] }); })
+      .then((res) => { if (!cancelled) setHistory(res || { subscription: null, visits: [] }); })
       .catch((err) => { if (!cancelled) setLoadError(err.message || 'Could not load the AMC history.'); });
     return () => { cancelled = true; };
   }, [job?.id]);

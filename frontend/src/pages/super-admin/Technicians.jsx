@@ -50,7 +50,8 @@ const Technicians = () => {
   const fetchTechs = React.useCallback(async () => {
     try {
       const res = await apiRequest('/super-admin/technicians?limit=200', { auth: true });
-      setTechnicians((res.data || []).map((item) => ({
+      const items = Array.isArray(res) ? res : [];
+      setTechnicians(items.map((item) => ({
         id: item.id,
         ref: item.humanId || item.id,
         // Notifications address the underlying User, not the Technician doc.

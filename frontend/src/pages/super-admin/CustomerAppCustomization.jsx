@@ -708,7 +708,7 @@ const CustomerAppCustomization = () => {
     (async () => {
       try {
         const data = await apiRequest('/cms/stories/admin', { auth: true });
-        setStoriesList((data?.data || []).map(shapeStory));
+        setStoriesList((data || []).map(shapeStory));
       } catch (err) {
         console.warn('Could not load stories:', err.message);
       }

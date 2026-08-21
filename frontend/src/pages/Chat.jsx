@@ -31,14 +31,14 @@ const Chat = () => {
     (async () => {
       try {
         const res = await apiRequest('/chat/conversations/support', { method: 'POST', auth: true });
-        const convo = res.data;
+        const convo = res;
         if (cancelled || !convo) return;
         setConversationId(convo.id);
         setSessionEnded(convo.status === 'Closed');
 
         const history = await apiRequest(`/chat/conversations/${convo.id}/messages`, { auth: true });
         if (cancelled) return;
-        setMessages((history.data || []).map((m) => ({
+        setMessages((history || []).map((m) => ({
           id: m.id,
           from: m.sender === 'customer' ? 'user' : 'technician',
           text: m.text,
@@ -105,7 +105,7 @@ const Chat = () => {
       const form = new FormData();
       form.append('file', file);
       const res = await apiRequest('/uploads', { method: 'POST', auth: true, body: form });
-      setAttachment({ name: res.data.name, url: res.data.url });
+      setAttachment({ name: res.name, url: res.url });
     } catch (err) {
       setChatError(err.message || 'Could not attach that file.');
     } finally {

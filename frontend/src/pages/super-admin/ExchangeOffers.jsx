@@ -57,7 +57,7 @@ const ExchangeOffers = () => {
       .catch(err => showToast(err.message || 'Could not load exchange configuration.'));
 
     apiRequest('/products?limit=200')
-      .then((res) => setProductsList((res.data || []).map((p) => ({
+      .then((res) => setProductsList((res || []).map((p) => ({
         id: p.id,
         name: p.name,
         category: p.category,
@@ -70,7 +70,7 @@ const ExchangeOffers = () => {
     const fetchRequests = async () => {
       try {
         const data = await apiRequest('/super-admin/exchange-requests', { auth: true });
-        const list = Array.isArray(data?.data) ? data.data : [];
+        const list = Array.isArray(data) ? data : [];
         setExchangeRequests(list.map(r => ({
           id: r._id || r.id,
           customer: r.user?.name || 'Customer',

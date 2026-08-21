@@ -26,7 +26,7 @@ const Analytics = () => {
     const days = TIMEFRAME_DAYS[selectedTimeframe] || 30;
     let cancelled = false;
     apiRequest(`/tech/earnings/analytics?days=${days}`, { auth: true })
-      .then((res) => { if (!cancelled) { setStats(res.data); setError(''); } })
+      .then((res) => { if (!cancelled) { setStats(res); setError(''); } })
       .catch((err) => { if (!cancelled) setError(err.message || 'Could not load your analytics.'); });
     return () => { cancelled = true; };
   }, [selectedTimeframe]);

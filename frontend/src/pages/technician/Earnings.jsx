@@ -14,13 +14,13 @@ const EarningsPage = () => {
 
   useEffect(() => {
     apiRequest(`/tech/earnings/analytics?days=${trendDays}`, { auth: true })
-      .then((res) => setStats(res.data))
+      .then((res) => setStats(res))
       .catch((err) => console.warn('[earnings] Could not load analytics:', err.message));
   }, [trendDays]);
 
   useEffect(() => {
     apiRequest('/tech/earnings/payouts?limit=20', { auth: true })
-      .then((res) => setPayouts(res.data || []))
+      .then((res) => setPayouts(res || []))
       .catch((err) => console.warn('[earnings] Could not load payouts:', err.message));
   }, []);
 

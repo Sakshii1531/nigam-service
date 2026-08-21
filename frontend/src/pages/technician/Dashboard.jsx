@@ -21,8 +21,31 @@ const Dashboard = () => {
     notifications,
     activeSpecs,
     toggleSpec,
-    dismissJob
+    dismissJob,
+    jobsLoading,
+    availability,
+    availabilityBusy,
+    setAvailability
   } = useTech();
+
+  const isOnline = availability === 'Available';
+  // null until the server answers — the pill must not claim "Offline" before we
+  // actually know, and tapping it in that window would send the wrong target.
+  const availabilityKnown = availability !== null;
+
+  const handleToggleDuty = async () => {
+    if (!availabilityKnown) return;
+    const res = await setAvailability(isOnline ? 'Offline' : 'Available');
+    if (!res.ok) {
+      // Most often "your account is Pending" — the technician needs to know why
+      // nothing happened rather than watching the pill silently snap back.
+      setDutyMessage(res.error || 'Could not change your status.');
+    } else if (!isOnline && res.assignedCount > 0) {
+      setDutyMessage(`You're online — ${res.assignedCount} waiting job(s) assigned to you.`);
+    } else {
+      setDutyMessage(null);
+    }
+  };
 
   const [showAllJobs, setShowAllJobs] = useState(false);
   const [filterTab, setFilterTab] = useState('All'); // 'All', 'Priority', 'Recommended'
@@ -30,17 +53,31 @@ const Dashboard = () => {
   const [expandedJobId, setExpandedJobId] = useState('8842'); // default to D2C Paid Service job ID
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [dutyMessage, setDutyMessage] = useState(null);
   const [instantAlertJob, setInstantAlertJob] = useState(null);
   const [countdown, setCountdown] = useState(60);
+  // Instant jobs the technician has already said no to. Without this, Decline
+  // only cleared the modal until the next jobs refresh re-ran the effect below
+  // and re-opened it on the very same job, seconds later — there was no way to
+  // dismiss an instant alert for good.
+  const [declinedInstantIds, setDeclinedInstantIds] = useState([]);
 
   // Auto-detect instant booking requests from job list
   React.useEffect(() => {
-    const instantJob = jobs.find(j => j.isInstant || j.scheduledTime === 'ASAP' || j.scheduledTime?.includes('ASAP'));
+    const instantJob = jobs.find(j => (
+      (j.isInstant || j.scheduledTime === 'ASAP' || j.scheduledTime?.includes('ASAP'))
+      && !declinedInstantIds.includes(j.id)
+    ));
     if (instantJob && !instantAlertJob) {
       setInstantAlertJob(instantJob);
       setCountdown(60);
     }
-  }, [jobs]);
+  }, [jobs, declinedInstantIds, instantAlertJob]);
+
+  const declineInstantJob = () => {
+    if (instantAlertJob) setDeclinedInstantIds((prev) => [...prev, instantAlertJob.id]);
+    setInstantAlertJob(null);
+  };
 
   // Countdown timer for instant job alert
   React.useEffect(() => {
@@ -218,6 +255,31 @@ const Dashboard = () => {
                 Good Morning, {user?.name?.split(' ')[0] || 'Technician'} 👋
               </h2>
               <p className="text-slate-300 text-[10px] mt-0.5 font-medium">Proud to be a part of NCC Service Network</p>
+
+              {/* Duty toggle. Jobs are only auto-assigned to technicians who are
+                  online, so this is the switch that puts you in the running. */}
+              <button
+                onClick={handleToggleDuty}
+                disabled={availabilityBusy || !availabilityKnown}
+                className={`mt-2 inline-flex items-center gap-1.5 rounded-full pl-1.5 pr-2.5 py-1 text-[10px] font-bold transition-colors disabled:opacity-60 ${
+                  isOnline ? 'bg-green-500/20 text-green-300' : 'bg-white/10 text-slate-300'
+                }`}
+              >
+                <span
+                  className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-400' : 'bg-slate-400'}`}
+                />
+                {!availabilityKnown
+                  ? 'Checking status…'
+                  : availabilityBusy
+                    ? 'Updating…'
+                    : isOnline
+                      ? 'Online • Accepting jobs'
+                      : 'Offline • Tap to go online'}
+              </button>
+
+              {dutyMessage && (
+                <p className="text-[9.5px] text-slate-300 mt-1 max-w-[190px] leading-snug">{dutyMessage}</p>
+              )}
             </div>
 
             {/* Partner Score Column */}
@@ -260,7 +322,7 @@ const Dashboard = () => {
                   <div className="w-6.5 h-6.5 rounded-full bg-[#E3F2FD] flex items-center justify-center flex-shrink-0">
                     <Briefcase className="w-3.5 h-3.5 text-[#1565C0]" />
                   </div>
-                  <span className="text-[14px] font-black text-[#052355]">{availableJobsCount}</span>
+                  <span className="text-[14px] font-black text-[#052355]">{jobsLoading ? '—' : availableJobsCount}</span>
                 </div>
                 <span className="text-[9.5px] font-bold text-slate-500 leading-tight mt-1">Available Jobs</span>
                 <button 
@@ -277,7 +339,7 @@ const Dashboard = () => {
                   <div className="w-6.5 h-6.5 rounded-full bg-[#E8F5E9] flex items-center justify-center flex-shrink-0">
                     <Wrench className="w-3.5 h-3.5 text-[#2E7D32]" />
                   </div>
-                  <span className="text-[14px] font-black text-[#2E7D32]">{jobs.filter(j => !j.isAvailableRequest).length}</span>
+                  <span className="text-[14px] font-black text-[#2E7D32]">{jobsLoading ? '—' : jobs.filter(j => !j.isAvailableRequest).length}</span>
                 </div>
                 <span className="text-[9.5px] font-bold text-slate-500 leading-tight mt-1">Active Jobs</span>
                 <button 
@@ -940,7 +1002,7 @@ const Dashboard = () => {
 
             <div className="flex gap-2.5 w-full mt-2">
               <button
-                onClick={() => setInstantAlertJob(null)}
+                onClick={declineInstantJob}
                 className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold py-3 rounded-xl transition-colors cursor-pointer"
               >
                 Decline

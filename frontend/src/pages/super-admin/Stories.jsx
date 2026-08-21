@@ -16,7 +16,7 @@ const Stories = () => {
       try {
         // /admin, not the public reader — the console must see Scheduled stories too.
         const data = await apiRequest('/cms/stories/admin', { auth: true });
-        if (!cancelled) setStories(data?.data || []);
+        if (!cancelled) setStories(data || []);
       } catch (err) {
         if (!cancelled) setError(err.message);
       } finally {

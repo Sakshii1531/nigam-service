@@ -5,7 +5,12 @@ import { attachTechnician } from '../../middleware/technician.js';
 import { ok } from '../../utils/respond.js';
 import { ROLES } from '../../config/constants.js';
 import * as technicianService from './technician.service.js';
-import { updateProfileSchema, addPayoutMethodSchema, methodIdParamSchema } from './technician.validation.js';
+import {
+  updateProfileSchema,
+  addPayoutMethodSchema,
+  methodIdParamSchema,
+  setAvailabilitySchema,
+} from './technician.validation.js';
 
 export const technicianRouter = Router();
 technicianRouter.use(requireAuth, requireRole(ROLES.TECHNICIAN), attachTechnician);
@@ -21,6 +26,14 @@ technicianRouter.get('/profile', async (req, res, next) => {
 technicianRouter.put('/profile', validate(updateProfileSchema), async (req, res, next) => {
   try {
     ok(res, await technicianService.updateProfile(req.technician.id, req.body));
+  } catch (err) {
+    next(err);
+  }
+});
+
+technicianRouter.patch('/availability', validate(setAvailabilitySchema), async (req, res, next) => {
+  try {
+    ok(res, await technicianService.setAvailability(req.technician.id, req.body.availability));
   } catch (err) {
     next(err);
   }

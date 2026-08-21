@@ -64,7 +64,7 @@ const AMC = () => {
 
   useEffect(() => {
     apiRequest('/warranty-amc/amc/plans', { auth: true })
-      .then((res) => setAmcPlans((res.data || []).map((p) => ({
+      .then((res) => setAmcPlans((res || []).map((p) => ({
         id: p.id,
         name: p.name,
         price: p.price,
@@ -822,13 +822,13 @@ const AMC = () => {
                       },
                     });
 
-                    setCreatedSubscription(res.data.subscription);
+                    setCreatedSubscription(res.subscription);
 
                     // Not covered until the payment clears.
-                    if (res.data.razorpay) {
+                    if (res.razorpay) {
                       await payWithRazorpay({
-                        razorpay: res.data.razorpay,
-                        verifyPath: `/warranty-amc/amc/subscriptions/${res.data.subscription.id}/verify-payment`,
+                        razorpay: res.razorpay,
+                        verifyPath: `/warranty-amc/amc/subscriptions/${res.subscription.id}/verify-payment`,
                         description: selectedPlan?.name,
                       });
                     }

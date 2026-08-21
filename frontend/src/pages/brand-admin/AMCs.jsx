@@ -59,7 +59,7 @@ const AMCs = () => {
     async function loadAmcs() {
       try {
         const data = await apiRequest('/brand/amc-subscriptions', { auth: true });
-        if (!cancelled) setAmcs((data?.data || []).map(shape));
+        if (!cancelled) setAmcs((data || []).map(shape));
       } catch (err) {
         if (!cancelled) setError(err.message);
       } finally {

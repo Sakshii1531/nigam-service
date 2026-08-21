@@ -81,7 +81,7 @@ const PaymentMethods = () => {
     try {
       if (user) {
         const res = await apiRequest('/auth/payment-methods', { auth: true });
-        const list = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+        const list = Array.isArray(res) ? res : [];
         setPaymentMethods(list);
         updateUser({ paymentMethods: list });
       } else {
@@ -131,7 +131,7 @@ const PaymentMethods = () => {
         body: payload
       });
 
-      const updatedList = Array.isArray(res) ? res : (res?.data || []);
+      const updatedList = Array.isArray(res) ? res : (res || []);
       setPaymentMethods(updatedList);
       updateUser({ paymentMethods: updatedList });
 
@@ -165,7 +165,7 @@ const PaymentMethods = () => {
         body: payload
       });
 
-      const updatedList = Array.isArray(res) ? res : (res?.data || []);
+      const updatedList = Array.isArray(res) ? res : (res || []);
       setPaymentMethods(updatedList);
       updateUser({ paymentMethods: updatedList });
 
@@ -189,7 +189,7 @@ const PaymentMethods = () => {
         auth: true
       });
 
-      const updatedList = Array.isArray(res) ? res : (res?.data || []);
+      const updatedList = Array.isArray(res) ? res : (res || []);
       setPaymentMethods(updatedList);
       updateUser({ paymentMethods: updatedList });
       showToast('Payment method removed');
@@ -206,7 +206,7 @@ const PaymentMethods = () => {
         auth: true
       });
 
-      const updatedList = Array.isArray(res) ? res : (res?.data || []);
+      const updatedList = Array.isArray(res) ? res : (res || []);
       setPaymentMethods(updatedList);
       updateUser({ paymentMethods: updatedList });
       showToast('Primary payment method updated');

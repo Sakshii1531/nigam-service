@@ -40,7 +40,7 @@ const Profile = () => {
   const [wishlistCount, setWishlistCount] = useState(0);
   useEffect(() => {
     apiRequest('/wishlist', { auth: true })
-      .then((res) => setWishlistCount((res.data || []).length))
+      .then((res) => setWishlistCount((res || []).length))
       .catch((err) => console.warn('[profile] Could not load wishlist count:', err.message));
   }, []);
 
@@ -48,7 +48,7 @@ const Profile = () => {
     const loadStats = async () => {
       try {
         const bookingsRes = await apiRequest('/bookings', { auth: true });
-        const bookingsList = Array.isArray(bookingsRes) ? bookingsRes : (bookingsRes?.data || []);
+        const bookingsList = Array.isArray(bookingsRes) ? bookingsRes : (bookingsRes || []);
         setBookingsCount(bookingsList.length);
       } catch (err) {
         console.warn('Error loading bookings count:', err);
@@ -58,8 +58,8 @@ const Profile = () => {
         const amcRes = await apiRequest('/warranty-amc/amc/subscriptions', { auth: true });
         const warrantiesRes = await apiRequest('/warranty-amc/extended-warranty/orders', { auth: true });
         
-        const amcList = Array.isArray(amcRes) ? amcRes : (amcRes?.data || []);
-        const warrantyList = Array.isArray(warrantiesRes) ? warrantiesRes : (warrantiesRes?.data || []);
+        const amcList = Array.isArray(amcRes) ? amcRes : (amcRes || []);
+        const warrantyList = Array.isArray(warrantiesRes) ? warrantiesRes : (warrantiesRes || []);
         
         const activeAmc = amcList.find(s => s.status === 'Active');
         const activeWarranty = warrantyList.find(w => w.status === 'Active');

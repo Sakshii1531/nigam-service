@@ -24,7 +24,7 @@ const EarningDetailPage = () => {
   useEffect(() => {
     apiRequest(`/tech/jobs/${id}`, { auth: true })
       .then((res) => {
-        const job = res.data;
+        const job = res;
         if (!job) return;
         const bill = job.billingEstimate || {};
         const sr = job.serviceRequest || {};

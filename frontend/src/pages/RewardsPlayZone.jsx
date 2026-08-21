@@ -108,7 +108,7 @@ const RewardsPlayZone = () => {
   useEffect(() => {
     if (!user) return;
     apiRequest('/wallet/claims', { auth: true })
-      .then((res) => setClaimedIds(res.data || []))
+      .then((res) => setClaimedIds(res || []))
       .catch((err) => console.warn('[rewards] Could not load claimed rewards:', err.message));
   }, [user]);
 
@@ -122,15 +122,15 @@ const RewardsPlayZone = () => {
     if (!user) return;
     try {
       const bookingsRes = await apiRequest('/bookings', { auth: true });
-      const bookingsList = Array.isArray(bookingsRes) ? bookingsRes : (bookingsRes?.data || []);
+      const bookingsList = Array.isArray(bookingsRes) ? bookingsRes : (bookingsRes || []);
       const isBookingDone = bookingsList.length > 0;
 
       const reviewsRes = await apiRequest('/reviews/user/reviews', { auth: true });
-      const reviewsList = Array.isArray(reviewsRes) ? reviewsRes : (reviewsRes?.data || []);
+      const reviewsList = Array.isArray(reviewsRes) ? reviewsRes : (reviewsRes || []);
       const isReviewDone = reviewsList.length > 0;
 
       const userRes = await apiRequest('/auth/me', { auth: true });
-      const userData = userRes?.data || userRes;
+      const userData = userRes;
       const isReferralDone = (userData?.referralsCount || 0) > 0;
       
       if (userData) {
@@ -167,7 +167,7 @@ const RewardsPlayZone = () => {
   const fetchWalletCoins = async () => {
     try {
       const res = await apiRequest('/wallet', { auth: true });
-      const walletData = res?.data || res;
+      const walletData = res;
       if (walletData) {
         const updates = {};
         if (typeof walletData.coins === 'number') {
@@ -200,7 +200,7 @@ const RewardsPlayZone = () => {
   const fetchWheelConfig = async () => {
     try {
       const res = await apiRequest('/wallet/spin-wheel/config');
-      const config = res?.data || res;
+      const config = res;
       if (config && Array.isArray(config.segments) && config.segments.length >= 2) {
         const formatted = config.segments.map((s, index) => {
           const preset = PRESET_COLORS[index % PRESET_COLORS.length];
@@ -260,7 +260,7 @@ const RewardsPlayZone = () => {
       setSpinning(true);
       setShowConfetti(false);
       const res = await apiRequest('/wallet/spin-wheel/spin', { method: 'POST', auth: true });
-      const spinData = res?.data || res;
+      const spinData = res;
       
       let winIndex = typeof spinData?.winIndex === 'number' ? spinData.winIndex : 0;
       winIndex = winIndex % wheelSegments.length;
@@ -295,12 +295,12 @@ const RewardsPlayZone = () => {
 
         if (spinData && typeof spinData.coins === 'number') {
           setCoins(spinData.coins);
-          setLevel(spinData.level || level);
-          setXp(spinData.xp || xp);
+          setLevel(spinData.level);
+          setXp(spinData.xp);
           updateUser({
             walletCoins: spinData.coins,
-            level: spinData.level || level,
-            xp: spinData.xp || xp,
+            level: spinData.level,
+            xp: spinData.xp,
             spinsLeft: spinData.spinsLeft
           });
         }
@@ -338,7 +338,7 @@ const RewardsPlayZone = () => {
 
       setClaimedIds((prev) => [...prev, task.id]);
       
-      const update = res?.data || res;
+      const update = res;
       if (update) {
         const updates = {};
         if (typeof update.coins === 'number') {

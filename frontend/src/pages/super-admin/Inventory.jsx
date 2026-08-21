@@ -60,7 +60,7 @@ const Inventory = () => {
     const fetchParts = async () => {
       try {
         const data = await apiRequest('/super-admin/spare-parts', { auth: true });
-        const list = Array.isArray(data?.data) ? data.data : [];
+        const list = Array.isArray(data) ? data : [];
         setParts(list.map(toPartRow));
       } catch (err) {
         setLoadError(err.message || 'Could not load inventory.');
@@ -108,10 +108,10 @@ const Inventory = () => {
           leadTimeDays: newPart.leadTimeDays ? Number(newPart.leadTimeDays) : undefined,
         },
       });
-      setParts((prev) => [...prev, toPartRow(res.data)]);
+      setParts((prev) => [...prev, toPartRow(res)]);
       setNewPart({ name: '', brand: 'LG', category: 'Refrigerator', stock: '', threshold: '', price: '', supplier: '', leadTimeDays: '', status: 'In Stock' });
       setShowAddModal(false);
-      showToast(`Spare part "${res.data.name}" added.`);
+      showToast(`Spare part "${res.name}" added.`);
     } catch (err) {
       setLoadError(err.message || 'Could not add the spare part.');
     }
@@ -139,7 +139,7 @@ const Inventory = () => {
           leadTimeDays: editingPart.leadTimeDays ? Number(editingPart.leadTimeDays) : undefined,
         },
       });
-      const updated = toPartRow(res.data);
+      const updated = toPartRow(res);
       setParts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
       if (selectedPart?.id === updated.id) setSelectedPart(updated);
       setShowEditModal(false);

@@ -50,7 +50,7 @@ const EscalationDesk = () => {
     async function loadEscalations() {
       try {
         const data = await apiRequest('/super-admin/escalations', { auth: true });
-        if (!cancelled) setEscalations((data?.data || []).map(shape));
+        if (!cancelled) setEscalations((data || []).map(shape));
       } catch (err) {
         if (!cancelled) setError(err.message);
       } finally {

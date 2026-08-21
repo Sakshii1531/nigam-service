@@ -37,6 +37,14 @@ services:
         sync: false
       - key: OTP_PROVIDER
         value: stub
+      # The stub provider only writes OTPs to the server log, so a hosted
+      # deployment needs one of two things to be loggable-into:
+      #   * OTP_PROVIDER=smsindiahub plus the SMSINDIAHUB_* credentials, or
+      #   * MOCK_OTP_CODE set to a fixed code (demo/staging only).
+      # Left unset here on purpose — without it no OTP can be completed in
+      # production, which is the safe default for a real launch.
+      - key: MOCK_OTP_CODE
+        sync: false
       - key: CLOUDINARY_CLOUD_NAME
         sync: false
       - key: CLOUDINARY_API_KEY

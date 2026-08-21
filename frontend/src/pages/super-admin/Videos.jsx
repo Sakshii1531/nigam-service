@@ -23,7 +23,7 @@ const Videos = () => {
       try {
         // /admin, not the public reader — the console must see deactivated videos too.
         const data = await apiRequest('/cms/videos/admin', { auth: true });
-        if (!cancelled) setVideos(data?.data || []);
+        if (!cancelled) setVideos(data || []);
       } catch (err) {
         if (!cancelled) setError(err.message);
       } finally {

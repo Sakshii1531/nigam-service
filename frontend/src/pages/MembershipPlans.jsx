@@ -113,7 +113,7 @@ const MembershipPlans = () => {
 
   useEffect(() => {
     apiRequest('/memberships/plans')
-      .then((res) => setCatalogue(res.data || []))
+      .then((res) => setCatalogue(res || []))
       .catch((err) => setPurchaseError(err.message || 'Could not load membership plans.'));
   }, []);
 
@@ -135,10 +135,10 @@ const MembershipPlans = () => {
         auth: true,
         body: { planId: plan.id, paymentMethod: 'UPI' },
       });
-      if (res.data.razorpay) {
+      if (res.razorpay) {
         await payWithRazorpay({
-          razorpay: res.data.razorpay,
-          verifyPath: `/memberships/${res.data.membership.id}/verify-payment`,
+          razorpay: res.razorpay,
+          verifyPath: `/memberships/${res.membership.id}/verify-payment`,
           description: plan.name,
         });
       }
@@ -157,7 +157,7 @@ const MembershipPlans = () => {
         // from whether the customer held an active AMC subscription, so an AMC
         // customer was shown as a Gold member they had never bought.
         const res = await apiRequest('/memberships/me', { auth: true });
-        setActivePlanName(res.data?.membership?.name?.toUpperCase() || null);
+        setActivePlanName(res?.membership?.name?.toUpperCase() || null);
       } catch (err) {
         console.warn('Error loading active membership:', err);
       } finally {

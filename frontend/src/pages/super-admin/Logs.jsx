@@ -35,7 +35,7 @@ const Logs = () => {
         const qs = selectedType === 'All Types' ? '' : `?type=${encodeURIComponent(selectedType)}`;
         const data = await apiRequest(`/super-admin/audit-logs${qs}`, { auth: true });
         if (cancelled) return;
-        setLogs((data?.data || []).map(entry => ({
+        setLogs((data || []).map(entry => ({
           id: entry.id,
           user: entry.user?.name || 'System',
           action: entry.action,

@@ -30,7 +30,7 @@ const NotificationSettings = () => {
     try {
       if (user) {
         const res = await apiRequest('/notifications/preferences', { auth: true });
-        const prefs = res?.data || res || {};
+        const prefs = res || {};
         setSettings({
           pushNotifications: prefs.pushNotifications !== undefined ? Boolean(prefs.pushNotifications) : (prefs.push !== undefined ? Boolean(prefs.push) : true),
           bookingUpdates: prefs.bookingUpdates !== undefined ? Boolean(prefs.bookingUpdates) : true,

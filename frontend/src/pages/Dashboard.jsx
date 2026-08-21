@@ -100,7 +100,7 @@ const Dashboard = ({ defaultType }) => {
     (async () => {
       try {
         const data = await apiRequest('/cms/service-pages');
-        if (!cancelled) setConfiguredServices((data?.data || []).map((c) => c.serviceKey));
+        if (!cancelled) setConfiguredServices((data || []).map((c) => c.serviceKey));
       } catch {
         if (!cancelled) setConfiguredServices([]);
       }
@@ -113,7 +113,7 @@ const Dashboard = ({ defaultType }) => {
     (async () => {
       try {
         const data = await apiRequest('/cms/home-tiles');
-        if (!cancelled) setCmsTiles(data?.data || []);
+        if (!cancelled) setCmsTiles(data || []);
       } catch {
         if (!cancelled) setCmsTiles([]);
       }
@@ -128,7 +128,7 @@ const Dashboard = ({ defaultType }) => {
     (async () => {
       try {
         const data = await apiRequest('/cms/banners?app=customer');
-        if (!cancelled) setCmsBanners(data?.data || []);
+        if (!cancelled) setCmsBanners(data || []);
       } catch {
         // Offline or unreachable — fall back to the bundled artwork rather than
         // rendering an empty carousel.

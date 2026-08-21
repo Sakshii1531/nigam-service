@@ -22,7 +22,7 @@ const Advertisements = () => {
       try {
         // /admin, not the public reader — the console must see Paused campaigns too.
         const data = await apiRequest('/cms/advertisements/admin', { auth: true });
-        if (!cancelled) setAds(data?.data || []);
+        if (!cancelled) setAds(data || []);
       } catch (err) {
         if (!cancelled) setError(err.message);
       } finally {

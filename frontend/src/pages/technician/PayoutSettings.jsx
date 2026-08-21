@@ -17,7 +17,7 @@ const PayoutSettings = () => {
   const loadAccounts = React.useCallback(async () => {
     try {
       const res = await apiRequest('/tech/profile/profile', { auth: true });
-      setAccounts((res.data?.payoutMethods || []).map((m) => ({
+      setAccounts((res?.payoutMethods || []).map((m) => ({
         id: m._id || m.id,
         type: m.type,
         name: m.name || m.upiId || (m.type === 'bank' ? 'Bank Account' : 'UPI'),

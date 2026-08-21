@@ -141,11 +141,11 @@ const Buy = () => {
           const wRes = await apiRequest('/warranty-amc/extended-warranty/orders', { auth: true });
           const aRes = await apiRequest('/warranty-amc/amc/subscriptions', { auth: true });
           
-          if (wRes && wRes.data) {
-            setWarranties(wRes.data);
+          if (wRes) {
+            setWarranties(wRes);
           }
-          if (aRes && aRes.data) {
-            setAmcs(aRes.data);
+          if (aRes) {
+            setAmcs(aRes);
           }
         } catch (err) {
           console.warn('Error loading protection plans:', err);
@@ -207,7 +207,7 @@ const Buy = () => {
 
   useEffect(() => {
     apiRequest('/warranty-amc/extended-warranty/plans', { auth: true })
-      .then((res) => setEwPlans((res.data || []).map((pl) => ({
+      .then((res) => setEwPlans((res || []).map((pl) => ({
         id: pl.id,
         label: pl.name,
         price: pl.price,
@@ -242,14 +242,14 @@ const Buy = () => {
         },
       });
 
-      if (res.data.razorpay) {
+      if (res.razorpay) {
         await payWithRazorpay({
-          razorpay: res.data.razorpay,
-          verifyPath: `/warranty-amc/extended-warranty/orders/${res.data.order.id}/verify-payment`,
+          razorpay: res.razorpay,
+          verifyPath: `/warranty-amc/extended-warranty/orders/${res.order.id}/verify-payment`,
           description: selectedTier.label,
         });
       }
-      setBoughtOrder(res.data.order);
+      setBoughtOrder(res.order);
       navigate(`/buy/success/${encodeURIComponent(selectedAppliance || '')}/${selectedTierIndex}`);
     } catch (err) {
       setBuyError(err.message || 'The policy could not be activated. You have not been charged.');

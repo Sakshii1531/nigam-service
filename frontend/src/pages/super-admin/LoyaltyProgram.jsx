@@ -26,7 +26,7 @@ const LoyaltyProgram = () => {
   const loadMilestones = React.useCallback(async () => {
     try {
       const res = await apiRequest('/super-admin/loyalty/milestones', { auth: true });
-      setMilestones(res.data || []);
+      setMilestones(res || []);
     } catch (err) {
       showToast(err.message || 'Could not load milestones.');
     }
@@ -71,7 +71,7 @@ const LoyaltyProgram = () => {
   const loadPlans = React.useCallback(async () => {
     try {
       const res = await apiRequest('/super-admin/loyalty/memberships', { auth: true });
-      setMembershipPlans(res.data || []);
+      setMembershipPlans(res || []);
     } catch (err) {
       showToast(err.message || 'Could not load membership plans.');
     }
@@ -215,7 +215,7 @@ const LoyaltyProgram = () => {
   const loadReferralCampaigns = React.useCallback(async () => {
     try {
       const res = await apiRequest('/super-admin/loyalty/referral-campaigns', { auth: true });
-      setReferralCampaigns(res.data || []);
+      setReferralCampaigns(res || []);
     } catch (err) {
       showToast(err.message || 'Could not load referral campaigns.');
     }
@@ -271,7 +271,7 @@ const LoyaltyProgram = () => {
     setCouponsLoading(true);
     try {
       const res = await apiRequest('/coupons/admin', { auth: true });
-      const listToMap = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+      const listToMap = Array.isArray(res) ? res : [];
       setCoupons(listToMap);
     } catch (err) {
       console.error(err);
@@ -284,7 +284,7 @@ const LoyaltyProgram = () => {
   const fetchSpinWheelConfig = async () => {
     try {
       const res = await apiRequest('/super-admin/loyalty/spin-wheel', { auth: true });
-      const config = res?.data || res;
+      const config = res;
       if (config && Array.isArray(config.segments)) {
         setWheelSegments(config.segments.map((s, index) => ({
           id: s.id || index + 1,
@@ -308,7 +308,7 @@ const LoyaltyProgram = () => {
     else if (activeTab === 'referrals') {
       loadReferralCampaigns();
       apiRequest('/super-admin/analytics/coin-redemption', { auth: true })
-        .then((res) => setCoinRedemption(res.data))
+        .then((res) => setCoinRedemption(res))
         .catch((err) => console.warn('[loyalty] Could not load coin redemption:', err.message));
     }
   }, [activeTab, loadMilestones, loadPlans, loadReferralCampaigns]);

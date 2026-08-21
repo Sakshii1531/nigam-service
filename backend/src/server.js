@@ -8,6 +8,18 @@ import { initSockets } from './sockets/index.js';
 async function main() {
   const modelCount = await registerAllModels();
   console.log(`[server] registered ${modelCount} models`);
+
+  // Two things that silently lock everyone out of a hosted deployment if they
+  // go unnoticed: the stub OTP provider only writes codes to this log, and the
+  // fixed demo code is off unless explicitly configured.
+  if (env.nodeEnv === 'production') {
+    if (env.mockOtpCode) {
+      console.warn('[server] WARNING: MOCK_OTP_CODE is set — a fixed OTP will be accepted for every login. Unset it once a real SMS provider is configured.');
+    }
+    if (env.otpProvider === 'stub' && !env.mockOtpCode) {
+      console.warn('[server] WARNING: OTP_PROVIDER=stub in production and no MOCK_OTP_CODE — codes are only written to this log, so nobody can complete a login. Configure OTP_PROVIDER=smsindiahub (with SMSINDIAHUB_* credentials) or set MOCK_OTP_CODE for a demo deployment.');
+    }
+  }
   await connectDB();
   await ensureIndexes();
 

@@ -98,7 +98,8 @@ const Users = () => {
     async function fetchUsers() {
       try {
         const res = await apiRequest('/super-admin/users?role=customer&limit=200', { auth: true });
-        setUsers((res.data || []).map((item) => ({
+        const items = Array.isArray(res) ? res : [];
+        setUsers(items.map((item) => ({
           _id: item.id,
           id: item.humanId || item.id,
           name: item.name || 'User',

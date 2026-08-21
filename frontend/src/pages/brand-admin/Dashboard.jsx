@@ -87,10 +87,10 @@ const Dashboard = () => {
           apiRequest('/service-requests?limit=5&sort=-createdAt', { auth: true }),
         ]);
         if (cancelled) return;
-        // apiRequest resolves the { data, error, meta } envelope — storing the
-        // envelope itself meant every KPI on this page read zero.
-        setMetrics(dash?.data || null);
-        setRecent((recent?.data || []).map((r) => ({
+        // apiRequest returns the envelope's `data` payload directly — unwrapping
+        // it a second time meant every KPI on this page read zero.
+        setMetrics(dash || null);
+        setRecent((recent || []).map((r) => ({
           id: r.humanId || r.id,
           customer: r.user?.name || 'Customer',
           product: r.category || '—',
@@ -242,11 +242,15 @@ const Dashboard = () => {
                       <stop offset="100%" stopColor="#3B82F6" stopOpacity="0.01" />
                     </linearGradient>
                   </defs>
-                  {/* Area fill */}
-                  <path
-                    d={`M ${trendData.map((v, i) => `${i * 83.3},${100 - (v / maxTrend) * 85}`).join(' L ')} L ${(trendData.length - 1) * 83.3},100 L 0,100 Z`}
-                    fill="url(#trendGrad)"
-                  />
+                  {/* Area fill. Skipped when there is no trend yet: an empty
+                      series produced d="M  L -83.3,100 …", which the browser
+                      rejects outright ("attribute d: Expected number"). */}
+                  {trendData.length > 0 && (
+                    <path
+                      d={`M ${trendData.map((v, i) => `${i * 83.3},${100 - (v / maxTrend) * 85}`).join(' L ')} L ${(trendData.length - 1) * 83.3},100 L 0,100 Z`}
+                      fill="url(#trendGrad)"
+                    />
+                  )}
                   {/* Line */}
                   <polyline
                     points={trendData.map((v, i) => `${i * 83.3},${100 - (v / maxTrend) * 85}`).join(' ')}

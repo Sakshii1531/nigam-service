@@ -52,7 +52,7 @@ const ServiceCompletionMonitor = () => {
     async function loadCompletions() {
       try {
         const data = await apiRequest('/brand/completions', { auth: true });
-        if (!cancelled) setJobs((data?.data || []).map(shape));
+        if (!cancelled) setJobs((data || []).map(shape));
       } catch (err) {
         if (!cancelled) setError(err.message);
       } finally {

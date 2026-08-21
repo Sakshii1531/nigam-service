@@ -57,7 +57,7 @@ const Exchanges = () => {
         // Brand-scoped: the API resolves the caller's brand and matches trade-ins
         // recorded against that brand name.
         const data = await apiRequest('/exchange/requests/brand', { auth: true });
-        if (!cancelled) setExchanges((data?.data || []).map(shape));
+        if (!cancelled) setExchanges((data || []).map(shape));
       } catch (err) {
         if (!cancelled) setError(err.message);
       } finally {

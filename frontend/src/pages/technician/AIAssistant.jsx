@@ -44,7 +44,7 @@ const AIAssistant = () => {
           })),
         },
       });
-      setMessages((prev) => [...prev, { id: Date.now() + 1, sender: 'ai', text: res.data.reply }]);
+      setMessages((prev) => [...prev, { id: Date.now() + 1, sender: 'ai', text: res.reply }]);
     } catch (err) {
       // 503 means the assistant isn't configured on this deployment; anything
       // else is a real failure. Either way, offer the human desk.
