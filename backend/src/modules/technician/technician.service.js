@@ -1,5 +1,44 @@
 import { Technician } from './technician.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
+import { autoAssignPendingRequests } from '../service-requests/serviceRequest.service.js';
+
+const ONLINE = 'Available';
+
+/**
+ * The technician's own online/offline switch.
+ *
+ * Nothing could set this before: registration hardcodes 'Offline'
+ * (technicianRegistration.routes.js) and the admin console only ever forces it
+ * back to 'Offline' (adminTechnician.service.js). The only writer of
+ * 'Available' was the seed script and the /_dev test route. Since
+ * rankTechnicians hard-filters on availability: 'Available', that meant a real
+ * technician was never a candidate — auto-assignment silently found nobody and
+ * the assignment console's shortlist came back empty.
+ */
+export async function setAvailability(technicianId, availability) {
+  const technician = await Technician.findById(technicianId);
+  if (!technician) throw new ApiError(404, 'Technician not found');
+  if (availability === ONLINE && technician.status !== 'Active') {
+    throw new ApiError(
+      409,
+      `Your account is ${technician.status} — an admin has to activate it before you can go online`,
+    );
+  }
+
+  const wasOffline = technician.availability !== ONLINE;
+  technician.availability = availability;
+  await technician.save();
+
+  // Coming online is exactly when a request that had no candidate at booking
+  // time becomes assignable, so drain the backlog now instead of leaving it for
+  // the next booking (or for an admin to notice).
+  const autoAssigned =
+    availability === ONLINE && wasOffline
+      ? await autoAssignPendingRequests()
+      : { assignedCount: 0, assigned: [] };
+
+  return { technician, autoAssigned };
+}
 
 export async function getProfile(technicianId) {
   const technician = await Technician.findById(technicianId).select('+payoutMethods.accountNo');

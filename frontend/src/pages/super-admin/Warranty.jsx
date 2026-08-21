@@ -37,7 +37,7 @@ const Warranty = () => {
     const fetchClaims = async () => {
       try {
         const data = await apiRequest('/super-admin/claims', { auth: true });
-        const list = Array.isArray(data?.data) ? data.data : [];
+        const list = Array.isArray(data) ? data : [];
         // Field names are the Claim schema's — the previous mapping read
         // c.user / c.invoiceNumber / c.issueDescription, none of which exist,
         // so every row showed "Customer", "N/A" and a generic issue string.

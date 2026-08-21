@@ -13,10 +13,10 @@ const PersonalInfo = () => {
   useEffect(() => {
     apiRequest('/tech/profile/profile', { auth: true })
       .then((res) => setForm({
-        name: res.data?.name || '',
-        email: res.data?.email || '',
-        phone: res.data?.phone || '',
-        address: res.data?.address || '',
+        name: res?.name || '',
+        email: res?.email || '',
+        phone: res?.phone || '',
+        address: res?.address || '',
       }))
       .catch((err) => setError(err.message || 'Could not load your profile.'));
   }, []);

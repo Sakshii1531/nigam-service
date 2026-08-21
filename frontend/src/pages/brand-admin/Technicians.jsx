@@ -45,7 +45,7 @@ const Technicians = () => {
       try {
         // Technicians who have actually worked this brand's requests.
         const data = await apiRequest('/brand/technicians', { auth: true });
-        if (!cancelled) setTechnicians((data?.data || []).map(shape));
+        if (!cancelled) setTechnicians((data || []).map(shape));
       } catch (err) {
         if (!cancelled) setError(err.message);
       } finally {

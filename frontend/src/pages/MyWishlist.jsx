@@ -24,7 +24,7 @@ const MyWishlist = () => {
 
   useEffect(() => {
     apiRequest('/wishlist', { auth: true })
-      .then((res) => setWishlist(res.data || []))
+      .then((res) => setWishlist(res || []))
       .catch((err) => setWishlistError(err.message || 'Could not load your wishlist.'));
   }, []);
 
@@ -44,7 +44,7 @@ const MyWishlist = () => {
     e.stopPropagation();
     try {
       const res = await apiRequest(`/wishlist/${id}`, { method: 'DELETE', auth: true });
-      setWishlist(res.data || []);
+      setWishlist(res || []);
     } catch (err) {
       setWishlistError(err.message || 'Could not remove that item.');
     }

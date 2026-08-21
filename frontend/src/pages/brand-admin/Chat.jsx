@@ -90,7 +90,7 @@ const Chat = () => {
       try {
         const data = await apiRequest('/chat/conversations', { auth: true });
         if (cancelled) return;
-        const list = data?.data || [];
+        const list = data || [];
         setConversations(Object.fromEntries(list.map((c) => [c.id, shapeConversation(c)])));
         if (list.length) setActiveChannel(list[0].id);
       } catch (err) {
@@ -107,6 +107,10 @@ const Chat = () => {
   useEffect(() => {
     const socket = socketRef.current;
     if (!activeChannel || !socket) return undefined;
+    // 'cust-1'/'tech-1' are the placeholder channel ids this screen starts on
+    // until a real conversation is opened. Sending those to the API asks Mongo
+    // to cast them to an ObjectId, which failed the request outright.
+    if (!/^[0-9a-fA-F]{24}$/.test(activeChannel)) return undefined;
 
     socket.emit('join-conversation', { conversationId: activeChannel }, (ack) => {
       if (!ack?.ok) setError(ack?.error || 'Could not join this conversation.');

@@ -69,8 +69,8 @@ const Academy = () => {
         if (cancelled) return;
         // apiRequest resolves the { data, error, meta } envelope — the previous
         // Array.isArray guard was never true, so the library always rendered empty.
-        setGuides((g?.data || []).map(shapeGuide));
-        setCourses((c?.data || []).map(shapeCourse));
+        setGuides((g || []).map(shapeGuide));
+        setCourses((c || []).map(shapeCourse));
       } catch (err) {
         if (!cancelled) setError(err.message);
       } finally {
@@ -116,11 +116,11 @@ const Academy = () => {
           title: newGuide.title,
           type: newGuide.type,
           product: newGuide.product,
-          url: upload.data.url,
+          url: upload.url,
         },
       });
 
-      setGuides((prev) => [shapeGuide(res.data), ...prev]);
+      setGuides((prev) => [shapeGuide(res), ...prev]);
       setNewGuide({ title: '', type: 'PDF', product: 'Smart TV' });
       setGuideFile(null);
       setShowUploadModal(false);

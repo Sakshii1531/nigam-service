@@ -25,7 +25,7 @@ const AllApplianceServices = () => {
     (async () => {
       try {
         const catRes = await apiRequest('/catalog/categories');
-        const categories = catRes.data || [];
+        const categories = catRes || [];
 
         const detailed = await Promise.all(
           categories.map((c) => apiRequest(`/catalog/categories/${encodeURIComponent(c.key)}`).catch(() => null)),

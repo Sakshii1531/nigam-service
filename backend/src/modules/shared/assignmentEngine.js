@@ -1,8 +1,24 @@
 import { Technician } from '../technician/technician.model.js';
+import { ServiceRequest } from '../service-requests/serviceRequest.model.js';
 import { AssignmentWeighting } from '../super-admin/assignmentWeighting.model.js';
 
 function clamp0to100(n) {
   return Math.max(0, Math.min(100, n));
+}
+
+/**
+ * Work already on a technician's plate but not yet picked up. `activeJobsCount`
+ * only moves when a technician *accepts* a job (job.service.js), so a batch
+ * auto-assign handed every pending request to the same top-ranked technician —
+ * nothing in the score changed between iterations. Counting assigned-but-
+ * unaccepted requests makes the workload term react immediately.
+ */
+async function pendingAssignmentCounts() {
+  const rows = await ServiceRequest.aggregate([
+    { $match: { status: 'Assigned', technician: { $ne: null } } },
+    { $group: { _id: '$technician', count: { $sum: 1 } } },
+  ]);
+  return new Map(rows.map((row) => [String(row._id), row.count]));
 }
 
 /**
@@ -20,14 +36,26 @@ function clamp0to100(n) {
  *     this is what naturally reproduces the old stub's "fall back to any
  *     available technician" behavior without a separate code path).
  *   - rating: technician.rating (0-5) scaled to 0-100.
- *   - workload: inversely proportional to activeJobsCount — 100 at 0 active
- *     jobs, -20 per active job, floored at 0.
+ *   - workload: inversely proportional to the technician's open load — their
+ *     accepted activeJobsCount plus anything already assigned to them and
+ *     awaiting pickup — 100 at 0, -20 per open item, floored at 0.
  * Weighted by the admin-configurable AssignmentWeighting singleton (defaults
  * 40/30/20/10 if none exists yet, matching the model's schema defaults).
  */
-export async function rankTechnicians({ category, city } = {}) {
-  const candidates = await Technician.find({ status: 'Active', availability: 'Available' }).populate('city');
+export async function rankTechnicians({ category, city, includeUnavailable = false } = {}) {
+  // Auto-assignment only ever considers technicians who have marked themselves
+  // Available. The super-admin console passes includeUnavailable so an operator
+  // can still hand-pick an Active technician who is Busy or Offline — an
+  // override has to reach the technicians the automatic path deliberately
+  // skips, otherwise the manual panel renders empty in exactly the situation
+  // where an operator went looking for it.
+  const filter = { status: 'Active' };
+  if (!includeUnavailable) filter.availability = 'Available';
+
+  const candidates = await Technician.find(filter).populate('city');
   if (candidates.length === 0) return [];
+
+  const pending = await pendingAssignmentCounts();
 
   const weighting = (await AssignmentWeighting.findOne()) || {
     proximityPercent: 40,
@@ -43,7 +71,8 @@ export async function rankTechnicians({ category, city } = {}) {
     }
     const skill = tech.specs.includes(category) ? 100 : 40;
     const rating = clamp0to100((tech.rating / 5) * 100);
-    const workload = clamp0to100(100 - tech.activeJobsCount * 20);
+    const load = tech.activeJobsCount + (pending.get(String(tech._id)) || 0);
+    const workload = clamp0to100(100 - load * 20);
 
     const score =
       (proximity * weighting.proximityPercent +

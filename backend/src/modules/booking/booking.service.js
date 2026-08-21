@@ -18,6 +18,7 @@ import { env } from '../../config/env.js';
  * never trust a client-supplied price for what's actually charged.
  */
 import { getIO } from '../../sockets/io.js';
+import { INSTANT_ROOM } from '../../sockets/instantBooking.gateway.js';
 
 export async function createBooking(userId, data) {
   const serviceItem = await findServiceItem(data.category, data.serviceSlug);
@@ -84,6 +85,12 @@ export async function createBooking(userId, data) {
     category: data.category,
     description: `${data.category} — ${serviceItem.name}`,
     requestMode: 'B2C',
+    // Carried over from the booking address so later re-ranking (the assignment
+    // console, and the backlog sweep when a technician comes online) scores
+    // proximity against the real city. Without it every candidate got the
+    // neutral 50 and assignment was effectively city-blind once the booking
+    // itself was over.
+    zone: data.address?.city || undefined,
     warranty: warrantyStatus === 'Out of Warranty' ? 'Out of Warranty' : 'In Warranty',
     brand: brandId,
     appliance: applianceId,
@@ -115,7 +122,9 @@ export async function createBooking(userId, data) {
   if (isInstant) {
     const io = getIO();
     if (io) {
-      io.emit('instant:new_request', {
+      // Scoped to the technicians' room — this payload carries the customer's
+      // name, mobile and address, and used to go to every connected socket.
+      io.to(INSTANT_ROOM).emit('instant:new_request', {
         bookingId: booking.id,
         serviceRequestId: serviceRequest.id,
         category: data.category,

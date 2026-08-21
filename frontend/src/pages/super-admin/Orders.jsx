@@ -47,11 +47,9 @@ const Orders = () => {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        // The admin-scoped list. This called the customer-scoped GET /orders,
-        // which filters on the caller's own user id — so an admin saw only
-        // orders they had personally placed.
         const data = await apiRequest('/super-admin/orders?limit=200', { auth: true });
-        setOrders((data?.data || []).map(shapeOrder));
+        const items = Array.isArray(data) ? data : [];
+        setOrders(items.map(shapeOrder));
       } catch (err) {
         setLoadError(err.message || 'Could not load orders.');
       } finally {
@@ -85,7 +83,7 @@ const Orders = () => {
 
     try {
       const res = await apiRequest(`/super-admin/orders/${id}/status`, { method: 'PATCH', auth: true, body });
-      const updated = shapeOrder(res.data);
+      const updated = shapeOrder(res);
       setOrders((prev) => prev.map((o) => (o.id === id ? updated : o)));
       if (selectedOrder?.id === id) setSelectedOrder(updated);
       showToast(`Order status updated to ${newStatus}`);

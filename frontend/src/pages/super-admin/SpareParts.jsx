@@ -14,7 +14,7 @@ const SpareParts = () => {
 
   useEffect(() => {
     apiRequest('/super-admin/settings', { auth: true })
-      .then((res) => setDefaultMarkup(res.data?.defaultSparePartMarkupPercent ?? null))
+      .then((res) => setDefaultMarkup(res?.defaultSparePartMarkupPercent ?? null))
       .catch((err) => console.warn('[spare-parts] Could not load platform settings:', err.message));
   }, []);
 
@@ -22,7 +22,7 @@ const SpareParts = () => {
     const fetchParts = async () => {
       try {
         const data = await apiRequest('/super-admin/spare-parts', { auth: true });
-        const list = Array.isArray(data?.data) ? data.data : [];
+        const list = Array.isArray(data) ? data : [];
         setParts(list.map(p => {
           const cost = Number(p.costPrice || p.cost || 0);
           const markup = Number(p.markupPercent || p.markup || 15);

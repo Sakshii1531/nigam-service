@@ -137,7 +137,7 @@ const Exchange = () => {
         );
         if (cancelled) return;
 
-        if (!lookup.data.found) {
+        if (!lookup.found) {
           setQuote(null);
           setQuoteError('We do not have a published trade-in value for this model yet. Please contact support for a manual valuation.');
           return;
@@ -150,12 +150,12 @@ const Exchange = () => {
           auth: true,
           body: {
             category: finalCategory,
-            baseValue: lookup.data.baseValue,
+            baseValue: lookup.baseValue,
             answers: { condition: finalCondition },
           },
         });
         if (cancelled) return;
-        setQuote(valuation.data);
+        setQuote(valuation);
       } catch (err) {
         if (!cancelled) {
           setQuote(null);
@@ -177,7 +177,7 @@ const Exchange = () => {
     if (!productId) return;
     let cancelled = false;
     apiRequest(`/products/${productId}`)
-      .then((res) => { if (!cancelled) setNewProduct(res.data); })
+      .then((res) => { if (!cancelled) setNewProduct(res); })
       .catch(() => { if (!cancelled) setNewProduct(null); });
     return () => { cancelled = true; };
   }, [productId]);

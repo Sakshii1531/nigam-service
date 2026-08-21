@@ -85,11 +85,11 @@ const TechnicianAppCustomization = () => {
         apiRequest('/cms/skills', { auth: true }),
         apiRequest('/cms/app-settings/technician'),
       ]);
-      setBanners((bannerRes.data || []).map(toBanner));
-      setVideos((videoRes.data || []).map(toVideo));
-      setAnnouncements((announceRes.data || []).map(toAnnouncement));
-      setSkills((skillRes.data || []).map(toSkill));
-      setSettings((prev) => ({ ...prev, ...(settingRes.data || {}) }));
+      setBanners((bannerRes || []).map(toBanner));
+      setVideos((videoRes || []).map(toVideo));
+      setAnnouncements((announceRes || []).map(toAnnouncement));
+      setSkills((skillRes || []).map(toSkill));
+      setSettings((prev) => ({ ...prev, ...(settingRes || {}) }));
     } catch (err) {
       setLoadError(err.message || 'Failed to load technician app content.');
     } finally {
@@ -114,7 +114,7 @@ const TechnicianAppCustomization = () => {
           app: 'technician',
         },
       });
-      setBanners((prev) => [...prev, toBanner(res.data)]);
+      setBanners((prev) => [...prev, toBanner(res)]);
       setNewBanner({ title: '', desc: '' });
       showToast('New technician banner published!');
     } catch (err) {
@@ -146,7 +146,7 @@ const TechnicianAppCustomization = () => {
           duration: newVideo.duration || '10 mins',
         },
       });
-      setVideos((prev) => [...prev, toVideo(res.data)]);
+      setVideos((prev) => [...prev, toVideo(res)]);
       setNewVideo({ title: '', category: '', duration: '' });
       showToast('Training video added successfully!');
     } catch (err) {
@@ -177,7 +177,7 @@ const TechnicianAppCustomization = () => {
         // everyone.
         body: { message: newAnnounce.msg, scope: region ? 'city' : 'all', region },
       });
-      setAnnouncements((prev) => [toAnnouncement(res.data), ...prev]);
+      setAnnouncements((prev) => [toAnnouncement(res), ...prev]);
       setNewAnnounce({ msg: '', scope: '' });
       showToast('System announcement broadcasted!');
     } catch (err) {
@@ -209,7 +209,7 @@ const TechnicianAppCustomization = () => {
           group: newSkill.group || 'General',
         },
       });
-      setSkills((prev) => [...prev, toSkill(res.data)]);
+      setSkills((prev) => [...prev, toSkill(res)]);
       setNewSkill({ name: '', code: '', group: '' });
       showToast('Dynamic skill tag added!');
     } catch (err) {

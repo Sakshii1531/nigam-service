@@ -17,7 +17,7 @@ const ServicePartners = () => {
         // Same envelope bug as Brands.jsx: the real list was always discarded
         // in favour of six invented partners.
         const res = await apiRequest('/super-admin/service-partners?limit=200', { auth: true });
-        setPartners((res.data || []).map((item) => ({
+        setPartners((res || []).map((item) => ({
           id: item.id,
           name: item.name,
           manager: item.manager || '—',

@@ -61,7 +61,7 @@ const Customers = () => {
         // Derived server-side: everyone who has raised a service request with
         // this brand, with per-customer counts.
         const data = await apiRequest('/brand/customers', { auth: true });
-        if (!cancelled) setCustomers((data?.data || []).map(shape));
+        if (!cancelled) setCustomers((data || []).map(shape));
       } catch (err) {
         if (!cancelled) setError(err.message);
       } finally {

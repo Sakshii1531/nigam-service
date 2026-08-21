@@ -494,7 +494,7 @@ export const initializeExchangeConfigs = async () => {
   // and the console must see the same data, which per-browser localStorage never
   // did. The bundled defaults above remain only as a seed for a fresh install.
   const res = await apiRequest('/exchange/product-configs', { auth: true });
-  return Object.fromEntries((res.data || []).map((c) => [
+  return Object.fromEntries((res || []).map((c) => [
     c.product,
     {
       id: c.id,
@@ -511,10 +511,10 @@ export const initializeExchangeConfigs = async () => {
 
 export const initializeQuestionSets = async () => {
   const res = await apiRequest('/exchange/question-sets', { auth: true });
-  return res.data || [];
+  return res || [];
 };
 
 export const initializeCampaigns = async () => {
   const res = await apiRequest('/exchange/campaigns', { auth: true });
-  return res.data || [];
+  return res || [];
 };

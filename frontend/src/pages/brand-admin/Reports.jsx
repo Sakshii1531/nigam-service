@@ -28,7 +28,7 @@ const Reports = () => {
     async function loadReport() {
       try {
         const res = await apiRequest('/brand/reports', { auth: true });
-        if (!cancelled && res.data) setReport(res.data);
+        if (!cancelled && res) setReport(res);
       } catch (err) {
         if (!cancelled) setError(err.message);
       } finally {

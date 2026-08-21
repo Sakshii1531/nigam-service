@@ -56,7 +56,7 @@ const EditProfile = () => {
         auth: true,
         body: { name: form.name, phone: form.phone, email: form.email },
       });
-      if (res.data) updateUser(res.data);
+      if (res) updateUser(res);
       setSaved(true);
       setTimeout(() => {
         setSaved(false);

@@ -38,7 +38,7 @@ const CMS = () => {
     const slug = getSlug(activeTab);
     try {
       const res = await apiRequest(`/cms/pages/${slug}`);
-      const pageData = res?.data || res || {};
+      const pageData = res || {};
 
       if (activeTab === 'faqs') {
         setFaqsList(Array.isArray(pageData.faqs) ? pageData.faqs : []);

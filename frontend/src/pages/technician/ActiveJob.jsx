@@ -5,7 +5,7 @@ import {
   ArrowLeft, Bell, Briefcase, ClipboardList, Calendar, User, Wrench, 
   MapPin, Phone, MessageSquare, Shield, Share2, MoreVertical, CheckCircle, 
   Clock, Plus, Info, Upload, Check, Video, Mic, FileText, Send, Sparkles,
-  ChevronRight, AlertTriangle, Package, CreditCard, Wallet, Banknote, QrCode
+  ChevronRight, AlertTriangle, AlertCircle, Package, CreditCard, Wallet, Banknote, QrCode
 } from 'lucide-react';
 import { useTech } from '../../context/TechContext';
 import splitAcImg from '../../assets/categories/split_ac.png';
@@ -168,7 +168,12 @@ const ActiveJob = () => {
     setProofs,
     addChatMessage,
     chatMessages,
-    inventory
+    inventory,
+    stepBusy,
+    stepError,
+    setStepError,
+    advanceStepsTo,
+    setDiagnosisNotes
   } = useTech();
 
   // ── Click-to-call relay ────────────────────────────────────────────────────
@@ -231,7 +236,10 @@ const ActiveJob = () => {
   const [activeTab, setActiveTab] = useState('Overview'); // 'Overview', 'Diagnosis', 'Parts', 'Notes', 'History'
   const [showAIModal, setShowAIModal] = useState(false);
   const [showSignaturePad, setShowSignaturePad] = useState(false);
-  const [notesText, setNotesText] = useState('');
+  // Mirrored into TechContext so completing the inspection submits these notes
+  // with the diagnosis, not just the separate 'Save Notes' button.
+  const [notesText, setNotesTextLocal] = useState('');
+  const setNotesText = (v) => { setNotesTextLocal(v); setDiagnosisNotes(typeof v === 'string' ? v : ''); };
   const [notesSaved, setNotesSaved] = useState(false);
   const [notesError, setNotesError] = useState('');
 
@@ -287,7 +295,7 @@ const ActiveJob = () => {
       try {
         const res = await apiRequest('/tech/claims', { auth: true });
         if (cancelled) return;
-        const claim = (res.data || []).find(
+        const claim = (res || []).find(
           (c) => String(c.serviceRequest?.id || c.serviceRequest) === String(activeJob.serviceRequestId),
         );
         setApprovalClaimStatus(claim ? claim.status : null);
@@ -679,7 +687,20 @@ const ActiveJob = () => {
       (activeStep === 'revisit_complete' || activeStep === 'customer_update_preview' || activeStep === 'spare_part_required' || activeStep === 'completed_pending' || activeStep === 'spare_part_job_details' || activeStep === 'cancellation_summary' || activeStep === 'unable_to_fix_summary' || activeStep === 'revisit_billing' || activeStep === 'revisit_payment' || activeStep === 'revisit_payment_upi' || activeStep === 'revisit_payment_cash' || activeStep === 'revisit_payment_card' || activeStep === 'revisit_payment_wallet' || activeStep === 'revisit_otp') ? 'bg-[#F5F8FC] pb-0' :
       'bg-[#F5F8FC] pb-24'
     }`}>
-      
+
+      {/* A step that failed to save server-side must say so. The flow used to
+          advance on local state alone, so a rejected write looked like success
+          and the job silently fell out of sync with the server. */}
+      {stepError && (
+        <div className="sticky top-0 z-[120] bg-rose-600 text-white px-4 py-3 flex items-start gap-3">
+          <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+          <span className="text-xs font-semibold leading-snug flex-1">{stepError}</span>
+          <button onClick={() => setStepError(null)} className="text-white/80 hover:text-white text-xs font-bold">
+            Dismiss
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       {activeStep === 'spare_part_required' || activeStep === 'completed_pending' || activeStep === 'customer_update_preview' || activeStep === 'spare_part_job_details' || activeStep === 'revisit_complete' || activeStep === 'cancellation_summary' || activeStep === 'unable_to_fix_summary' || activeStep === 'revisit_billing' || activeStep === 'revisit_payment' || activeStep === 'revisit_payment_upi' || activeStep === 'revisit_payment_cash' || activeStep === 'revisit_payment_card' || activeStep === 'revisit_payment_wallet' || activeStep === 'revisit_otp' ? null : activeStep === 'details' && activeJob && isSpecialWarrantyJob ? (
         /* White Header for Special Warranty Details */
@@ -1212,9 +1233,10 @@ const ActiveJob = () => {
                 
                 <button 
                   onClick={() => advanceStep()}
-                  className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-normal py-4 rounded-2xl text-sm transition-all shadow-md mt-2"
+                  disabled={stepBusy}
+                  className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] disabled:opacity-60 text-white font-normal py-4 rounded-2xl text-sm transition-all shadow-md mt-2"
                 >
-                  Start Trip (On My Way)
+                  {stepBusy ? 'Saving…' : 'Start Trip (On My Way)'}
                 </button>
               </div>
             )}
@@ -1484,7 +1506,7 @@ const ActiveJob = () => {
                                 View Invoice
                               </button>
                               <button
-                                onClick={() => setActiveStep('billing')}
+                                onClick={() => advanceStepsTo('billing')}
                                 className="flex-1 bg-[#1E6BDB] hover:bg-blue-700 text-white font-semibold py-3.5 rounded-2xl text-xs transition-all shadow-md"
                               >
                                 Generate Invoice
@@ -1527,7 +1549,7 @@ const ActiveJob = () => {
                                 View Claim Invoice
                               </button>
                               <button
-                                onClick={() => setActiveStep('billing')}
+                                onClick={() => advanceStepsTo('billing')}
                                 className="flex-1 bg-[#7C4DFF] hover:bg-purple-600 text-white font-semibold py-3.5 rounded-2xl text-xs transition-all shadow-md"
                               >
                                 Generate Invoice
@@ -1569,7 +1591,7 @@ const ActiveJob = () => {
                                 Preview Report
                               </button>
                               <button
-                                onClick={() => setActiveStep('billing')}
+                                onClick={() => advanceStepsTo('billing')}
                                 className="flex-1 bg-[#FFA000] hover:bg-amber-500 text-white font-semibold py-3.5 rounded-2xl text-xs transition-all shadow-md"
                               >
                                 Complete Visit
@@ -2226,15 +2248,20 @@ const ActiveJob = () => {
                     ))}
                   </div>
 
-                  {/* Advancing is gated on the brand's real decision. This was a
-                      "Simulate Approval (Next Step)" button, so a technician
-                      could self-approve FOC parts the brand never authorised. */}
-                  {approvalClaimStatus === 'Approved' ? (
+                  {/* Advancing on covered work is gated on the brand's real
+                      decision (this was once a "Simulate Approval" button, so a
+                      technician could self-approve FOC parts nobody authorised).
+                      A D2C job has no claim to approve — the customer is billed
+                      for the parts — and job.service.js only raises claims when
+                      !isD2C, so gating those too left every paid job stuck here
+                      forever on "No claim has been raised for these parts yet." */}
+                  {activeJob?.isD2C || approvalClaimStatus === 'Approved' ? (
                     <button
                       onClick={() => advanceStep()}
-                      className={`w-full ${approvalColor} text-white font-normal py-4 rounded-2xl text-sm transition-all shadow-md mt-2`}
+                      disabled={stepBusy}
+                      className={`w-full ${approvalColor} disabled:opacity-60 text-white font-normal py-4 rounded-2xl text-sm transition-all shadow-md mt-2`}
                     >
-                      Approved — Continue
+                      {stepBusy ? 'Saving…' : activeJob?.isD2C ? 'Parts Billed to Customer — Continue' : 'Approved — Continue'}
                     </button>
                   ) : approvalClaimStatus === 'Rejected' ? (
                     <div className="w-full bg-red-50 border border-red-200 text-red-700 font-semibold py-3 rounded-2xl text-xs mt-2 px-3">
@@ -2264,9 +2291,10 @@ const ActiveJob = () => {
 
                 <button 
                   onClick={() => advanceStep()}
-                  className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-normal py-4 rounded-2xl text-sm transition-all shadow-md"
+                  disabled={stepBusy}
+                  className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] disabled:opacity-60 text-white font-normal py-4 rounded-2xl text-sm transition-all shadow-md"
                 >
-                  Proceed to Invoice & Billing
+                  {stepBusy ? 'Saving…' : 'Proceed to Invoice & Billing'}
                 </button>
               </div>
             )}
@@ -3710,13 +3738,12 @@ const ActiveJob = () => {
 
                   <div className="flex flex-col mt-6">
                     {/* Verify & Close Job Green Button */}
-                    <button 
-                      onClick={() => {
-                        collectPayment();
-                      }}
-                      className="w-full bg-[#16A34A] hover:bg-[#15803D] text-white font-bold py-4 rounded-2xl text-base transition-all shadow-md text-center"
+                    <button
+                      onClick={() => { collectPayment(); }}
+                      disabled={stepBusy}
+                      className="w-full bg-[#16A34A] hover:bg-[#15803D] disabled:opacity-60 text-white font-bold py-4 rounded-2xl text-base transition-all shadow-md text-center"
                     >
-                      Verify & Close Job
+                      {stepBusy ? 'Closing…' : 'Verify & Close Job'}
                     </button>
                   </div>
                 </div>
@@ -3865,8 +3892,11 @@ const ActiveJob = () => {
                 </div>
 
                 <button 
-                  onClick={() => {
-                    collectPayment();
+                  onClick={async () => {
+                    // The AMC/EW decrements below are only correct once the job
+                    // actually closed server-side, so they wait on the result.
+                    const res = await collectPayment();
+                    if (!res?.ok) return;
                     // Decrement AMC visits remaining
                     if ((activeJob?.type === 'AMC Visit' || activeJob?.type === 'AMC VISIT') && activeJob?.id) {
                       decrementAmcVisit(activeJob.id);

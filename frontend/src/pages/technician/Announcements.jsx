@@ -28,7 +28,7 @@ const Announcements = () => {
 
   useEffect(() => {
     apiRequest('/tech/academy/announcements', { auth: true })
-      .then((res) => setNotices((res.data || []).map((n) => ({
+      .then((res) => setNotices((res || []).map((n) => ({
         id: n.id,
         message: n.message,
         severity: n.severity,

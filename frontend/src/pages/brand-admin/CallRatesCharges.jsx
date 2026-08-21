@@ -37,7 +37,7 @@ const CallRatesCharges = () => {
     async function loadRates() {
       try {
         const data = await apiRequest('/brand/rate-cards', { auth: true });
-        if (!cancelled) setRates((data?.data || []).map(shape));
+        if (!cancelled) setRates((data || []).map(shape));
       } catch (err) {
         if (!cancelled) setError(err.message);
       } finally {
@@ -70,7 +70,7 @@ const CallRatesCharges = () => {
       },
     });
     const data = await apiRequest('/brand/rate-cards', { auth: true });
-    setRates((data?.data || []).map(shape));
+    setRates((data || []).map(shape));
   };
 
   const saveEdit = async () => {

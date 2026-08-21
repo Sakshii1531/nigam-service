@@ -55,7 +55,7 @@ const Settings = () => {
     async function loadSettings() {
       try {
         const res = await apiRequest('/brand/settings', { auth: true });
-        const s = res?.data;
+        const s = res;
         if (cancelled || !s) return;
         // brandName is the Brand document's own, owned by super-admin.
         setBrandName(s.brandName || '');
@@ -98,7 +98,7 @@ const Settings = () => {
         ...overrides,
       },
     });
-    return res.data;
+    return res;
   };
 
   // Every branch persists now. The security tab in particular reported

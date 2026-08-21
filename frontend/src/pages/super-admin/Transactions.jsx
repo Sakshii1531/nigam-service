@@ -38,7 +38,7 @@ const Transactions = () => {
     async function loadTransactions() {
       try {
         const data = await apiRequest('/super-admin/transactions', { auth: true });
-        if (!cancelled) setTransactions((data?.data || []).map(shape));
+        if (!cancelled) setTransactions((data || []).map(shape));
       } catch (err) {
         if (!cancelled) setError(err.message);
       } finally {

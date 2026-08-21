@@ -81,7 +81,7 @@ const Support = () => {
         // threads are not included.
         const data = await apiRequest('/chat/conversations', { auth: true });
         if (cancelled) return;
-        const list = (data?.data || []).map(shapeTicket);
+        const list = (data || []).map(shapeTicket);
         setTickets(list);
         if (list.length) setSelectedTicketId(list[0].id);
       } catch (err) {
@@ -145,7 +145,7 @@ const Support = () => {
         auth: true,
         body: { text },
       });
-      const sent = res.data;
+      const sent = res;
       setTickets(tickets.map(t => (t.id === selectedTicketId ? {
         ...t,
         status: 'Pending',

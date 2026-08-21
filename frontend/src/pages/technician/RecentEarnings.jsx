@@ -12,7 +12,7 @@ const RecentEarnings = () => {
 
   useEffect(() => {
     apiRequest('/tech/earnings/recent?limit=50', { auth: true })
-      .then((res) => setEarnings((res.data || []).map((e) => ({
+      .then((res) => setEarnings((res || []).map((e) => ({
         id: e.id,
         title: e.title,
         // 'NCC Paid Service' is settled directly to the technician; the other

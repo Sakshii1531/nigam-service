@@ -68,10 +68,10 @@ const ExtendWarranty = () => {
           apiRequest('/warranty-amc/extended-warranty/plans', { auth: true }),
         ]);
         if (cancelled) return;
-        setCategories((catRes.data || []).map((c) => ({ id: c.key || c.id, name: c.name, icon: c.icon || '🔧' })));
+        setCategories((catRes || []).map((c) => ({ id: c.key || c.id, name: c.name, icon: c.icon || '🔧' })));
         setBrands((brandRes.data || []).map((b) => b.name || b));
-        setExistingWarranties((appRes.data || []).map(toApplianceCard));
-        setExtendWarrantyPlans(planRes.data || []);
+        setExistingWarranties((appRes || []).map(toApplianceCard));
+        setExtendWarrantyPlans(planRes || []);
       } catch (err) {
         if (!cancelled) setLoadError(err.message || 'Could not load your appliances and plans.');
       }
@@ -107,7 +107,7 @@ const ExtendWarranty = () => {
       const form = new FormData();
       form.append('file', file);
       const res = await apiRequest('/uploads', { method: 'POST', auth: true, body: form });
-      setInvoiceUrl(res.data.url);
+      setInvoiceUrl(res.url);
       setUploadProgress(100);
     } catch (err) {
       setInvoiceFile(null);
@@ -139,8 +139,8 @@ const ExtendWarranty = () => {
         { auth: true },
       );
 
-      const appliance = lookup.data.found
-        ? lookup.data.appliance
+      const appliance = lookup.found
+        ? lookup.appliance
         : (await apiRequest('/appliances', {
             method: 'POST',
             auth: true,
@@ -188,10 +188,10 @@ const ExtendWarranty = () => {
       });
 
       // The policy is only shown as bought once the gateway has taken the money.
-      if (res.data.razorpay) {
+      if (res.razorpay) {
         await payWithRazorpay({
-          razorpay: res.data.razorpay,
-          verifyPath: `/warranty-amc/extended-warranty/orders/${res.data.order.id}/verify-payment`,
+          razorpay: res.razorpay,
+          verifyPath: `/warranty-amc/extended-warranty/orders/${res.order.id}/verify-payment`,
           description: selectedPlan?.name,
         });
       }

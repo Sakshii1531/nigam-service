@@ -20,12 +20,12 @@ const SkillsCertifications = () => {
   useEffect(() => {
     apiRequest('/tech/profile/profile', { auth: true })
       .then((res) => {
-        setSkills((res.data?.skills || []).map((sk) => ({
+        setSkills((res?.skills || []).map((sk) => ({
           name: sk.name,
           level: sk.level,
           years: sk.years ? `${sk.years} yr${sk.years === 1 ? '' : 's'}` : null,
         })));
-        setCertifications((res.data?.certifications || []).map((c) => ({
+        setCertifications((res?.certifications || []).map((c) => ({
           name: c.name,
           issuer: c.issuer,
           date: c.date ? new Date(c.date).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : '—',

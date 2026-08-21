@@ -33,7 +33,7 @@ const WarrantyVerification = () => {
     async function loadRegistrations() {
       try {
         const data = await apiRequest('/super-admin/warranty-registrations', { auth: true });
-        if (!cancelled) setClaims((data?.data || []).map(shape));
+        if (!cancelled) setClaims((data || []).map(shape));
       } catch (err) {
         if (!cancelled) setError(err.message);
       } finally {

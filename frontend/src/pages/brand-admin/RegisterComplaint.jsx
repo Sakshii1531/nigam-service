@@ -118,7 +118,7 @@ const RegisterComplaint = () => {
     async function loadCustomers() {
       try {
         const data = await apiRequest('/brand/customers', { auth: true });
-        if (!cancelled) setCustomers((data?.data || []).map(shapeCustomer));
+        if (!cancelled) setCustomers((data || []).map(shapeCustomer));
       } catch (err) {
         if (!cancelled) setError(err.message);
       }

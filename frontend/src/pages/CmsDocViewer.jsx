@@ -21,7 +21,7 @@ const CmsDocViewer = () => {
     setLoading(true);
     try {
       const res = await apiRequest(`/cms/pages/${slug}`);
-      const pageData = res?.data || res || {};
+      const pageData = res || {};
       setContent(pageData.body || '');
     } catch (err) {
       console.warn(`Error loading ${slug}:`, err);

@@ -43,8 +43,8 @@ export async function preloadCatalogOverrides() {
       apiRequest('/cms/service-pages'),
       apiRequest('/cms/category-configs'),
     ]);
-    servicePageOverrides = Object.fromEntries((servicePages.data || []).map(c => [c.serviceKey, c]));
-    categoryOverrides = Object.fromEntries((categories.data || []).map(c => [c.categoryName, c]));
+    servicePageOverrides = Object.fromEntries((servicePages || []).map(c => [c.serviceKey, c]));
+    categoryOverrides = Object.fromEntries((categories || []).map(c => [c.categoryName, c]));
   } catch (err) {
     console.warn('[catalog] Could not load admin overrides, using defaults:', err.message);
   }

@@ -23,8 +23,8 @@ const MyOrders = () => {
       setLoading(true);
       try {
         const res = await apiRequest('/orders', { auth: true });
-        if (res && res.data) {
-          const formatted = res.data.map(o => ({
+        if (res) {
+          const formatted = res.map(o => ({
             id: o.humanId || o.id,
             item: o.items?.map(it => `${it.name} (x${it.quantity})`).join(', ') || 'Product Purchase',
             type: o.items?.[0] ? 'Buy New' : 'Order',

@@ -15,7 +15,10 @@ const ProductDetails = () => {
   
   // Extract product ID from URL query parameters
   const queryParams = new URLSearchParams(location.search);
-  const productId = queryParams.get('id') || 'p1';
+  // No fallback id: 'p1' was a leftover mock identifier, so opening this page
+  // without ?id= fetched a product that cannot exist and rendered the driver's
+  // cast error as the page body.
+  const productId = queryParams.get('id');
 
   // State variables
   const [cartCount, setCartCount] = useState(0);
@@ -58,9 +61,9 @@ const ProductDetails = () => {
   };
 
   useEffect(() => {
-    if (!productId) return;
+    if (!productId) { setProductError('No product selected.'); return; }
     apiRequest(`/products/${productId}`)
-      .then((res) => setProduct(res.data))
+      .then((res) => setProduct(res))
       .catch((err) => setProductError(err.message || 'Could not load this product.'));
   }, [productId]);
 
@@ -126,7 +129,7 @@ const ProductDetails = () => {
           paymentMethod: 'Cash',
         },
       });
-      setPlacedOrder(orderRes.data || null);
+      setPlacedOrder(orderRes || null);
       updateCart([]);
       setCheckoutStep('success');
     } catch (err) {
@@ -137,8 +140,17 @@ const ProductDetails = () => {
 
   if (productError) {
     return (
-      <div className="min-h-screen bg-bg-light flex items-center justify-center p-6 text-center">
+      <div className="min-h-screen bg-bg-light flex flex-col items-center justify-center p-6 text-center gap-3">
         <p className="text-sm font-semibold text-rose-600">{productError}</p>
+        <p className="text-xs text-slate-500 max-w-[260px]">
+          Pick a product from the store to see its details, pricing and reviews.
+        </p>
+        <button
+          onClick={() => navigate('/buy')}
+          className="mt-1 bg-[#0D47A1] hover:bg-[#0A3F91] text-white text-xs font-bold px-5 py-2.5 rounded-full transition-colors"
+        >
+          Browse Products
+        </button>
       </div>
     );
   }

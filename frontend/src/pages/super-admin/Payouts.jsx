@@ -29,7 +29,7 @@ const Payouts = () => {
     async function loadPayouts() {
       try {
         const data = await apiRequest('/super-admin/payouts', { auth: true });
-        if (!cancelled) setPayouts((data?.data || []).map(shape));
+        if (!cancelled) setPayouts((data || []).map(shape));
       } catch (err) {
         if (!cancelled) setError(err.message);
       } finally {

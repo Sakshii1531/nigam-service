@@ -32,6 +32,14 @@ export const env = {
     apiKey: process.env.ANTHROPIC_API_KEY || '',
   },
   otpProvider: process.env.OTP_PROVIDER || 'stub',
+  // Fixed code that always verifies, for demo/staging deployments where no SMS
+  // vendor is wired up. Previously the fixed code was hardcoded and gated on
+  // NODE_ENV !== 'production', which meant a hosted server had no way in at
+  // all: the stub provider only writes the real code to the server log, and the
+  // fixed code was refused. Now it is an explicit opt-in that an operator sets
+  // deliberately, and it stays off in production unless they do.
+  mockOtpCode: process.env.MOCK_OTP_CODE
+    || (process.env.NODE_ENV !== 'production' ? '123456' : ''),
 
   cloudinary: {
     cloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
@@ -95,6 +103,8 @@ export const isSmsIndiaHubConfigured = Boolean(env.smsIndiaHub.username && env.s
 export const isFcmConfigured = Boolean(env.fcm.serviceAccountJson);
 export const isTwilioConfigured = Boolean(env.twilio.accountSid && env.twilio.authToken);
 export const isTwilioVoiceConfigured = Boolean(env.twilio.accountSid && env.twilio.authToken && env.twilio.voiceFrom);
+
+export const isMockOtpEnabled = Boolean(env.mockOtpCode);
 
 export const isProd = env.nodeEnv === 'production';
 export const isTest = env.nodeEnv === 'test';

@@ -24,11 +24,11 @@ const ExchangeDetails = () => {
     const fetchExchanges = async () => {
       setLoading(true);
       try {
-        // apiRequest resolves the whole envelope — the previous
-        // `Array.isArray(res)` guard was never true, so this screen showed no
-        // trade-ins no matter how many the customer had.
+        // apiRequest returns the envelope's `data` payload directly, so this is
+        // already the array — reaching for `.data` on it yields undefined and the
+        // screen showed no trade-ins no matter how many the customer had.
         const res = await apiRequest('/exchange/requests', { auth: true });
-        setExchanges((res?.data || []).map(e => ({
+        setExchanges((res || []).map(e => ({
           id: e.humanId || e.id,
           oldAppliance: `${e.brand} ${e.category} (${e.condition || 'Used'})`,
           newAppliance: e.model || 'Replacement Device',

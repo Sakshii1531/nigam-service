@@ -20,7 +20,7 @@ const Payment = () => {
   const [availableCoins, setAvailableCoins] = useState(0);
   useEffect(() => {
     apiRequest('/wallet', { auth: true })
-      .then((res) => setAvailableCoins(res.data?.coins ?? 0))
+      .then((res) => setAvailableCoins(res?.coins ?? 0))
       .catch((err) => console.warn('[payment] Could not load wallet balance:', err.message));
   }, []);
   // Conversion: 10 coins = ₹1 (or $1 for services)

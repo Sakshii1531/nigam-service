@@ -14,7 +14,7 @@ const Coupons = () => {
       setLoading(true);
       try {
         const res = await apiRequest('/coupons', { auth: true });
-        const listToMap = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+        const listToMap = Array.isArray(res) ? res : [];
         if (listToMap && listToMap.length >= 0) {
           const formatted = listToMap.map(c => {
             const hasPct = c.description?.toLowerCase().includes('%');

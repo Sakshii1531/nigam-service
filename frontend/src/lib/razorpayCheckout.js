@@ -75,5 +75,5 @@ export async function payWithRazorpay({ razorpay, verifyPath, name, description,
       razorpaySignature: result.razorpay_signature,
     },
   });
-  return verified.data;
+  return verified;
 }

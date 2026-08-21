@@ -27,9 +27,9 @@ const NotificationDetail = () => {
     apiRequest(`/notifications/${id}`, { auth: true })
       .then((res) => {
         if (cancelled) return;
-        setN(res.data);
+        setN(res);
         // Broadcasts have no per-user read state, so this is best-effort.
-        if (!res.data.read && res.data.recipient) {
+        if (!res.read && res.recipient) {
           apiRequest(`/notifications/${id}/read`, { method: 'PATCH', auth: true }).catch(() => {});
         }
       })

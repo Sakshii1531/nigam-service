@@ -62,9 +62,9 @@ const Requests = () => {
 
   const loadRequests = React.useCallback(async () => {
     try {
-      // apiRequest returns the full envelope — the rows are under `.data`.
       const res = await apiRequest('/service-requests?limit=200&sort=-createdAt', { auth: true });
-      setRequests((res.data || []).map(item => ({
+      const items = Array.isArray(res) ? res : [];
+      setRequests(items.map(item => ({
         id: item.id,
         ref: item.humanId || item.brandTicketNo || item.id,
         customer: item.user?.name || 'Customer',
@@ -89,8 +89,9 @@ const Requests = () => {
 
     try {
       const dash = await apiRequest('/super-admin/analytics/dashboard', { auth: true });
-      setStats(dash.data?.requests || { open: 0, assigned: 0, inProgress: 0, completed: 0 });
-      setOpenEscalations(dash.data?.openEscalations ?? 0);
+      const dashData = dash;
+      setStats(dashData?.requests || { open: 0, assigned: 0, inProgress: 0, completed: 0 });
+      setOpenEscalations(dashData?.openEscalations ?? 0);
     } catch (err) {
       console.warn('[requests] Could not load dashboard stats:', err.message);
     }
@@ -114,7 +115,7 @@ const Requests = () => {
         auth: true,
         body: { status: newStatus },
       });
-      const status = res.data?.status || newStatus;
+      const status = res?.status || newStatus;
       setRequests(prev => prev.map(r => (
         r.id === id ? { ...r, status, bucket: STATUS_BUCKET[status] || status } : r
       )));

@@ -100,7 +100,7 @@ const CardPayment = () => {
             paymentMethod: 'Card',
           },
         });
-        const order = orderRes.data;
+        const order = orderRes;
         if (order.razorpay) {
           await payWithRazorpay({
             razorpay: order.razorpay,

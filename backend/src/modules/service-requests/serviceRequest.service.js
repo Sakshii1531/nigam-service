@@ -2,6 +2,7 @@ import { ServiceRequest } from './serviceRequest.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { rankTechnicians, findAvailableTechnician } from '../shared/assignmentEngine.js';
 import { Technician } from '../technician/technician.model.js';
+import { Booking } from '../booking/booking.model.js';
 import { SERVICE_REQUEST_TRANSITIONS } from '../../config/constants.js';
 import { parsePagination, paginationMeta } from '../../utils/pagination.js';
 
@@ -96,13 +97,26 @@ export async function listServiceRequests({ user, technician, brand, status, pag
  */
 export async function suggestTechnicians(id) {
   const serviceRequest = await findOr404(id);
-  const ranked = await rankTechnicians({ category: serviceRequest.category, city: serviceRequest.zone });
+  const ranked = await rankTechnicians({
+    category: serviceRequest.category,
+    city: serviceRequest.zone,
+    // The operator is overriding auto-assignment, so they get every Active
+    // technician — including the Busy/Offline ones auto-assign skips. The
+    // shortlist used to be filtered to Available only, which meant that with
+    // nobody online it came back empty and the "Assign Technician" button had
+    // nothing to select: manual assignment was impossible precisely when
+    // automatic assignment had already failed.
+    includeUnavailable: true,
+  });
   return ranked.map(({ technician, score, proximity, skill, rating, workload }) => ({
     id: technician.id,
     name: technician.name,
     specs: technician.specs,
     rating: technician.rating,
     activeJobsCount: technician.activeJobsCount,
+    // Surfaced so the console can mark who is actually online — an operator
+    // picking an Offline technician should be able to see that they are.
+    availability: technician.availability,
     city: technician.city?.name || null,
     score: Math.round(score),
     breakdown: { proximity, skill, rating, workload },
@@ -133,6 +147,7 @@ export async function assignTechnician(id, technicianId) {
 
   serviceRequest.technician = technician._id;
   if (serviceRequest.status === 'New') serviceRequest.status = 'Assigned';
+  if (serviceRequest.isInstant) serviceRequest.instantStatus = 'ASSIGNED';
   serviceRequest.timeline.push({
     stepLabel: 'Assigned',
     done: true,
@@ -141,5 +156,56 @@ export async function assignTechnician(id, technicianId) {
   });
   await serviceRequest.save();
 
+  // The customer's booking screens read Booking.technician, not the service
+  // request behind it. A console assignment only ever touched the
+  // ServiceRequest, so the customer kept seeing an unassigned booking (and an
+  // instant booking stayed stuck on "SEARCHING") no matter what the admin did.
+  if (serviceRequest.booking) {
+    const booking = await Booking.findById(serviceRequest.booking);
+    if (booking) {
+      booking.technician = technician._id;
+      if (booking.isInstant) booking.instantStatus = 'ASSIGNED';
+      await booking.save();
+    }
+  }
+
+  await emitNotification('technician.assigned', {
+    user: serviceRequest.user,
+    technicianName: technician.name,
+    serviceRequestId: serviceRequest.id,
+  });
+
   return ServiceRequest.findById(id).populate('technician', 'name rating specs');
+}
+
+/**
+ * Drains the backlog of requests that were created while nobody was online.
+ *
+ * Auto-assignment used to run exactly once, inside createBooking: if no
+ * technician was Available at that instant the request was written with
+ * technician: null and nothing ever looked at it again, so it sat in the
+ * super-admin queue forever. This is called when a technician comes online —
+ * the moment a previously-unassignable request becomes assignable.
+ */
+export async function autoAssignPendingRequests({ limit = 25 } = {}) {
+  const pending = await ServiceRequest.find({ technician: null, status: 'New' })
+    .sort({ createdAt: 1 })
+    .limit(limit)
+    .select('_id');
+
+  const assigned = [];
+  for (const { _id } of pending) {
+    try {
+      // Sequential on purpose: each assignment feeds the workload term the next
+      // one is ranked against, so these must not run in parallel or the whole
+      // backlog lands on whoever happens to rank first.
+      const updated = await assignTechnician(String(_id), null);
+      assigned.push(updated.humanId || String(_id));
+    } catch {
+      // No eligible technician for this one, or it moved on under us. Leave it
+      // queued for the next sweep rather than failing the whole batch.
+    }
+  }
+
+  return { assignedCount: assigned.length, assigned };
 }

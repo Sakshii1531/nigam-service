@@ -53,7 +53,7 @@ const Reviews = () => {
     async function loadReviews() {
       try {
         const data = await apiRequest('/reviews/brand', { auth: true });
-        if (!cancelled) setReviews((data?.data || []).map(shape));
+        if (!cancelled) setReviews((data || []).map(shape));
       } catch (err) {
         if (!cancelled) setError(err.message);
       } finally {

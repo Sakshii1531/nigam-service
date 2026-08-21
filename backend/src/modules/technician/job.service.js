@@ -15,7 +15,7 @@ import { getOrCreateConversation } from '../chat/conversation.service.js';
 import { emit as emitNotification } from '../notifications/notification.service.js';
 import { env } from '../../config/env.js';
 import { ApiError } from '../../middleware/errorHandler.js';
-import { JOB_STEP_TRANSITIONS } from '../../config/constants.js';
+import { JOB_STEP_TRANSITIONS, SERVICE_REQUEST_TRANSITIONS } from '../../config/constants.js';
 import { RateCard } from '../brand-admin/rateCard.model.js';
 import { PlatformSettings } from '../super-admin/platformSettings.model.js';
 
@@ -229,7 +229,15 @@ export async function submitDiagnosis(technicianId, jobId, diagnosisData) {
   }
   job.diagnosis = diagnosisData;
   await job.save();
-  await transitionStatus(job.serviceRequest, 'Diagnosis Done', { description: 'Technician submitted diagnosis' });
+
+  // Only the first submission moves the request on. Saving again — a technician
+  // editing their notes, or the inspection step submitting diagnosis before the
+  // parts list — used to attempt an illegal 'Diagnosis Done' -> 'Diagnosis Done'
+  // transition and fail the whole call with a 400.
+  const serviceRequest = await ServiceRequest.findById(job.serviceRequest);
+  if (SERVICE_REQUEST_TRANSITIONS[serviceRequest?.status]?.includes('Diagnosis Done')) {
+    await transitionStatus(job.serviceRequest, 'Diagnosis Done', { description: 'Technician submitted diagnosis' });
+  }
   return job;
 }
 
@@ -380,6 +388,20 @@ async function finalizeJobCompletion(job, payment) {
   // payment is what hands it off to the customer for final sign-off. 'Closed' itself
   // requires an actual customer confirmation action, which is out of Phase 6's scope.
   await transitionStatus(serviceRequest._id, 'Customer Confirmation', { description: 'Payment collected by technician' });
+
+  // The customer's own screens (My Bookings, the booking detail) are keyed on
+  // Booking.status, which nothing in the job lifecycle ever advanced — a paid,
+  // finished job still displayed as "Upcoming" to the customer, and stayed that
+  // way permanently. This is the single completion path for both the Cash and
+  // the gateway-verified routes, so syncing here covers both.
+  if (serviceRequest.booking) {
+    const booking = await Booking.findById(serviceRequest.booking);
+    if (booking && booking.status !== 'Cancelled') {
+      booking.status = 'Completed';
+      if (booking.isInstant) booking.instantStatus = 'COMPLETED';
+      await booking.save();
+    }
+  }
 
   await emitNotification('payment.success', { user: serviceRequest.user, amount: payment.amount });
   await emitNotification('service.completed', { user: serviceRequest.user, serviceRequestId: serviceRequest.id });

@@ -23,7 +23,7 @@ const MyBookings = () => {
       setLoading(true);
       try {
         const res = await apiRequest('/bookings', { auth: true });
-        const listToMap = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+        const listToMap = Array.isArray(res) ? res : [];
         // Field names are the Booking schema's: there is no `bookingId` or
         // `serviceName`, and `service` is an object — reading it directly would
         // have rendered "[object Object]".

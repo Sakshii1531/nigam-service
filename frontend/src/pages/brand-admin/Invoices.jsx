@@ -64,7 +64,7 @@ const Invoices = () => {
     async function loadInvoices() {
       try {
         const data = await apiRequest('/brand/invoices', { auth: true });
-        if (!cancelled) setInvoices((data?.data || []).map(shape));
+        if (!cancelled) setInvoices((data || []).map(shape));
       } catch (err) {
         if (!cancelled) setError(err.message);
       } finally {

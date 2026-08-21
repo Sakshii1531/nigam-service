@@ -21,8 +21,8 @@ const AMC = () => {
           apiRequest('/super-admin/amc/subscriptions?limit=200', { auth: true }),
           apiRequest('/super-admin/amc/summary', { auth: true }),
         ]);
-        setSummary(summaryRes.data || null);
-        setSubscriptions((listRes.data || []).map(s => ({
+        setSummary(summaryRes || null);
+        setSubscriptions((listRes || []).map(s => ({
           id: s.id,
           ref: s.humanId || s.id,
           customer: s.user?.name || 'Customer',

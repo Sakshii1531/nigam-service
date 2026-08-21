@@ -1,6 +1,11 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import { io } from 'socket.io-client';
 import { useAuth } from './AuthContext';
-import { apiRequest } from '../lib/apiClient';
+import { apiRequest, getStoredTokens } from '../lib/apiClient';
+
+const SOCKET_URL = import.meta.env.VITE_API_BASE_URL
+  ? import.meta.env.VITE_API_BASE_URL.replace('/api/v1', '')
+  : 'http://localhost:4000';
 
 const TechContext = createContext(null);
 
@@ -13,6 +18,20 @@ export const useTech = () => {
 export const TechProvider = ({ children }) => {
   const { user } = useAuth();
   const [jobs, setJobs] = useState([]);
+  // Distinguishes "no jobs" from "jobs not loaded yet". Without it the stat
+  // cards rendered a confident 0 for the several seconds the fetch takes,
+  // which reads as "the technician has been assigned nothing".
+  const [jobsLoading, setJobsLoading] = useState(true);
+  // The technician's own online switch. Auto-assignment only ever considers
+  // technicians whose availability is 'Available', so until this could be set a
+  // technician was never a candidate for any job.
+  //
+  // null means "not read back from the server yet" — deliberately not 'Offline',
+  // because defaulting to a real value made a reload render a confident
+  // "Offline" for an technician who was actually online, and the pill kept
+  // showing that stale value if the hydrating request failed.
+  const [availability, setAvailabilityState] = useState(null);
+  const [availabilityBusy, setAvailabilityBusy] = useState(false);
   const [activeSpecs, setActiveSpecs] = useState(['AC', 'Refrigerator', 'Washing Machine']);
   const toggleSpec = useCallback((spec) => {
     setActiveSpecs(prev => prev.includes(spec) ? prev.filter(s => s !== spec) : [...prev, spec]);
@@ -34,12 +53,22 @@ export const TechProvider = ({ children }) => {
   // Fetch real jobs, inventory, claims, and earnings from backend when logged in as technician
   const fetchRealJobs = useCallback(async () => {
     if (!user || user.role !== 'technician') return;
+    setJobsLoading(true);
     try {
-      // 1. Fetch jobs
-      const availableRes = await apiRequest('/tech/jobs/available', { auth: true });
-      const activeRes = await apiRequest('/tech/jobs/active', { auth: true });
-      const availableSRs = availableRes?.data || [];
-      const activeJobs = activeRes?.data || [];
+      // 1. Fetch jobs. In parallel, not one after the other: /jobs/available is
+      // the slow one (~3s — it populates user, booking, AMC plan and EW order),
+      // and running /jobs/active behind it pushed the job list past ten seconds
+      // on a remote database, long enough that the dashboard looked empty.
+      const [availableRes, activeRes] = await Promise.all([
+        apiRequest('/tech/jobs/available', { auth: true }),
+        apiRequest('/tech/jobs/active', { auth: true }),
+      ]);
+      // apiRequest already returns the envelope's `data` (apiClient.js's
+      // rawRequest ends in `return json.data`), so reaching for `.data` again
+      // yields undefined and every list here silently rendered empty — the
+      // technician saw "0 Available Jobs" while the API was returning five.
+      const availableSRs = Array.isArray(availableRes) ? availableRes : [];
+      const activeJobs = Array.isArray(activeRes) ? activeRes : [];
 
       const mappedAvailable = availableSRs.map((sr) => ({
         id: sr.id || sr._id,
@@ -125,19 +154,29 @@ export const TechProvider = ({ children }) => {
 
       const combinedJobs = [...mappedActive, ...mappedAvailable];
       setJobs(combinedJobs);
+      // Jobs are on screen now; the inventory/claims/earnings calls below are
+      // secondary and must not keep the job cards in a loading state.
+      setJobsLoading(false);
 
       // 2. Fetch real inventory
       try {
         const invRes = await apiRequest('/tech/inventory', { auth: true });
-        if (Array.isArray(invRes?.data)) {
-          setInventory(invRes.data.map(item => ({
-            id: item._id || item.id,
-            name: item.name || item.partName || 'Spare Part',
-            sku: item.sku || item.partCode || 'SKU-000',
-            qty: item.stock ?? item.quantity ?? 0,
-            status: (item.stock ?? item.quantity ?? 0) === 0 ? 'Out of Stock' : (item.stock ?? item.quantity ?? 0) <= 2 ? 'Low Stock' : 'In Stock',
-            price: item.price || item.retailPrice || 0
-          })));
+        if (Array.isArray(invRes)) {
+          setInventory(invRes.map(item => {
+            // techInventoryItem stores the count as `qty`. This read only tried
+            // `stock`/`quantity`, so every item came back as 0 — the whole
+            // inventory showed "Out of Stock" and the job flow's parts picker,
+            // which lists only items with qty > 0, was permanently empty.
+            const qty = item.qty ?? item.stock ?? item.quantity ?? 0;
+            return {
+              id: item._id || item.id,
+              name: item.name || item.partName || 'Spare Part',
+              sku: item.sku || item.partCode || 'SKU-000',
+              qty,
+              status: qty === 0 ? 'Out of Stock' : qty <= 2 ? 'Low Stock' : 'In Stock',
+              price: item.price || item.retailPrice || 0
+            };
+          }));
         }
       } catch (e) {
         console.warn('Technician inventory fetch warning:', e.message);
@@ -146,8 +185,8 @@ export const TechProvider = ({ children }) => {
       // 3. Fetch real claims
       try {
         const claimsRes = await apiRequest('/tech/claims', { auth: true });
-        if (Array.isArray(claimsRes?.data)) {
-          setClaims(claimsRes.data.map(c => ({
+        if (Array.isArray(claimsRes)) {
+          setClaims(claimsRes.map(c => ({
             id: c._id || c.id,
             brand: c.brand || 'Partner Warranty',
             claimId: c.humanId || c.id,
@@ -168,8 +207,8 @@ export const TechProvider = ({ children }) => {
         // this previously read `totalEarnings`/`todayEarnings`, which the API has
         // never returned, so the tally was permanently zero.
         const earnRes = await apiRequest('/tech/earnings/breakdown', { auth: true });
-        if (earnRes?.data) {
-          const d = earnRes.data;
+        if (earnRes) {
+          const d = earnRes;
           setEarningsTally({
             today: d.today || 0,
             total: d.lifetimeEarned || 0,
@@ -187,11 +226,109 @@ export const TechProvider = ({ children }) => {
 
     } catch (err) {
       console.error('Failed to fetch real jobs for technician:', err.message);
+    } finally {
+      setJobsLoading(false);
     }
   }, [user]);
 
   useEffect(() => {
     fetchRealJobs();
+  }, [fetchRealJobs]);
+
+  /**
+   * Live instant-booking feed.
+   *
+   * The backend has broadcast `instant:new_request` since instant bookings were
+   * added (sockets/instantBooking.gateway.js), but nothing on the client ever
+   * listened — so an ASAP booking reached a technician only if they happened to
+   * reload. Joining the technicians' room and refetching on each event is what
+   * makes "right now" actually mean right now.
+   *
+   * Only while online: an offline technician should not be pulled into a job,
+   * which is also why the socket is torn down when they go offline.
+   */
+  const socketRef = useRef(null);
+  useEffect(() => {
+    if (!user || user.role !== 'technician' || availability !== 'Available') return undefined;
+
+    const { accessToken } = getStoredTokens();
+    if (!accessToken) return undefined;
+
+    const socket = io(SOCKET_URL, { auth: { token: accessToken }, transports: ['websocket'] });
+    socketRef.current = socket;
+    socket.on('connect', () => socket.emit('join-instant-feed', {}));
+    socket.on('instant:new_request', () => { fetchRealJobs(); });
+    socket.on('instant:status_update', () => { fetchRealJobs(); });
+    socket.on('connect_error', (err) => console.warn('[tech] instant feed disconnected:', err.message));
+
+    return () => { socket.disconnect(); socketRef.current = null; };
+  }, [user, availability, fetchRealJobs]);
+
+  /**
+   * Claims an instant job over the socket, which is what the gateway's
+   * `instant:accept_job` handler expects (it assigns the booking and the
+   * service request together, and tells the customer over the same channel).
+   */
+  const acceptInstantJob = useCallback(async ({ bookingId, serviceRequestId }) => {
+    const socket = socketRef.current;
+    if (!socket) return { ok: false, error: 'Not connected to the instant feed.' };
+    return new Promise((resolve) => {
+      socket.emit('instant:accept_job', { bookingId, serviceRequestId }, async (ack) => {
+        if (ack?.ok) await fetchRealJobs();
+        resolve(ack?.ok ? { ok: true } : { ok: false, error: ack?.error || 'Could not accept the job.' });
+      });
+    });
+  }, [fetchRealJobs]);
+
+  /**
+   * Read the technician's online state back from the server.
+   *
+   * Deliberately its own request/effect rather than a step inside
+   * fetchRealJobs: availability lived at the end of that function's try block,
+   * so any failure in the job fetches skipped it entirely and the technician
+   * was shown as Offline — on every reload — while the server had them online.
+   * The switch has to survive a reload, and it must not depend on unrelated
+   * calls succeeding.
+   */
+  const fetchAvailability = useCallback(async () => {
+    if (!user || user.role !== 'technician') return;
+    try {
+      const res = await apiRequest('/tech/profile/profile', { auth: true });
+      if (res?.availability) setAvailabilityState(res.availability);
+    } catch (err) {
+      console.warn('Technician availability fetch warning:', err.message);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    fetchAvailability();
+  }, [fetchAvailability]);
+
+  /**
+   * Go online / offline. Going online also drains the backlog server-side —
+   * requests booked while nobody was available get assigned on the spot — so
+   * the refetch below is what makes them show up in the feed immediately.
+   */
+  const setAvailability = useCallback(async (next) => {
+    setAvailabilityBusy(true);
+    try {
+      // technicianRouter is mounted at /tech/profile (app.js), so its own
+      // '/availability' route lives under that prefix — same shape as the
+      // sibling '/tech/profile/payout-methods' calls.
+      const res = await apiRequest('/tech/profile/availability', {
+        method: 'PATCH',
+        auth: true,
+        body: { availability: next },
+      });
+      setAvailabilityState(res?.technician?.availability || next);
+      await fetchRealJobs();
+      return { ok: true, assignedCount: res?.autoAssigned?.assignedCount || 0 };
+    } catch (err) {
+      console.error('Failed to change availability:', err.message);
+      return { ok: false, error: err.message };
+    } finally {
+      setAvailabilityBusy(false);
+    }
   }, [fetchRealJobs]);
 
   // Active Job flow states
@@ -207,7 +344,10 @@ export const TechProvider = ({ children }) => {
   // 'completed' (Success screen after Collect Payment)
   const [activeJobId, setActiveJobId] = useState(null);
   const [activeStep, setActiveStep] = useState('idle');
-  const [selectedParts, setSelectedParts] = useState([]); // Parts selected during diagnosis
+  const [selectedParts, setSelectedParts] = useState([]);
+  // Notes typed during inspection, submitted with the diagnosis when the
+  // technician completes that step.
+  const [diagnosisNotes, setDiagnosisNotes] = useState(''); // Parts selected during diagnosis
   
   // Signature, photos uploads state
   const [proofs, setProofs] = useState({
@@ -231,8 +371,12 @@ export const TechProvider = ({ children }) => {
 
   const selectJobForDetails = useCallback((id) => {
     setActiveJobId(id);
-    setActiveStep('details');
-  }, []);
+    const job = jobs.find((j) => j.id === id);
+    // Resume an in-progress job wherever the server says it actually is.
+    // Always opening at 'details' rewound the UI on every reopen, and the next
+    // action was then rejected as an illegal step transition.
+    setActiveStep(job && !job.isAvailableRequest && job.activeStep ? job.activeStep : 'details');
+  }, [jobs]);
 
   const acceptJob = useCallback(async (id) => {
     const jobObj = jobs.find(j => j.id === id);
@@ -267,18 +411,82 @@ export const TechProvider = ({ children }) => {
     }
   }, [jobs, fetchRealJobs]);
 
-  const advanceStep = useCallback(() => {
-    setActiveStep(prev => {
-      switch (prev) {
-        case 'assigned': return 'ontheway';
-        case 'ontheway': return 'inspection';
-        case 'inspection': return 'spareapproval';
-        case 'spareapproval': return 'repaircomplete';
-        case 'repaircomplete': return 'billing';
-        default: return prev;
+  /**
+   * Each technician-visible step is advanced by exactly one backend call. This
+   * table only says which endpoint moves which step — the real state machine
+   * (JOB_STEP_TRANSITIONS, server-side) stays the authority, and the step we
+   * store is whatever the server reports back.
+   *
+   * This used to be a local `switch` that moved React state and called nothing:
+   * a technician could walk the entire job to completion while, on the server,
+   * nothing past diagnosis had happened — no billing, no payment, no earnings,
+   * the service request frozen at "Engineer Accepted" and the customer's
+   * booking never completing.
+   */
+  const STEP_ADVANCE = {
+    assigned: { path: 'start-travel' },
+    ontheway: { path: 'arrive' },
+    inspection: { path: 'spare-parts', needsParts: true },
+    spareapproval: { path: 'repair-complete' },
+    repaircomplete: { path: 'billing' },
+  };
+
+  const [stepBusy, setStepBusy] = useState(false);
+  const [stepError, setStepError] = useState(null);
+
+  // `fromStep` lets a caller advance from a step it just read off the server,
+  // rather than from React state that may not have flushed yet.
+  const advanceStep = useCallback(async (fromStep) => {
+    const current = typeof fromStep === 'string' ? fromStep : activeStep;
+    const move = STEP_ADVANCE[current];
+    if (!move) return { ok: false, error: `Nothing follows "${current}".` };
+    if (!activeJobId) return { ok: false, error: 'No active job to update.' };
+
+    setStepBusy(true);
+    setStepError(null);
+    try {
+      const body = move.needsParts
+        ? {
+            // Only ticked parts are billed (job.service.js filters on `checked`),
+            // and the schema wants a plain line item — the inventory rows carry
+            // extra display fields.
+            parts: selectedParts.map((p) => ({
+              name: p.name,
+              price: Number(p.price) || 0,
+              checked: true,
+              ...(p.sku ? { sku: p.sku } : {}),
+              source: 'manual',
+            })),
+            additionalServices: [],
+          }
+        : undefined;
+
+      // Finishing the inspection is the diagnosis being submitted. The server
+      // moves the request Engineer Reached -> Diagnosis Done on that call, and
+      // the spare-parts call below then needs it there — sending parts straight
+      // from Engineer Reached is rejected as an illegal status transition.
+      if (move.needsParts) {
+        await apiRequest(`/tech/jobs/${activeJobId}/diagnosis`, {
+          method: 'POST',
+          auth: true,
+          body: { notes: diagnosisNotes || undefined },
+        });
       }
-    });
-  }, []);
+
+      const job = await apiRequest(`/tech/jobs/${activeJobId}/${move.path}`, { method: 'POST', auth: true, body });
+      // Trust the server's step over a locally-guessed one.
+      setActiveStep(job?.activeStep || current);
+      await fetchRealJobs();
+      return { ok: true };
+    } catch (err) {
+      // Leave the UI on the current step — silently moving on after a failed
+      // write is how the local-only version drifted from the server.
+      setStepError(err.message || 'Could not update this job.');
+      return { ok: false, error: err.message };
+    } finally {
+      setStepBusy(false);
+    }
+  }, [activeStep, activeJobId, selectedParts, diagnosisNotes, fetchRealJobs]);
 
   const resetActiveJob = useCallback(() => {
     setActiveJobId(null);
@@ -311,28 +519,84 @@ export const TechProvider = ({ children }) => {
     ));
   }, []);
 
-  const collectPayment = useCallback(() => {
-    if (!activeJob) return;
-    setActiveStep('completed');
-    // The server credits the tally as part of completing the job — read it back
-    // rather than guessing the delta here.
-    apiRequest('/tech/earnings/breakdown', { auth: true })
-      .then((res) => {
-        const d = res.data;
-        if (!d) return;
-        setEarningsTally({
-          today: d.today || 0,
-          total: d.lifetimeEarned || 0,
-          completedToday: d.completedToday || 0,
-          completedTotal: d.completedTotal || 0,
-          available: d.available || 0,
-          paidOut: d.paidOut || 0,
-          lifetimeEarned: d.lifetimeEarned || 0,
-          split: d.split || { quick: { amount: 0, jobs: 0 }, invoice: { amount: 0, jobs: 0 } },
-        });
-      })
-      .catch((err) => console.warn('[tech] Could not refresh earnings:', err.message));
-  }, [activeJob]);
+  /**
+   * Walks the server forward until the job reaches `target`.
+   *
+   * The warranty job screens have a "Generate Invoice" shortcut that used to
+   * call setActiveStep('billing') directly. That only moved the UI: the server
+   * never ran repair-complete or billing, so no billingEstimate was computed
+   * and collecting payment afterwards failed on a job that looked ready to pay.
+   * Bounded, and stops at the first refusal so an illegal jump surfaces as an
+   * error instead of looping.
+   */
+  const advanceStepsTo = useCallback(async (target) => {
+    for (let i = 0; i < 6; i += 1) {
+      const job = await apiRequest(`/tech/jobs/${activeJobId}`, { auth: true }).catch(() => null);
+      const current = job?.activeStep;
+      if (!current) return { ok: false, error: 'Could not read the job.' };
+      if (current === target) { setActiveStep(current); return { ok: true }; }
+      const res = await advanceStep(current);
+      if (!res.ok) return res;
+    }
+    return { ok: false, error: `Could not reach "${target}".` };
+  }, [activeJobId, advanceStep]);
+
+  /** Single place that maps the earnings payload onto the tally — the same
+   *  block was previously copied into four callers, each free to drift. */
+  const refreshEarnings = useCallback(async (merge = false) => {
+    try {
+      const d = await apiRequest('/tech/earnings/breakdown', { auth: true });
+      if (!d) return;
+      const next = {
+        today: d.today || 0,
+        total: d.lifetimeEarned || 0,
+        completedToday: d.completedToday || 0,
+        completedTotal: d.completedTotal || 0,
+        available: d.available || 0,
+        paidOut: d.paidOut || 0,
+        lifetimeEarned: d.lifetimeEarned || 0,
+        split: d.split || { quick: { amount: 0, jobs: 0 }, invoice: { amount: 0, jobs: 0 } },
+      };
+      setEarningsTally((prev) => (merge ? { ...prev, ...next } : next));
+    } catch (err) {
+      console.warn('[tech] Could not refresh earnings:', err.message);
+    }
+  }, []);
+
+  /**
+   * Closes the job out for real.
+   *
+   * This used to set the step to 'completed' locally and then read the earnings
+   * back, under the assumption that "the server credits the tally as part of
+   * completing the job" — but nothing ever told the server the job was done, so
+   * it read an unchanged tally and left the service request, the customer's
+   * booking and the technician's payout untouched.
+   *
+   * A Cash job completes synchronously. Anything routed through the gateway
+   * comes back as 'awaitingpayment' with a razorpay order, which the caller has
+   * to take to Checkout and then verify — so that case is reported, not faked.
+   */
+  const collectPayment = useCallback(async (paymentMethod = 'Cash') => {
+    if (!activeJobId) return { ok: false, error: 'No active job to close.' };
+    setStepBusy(true);
+    setStepError(null);
+    try {
+      const res = await apiRequest(`/tech/jobs/${activeJobId}/collect-payment`, {
+        method: 'POST',
+        auth: true,
+        body: { paymentMethod },
+      });
+      const step = res?.job?.activeStep || 'completed';
+      setActiveStep(step);
+      await Promise.all([fetchRealJobs(), refreshEarnings()]);
+      return { ok: true, step, razorpay: res?.razorpay || null };
+    } catch (err) {
+      setStepError(err.message || 'Could not collect payment.');
+      return { ok: false, error: err.message };
+    } finally {
+      setStepBusy(false);
+    }
+  }, [activeJobId, fetchRealJobs, refreshEarnings]);
 
   // Credits the visit fee for a job the technician travelled to but could not
   // complete. The server owns the amount (PlatformSettings.visitFeeAmount) and
@@ -344,14 +608,13 @@ export const TechProvider = ({ children }) => {
     if (jobId) {
       try {
         const res = await apiRequest(`/tech/earnings/visit-fee/${jobId}`, { method: 'POST', auth: true });
-        credited = res.data;
+        credited = res;
       } catch (err) {
         console.warn('[tech] Could not credit visit fee:', err.message);
       }
     }
     await apiRequest('/tech/earnings/breakdown', { auth: true })
-      .then((res) => {
-        const d = res.data;
+      .then((d) => {
         if (!d) return;
         setEarningsTally((prev) => ({
           ...prev,
@@ -409,7 +672,7 @@ export const TechProvider = ({ children }) => {
       })));
 
       setPartsCart([]);
-      return { ok: true, orders: placed.map((r) => r.data) };
+      return { ok: true, orders: placed };
     } catch (err) {
       return { ok: false, error: err.message || 'Could not place the parts order.' };
     }
@@ -430,7 +693,7 @@ export const TechProvider = ({ children }) => {
           reason: claimData.reason || undefined,
         },
       });
-      const c = res.data;
+      const c = res;
       setClaims((prev) => [{
         id: c.id,
         brand: c.brand,
@@ -482,7 +745,7 @@ export const TechProvider = ({ children }) => {
             .map((m) => ({ role: m.sender === 'user' ? 'user' : 'assistant', content: m.text })),
         },
       });
-      setChatMessages((prev) => [...prev, { id: Date.now() + 1, sender: 'ai', text: res.data.reply }]);
+      setChatMessages((prev) => [...prev, { id: Date.now() + 1, sender: 'ai', text: res.reply }]);
     } catch (err) {
       setChatMessages((prev) => [...prev, {
         id: Date.now() + 1,
@@ -502,6 +765,8 @@ export const TechProvider = ({ children }) => {
       activeJob,
       selectedParts,
       setSelectedParts,
+      diagnosisNotes,
+      setDiagnosisNotes,
       proofs,
       setProofs,
       inventory,
@@ -517,6 +782,11 @@ export const TechProvider = ({ children }) => {
       setActiveStep,
       resetActiveJob,
       collectPayment,
+      advanceStepsTo,
+      stepBusy,
+      stepError,
+      setStepError,
+      refreshEarnings,
       creditTravelFee,
       decrementAmcVisit,
       decrementEwClaim,
@@ -529,7 +799,12 @@ export const TechProvider = ({ children }) => {
     dismissJob,
       addChatMessage,
       activeSpecs,
-      toggleSpec
+      toggleSpec,
+      availability,
+      availabilityBusy,
+      setAvailability,
+      jobsLoading,
+      acceptInstantJob
     }}>
       {children}
     </TechContext.Provider>

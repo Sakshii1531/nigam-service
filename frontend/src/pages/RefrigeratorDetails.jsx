@@ -16,7 +16,7 @@ const RefrigeratorDetails = () => {
   useEffect(() => {
     apiRequest('/catalog/categories/Refrigerator')
       .then((res) => {
-        const services = res.data?.services || [];
+        const services = res?.services || [];
         const repair = services.find((sv) => /repair|service/i.test(sv.name)) || services[0];
         setServicePrice(repair?.price ?? null);
       })

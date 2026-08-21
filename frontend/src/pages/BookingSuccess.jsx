@@ -55,10 +55,10 @@ const BookingSuccess = () => {
       try {
         const res = await apiRequest(`/service-requests/${serviceRequestId}`, { auth: true });
         if (cancelled) return;
-        setBookingId(res.data?.humanId || serviceRequestId);
+        setBookingId(res?.humanId || serviceRequestId);
         // A fresh booking is usually unassigned — the panel below only appears
         // once assignment has actually happened.
-        setTechnician(res.data?.technician || null);
+        setTechnician(res?.technician || null);
       } catch (err) {
         console.error('[booking] Could not load booking reference:', err.message);
         if (!cancelled) setBookingId(serviceRequestId);

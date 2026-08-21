@@ -12,9 +12,9 @@ const Products = () => {
   const [loadError, setLoadError] = useState('');
 
   // The storefront catalogue. This screen shipped a `defaultProducts` array and
-  // then checked `Array.isArray(data)` on the response envelope — which is an
-  // object — so the real catalogue was never used and an admin always saw five
-  // invented products.
+  // fell back to it whenever the fetched value was not an array — which is what
+  // happened while the response was being unwrapped twice, so an admin always
+  // saw five invented products instead of the real catalogue.
   const toRow = (item) => ({
     id: item.id,
     name: item.name,
@@ -28,7 +28,7 @@ const Products = () => {
 
   useEffect(() => {
     apiRequest('/products?limit=200')
-      .then((res) => setProducts((res.data || []).map(toRow)))
+      .then((res) => setProducts((res || []).map(toRow)))
       .catch((err) => setLoadError(err.message || 'Could not load the product catalogue.'));
   }, []);
 
@@ -59,7 +59,7 @@ const Products = () => {
           imageUrl: newImage || undefined,
         },
       });
-      setProducts((prev) => [...prev, toRow(res.data)]);
+      setProducts((prev) => [...prev, toRow(res)]);
 
       setNewName('');
       setNewSku('');

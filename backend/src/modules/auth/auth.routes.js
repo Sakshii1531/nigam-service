@@ -4,7 +4,7 @@ import { validate } from '../../middleware/validate.js';
 import { requireAuth } from '../../middleware/auth.js';
 import { User } from './user.model.js';
 import { ok } from '../../utils/respond.js';
-import { isTest } from '../../config/env.js';
+import { isTest, isProd } from '../../config/env.js';
 import * as authService from './auth.service.js';
 import {
   loginSchema,
@@ -23,16 +23,17 @@ import {
 export const authRouter = Router();
 
 // Tighter than the app-wide default (app.js) — these are the brute-force-sensitive
-// endpoints (password checks, OTP guesses). Skipped in NODE_ENV=test: the in-memory
-// store persists for the life of the process, and a single Jest file legitimately
-// exercises far more than 20 auth requests across its test cases — rate limiting
-// itself is exercised separately were it ever made configurable per-environment,
-// but blocking the functional test suite on it isn't the point of this middleware.
+// endpoints (password checks, OTP guesses). Skipped in NODE_ENV=test.
 const authRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 20,
+  limit: isProd ? 30 : 1000,
   standardHeaders: true,
   legacyHeaders: false,
+  message: {
+    data: null,
+    error: { message: 'Too many login attempts. Please wait 15 minutes and try again.' },
+    meta: {},
+  },
 });
 if (!isTest) authRouter.use(authRateLimit);
 

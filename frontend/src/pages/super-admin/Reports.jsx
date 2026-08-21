@@ -20,7 +20,7 @@ const Reports = () => {
 
   useEffect(() => {
     apiRequest('/super-admin/analytics/retention', { auth: true })
-      .then((res) => setRetention(res.data))
+      .then((res) => setRetention(res))
       .catch((err) => console.warn('[reports] Could not load retention:', err.message));
   }, []);
   const [isPdfExporting, setIsPdfExporting] = useState(false);

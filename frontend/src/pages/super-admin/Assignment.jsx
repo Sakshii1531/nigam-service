@@ -43,7 +43,8 @@ const Assignment = () => {
   const loadData = React.useCallback(async () => {
     try {
       const res = await apiRequest('/service-requests?limit=200&sort=-createdAt', { auth: true });
-      const unassigned = (res.data || [])
+      const items = Array.isArray(res) ? res : [];
+      const unassigned = items
         .filter(item => !item.technician && !['Closed', 'Cancelled'].includes(item.status))
         .map(item => ({
           id: item.id,
@@ -66,12 +67,13 @@ const Assignment = () => {
 
     try {
       const w = await apiRequest('/super-admin/assignment-weighting', { auth: true });
-      if (w.data) {
+      const wData = w;
+      if (wData) {
         setWeights({
-          proximity: w.data.proximityPercent,
-          skill: w.data.skillPercent,
-          rating: w.data.ratingPercent,
-          workload: w.data.workloadPercent,
+          proximity: wData.proximityPercent ?? 40,
+          skill: wData.skillPercent ?? 30,
+          rating: wData.ratingPercent ?? 20,
+          workload: wData.workloadPercent ?? 10,
         });
       }
     } catch (err) {
@@ -90,7 +92,8 @@ const Assignment = () => {
       try {
         const res = await apiRequest(`/service-requests/${selectedRequest.id}/technician-suggestions`, { auth: true });
         if (cancelled) return;
-        setTechs((res.data || []).map(t => ({
+        const items = Array.isArray(res) ? res : [];
+        setTechs(items.map(t => ({
           id: t.id,
           name: t.name,
           skill: t.specs?.length ? t.specs.join(', ') : 'All Appliances',
@@ -98,6 +101,7 @@ const Assignment = () => {
           activeJobs: t.activeJobsCount || 0,
           city: t.city || '—',
           score: t.score,
+          availability: t.availability || 'Offline',
         })));
       } catch (err) {
         if (!cancelled) {
@@ -416,7 +420,21 @@ const Assignment = () => {
                     </div>
                     <div className="mt-2 flex justify-between items-center text-xs text-[#64748B]">
                       <span>Active Jobs: {tech.activeJobs}</span>
-                      <span className="text-green-600 font-medium">Ready to assign</span>
+                      {/* The shortlist now includes Active-but-offline technicians so a
+                          manual override is possible when nobody is online — which
+                          means it has to say who is actually online rather than
+                          labelling everyone "Ready to assign". */}
+                      <span
+                        className={`font-medium ${
+                          tech.availability === 'Available'
+                            ? 'text-green-600'
+                            : tech.availability === 'Busy'
+                              ? 'text-amber-600'
+                              : 'text-[#94A3B8]'
+                        }`}
+                      >
+                        {tech.availability === 'Available' ? 'Online • Ready to assign' : `${tech.availability} • manual override`}
+                      </span>
                     </div>
                   </div>
                 ))}

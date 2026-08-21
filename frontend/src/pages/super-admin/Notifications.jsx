@@ -36,7 +36,7 @@ const Notifications = () => {
   const loadLogs = React.useCallback(async () => {
     try {
       const res = await apiRequest('/notifications/broadcasts?limit=100', { auth: true });
-      setLogs((res.data || []).map((n) => ({
+      setLogs((res || []).map((n) => ({
         id: n.id,
         title: n.title,
         message: n.message || '',
@@ -54,7 +54,7 @@ const Notifications = () => {
 
     try {
       const stats = await apiRequest('/notifications/push-stats', { auth: true });
-      setPushStats(stats.data || null);
+      setPushStats(stats || null);
     } catch (err) {
       console.warn('[notifications] Could not load push stats:', err.message);
     }

@@ -91,7 +91,7 @@ const BuyNew = () => {
     apiRequest(`/products?category=${encodeURIComponent(finalCategory)}&limit=100`)
       .then((res) => {
         if (cancelled) return;
-        setCategoryProducts(res.data || []);
+        setCategoryProducts(res || []);
         setProductsError('');
       })
       .catch((err) => { if (!cancelled) setProductsError(err.message || 'Could not load products.'); })
@@ -105,7 +105,7 @@ const BuyNew = () => {
   const [wishlist, setWishlist] = useState([]);
   useEffect(() => {
     apiRequest('/wishlist', { auth: true })
-      .then((res) => setWishlist(res.data || []))
+      .then((res) => setWishlist(res || []))
       .catch((err) => console.warn('[wishlist] Could not load:', err.message));
   }, []);
 
@@ -126,7 +126,7 @@ const BuyNew = () => {
         method: exists ? 'DELETE' : 'POST',
         auth: true,
       });
-      setWishlist(res.data || []);
+      setWishlist(res || []);
     } catch (err) {
       console.error('[wishlist] Could not update:', err.message);
     }
@@ -274,7 +274,7 @@ const BuyNew = () => {
           paymentMethod: 'UPI',
         },
       });
-      const order = res.data;
+      const order = res;
 
       if (order.razorpay) {
         await payWithRazorpay({

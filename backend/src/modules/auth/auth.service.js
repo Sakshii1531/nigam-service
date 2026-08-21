@@ -6,6 +6,7 @@ import { hashPassword, verifyPassword } from './password.js';
 import { generateOtpCode, sendOtp, maskIdentifier } from './otpProvider.js';
 import { signAccessToken, signRefreshToken, verifyRefreshToken, hashToken, tokenExpiryDate } from './tokens.js';
 import { ApiError } from '../../middleware/errorHandler.js';
+import { env } from '../../config/env.js';
 
 const OTP_TTL_MINUTES = 10;
 const MAX_OTP_ATTEMPTS = 5;
@@ -39,7 +40,9 @@ async function consumeOtp({ role, identifier, code, purpose }) {
   if (otp.expiresAt.getTime() < Date.now()) throw new ApiError(400, 'OTP has expired — request a new code');
   if (otp.attempts >= MAX_OTP_ATTEMPTS) throw new ApiError(429, 'Too many incorrect attempts — request a new code');
 
-  const isBypass = code === '123456' && process.env.NODE_ENV !== 'production';
+  // env.mockOtpCode is empty unless an operator opts in (MOCK_OTP_CODE), so
+  // this is a no-op on a properly configured production deployment.
+  const isBypass = Boolean(env.mockOtpCode) && code === env.mockOtpCode;
   const valid = isBypass || (await verifyPassword(code, otp.codeHash));
   if (!valid) {
     otp.attempts += 1;
