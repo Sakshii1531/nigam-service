@@ -24,7 +24,8 @@ const Dashboard = () => {
     jobsLoading,
     availability,
     availabilityBusy,
-    setAvailability
+    setAvailability,
+    dismissJob
   } = useTech();
 
   const isOnline = availability === 'Available';
@@ -72,39 +73,67 @@ const Dashboard = () => {
     }
   }, [jobs, declinedInstantIds, acceptedInstantIds, instantAlertJob]);
 
-  const dismissJob = (jobId) => {
-    if (jobId) {
-      setDeclinedInstantIds((prev) => [...prev, jobId]);
-    }
+  /** Stop the alert re-opening for this job before the refetch lands. */
+  const suppressInstantAlert = (jobId) => {
+    if (jobId) setDeclinedInstantIds((prev) => (prev.includes(jobId) ? prev : [...prev, jobId]));
     if (instantAlertJob && (instantAlertJob.id === jobId || instantAlertJob.serviceRequestId === jobId)) {
       setInstantAlertJob(null);
     }
   };
 
+  /**
+   * Reject for real. A local-only version of this shadowed the context's
+   * dismissJob, so both Decline buttons quietly did nothing server-side: the
+   * request stayed assigned to the technician who turned it down.
+   */
+  const rejectJob = async (jobId) => {
+    suppressInstantAlert(jobId);
+    const res = await dismissJob(jobId);
+    setDutyMessage(
+      !res?.ok
+        ? res?.error || 'Could not reject that job.'
+        : res.reassignedTo
+          ? `Rejected — passed to ${res.reassignedTo}.`
+          : 'Rejected — back in the queue for another technician.',
+    );
+    return res;
+  };
+
   const declineInstantJob = async () => {
     const job = instantAlertJob;
     setInstantAlertJob(null);
-    if (!job) return;
-    // Remember it locally too, so the alert does not re-open from the jobs
-    // already in state before the refetch lands.
-    setDeclinedInstantIds((prev) => [...prev, job.id]);
-    const res = await dismissJob(job.id);
-    if (!res?.ok) {
-      setDutyMessage(res?.error || 'Could not reject that job.');
-    } else if (res.reassignedTo) {
-      setDutyMessage(`Rejected — passed to ${res.reassignedTo}.`);
-    } else {
-      setDutyMessage('Rejected — back in the queue for another technician.');
-    }
+    if (job) await rejectJob(job.id);
   };
 
-  // Countdown timer for instant job alert
+  // Countdown timer for the instant job alert. Running out is a rejection: an
+  // ASAP customer cannot wait on a technician who never answered, so the job
+  // goes back to the pool for somebody else. The timer used to just sit at
+  // "0s" forever with the request still pinned to that technician.
+  const autoRejectedRef = React.useRef(null);
   React.useEffect(() => {
-    if (!instantAlertJob || countdown <= 0) return;
-    const timer = setInterval(() => {
-      setCountdown(prev => prev - 1);
-    }, 1000);
-    return () => clearInterval(timer);
+    if (!instantAlertJob) return undefined;
+
+    if (countdown <= 0) {
+      // Guard against the effect re-running and rejecting the same job twice.
+      if (autoRejectedRef.current !== instantAlertJob.id) {
+        autoRejectedRef.current = instantAlertJob.id;
+        const job = instantAlertJob;
+        setInstantAlertJob(null);
+        rejectJob(job.id).then((res) => {
+          if (res?.ok) {
+            setDutyMessage(
+              res.reassignedTo
+                ? `Offer expired — passed to ${res.reassignedTo}.`
+                : 'Offer expired — back in the queue for another technician.',
+            );
+          }
+        });
+      }
+      return undefined;
+    }
+
+    const timer = setTimeout(() => setCountdown((prev) => prev - 1), 1000);
+    return () => clearTimeout(timer);
   }, [instantAlertJob, countdown]);
 
   const unreadNotificationsCount = notifications.filter(n => !n.read).length;
@@ -856,16 +885,7 @@ const Dashboard = () => {
                             Accept
                           </button>
                           <button
-                            onClick={async () => {
-                              const res = await dismissJob(job.id);
-                              setDutyMessage(
-                                !res?.ok
-                                  ? res?.error || 'Could not reject that job.'
-                                  : res.reassignedTo
-                                    ? `Rejected — passed to ${res.reassignedTo}.`
-                                    : 'Rejected — back in the queue for another technician.',
-                              );
-                            }}
+                            onClick={() => rejectJob(job.id)}
                             title="Reject this request — it goes back to the queue for another technician"
                             className="flex-1 bg-white hover:bg-slate-50 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition-all border border-slate-300"
                           >
