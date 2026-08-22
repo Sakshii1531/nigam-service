@@ -515,8 +515,11 @@ export async function updateBrandPartOrderStatus(brandId, partOrderId, payload) 
           // Record the move. Assigning the status alone left the request
           // jumping to 'Spare Received' with nothing in its timeline, so
           // neither the customer nor an admin could see why it changed.
+          // submitSpareParts may already have walked the request through to
+          // 'Spare Received'; re-stamping it just duplicates the timeline entry.
+          const alreadyReceived = sr.status === 'Spare Received';
           sr.status = 'Spare Received';
-          sr.timeline.push({
+          if (!alreadyReceived) sr.timeline.push({
             stepLabel: 'Spare Received',
             done: true,
             timestamp: new Date(),

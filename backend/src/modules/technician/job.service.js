@@ -316,7 +316,13 @@ export async function submitSpareParts(technicianId, jobId, { parts = [], additi
  */
 export async function generateBilling(technicianId, jobId) {
   const job = await findOwnedJob(technicianId, jobId);
-  ensureTransition(job, 'billing');
+  // A job that came back for a spare part bills through the revisit branch, the
+  // same way simpleTransition aliases travel/arrive/repair-complete. Without
+  // this a rescheduled job dead-ended at 'revisit_complete': billing was
+  // refused, payment could never be collected, the customer's booking stayed
+  // Upcoming forever and the technician was never paid for the return visit.
+  const billingStep = job.activeStep === 'revisit_complete' ? 'revisit_billing' : 'billing';
+  ensureTransition(job, billingStep);
 
   const serviceCharge = job.isD2C ? job.price : 0;
   const sparePartsTotal = job.isD2C ? job.spareParts.filter((p) => p.checked).reduce((sum, p) => sum + p.price, 0) : 0;
@@ -334,7 +340,7 @@ export async function generateBilling(technicianId, jobId) {
     total: charges.total,
     technicianEarnings,
   };
-  job.activeStep = 'billing';
+  job.activeStep = billingStep;
   await job.save();
   return job;
 }
@@ -437,7 +443,7 @@ export async function collectPayment(technicianId, jobId, { paymentMethod = 'Cas
   // below — an out-of-order call (e.g. before the billing step) has no
   // billingEstimate at all, so reading .total off it would throw a raw 500
   // instead of the same clean 400 every other out-of-order action gets.
-  if (job.activeStep !== 'billing') {
+  if (!['billing', 'revisit_billing'].includes(job.activeStep)) {
     throw new ApiError(400, `Cannot move from "${job.activeStep}" to "completed" (allowed: billing -> completed)`);
   }
   const amount = job.billingEstimate.total;

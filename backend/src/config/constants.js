@@ -130,7 +130,11 @@ export const SERVICE_REQUEST_TRANSITIONS = Object.freeze({
   Assigned: ['Engineer Accepted', 'Customer NA', 'Cancelled', 'New'],
   'Engineer Accepted': ['Visit Scheduled', 'Cancelled'],
   'Visit Scheduled': ['Engineer Reached', 'Reschedule', 'Customer NA', 'Cancelled'],
-  'Engineer Reached': ['Diagnosis Done', 'Customer NA'],
+  // 'Repair Completed' direct: on a return visit the technician arrives with
+  // the approved part and finishes the job — the diagnosis was done on the
+  // first visit, so requiring it again stranded every rescheduled request at
+  // 'Engineer Reached' and payment could never be collected.
+  'Engineer Reached': ['Diagnosis Done', 'Repair Completed', 'Customer NA'],
   'Diagnosis Done': ['Spare Required', 'Repair Completed'],
   'Spare Required': ['Spare Ordered'],
   'Spare Ordered': ['Spare Received'],
