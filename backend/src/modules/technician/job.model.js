@@ -61,8 +61,17 @@ const proofsSchema = new mongoose.Schema(
 const revisitSchema = new mongoose.Schema(
   {
     expectedDate: Date,
+    scheduledDate: Date,
+    timeSlot: String,
+    status: {
+      type: String,
+      enum: ['Not Required', 'Pending Approval', 'Scheduled', 'In Progress', 'Completed'],
+      default: 'Not Required',
+    },
+    partOrderId: { type: mongoose.Schema.Types.ObjectId, ref: 'PartOrder' },
     repairStatus: { type: String, enum: ['completed', 'unable', 'cancelled', null], default: null },
     reason: String,
+    notes: String,
     otp: String,
     signatureUrl: String,
     paymentMethod: { type: String, enum: ['upi', 'cash', 'card', 'wallet', null], default: null },

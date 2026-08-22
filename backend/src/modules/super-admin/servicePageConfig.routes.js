@@ -23,7 +23,11 @@ servicePageConfigRouter.get('/', async (req, res, next) => {
 
 servicePageConfigRouter.get('/:serviceKey', validate(serviceKeyParamSchema, 'params'), async (req, res, next) => {
   try {
-    ok(res, await configService.getServicePageConfig(req.params.serviceKey));
+    const config = await configService.getServicePageConfig(req.params.serviceKey);
+    if (!config) {
+      return res.status(404).json({ error: `No page configuration for "${req.params.serviceKey}"` });
+    }
+    ok(res, config);
   } catch (err) {
     next(err);
   }

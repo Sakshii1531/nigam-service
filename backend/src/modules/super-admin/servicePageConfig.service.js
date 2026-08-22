@@ -17,9 +17,13 @@ export async function getServicePageConfig(serviceKey) {
 
 /** Upsert so the console can save a service that has never been configured. */
 export async function upsertServicePageConfig(serviceKey, updates) {
+  const payload = { ...updates, serviceKey };
+  if (Array.isArray(payload.subServices)) {
+    payload.subServices = payload.subServices.join(', ');
+  }
   return ServicePageConfig.findOneAndUpdate(
     { serviceKey },
-    { ...updates, serviceKey },
+    payload,
     { upsert: true, new: true, setDefaultsOnInsert: true },
   );
 }

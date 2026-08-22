@@ -66,6 +66,16 @@ const PartRequests = () => {
     return () => { cancelled = true; };
   }, []);
 
+  const [showRevisitModal, setShowRevisitModal] = useState(false);
+  const [revisitTarget, setRevisitTarget] = useState(null);
+  const [scheduledDate, setScheduledDate] = useState(() => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow.toISOString().split('T')[0];
+  });
+  const [timeSlot, setTimeSlot] = useState('10:00 AM - 01:00 PM');
+  const [revisitNotes, setRevisitNotes] = useState('');
+
   const showToast = (message) => {
     setSuccessMessage(message);
     setTimeout(() => {
@@ -73,12 +83,12 @@ const PartRequests = () => {
     }, 3000);
   };
 
-  const updateStatus = async (id, newStatus) => {
+  const updateStatus = async (id, newStatus, extraData = {}) => {
     try {
       setError('');
       await apiRequest(`/brand/part-orders/${id}`, {
         method: 'PATCH',
-        body: { status: newStatus },
+        body: { status: newStatus, ...extraData },
         auth: true,
       });
       setRequests((prev) =>
@@ -87,10 +97,34 @@ const PartRequests = () => {
       if (selectedRequest && selectedRequest.id === id) {
         setSelectedRequest((prev) => (prev ? { ...prev, status: newStatus } : null));
       }
-      showToast(`Part request moved to "${newStatus}" successfully`);
+      showToast(
+        newStatus === 'Approved' || newStatus === 'Dispatched'
+          ? `Part request moved to "${newStatus}" & Revisit scheduled!`
+          : `Part request moved to "${newStatus}" successfully`
+      );
     } catch (err) {
       setError(err?.message || `Could not update status to "${newStatus}"`);
     }
+  };
+
+  const handleApproveClick = (req, newStatus) => {
+    if (newStatus === 'Approved' || newStatus === 'Dispatched') {
+      setRevisitTarget({ id: req.id, newStatus, partName: req.part, technician: req.technician });
+      setShowRevisitModal(true);
+    } else {
+      updateStatus(req.id, newStatus);
+    }
+  };
+
+  const confirmRevisitSchedule = async () => {
+    if (!revisitTarget) return;
+    await updateStatus(revisitTarget.id, revisitTarget.newStatus, {
+      scheduledDate,
+      timeSlot,
+      notes: revisitNotes,
+    });
+    setShowRevisitModal(false);
+    setRevisitTarget(null);
   };
 
   const handleRowClick = (req) => {
@@ -264,11 +298,11 @@ const PartRequests = () => {
                           {req.status === 'Pending' && (
                             <>
                               <button 
-                                onClick={() => updateStatus(req.id, 'Approved')}
-                                className="p-1.5 text-green-600 hover:bg-green-50 rounded" 
-                                title="Approve"
+                                onClick={() => handleApproveClick(req, 'Approved')}
+                                className="p-1.5 text-green-600 hover:bg-green-50 rounded flex items-center gap-1 text-xs font-semibold" 
+                                title="Approve & Schedule Revisit"
                               >
-                                <Check size={16} />
+                                <Check size={16} /> Approve
                               </button>
                               <button 
                                 onClick={() => updateStatus(req.id, 'Rejected')}
@@ -281,9 +315,9 @@ const PartRequests = () => {
                           )}
                           {req.status === 'Approved' && (
                             <button 
-                              onClick={() => updateStatus(req.id, 'Dispatched')}
+                              onClick={() => handleApproveClick(req, 'Dispatched')}
                               className="p-1.5 text-teal-600 hover:bg-teal-50 rounded flex items-center gap-1 text-xs font-medium" 
-                              title="Dispatch"
+                              title="Dispatch & Schedule Revisit"
                             >
                               <Truck size={14} /> Dispatch
                             </button>
@@ -312,6 +346,78 @@ const PartRequests = () => {
           </div>
 
         </div>
+
+        {/* Revisit Schedule Modal */}
+        {showRevisitModal && revisitTarget && (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+              <div className="p-5 border-b border-[#E2E8F0] flex justify-between items-center bg-[#F8FAFC]">
+                <div>
+                  <h2 className="text-base font-bold text-[#1E293B]">Schedule Revisit Visit</h2>
+                  <p className="text-xs text-[#64748B]">Part: <span className="font-semibold text-[#0D47A1]">{revisitTarget.partName}</span></p>
+                </div>
+                <button 
+                  onClick={() => setShowRevisitModal(false)}
+                  className="text-[#64748B] hover:text-[#1E293B] p-1.5 hover:bg-slate-200 rounded-full"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4 text-sm">
+                <div>
+                  <label className="block text-xs font-semibold text-[#64748B] mb-1">Revisit Date</label>
+                  <input 
+                    type="date" 
+                    value={scheduledDate} 
+                    onChange={(e) => setScheduledDate(e.target.value)}
+                    className="w-full border border-[#E2E8F0] rounded-xl px-3 py-2 text-sm text-[#1E293B] focus:ring-2 focus:ring-[#0D47A1] outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#64748B] mb-1">Time Slot</label>
+                  <select 
+                    value={timeSlot} 
+                    onChange={(e) => setTimeSlot(e.target.value)}
+                    className="w-full border border-[#E2E8F0] rounded-xl px-3 py-2 text-sm text-[#1E293B] focus:ring-2 focus:ring-[#0D47A1] outline-none"
+                  >
+                    <option value="09:00 AM - 12:00 PM">09:00 AM - 12:00 PM</option>
+                    <option value="10:00 AM - 01:00 PM">10:00 AM - 01:00 PM</option>
+                    <option value="01:00 PM - 04:00 PM">01:00 PM - 04:00 PM</option>
+                    <option value="04:00 PM - 07:00 PM">04:00 PM - 07:00 PM</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#64748B] mb-1">Dispatch / Revisit Notes</label>
+                  <textarea 
+                    rows={2} 
+                    value={revisitNotes} 
+                    onChange={(e) => setRevisitNotes(e.target.value)}
+                    placeholder="E.g. Part handed over to technician for delivery..."
+                    className="w-full border border-[#E2E8F0] rounded-xl px-3 py-2 text-sm text-[#1E293B] focus:ring-2 focus:ring-[#0D47A1] outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="p-4 border-t border-[#E2E8F0] bg-[#F8FAFC] flex gap-2 justify-end">
+                <button 
+                  onClick={() => setShowRevisitModal(false)}
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-200 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={confirmRevisitSchedule}
+                  className="px-4 py-2 text-xs font-bold text-white bg-[#0D47A1] hover:bg-blue-800 rounded-lg shadow-md transition-colors"
+                >
+                  Confirm Revisit & {revisitTarget.newStatus}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Detail Modal */}
         {showModal && selectedRequest && (
