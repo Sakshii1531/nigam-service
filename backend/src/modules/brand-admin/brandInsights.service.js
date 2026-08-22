@@ -476,6 +476,24 @@ export async function listBrandPartOrders(brandId, { status, page, limit, sort }
   return { items, meta: paginationMeta({ page: pg, limit: lim, total }) };
 }
 
+export async function updateBrandPartOrderStatus(brandId, partOrderId, status) {
+  const partOrder = await PartOrder.findById(partOrderId).populate({
+    path: 'job',
+    populate: { path: 'serviceRequest' },
+  });
+  if (!partOrder) throw new ApiError(404, 'Part request not found');
+
+  if (partOrder.job && partOrder.job.serviceRequest) {
+    if (String(partOrder.job.serviceRequest.brand) !== String(brandId)) {
+      throw new ApiError(403, 'Forbidden — part request does not belong to your brand');
+    }
+  }
+
+  partOrder.status = status;
+  await partOrder.save();
+  return partOrder;
+}
+
 /**
  * Spare-part stock held by the technicians who serve this brand.
  *
