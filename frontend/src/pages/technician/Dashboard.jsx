@@ -21,7 +21,6 @@ const Dashboard = () => {
     notifications,
     activeSpecs,
     toggleSpec,
-    dismissJob,
     jobsLoading,
     availability,
     availabilityBusy,
@@ -56,26 +55,36 @@ const Dashboard = () => {
   const [dutyMessage, setDutyMessage] = useState(null);
   const [instantAlertJob, setInstantAlertJob] = useState(null);
   const [countdown, setCountdown] = useState(60);
-  // Instant jobs the technician has already said no to. Without this, Decline
-  // only cleared the modal until the next jobs refresh re-ran the effect below
-  // and re-opened it on the very same job, seconds later — there was no way to
-  // dismiss an instant alert for good.
   const [declinedInstantIds, setDeclinedInstantIds] = useState([]);
+  const [acceptedInstantIds, setAcceptedInstantIds] = useState([]);
 
   // Auto-detect instant booking requests from job list
   React.useEffect(() => {
     const instantJob = jobs.find(j => (
+      j.isAvailableRequest &&
       (j.isInstant || j.scheduledTime === 'ASAP' || j.scheduledTime?.includes('ASAP'))
       && !declinedInstantIds.includes(j.id)
+      && !acceptedInstantIds.includes(j.id)
     ));
     if (instantJob && !instantAlertJob) {
       setInstantAlertJob(instantJob);
       setCountdown(60);
     }
-  }, [jobs, declinedInstantIds, instantAlertJob]);
+  }, [jobs, declinedInstantIds, acceptedInstantIds, instantAlertJob]);
+
+  const dismissJob = (jobId) => {
+    if (jobId) {
+      setDeclinedInstantIds((prev) => [...prev, jobId]);
+    }
+    if (instantAlertJob && (instantAlertJob.id === jobId || instantAlertJob.serviceRequestId === jobId)) {
+      setInstantAlertJob(null);
+    }
+  };
 
   const declineInstantJob = () => {
-    if (instantAlertJob) setDeclinedInstantIds((prev) => [...prev, instantAlertJob.id]);
+    if (instantAlertJob) {
+      dismissJob(instantAlertJob.id || instantAlertJob.serviceRequestId);
+    }
     setInstantAlertJob(null);
   };
 
@@ -133,7 +142,10 @@ const Dashboard = () => {
 
   // Filter jobs based on selected tabs for View 2 (Full Jobs list)
   const filteredJobs = jobs.filter(job => {
+    if (!job.isAvailableRequest) return false;
     if (!isJobSpecActive(job)) return false;
+    if (declinedInstantIds.includes(job.id) || declinedInstantIds.includes(job.serviceRequestId)) return false;
+    if (acceptedInstantIds.includes(job.id) || acceptedInstantIds.includes(job.serviceRequestId)) return false;
 
     if (filterTab === 'Priority' && !job.isPriority) return false;
     if (filterTab === 'Recommended' && !job.isRecommended) return false;
@@ -145,7 +157,29 @@ const Dashboard = () => {
     return true;
   });
 
-  const nearbyJobs = jobs.filter(isJobSpecActive).slice(0, 4);
+  const nearbyJobs = jobs.filter(job => (
+    job.isAvailableRequest &&
+    isJobSpecActive(job) &&
+    !declinedInstantIds.includes(job.id) &&
+    !declinedInstantIds.includes(job.serviceRequestId) &&
+    !acceptedInstantIds.includes(job.id) &&
+    !acceptedInstantIds.includes(job.serviceRequestId)
+  )).slice(0, 4);
+
+  const revisitJobs = jobs.filter(job => (
+    !job.isAvailableRequest &&
+    (
+      job.activeStep === 'spare_part_required' ||
+      job.activeStep === 'spareapproval' ||
+      job.activeStep === 'revisit_complete' ||
+      job.activeStep === 'revisit_billing' ||
+      job.activeStep === 'revisit_payment' ||
+      job.status === 'Spare Required' ||
+      job.status === 'Spare Ordered' ||
+      job.status === 'Spare Received' ||
+      Boolean(job.isRevisit)
+    )
+  ));
 
   // LG Logo SVG Component
   const LgLogo = () => (
@@ -356,7 +390,7 @@ const Dashboard = () => {
                   <div className="w-6.5 h-6.5 rounded-full bg-[#FFF3E0] flex items-center justify-center flex-shrink-0">
                     <RotateCw className="w-3.5 h-3.5 text-[#E65100]" />
                   </div>
-                  <span className="text-[14px] font-black text-[#E65100]">0</span>
+                  <span className="text-[14px] font-black text-[#E65100]">{revisitJobs.length}</span>
                 </div>
                 <span className="text-[9.5px] font-bold text-slate-500 leading-tight mt-1">Revisit Jobs</span>
                 <button 
@@ -395,11 +429,42 @@ const Dashboard = () => {
               </div>
               <p className="text-[10px] text-slate-500">Pending jobs requiring spare parts or follow-up visit</p>
 
-              <div className="bg-[#FFFDF9] border border-[#FFE0B2] rounded-2xl p-4 shadow-sm flex flex-col items-center justify-center text-center gap-1.5 mt-1.5">
-                <RotateCw className="w-6 h-6 text-amber-400" />
-                <p className="text-xs font-bold text-slate-700">No Revisit Jobs Scheduled</p>
-                <p className="text-[10px] text-slate-400">Revisit requests assigned to you will appear here.</p>
-              </div>
+              {revisitJobs.length > 0 ? (
+                <div className="flex flex-col gap-2.5 mt-1.5">
+                  {revisitJobs.map((job) => (
+                    <div 
+                      key={job.id}
+                      onClick={() => {
+                        selectJobForDetails(job.id);
+                        navigate('/technician/active-job');
+                      }}
+                      className="bg-[#FFFDF9] border border-[#FFE0B2] rounded-2xl p-3.5 shadow-sm flex justify-between items-center cursor-pointer hover:shadow-md transition-all"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8.5 h-8.5 rounded-xl bg-[#FFF3E0] flex items-center justify-center text-[#E65100] flex-shrink-0">
+                          <RotateCw className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-bold text-[#052355]">{job.product || job.category}</h4>
+                          <p className="text-[10px] text-slate-500 font-semibold mt-0.5">
+                            Customer: <span className="text-slate-800 font-bold">{job.customerName}</span>
+                          </p>
+                          <span className="inline-block text-[9px] font-bold text-[#E65100] bg-[#FFF3E0] px-2 py-0.5 rounded-full mt-1">
+                            Spare Part Pending / Revisit
+                          </span>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-slate-400" />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="bg-[#FFFDF9] border border-[#FFE0B2] rounded-2xl p-4 shadow-sm flex flex-col items-center justify-center text-center gap-1.5 mt-1.5">
+                  <RotateCw className="w-6 h-6 text-amber-400" />
+                  <p className="text-xs font-bold text-slate-700">No Revisit Jobs Scheduled</p>
+                  <p className="text-[10px] text-slate-400">Revisit requests assigned to you will appear here.</p>
+                </div>
+              )}
             </div>
 
             {/* High Priority Jobs Banner */}
@@ -741,7 +806,11 @@ const Dashboard = () => {
                       {isExpanded && (
                         <div className="flex gap-3.5 mt-2" onClick={(e) => e.stopPropagation()}>
                           <button 
-                            onClick={() => acceptJob(job.id)}
+                            onClick={async () => {
+                              setAcceptedInstantIds((prev) => [...prev, job.id, job.serviceRequestId].filter(Boolean));
+                              await acceptJob(job.id);
+                              navigate('/technician/active-job');
+                            }}
                             className="flex-1 bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-bold py-2.5 rounded-xl text-xs transition-all shadow-xs"
                           >
                             Accept
@@ -1008,10 +1077,12 @@ const Dashboard = () => {
                 Decline
               </button>
               <button
-                onClick={() => {
-                  acceptJob(instantAlertJob.id);
+                onClick={async () => {
+                  const jobId = instantAlertJob.id;
+                  setAcceptedInstantIds((prev) => [...prev, jobId]);
                   setInstantAlertJob(null);
-                  navigate('/technician/dashboard');
+                  await acceptJob(jobId);
+                  navigate('/technician/active-job');
                 }}
                 className="flex-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-black py-3 rounded-xl transition-all cursor-pointer shadow-lg shadow-amber-500/30 flex items-center justify-center gap-1.5"
               >

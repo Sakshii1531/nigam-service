@@ -33,6 +33,7 @@ function shape(o) {
     reason: o.orderSource,
     status: o.status || 'Pending',
     date: o.createdAt ? dateFormatter.format(new Date(o.createdAt)) : '—',
+    warranty: o.job?.serviceRequest?.warrantyStatus || 'Warranty',
   };
 }
 
@@ -72,11 +73,24 @@ const PartRequests = () => {
     }, 3000);
   };
 
-  // No endpoint exists to approve or dispatch a part order — the technician-side
-  // module exposes only create and read (/tech/inventory/part-orders). Say so
-  // rather than flip the badge for a change that was never saved.
-  const updateStatus = (id, newStatus) => {
-    setError(`Moving a part request to "${newStatus}" is not supported by the API yet — no change was saved.`);
+  const updateStatus = async (id, newStatus) => {
+    try {
+      setError('');
+      await apiRequest(`/brand/part-orders/${id}`, {
+        method: 'PATCH',
+        body: { status: newStatus },
+        auth: true,
+      });
+      setRequests((prev) =>
+        prev.map((req) => (req.id === id ? { ...req, status: newStatus } : req))
+      );
+      if (selectedRequest && selectedRequest.id === id) {
+        setSelectedRequest((prev) => (prev ? { ...prev, status: newStatus } : null));
+      }
+      showToast(`Part request moved to "${newStatus}" successfully`);
+    } catch (err) {
+      setError(err?.message || `Could not update status to "${newStatus}"`);
+    }
   };
 
   const handleRowClick = (req) => {

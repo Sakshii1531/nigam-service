@@ -5,6 +5,9 @@ import { Product } from '../src/modules/buy-commerce/product.model.js';
 import { SparePartCatalog } from '../src/modules/super-admin/sparePartCatalog.model.js';
 import { TechInventoryItem } from '../src/modules/technician/techInventoryItem.model.js';
 import { Technician } from '../src/modules/technician/technician.model.js';
+import { PartOrder } from '../src/modules/technician/partOrder.model.js';
+import { ServiceRequest } from '../src/modules/service-requests/serviceRequest.model.js';
+import { Job } from '../src/modules/technician/job.model.js';
 
 export const CITIES_DATA = [
   { name: 'Lucknow', state: 'Uttar Pradesh', district: 'Lucknow', coverageAreaSqkm: 350, status: 'Active' },
@@ -607,6 +610,46 @@ export async function seedDemoEntities() {
       );
     }
     console.log(`[demo-seed] ${techInventoryData.length} Technician Inventory Items seeded for tech: ${sampleTech.name}`);
+
+    // 7. Seed Sample Part Orders for Brand Admin dashboards
+    const brandList = await Brand.find({ status: 'Active' });
+    let totalPartOrdersSeeded = 0;
+    for (const b of brandList) {
+      let sr = await ServiceRequest.findOne({ brand: b._id });
+      if (!sr) {
+        sr = await ServiceRequest.create({
+          user: sampleTech.user,
+          category: b.category?.includes('Cooling') ? 'AC' : 'Washing Machine',
+          brand: b._id,
+          status: 'Spare Required',
+          humanId: `SR-${Math.floor(100000 + Math.random() * 900000)}`,
+          warrantyStatus: 'Under Warranty',
+        });
+      }
+      let job = await Job.findOne({ serviceRequest: sr._id });
+      if (!job) {
+        job = await Job.create({
+          technician: sampleTech._id,
+          serviceRequest: sr._id,
+          type: 'Brand Warranty',
+          activeStep: 'spareapproval',
+        });
+      }
+      const samplePartOrders = [
+        { partName: 'Copper Pipe (1/4")', sku: 'SP-AC-COPPER-5M', qty: 1, price: 800, orderSource: 'Partner Brand', status: 'Pending' },
+        { partName: 'Inverter AC Main PCB Board', sku: 'SP-AC-PCB-01', qty: 1, price: 2250, orderSource: 'NCC Warehouse', status: 'Approved' },
+        { partName: 'Washing Machine Drain Pump', sku: 'SP-WM-PMP-01', qty: 1, price: 585, orderSource: 'Partner Brand', status: 'Dispatched' },
+      ];
+      for (const pOrder of samplePartOrders) {
+        await PartOrder.findOneAndUpdate(
+          { technician: sampleTech._id, job: job._id, partName: pOrder.partName },
+          { technician: sampleTech._id, job: job._id, ...pOrder },
+          { upsert: true, new: true, setDefaultsOnInsert: true },
+        );
+        totalPartOrdersSeeded++;
+      }
+    }
+    console.log(`[demo-seed] ${totalPartOrdersSeeded} Sample Part Orders seeded for Brand Admins`);
   }
 
   console.log('[demo-seed] All demo data successfully seeded!');
