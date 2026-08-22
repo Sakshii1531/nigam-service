@@ -67,8 +67,11 @@ export async function updatePartOrderStatus(partOrderId, { status, scheduledDate
 
       const sr = await ServiceRequest.findById(job.serviceRequest);
       if (sr) {
+        // Same guard as the brand path: submitSpareParts may already have
+        // reached 'Spare Received', and re-stamping duplicates the entry.
+        const alreadyReceived = sr.status === 'Spare Received';
         sr.status = 'Spare Received';
-        sr.timeline.push({
+        if (!alreadyReceived) sr.timeline.push({
           stepLabel: 'Spare Received',
           done: true,
           timestamp: new Date(),
