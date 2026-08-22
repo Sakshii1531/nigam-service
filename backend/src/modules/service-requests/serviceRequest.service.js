@@ -3,6 +3,7 @@ import { ApiError } from '../../middleware/errorHandler.js';
 import { rankTechnicians, findAvailableTechnician } from '../shared/assignmentEngine.js';
 import { Technician } from '../technician/technician.model.js';
 import { Booking } from '../booking/booking.model.js';
+import { Job } from '../technician/job.model.js';
 import { SERVICE_REQUEST_TRANSITIONS } from '../../config/constants.js';
 import { parsePagination, paginationMeta } from '../../utils/pagination.js';
 
@@ -141,7 +142,11 @@ export async function assignTechnician(id, technicianId) {
     if (!technician) throw new ApiError(404, 'Technician not found');
     if (technician.status !== 'Active') throw new ApiError(409, `Technician is ${technician.status}, not Active`);
   } else {
-    technician = await findAvailableTechnician({ category: serviceRequest.category, city: serviceRequest.zone });
+    technician = await findAvailableTechnician({
+      category: serviceRequest.category,
+      city: serviceRequest.zone,
+      exclude: serviceRequest.declinedBy || [],
+    });
     if (!technician) throw new ApiError(409, 'No available technician to assign');
   }
 
@@ -176,6 +181,69 @@ export async function assignTechnician(id, technicianId) {
   });
 
   return ServiceRequest.findById(id).populate('technician', 'name rating specs');
+}
+
+/**
+ * A technician turns down a request that was assigned to them.
+ *
+ * There was no reject at all before: the technician app's "Decline" only
+ * filtered the card out of local state, so the request stayed assigned to them
+ * forever, reappeared on the next refresh, and was never offered to anybody
+ * else. Rejecting has to actually release the work — clear the assignee, put
+ * the request back in the pool, remember who said no, and immediately look for
+ * the next best technician.
+ *
+ * Only assignable-but-unstarted work can be rejected; once a Job exists the
+ * technician has engaged with it and walking away is a different operation.
+ */
+export async function declineAssignment(id, technicianId) {
+  const serviceRequest = await findOr404(id);
+
+  if (String(serviceRequest.technician) !== String(technicianId)) {
+    throw new ApiError(403, 'This request is not assigned to you');
+  }
+  if (serviceRequest.status !== 'Assigned') {
+    throw new ApiError(409, `Cannot reject a request in status "${serviceRequest.status}"`);
+  }
+  const existingJob = await Job.findOne({ serviceRequest: serviceRequest._id });
+  if (existingJob) throw new ApiError(409, 'You have already accepted this job — it can no longer be rejected');
+
+  if (!serviceRequest.declinedBy.some((t) => String(t) === String(technicianId))) {
+    serviceRequest.declinedBy.push(technicianId);
+  }
+  serviceRequest.technician = null;
+  serviceRequest.status = 'New';
+  if (serviceRequest.isInstant) serviceRequest.instantStatus = 'SEARCHING';
+  serviceRequest.timeline.push({
+    stepLabel: 'New',
+    done: true,
+    timestamp: new Date(),
+    description: 'Rejected by technician — returned to the pool',
+  });
+  await serviceRequest.save();
+
+  // The customer's screens read the booking, so it has to let go of the
+  // technician too or they keep seeing someone who is not coming.
+  if (serviceRequest.booking) {
+    const booking = await Booking.findById(serviceRequest.booking);
+    if (booking) {
+      booking.technician = null;
+      if (booking.isInstant) booking.instantStatus = 'SEARCHING';
+      await booking.save();
+    }
+  }
+
+  // Offer it to the next best technician right away. Nobody else being
+  // available is a normal outcome — it stays queued for the next sweep.
+  let reassignedTo = null;
+  try {
+    const updated = await assignTechnician(String(serviceRequest._id), null);
+    reassignedTo = updated.technician?.name || null;
+  } catch {
+    reassignedTo = null;
+  }
+
+  return { declined: true, reassignedTo };
 }
 
 /**

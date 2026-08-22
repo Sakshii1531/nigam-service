@@ -58,6 +58,7 @@ import { loyaltyConfigRouter } from './modules/super-admin/loyaltyConfig.routes.
 import { platformRoleRouter } from './modules/super-admin/platformRole.routes.js';
 import { platformUserRouter } from './modules/super-admin/platformUser.routes.js';
 import { adminTechnicianRouter } from './modules/super-admin/adminTechnician.routes.js';
+import { adminPartOrderRouter } from './modules/super-admin/adminPartOrder.routes.js';
 import { warrantyRegistrationRouter } from './modules/super-admin/warrantyRegistration.routes.js';
 import { analyticsRouter } from './modules/super-admin/analytics.routes.js';
 import { adminAmcRouter } from './modules/super-admin/adminAmc.routes.js';
@@ -194,6 +195,7 @@ export function createApp() {
   app.use('/api/v1/super-admin/roles', platformRoleRouter);
   app.use('/api/v1/super-admin/users', platformUserRouter);
   app.use('/api/v1/super-admin/technicians', adminTechnicianRouter);
+  app.use('/api/v1/super-admin/part-orders', adminPartOrderRouter);
   app.use('/api/v1/super-admin/warranty-registrations', warrantyRegistrationRouter);
   app.use('/api/v1/super-admin/analytics', analyticsRouter);
   app.use('/api/v1/super-admin/amc', adminAmcRouter);

@@ -512,7 +512,16 @@ export async function updateBrandPartOrderStatus(brandId, partOrderId, payload) 
       if (partOrder.job.serviceRequest) {
         const sr = await ServiceRequest.findById(partOrder.job.serviceRequest._id || partOrder.job.serviceRequest);
         if (sr) {
+          // Record the move. Assigning the status alone left the request
+          // jumping to 'Spare Received' with nothing in its timeline, so
+          // neither the customer nor an admin could see why it changed.
           sr.status = 'Spare Received';
+          sr.timeline.push({
+            stepLabel: 'Spare Received',
+            done: true,
+            timestamp: new Date(),
+            description: `Spare part ${status.toLowerCase()} by brand — revisit scheduled`,
+          });
           await sr.save();
         }
       }

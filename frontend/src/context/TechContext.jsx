@@ -671,6 +671,11 @@ export const TechProvider = ({ children }) => {
         method: 'POST',
         auth: true,
         body: {
+          // The job is what ties the order to a customer's request, and through
+          // it to the brand that has to approve it. Omitting it left every part
+          // request belonging to nobody: the brand console filters them out, and
+          // the approval that reschedules the held job could never fire.
+          job: activeJobId || undefined,
           partName: item.name,
           sku: item.sku || undefined,
           qty: item.qty || 1,
@@ -684,7 +689,7 @@ export const TechProvider = ({ children }) => {
     } catch (err) {
       return { ok: false, error: err.message || 'Could not place the parts order.' };
     }
-  }, [partsCart]);
+  }, [partsCart, activeJobId]);
 
   // Raises the claim server-side so the brand can actually see and decide it.
   const raiseClaim = useCallback(async (claimData) => {
@@ -718,9 +723,34 @@ export const TechProvider = ({ children }) => {
   }, []);
 
   // Marking read is persisted — the local-only version reverted on next load.
-  const dismissJob = useCallback((jobId) => {
+  /**
+   * Turn down an assigned request so somebody else can take it.
+   *
+   * This only filtered the card out of local state, so the request stayed
+   * assigned to the technician who declined it, came back on the next refresh,
+   * and was never offered to anyone else. The server now releases it and
+   * immediately looks for the next best technician.
+   */
+  const dismissJob = useCallback(async (jobId) => {
+    const job = jobs.find((j) => j.id === jobId);
+    const serviceRequestId = job?.serviceRequestId;
+    if (!serviceRequestId) {
+      // An accepted job is not a pending offer — nothing to hand back.
+      return { ok: false, error: 'Only a request you have not accepted yet can be rejected.' };
+    }
+
+    // Drop it from the feed straight away; the refetch below is the source of
+    // truth if the server disagrees.
     setJobs((prev) => prev.filter((j) => j.id !== jobId));
-  }, []);
+    try {
+      const res = await apiRequest(`/tech/jobs/reject/${serviceRequestId}`, { method: 'POST', auth: true });
+      await fetchRealJobs();
+      return { ok: true, reassignedTo: res?.reassignedTo || null };
+    } catch (err) {
+      await fetchRealJobs();
+      return { ok: false, error: err.message || 'Could not reject this job.' };
+    }
+  }, [jobs, fetchRealJobs]);
 
   const markAllNotificationsRead = useCallback(async () => {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
