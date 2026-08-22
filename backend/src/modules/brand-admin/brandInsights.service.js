@@ -476,7 +476,9 @@ export async function listBrandPartOrders(brandId, { status, page, limit, sort }
   return { items, meta: paginationMeta({ page: pg, limit: lim, total }) };
 }
 
-export async function updateBrandPartOrderStatus(brandId, partOrderId, status) {
+export async function updateBrandPartOrderStatus(brandId, partOrderId, payload) {
+  const { status, scheduledDate, timeSlot, notes } = typeof payload === 'string' ? { status: payload } : payload;
+
   const partOrder = await PartOrder.findById(partOrderId).populate({
     path: 'job',
     populate: { path: 'serviceRequest' },
@@ -491,6 +493,32 @@ export async function updateBrandPartOrderStatus(brandId, partOrderId, status) {
 
   partOrder.status = status;
   await partOrder.save();
+
+  if (partOrder.job && (status === 'Approved' || status === 'Dispatched')) {
+    const job = await Job.findById(partOrder.job._id || partOrder.job);
+    if (job) {
+      job.activeStep = 'revisit_scheduled';
+      const parsedDate = scheduledDate ? new Date(scheduledDate) : new Date(Date.now() + 86400000);
+      job.revisit = {
+        scheduledDate: parsedDate,
+        expectedDate: parsedDate,
+        timeSlot: timeSlot || '10:00 AM - 01:00 PM',
+        status: 'Scheduled',
+        partOrderId: partOrder._id,
+        notes: notes || 'Spare part approved/dispatched by brand',
+      };
+      await job.save();
+
+      if (partOrder.job.serviceRequest) {
+        const sr = await ServiceRequest.findById(partOrder.job.serviceRequest._id || partOrder.job.serviceRequest);
+        if (sr) {
+          sr.status = 'Spare Received';
+          await sr.save();
+        }
+      }
+    }
+  }
+
   return partOrder;
 }
 

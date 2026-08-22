@@ -431,32 +431,62 @@ const Dashboard = () => {
 
               {revisitJobs.length > 0 ? (
                 <div className="flex flex-col gap-2.5 mt-1.5">
-                  {revisitJobs.map((job) => (
-                    <div 
-                      key={job.id}
-                      onClick={() => {
-                        selectJobForDetails(job.id);
-                        navigate('/technician/active-job');
-                      }}
-                      className="bg-[#FFFDF9] border border-[#FFE0B2] rounded-2xl p-3.5 shadow-sm flex justify-between items-center cursor-pointer hover:shadow-md transition-all"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8.5 h-8.5 rounded-xl bg-[#FFF3E0] flex items-center justify-center text-[#E65100] flex-shrink-0">
-                          <RotateCw className="w-4 h-4" />
+                  {revisitJobs.map((job) => {
+                    const isRevisitScheduled = job.activeStep === 'revisit_scheduled' || job.revisitScheduledDate;
+                    const isRevisitOnTheWay = job.activeStep === 'revisit_ontheway';
+                    const isRevisitArrived = job.activeStep === 'revisit_arrived';
+
+                    let statusBadgeLabel = 'Spare Part Pending';
+                    let statusBadgeStyle = 'bg-[#FFF3E0] text-[#E65100] border-[#FFE0B2]';
+
+                    if (isRevisitScheduled) {
+                      statusBadgeLabel = 'Spare Received — Revisit Scheduled';
+                      statusBadgeStyle = 'bg-blue-50 text-blue-700 border-blue-200';
+                    } else if (isRevisitOnTheWay) {
+                      statusBadgeLabel = 'On The Way to Revisit';
+                      statusBadgeStyle = 'bg-amber-50 text-amber-700 border-amber-200';
+                    } else if (isRevisitArrived) {
+                      statusBadgeLabel = 'At Customer Location';
+                      statusBadgeStyle = 'bg-purple-50 text-purple-700 border-purple-200';
+                    }
+
+                    return (
+                      <div 
+                        key={job.id}
+                        onClick={() => {
+                          selectJobForDetails(job.id);
+                          navigate('/technician/active-job');
+                        }}
+                        className="bg-[#FFFDF9] border border-[#FFE0B2] rounded-2xl p-3.5 shadow-sm flex justify-between items-center cursor-pointer hover:shadow-md transition-all"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-xl bg-[#FFF3E0] flex items-center justify-center text-[#E65100] flex-shrink-0">
+                            <RotateCw className="w-4.5 h-4.5" />
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-bold text-[#052355]">{job.product || job.category}</h4>
+                            <p className="text-[10px] text-slate-500 font-semibold mt-0.5">
+                              Customer: <span className="text-slate-800 font-bold">{job.customerName}</span>
+                            </p>
+                            {job.revisitScheduledDate && (
+                              <p className="text-[9.5px] font-bold text-slate-600 mt-0.5">
+                                📅 {new Date(job.revisitScheduledDate).toLocaleDateString()} {job.revisitTimeSlot ? `• ${job.revisitTimeSlot}` : ''}
+                              </p>
+                            )}
+                            <span className={`inline-block text-[9px] font-bold px-2 py-0.5 border rounded-full mt-1 ${statusBadgeStyle}`}>
+                              {statusBadgeLabel}
+                            </span>
+                          </div>
                         </div>
-                        <div>
-                          <h4 className="text-xs font-bold text-[#052355]">{job.product || job.category}</h4>
-                          <p className="text-[10px] text-slate-500 font-semibold mt-0.5">
-                            Customer: <span className="text-slate-800 font-bold">{job.customerName}</span>
-                          </p>
-                          <span className="inline-block text-[9px] font-bold text-[#E65100] bg-[#FFF3E0] px-2 py-0.5 rounded-full mt-1">
-                            Spare Part Pending / Revisit
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] font-bold text-[#052355] bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3 py-1.5 rounded-xl flex items-center gap-1 transition-colors">
+                            {isRevisitScheduled ? 'Start Revisit' : 'Open Job'}
+                            <ChevronRight className="w-3.5 h-3.5 text-[#052355]" />
                           </span>
                         </div>
                       </div>
-                      <ChevronRight className="w-5 h-5 text-slate-400" />
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="bg-[#FFFDF9] border border-[#FFE0B2] rounded-2xl p-4 shadow-sm flex flex-col items-center justify-center text-center gap-1.5 mt-1.5">

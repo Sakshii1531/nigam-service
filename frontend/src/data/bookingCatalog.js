@@ -351,12 +351,22 @@ export const getCatalogEntry = (category) => {
   const serviceConfigs = servicePageOverrides;
 
   let matchedServiceKey = null;
-  Object.keys(serviceConfigs).forEach(key => {
-    const keyNorm = key.toLowerCase();
-    if (keyNorm === decodedNorm || keyNorm.includes(decodedNorm) || decodedNorm.includes(keyNorm)) {
-      matchedServiceKey = key;
+  // 1a. Try exact match first
+  const exactKey = Object.keys(serviceConfigs).find(key => key.toLowerCase() === decodedNorm);
+  if (exactKey) {
+    matchedServiceKey = exactKey;
+  } else {
+    // 1b. Fallback to whole-word match if no exact match exists
+    const cleanWordKey = Object.keys(serviceConfigs).find(key => {
+      const keyNorm = key.toLowerCase();
+      const escaped = decodedNorm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(`(?:^|\\s)${escaped}(?:$|\\s)`, 'i');
+      return regex.test(keyNorm);
+    });
+    if (cleanWordKey) {
+      matchedServiceKey = cleanWordKey;
     }
-  });
+  }
 
   if (matchedServiceKey) {
     const config = serviceConfigs[matchedServiceKey] || {};

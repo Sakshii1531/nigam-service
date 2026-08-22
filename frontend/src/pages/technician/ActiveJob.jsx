@@ -702,7 +702,7 @@ const ActiveJob = () => {
       )}
 
       {/* Header */}
-      {activeStep === 'spare_part_required' || activeStep === 'completed_pending' || activeStep === 'customer_update_preview' || activeStep === 'spare_part_job_details' || activeStep === 'revisit_complete' || activeStep === 'cancellation_summary' || activeStep === 'unable_to_fix_summary' || activeStep === 'revisit_billing' || activeStep === 'revisit_payment' || activeStep === 'revisit_payment_upi' || activeStep === 'revisit_payment_cash' || activeStep === 'revisit_payment_card' || activeStep === 'revisit_payment_wallet' || activeStep === 'revisit_otp' ? null : activeStep === 'details' && activeJob && isSpecialWarrantyJob ? (
+      {activeStep === 'spare_part_required' || activeStep === 'completed_pending' || activeStep === 'customer_update_preview' || activeStep === 'spare_part_job_details' || activeStep === 'revisit_scheduled' || activeStep === 'revisit_ontheway' || activeStep === 'revisit_arrived' || activeStep === 'revisit_complete' || activeStep === 'cancellation_summary' || activeStep === 'unable_to_fix_summary' || activeStep === 'revisit_billing' || activeStep === 'revisit_payment' || activeStep === 'revisit_payment_upi' || activeStep === 'revisit_payment_cash' || activeStep === 'revisit_payment_card' || activeStep === 'revisit_payment_wallet' || activeStep === 'revisit_otp' ? null : activeStep === 'details' && activeJob && isSpecialWarrantyJob ? (
         /* White Header for Special Warranty Details */
         <div className="bg-white px-3.5 py-4 flex justify-between items-center z-10 border-b border-slate-200">
           <button 
@@ -1218,7 +1218,7 @@ const ActiveJob = () => {
             ) : (
               /* Normal stepper list flow */
               <>
-                {!(activeStep === 'inspection' && enteredInspection) && activeStep !== 'spare_part_required' && activeStep !== 'completed_pending' && activeStep !== 'customer_update_preview' && activeStep !== 'spare_part_job_details' && activeStep !== 'revisit_complete' && activeStep !== 'cancellation_summary' && activeStep !== 'unable_to_fix_summary' && activeStep !== 'revisit_billing' && activeStep !== 'revisit_payment' && activeStep !== 'revisit_payment_upi' && activeStep !== 'revisit_payment_cash' && activeStep !== 'revisit_payment_card' && activeStep !== 'revisit_payment_wallet' && activeStep !== 'revisit_otp' && renderStepper()}
+                {!(activeStep === 'inspection' && enteredInspection) && activeStep !== 'spare_part_required' && activeStep !== 'completed_pending' && activeStep !== 'customer_update_preview' && activeStep !== 'spare_part_job_details' && activeStep !== 'revisit_scheduled' && activeStep !== 'revisit_ontheway' && activeStep !== 'revisit_arrived' && activeStep !== 'revisit_complete' && activeStep !== 'cancellation_summary' && activeStep !== 'unable_to_fix_summary' && activeStep !== 'revisit_billing' && activeStep !== 'revisit_payment' && activeStep !== 'revisit_payment_upi' && activeStep !== 'revisit_payment_cash' && activeStep !== 'revisit_payment_card' && activeStep !== 'revisit_payment_wallet' && activeStep !== 'revisit_otp' && renderStepper()}
 
             {/* 2. Step Details Panel */}
             {/* Step: ASSIGNED (Step 1) */}
@@ -2747,6 +2747,99 @@ const ActiveJob = () => {
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Step: REVISIT SCHEDULED / ON THE WAY / ARRIVED */}
+            {(activeStep === 'revisit_scheduled' || activeStep === 'revisit_ontheway' || activeStep === 'revisit_arrived') && (
+              <div className="bg-[#F5F8FC] flex flex-col gap-4 text-left font-sans -mx-4 -my-4 p-4 min-h-screen">
+                <div className="bg-[#052355] text-white pt-4 pb-6 px-4 flex flex-col gap-3 rounded-b-[2.5rem] relative z-10 shadow-md -mx-4 -mt-4">
+                  <div className="flex items-center justify-between">
+                    <button 
+                      onClick={() => navigate('/technician/dashboard')} 
+                      className="p-1 hover:bg-white/10 rounded-full transition-colors"
+                    >
+                      <ArrowLeft className="h-6 w-6 text-white" />
+                    </button>
+                    <div className="flex-1 text-center pr-9">
+                      <h1 className="text-base font-semibold text-white">Revisit Job</h1>
+                      <span className="text-xs text-white/80 block font-normal mt-0.5">
+                        #{activeJob?.id || 'SR-Revisit'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex-1 flex flex-col gap-4 mt-2">
+                  <div className="bg-white rounded-3xl p-5 border border-slate-200/60 shadow-sm flex flex-col gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-[#0D47A1]">
+                        <RotateCw className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold text-[#052355]">Spare Part Received & Scheduled</h3>
+                        <p className="text-xs text-slate-500 font-medium">Revisit for installation</p>
+                      </div>
+                    </div>
+
+                    {activeJob?.revisitScheduledDate && (
+                      <div className="bg-blue-50/60 border border-blue-100 rounded-2xl p-3.5 flex items-center gap-3 mt-1">
+                        <Calendar className="w-5 h-5 text-[#0D47A1]" />
+                        <div>
+                          <p className="text-xs font-bold text-[#052355]">
+                            {new Date(activeJob.revisitScheduledDate).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+                          </p>
+                          {activeJob.revisitTimeSlot && (
+                            <p className="text-[11px] font-semibold text-slate-600">Slot: {activeJob.revisitTimeSlot}</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="border-t border-slate-100 pt-3 flex flex-col gap-2 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Customer:</span>
+                        <span className="font-bold text-[#052355]">{activeJob?.customerName}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Address:</span>
+                        <span className="font-semibold text-slate-700 text-right max-w-[200px] truncate">{activeJob?.address}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {activeStep === 'revisit_scheduled' && (
+                    <button
+                      onClick={() => advanceStep('revisit_scheduled')}
+                      disabled={stepBusy}
+                      className="w-full bg-[#0D47A1] hover:bg-blue-800 disabled:opacity-60 text-white font-bold py-4 rounded-2xl text-sm transition-all shadow-md text-center flex items-center justify-center gap-2"
+                    >
+                      <Navigation className="w-4 h-4" />
+                      {stepBusy ? 'Updating…' : 'Start Travel to Customer'}
+                    </button>
+                  )}
+
+                  {activeStep === 'revisit_ontheway' && (
+                    <button
+                      onClick={() => advanceStep('revisit_ontheway')}
+                      disabled={stepBusy}
+                      className="w-full bg-[#16A34A] hover:bg-green-700 disabled:opacity-60 text-white font-bold py-4 rounded-2xl text-sm transition-all shadow-md text-center flex items-center justify-center gap-2"
+                    >
+                      <MapPin className="w-4 h-4" />
+                      {stepBusy ? 'Updating…' : 'Reached Customer Location'}
+                    </button>
+                  )}
+
+                  {activeStep === 'revisit_arrived' && (
+                    <button
+                      onClick={() => setActiveStep('revisit_complete')}
+                      className="w-full bg-[#052355] hover:bg-blue-900 text-white font-bold py-4 rounded-2xl text-sm transition-all shadow-md text-center flex items-center justify-center gap-2"
+                    >
+                      <Check className="w-4 h-4" />
+                      Proceed to Part Installation & Inspection
+                    </button>
+                  )}
+                </div>
               </div>
             )}
 

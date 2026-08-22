@@ -70,11 +70,20 @@ async function findOwnedJob(technicianId, jobId) {
  */
 async function simpleTransition(technicianId, jobId, toStep, srStatus) {
   const job = await findOwnedJob(technicianId, jobId);
-  ensureTransition(job, toStep);
-  job.activeStep = toStep;
+
+  let targetStep = toStep;
+  if (job.activeStep === 'revisit_scheduled' && toStep === 'ontheway') targetStep = 'revisit_ontheway';
+  if ((job.activeStep === 'revisit_scheduled' || job.activeStep === 'revisit_ontheway') && toStep === 'inspection') targetStep = 'revisit_arrived';
+  if ((job.activeStep === 'revisit_arrived' || job.activeStep === 'revisit_complete') && toStep === 'repaircomplete') targetStep = 'revisit_complete';
+
+  ensureTransition(job, targetStep);
+  job.activeStep = targetStep;
   await job.save();
   if (srStatus) {
-    await transitionStatus(job.serviceRequest, srStatus, { description: `Job step -> ${toStep}` });
+    const serviceRequest = await ServiceRequest.findById(job.serviceRequest._id || job.serviceRequest);
+    if (SERVICE_REQUEST_TRANSITIONS[serviceRequest?.status]?.includes(srStatus)) {
+      await transitionStatus(job.serviceRequest, srStatus, { description: `Job step -> ${targetStep}` });
+    }
   }
   return job;
 }

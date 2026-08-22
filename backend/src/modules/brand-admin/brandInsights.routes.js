@@ -104,11 +104,16 @@ brandInsightsRouter.get('/part-orders', validate(listPartOrdersQuerySchema, 'que
 
 brandInsightsRouter.patch('/part-orders/:id', async (req, res, next) => {
   try {
-    const { status } = req.body;
+    const { status, scheduledDate, timeSlot, notes } = req.body;
     if (!['Pending', 'Approved', 'Dispatched', 'Rejected'].includes(status)) {
       throw new ApiError(400, 'Invalid status value');
     }
-    const updated = await brandInsights.updateBrandPartOrderStatus(req.user.brand, req.params.id, status);
+    const updated = await brandInsights.updateBrandPartOrderStatus(req.user.brand, req.params.id, {
+      status,
+      scheduledDate,
+      timeSlot,
+      notes,
+    });
     ok(res, updated);
   } catch (err) {
     next(err);

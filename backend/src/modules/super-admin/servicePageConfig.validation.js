@@ -7,6 +7,9 @@ const catalogItemSchema = z.object({
   price: z.string().optional(),
   time: z.string().optional(),
   bullets: z.array(z.string()).optional(),
+  icon: z.string().optional(),
+  desc: z.string().optional(),
+  unit: z.string().optional(),
 });
 
 const catalogSectionSchema = z.object({
@@ -19,7 +22,9 @@ const catalogSectionSchema = z.object({
 export const upsertServicePageConfigSchema = z.object({
   tagline: z.string().optional(),
   subtitle: z.string().optional(),
-  subServices: z.string().optional(),
+  bannerImg: z.string().optional(),
+  subServices: z.union([z.string(), z.array(z.string())]).optional(),
+  productTypes: z.array(z.string()).optional(),
   catalog: z.array(catalogSectionSchema).optional(),
 });
 

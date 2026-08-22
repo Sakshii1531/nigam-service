@@ -149,6 +149,10 @@ export const TechProvider = ({ children }) => {
           isAvailableRequest: false,
           serviceRequestId: sr?.id || sr?._id,
           activeStep: job.activeStep || 'details',
+          isRevisit: Boolean(job.revisit?.scheduledDate || job.activeStep?.startsWith('revisit') || job.activeStep === 'spareapproval'),
+          revisitScheduledDate: job.revisit?.scheduledDate || null,
+          revisitTimeSlot: job.revisit?.timeSlot || null,
+          revisitNotes: job.revisit?.notes || null,
         };
       });
 
@@ -427,7 +431,11 @@ export const TechProvider = ({ children }) => {
     assigned: { path: 'start-travel' },
     ontheway: { path: 'arrive' },
     inspection: { path: 'spare-parts', needsParts: true },
-    spareapproval: { path: 'repair-complete' },
+    spareapproval: { path: 'start-travel' },
+    revisit_scheduled: { path: 'start-travel' },
+    revisit_ontheway: { path: 'arrive' },
+    revisit_arrived: { path: 'repair-complete' },
+    revisit_complete: { path: 'billing' },
     repaircomplete: { path: 'billing' },
   };
 

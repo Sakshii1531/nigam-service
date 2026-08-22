@@ -186,26 +186,47 @@ function readTiles(key) {
  */
 async function writeTiles(key, list) {
   const previous = tileCache[key] || [];
-  tileCache[key] = list;
-  const { toApi } = TILE_ADAPTERS[key];
   const placement = TILE_PLACEMENTS[key];
+  const { toApi, fromApi } = TILE_ADAPTERS[key];
 
+  const updatedList = [];
   try {
     for (const [i, tile] of list.entries()) {
       const body = { ...toApi(tile), placement, sortOrder: i };
-      if (tile.id && previous.some((p) => p.id === tile.id)) {
-        await apiRequest(`/cms/home-tiles/${tile.id}`, { method: 'PUT', auth: true, body });
+      
+      const existing = previous.find((p) => 
+        (p.id && tile.id && String(p.id) === String(tile.id)) ||
+        (p.name && tile.name && p.name.trim().toLowerCase() === tile.name.trim().toLowerCase()) ||
+        (p.title && tile.title && p.title.trim().toLowerCase() === tile.title.trim().toLowerCase())
+      );
+
+      if (existing && existing.id && !String(existing.id).match(/^\d+$/)) {
+        const updated = await apiRequest(`/cms/home-tiles/${existing.id}`, { method: 'PUT', auth: true, body });
+        updatedList.push(fromApi(updated));
       } else {
         const created = await apiRequest('/cms/home-tiles', { method: 'POST', auth: true, body });
-        tileCache[key][i] = { ...tile, id: created.id };
+        updatedList.push(fromApi(created));
       }
     }
-    for (const gone of previous.filter((prev) => !list.some((t) => t.id === prev.id))) {
+
+    const goneTiles = previous.filter(
+      (prev) => prev.id && !String(prev.id).match(/^\d+$/) && !list.some((t) => 
+        (t.id && String(t.id) === String(prev.id)) ||
+        (t.name && prev.name && t.name.trim().toLowerCase() === prev.name.trim().toLowerCase()) ||
+        (t.title && prev.title && t.title.trim().toLowerCase() === prev.title.trim().toLowerCase())
+      )
+    );
+
+    for (const gone of goneTiles) {
       await apiRequest(`/cms/home-tiles/${gone.id}`, { method: 'DELETE', auth: true });
     }
   } catch (err) {
     console.warn(`Could not save ${key}:`, err.message);
+    throw err;
   }
+
+  tileCache[key] = updatedList;
+  return updatedList;
 }
 
 // ── Service-page storage ──────────────────────────────────────────────────────
@@ -243,20 +264,20 @@ function syncServicePage(serviceKey) {
   }).catch((err) => console.warn(`Could not save "${serviceKey}":`, err.message));
 }
 
-function writeServiceConfigs(configs) {
+async function writeServiceConfigs(configs) {
   const changed = Object.keys(configs).filter(
     (k) => JSON.stringify(configs[k]) !== JSON.stringify(servicePageCache.configs[k]),
   );
   servicePageCache.configs = configs;
-  changed.forEach(syncServicePage);
+  await Promise.all(changed.map(syncServicePage));
 }
 
-function writeServiceCatalogs(catalogs) {
+async function writeServiceCatalogs(catalogs) {
   const changed = Object.keys(catalogs).filter(
     (k) => JSON.stringify(catalogs[k]) !== JSON.stringify(servicePageCache.catalogs[k]),
   );
   servicePageCache.catalogs = catalogs;
-  changed.forEach(syncServicePage);
+  await Promise.all(changed.map(syncServicePage));
 }
 
 function readServiceConfigs() {
@@ -639,14 +660,56 @@ const CustomerAppCustomization = () => {
   const [appliancePackages, setAppliancePackages] = useState([]);
 
   useEffect(() => {
-    // Load Categories
-    const savedCats = readTiles('categories');
-    if (savedCats) {
-      setCategories(JSON.parse(savedCats));
-    } else {
-      setCategories(DEFAULT_CATEGORIES);
-      writeTiles('categories', DEFAULT_CATEGORIES);
-    }
+    (async () => {
+      await hydrateTiles();
+      await hydrateCategoryConfigs();
+      await hydrateServicePages();
+
+      // Load Categories
+      const savedCats = readTiles('categories');
+      if (savedCats) {
+        setCategories(JSON.parse(savedCats));
+      } else {
+        setCategories(DEFAULT_CATEGORIES);
+        writeTiles('categories', DEFAULT_CATEGORIES);
+      }
+
+      // Load Services
+      const savedServices = readTiles('services');
+      if (savedServices) {
+        setServices(JSON.parse(savedServices));
+      } else {
+        setServices(DEFAULT_SERVICES);
+        writeTiles('services', DEFAULT_SERVICES);
+      }
+
+      // Load Brands & Offers
+      const savedBrands = readTiles('brandCards');
+      if (savedBrands) {
+        setBrandCards(JSON.parse(savedBrands));
+      } else {
+        setBrandCards(DEFAULT_BRAND_CARDS);
+        writeTiles('brandCards', DEFAULT_BRAND_CARDS);
+      }
+
+      // Load Most Booked
+      const savedMost = readTiles('mostBooked');
+      if (savedMost) {
+        setMostBookedList(JSON.parse(savedMost));
+      } else {
+        setMostBookedList(DEFAULT_MOST_BOOKED);
+        writeTiles('mostBooked', DEFAULT_MOST_BOOKED);
+      }
+
+      // Load Appliance Services
+      const savedAppliance = readTiles('applianceServices');
+      if (savedAppliance) {
+        setApplianceServicesList(JSON.parse(savedAppliance));
+      } else {
+        setApplianceServicesList(DEFAULT_APPLIANCE_SERVICES);
+        writeTiles('applianceServices', DEFAULT_APPLIANCE_SERVICES);
+      }
+    })();
 
     // Load Banners
     // Banners are real server-side content (/cms/banners), not local state —
@@ -662,46 +725,6 @@ const CustomerAppCustomization = () => {
         console.warn('Could not load banners:', err.message);
       }
     })();
-
-    // Load Services
-    const savedServices = readTiles('services');
-    if (savedServices) {
-      setServices(JSON.parse(savedServices));
-    } else {
-      setServices(DEFAULT_SERVICES);
-      writeTiles('services', DEFAULT_SERVICES);
-    }
-
-    // Load Brands & Offers
-    const savedBrands = readTiles('brandCards');
-    if (savedBrands) {
-      setBrandCards(JSON.parse(savedBrands));
-    } else {
-      setBrandCards(DEFAULT_BRAND_CARDS);
-      writeTiles('brandCards', DEFAULT_BRAND_CARDS);
-    }
-
-    // Load Most Booked
-    const savedMost = readTiles('mostBooked');
-    if (savedMost) {
-      setMostBookedList(JSON.parse(savedMost));
-    } else {
-      setMostBookedList(DEFAULT_MOST_BOOKED);
-      writeTiles('mostBooked', DEFAULT_MOST_BOOKED);
-    }
-
-    // Load Appliance Services
-    const savedAppliance = readTiles('applianceServices');
-    if (savedAppliance) {
-      setApplianceServicesList(JSON.parse(savedAppliance));
-    } else {
-      setApplianceServicesList(DEFAULT_APPLIANCE_SERVICES);
-      writeTiles('applianceServices', DEFAULT_APPLIANCE_SERVICES);
-    }
-
-    hydrateTiles();
-    hydrateCategoryConfigs();
-    hydrateServicePages();
 
     // Stories are server-side content the customer app reads from the same
     // endpoint — /admin so Scheduled ones are visible here too.
@@ -994,36 +1017,66 @@ const CustomerAppCustomization = () => {
   };
 
   // --- Services Handlers ---
-  const handleServiceFileChange = (e) => {
+  const handleServiceFileChange = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setServiceForm(prev => ({ ...prev, img: reader.result }));
-      };
-      reader.readAsDataURL(file);
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await apiRequest('/uploads', {
+          method: 'POST',
+          auth: true,
+          body: formData,
+        });
+        const url = res.url || res.data?.url || '';
+        if (url) {
+          setServiceForm(prev => ({ ...prev, img: url }));
+        }
+      } catch (err) {
+        showToast(`Image upload failed: ${err.message}`);
+      }
     }
   };
 
-  const handlePackageIconChange = (pkgId, e) => {
+  const handlePackageIconChange = async (pkgId, e) => {
     const file = e.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setServicePackages(prev => prev.map(p => p.id === pkgId ? { ...p, icon: reader.result } : p));
-      };
-      reader.readAsDataURL(file);
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await apiRequest('/uploads', {
+          method: 'POST',
+          auth: true,
+          body: formData,
+        });
+        const url = res.url || res.data?.url || '';
+        if (url) {
+          setServicePackages(prev => prev.map(p => p.id === pkgId ? { ...p, icon: url } : p));
+        }
+      } catch (err) {
+        showToast(`Icon upload failed: ${err.message}`);
+      }
     }
   };
 
-  const handleServiceBannerFileChange = (e) => {
+  const handleServiceBannerFileChange = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setServiceForm(prev => ({ ...prev, bannerImg: reader.result }));
-      };
-      reader.readAsDataURL(file);
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await apiRequest('/uploads', {
+          method: 'POST',
+          auth: true,
+          body: formData,
+        });
+        const url = res.url || res.data?.url || '';
+        if (url) {
+          setServiceForm(prev => ({ ...prev, bannerImg: url }));
+        }
+      } catch (err) {
+        showToast(`Banner upload failed: ${err.message}`);
+      }
     }
   };
 
@@ -1094,32 +1147,36 @@ const CustomerAppCustomization = () => {
     setShowServiceModal(true);
   };
 
-  const handleDeleteService = (index) => {
+  const handleDeleteService = async (index) => {
     const srvName = services[index].name;
     if (window.confirm(`Are you sure you want to delete "${srvName}"?`)) {
       const updated = services.filter((_, i) => i !== index);
-      setServices(updated);
-      writeTiles('services', updated);
+      try {
+        const savedTiles = await writeTiles('services', updated);
+        setServices(savedTiles || updated);
 
-      const savedConfigs = readServiceConfigs();
-      if (savedConfigs) {
-        const configs = JSON.parse(savedConfigs);
-        delete configs[srvName];
-        writeServiceConfigs(configs);
+        const savedConfigs = readServiceConfigs();
+        if (savedConfigs) {
+          const configs = JSON.parse(savedConfigs);
+          delete configs[srvName];
+          writeServiceConfigs(configs);
+        }
+
+        const savedCatalogs = readServiceCatalogs();
+        if (savedCatalogs) {
+          const catalogs = JSON.parse(savedCatalogs);
+          delete catalogs[srvName];
+          writeServiceCatalogs(catalogs);
+        }
+
+        showToast('Service deleted successfully.');
+      } catch (err) {
+        showToast(`Could not delete service: ${err.message}`);
       }
-
-      const savedCatalogs = readServiceCatalogs();
-      if (savedCatalogs) {
-        const catalogs = JSON.parse(savedCatalogs);
-        delete catalogs[srvName];
-        writeServiceCatalogs(catalogs);
-      }
-
-      showToast('Service deleted successfully.');
     }
   };
 
-  const handleSaveService = (e) => {
+  const handleSaveService = async (e) => {
     e.preventDefault();
     if (!serviceForm.name.trim()) return;
 
@@ -1156,27 +1213,31 @@ const CustomerAppCustomization = () => {
       updated.push(newSrv);
     }
 
-    setServices(updated);
-    writeTiles('services', updated);
+    try {
+      const savedTiles = await writeTiles('services', updated);
+      setServices(savedTiles || updated);
 
-    const savedConfigs = readServiceConfigs();
-    const configs = savedConfigs ? JSON.parse(savedConfigs) : {};
-    configs[serviceForm.name] = {
-      tagline: serviceForm.tagline,
-      subtitle: serviceForm.subtitle,
-      bannerImg: serviceForm.bannerImg,
-      subServices: Array.from(new Set(servicePackages.map(p => p.section.trim()).filter(Boolean))),
-      productTypes: serviceTypes.map(t => t.trim()).filter(Boolean)
-    };
-    writeServiceConfigs(configs);
+      const savedConfigs = readServiceConfigs();
+      const configs = savedConfigs ? JSON.parse(savedConfigs) : {};
+      configs[serviceForm.name] = {
+        tagline: serviceForm.tagline,
+        subtitle: serviceForm.subtitle,
+        bannerImg: serviceForm.bannerImg,
+        subServices: Array.from(new Set(servicePackages.map(p => p.section.trim()).filter(Boolean))).join(', '),
+        productTypes: serviceTypes.map(t => t.trim()).filter(Boolean)
+      };
+      await writeServiceConfigs(configs);
 
-    const savedCatalogs = readServiceCatalogs();
-    const catalogs = savedCatalogs ? JSON.parse(savedCatalogs) : {};
-    catalogs[serviceForm.name] = parsedCatalog;
-    writeServiceCatalogs(catalogs);
+      const savedCatalogs = readServiceCatalogs();
+      const catalogs = savedCatalogs ? JSON.parse(savedCatalogs) : {};
+      catalogs[serviceForm.name] = parsedCatalog;
+      await writeServiceCatalogs(catalogs);
 
-    setShowServiceModal(false);
-    showToast('Service details saved successfully!');
+      setShowServiceModal(false);
+      showToast('Service details saved successfully!');
+    } catch (err) {
+      showToast(`Error saving service: ${err.message}`);
+    }
   };
 
   const handleResetServices = () => {

@@ -270,8 +270,15 @@ const ServiceDetails = () => {
       }
     : SERVICE_CONFIG[serviceName] || DEFAULT_CONFIG;
 
+  // Normalize subServices into an array whether it comes as a string or array
+  const rawSubServices = Array.isArray(rawConfig.subServices)
+    ? rawConfig.subServices
+    : typeof rawConfig.subServices === 'string'
+    ? rawConfig.subServices.split(',').map(s => s.trim()).filter(Boolean)
+    : [];
+
   // Resolve subServices with preset icons if necessary
-  const resolvedSubServices = (rawConfig.subServices || []).map(sub => {
+  const resolvedSubServices = rawSubServices.map(sub => {
     if (typeof sub === 'string') {
       return { name: sub, img: getSubServiceIcon(sub) };
     }

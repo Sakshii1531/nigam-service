@@ -64,6 +64,12 @@ export const JOB_STEPS = Object.freeze([
   'ontheway',
   'inspection',
   'spareapproval',
+  'revisit_scheduled',
+  'revisit_ontheway',
+  'revisit_arrived',
+  'revisit_complete',
+  'revisit_billing',
+  'revisit_payment',
   'repaircomplete',
   'billing',
   'awaitingpayment',
@@ -71,6 +77,9 @@ export const JOB_STEPS = Object.freeze([
 ]);
 
 export const JOB_REVISIT_STEPS = Object.freeze([
+  'revisit_scheduled',
+  'revisit_ontheway',
+  'revisit_arrived',
   'revisit_complete',
   'spare_part_required',
   'completed_pending',
@@ -123,7 +132,7 @@ export const SERVICE_REQUEST_TRANSITIONS = Object.freeze({
   'Diagnosis Done': ['Spare Required', 'Repair Completed'],
   'Spare Required': ['Spare Ordered'],
   'Spare Ordered': ['Spare Received'],
-  'Spare Received': ['Repair Completed'],
+  'Spare Received': ['Visit Scheduled', 'Repair Completed'],
   'Repair Completed': ['Customer Confirmation'],
   'Customer Confirmation': ['Closed'],
   'Customer NA': ['Visit Scheduled', 'Reschedule', 'Cancelled'],
@@ -133,17 +142,20 @@ export const SERVICE_REQUEST_TRANSITIONS = Object.freeze({
 });
 
 // Allowed next-steps per current Job.activeStep — same server-side-validation
-// reasoning as SERVICE_REQUEST_TRANSITIONS. Linear happy path only; the
-// JOB_REVISIT_STEPS sub-flow (re-visit scheduling after an incomplete repair)
-// is deliberately out of scope for Phase 6 (see DATA_MODEL.md Phase 6 addendum)
-// — those steps stay in the Job.activeStep enum but have no transitions here yet.
+// reasoning as SERVICE_REQUEST_TRANSITIONS. Supports revisit sub-flow after spare approval.
 export const JOB_STEP_TRANSITIONS = Object.freeze({
   idle: ['details', 'assigned'],
   details: ['assigned'],
   assigned: ['ontheway'],
   ontheway: ['inspection'],
-  inspection: ['spareapproval'],
-  spareapproval: ['repaircomplete'],
+  inspection: ['spareapproval', 'repaircomplete'],
+  spareapproval: ['revisit_scheduled', 'repaircomplete'],
+  revisit_scheduled: ['revisit_ontheway', 'revisit_arrived', 'revisit_complete'],
+  revisit_ontheway: ['revisit_arrived', 'revisit_complete'],
+  revisit_arrived: ['revisit_complete'],
+  revisit_complete: ['revisit_billing', 'repaircomplete'],
+  revisit_billing: ['revisit_payment', 'completed', 'awaitingpayment'],
+  revisit_payment: ['completed'],
   repaircomplete: ['billing'],
   billing: ['completed', 'awaitingpayment'],
   awaitingpayment: ['completed'],
