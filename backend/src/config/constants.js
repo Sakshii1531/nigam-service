@@ -125,7 +125,9 @@ export const ID_SCHEMES = Object.freeze({
 // mock UI uses. Terminal states (Closed, Cancelled) have no outgoing edges.
 export const SERVICE_REQUEST_TRANSITIONS = Object.freeze({
   New: ['Assigned', 'Cancelled'],
-  Assigned: ['Engineer Accepted', 'Customer NA', 'Cancelled'],
+  // 'New' is how a technician's rejection returns the request to the pool so
+  // the engine can offer it to somebody else.
+  Assigned: ['Engineer Accepted', 'Customer NA', 'Cancelled', 'New'],
   'Engineer Accepted': ['Visit Scheduled', 'Cancelled'],
   'Visit Scheduled': ['Engineer Reached', 'Reschedule', 'Customer NA', 'Cancelled'],
   'Engineer Reached': ['Diagnosis Done', 'Customer NA'],

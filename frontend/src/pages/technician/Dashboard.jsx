@@ -81,11 +81,21 @@ const Dashboard = () => {
     }
   };
 
-  const declineInstantJob = () => {
-    if (instantAlertJob) {
-      dismissJob(instantAlertJob.id || instantAlertJob.serviceRequestId);
-    }
+  const declineInstantJob = async () => {
+    const job = instantAlertJob;
     setInstantAlertJob(null);
+    if (!job) return;
+    // Remember it locally too, so the alert does not re-open from the jobs
+    // already in state before the refetch lands.
+    setDeclinedInstantIds((prev) => [...prev, job.id]);
+    const res = await dismissJob(job.id);
+    if (!res?.ok) {
+      setDutyMessage(res?.error || 'Could not reject that job.');
+    } else if (res.reassignedTo) {
+      setDutyMessage(`Rejected — passed to ${res.reassignedTo}.`);
+    } else {
+      setDutyMessage('Rejected — back in the queue for another technician.');
+    }
   };
 
   // Countdown timer for instant job alert
@@ -845,9 +855,18 @@ const Dashboard = () => {
                           >
                             Accept
                           </button>
-                          <button 
-                            onClick={() => dismissJob(job.id)}
-                            title="Hide this request — it stays available to other technicians"
+                          <button
+                            onClick={async () => {
+                              const res = await dismissJob(job.id);
+                              setDutyMessage(
+                                !res?.ok
+                                  ? res?.error || 'Could not reject that job.'
+                                  : res.reassignedTo
+                                    ? `Rejected — passed to ${res.reassignedTo}.`
+                                    : 'Rejected — back in the queue for another technician.',
+                              );
+                            }}
+                            title="Reject this request — it goes back to the queue for another technician"
                             className="flex-1 bg-white hover:bg-slate-50 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition-all border border-slate-300"
                           >
                             Decline

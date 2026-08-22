@@ -3,6 +3,7 @@ import { validate } from '../../middleware/validate.js';
 import { requireAuth, requireRole } from '../../middleware/auth.js';
 import { attachTechnician } from '../../middleware/technician.js';
 import { ok } from '../../utils/respond.js';
+import * as serviceRequestService from '../service-requests/serviceRequest.service.js';
 import { ROLES } from '../../config/constants.js';
 import * as jobService from './job.service.js';
 import {
@@ -43,6 +44,21 @@ jobRouter.post(
   async (req, res, next) => {
     try {
       ok(res, await jobService.acceptJob(req.technician.id, req.params.serviceRequestId, req.body));
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// Rejecting is the counterpart to accept: it releases the request rather than
+// hiding it locally, which is all the app could do before. Keyed by service
+// request id for the same reason accept is — there is no Job yet.
+jobRouter.post(
+  '/reject/:serviceRequestId',
+  validate(serviceRequestIdParamSchema, 'params'),
+  async (req, res, next) => {
+    try {
+      ok(res, await serviceRequestService.declineAssignment(req.params.serviceRequestId, req.technician.id));
     } catch (err) {
       next(err);
     }

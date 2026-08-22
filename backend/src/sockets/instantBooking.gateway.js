@@ -1,7 +1,7 @@
 import { Booking } from '../modules/booking/booking.model.js';
 import { ServiceRequest } from '../modules/service-requests/serviceRequest.model.js';
 import { Technician } from '../modules/technician/technician.model.js';
-import { transitionStatus } from '../modules/service-requests/serviceRequest.service.js';
+import { transitionStatus, declineAssignment } from '../modules/service-requests/serviceRequest.service.js';
 import { ROLES } from '../config/constants.js';
 
 // Technicians who are online and listening for ASAP work. Exported because
@@ -22,6 +22,36 @@ export function registerInstantBookingGateway(io) {
       }
       socket.join(INSTANT_ROOM);
       return ack?.({ ok: true, room: INSTANT_ROOM });
+    });
+
+    // Turning down an instant job. Without this the popup could only be hidden
+    // client-side, so the request stayed pinned to the technician who ignored
+    // it and no one else was ever offered the work.
+    socket.on('instant:reject_job', async ({ serviceRequestId }, ack) => {
+      try {
+        if (socket.user.role !== ROLES.TECHNICIAN) {
+          return ack?.({ ok: false, error: 'technician role required' });
+        }
+        const technician = await Technician.findOne({ user: socket.user.id });
+        if (!technician) return ack?.({ ok: false, error: 'Technician profile not found' });
+
+        const result = await declineAssignment(serviceRequestId, String(technician._id));
+
+        // Put it back in front of everyone still listening, so the next
+        // technician sees it immediately rather than on their next refresh.
+        const sr = await ServiceRequest.findById(serviceRequestId).populate('booking');
+        io.to(INSTANT_ROOM).emit('instant:new_request', {
+          bookingId: sr?.booking?.id || null,
+          serviceRequestId: sr?.id,
+          category: sr?.category,
+          instantStatus: sr?.instantStatus,
+          assignedTechnicianId: sr?.technician ? String(sr.technician) : null,
+        });
+
+        return ack?.({ ok: true, ...result });
+      } catch (err) {
+        return ack?.({ ok: false, error: err.message });
+      }
     });
 
     // Technician accepts an instant job request

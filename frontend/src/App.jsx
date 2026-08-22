@@ -106,6 +106,7 @@ import SuperAdminWarranty from './pages/super-admin/Warranty';
 import SuperAdminAssignment from './pages/super-admin/Assignment';
 import SuperAdminTracking from './pages/super-admin/Tracking';
 import SuperAdminInventory from './pages/super-admin/Inventory';
+import SuperAdminPartRequests from './pages/super-admin/PartRequests';
 import SuperAdminOrders from './pages/super-admin/Orders';
 import SuperAdminBilling from './pages/super-admin/Billing';
 import SuperAdminComplaints from './pages/super-admin/Complaints';
@@ -495,6 +496,7 @@ function App() {
         <Route path="/super-admin/assignment" element={<SuperAdminAssignment />} />
         <Route path="/super-admin/tracking" element={<SuperAdminTracking />} />
         <Route path="/super-admin/inventory" element={<SuperAdminInventory />} />
+        <Route path="/super-admin/part-requests" element={<SuperAdminPartRequests />} />
         <Route path="/super-admin/orders" element={<SuperAdminOrders />} />
         <Route path="/super-admin/billing" element={<SuperAdminBilling />} />
         <Route path="/super-admin/complaints" element={<SuperAdminComplaints />} />

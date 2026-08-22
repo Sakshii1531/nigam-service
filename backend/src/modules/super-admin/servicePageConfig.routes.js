@@ -23,11 +23,11 @@ servicePageConfigRouter.get('/', async (req, res, next) => {
 
 servicePageConfigRouter.get('/:serviceKey', validate(serviceKeyParamSchema, 'params'), async (req, res, next) => {
   try {
-    const config = await configService.getServicePageConfig(req.params.serviceKey);
-    if (!config) {
-      return res.status(404).json({ error: `No page configuration for "${req.params.serviceKey}"` });
-    }
-    ok(res, config);
+    // null, not 404: a service with no configured page is an ordinary state —
+    // the customer app falls back to its built-in copy — and 404ing it made
+    // every visit to a service page log a failed request. (This also returned a
+    // bare { error } instead of the API's { data, error, meta } envelope.)
+    ok(res, await configService.getServicePageConfig(req.params.serviceKey));
   } catch (err) {
     next(err);
   }

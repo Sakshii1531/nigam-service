@@ -175,6 +175,12 @@ const Sidebar = () => {
       icon: <Package size={18} />
     },
     {
+      type: 'link',
+      label: 'Part Requests',
+      path: '/super-admin/part-requests',
+      icon: <Package size={18} />
+    },
+    {
       type: 'header',
       label: 'CUSTOMER APP'
     },

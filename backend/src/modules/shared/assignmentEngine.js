@@ -42,7 +42,7 @@ async function pendingAssignmentCounts() {
  * Weighted by the admin-configurable AssignmentWeighting singleton (defaults
  * 40/30/20/10 if none exists yet, matching the model's schema defaults).
  */
-export async function rankTechnicians({ category, city, includeUnavailable = false } = {}) {
+export async function rankTechnicians({ category, city, includeUnavailable = false, exclude = [] } = {}) {
   // Auto-assignment only ever considers technicians who have marked themselves
   // Available. The super-admin console passes includeUnavailable so an operator
   // can still hand-pick an Active technician who is Busy or Offline — an
@@ -51,6 +51,10 @@ export async function rankTechnicians({ category, city, includeUnavailable = fal
   // where an operator went looking for it.
   const filter = { status: 'Active' };
   if (!includeUnavailable) filter.availability = 'Available';
+  // Technicians who already turned this request down. Without this a rejected
+  // job is handed straight back to the same person, who is usually the
+  // top-ranked candidate that made them the assignee in the first place.
+  if (exclude.length) filter._id = { $nin: exclude };
 
   const candidates = await Technician.find(filter).populate('city');
   if (candidates.length === 0) return [];
@@ -91,7 +95,7 @@ export async function rankTechnicians({ category, city, includeUnavailable = fal
     .sort((a, b) => b.score - a.score);
 }
 
-export async function findAvailableTechnician({ category, city } = {}) {
-  const [best] = await rankTechnicians({ category, city });
+export async function findAvailableTechnician({ category, city, exclude = [] } = {}) {
+  const [best] = await rankTechnicians({ category, city, exclude });
   return best ? best.technician : null;
 }
