@@ -346,7 +346,27 @@ export const TechProvider = ({ children }) => {
   // 'repaircomplete' (Screen 4: step 5), 
   // 'billing' (Screen 12),
   // 'completed' (Success screen after Collect Payment)
-  const [activeJobId, setActiveJobId] = useState(null);
+  // Which job the technician currently has open. Persisted because it was
+  // in-memory only: accepting a job and then reloading (or navigating away and
+  // back) left this null, and the Active Job screen announced "No Active Job In
+  // Progress" to a technician who had work underway — with no way back into it.
+  const ACTIVE_JOB_KEY = 'ncc_tech_active_job';
+  const [activeJobId, setActiveJobIdState] = useState(() => {
+    try {
+      return localStorage.getItem(ACTIVE_JOB_KEY) || null;
+    } catch {
+      return null;
+    }
+  });
+  const setActiveJobId = useCallback((id) => {
+    setActiveJobIdState(id);
+    try {
+      if (id) localStorage.setItem(ACTIVE_JOB_KEY, id);
+      else localStorage.removeItem(ACTIVE_JOB_KEY);
+    } catch {
+      // Private mode / blocked storage — the id still works for this session.
+    }
+  }, []);
   const [activeStep, setActiveStep] = useState('idle');
   const [selectedParts, setSelectedParts] = useState([]);
   // Notes typed during inspection, submitted with the diagnosis when the
@@ -372,6 +392,27 @@ export const TechProvider = ({ children }) => {
   ]);
 
   const activeJob = jobs.find(j => j.id === activeJobId) || null;
+
+  /**
+   * Re-open a restored job at the step the server says it is on.
+   *
+   * activeStep starts at 'idle' on every load, so a job restored from storage
+   * would render the empty state until the technician clicked something. Runs
+   * only while the UI is still idle, so it never overrides a step the
+   * technician is actively moving through.
+   */
+  const resumedRef = useRef(null);
+  useEffect(() => {
+    if (!activeJob || activeStep !== 'idle') return;
+    if (activeJob.isAvailableRequest || !activeJob.activeStep) return;
+    if (resumedRef.current === activeJob.id) return;
+    resumedRef.current = activeJob.id;
+    setActiveStep(activeJob.activeStep);
+  }, [activeJob, activeStep]);
+
+  /** Jobs the technician has accepted and not finished — what the Active Job
+   *  screen offers when nothing is open, instead of claiming there are none. */
+  const resumableJobs = jobs.filter((j) => !j.isAvailableRequest);
 
   const selectJobForDetails = useCallback((id) => {
     setActiveJobId(id);
@@ -431,7 +472,13 @@ export const TechProvider = ({ children }) => {
     assigned: { path: 'start-travel' },
     ontheway: { path: 'arrive' },
     inspection: { path: 'spare-parts', needsParts: true },
-    spareapproval: { path: 'start-travel' },
+    // Parts are in hand, so the repair finishes now. 'start-travel' here asked
+    // the server to move spareapproval -> ontheway, which is not a legal step
+    // (spareapproval allows revisit_scheduled or repaircomplete) and failed
+    // with a 400 — stranding every job at the parts-approval screen. Going out
+    // again for an ordered part is the revisit branch, entered by the brand or
+    // NCC approving the part order, not by this button.
+    spareapproval: { path: 'repair-complete' },
     revisit_scheduled: { path: 'start-travel' },
     revisit_ontheway: { path: 'arrive' },
     revisit_arrived: { path: 'repair-complete' },
@@ -814,6 +861,7 @@ export const TechProvider = ({ children }) => {
       earningsTally,
       partsCart,
       chatMessages,
+      resumableJobs,
       selectJobForDetails,
       acceptJob,
       advanceStep,

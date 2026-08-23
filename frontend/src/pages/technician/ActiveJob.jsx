@@ -169,6 +169,8 @@ const ActiveJob = () => {
     addChatMessage,
     chatMessages,
     inventory,
+    selectJobForDetails,
+    resumableJobs,
     stepBusy,
     stepError,
     setStepError,
@@ -464,12 +466,41 @@ const ActiveJob = () => {
             <Briefcase className="h-8 w-8" />
           </div>
           <div>
-            <h2 className="text-lg font-normal text-[#052355]">No Active Job In Progress</h2>
-            <p className="text-sm text-slate-600 mt-1">Please accept a job from your dashboard to begin the service process.</p>
+            <h2 className="text-lg font-normal text-[#052355]">
+              {resumableJobs.length > 0 ? 'Pick up where you left off' : 'No Active Job In Progress'}
+            </h2>
+            <p className="text-sm text-slate-600 mt-1">
+              {resumableJobs.length > 0
+                ? 'These jobs are accepted and still open.'
+                : 'Please accept a job from your dashboard to begin the service process.'}
+            </p>
           </div>
-          <button 
+
+          {/* Jobs already accepted but not finished. This screen used to say
+              "No Active Job In Progress" whenever nothing was selected in
+              memory, so after a reload a technician's open work was
+              unreachable — the job existed on the server with no way back in. */}
+          {resumableJobs.length > 0 && (
+            <div className="w-full flex flex-col gap-2.5 max-h-72 overflow-y-auto">
+              {resumableJobs.map((job) => (
+                <button
+                  key={job.id}
+                  onClick={() => selectJobForDetails(job.id)}
+                  className="w-full text-left bg-white border border-slate-200 hover:border-[#0D47A1] rounded-2xl p-3.5 transition-colors"
+                >
+                  <p className="text-sm font-semibold text-[#052355]">{job.customerName}</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5">{job.category} · {job.type}</p>
+                  <span className="inline-block mt-1.5 text-[9.5px] font-bold uppercase tracking-wider text-[#0D47A1] bg-[#E3ECF9] px-2 py-0.5 rounded">
+                    {String(job.activeStep || 'assigned').replace(/_/g, ' ')}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          <button
             onClick={() => navigate('/technician/dashboard')}
-            className="mt-4 bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-normal py-3 px-3.5 rounded-2xl text-sm transition-all shadow-sm"
+            className="mt-2 bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-normal py-3 px-3.5 rounded-2xl text-sm transition-all shadow-sm"
           >
             Go to Dashboard
           </button>

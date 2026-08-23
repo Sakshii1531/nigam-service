@@ -151,7 +151,10 @@ const Dashboard = () => {
     return true;
   };
 
-  const availableJobsCount = jobs.filter(isJobSpecActive).length;
+  // Offers only. This counted the whole list — accepted work included — so the
+  // "Available Jobs" tile read 25 while the technician actually had 5 open
+  // offers, and it disagreed with the "Active Jobs" tile sitting next to it.
+  const availableJobsCount = jobs.filter((j) => j.isAvailableRequest && isJobSpecActive(j)).length;
 
   // Sony Logo Component
   const SonyLogo = () => (
