@@ -32,15 +32,15 @@ const BookingSuccess = () => {
     }
   };
 
-  const service     = p.get('service')     || 'Installation';
+  const serviceParam = p.get('service')    || 'Installation';
   const category    = p.get('category')    || 'AC';
   const productType = p.get('productType') || 'Split AC';
   const brand       = p.get('brand')       || '—';
   const quantity    = p.get('quantity')    || '1';
   const date        = p.get('date')        || '—';
   const timeGroup   = p.get('timeGroup')   || '—';
-  const totalPrice  = p.get('totalPrice')  || '299';
-  const advanceAmt  = p.get('advanceAmt')  || '49';
+  const totalPriceParam = p.get('totalPrice') || '299';
+  const advanceAmtParam = p.get('advanceAmt') || '49';
   const paymentMode = p.get('paymentMode') || 'advance';
 
   // The platform's SR-#### id is assigned server-side on create, so read it back
@@ -48,6 +48,11 @@ const BookingSuccess = () => {
   // to support and the one the admin console lists.
   const [bookingId, setBookingId] = useState('');
   const [technician, setTechnician] = useState(null);
+  // The amount the customer is actually being charged. The URL carries what the
+  // booking screen had computed locally, but the server prices the booking from
+  // the catalog, so the two can disagree — and this screen was confirming the
+  // client's number while the customer was billed the server's.
+  const [charged, setCharged] = useState(null);
   React.useEffect(() => {
     if (!serviceRequestId) return;
     let cancelled = false;
@@ -59,6 +64,15 @@ const BookingSuccess = () => {
         // A fresh booking is usually unassigned — the panel below only appears
         // once assignment has actually happened.
         setTechnician(res?.technician || null);
+
+        if (res?.booking) {
+          const bk = typeof res.booking === 'object'
+            ? res.booking
+            : await apiRequest(`/bookings/${res.booking}`, { auth: true }).catch(() => null);
+          if (!cancelled && bk && bk.totalPrice != null) {
+            setCharged({ total: bk.totalPrice, advance: bk.advanceAmount ?? null, service: bk.service?.name || null });
+          }
+        }
       } catch (err) {
         console.error('[booking] Could not load booking reference:', err.message);
         if (!cancelled) setBookingId(serviceRequestId);
@@ -66,6 +80,13 @@ const BookingSuccess = () => {
     })();
     return () => { cancelled = true; };
   }, [serviceRequestId]);
+
+  // Prefer the stored booking over the query string wherever it has loaded.
+  const totalPrice = charged ? String(charged.total) : totalPriceParam;
+  const advanceAmt = charged && charged.advance != null ? String(charged.advance) : advanceAmtParam;
+  // Same reasoning as the price: name what was actually booked, not what the
+  // previous screen thought it was sending.
+  const service = charged?.service || serviceParam;
 
   const isInstant = p.get('isInstant') === 'true' || timeGroup === 'ASAP' || timeGroup.includes('ASAP');
   const [instantStatus, setInstantStatus] = useState(isInstant ? 'SEARCHING' : null);
