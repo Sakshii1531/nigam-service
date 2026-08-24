@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import { Search, Bell, Menu, MapPin, Calendar, ChevronDown, User, LogOut, Settings, Check } from 'lucide-react';
 
 const Topbar = ({ title, subtitle, showFilters = false }) => {
+  const { logout } = useAuth();
   const navigate = useNavigate();
   const [isLocationOpen, setIsLocationOpen] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState('All India');
@@ -204,9 +206,13 @@ const Topbar = ({ title, subtitle, showFilters = false }) => {
                 Cancel
               </button>
               <button
-                onClick={() => {
+                onClick={async () => {
                   setShowLogoutConfirm(false);
-                  navigate('/super-admin/login');
+                  // Clearing the session is what actually logs the user out;
+                  // navigating alone left the tokens in place, so the route
+                  // guard saw an authenticated user and sent them straight back.
+                  await logout();
+                  navigate('/super-admin/login', { replace: true });
                 }}
                 className="flex-1 bg-red-600 hover:bg-red-700 text-white text-[10.5px] font-black py-2.5 rounded-xl transition-colors cursor-pointer shadow-sm"
               >

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import { 
   Menu, MoreVertical, ChevronDown, TrendingUp, Briefcase, 
   ClipboardList, Wrench, Calendar, User, ShieldCheck, HelpCircle, LogOut, CreditCard, X,
@@ -13,6 +14,7 @@ const SLICE_COLORS = ['#0D47A1', '#2E7D32', '#7B1FA2', '#FFB300', '#EF6C00', '#0
 const DONUT_CIRCUMFERENCE = 2 * Math.PI * 45;
 
 const Analytics = () => {
+  const { logout } = useAuth();
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -55,7 +57,13 @@ const Analytics = () => {
           <ArrowLeft className="h-6 w-6 text-slate-700" />
         </button>
         <h1 className="text-base font-medium text-[#052355] flex-1 text-center pl-8">Analytics</h1>
-        <button className="p-1 hover:bg-slate-50 rounded-full text-slate-700 transition-colors">
+        {/* Opens the menu this screen already renders (Logout included). It had
+            no handler at all, so the sidebar could never be shown here. */}
+        <button
+          onClick={() => setIsSidebarOpen(true)}
+          aria-label="Open menu"
+          className="p-1 hover:bg-slate-50 rounded-full text-slate-700 transition-colors"
+        >
           <MoreVertical className="h-5 w-5 text-slate-700" />
         </button>
       </div>
@@ -350,9 +358,13 @@ const Analytics = () => {
                 Cancel
               </button>
               <button
-                onClick={() => {
+                onClick={async () => {
                   setShowLogoutConfirm(false);
-                  navigate('/technician/login');
+                  // Clearing the session is what actually logs the user out;
+                  // navigating alone left the tokens in place, so the route
+                  // guard saw an authenticated user and sent them straight back.
+                  await logout();
+                  navigate('/technician/login', { replace: true });
                 }}
                 className="flex-1 bg-red-600 hover:bg-red-700 text-white text-[10.5px] font-black py-2.5 rounded-xl transition-colors cursor-pointer shadow-sm"
               >

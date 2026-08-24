@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import { Bell, ChevronDown, User, LogOut, Phone, Calendar, Copy, Check, Mail } from 'lucide-react';
 
 const Topbar = ({ title, subtitle }) => {
+  const { logout } = useAuth();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isPhoneDropdownOpen, setIsPhoneDropdownOpen] = useState(false);
   const [isDateDropdownOpen, setIsDateDropdownOpen] = useState(false);
@@ -198,9 +200,13 @@ const Topbar = ({ title, subtitle }) => {
                 Cancel
               </button>
               <button
-                onClick={() => {
+                onClick={async () => {
                   setShowLogoutConfirm(false);
-                  navigate('/brand-admin/login');
+                  // Clearing the session is what actually logs the user out;
+                  // navigating alone left the tokens in place, so the route
+                  // guard saw an authenticated user and sent them straight back.
+                  await logout();
+                  navigate('/brand-admin/login', { replace: true });
                 }}
                 className="flex-1 bg-red-600 hover:bg-red-700 text-white text-[10.5px] font-black py-2.5 rounded-xl transition-colors cursor-pointer shadow-sm"
               >
