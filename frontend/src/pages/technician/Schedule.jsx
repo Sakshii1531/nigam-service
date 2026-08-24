@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import { Menu, Calendar, Briefcase, ClipboardList, Wrench, User, CreditCard, ShieldCheck, HelpCircle, LogOut, X } from 'lucide-react';
 import { useTech } from '../../context/TechContext';
 
 const Schedule = () => {
+  const { logout } = useAuth();
   const navigate = useNavigate();
   const { jobs, notifications, selectJobForDetails, acceptJob, earningsTally } = useTech();
 
@@ -351,9 +353,13 @@ const Schedule = () => {
                 Cancel
               </button>
               <button
-                onClick={() => {
+                onClick={async () => {
                   setShowLogoutConfirm(false);
-                  navigate('/technician/login');
+                  // Clearing the session is what actually logs the user out;
+                  // navigating alone left the tokens in place, so the route
+                  // guard saw an authenticated user and sent them straight back.
+                  await logout();
+                  navigate('/technician/login', { replace: true });
                 }}
                 className="flex-1 bg-red-600 hover:bg-red-700 text-white text-[10.5px] font-black py-2.5 rounded-xl transition-colors cursor-pointer shadow-sm"
               >

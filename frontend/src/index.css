@@ -1,5 +1,16 @@
 @import "tailwindcss";
 
+/* Zoom is disabled app-wide (see the viewport meta in index.html).
+   `touch-action: manipulation` drops the double-tap-to-zoom gesture while
+   leaving normal scrolling and taps alone, and text-size-adjust stops mobile
+   browsers reflowing font sizes on their own — both needed because iOS Safari
+   ignores user-scalable=no. Pinch gestures are blocked in main.jsx. */
+html {
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 @theme {
   --font-sans: 'Inter', 'Poppins', system-ui, -apple-system, sans-serif;
   

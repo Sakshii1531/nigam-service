@@ -11,7 +11,7 @@ import techAvatar from '../../assets/tech_avatar.png';
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { 
     jobs, 
     earningsTally, 
@@ -285,6 +285,17 @@ const Dashboard = () => {
           {/* Header Bar */}
           <div className="flex justify-between items-center text-white">
             <div className="flex items-center gap-2">
+              {/* The sidebar (Logout lives in it) is rendered on this screen but
+                  nothing opened it — the only other Menu icon here is the jobs
+                  list's back button — so Logout was unreachable from the
+                  dashboard entirely. */}
+              <button
+                onClick={() => setIsSidebarOpen(true)}
+                aria-label="Open menu"
+                className="p-1.5 hover:bg-white/10 rounded-full transition-all"
+              >
+                <Menu className="h-5.5 w-5.5 text-white" />
+              </button>
               <div className="flex items-center gap-1.5 ml-1">
                 {/* Custom NCC shield logo */}
                 <div className="w-7 h-7 rounded-md bg-[#FFD400] flex items-center justify-center shadow-md">
@@ -1094,9 +1105,13 @@ const Dashboard = () => {
                 Cancel
               </button>
               <button
-                onClick={() => {
+                onClick={async () => {
                   setShowLogoutConfirm(false);
-                  navigate('/technician/login');
+                  // Clearing the session is what actually logs the user out;
+                  // navigating alone left the tokens in place, so the route
+                  // guard saw an authenticated user and sent them straight back.
+                  await logout();
+                  navigate('/technician/login', { replace: true });
                 }}
                 className="flex-1 bg-red-600 hover:bg-red-700 text-white text-[10.5px] font-black py-2.5 rounded-xl transition-colors cursor-pointer shadow-sm"
               >
