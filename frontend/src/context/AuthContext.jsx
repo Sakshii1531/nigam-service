@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { apiRequest, getStoredTokens, storeTokens, clearTokens } from '../lib/apiClient';
+import { syncPushToken, disablePush } from '../lib/pushClient';
 
 // Phase 13 — real session state backed by the backend's two-step
 // login (password -> OTP -> tokens), scoped to the customer role for this
@@ -43,6 +44,10 @@ export const AuthProvider = ({ children }) => {
     storeTokens(data);
     localStorage.setItem(USER_KEY, JSON.stringify(data.user));
     setUser(data.user);
+    // Re-attach this device to the account that just signed in. Silent — it
+    // only does anything if permission was already granted, so it never
+    // prompts here (see pushClient.enablePush for the asking path).
+    syncPushToken();
     return data.user;
   }, []);
 
@@ -65,6 +70,7 @@ export const AuthProvider = ({ children }) => {
     storeTokens(data);
     localStorage.setItem(USER_KEY, JSON.stringify(data.user));
     setUser(data.user);
+    syncPushToken();
     return data.user;
   }, []);
 
@@ -88,6 +94,10 @@ export const AuthProvider = ({ children }) => {
           if (freshUser) {
             localStorage.setItem(USER_KEY, JSON.stringify(freshUser));
             setUser(freshUser);
+            // FCM rotates tokens (reinstall, cleared data, long silence) and the
+            // backend prunes stale ones, so a session that registered once would
+            // eventually go quiet. Re-check on every start.
+            syncPushToken();
           }
         })
         .catch((err) => {
@@ -101,12 +111,18 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const logout = useCallback(async () => {
-    const { refreshToken } = getStoredTokens();
-    
+    const { refreshToken, accessToken } = getStoredTokens();
+
     // Clear local tokens & state synchronously FIRST so UI & route guards update instantly
     clearTokens();
     localStorage.removeItem(USER_KEY);
     setUser(null);
+
+    // Detach this device from the account, using the token captured above since
+    // the stored session is already gone. Left attached, the next person to use
+    // this device would keep receiving the previous user's notifications — on a
+    // shared technician handset that is a disclosure, not untidiness.
+    await disablePush({ accessToken });
 
     if (refreshToken) {
       try {

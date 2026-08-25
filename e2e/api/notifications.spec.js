@@ -342,10 +342,13 @@ test.describe('Broadcast read state is per user', () => {
       headers: { Authorization: `Bearer ${alice.token}` },
     });
 
+    // Assert on THIS broadcast, not on an empty feed: specs run fully parallel
+    // against one database, so another spec's platform-wide broadcast can land
+    // in Alice's inbox between the read-all and this read.
     const aliceUnread = await request.get('/api/v1/notifications?read=false', {
       headers: { Authorization: `Bearer ${alice.token}` },
     });
-    expect((await aliceUnread.json()).data).toHaveLength(0);
+    expect((await aliceUnread.json()).data.map((n) => n.title)).not.toContain(title);
 
     const bobUnread = await request.get('/api/v1/notifications?read=false', {
       headers: { Authorization: `Bearer ${bob.token}` },
