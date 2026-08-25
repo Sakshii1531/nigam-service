@@ -11,12 +11,13 @@ import { apiRequest } from '../../lib/apiClient';
 
 const STATUS_STYLES = {
   Pending: 'bg-amber-50 text-amber-700 border-amber-200',
-  Approved: 'bg-green-50 text-green-700 border-green-200',
+  Approved: 'bg-indigo-50 text-indigo-700 border-indigo-200',
   Dispatched: 'bg-blue-50 text-blue-700 border-blue-200',
+  Delivered: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   Rejected: 'bg-rose-50 text-rose-700 border-rose-200',
 };
 
-const FILTERS = ['All', 'Pending', 'Approved', 'Dispatched', 'Rejected'];
+const FILTERS = ['All', 'Pending', 'Approved', 'Dispatched', 'Delivered', 'Rejected'];
 
 const PartRequests = () => {
   const [requests, setRequests] = useState([]);
@@ -47,7 +48,11 @@ const PartRequests = () => {
       await apiRequest(`/super-admin/part-orders/${id}`, { method: 'PATCH', auth: true, body: { status } });
       setToast(
         status === 'Approved'
-          ? 'Approved — the technician’s revisit has been scheduled.'
+          ? 'Approved — request approved and ready for dispatch.'
+          : status === 'Dispatched'
+          ? 'Dispatched — spare parts are on the way to technician.'
+          : status === 'Delivered'
+          ? 'Delivered — parts delivered & technician revisit has been rescheduled!'
           : `Request marked ${status}.`,
       );
       setTimeout(() => setToast(''), 4000);
@@ -77,8 +82,7 @@ const PartRequests = () => {
                 <Package size={20} className="text-[#0D47A1]" /> Spare Part Requests
               </h2>
               <p className="text-xs text-slate-500 mt-1 font-medium">
-                Requests raised by technicians against NCC warehouse stock, and any job with no brand behind it.
-                Approving one schedules the technician&rsquo;s revisit automatically.
+                Manage technician spare part requests. Approve &rarr; Dispatch &rarr; Mark Delivered to automatically reschedule the technician&rsquo;s revisit.
               </p>
             </div>
           </div>
@@ -165,13 +169,13 @@ const PartRequests = () => {
                             </span>
                           </td>
                           <td className="px-5 py-3.5">
-                            <div className="flex gap-2 justify-end">
+                            <div className="flex gap-2 justify-end items-center">
                               {r.status === 'Pending' ? (
                                 <>
                                   <button
                                     onClick={() => decide(r.id, 'Approved')}
                                     disabled={busyId === r.id}
-                                    className="inline-flex items-center gap-1 bg-[#0D47A1] hover:bg-blue-800 disabled:opacity-60 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition-colors"
+                                    className="inline-flex items-center gap-1 bg-[#0D47A1] hover:bg-blue-800 disabled:opacity-60 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition-colors shadow-sm"
                                   >
                                     <CheckCircle2 size={13} /> Approve
                                   </button>
@@ -187,13 +191,25 @@ const PartRequests = () => {
                                 <button
                                   onClick={() => decide(r.id, 'Dispatched')}
                                   disabled={busyId === r.id}
-                                  className="inline-flex items-center gap-1 bg-white hover:bg-slate-50 disabled:opacity-60 text-[#0D47A1] text-[11px] font-bold px-3 py-1.5 rounded-lg border border-[#0D47A1]/30 transition-colors"
+                                  className="inline-flex items-center gap-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition-colors shadow-sm"
                                 >
                                   <Truck size={13} /> Mark Dispatched
                                 </button>
+                              ) : r.status === 'Dispatched' ? (
+                                <button
+                                  onClick={() => decide(r.id, 'Delivered')}
+                                  disabled={busyId === r.id}
+                                  className="inline-flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition-colors shadow-sm"
+                                >
+                                  <CheckCircle2 size={13} /> Mark Delivered & Reschedule
+                                </button>
+                              ) : r.status === 'Delivered' ? (
+                                <span className="text-[11px] text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg inline-flex items-center gap-1">
+                                  <CheckCircle2 size={12} /> Revisit Scheduled
+                                </span>
                               ) : (
                                 <span className="text-[11px] text-slate-400 inline-flex items-center gap-1">
-                                  <Clock size={12} /> No action needed
+                                  <Clock size={12} /> Closed ({r.status})
                                 </span>
                               )}
                             </div>

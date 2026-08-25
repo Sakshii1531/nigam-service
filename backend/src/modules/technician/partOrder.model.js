@@ -11,7 +11,7 @@ const partOrderSchema = new mongoose.Schema(
     qty: { type: Number, default: 1 },
     price: Number,
     orderSource: { type: String, enum: ['NCC Warehouse', 'Partner Brand', 'Nearby Store'], required: true },
-    status: { type: String, enum: ['Pending', 'Approved', 'Dispatched', 'Rejected'], default: 'Pending', index: true },
+    status: { type: String, enum: ['Pending', 'Approved', 'Dispatched', 'Delivered', 'Rejected'], default: 'Pending', index: true },
   },
   { timestamps: true },
 );

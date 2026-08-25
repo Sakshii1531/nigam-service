@@ -1,6 +1,7 @@
 import { Job } from './job.model.js';
 import { Technician } from './technician.model.js';
 import { EarningsTally } from './earningsTally.model.js';
+import { PartOrder } from './partOrder.model.js';
 import { ServiceRequest } from '../service-requests/serviceRequest.model.js';
 import { transitionStatus } from '../service-requests/serviceRequest.service.js';
 import { Booking } from '../booking/booking.model.js';
@@ -306,6 +307,80 @@ export async function submitSpareParts(technicianId, jobId, { parts = [], additi
   }
 
   return job;
+}
+
+/**
+ * Technician marks that a spare part is required for the job.
+ * Creates a PartOrder for Super Admin approval/dispatch, transitions the service request
+ * to 'Spare Required' / 'Spare Ordered', and parks the job at 'completed_pending' until
+ * the part is delivered and the revisit is scheduled by Super Admin.
+ */
+export async function requestSparePart(
+  technicianId,
+  jobId,
+  { partName, sku, price, qty = 1, orderSource = 'NCC Warehouse', parts = [], notes = '' } = {},
+) {
+  const job = await findOwnedJob(technicianId, jobId);
+
+  const items = parts.length > 0
+    ? parts
+    : [{ name: partName || 'Spare Part', sku, price: Number(price) || 0, qty: Number(qty) || 1 }];
+
+  job.spareParts = items.map((item) => ({
+    name: item.name || partName || 'Spare Part',
+    sku: item.sku || sku,
+    price: Number(item.price != null ? item.price : price) || 0,
+    checked: true,
+    source: 'manual',
+  }));
+
+  job.activeStep = 'completed_pending';
+
+  // Create PartOrder records for super admin queue
+  const createdOrders = await Promise.all(
+    items.map((item) =>
+      PartOrder.create({
+        technician: technicianId,
+        job: job._id,
+        partName: item.name || partName || 'Spare Part',
+        sku: item.sku || sku || undefined,
+        qty: Number(item.qty || qty || 1),
+        price: Number(item.price != null ? item.price : price) || 0,
+        orderSource: orderSource || 'NCC Warehouse',
+        status: 'Pending',
+      }),
+    ),
+  );
+
+  const primaryPartOrder = createdOrders[0];
+  job.revisit = {
+    status: 'Pending Approval',
+    partOrderId: primaryPartOrder?._id,
+    notes: notes || 'Spare part requested by technician',
+  };
+  await job.save();
+
+  // Progress service request status and timeline
+  const sr = await ServiceRequest.findById(job.serviceRequest);
+  if (sr) {
+    if (SERVICE_REQUEST_TRANSITIONS[sr.status]?.includes('Diagnosis Done')) {
+      await transitionStatus(job.serviceRequest, 'Diagnosis Done', { description: 'Technician completed diagnosis' });
+    }
+    const currentSr = await ServiceRequest.findById(job.serviceRequest);
+    if (SERVICE_REQUEST_TRANSITIONS[currentSr.status]?.includes('Spare Required')) {
+      await transitionStatus(job.serviceRequest, 'Spare Required', {
+        description: `Spare part required: ${items.map((i) => i.name).join(', ')}`,
+      });
+    }
+    const updatedSr = await ServiceRequest.findById(job.serviceRequest);
+    if (SERVICE_REQUEST_TRANSITIONS[updatedSr.status]?.includes('Spare Ordered')) {
+      await transitionStatus(job.serviceRequest, 'Spare Ordered', {
+        description: `Part request sent to Super Admin for approval (${orderSource})`,
+      });
+    }
+  }
+
+  return { job, partOrders: createdOrders };
 }
 
 /**

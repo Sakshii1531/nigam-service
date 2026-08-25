@@ -494,7 +494,7 @@ export async function updateBrandPartOrderStatus(brandId, partOrderId, payload) 
   partOrder.status = status;
   await partOrder.save();
 
-  if (partOrder.job && (status === 'Approved' || status === 'Dispatched')) {
+  if (partOrder.job && (status === 'Approved' || status === 'Dispatched' || status === 'Delivered')) {
     const job = await Job.findById(partOrder.job._id || partOrder.job);
     if (job) {
       job.activeStep = 'revisit_scheduled';

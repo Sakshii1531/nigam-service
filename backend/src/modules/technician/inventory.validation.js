@@ -10,7 +10,7 @@ export const placePartOrderSchema = z.object({
 });
 
 export const listPartOrdersQuerySchema = z.object({
-  status: z.enum(['Pending', 'Approved', 'Dispatched', 'Rejected']).optional(),
+  status: z.enum(['Pending', 'Approved', 'Dispatched', 'Delivered', 'Rejected']).optional(),
   page: z.coerce.number().int().positive().optional(),
   limit: z.coerce.number().int().positive().optional(),
   sort: z.string().optional(),

@@ -5,36 +5,61 @@ import { Menu, Calendar, Briefcase, ClipboardList, Wrench, User, CreditCard, Shi
 import { useTech } from '../../context/TechContext';
 
 const Schedule = () => {
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { jobs, notifications, selectJobForDetails, acceptJob, earningsTally } = useTech();
 
-  const [selectedDate, setSelectedDate] = useState('Today');
+  const today = new Date();
+  
+  // Generate a dynamic 7-day rolling window starting from today
+  const calendarDays = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(today.getDate() + i);
+    const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
+    const dayNum = String(d.getDate()).padStart(2, '0');
+    const fullDateStr = d.toISOString().split('T')[0];
+    return {
+      day: dayName,
+      num: dayNum,
+      dateStr: fullDateStr,
+      isToday: i === 0,
+      label: i === 0 ? 'Today' : `${dayName} ${dayNum}`,
+      current: true,
+    };
+  });
+
+  const [selectedDateObj, setSelectedDateObj] = useState(calendarDays[0]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
-  const calendarDays = [
-    { day: 'Sun', num: '12', current: false },
-    { day: 'Mon', num: '13', current: true },
-    { day: 'Tue', num: '14', current: true },
-    { day: 'Wed', num: '15', current: true },
-    { day: 'Thu', num: '16', current: true },
-    { day: 'Fri', num: '17', current: true },
-    { day: 'Sat', num: '18', current: true },
-    { day: 'Sun', num: '19', current: true }
-  ];
-
-  const activeSchedules = jobs.map(j => ({
-    id: j.id,
-    time: '09:00 AM',
-    category: j.category || j.product,
-    customer: j.customerName || 'Customer',
-    address: j.address || 'Location',
-    status: j.isAvailableRequest ? 'Pending' : 'Confirmed'
-  }));
+  const activeSchedules = jobs
+    .filter(j => {
+      if (!selectedDateObj) return true;
+      const jobDate = j.scheduledDate 
+        ? new Date(j.scheduledDate).toISOString().split('T')[0] 
+        : j.revisit?.scheduledDate 
+          ? new Date(j.revisit.scheduledDate).toISOString().split('T')[0]
+          : null;
+      if (jobDate) return jobDate === selectedDateObj.dateStr;
+      return selectedDateObj.isToday;
+    })
+    .map(j => ({
+      id: j.id,
+      time: j.timeSlot || (j.revisit?.timeSlot) || '09:00 AM - 12:00 PM',
+      category: j.category || j.product || 'Service Request',
+      customer: j.customerName || j.serviceRequest?.user?.name || 'Customer',
+      address: j.address || j.serviceRequest?.booking?.address || j.serviceRequest?.zone || 'Customer Location',
+      status: j.activeStep === 'completed' 
+        ? 'Completed' 
+        : j.activeStep === 'revisit_scheduled' 
+          ? 'Revisit' 
+          : j.isAvailableRequest 
+            ? 'Available' 
+            : 'Confirmed'
+    }));
 
   const handleJobClick = (jobId, status) => {
-    if (status === 'Confirmed') {
+    if (status === 'Confirmed' || status === 'Revisit') {
       acceptJob(jobId);
     } else {
       selectJobForDetails(jobId);
@@ -42,7 +67,12 @@ const Schedule = () => {
     navigate('/technician/active-job');
   };
 
-  const unreadNotificationsCount = notifications.filter(n => !n.read).length;
+  const currentMonthYear = today.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+  const getInitials = (name) => {
+    if (!name) return 'TC';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
 
   return (
     <div className="min-h-screen bg-white flex flex-col pb-24 max-w-md mx-auto border-x border-slate-100 shadow-xl relative font-sans overflow-hidden">
@@ -58,7 +88,7 @@ const Schedule = () => {
         
         <h1 className="text-base font-extrabold text-[#052355] flex-1 text-center pr-8">Schedule</h1>
         
-        <div className="w-8"></div> {/* Spacer to center the title */}
+        <div className="w-8"></div>
       </div>
 
       {/* Main Content */}
@@ -67,29 +97,21 @@ const Schedule = () => {
         {/* Horizontal Calendar Date Ribbon */}
         <div className="flex flex-col gap-2">
           <div className="flex justify-between items-center px-1">
-            <span className="text-sm font-extrabold text-[#052355]">May 2026</span>
+            <span className="text-sm font-extrabold text-[#052355]">{currentMonthYear}</span>
           </div>
 
           <div className="flex gap-1 justify-between overflow-x-auto no-scrollbar py-2">
             {calendarDays.map((dayItem) => {
-              const dateStr = `${dayItem.day} ${dayItem.num}`;
-              const isSelected = selectedDate === dateStr;
-              const isFaded = !dayItem.current;
+              const isSelected = selectedDateObj?.dateStr === dayItem.dateStr;
               
               return (
                 <button
-                  key={dateStr}
-                  onClick={() => {
-                    if (dayItem.current) {
-                      setSelectedDate(dateStr);
-                    }
-                  }}
+                  key={dayItem.dateStr}
+                  onClick={() => setSelectedDateObj(dayItem)}
                   className={`flex flex-col items-center p-2 rounded-xl min-w-[42px] transition-all ${
                     isSelected
                       ? 'bg-[#0D47A1] text-white shadow-xs'
-                      : isFaded
-                        ? 'opacity-30 text-slate-400 cursor-not-allowed'
-                        : 'text-slate-500 hover:bg-slate-50'
+                      : 'text-slate-500 hover:bg-slate-50'
                   }`}
                 >
                   <span className={`text-[10px] font-bold ${isSelected ? 'text-white' : 'text-slate-450'}`}>
@@ -117,10 +139,7 @@ const Schedule = () => {
                   
                   {/* Left Side: Time column */}
                   <div className="w-16 flex flex-col items-center flex-shrink-0 pt-0.5">
-                    <span className="text-xs font-black text-[#052355] whitespace-nowrap">{item.time}</span>
-                    <div className="w-6 h-6 bg-slate-100 rounded-full flex items-center justify-center text-[10px] font-black text-slate-400 mt-1">
-                      G
-                    </div>
+                    <span className="text-[11px] font-black text-[#052355] text-center leading-tight">{item.time}</span>
                   </div>
 
                   {/* Middle Side: Timeline node circle */}
@@ -144,9 +163,13 @@ const Schedule = () => {
                     </div>
 
                     <span className={`text-[10px] font-bold px-3 py-1 rounded-full tracking-wide whitespace-nowrap ${
-                      item.status === 'Confirmed'
-                        ? 'bg-green-50 text-green-700 border border-green-200'
-                        : 'bg-orange-55 text-orange-700 border border-orange-200'
+                      item.status === 'Completed'
+                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                        : item.status === 'Revisit'
+                          ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                          : item.status === 'Confirmed'
+                            ? 'bg-green-50 text-green-700 border border-green-200'
+                            : 'bg-orange-55 text-orange-700 border border-orange-200'
                     }`}>
                       {item.status}
                     </span>
@@ -159,8 +182,8 @@ const Schedule = () => {
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-slate-400 gap-3 border border-dashed border-slate-200 rounded-3xl my-2">
               <Calendar className="h-10 w-10 text-slate-300" />
               <div>
-                <h4 className="text-sm font-bold text-[#052355]">No appointments scheduled</h4>
-                <p className="text-xs text-slate-400 mt-1">Bookings made from customer app will appear here when assigned.</p>
+                <h4 className="text-sm font-bold text-[#052355]">No appointments for {selectedDateObj?.label || 'this day'}</h4>
+                <p className="text-xs text-slate-400 mt-1">Bookings made from customer app will appear here when scheduled.</p>
               </div>
             </div>
           )}
@@ -172,8 +195,8 @@ const Schedule = () => {
           
           <div className="grid grid-cols-3 gap-3 text-center">
             <div className="flex flex-col items-center justify-center">
-              <span className="text-2xl font-black text-[#052355]">{activeSchedules.length}</span>
-              <span className="text-[10px] font-bold text-slate-450 uppercase mt-1">Jobs</span>
+              <span className="text-2xl font-black text-[#052355]">{jobs.length}</span>
+              <span className="text-[10px] font-bold text-slate-450 uppercase mt-1">Total Jobs</span>
             </div>
             
             <div className="flex flex-col items-center justify-center border-x border-slate-200">
@@ -211,12 +234,12 @@ const Schedule = () => {
               </button>
               
               <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-extrabold text-xl shadow-md border-2 border-white/20 mt-2">
-                AR
+                {getInitials(user?.name)}
               </div>
               
               <div>
-                <h3 className="text-sm font-bold text-white leading-tight">Alex Rodriguez</h3>
-                <p className="text-[10px] text-slate-300 font-semibold mt-0.5">Expert HVAC Technician • ★ 4.9</p>
+                <h3 className="text-sm font-bold text-white leading-tight">{user?.name || 'Technician'}</h3>
+                <p className="text-[10px] text-slate-300 font-semibold mt-0.5">{user?.phone || user?.email || 'Nigam Care Partner'}</p>
               </div>
             </div>
 
@@ -355,9 +378,6 @@ const Schedule = () => {
               <button
                 onClick={async () => {
                   setShowLogoutConfirm(false);
-                  // Clearing the session is what actually logs the user out;
-                  // navigating alone left the tokens in place, so the route
-                  // guard saw an authenticated user and sent them straight back.
                   await logout();
                   navigate('/technician/login', { replace: true });
                 }}

@@ -596,6 +596,31 @@ export const TechProvider = ({ children }) => {
     return { ok: false, error: `Could not reach "${target}".` };
   }, [activeJobId, advanceStep]);
 
+  const requestSparePart = useCallback(async (jobId, partPayload) => {
+    const targetJobId = jobId || activeJobId;
+    if (!targetJobId) return { ok: false, error: 'No active job specified.' };
+
+    setStepBusy(true);
+    setStepError(null);
+    try {
+      const res = await apiRequest(`/tech/jobs/${targetJobId}/request-part`, {
+        method: 'POST',
+        auth: true,
+        body: partPayload,
+      });
+      if (res?.job) {
+        setActiveStep(res.job.activeStep || 'completed_pending');
+      }
+      await fetchRealJobs();
+      return { ok: true, data: res };
+    } catch (err) {
+      setStepError(err.message || 'Could not submit spare part request.');
+      return { ok: false, error: err.message };
+    } finally {
+      setStepBusy(false);
+    }
+  }, [activeJobId, fetchRealJobs]);
+
   /** Single place that maps the earnings payload onto the tally — the same
    *  block was previously copied into four callers, each free to drift. */
   const refreshEarnings = useCallback(async (merge = false) => {
@@ -869,6 +894,7 @@ export const TechProvider = ({ children }) => {
       resetActiveJob,
       collectPayment,
       advanceStepsTo,
+      requestSparePart,
       stepBusy,
       stepError,
       setStepError,

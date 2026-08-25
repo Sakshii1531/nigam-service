@@ -1,12 +1,31 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Star } from 'lucide-react';
+import { ArrowLeft, Star, Award, CheckCircle } from 'lucide-react';
 import { useTech } from '../../context/TechContext';
+import { useAuth } from '../../context/AuthContext';
+import { apiRequest } from '../../lib/apiClient';
 import techAvatar from '../../assets/tech_avatar.png';
 
 const PartnerLevel = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { earningsTally, activeSpecs, toggleSpec } = useTech();
+  const [profile, setProfile] = useState(null);
+
+  useEffect(() => {
+    apiRequest('/tech/profile/profile', { auth: true })
+      .then((res) => setProfile(res))
+      .catch((err) => console.warn('Could not load profile in PartnerLevel:', err.message));
+  }, []);
+
+  const totalCompleted = earningsTally?.completedTotal ?? profile?.totalJobsCompleted ?? 0;
+  const rating = profile?.rating || 4.9;
+  const name = profile?.name || user?.name || 'Technician';
+  const roleTitle = profile?.skills?.length ? `${profile.skills[0].name} Specialist` : 'Service Specialist';
+
+  const badgeLevel = totalCompleted >= 150 ? '🥇 Senior SP' : totalCompleted >= 50 ? '🥈 Specialised SP' : '🥉 Trainee SP';
+  const nextTarget = totalCompleted >= 150 ? 300 : totalCompleted >= 50 ? 150 : 50;
+  const progressPercent = Math.min(100, Math.round((totalCompleted / nextTarget) * 100));
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-24 max-w-md mx-auto border-x border-slate-200 shadow-xl relative font-sans overflow-hidden">
@@ -29,11 +48,11 @@ const PartnerLevel = () => {
         <div className="bg-gradient-to-br from-[#052355] to-[#0A2C74] text-white rounded-3xl p-5 shadow-md flex flex-col gap-4">
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white/25 shadow-sm">
-              <img src={techAvatar} alt="Alex Rodriguez Avatar" className="w-full h-full object-cover" />
+              <img src={techAvatar} alt={`${name} Avatar`} className="w-full h-full object-cover" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-white leading-tight">Alex Rodriguez</h2>
-              <p className="text-xs text-slate-300 mt-1 font-medium">Expert HVAC Specialist</p>
+              <h2 className="text-base font-bold text-white leading-tight">{name}</h2>
+              <p className="text-xs text-slate-300 mt-1 font-medium">{roleTitle}</p>
             </div>
           </div>
 
@@ -42,29 +61,29 @@ const PartnerLevel = () => {
             <div className="flex justify-between items-center mb-2">
               <span className="text-[10px] font-bold text-slate-300 tracking-wider">CURRENT BADGE LEVEL</span>
               <span className="bg-[#FFD400] text-[#052355] text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-wider shadow-sm">
-                🥇 Senior SP
+                {badgeLevel}
               </span>
             </div>
 
             {/* Progress Indicators */}
             <div className="flex flex-col gap-2 mt-3">
               <div className="flex justify-between text-[9px] font-bold text-slate-300">
-                <span className={earningsTally.completedTotal >= 0 ? 'text-[#FFD400]' : 'text-slate-400'}>TSP (Trainee)</span>
-                <span className={earningsTally.completedTotal >= 50 ? 'text-[#FFD400]' : 'text-slate-400'}>SP (Specialised)</span>
-                <span className={earningsTally.completedTotal >= 150 ? 'text-[#FFD400]' : 'text-slate-400'}>Senior SP</span>
+                <span className={totalCompleted >= 0 ? 'text-[#FFD400]' : 'text-slate-400'}>Trainee SP</span>
+                <span className={totalCompleted >= 50 ? 'text-[#FFD400]' : 'text-slate-400'}>Specialised SP</span>
+                <span className={totalCompleted >= 150 ? 'text-[#FFD400]' : 'text-slate-400'}>Senior SP</span>
               </div>
               
               {/* Progress Bar */}
               <div className="w-full h-2 bg-white/20 rounded-full overflow-hidden relative">
                 <div 
-                  className="h-full bg-gradient-to-r from-yellow-400 to-[#FFD400] rounded-full" 
-                  style={{ width: `${Math.min(100, (earningsTally.completedTotal / 150) * 100)}%` }} 
+                  className="h-full bg-gradient-to-r from-yellow-400 to-[#FFD400] rounded-full transition-all duration-500" 
+                  style={{ width: `${progressPercent}%` }} 
                 />
               </div>
 
-              <div className="flex justify-between items-center text-[9px] text-slate-355 mt-0.5">
-                <span>{earningsTally.completedTotal} jobs completed</span>
-                <span>Level unlocked at 150</span>
+              <div className="flex justify-between items-center text-[9px] text-slate-300 mt-0.5">
+                <span>{totalCompleted} jobs completed</span>
+                <span>Next level at {nextTarget}</span>
               </div>
             </div>
           </div>
@@ -76,13 +95,13 @@ const PartnerLevel = () => {
           
           <div className="flex items-center gap-4 mb-4 bg-slate-50 p-3 rounded-2xl">
             <div className="text-center">
-              <span className="text-3xl font-extrabold text-[#0D47A1]">4.9</span>
-              <span className="text-[9px] text-slate-500 font-bold block mt-0.5 uppercase tracking-wider">Average</span>
+              <span className="text-3xl font-extrabold text-[#0D47A1]">{rating.toFixed(1)}</span>
+              <span className="text-[9px] text-slate-500 font-bold block mt-0.5 uppercase tracking-wider">Rating</span>
             </div>
             <div className="h-10 w-[1px] bg-slate-200"></div>
             <div className="flex-1 text-xs text-slate-650 flex flex-col gap-1">
-              <p className="font-semibold">Customer Reviews: <span className="text-[#052355] font-bold">120+ reviews</span></p>
-              <p className="font-normal text-slate-500">Quality of work is rated 98% positive.</p>
+              <p className="font-semibold">Performance: <span className="text-[#052355] font-bold">{totalCompleted} completed jobs</span></p>
+              <p className="font-normal text-slate-500">{totalCompleted > 0 ? 'Consistent performance across assigned jobs' : 'Start completing jobs to unlock partner tiers'}</p>
             </div>
           </div>
 

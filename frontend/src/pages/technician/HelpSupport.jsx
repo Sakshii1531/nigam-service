@@ -2,8 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Bell, Briefcase, ClipboardList, Calendar, Wrench, User, MessageCircle, Phone, FileText, ChevronDown, ChevronUp } from 'lucide-react';
 
+import { useTech } from '../../context/TechContext';
+
 const HelpSupport = () => {
   const navigate = useNavigate();
+  const { notifications } = useTech();
 
   const [openFaq, setOpenFaq] = useState(null);
 
@@ -11,22 +14,24 @@ const HelpSupport = () => {
     setOpenFaq(openFaq === index ? null : index);
   };
 
+  const unreadCount = (notifications || []).filter(n => !n.read).length;
+
   const faqs = [
     {
-      q: "How do I update my bank account?",
-      a: "Go to Profile > Payout Settings to update your bank account or UPI ID."
+      q: "How do I update my bank account or UPI?",
+      a: "Go to Profile > Payout Settings to add or switch your primary bank account or UPI ID."
     },
     {
-      q: "What to do if a customer cancels?",
-      a: "If a customer cancels, you will receive a notification and the job will be removed from your list. You may be eligible for a cancellation fee."
+      q: "What happens when a spare part is required?",
+      a: "Mark 'Spare Part Required' on the job flow. The request goes to Super Admin/Brand for approval, dispatch, and delivery. Once delivered, your revisit will be scheduled automatically."
     },
     {
-      q: "When do I get my weekly payout?",
-      a: "Payouts are processed every Monday for the work completed in the previous week."
+      q: "When are technician payouts settled?",
+      a: "Quick payouts are credited immediately to your balance upon customer payment. Invoice-based jobs settle with brand cycle."
     },
     {
-      q: "How to report a fake job request?",
-      a: "Click on Decline and select 'Fake Request' as the reason, or contact support directly."
+      q: "How to report an issue or fake job request?",
+      a: "Click 'Decline' on the job card before accepting, or connect with our 24/7 technical helpline directly."
     }
   ];
 
@@ -41,9 +46,9 @@ const HelpSupport = () => {
           </button>
           <h1 className="text-lg font-semibold text-slate-900">Help & Support</h1>
         </div>
-        <button className="p-2 hover:bg-slate-50 rounded-full transition-colors relative">
+        <button onClick={() => navigate('/technician/notifications')} className="p-2 hover:bg-slate-50 rounded-full transition-colors relative">
           <Bell className="h-5 w-5 text-slate-700" />
-          <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+          {unreadCount > 0 && <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>}
         </button>
       </div>
 
@@ -54,23 +59,23 @@ const HelpSupport = () => {
         <div className="grid grid-cols-2 gap-4">
           <button 
             onClick={() => navigate('/technician/technical-support')}
-            className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm flex flex-col items-center gap-2 hover:bg-slate-50 transition-colors"
+            className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm flex flex-col items-center gap-2 hover:bg-slate-50 transition-colors cursor-pointer"
           >
             <div className="w-10 h-10 bg-[#E3ECF9] rounded-full flex items-center justify-center">
               <MessageCircle className="h-5 w-5 text-[#0D47A1]" />
             </div>
-            <span className="text-sm font-semibold text-slate-900">Chat with Us</span>
+            <span className="text-sm font-semibold text-slate-900">Live Support Chat</span>
             <span className="text-xs text-slate-500">Fastest response</span>
           </button>
           <button 
-            onClick={() => { window.location.href = 'tel:+18006228324'; }}
-            className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm flex flex-col items-center gap-2 hover:bg-slate-50 transition-colors"
+            onClick={() => { window.location.href = 'tel:18001234567'; }}
+            className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm flex flex-col items-center gap-2 hover:bg-slate-50 transition-colors cursor-pointer"
           >
             <div className="w-10 h-10 bg-[#E3ECF9] rounded-full flex items-center justify-center">
               <Phone className="h-5 w-5 text-[#0D47A1]" />
             </div>
             <span className="text-sm font-semibold text-slate-900">Call Support</span>
-            <span className="text-xs text-slate-500">24/7 Available</span>
+            <span className="text-xs text-slate-500">1800-123-4567</span>
           </button>
         </div>
 

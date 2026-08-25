@@ -198,7 +198,13 @@ export async function verifyBookingPayment(userId, bookingId, { razorpayPaymentI
 }
 
 async function findOwnedOr404(userId, id) {
-  const booking = await Booking.findById(id);
+  const booking = await Booking.findById(id)
+    .populate('technician', 'name phone rating avatar photo')
+    .populate({
+      path: 'serviceRequest',
+      select: 'humanId status timeline tracking warranty brand category description job',
+      populate: { path: 'brand', select: 'name logo' },
+    });
   if (!booking) throw new ApiError(404, 'Booking not found');
   if (String(booking.user) !== userId) throw new ApiError(403, 'Not authorized to view this booking');
   return booking;
@@ -214,7 +220,15 @@ export async function listBookings(userId, { status, page, limit, sort } = {}) {
 
   const { skip, limit: lim, page: pg, sort: sortObj } = parsePagination({ page, limit, sort });
   const [items, total] = await Promise.all([
-    Booking.find(query).sort(sortObj).skip(skip).limit(lim),
+    Booking.find(query)
+      .populate('technician', 'name phone rating avatar photo')
+      .populate({
+        path: 'serviceRequest',
+        select: 'humanId status timeline tracking warranty category description',
+      })
+      .sort(sortObj)
+      .skip(skip)
+      .limit(lim),
     Booking.countDocuments(query),
   ]);
 

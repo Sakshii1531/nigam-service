@@ -30,6 +30,16 @@ export const collectPaymentSchema = z.object({
   paymentMethod: z.enum(['Card', 'UPI', 'NetBanking', 'Cash', 'Wallet']).optional(),
 });
 
+export const requestPartSchema = z.object({
+  partName: z.string().optional(),
+  sku: z.string().optional(),
+  price: z.number().min(0).optional(),
+  qty: z.number().int().positive().default(1),
+  orderSource: z.enum(['NCC Warehouse', 'Partner Brand', 'Nearby Store']).default('NCC Warehouse'),
+  parts: z.array(sparePartSchema).optional(),
+  notes: z.string().optional(),
+});
+
 export const verifyJobPaymentSchema = z.object({
   razorpayPaymentId: z.string().min(1),
   razorpaySignature: z.string().min(1),

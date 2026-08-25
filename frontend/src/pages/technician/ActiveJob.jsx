@@ -175,6 +175,7 @@ const ActiveJob = () => {
     stepError,
     setStepError,
     advanceStepsTo,
+    requestSparePart,
     setDiagnosisNotes
   } = useTech();
 
@@ -2521,10 +2522,30 @@ const ActiveJob = () => {
 
                   {/* Send Update Button */}
                   <button 
-                    onClick={() => setActiveStep('completed_pending')}
-                    className="w-full bg-[#052355] hover:bg-[#031c45] text-white font-bold py-4 rounded-2xl text-sm transition-all shadow-md mt-6 mb-1 text-center"
+                    disabled={stepBusy}
+                    onClick={async () => {
+                      const partsToRequest = spareParts.filter(p => p.checked);
+                      const partName = partsToRequest.length > 0
+                        ? partsToRequest.map(p => p.name).join(', ')
+                        : (dynamicPartName && dynamicPartName !== 'No part used' ? dynamicPartName : 'Spare Part');
+                      const price = partsToRequest.reduce((sum, p) => sum + (p.price || 0), 0) || (dynamicPartPrice || 0);
+
+                      const payload = {
+                        partName,
+                        price,
+                        qty: 1,
+                        orderSource: 'NCC Warehouse',
+                        parts: partsToRequest.length > 0 ? partsToRequest : [{ name: partName, price, qty: 1 }],
+                      };
+
+                      const res = await requestSparePart(activeJob?.id, payload);
+                      if (res.ok) {
+                        setActiveStep('completed_pending');
+                      }
+                    }}
+                    className="w-full bg-[#052355] hover:bg-[#031c45] disabled:opacity-60 text-white font-bold py-4 rounded-2xl text-sm transition-all shadow-md mt-6 mb-1 text-center"
                   >
-                    Send Update
+                    {stepBusy ? 'Sending Request…' : 'Send Update'}
                   </button>
                 </div>
               </div>
