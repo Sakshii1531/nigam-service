@@ -4,19 +4,10 @@ import { ApiError } from '../../middleware/errorHandler.js';
 import { parsePagination, paginationMeta } from '../../utils/pagination.js';
 import { getIO } from '../../sockets/io.js';
 import { User } from '../auth/user.model.js';
-import { ROLES } from '../../config/constants.js';
+import { BROADCAST_ROLE_FILTER, broadcastAudiencesForRole } from '../../config/constants.js';
 import { sendPush } from './providers/push.provider.js';
 import { sendWhatsApp } from './providers/whatsapp.provider.js';
 import { sendSms } from './providers/sms.provider.js';
-
-// A broadcast audience label (what the console's composer sends) -> the User.role
-// it selects. `All` maps to null: every role, no role filter.
-export const BROADCAST_ROLE_FILTER = Object.freeze({
-  All: null,
-  Technicians: ROLES.TECHNICIAN,
-  Brands: ROLES.BRAND_ADMIN,
-  Customers: ROLES.CUSTOMER,
-});
 
 // firebase-admin's sendEachForMulticast rejects more than 500 tokens in one
 // call, so a broadcast to the whole customer base is many calls, not one.
@@ -452,8 +443,22 @@ export async function sendAdHocSms({ recipientId, phone, message, templateId }) 
   return { sent: true, to };
 }
 
-export async function listNotifications(userId, { read, page, limit, sort } = {}) {
-  const query = { $or: [{ recipient: userId }, { broadcastRole: 'All' }] };
+/**
+ * One user's inbox: everything addressed to them personally, plus the
+ * broadcasts aimed at their role.
+ *
+ * Takes the whole user rather than just an id because a broadcast's audience is
+ * role-derived. This used to hardcode `broadcastRole: 'All'`, which made every
+ * role-targeted broadcast — the console composer's whole purpose — permanently
+ * invisible in every inbox.
+ */
+export async function listNotifications(user, { read, page, limit, sort } = {}) {
+  const query = {
+    $or: [
+      { recipient: user.id },
+      { broadcastRole: { $in: broadcastAudiencesForRole(user.role) } },
+    ],
+  };
   if (read !== undefined) query.read = read;
 
   const { skip, limit: lim, page: pg, sort: sortObj } = parsePagination({ page, limit, sort });
@@ -480,8 +485,13 @@ export async function getNotification(user, id) {
   if (!notification) throw new ApiError(404, 'Notification not found');
 
   const isOwn = notification.recipient && String(notification.recipient) === user.id;
-  const isBroadcast = Boolean(notification.broadcastRole);
-  if (!isOwn && !isBroadcast) throw new ApiError(403, 'Not authorized to view this notification');
+  // Not merely "is a broadcast": a broadcast aimed at Technicians is not a
+  // customer's to read. Before role targeting meant anything this check was
+  // Boolean(broadcastRole), which let any user open any broadcast by id.
+  const isMyBroadcast =
+    Boolean(notification.broadcastRole) &&
+    broadcastAudiencesForRole(user.role).includes(notification.broadcastRole);
+  if (!isOwn && !isMyBroadcast) throw new ApiError(403, 'Not authorized to view this notification');
 
   return notification;
 }

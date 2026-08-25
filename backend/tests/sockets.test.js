@@ -17,6 +17,7 @@ import { LiveTracking } from '../src/modules/super-admin/liveTracking.model.js';
 import { signAccessToken } from '../src/modules/auth/tokens.js';
 import { hashPassword } from '../src/modules/auth/password.js';
 import { ROLES } from '../src/config/constants.js';
+import { sendAdHocPush } from '../src/modules/notifications/notification.service.js';
 import { testDbUri } from './helpers/testDb.js';
 
 const TEST_DB_URI = testDbUri('sockets');
@@ -369,5 +370,69 @@ describe('chat — the platform help desk', () => {
 
     admin.disconnect();
     brandAgent.disconnect();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Broadcast rooms — a role-targeted broadcast has to reach that role's live
+// connections. Every socket used to join only 'broadcast:All', so the console's
+// role-targeted broadcasts were emitted into rooms with no members at all.
+// ─────────────────────────────────────────────────────────────────────────────
+describe('broadcast rooms', () => {
+  it('delivers a role-targeted broadcast to that role and nobody else', async () => {
+    const { token: techToken } = await createTechnician();
+    const { token: custToken } = await createCustomer();
+
+    const techSocket = await connectClient(techToken);
+    const custSocket = await connectClient(custToken);
+
+    const techHeard = waitForEvent(techSocket, 'notification:new');
+    const custHeard = waitForEvent(custSocket, 'notification:new');
+
+    await sendAdHocPush({ broadcastRole: 'Technicians', title: 'Payout moved', body: 'Wednesdays', type: 'promo' });
+
+    expect((await techHeard)?.title).toBe('Payout moved');
+    expect(await custHeard).toBeNull();
+
+    techSocket.disconnect();
+    custSocket.disconnect();
+  });
+
+  it('delivers an "All" broadcast to every role', async () => {
+    const { token: techToken } = await createTechnician();
+    const { token: custToken } = await createCustomer();
+
+    const techSocket = await connectClient(techToken);
+    const custSocket = await connectClient(custToken);
+
+    const techHeard = waitForEvent(techSocket, 'notification:new');
+    const custHeard = waitForEvent(custSocket, 'notification:new');
+
+    await sendAdHocPush({ broadcastRole: 'All', title: 'Maintenance tonight', body: '2 AM', type: 'promo' });
+
+    expect((await techHeard)?.title).toBe('Maintenance tonight');
+    expect((await custHeard)?.title).toBe('Maintenance tonight');
+
+    techSocket.disconnect();
+    custSocket.disconnect();
+  });
+
+  it('routes a brand broadcast to brand admins only', async () => {
+    const b = await createBrandAdmin('RoomTestBrand');
+    const { token: techToken } = await createTechnician();
+
+    const brandSocket = await connectClient(b.token);
+    const techSocket = await connectClient(techToken);
+
+    const brandHeard = waitForEvent(brandSocket, 'notification:new');
+    const techHeard = waitForEvent(techSocket, 'notification:new');
+
+    await sendAdHocPush({ broadcastRole: 'Brands', title: 'Portal update', body: 'New report', type: 'promo' });
+
+    expect((await brandHeard)?.title).toBe('Portal update');
+    expect(await techHeard).toBeNull();
+
+    brandSocket.disconnect();
+    techSocket.disconnect();
   });
 });

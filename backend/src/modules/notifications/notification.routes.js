@@ -23,7 +23,7 @@ notificationRouter.use(requireAuth);
 
 notificationRouter.get('/', validate(listQuerySchema, 'query'), async (req, res, next) => {
   try {
-    const { items, meta } = await notificationService.listNotifications(req.user.id, req.query);
+    const { items, meta } = await notificationService.listNotifications(req.user, req.query);
     ok(res, items, meta);
   } catch (err) {
     next(err);

@@ -42,7 +42,7 @@ const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
 // ── Import modules AFTER mocks are set up ────────────────────────────────────
-const { emit, listNotifications, markRead, sendAdHocPush, listBroadcasts, awaitPendingDeliveries } =
+const { emit, listNotifications, markRead, sendAdHocPush, listBroadcasts, awaitPendingDeliveries, getNotification } =
   await import('../src/modules/notifications/notification.service.js');
 const { User } = await import('../src/modules/auth/user.model.js');
 const { Notification } = await import('../src/modules/notifications/notification.model.js');
@@ -119,7 +119,7 @@ describe('emit() — in-app delivery', () => {
   test('listNotifications returns docs for a recipient', async () => {
     const user = await seedUser();
     await emit('service.completed', { user: user._id });
-    const { items } = await listNotifications(String(user._id));
+    const { items } = await listNotifications({ id: String(user._id), role: 'customer' });
     expect(items.length).toBeGreaterThanOrEqual(1);
   });
 });
@@ -493,6 +493,84 @@ describe('sendAdHocPush() — broadcast fan-out', () => {
     await awaitPendingDeliveries();
 
     expect(tokensSentToFcm()).toEqual(['solo-1']);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 7. Broadcast inbox visibility + isolation
+//
+// Regression guard: listNotifications() hardcoded `broadcastRole: 'All'`, so a
+// broadcast to Technicians/Brands/Customers never appeared in ANY inbox — and
+// getNotification() let any user open any broadcast by id.
+// ─────────────────────────────────────────────────────────────────────────────
+describe('broadcast inbox visibility', () => {
+  test('a role broadcast lands in that role\'s inbox', async () => {
+    const tech = await seedRoleUser('technician');
+    await sendAdHocPush({ broadcastRole: 'Technicians', title: 'Payout moved', body: 'Wednesdays', type: 'promo' });
+
+    const { items } = await listNotifications({ id: String(tech._id), role: 'technician' });
+    expect(items.map((i) => i.title)).toContain('Payout moved');
+  });
+
+  test('and stays out of every other role\'s inbox', async () => {
+    const customer = await seedRoleUser('customer');
+    const brand = await seedRoleUser('brand_admin');
+    await sendAdHocPush({ broadcastRole: 'Technicians', title: 'Tech only', body: 'Body', type: 'promo' });
+
+    const cust = await listNotifications({ id: String(customer._id), role: 'customer' });
+    const brnd = await listNotifications({ id: String(brand._id), role: 'brand_admin' });
+    expect(cust.items).toHaveLength(0);
+    expect(brnd.items).toHaveLength(0);
+  });
+
+  test('an "All" broadcast reaches every role, super_admin included', async () => {
+    const tech = await seedRoleUser('technician');
+    const customer = await seedRoleUser('customer');
+    const brand = await seedRoleUser('brand_admin');
+    const admin = await seedRoleUser('super_admin');
+    await sendAdHocPush({ broadcastRole: 'All', title: 'Maintenance tonight', body: '2 AM', type: 'promo' });
+
+    for (const [u, role] of [[tech, 'technician'], [customer, 'customer'], [brand, 'brand_admin'], [admin, 'super_admin']]) {
+      const { items } = await listNotifications({ id: String(u._id), role });
+      expect(items.map((i) => i.title)).toContain('Maintenance tonight');
+    }
+  });
+
+  test('a super_admin does not receive role-targeted broadcasts', async () => {
+    const admin = await seedRoleUser('super_admin');
+    await sendAdHocPush({ broadcastRole: 'Customers', title: 'Customer promo', body: 'Body', type: 'promo' });
+
+    const { items } = await listNotifications({ id: String(admin._id), role: 'super_admin' });
+    expect(items).toHaveLength(0);
+  });
+
+  test('personal notifications still reach their recipient alongside broadcasts', async () => {
+    const tech = await seedRoleUser('technician');
+    await sendAdHocPush({ recipientId: String(tech._id), title: 'Just you', body: 'Body', type: 'tech' });
+    await sendAdHocPush({ broadcastRole: 'Technicians', title: 'All techs', body: 'Body', type: 'promo' });
+    await sendAdHocPush({ broadcastRole: 'Customers', title: 'Not for you', body: 'Body', type: 'promo' });
+
+    const { items } = await listNotifications({ id: String(tech._id), role: 'technician' });
+    const titles = items.map((i) => i.title);
+    expect(titles).toEqual(expect.arrayContaining(['Just you', 'All techs']));
+    expect(titles).not.toContain('Not for you');
+  });
+
+  test('getNotification refuses a broadcast aimed at another role', async () => {
+    const customer = await seedRoleUser('customer');
+    const notif = await sendAdHocPush({ broadcastRole: 'Technicians', title: 'Tech only', body: 'Body', type: 'promo' });
+
+    await expect(
+      getNotification({ id: String(customer._id), role: 'customer' }, String(notif._id)),
+    ).rejects.toThrow(/Not authorized/);
+  });
+
+  test('getNotification allows a broadcast aimed at the caller\'s role', async () => {
+    const tech = await seedRoleUser('technician');
+    const notif = await sendAdHocPush({ broadcastRole: 'Technicians', title: 'Tech only', body: 'Body', type: 'promo' });
+
+    const found = await getNotification({ id: String(tech._id), role: 'technician' }, String(notif._id));
+    expect(found.title).toBe('Tech only');
   });
 });
 

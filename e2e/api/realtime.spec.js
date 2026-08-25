@@ -87,7 +87,12 @@ test.describe('notifications — real domain events, not just CRUD', () => {
     await request.patch('/api/v1/notifications/read-all', { headers: { Authorization: `Bearer ${customer.token}` } });
 
     const unreadAfter = await request.get('/api/v1/notifications?read=false', { headers: { Authorization: `Bearer ${customer.token}` } });
-    expect((await unreadAfter.json()).data).toHaveLength(0);
+    // Personal only, as the test name says. read-all deliberately does not touch
+    // broadcasts: they carry a single shared `read` flag, so clearing one here
+    // would mark it read for every recipient on the platform. Any platform-wide
+    // broadcast another spec has sent is therefore still legitimately unread.
+    const stillUnread = (await unreadAfter.json()).data.filter((n) => n.recipient !== null);
+    expect(stillUnread).toHaveLength(0);
   });
 
   test('rejects an unauthenticated request', async ({ request }) => {
