@@ -42,9 +42,8 @@ const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
 // ── Import modules AFTER mocks are set up ────────────────────────────────────
-const { emit, listNotifications, markRead, sendAdHocPush, listBroadcasts } = await import(
-  '../src/modules/notifications/notification.service.js'
-);
+const { emit, listNotifications, markRead, sendAdHocPush, listBroadcasts, awaitPendingDeliveries } =
+  await import('../src/modules/notifications/notification.service.js');
 const { User } = await import('../src/modules/auth/user.model.js');
 const { Notification } = await import('../src/modules/notifications/notification.model.js');
 const { NotificationPreference } = await import(
@@ -311,6 +310,189 @@ describe('emit() — broadcast escalation event', () => {
     delete process.env.FCM_SERVICE_ACCOUNT_JSON;
     delete process.env.TWILIO_ACCOUNT_SID;
     delete process.env.TWILIO_AUTH_TOKEN;
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 6. Broadcast push fan-out — the super-admin console's composer
+//
+// Regression guard: sendAdHocPush({ broadcastRole }) used to write a row, emit
+// a socket event, report success, and send zero pushes — deliverExternal()
+// returned immediately when there was no single recipient to resolve.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Distinct phone per call — User has a unique { phone, role } index. */
+let phoneSeq = 0;
+async function seedRoleUser(role, { tokens = [], phone } = {}) {
+  phoneSeq += 1;
+  return User.create({
+    role,
+    name: `${role}-${phoneSeq}`,
+    phone: phone || `90000${String(phoneSeq).padStart(5, '0')}`,
+    passwordHash: 'stub',
+    status: 'Active',
+    fcmTokens: tokens,
+  });
+}
+
+/** Every token string handed to FCM across all calls this test made. */
+function tokensSentToFcm() {
+  return mockSendEachForMulticast.mock.calls.flatMap((c) => c[0].tokens);
+}
+
+describe('sendAdHocPush() — broadcast fan-out', () => {
+  beforeEach(() => {
+    process.env.FCM_SERVICE_ACCOUNT_JSON = '{"type":"service_account","project_id":"test"}';
+    process.env.NOTIFICATION_PUSH_ENABLED = 'true';
+    phoneSeq = 0;
+  });
+
+  afterEach(() => {
+    delete process.env.FCM_SERVICE_ACCOUNT_JSON;
+    delete process.env.NOTIFICATION_PUSH_ENABLED;
+  });
+
+  test('a role broadcast pushes to that role only', async () => {
+    await seedRoleUser('technician', { tokens: ['tech-1'] });
+    await seedRoleUser('technician', { tokens: ['tech-2'] });
+    await seedRoleUser('customer', { tokens: ['cust-1'] });
+    await seedRoleUser('brand_admin', { tokens: ['brand-1'] });
+
+    await sendAdHocPush({ broadcastRole: 'Technicians', title: 'Payout', body: 'Wednesdays', type: 'promo' });
+    await awaitPendingDeliveries();
+
+    const sent = tokensSentToFcm();
+    expect(sent.sort()).toEqual(['tech-1', 'tech-2']);
+    expect(sent).not.toContain('cust-1');
+    expect(sent).not.toContain('brand-1');
+  });
+
+  test('Customers and Brands each select their own role', async () => {
+    await seedRoleUser('customer', { tokens: ['cust-1'] });
+    await seedRoleUser('brand_admin', { tokens: ['brand-1'] });
+
+    await sendAdHocPush({ broadcastRole: 'Customers', title: 'Offer', body: '10% off', type: 'promo' });
+    await awaitPendingDeliveries();
+    expect(tokensSentToFcm()).toEqual(['cust-1']);
+
+    jest.clearAllMocks();
+    mockSendEachForMulticast.mockResolvedValue({ responses: [{ success: true }] });
+
+    await sendAdHocPush({ broadcastRole: 'Brands', title: 'Portal', body: 'New report', type: 'promo' });
+    await awaitPendingDeliveries();
+    expect(tokensSentToFcm()).toEqual(['brand-1']);
+  });
+
+  test('"All" reaches every role', async () => {
+    await seedRoleUser('technician', { tokens: ['tech-1'] });
+    await seedRoleUser('customer', { tokens: ['cust-1'] });
+    await seedRoleUser('brand_admin', { tokens: ['brand-1'] });
+
+    await sendAdHocPush({ broadcastRole: 'All', title: 'Maintenance', body: '2 AM', type: 'promo' });
+    await awaitPendingDeliveries();
+
+    expect(tokensSentToFcm().sort()).toEqual(['brand-1', 'cust-1', 'tech-1']);
+  });
+
+  test('carries the notification title/body and its id in the data payload', async () => {
+    await seedRoleUser('technician', { tokens: ['tech-1'] });
+
+    const notif = await sendAdHocPush({ broadcastRole: 'Technicians', title: 'Heads up', body: 'Read this', type: 'promo' });
+    await awaitPendingDeliveries();
+
+    const arg = mockSendEachForMulticast.mock.calls[0][0];
+    expect(arg.notification).toEqual({ title: 'Heads up', body: 'Read this' });
+    expect(arg.data.notificationId).toBe(String(notif._id));
+    expect(arg.data.broadcastRole).toBe('Technicians');
+  });
+
+  test('splits into 500-token batches — FCM rejects more in one call', async () => {
+    // 60 technicians x 10 devices = 600 tokens => 500 + 100.
+    await Promise.all(
+      Array.from({ length: 60 }, (_, u) =>
+        seedRoleUser('technician', { tokens: Array.from({ length: 10 }, (_, t) => `t${u}-d${t}`) }),
+      ),
+    );
+
+    await sendAdHocPush({ broadcastRole: 'Technicians', title: 'Bulk', body: 'Fan out', type: 'promo' });
+    await awaitPendingDeliveries();
+
+    expect(mockSendEachForMulticast).toHaveBeenCalledTimes(2);
+    const sizes = mockSendEachForMulticast.mock.calls.map((c) => c[0].tokens.length);
+    expect(sizes).toEqual([500, 100]);
+    expect(new Set(tokensSentToFcm()).size).toBe(600);
+    expect(sizes.every((n) => n <= 500)).toBe(true);
+  });
+
+  test('skips users who opted out of push', async () => {
+    const optedIn = await seedRoleUser('technician', { tokens: ['in-1'] });
+    const optedOut = await seedRoleUser('technician', { tokens: ['out-1'] });
+    await NotificationPreference.create({ user: optedOut._id, push: false });
+
+    await sendAdHocPush({ broadcastRole: 'Technicians', title: 'Notice', body: 'Body', type: 'promo' });
+    await awaitPendingDeliveries();
+
+    const sent = tokensSentToFcm();
+    expect(sent).toEqual(['in-1']);
+    expect(sent).not.toContain('out-1');
+    expect(optedIn).toBeTruthy();
+  });
+
+  test('a promo broadcast respects the promo-specific opt-out', async () => {
+    await seedRoleUser('customer', { tokens: ['keep-1'] });
+    const noPromo = await seedRoleUser('customer', { tokens: ['nopromo-1'] });
+    await NotificationPreference.create({ user: noPromo._id, whatsAppPromo: false, emailPromo: false });
+
+    await sendAdHocPush({ broadcastRole: 'Customers', title: 'Sale', body: 'Today', type: 'promo' });
+    await awaitPendingDeliveries();
+
+    expect(tokensSentToFcm()).toEqual(['keep-1']);
+  });
+
+  test('sends nothing when NOTIFICATION_PUSH_ENABLED=false', async () => {
+    process.env.NOTIFICATION_PUSH_ENABLED = 'false';
+    await seedRoleUser('technician', { tokens: ['tech-1'] });
+
+    await sendAdHocPush({ broadcastRole: 'Technicians', title: 'Off', body: 'Body', type: 'promo' });
+    await awaitPendingDeliveries();
+
+    expect(mockSendEachForMulticast).not.toHaveBeenCalled();
+  });
+
+  test('users without device tokens are not sent to', async () => {
+    await seedRoleUser('technician', { tokens: [] });
+
+    await sendAdHocPush({ broadcastRole: 'Technicians', title: 'Nobody', body: 'Body', type: 'promo' });
+    await awaitPendingDeliveries();
+
+    expect(mockSendEachForMulticast).not.toHaveBeenCalled();
+  });
+
+  test('prunes stale tokens across the whole audience in one pass', async () => {
+    const a = await seedRoleUser('technician', { tokens: ['good-1', 'dead-1'] });
+    const b = await seedRoleUser('technician', { tokens: ['dead-2'] });
+
+    mockSendEachForMulticast.mockImplementation(async ({ tokens }) => ({
+      responses: tokens.map((t) => (t.startsWith('dead')
+        ? { success: false, error: { code: 'messaging/registration-token-not-registered' } }
+        : { success: true })),
+    }));
+
+    await sendAdHocPush({ broadcastRole: 'Technicians', title: 'Prune', body: 'Body', type: 'promo' });
+    await awaitPendingDeliveries();
+
+    const [afterA, afterB] = await Promise.all([User.findById(a._id).lean(), User.findById(b._id).lean()]);
+    expect(afterA.fcmTokens).toEqual(['good-1']);
+    expect(afterB.fcmTokens).toEqual([]);
+  });
+
+  test('a personal ad-hoc push is unaffected by the broadcast path', async () => {
+    const user = await seedRoleUser('customer', { tokens: ['solo-1'] });
+
+    await sendAdHocPush({ recipientId: String(user._id), title: 'Just you', body: 'Body', type: 'tech' });
+    await awaitPendingDeliveries();
+
+    expect(tokensSentToFcm()).toEqual(['solo-1']);
   });
 });
 

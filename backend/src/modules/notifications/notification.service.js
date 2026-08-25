@@ -4,9 +4,27 @@ import { ApiError } from '../../middleware/errorHandler.js';
 import { parsePagination, paginationMeta } from '../../utils/pagination.js';
 import { getIO } from '../../sockets/io.js';
 import { User } from '../auth/user.model.js';
+import { ROLES } from '../../config/constants.js';
 import { sendPush } from './providers/push.provider.js';
 import { sendWhatsApp } from './providers/whatsapp.provider.js';
 import { sendSms } from './providers/sms.provider.js';
+
+// A broadcast audience label (what the console's composer sends) -> the User.role
+// it selects. `All` maps to null: every role, no role filter.
+export const BROADCAST_ROLE_FILTER = Object.freeze({
+  All: null,
+  Technicians: ROLES.TECHNICIAN,
+  Brands: ROLES.BRAND_ADMIN,
+  Customers: ROLES.CUSTOMER,
+});
+
+// firebase-admin's sendEachForMulticast rejects more than 500 tokens in one
+// call, so a broadcast to the whole customer base is many calls, not one.
+const FCM_MULTICAST_LIMIT = 500;
+
+// How many users to pull per DB round-trip while fanning out. Independent of
+// the FCM cap above — one user can hold up to 20 tokens.
+const BROADCAST_USER_PAGE = 500;
 
 // Domain-event -> Notification template map. Each template returns:
 //   - The standard in-app notification fields (recipient, type, title, message, cta, priority)
@@ -66,8 +84,10 @@ const EVENT_TEMPLATES = {
     title: 'Escalation Raised',
     message: p.reason || 'A new escalation has been raised.',
     priority: 'High',
-    // Escalation notifications are broadcast (no single phone/token available) —
-    // SMS/WhatsApp/Push require a resolved recipient, so these channels are skipped.
+    // Stays in-app on purpose. Role-wide push exists (deliverBroadcastPush) but
+    // is reserved for the console's composer, where a human chose the audience:
+    // an ops escalation firing a phone alert at every user on the platform is
+    // not what "raise an escalation" should mean.
   }),
   'brand.warranty_claim': (p) => ({
     broadcastRole: 'Brands',
@@ -79,6 +99,44 @@ const EVENT_TEMPLATES = {
 };
 
 // ── Channel delivery helpers ──────────────────────────────────────────────────
+
+/**
+ * Which preference switches a notification is subject to, derived from its
+ * `type`. Extracted so the personal and broadcast paths can't drift apart —
+ * an opt-out has to mean the same thing whether the message was addressed to
+ * one user or to their whole role.
+ */
+function classifyType(notification, template) {
+  const t = notification.type || '';
+  return {
+    isPromotional: t === 'promo' || t === 'promotional' || t === 'offer' || Boolean(template?.isPromotional),
+    isBookingUpdate: t === 'created' || t === 'assigned' || t === 'status' || t === 'completed' || t === 'payment',
+    isSecurityAlert: t === 'security' || t === 'login',
+  };
+}
+
+/** Does this user's preference doc allow a push of this type? (No doc = yes.) */
+function isPushAllowed(prefs, flags) {
+  if (prefs?.push === false || prefs?.pushNotifications === false) return false;
+  if (flags.isPromotional && prefs?.whatsAppPromo === false && prefs?.emailPromo === false) return false;
+  if (flags.isBookingUpdate && prefs?.bookingUpdates === false) return false;
+  if (flags.isSecurityAlert && prefs?.securityAlerts === false) return false;
+  return true;
+}
+
+/**
+ * The mirror of isPushAllowed as a Mongo query: preference docs that opt OUT
+ * of a push of this type. Fanning out a broadcast can't afford one preference
+ * lookup per user, and preferences default to enabled — so we fetch only the
+ * (typically small) set of explicit opt-outs and treat everyone else as in.
+ */
+function pushOptOutQuery(flags) {
+  const or = [{ push: false }, { pushNotifications: false }];
+  if (flags.isPromotional) or.push({ whatsAppPromo: false, emailPromo: false });
+  if (flags.isBookingUpdate) or.push({ bookingUpdates: false });
+  if (flags.isSecurityAlert) or.push({ securityAlerts: false });
+  return { $or: or };
+}
 
 /**
  * Delivers push + SMS + WhatsApp for a personally-addressed notification.
@@ -100,24 +158,12 @@ async function deliverExternal(notification, template, recipientId) {
     if (!user) return;
 
     // Check category preferences
-    const notifType = notification.type || '';
-    const isPromotional = notifType === 'promo' || notifType === 'promotional' || notifType === 'offer' || Boolean(template?.isPromotional);
-    const isBookingUpdate = notifType === 'created' || notifType === 'assigned' || notifType === 'status' || notifType === 'completed' || notifType === 'payment';
-    const isSecurityAlert = notifType === 'security' || notifType === 'login';
+    const flags = classifyType(notification, template);
 
-    let pushEnabled = prefs?.push !== false && prefs?.pushNotifications !== false && process.env.NOTIFICATION_PUSH_ENABLED !== 'false';
-    if (isPromotional && (prefs?.pushNotifications === false || (prefs?.whatsAppPromo === false && prefs?.emailPromo === false))) {
-      pushEnabled = false;
-    }
-    if (isBookingUpdate && prefs?.bookingUpdates === false) {
-      pushEnabled = false;
-    }
-    if (isSecurityAlert && prefs?.securityAlerts === false) {
-      pushEnabled = false;
-    }
+    const pushEnabled = process.env.NOTIFICATION_PUSH_ENABLED !== 'false' && isPushAllowed(prefs, flags);
 
     let whatsappEnabled = prefs?.whatsapp !== false && process.env.NOTIFICATION_WHATSAPP_ENABLED !== 'false';
-    if (isPromotional && prefs?.whatsAppPromo === false) {
+    if (flags.isPromotional && prefs?.whatsAppPromo === false) {
       whatsappEnabled = false;
     }
 
@@ -166,6 +212,115 @@ async function deliverExternal(notification, template, recipientId) {
   }
 }
 
+/**
+ * Fan a broadcast out to every device token held by the targeted role.
+ *
+ * deliverExternal() above can't do this: it resolves a single User document,
+ * so a broadcast (recipient: null) fell straight through its guard and sent
+ * nothing at all. This walks the audience in pages instead, and never holds
+ * the whole token set in memory at once.
+ *
+ * Never throws — the notification is already saved and socket-delivered by the
+ * time this runs, so a Firebase outage must not turn into a failed request.
+ *
+ * @returns {Promise<{recipients:number, tokens:number, batches:number}>} counts
+ *          for logging; also what the tests assert on.
+ */
+async function deliverBroadcastPush(notification, broadcastRole, template = {}) {
+  const stats = { recipients: 0, tokens: 0, batches: 0 };
+  if (process.env.NOTIFICATION_PUSH_ENABLED === 'false') return stats;
+
+  try {
+    const roleFilter = BROADCAST_ROLE_FILTER[broadcastRole];
+    if (roleFilter === undefined) {
+      console.error(`[notifications] unknown broadcastRole "${broadcastRole}" — nothing sent`);
+      return stats;
+    }
+
+    const flags = classifyType(notification, template);
+
+    // One query for the whole audience's opt-outs, not one per user.
+    const optOuts = await NotificationPreference.find(pushOptOutQuery(flags)).select('user').lean();
+    const optedOut = new Set(optOuts.map((p) => String(p.user)));
+
+    const userQuery = { fcmTokens: { $exists: true, $ne: [] } };
+    if (roleFilter) userQuery.role = roleFilter;
+
+    const title = notification.title;
+    const body = notification.message;
+    const data = { notificationId: String(notification._id), broadcastRole };
+
+    // Stale tokens are pruned once at the end rather than per batch: they come
+    // from many different users, so a single updateMany beats N updateOnes.
+    const stale = [];
+
+    let batch = [];
+    const flush = async () => {
+      if (!batch.length) return;
+      const tokens = batch;
+      batch = [];
+      stats.batches += 1;
+      stats.tokens += tokens.length;
+      await sendPush({ tokens, title, body, data, onStaleTokens: (s) => stale.push(...s) });
+    };
+
+    // Paginate by _id rather than skip/limit — a broadcast to a large audience
+    // would otherwise re-scan the collection on every page.
+    let lastId = null;
+    for (;;) {
+      const page = await User.find(lastId ? { ...userQuery, _id: { $gt: lastId } } : userQuery)
+        .select('_id fcmTokens')
+        .sort({ _id: 1 })
+        .limit(BROADCAST_USER_PAGE)
+        .lean();
+      if (!page.length) break;
+      lastId = page[page.length - 1]._id;
+
+      for (const user of page) {
+        if (optedOut.has(String(user._id))) continue;
+        stats.recipients += 1;
+        for (const token of user.fcmTokens) {
+          batch.push(token);
+          if (batch.length >= FCM_MULTICAST_LIMIT) await flush();
+        }
+      }
+
+      if (page.length < BROADCAST_USER_PAGE) break;
+    }
+    await flush();
+
+    if (stale.length) {
+      await User.updateMany(
+        { fcmTokens: { $in: stale } },
+        { $pull: { fcmTokens: { $in: stale } } },
+      ).catch((e) => console.error('[push] broadcast stale-token prune failed:', e.message));
+    }
+
+    return stats;
+  } catch (err) {
+    console.error('[notifications] deliverBroadcastPush error:', err.message);
+    return stats;
+  }
+}
+
+// A broadcast fan-out is deliberately not awaited by the request that triggers
+// it, so tests (and a graceful shutdown) need a way to know when it has landed.
+const pendingDeliveries = new Set();
+
+function trackDelivery(promise) {
+  pendingDeliveries.add(promise);
+  promise.finally(() => pendingDeliveries.delete(promise));
+  return promise;
+}
+
+/** Resolves once every in-flight fan-out has settled. */
+export async function awaitPendingDeliveries() {
+  // Looped, not a single allSettled: a settling delivery can spawn another.
+  while (pendingDeliveries.size) {
+    await Promise.allSettled([...pendingDeliveries]);
+  }
+}
+
 // ── Public API ────────────────────────────────────────────────────────────────
 
 /**
@@ -180,6 +335,10 @@ async function deliverExternal(notification, template, recipientId) {
  *   1. DB write (Notification document)
  *   2. Socket.IO real-time push (in-app)
  *   3. FCM mobile push + WhatsApp + SMS — fired in parallel via Promise.allSettled
+ *
+ * Broadcast templates (recipient: null) stop after step 2 — see the escalation
+ * template. Role-wide device push is the console composer's job, via
+ * sendAdHocPush(), where an admin explicitly picked the audience.
  */
 export async function emit(event, payload) {
   const template = EVENT_TEMPLATES[event];
@@ -254,7 +413,21 @@ export async function sendAdHocPush({ recipientId, broadcastRole, title, body, t
   }
 
   // Empty template => push only; SMS/WhatsApp are dispatched by their own endpoint.
-  await deliverExternal(notification, {}, recipientId ? String(recipientId) : null);
+  if (recipientId) {
+    await deliverExternal(notification, {}, String(recipientId));
+  } else {
+    // Detached: a broadcast to a large audience is many sequential FCM calls,
+    // and the admin who pressed "send" should not wait out the fan-out. Errors
+    // are swallowed inside deliverBroadcastPush, so nothing can reject here.
+    trackDelivery(
+      deliverBroadcastPush(notification, broadcastRole).then((s) =>
+        console.info(
+          `[notifications] broadcast "${title}" -> ${broadcastRole}: ` +
+            `${s.tokens} token(s) across ${s.batches} batch(es), ${s.recipients} recipient(s)`,
+        ),
+      ),
+    );
+  }
 
   return notification;
 }
