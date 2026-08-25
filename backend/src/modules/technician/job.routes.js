@@ -12,6 +12,7 @@ import {
   acceptJobSchema,
   submitDiagnosisSchema,
   submitSparePartsSchema,
+  requestPartSchema,
   collectPaymentSchema,
   verifyJobPaymentSchema,
 } from './job.validation.js';
@@ -109,6 +110,19 @@ jobRouter.post(
   async (req, res, next) => {
     try {
       ok(res, await jobService.submitSpareParts(req.technician.id, req.params.id, req.body));
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+jobRouter.post(
+  '/:id/request-part',
+  validate(jobIdParamSchema, 'params'),
+  validate(requestPartSchema),
+  async (req, res, next) => {
+    try {
+      ok(res, await jobService.requestSparePart(req.technician.id, req.params.id, req.body));
     } catch (err) {
       next(err);
     }

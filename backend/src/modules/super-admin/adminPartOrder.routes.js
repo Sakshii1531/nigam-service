@@ -6,7 +6,7 @@ import { ok } from '../../utils/respond.js';
 import { ROLES } from '../../config/constants.js';
 import * as adminPartOrderService from './adminPartOrder.service.js';
 
-const PART_ORDER_STATUSES = ['Pending', 'Approved', 'Dispatched', 'Rejected'];
+const PART_ORDER_STATUSES = ['Pending', 'Approved', 'Dispatched', 'Delivered', 'Rejected'];
 
 const listQuerySchema = z.object({
   status: z.enum(PART_ORDER_STATUSES).optional(),

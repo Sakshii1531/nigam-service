@@ -50,32 +50,77 @@ export async function updatePartOrderStatus(partOrderId, { status, scheduledDate
   partOrder.status = status;
   await partOrder.save();
 
-  if (partOrder.job && (status === 'Approved' || status === 'Dispatched')) {
+  if (partOrder.job) {
     const job = await Job.findById(partOrder.job);
-    if (job) {
-      const parsedDate = scheduledDate ? new Date(scheduledDate) : new Date(Date.now() + 86400000);
-      job.activeStep = 'revisit_scheduled';
-      job.revisit = {
-        scheduledDate: parsedDate,
-        expectedDate: parsedDate,
-        timeSlot: timeSlot || '10:00 AM - 01:00 PM',
-        status: 'Scheduled',
-        partOrderId: partOrder._id,
-        notes: notes || 'Spare part approved by NCC',
-      };
-      await job.save();
+    const sr = job ? await ServiceRequest.findById(job.serviceRequest) : null;
 
-      const sr = await ServiceRequest.findById(job.serviceRequest);
+    if (status === 'Approved') {
+      if (job) {
+        if (!job.revisit) job.revisit = {};
+        job.revisit.status = 'Pending Approval';
+        job.revisit.partOrderId = partOrder._id;
+        await job.save();
+      }
       if (sr) {
-        // Same guard as the brand path: submitSpareParts may already have
-        // reached 'Spare Received', and re-stamping duplicates the entry.
-        const alreadyReceived = sr.status === 'Spare Received';
-        sr.status = 'Spare Received';
-        if (!alreadyReceived) sr.timeline.push({
-          stepLabel: 'Spare Received',
+        sr.timeline.push({
+          stepLabel: 'Spare Approved',
           done: true,
           timestamp: new Date(),
-          description: `Spare part ${status.toLowerCase()} by NCC — revisit scheduled`,
+          description: notes || 'Spare part approved by Super Admin — awaiting dispatch',
+        });
+        await sr.save();
+      }
+    } else if (status === 'Dispatched') {
+      if (job) {
+        if (!job.revisit) job.revisit = {};
+        job.revisit.status = 'Pending Approval';
+        job.revisit.partOrderId = partOrder._id;
+        await job.save();
+      }
+      if (sr) {
+        sr.timeline.push({
+          stepLabel: 'Spare Dispatched',
+          done: true,
+          timestamp: new Date(),
+          description: notes || 'Spare part dispatched to technician',
+        });
+        await sr.save();
+      }
+    } else if (status === 'Delivered') {
+      if (job) {
+        const parsedDate = scheduledDate ? new Date(scheduledDate) : new Date(Date.now() + 86400000);
+        job.activeStep = 'revisit_scheduled';
+        job.revisit = {
+          scheduledDate: parsedDate,
+          expectedDate: parsedDate,
+          timeSlot: timeSlot || '10:00 AM - 01:00 PM',
+          status: 'Scheduled',
+          partOrderId: partOrder._id,
+          notes: notes || 'Spare part delivered — revisit scheduled',
+        };
+        await job.save();
+      }
+
+      if (sr) {
+        const alreadyReceived = sr.status === 'Spare Received';
+        sr.status = 'Spare Received';
+        if (!alreadyReceived) {
+          sr.timeline.push({
+            stepLabel: 'Spare Received',
+            done: true,
+            timestamp: new Date(),
+            description: notes || 'Spare part delivered — revisit scheduled',
+          });
+        }
+        await sr.save();
+      }
+    } else if (status === 'Rejected') {
+      if (sr) {
+        sr.timeline.push({
+          stepLabel: 'Spare Rejected',
+          done: true,
+          timestamp: new Date(),
+          description: notes || 'Spare part request rejected by Super Admin',
         });
         await sr.save();
       }

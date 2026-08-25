@@ -18,11 +18,14 @@ const recentEarnings = [
   { id: 5, title: 'Voltas AC Service (Partner Brand)', tag: 'InvoicePayout', date: '16 May 2026, 03:45 PM', amount: 600, status: 'Verification', statusColor: 'text-blue-500', icon: 'file', tab: 'invoice' },
 ];
 
+import { apiRequest } from '../../lib/apiClient';
+
 const ProfilePage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { earningsTally, notifications } = useTech();
 
+  const [profile, setProfile] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [exploreOpen, setExploreOpen] = useState(true);
   const [chatOpen, setChatOpen] = useState(false);
@@ -32,23 +35,35 @@ const ProfilePage = () => {
   ]);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
-  const handleSendChatMessage = () => {
+  useEffect(() => {
+    apiRequest('/tech/profile/profile', { auth: true })
+      .then((res) => setProfile(res))
+      .catch((err) => console.warn('Could not load profile:', err.message));
+  }, []);
+
+  const primaryPayout = profile?.payoutMethods?.find(m => m.isPrimary) || profile?.payoutMethods?.[0] || null;
+
+  const handleSendChatMessage = async () => {
     if (!chatInput.trim()) return;
-    setChatMessages(prev => [...prev, { id: Date.now(), sender: 'user', text: chatInput }]);
-    const userText = chatInput;
+    const userText = chatInput.trim();
+    setChatMessages(prev => [...prev, { id: Date.now(), sender: 'user', text: userText }]);
     setChatInput('');
-    setTimeout(() => {
-      let reply = "I can assist you with HVAC diagnostic tips, earnings analytics, or inventory requests. What can I do for you?";
-      const lowerText = userText.toLowerCase();
-      if (lowerText.includes('part') || lowerText.includes('capacitor')) {
-        reply = "Capacitor 45/5 MFD is in stock at NCC Warehouse. You can request it from your Inventory tab.";
-      } else if (lowerText.includes('earn') || lowerText.includes('money') || lowerText.includes('analytics')) {
-        reply = "You can view your full performance stats and withdraw balance from the Analytics tab.";
-      } else if (lowerText.includes('schedule') || lowerText.includes('job')) {
-        reply = "You have 3 confirmed jobs scheduled for Tuesday, May 14. Split AC Repair is your next appointment.";
-      }
-      setChatMessages(curr => [...curr, { id: Date.now() + 1, sender: 'ai', text: reply }]);
-    }, 800);
+    
+    try {
+      const res = await apiRequest('/tech/assistant', {
+        method: 'POST',
+        auth: true,
+        body: {
+          messages: [
+            ...chatMessages.map(m => ({ role: m.sender === 'user' ? 'user' : 'assistant', content: m.text })),
+            { role: 'user', content: userText }
+          ]
+        }
+      });
+      setChatMessages(curr => [...curr, { id: Date.now() + 1, sender: 'ai', text: res?.reply || "I'm here to help with your jobs, parts, and earnings." }]);
+    } catch {
+      setChatMessages(curr => [...curr, { id: Date.now() + 1, sender: 'ai', text: "I can assist you with diagnostic tips, earnings analytics, or inventory requests. What can I do for you?" }]);
+    }
   };
 
   const exploreItems = [
@@ -239,7 +254,7 @@ const ProfilePage = () => {
           </button>
         </div>
 
-        {/* Bank Account */}
+        {/* Bank Account / Payout Method */}
         <div className="mx-3 bg-white rounded-2xl border border-slate-200 shadow-sm">
           <button
             onClick={() => navigate('/technician/payout-settings')}
@@ -249,13 +264,19 @@ const ProfilePage = () => {
               <Building2 className="h-5 w-5 text-slate-500" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-[#052355]">Bank Account</p>
-              <p className="text-[10px] text-slate-500 mt-0.5">State Bank of India</p>
-              <p className="text-[10px] text-slate-400">A/C No. ••••••4521</p>
+              <p className="text-xs font-semibold text-[#052355]">{primaryPayout ? (primaryPayout.type === 'bank' ? 'Bank Account' : 'UPI ID') : 'Payout Method'}</p>
+              <p className="text-[10px] text-slate-500 mt-0.5">{primaryPayout ? primaryPayout.name : 'No payout method linked'}</p>
+              <p className="text-[10px] text-slate-400">
+                {primaryPayout 
+                  ? (primaryPayout.accountNo ? `A/C No. ••••••${primaryPayout.accountNo.slice(-4)}` : primaryPayout.upiId || '')
+                  : 'Tap to configure for weekly earnings'}
+              </p>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
-              <span className="text-[10px] font-semibold text-[#0D47A1] bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">Primary</span>
-              <span className="text-xs font-semibold text-[#0D47A1]">Manage</span>
+              {primaryPayout && (
+                <span className="text-[10px] font-semibold text-[#0D47A1] bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">Primary</span>
+              )}
+              <span className="text-xs font-semibold text-[#0D47A1]">{primaryPayout ? 'Manage' : 'Add'}</span>
               <ChevronRight className="h-4 w-4 text-slate-400" />
             </div>
           </button>
