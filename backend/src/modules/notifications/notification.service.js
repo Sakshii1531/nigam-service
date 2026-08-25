@@ -1,5 +1,7 @@
+import mongoose from 'mongoose';
 import { Notification } from './notification.model.js';
 import { NotificationPreference } from './notificationPreference.model.js';
+import { NotificationReceipt } from './notificationReceipt.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { parsePagination, paginationMeta } from '../../utils/pagination.js';
 import { getIO } from '../../sockets/io.js';
@@ -453,32 +455,59 @@ export async function sendAdHocSms({ recipientId, phone, message, templateId }) 
  * invisible in every inbox.
  */
 export async function listNotifications(user, { read, page, limit, sort } = {}) {
-  const query = {
-    $or: [
-      { recipient: user.id },
-      { broadcastRole: { $in: broadcastAudiencesForRole(user.role) } },
-    ],
-  };
-  if (read !== undefined) query.read = read;
+  const userId = new mongoose.Types.ObjectId(String(user.id));
+  const audiences = broadcastAudiencesForRole(user.role);
 
+  const match = { $or: [{ recipient: userId }, { broadcastRole: { $in: audiences } }] };
   const { skip, limit: lim, page: pg, sort: sortObj } = parsePagination({ page, limit, sort });
-  const [items, total] = await Promise.all([
-    Notification.find(query).sort(sortObj).skip(skip).limit(lim),
-    Notification.countDocuments(query),
+
+  // Aggregation rather than find(): a broadcast's read state for THIS user
+  // lives in a receipt row, not on the document, so `read` has to be computed
+  // per user before it can be filtered, sorted, or paginated on. Doing it in
+  // JS after the fact would page over the wrong set.
+  const withReadState = [
+    { $match: match },
+    {
+      $lookup: {
+        from: NotificationReceipt.collection.name,
+        let: { nid: '$_id' },
+        pipeline: [{ $match: { $expr: { $and: [{ $eq: ['$notification', '$$nid'] }, { $eq: ['$user', userId] }] } } }],
+        as: 'receipt',
+      },
+    },
+    {
+      $addFields: {
+        // Personal notifications keep their own flag; a broadcast is read
+        // exactly when this user has a receipt for it.
+        read: {
+          $cond: [{ $ne: ['$recipient', null] }, '$read', { $gt: [{ $size: '$receipt' }, 0] }],
+        },
+      },
+    },
+    ...(read !== undefined ? [{ $match: { read } }] : []),
+  ];
+
+  const [items, countResult] = await Promise.all([
+    Notification.aggregate([
+      ...withReadState,
+      { $sort: sortObj },
+      { $skip: skip },
+      { $limit: lim },
+      // The toJSON plugin that normally maps _id -> id does not run on
+      // aggregation output, so shape it here or the frontend loses every id.
+      { $addFields: { id: '$_id' } },
+      { $project: { _id: 0, __v: 0, receipt: 0 } },
+    ]),
+    Notification.aggregate([...withReadState, { $count: 'total' }]),
   ]);
+
+  const total = countResult[0]?.total || 0;
   return { items, meta: paginationMeta({ page: pg, limit: lim, total }) };
 }
 
-/** Broadcast notifications (recipient: null, broadcastRole set) have a single
- * shared `read` flag, not a per-recipient read receipt — the schema has no row
- * to represent "read by user X, unread for user Y". Marking one read here
- * would flip it to read for every recipient at once, so this only ever
- * touches personally-addressed notifications; broadcast read-state is a known
- * gap, not silently mishandled. */
 /**
  * One notification the user is entitled to see — their own, or a broadcast
- * aimed at their role. Separate from markRead because broadcasts have no
- * per-user read state and must still be openable.
+ * aimed at their role.
  */
 export async function getNotification(user, id) {
   const notification = await Notification.findById(id);
@@ -496,19 +525,91 @@ export async function getNotification(user, id) {
   return notification;
 }
 
-export async function markRead(userId, id) {
+/**
+ * Mark one notification read for this user.
+ *
+ * A personal notification flips its own `read` flag. A broadcast writes a
+ * receipt instead — flipping the shared flag would mark the message read for
+ * every recipient at once, which is why this used to reject broadcasts with a
+ * 400 rather than mishandle them.
+ */
+export async function markRead(user, id) {
   const notification = await Notification.findById(id);
   if (!notification) throw new ApiError(404, 'Notification not found');
-  if (!notification.recipient) throw new ApiError(400, 'Broadcast notifications have no per-user read state yet');
-  if (String(notification.recipient) !== userId) throw new ApiError(403, 'Not authorized to update this notification');
 
-  notification.read = true;
-  await notification.save();
-  return notification;
+  if (notification.recipient) {
+    if (String(notification.recipient) !== user.id) {
+      throw new ApiError(403, 'Not authorized to update this notification');
+    }
+    notification.read = true;
+    await notification.save();
+    return { ...notification.toJSON(), read: true };
+  }
+
+  if (!broadcastAudiencesForRole(user.role).includes(notification.broadcastRole)) {
+    throw new ApiError(403, 'Not authorized to update this notification');
+  }
+
+  // Upsert: re-reading an already-read broadcast is a no-op, not a duplicate
+  // row and not an E11000 against the unique (user, notification) index.
+  await NotificationReceipt.updateOne(
+    { user: user.id, notification: notification._id },
+    { $setOnInsert: { readAt: new Date() } },
+    { upsert: true },
+  );
+
+  // The document's own `read` flag is meaningless for a broadcast — report the
+  // per-user truth the inbox will now show.
+  return { ...notification.toJSON(), read: true };
 }
 
-export async function markAllRead(userId) {
-  await Notification.updateMany({ recipient: userId, read: false }, { read: true });
+/**
+ * Clear this user's whole inbox: their personal notifications by flag, and
+ * every broadcast aimed at their role by receipt.
+ */
+export async function markAllRead(user) {
+  const audiences = broadcastAudiencesForRole(user.role);
+
+  const [, unreadBroadcasts] = await Promise.all([
+    Notification.updateMany({ recipient: user.id, read: false }, { read: true }),
+    // Only broadcasts with no receipt yet — insertMany below would otherwise
+    // collide with the unique index on every already-read one.
+    Notification.aggregate([
+      { $match: { broadcastRole: { $in: audiences } } },
+      {
+        $lookup: {
+          from: NotificationReceipt.collection.name,
+          let: { nid: '$_id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$notification', '$$nid'] },
+                    { $eq: ['$user', new mongoose.Types.ObjectId(String(user.id))] },
+                  ],
+                },
+              },
+            },
+          ],
+          as: 'receipt',
+        },
+      },
+      { $match: { receipt: { $size: 0 } } },
+      { $project: { _id: 1 } },
+    ]),
+  ]);
+
+  if (unreadBroadcasts.length) {
+    const now = new Date();
+    await NotificationReceipt.insertMany(
+      unreadBroadcasts.map((b) => ({ user: user.id, notification: b._id, readAt: now })),
+      // A receipt written concurrently by markRead() must not fail the batch.
+      { ordered: false },
+    ).catch((err) => {
+      if (err?.code !== 11000) throw err;
+    });
+  }
 }
 
 /**

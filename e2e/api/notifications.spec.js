@@ -288,3 +288,84 @@ test.describe('Super-admin broadcast targeting', () => {
     expect(res.status()).toBe(403);
   });
 });
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Per-user broadcast read state, over real HTTP.
+//
+// A broadcast has many readers; the document's single `read` flag cannot say
+// "read by this technician, unread for that one". Read state lives in a
+// per-user receipt, so one technician clearing a broadcast must not clear it
+// for the rest of the role.
+// ─────────────────────────────────────────────────────────────────────────────
+test.describe('Broadcast read state is per user', () => {
+  test('one technician reading a broadcast leaves it unread for another', async ({ request }) => {
+    const admin = await createSuperAdmin(request);
+    const alice = await createTechnician(request);
+    const bob = await createTechnician(request);
+
+    const title = `Shift change ${randomUUID().slice(0, 8)}`;
+    const sent = await request.post('/api/v1/notifications/push', {
+      headers: { Authorization: `Bearer ${admin.token}` },
+      data: { broadcastRole: 'Technicians', title, body: 'Body', type: 'promo' },
+    });
+    const id = (await sent.json()).data.id;
+
+    const marked = await request.patch(`/api/v1/notifications/${id}/read`, {
+      headers: { Authorization: `Bearer ${alice.token}` },
+    });
+    expect(marked.status()).toBe(200);
+
+    const aliceUnread = await request.get('/api/v1/notifications?read=false', {
+      headers: { Authorization: `Bearer ${alice.token}` },
+    });
+    expect((await aliceUnread.json()).data.map((n) => n.title)).not.toContain(title);
+
+    const bobUnread = await request.get('/api/v1/notifications?read=false', {
+      headers: { Authorization: `Bearer ${bob.token}` },
+    });
+    expect((await bobUnread.json()).data.map((n) => n.title)).toContain(title);
+  });
+
+  test('read-all clears broadcasts for the caller only', async ({ request }) => {
+    const admin = await createSuperAdmin(request);
+    const alice = await createTechnician(request);
+    const bob = await createTechnician(request);
+
+    const title = `Payout notice ${randomUUID().slice(0, 8)}`;
+    await request.post('/api/v1/notifications/push', {
+      headers: { Authorization: `Bearer ${admin.token}` },
+      data: { broadcastRole: 'Technicians', title, body: 'Body', type: 'promo' },
+    });
+
+    await request.patch('/api/v1/notifications/read-all', {
+      headers: { Authorization: `Bearer ${alice.token}` },
+    });
+
+    const aliceUnread = await request.get('/api/v1/notifications?read=false', {
+      headers: { Authorization: `Bearer ${alice.token}` },
+    });
+    expect((await aliceUnread.json()).data).toHaveLength(0);
+
+    const bobUnread = await request.get('/api/v1/notifications?read=false', {
+      headers: { Authorization: `Bearer ${bob.token}` },
+    });
+    expect((await bobUnread.json()).data.map((n) => n.title)).toContain(title);
+  });
+
+  test('a customer cannot mark a technicians-only broadcast read', async ({ request }) => {
+    const admin = await createSuperAdmin(request);
+    const customer = await createCustomer(request);
+
+    const sent = await request.post('/api/v1/notifications/push', {
+      headers: { Authorization: `Bearer ${admin.token}` },
+      data: { broadcastRole: 'Technicians', title: `Tech only ${randomUUID().slice(0, 8)}`, body: 'Body', type: 'promo' },
+    });
+    const id = (await sent.json()).data.id;
+
+    const res = await request.patch(`/api/v1/notifications/${id}/read`, {
+      headers: { Authorization: `Bearer ${customer.token}` },
+    });
+    expect(res.status()).toBe(403);
+  });
+});
