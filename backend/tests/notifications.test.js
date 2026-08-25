@@ -42,12 +42,15 @@ const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
 // ── Import modules AFTER mocks are set up ────────────────────────────────────
-const { emit, listNotifications, markRead, sendAdHocPush, listBroadcasts, awaitPendingDeliveries, getNotification } =
+const { emit, listNotifications, markRead, sendAdHocPush, listBroadcasts, awaitPendingDeliveries, getNotification, markAllRead } =
   await import('../src/modules/notifications/notification.service.js');
 const { User } = await import('../src/modules/auth/user.model.js');
 const { Notification } = await import('../src/modules/notifications/notification.model.js');
 const { NotificationPreference } = await import(
   '../src/modules/notifications/notificationPreference.model.js'
+);
+const { NotificationReceipt } = await import(
+  '../src/modules/notifications/notificationReceipt.model.js'
 );
 
 // ── DB setup ──────────────────────────────────────────────────────────────────
@@ -72,6 +75,7 @@ beforeEach(async () => {
     Notification.deleteMany({}),
     User.deleteMany({}),
     NotificationPreference.deleteMany({}),
+    NotificationReceipt.deleteMany({}),
   ]);
   jest.clearAllMocks();
   mockSendEachForMulticast.mockResolvedValue({ responses: [{ success: true }] });
@@ -112,7 +116,7 @@ describe('emit() — in-app delivery', () => {
   test('marks a notification read', async () => {
     const user = await seedUser();
     const notif = await emit('payment.success', { user: user._id, amount: 499 });
-    const updated = await markRead(String(user._id), notif.id);
+    const updated = await markRead({ id: String(user._id), role: 'customer' }, notif.id);
     expect(updated.read).toBe(true);
   });
 
@@ -571,6 +575,125 @@ describe('broadcast inbox visibility', () => {
 
     const found = await getNotification({ id: String(tech._id), role: 'technician' }, String(notif._id));
     expect(found.title).toBe('Tech only');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 8. Per-user broadcast read state
+//
+// A broadcast has many readers, so the document's single `read` flag cannot say
+// "read by this technician, unread for that one". Read state for a broadcast
+// lives in a NotificationReceipt row instead.
+// ─────────────────────────────────────────────────────────────────────────────
+describe('per-user broadcast read state', () => {
+  async function twoTechs() {
+    return [
+      { id: String((await seedRoleUser('technician'))._id), role: 'technician' },
+      { id: String((await seedRoleUser('technician'))._id), role: 'technician' },
+    ];
+  }
+
+  test('one user reading a broadcast leaves it unread for everyone else', async () => {
+    const [alice, bob] = await twoTechs();
+    const notif = await sendAdHocPush({ broadcastRole: 'Technicians', title: 'Shift change', body: 'Body', type: 'promo' });
+
+    await markRead(alice, String(notif._id));
+
+    const a = await listNotifications(alice);
+    const b = await listNotifications(bob);
+    expect(a.items.find((i) => i.title === 'Shift change').read).toBe(true);
+    expect(b.items.find((i) => i.title === 'Shift change').read).toBe(false);
+  });
+
+  test('read=false excludes a broadcast this user has read, but not others', async () => {
+    const [alice, bob] = await twoTechs();
+    const notif = await sendAdHocPush({ broadcastRole: 'Technicians', title: 'Shift change', body: 'Body', type: 'promo' });
+    await markRead(alice, String(notif._id));
+
+    const aUnread = await listNotifications(alice, { read: false });
+    const bUnread = await listNotifications(bob, { read: false });
+    expect(aUnread.items).toHaveLength(0);
+    expect(bUnread.items.map((i) => i.title)).toEqual(['Shift change']);
+  });
+
+  test('read=true returns it for the reader only', async () => {
+    const [alice, bob] = await twoTechs();
+    const notif = await sendAdHocPush({ broadcastRole: 'Technicians', title: 'Shift change', body: 'Body', type: 'promo' });
+    await markRead(alice, String(notif._id));
+
+    expect((await listNotifications(alice, { read: true })).items.map((i) => i.title)).toEqual(['Shift change']);
+    expect((await listNotifications(bob, { read: true })).items).toHaveLength(0);
+  });
+
+  test('meta.total reflects the per-user filter, not the raw document count', async () => {
+    const [alice, bob] = await twoTechs();
+    const n1 = await sendAdHocPush({ broadcastRole: 'Technicians', title: 'One', body: 'Body', type: 'promo' });
+    await sendAdHocPush({ broadcastRole: 'Technicians', title: 'Two', body: 'Body', type: 'promo' });
+    await markRead(alice, String(n1._id));
+
+    expect((await listNotifications(alice, { read: false })).meta.total).toBe(1);
+    expect((await listNotifications(bob, { read: false })).meta.total).toBe(2);
+  });
+
+  test('marking the same broadcast read twice is idempotent', async () => {
+    const [alice] = await twoTechs();
+    const notif = await sendAdHocPush({ broadcastRole: 'Technicians', title: 'Twice', body: 'Body', type: 'promo' });
+
+    await markRead(alice, String(notif._id));
+    await expect(markRead(alice, String(notif._id))).resolves.toBeTruthy();
+    expect(await NotificationReceipt.countDocuments({ user: alice.id, notification: notif._id })).toBe(1);
+  });
+
+  test('markRead refuses a broadcast aimed at another role', async () => {
+    const customer = { id: String((await seedRoleUser('customer'))._id), role: 'customer' };
+    const notif = await sendAdHocPush({ broadcastRole: 'Technicians', title: 'Tech only', body: 'Body', type: 'promo' });
+
+    await expect(markRead(customer, String(notif._id))).rejects.toThrow(/Not authorized/);
+    expect(await NotificationReceipt.countDocuments({})).toBe(0);
+  });
+
+  test('markAllRead clears broadcasts as well as personal notifications', async () => {
+    const [alice, bob] = await twoTechs();
+    await sendAdHocPush({ recipientId: alice.id, title: 'Personal', body: 'Body', type: 'tech' });
+    await sendAdHocPush({ broadcastRole: 'Technicians', title: 'Broadcast', body: 'Body', type: 'promo' });
+    await sendAdHocPush({ broadcastRole: 'All', title: 'Platform', body: 'Body', type: 'promo' });
+
+    await markAllRead(alice);
+
+    expect((await listNotifications(alice, { read: false })).items).toHaveLength(0);
+    // ...and did not read anything on anyone else's behalf.
+    expect((await listNotifications(bob, { read: false })).items.map((i) => i.title).sort())
+      .toEqual(['Broadcast', 'Platform']);
+  });
+
+  test('markAllRead is safe to run twice (no duplicate receipts)', async () => {
+    const [alice] = await twoTechs();
+    await sendAdHocPush({ broadcastRole: 'Technicians', title: 'Once', body: 'Body', type: 'promo' });
+
+    await markAllRead(alice);
+    await expect(markAllRead(alice)).resolves.not.toThrow();
+    expect(await NotificationReceipt.countDocuments({ user: alice.id })).toBe(1);
+  });
+
+  test('a personal notification still uses its own read flag', async () => {
+    const [alice] = await twoTechs();
+    const notif = await sendAdHocPush({ recipientId: alice.id, title: 'Mine', body: 'Body', type: 'tech' });
+
+    await markRead(alice, String(notif._id));
+
+    expect(await Notification.findById(notif._id).then((n) => n.read)).toBe(true);
+    expect(await NotificationReceipt.countDocuments({})).toBe(0);
+  });
+
+  test('list items expose `id` — the toJSON plugin does not run on aggregation output', async () => {
+    const [alice] = await twoTechs();
+    await sendAdHocPush({ broadcastRole: 'Technicians', title: 'Shape', body: 'Body', type: 'promo' });
+
+    const { items } = await listNotifications(alice);
+    expect(items[0].id).toBeDefined();
+    expect(items[0]._id).toBeUndefined();
+    expect(items[0].receipt).toBeUndefined();
+    expect(items[0].title).toBe('Shape');
   });
 });
 

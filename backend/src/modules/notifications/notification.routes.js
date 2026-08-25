@@ -32,7 +32,7 @@ notificationRouter.get('/', validate(listQuerySchema, 'query'), async (req, res,
 
 notificationRouter.patch('/read-all', async (req, res, next) => {
   try {
-    await notificationService.markAllRead(req.user.id);
+    await notificationService.markAllRead(req.user);
     ok(res, { updated: true });
   } catch (err) {
     next(err);
@@ -41,7 +41,7 @@ notificationRouter.patch('/read-all', async (req, res, next) => {
 
 notificationRouter.patch('/:id/read', validate(idParamSchema, 'params'), async (req, res, next) => {
   try {
-    ok(res, await notificationService.markRead(req.user.id, req.params.id));
+    ok(res, await notificationService.markRead(req.user, req.params.id));
   } catch (err) {
     next(err);
   }
