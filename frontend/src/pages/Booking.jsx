@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, X, MapPin, User, Edit3, Star, Calendar as CalendarIcon, Clock, CreditCard, ChevronDown, ChevronUp, ChevronRight } from 'lucide-react';
+import { ArrowLeft, X, MapPin, User, Edit3, Star, Calendar as CalendarIcon, Clock, CreditCard, ChevronDown, ChevronUp, ChevronRight, Check } from 'lucide-react';
 import { apiRequest, getStoredTokens, storeTokens } from '../lib/apiClient';
+import { useAuth } from '../context/AuthContext';
 
 const Booking = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
   
   const searchParams = new URLSearchParams(location.search);
   const preSelectedService = searchParams.get('service') || 'Electrician Consultancy';
@@ -24,14 +26,83 @@ const Booking = () => {
 
   // Address drawer state
   const [showAddressDrawer, setShowAddressDrawer] = useState(false);
-  const [houseNo, setHouseNo] = useState('102');
-  const [landmark, setLandmark] = useState('SSB Camp Road');
-  const [name, setName] = useState('Parveen');
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [selectedAddrId, setSelectedAddrId] = useState(null);
+  const [houseNo, setHouseNo] = useState('');
+  const [landmark, setLandmark] = useState('');
+  const [name, setName] = useState('');
   const [saveAs, setSaveAs] = useState('Home');
+  const [city, setCity] = useState('Delhi');
+  const [pincode, setPincode] = useState('110054');
+
+  const applyAddressData = (addr) => {
+    if (!addr) return;
+    setSelectedAddrId(addr._id || addr.id || null);
+    setHouseNo(addr.house || addr.address || '');
+    setLandmark(addr.landmark || addr.detail || '');
+    setSaveAs(addr.type || 'Home');
+    setCity(addr.city || 'Delhi');
+    setPincode(addr.pincode || '110054');
+    if (addr.name) {
+      setName(addr.name);
+    } else if (user?.name) {
+      setName(user.name);
+    }
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadAddressInfo = async () => {
+      let addrs = user?.addresses || [];
+      const { accessToken } = getStoredTokens();
+      if (accessToken) {
+        try {
+          const res = await apiRequest('/auth/addresses', { auth: true });
+          if (Array.isArray(res)) addrs = res;
+        } catch (e) {
+          console.warn('Could not fetch user addresses:', e);
+        }
+      }
+      if (!isMounted) return;
+      setSavedAddresses(addrs);
+
+      const def = addrs.find((a) => a.isDefault) || addrs[0];
+      if (def) {
+        applyAddressData(def);
+      } else if (user) {
+        setName(user.name || '');
+        if (user.address) setHouseNo(user.address);
+      }
+    };
+
+    loadAddressInfo();
+    return () => {
+      isMounted = false;
+    };
+  }, [user]);
 
   // Date and Time selection drawer state
   const [showDateTimeDrawer, setShowDateTimeDrawer] = useState(false);
-  const [selectedDate, setSelectedDate] = useState('Today');
+  const upcomingDates = React.useMemo(() => {
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const dates = [];
+    const today = new Date();
+    for (let i = 0; i < 4; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() + i);
+      const dayName = days[d.getDay()];
+      const dayNum = d.getDate();
+      dates.push(`${dayName} ${dayNum}`);
+    }
+    dates.push('Select custom');
+    return dates;
+  }, []);
+
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const today = new Date();
+    return `${days[today.getDay()]} ${today.getDate()}`;
+  });
   const [selectedTimeSlot, setSelectedTimeSlot] = useState('09:00 AM');
 
   // Payment Options page state
@@ -97,7 +168,10 @@ const Booking = () => {
     if (n.includes('microwave') || n.includes('oven')) return 'Microwave';
     if (n.includes('chimney')) return 'Chimney';
     if (n.includes('cooler')) return 'Air Cooler';
-    return 'AC';
+    if (n.includes('fan') || n.includes('electric') || n.includes('wiring') || n.includes('light') || n.includes('switch') || n.includes('socket')) return 'Electrician';
+    if (n.includes('plumb') || n.includes('pipe') || n.includes('tap') || n.includes('leak')) return 'Plumber';
+    if (n.includes('clean') || n.includes('sofa') || n.includes('bathroom')) return 'Cleaning';
+    return 'Electrician';
   };
 
   const handlePaymentSuccess = async (paymentMethod = 'UPI') => {
@@ -114,16 +188,22 @@ const Booking = () => {
         body: {
           category: catKey,
           serviceSlug: preSelectedService.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'service',
+          serviceName: preSelectedService,
+          price: price,
+          totalPrice: total,
+          advanceAmount: advance,
           quantity: qty,
           scheduledDate: new Date().toISOString(),
           timeSlot: { date: selectedDate || 'Today', time: selectedTimeSlot || '09:00 AM' },
           address: {
-            house: houseNo || '102',
-            landmark: landmark || 'Local',
+            house: houseNo || '',
+            landmark: landmark || '',
             type: saveAs || 'Home',
-            name: name || 'Customer',
+            name: name || user?.name || 'Customer',
+            city: city || 'Delhi',
+            pincode: pincode || '110054'
           },
-          fullName: name || 'Customer',
+          fullName: name || user?.name || 'Customer',
           mobile: '9876543210',
           paymentMode: 'advance',
           paymentMethod: typeof paymentMethod === 'string' ? paymentMethod : 'UPI',
@@ -519,10 +599,10 @@ const Booking = () => {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[11px] font-black text-slate-800 uppercase tracking-wider">
-                  {saveAs} - {houseNo}, {landmark}
+                  {saveAs} - {houseNo}{landmark ? `, ${landmark}` : ''}
                 </p>
                 <p className="text-[10px] text-slate-400 font-semibold leading-normal mt-0.5">
-                  Shashtra Seema Bal (Sashastra Seema Bal), Mehrauli-Gurgaon Rd, Aya Nagar Phase 1, Ghitorni, New Delhi, Delhi, 110047, India
+                  {[houseNo, landmark, city, pincode].filter(Boolean).join(', ')}
                 </p>
               </div>
             </div>
@@ -635,14 +715,48 @@ const Booking = () => {
               </div>
 
               {/* Saved Address Box */}
-              <div className="bg-[#F8F9FA] rounded-2xl p-4 border border-slate-100">
-                <p className="text-[11px] font-black text-slate-800 mb-1">
-                  Shashtra Seema Bal (Sashastra Seema Bal)
-                </p>
-                <p className="text-[10px] text-slate-400 leading-normal font-semibold">
-                  Shashtra Seema Bal (Sashastra Seema Bal), Mehrauli-Gurgaon Rd, Aya Nagar Phase 1, Ghitorni, New Delhi, Delhi, 110047, India
-                </p>
-              </div>
+              {savedAddresses.length > 0 ? (
+                <div className="flex flex-col gap-2">
+                  <span className="text-[11px] font-extrabold text-slate-700">Select Saved Address</span>
+                  <div className="flex flex-col gap-2 max-h-40 overflow-y-auto pr-1">
+                    {savedAddresses.map((addr) => {
+                      const id = addr._id || addr.id;
+                      const isSelected = selectedAddrId === id;
+                      const addrHouse = addr.house || addr.address || '';
+                      const addrLandmark = addr.landmark || addr.detail || '';
+                      const fullStr = [addrHouse, addrLandmark, addr.city || 'Delhi', addr.pincode || ''].filter(Boolean).join(', ');
+                      return (
+                        <div
+                          key={id}
+                          onClick={() => applyAddressData(addr)}
+                          className={`p-3 rounded-2xl border text-left cursor-pointer transition-all ${
+                            isSelected ? 'bg-[#EAF4FF] border-[#0D47A1] shadow-sm' : 'bg-[#F8F9FA] border-slate-100 hover:border-slate-200'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-black text-slate-800 uppercase">
+                              {addr.type || 'Home'} {addr.isDefault ? '• Default' : ''}
+                            </span>
+                            {isSelected && <Check className="w-4 h-4 text-[#0D47A1]" />}
+                          </div>
+                          <p className="text-[10px] text-slate-500 font-semibold leading-normal mt-0.5 truncate">
+                            {fullStr}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-[#F8F9FA] rounded-2xl p-4 border border-slate-100">
+                  <p className="text-[11px] font-black text-slate-800 mb-1">
+                    {houseNo || landmark ? `${houseNo}${houseNo && landmark ? ', ' : ''}${landmark}` : 'Current Address'}
+                  </p>
+                  <p className="text-[10px] text-slate-400 leading-normal font-semibold">
+                    {[houseNo, landmark, city, pincode].filter(Boolean).join(', ') || 'Add details below to complete your address.'}
+                  </p>
+                </div>
+              )}
 
               {/* Form Input Fields */}
               <div className="flex flex-col gap-3.5">
@@ -776,14 +890,21 @@ const Booking = () => {
               {/* Date Card Selector */}
               <div className="flex flex-col gap-2">
                 <div className="flex gap-2 overflow-x-auto no-scrollbar py-0.5">
-                  {['Wed 27', 'Thu 28', 'Fri 29', 'Sat 30', 'Select custom'].map((dateText) => {
+                  {upcomingDates.map((dateText) => {
                     const isActive = selectedDate === dateText;
                     const parts = dateText.split(' ');
                     const isCustom = parts.length === 1;
                     return (
                       <button
                         key={dateText}
-                        onClick={() => setSelectedDate(dateText)}
+                        onClick={() => {
+                          if (isCustom) {
+                            const customVal = prompt('Enter custom date (e.g. 31 Aug):');
+                            if (customVal) setSelectedDate(customVal);
+                          } else {
+                            setSelectedDate(dateText);
+                          }
+                        }}
                         className={`flex flex-col items-center justify-center min-w-[64px] h-[64px] rounded-2xl border transition-all ${
                           isActive
                             ? 'border-[#2F80ED] bg-[#EAF4FF] shadow-sm'
