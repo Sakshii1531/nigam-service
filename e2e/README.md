@@ -10,6 +10,25 @@ before it's committed as a checkpoint. `api/` must cover every route currently m
 in `backend/src/app.js` — no route ships without a spec here. If anything is red, the
 phase is not done: no commit, no moving on.
 
+## Two suites
+
+- **`npm test`** — `api/`, the per-phase gate described above. Fast, no browser.
+- **`npm run test:ui`** — `ui/`, a small browser smoke suite (`playwright.ui.config.js`).
+  Deliberately *not* part of the gate: it starts a Vite dev server and is an order of
+  magnitude slower, and the API suite is what guards the backend contract.
+
+`ui/` exists because passing API specs and a passing `vite build` together still prove
+nothing about whether the app *renders* — a provider that throws, or a socket listener
+that was never attached, breaks no build and fails no API test. It currently covers the
+notification path end to end: the app booting with `NotificationProvider` mounted, a
+signed-in customer opening the feed, and a broadcast sent **while the feed is open**
+appearing over the socket. That last one is the direct regression guard for
+`notification:new` having shipped with no frontend listener at all.
+
+It runs on its own ports (`4111`/`5199`) against its own database, and passes the API
+origin to Vite explicitly rather than reading `frontend/.env` — otherwise a developer
+pointing their local `.env` at a deployed backend would silently change what is tested.
+
 ## Running
 
 ```bash
