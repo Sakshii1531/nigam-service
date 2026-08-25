@@ -14,6 +14,7 @@ import Booking from './pages/Booking';
 import BookingFlow from './pages/BookingFlow';
 import { BookingProvider } from './context/BookingContext';
 import { AuthProvider } from './context/AuthContext';
+import { NotificationProvider } from './context/NotificationContext';
 import Chat from './pages/Chat';
 import AllServices from './pages/AllServices';
 import Categories from './pages/Categories';
@@ -315,6 +316,7 @@ function App() {
   return (
     <Router>
       <AuthProvider>
+      <NotificationProvider>
       <BookingProvider>
       <TechProvider>
       <PageTitleManager />
@@ -529,6 +531,7 @@ function App() {
       </Routes>
       </TechProvider>
       </BookingProvider>
+      </NotificationProvider>
       </AuthProvider>
     </Router>
   );

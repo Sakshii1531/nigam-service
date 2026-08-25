@@ -1,16 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bell, X } from 'lucide-react';
-import { apiRequest } from '../lib/apiClient';
+import { useAuth } from '../context/AuthContext';
+import { usePushPermission, pushBlockedMessage } from '../hooks/usePushPermission';
 
 // Module-level flag: shown once per app session (resets on full refresh).
 let alreadyPrompted = false;
 
 /**
- * Reusable "Enable notifications?" bottom-sheet prompt. "Allow" asks the
- * browser for real permission and registers the resulting device token — it
- * used to just close the sheet, so a customer who tapped Allow received
- * nothing and had no way to tell.
+ * "Enable notifications?" bottom sheet — the soft ask that precedes the real
+ * browser prompt.
+ *
+ * The soft ask matters: a browser permission prompt can only be shown once,
+ * and a denial is permanent from the page's side. Asking in our own UI first
+ * means a user who is not interested taps "Not now" and can still be asked
+ * again later, instead of burning the one real prompt this origin gets.
+ *
+ * "Allow" runs the actual registration. It previously posted
+ * JSON.stringify(pushSubscription) as the device token, which is not what the
+ * backend sends to: User.fcmTokens goes straight into FCM's
+ * sendEachForMulticast, which needs an FCM registration token and rejects a
+ * serialized Web Push subscription as invalid — so the "registered" device
+ * received nothing, and the bogus entry was pruned on the next send. It now
+ * goes through enablePush(), which mints a real token via getToken().
  *
  * Props: accent ('#0D47A1' default), title/subtitle overrides optional.
  */
@@ -19,8 +31,20 @@ const PushPermissionPrompt = ({
   title = 'Stay in the loop',
   subtitle = 'Enable notifications to get service updates, arrival alerts and payment receipts.',
 }) => {
-  // Completely disabled auto popup on page refresh/mount
+  const { isAuthenticated } = useAuth();
+  const { permission, requesting, requestPush } = usePushPermission();
   const [open, setOpen] = useState(false);
+
+  // Only ask someone who is signed in (the token is registered against their
+  // account) and who has never been asked — 'granted' needs nothing, and
+  // 'denied' cannot be re-prompted from here, so opening the sheet for either
+  // would just be a dead end. Once per session, so declining is not nagged at.
+  useEffect(() => {
+    if (!isAuthenticated || alreadyPrompted || permission !== 'default') return;
+    alreadyPrompted = true;
+    const timer = setTimeout(() => setOpen(true), 2500);
+    return () => clearTimeout(timer);
+  }, [isAuthenticated, permission]);
 
   // Lock background scroll when popup is open
   useEffect(() => {
@@ -40,35 +64,26 @@ const PushPermissionPrompt = ({
 
   const allow = async () => {
     setError('');
-    if (typeof Notification === 'undefined') {
-      setError('This browser does not support notifications.');
+
+    const unavailable = pushBlockedMessage(permission);
+    if (unavailable) {
+      setError(unavailable);
       return;
     }
 
-    const permission = await Notification.requestPermission();
-    if (permission !== 'granted') {
-      setError('Notifications stay off. You can enable them later in your browser settings.');
+    // Fires the browser prompt and registers the resulting FCM token. Called
+    // straight from the click because the prompt needs a user gesture.
+    const result = await requestPush();
+    if (result.ok) {
+      close();
       return;
     }
 
-    // Web Push needs a service-worker subscription to produce a token; until
-    // that is registered there is nothing to send to the server, so we do not
-    // pretend a device was registered.
-    try {
-      const registration = await navigator.serviceWorker?.ready;
-      const subscription = await registration?.pushManager?.getSubscription();
-      if (subscription) {
-        await apiRequest('/notifications/device-token', {
-          method: 'POST',
-          auth: true,
-          body: { token: JSON.stringify(subscription) },
-        });
-      }
-    } catch {
-      // Permission is granted either way; a token-registration failure only
-      // means this device won't receive pushes yet.
-    }
-    close();
+    setError(
+      result.reason === 'denied'
+        ? 'Notifications stay off. You can turn them on later in your browser settings.'
+        : pushBlockedMessage(permission) || 'Could not enable notifications on this device.',
+    );
   };
 
   return (
@@ -107,10 +122,13 @@ const PushPermissionPrompt = ({
             <div className="flex flex-col gap-2.5 mt-6">
               <button
                 onClick={allow}
-                className="w-full text-white font-semibold py-3 rounded-2xl transition-transform active:scale-[0.98]"
+                disabled={requesting}
+                className={`w-full text-white font-semibold py-3 rounded-2xl transition-transform active:scale-[0.98] ${
+                  requesting ? 'opacity-60 cursor-wait' : ''
+                }`}
                 style={{ backgroundColor: accent }}
               >
-                Allow Notifications
+                {requesting ? 'Enabling…' : 'Allow Notifications'}
               </button>
               {error && <p className="text-[11px] font-semibold text-red-600 text-center">{error}</p>}
               <button onClick={close} className="w-full text-slate-500 font-semibold py-2.5 rounded-2xl hover:bg-slate-50">

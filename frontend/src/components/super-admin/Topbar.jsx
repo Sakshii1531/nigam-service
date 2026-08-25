@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Search, Bell, Menu, MapPin, Calendar, ChevronDown, User, LogOut, Settings, Check } from 'lucide-react';
+import { useNotifications } from '../../context/NotificationContext';
 
 const Topbar = ({ title, subtitle, showFilters = false }) => {
+  const { unreadCount } = useNotifications();
   const { logout } = useAuth();
   const navigate = useNavigate();
   const [isLocationOpen, setIsLocationOpen] = useState(false);
@@ -132,9 +134,13 @@ const Topbar = ({ title, subtitle, showFilters = false }) => {
           title="Super Admin Notifications"
         >
           <Bell size={18} />
-          <span className="absolute top-0.5 right-0.5 w-4 h-4 bg-red-500 text-[9px] font-extrabold text-white rounded-full flex items-center justify-center border border-white">
-            2
-          </span>
+          {/* Was a hardcoded "2". Live count, and no badge at all when there is
+              nothing unread — a permanent red dot teaches people to ignore it. */}
+          {unreadCount > 0 && (
+            <span className="absolute top-0.5 right-0.5 min-w-4 h-4 px-1 bg-red-500 text-[9px] font-extrabold text-white rounded-full flex items-center justify-center border border-white">
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </span>
+          )}
         </button>
 
         {/* User initials badge with active status */}

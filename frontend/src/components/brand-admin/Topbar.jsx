@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Bell, ChevronDown, User, LogOut, Phone, Calendar, Copy, Check, Mail } from 'lucide-react';
+import { useNotifications } from '../../context/NotificationContext';
 
 const Topbar = ({ title, subtitle }) => {
+  const { unreadCount } = useNotifications();
   const { logout } = useAuth();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isPhoneDropdownOpen, setIsPhoneDropdownOpen] = useState(false);
@@ -134,7 +136,12 @@ const Topbar = ({ title, subtitle }) => {
           className="relative cursor-pointer text-[#64748B] hover:text-[#1E293B] p-1"
         >
           <Bell size={20} />
-          <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-white text-[9px] font-bold">9</span>
+          {/* Was a hardcoded "9". */}
+          {unreadCount > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 bg-red-500 rounded-full flex items-center justify-center text-white text-[9px] font-bold">
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </span>
+          )}
         </div>
 
         <div className="relative">

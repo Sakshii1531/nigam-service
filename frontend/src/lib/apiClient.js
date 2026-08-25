@@ -44,7 +44,7 @@ export function clearTokens() {
   localStorage.removeItem(REFRESH_TOKEN_KEY);
 }
 
-async function rawRequest(path, { method = 'GET', body, accessToken } = {}) {
+async function rawRequest(path, { method = 'GET', body, accessToken, envelope = false } = {}) {
   // A FormData body is sent as-is: the browser must set its own multipart
   // Content-Type (with the boundary), and JSON.stringify would turn the file
   // into "{}". This is what file uploads (invoices, ID proofs) go through.
@@ -69,7 +69,9 @@ async function rawRequest(path, { method = 'GET', body, accessToken } = {}) {
   if (!res.ok) {
     throw new ApiError(res.status, json?.error?.message || 'Request failed', json?.error?.details);
   }
-  return json.data;
+  // Callers that need pagination meta (an unread COUNT, not the rows) ask for
+  // the whole envelope; everything else keeps getting just the payload.
+  return envelope ? json : json.data;
 }
 
 // One-time refresh, not a queue — good enough for this phase's scoped Auth
@@ -106,17 +108,17 @@ async function refreshAccessToken() {
  * make one authenticated call (de-registering the push token) with the
  * credentials it just discarded.
  */
-export async function apiRequest(path, { method = 'GET', body, auth = false, accessToken: explicitToken } = {}) {
-  if (!auth) return rawRequest(path, { method, body });
+export async function apiRequest(path, { method = 'GET', body, auth = false, accessToken: explicitToken, envelope = false } = {}) {
+  if (!auth) return rawRequest(path, { method, body, envelope });
 
   const accessToken = explicitToken || getStoredTokens().accessToken;
   try {
-    return await rawRequest(path, { method, body, accessToken });
+    return await rawRequest(path, { method, body, accessToken, envelope });
   } catch (err) {
     if (err instanceof ApiError && err.status === 401 && accessToken) {
       try {
         const refreshed = await refreshAccessToken();
-        return await rawRequest(path, { method, body, accessToken: refreshed.accessToken });
+        return await rawRequest(path, { method, body, accessToken: refreshed.accessToken, envelope });
       } catch (refreshErr) {
         clearTokens();
         localStorage.removeItem('ncc_user');
