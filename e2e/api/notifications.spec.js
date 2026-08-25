@@ -372,3 +372,45 @@ test.describe('Broadcast read state is per user', () => {
     expect(res.status()).toBe(403);
   });
 });
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Channel selection. The composer's selector used to change only its success
+// message — every send fanned out to devices whatever the admin picked.
+// ─────────────────────────────────────────────────────────────────────────────
+test.describe('Broadcast channel selection', () => {
+  test('an in-app-only broadcast is still recorded and still reaches the inbox', async ({ request }) => {
+    const admin = await createSuperAdmin(request);
+    const tech = await createTechnician(request);
+
+    const title = `Quiet notice ${randomUUID().slice(0, 8)}`;
+    const res = await request.post('/api/v1/notifications/push', {
+      headers: { Authorization: `Bearer ${admin.token}` },
+      data: { broadcastRole: 'Technicians', title, body: 'Body', type: 'promo', channels: ['inapp'] },
+    });
+    expect(res.status()).toBe(201);
+
+    const feed = await request.get('/api/v1/notifications', {
+      headers: { Authorization: `Bearer ${tech.token}` },
+    });
+    expect((await feed.json()).data.map((n) => n.title)).toContain(title);
+  });
+
+  test('rejects a channel outside the supported set', async ({ request }) => {
+    const admin = await createSuperAdmin(request);
+    const res = await request.post('/api/v1/notifications/push', {
+      headers: { Authorization: `Bearer ${admin.token}` },
+      data: { broadcastRole: 'All', title: 'Bad channel', body: 'Body', channels: ['carrier-pigeon'] },
+    });
+    expect(res.status()).toBe(400);
+  });
+
+  test('rejects an empty channel list rather than silently sending nothing', async ({ request }) => {
+    const admin = await createSuperAdmin(request);
+    const res = await request.post('/api/v1/notifications/push', {
+      headers: { Authorization: `Bearer ${admin.token}` },
+      data: { broadcastRole: 'All', title: 'No channels', body: 'Body', channels: [] },
+    });
+    expect(res.status()).toBe(400);
+  });
+});

@@ -501,6 +501,67 @@ describe('sendAdHocPush() — broadcast fan-out', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 6b. Channel selection — an in-app announcement that does not buzz phones
+// ─────────────────────────────────────────────────────────────────────────────
+describe('sendAdHocPush() — channel selection', () => {
+  beforeEach(() => {
+    process.env.FCM_SERVICE_ACCOUNT_JSON = '{"type":"service_account","project_id":"test"}';
+    process.env.NOTIFICATION_PUSH_ENABLED = 'true';
+    phoneSeq = 0;
+  });
+  afterEach(() => {
+    delete process.env.FCM_SERVICE_ACCOUNT_JSON;
+    delete process.env.NOTIFICATION_PUSH_ENABLED;
+  });
+
+  test('channels: ["inapp"] still records the broadcast but sends no device push', async () => {
+    await seedRoleUser('technician', { tokens: ['tech-1'] });
+
+    const notif = await sendAdHocPush({
+      broadcastRole: 'Technicians', title: 'Quiet notice', body: 'Body', type: 'promo', channels: ['inapp'],
+    });
+    await awaitPendingDeliveries();
+
+    expect(notif.title).toBe('Quiet notice');
+    expect(await Notification.countDocuments({ title: 'Quiet notice' })).toBe(1);
+    expect(mockSendEachForMulticast).not.toHaveBeenCalled();
+  });
+
+  test('an in-app-only broadcast still reaches the role\'s inbox', async () => {
+    const tech = { id: String((await seedRoleUser('technician'))._id), role: 'technician' };
+    await sendAdHocPush({ broadcastRole: 'Technicians', title: 'Quiet notice', body: 'Body', type: 'promo', channels: ['inapp'] });
+
+    const { items } = await listNotifications(tech);
+    expect(items.map((i) => i.title)).toContain('Quiet notice');
+  });
+
+  test('channels: ["inapp","push"] fans out to devices', async () => {
+    await seedRoleUser('technician', { tokens: ['tech-1'] });
+    await sendAdHocPush({
+      broadcastRole: 'Technicians', title: 'Loud notice', body: 'Body', type: 'promo', channels: ['inapp', 'push'],
+    });
+    await awaitPendingDeliveries();
+    expect(tokensSentToFcm()).toEqual(['tech-1']);
+  });
+
+  test('omitting channels keeps the previous behaviour — push is sent', async () => {
+    await seedRoleUser('technician', { tokens: ['tech-1'] });
+    await sendAdHocPush({ broadcastRole: 'Technicians', title: 'Default', body: 'Body', type: 'promo' });
+    await awaitPendingDeliveries();
+    expect(tokensSentToFcm()).toEqual(['tech-1']);
+  });
+
+  test('an in-app-only personal dispatch sends no push either', async () => {
+    const user = await seedRoleUser('customer', { tokens: ['cust-1'] });
+    await sendAdHocPush({
+      recipientId: String(user._id), title: 'Quiet personal', body: 'Body', type: 'tech', channels: ['inapp'],
+    });
+    await awaitPendingDeliveries();
+    expect(mockSendEachForMulticast).not.toHaveBeenCalled();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // 7. Broadcast inbox visibility + isolation
 //
 // Regression guard: listNotifications() hardcoded `broadcastRole: 'All'`, so a

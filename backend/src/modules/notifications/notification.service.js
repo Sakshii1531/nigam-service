@@ -375,7 +375,16 @@ export async function emit(event, payload) {
  * Unlike emit(), this throws — an admin pressing "send" gets a real error back
  * rather than a silent no-op.
  */
-export async function sendAdHocPush({ recipientId, broadcastRole, title, body, type = 'tech', priority = 'Medium', cta }) {
+export async function sendAdHocPush({
+  recipientId,
+  broadcastRole,
+  title,
+  body,
+  type = 'tech',
+  priority = 'Medium',
+  cta,
+  channels,
+}) {
   if (!recipientId && !broadcastRole) {
     throw new ApiError(400, 'Either recipientId or broadcastRole is required');
   }
@@ -403,6 +412,13 @@ export async function sendAdHocPush({ recipientId, broadcastRole, title, body, t
     const json = notification.toJSON();
     if (recipientId) io.to(`user:${recipientId}`).emit('notification:new', json);
     if (broadcastRole) io.to(`broadcast:${broadcastRole}`).emit('notification:new', json);
+  }
+
+  // The in-app record above is always written; device push is opt-out. An
+  // "in-app only" dispatch is a real choice in the composer — an announcement
+  // worth showing in the app without buzzing every phone on the platform.
+  if (channels && !channels.includes('push')) {
+    return notification;
   }
 
   // Empty template => push only; SMS/WhatsApp are dispatched by their own endpoint.

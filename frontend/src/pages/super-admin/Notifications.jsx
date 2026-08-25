@@ -41,7 +41,7 @@ const Notifications = () => {
         title: n.title,
         message: n.message || '',
         target: n.broadcastRole,
-        channel: 'Push',
+        channel: n.type === 'promo' ? 'Broadcast' : 'Push',
         date: n.createdAt
           ? new Date(n.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
           : '—',
@@ -79,6 +79,10 @@ const Notifications = () => {
     try {
       // A failure here has to be reported — this used to be swallowed and the
       // console claimed success for a broadcast that never left the building.
+      // The selector used to change only this toast's wording — every send
+      // fanned out to devices regardless of what the admin picked. In-app is
+      // always written (it is the record, and the history below reads it back);
+      // 'push' is what additionally reaches phones.
       await apiRequest('/notifications/push', {
         method: 'POST',
         auth: true,
@@ -87,11 +91,15 @@ const Notifications = () => {
           title,
           body: message,
           type: 'promo',
+          channels: channel === 'push' ? ['inapp', 'push'] : ['inapp'],
         },
       });
 
-      const channelName = channel === 'push' ? 'Push Notification' : channel === 'whatsapp' ? 'WhatsApp Alert' : 'In-App Banner';
-      showToast(`${channelName} broadcast to ${target}`);
+      showToast(
+        channel === 'push'
+          ? `Push + in-app broadcast sent to ${target}`
+          : `In-app broadcast sent to ${target}`,
+      );
       await loadLogs();
 
       setTitle('');
@@ -213,17 +221,7 @@ const Notifications = () => {
                         }`}
                       >
                         <Smartphone size={14} />
-                        <span>FCM Push</span>
-                      </button>
-
-                      <button
-                        onClick={() => setChannel('whatsapp')}
-                        className={`py-2 px-2 rounded-xl text-[11px] font-bold border transition-colors flex flex-col items-center justify-center gap-1 cursor-pointer ${
-                          channel === 'whatsapp' ? 'border-emerald-500 bg-emerald-50 text-emerald-600' : 'border-[#E2E8F0] text-slate-600 hover:bg-slate-50'
-                        }`}
-                      >
-                        <MessageSquare size={14} />
-                        <span>WhatsApp</span>
+                        <span>Push + In-App</span>
                       </button>
 
                       <button
@@ -233,9 +231,28 @@ const Notifications = () => {
                         }`}
                       >
                         <Radio size={14} />
-                        <span>In-App</span>
+                        <span>In-App Only</span>
+                      </button>
+
+                      {/* Disabled rather than removed: WhatsApp has a provider
+                          for one-to-one sends, but no role-wide fan-out — and
+                          bulk WhatsApp needs template approval before it could
+                          be offered here. Selecting it used to change nothing
+                          but this screen's success message. */}
+                      <button
+                        disabled
+                        title="Bulk WhatsApp broadcast is not configured yet"
+                        className="py-2 px-2 rounded-xl text-[11px] font-bold border border-[#E2E8F0] text-slate-300 bg-slate-50 flex flex-col items-center justify-center gap-1 cursor-not-allowed"
+                      >
+                        <MessageSquare size={14} />
+                        <span>WhatsApp</span>
                       </button>
                     </div>
+                    <p className="text-[10px] text-slate-400 font-medium mt-1.5">
+                      {channel === 'push'
+                        ? 'Appears in the app and alerts registered devices.'
+                        : 'Appears in the app only — no device alert.'}
+                    </p>
                   </div>
 
                   {/* Title */}
