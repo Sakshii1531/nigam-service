@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { apiRequest } from '../lib/apiClient';
 import { relativeTime } from '../lib/relativeTime';
+import { useNotifications } from '../context/NotificationContext';
 
 const ICONS = {
   assigned: { Icon: UserCheck, bg: 'bg-[#E8F5E9]', color: 'text-[#2E7D32]' },
@@ -21,6 +22,7 @@ const NotificationDetail = () => {
   // someone else's notification text.
   const [n, setN] = useState(null);
   const [loadError, setLoadError] = useState('');
+  const { markedRead } = useNotifications();
 
   useEffect(() => {
     let cancelled = false;
@@ -28,14 +30,18 @@ const NotificationDetail = () => {
       .then((res) => {
         if (cancelled) return;
         setN(res);
-        // Broadcasts have no per-user read state, so this is best-effort.
-        if (!res.read && res.recipient) {
-          apiRequest(`/notifications/${id}/read`, { method: 'PATCH', auth: true }).catch(() => {});
+        // Broadcasts DO have per-user read state now (NotificationReceipt), so
+        // this no longer skips them — opening one from the feed used to leave it
+        // unread forever, permanently inflating the bell badge.
+        if (!res.read) {
+          apiRequest(`/notifications/${id}/read`, { method: 'PATCH', auth: true })
+            .then(() => markedRead(1))
+            .catch(() => {});
         }
       })
       .catch((err) => { if (!cancelled) setLoadError(err.message || 'Could not load this notification.'); });
     return () => { cancelled = true; };
-  }, [id]);
+  }, [id, markedRead]);
 
   const { Icon, bg, color } = ICONS[n?.type] || { Icon: Bell, bg: 'bg-slate-100', color: 'text-slate-500' };
 

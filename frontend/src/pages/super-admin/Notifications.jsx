@@ -52,8 +52,16 @@ const Notifications = () => {
       setLoadError(err.message || 'Could not load broadcast history.');
     }
 
+  }, []);
+
+  // Reach is audience-specific: showing platform-wide device counts while the
+  // admin has "Technicians" selected overstates who this will actually land on.
+  const loadStats = React.useCallback(async (audience) => {
     try {
-      const stats = await apiRequest('/notifications/push-stats', { auth: true });
+      const stats = await apiRequest(
+        `/notifications/push-stats?broadcastRole=${encodeURIComponent(audience)}`,
+        { auth: true },
+      );
       setPushStats(stats || null);
     } catch (err) {
       console.warn('[notifications] Could not load push stats:', err.message);
@@ -61,6 +69,7 @@ const Notifications = () => {
   }, []);
 
   useEffect(() => { loadLogs(); }, [loadLogs]);
+  useEffect(() => { loadStats(target); }, [loadStats, target]);
 
   const showToast = (msg) => {
     setSuccessMessage(msg);
@@ -100,7 +109,7 @@ const Notifications = () => {
           ? `Push + in-app broadcast sent to ${target}`
           : `In-app broadcast sent to ${target}`,
       );
-      await loadLogs();
+      await Promise.all([loadLogs(), loadStats(target)]);
 
       setTitle('');
       setMessage('');
@@ -253,6 +262,24 @@ const Notifications = () => {
                         ? 'Appears in the app and alerts registered devices.'
                         : 'Appears in the app only — no device alert.'}
                     </p>
+                    {/* Says who this actually lands on, counted the same way the
+                        fan-out counts: in-audience, holds a device token, has
+                        not opted out. */}
+                    {channel === 'push' && pushStats && (
+                      <p className="text-[10px] font-bold text-slate-500 mt-1">
+                        {pushStats.deviceHolders > 0 ? (
+                          <>
+                            Reaches <span className="text-pink-600">{pushStats.deviceHolders.toLocaleString('en-IN')}</span>
+                            {' of '}{(pushStats.audience || 0).toLocaleString('en-IN')} in {target}
+                            {' '}({(pushStats.activeDevices || 0).toLocaleString('en-IN')} devices)
+                          </>
+                        ) : (
+                          <span className="text-amber-600">
+                            Nobody in {target} has notifications enabled yet — this will be in-app only.
+                          </span>
+                        )}
+                      </p>
+                    )}
                   </div>
 
                   {/* Title */}

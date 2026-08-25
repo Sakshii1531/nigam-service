@@ -14,6 +14,7 @@ import {
   deviceTokenSchema,
   adHocPushSchema,
   adHocSmsSchema,
+  pushStatsQuerySchema,
 } from './notification.validation.js';
 
 export const notificationRouter = Router();
@@ -140,9 +141,9 @@ notificationRouter.get('/broadcasts', requireRole(ROLES.SUPER_ADMIN), async (req
   }
 });
 
-notificationRouter.get('/push-stats', requireRole(ROLES.SUPER_ADMIN), async (req, res, next) => {
+notificationRouter.get('/push-stats', requireRole(ROLES.SUPER_ADMIN), validate(pushStatsQuerySchema, 'query'), async (req, res, next) => {
   try {
-    ok(res, await notificationService.getPushStats());
+    ok(res, await notificationService.getPushStats(req.query));
   } catch (err) {
     next(err);
   }

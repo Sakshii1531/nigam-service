@@ -648,15 +648,43 @@ export async function listBroadcasts({ page, limit } = {}) {
  * have been sent. Delivery/open rates would need per-message receipts from FCM,
  * which nothing here stores.
  */
-export async function getPushStats() {
-  const [activeDevices, deviceHolders, broadcasts] = await Promise.all([
+export async function getPushStats({ broadcastRole } = {}) {
+  const roleFilter = broadcastRole ? BROADCAST_ROLE_FILTER[broadcastRole] : null;
+  if (broadcastRole && roleFilter === undefined) {
+    throw new ApiError(400, `Unknown broadcast audience "${broadcastRole}"`);
+  }
+
+  const withTokens = { fcmTokens: { $exists: true, $ne: [] } };
+  if (roleFilter) withTokens.role = roleFilter;
+
+  // Reach has to mean what the fan-out will actually do, so it applies the same
+  // opt-out rule — a user who turned push off is not reachable, and counting
+  // them would tell the admin this will land on more phones than it will.
+  // Previewed as a promo, which is what the composer sends.
+  const optOuts = await NotificationPreference.find(
+    pushOptOutQuery(classifyType({ type: 'promo' }, {})),
+  ).select('user').lean();
+  const reachable = optOuts.length
+    ? { ...withTokens, _id: { $nin: optOuts.map((p) => p.user) } }
+    : withTokens;
+
+  const [devices, deviceHolders, audience, broadcasts] = await Promise.all([
     User.aggregate([
-      { $match: { fcmTokens: { $exists: true, $ne: [] } } },
+      { $match: reachable },
       { $group: { _id: null, total: { $sum: { $size: '$fcmTokens' } } } },
     ]),
-    User.countDocuments({ fcmTokens: { $exists: true, $ne: [] } }),
+    User.countDocuments(reachable),
+    // Everyone in the audience, whether or not they can be pushed to — the
+    // difference between this and deviceHolders is the honest "not reachable".
+    User.countDocuments(roleFilter ? { role: roleFilter } : {}),
     Notification.countDocuments({ broadcastRole: { $ne: null } }),
   ]);
 
-  return { activeDevices: activeDevices[0]?.total || 0, deviceHolders, broadcasts };
+  return {
+    activeDevices: devices[0]?.total || 0,
+    deviceHolders,
+    audience,
+    broadcasts,
+    broadcastRole: broadcastRole || null,
+  };
 }
