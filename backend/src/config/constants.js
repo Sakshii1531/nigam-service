@@ -8,6 +8,52 @@ export const ROLES = Object.freeze({
   SUPER_ADMIN: 'super_admin',
 });
 
+// The audiences the super-admin console's broadcast composer can target, and
+// the User.role each one selects ('All' = every role, no filter).
+//
+// Lives here rather than in the notifications module because three separate
+// layers have to agree on who "Technicians" means: the push fan-out, the inbox
+// query, and the socket room a connection joins. They drifted before — the
+// socket layer only ever joined 'broadcast:All', so a role-targeted broadcast
+// was emitted into an empty room.
+export const BROADCAST_AUDIENCES = Object.freeze({
+  ALL: 'All',
+  TECHNICIANS: 'Technicians',
+  BRANDS: 'Brands',
+  CUSTOMERS: 'Customers',
+});
+
+export const BROADCAST_ROLE_FILTER = Object.freeze({
+  [BROADCAST_AUDIENCES.ALL]: null,
+  [BROADCAST_AUDIENCES.TECHNICIANS]: ROLES.TECHNICIAN,
+  [BROADCAST_AUDIENCES.BRANDS]: ROLES.BRAND_ADMIN,
+  [BROADCAST_AUDIENCES.CUSTOMERS]: ROLES.CUSTOMER,
+});
+
+/**
+ * The role-specific broadcast audience a user belongs to, or null if they have
+ * none. super_admin has no audience of its own — there is no "Admins" target in
+ * the composer — so an admin only ever receives platform-wide ('All') broadcasts.
+ */
+export function broadcastAudienceForRole(role) {
+  switch (role) {
+    case ROLES.TECHNICIAN:
+      return BROADCAST_AUDIENCES.TECHNICIANS;
+    case ROLES.BRAND_ADMIN:
+      return BROADCAST_AUDIENCES.BRANDS;
+    case ROLES.CUSTOMER:
+      return BROADCAST_AUDIENCES.CUSTOMERS;
+    default:
+      return null;
+  }
+}
+
+/** Every broadcast audience a user of this role should receive. */
+export function broadcastAudiencesForRole(role) {
+  const own = broadcastAudienceForRole(role);
+  return own ? [BROADCAST_AUDIENCES.ALL, own] : [BROADCAST_AUDIENCES.ALL];
+}
+
 // Human-readable ID prefixes the frontend already assumes — preserve these exactly
 // so the existing UI needs no changes once wired to real data (BACKEND_CONTEXT.md §7.2).
 export const ID_PREFIXES = Object.freeze({

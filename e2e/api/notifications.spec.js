@@ -36,6 +36,16 @@ async function createSuperAdmin(request) {
   return { email, token };
 }
 
+
+async function createTechnician(request) {
+  const phone = `9${randomUUID().replace(/\D/g, '').slice(0, 9).padEnd(9, '0')}`;
+  await request.post('/api/v1/_dev/test-technician', {
+    data: { phone, password: 'password123', specs: ['AC'], availability: 'Available' },
+  });
+  const token = await loginAndVerify(request, { role: 'technician', identifier: phone, password: 'password123' });
+  return { phone, token };
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 test.describe('Notification feed', () => {
@@ -200,5 +210,81 @@ test.describe('FCM device token registration', () => {
     });
     const body = (await lastRes.json()).data;
     expect(body.tokenCount).toBeLessThanOrEqual(20);
+  });
+});
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Super-admin broadcast targeting, over real HTTP.
+//
+// Regression guard for the pair of faults that made the console's composer a
+// no-op for every audience except "All": listNotifications() hardcoded
+// broadcastRole 'All', so a role-targeted broadcast reached no inbox at all,
+// and GET /notifications/:id let any user open any broadcast by id.
+// ─────────────────────────────────────────────────────────────────────────────
+test.describe('Super-admin broadcast targeting', () => {
+  test('a Technicians broadcast reaches technicians and not customers', async ({ request }) => {
+    const admin = await createSuperAdmin(request);
+    const tech = await createTechnician(request);
+    const customer = await createCustomer(request);
+
+    const title = `Payout window ${randomUUID().slice(0, 8)}`;
+    const sent = await request.post('/api/v1/notifications/push', {
+      headers: { Authorization: `Bearer ${admin.token}` },
+      data: { broadcastRole: 'Technicians', title, body: 'Moved to Wednesdays', type: 'promo' },
+    });
+    expect(sent.status()).toBe(201);
+
+    const techFeed = await request.get('/api/v1/notifications', {
+      headers: { Authorization: `Bearer ${tech.token}` },
+    });
+    expect((await techFeed.json()).data.map((n) => n.title)).toContain(title);
+
+    const custFeed = await request.get('/api/v1/notifications', {
+      headers: { Authorization: `Bearer ${customer.token}` },
+    });
+    expect((await custFeed.json()).data.map((n) => n.title)).not.toContain(title);
+  });
+
+  test('an All broadcast reaches every role', async ({ request }) => {
+    const admin = await createSuperAdmin(request);
+    const tech = await createTechnician(request);
+    const customer = await createCustomer(request);
+
+    const title = `Maintenance ${randomUUID().slice(0, 8)}`;
+    await request.post('/api/v1/notifications/push', {
+      headers: { Authorization: `Bearer ${admin.token}` },
+      data: { broadcastRole: 'All', title, body: '2 AM tonight', type: 'promo' },
+    });
+
+    for (const token of [tech.token, customer.token]) {
+      const feed = await request.get('/api/v1/notifications', { headers: { Authorization: `Bearer ${token}` } });
+      expect((await feed.json()).data.map((n) => n.title)).toContain(title);
+    }
+  });
+
+  test('a customer cannot open a technicians-only broadcast by id', async ({ request }) => {
+    const admin = await createSuperAdmin(request);
+    const customer = await createCustomer(request);
+
+    const sent = await request.post('/api/v1/notifications/push', {
+      headers: { Authorization: `Bearer ${admin.token}` },
+      data: { broadcastRole: 'Technicians', title: `Tech only ${randomUUID().slice(0, 8)}`, body: 'Body', type: 'promo' },
+    });
+    const id = (await sent.json()).data.id;
+
+    const res = await request.get(`/api/v1/notifications/${id}`, {
+      headers: { Authorization: `Bearer ${customer.token}` },
+    });
+    expect(res.status()).toBe(403);
+  });
+
+  test('a non-admin cannot broadcast', async ({ request }) => {
+    const { token } = await createCustomer(request);
+    const res = await request.post('/api/v1/notifications/push', {
+      headers: { Authorization: `Bearer ${token}` },
+      data: { broadcastRole: 'All', title: 'Nope', body: 'Body', type: 'promo' },
+    });
+    expect(res.status()).toBe(403);
   });
 });

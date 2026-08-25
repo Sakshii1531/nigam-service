@@ -1,5 +1,6 @@
 import { Server } from 'socket.io';
 import { env } from '../config/env.js';
+import { broadcastAudiencesForRole } from '../config/constants.js';
 import { socketAuth } from './socketAuth.js';
 import { registerChatGateway } from './chat.gateway.js';
 import { registerTrackingGateway } from './tracking.gateway.js';
@@ -27,11 +28,16 @@ export function initSockets(httpServer) {
 
   // Every authenticated socket auto-joins its own notification room —
   // notification.service.js's emit() pushes here directly, no client-side
-  // "subscribe to my notifications" step needed. Role-broadcast room too
-  // (e.g. 'broadcast:All' for platform-wide announcements/escalations).
+  // "subscribe to my notifications" step needed. Plus every broadcast room the
+  // connection's role belongs to: 'broadcast:All' for platform-wide
+  // announcements, and 'broadcast:Technicians'/'Brands'/'Customers' for the
+  // console composer's role-targeted ones. Joining only 'All' (as this did)
+  // left every role-targeted broadcast emitting into a room with no members.
   io.on('connection', (socket) => {
     socket.join(`user:${socket.user.id}`);
-    socket.join(`broadcast:All`);
+    for (const audience of broadcastAudiencesForRole(socket.user.role)) {
+      socket.join(`broadcast:${audience}`);
+    }
   });
 
   registerChatGateway(io);
