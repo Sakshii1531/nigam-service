@@ -1,12 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Bell, Globe, Lock, Briefcase, ClipboardList, Calendar, Wrench, User, ChevronRight, Eye, EyeOff } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
+import { usePushPermission, pushBlockedMessage } from '../../hooks/usePushPermission';
 
-const Toggle = ({ enabled, onToggle }) => (
+const Toggle = ({ enabled, onToggle, disabled = false }) => (
   <button
     onClick={onToggle}
-    className={`relative w-10 h-5 rounded-full transition-colors duration-200 ${enabled ? 'bg-[#0D47A1]' : 'bg-slate-200'}`}
+    disabled={disabled}
+    aria-pressed={enabled}
+    className={`relative w-10 h-5 rounded-full transition-colors duration-200 shrink-0 ${
+      disabled ? 'cursor-wait opacity-60' : ''
+    } ${enabled ? 'bg-[#0D47A1]' : 'bg-slate-200'}`}
   >
     <span 
       className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all duration-200"
@@ -18,9 +23,87 @@ const Toggle = ({ enabled, onToggle }) => (
 const TechSettings = () => {
   const navigate = useNavigate();
 
+  // These were local-only state: a technician could switch push off, walk away,
+  // come back and find it on again, and the server never heard about it either.
+  // They now read and write the same /notifications/preferences the backend
+  // actually gates delivery on.
   const [notifications, setNotifications] = useState(true);
   const [jobAlerts, setJobAlerts] = useState(true);
+  const [prefsError, setPrefsError] = useState('');
   const [locationAccess, setLocationAccess] = useState(true);
+
+  const { permission, requesting, requestPush } = usePushPermission();
+  const pushUnavailable = pushBlockedMessage(permission);
+
+  useEffect(() => {
+    let cancelled = false;
+    apiRequest('/notifications/preferences', { auth: true })
+      .then((prefs) => {
+        if (cancelled || !prefs) return;
+        setNotifications(prefs.pushNotifications !== undefined ? Boolean(prefs.pushNotifications) : prefs.push !== false);
+        setJobAlerts(prefs.bookingUpdates !== false);
+      })
+      .catch((err) => console.warn('[settings] could not load notification preferences:', err.message));
+    return () => { cancelled = true; };
+  }, []);
+
+  /** No Save button on this screen, so each switch persists as it is flipped. */
+  const savePrefs = useCallback(async (next) => {
+    setPrefsError('');
+    try {
+      await apiRequest('/notifications/preferences', {
+        method: 'PUT',
+        auth: true,
+        body: {
+          pushNotifications: next.pushNotifications,
+          push: next.pushNotifications,
+          bookingUpdates: next.bookingUpdates,
+        },
+      });
+      return true;
+    } catch (err) {
+      setPrefsError(err.message || 'Could not save notification settings.');
+      return false;
+    }
+  }, []);
+
+  /**
+   * Turning push on has to obtain a browser permission and a device token, not
+   * just flip a preference — and the prompt needs a user gesture, so it fires
+   * from this click. Turning it off is preference-only: the backend gates
+   * delivery on that, and tearing down the device registration would also cut
+   * off any other account signed in on this handset.
+   */
+  const togglePush = async () => {
+    if (notifications) {
+      setNotifications(false);
+      if (!(await savePrefs({ pushNotifications: false, bookingUpdates: jobAlerts }))) setNotifications(true);
+      return;
+    }
+
+    if (pushUnavailable) {
+      setPrefsError(pushUnavailable);
+      return;
+    }
+
+    const result = await requestPush();
+    if (!result.ok) {
+      setPrefsError(
+        pushBlockedMessage(result.reason === 'denied' ? 'denied' : permission) ||
+          'Could not enable push notifications on this device.',
+      );
+      return;
+    }
+
+    setNotifications(true);
+    if (!(await savePrefs({ pushNotifications: true, bookingUpdates: jobAlerts }))) setNotifications(false);
+  };
+
+  const toggleJobAlerts = async () => {
+    const next = !jobAlerts;
+    setJobAlerts(next);
+    if (!(await savePrefs({ pushNotifications: notifications, bookingUpdates: next }))) setJobAlerts(!next);
+  };
 
   // Change Password Flow States
   const [isChangingPassword, setIsChangingPassword] = useState(false);
@@ -58,8 +141,13 @@ const TechSettings = () => {
               <div>
                 <p className="text-xs font-medium text-[#052355]">Push Notifications</p>
                 <p className="text-[10px] text-slate-500 font-normal mt-0.5">Receive app alerts</p>
+                {/* A blocked permission cannot be re-prompted from the page, so
+                    name the reason instead of leaving a switch that will not move. */}
+                {pushUnavailable && (
+                  <p className="text-[10px] text-amber-600 font-medium mt-1 leading-snug max-w-[200px]">{pushUnavailable}</p>
+                )}
               </div>
-              <Toggle enabled={notifications} onToggle={() => setNotifications(p => !p)} />
+              <Toggle enabled={notifications} onToggle={togglePush} disabled={requesting} />
             </div>
             <div className="h-[1px] bg-slate-100" />
             <div className="flex items-center justify-between">
@@ -67,8 +155,11 @@ const TechSettings = () => {
                 <p className="text-xs font-medium text-[#052355]">Job Alerts</p>
                 <p className="text-[10px] text-slate-500 font-normal mt-0.5">New job assignment alerts</p>
               </div>
-              <Toggle enabled={jobAlerts} onToggle={() => setJobAlerts(p => !p)} />
+              <Toggle enabled={jobAlerts} onToggle={toggleJobAlerts} />
             </div>
+            {prefsError && (
+              <p className="text-[10px] text-red-600 font-medium leading-snug">{prefsError}</p>
+            )}
           </div>
         </div>
 

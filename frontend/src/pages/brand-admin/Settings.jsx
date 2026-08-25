@@ -11,6 +11,7 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
+import { usePushPermission, pushBlockedMessage } from '../../hooks/usePushPermission';
 
 // Which settings fields each tab owns, so saving one tab never writes another
 // tab's unsaved values.
@@ -35,6 +36,10 @@ const Settings = () => {
   const [requirePhoto, setRequirePhoto] = useState(true);
   const [emailNotifs, setEmailNotifs] = useState(true);
   const [smsAlerts, setSmsAlerts] = useState(false);
+  // Push lives on the per-user NotificationPreference, not on brand settings —
+  // it is the admin's own device that receives, not the brand's.
+  const [pushNotifs, setPushNotifs] = useState(false);
+  const { permission, requesting, requestPush } = usePushPermission();
 
   // Security password fields
   const [loading, setLoading] = useState(true);
@@ -73,6 +78,16 @@ const Settings = () => {
       }
     }
     loadSettings();
+
+    // Separate endpoint, separate document — this one is the admin's own
+    // notification preference, which is what the backend gates push delivery on.
+    apiRequest('/notifications/preferences', { auth: true })
+      .then((prefs) => {
+        if (cancelled || !prefs) return;
+        setPushNotifs(prefs.pushNotifications !== undefined ? Boolean(prefs.pushNotifications) : prefs.push !== false);
+      })
+      .catch((err) => console.warn('[settings] could not load push preference:', err.message));
+
     return () => { cancelled = true; };
   }, []);
 
@@ -131,6 +146,58 @@ const Settings = () => {
       );
     } catch (err) {
       setError(err.message || 'Could not save your settings.');
+    }
+  };
+
+  /**
+   * Push is the one notification channel that is not a brand setting: the
+   * backend gates device delivery on the per-USER NotificationPreference, and
+   * needs a device token that only this browser can hand over. So it reads and
+   * writes /notifications/preferences rather than the brand settings blob.
+   */
+  const togglePush = async () => {
+    setError('');
+
+    if (pushNotifs) {
+      setPushNotifs(false);
+      try {
+        await apiRequest('/notifications/preferences', {
+          method: 'PUT', auth: true, body: { pushNotifications: false, push: false },
+        });
+        showToast('Push Notifications is now DISABLED');
+      } catch (err) {
+        setPushNotifs(true);
+        setError(err.message || 'Could not change "Push Notifications".');
+      }
+      return;
+    }
+
+    const unavailable = pushBlockedMessage(permission);
+    if (unavailable) {
+      setError(unavailable);
+      return;
+    }
+
+    // Must run from this click: the browser's permission prompt needs a user
+    // gesture, so it cannot be deferred to the Save button.
+    const result = await requestPush();
+    if (!result.ok) {
+      setError(
+        pushBlockedMessage(result.reason === 'denied' ? 'denied' : permission) ||
+          'Could not enable push notifications on this device.',
+      );
+      return;
+    }
+
+    setPushNotifs(true);
+    try {
+      await apiRequest('/notifications/preferences', {
+        method: 'PUT', auth: true, body: { pushNotifications: true, push: true },
+      });
+      showToast('Push Notifications is now ENABLED');
+    } catch (err) {
+      setPushNotifs(false);
+      setError(err.message || 'Could not change "Push Notifications".');
     }
   };
 
@@ -273,6 +340,27 @@ const Settings = () => {
                 <h2 className="text-lg font-bold text-[#1E293B]">Notification Preferences</h2>
                 
                 <div className="space-y-4">
+                  <div className="flex justify-between items-center py-3 border-b border-[#E2E8F0]">
+                    <div>
+                      <p className="text-sm font-medium text-[#1E293B]">Push Notifications</p>
+                      <p className="text-xs text-[#64748B]">Get platform announcements and brand alerts on this device.</p>
+                      {/* A blocked permission cannot be re-prompted from the page. */}
+                      {pushBlockedMessage(permission) && (
+                        <p className="text-xs text-amber-600 font-medium mt-1 max-w-md">{pushBlockedMessage(permission)}</p>
+                      )}
+                    </div>
+                    <label className={`relative inline-flex items-center ${requesting ? 'cursor-wait opacity-60' : 'cursor-pointer'}`}>
+                      <input
+                        type="checkbox"
+                        className="sr-only peer"
+                        checked={pushNotifs}
+                        disabled={requesting}
+                        onChange={togglePush}
+                      />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0D47A1]"></div>
+                    </label>
+                  </div>
+
                   <div className="flex justify-between items-center py-3 border-b border-[#E2E8F0]">
                     <div>
                       <p className="text-sm font-medium text-[#1E293B]">Email Notifications</p>
