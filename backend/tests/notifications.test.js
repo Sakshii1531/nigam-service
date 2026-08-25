@@ -42,7 +42,7 @@ const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
 // ── Import modules AFTER mocks are set up ────────────────────────────────────
-const { emit, listNotifications, markRead, sendAdHocPush, listBroadcasts, awaitPendingDeliveries, getNotification, markAllRead } =
+const { emit, listNotifications, markRead, sendAdHocPush, listBroadcasts, awaitPendingDeliveries, getNotification, markAllRead, getPushStats } =
   await import('../src/modules/notifications/notification.service.js');
 const { User } = await import('../src/modules/auth/user.model.js');
 const { Notification } = await import('../src/modules/notifications/notification.model.js');
@@ -755,6 +755,65 @@ describe('per-user broadcast read state', () => {
     expect(items[0]._id).toBeUndefined();
     expect(items[0].receipt).toBeUndefined();
     expect(items[0].title).toBe('Shape');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 9. Reach preview — what the composer promises must match what it will do
+// ─────────────────────────────────────────────────────────────────────────────
+describe('getPushStats', () => {
+  test('scopes device counts to the targeted audience', async () => {
+    await seedRoleUser('technician', { tokens: ['t1', 't2'] });
+    await seedRoleUser('technician', { tokens: ['t3'] });
+    await seedRoleUser('customer', { tokens: ['c1'] });
+
+    const techs = await getPushStats({ broadcastRole: 'Technicians' });
+    expect(techs.deviceHolders).toBe(2);
+    expect(techs.activeDevices).toBe(3);
+
+    const customers = await getPushStats({ broadcastRole: 'Customers' });
+    expect(customers.deviceHolders).toBe(1);
+    expect(customers.activeDevices).toBe(1);
+  });
+
+  test('"All" counts every role', async () => {
+    await seedRoleUser('technician', { tokens: ['t1'] });
+    await seedRoleUser('customer', { tokens: ['c1'] });
+    const all = await getPushStats({ broadcastRole: 'All' });
+    expect(all.deviceHolders).toBe(2);
+    expect(all.activeDevices).toBe(2);
+  });
+
+  test('excludes opted-out users, so reach matches what the fan-out will send', async () => {
+    await seedRoleUser('technician', { tokens: ['keep'] });
+    const out = await seedRoleUser('technician', { tokens: ['skip-1', 'skip-2'] });
+    await NotificationPreference.create({ user: out._id, push: false });
+
+    const stats = await getPushStats({ broadcastRole: 'Technicians' });
+    expect(stats.deviceHolders).toBe(1);
+    expect(stats.activeDevices).toBe(1);
+  });
+
+  test('reports audience size separately from how many can be reached', async () => {
+    await seedRoleUser('technician', { tokens: ['t1'] });
+    await seedRoleUser('technician'); // no device
+    await seedRoleUser('technician'); // no device
+
+    const stats = await getPushStats({ broadcastRole: 'Technicians' });
+    expect(stats.audience).toBe(3);
+    expect(stats.deviceHolders).toBe(1);
+  });
+
+  test('rejects an unknown audience rather than silently reporting everyone', async () => {
+    await expect(getPushStats({ broadcastRole: 'Wizards' })).rejects.toThrow(/Unknown broadcast audience/);
+  });
+
+  test('no audience given still reports platform-wide totals', async () => {
+    await seedRoleUser('technician', { tokens: ['t1'] });
+    await seedRoleUser('customer', { tokens: ['c1'] });
+    const stats = await getPushStats();
+    expect(stats.deviceHolders).toBe(2);
+    expect(stats.broadcastRole).toBeNull();
   });
 });
 

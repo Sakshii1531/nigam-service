@@ -414,3 +414,50 @@ test.describe('Broadcast channel selection', () => {
     expect(res.status()).toBe(400);
   });
 });
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Reach preview. The composer showed platform-wide device counts whatever
+// audience was selected, overstating who a role broadcast would land on.
+// ─────────────────────────────────────────────────────────────────────────────
+test.describe('Push reach stats', () => {
+  test('scopes to the requested audience', async ({ request }) => {
+    const admin = await createSuperAdmin(request);
+    const auth = { headers: { Authorization: `Bearer ${admin.token}` } };
+
+    const tech = await createTechnician(request);
+    await request.post('/api/v1/notifications/device-token', {
+      headers: { Authorization: `Bearer ${tech.token}` },
+      data: { token: `reach-tech-${randomUUID()}` },
+    });
+
+    const techStats = await request.get('/api/v1/notifications/push-stats?broadcastRole=Technicians', auth);
+    expect(techStats.status()).toBe(200);
+    const t = (await techStats.json()).data;
+    expect(t.broadcastRole).toBe('Technicians');
+    expect(t.deviceHolders).toBeGreaterThanOrEqual(1);
+    expect(t.audience).toBeGreaterThanOrEqual(t.deviceHolders);
+
+    // A Brands broadcast must not inherit the technician's device.
+    const brandStats = await request.get('/api/v1/notifications/push-stats?broadcastRole=Brands', auth);
+    const b = (await brandStats.json()).data;
+    expect(b.broadcastRole).toBe('Brands');
+    expect(b.deviceHolders).toBeLessThan(t.deviceHolders + 1);
+  });
+
+  test('rejects an unknown audience', async ({ request }) => {
+    const admin = await createSuperAdmin(request);
+    const res = await request.get('/api/v1/notifications/push-stats?broadcastRole=Wizards', {
+      headers: { Authorization: `Bearer ${admin.token}` },
+    });
+    expect(res.status()).toBe(400);
+  });
+
+  test('is closed to non-admins', async ({ request }) => {
+    const { token } = await createCustomer(request);
+    const res = await request.get('/api/v1/notifications/push-stats', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    expect(res.status()).toBe(403);
+  });
+});

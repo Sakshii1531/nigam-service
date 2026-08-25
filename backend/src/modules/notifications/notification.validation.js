@@ -59,3 +59,8 @@ export const adHocSmsSchema = z.object({
   // only wired provider, so it is not branched on yet.
   provider: z.string().optional(),
 });
+
+// Reach preview for the composer: which audience the admin is about to target.
+export const pushStatsQuerySchema = z.object({
+  broadcastRole: z.enum(['All', 'Technicians', 'Brands', 'Customers']).optional(),
+});
