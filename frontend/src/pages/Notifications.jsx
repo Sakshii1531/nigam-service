@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { apiRequest } from '../lib/apiClient';
 import { relativeTime } from '../lib/relativeTime';
+import { useNotifications } from '../context/NotificationContext';
 
 const ICONS = {
   assigned: { Icon: UserCheck, bg: 'bg-[#E8F5E9]', color: 'text-[#2E7D32]' },
@@ -21,6 +22,7 @@ const Notifications = () => {
   const [items, setItems] = useState([]);
   const [loadError, setLoadError] = useState('');
   const unread = items.filter((n) => !n.read).length;
+  const { subscribe, markedRead, refreshUnread } = useNotifications();
 
   useEffect(() => {
     apiRequest('/notifications?limit=50', { auth: true })
@@ -28,8 +30,15 @@ const Notifications = () => {
       .catch((err) => setLoadError(err.message || 'Could not load your notifications.'));
   }, []);
 
+  // Anything arriving while this screen is open goes straight to the top,
+  // rather than waiting for the user to navigate away and back.
+  useEffect(() => subscribe((incoming) => {
+    setItems((prev) => (prev.some((x) => x.id === incoming.id) ? prev : [incoming, ...prev]));
+  }), [subscribe]);
+
   const open = async (n) => {
     setItems((prev) => prev.map((x) => (x.id === n.id ? { ...x, read: true } : x)));
+    if (!n.read) markedRead(1);
     navigate(`/notifications/${n.id}`);
     if (!n.read) {
       try {
@@ -46,8 +55,12 @@ const Notifications = () => {
     setItems((prev) => prev.map((x) => ({ ...x, read: true })));
     try {
       await apiRequest('/notifications/read-all', { method: 'PATCH', auth: true });
+      // Recount rather than zeroing: read-all clears this user's inbox, but the
+      // badge should reflect the server, not this screen's 50-row page.
+      refreshUnread();
     } catch (err) {
       setItems(previous);
+      refreshUnread();
       setLoadError(err.message || 'Could not mark your notifications as read.');
     }
   };
