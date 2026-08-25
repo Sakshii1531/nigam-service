@@ -43,6 +43,11 @@ export const adHocPushSchema = z.object({
     .optional(),
   priority: z.enum(['Low', 'Medium', 'High']).optional(),
   cta: z.object({ label: z.string(), route: z.string() }).optional(),
+  // Which channels this dispatch uses. In-app (DB row + Socket.IO) is always
+  // written — it is the record of the broadcast, and the composer's history
+  // reads it back. 'push' is what additionally fans out to device tokens.
+  // Omitted means both, so existing callers are unaffected.
+  channels: z.array(z.enum(['inapp', 'push'])).min(1).optional(),
 });
 
 export const adHocSmsSchema = z.object({
