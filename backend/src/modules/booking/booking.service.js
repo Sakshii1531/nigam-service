@@ -21,9 +21,18 @@ import { getIO } from '../../sockets/io.js';
 import { INSTANT_ROOM } from '../../sockets/instantBooking.gateway.js';
 
 export async function createBooking(userId, data) {
-  const serviceItem = await findServiceItem(data.category, data.serviceSlug);
+  let serviceItem = null;
+  try {
+    serviceItem = await findServiceItem(data.category, data.serviceSlug);
+  } catch (err) {
+    serviceItem = null;
+  }
+
   const quantity = data.quantity || 1;
-  const basePrice = serviceItem.price * quantity;
+  const itemPrice = data.price != null ? Number(data.price) : (serviceItem?.price || 299);
+  const basePrice = (data.totalPrice != null && Number(data.totalPrice) > 0) ? Number(data.totalPrice) : (itemPrice * quantity);
+  const serviceName = data.serviceName || data.service || serviceItem?.name || 'Home Service';
+  const serviceSlug = data.serviceSlug || serviceItem?.slug || 'service';
 
   const isInstant = Boolean(data.isInstant || data.timeGroup === 'ASAP' || data.timeSlot?.time === 'ASAP' || data.timeSlot?.time?.includes('ASAP'));
 
@@ -60,7 +69,13 @@ export async function createBooking(userId, data) {
     user: userId,
     category: data.category,
     productType: data.productType,
-    service: { slug: serviceItem.slug, name: serviceItem.name, price: serviceItem.price, desc: serviceItem.desc, unit: serviceItem.unit },
+    service: {
+      slug: serviceSlug,
+      name: serviceName,
+      price: itemPrice,
+      desc: serviceItem?.desc || serviceName,
+      unit: serviceItem?.unit || 'service'
+    },
     brand: data.brand,
     quantity,
     scheduledDate: isInstant ? new Date() : data.scheduledDate,
@@ -69,9 +84,9 @@ export async function createBooking(userId, data) {
     fullName: data.fullName,
     mobile: data.mobile,
     paymentMode: data.paymentMode || 'after',
-    advanceAmount: data.paymentMode === 'advance' ? Math.round(totalPrice * (advancePercent / 100)) : 0,
+    advanceAmount: data.advanceAmount != null ? Number(data.advanceAmount) : (data.paymentMode === 'advance' ? Math.round(totalPrice * (advancePercent / 100)) : 0),
     totalPrice,
-    technician: technician ? technician._id : null,
+    technician: isInstant && technician ? technician._id : null,
     status: isInstant ? 'Ongoing' : 'Upcoming',
     isInstant,
     instantStatus: initialInstantStatus,
@@ -80,7 +95,7 @@ export async function createBooking(userId, data) {
 
   let serviceRequest = await createServiceRequest({
     user: userId,
-    technician: technician ? technician._id : null,
+    technician: isInstant && technician ? technician._id : null,
     booking: booking._id,
     category: data.category,
     description: `${data.category} — ${serviceItem.name}`,

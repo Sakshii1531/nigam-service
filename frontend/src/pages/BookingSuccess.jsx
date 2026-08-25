@@ -32,27 +32,24 @@ const BookingSuccess = () => {
     }
   };
 
-  const serviceParam = p.get('service')    || 'Installation';
-  const category    = p.get('category')    || 'AC';
-  const productType = p.get('productType') || 'Split AC';
-  const brand       = p.get('brand')       || '—';
-  const quantity    = p.get('quantity')    || '1';
-  const date        = p.get('date')        || '—';
-  const timeGroup   = p.get('timeGroup')   || '—';
-  const totalPriceParam = p.get('totalPrice') || '299';
-  const advanceAmtParam = p.get('advanceAmt') || '49';
-  const paymentMode = p.get('paymentMode') || 'advance';
+  const serviceParam     = p.get('service')     || 'Home Service';
+  const categoryParam    = p.get('category')    || '';
+  const productTypeParam = p.get('productType') || '';
+  const brandParam       = p.get('brand')       || '';
+  const quantityParam    = p.get('quantity')    || '1';
+  const dateParam        = p.get('date')        || 'Today';
+  const timeGroupParam   = p.get('timeGroup')   || '09:00 AM';
+  const totalPriceParam  = p.get('totalPrice')  || '299';
+  const advanceAmtParam  = p.get('advanceAmt')  || '49';
+  const paymentMode      = p.get('paymentMode') || 'advance';
 
   // The platform's SR-#### id is assigned server-side on create, so read it back
   // rather than inventing one here — this is the reference the customer quotes
   // to support and the one the admin console lists.
   const [bookingId, setBookingId] = useState('');
   const [technician, setTechnician] = useState(null);
-  // The amount the customer is actually being charged. The URL carries what the
-  // booking screen had computed locally, but the server prices the booking from
-  // the catalog, so the two can disagree — and this screen was confirming the
-  // client's number while the customer was billed the server's.
   const [charged, setCharged] = useState(null);
+
   React.useEffect(() => {
     if (!serviceRequestId) return;
     let cancelled = false;
@@ -60,17 +57,25 @@ const BookingSuccess = () => {
       try {
         const res = await apiRequest(`/service-requests/${serviceRequestId}`, { auth: true });
         if (cancelled) return;
-        setBookingId(res?.humanId || serviceRequestId);
-        // A fresh booking is usually unassigned — the panel below only appears
-        // once assignment has actually happened.
-        setTechnician(res?.technician || null);
+        setBookingId(res?.humanId || res?.id || serviceRequestId);
+        setTechnician(null);
 
         if (res?.booking) {
           const bk = typeof res.booking === 'object'
             ? res.booking
             : await apiRequest(`/bookings/${res.booking}`, { auth: true }).catch(() => null);
-          if (!cancelled && bk && bk.totalPrice != null) {
-            setCharged({ total: bk.totalPrice, advance: bk.advanceAmount ?? null, service: bk.service?.name || null });
+          if (!cancelled && bk) {
+            setCharged({
+              total: bk.totalPrice ?? null,
+              advance: bk.advanceAmount ?? null,
+              service: bk.service?.name || null,
+              category: bk.category || null,
+              productType: bk.productType || null,
+              brand: bk.brand || null,
+              quantity: bk.quantity != null ? String(bk.quantity) : null,
+              date: bk.timeSlot?.date || null,
+              timeSlot: bk.timeSlot?.time || null
+            });
           }
         }
       } catch (err) {
@@ -81,12 +86,15 @@ const BookingSuccess = () => {
     return () => { cancelled = true; };
   }, [serviceRequestId]);
 
-  // Prefer the stored booking over the query string wherever it has loaded.
-  const totalPrice = charged ? String(charged.total) : totalPriceParam;
-  const advanceAmt = charged && charged.advance != null ? String(charged.advance) : advanceAmtParam;
-  // Same reasoning as the price: name what was actually booked, not what the
-  // previous screen thought it was sending.
-  const service = charged?.service || serviceParam;
+  const service     = serviceParam     || charged?.service     || 'Home Service';
+  const category    = categoryParam    || charged?.category    || '';
+  const productType = productTypeParam || charged?.productType || '';
+  const brand       = brandParam       || charged?.brand       || '';
+  const quantity    = quantityParam    || charged?.quantity    || '1';
+  const date        = dateParam        || charged?.date        || 'Today';
+  const timeGroup   = timeGroupParam   || charged?.timeSlot    || '09:00 AM';
+  const totalPrice  = totalPriceParam  || (charged?.total != null ? String(charged.total) : '0');
+  const advanceAmt  = advanceAmtParam  || (charged?.advance != null ? String(charged.advance) : '0');
 
   const isInstant = p.get('isInstant') === 'true' || timeGroup === 'ASAP' || timeGroup.includes('ASAP');
   const [instantStatus, setInstantStatus] = useState(isInstant ? 'SEARCHING' : null);
@@ -98,17 +106,39 @@ const BookingSuccess = () => {
     Evening:   '4 PM – 7 PM',
   }[timeGroup] || timeGroup);
 
-  // Rows for the booking summary table
+  // Rows for the booking summary table — rendered 100% dynamically based on actual booked details
   const rows = [
-    { Icon: Wrench,       iconColor: '#9CA3AF', label: 'Service',            value: service },
-    { Icon: Snowflake,    iconColor: '#3B82F6', label: `${category} Type`,   value: productType },
-    { Icon: Tag,          iconColor: '#F59E0B', label: 'Brand',              value: brand },
-    { Icon: Package,      iconColor: '#F97316', label: 'Quantity',           value: `${quantity} ${quantity === '1' ? category : category + 's'}` },
-    { Icon: CalendarDays, iconColor: '#6366F1', label: 'Date',               value: date },
-    { Icon: Clock,        iconColor: '#EF4444', label: 'Time Slot',          value: timeSlotDisplay },
-    { Icon: Flame,        iconColor: '#F97316', label: 'Total Amount',       value: `₹${totalPrice}` },
-    { Icon: CheckSquare,  iconColor: '#22C55E', label: 'Advance Paid',       value: `₹${advanceAmt}`, valueColor: '#0D47A1' },
+    { Icon: Wrench, iconColor: '#9CA3AF', label: 'Service', value: service },
   ];
+
+  if (category && category.toLowerCase() !== 'all') {
+    rows.push({ Icon: Package, iconColor: '#6366F1', label: 'Category', value: category });
+  }
+
+  if (productType && productType !== '—') {
+    rows.push({
+      Icon: Snowflake,
+      iconColor: '#3B82F6',
+      label: `${category ? category : 'Appliance'} Type`,
+      value: productType,
+    });
+  }
+
+  if (brand && brand !== '—') {
+    rows.push({ Icon: Tag, iconColor: '#F59E0B', label: 'Brand', value: brand });
+  }
+
+  rows.push({
+    Icon: Package,
+    iconColor: '#F97316',
+    label: 'Quantity',
+    value: `${quantity} ${quantity === '1' ? 'Unit' : 'Units'}`,
+  });
+
+  rows.push({ Icon: CalendarDays, iconColor: '#6366F1', label: 'Date', value: date });
+  rows.push({ Icon: Clock, iconColor: '#EF4444', label: 'Time Slot', value: timeSlotDisplay });
+  rows.push({ Icon: Flame, iconColor: '#F97316', label: 'Total Amount', value: `₹${totalPrice}` });
+  rows.push({ Icon: CheckSquare, iconColor: '#22C55E', label: 'Advance Paid', value: `₹${advanceAmt}`, valueColor: '#0D47A1' });
 
   return (
     <div className="min-h-screen bg-[#F0F4FF] flex flex-col font-sans">
@@ -217,9 +247,9 @@ const BookingSuccess = () => {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <p className="text-[13px] font-extrabold text-slate-900">{technician.name || 'Technician'}</p>
-                    {technician.specs?.[0] && (
+                    {(category || technician.specs?.[0]) && (
                       <span className="text-[9px] bg-[#0D47A1] text-white font-extrabold px-2 py-0.5 rounded-full">
-                        {technician.specs[0]}
+                        {category || technician.specs[0]}
                       </span>
                     )}
                   </div>
