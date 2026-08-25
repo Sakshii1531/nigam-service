@@ -32,6 +32,16 @@ export default defineConfig({
               priority: 20,
             },
             {
+              // Firebase is only ever reached through a dynamic import in
+              // lib/pushClient.js, but the catch-all vendor-other group below
+              // would otherwise absorb it into an eagerly-loaded chunk — making
+              // every visitor download the messaging SDK for a feature most of
+              // them never turn on. Higher priority keeps it in its own lazy chunk.
+              name: 'vendor-firebase',
+              test: /node_modules[\\/](@firebase|firebase)/,
+              priority: 45,
+            },
+            {
               name: 'vendor-other',
               test: /node_modules/,
               priority: 10,

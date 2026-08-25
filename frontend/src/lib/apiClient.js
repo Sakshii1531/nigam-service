@@ -100,11 +100,16 @@ async function refreshAccessToken() {
  * apiRequest('/bookings', { method: 'POST', body: {...}, auth: true }) — attaches
  * the stored access token and retries once via /auth/refresh on a 401 before
  * giving up (a token that expired mid-session shouldn't force a full re-login).
+ *
+ * `accessToken` overrides the stored one. Logout needs this: it clears the
+ * session synchronously so route guards update instantly, then still has to
+ * make one authenticated call (de-registering the push token) with the
+ * credentials it just discarded.
  */
-export async function apiRequest(path, { method = 'GET', body, auth = false } = {}) {
+export async function apiRequest(path, { method = 'GET', body, auth = false, accessToken: explicitToken } = {}) {
   if (!auth) return rawRequest(path, { method, body });
 
-  const { accessToken } = getStoredTokens();
+  const accessToken = explicitToken || getStoredTokens().accessToken;
   try {
     return await rawRequest(path, { method, body, accessToken });
   } catch (err) {

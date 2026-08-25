@@ -82,15 +82,19 @@ test.describe('notifications — real domain events, not just CRUD', () => {
     await request.post('/api/v1/bookings', { headers: { Authorization: `Bearer ${customer.token}` }, data: { category: categoryKey, serviceSlug: 'repair' } });
 
     const unreadBefore = await request.get('/api/v1/notifications?read=false', { headers: { Authorization: `Bearer ${customer.token}` } });
-    expect((await unreadBefore.json()).data.length).toBeGreaterThanOrEqual(2);
+    const before = (await unreadBefore.json()).data;
+    expect(before.length).toBeGreaterThanOrEqual(2);
 
     await request.patch('/api/v1/notifications/read-all', { headers: { Authorization: `Bearer ${customer.token}` } });
 
+    // Everything that was unread a moment ago is now cleared — including
+    // broadcasts, which read-all reaches via a per-user receipt. Asserting on
+    // these specific ids rather than an empty feed: specs run fully parallel
+    // against one database, so another spec can broadcast into this customer's
+    // inbox between the two reads.
     const unreadAfter = await request.get('/api/v1/notifications?read=false', { headers: { Authorization: `Bearer ${customer.token}` } });
-    // Nothing left unread at all — read-all now clears broadcasts too, via a
-    // per-user receipt, so a platform-wide broadcast from another spec is
-    // cleared for this customer without being marked read for anyone else.
-    expect((await unreadAfter.json()).data).toHaveLength(0);
+    const stillUnread = (await unreadAfter.json()).data.map((n) => n.id);
+    expect(before.filter((n) => stillUnread.includes(n.id))).toHaveLength(0);
   });
 
   test('rejects an unauthenticated request', async ({ request }) => {

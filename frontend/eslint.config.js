@@ -18,4 +18,13 @@ export default defineConfig([
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
   },
+  {
+    // Service workers are not part of the module graph — they are served
+    // verbatim from public/ and run with their own globals (self, clients,
+    // importScripts), pulling the Firebase compat SDK in at install time.
+    files: ['public/*-sw.js'],
+    languageOptions: {
+      globals: { ...globals.serviceworker, firebase: 'readonly' },
+    },
+  },
 ])
