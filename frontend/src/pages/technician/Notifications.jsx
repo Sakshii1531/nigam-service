@@ -1,14 +1,64 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   ChevronLeft, Briefcase, Check, CreditCard, Bell, BookOpen
 } from 'lucide-react';
-import { useTech } from '../../context/TechContext';
+import { apiRequest } from '../../lib/apiClient';
+import { relativeTime } from '../../lib/relativeTime';
+import { useNotifications } from '../../context/NotificationContext';
+
+// The backend's notification `type` vocabulary mapped onto this screen's three
+// filter tabs. Anything unmapped (a platform broadcast, a service update) is
+// still listed under "All" — it just has no tab of its own.
+const TAB_FOR_TYPE = {
+  jobs: 'Jobs', assigned: 'Jobs', tech: 'Jobs', service: 'Jobs', dispatch: 'Jobs',
+  claims: 'Claims',
+  payments: 'Payments', payment: 'Payments',
+};
 
 const Notifications = () => {
   const navigate = useNavigate();
-  const { notifications, markAllNotificationsRead } = useTech();
   const [filterTab, setFilterTab] = useState('All'); // 'All', 'Jobs', 'Claims', 'Payments'
+
+  // This screen used to read TechContext's in-memory list, which started empty
+  // and was only ever appended to locally when a job was accepted in the mock
+  // branch. It never fetched, so a technician saw none of what the platform
+  // actually sent them — not an assignment, not a super-admin broadcast.
+  const [notifications, setNotifications] = useState([]);
+  const [loadError, setLoadError] = useState('');
+  const { subscribe, refreshUnread } = useNotifications();
+
+  const shape = useCallback((n) => ({
+    id: n.id,
+    type: TAB_FOR_TYPE[n.type] || 'Updates',
+    title: n.title,
+    message: n.message || '',
+    time: n.createdAt ? relativeTime(n.createdAt) : 'Just now',
+    read: Boolean(n.read),
+  }), []);
+
+  useEffect(() => {
+    apiRequest('/notifications?limit=50', { auth: true })
+      .then((res) => setNotifications((res || []).map(shape)))
+      .catch((err) => setLoadError(err.message || 'Could not load your notifications.'));
+  }, [shape]);
+
+  // Live arrivals go to the top instead of waiting for a reload.
+  useEffect(() => subscribe((incoming) => {
+    setNotifications((prev) => (prev.some((x) => x.id === incoming.id) ? prev : [shape(incoming), ...prev]));
+  }), [subscribe, shape]);
+
+  const markAllNotificationsRead = async () => {
+    const previous = notifications;
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    try {
+      await apiRequest('/notifications/read-all', { method: 'PATCH', auth: true });
+    } catch (err) {
+      setNotifications(previous);
+      setLoadError(err.message || 'Could not mark notifications read.');
+    }
+    refreshUnread();
+  };
 
   const filteredNotifications = notifications.filter(n => {
     if (filterTab === 'All') return true;
@@ -105,7 +155,8 @@ const Notifications = () => {
           ) : (
             <div className="text-center py-16 text-slate-600 px-3.5">
               <Bell className="h-10 w-10 mx-auto text-slate-500 mb-2" />
-              <p className="text-sm font-normal">No notifications found.</p>
+              {/* An empty list and a failed fetch look identical otherwise. */}
+              <p className="text-sm font-normal">{loadError || 'No notifications found.'}</p>
             </div>
           )}
         </div>

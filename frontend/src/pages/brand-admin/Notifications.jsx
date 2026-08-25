@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
 import { apiRequest } from '../../lib/apiClient';
+import { useNotifications } from '../../context/NotificationContext';
 import { 
   Bell, 
   ClipboardList, 
@@ -68,6 +69,14 @@ const Notifications = () => {
     return () => { cancelled = true; };
   }, []);
 
+  const { subscribe, markedRead, refreshUnread } = useNotifications();
+
+  // A broadcast sent while this screen is open now lands at the top, instead of
+  // being invisible until the admin navigates away and back.
+  useEffect(() => subscribe((incoming) => {
+    setNotifications((prev) => (prev.some((x) => x.id === incoming.id) ? prev : [shape(incoming), ...prev]));
+  }), [subscribe]);
+
   const showToast = (message) => {
     setSuccessMessage(message);
     setTimeout(() => {
@@ -80,6 +89,7 @@ const Notifications = () => {
     setNotifications(prev => prev.map(n => (n.id === id ? { ...n, read: true } : n)));
     try {
       await apiRequest(`/notifications/${id}/read`, { method: 'PATCH', auth: true });
+      markedRead(1);
       showToast('Notification marked as read');
     } catch (err) {
       setNotifications(previous);
@@ -92,6 +102,8 @@ const Notifications = () => {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
     try {
       await apiRequest('/notifications/read-all', { method: 'PATCH', auth: true });
+      // Recount from the server: this screen holds one page, not the total.
+      refreshUnread();
       showToast('All notifications marked as read');
     } catch (err) {
       setNotifications(previous);

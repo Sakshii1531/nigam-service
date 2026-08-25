@@ -5,6 +5,7 @@ import {
   MapPin, Check, Plus, AlertTriangle, ShieldCheck, ChevronRight, ChevronLeft, X 
 } from 'lucide-react';
 import { useTech } from '../../context/TechContext';
+import { useNotifications } from '../../context/NotificationContext';
 
 const RaisePartRequest = () => {
   const navigate = useNavigate();
@@ -18,7 +19,6 @@ const RaisePartRequest = () => {
     removePartFromCart, 
     placePartsOrder, 
     raiseClaim,
-    notifications 
   } = useTech();
 
   // Read URL query parameter for active tab, defaulting to 'inventory'
@@ -51,7 +51,7 @@ const RaisePartRequest = () => {
     }
   }, [urlTab]);
 
-  const unreadNotificationsCount = notifications.filter(n => !n.read).length;
+  const { unreadCount: unreadNotificationsCount } = useNotifications();
 
   // Screen 9: Filter inventory items
   const filteredInventory = inventory.filter(item => {
