@@ -13,6 +13,7 @@
     "seed:demo": "node scripts/seedDemoItems.js",
     "db:clear": "node scripts/clearDb.js",
     "db:clear-bookings": "node scripts/clearBookingsAndServiceRequests.js",
+    "push:doctor": "node scripts/pushDoctor.js",
     "loadtest": "node scripts/loadtest.js",
     "test": "cross-env NODE_ENV=test OTP_PROVIDER=test node --experimental-vm-modules node_modules/.bin/jest --runInBand",
     "lint": "eslint ."
