@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Bell, Mail, MessageSquare, ShieldAlert, Sparkles, RefreshCw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { apiRequest } from '../lib/apiClient';
+import { usePushPermission, pushBlockedMessage } from '../hooks/usePushPermission';
 
 const NotificationSettings = () => {
   const navigate = useNavigate();
@@ -50,11 +51,50 @@ const NotificationSettings = () => {
     fetchPreferences();
   }, [user?.id]);
 
+  const { permission, requesting, requestPush } = usePushPermission();
+  const pushUnavailable = pushBlockedMessage(permission);
+
   const toggleSetting = (key) => {
     setSettings(prev => ({
       ...prev,
       [key]: !prev[key]
     }));
+  };
+
+  /**
+   * The push switch is not just a preference — turning it on has to obtain a
+   * browser permission and a device token, or the server has nothing to send
+   * to. That has to happen here in the click: the permission prompt needs a
+   * user gesture, so deferring it to "Save Changes" would suppress it.
+   *
+   * Turning it OFF only updates the preference. The backend gates delivery on
+   * that preference, so there is no need to tear down the device registration —
+   * which would also disable push for any other account using this device.
+   */
+  const togglePush = async () => {
+    if (settings.pushNotifications) {
+      setSettings(prev => ({ ...prev, pushNotifications: false }));
+      return;
+    }
+
+    if (pushUnavailable) {
+      showToast(pushUnavailable);
+      return;
+    }
+
+    // Runs for 'granted' too, not just 'default': no prompt is shown in that
+    // case, and it re-registers a token that may have been pruned as stale.
+    const result = await requestPush();
+    if (result.ok) {
+      setSettings(prev => ({ ...prev, pushNotifications: true }));
+      showToast('Push notifications enabled on this device.');
+      return;
+    }
+
+    showToast(
+      pushBlockedMessage(result.reason === 'denied' ? 'denied' : permission) ||
+        'Could not enable push notifications on this device.',
+    );
   };
 
   const handleSaveChanges = async () => {
@@ -141,13 +181,24 @@ const NotificationSettings = () => {
                   <div>
                     <span className="text-xs font-black text-slate-800 block">Push Notifications</span>
                     <span className="text-[9px] text-slate-400 font-bold block mt-0.5">Receive alerts on your mobile device</span>
+                    {/* A blocked permission cannot be re-prompted from the page,
+                        so say so here rather than leaving a switch that refuses
+                        to move for no visible reason. */}
+                    {pushUnavailable && (
+                      <span className="text-[9px] text-amber-600 font-bold block mt-1 max-w-[210px] leading-snug">
+                        {pushUnavailable}
+                      </span>
+                    )}
                   </div>
                 </div>
-                <button 
-                  onClick={() => toggleSetting('pushNotifications')}
-                  className={`w-10 h-5.5 rounded-full transition-all duration-300 relative cursor-pointer ${
-                    settings.pushNotifications ? 'bg-pink-500' : 'bg-slate-200'
-                  }`}
+                <button
+                  onClick={togglePush}
+                  disabled={requesting}
+                  aria-pressed={settings.pushNotifications}
+                  aria-label="Push notifications"
+                  className={`w-10 h-5.5 rounded-full transition-all duration-300 relative shrink-0 ${
+                    requesting ? 'cursor-wait opacity-60' : 'cursor-pointer'
+                  } ${settings.pushNotifications ? 'bg-pink-500' : 'bg-slate-200'}`}
                 >
                   <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 shadow-sm transition-all duration-300 ${
                     settings.pushNotifications ? 'left-[22px]' : 'left-1'
