@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Search, Bell, MapPin, Wrench, Zap, Droplet, Thermometer, Shield, Home as HomeIcon, Calendar, MessageSquare, User, Star, X, Wind, WashingMachine, Refrigerator, Droplets, Sparkles, ShoppingCart, Tv, Flame, MousePointerClick, LayoutGrid } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import PushPermissionPrompt from '../components/PushPermissionPrompt';
+import { useNotifications } from '../context/NotificationContext';
 import { apiRequest } from '../lib/apiClient';
 import acBanner from '../assets/ac_service_banner.png';
 import electricianBanner from '../assets/electrician_banner.png';
@@ -50,6 +51,7 @@ import chimney3d from '../assets/icon_3d_chimney.png';
 import cooler3d from '../assets/icon_3d_cooler.png';
 
 const Dashboard = ({ defaultType }) => {
+  const { unreadCount } = useNotifications();
   const navigate = useNavigate();
   const bannerRef = useRef(null);
   const [activeType, setActiveType] = useState(defaultType || 'non-warranty'); // 'non-warranty' or 'in-warranty'
@@ -437,7 +439,11 @@ const Dashboard = ({ defaultType }) => {
               className="w-9 h-9 bg-slate-100 rounded-full relative flex items-center justify-center"
             >
               <Bell className="h-5 w-5 text-text-primary" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
+              {/* The dot used to be unconditional — permanently "you have
+                  something", which is the same as saying nothing. */}
+              {unreadCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
+              )}
             </button>
             <div 
               onClick={() => navigate('/profile')}

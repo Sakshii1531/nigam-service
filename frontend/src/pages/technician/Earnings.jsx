@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Bell, ArrowLeft, Shield, Calendar, TrendingUp, ChevronDown, Check, Clock, Briefcase, ClipboardList, User, Wrench, Zap, FileText } from 'lucide-react';
 import { useTech } from '../../context/TechContext';
+import { useNotifications } from '../../context/NotificationContext';
 import { apiRequest } from '../../lib/apiClient';
 
 const EarningsPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { earningsTally, notifications } = useTech();
+  const { earningsTally } = useTech();
   const [stats, setStats] = useState(null);
   const [payouts, setPayouts] = useState([]);
   const [trendDays, setTrendDays] = useState(7);
@@ -53,7 +54,7 @@ const EarningsPage = () => {
     setActiveTab(params.get('tab') === 'invoice' ? 'invoice' : 'quick');
   }, [location.search]);
 
-  const unreadNotificationsCount = notifications.filter(n => !n.read).length;
+  const { unreadCount: unreadNotificationsCount } = useNotifications();
 
   const handleWithdraw = () => {
     setWithdrawStep('success');

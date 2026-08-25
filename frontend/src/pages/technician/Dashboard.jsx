@@ -5,6 +5,7 @@ import {
   Clock, Shield, Star, GraduationCap, MessageSquare, Megaphone, Scan, CheckCircle, RotateCw, X, LogOut, Sparkles, CreditCard, ShieldCheck, Award, Settings, HelpCircle, ArrowLeft, Zap
 } from 'lucide-react';
 import { useTech } from '../../context/TechContext';
+import { useNotifications } from '../../context/NotificationContext';
 import { useAuth } from '../../context/AuthContext';
 import PushPermissionPrompt from '../../components/PushPermissionPrompt';
 import techAvatar from '../../assets/tech_avatar.png';
@@ -18,7 +19,6 @@ const Dashboard = () => {
     acceptJob, 
     selectJobForDetails,
     setActiveStep,
-    notifications,
     activeSpecs,
     toggleSpec,
     jobsLoading,
@@ -136,7 +136,9 @@ const Dashboard = () => {
     return () => clearTimeout(timer);
   }, [instantAlertJob, countdown]);
 
-  const unreadNotificationsCount = notifications.filter(n => !n.read).length;
+  // Was counting TechContext's local list, which never fetched — so this badge
+  // sat at 0 no matter what the platform had actually sent.
+  const { unreadCount: unreadNotificationsCount } = useNotifications();
 
   const isJobSpecActive = (job) => {
     const cat = job.category.toLowerCase();
