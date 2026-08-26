@@ -231,7 +231,15 @@ export async function getBooking(userId, id) {
 
 export async function listBookings(userId, { status, page, limit, sort } = {}) {
   const query = { user: userId };
-  if (status) query.status = status;
+  if (status) {
+    if (status === 'Upcoming') {
+      query.status = { $in: ['Upcoming', 'Rescheduled'] };
+    } else if (status === 'Ongoing') {
+      query.status = { $in: ['Ongoing', 'Parts Pending'] };
+    } else {
+      query.status = status;
+    }
+  }
 
   const { skip, limit: lim, page: pg, sort: sortObj } = parsePagination({ page, limit, sort });
   const [items, total] = await Promise.all([
@@ -239,7 +247,8 @@ export async function listBookings(userId, { status, page, limit, sort } = {}) {
       .populate('technician', 'name phone rating avatar photo')
       .populate({
         path: 'serviceRequest',
-        select: 'humanId status timeline tracking warranty category description',
+        select: 'humanId status timeline tracking warranty category description brand instantStatus',
+        populate: { path: 'brand', select: 'name logo' },
       })
       .sort(sortObj)
       .skip(skip)

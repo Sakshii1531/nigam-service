@@ -39,7 +39,7 @@ const Academy = () => {
   const activeBlog = blogs.find((b) => b.id === activeBlogId);
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-24 max-w-md mx-auto border-x border-slate-200 shadow-xl relative font-sans overflow-hidden">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-16 relative font-sans">
       {/* Header */}
       <div className="bg-[#052355] text-white px-4 py-3.5 flex items-center justify-between sticky top-0 z-10 shadow-md">
         <div className="flex items-center gap-3">

@@ -1,6 +1,8 @@
 import React, { useRef, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useAdminSidebar } from '../../context/AdminSidebarContext';
 import { 
   LayoutDashboard, 
   Users, 
@@ -48,6 +50,7 @@ const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { logout } = useAuth();
+  const { isSidebarOpen } = useAdminSidebar();
   const scrollContainerRef = useRef(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   
@@ -425,7 +428,9 @@ const Sidebar = () => {
       });
 
   return (
-    <div className="w-64 bg-[#F4F7FE] h-screen border-r border-[#E2E8F0] flex flex-col fixed left-0 top-0 z-20">
+    <div className={`w-64 bg-[#F4F7FE] h-screen border-r border-[#E2E8F0] flex flex-col fixed left-0 top-0 z-30 transition-transform duration-300 ease-in-out ${
+      isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+    }`}>
       {/* Premium Logo Header */}
       <div className="p-4 border-b border-[#E2E8F0] bg-white flex flex-col gap-3">
         <div className="flex items-center justify-between">
@@ -609,10 +614,16 @@ const Sidebar = () => {
         </div>
       </div>
 
-      {/* Logout Confirmation Modal Overlay */}
-      {showLogoutConfirm && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-6 z-[100] animate-fade-in text-slate-800">
-          <div className="bg-white border border-slate-100 rounded-[28px] p-6 max-w-xs w-full flex flex-col items-center text-center gap-4 shadow-xl">
+      {/* Logout Confirmation Modal Overlay rendered via Portal */}
+      {showLogoutConfirm && typeof document !== 'undefined' && createPortal(
+        <div 
+          onClick={() => setShowLogoutConfirm(false)}
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-6 z-[9999] animate-fade-in text-slate-800"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white border border-slate-100 rounded-[28px] p-6 max-w-xs w-full flex flex-col items-center text-center gap-4 shadow-2xl"
+          >
             <div className="w-12 h-12 bg-red-50 text-red-600 rounded-full flex items-center justify-center">
               <LogOut className="h-5 w-5 text-red-600" />
             </div>
@@ -641,7 +652,8 @@ const Sidebar = () => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

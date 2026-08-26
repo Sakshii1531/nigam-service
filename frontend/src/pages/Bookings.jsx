@@ -6,13 +6,20 @@ import {
   MapPin, CreditCard, FileText, RefreshCw, Star, ShieldCheck, Truck, 
   RotateCcw, Sparkles, HelpCircle, Package, Check
 } from 'lucide-react';
-import { apiRequest } from '../lib/apiClient';
+import { apiRequest, getStoredTokens } from '../lib/apiClient';
+import { io } from 'socket.io-client';
+
+const SOCKET_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000').replace(/\/api\/v1\/?$/, '');
 
 const TABS = ['All', 'Upcoming', 'Completed', 'Cancelled'];
 
 const STATUS_BADGES = {
   Upcoming: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', dot: 'bg-blue-500' },
   Ongoing: { bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200', dot: 'bg-indigo-500' },
+  'Parts Pending': { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', dot: 'bg-amber-500' },
+  'Spare Ordered': { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', dot: 'bg-amber-500' },
+  Rescheduled: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', dot: 'bg-purple-500' },
+  'Revisit Scheduled': { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', dot: 'bg-purple-500' },
   Completed: { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', dot: 'bg-emerald-500' },
   Cancelled: { bg: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-200', dot: 'bg-rose-500' },
 };
@@ -62,6 +69,38 @@ const Bookings = () => {
 
   useEffect(() => {
     loadBookings();
+    // Poll every 5s if there are pending or upcoming bookings
+    const interval = setInterval(() => {
+      loadBookings(true);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [loadBookings]);
+
+  // Real-time socket updates for booking status and technician assignment
+  useEffect(() => {
+    const { accessToken } = getStoredTokens();
+    if (!accessToken) return;
+
+    const socket = io(SOCKET_URL, {
+      auth: { token: accessToken },
+      transports: ['websocket'],
+    });
+
+    socket.on('instant:status_update', () => {
+      loadBookings(true);
+    });
+
+    socket.on('tracking:update', () => {
+      loadBookings(true);
+    });
+
+    socket.on('service_request:updated', () => {
+      loadBookings(true);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
   }, [loadBookings]);
 
   // Check if a specific booking was passed via navigation state to open directly
@@ -109,9 +148,19 @@ const Bookings = () => {
 
   const getTimelineSteps = (booking) => {
     const sr = booking.serviceRequest;
-    const status = booking.status;
+    const tl = sr?.timeline || [];
 
-    const baseSteps = [
+    const hasTl = (label) => tl.some((t) => t.stepLabel?.toLowerCase().includes(label.toLowerCase()) || t.description?.toLowerCase().includes(label.toLowerCase()));
+    const getTlItem = (label) => tl.find((t) => t.stepLabel?.toLowerCase().includes(label.toLowerCase()) || t.description?.toLowerCase().includes(label.toLowerCase()));
+
+    const isSpareReq = hasTl('Spare Required') || hasTl('Spare Ordered') || sr?.status === 'Spare Required' || sr?.status === 'Spare Ordered' || booking.instantStatus === 'PARTS_PENDING' || booking.status === 'Parts Pending';
+    const isSpareApproved = hasTl('Spare Approved');
+    const isSpareDispatched = hasTl('Spare Dispatched');
+    const isSpareReceived = hasTl('Spare Received') || sr?.status === 'Spare Received' || booking.instantStatus === 'RESCHEDULED' || booking.status === 'Rescheduled' || booking.status === 'Revisit Scheduled';
+    const isCompleted = booking.status === 'Completed' || sr?.status === 'Repair Completed' || sr?.status === 'Closed';
+    const isCancelled = booking.status === 'Cancelled' || sr?.status === 'Cancelled';
+
+    const steps = [
       {
         id: 'confirmed',
         title: 'Booking Placed',
@@ -123,35 +172,75 @@ const Bookings = () => {
       {
         id: 'assigned',
         title: 'Technician Assigned',
-        desc: booking.technician?.name ? `${booking.technician.name} assigned` : 'Assigning nearest verified engineer',
+        desc: booking.technician?.name ? `${booking.technician.name} (Verified Partner)` : 'Assigning nearest verified engineer',
         time: booking.technician ? 'Assigned' : '',
         completed: Boolean(booking.technician),
-        current: Boolean(booking.technician) && status !== 'Completed' && status !== 'Cancelled',
-      },
-      {
-        id: 'in_progress',
-        title: 'Service In Progress',
-        desc: sr?.status === 'Work in Progress' || sr?.status === 'Inspection' ? 'Technician at location' : 'Inspection & repair',
-        time: '',
-        completed: status === 'Completed',
-        current: status === 'Ongoing',
-      },
-      {
-        id: 'completed',
-        title: status === 'Cancelled' ? 'Booking Cancelled' : 'Service Completed',
-        desc: status === 'Cancelled' ? 'Cancelled by customer' : 'Inspection & warranty active',
-        time: booking.updatedAt && (status === 'Completed' || status === 'Cancelled') ? new Date(booking.updatedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '',
-        completed: status === 'Completed' || status === 'Cancelled',
-        current: status === 'Completed',
-        isCancelled: status === 'Cancelled',
+        current: false,
       },
     ];
 
-    return baseSteps;
+    if (isSpareReq || isSpareReceived) {
+      const spareItem = getTlItem('Spare Required') || getTlItem('Spare Ordered');
+      steps.push({
+        id: 'spare_pending',
+        title: 'Spare Part Ordered',
+        desc: spareItem?.description || 'Spare parts requested from warehouse for appliance repair',
+        time: spareItem?.timestamp ? new Date(spareItem.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : 'Ordered',
+        completed: true,
+        current: !isSpareApproved && !isSpareDispatched && !isSpareReceived && !isCompleted,
+      });
+
+      if (isSpareApproved || isSpareDispatched || isSpareReceived) {
+        steps.push({
+          id: 'spare_dispatched',
+          title: isSpareDispatched ? 'Spare Part Dispatched' : 'Spare Part Approved',
+          desc: isSpareDispatched ? 'Part dispatched to technician via logistics' : 'Approved by warehouse admin',
+          time: 'Processed',
+          completed: true,
+          current: !isSpareReceived && !isCompleted,
+        });
+      }
+
+      if (isSpareReceived) {
+        const revisitDateStr = booking.scheduledDate 
+          ? new Date(booking.scheduledDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) 
+          : 'Scheduled';
+        const timeSlotStr = typeof booking.timeSlot === 'object' ? (booking.timeSlot?.time || '10:00 AM - 01:00 PM') : (booking.timeSlot || '10:00 AM - 01:00 PM');
+        steps.push({
+          id: 'revisit_scheduled',
+          title: 'Revisit Scheduled',
+          desc: `Spare delivered to technician. Revisit confirmed for ${revisitDateStr} (${timeSlotStr}) to complete repair.`,
+          time: 'Scheduled',
+          completed: true,
+          current: !isCompleted,
+        });
+      }
+    } else {
+      steps.push({
+        id: 'in_progress',
+        title: 'Service In Progress',
+        desc: sr?.status === 'Work in Progress' || sr?.status === 'Inspection' || sr?.status === 'Engineer Reached' ? 'Technician inspecting appliance' : 'Inspection & repair',
+        time: '',
+        completed: isCompleted,
+        current: booking.status === 'Ongoing' && !isCompleted && !isCancelled,
+      });
+    }
+
+    steps.push({
+      id: 'completed',
+      title: isCancelled ? 'Booking Cancelled' : 'Service Completed',
+      desc: isCancelled ? 'Cancelled by customer' : 'Inspection complete & warranty active',
+      time: booking.updatedAt && (isCompleted || isCancelled) ? new Date(booking.updatedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '',
+      completed: isCompleted || isCancelled,
+      current: isCompleted,
+      isCancelled,
+    });
+
+    return steps;
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-24 font-sans max-w-md mx-auto shadow-2xl relative border-x border-slate-100">
+    <div className="min-h-screen bg-bg-light flex flex-col pb-24">
       
       {/* Top App Header */}
       <div className="bg-white border-b border-slate-100 px-5 pt-4 pb-3 sticky top-0 z-30 shadow-xs">
@@ -272,7 +361,7 @@ const Bookings = () => {
               </p>
             </div>
             <button 
-              onClick={() => navigate('/all-services')}
+              onClick={() => navigate('/services')}
               className="mt-3 bg-[#0D47A1] hover:bg-[#09357a] text-white text-xs font-bold px-6 py-3 rounded-2xl shadow-sm transition-all cursor-pointer"
             >
               Book a Service
@@ -280,7 +369,9 @@ const Bookings = () => {
           </div>
         ) : (
           filteredBookings.map((b) => {
-            const status = b.status || 'Upcoming';
+            const isPartsPending = b.instantStatus === 'PARTS_PENDING' || b.partPending || b.serviceRequest?.status === 'Spare Ordered' || b.serviceRequest?.status === 'Spare Required' || b.status === 'Parts Pending';
+            const isRescheduled = b.instantStatus === 'RESCHEDULED' || b.serviceRequest?.status === 'Spare Received' || b.status === 'Rescheduled' || b.status === 'Revisit Scheduled';
+            const status = isPartsPending ? 'Parts Pending' : isRescheduled ? 'Revisit Scheduled' : (b.status || 'Upcoming');
             const badge = STATUS_BADGES[status] || STATUS_BADGES.Upcoming;
             const categoryBadge = CATEGORY_COLORS[b.category] || 'bg-slate-100 text-slate-700';
             const scheduledDateStr = b.scheduledDate 
@@ -334,24 +425,41 @@ const Bookings = () => {
                   </div>
                 </div>
 
-                {/* Technician preview if assigned */}
+                {/* Technician preview & Closure OTP if assigned */}
                 {b.technician && (
-                  <div className="flex items-center justify-between bg-blue-50/40 rounded-2xl px-3 py-2 border border-blue-100/60">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-[#0D47A1] text-white flex items-center justify-center text-[10px] font-black">
-                        {b.technician.name?.charAt(0) || 'T'}
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between bg-blue-50/40 rounded-2xl px-3 py-2 border border-blue-100/60">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-[#0D47A1] text-white flex items-center justify-center text-[10px] font-black">
+                          {b.technician.name?.charAt(0) || 'T'}
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-[#052355] leading-none">{b.technician.name}</p>
+                          <p className="text-[10px] text-slate-500 font-semibold mt-0.5">Verified Technician</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-xs font-bold text-[#052355] leading-none">{b.technician.name}</p>
-                        <p className="text-[10px] text-slate-500 mt-0.5">Verified Technician</p>
+                      <div className="text-right">
+                        <span className="text-[10px] text-slate-400 font-medium">{b.technician.phone ? 'Tap to Call' : ''}</span>
                       </div>
                     </div>
-                    {b.technician.rating && (
-                      <span className="text-[10px] font-black text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full flex items-center gap-1 border border-amber-200">
-                        ★ {b.technician.rating}
-                      </span>
+
+                    {b.status !== 'Completed' && b.status !== 'Cancelled' && (
+                      <div className="flex items-center justify-between bg-gradient-to-r from-blue-50 to-indigo-50/60 rounded-2xl px-3.5 py-2 border border-blue-100">
+                        <div className="flex items-center gap-1.5 text-xs text-[#052355] font-bold">
+                          <ShieldCheck className="h-3.5 w-3.5 text-[#0D47A1]" />
+                          <span className="text-[11px]">Verification OTP:</span>
+                        </div>
+                        <span className="bg-[#052355] text-white text-xs font-black px-2.5 py-0.5 rounded-lg tracking-widest">
+                          {b.completionOtp || b.serviceRequest?.completionOtp || '8745'}
+                        </span>
+                      </div>
                     )}
                   </div>
+                )}
+                {b.technician?.rating && (
+                  <span className="text-[10px] font-black text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full flex items-center gap-1 border border-amber-200">
+                    ★ {b.technician.rating}
+                  </span>
                 )}
 
                 {/* Card Footer: Price & Action */}
@@ -390,13 +498,29 @@ const Bookings = () => {
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-xs font-bold text-blue-200 uppercase tracking-wider">Booking Summary</span>
-                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
-                    selectedBooking.status === 'Completed' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30' :
-                    selectedBooking.status === 'Cancelled' ? 'bg-rose-500/20 text-rose-300 border border-rose-400/30' :
-                    'bg-blue-400/20 text-blue-200 border border-blue-300/30'
-                  }`}>
-                    {selectedBooking.status}
-                  </span>
+                  {(() => {
+                    const sr = selectedBooking.serviceRequest;
+                    const tl = sr?.timeline || [];
+                    const hasTl = (lbl) => tl.some((t) => t.stepLabel?.toLowerCase().includes(lbl.toLowerCase()) || t.description?.toLowerCase().includes(lbl.toLowerCase()));
+                    const isPartsPending = selectedBooking.instantStatus === 'PARTS_PENDING' || selectedBooking.partPending || hasTl('Spare Required') || hasTl('Spare Ordered') || sr?.status === 'Spare Ordered' || sr?.status === 'Spare Required' || selectedBooking.status === 'Parts Pending';
+                    const isRescheduled = selectedBooking.instantStatus === 'RESCHEDULED' || hasTl('Spare Received') || sr?.status === 'Spare Received' || selectedBooking.status === 'Rescheduled' || selectedBooking.status === 'Revisit Scheduled';
+                    const modalStatus = selectedBooking.status === 'Completed' ? 'Completed' :
+                                       selectedBooking.status === 'Cancelled' ? 'Cancelled' :
+                                       isRescheduled ? 'Revisit Scheduled' :
+                                       isPartsPending ? 'Parts Pending' :
+                                       (selectedBooking.status || 'Upcoming');
+                    const badgeClasses = 
+                      modalStatus === 'Completed' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30' :
+                      modalStatus === 'Cancelled' ? 'bg-rose-500/20 text-rose-300 border border-rose-400/30' :
+                      modalStatus === 'Parts Pending' ? 'bg-amber-500/25 text-amber-200 border border-amber-400/40' :
+                      modalStatus === 'Revisit Scheduled' ? 'bg-purple-500/25 text-purple-200 border border-purple-400/40' :
+                      'bg-blue-400/20 text-blue-200 border border-blue-300/30';
+                    return (
+                      <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full ${badgeClasses}`}>
+                        {modalStatus}
+                      </span>
+                    );
+                  })()}
                 </div>
                 <h2 className="text-base font-extrabold text-white leading-tight">
                   {selectedBooking.humanId || selectedBooking.id}
@@ -414,6 +538,21 @@ const Bookings = () => {
             {/* Modal Scrollable Content */}
             <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-4 bg-[#F8FAFC]">
               
+              {/* Service Completion OTP Card */}
+              {selectedBooking.status !== 'Completed' && selectedBooking.status !== 'Cancelled' && (
+                <div className="bg-gradient-to-r from-[#052355] to-[#0D47A1] rounded-2xl p-4 text-white shadow-md flex items-center justify-between">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[10px] uppercase font-bold text-blue-200 tracking-wider flex items-center gap-1.5">
+                      <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" /> Service Verification OTP
+                    </span>
+                    <p className="text-[11px] text-blue-100 font-medium">Share this code with technician at job closure</p>
+                  </div>
+                  <div className="bg-white text-[#052355] px-4 py-2 rounded-xl font-black text-lg tracking-widest shadow-sm">
+                    {selectedBooking.completionOtp || selectedBooking.serviceRequest?.completionOtp || '8745'}
+                  </div>
+                </div>
+              )}
+
               {/* Service & Product Card */}
               <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-2xs flex flex-col gap-2">
                 <div className="flex justify-between items-start">
@@ -616,7 +755,7 @@ const Bookings = () => {
               <button
                 onClick={() => {
                   setSelectedBooking(null);
-                  navigate('/all-services');
+                  navigate('/services');
                 }}
                 className="flex-1 py-3 px-4 bg-[#0D47A1] hover:bg-[#09357a] text-white text-xs font-bold rounded-2xl shadow-sm transition-all cursor-pointer text-center"
               >
@@ -661,40 +800,40 @@ const Bookings = () => {
       )}
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/80 px-6 py-3 flex justify-around items-center z-20 shadow-lg max-w-md mx-auto">
+      <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-border-color p-4 flex justify-around items-center z-40 overflow-visible">
         <button 
           onClick={() => navigate('/dashboard')}
-          className="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-700 transition-colors"
+          className="flex flex-col items-center text-text-secondary hover:text-brand-blue"
         >
-          <HomeIcon className="h-5.5 w-5.5" />
-          <span className="text-[10px] font-semibold">Home</span>
+          <HomeIcon className="h-6 w-6" />
+          <span className="text-xs font-medium">Home</span>
         </button>
         <button 
           onClick={() => navigate('/categories')}
-          className="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-700 transition-colors"
+          className="flex flex-col items-center text-text-secondary hover:text-brand-blue"
         >
-          <LayoutGrid className="h-5.5 w-5.5" />
-          <span className="text-[10px] font-semibold">Categories</span>
+          <LayoutGrid className="h-6 w-6" />
+          <span className="text-xs font-medium">Categories</span>
         </button>
         <button 
           onClick={() => navigate('/buy')}
-          className="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-700 transition-colors"
+          className="flex flex-col items-center text-text-secondary hover:text-brand-blue"
         >
-          <ShoppingCart className="h-5.5 w-5.5" />
-          <span className="text-[10px] font-semibold">Buy</span>
+          <ShoppingCart className="h-6 w-6" />
+          <span className="text-xs font-medium">Buy</span>
         </button>
         <button 
-          className="flex flex-col items-center gap-1 text-[#0D47A1] font-bold"
+          className="flex flex-col items-center text-brand-blue"
         >
-          <Calendar className="h-5.5 w-5.5 stroke-[2.5]" />
-          <span className="text-[10px] font-black">Bookings</span>
+          <Calendar className="h-6 w-6" />
+          <span className="text-xs font-medium">Bookings</span>
         </button>
         <button 
           onClick={() => navigate('/profile')}
-          className="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-700 transition-colors"
+          className="flex flex-col items-center text-text-secondary hover:text-brand-blue"
         >
-          <User className="h-5.5 w-5.5" />
-          <span className="text-[10px] font-semibold">Account</span>
+          <User className="h-6 w-6" />
+          <span className="text-xs font-medium">Account</span>
         </button>
       </div>
 

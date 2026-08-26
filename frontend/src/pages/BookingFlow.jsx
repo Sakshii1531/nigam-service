@@ -5,6 +5,7 @@ import {
   Sun, Moon, Info, ShieldCheck, ArrowRight, Zap
 } from 'lucide-react';
 import { apiRequest, getStoredTokens, storeTokens } from '../lib/apiClient';
+import { useAuth } from '../context/AuthContext';
 
 import { getCatalogEntry, preloadCatalogOverrides } from '../data/bookingCatalog';
 
@@ -176,6 +177,19 @@ const BookingFlow = () => {
   const [address, setAddress] = useState({ house: '', area: '', city: '', pincode: '' });
   const [paymentMode, setPaymentMode] = useState('advance');
   const [priceExpanded, setPriceExpanded] = useState(false);
+
+  const { user } = useAuth();
+
+  // Prefill user data if available from session
+  useEffect(() => {
+    if (user) {
+      if (user.name && !fullName) setFullName(user.name);
+      if (user.phone && !mobile) setMobile(user.phone);
+      if (user.address && typeof user.address === 'string' && !address.house) {
+        setAddress(prev => ({ ...prev, house: user.address, city: user.city || prev.city }));
+      }
+    }
+  }, [user]);
 
   // Ref for hidden native date input
   const dateInputRef = useRef(null);
@@ -360,6 +374,11 @@ const BookingFlow = () => {
           paymentMode: 'after',
           isInstant: isInstant ? 'true' : 'false',
         });
+        if (result.technician?.name) {
+          params.set('technicianName', result.technician.name);
+          params.set('technicianRating', String(result.technician.rating || '4.8'));
+          if (result.technician.phone) params.set('technicianPhone', result.technician.phone);
+        }
         navigate(`/booking-success?${params.toString()}`);
       } catch (err) {
         console.error('Failed to create booking:', err);
@@ -402,8 +421,13 @@ const BookingFlow = () => {
   // ── Validation per step ────────────────────────────────────────────────────
   const step1Valid = (!data.productTypes || data.productTypes.length === 0) ? true : !!productType;
   const step2Valid = !!service;
-  const step3Valid = !!selectedDate && !!timeGroup;
-  const step4Valid = true;
+  const step3Valid = !!brand && !!selectedDate && !!timeGroup;
+
+  const isMobileValid = !!mobile?.trim() && /^\d{10}$/.test(mobile.trim());
+  const isPincodeValid = !!address.pincode?.trim() && /^\d{6}$/.test(address.pincode.trim());
+  const isAddressValid = !!address.house?.trim() && !!address.area?.trim() && !!address.city?.trim() && isPincodeValid;
+  const isContactValid = !!fullName?.trim() && isMobileValid;
+  const step4Valid = isAddressValid && isContactValid;
 
   // ── Step config ────────────────────────────────────────────────────────────
   const stepConfig = {
@@ -429,8 +453,9 @@ const BookingFlow = () => {
   const getBarBtnLabel = () => {
     if (step === 1) return 'Continue — Choose Service';
     if (step === 2) return 'Continue — Schedule Visit';
-    if (step === 3) return 'Continue — Address & Payment';
+    if (step === 3) return !step3Valid ? 'Select Brand, Date & Slot' : 'Continue — Address & Payment';
     if (submitting) return 'Booking Service...';
+    if (!step4Valid) return 'Fill Address & Contact Details';
     if (paymentMode === 'after') return 'Confirm Booking (Pay After Service)';
     return `Pay ₹${advanceAmt} & Confirm Booking`;
   };
@@ -622,16 +647,18 @@ const BookingFlow = () => {
 
             {/* Brand dropdown */}
             <div>
-              <p className="text-[12px] font-extrabold text-slate-800 mb-2">Brand (Optional)</p>
+              <p className="text-[12px] font-extrabold text-slate-800 mb-2">
+                Select Brand <span className="text-red-500">*</span>
+              </p>
               <div className="relative">
                 <select
                   value={brand}
                   onChange={(e) => setBrand(e.target.value)}
-                  className={`w-full appearance-none px-4 py-3.5 pr-10 bg-white border border-slate-200 rounded-2xl text-[13px] font-semibold outline-none transition-all ${
-                    brand ? 'text-slate-800 border-slate-300' : 'text-slate-400'
+                  className={`w-full appearance-none px-4 py-3.5 pr-10 bg-white border rounded-2xl text-[13px] font-semibold outline-none transition-all ${
+                    brand ? 'text-slate-800 border-slate-300 shadow-xs' : 'text-slate-400 border-amber-300 bg-amber-50/20'
                   }`}
                 >
-                  <option value="" disabled>Select Brand</option>
+                  <option value="" disabled>Select Brand (Compulsory)</option>
                   {data.brands.map(b => (
                     <option key={b} value={b}>{b}</option>
                   ))}
@@ -639,19 +666,19 @@ const BookingFlow = () => {
                 </select>
                 <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
               </div>
-              <button
-                type="button"
-                onClick={() => setBrand('Other')}
-                className="text-[#0D47A1] text-[12px] font-bold mt-2 hover:underline text-left block"
-              >
-                Not sure? Skip
-              </button>
+              {!brand && (
+                <p className="text-[11px] text-amber-600 font-semibold mt-1.5 flex items-center gap-1">
+                  <span>⚠️</span> Please select an appliance brand to proceed
+                </p>
+              )}
             </div>
 
             {/* Date picker */}
             <div className="mt-2">
               <div className="flex items-center justify-between mb-3">
-                <p className="text-[12px] font-extrabold text-slate-800">Select Date</p>
+                <p className="text-[12px] font-extrabold text-slate-800">
+                  Select Date <span className="text-red-500">*</span>
+                </p>
                 <button
                   onClick={() => dateInputRef.current?.showPicker?.() || dateInputRef.current?.click()}
                   className="w-8 h-8 rounded-xl bg-[#EAF4FF] flex items-center justify-center hover:bg-[#D6ECFF] transition-all"
@@ -791,76 +818,121 @@ const BookingFlow = () => {
 
             {/* Address Details */}
             <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
-              <p className="text-[13px] font-extrabold text-slate-900 mb-3">Address Details</p>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-[13px] font-extrabold text-slate-900">
+                  Address Details <span className="text-red-500">*</span>
+                </p>
+                <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
+                  All fields required
+                </span>
+              </div>
               <div className="flex flex-col gap-3">
                 {/* House / Flat */}
-                <div className="relative">
-                  <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <input
-                    type="text"
-                    value={address.house}
-                    onChange={(e) => setAddress(p => ({ ...p, house: e.target.value }))}
-                    placeholder="House / Flat / Building No."
-                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[12px] font-medium text-slate-800 placeholder-slate-400 focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] outline-none transition-all"
-                  />
+                <div>
+                  <div className="relative">
+                    <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <input
+                      type="text"
+                      value={address.house}
+                      onChange={(e) => setAddress(p => ({ ...p, house: e.target.value }))}
+                      placeholder="House / Flat / Building No. *"
+                      className={`w-full pl-10 pr-4 py-3 bg-slate-50 border rounded-xl text-[12px] font-medium text-slate-800 placeholder-slate-400 focus:bg-white focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] outline-none transition-all ${
+                        !address.house?.trim() ? 'border-slate-200' : 'border-slate-300'
+                      }`}
+                    />
+                  </div>
                 </div>
                 {/* Area / Landmark */}
-                <div className="relative">
-                  <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <input
-                    type="text"
-                    value={address.area}
-                    onChange={(e) => setAddress(p => ({ ...p, area: e.target.value }))}
-                    placeholder="Area / Landmark / Street"
-                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[12px] font-medium text-slate-800 placeholder-slate-400 focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] outline-none transition-all"
-                  />
+                <div>
+                  <div className="relative">
+                    <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <input
+                      type="text"
+                      value={address.area}
+                      onChange={(e) => setAddress(p => ({ ...p, area: e.target.value }))}
+                      placeholder="Area / Landmark / Street *"
+                      className={`w-full pl-10 pr-4 py-3 bg-slate-50 border rounded-xl text-[12px] font-medium text-slate-800 placeholder-slate-400 focus:bg-white focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] outline-none transition-all ${
+                        !address.area?.trim() ? 'border-slate-200' : 'border-slate-300'
+                      }`}
+                    />
+                  </div>
                 </div>
                 <div className="flex gap-3">
                   {/* City */}
-                  <input
-                    type="text"
-                    value={address.city}
-                    onChange={(e) => setAddress(p => ({ ...p, city: e.target.value }))}
-                    placeholder="City"
-                    className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[12px] font-medium text-slate-800 placeholder-slate-400 focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] outline-none transition-all"
-                  />
+                  <div className="flex-1">
+                    <input
+                      type="text"
+                      value={address.city}
+                      onChange={(e) => setAddress(p => ({ ...p, city: e.target.value }))}
+                      placeholder="City *"
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[12px] font-medium text-slate-800 placeholder-slate-400 focus:bg-white focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] outline-none transition-all"
+                    />
+                  </div>
                   {/* Pincode */}
-                  <input
-                    type="text"
-                    value={address.pincode}
-                    onChange={(e) => setAddress(p => ({ ...p, pincode: e.target.value }))}
-                    placeholder="Pincode"
-                    maxLength={6}
-                    className="w-28 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[12px] font-medium text-slate-800 placeholder-slate-400 focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] outline-none transition-all"
-                  />
+                  <div className="w-32">
+                    <input
+                      type="text"
+                      value={address.pincode}
+                      onChange={(e) => setAddress(p => ({ ...p, pincode: e.target.value.replace(/\D/g, '').slice(0, 6) }))}
+                      placeholder="Pincode *"
+                      maxLength={6}
+                      className={`w-full px-4 py-3 bg-slate-50 border rounded-xl text-[12px] font-medium text-slate-800 placeholder-slate-400 focus:bg-white focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] outline-none transition-all ${
+                        address.pincode && address.pincode.length < 6 ? 'border-rose-400 bg-rose-50/20' : 'border-slate-200'
+                      }`}
+                    />
+                  </div>
                 </div>
+                {address.pincode && address.pincode.length < 6 && (
+                  <p className="text-[10px] text-rose-500 font-semibold -mt-1 ml-1">
+                    Pincode must be exactly 6 digits
+                  </p>
+                )}
               </div>
             </div>
 
             {/* Full Name + Mobile */}
             <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm flex flex-col gap-3">
-              <p className="text-[13px] font-extrabold text-slate-900">Contact Details</p>
+              <div className="flex items-center justify-between">
+                <p className="text-[13px] font-extrabold text-slate-900">
+                  Contact Details <span className="text-red-500">*</span>
+                </p>
+                <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
+                  Required for visit
+                </span>
+              </div>
               {/* Full Name */}
-              <div className="relative">
-                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <input
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Full Name"
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[12px] font-medium text-slate-800 placeholder-slate-400 focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] outline-none transition-all"
-                />
+              <div>
+                <div className="relative">
+                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <input
+                    type="text"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Full Name *"
+                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[12px] font-medium text-slate-800 placeholder-slate-400 focus:bg-white focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] outline-none transition-all"
+                  />
+                </div>
               </div>
               {/* Mobile */}
-              <div className="relative">
-                <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <input
-                  type="tel"
-                  value={mobile}
-                  onChange={(e) => setMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                  placeholder="Mobile Number"
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[12px] font-medium text-slate-800 placeholder-slate-400 focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] outline-none transition-all"
-                />
+              <div>
+                <div className="relative">
+                  <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <input
+                    type="tel"
+                    value={mobile}
+                    onChange={(e) => setMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                    placeholder="10-digit Mobile Number *"
+                    maxLength={10}
+                    className={`w-full pl-10 pr-4 py-3 bg-slate-50 border rounded-xl text-[12px] font-medium text-slate-800 placeholder-slate-400 focus:bg-white focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] outline-none transition-all ${
+                      mobile && mobile.length < 10 ? 'border-rose-400 bg-rose-50/20' : 'border-slate-200'
+                    }`}
+                  />
+                </div>
+                {mobile && mobile.length < 10 && (
+                  <p className="text-[10px] text-rose-500 font-semibold mt-1 ml-1">
+                    Mobile number must be exactly 10 digits
+                  </p>
+                )}
               </div>
             </div>
 
@@ -1000,9 +1072,10 @@ const BookingFlow = () => {
               <div className="text-left">
                 <p className="text-[13px] font-extrabold text-slate-800 leading-tight">
                   {selectedDate ? selectedDate.split(' ').slice(0, 3).join(' ') : 'Select Date'}
+                  {brand ? ` • ${brand}` : ''}
                 </p>
                 <p className="text-[10px] text-slate-400 font-bold mt-0.5">
-                  {timeGroup ? TIME_GROUPS.find(t => t.id === timeGroup)?.timeRange : 'Select Time Slot'}
+                  {!brand ? 'Select Brand, Date & Time Slot' : (timeGroup ? TIME_GROUPS.find(t => t.id === timeGroup)?.timeRange : 'Select Time Slot')}
                 </p>
               </div>
             </div>
@@ -1021,7 +1094,7 @@ const BookingFlow = () => {
                 : 'bg-[#0D47A1] text-white hover:bg-[#1565C0] shadow-md shadow-[#0D47A1]/20'
             }`}
           >
-            Continue
+            {!brand ? 'Choose Brand to Continue' : (!selectedDate || !timeGroup ? 'Select Date & Time Slot' : 'Continue')}
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>
