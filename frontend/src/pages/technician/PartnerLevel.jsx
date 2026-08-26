@@ -28,7 +28,7 @@ const PartnerLevel = () => {
   const progressPercent = Math.min(100, Math.round((totalCompleted / nextTarget) * 100));
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-24 max-w-md mx-auto border-x border-slate-200 shadow-xl relative font-sans overflow-hidden">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-12 relative font-sans">
       
       {/* Header */}
       <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center sticky top-0 z-10 shadow-sm">

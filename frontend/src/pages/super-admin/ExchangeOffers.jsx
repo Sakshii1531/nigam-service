@@ -286,7 +286,7 @@ const ExchangeOffers = () => {
   return (
     <div className="flex h-screen bg-[#F8FAFC]">
       <Sidebar />
-      <div className="flex-1 flex flex-col pl-64 overflow-hidden">
+      <div className="flex-1 ml-64 min-h-screen flex flex-col overflow-hidden">
         <Topbar title="Exchange Offers Control Panel" />
 
         {/* MAIN BODY SCROLLABLE */}

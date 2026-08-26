@@ -5,6 +5,7 @@ import {
   CreditCard, Plus, X, Building2, CheckCircle, ChevronRight
 } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
+import TechBottomNav from '../../components/TechBottomNav';
 
 const PayoutSettings = () => {
   const navigate = useNavigate();
@@ -104,7 +105,7 @@ const PayoutSettings = () => {
   const anyModalOpen = showMethodPicker || showBankForm || showUpiForm;
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-24 max-w-md mx-auto border-x border-slate-100 shadow-sm relative overflow-hidden">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-20 relative">
 
       {/* Header */}
       <div className="bg-white border-b border-slate-100 p-4 flex items-center justify-between sticky top-0 z-10">
@@ -390,28 +391,7 @@ const PayoutSettings = () => {
       )}
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 py-3 px-3.5 flex justify-around items-center z-20 shadow-lg">
-        <button onClick={() => navigate('/technician/dashboard')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-slate-700 transition-all">
-          <Briefcase className="h-6 w-6 stroke-[2]" />
-          <span className="text-[10px] font-normal tracking-wide">Jobs</span>
-        </button>
-        <button onClick={() => navigate('/technician/raise-part-request?tab=claims')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-slate-700 transition-all">
-          <ClipboardList className="h-6 w-6 stroke-[2]" />
-          <span className="text-[10px] font-normal tracking-wide">Requests</span>
-        </button>
-        <button onClick={() => navigate('/technician/inventory')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-slate-700 transition-all">
-          <Wrench className="h-6 w-6 stroke-[2]" />
-          <span className="text-[10px] font-normal tracking-wide">Inventory</span>
-        </button>
-        <button onClick={() => navigate('/technician/schedule')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-slate-700 transition-all">
-          <Calendar className="h-6 w-6 stroke-[2]" />
-          <span className="text-[10px] font-normal tracking-wide">Schedule</span>
-        </button>
-        <button onClick={() => navigate('/technician/profile')} className="flex flex-col items-center gap-1 text-[#0D47A1] transition-all">
-          <User className="h-6 w-6 stroke-[2.5]" />
-          <span className="text-[10px] font-medium tracking-wide">Profile</span>
-        </button>
-      </div>
+      <TechBottomNav activeTab="profile" />
 
     </div>
   );

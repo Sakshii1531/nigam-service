@@ -14,6 +14,7 @@ import { computeCharges } from '../shared/pricingEngine.js';
 import { raiseTechnicianClaim } from './claim.service.js';
 import { getOrCreateConversation } from '../chat/conversation.service.js';
 import { emit as emitNotification } from '../notifications/notification.service.js';
+import { getIO } from '../../sockets/io.js';
 import { env } from '../../config/env.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { JOB_STEP_TRANSITIONS, SERVICE_REQUEST_TRANSITIONS } from '../../config/constants.js';
@@ -86,6 +87,24 @@ async function simpleTransition(technicianId, jobId, toStep, srStatus) {
       await transitionStatus(job.serviceRequest, srStatus, { description: `Job step -> ${targetStep}` });
     }
   }
+
+  if (targetStep === 'ontheway' || targetStep === 'revisit_ontheway') {
+    try {
+      const sr = await ServiceRequest.findById(job.serviceRequest._id || job.serviceRequest);
+      const tech = await Technician.findById(technicianId);
+      if (sr?.user) {
+        await emitNotification('technician.ontheway', {
+          user: sr.user,
+          technicianName: tech?.name || 'Technician',
+          bookingId: sr.booking,
+          serviceRequestId: sr._id || sr.id,
+        });
+      }
+    } catch (e) {
+      console.error('[notification] Failed to emit technician.ontheway:', e.message);
+    }
+  }
+
   return job;
 }
 
@@ -100,7 +119,7 @@ const AMC_POPULATE = { path: 'amcSubscription', populate: { path: 'plan', select
 const EW_POPULATE = { path: 'extendedWarrantyOrder' };
 
 export async function listAvailableJobs(technicianId) {
-  const acceptedServiceRequestIds = await Job.find({ technician: technicianId }).distinct('serviceRequest');
+  const acceptedServiceRequestIds = await Job.distinct('serviceRequest');
   return ServiceRequest.find({
     technician: technicianId,
     status: 'Assigned',
@@ -378,6 +397,49 @@ export async function requestSparePart(
         description: `Part request sent to Super Admin for approval (${orderSource})`,
       });
     }
+
+    // Update Booking status and notify customer
+    let customerUserId = null;
+    if (sr.booking) {
+      const booking = await Booking.findById(sr.booking);
+      if (booking) {
+        customerUserId = booking.user;
+        booking.status = 'Ongoing';
+        booking.instantStatus = 'PARTS_PENDING';
+        await booking.save();
+      }
+    } else if (sr.user) {
+      customerUserId = sr.user;
+    }
+
+    if (customerUserId) {
+      const partNames = items.map((i) => i.name).join(', ');
+      await emitNotification('technician.parts_pending', {
+        user: customerUserId,
+        category: sr.category,
+        partName: partNames,
+        bookingId: sr.booking ? String(sr.booking) : null,
+      }).catch(() => {});
+
+      try {
+        const io = getIO();
+        io.to(`user:${customerUserId}`).emit('booking:updated', {
+          bookingId: sr.booking,
+          status: 'Ongoing',
+          instantStatus: 'PARTS_PENDING',
+          partPending: true,
+          partName: partNames,
+        });
+        io.to(`user:${customerUserId}`).emit('instant:status_update', {
+          bookingId: sr.booking,
+          instantStatus: 'PARTS_PENDING',
+        });
+        io.to(`user:${customerUserId}`).emit('service_request:updated', {
+          serviceRequestId: sr._id,
+          status: 'Spare Ordered',
+        });
+      } catch {}
+    }
   }
 
   return { job, partOrders: createdOrders };
@@ -512,17 +574,38 @@ async function finalizeJobCompletion(job, payment) {
  *    verifyJobPayment() below is what actually finishes the job once Checkout
  *    reports success.
  */
-export async function collectPayment(technicianId, jobId, { paymentMethod = 'Cash' } = {}) {
+export async function collectPayment(technicianId, jobId, { paymentMethod = 'Cash', otp, signatureUrl } = {}) {
   const job = await findOwnedJob(technicianId, jobId);
-  // Guard billingEstimate access before ensureTransition's normal check runs
-  // below — an out-of-order call (e.g. before the billing step) has no
-  // billingEstimate at all, so reading .total off it would throw a raw 500
-  // instead of the same clean 400 every other out-of-order action gets.
-  if (!['billing', 'revisit_billing'].includes(job.activeStep)) {
-    throw new ApiError(400, `Cannot move from "${job.activeStep}" to "completed" (allowed: billing -> completed)`);
+
+  // Auto-compute billingEstimate if missing
+  if (!job.billingEstimate || job.billingEstimate.total == null) {
+    const serviceCharge = job.isD2C ? (job.price || 499) : 0;
+    const sparePartsTotal = job.isD2C ? (job.spareParts || []).filter((p) => p.checked).reduce((sum, p) => sum + (p.price || 0), 0) : 0;
+    const additionalServicesTotal = (job.additionalServices || []).filter((s) => s.checked).reduce((sum, s) => sum + (s.price || 0), 0);
+    const charges = computeCharges({ laborRate: serviceCharge, partsCost: sparePartsTotal, additionalCharges: additionalServicesTotal });
+    const billingShare = await technicianShare();
+    const technicianEarnings = job.isD2C ? Math.round(charges.subtotal * billingShare) : (job.estEarnings || 250);
+    job.billingEstimate = {
+      serviceCharge,
+      sparePartsTotal,
+      additionalServicesTotal,
+      gstPercent: charges.gstPercent,
+      total: charges.total,
+      technicianEarnings,
+    };
   }
+
+  if (otp) {
+    if (!job.revisit) job.revisit = {};
+    job.revisit.otp = otp;
+  }
+  if (signatureUrl) {
+    if (!job.revisit) job.revisit = {};
+    job.revisit.signatureUrl = signatureUrl;
+  }
+
   const amount = job.billingEstimate.total;
-  const needsGateway = amount > 0 && paymentMethod !== 'Cash';
+  const needsGateway = amount > 0 && paymentMethod !== 'Cash' && paymentMethod !== 'cash';
   const serviceRequest = await ServiceRequest.findById(job.serviceRequest);
 
   if (!needsGateway) {

@@ -148,7 +148,7 @@ export const TechProvider = ({ children }) => {
           isRecommended: job.isRecommended ?? true,
           isAvailableRequest: false,
           serviceRequestId: sr?.id || sr?._id,
-          activeStep: job.activeStep || 'details',
+          activeStep: job.activeStep && job.activeStep !== 'details' ? job.activeStep : 'assigned',
           isRevisit: Boolean(job.revisit?.scheduledDate || job.activeStep?.startsWith('revisit') || job.activeStep === 'spareapproval'),
           revisitScheduledDate: job.revisit?.scheduledDate || null,
           revisitTimeSlot: job.revisit?.timeSlot || null,
@@ -401,30 +401,39 @@ export const TechProvider = ({ children }) => {
    * only while the UI is still idle, so it never overrides a step the
    * technician is actively moving through.
    */
-  const resumedRef = useRef(null);
   useEffect(() => {
-    if (!activeJob || activeStep !== 'idle') return;
-    if (activeJob.isAvailableRequest || !activeJob.activeStep) return;
-    if (resumedRef.current === activeJob.id) return;
-    resumedRef.current = activeJob.id;
-    setActiveStep(activeJob.activeStep);
+    if (!activeJob) return;
+    if (activeJob.isAvailableRequest) {
+      if (activeStep === 'idle') setActiveStep('details');
+      return;
+    }
+    const realStep = activeJob.activeStep && activeJob.activeStep !== 'details' ? activeJob.activeStep : 'assigned';
+    if (activeStep === 'idle' || activeStep === 'details') {
+      setActiveStep(realStep);
+    }
   }, [activeJob, activeStep]);
 
   /** Jobs the technician has accepted and not finished — what the Active Job
    *  screen offers when nothing is open, instead of claiming there are none. */
-  const resumableJobs = jobs.filter((j) => !j.isAvailableRequest);
+  const resumableJobs = jobs.filter((j) => !j.isAvailableRequest && j.activeStep !== 'completed' && j.status !== 'Completed' && j.status !== 'Customer Confirmation' && j.status !== 'Closed');
 
   const selectJobForDetails = useCallback((id) => {
-    setActiveJobId(id);
-    const job = jobs.find((j) => j.id === id);
-    // Resume an in-progress job wherever the server says it actually is.
-    // Always opening at 'details' rewound the UI on every reopen, and the next
-    // action was then rejected as an illegal step transition.
-    setActiveStep(job && !job.isAvailableRequest && job.activeStep ? job.activeStep : 'details');
+    const job = jobs.find((j) => j.id === id || j.serviceRequestId === id);
+    const targetId = job ? job.id : id;
+    setActiveJobId(targetId);
+    if (job && !job.isAvailableRequest) {
+      if (job.activeStep === 'completed' || job.status === 'Completed' || job.status === 'Customer Confirmation' || job.status === 'Closed') {
+        setActiveStep('completed');
+      } else {
+        setActiveStep(job.activeStep && job.activeStep !== 'details' ? job.activeStep : 'assigned');
+      }
+    } else {
+      setActiveStep('details');
+    }
   }, [jobs]);
 
   const acceptJob = useCallback(async (id) => {
-    const jobObj = jobs.find(j => j.id === id);
+    const jobObj = jobs.find(j => j.id === id || j.serviceRequestId === id);
     if (jobObj?.isAvailableRequest) {
       try {
         const result = await apiRequest(`/tech/jobs/accept/${jobObj.serviceRequestId}`, {
@@ -432,10 +441,31 @@ export const TechProvider = ({ children }) => {
           body: { type: jobObj.type },
           auth: true,
         });
-        await fetchRealJobs();
-        setActiveJobId(result.id || result._id);
+        const newJobId = result.id || result._id;
+        setJobs(prevJobs => prevJobs.map(j => {
+          if (j.id === id || j.serviceRequestId === jobObj.serviceRequestId) {
+            return {
+              ...j,
+              id: newJobId,
+              isAvailableRequest: false,
+              activeStep: 'assigned',
+            };
+          }
+          return j;
+        }));
+        setActiveJobId(newJobId);
         setActiveStep('assigned');
+        await fetchRealJobs();
       } catch (err) {
+        if (err.message && err.message.includes('already exists')) {
+          await fetchRealJobs();
+          const existing = jobs.find(j => j.serviceRequestId === jobObj.serviceRequestId);
+          if (existing) {
+            setActiveJobId(existing.id);
+            setActiveStep(existing.activeStep || 'assigned');
+          }
+          return;
+        }
         console.error('Failed to accept job on backend:', err);
         alert(`Failed to accept job: ${err.message}`);
       }
@@ -447,7 +477,7 @@ export const TechProvider = ({ children }) => {
           id: Date.now(),
           type: 'Jobs',
           title: 'Job Accepted',
-          message: `You accepted job #${id} for ${jobs.find(j => j.id === id)?.customerName}.`,
+          message: `You accepted job #${id} for ${jobs.find(j => j.id === id || j.serviceRequestId === id)?.customerName || 'Customer'}.`,
           time: 'Just now',
           read: false
         },
@@ -656,15 +686,16 @@ export const TechProvider = ({ children }) => {
    * comes back as 'awaitingpayment' with a razorpay order, which the caller has
    * to take to Checkout and then verify — so that case is reported, not faked.
    */
-  const collectPayment = useCallback(async (paymentMethod = 'Cash') => {
+  const collectPayment = useCallback(async (paymentMethod = 'Cash', extraData = {}) => {
     if (!activeJobId) return { ok: false, error: 'No active job to close.' };
     setStepBusy(true);
     setStepError(null);
     try {
+      const payload = typeof paymentMethod === 'object' ? paymentMethod : { paymentMethod, ...extraData };
       const res = await apiRequest(`/tech/jobs/${activeJobId}/collect-payment`, {
         method: 'POST',
         auth: true,
-        body: { paymentMethod },
+        body: payload,
       });
       const step = res?.job?.activeStep || 'completed';
       setActiveStep(step);
@@ -804,16 +835,13 @@ export const TechProvider = ({ children }) => {
    * immediately looks for the next best technician.
    */
   const dismissJob = useCallback(async (jobId) => {
-    const job = jobs.find((j) => j.id === jobId);
-    const serviceRequestId = job?.serviceRequestId;
+    const job = jobs.find((j) => j.id === jobId || j.serviceRequestId === jobId);
+    const serviceRequestId = job?.serviceRequestId || (job?.isAvailableRequest ? job.id : jobId);
     if (!serviceRequestId) {
-      // An accepted job is not a pending offer — nothing to hand back.
-      return { ok: false, error: 'Only a request you have not accepted yet can be rejected.' };
+      return { ok: false, error: 'Service request ID not found' };
     }
 
-    // Drop it from the feed straight away; the refetch below is the source of
-    // truth if the server disagrees.
-    setJobs((prev) => prev.filter((j) => j.id !== jobId));
+    setJobs((prev) => prev.filter((j) => j.id !== jobId && j.serviceRequestId !== serviceRequestId));
     try {
       const res = await apiRequest(`/tech/jobs/reject/${serviceRequestId}`, { method: 'POST', auth: true });
       await fetchRealJobs();
@@ -871,6 +899,7 @@ export const TechProvider = ({ children }) => {
     <TechContext.Provider value={{
       jobs,
       activeJobId,
+      setActiveJobId,
       activeStep,
       activeJob,
       selectedParts,

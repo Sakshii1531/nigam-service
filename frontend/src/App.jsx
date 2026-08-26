@@ -15,6 +15,7 @@ import BookingFlow from './pages/BookingFlow';
 import { BookingProvider } from './context/BookingContext';
 import { AuthProvider } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
+import { AdminSidebarProvider } from './context/AdminSidebarContext';
 import Chat from './pages/Chat';
 import AllServices from './pages/AllServices';
 import Categories from './pages/Categories';
@@ -316,6 +317,7 @@ function App() {
   return (
     <Router>
       <AuthProvider>
+      <AdminSidebarProvider>
       <NotificationProvider>
       <BookingProvider>
       <TechProvider>
@@ -344,6 +346,7 @@ function App() {
         <Route path="/partner-warranty/service-updates" element={<ServiceUpdates />} />
         <Route path="/partner-warranty/rate-service" element={<RateService />} />
         <Route path="/services" element={<AllServices />} />
+        <Route path="/all-services" element={<AllServices />} />
         <Route path="/categories" element={<Categories />} />
         <Route path="/cleaning-services" element={<AllCleaningServices />} />
         <Route path="/appliance-services" element={<AllApplianceServices />} />
@@ -532,6 +535,7 @@ function App() {
       </TechProvider>
       </BookingProvider>
       </NotificationProvider>
+      </AdminSidebarProvider>
       </AuthProvider>
     </Router>
   );

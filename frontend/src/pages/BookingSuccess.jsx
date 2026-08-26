@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   ArrowRight, Phone, Star,
   Wrench, Snowflake, Tag, Package, CalendarDays, Clock, Flame, CheckSquare,
 } from 'lucide-react';
-import { apiRequest } from '../lib/apiClient';
+import { apiRequest, getStoredTokens } from '../lib/apiClient';
+import { io } from 'socket.io-client';
+
+const SOCKET_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000').replace(/\/api\/v1\/?$/, '');
 
 const BookingSuccess = () => {
   const navigate = useNavigate();
@@ -13,7 +16,23 @@ const BookingSuccess = () => {
   const [callLoading, setCallLoading] = useState(false);
   const serviceRequestId = p.get('serviceRequestId') || p.get('bookingId');
 
+  const [bookingId, setBookingId] = useState('');
+  const [technician, setTechnician] = useState(() => {
+    const name = p.get('technicianName');
+    if (!name) return null;
+    return {
+      name,
+      rating: parseFloat(p.get('technicianRating') || '4.8'),
+      phone: p.get('technicianPhone') || '',
+    };
+  });
+  const [charged, setCharged] = useState(null);
+
   const handleCallTechnician = async () => {
+    if (technician?.phone) {
+      window.location.href = `tel:${technician.phone}`;
+      return;
+    }
     if (!serviceRequestId) return;
     setCallLoading(true);
     try {
@@ -41,50 +60,88 @@ const BookingSuccess = () => {
   const timeGroupParam   = p.get('timeGroup')   || '09:00 AM';
   const totalPriceParam  = p.get('totalPrice')  || '299';
   const advanceAmtParam  = p.get('advanceAmt')  || '49';
-  const paymentMode      = p.get('paymentMode') || 'advance';
+  const paymentMode      = p.get('paymentMode') || 'after';
 
-  // The platform's SR-#### id is assigned server-side on create, so read it back
-  // rather than inventing one here — this is the reference the customer quotes
-  // to support and the one the admin console lists.
-  const [bookingId, setBookingId] = useState('');
-  const [technician, setTechnician] = useState(null);
-  const [charged, setCharged] = useState(null);
+  const isInstant = p.get('isInstant') === 'true' || timeGroupParam === 'ASAP' || timeGroupParam.includes('ASAP');
+  const [instantStatus, setInstantStatus] = useState(isInstant ? 'SEARCHING' : null);
 
-  React.useEffect(() => {
+  const loadBookingData = useCallback(async () => {
     if (!serviceRequestId) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await apiRequest(`/service-requests/${serviceRequestId}`, { auth: true });
-        if (cancelled) return;
-        setBookingId(res?.humanId || res?.id || serviceRequestId);
-        setTechnician(null);
-
-        if (res?.booking) {
-          const bk = typeof res.booking === 'object'
-            ? res.booking
-            : await apiRequest(`/bookings/${res.booking}`, { auth: true }).catch(() => null);
-          if (!cancelled && bk) {
-            setCharged({
-              total: bk.totalPrice ?? null,
-              advance: bk.advanceAmount ?? null,
-              service: bk.service?.name || null,
-              category: bk.category || null,
-              productType: bk.productType || null,
-              brand: bk.brand || null,
-              quantity: bk.quantity != null ? String(bk.quantity) : null,
-              date: bk.timeSlot?.date || null,
-              timeSlot: bk.timeSlot?.time || null
-            });
-          }
-        }
-      } catch (err) {
-        console.error('[booking] Could not load booking reference:', err.message);
-        if (!cancelled) setBookingId(serviceRequestId);
+    try {
+      const res = await apiRequest(`/service-requests/${serviceRequestId}`, { auth: true });
+      if (res?.humanId || res?.id) {
+        setBookingId(res?.humanId || res?.id);
       }
-    })();
-    return () => { cancelled = true; };
+      if (res?.technician) {
+        setTechnician(typeof res.technician === 'object' ? res.technician : { name: 'Assigned Technician' });
+      }
+      if (res?.instantStatus) {
+        setInstantStatus(res.instantStatus);
+      }
+
+      if (res?.booking) {
+        const bk = typeof res.booking === 'object'
+          ? res.booking
+          : await apiRequest(`/bookings/${res.booking}`, { auth: true }).catch(() => null);
+        if (bk) {
+          if (bk.technician && !res?.technician) {
+            setTechnician(typeof bk.technician === 'object' ? bk.technician : { name: 'Assigned Technician' });
+          }
+          if (bk.instantStatus && !res?.instantStatus) {
+            setInstantStatus(bk.instantStatus);
+          }
+          setCharged({
+            total: bk.totalPrice ?? null,
+            advance: bk.advanceAmount ?? null,
+            service: bk.service?.name || null,
+            category: bk.category || null,
+            productType: bk.productType || null,
+            brand: bk.brand || null,
+            quantity: bk.quantity != null ? String(bk.quantity) : null,
+            date: bk.timeSlot?.date || null,
+            timeSlot: bk.timeSlot?.time || null,
+          });
+        }
+      }
+    } catch (err) {
+      console.error('[booking] Could not load booking reference:', err.message);
+    }
   }, [serviceRequestId]);
+
+  // Initial load + interval polling every 3 seconds to catch live status changes
+  useEffect(() => {
+    loadBookingData();
+    const interval = setInterval(loadBookingData, 3000);
+    return () => clearInterval(interval);
+  }, [loadBookingData]);
+
+  // Real-time socket updates for instant dispatch and tracking
+  useEffect(() => {
+    const { accessToken } = getStoredTokens();
+    const socket = io(SOCKET_URL, {
+      auth: { token: accessToken },
+      transports: ['websocket'],
+    });
+
+    socket.on('instant:status_update', (data) => {
+      if (data?.bookingId || data?.serviceRequestId === serviceRequestId) {
+        if (data.technician) setTechnician(data.technician);
+        if (data.instantStatus) setInstantStatus(data.instantStatus);
+        loadBookingData();
+      }
+    });
+
+    socket.on('tracking:update', (data) => {
+      if (data?.serviceRequestId === serviceRequestId) {
+        if (data.technician) setTechnician(data.technician);
+        loadBookingData();
+      }
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [serviceRequestId, loadBookingData]);
 
   const service     = serviceParam     || charged?.service     || 'Home Service';
   const category    = categoryParam    || charged?.category    || '';
@@ -95,9 +152,6 @@ const BookingSuccess = () => {
   const timeGroup   = timeGroupParam   || charged?.timeSlot    || '09:00 AM';
   const totalPrice  = totalPriceParam  || (charged?.total != null ? String(charged.total) : '0');
   const advanceAmt  = advanceAmtParam  || (charged?.advance != null ? String(charged.advance) : '0');
-
-  const isInstant = p.get('isInstant') === 'true' || timeGroup === 'ASAP' || timeGroup.includes('ASAP');
-  const [instantStatus, setInstantStatus] = useState(isInstant ? 'SEARCHING' : null);
 
   // Time slot display
   const timeSlotDisplay = isInstant ? '⚡ Right Now (Instant ASAP Service)' : ({
@@ -210,25 +264,28 @@ const BookingSuccess = () => {
 
           {/* ── Instant Service Live Tracker ── */}
           {isInstant && (
-            <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-2xl p-4 shadow-md shadow-amber-500/20">
+            <div className={`text-white rounded-2xl p-4 shadow-md transition-all ${
+              technician ? 'bg-gradient-to-r from-blue-700 to-indigo-700 shadow-blue-500/20' : 'bg-gradient-to-r from-amber-500 to-orange-500 shadow-amber-500/20'
+            }`}>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-black uppercase tracking-wider bg-white/20 px-2 py-0.5 rounded-full">
+                <span className="text-[10px] font-black uppercase tracking-wider bg-white/20 px-2.5 py-0.5 rounded-full flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
                   ⚡ Live Express Dispatch
                 </span>
-                <span className="text-[11px] font-extrabold animate-pulse">
-                  {technician ? 'Technician En Route' : 'Searching Nearby Tech...'}
+                <span className="text-[11px] font-extrabold">
+                  {instantStatus === 'EN_ROUTE' ? '🚗 On The Way' : (technician ? '✅ Technician Assigned' : '⏳ Searching Nearby Tech...')}
                 </span>
               </div>
               <div className="flex items-center gap-3 mt-3">
                 <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl font-bold">
-                  ⏱️
+                  {technician ? '👨‍🔧' : '⏱️'}
                 </div>
                 <div className="flex-1">
                   <p className="text-[13px] font-extrabold leading-tight">
-                    {technician ? `On the way to your doorstep!` : 'Connecting with nearest certified technician'}
+                    {technician ? `${technician.name || 'Technician'} is on the way!` : 'Connecting with nearest certified technician'}
                   </p>
                   <p className="text-[10px] text-white/90 font-medium mt-0.5">
-                    Estimated arrival: within 30-45 minutes
+                    {technician ? 'Estimated arrival: within 20-35 minutes' : 'Estimated arrival: within 30-45 minutes'}
                   </p>
                 </div>
               </div>
@@ -237,48 +294,63 @@ const BookingSuccess = () => {
 
           {/* ── Assigned Technician ── */}
           {technician ? (
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
+            <div className="bg-white rounded-2xl shadow-sm border border-blue-100 p-4 relative overflow-hidden">
+              <div className="absolute top-0 right-0 bg-blue-50 text-[#0D47A1] text-[9px] font-extrabold px-3 py-1 rounded-bl-xl border-l border-b border-blue-100 uppercase tracking-wider">
+                Assigned Expert
+              </div>
               <div className="flex items-center gap-3">
                 {/* Avatar */}
                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#0D47A1] to-[#1565C0] flex items-center justify-center flex-shrink-0 text-white text-lg font-extrabold shadow-md">
-                  {(technician.name || '?').charAt(0).toUpperCase()}
+                  {(technician.name || 'T').charAt(0).toUpperCase()}
                 </div>
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className="text-[13px] font-extrabold text-slate-900">{technician.name || 'Technician'}</p>
+                    <p className="text-[14px] font-extrabold text-slate-900 truncate">{technician.name || 'Technician'}</p>
+                    <span className="text-[9px] bg-emerald-50 text-emerald-700 font-extrabold px-2 py-0.5 rounded-full border border-emerald-200">
+                      Verified
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    {(technician.rating || 4.8) > 0 && (
+                      <div className="flex items-center gap-1">
+                        <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
+                        <span className="text-[11px] font-extrabold text-slate-700">{technician.rating || 4.8}</span>
+                      </div>
+                    )}
                     {(category || technician.specs?.[0]) && (
-                      <span className="text-[9px] bg-[#0D47A1] text-white font-extrabold px-2 py-0.5 rounded-full">
-                        {category || technician.specs[0]}
+                      <span className="text-[10px] text-slate-400 font-medium truncate">
+                        • {category || technician.specs?.[0]} Specialist
                       </span>
                     )}
                   </div>
-                  {technician.rating > 0 && (
-                    <div className="flex items-center gap-1 mt-0.5">
-                      <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
-                      <span className="text-[11px] font-extrabold text-slate-700">{technician.rating}</span>
-                    </div>
-                  )}
                 </div>
                 {/* Call button */}
                 <button
                   onClick={handleCallTechnician}
                   disabled={callLoading}
-                  title={callLoading ? 'Connecting…' : 'Call Technician (masked relay)'}
-                  className="w-10 h-10 rounded-full bg-[#EAF4FF] flex items-center justify-center flex-shrink-0 active:scale-90 transition-all disabled:opacity-50"
+                  title="Call Assigned Technician"
+                  className="w-11 h-11 rounded-full bg-[#EAF4FF] flex items-center justify-center flex-shrink-0 active:scale-95 transition-all shadow-xs border border-blue-200 hover:bg-[#D6ECFF]"
                 >
-                  <Phone className="w-4 h-4 text-[#0D47A1]" />
+                  <Phone className="w-5 h-5 text-[#0D47A1]" />
                 </button>
               </div>
-              <p className="text-[10px] text-slate-400 font-medium mt-3 text-center">
-                Assigned Technician
-              </p>
+              <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                <span className="text-slate-500 font-medium">Technician Status</span>
+                <span className="text-[#0D47A1] font-extrabold flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  {instantStatus === 'EN_ROUTE' ? 'Driving to Location' : 'Accepted Job'}
+                </span>
+              </div>
             </div>
           ) : (
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 text-center">
-              <p className="text-[12px] font-bold text-slate-600">Technician being assigned</p>
+              <div className="w-8 h-8 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mx-auto mb-2 font-bold text-sm animate-pulse">
+                ⌛
+              </div>
+              <p className="text-[12px] font-bold text-slate-700">Connecting to nearest technician...</p>
               <p className="text-[10px] text-slate-400 font-medium mt-1">
-                We'll notify you as soon as an expert picks up your booking.
+                Your request is live. You'll see technician details as soon as accepted.
               </p>
             </div>
           )}
