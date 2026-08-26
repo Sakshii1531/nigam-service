@@ -62,8 +62,21 @@ export async function getUser(id) {
       ExchangeRequest.find({ user: user._id })
     ]);
 
+    const cleanedAddresses = (user.addresses || []).map(addr => {
+      const obj = addr && addr.toObject ? addr.toObject() : (addr || {});
+      if (obj.house && (obj.house.includes('(City:') || obj.house.includes('City:'))) {
+        return {
+          ...obj,
+          city: obj.city === 'Delhi' ? '' : (obj.city || ''),
+          pincode: obj.pincode === '110001' ? '' : (obj.pincode || '')
+        };
+      }
+      return obj;
+    });
+
     return {
       ...user.toObject(),
+      addresses: cleanedAddresses,
       referrals,
       amcSubscriptions,
       warrantyOrders,

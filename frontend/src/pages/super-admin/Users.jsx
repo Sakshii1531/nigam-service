@@ -59,6 +59,34 @@ const Users = () => {
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api/v1';
 
+  const formatUserAddress = (a) => {
+    if (!a) return '';
+    if (typeof a === 'string') {
+      let str = a;
+      if (str.includes('(City:') || str.includes('City:')) {
+        str = str.replace(/,\s*,\s*Delhi\s*110001/gi, '');
+        str = str.replace(/,\s*Delhi\s*110001/gi, '');
+        str = str.replace(/,\s*110001/gi, '');
+      }
+      return str.trim();
+    }
+    
+    const house = (a.house || '').trim();
+    const landmark = (a.landmark || '').trim();
+    
+    const isEmbedded = house.includes('(City:') || house.includes('City:');
+    const city = (!isEmbedded && a.city && a.city !== 'Delhi') ? a.city.trim() : (!isEmbedded ? (a.city || '').trim() : '');
+    const pincode = (!isEmbedded && a.pincode && a.pincode !== '110001') ? a.pincode.trim() : (!isEmbedded ? (a.pincode || '').trim() : '');
+
+    let res = [house, landmark, city, pincode].filter(Boolean).join(', ');
+    if (res.includes('(City:') || res.includes('City:')) {
+      res = res.replace(/,\s*,\s*Delhi\s*110001/gi, '');
+      res = res.replace(/,\s*Delhi\s*110001/gi, '');
+      res = res.replace(/,\s*110001/gi, '');
+    }
+    return res.trim();
+  };
+
   const handleViewProfile = async (user) => {
     setSelectedUser(user);
     setShowDrawer(true);
@@ -75,7 +103,7 @@ const Users = () => {
           phone: fullUser.phone,
           status: fullUser.status,
           referralCode: fullUser.referralCode || '—',
-          addresses: fullUser.addresses ? fullUser.addresses.map(a => `${a.house || ''}, ${a.landmark || ''}, ${a.city || ''} ${a.pincode || ''}`) : [],
+          addresses: fullUser.addresses ? fullUser.addresses.map(formatUserAddress) : [],
           applianceList: fullUser.ownedAppliances || [],
           source: fullUser.source || user.source || 'B2C',
           referrals: fullUser.referrals || [],
@@ -109,7 +137,7 @@ const Users = () => {
           services: item.servicesCount ?? 0,
           status: item.status || 'Active',
           lastActive: item.updatedAt ? new Date(item.updatedAt).toLocaleDateString('en-IN') : '—',
-          addresses: (item.addresses || []).map(a => [a.house, a.landmark, a.city].filter(Boolean).join(', ')),
+          addresses: (item.addresses || []).map(formatUserAddress),
           applianceList: item.ownedAppliances || [],
           source: item.source || 'B2C',
         })));
@@ -230,41 +258,90 @@ const Users = () => {
                   setShowDrawer(false);
                   setSelectedUser(null);
                 }}
-                className="flex items-center gap-2 text-sm font-semibold text-[#0D47A1] hover:text-blue-800 transition-colors"
+                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:text-[#0D47A1] hover:border-blue-200 hover:bg-blue-50/50 transition-all shadow-2xs cursor-pointer"
               >
-                <ArrowLeft size={16} /> Back to Customers
+                <ArrowLeft size={14} className="stroke-[2.5]" /> Back to Customers
               </button>
             </div>
 
-            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden flex flex-col min-h-[500px]">
+            <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden flex flex-col min-h-[500px]">
               {/* Header */}
-              <div className="p-6 border-b border-[#E2E8F0] bg-[#F8FAFC] flex justify-between items-center">
-                <div>
-                  <h3 className="text-lg font-black text-[#1E293B]">Customer Details</h3>
+              <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-slate-50 via-white to-blue-50/30 flex flex-wrap justify-between items-center gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    <div className="w-14 h-14 bg-gradient-to-tr from-[#0D47A1] to-[#1E88E5] text-white rounded-2xl flex items-center justify-center font-black text-xl shadow-md shadow-[#0D47A1]/20 uppercase">
+                      {selectedUser.name ? selectedUser.name.split(' ').map(n => n[0]).join('') : 'U'}
+                    </div>
+                    <span className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${
+                      selectedUser.status === 'Active' ? 'bg-emerald-500' : 'bg-rose-500'
+                    }`} />
+                  </div>
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-2.5">
+                      <h3 className="text-xl font-black text-slate-900 tracking-tight">{selectedUser.name}</h3>
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                        selectedUser.status === 'Active' 
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60' 
+                          : 'bg-rose-50 text-rose-700 border border-rose-200/60'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${selectedUser.status === 'Active' ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
+                        {selectedUser.status}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 mt-1">
+                      <span>ID: <strong className="text-slate-800 font-bold">{selectedUser.id}</strong></span>
+                      <span>•</span>
+                      <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md font-bold text-[10px] uppercase tracking-wider">{selectedUser.source || 'B2C'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick Action Button */}
+                <div className="flex items-center gap-3">
+                  {selectedUser.status === 'Active' ? (
+                    <button
+                      onClick={() => handleStatusChange(selectedUser.id, 'Suspended')}
+                      className="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/80 rounded-xl text-xs font-black transition-all shadow-2xs flex items-center gap-2 cursor-pointer"
+                    >
+                      <Ban size={14} className="stroke-[2.5]" /> Suspend Account
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleStatusChange(selectedUser.id, 'Active')}
+                      className="px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/80 rounded-xl text-xs font-black transition-all shadow-2xs flex items-center gap-2 cursor-pointer"
+                    >
+                      <CheckCircle size={14} className="stroke-[2.5]" /> Activate Account
+                    </button>
+                  )}
                 </div>
               </div>
 
               {/* Tab Navigation */}
-              <div className="flex bg-[#F8FAFC] border-b border-[#E2E8F0] px-6 overflow-x-auto">
+              <div className="flex bg-slate-50/80 border-b border-slate-200/80 px-6 overflow-x-auto gap-2">
                 {[
-                  { id: 'overview', label: 'Overview & Addresses' },
-                  { id: 'appliances', label: 'Appliances & Plans' },
-                  { id: 'services', label: 'Service History' },
-                  { id: 'orders', label: 'Orders & Exchanges' },
-                  { id: 'referrals', label: 'Referral Network' }
-                ].map(tab => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`py-3 px-4 font-bold text-xs border-b-2 transition-all whitespace-nowrap ${
-                      activeTab === tab.id
-                        ? 'border-[#0D47A1] text-[#0D47A1]'
-                        : 'border-transparent text-slate-500 hover:text-slate-800'
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
+                  { id: 'overview', label: 'Overview & Addresses', icon: UsersIcon },
+                  { id: 'appliances', label: 'Appliances & Plans', icon: Tv },
+                  { id: 'services', label: 'Service History', icon: FileText },
+                  { id: 'orders', label: 'Orders & Exchanges', icon: ShoppingBag },
+                  { id: 'referrals', label: 'Referral Network', icon: Gift }
+                ].map(tab => {
+                  const Icon = tab.icon;
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`py-3.5 px-4 font-extrabold text-xs border-b-2 transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer ${
+                        isActive
+                          ? 'border-[#0D47A1] text-[#0D47A1] bg-white rounded-t-xl shadow-2xs'
+                          : 'border-transparent text-slate-500 hover:text-slate-800 hover:bg-white/50'
+                      }`}
+                    >
+                      <Icon size={14} className={isActive ? 'text-[#0D47A1]' : 'text-slate-400'} />
+                      <span>{tab.label}</span>
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Tab Content */}
@@ -297,38 +374,61 @@ const Users = () => {
                   <>
                     {/* Tab 1: Overview & Addresses */}
                     {activeTab === 'overview' && (
-                      <div className="space-y-5">
-                        <div className="flex items-center gap-3">
-                          <div className="w-14 h-14 bg-[#EEF4FF] text-[#0D47A1] rounded-full flex items-center justify-center font-bold text-xl">
-                            {selectedUser.name.split(' ').map(n => n[0]).join('')}
+                      <div className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                          {/* Contact & Account Info */}
+                          <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-5 space-y-4">
+                            <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                              <Info size={14} className="text-[#0D47A1]" /> Contact Information
+                            </h4>
+                            <div className="space-y-3 text-xs font-semibold">
+                              <div className="flex items-center gap-3 bg-white p-3 rounded-xl border border-slate-100 shadow-2xs">
+                                <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-[#0D47A1]">
+                                  <Mail size={15} />
+                                </div>
+                                <div>
+                                  <span className="text-[10px] text-slate-400 block font-bold uppercase tracking-wider">Email Address</span>
+                                  <span className="text-slate-800 font-bold">{selectedUser.email || '—'}</span>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-3 bg-white p-3 rounded-xl border border-slate-100 shadow-2xs">
+                                <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
+                                  <Phone size={15} />
+                                </div>
+                                <div>
+                                  <span className="text-[10px] text-slate-400 block font-bold uppercase tracking-wider">Phone Number</span>
+                                  <span className="text-slate-800 font-bold">{selectedUser.phone || '—'}</span>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-3 bg-white p-3 rounded-xl border border-slate-100 shadow-2xs">
+                                <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center text-purple-600">
+                                  <Shield size={15} />
+                                </div>
+                                <div>
+                                  <span className="text-[10px] text-slate-400 block font-bold uppercase tracking-wider">Account Source / Category</span>
+                                  <span className="text-slate-800 font-bold">{selectedUser.source || 'B2C Standard Customer'}</span>
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                          <div>
-                            <h4 className="font-bold text-[#1E293B] text-base">{selectedUser.name}</h4>
-                            <span className={`px-2 py-0.5 rounded text-xs font-bold ${
-                              selectedUser.status === 'Active' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'
-                            }`}>{selectedUser.status}</span>
-                          </div>
-                        </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2.5 text-xs border border-[#E2E8F0] rounded-xl p-4 bg-slate-50 font-medium">
-                            <p className="flex items-center gap-2 text-slate-700"><Mail size={14} className="text-[#64748B]" /> {selectedUser.email}</p>
-                            <p className="flex items-center gap-2 text-slate-700 mt-1.5"><Phone size={14} className="text-[#64748B]" /> {selectedUser.phone}</p>
-                            <p className="flex items-center gap-2 text-slate-700 mt-1.5"><Info size={14} className="text-[#64748B]" /> Source: {selectedUser.source || 'B2C'}</p>
-                          </div>
-
-                          <div className="space-y-3">
-                            <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider flex items-center gap-1.5">
+                          {/* Saved Addresses */}
+                          <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-5 space-y-4">
+                            <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                               <MapPin size={14} className="text-[#0D47A1]" /> Saved Addresses ({selectedUser.addresses?.length || 0})
                             </h4>
-                            <div className="space-y-2">
+                            <div className="space-y-2.5">
                               {selectedUser.addresses?.map((addr, idx) => (
-                                <p key={idx} className="bg-white text-xs p-3 border border-[#E2E8F0] rounded-xl text-slate-600 font-semibold shadow-xs">
-                                  {addr}
-                                </p>
+                                <div key={idx} className="bg-white text-xs p-3.5 border border-slate-200/80 rounded-xl text-slate-700 font-semibold shadow-2xs flex items-start gap-2.5">
+                                  <MapPin size={15} className="text-[#0D47A1] flex-shrink-0 mt-0.5" />
+                                  <span className="leading-relaxed">{addr}</span>
+                                </div>
                               ))}
                               {(!selectedUser.addresses || selectedUser.addresses.length === 0) && (
-                                <p className="text-xs text-slate-500 italic">No addresses saved yet.</p>
+                                <div className="bg-white p-6 rounded-xl border border-slate-200/80 text-center">
+                                  <MapPin size={24} className="text-slate-300 mx-auto mb-2" />
+                                  <p className="text-xs text-slate-500 font-medium">No saved addresses on file yet.</p>
+                                </div>
                               )}
                             </div>
                           </div>
@@ -649,33 +749,93 @@ const Users = () => {
                 )}
               </div>
 
-              <div className="p-4 border-t border-[#E2E8F0] bg-[#F8FAFC] flex gap-3">
+              <div className="p-4 border-t border-slate-100 bg-slate-50/80 flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-2 text-xs text-slate-500 font-semibold">
+                  <Shield size={14} className="text-[#0D47A1]" />
+                  <span>Account Actions & Compliance Control</span>
+                </div>
                 {selectedUser.status === 'Active' ? (
                   <button
                     onClick={() => handleStatusChange(selectedUser.id, 'Suspended')}
-                    className="w-full bg-orange-600 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-orange-700 transition-colors shadow-sm text-center flex items-center justify-center gap-2"
+                    className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-black transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer"
                   >
-                    <Ban size={16} /> Suspend Account
+                    <Ban size={15} className="stroke-[2.5]" /> Suspend Account
                   </button>
                 ) : (
                   <button
                     onClick={() => handleStatusChange(selectedUser.id, 'Active')}
-                    className="w-full bg-green-600 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-green-700 transition-colors shadow-sm text-center flex items-center justify-center gap-2"
+                    className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer"
                   >
-                    <CheckCircle size={16} /> Activate Account
+                    <CheckCircle size={15} className="stroke-[2.5]" /> Activate Account
                   </button>
                 )}
               </div>
             </div>
           </div>
         ) : (
-          <div className="p-6 space-y-6 flex-1">
+          <div className="p-6 space-y-6 flex-1 text-left">
           
-          {/* Header Actions */}
-          <div className="flex justify-between items-center">
-            <h2 className="text-lg font-bold text-[#1E293B]">Customers / Users</h2>
-            <div className="flex gap-2">
-              <span className="text-sm text-[#64748B] font-semibold">Total Users: <span className="text-[#0D47A1] font-bold">{users.length}</span></span>
+          {/* Header & KPI Summary Cards */}
+          <div className="flex flex-col gap-5">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-black text-slate-900 tracking-tight">Customer Management</h2>
+                <p className="text-xs font-semibold text-slate-500 mt-0.5">View and manage registered accounts, services, warranties, and status controls.</p>
+              </div>
+              <div className="flex gap-2">
+                <span className="text-xs bg-white border border-slate-200 px-3 py-1.5 rounded-full text-slate-600 font-bold shadow-2xs">
+                  Total Users: <strong className="text-[#0D47A1]">{users.length}</strong>
+                </span>
+              </div>
+            </div>
+
+            {/* KPI Cards Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Customers</span>
+                  <span className="text-2xl font-black text-slate-900 mt-0.5 block">{users.length}</span>
+                </div>
+                <div className="w-11 h-11 bg-blue-50 text-[#0D47A1] rounded-2xl flex items-center justify-center">
+                  <UsersIcon size={20} />
+                </div>
+              </div>
+
+              <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Active Accounts</span>
+                  <span className="text-2xl font-black text-emerald-600 mt-0.5 block">
+                    {users.filter(u => u.status === 'Active').length}
+                  </span>
+                </div>
+                <div className="w-11 h-11 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center">
+                  <CheckCircle size={20} />
+                </div>
+              </div>
+
+              <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Suspended</span>
+                  <span className="text-2xl font-black text-rose-600 mt-0.5 block">
+                    {users.filter(u => u.status === 'Suspended').length}
+                  </span>
+                </div>
+                <div className="w-11 h-11 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center">
+                  <Ban size={20} />
+                </div>
+              </div>
+
+              <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Special Category</span>
+                  <span className="text-2xl font-black text-purple-600 mt-0.5 block">
+                    {users.filter(u => u.source && u.source !== 'B2C').length}
+                  </span>
+                </div>
+                <div className="w-11 h-11 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center">
+                  <Shield size={20} />
+                </div>
+              </div>
             </div>
           </div>
 

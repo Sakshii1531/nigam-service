@@ -167,12 +167,20 @@ export async function signupVerify({ name, phone, email, password, address, refe
   const myReferralCode = Math.random().toString(36).substring(2, 8).toUpperCase();
   const hashed = await hashPassword(password);
 
+  let parsedCity = '';
+  if (address && address.includes('(City:')) {
+    const match = address.match(/\(City:\s*([^,]+)/);
+    if (match) {
+      parsedCity = match[1].trim();
+    }
+  }
+
   const userAddress = {
     type: 'Home',
     house: address,
     landmark: '',
-    city: 'Delhi',
-    pincode: '110001',
+    city: parsedCity || '',
+    pincode: '',
     name: name,
     isDefault: true
   };

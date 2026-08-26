@@ -6,11 +6,42 @@ import { useAuth } from '../context/AuthContext';
 import { ApiError } from '../lib/apiClient';
 
 const STATE_CITIES = {
-  'Delhi NCR': ['Delhi', 'Noida', 'Gurgaon', 'Ghaziabad'],
-  'Maharashtra': ['Mumbai', 'Pune', 'Nagpur'],
-  'Karnataka': ['Bangalore', 'Mysore'],
-  'Tamil Nadu': ['Chennai', 'Coimbatore'],
-  'West Bengal': ['Kolkata']
+  'Delhi NCR': ['Delhi', 'Noida', 'Gurgaon', 'Ghaziabad', 'Faridabad'],
+  'Andhra Pradesh': ['Visakhapatnam', 'Vijayawada', 'Guntur', 'Nellore', 'Tirupati', 'Kakinada', 'Kurnool', 'Rajahmundry'],
+  'Arunachal Pradesh': ['Itanagar', 'Naharlagun', 'Pasighat', 'Tawang'],
+  'Assam': ['Guwahati', 'Silchar', 'Dibrugarh', 'Jorhat', 'Nagaon', 'Tinsukia', 'Tezpur'],
+  'Bihar': ['Patna', 'Gaya', 'Bhagalpur', 'Muzaffarpur', 'Purnia', 'Darbhanga', 'Bihar Sharif', 'Arrah'],
+  'Chhattisgarh': ['Raipur', 'Bhilai', 'Bilaspur', 'Korba', 'Durg', 'Rajnandgaon'],
+  'Goa': ['Panaji', 'Margao', 'Vasco da Gama', 'Mapusa', 'Ponda'],
+  'Gujarat': ['Ahmedabad', 'Surat', 'Vadodara', 'Rajkot', 'Bhavnagar', 'Jamnagar', 'Gandhinagar', 'Junagadh'],
+  'Haryana': ['Gurgaon', 'Faridabad', 'Panipat', 'Ambala', 'Yamunanagar', 'Rohtak', 'Hisar', 'Karnal'],
+  'Himachal Pradesh': ['Shimla', 'Dharamshala', 'Mandi', 'Solan', 'Bilaspur', 'Kullu'],
+  'Jharkhand': ['Ranchi', 'Jamshedpur', 'Dhanbad', 'Bokaro', 'Hazaribagh', 'Deoghar'],
+  'Karnataka': ['Bangalore', 'Mysore', 'Hubli-Dharwad', 'Mangalore', 'Belgaum', 'Gulbarga', 'Davangere', 'Bellary'],
+  'Kerala': ['Thiruvananthapuram', 'Kochi', 'Kozhikode', 'Thrissur', 'Kollam', 'Palakkad', 'Kannur', 'Alappuzha'],
+  'Madhya Pradesh': ['Indore', 'Bhopal', 'Jabalpur', 'Gwalior', 'Ujjain', 'Sagar', 'Dewas', 'Satna', 'Ratlam'],
+  'Maharashtra': ['Mumbai', 'Pune', 'Nagpur', 'Thane', 'Nashik', 'Kalyan-Dombivli', 'Vasai-Virar', 'Aurangabad', 'Solapur', 'Amravati', 'Kolhapur'],
+  'Manipur': ['Imphal', 'Churachandpur', 'Thoubal'],
+  'Meghalaya': ['Shillong', 'Tura', 'Jowai'],
+  'Mizoram': ['Aizawl', 'Lunglei', 'Champhai'],
+  'Nagaland': ['Kohima', 'Dimapur', 'Mokokchung'],
+  'Odisha': ['Bhubaneswar', 'Cuttack', 'Rourkela', 'Berhampur', 'Sambalpur', 'Puri', 'Balasore'],
+  'Punjab': ['Ludhiana', 'Amritsar', 'Jalandhar', 'Patiala', 'Bathinda', 'Mohali', 'Pathankot'],
+  'Rajasthan': ['Jaipur', 'Jodhpur', 'Kota', 'Bikaner', 'Ajmer', 'Udaipur', 'Bhilwara', 'Alwar', 'Sikar'],
+  'Sikkim': ['Gangtok', 'Namchi', 'Geyzing'],
+  'Tamil Nadu': ['Chennai', 'Coimbatore', 'Madurai', 'Tiruchirappalli', 'Salem', 'Tiruppur', 'Erode', 'Vellore', 'Tirunelveli'],
+  'Telangana': ['Hyderabad', 'Warangal', 'Nizamabad', 'Khammam', 'Karimnagar', 'Ramagundam', 'Mahbubnagar'],
+  'Tripura': ['Agartala', 'Udaipur', 'Dharmanagar'],
+  'Uttar Pradesh': ['Lucknow', 'Kanpur', 'Ghaziabad', 'Agra', 'Varanasi', 'Meerut', 'Prayagraj', 'Noida', 'Bareilly', 'Aligarh', 'Moradabad', 'Saharanpur', 'Gorakhpur'],
+  'Uttarakhand': ['Dehradun', 'Haridwar', 'Roorkee', 'Haldwani', 'Rudrapur', 'Rishikesh', 'Nainital'],
+  'West Bengal': ['Kolkata', 'Howrah', 'Durgapur', 'Asansol', 'Siliguri', 'Kharagpur', 'Bardhaman'],
+  'Andaman and Nicobar Islands': ['Port Blair'],
+  'Chandigarh': ['Chandigarh'],
+  'Dadra and Nagar Haveli and Daman and Diu': ['Daman', 'Diu', 'Silvassa'],
+  'Jammu and Kashmir': ['Srinagar', 'Jammu', 'Anantnag', 'Baramulla', 'Udhampur'],
+  'Ladakh': ['Leh', 'Kargil'],
+  'Lakshadweep': ['Kavaratti'],
+  'Puducherry': ['Puducherry', 'Karaikal', 'Mahe', 'Yanam']
 };
 
 const Login = () => {
@@ -430,7 +461,8 @@ const Login = () => {
                     value={signupForm.state}
                     onChange={(e) => {
                       const st = e.target.value;
-                      setSignupForm({ ...signupForm, state: st, city: STATE_CITIES[st][0] });
+                      const cities = STATE_CITIES[st] || ['Other'];
+                      setSignupForm({ ...signupForm, state: st, city: cities[0] });
                     }}
                     className="w-full bg-white border border-slate-200 rounded-lg py-1.5 px-2 outline-none text-xs focus:border-[#0D47A1] transition-all"
                   >
@@ -446,7 +478,7 @@ const Login = () => {
                     onChange={(e) => setSignupForm({ ...signupForm, city: e.target.value })}
                     className="w-full bg-white border border-slate-200 rounded-lg py-1.5 px-2 outline-none text-xs focus:border-[#0D47A1] transition-all"
                   >
-                    {STATE_CITIES[signupForm.state].map(ct => (
+                    {(STATE_CITIES[signupForm.state] || ['Other']).map(ct => (
                       <option key={ct} value={ct}>{ct}</option>
                     ))}
                   </select>
