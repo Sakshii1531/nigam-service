@@ -155,7 +155,7 @@ const BillingEstimate = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F8FC] flex flex-col justify-between pb-6 max-w-md mx-auto border-x border-slate-200 shadow-xl relative font-sans">
+    <div className="min-h-screen bg-[#F5F8FC] flex flex-col justify-between pb-6 relative font-sans">
       
       {/* Header */}
       <div className="bg-white border-b border-slate-200 px-4 py-3.5 flex items-center justify-between sticky top-0 z-10">

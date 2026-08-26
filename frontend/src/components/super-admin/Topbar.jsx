@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Search, Bell, Menu, MapPin, Calendar, ChevronDown, User, LogOut, Settings, Check } from 'lucide-react';
 import { useNotifications } from '../../context/NotificationContext';
+import { useAdminSidebar } from '../../context/AdminSidebarContext';
 
 const Topbar = ({ title, subtitle, showFilters = false }) => {
   const { unreadCount } = useNotifications();
+  const { toggleSidebar } = useAdminSidebar();
   const { logout } = useAuth();
   const navigate = useNavigate();
   const [isLocationOpen, setIsLocationOpen] = useState(false);
@@ -36,8 +39,9 @@ const Topbar = ({ title, subtitle, showFilters = false }) => {
       {/* Left side: Hamburger menu + Title/Subtitle */}
       <div className="flex items-center gap-4">
         <button 
-          onClick={() => triggerToast('Sidebar menu toggled')}
-          className="p-1.5 hover:bg-slate-50 rounded-lg text-[#64748B] hover:text-[#1E293B] cursor-pointer"
+          onClick={toggleSidebar}
+          aria-label="Toggle Sidebar"
+          className="p-1.5 hover:bg-slate-100 rounded-lg text-[#64748B] hover:text-[#1E293B] cursor-pointer transition-colors"
         >
           <Menu size={20} />
         </button>
@@ -191,10 +195,16 @@ const Topbar = ({ title, subtitle, showFilters = false }) => {
         </div>
       )}
 
-      {/* Logout Confirmation Modal Overlay */}
-      {showLogoutConfirm && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-6 z-[100] animate-fade-in text-slate-800">
-          <div className="bg-white border border-slate-100 rounded-[28px] p-6 max-w-xs w-full flex flex-col items-center text-center gap-4 shadow-xl">
+      {/* Logout Confirmation Modal Overlay rendered via Portal */}
+      {showLogoutConfirm && typeof document !== 'undefined' && createPortal(
+        <div 
+          onClick={() => setShowLogoutConfirm(false)}
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-6 z-[9999] animate-fade-in text-slate-800"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white border border-slate-100 rounded-[28px] p-6 max-w-xs w-full flex flex-col items-center text-center gap-4 shadow-2xl"
+          >
             <div className="w-12 h-12 bg-red-50 text-red-600 rounded-full flex items-center justify-center">
               <LogOut className="h-5 w-5 text-red-600" />
             </div>
@@ -214,9 +224,6 @@ const Topbar = ({ title, subtitle, showFilters = false }) => {
               <button
                 onClick={async () => {
                   setShowLogoutConfirm(false);
-                  // Clearing the session is what actually logs the user out;
-                  // navigating alone left the tokens in place, so the route
-                  // guard saw an authenticated user and sent them straight back.
                   await logout();
                   navigate('/super-admin/login', { replace: true });
                 }}
@@ -226,7 +233,8 @@ const Topbar = ({ title, subtitle, showFilters = false }) => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

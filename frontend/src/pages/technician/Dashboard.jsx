@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Bell, Briefcase, ClipboardList, Calendar, Wrench, User, MapPin, ChevronRight, Menu,
+  Bell, Briefcase, ClipboardList, Calendar, Wrench, User, MapPin, ChevronRight, ChevronLeft, Menu,
   Clock, Shield, Star, GraduationCap, MessageSquare, Megaphone, Scan, CheckCircle, RotateCw, X, LogOut, Sparkles, CreditCard, ShieldCheck, Award, Settings, HelpCircle, ArrowLeft, Zap
 } from 'lucide-react';
 import { useTech } from '../../context/TechContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { useAuth } from '../../context/AuthContext';
 import PushPermissionPrompt from '../../components/PushPermissionPrompt';
+import TechBottomNav from '../../components/TechBottomNav';
 import techAvatar from '../../assets/tech_avatar.png';
 
 const Dashboard = () => {
@@ -50,8 +51,7 @@ const Dashboard = () => {
   const [showAllJobs, setShowAllJobs] = useState(false);
   const [filterTab, setFilterTab] = useState('All'); // 'All', 'Priority', 'Recommended'
   const [categoryTab, setCategoryTab] = useState('All'); // 'All', 'D2C', 'Partner', 'NCC EW'
-  const [expandedJobId, setExpandedJobId] = useState('8842'); // default to D2C Paid Service job ID
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [expandedJobId, setExpandedJobId] = useState(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [dutyMessage, setDutyMessage] = useState(null);
   const [instantAlertJob, setInstantAlertJob] = useState(null);
@@ -186,10 +186,8 @@ const Dashboard = () => {
 
   // Filter jobs based on selected tabs for View 2 (Full Jobs list)
   const filteredJobs = jobs.filter(job => {
-    if (!job.isAvailableRequest) return false;
     if (!isJobSpecActive(job)) return false;
     if (declinedInstantIds.includes(job.id) || declinedInstantIds.includes(job.serviceRequestId)) return false;
-    if (acceptedInstantIds.includes(job.id) || acceptedInstantIds.includes(job.serviceRequestId)) return false;
 
     if (filterTab === 'Priority' && !job.isPriority) return false;
     if (filterTab === 'Recommended' && !job.isRecommended) return false;
@@ -210,14 +208,33 @@ const Dashboard = () => {
     !acceptedInstantIds.includes(job.serviceRequestId)
   )).slice(0, 4);
 
+  const priorityJobs = jobs.filter(job => (
+    job.isAvailableRequest &&
+    isJobSpecActive(job) &&
+    !declinedInstantIds.includes(job.id) &&
+    !declinedInstantIds.includes(job.serviceRequestId) &&
+    !acceptedInstantIds.includes(job.id) &&
+    !acceptedInstantIds.includes(job.serviceRequestId) &&
+    (job.isPriority || job.priority === 'High' || job.priority === 'Critical')
+  ));
+  const priorityJobsCount = priorityJobs.length;
+
   const revisitJobs = jobs.filter(job => (
     !job.isAvailableRequest &&
+    job.activeStep !== 'completed' &&
+    job.status !== 'Completed' &&
+    job.status !== 'Customer Confirmation' &&
+    job.status !== 'Closed' &&
     (
       job.activeStep === 'spare_part_required' ||
       job.activeStep === 'spareapproval' ||
+      job.activeStep === 'revisit_scheduled' ||
+      job.activeStep === 'revisit_ontheway' ||
+      job.activeStep === 'revisit_arrived' ||
       job.activeStep === 'revisit_complete' ||
       job.activeStep === 'revisit_billing' ||
       job.activeStep === 'revisit_payment' ||
+      job.activeStep === 'revisit_otp' ||
       job.status === 'Spare Required' ||
       job.status === 'Spare Ordered' ||
       job.status === 'Spare Received' ||
@@ -251,7 +268,7 @@ const Dashboard = () => {
   );
 
   return (
-    <div className="tech-app-container min-h-screen bg-[#F5F8FC] flex flex-col pb-[68px] max-w-md mx-auto border-x border-slate-200 shadow-xl relative font-sans overflow-x-hidden">
+    <div className="tech-app-container min-h-screen bg-[#F5F8FC] flex flex-col pb-20 relative font-sans">
 
       {/* First-run push notification permission prompt */}
       <PushPermissionPrompt subtitle="Enable notifications to get new job alerts, payouts and announcements instantly." />
@@ -259,20 +276,20 @@ const Dashboard = () => {
       {/* Top Banner / Header Section */}
       {showAllJobs ? (
         /* White Header for Jobs List Screen (Screen 2) */
-        <div className="bg-white px-3.5 py-4 flex justify-between items-center z-10 border-b border-slate-200">
+        <div className="bg-white px-3.5 py-4 flex justify-between items-center z-10 border-b border-slate-200 shadow-xs">
           <button 
             onClick={() => setShowAllJobs(false)}
-            className="p-1 hover:bg-slate-100 rounded-full transition-colors text-[#052355]"
+            className="p-1 hover:bg-slate-100 rounded-full transition-colors text-[#052355] cursor-pointer"
           >
-            <Menu className="h-6 w-6 stroke-[2]" />
+            <ChevronLeft className="h-6 w-6 stroke-[2.5]" />
           </button>
           
-          <h1 className="text-base font-normal text-[#052355]">Jobs</h1>
+          <h1 className="text-base font-bold text-[#052355]">All Jobs</h1>
           
           <div className="relative">
             <button 
               onClick={() => navigate('/technician/notifications')}
-              className="p-2 hover:bg-slate-100 rounded-full transition-colors text-[#052355] relative"
+              className="p-2 hover:bg-slate-100 rounded-full transition-colors text-[#052355] relative cursor-pointer"
             >
               <Bell className="h-5 w-5 stroke-[2]" />
               {unreadNotificationsCount > 0 && (
@@ -287,26 +304,13 @@ const Dashboard = () => {
           {/* Header Bar */}
           <div className="flex justify-between items-center text-white">
             <div className="flex items-center gap-2">
-              {/* The sidebar (Logout lives in it) is rendered on this screen but
-                  nothing opened it — the only other Menu icon here is the jobs
-                  list's back button — so Logout was unreachable from the
-                  dashboard entirely. */}
-              <button
-                onClick={() => setIsSidebarOpen(true)}
-                aria-label="Open menu"
-                className="p-1.5 hover:bg-white/10 rounded-full transition-all"
-              >
-                <Menu className="h-5.5 w-5.5 text-white" />
-              </button>
-              <div className="flex items-center gap-1.5 ml-1">
-                {/* Custom NCC shield logo */}
-                <div className="w-7 h-7 rounded-md bg-[#FFD400] flex items-center justify-center shadow-md">
-                  <span className="text-[#052355] font-black text-sm">NCC</span>
-                </div>
-                <span className="font-bold tracking-wider text-sm flex items-center gap-1">
-                  NCC <span className="text-[#FFD400]">PARTNER</span>
-                </span>
+              {/* Custom NCC shield logo */}
+              <div className="w-7 h-7 rounded-md bg-[#FFD400] flex items-center justify-center shadow-md">
+                <span className="text-[#052355] font-black text-sm">NCC</span>
               </div>
+              <span className="font-bold tracking-wider text-sm flex items-center gap-1">
+                NCC <span className="text-[#FFD400]">PARTNER</span>
+              </span>
             </div>
             
             <div className="flex items-center gap-3">
@@ -428,7 +432,7 @@ const Dashboard = () => {
                   <div className="w-6.5 h-6.5 rounded-full bg-[#E8F5E9] flex items-center justify-center flex-shrink-0">
                     <Wrench className="w-3.5 h-3.5 text-[#2E7D32]" />
                   </div>
-                  <span className="text-[14px] font-black text-[#2E7D32]">{jobsLoading ? '—' : jobs.filter(j => !j.isAvailableRequest).length}</span>
+                  <span className="text-[14px] font-black text-[#2E7D32]">{jobsLoading ? '—' : jobs.filter(j => !j.isAvailableRequest && j.activeStep !== 'completed' && j.status !== 'Completed' && j.status !== 'Customer Confirmation' && j.status !== 'Closed').length}</span>
                 </div>
                 <span className="text-[9.5px] font-bold text-slate-500 leading-tight mt-1">Active Jobs</span>
                 <button 
@@ -552,40 +556,42 @@ const Dashboard = () => {
               )}
             </div>
 
-            {/* High Priority Jobs Banner */}
-            <div 
-              onClick={() => { setShowAllJobs(true); setFilterTab('Priority'); }}
-              className="bg-[#FFF1F2] border border-[#FFD3D6] rounded-2xl p-3 flex items-center justify-between cursor-pointer hover:shadow-md transition-all mt-2.5"
-            >
-              <div className="flex items-center gap-3">
-                {/* Premium Alarm Siren SVG */}
-                <div className="flex-shrink-0 animate-pulse">
-                  <svg viewBox="0 0 24 24" className="w-7 h-7 text-[#E53935]" fill="currentColor">
-                    <path d="M4 19h16v1a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1z" fill="#90A4AE" />
-                    <path d="M5 16h14v3H5v-3z" fill="#455A64" />
-                    <path d="M12 5C8.13 5 5 8.13 5 12v4h14v-4c0-3.87-3.13-7-12-7z" fill="#E53935" opacity="0.95" />
-                    <path d="M12 7c-2.76 0-5 2.24-5 5v4h10v-4c0-2.76-2.24-5-5-5z" fill="#FF8A80" opacity="0.8" />
-                    <path d="M2 10a8.97 8.97 0 0 1 2.2-5.8l1.4 1.4A6.97 6.97 0 0 0 4 10H2zm20 0h-2c0-1.9-.77-3.64-2-4.9l1.4-1.4A8.97 8.97 0 0 1 22 10z" fill="#E53935" />
-                    <path d="M12 1v2M5.2 3.8l1.4 1.4m10.8-1.4-1.4 1.4" stroke="#E53935" strokeWidth="2" strokeLinecap="round" />
-                  </svg>
+            {/* High Priority Jobs Banner - Dynamic */}
+            {priorityJobsCount > 0 && (
+              <div 
+                onClick={() => { setShowAllJobs(true); setFilterTab('Priority'); }}
+                className="bg-[#FFF1F2] border border-[#FFD3D6] rounded-2xl p-3 flex items-center justify-between cursor-pointer hover:shadow-md transition-all mt-2.5"
+              >
+                <div className="flex items-center gap-3">
+                  {/* Premium Alarm Siren SVG */}
+                  <div className="flex-shrink-0 animate-pulse">
+                    <svg viewBox="0 0 24 24" className="w-7 h-7 text-[#E53935]" fill="currentColor">
+                      <path d="M4 19h16v1a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1z" fill="#90A4AE" />
+                      <path d="M5 16h14v3H5v-3z" fill="#455A64" />
+                      <path d="M12 5C8.13 5 5 8.13 5 12v4h14v-4c0-3.87-3.13-7-12-7z" fill="#E53935" opacity="0.95" />
+                      <path d="M12 7c-2.76 0-5 2.24-5 5v4h10v-4c0-2.76-2.24-5-5-5z" fill="#FF8A80" opacity="0.8" />
+                      <path d="M2 10a8.97 8.97 0 0 1 2.2-5.8l1.4 1.4A6.97 6.97 0 0 0 4 10H2zm20 0h-2c0-1.9-.77-3.64-2-4.9l1.4-1.4A8.97 8.97 0 0 1 22 10z" fill="#E53935" />
+                      <path d="M12 1v2M5.2 3.8l1.4 1.4m10.8-1.4-1.4 1.4" stroke="#E53935" strokeWidth="2" strokeLinecap="round" />
+                    </svg>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-xs font-bold text-[#D32F2F]">High Priority Jobs</h4>
+                    <p className="text-[10px] text-slate-650 mt-0.5">Time-sensitive jobs that need your attention</p>
+                  </div>
                 </div>
-                
-                <div>
-                  <h4 className="text-xs font-bold text-[#D32F2F]">High Priority Jobs</h4>
-                  <p className="text-[10px] text-slate-650 mt-0.5">Time-sensitive jobs that need your attention</p>
-                </div>
-              </div>
 
-              <div className="flex items-center gap-2">
-                <span className="w-5 h-5 rounded-full bg-[#D32F2F] text-white text-[10px] font-bold flex items-center justify-center">
-                  2
-                </span>
-                <span className="text-[10px] font-bold text-[#D32F2F] flex items-center gap-0.5 whitespace-nowrap">
-                  View All
-                  <ChevronRight className="h-4 w-4" />
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-[#D32F2F] text-white text-[10px] font-bold flex items-center justify-center">
+                    {priorityJobsCount}
+                  </span>
+                  <span className="text-[10px] font-bold text-[#D32F2F] flex items-center gap-0.5 whitespace-nowrap">
+                    View All
+                    <ChevronRight className="h-4 w-4" />
+                  </span>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Nearby Jobs Section */}
             <div className="flex flex-col gap-2 mt-2.5">
@@ -637,14 +643,8 @@ const Dashboard = () => {
                       <div 
                         key={job.id}
                         onClick={() => {
-                          if (job.isAvailableRequest) {
-                            setShowAllJobs(true);
-                            setFilterTab('All');
-                            setExpandedJobId(job.id);
-                          } else {
-                            selectJobForDetails(job.id);
-                            navigate('/technician/active-job');
-                          }
+                          selectJobForDetails(job.id);
+                          navigate('/technician/active-job');
                         }}
                         className={`bg-white rounded-[20px] p-3.5 cursor-pointer hover:shadow-md transition-all shadow-[0_3px_15px_rgba(0,0,0,0.03)] flex flex-col gap-2.5 border border-slate-200 border-l-[4px] ${borderColor}`}
                       >
@@ -838,15 +838,22 @@ const Dashboard = () => {
                       <div className="flex justify-between items-start gap-2">
                         {/* Left Column */}
                         <div className="min-w-0 flex-1">
-                          <span className={`inline-block text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${
-                            job.type.includes('Paid') 
-                              ? 'bg-[#E8F5E9] text-[#2E7D32]'
-                              : job.type.includes('Warranty')
-                                ? 'bg-[#E3F2FD] text-[#1565C0]'
-                                : 'bg-[#FFF3E0] text-[#E65100]'
-                          }`}>
-                            {job.type}
-                          </span>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className={`inline-block text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${
+                              job.type.includes('Paid') 
+                                ? 'bg-[#E8F5E9] text-[#2E7D32]'
+                                : job.type.includes('Warranty')
+                                  ? 'bg-[#E3F2FD] text-[#1565C0]'
+                                  : 'bg-[#FFF3E0] text-[#E65100]'
+                            }`}>
+                              {job.type}
+                            </span>
+                            {!job.isAvailableRequest && (
+                              <span className="inline-block text-[9px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                                ACTIVE
+                              </span>
+                            )}
+                          </div>
 
                           {/* Subtitle / Product name */}
                           <h4 className="text-sm font-bold text-[#052355] mt-2.5 truncate leading-snug">
@@ -887,25 +894,39 @@ const Dashboard = () => {
                         </div>
                       </div>
 
-                      {/* Accept / Decline buttons only for Expanded Job */}
-                      {isExpanded && (
+                      {/* For Available Request: show Accept / Decline if expanded. For Active Job: show Open Job Sheet */}
+                      {job.isAvailableRequest ? (
+                        isExpanded && (
+                          <div className="flex gap-3.5 mt-2" onClick={(e) => e.stopPropagation()}>
+                            <button 
+                              onClick={async () => {
+                                setAcceptedInstantIds((prev) => [...prev, job.id, job.serviceRequestId].filter(Boolean));
+                                await acceptJob(job.id);
+                                navigate('/technician/active-job');
+                              }}
+                              className="flex-1 bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-bold py-2.5 rounded-xl text-xs transition-all shadow-xs cursor-pointer"
+                            >
+                              Accept
+                            </button>
+                            <button
+                              onClick={() => rejectJob(job.id)}
+                              title="Reject this request — it goes back to the queue for another technician"
+                              className="flex-1 bg-white hover:bg-slate-50 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition-all border border-slate-300 cursor-pointer"
+                            >
+                              Decline
+                            </button>
+                          </div>
+                        )
+                      ) : (
                         <div className="flex gap-3.5 mt-2" onClick={(e) => e.stopPropagation()}>
                           <button 
-                            onClick={async () => {
-                              setAcceptedInstantIds((prev) => [...prev, job.id, job.serviceRequestId].filter(Boolean));
-                              await acceptJob(job.id);
+                            onClick={() => {
+                              selectJobForDetails(job.id);
                               navigate('/technician/active-job');
                             }}
-                            className="flex-1 bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-bold py-2.5 rounded-xl text-xs transition-all shadow-xs"
+                            className="flex-1 bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-bold py-2.5 rounded-xl text-xs transition-all shadow-xs cursor-pointer"
                           >
-                            Accept
-                          </button>
-                          <button
-                            onClick={() => rejectJob(job.id)}
-                            title="Reject this request — it goes back to the queue for another technician"
-                            className="flex-1 bg-white hover:bg-slate-50 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition-all border border-slate-300"
-                          >
-                            Decline
+                            Open Job Sheet
                           </button>
                         </div>
                       )}
@@ -923,168 +944,10 @@ const Dashboard = () => {
         )}
       </div>
 
-      {/* Sidebar Drawer Overlay */}
-      {isSidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-[#052355]/40 backdrop-blur-xs z-50 transition-all flex justify-start"
-          onClick={() => setIsSidebarOpen(false)}
-        >
-          {/* Drawer Container */}
-          <div 
-            className="bg-white w-72 h-full shadow-2xl flex flex-col z-50 text-left animate-slide-in-left"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header: Dark Blue Profile Section */}
-            <div className="bg-[#052355] text-white p-5 flex flex-col gap-4 relative">
-              <button 
-                onClick={() => setIsSidebarOpen(false)}
-                className="absolute top-4 right-4 p-1.5 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
-              >
-                <X className="h-4.5 w-4.5" />
-              </button>
-              
-              <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-white/20 mt-2 shadow-md">
-                <img 
-                  src={techAvatar} 
-                  alt="Alex Rodriguez Avatar Side" 
-                  className="w-full h-full object-cover" 
-                />
-              </div>
-              
-              <div>
-                <h3 className="text-base font-bold text-white leading-tight">Alex Rodriguez</h3>
-                <p className="text-[11px] text-slate-300 font-medium mt-1">Expert HVAC Technician • ★ 4.9</p>
-              </div>
-            </div>
 
-            {/* Menu List */}
-            <div className="flex-1 overflow-y-auto py-4 flex flex-col gap-0.5">
-              {/* Dashboard / Jobs */}
-              <button 
-                onClick={() => { setIsSidebarOpen(false); navigate('/technician/dashboard'); }}
-                className="w-full px-5 py-3.5 flex items-center gap-4 hover:bg-slate-50 text-slate-650 hover:text-[#0D47A1] transition-colors text-left"
-              >
-                <Briefcase className="h-5 w-5 text-slate-500" />
-                <span className="text-xs font-semibold">Dashboard (Jobs)</span>
-              </button>
-
-              {/* My Schedule */}
-              <button 
-                onClick={() => { setIsSidebarOpen(false); navigate('/technician/schedule'); }}
-                className="w-full px-5 py-3.5 flex items-center gap-4 hover:bg-slate-50 text-slate-650 hover:text-[#0D47A1] transition-colors text-left"
-              >
-                <Calendar className="h-5 w-5 text-slate-500" />
-                <span className="text-xs font-semibold">My Schedule</span>
-              </button>
-
-              {/* Part Requests */}
-              <button 
-                onClick={() => { setIsSidebarOpen(false); navigate('/technician/raise-part-request?tab=claims'); }}
-                className="w-full px-5 py-3.5 flex items-center gap-4 hover:bg-slate-50 text-slate-650 hover:text-[#0D47A1] transition-colors text-left"
-              >
-                <ClipboardList className="h-5 w-5 text-slate-500" />
-                <span className="text-xs font-semibold">Part Requests</span>
-              </button>
-
-              {/* Inventory */}
-              <button 
-                onClick={() => { setIsSidebarOpen(false); navigate('/technician/inventory'); }}
-                className="w-full px-5 py-3.5 flex items-center gap-4 hover:bg-slate-50 text-slate-650 hover:text-[#0D47A1] transition-colors text-left"
-              >
-                <Wrench className="h-5 w-5 text-slate-500" />
-                <span className="text-xs font-semibold">My Inventory</span>
-              </button>
-
-              {/* Payout Settings */}
-              <button 
-                onClick={() => { setIsSidebarOpen(false); navigate('/technician/payout-settings'); }}
-                className="w-full px-5 py-3.5 flex items-center gap-4 hover:bg-slate-50 text-slate-650 hover:text-[#0D47A1] transition-colors text-left"
-              >
-                <CreditCard className="h-5 w-5 text-slate-500" />
-                <span className="text-xs font-semibold">Payout Settings</span>
-              </button>
-
-              {/* KYC Verification */}
-              <button 
-                onClick={() => { setIsSidebarOpen(false); navigate('/technician/verification'); }}
-                className="w-full px-5 py-3.5 flex items-center gap-4 hover:bg-slate-50 text-slate-650 hover:text-[#0D47A1] transition-colors text-left"
-              >
-                <ShieldCheck className="h-5 w-5 text-slate-500" />
-                <span className="text-xs font-semibold">KYC Verification</span>
-              </button>
-
-              {/* Help & Support */}
-              <button 
-                onClick={() => { setIsSidebarOpen(false); navigate('/technician/support'); }}
-                className="w-full px-5 py-3.5 flex items-center gap-4 hover:bg-slate-50 text-slate-650 hover:text-[#0D47A1] transition-colors text-left"
-              >
-                <HelpCircle className="h-5 w-5 text-slate-500" />
-                <span className="text-xs font-semibold">Help & Support</span>
-              </button>
-
-              {/* Divider */}
-              <div className="h-[1px] bg-slate-100 my-3.5 mx-5"></div>
-
-              {/* Logout */}
-              <button 
-                onClick={() => { setIsSidebarOpen(false); setShowLogoutConfirm(true); }}
-                className="w-full px-5 py-3.5 flex items-center gap-4 hover:bg-red-50/20 text-red-600 transition-colors text-left"
-              >
-                <LogOut className="h-5 w-5 text-red-500" />
-                <span className="text-xs font-semibold">Logout</span>
-              </button>
-            </div>
-
-            {/* Version Info */}
-            <div className="p-5 border-t border-slate-150 text-left">
-              <span className="text-[10px] font-semibold text-slate-500">Partner App v2.4.1</span>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 py-3 px-3.5 flex justify-around items-center z-25 shadow-lg">
-        <button 
-          onClick={() => { setShowAllJobs(false); navigate('/technician/dashboard'); }}
-          className="flex flex-col items-center gap-1 text-[#0D47A1] transition-all"
-        >
-          <Briefcase className="h-6 w-6 stroke-[2.5]" />
-          <span className="text-[10px] font-bold tracking-wide">Jobs</span>
-        </button>
-        
-        <button 
-          onClick={() => navigate('/technician/raise-part-request?tab=claims')}
-          className="flex flex-col items-center gap-1 text-slate-550 hover:text-slate-700 transition-all"
-        >
-          <ClipboardList className="h-6 w-6 stroke-[2]" />
-          <span className="text-[10px] font-semibold tracking-wide">Requests</span>
-        </button>
-        
-        <button 
-          onClick={() => navigate('/technician/inventory')}
-          className="flex flex-col items-center gap-1 text-slate-550 hover:text-slate-700 transition-all"
-        >
-          <Wrench className="h-6 w-6 stroke-[2]" />
-          <span className="text-[10px] font-semibold tracking-wide">Inventory</span>
-        </button>
-        
-        <button 
-          onClick={() => navigate('/technician/schedule')}
-          className="flex flex-col items-center gap-1 text-slate-550 hover:text-slate-700 transition-all"
-        >
-          <Calendar className="h-6 w-6 stroke-[2]" />
-          <span className="text-[10px] font-semibold tracking-wide">Schedule</span>
-        </button>
-        
-        <button 
-          onClick={() => navigate('/technician/profile')}
-          className="flex flex-col items-center gap-1 text-slate-550 hover:text-slate-700 transition-all"
-        >
-          <User className="h-6 w-6 stroke-[2]" />
-          <span className="text-[10px] font-semibold tracking-wide">Profile</span>
-        </button>
-      </div>
+      <TechBottomNav activeTab="jobs" />
 
       {/* Logout Confirmation Modal Overlay */}
       {showLogoutConfirm && (

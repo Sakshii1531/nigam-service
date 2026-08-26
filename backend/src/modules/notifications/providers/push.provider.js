@@ -15,7 +15,12 @@ async function getMessaging() {
   }
 
   try {
-    const { default: admin } = await import('firebase-admin');
+    const adminModule = await import('firebase-admin');
+    const admin = adminModule.default || adminModule;
+    const apps = admin.apps || admin.getApps?.() || [];
+    const certFn = admin.credential?.cert || adminModule.cert;
+    const initAppFn = admin.initializeApp || adminModule.initializeApp;
+    const getMessagingFn = admin.messaging || adminModule.getMessaging;
 
     let serviceAccount;
     try {
@@ -25,15 +30,16 @@ async function getMessaging() {
     }
 
     // Reset the app if the credential changed
-    if (admin.apps.length && initializedWith !== serviceAccountJson) {
-      await Promise.all(admin.apps.map((a) => a.delete().catch(() => {})));
+    if (apps.length && initializedWith !== serviceAccountJson) {
+      await Promise.all(apps.map((a) => (a.delete ? a.delete().catch(() => {}) : Promise.resolve())));
     }
 
-    if (!admin.apps.length) {
-      admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+    const currentApps = admin.apps || admin.getApps?.() || [];
+    if (!currentApps.length) {
+      initAppFn({ credential: certFn(serviceAccount) });
     }
 
-    messagingInstance = admin.messaging();
+    messagingInstance = getMessagingFn();
     initializedWith = serviceAccountJson;
     return messagingInstance;
   } catch (err) {

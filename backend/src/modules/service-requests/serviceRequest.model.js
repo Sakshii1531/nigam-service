@@ -45,6 +45,7 @@ const serviceRequestSchema = new mongoose.Schema(
     requestMode: { type: String, enum: ['B2B', 'B2C'], default: 'B2C' },
 
     status: { type: String, enum: SERVICE_REQUEST_STATUS, default: 'New', index: true },
+    completionOtp: { type: String, default: () => Math.floor(1000 + Math.random() * 9000).toString() },
     timeline: [timelineStepSchema],
 
     slaDueAt: Date,
@@ -52,7 +53,7 @@ const serviceRequestSchema = new mongoose.Schema(
     isInstant: { type: Boolean, default: false },
     instantStatus: {
       type: String,
-      enum: ['SEARCHING', 'ASSIGNED', 'EN_ROUTE', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'],
+      enum: ['SEARCHING', 'ASSIGNED', 'EN_ROUTE', 'IN_PROGRESS', 'PARTS_PENDING', 'RESCHEDULED', 'COMPLETED', 'CANCELLED'],
       default: null,
     },
   },

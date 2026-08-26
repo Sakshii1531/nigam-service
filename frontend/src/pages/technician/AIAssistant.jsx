@@ -69,7 +69,7 @@ const AIAssistant = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col max-w-md mx-auto border-x border-slate-200 shadow-xl relative font-sans">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col relative font-sans">
       
       {/* Header */}
       <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between sticky top-0 z-10">

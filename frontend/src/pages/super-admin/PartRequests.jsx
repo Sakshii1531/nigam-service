@@ -72,21 +72,13 @@ const PartRequests = () => {
   return (
     <div className="flex min-h-screen bg-[#F8FAFC]">
       <Sidebar />
-      <div className="flex-1 flex flex-col">
-        <Topbar />
+      <div className="flex-1 ml-64 min-h-screen flex flex-col">
+        <Topbar 
+          title="Spare Part Requests" 
+          subtitle="Manage technician spare part requests and warehouse fulfillment" 
+        />
 
         <div className="p-6 flex flex-col gap-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-bold text-[#1E293B] flex items-center gap-2">
-                <Package size={20} className="text-[#0D47A1]" /> Spare Part Requests
-              </h2>
-              <p className="text-xs text-slate-500 mt-1 font-medium">
-                Manage technician spare part requests. Approve &rarr; Dispatch &rarr; Mark Delivered to automatically reschedule the technician&rsquo;s revisit.
-              </p>
-            </div>
-          </div>
-
           {toast && (
             <div className="bg-green-50 border border-green-200 text-green-700 text-xs font-semibold rounded-xl px-4 py-3 flex items-center gap-2">
               <CheckCircle2 size={15} /> {toast}

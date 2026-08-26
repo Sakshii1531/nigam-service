@@ -8,6 +8,7 @@ import { SERVICE_REQUEST_TRANSITIONS } from '../../config/constants.js';
 import { parsePagination, paginationMeta } from '../../utils/pagination.js';
 
 import { emit as emitNotification } from '../notifications/notification.service.js';
+import { getIO } from '../../sockets/io.js';
 
 export async function createServiceRequest(data) {
   const serviceRequest = await ServiceRequest.create({
@@ -192,23 +193,19 @@ export async function assignTechnician(id, technicianId) {
  * else. Rejecting has to actually release the work — clear the assignee, put
  * the request back in the pool, remember who said no, and immediately look for
  * the next best technician.
- *
- * Only assignable-but-unstarted work can be rejected; once a Job exists the
- * technician has engaged with it and walking away is a different operation.
  */
 export async function declineAssignment(id, technicianId) {
   const serviceRequest = await findOr404(id);
 
-  if (String(serviceRequest.technician) !== String(technicianId)) {
-    throw new ApiError(403, 'This request is not assigned to you');
+  // If already at terminal states (Completed / Closed / Cancelled), cannot reject
+  if (serviceRequest.status === 'Closed' || serviceRequest.status === 'Cancelled' || serviceRequest.status === 'Completed') {
+    throw new ApiError(409, `Cannot reject a request in terminal status "${serviceRequest.status}"`);
   }
-  if (serviceRequest.status !== 'Assigned') {
-    throw new ApiError(409, `Cannot reject a request in status "${serviceRequest.status}"`);
-  }
-  const existingJob = await Job.findOne({ serviceRequest: serviceRequest._id });
-  if (existingJob) throw new ApiError(409, 'You have already accepted this job — it can no longer be rejected');
 
-  if (!serviceRequest.declinedBy.some((t) => String(t) === String(technicianId))) {
+  // Remove any active Job document created for this technician / service request
+  await Job.deleteMany({ serviceRequest: serviceRequest._id });
+
+  if (technicianId && !serviceRequest.declinedBy.some((t) => String(t) === String(technicianId))) {
     serviceRequest.declinedBy.push(technicianId);
   }
   serviceRequest.technician = null;
@@ -218,19 +215,54 @@ export async function declineAssignment(id, technicianId) {
     stepLabel: 'New',
     done: true,
     timestamp: new Date(),
-    description: 'Rejected by technician — returned to the pool',
+    description: 'Declined by technician — searching for another technician',
   });
   await serviceRequest.save();
 
   // The customer's screens read the booking, so it has to let go of the
   // technician too or they keep seeing someone who is not coming.
+  let customerUserId = null;
   if (serviceRequest.booking) {
     const booking = await Booking.findById(serviceRequest.booking);
     if (booking) {
+      customerUserId = booking.user ? String(booking.user._id || booking.user) : null;
       booking.technician = null;
       if (booking.isInstant) booking.instantStatus = 'SEARCHING';
+      booking.status = 'Upcoming';
       await booking.save();
     }
+  } else if (serviceRequest.user) {
+    customerUserId = String(serviceRequest.user._id || serviceRequest.user);
+  }
+
+  // Emit realtime updates to the customer and technician rooms
+  try {
+    const io = getIO();
+    if (customerUserId) {
+      io.to(`user:${customerUserId}`).emit('instant:status_update', {
+        bookingId: serviceRequest.booking ? String(serviceRequest.booking) : null,
+        serviceRequestId: serviceRequest.id,
+        instantStatus: 'SEARCHING',
+        technician: null,
+      });
+      io.to(`user:${customerUserId}`).emit('service_request:updated', {
+        serviceRequestId: serviceRequest.id,
+        status: 'New',
+        technician: null,
+      });
+      io.to(`user:${customerUserId}`).emit('booking:updated', {
+        bookingId: serviceRequest.booking ? String(serviceRequest.booking) : null,
+        technician: null,
+      });
+    }
+    io.to('instant:technicians').emit('instant:status_update', {
+      bookingId: serviceRequest.booking ? String(serviceRequest.booking) : null,
+      serviceRequestId: serviceRequest.id,
+      instantStatus: 'SEARCHING',
+      technician: null,
+    });
+  } catch {
+    // Socket might not be initialized during isolated tests
   }
 
   // Offer it to the next best technician right away. Nobody else being

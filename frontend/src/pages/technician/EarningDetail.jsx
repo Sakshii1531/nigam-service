@@ -61,7 +61,7 @@ const EarningDetailPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F4F6FA] flex items-center justify-center max-w-md mx-auto">
+      <div className="min-h-screen bg-[#F4F6FA] flex items-center justify-center">
         <p className="text-sm text-slate-500">Loading…</p>
       </div>
     );
@@ -69,7 +69,7 @@ const EarningDetailPage = () => {
 
   if (!earning) {
     return (
-      <div className="min-h-screen bg-[#F4F6FA] flex items-center justify-center max-w-md mx-auto">
+      <div className="min-h-screen bg-[#F4F6FA] flex items-center justify-center">
         <div className="text-center p-6">
           <AlertCircle className="h-12 w-12 text-slate-400 mx-auto mb-3" />
           <p className="text-sm text-slate-600">Earning record not found.</p>
@@ -83,7 +83,7 @@ const EarningDetailPage = () => {
   const isQuick = earning.tag === 'QuickPayout';
 
   return (
-    <div className="min-h-screen bg-[#F4F6FA] flex flex-col pb-8 max-w-md mx-auto border-x border-slate-200 shadow-xl font-sans">
+    <div className="min-h-screen bg-[#F4F6FA] flex flex-col pb-8 font-sans">
 
       {/* Header */}
       <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center gap-3 sticky top-0 z-10">

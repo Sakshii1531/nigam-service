@@ -7,6 +7,7 @@ import {
   ArrowLeft
 } from 'lucide-react';
 import techAvatar from '../../assets/tech_avatar.png';
+import TechBottomNav from '../../components/TechBottomNav';
 import { apiRequest } from '../../lib/apiClient';
 
 const TIMEFRAME_DAYS = { 'Last 7 Days': 7, 'Last 30 Days': 30, 'Last 90 Days': 90 };
@@ -16,7 +17,6 @@ const DONUT_CIRCUMFERENCE = 2 * Math.PI * 45;
 const Analytics = () => {
   const { logout } = useAuth();
   const navigate = useNavigate();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   // The old options ('This Week'/'This Month'/'This Year') did not correspond to
   // anything the API measures; these map directly onto its rolling windows.
@@ -46,7 +46,7 @@ const Analytics = () => {
   const changeLabel = (v) => (v == null ? '—' : `${v >= 0 ? '+' : ''}${v}%`);
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-24 max-w-md mx-auto border-x border-slate-200 shadow-xl relative font-sans">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-20 relative font-sans">
       
       {/* Header */}
       <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
@@ -191,151 +191,10 @@ const Analytics = () => {
 
       </div>
 
-      {/* Sidebar Drawer Overlay */}
-      {isSidebarOpen && (
-        <div 
-          className="absolute inset-0 bg-[#052355]/40 backdrop-blur-sm z-30 transition-all flex justify-start animate-fade-in"
-          onClick={() => setIsSidebarOpen(false)}
-        >
-          {/* Drawer Container */}
-          <div 
-            className="bg-white w-72 h-full shadow-2xl flex flex-col z-40 text-left animate-slide-in"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header: Dark Blue Profile Section */}
-            <div className="bg-[#052355] text-white p-3.5 flex flex-col gap-3 relative">
-              <button 
-                onClick={() => setIsSidebarOpen(false)}
-                className="absolute top-4 right-4 p-1 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
-              >
-                <X className="h-4 w-4" />
-              </button>
-              
-              <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-white/20 mt-2 shadow-md">
-                <img 
-                  src={techAvatar} 
-                  alt="Alex Rodriguez Avatar Side" 
-                  className="w-full h-full object-cover" 
-                />
-              </div>
-              
-              <div>
-                <h3 className="text-sm font-normal text-white leading-tight">Alex Rodriguez</h3>
-                <p className="text-[10px] text-slate-500 font-normal mt-0.5">Expert HVAC Technician • ★ 4.9</p>
-              </div>
-            </div>
 
-            {/* Menu List */}
-            <div className="flex-1 overflow-y-auto py-4 flex flex-col gap-1">
-              
-              {/* Dashboard / Jobs */}
-              <button 
-                onClick={() => { setIsSidebarOpen(false); navigate('/technician/dashboard'); }}
-                className="w-full px-3.5 py-3.5 flex items-center gap-3.5 hover:bg-slate-50 text-slate-600 hover:text-[#0D47A1] transition-colors text-left"
-              >
-                <Briefcase className="h-5 w-5 text-slate-600" />
-                <span className="text-xs font-normal">Dashboard (Jobs)</span>
-              </button>
-
-              {/* My Schedule */}
-              <button 
-                onClick={() => { setIsSidebarOpen(false); navigate('/technician/schedule'); }}
-                className="w-full px-3.5 py-3.5 flex items-center gap-3.5 hover:bg-slate-50 text-slate-600 hover:text-[#0D47A1] transition-colors text-left"
-              >
-                <Calendar className="h-5 w-5 text-slate-600" />
-                <span className="text-xs font-normal">My Schedule</span>
-              </button>
-
-              {/* Part Requests */}
-              <button 
-                onClick={() => { setIsSidebarOpen(false); navigate('/technician/raise-part-request?tab=claims'); }}
-                className="w-full px-3.5 py-3.5 flex items-center gap-3.5 hover:bg-slate-50 text-slate-600 hover:text-[#0D47A1] transition-colors text-left"
-              >
-                <ClipboardList className="h-5 w-5 text-slate-600" />
-                <span className="text-xs font-normal">Part Requests</span>
-              </button>
-
-              {/* Inventory */}
-              <button 
-                onClick={() => { setIsSidebarOpen(false); navigate('/technician/inventory'); }}
-                className="w-full px-3.5 py-3.5 flex items-center gap-3.5 hover:bg-slate-50 text-slate-600 hover:text-[#0D47A1] transition-colors text-left"
-              >
-                <Wrench className="h-5 w-5 text-slate-600" />
-                <span className="text-xs font-normal">My Inventory</span>
-              </button>
-
-              {/* Payout Settings */}
-              <button 
-                onClick={() => { setIsSidebarOpen(false); navigate('/technician/payout-settings'); }}
-                className="w-full px-3.5 py-3.5 flex items-center gap-3.5 hover:bg-slate-50 text-slate-600 hover:text-[#0D47A1] transition-colors text-left"
-              >
-                <CreditCard className="h-5 w-5 text-slate-600" />
-                <span className="text-xs font-normal">Payout Settings</span>
-              </button>
-
-              {/* KYC Verification */}
-              <button 
-                onClick={() => { setIsSidebarOpen(false); navigate('/technician/verification'); }}
-                className="w-full px-3.5 py-3.5 flex items-center gap-3.5 hover:bg-slate-50 text-slate-600 hover:text-[#0D47A1] transition-colors text-left"
-              >
-                <ShieldCheck className="h-5 w-5 text-slate-600" />
-                <span className="text-xs font-normal">KYC Verification</span>
-              </button>
-
-              {/* Help & Support */}
-              <button 
-                onClick={() => { setIsSidebarOpen(false); navigate('/technician/support'); }}
-                className="w-full px-3.5 py-3.5 flex items-center gap-3.5 hover:bg-slate-50 text-slate-600 hover:text-[#0D47A1] transition-colors text-left"
-              >
-                <HelpCircle className="h-5 w-5 text-slate-600" />
-                <span className="text-xs font-normal">Help & Support</span>
-              </button>
-
-              {/* Divider */}
-              <div className="h-[1px] bg-slate-100 my-2 mx-5"></div>
-
-              {/* Logout */}
-              <button 
-                onClick={() => { setIsSidebarOpen(false); setShowLogoutConfirm(true); }}
-                className="w-full px-3.5 py-3.5 flex items-center gap-3.5 hover:bg-red-50/20 text-red-500 transition-colors text-left"
-              >
-                <LogOut className="h-5 w-5 text-red-400" />
-                <span className="text-xs font-normal">Logout</span>
-              </button>
-
-            </div>
-
-            {/* Version Info */}
-            <div className="p-3.5 border-t border-slate-200 text-left">
-              <span className="text-[10px] font-normal text-slate-600">Partner App v2.4.1</span>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 py-3 px-3.5 flex justify-around items-center z-20 shadow-lg">
-        <button onClick={() => navigate('/technician/dashboard')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-slate-700 transition-all">
-          <Briefcase className="h-6 w-6 stroke-[2]" />
-          <span className="text-[10px] font-normal tracking-wide">Jobs</span>
-        </button>
-        <button onClick={() => navigate('/technician/raise-part-request?tab=claims')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-slate-700 transition-all">
-          <ClipboardList className="h-6 w-6 stroke-[2]" />
-          <span className="text-[10px] font-normal tracking-wide">Requests</span>
-        </button>
-        <button onClick={() => navigate('/technician/inventory')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-slate-700 transition-all">
-          <Wrench className="h-6 w-6 stroke-[2]" />
-          <span className="text-[10px] font-normal tracking-wide">Inventory</span>
-        </button>
-        <button onClick={() => navigate('/technician/schedule')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-slate-700 transition-all">
-          <Calendar className="h-6 w-6 stroke-[2]" />
-          <span className="text-[10px] font-normal tracking-wide">Schedule</span>
-        </button>
-        <button onClick={() => navigate('/technician/profile')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-[#0D47A1] transition-all">
-          <User className="h-6 w-6 stroke-[2]" />
-          <span className="text-[10px] font-normal tracking-wide">Profile</span>
-        </button>
-      </div>
+      <TechBottomNav activeTab="profile" />
 
       {/* Logout Confirmation Modal Overlay */}
       {showLogoutConfirm && (
