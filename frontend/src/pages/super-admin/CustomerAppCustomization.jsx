@@ -56,15 +56,288 @@ const DEFAULT_CATEGORIES = [
 ];
 
 const AVAILABLE_ICONS = [
-  { id: 'sparkles', label: 'For You (Sparkles)' },
+  { id: 'sparkles', label: 'For You' },
   { id: 'ac', label: 'AC Unit' },
   { id: 'washing', label: 'Washing Machine' },
   { id: 'fridge', label: 'Refrigerator' },
   { id: 'tv', label: 'Television' },
   { id: 'ro', label: 'Water Purifier' },
   { id: 'geyser', label: 'Geyser' },
-  { id: 'more', label: 'More (Grid/Chevron)' }
+  { id: 'microwave', label: 'Microwave' },
+  { id: 'chimney', label: 'Chimney' },
+  { id: 'laptop', label: 'Laptop/PC' },
+  { id: 'mobile', label: 'Mobile' },
+  { id: 'electric', label: 'Electrician' },
+  { id: 'plumbing', label: 'Plumber' },
+  { id: 'cleaning', label: 'Cleaning' },
+  { id: 'painting', label: 'Painter' },
+  { id: 'sofa', label: 'Sofa/Furniture' },
+  { id: 'pest', label: 'Pest Control' },
+  { id: 'car', label: 'Car Service' },
+  { id: 'gardening', label: 'Gardening' },
+  { id: 'carpenter', label: 'Carpenter' },
+  { id: 'appliance', label: 'Appliance' },
+  { id: 'wrench', label: 'General Repair' },
+  { id: 'shield', label: 'Warranty' },
+  { id: 'tag', label: 'Offers' },
+  { id: 'clock', label: 'Fast Service' },
+  { id: 'truck', label: 'Delivery' },
+  { id: 'more', label: 'More' }
 ];
+
+const CategoryVectorIcon = ({ iconKey, className = "w-6 h-6 text-[#0D47A1]" }) => {
+  const k = (iconKey || '').toLowerCase();
+  if (k === 'ac') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <rect x="2" y="6" width="20" height="8" rx="2" />
+        <line x1="6" y1="14" x2="18" y2="14" />
+        <path d="M7 17l1.5 2" />
+        <path d="M12 17v2" />
+        <path d="M17 17l-1.5 2" />
+        <circle cx="18" cy="10" r="1" fill="currentColor" />
+      </svg>
+    );
+  }
+  if (k === 'washing') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <rect x="5" y="3" width="14" height="18" rx="2" />
+        <circle cx="12" cy="13" r="4" />
+        <circle cx="12" cy="7" r="1" />
+      </svg>
+    );
+  }
+  if (k === 'fridge') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <rect x="5" y="2" width="14" height="20" rx="2" />
+        <line x1="5" y1="10" x2="19" y2="10" />
+        <line x1="9" y1="6" x2="9" y2="8" />
+        <line x1="9" y1="13" x2="9" y2="17" />
+      </svg>
+    );
+  }
+  if (k === 'tv') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <rect x="2" y="3" width="20" height="14" rx="2" />
+        <path d="M8 21h8" />
+        <path d="M12 17v4" />
+      </svg>
+    );
+  }
+  if (k === 'ro' || k === 'water') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M12 22a7 7 0 0 0 7-7c0-4.3-7-13-7-13S5 10.7 5 15a7 7 0 0 0 7 7z" />
+      </svg>
+    );
+  }
+  if (k === 'geyser') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <rect x="6" y="2" width="12" height="16" rx="3" />
+        <path d="M9 22v-4" />
+        <path d="M15 22v-4" />
+        <circle cx="12" cy="10" r="2" />
+      </svg>
+    );
+  }
+  if (k === 'sparkles') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275Z" />
+      </svg>
+    );
+  }
+  if (k === 'microwave') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <rect x="3" y="5" width="18" height="14" rx="2" />
+        <path d="M15 5v14" />
+        <circle cx="18" cy="9" r="1" fill="currentColor" />
+        <circle cx="18" cy="13" r="1" fill="currentColor" />
+        <path d="M6 12h5" />
+      </svg>
+    );
+  }
+  if (k === 'chimney') {
+    // Kitchen range hood - clean trapezoid shape
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <rect x="5" y="2" width="14" height="6" rx="1" />
+        <path d="M3 8h18l-2 13H5L3 8z" />
+      </svg>
+    );
+  }
+  if (k === 'laptop') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <rect x="4" y="5" width="16" height="10" rx="2" />
+        <path d="M2 19h20" />
+      </svg>
+    );
+  }
+  if (k === 'mobile') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <rect x="6" y="3" width="12" height="18" rx="2" />
+        <line x1="11" y1="18" x2="13" y2="18" />
+      </svg>
+    );
+  }
+  if (k === 'electric') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+      </svg>
+    );
+  }
+  if (k === 'plumbing') {
+    // Clean water faucet / tap
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M9 5h6v3H9z" />
+        <path d="M9 8a6 6 0 0 0 6 0" />
+        <path d="M12 8v6" />
+        <path d="M10 14h4" />
+        <circle cx="12" cy="17" r="1" fill="currentColor" />
+      </svg>
+    );
+  }
+  if (k === 'cleaning') {
+    // Broom - diagonal stick with bristles
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M17 3 7 13" />
+        <path d="M5 21c0-3 2-6 5-8l5-5-3-3-7 7c-2 3-1 9 0 9z" />
+      </svg>
+    );
+  }
+  if (k === 'painting') {
+    // Paint roller - recognizable roller tool
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <rect x="3" y="5" width="12" height="7" rx="2" />
+        <path d="M15 8h3a2 2 0 0 1 0 4h-3" />
+        <path d="M9 12v7" />
+        <rect x="6" y="18" width="6" height="3" rx="1" />
+      </svg>
+    );
+  }
+  if (k === 'sofa') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M20 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v3" />
+        <path d="M2 11v5a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-5a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" />
+        <path d="M4 18v2" />
+        <path d="M20 18v2" />
+      </svg>
+    );
+  }
+  if (k === 'pest') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <rect x="8" y="9" width="8" height="10" rx="4" />
+        <path d="M6 13h12" />
+        <path d="M4 9l4 3" />
+        <path d="M20 9l-4 3" />
+        <path d="M4 17l4-2" />
+        <path d="M20 17l-4-2" />
+      </svg>
+    );
+  }
+  if (k === 'car') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M5 17a2 2 0 1 0 4 0 2 2 0 1 0-4 0Z" />
+        <path d="M15 17a2 2 0 1 0 4 0 2 2 0 1 0-4 0Z" />
+        <path d="M5 9l2-4h10l2 4v8H5V9Z" />
+      </svg>
+    );
+  }
+  if (k === 'gardening') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M12 22v-9" />
+        <path d="M12 13C7 13 4 8 4 3c5 0 10 3 10 8" />
+        <path d="M12 17c4 0 7-3 7-7-4 0-7 2-7 7" />
+      </svg>
+    );
+  }
+  if (k === 'carpenter') {
+    // Hammer - clean minimal shape
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="m2 22 8-8" />
+        <path d="m13 7 4-4" />
+        <path d="M10 14 4 8l6-6 6 6-6 6z" />
+        <path d="m17 3 4 4-4-4z" />
+      </svg>
+    );
+  }
+  if (k === 'appliance') {
+    // Electrical plug - clean Lucide-style
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M12 22v-5" />
+        <path d="M9 8V2" />
+        <path d="M15 8V2" />
+        <path d="M18 8H6" />
+        <path d="M6 8a6 6 0 0 0 6 6 6 6 0 0 0 6-6" />
+      </svg>
+    );
+  }
+  if (k === 'wrench') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+      </svg>
+    );
+  }
+  if (k === 'shield') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      </svg>
+    );
+  }
+  if (k === 'tag') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M12 2H2v10l11.29 11.29a1 1 0 0 0 1.41 0l7-7a1 1 0 0 0 0-1.41L12 2z" />
+        <circle cx="7" cy="7" r="1.5" />
+      </svg>
+    );
+  }
+  if (k === 'clock') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <circle cx="12" cy="12" r="10" />
+        <polyline points="12 6 12 12 16 14" />
+      </svg>
+    );
+  }
+  if (k === 'truck') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <rect x="1" y="3" width="15" height="13" rx="2" />
+        <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
+        <circle cx="5.5" cy="18.5" r="2.5" />
+        <circle cx="18.5" cy="18.5" r="2.5" />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <rect x="3" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="14" width="7" height="7" rx="1" />
+      <rect x="3" y="14" width="7" height="7" rx="1" />
+    </svg>
+  );
+};
 
 // The API stores imageUrl/segment; this screen has always spoken image/title.
 // ── Category booking-config storage ───────────────────────────────────────────
@@ -166,9 +439,22 @@ async function hydrateTiles() {
   try {
     const rows = await apiRequest('/cms/home-tiles/admin', { auth: true });
     for (const [key, placement] of Object.entries(TILE_PLACEMENTS)) {
-      tileCache[key] = (Array.isArray(rows) ? rows : [])
+      const items = (Array.isArray(rows) ? rows : [])
         .filter((t) => t.placement === placement)
         .map(TILE_ADAPTERS[key].fromApi);
+
+      const uniqueItems = [];
+      const seen = new Set();
+      for (const item of items) {
+        const identifier = (item.name || item.title || '').trim().toLowerCase();
+        if (identifier && !seen.has(identifier)) {
+          seen.add(identifier);
+          uniqueItems.push(item);
+        } else if (!identifier) {
+          uniqueItems.push(item);
+        }
+      }
+      tileCache[key] = uniqueItems;
     }
   } catch (err) {
     console.warn('Could not load home tiles:', err.message);
@@ -576,6 +862,8 @@ const CustomerAppCustomization = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editIndex, setEditIndex] = useState(-1);
+  const [iconMode, setIconMode] = useState('preset'); // 'preset' | 'upload'
+  const [showIconPicker, setShowIconPicker] = useState(false);
   const [categoryForm, setCategoryForm] = useState({
     name: '',
     icon: 'ac',
@@ -668,7 +956,20 @@ const CustomerAppCustomization = () => {
       // Load Categories
       const savedCats = readTiles('categories');
       if (savedCats) {
-        setCategories(JSON.parse(savedCats));
+        const parsed = JSON.parse(savedCats);
+        const uniqueCats = [];
+        const seenNames = new Set();
+        for (const cat of parsed) {
+          const norm = (cat.name || '').trim().toLowerCase();
+          if (norm && !seenNames.has(norm)) {
+            seenNames.add(norm);
+            uniqueCats.push(cat);
+          }
+        }
+        setCategories(uniqueCats);
+        if (uniqueCats.length !== parsed.length) {
+          writeTiles('categories', uniqueCats);
+        }
       } else {
         setCategories(DEFAULT_CATEGORIES);
         writeTiles('categories', DEFAULT_CATEGORIES);
@@ -802,12 +1103,46 @@ const CustomerAppCustomization = () => {
     setTimeout(() => setSuccessMessage(''), 3000);
   };
 
+  const detectIconFromName = (name) => {
+    const norm = (name || '').toLowerCase().trim();
+    if (!norm) return null;
+    if (norm.includes('microwave') || norm.includes('oven') || norm.includes('micro')) return 'microwave';
+    if (norm.includes('chimney') || norm.includes('exhaust')) return 'chimney';
+    if (norm.includes('laptop') || norm.includes('computer') || norm.includes('pc')) return 'laptop';
+    if (norm.includes('mobile') || norm.includes('phone') || norm.includes('tablet')) return 'mobile';
+    if (norm.includes('electric') || norm.includes('wire') || norm.includes('mcb') || norm.includes('switch')) return 'electric';
+    if (norm.includes('plumb') || norm.includes('pipe') || norm.includes('tap') || norm.includes('leak')) return 'plumbing';
+    if (norm.includes('clean') || norm.includes('sweep') || norm.includes('wash home')) return 'cleaning';
+    if (norm.includes('paint') || norm.includes('wall') || norm.includes('color')) return 'painting';
+    if (norm.includes('sofa') || norm.includes('couch') || norm.includes('furnit')) return 'sofa';
+    if (norm.includes('pest') || norm.includes('bug') || norm.includes('termite')) return 'pest';
+    if (norm.includes('car') || norm.includes('vehicle') || norm.includes('auto')) return 'car';
+    if (norm.includes('garden') || norm.includes('plant') || norm.includes('lawn')) return 'gardening';
+    if (norm.includes('carpent') || norm.includes('wood') || norm.includes('furniture repair')) return 'carpenter';
+    if (norm.includes('appliance') || norm.includes('plug')) return 'appliance';
+    if (norm.includes('ac') || norm.includes('air condition') || norm.includes('cool')) return 'ac';
+    if (norm.includes('wash') || norm.includes('machine') || norm.includes('laundry')) return 'washing';
+    if (norm.includes('fridge') || norm.includes('refriger')) return 'fridge';
+    if (norm.includes('tv') || norm.includes('televis') || norm.includes('screen')) return 'tv';
+    if (norm.includes('ro') || norm.includes('purif') || norm.includes('water')) return 'ro';
+    if (norm.includes('geyser') || norm.includes('heater') || norm.includes('boiler')) return 'geyser';
+    if (norm.includes('sparkle') || norm.includes('for you')) return 'sparkles';
+    if (norm.includes('repair') || norm.includes('fix')) return 'wrench';
+    if (norm.includes('warrant') || norm.includes('shield')) return 'shield';
+    if (norm.includes('offer') || norm.includes('discount') || norm.includes('tag')) return 'tag';
+    if (norm.includes('fast') || norm.includes('express') || norm.includes('clock')) return 'clock';
+    if (norm.includes('deliver') || norm.includes('truck')) return 'truck';
+    if (norm.includes('more')) return 'more';
+    return null;
+  };
+
   // --- Category Handlers ---
   const handleCategoryFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
+        setIconMode('upload');
         setCategoryForm(prev => ({ ...prev, icon: reader.result }));
       };
       reader.readAsDataURL(file);
@@ -816,6 +1151,8 @@ const CustomerAppCustomization = () => {
 
   const handleOpenAddCategory = () => {
     setIsEditing(false);
+    setIconMode('preset');
+    setShowIconPicker(false);
     setCategoryForm({
       name: '',
       icon: 'ac',
@@ -834,7 +1171,9 @@ const CustomerAppCustomization = () => {
   const handleOpenEditCategory = (index) => {
     setIsEditing(true);
     setEditIndex(index);
+    setShowIconPicker(false);
     const cat = categories[index];
+    setIconMode(cat.icon && cat.icon.startsWith('data:image/') ? 'upload' : 'preset');
     
     const savedCatalogs = readCategoryConfigs();
     const customCatalogs = savedCatalogs ? JSON.parse(savedCatalogs) : {};
@@ -912,9 +1251,15 @@ const CustomerAppCustomization = () => {
       }
     }
 
+    let selectedIcon = cat.icon || 'ac';
+    const detected = detectIconFromName(cat.name);
+    if (detected && (!selectedIcon || !selectedIcon.startsWith('data:image/'))) {
+      selectedIcon = detected;
+    }
+
     setCategoryForm({
       name: cat.name,
-      icon: cat.icon || 'ac',
+      icon: selectedIcon,
       service: cat.service || '',
       isForYou: !!cat.isForYou,
       isMore: !!cat.isMore,
@@ -1933,8 +2278,8 @@ const CustomerAppCustomization = () => {
                           {cat.icon && cat.icon.startsWith('data:image/') ? (
                             <img src={cat.icon} alt={cat.name} className="w-8 h-8 object-contain border border-slate-200 rounded-md p-0.5 bg-slate-50" />
                           ) : (
-                            <span className="bg-blue-50 text-[#0D47A1] px-2 py-1 rounded-md font-semibold text-[10px]">
-                              {cat.icon || 'ac'}
+                            <span className="w-9 h-9 rounded-xl bg-blue-50/80 border border-blue-100 flex items-center justify-center shadow-2xs">
+                              <CategoryVectorIcon iconKey={cat.icon || detectIconFromName(cat.name)} className="w-5 h-5 text-[#0D47A1]" />
                             </span>
                           )}
                         </td>
@@ -2633,8 +2978,12 @@ const CustomerAppCustomization = () => {
                             <label className="text-[9px] font-bold text-slate-400 block mb-0.5">Price (₹) *</label>
                             <input
                               type="text"
-                              value={pkg.price}
-                              onChange={(e) => setServicePackages(servicePackages.map(p => p.id === pkg.id ? { ...p, price: e.target.value } : p))}
+                              value={pkg.price === 0 || pkg.price === '0' ? '' : (pkg.price ?? '')}
+                              onFocus={(e) => e.target.select()}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setServicePackages(servicePackages.map(p => p.id === pkg.id ? { ...p, price: val === '0' ? '' : val } : p));
+                              }}
                               placeholder="e.g. 299"
                               className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-md text-xs outline-none focus:border-[#0D47A1] transition-all"
                               required
@@ -2729,178 +3078,429 @@ const CustomerAppCustomization = () => {
       {/* Edit/Add Category Modal Overlay */}
       {showAddModal && (
         <div className="fixed inset-0 bg-[#052355]/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-2xl border border-slate-100 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh]">
+          <div className="bg-white rounded-3xl w-full max-w-lg p-6 shadow-2xl border border-slate-100 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh]">
             <div className="flex justify-between items-center flex-shrink-0">
-              <h3 className="text-base font-bold text-[#1E293B]">{isEditing ? 'Edit Category & Booking Flow' : 'Add New Category & Booking Flow'}</h3>
-              <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+              <div>
+                <h3 className="text-base font-black text-slate-900">{isEditing ? 'Edit Category' : 'Add New Category'}</h3>
+                <p className="text-xs font-medium text-slate-500 mt-0.5">Configure category icon, brands, and booking service packages.</p>
+              </div>
+              <button onClick={() => setShowAddModal(false)} className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 font-bold transition-colors">✕</button>
             </div>
             
-            <form onSubmit={handleSaveCategory} className="space-y-4 overflow-y-auto pr-1 flex-1 max-h-[75vh] no-scrollbar">
-              <div className="bg-slate-50 p-3 rounded-xl border border-slate-150 space-y-3">
-                <span className="text-[10px] font-bold text-[#0D47A1] uppercase tracking-wider block">1. Dashboard Category Details</span>
+            <form 
+              onSubmit={handleSaveCategory} 
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+                  e.preventDefault();
+                }
+              }}
+              className="space-y-4 overflow-y-auto pr-1 flex-1 max-h-[75vh] no-scrollbar text-left"
+            >
+              {/* 1. Basic Details */}
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-3">
+                <span className="text-[10px] font-black text-[#0D47A1] uppercase tracking-wider block">1. Basic Details</span>
                 <div>
-                  <label className="text-xs font-semibold text-[#64748B] mb-1 block">Category Name *</label>
+                  <label className="text-xs font-bold text-slate-700 mb-1 block">Category Name *</label>
                   <input 
                     type="text" 
                     value={categoryForm.name}
-                    onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
+                    onChange={(e) => {
+                      const newName = e.target.value;
+                      const detected = detectIconFromName(newName);
+                      setCategoryForm(prev => ({
+                        ...prev,
+                        name: newName,
+                        icon: (detected && iconMode === 'preset') ? detected : (prev.icon || 'ac')
+                      }));
+                    }}
                     placeholder="e.g. Microwave, Chimney"
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:border-[#0D47A1] transition-all"
+                    className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:border-[#0D47A1] transition-all"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-[#64748B] mb-2 block">Icon Type *</label>
+                  <label className="text-xs font-bold text-slate-700 mb-1.5 block">Category Icon *</label>
                   <div className="flex gap-4 mb-2">
                     <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 cursor-pointer">
                       <input 
                         type="radio" 
                         name="iconSource" 
-                        checked={!categoryForm.icon.startsWith('data:image/')} 
-                        onChange={() => setCategoryForm(prev => ({ ...prev, icon: 'ac' }))}
+                        checked={iconMode === 'preset'} 
+                        onChange={() => {
+                          setIconMode('preset');
+                          setShowIconPicker(true);
+                          if (categoryForm.icon && categoryForm.icon.startsWith('data:image/')) {
+                            setCategoryForm(prev => ({ ...prev, icon: 'ac' }));
+                          }
+                        }}
                       />
-                      <span>Preset Icon</span>
+                      <span>Built-in Icon</span>
                     </label>
                     <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 cursor-pointer">
                       <input 
                         type="radio" 
                         name="iconSource" 
-                        checked={categoryForm.icon.startsWith('data:image/')} 
-                        onChange={() => setCategoryForm(prev => ({ ...prev, icon: '' }))}
+                        checked={iconMode === 'upload'} 
+                        onChange={() => {
+                          setIconMode('upload');
+                        }}
                       />
-                      <span>Upload Custom Image</span>
+                      <span>Upload Image</span>
                     </label>
                   </div>
 
-                  {!categoryForm.icon.startsWith('data:image/') ? (
-                    <select
-                      value={categoryForm.icon}
-                      onChange={(e) => setCategoryForm({ ...categoryForm, icon: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs outline-none focus:border-[#0D47A1] bg-white transition-all"
-                    >
-                      {AVAILABLE_ICONS.map((ico) => (
-                        <option key={ico.id} value={ico.id}>{ico.label}</option>
-                      ))}
-                    </select>
+                  {iconMode === 'preset' ? (
+                    !showIconPicker && categoryForm.icon ? (
+                      <div className="flex items-center justify-between bg-white border border-slate-200 rounded-xl p-3 shadow-2xs">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center">
+                            <CategoryVectorIcon iconKey={categoryForm.icon} className="w-6 h-6 text-[#0D47A1]" />
+                          </div>
+                          <div>
+                            <span className="text-xs font-bold text-slate-800 block">
+                              {AVAILABLE_ICONS.find(i => i.id === categoryForm.icon)?.label || categoryForm.icon}
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-medium block">Selected Built-in Icon</span>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setShowIconPicker(true)}
+                          className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
+                        >
+                          Change Icon
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center px-1">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Choose Icon</span>
+                          <button
+                            type="button"
+                            onClick={() => setShowIconPicker(false)}
+                            className="text-xs text-[#0D47A1] font-bold hover:underline cursor-pointer"
+                          >
+                            Close Grid ✕
+                          </button>
+                        </div>
+                        <div className="flex flex-wrap gap-2.5 pt-1 bg-white p-3 border border-slate-200 rounded-2xl">
+                          {AVAILABLE_ICONS.map((ico) => {
+                            const isSelected = categoryForm.icon === ico.id;
+                            return (
+                              <button
+                                key={ico.id}
+                                type="button"
+                                onClick={() => {
+                                  setCategoryForm({ ...categoryForm, icon: ico.id });
+                                  setShowIconPicker(false);
+                                }}
+                                className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all cursor-pointer ${
+                                  isSelected 
+                                    ? 'bg-blue-50 border-2 border-[#0D47A1] shadow-xs scale-105' 
+                                    : 'bg-white border border-slate-200 hover:bg-slate-50 hover:border-slate-300'
+                                }`}
+                                title={ico.label}
+                              >
+                                <CategoryVectorIcon iconKey={ico.id} className={`w-6 h-6 ${isSelected ? 'text-[#0D47A1]' : 'text-slate-500'}`} />
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )
                   ) : (
-                    <div className="flex items-center gap-3 bg-white border border-dashed border-slate-200 rounded-lg p-2">
+                    <div className="flex items-center gap-3 bg-white border border-dashed border-slate-200 rounded-xl p-3">
                       <input 
                         type="file" 
                         accept="image/*"
                         onChange={handleCategoryFileChange}
                         className="w-full text-xs text-slate-500 file:mr-3 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-blue-50 file:text-[#0D47A1] hover:file:bg-blue-100 cursor-pointer"
+                        required={!categoryForm.icon || !categoryForm.icon.startsWith('data:image/')}
                       />
-                      {categoryForm.icon && (
-                        <img src={categoryForm.icon} alt="Preview" className="w-8 h-8 object-contain border border-slate-200 rounded-md p-0.5 bg-white flex-shrink-0" />
+                      {categoryForm.icon && categoryForm.icon.startsWith('data:image/') && (
+                        <img src={categoryForm.icon} alt="Preview" className="w-9 h-9 object-contain border border-slate-200 rounded-xl p-0.5 bg-white flex-shrink-0 shadow-2xs" />
                       )}
                     </div>
                   )}
                 </div>
-
-                <div>
-                  <label className="text-xs font-semibold text-[#64748B] mb-1 block">Service Name (Optional - For Direct Details Page)</label>
-                  <input 
-                    type="text" 
-                    value={categoryForm.service}
-                    onChange={(e) => setCategoryForm({ ...categoryForm, service: e.target.value })}
-                    placeholder="e.g. Smart TV Service & Repair"
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:border-[#0D47A1] transition-all"
-                  />
-                </div>
-
-                <div className="space-y-2 border-t border-slate-200 pt-3">
-                  <label className="text-xs font-semibold text-[#64748B] block mb-1">Configuration Flags</label>
-                  <div className="flex flex-col gap-2">
-                    <label className="flex items-center gap-2 text-xs text-slate-700 font-semibold cursor-pointer">
-                      <input 
-                        type="checkbox"
-                        checked={categoryForm.isForYou}
-                        onChange={(e) => setCategoryForm({ ...categoryForm, isForYou: e.target.checked })}
-                      />
-                      <span>Is "For You" Feed?</span>
-                    </label>
-                    <label className="flex items-center gap-2 text-xs text-slate-700 font-semibold cursor-pointer">
-                      <input 
-                        type="checkbox"
-                        checked={categoryForm.isMore}
-                        onChange={(e) => setCategoryForm({ ...categoryForm, isMore: e.target.checked })}
-                      />
-                      <span>Is "More" Category Link?</span>
-                    </label>
-                    <label className="flex items-center gap-2 text-xs text-slate-700 font-semibold cursor-pointer">
-                      <input 
-                        type="checkbox"
-                        checked={categoryForm.isFridge}
-                        onChange={(e) => setCategoryForm({ ...categoryForm, isFridge: e.target.checked })}
-                      />
-                      <span>Is Refrigerator specific?</span>
-                    </label>
-                  </div>
-                </div>
               </div>
 
-              <div className="bg-blue-50/50 p-3 rounded-xl border border-blue-100 space-y-3">
-                <span className="text-[10px] font-bold text-[#0D47A1] uppercase tracking-wider block font-sans">2. Checkout Booking Flow Settings</span>
-                
-                <div>
-                  <label className="text-xs font-semibold text-[#64748B] mb-1 block">Device Types (Optional - Comma separated)</label>
-                  <input 
-                    type="text" 
-                    value={categoryForm.productTypes}
-                    onChange={(e) => setCategoryForm({ ...categoryForm, productTypes: e.target.value })}
-                    placeholder="e.g. Split AC, Window AC, Cassette AC (Leave empty if no type selection needed)"
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:border-[#0D47A1] transition-all"
-                  />
-                  <span className="text-[9px] text-slate-400 font-medium block mt-0.5">Note: If left empty, step 1's product type selector grid will be hidden and optional.</span>
-                </div>
+              {/* 2. Supported Options & Brands */}
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-3">
+                <span className="text-[10px] font-black text-[#0D47A1] uppercase tracking-wider block">2. Booking Options & Brands</span>
 
                 <div>
-                  <label className="text-xs font-semibold text-[#64748B] mb-1 block">Booking Flow Services (JSON Array) *</label>
-                  <textarea 
-                    value={categoryForm.servicesJson}
-                    onChange={(e) => setCategoryForm({ ...categoryForm, servicesJson: e.target.value })}
-                    placeholder="Enter valid JSON array of services"
-                    rows={5}
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-mono outline-none focus:border-[#0D47A1] transition-all"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-semibold text-[#64748B] mb-1 block">Supported Brands (Comma separated)</label>
+                  <label className="text-xs font-bold text-slate-700 mb-1 block">Supported Brands (Comma separated)</label>
                   <input 
                     type="text" 
                     value={categoryForm.brands}
                     onChange={(e) => setCategoryForm({ ...categoryForm, brands: e.target.value })}
                     placeholder="e.g. Voltas, LG, Samsung, Whirlpool"
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:border-[#0D47A1] transition-all"
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium outline-none focus:border-[#0D47A1] transition-all"
                   />
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-[#64748B] mb-1 block">Category Note</label>
+                  <label className="text-xs font-bold text-slate-700 mb-1 block">Appliance Types (Optional - Comma separated)</label>
+                  <input 
+                    type="text" 
+                    value={categoryForm.productTypes}
+                    onChange={(e) => setCategoryForm({ ...categoryForm, productTypes: e.target.value })}
+                    placeholder="e.g. Split AC, Window AC, Cassette AC"
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium outline-none focus:border-[#0D47A1] transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-700 mb-1 block">Price Note / Disclaimer</label>
                   <input 
                     type="text" 
                     value={categoryForm.categoryNote}
                     onChange={(e) => setCategoryForm({ ...categoryForm, categoryNote: e.target.value })}
-                    placeholder="e.g. Prices shown are indicative. The technician will confirm exact charges."
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:border-[#0D47A1] transition-all"
+                    placeholder="e.g. Prices shown are indicative. Exact charges confirmed after inspection."
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium outline-none focus:border-[#0D47A1] transition-all"
                   />
                 </div>
+              </div>
+
+              {/* 3. Booking Services Builder */}
+              <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100/80 space-y-3">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <span className="text-[10px] font-black text-[#0D47A1] uppercase tracking-wider block font-sans">3. Booking Services & Pricing *</span>
+                    <span className="text-[10px] text-slate-500 font-medium mt-0.5 block">Add services customers can book in this category.</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      let currentList = [];
+                      try { currentList = JSON.parse(categoryForm.servicesJson); } catch(e) {}
+                      if (!Array.isArray(currentList)) currentList = [];
+                      currentList.push({
+                        id: `service_${Date.now()}`,
+                        name: '',
+                        price: 299,
+                        icon: '🔧',
+                        desc: ''
+                      });
+                      setCategoryForm({ ...categoryForm, servicesJson: JSON.stringify(currentList, null, 2) });
+                    }}
+                    className="bg-[#0D47A1] hover:bg-blue-800 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer flex items-center gap-1"
+                  >
+                    <Plus size={13} /> Add Service Option
+                  </button>
+                </div>
+
+                {/* Visual Service Items List */}
+                {(() => {
+                  let parsed = [];
+                  try { parsed = JSON.parse(categoryForm.servicesJson); } catch(e) {}
+                  if (!Array.isArray(parsed)) parsed = [];
+
+                  if (parsed.length === 0) {
+                    return (
+                      <div className="bg-white border border-slate-200 rounded-xl p-4 text-center text-xs text-slate-500 font-semibold">
+                        No services added yet. Click "+ Add Service Option" above.
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+                      {parsed.map((item, idx) => (
+                        <div key={idx} className="bg-white border border-slate-200 rounded-xl p-3 shadow-2xs flex flex-col gap-2 relative">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = parsed.filter((_, i) => i !== idx);
+                              setCategoryForm({ ...categoryForm, servicesJson: JSON.stringify(updated, null, 2) });
+                            }}
+                            className="absolute top-2.5 right-2.5 p-1 text-slate-400 hover:text-rose-600 rounded-lg transition-colors cursor-pointer"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                          
+                          <div className="grid grid-cols-12 gap-2 pr-6">
+                            <div className="col-span-5 sm:col-span-4">
+                              <label className="text-[9px] font-bold text-slate-400 block mb-0.5">Icon / Image</label>
+                              {item.icon && (item.icon.startsWith('data:image/') || item.icon.startsWith('http')) ? (
+                                <div className="flex items-center gap-1.5 h-7">
+                                  <img src={item.icon} alt="Icon" className="w-7 h-7 object-contain border border-slate-200 rounded-md p-0.5 bg-white shadow-2xs flex-shrink-0" />
+                                  <label className="text-[10px] text-[#0D47A1] font-bold hover:underline cursor-pointer">
+                                    Change
+                                    <input
+                                      type="file"
+                                      accept="image/*"
+                                      className="hidden"
+                                      onChange={(e) => {
+                                        const file = e.target.files[0];
+                                        if (file) {
+                                          const reader = new FileReader();
+                                          reader.onloadend = () => {
+                                            parsed[idx].icon = reader.result;
+                                            setCategoryForm({ ...categoryForm, servicesJson: JSON.stringify(parsed, null, 2) });
+                                          };
+                                          reader.readAsDataURL(file);
+                                        }
+                                      }}
+                                    />
+                                  </label>
+                                  <button 
+                                    type="button" 
+                                    onClick={() => {
+                                      parsed[idx].icon = '🔧';
+                                      setCategoryForm({ ...categoryForm, servicesJson: JSON.stringify(parsed, null, 2) });
+                                    }}
+                                    className="text-[10px] text-rose-500 font-extrabold hover:underline"
+                                    title="Reset to default emoji icon"
+                                  >
+                                    Reset
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1.5 h-7">
+                                  <input 
+                                    type="text"
+                                    value={item.icon || '🔧'}
+                                    onChange={(e) => {
+                                      parsed[idx].icon = e.target.value;
+                                      setCategoryForm({ ...categoryForm, servicesJson: JSON.stringify(parsed, null, 2) });
+                                    }}
+                                    placeholder="🔧"
+                                    className="w-8 px-1 py-1 bg-slate-50 border border-slate-200 rounded-md text-xs font-semibold text-center outline-none focus:border-[#0D47A1]"
+                                  />
+                                  <label className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-md text-[10px] font-bold cursor-pointer transition-colors flex items-center gap-1">
+                                    <Image size={11} />
+                                    Upload
+                                    <input
+                                      type="file"
+                                      accept="image/*"
+                                      className="hidden"
+                                      onChange={(e) => {
+                                        const file = e.target.files[0];
+                                        if (file) {
+                                          const reader = new FileReader();
+                                          reader.onloadend = () => {
+                                            parsed[idx].icon = reader.result;
+                                            setCategoryForm({ ...categoryForm, servicesJson: JSON.stringify(parsed, null, 2) });
+                                          };
+                                          reader.readAsDataURL(file);
+                                        }
+                                      }}
+                                    />
+                                  </label>
+                                </div>
+                              )}
+                            </div>
+                            <div className="col-span-7 sm:col-span-5">
+                              <label className="text-[9px] font-bold text-slate-400 block mb-0.5">Service Name *</label>
+                              <input 
+                                type="text"
+                                value={item.name || ''}
+                                onChange={(e) => {
+                                  parsed[idx].name = e.target.value;
+                                  if (!parsed[idx].id) parsed[idx].id = (e.target.value || '').toLowerCase().replace(/\s+/g, '_');
+                                  setCategoryForm({ ...categoryForm, servicesJson: JSON.stringify(parsed, null, 2) });
+                                }}
+                                placeholder="e.g. Repair & Fix"
+                                className="w-full px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold outline-none focus:border-[#0D47A1]"
+                                required
+                              />
+                            </div>
+                            <div className="col-span-12 sm:col-span-3">
+                              <label className="text-[9px] font-bold text-slate-400 block mb-0.5">Price (₹) *</label>
+                              <input 
+                                type="number"
+                                value={item.price === 0 || item.price === '0' ? '' : (item.price ?? '')}
+                                onFocus={(e) => e.target.select()}
+                                onChange={(e) => {
+                                  const raw = e.target.value;
+                                  parsed[idx].price = raw === '' ? '' : Number(raw);
+                                  setCategoryForm({ ...categoryForm, servicesJson: JSON.stringify(parsed, null, 2) });
+                                }}
+                                placeholder="299"
+                                className="w-full px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-extrabold outline-none focus:border-[#0D47A1]"
+                                required
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <input 
+                              type="text"
+                              value={item.desc || ''}
+                              onChange={(e) => {
+                                parsed[idx].desc = e.target.value;
+                                setCategoryForm({ ...categoryForm, servicesJson: JSON.stringify(parsed, null, 2) });
+                              }}
+                              placeholder="Short description (e.g. Fix breakdowns & issues)"
+                              className="w-full px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-[11px] font-medium text-slate-600 outline-none focus:border-[#0D47A1]"
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+
+                {/* Advanced Mode Section - Open automatically */}
+                <details open className="mt-2 text-xs">
+                  <summary className="cursor-pointer text-[10px] font-extrabold text-[#0D47A1] hover:underline">
+                    ⚙️ Advanced Options & Technical Flags
+                  </summary>
+                  <div className="mt-3 space-y-3 p-3 bg-white rounded-xl border border-slate-200">
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-500 mb-1 block">Direct Details Page Link (Optional)</label>
+                      <input 
+                        type="text" 
+                        value={categoryForm.service}
+                        onChange={(e) => setCategoryForm({ ...categoryForm, service: e.target.value })}
+                        placeholder="e.g. Smart TV Service & Repair"
+                        className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none focus:border-[#0D47A1]"
+                      />
+                    </div>
+                    <div className="flex flex-wrap gap-4 pt-1">
+                      <label className="flex items-center gap-1.5 text-xs text-slate-700 font-semibold cursor-pointer">
+                        <input 
+                          type="checkbox"
+                          checked={categoryForm.isForYou}
+                          onChange={(e) => setCategoryForm({ ...categoryForm, isForYou: e.target.checked })}
+                        />
+                        <span>"For You" Feed</span>
+                      </label>
+                      <label className="flex items-center gap-1.5 text-xs text-slate-700 font-semibold cursor-pointer">
+                        <input 
+                          type="checkbox"
+                          checked={categoryForm.isMore}
+                          onChange={(e) => setCategoryForm({ ...categoryForm, isMore: e.target.checked })}
+                        />
+                        <span>"More" Link</span>
+                      </label>
+                      <label className="flex items-center gap-1.5 text-xs text-slate-700 font-semibold cursor-pointer">
+                        <input 
+                          type="checkbox"
+                          checked={categoryForm.isFridge}
+                          onChange={(e) => setCategoryForm({ ...categoryForm, isFridge: e.target.checked })}
+                        />
+                        <span>Refrigerator Specific</span>
+                      </label>
+                    </div>
+                  </div>
+                </details>
               </div>
 
               <div className="flex gap-3 pt-2 bg-white sticky bottom-0 z-10">
                 <button 
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2.5 rounded-lg text-xs transition-all"
+                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition-all cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit"
-                  className="flex-1 bg-[#0D47A1] hover:bg-blue-800 text-white font-semibold py-2.5 rounded-lg text-xs transition-all shadow-sm"
+                  className="flex-1 bg-[#0D47A1] hover:bg-blue-800 text-white font-bold py-2.5 rounded-xl text-xs transition-all shadow-sm cursor-pointer"
                 >
                   Save Category & Settings
                 </button>

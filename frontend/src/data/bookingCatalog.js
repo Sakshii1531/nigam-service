@@ -421,14 +421,104 @@ export const getCatalogEntry = (category) => {
     return { key: decoded, data: resolved };
   }
 
-  // 2. Otherwise, fall back to Category Customization / Static defaults
-  const unifiedCatalog = { ...BOOKING_CATALOG, ...categoryOverrides };
-
-  const key = Object.keys(unifiedCatalog).find(
+  // 2. Otherwise, fall back to Category Customization (categoryOverrides) merged over Static defaults (BOOKING_CATALOG)
+  const staticKey = Object.keys(BOOKING_CATALOG).find(
     (k) => k.toLowerCase() === decodedNorm
   );
+  const staticDefault = staticKey ? BOOKING_CATALOG[staticKey] : {};
 
-  return key ? { key, data: unifiedCatalog[key] } : null;
+  const overrideKey = Object.keys(categoryOverrides).find(
+    (k) => k.toLowerCase() === decodedNorm
+  );
+  const categoryConfig = overrideKey ? categoryOverrides[overrideKey] : null;
+
+  if (!staticKey && !overrideKey) {
+    return null;
+  }
+
+  // Parse productTypes from override or static
+  let productTypes = [];
+  if (categoryConfig && categoryConfig.productTypes) {
+    const rawTypes = typeof categoryConfig.productTypes === 'string'
+      ? categoryConfig.productTypes.split(',').map(s => s.trim()).filter(Boolean)
+      : (Array.isArray(categoryConfig.productTypes) ? categoryConfig.productTypes : []);
+
+    productTypes = rawTypes.map(item => {
+      const nameStr = typeof item === 'string' ? item : (item.name || String(item));
+      const staticItem = (staticDefault.productTypes || []).find(
+        st => st.name?.toLowerCase() === nameStr.toLowerCase()
+      );
+      return {
+        id: staticItem?.id || (typeof item === 'object' && item.id ? item.id : nameStr.toLowerCase().replace(/\s+/g, '_')),
+        name: nameStr,
+        icon: (typeof item === 'object' && item.icon) ? item.icon : (staticItem?.icon || '⚡'),
+        desc: (typeof item === 'object' && item.desc) ? item.desc : (staticItem?.desc || '')
+      };
+    });
+  } else {
+    productTypes = staticDefault.productTypes || [];
+  }
+
+  // Parse services from override or static
+  let servicesList = [];
+  if (categoryConfig && categoryConfig.services) {
+    const rawServices = Array.isArray(categoryConfig.services)
+      ? categoryConfig.services
+      : (categoryConfig.services.default || []);
+
+    servicesList = rawServices.map(s => ({
+      id: s.id || (s.name || '').toLowerCase().replace(/\s+/g, '_'),
+      name: s.name || '',
+      icon: s.icon || '🔧',
+      desc: s.desc || '',
+      price: typeof s.price === 'number' ? s.price : (parseInt(s.price) || 299),
+      unit: s.unit || 'per unit'
+    }));
+  } else if (staticDefault.services) {
+    servicesList = Array.isArray(staticDefault.services)
+      ? staticDefault.services
+      : (staticDefault.services.default || []);
+  }
+
+  // Parse brands from override or static
+  let brands = [];
+  if (categoryConfig && categoryConfig.brands) {
+    brands = typeof categoryConfig.brands === 'string'
+      ? categoryConfig.brands.split(',').map(s => s.trim()).filter(Boolean)
+      : categoryConfig.brands;
+  }
+  if (!brands || brands.length === 0) {
+    brands = staticDefault.brands || ['LG', 'Samsung', 'Whirlpool', 'Panasonic'];
+  }
+
+  // Parse whyBrandPoints
+  const whyBrandPoints = (categoryConfig && categoryConfig.whyBrandPoints && categoryConfig.whyBrandPoints.length)
+    ? categoryConfig.whyBrandPoints
+    : (staticDefault.whyBrandPoints || [
+        'Brand certified expert technicians',
+        'Correct parts calibration',
+        'Genuine brand replacement parts'
+      ]);
+
+  // Parse categoryNote
+  const categoryNote = (categoryConfig && categoryConfig.categoryNote)
+    || staticDefault.categoryNote
+    || 'Prices shown are indicative.';
+
+  const resolved = {
+    icon: staticDefault.icon || null,
+    color: staticDefault.color || '#0D47A1',
+    lightBg: staticDefault.lightBg || '#EAF4FF',
+    productTypes,
+    services: {
+      default: servicesList
+    },
+    brands,
+    whyBrandPoints,
+    categoryNote
+  };
+
+  return { key: overrideKey || staticKey || decoded, data: resolved };
 };
 
 /**

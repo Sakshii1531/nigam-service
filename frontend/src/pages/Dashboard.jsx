@@ -43,6 +43,81 @@ import star3d from '../assets/star_3d.png';
 import ac3d from '../assets/icon_3d_ac.png';
 import wm3d from '../assets/icon_3d_wm.png';
 import fridge3d from '../assets/icon_3d_fridge.png';
+
+const renderDashboardCategoryIcon = (iconKey) => {
+  const k = (iconKey || '').toLowerCase();
+  if (k === 'sparkles') return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275Z" /><path d="m5 3 1 2.5L8.5 6 6 7 5 9.5 4 7 1.5 6 4 5Z" opacity="0.5" /><path d="m19 17 1 2.5 2.5.5-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1Z" opacity="0.5" /></svg>;
+  if (k === 'ac') return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue"><rect x="2" y="6" width="20" height="8" rx="2" /><line x1="6" y1="14" x2="18" y2="14" /><path d="M7 17l1.5 2" /><path d="M12 17v2" /><path d="M17 17l-1.5 2" /><circle cx="18" cy="10" r="1" fill="currentColor" /></svg>;
+  if (k === 'washing') return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue"><rect x="5" y="3" width="14" height="18" rx="2" /><circle cx="12" cy="13" r="4" /><circle cx="12" cy="7" r="1" /></svg>;
+  if (k === 'fridge') return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue"><rect x="5" y="2" width="14" height="20" rx="2" /><line x1="5" y1="10" x2="19" y2="10" /><line x1="9" y1="6" x2="9" y2="8" /><line x1="9" y1="13" x2="9" y2="17" /></svg>;
+  if (k === 'tv') return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue"><rect x="2" y="3" width="20" height="14" rx="2" /><path d="M8 21h8" /><path d="M12 17v4" /></svg>;
+  if (k === 'ro' || k === 'water') return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue"><path d="M12 22a7 7 0 0 0 7-7c0-4.3-7-13-7-13S5 10.7 5 15a7 7 0 0 0 7 7z" /></svg>;
+  if (k === 'geyser') return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue"><rect x="6" y="2" width="12" height="16" rx="3" /><path d="M9 22v-4" /><path d="M15 22v-4" /><circle cx="12" cy="10" r="2" /></svg>;
+  if (k === 'microwave') return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M15 5v14" /><circle cx="18" cy="9" r="1" fill="currentColor" /><circle cx="18" cy="13" r="1" fill="currentColor" /><path d="M6 12h5" /></svg>;
+  if (k === 'chimney') return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue"><rect x="5" y="2" width="14" height="6" rx="1"/><path d="M3 8h18l-2 13H5L3 8z"/></svg>;
+  if (k === 'laptop') return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue"><rect x="4" y="5" width="16" height="10" rx="2" /><path d="M2 19h20" /></svg>;
+  if (k === 'mobile') return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue"><rect x="6" y="3" width="12" height="18" rx="2" /><line x1="11" y1="18" x2="13" y2="18" /></svg>;
+  if (k === 'electric') return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg>;
+  if (k === 'plumbing') return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue"><path d="M9 5h6v3H9z"/><path d="M9 8a6 6 0 0 0 6 0"/><path d="M12 8v6"/><path d="M10 14h4"/><circle cx="12" cy="17" r="1" fill="currentColor"/></svg>;
+  if (k === 'cleaning') return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue"><path d="M17 3 7 13"/><path d="M5 21c0-3 2-6 5-8l5-5-3-3-7 7c-2 3-1 9 0 9z"/></svg>;
+  if (k === 'painting') return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue"><rect x="3" y="5" width="12" height="7" rx="2"/><path d="M15 8h3a2 2 0 0 1 0 4h-3"/><path d="M9 12v7"/><rect x="6" y="18" width="6" height="3" rx="1"/></svg>;
+  if (k === 'sofa') return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue"><path d="M20 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v3" /><path d="M2 11v5a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-5a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" /><path d="M4 18v2" /><path d="M20 18v2" /></svg>;
+  if (k === 'pest') return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue"><rect x="8" y="9" width="8" height="10" rx="4" /><path d="M6 13h12" /><path d="M4 9l4 3" /><path d="M20 9l-4 3" /><path d="M4 17l4-2" /><path d="M20 17l-4-2" /></svg>;
+  if (k === 'car') return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue"><path d="M5 17a2 2 0 1 0 4 0 2 2 0 1 0-4 0Z" /><path d="M15 17a2 2 0 1 0 4 0 2 2 0 1 0-4 0Z" /><path d="M5 9l2-4h10l2 4v8H5V9Z" /></svg>;
+  if (k === 'gardening') return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue"><path d="M12 22v-9" /><path d="M12 13C7 13 4 8 4 3c5 0 10 3 10 8" /><path d="M12 17c4 0 7-3 7-7-4 0-7 2-7 7" /></svg>;
+  if (k === 'carpenter') return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue"><path d="m2 22 8-8"/><path d="m13 7 4-4"/><path d="M10 14 4 8l6-6 6 6-6 6z"/><path d="m17 3 4 4-4-4z"/></svg>;
+  if (k === 'appliance') return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue"><path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8H6"/><path d="M6 8a6 6 0 0 0 6 6 6 6 0 0 0 6-6"/></svg>;
+  if (k === 'wrench') return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" /></svg>;
+  if (k === 'shield') return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>;
+  if (k === 'tag') return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue"><path d="M12 2H2v10l11.29 11.29a1 1 0 0 0 1.41 0l7-7a1 1 0 0 0 0-1.41L12 2z" /><circle cx="7" cy="7" r="1.5" /></svg>;
+  if (k === 'clock') return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>;
+  if (k === 'truck') return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue"><rect x="1" y="3" width="15" height="13" rx="2" /><polygon points="16 8 20 8 23 11 23 16 16 16 16 8" /><circle cx="5.5" cy="18.5" r="2.5" /><circle cx="18.5" cy="18.5" r="2.5" /></svg>;
+
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /></svg>;
+};
+
+const detectIconFromName = (name) => {
+  if (!name) return null;
+  const norm = name.trim().toLowerCase();
+  if (norm.includes('micro') || norm.includes('oven')) return 'microwave';
+  if (norm.includes('chimney') || norm.includes('hood')) return 'chimney';
+  if (norm.includes('laptop') || norm.includes('pc') || norm.includes('computer')) return 'laptop';
+  if (norm.includes('mobile') || norm.includes('phone')) return 'mobile';
+  if (norm.includes('electr') || norm.includes('wire') || norm.includes('switch')) return 'electric';
+  if (norm.includes('plumb') || norm.includes('pipe') || norm.includes('leak') || norm.includes('tap') || norm.includes('faucet')) return 'plumbing';
+  if (norm.includes('clean') || norm.includes('sweep') || norm.includes('broom')) return 'cleaning';
+  if (norm.includes('paint') || norm.includes('wall')) return 'painting';
+  if (norm.includes('sofa') || norm.includes('couch')) return 'sofa';
+  if (norm.includes('pest') || norm.includes('termite') || norm.includes('insect')) return 'pest';
+  if (norm.includes('car') || norm.includes('auto')) return 'car';
+  if (norm.includes('garden') || norm.includes('plant')) return 'gardening';
+  if (norm.includes('carpent') || norm.includes('wood') || norm.includes('furniture repair')) return 'carpenter';
+  if (norm.includes('appliance') || norm.includes('plug')) return 'appliance';
+  if (norm.includes('ac') || norm.includes('air condition') || norm.includes('cool')) return 'ac';
+  if (norm.includes('wash') || norm.includes('machine') || norm.includes('laundry')) return 'washing';
+  if (norm.includes('fridge') || norm.includes('refriger')) return 'fridge';
+  if (norm.includes('tv') || norm.includes('televis') || norm.includes('screen')) return 'tv';
+  if (norm.includes('ro') || norm.includes('purif') || norm.includes('water')) return 'ro';
+  if (norm.includes('geyser') || norm.includes('heater') || norm.includes('boiler')) return 'geyser';
+  if (norm.includes('sparkle') || norm.includes('for you')) return 'sparkles';
+  if (norm.includes('repair') || norm.includes('fix')) return 'wrench';
+  if (norm.includes('warrant') || norm.includes('shield')) return 'shield';
+  if (norm.includes('offer') || norm.includes('discount') || norm.includes('tag')) return 'tag';
+  if (norm.includes('fast') || norm.includes('express') || norm.includes('clock')) return 'clock';
+  if (norm.includes('deliver') || norm.includes('truck')) return 'truck';
+  if (norm.includes('more')) return 'more';
+  return null;
+};
+
+const getCategoryIconKey = (cat) => {
+  if (!cat) return 'more';
+  if (cat.icon && (cat.icon.startsWith('data:image/') || cat.icon.startsWith('http'))) {
+    return cat.icon;
+  }
+  const detected = detectIconFromName(cat.name);
+  if (detected) return detected;
+  return cat.icon || 'more';
+};
 import tv3d from '../assets/icon_3d_tv.png';
 import geyser3d from '../assets/icon_3d_geyser.png';
 import ro3d from '../assets/icon_3d_ro.png';
@@ -86,16 +161,36 @@ const Dashboard = ({ defaultType }) => {
     return rows.length ? rows.map((b) => ({ id: b.id, image: b.imageUrl })) : fallback;
   }
 
-  const dashboardCategories = tilesFor('category', [
-    { name: 'For You', icon: 'sparkles', isForYou: true },
-    { name: 'AC', icon: 'ac', service: 'AC Repair' },
-    { name: 'Washing Machine', icon: 'washing', service: 'Washing Machine' },
-    { name: 'Refrigerator', icon: 'fridge', isFridge: true },
-    { name: 'TV', icon: 'tv', service: 'Smart TV Service & Repair' },
-    { name: 'RO Water Purifier', icon: 'ro', service: 'Water Purifier RO Service' },
-    { name: 'Geyser', icon: 'geyser', service: 'Geyser Service & Repair' },
-    { name: 'More', icon: 'more', isMore: true }
-  ], (t) => ({ name: t.title, icon: t.icon, service: t.service }));
+  const dashboardCategories = (() => {
+    const raw = tilesFor('category', [
+      { name: 'For You', icon: 'sparkles', isForYou: true },
+      { name: 'AC', icon: 'ac', service: 'AC Repair' },
+      { name: 'Washing Machine', icon: 'washing', service: 'Washing Machine' },
+      { name: 'Refrigerator', icon: 'fridge', isFridge: true },
+      { name: 'TV', icon: 'tv', service: 'Smart TV Service & Repair' },
+      { name: 'RO Water Purifier', icon: 'ro', service: 'Water Purifier RO Service' },
+      { name: 'Geyser', icon: 'geyser', service: 'Geyser Service & Repair' },
+      { name: 'More', icon: 'more', isMore: true }
+    ], (t) => ({
+      name: t.title,
+      icon: t.icon || (t.title === 'For You' ? 'sparkles' : 'more'),
+      service: t.service,
+      isForYou: t.title === 'For You' || t.isForYou,
+      isMore: t.title === 'More' || t.isMore,
+      isFridge: t.title === 'Refrigerator' || t.isFridge
+    }));
+
+    const unique = [];
+    const seen = new Set();
+    for (const cat of raw) {
+      const norm = (cat.name || '').trim().toLowerCase();
+      if (norm && !seen.has(norm)) {
+        seen.add(norm);
+        unique.push(cat);
+      }
+    }
+    return unique.length ? unique : raw;
+  })();
 
   useEffect(() => {
     let cancelled = false;
@@ -494,72 +589,13 @@ const Dashboard = ({ defaultType }) => {
               }}
             >
               <div className="w-7 h-7 flex items-center justify-center">
-                {cat.icon && cat.icon.startsWith('data:image/') ? (
-                  <img src={cat.icon} alt={cat.name} className="w-7 h-7 object-contain" />
-                ) : (
-                  <>
-                    {(cat.icon === 'sparkles') && (
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue">
-                        <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275Z" />
-                        <path d="m5 3 1 2.5L8.5 6 6 7 5 9.5 4 7 1.5 6 4 5Z" opacity="0.5" />
-                        <path d="m19 17 1 2.5 2.5.5-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1Z" opacity="0.5" />
-                      </svg>
-                    )}
-                    {cat.icon === 'ac' && (
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue">
-                        <rect x="2" y="6" width="20" height="8" rx="2" />
-                        <line x1="6" y1="14" x2="18" y2="14" />
-                        <path d="M7 17l1.5 2" />
-                        <path d="M12 17v2" />
-                        <path d="M17 17l-1.5 2" />
-                        <circle cx="18" cy="10" r="1" fill="currentColor" />
-                      </svg>
-                    )}
-                    {cat.icon === 'washing' && (
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue">
-                        <rect x="5" y="3" width="14" height="18" rx="2" />
-                        <circle cx="12" cy="13" r="4" />
-                        <circle cx="12" cy="7" r="1" />
-                      </svg>
-                    )}
-                    {cat.icon === 'fridge' && (
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue">
-                        <rect x="5" y="2" width="14" height="20" rx="2" />
-                        <line x1="5" y1="10" x2="19" y2="10" />
-                        <line x1="9" y1="6" x2="9" y2="8" />
-                        <line x1="9" y1="13" x2="9" y2="17" />
-                      </svg>
-                    )}
-                    {cat.icon === 'tv' && (
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue">
-                        <rect x="2" y="3" width="20" height="14" rx="2" />
-                        <path d="M8 21h8" />
-                        <path d="M12 17v4" />
-                      </svg>
-                    )}
-                    {cat.icon === 'ro' && (
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue">
-                        <path d="M12 22a7 7 0 0 0 7-7c0-4.3-7-13-7-13S5 10.7 5 15a7 7 0 0 0 7 7z" />
-                      </svg>
-                    )}
-                    {cat.icon === 'geyser' && (
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue">
-                        <rect x="6" y="2" width="12" height="16" rx="3" />
-                        <path d="M9 22v-4" />
-                        <path d="M15 22v-4" />
-                        <circle cx="12" cy="10" r="2" />
-                      </svg>
-                    )}
-                    {(cat.icon === 'more' || !['sparkles','ac','washing','fridge','tv','ro','geyser','more'].includes(cat.icon)) && (
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-brand-blue">
-                        <rect x="3" y="3" width="7" height="7" rx="1" />
-                        <rect x="14" y="3" width="7" height="7" rx="1" />
-                        <rect x="14" y="14" width="7" height="7" rx="1" />
-                        <rect x="3" y="14" width="7" height="7" rx="1" />
-                      </svg>
-                    )}
-                  </>
-                )}
+                {(() => {
+                  const iconKey = getCategoryIconKey(cat);
+                  if (iconKey && (iconKey.startsWith('data:image/') || iconKey.startsWith('http'))) {
+                    return <img src={iconKey} alt={cat.name} className="w-7 h-7 object-contain" />;
+                  }
+                  return renderDashboardCategoryIcon(iconKey);
+                })()}
               </div>
               <span className="text-[9px] font-black text-brand-blue uppercase tracking-tighter text-center w-full leading-tight">
                 {cat.name}
