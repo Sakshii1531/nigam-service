@@ -1,6 +1,10 @@
 import { PartOrder } from '../technician/partOrder.model.js';
 import { Job } from '../technician/job.model.js';
 import { ServiceRequest } from '../service-requests/serviceRequest.model.js';
+import { Booking } from '../booking/booking.model.js';
+import { Technician } from '../technician/technician.model.js';
+import { emit as emitNotification } from '../notifications/notification.service.js';
+import { getIO } from '../../sockets/io.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { parsePagination, paginationMeta } from '../../utils/pagination.js';
 
@@ -87,8 +91,8 @@ export async function updatePartOrderStatus(partOrderId, { status, scheduledDate
         await sr.save();
       }
     } else if (status === 'Delivered') {
+      const parsedDate = scheduledDate ? new Date(scheduledDate) : new Date(Date.now() + 86400000);
       if (job) {
-        const parsedDate = scheduledDate ? new Date(scheduledDate) : new Date(Date.now() + 86400000);
         job.activeStep = 'revisit_scheduled';
         job.revisit = {
           scheduledDate: parsedDate,
@@ -113,6 +117,65 @@ export async function updatePartOrderStatus(partOrderId, { status, scheduledDate
           });
         }
         await sr.save();
+
+        let customerUserId = null;
+        if (sr.booking) {
+          const booking = await Booking.findById(sr.booking);
+          if (booking) {
+            customerUserId = booking.user;
+            booking.status = 'Upcoming';
+            booking.instantStatus = 'RESCHEDULED';
+            booking.scheduledDate = parsedDate;
+            booking.timeSlot = timeSlot || '10:00 AM - 01:00 PM';
+            await booking.save();
+          }
+        } else if (sr.user) {
+          customerUserId = sr.user;
+        }
+
+        const tech = job ? await Technician.findById(job.technician) : null;
+        const formattedDate = parsedDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+
+        if (customerUserId) {
+          await emitNotification('service.rescheduled', {
+            user: customerUserId,
+            category: sr.category,
+            technicianName: tech?.name || 'Your technician',
+            scheduledDate: formattedDate,
+            timeSlot: timeSlot || '10:00 AM - 01:00 PM',
+            bookingId: sr.booking ? String(sr.booking) : null,
+          }).catch(() => {});
+
+          try {
+            const io = getIO();
+            io.to(`user:${customerUserId}`).emit('booking:updated', {
+              bookingId: sr.booking,
+              status: 'Upcoming',
+              instantStatus: 'RESCHEDULED',
+              scheduledDate: parsedDate,
+              timeSlot: timeSlot || '10:00 AM - 01:00 PM',
+            });
+            io.to(`user:${customerUserId}`).emit('instant:status_update', {
+              bookingId: sr.booking,
+              instantStatus: 'RESCHEDULED',
+            });
+            io.to(`user:${customerUserId}`).emit('service_request:updated', {
+              serviceRequestId: sr._id,
+              status: 'Spare Received',
+            });
+          } catch {}
+        }
+
+        if (tech?.user) {
+          try {
+            const io = getIO();
+            io.to(`user:${tech.user}`).emit('job:updated', {
+              jobId: job?._id,
+              activeStep: 'revisit_scheduled',
+              revisit: job?.revisit,
+            });
+          } catch {}
+        }
       }
     } else if (status === 'Rejected') {
       if (sr) {

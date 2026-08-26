@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   ChevronLeft, Search, Filter, Briefcase, ClipboardList, Wrench, Calendar, User, Check, X, ShieldAlert
 } from 'lucide-react';
+import TechBottomNav from '../../components/TechBottomNav';
 import { useTech } from '../../context/TechContext';
 
 const Inventory = () => {
@@ -40,7 +41,7 @@ const Inventory = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-24 max-w-md mx-auto border-x border-slate-200 shadow-xl relative font-sans">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-20 relative font-sans">
       
       {/* Header */}
       <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
@@ -144,28 +145,7 @@ const Inventory = () => {
       </div>
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 py-3 px-3.5 flex justify-around items-center z-20 shadow-lg">
-        <button onClick={() => navigate('/technician/dashboard')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-slate-700 transition-all">
-          <Briefcase className="h-6 w-6 stroke-[2]" />
-          <span className="text-[10px] font-normal tracking-wide">Jobs</span>
-        </button>
-        <button onClick={() => navigate('/technician/raise-part-request?tab=claims')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-slate-700 transition-all">
-          <ClipboardList className="h-6 w-6 stroke-[2]" />
-          <span className="text-[10px] font-normal tracking-wide">Requests</span>
-        </button>
-        <button onClick={() => navigate('/technician/inventory')} className="flex flex-col items-center gap-1 text-[#0D47A1] transition-all">
-          <Wrench className="h-6 w-6 stroke-[2.5]" />
-          <span className="text-[10px] font-medium tracking-wide">Inventory</span>
-        </button>
-        <button onClick={() => navigate('/technician/schedule')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-slate-700 transition-all">
-          <Calendar className="h-6 w-6 stroke-[2]" />
-          <span className="text-[10px] font-normal tracking-wide">Schedule</span>
-        </button>
-        <button onClick={() => navigate('/technician/profile')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-slate-700 transition-all">
-          <User className="h-6 w-6 stroke-[2]" />
-          <span className="text-[10px] font-normal tracking-wide">Profile</span>
-        </button>
-      </div>
+      <TechBottomNav activeTab="inventory" />
 
     </div>
   );

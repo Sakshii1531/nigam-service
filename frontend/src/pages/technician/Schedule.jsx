@@ -1,13 +1,20 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Menu, Calendar, Briefcase, ClipboardList, Wrench, User, CreditCard, ShieldCheck, HelpCircle, LogOut, X } from 'lucide-react';
+import { 
+  Calendar, Briefcase, ClipboardList, Wrench, User, CreditCard, ShieldCheck, 
+  HelpCircle, LogOut, CheckCircle2, ChevronLeft, ChevronRight, Bell, Clock, 
+  MapPin, Phone, ArrowRight, RotateCw, Sparkles
+} from 'lucide-react';
+import TechBottomNav from '../../components/TechBottomNav';
 import { useTech } from '../../context/TechContext';
+import { useNotifications } from '../../context/NotificationContext';
 
 const Schedule = () => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
-  const { jobs, notifications, selectJobForDetails, acceptJob, earningsTally } = useTech();
+  const { jobs, selectJobForDetails, acceptJob, earningsTally } = useTech();
+  const { unreadCount: unreadNotificationsCount } = useNotifications();
 
   const today = new Date();
   
@@ -23,14 +30,13 @@ const Schedule = () => {
       num: dayNum,
       dateStr: fullDateStr,
       isToday: i === 0,
-      label: i === 0 ? 'Today' : `${dayName} ${dayNum}`,
+      label: i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : `${dayName}, ${dayNum} ${d.toLocaleDateString('en-US', { month: 'short' })}`,
+      monthName: d.toLocaleDateString('en-US', { month: 'short' }),
       current: true,
     };
   });
 
   const [selectedDateObj, setSelectedDateObj] = useState(calendarDays[0]);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const activeSchedules = jobs
     .filter(j => {
@@ -47,60 +53,89 @@ const Schedule = () => {
       id: j.id,
       time: j.timeSlot || (j.revisit?.timeSlot) || '09:00 AM - 12:00 PM',
       category: j.category || j.product || 'Service Request',
-      customer: j.customerName || j.serviceRequest?.user?.name || 'Customer',
-      address: j.address || j.serviceRequest?.booking?.address || j.serviceRequest?.zone || 'Customer Location',
-      status: j.activeStep === 'completed' 
+      customer: j.customerName || 'Customer',
+      address: j.address || 'Address details in job sheet',
+      phone: j.customerPhone || j.phone,
+      isPriority: j.isPriority || j.priority === 'High',
+      status: j.status === 'Completed' || j.activeStep === 'completed'
         ? 'Completed' 
-        : j.activeStep === 'revisit_scheduled' 
+        : j.revisit 
           ? 'Revisit' 
-          : j.isAvailableRequest 
-            ? 'Available' 
+          : j.status === 'In Progress' || j.activeStep === 'ontheway' || j.activeStep === 'inspection'
+            ? 'In Progress' 
             : 'Confirmed'
     }));
 
   const handleJobClick = (jobId, status) => {
-    if (status === 'Confirmed' || status === 'Revisit') {
-      acceptJob(jobId);
+    selectJobForDetails(jobId);
+    if (status === 'Completed') {
+      navigate('/technician/billing-estimate');
     } else {
-      selectJobForDetails(jobId);
+      navigate('/technician/active-job');
     }
-    navigate('/technician/active-job');
   };
 
   const currentMonthYear = today.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
-  const getInitials = (name) => {
-    if (!name) return 'TC';
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-  };
-
   return (
-    <div className="min-h-screen bg-white flex flex-col pb-24 max-w-md mx-auto border-x border-slate-100 shadow-xl relative font-sans overflow-hidden">
+    <div className="min-h-screen bg-[#F4F7FC] flex flex-col pb-28 relative font-sans w-full max-w-full overflow-x-hidden text-left">
       
-      {/* Header */}
-      <div className="bg-white border-b border-slate-100 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
-        <button 
-          onClick={() => setIsSidebarOpen(true)}
-          className="p-1 hover:bg-slate-50 rounded-full text-slate-700 transition-colors"
-        >
-          <Menu className="h-6 w-6 text-slate-700" />
-        </button>
-        
-        <h1 className="text-base font-extrabold text-[#052355] flex-1 text-center pr-8">Schedule</h1>
-        
-        <div className="w-8"></div>
+      {/* Header Section with Back Button & Signature Navy Gradient */}
+      <div className="bg-gradient-to-b from-[#052355] to-[#0A337A] text-white pt-5 pb-7 px-4 shadow-md rounded-b-[2.2rem] sticky top-0 z-20">
+        <div className="flex items-center justify-between">
+          <button 
+            type="button"
+            onClick={() => navigate('/technician/dashboard')} 
+            className="p-1.5 hover:bg-white/10 rounded-full text-white transition-colors cursor-pointer"
+            title="Back to Dashboard"
+          >
+            <ChevronLeft className="h-6 w-6 text-white stroke-[2.5]" />
+          </button>
+          <div className="text-center flex-1 pr-2">
+            <h1 className="text-base font-extrabold text-white tracking-wide">Daily Schedule</h1>
+            <span className="text-[11px] text-white/80 font-normal">{currentMonthYear}</span>
+          </div>
+          <button 
+            onClick={() => navigate('/technician/notifications')}
+            className="p-2 hover:bg-white/10 rounded-full transition-colors relative cursor-pointer"
+          >
+            <Bell className="h-5 w-5 text-white" />
+            {unreadNotificationsCount > 0 && (
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-[#052355]"></span>
+            )}
+          </button>
+        </div>
+
+        {/* Quick Day Stats Banner */}
+        <div className="grid grid-cols-3 gap-2 mt-4 pt-1">
+          <div className="bg-white/10 backdrop-blur-xs rounded-2xl p-2.5 text-center border border-white/15">
+            <span className="text-[10px] font-bold text-white/70 uppercase tracking-wider block">Day Jobs</span>
+            <span className="text-base font-black text-white">{activeSchedules.length}</span>
+          </div>
+          <div className="bg-white/10 backdrop-blur-xs rounded-2xl p-2.5 text-center border border-white/15">
+            <span className="text-[10px] font-bold text-white/70 uppercase tracking-wider block">Earnings</span>
+            <span className="text-base font-black text-emerald-300">₹{earningsTally.today.toLocaleString('en-IN')}</span>
+          </div>
+          <div className="bg-white/10 backdrop-blur-xs rounded-2xl p-2.5 text-center border border-white/15">
+            <span className="text-[10px] font-bold text-white/70 uppercase tracking-wider block">Completed</span>
+            <span className="text-base font-black text-amber-300">{earningsTally.completedToday || 0}</span>
+          </div>
+        </div>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 p-5 flex flex-col gap-6">
+      {/* Main Content Area */}
+      <div className="flex-1 px-3.5 pt-3.5 flex flex-col gap-4 w-full">
         
         {/* Horizontal Calendar Date Ribbon */}
-        <div className="flex flex-col gap-2">
+        <div className="bg-white rounded-3xl p-3.5 border border-slate-200/80 shadow-2xs flex flex-col gap-2.5">
           <div className="flex justify-between items-center px-1">
-            <span className="text-sm font-extrabold text-[#052355]">{currentMonthYear}</span>
+            <span className="text-xs font-black text-[#052355] uppercase tracking-wider">Select Day</span>
+            <span className="text-xs font-extrabold text-[#0D47A1] bg-blue-50 px-2 py-0.5 rounded-full border border-blue-150">
+              {selectedDateObj?.label}
+            </span>
           </div>
 
-          <div className="flex gap-1 justify-between overflow-x-auto no-scrollbar py-2">
+          <div className="flex gap-1.5 justify-between overflow-x-auto no-scrollbar py-1 w-full">
             {calendarDays.map((dayItem) => {
               const isSelected = selectedDateObj?.dateStr === dayItem.dateStr;
               
@@ -108,287 +143,150 @@ const Schedule = () => {
                 <button
                   key={dayItem.dateStr}
                   onClick={() => setSelectedDateObj(dayItem)}
-                  className={`flex flex-col items-center p-2 rounded-xl min-w-[42px] transition-all ${
+                  className={`flex flex-col items-center py-2.5 px-2 rounded-2xl flex-1 min-w-[44px] transition-all cursor-pointer select-none ${
                     isSelected
-                      ? 'bg-[#0D47A1] text-white shadow-xs'
-                      : 'text-slate-500 hover:bg-slate-50'
+                      ? 'bg-[#052355] text-white shadow-xs scale-105 border border-[#052355]'
+                      : 'text-slate-500 hover:bg-slate-50 bg-slate-50/70 border border-slate-150'
                   }`}
                 >
-                  <span className={`text-[10px] font-bold ${isSelected ? 'text-white' : 'text-slate-450'}`}>
+                  <span className={`text-[10px] font-extrabold uppercase ${isSelected ? 'text-blue-200' : 'text-slate-400'}`}>
                     {dayItem.day}
                   </span>
-                  <span className={`text-sm font-black mt-1 ${isSelected ? 'text-white' : 'text-[#052355]'}`}>
+                  <span className={`text-sm font-black mt-0.5 ${isSelected ? 'text-white' : 'text-[#052355]'}`}>
                     {dayItem.num}
                   </span>
+                  {dayItem.isToday && (
+                    <span className={`w-1.5 h-1.5 rounded-full mt-1 ${isSelected ? 'bg-amber-400' : 'bg-[#0D47A1]'}`} />
+                  )}
                 </button>
               );
             })}
           </div>
         </div>
 
-        {/* Timeline Slot List */}
-        <div className="flex-1 flex flex-col relative min-h-[360px]">
+        {/* Timeline Appointments List */}
+        <div className="flex-1 flex flex-col relative min-h-[300px] w-full">
+          <div className="flex justify-between items-center px-1 mb-1">
+            <h3 className="text-xs font-black text-[#052355] uppercase tracking-wider">
+              Appointments ({activeSchedules.length})
+            </h3>
+            {activeSchedules.length > 0 && (
+              <span className="text-[11px] text-slate-500 font-semibold">Sorted by time slot</span>
+            )}
+          </div>
+
           {activeSchedules.length > 0 ? (
-            <div className="flex flex-col gap-6 relative pl-4 mt-2">
-              
-              {/* Blue Vertical Timeline Line */}
-              <div className="absolute left-[108px] top-[22px] bottom-[22px] w-[2px] bg-[#B9D1F9]"></div>
-
+            <div className="flex flex-col gap-3 relative w-full mt-1">
               {activeSchedules.map((item, idx) => (
-                <div key={item.id} className="flex gap-4 items-start relative">
-                  
-                  {/* Left Side: Time column */}
-                  <div className="w-16 flex flex-col items-center flex-shrink-0 pt-0.5">
-                    <span className="text-[11px] font-black text-[#052355] text-center leading-tight">{item.time}</span>
-                  </div>
-
-                  {/* Middle Side: Timeline node circle */}
-                  <div className="relative flex items-center justify-center h-6 w-6 z-10 flex-shrink-0">
-                    <div className={`rounded-full bg-white border-[#1E6BDB] ${
-                      idx === 0 
-                        ? 'w-3.5 h-3.5 border-[2.5px]' 
-                        : 'w-2.5 h-2.5 border-2'
-                    }`}></div>
-                  </div>
-
-                  {/* Right Side: Appointment Detail Card */}
-                  <div 
-                    onClick={() => handleJobClick(item.id, item.status)}
-                    className="flex-1 bg-white border border-slate-100 rounded-2xl p-4 shadow-2xs hover:shadow-xs cursor-pointer transition-all flex justify-between items-start"
-                  >
-                    <div className="text-left flex-1 min-w-0 pr-2">
-                      <h4 className="text-sm font-extrabold text-[#052355] truncate leading-tight">{item.category}</h4>
-                      <p className="text-xs text-slate-400 font-semibold mt-1 truncate">{item.customer}</p>
-                      <p className="text-[11px] text-slate-500 font-medium mt-1 truncate">{item.address}</p>
+                <div 
+                  key={item.id}
+                  onClick={() => handleJobClick(item.id, item.status)}
+                  className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs hover:shadow-sm cursor-pointer transition-all flex flex-col gap-3 group"
+                >
+                  {/* Top Bar: Time Slot & Status Pill */}
+                  <div className="flex justify-between items-center border-b border-slate-100 pb-2.5">
+                    <div className="flex items-center gap-1.5 text-xs font-black text-[#052355]">
+                      <Clock className="w-3.5 h-3.5 text-[#0D47A1]" />
+                      <span>{item.time}</span>
                     </div>
 
-                    <span className={`text-[10px] font-bold px-3 py-1 rounded-full tracking-wide whitespace-nowrap ${
-                      item.status === 'Completed'
-                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                        : item.status === 'Revisit'
-                          ? 'bg-purple-50 text-purple-700 border border-purple-200'
-                          : item.status === 'Confirmed'
-                            ? 'bg-green-50 text-green-700 border border-green-200'
-                            : 'bg-orange-55 text-orange-700 border border-orange-200'
-                    }`}>
-                      {item.status}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {item.isPriority && (
+                        <span className="text-[9px] font-black text-red-700 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full uppercase">
+                          Priority
+                        </span>
+                      )}
+                      <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase border ${
+                        item.status === 'Completed'
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                          : item.status === 'Revisit'
+                            ? 'bg-purple-50 text-purple-800 border-purple-200'
+                            : item.status === 'In Progress'
+                              ? 'bg-amber-50 text-amber-800 border-amber-200 animate-pulse'
+                              : 'bg-blue-50 text-blue-800 border-blue-200'
+                      }`}>
+                        {item.status}
+                      </span>
+                    </div>
                   </div>
 
+                  {/* Middle: Category & Customer Info */}
+                  <div className="flex justify-between items-start gap-2">
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-sm font-extrabold text-[#052355] truncate group-hover:text-[#0D47A1] transition-colors">
+                        {item.category}
+                      </h4>
+                      <p className="text-xs text-slate-700 font-bold mt-0.5">
+                        Customer: <span className="text-slate-900 font-black">{item.customer}</span>
+                      </p>
+                      <div className="flex items-start gap-1 text-[11px] text-slate-500 font-medium mt-1">
+                        <MapPin className="w-3.5 h-3.5 text-slate-400 flex-shrink-0 mt-0.5" />
+                        <span className="line-clamp-1 break-words">{item.address}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bottom Action Footer */}
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
+                    <span className="text-[11px] font-bold text-slate-400">Booking #{item.id?.slice(-6) || '8842'}</span>
+                    <div className="flex items-center gap-1 font-bold text-[#0D47A1] group-hover:translate-x-0.5 transition-transform">
+                      <span>{item.status === 'Completed' ? 'View Summary' : 'Open Active Job'}</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-slate-400 gap-3 border border-dashed border-slate-200 rounded-3xl my-2">
-              <Calendar className="h-10 w-10 text-slate-300" />
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-slate-400 gap-3 border-2 border-dashed border-slate-200/80 rounded-3xl my-2 bg-white/60">
+              <div className="w-14 h-14 bg-blue-50 rounded-full flex items-center justify-center text-[#0D47A1]">
+                <Calendar className="h-7 w-7 stroke-[1.8]" />
+              </div>
               <div>
                 <h4 className="text-sm font-bold text-[#052355]">No appointments for {selectedDateObj?.label || 'this day'}</h4>
-                <p className="text-xs text-slate-400 mt-1">Bookings made from customer app will appear here when scheduled.</p>
+                <p className="text-xs text-slate-400 mt-1 max-w-xs leading-relaxed">
+                  Bookings made by customers or follow-up visits will be scheduled here automatically.
+                </p>
               </div>
+              <button
+                onClick={() => navigate('/technician/dashboard')}
+                className="mt-2 text-xs font-bold text-[#0D47A1] hover:underline"
+              >
+                Go to Dashboard →
+              </button>
             </div>
           )}
         </div>
 
-        {/* Today's Summary Card */}
-        <div className="bg-[#EBF3FC] rounded-3xl p-5 border border-[#1A73E8]/10 shadow-2xs flex flex-col gap-4">
-          <span className="text-xs font-extrabold text-[#052355] text-left">Today's Summary</span>
+        {/* Daily Summary Card */}
+        <div className="bg-gradient-to-r from-blue-50/80 to-slate-50 rounded-3xl p-4 sm:p-5 border border-blue-100 shadow-2xs flex flex-col gap-3 w-full">
+          <div className="flex justify-between items-center">
+            <span className="text-xs font-black text-[#052355] uppercase tracking-wider">Performance Tally</span>
+            <span className="text-[10px] font-bold text-slate-500">Live Metric</span>
+          </div>
           
-          <div className="grid grid-cols-3 gap-3 text-center">
-            <div className="flex flex-col items-center justify-center">
-              <span className="text-2xl font-black text-[#052355]">{jobs.length}</span>
-              <span className="text-[10px] font-bold text-slate-450 uppercase mt-1">Total Jobs</span>
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="flex flex-col items-center justify-center bg-white rounded-2xl p-2.5 border border-slate-150">
+              <span className="text-lg sm:text-xl font-black text-[#052355]">{jobs.length}</span>
+              <span className="text-[9.5px] font-bold text-slate-400 uppercase mt-0.5">Total Jobs</span>
             </div>
             
-            <div className="flex flex-col items-center justify-center border-x border-slate-200">
-              <span className="text-2xl font-black text-[#052355]">₹{earningsTally.today.toLocaleString('en-IN')}</span>
-              <span className="text-[10px] font-bold text-slate-450 uppercase mt-1">Earnings</span>
+            <div className="flex flex-col items-center justify-center bg-white rounded-2xl p-2.5 border border-slate-150">
+              <span className="text-lg sm:text-xl font-black text-[#16A34A]">₹{earningsTally.today.toLocaleString('en-IN')}</span>
+              <span className="text-[9.5px] font-bold text-slate-400 uppercase mt-0.5">Earnings</span>
             </div>
             
-            <div className="flex flex-col items-center justify-center">
-              <span className="text-2xl font-black text-[#052355]">{earningsTally.completedToday}</span>
-              <span className="text-[10px] font-bold text-slate-450 uppercase mt-1">Completed</span>
+            <div className="flex flex-col items-center justify-center bg-white rounded-2xl p-2.5 border border-slate-150">
+              <span className="text-lg sm:text-xl font-black text-[#0D47A1]">{earningsTally.completedToday || 0}</span>
+              <span className="text-[9.5px] font-bold text-slate-400 uppercase mt-0.5">Completed</span>
             </div>
           </div>
         </div>
 
       </div>
-
-      {/* Sidebar Drawer Overlay */}
-      {isSidebarOpen && (
-        <div 
-          className="absolute inset-0 bg-[#052355]/40 backdrop-blur-xs z-30 transition-all flex justify-start"
-          onClick={() => setIsSidebarOpen(false)}
-        >
-          {/* Drawer Container */}
-          <div 
-            className="bg-white w-72 h-full shadow-2xl flex flex-col z-40 text-left"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header: Dark Blue Profile Section */}
-            <div className="bg-[#052355] text-white p-5 flex flex-col gap-3 relative">
-              <button 
-                onClick={() => setIsSidebarOpen(false)}
-                className="absolute top-4 right-4 p-1 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
-              >
-                <X className="h-4 w-4" />
-              </button>
-              
-              <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-extrabold text-xl shadow-md border-2 border-white/20 mt-2">
-                {getInitials(user?.name)}
-              </div>
-              
-              <div>
-                <h3 className="text-sm font-bold text-white leading-tight">{user?.name || 'Technician'}</h3>
-                <p className="text-[10px] text-slate-300 font-semibold mt-0.5">{user?.phone || user?.email || 'Nigam Care Partner'}</p>
-              </div>
-            </div>
-
-            {/* Menu List */}
-            <div className="flex-1 overflow-y-auto py-4 flex flex-col gap-1">
-              
-              {/* Dashboard / Jobs */}
-              <button 
-                onClick={() => { setIsSidebarOpen(false); navigate('/technician/dashboard'); }}
-                className="w-full px-5 py-3.5 flex items-center gap-3.5 hover:bg-slate-50 text-slate-600 hover:text-[#0D47A1] transition-colors text-left"
-              >
-                <Briefcase className="h-5 w-5 text-slate-400" />
-                <span className="text-xs font-bold">Dashboard (Jobs)</span>
-              </button>
-
-              {/* My Schedule */}
-              <button 
-                onClick={() => { setIsSidebarOpen(false); }}
-                className="w-full px-5 py-3.5 flex items-center gap-3.5 bg-blue-50/50 text-[#0D47A1] transition-colors text-left"
-              >
-                <Calendar className="h-5 w-5 text-[#0D47A1]" />
-                <span className="text-xs font-bold">My Schedule</span>
-              </button>
-
-              {/* Part Requests */}
-              <button 
-                onClick={() => { setIsSidebarOpen(false); navigate('/technician/raise-part-request?tab=claims'); }}
-                className="w-full px-5 py-3.5 flex items-center gap-3.5 hover:bg-slate-50 text-slate-600 hover:text-[#0D47A1] transition-colors text-left"
-              >
-                <ClipboardList className="h-5 w-5 text-slate-400" />
-                <span className="text-xs font-bold">Part Requests</span>
-              </button>
-
-              {/* Inventory */}
-              <button 
-                onClick={() => { setIsSidebarOpen(false); navigate('/technician/inventory'); }}
-                className="w-full px-5 py-3.5 flex items-center gap-3.5 hover:bg-slate-50 text-slate-600 hover:text-[#0D47A1] transition-colors text-left"
-              >
-                <Wrench className="h-5 w-5 text-slate-400" />
-                <span className="text-xs font-bold">My Inventory</span>
-              </button>
-
-              {/* Payout Settings */}
-              <button 
-                onClick={() => { setIsSidebarOpen(false); navigate('/technician/payout-settings'); }}
-                className="w-full px-5 py-3.5 flex items-center gap-3.5 hover:bg-slate-50 text-slate-600 hover:text-[#0D47A1] transition-colors text-left"
-              >
-                <CreditCard className="h-5 w-5 text-slate-400" />
-                <span className="text-xs font-bold">Payout Settings</span>
-              </button>
-
-              {/* KYC Verification */}
-              <button 
-                onClick={() => { setIsSidebarOpen(false); navigate('/technician/verification'); }}
-                className="w-full px-5 py-3.5 flex items-center gap-3.5 hover:bg-slate-50 text-slate-600 hover:text-[#0D47A1] transition-colors text-left"
-              >
-                <ShieldCheck className="h-5 w-5 text-slate-400" />
-                <span className="text-xs font-bold">KYC Verification</span>
-              </button>
-
-              {/* Help & Support */}
-              <button 
-                onClick={() => { setIsSidebarOpen(false); navigate('/technician/support'); }}
-                className="w-full px-5 py-3.5 flex items-center gap-3.5 hover:bg-slate-50 text-slate-600 hover:text-[#0D47A1] transition-colors text-left"
-              >
-                <HelpCircle className="h-5 w-5 text-slate-400" />
-                <span className="text-xs font-bold">Help & Support</span>
-              </button>
-
-              {/* Divider */}
-              <div className="h-[1px] bg-slate-100 my-2 mx-5"></div>
-
-              {/* Logout */}
-              <button 
-                onClick={() => { setIsSidebarOpen(false); setShowLogoutConfirm(true); }}
-                className="w-full px-5 py-3.5 flex items-center gap-3.5 hover:bg-red-50/20 text-red-500 transition-colors text-left"
-              >
-                <LogOut className="h-5 w-5 text-red-400" />
-                <span className="text-xs font-bold">Logout</span>
-              </button>
-
-            </div>
-
-            {/* Version Info */}
-            <div className="p-5 border-t border-slate-100 text-left">
-              <span className="text-[10px] font-bold text-slate-400">Partner App v2.4.1</span>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 py-3 px-6 flex justify-around items-center z-20 shadow-lg">
-        <button onClick={() => navigate('/technician/dashboard')} className="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-700 transition-all">
-          <Briefcase className="h-6 w-6 stroke-[2]" />
-          <span className="text-[10px] font-bold tracking-wide">Jobs</span>
-        </button>
-        <button onClick={() => navigate('/technician/raise-part-request?tab=claims')} className="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-700 transition-all">
-          <ClipboardList className="h-6 w-6 stroke-[2]" />
-          <span className="text-[10px] font-bold tracking-wide">Requests</span>
-        </button>
-        <button onClick={() => navigate('/technician/inventory')} className="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-700 transition-all">
-          <Wrench className="h-6 w-6 stroke-[2]" />
-          <span className="text-[10px] font-bold tracking-wide">Inventory</span>
-        </button>
-        <button onClick={() => navigate('/technician/schedule')} className="flex flex-col items-center gap-1 text-[#0D47A1] transition-all">
-          <Calendar className="h-6 w-6 stroke-[2.5]" />
-          <span className="text-[10px] font-black tracking-wide">Schedule</span>
-        </button>
-        <button onClick={() => navigate('/technician/profile')} className="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-700 transition-all">
-          <User className="h-6 w-6 stroke-[2]" />
-          <span className="text-[10px] font-bold tracking-wide">Profile</span>
-        </button>
-      </div>
-
-      {/* Logout Confirmation Modal Overlay */}
-      {showLogoutConfirm && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-6 z-[100] animate-fade-in">
-          <div className="bg-white border border-slate-100 rounded-[28px] p-6 max-w-xs w-full flex flex-col items-center text-center gap-4 shadow-xl">
-            <div className="w-12 h-12 bg-red-50 text-red-600 rounded-full flex items-center justify-center">
-              <LogOut className="h-5 w-5" />
-            </div>
-            <div>
-              <h4 className="text-sm font-black text-[#052355] mb-1">Log Out</h4>
-              <p className="text-[11px] text-slate-500 font-semibold leading-normal">
-                Are you sure you want to log out of your account?
-              </p>
-            </div>
-            <div className="flex gap-2.5 w-full mt-2">
-              <button
-                onClick={() => setShowLogoutConfirm(false)}
-                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-800 text-[10.5px] font-black py-2.5 rounded-xl transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={async () => {
-                  setShowLogoutConfirm(false);
-                  await logout();
-                  navigate('/technician/login', { replace: true });
-                }}
-                className="flex-1 bg-red-600 hover:bg-red-700 text-white text-[10.5px] font-black py-2.5 rounded-xl transition-colors cursor-pointer shadow-sm"
-              >
-                Yes, Log Out
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <TechBottomNav activeTab="schedule" />
 
     </div>
   );

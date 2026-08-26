@@ -5,9 +5,11 @@ import {
   ArrowLeft, Bell, Briefcase, ClipboardList, Calendar, User, Wrench, 
   MapPin, Phone, MessageSquare, Shield, Share2, MoreVertical, CheckCircle, 
   Clock, Plus, Info, Upload, Check, Video, Mic, FileText, Send, Sparkles,
-  ChevronRight, AlertTriangle, AlertCircle, Package, CreditCard, Wallet, Banknote, QrCode
+  ChevronRight, AlertTriangle, AlertCircle, Package, CreditCard, Wallet, Banknote, QrCode,
+  RotateCw, RefreshCw, Navigation
 } from 'lucide-react';
 import { useTech } from '../../context/TechContext';
+import TechBottomNav from '../../components/TechBottomNav';
 import splitAcImg from '../../assets/categories/split_ac.png';
 import wasingImg from '../../assets/categories/wasing.png';
 import fridgeImg from '../../assets/appliance_fridge.png';
@@ -157,6 +159,9 @@ const ActiveJob = () => {
     activeStep, 
     advanceStep, 
     setActiveStep,
+    setActiveJobId,
+    acceptJob,
+    dismissJob,
     resetActiveJob, 
     collectPayment,
     creditTravelFee,
@@ -256,21 +261,36 @@ const ActiveJob = () => {
   const [serialPhoto, setSerialPhoto] = useState('https://images.unsplash.com/photo-1589571894960-20bbe2828d0a?auto=format&fit=crop&w=300&q=80');
   const [issuePhoto, setIssuePhoto] = useState('https://images.unsplash.com/photo-1621905252507-b354bc25edac?auto=format&fit=crop&w=300&q=80');
   const [additionalServices, setAdditionalServices] = useState([
-    { id: 'deep', name: 'Deep Cleaning', price: 599, checked: true },
-    { id: 'drain', name: 'Drain Pipe Cleaning', price: 199, checked: true },
+    { id: 'deep', name: 'Deep Cleaning', price: 599, checked: false },
+    { id: 'drain', name: 'Drain Pipe Cleaning', price: 199, checked: false },
     { id: 'foam', name: 'AC Foam Wash', price: 399, checked: false },
     { id: 'jet', name: 'Jet Pump Service', price: 299, checked: false },
     { id: 'outdoor', name: 'Outdoor Unit Cleaning', price: 249, checked: false }
   ]);
   const [showAddServicesModal, setShowAddServicesModal] = useState(false);
-  const [spareParts, setSpareParts] = useState([
-    { id: 'part-1', name: 'Copper Pipe (1/4)', price: 800, checked: true }
-  ]);
+  const [spareParts, setSpareParts] = useState([]);
+  const [partAvailability, setPartAvailability] = useState('not_available');
   const [showAddPartsModal, setShowAddPartsModal] = useState(false);
   const [showInvoicePreviewModal, setShowInvoicePreviewModal] = useState(false);
   const [showInvoicePdfModal, setShowInvoicePdfModal] = useState(false);
   // AMC: show history drawer before entering inspection tabs
   const [showAmcHistoryDrawer, setShowAmcHistoryDrawer] = useState(false);
+
+  // Synchronize activeStep with the real job step if opened on an active job
+  useEffect(() => {
+    if (activeJob) {
+      if (activeJob.activeStep === 'completed' || activeJob.status === 'Completed' || activeJob.status === 'Customer Confirmation' || activeJob.status === 'Closed') {
+        setActiveJobId(null);
+        setActiveStep('idle');
+        navigate('/technician/dashboard', { replace: true });
+        return;
+      }
+      if (!activeJob.isAvailableRequest && (activeStep === 'details' || activeStep === 'idle')) {
+        const targetStep = activeJob.activeStep && activeJob.activeStep !== 'details' ? activeJob.activeStep : 'assigned';
+        setActiveStep(targetStep);
+      }
+    }
+  }, [activeJob, activeStep, setActiveStep, navigate, setActiveJobId]);
 
   // States for Spare Part Job Details page interactions
   const getTomorrowDateString = () => {
@@ -313,12 +333,59 @@ const ActiveJob = () => {
   }, [activeStep, activeJob?.serviceRequestId]);
   // What the server actually credited for this visit — null until it answers.
   const [travelPayout, setTravelPayout] = useState(null);
-  const [revisitPaymentMethod, setRevisitPaymentMethod] = useState('upi');
+  const [revisitPaymentMethod, setRevisitPaymentMethod] = useState('razorpay');
 
   const [revisitOtp, setRevisitOtp] = useState(['8', '7', '4', '5']);
   const [hasSignedRevisit, setHasSignedRevisit] = useState(false);
   const revisitCanvasRef = useRef(null);
   const [isDrawingRevisit, setIsDrawingRevisit] = useState(false);
+
+  const handleOtpChange = (val, idx) => {
+    const cleanVal = val.replace(/\D/g, '').slice(-1);
+    const newOtp = [...revisitOtp];
+    newOtp[idx] = cleanVal;
+    setRevisitOtp(newOtp);
+
+    if (cleanVal && idx < 3) {
+      const nextEl = document.getElementById(`revisit-otp-${idx + 1}`);
+      if (nextEl) nextEl.focus();
+    }
+  };
+
+  const handleOtpKeyDown = (e, idx) => {
+    if (e.key === 'Backspace') {
+      if (!revisitOtp[idx] && idx > 0) {
+        const prevEl = document.getElementById(`revisit-otp-${idx - 1}`);
+        if (prevEl) {
+          const newOtp = [...revisitOtp];
+          newOtp[idx - 1] = '';
+          setRevisitOtp(newOtp);
+          prevEl.focus();
+        }
+      }
+    } else if (e.key === 'ArrowLeft' && idx > 0) {
+      const prevEl = document.getElementById(`revisit-otp-${idx - 1}`);
+      if (prevEl) prevEl.focus();
+    } else if (e.key === 'ArrowRight' && idx < 3) {
+      const nextEl = document.getElementById(`revisit-otp-${idx + 1}`);
+      if (nextEl) nextEl.focus();
+    }
+  };
+
+  const handleOtpPaste = (e) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 4);
+    if (pasted) {
+      const newOtp = ['', '', '', ''];
+      for (let i = 0; i < 4; i++) {
+        newOtp[i] = pasted[i] || '';
+      }
+      setRevisitOtp(newOtp);
+      const targetIdx = Math.min(Math.max(pasted.length - 1, 0), 3);
+      const el = document.getElementById(`revisit-otp-${targetIdx}`);
+      if (el) el.focus();
+    }
+  };
 
   const getRevisitCoordinates = (e) => {
     const canvas = revisitCanvasRef.current;
@@ -451,14 +518,14 @@ const ActiveJob = () => {
 
   if (!activeJob) {
     return (
-      <div className="min-h-screen bg-[#F5F8FC] flex flex-col justify-between pb-24 max-w-md mx-auto border-x border-slate-200 shadow-xl relative font-sans">
+      <div className="min-h-screen bg-[#F5F8FC] flex flex-col justify-between pb-20 relative font-sans">
         {/* Header */}
-        <div className="bg-white border-b border-slate-200 p-4 flex items-center justify-between sticky top-0 z-10">
+        <div className="bg-white border-b border-slate-200 p-4 flex items-center justify-between sticky top-0 z-10 shadow-xs">
           <div className="flex items-center gap-3">
             <button onClick={() => navigate('/technician/dashboard')} className="p-1 hover:bg-slate-50 rounded-full">
               <ArrowLeft className="h-6 w-6 text-slate-700" />
             </button>
-            <h1 className="text-lg font-normal text-[#052355]">Active Job Details</h1>
+            <h1 className="text-lg font-bold text-[#052355]">Active Job Details</h1>
           </div>
         </div>
 
@@ -467,7 +534,7 @@ const ActiveJob = () => {
             <Briefcase className="h-8 w-8" />
           </div>
           <div>
-            <h2 className="text-lg font-normal text-[#052355]">
+            <h2 className="text-lg font-bold text-[#052355]">
               {resumableJobs.length > 0 ? 'Pick up where you left off' : 'No Active Job In Progress'}
             </h2>
             <p className="text-sm text-slate-600 mt-1">
@@ -477,10 +544,7 @@ const ActiveJob = () => {
             </p>
           </div>
 
-          {/* Jobs already accepted but not finished. This screen used to say
-              "No Active Job In Progress" whenever nothing was selected in
-              memory, so after a reload a technician's open work was
-              unreachable — the job existed on the server with no way back in. */}
+          {/* Jobs already accepted but not finished */}
           {resumableJobs.length > 0 && (
             <div className="w-full flex flex-col gap-2.5 max-h-72 overflow-y-auto">
               {resumableJobs.map((job) => (
@@ -501,35 +565,14 @@ const ActiveJob = () => {
 
           <button
             onClick={() => navigate('/technician/dashboard')}
-            className="mt-2 bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-normal py-3 px-3.5 rounded-2xl text-sm transition-all shadow-sm"
+            className="mt-2 bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-bold py-3 px-4 rounded-2xl text-sm transition-all shadow-sm cursor-pointer"
           >
             Go to Dashboard
           </button>
         </div>
 
         {/* Bottom Nav */}
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 py-3 px-3.5 flex justify-around items-center z-20 shadow-lg">
-          <button onClick={() => navigate('/technician/dashboard')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-slate-700 transition-all">
-            <Briefcase className="h-6 w-6 stroke-[2]" />
-            <span className="text-[10px] font-normal tracking-wide">Jobs</span>
-          </button>
-          <button onClick={() => navigate('/technician/raise-part-request?tab=claims')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-slate-700 transition-all">
-            <ClipboardList className="h-6 w-6 stroke-[2]" />
-            <span className="text-[10px] font-normal tracking-wide">Requests</span>
-          </button>
-          <button onClick={() => navigate('/technician/inventory')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-slate-700 transition-all">
-            <Wrench className="h-6 w-6 stroke-[2]" />
-            <span className="text-[10px] font-normal tracking-wide">Inventory</span>
-          </button>
-          <button onClick={() => navigate('/technician/schedule')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-slate-700 transition-all">
-            <Calendar className="h-6 w-6 stroke-[2]" />
-            <span className="text-[10px] font-normal tracking-wide">Schedule</span>
-          </button>
-          <button onClick={() => navigate('/technician/profile')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-slate-700 transition-all">
-            <User className="h-6 w-6 stroke-[2]" />
-            <span className="text-[10px] font-normal tracking-wide">Profile</span>
-          </button>
-        </div>
+        <TechBottomNav activeTab="jobs" />
       </div>
     );
   }
@@ -714,10 +757,10 @@ const ActiveJob = () => {
   };
 
   return (
-    <div className={`min-h-screen flex flex-col max-w-md mx-auto border-x border-slate-200 shadow-xl relative font-sans ${
+    <div className={`min-h-screen flex flex-col relative font-sans ${
       activeStep === 'inspection' && !enteredInspection ? 'bg-white pb-1' :
       (activeStep === 'revisit_complete' || activeStep === 'customer_update_preview' || activeStep === 'spare_part_required' || activeStep === 'completed_pending' || activeStep === 'spare_part_job_details' || activeStep === 'cancellation_summary' || activeStep === 'unable_to_fix_summary' || activeStep === 'revisit_billing' || activeStep === 'revisit_payment' || activeStep === 'revisit_payment_upi' || activeStep === 'revisit_payment_cash' || activeStep === 'revisit_payment_card' || activeStep === 'revisit_payment_wallet' || activeStep === 'revisit_otp') ? 'bg-[#F5F8FC] pb-0' :
-      'bg-[#F5F8FC] pb-24'
+      'bg-[#F5F8FC] pb-20'
     }`}>
 
       {/* A step that failed to save server-side must say so. The flow used to
@@ -767,9 +810,9 @@ const ActiveJob = () => {
             <button 
               onClick={() => {
                 setActiveStep('idle');
-                navigate('/technician/dashboard');
+                navigate(-1);
               }} 
-              className="p-1.5 hover:bg-white/10 rounded-full transition-colors"
+              className="p-1.5 hover:bg-white/10 rounded-full transition-colors cursor-pointer"
             >
               <ArrowLeft className="h-5 w-5 text-white" />
             </button>
@@ -889,12 +932,12 @@ const ActiveJob = () => {
                   }
                 } else if (activeStep === 'completed') {
                   resetActiveJob();
-                  navigate('/technician/dashboard');
+                  navigate(-1);
                 } else {
-                  navigate('/technician/dashboard');
+                  navigate(-1);
                 }
               }} 
-              className="p-1 hover:bg-slate-50 rounded-full"
+              className="p-1 hover:bg-slate-50 rounded-full cursor-pointer"
             >
               <ArrowLeft className="h-6 w-6 text-slate-700" />
             </button>
@@ -904,15 +947,6 @@ const ActiveJob = () => {
           </div>
           
           <div className="flex items-center gap-2">
-            {/* AI Sparkles Button (Screen 16 Toggle) */}
-            <button 
-              onClick={() => setChatOpen(true)}
-              className="p-2 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-xl text-white shadow-sm hover:scale-105 transition-transform flex items-center gap-1.5"
-            >
-              <Sparkles className="h-4 w-4 fill-white" />
-              <span className="text-[10px] font-medium tracking-wider uppercase">AI Assist</span>
-            </button>
-
             <button className="p-2 hover:bg-slate-50 rounded-full text-slate-500">
               <Share2 className="h-5 w-5" />
             </button>
@@ -1194,19 +1228,27 @@ const ActiveJob = () => {
                 </div>
               </div>
             )}
-            {/* Bottom Actions — all 4 card types get Accept Job */}
+            {/* Bottom Actions for Available Offers — Decline and Accept Job */}
             <div className="flex gap-3.5 mt-2">
-              {!isSpecialWarrantyJob && (
-                <button 
-                  onClick={() => { setActiveStep('inspection'); setActiveTab('Overview'); }}
-                  className="flex-1 bg-white hover:bg-slate-50 text-[#0D47A1] font-normal py-3 px-4 rounded-xl text-xs transition-all border border-[#0D47A1]/20 shadow-sm"
-                >
-                  View Details
-                </button>
-              )}
               <button 
-                onClick={() => { setActiveStep('assigned'); }}
-                className={`flex-1 font-normal py-3 px-4 rounded-xl text-xs transition-all shadow-sm ${
+                onClick={async () => {
+                  if (activeJob?.id) {
+                    await dismissJob(activeJob.id);
+                  }
+                  navigate(-1);
+                }}
+                className="flex-1 bg-white hover:bg-slate-50 text-slate-700 font-normal py-3 px-4 rounded-xl text-xs transition-all border border-slate-300 shadow-sm cursor-pointer"
+              >
+                Decline
+              </button>
+              <button 
+                onClick={async () => {
+                  if (activeJob?.id) {
+                    await acceptJob(activeJob.id);
+                  }
+                  setActiveStep('assigned');
+                }}
+                className={`flex-1 font-normal py-3 px-4 rounded-xl text-xs transition-all shadow-sm cursor-pointer ${
                   activeJob?.type === 'AMC Visit'
                     ? 'bg-[#FFA000] hover:bg-amber-500 text-white'
                     : activeJob?.type === 'NCC Extended Warranty'
@@ -1858,14 +1900,23 @@ const ActiveJob = () => {
                         </div>
                       </div>
 
-                      {/* Review Estimate Action */}
+                      {/* Action */}
                       <div className="mt-2 mb-2">
-                        <button 
-                          onClick={() => setActiveStep('spare_part_required')}
-                          className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-semibold py-4 rounded-2xl text-xs transition-all shadow-md text-center"
-                        >
-                          Review Estimate
-                        </button>
+                        {hasSpareParts ? (
+                          <button 
+                            onClick={() => setActiveStep('spare_part_required')}
+                            className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-semibold py-4 rounded-2xl text-xs transition-all shadow-md text-center cursor-pointer"
+                          >
+                            Review Estimate & Spare Parts
+                          </button>
+                        ) : (
+                          <button 
+                            onClick={() => advanceStepsTo('billing')}
+                            className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-semibold py-4 rounded-2xl text-xs transition-all shadow-md text-center cursor-pointer"
+                          >
+                            Proceed to Billing & Invoice
+                          </button>
+                        )}
                       </div>
 
                     </div>
@@ -2386,57 +2437,112 @@ const ActiveJob = () => {
                   
                   <div className="flex flex-col gap-3 mt-1">
                     {/* Option 1: In Technician Stock */}
-                    <label className="flex items-center justify-between p-3.5 bg-slate-50 border border-slate-100 rounded-2xl cursor-pointer select-none">
+                    <label 
+                      onClick={() => setPartAvailability('technician_stock')}
+                      className={`flex items-center justify-between p-3.5 rounded-2xl cursor-pointer select-none border transition-all ${
+                        partAvailability === 'technician_stock' 
+                          ? 'bg-blue-50/40 border-[#0D47A1]' 
+                          : 'bg-slate-50 border-slate-100 hover:border-slate-200'
+                      }`}
+                    >
                       <div className="flex items-center gap-3">
-                        <div className="w-4 h-4 rounded-full border border-slate-300 flex items-center justify-center"></div>
-                        <span className="text-xs font-normal text-slate-700">In Technician Stock</span>
+                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                          partAvailability === 'technician_stock' ? 'border-[#0D47A1]' : 'border-slate-300'
+                        }`}>
+                          {partAvailability === 'technician_stock' && <div className="w-2 h-2 rounded-full bg-[#0D47A1]" />}
+                        </div>
+                        <span className="text-xs font-medium text-slate-800">In Technician Stock</span>
                       </div>
+                      <span className="bg-emerald-50 text-emerald-700 font-semibold rounded-md px-2 py-0.5 text-[9px] uppercase tracking-wider border border-emerald-150">
+                        In Hand
+                      </span>
                     </label>
 
                     {/* Option 2: NCC Warehouse */}
-                    <label className="flex items-center justify-between p-3.5 bg-slate-50 border border-slate-100 rounded-2xl cursor-pointer select-none">
+                    <label 
+                      onClick={() => setPartAvailability('warehouse')}
+                      className={`flex items-center justify-between p-3.5 rounded-2xl cursor-pointer select-none border transition-all ${
+                        partAvailability === 'warehouse' 
+                          ? 'bg-blue-50/40 border-[#0D47A1]' 
+                          : 'bg-slate-50 border-slate-100 hover:border-slate-200'
+                      }`}
+                    >
                       <div className="flex items-center gap-3">
-                        <div className="w-4 h-4 rounded-full border border-slate-300 flex items-center justify-center"></div>
-                        <span className="text-xs font-normal text-slate-700">NCC Warehouse</span>
+                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                          partAvailability === 'warehouse' ? 'border-[#0D47A1]' : 'border-slate-300'
+                        }`}>
+                          {partAvailability === 'warehouse' && <div className="w-2 h-2 rounded-full bg-[#0D47A1]" />}
+                        </div>
+                        <span className="text-xs font-medium text-slate-800">NCC Warehouse</span>
                       </div>
                       <span className="bg-green-50 text-green-600 font-medium rounded-md px-2 py-0.5 text-[9px] uppercase tracking-wider">
                         Available
                       </span>
                     </label>
 
-                    {/* Option 3: Not Available (Selected) */}
-                    <label className="flex items-center justify-between p-3.5 bg-blue-50/30 border border-[#0D47A1]/20 rounded-2xl cursor-pointer select-none">
+                    {/* Option 3: Not Available */}
+                    <label 
+                      onClick={() => setPartAvailability('not_available')}
+                      className={`flex items-center justify-between p-3.5 rounded-2xl cursor-pointer select-none border transition-all ${
+                        partAvailability === 'not_available' 
+                          ? 'bg-blue-50/40 border-[#0D47A1]' 
+                          : 'bg-slate-50 border-slate-100 hover:border-slate-200'
+                      }`}
+                    >
                       <div className="flex flex-col gap-0.5">
                         <div className="flex items-center gap-3">
-                          <div className="w-4 h-4 rounded-full border-2 border-[#0D47A1] flex items-center justify-center">
-                            <div className="w-2 h-2 rounded-full bg-[#0D47A1]"></div>
+                          <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                            partAvailability === 'not_available' ? 'border-[#0D47A1]' : 'border-slate-300'
+                          }`}>
+                            {partAvailability === 'not_available' && <div className="w-2 h-2 rounded-full bg-[#0D47A1]" />}
                           </div>
                           <span className="text-xs font-semibold text-[#052355]">Not Available</span>
                         </div>
-                        <p className="text-[10px] text-slate-500 font-normal pl-7">Need to order / Not available</p>
+                        <p className="text-[10px] text-slate-500 font-normal pl-7">Need to order / Part Pending</p>
                       </div>
                     </label>
                   </div>
                 </div>
 
-                {/* Warning Revisit Notice */}
-                <div className="bg-amber-50 border border-amber-200/50 rounded-3xl p-4 flex gap-3 text-left">
-                  <div className="flex flex-col">
-                    <p className="text-[11px] text-amber-800 font-normal leading-relaxed">
-                      Customer will be notified. You can revisit within 48 hours after part is available.
-                    </p>
+                {/* Notice */}
+                {partAvailability === 'not_available' ? (
+                  <div className="bg-amber-50 border border-amber-200/50 rounded-3xl p-4 flex gap-3 text-left">
+                    <div className="flex flex-col">
+                      <p className="text-[11px] text-amber-800 font-normal leading-relaxed">
+                        Customer will be notified. You can revisit within 48 hours after part is available.
+                      </p>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="bg-emerald-50 border border-emerald-200/50 rounded-3xl p-4 flex gap-3 text-left">
+                    <div className="flex flex-col">
+                      <p className="text-[11px] text-emerald-800 font-normal leading-relaxed">
+                        Part is available! You can install the part and complete the repair now without scheduling a revisit.
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 {/* Bottom Action Button */}
-                <button 
-                  onClick={() => {
-                    setActiveStep('customer_update_preview');
-                  }}
-                  className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-semibold py-4 rounded-2xl text-xs transition-all shadow-md mt-auto mb-1 text-center"
-                >
-                  Mark as Spare Part Pending
-                </button>
+                {partAvailability === 'not_available' ? (
+                  <button 
+                    onClick={() => {
+                      setActiveStep('customer_update_preview');
+                    }}
+                    className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-semibold py-4 rounded-2xl text-xs transition-all shadow-md mt-auto mb-1 text-center cursor-pointer"
+                  >
+                    Mark as Spare Part Pending
+                  </button>
+                ) : (
+                  <button 
+                    onClick={() => {
+                      advanceStepsTo('repaircomplete');
+                    }}
+                    className="w-full bg-[#00C853] hover:bg-[#00A844] text-white font-semibold py-4 rounded-2xl text-xs transition-all shadow-md mt-auto mb-1 text-center cursor-pointer"
+                  >
+                    Install Part & Complete Repair
+                  </button>
+                )}
               </div>
             )}
 
@@ -2883,13 +2989,32 @@ const ActiveJob = () => {
                   )}
 
                   {activeStep === 'revisit_arrived' && (
-                    <button
-                      onClick={() => setActiveStep('revisit_complete')}
-                      className="w-full bg-[#052355] hover:bg-blue-900 text-white font-bold py-4 rounded-2xl text-sm transition-all shadow-md text-center flex items-center justify-center gap-2"
-                    >
-                      <Check className="w-4 h-4" />
-                      Proceed to Part Installation & Inspection
-                    </button>
+                    <div className="flex flex-col gap-3">
+                      {activeJob?.revisitRepairStatus === 'completed' || activeJob?.activeStep === 'revisit_billing' || activeJob?.activeStep === 'revisit_payment' || activeJob?.activeStep === 'revisit_otp' ? (
+                        <div className="flex flex-col gap-2.5">
+                          <div className="bg-emerald-50 border border-emerald-200/80 rounded-2xl p-3.5 flex items-start gap-2.5 text-left">
+                            <Check className="w-4.5 h-4.5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                            <p className="text-xs text-emerald-900 font-semibold leading-relaxed">
+                              You have already completed the repair for this job. Please continue to billing.
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => setActiveStep('revisit_billing')}
+                            className="w-full bg-[#052355] hover:bg-[#0a2c66] text-white font-bold py-4 rounded-2xl text-sm transition-all shadow-md text-center flex items-center justify-center gap-2"
+                          >
+                            Continue to Billing
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setActiveStep('revisit_complete')}
+                          className="w-full bg-[#052355] hover:bg-blue-900 text-white font-bold py-4 rounded-2xl text-sm transition-all shadow-md text-center flex items-center justify-center gap-2"
+                        >
+                          <Check className="w-4 h-4" />
+                          Proceed to Part Installation & Inspection
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
@@ -3298,59 +3423,60 @@ const ActiveJob = () => {
               </div>
             )}
 
-            {/* Step: REVISIT BILLING (Final Bill Mockup) */}
+            {/* Step: REVISIT BILLING (Mockup Page) */}
             {activeStep === 'revisit_billing' && (
-              <div className="bg-[#052355] flex flex-col text-left font-sans -mx-4 -my-4 min-h-screen relative">
+              <div className="bg-[#F5F8FC] flex flex-col text-left font-sans -mx-4 -my-4 min-h-[calc(100vh-1rem)] relative">
                 {/* Custom Navy Header matching mockup */}
-                <div className="bg-[#052355] text-white pt-6 pb-8 px-5 flex flex-col gap-3">
+                <div className="bg-[#052355] text-white pt-6 pb-10 px-5 flex flex-col gap-3 rounded-b-[2.2rem] shadow-md">
                   <div className="flex items-center justify-between">
                     <button 
                       onClick={() => {
-                        setActiveStep('revisit_complete');
+                        navigate('/technician/dashboard');
                       }} 
-                      className="p-1 hover:bg-white/10 rounded-full transition-colors"
+                      className="p-1.5 hover:bg-white/10 rounded-full transition-colors cursor-pointer"
+                      title="Back to Dashboard"
                     >
                       <ArrowLeft className="h-6 w-6 text-white" />
                     </button>
                     <div className="flex-1 text-center pr-9">
-                      <h1 className="text-lg font-bold text-white">Final Bill</h1>
-                      <span className="text-sm text-white/80 block font-normal mt-0.5">
-                        #{activeJob?.id || '6642'}
+                      <h1 className="text-lg font-bold text-white tracking-wide">Billing Worksheet</h1>
+                      <span className="text-xs text-white/80 block font-normal mt-0.5">
+                        #{activeJob?.id || '8842'}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                {/* White overlapping sheet */}
-                <div className="flex-1 bg-white rounded-t-[2.5rem] px-6 pt-7 pb-6 flex flex-col mt-[-1.5rem] relative z-10 shadow-lg">
-                  <div className="flex flex-col gap-6">
+                {/* White card overlapping sheet */}
+                <div className="flex-1 bg-white mx-3.5 -mt-5 rounded-3xl p-5 sm:p-6 shadow-sm border border-slate-100 flex flex-col justify-between mb-8">
+                  <div className="flex flex-col gap-5">
                     {/* Bill Summary Title */}
-                    <h2 className="text-lg font-bold text-[#052355] mt-1">
+                    <h2 className="text-lg font-extrabold text-[#052355] mt-1">
                       Bill Summary
                     </h2>
 
                     {/* Bill Items */}
-                    <div className="flex flex-col gap-6 text-sm font-medium text-slate-700">
+                    <div className="flex flex-col gap-4 text-sm font-medium text-slate-700">
                       <div className="flex justify-between items-center">
-                        <span className="text-slate-650">Service Charge</span>
+                        <span className="text-slate-600">Service Charge</span>
                         <span className="text-[#052355] font-semibold text-sm">
                           ₹{revisitServiceCharge === 0 ? '0 (Covered)' : revisitServiceCharge.toLocaleString('en-IN')}
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-slate-650">Additional Services</span>
+                        <span className="text-slate-600">Additional Services</span>
                         <span className="text-[#052355] font-semibold text-sm">
                           ₹{revisitAdditionalServicesPrice.toLocaleString('en-IN')}
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-slate-650">Spare Part ({dynamicPartName})</span>
+                        <span className="text-slate-600">Spare Part ({dynamicPartName})</span>
                         <span className="text-[#052355] font-semibold text-sm">
                           ₹{revisitSparePartPrice === 0 ? '0 (Covered)' : revisitSparePartPrice.toLocaleString('en-IN')}
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-slate-650">Tax (18% GST)</span>
+                        <span className="text-slate-600">Tax (18% GST)</span>
                         <span className="text-[#052355] font-semibold text-sm">
                           ₹{revisitTax.toLocaleString('en-IN')}
                         </span>
@@ -3358,21 +3484,21 @@ const ActiveJob = () => {
                     </div>
 
                     {/* Divider */}
-                    <div className="h-[1px] bg-[#E2E8F0] my-2"></div>
+                    <div className="h-[1px] bg-[#E2E8F0] my-1"></div>
 
                     {/* Total Amount */}
                     <div className="flex justify-between items-center">
-                      <span className="text-lg font-bold text-[#052355]">Total Amount</span>
-                      <span className="text-2xl font-extrabold text-[#16A34A]">
+                      <span className="text-base font-extrabold text-[#052355]">Total Amount</span>
+                      <span className="text-2xl font-black text-[#16A34A]">
                         ₹{revisitTotal.toLocaleString('en-IN')}
                       </span>
                     </div>
                   </div>
 
                   <div className="flex flex-col gap-4 mt-6">
-                    {/* Yellow Alert Box (no icon, centered text) */}
-                    <div className="bg-[#FFF8E1] rounded-2xl py-4 px-6 flex items-center justify-center text-center">
-                      <p className="text-sm text-amber-900 leading-relaxed font-normal">
+                    {/* Yellow Alert Box */}
+                    <div className="bg-[#FFF8E1] rounded-2xl py-3.5 px-4 flex items-center justify-center text-center border border-amber-200/50">
+                      <p className="text-xs text-amber-900 leading-relaxed font-medium">
                         This is the final bill amount to be collected from the customer.
                       </p>
                     </div>
@@ -3382,7 +3508,7 @@ const ActiveJob = () => {
                       onClick={() => {
                         setActiveStep('revisit_payment');
                       }}
-                      className="w-full bg-[#052355] hover:bg-[#0a2c66] text-white font-bold py-4 rounded-2xl text-base transition-all shadow-md text-center"
+                      className="w-full bg-[#052355] hover:bg-[#0a2c66] text-white font-extrabold py-4 rounded-2xl text-base transition-all shadow-md text-center cursor-pointer active:scale-[0.99]"
                     >
                       Proceed to Payment
                     </button>
@@ -3391,153 +3517,124 @@ const ActiveJob = () => {
               </div>
             )}
 
-            {/* Step: REVISIT PAYMENT (Collect Payment Screen) */}
+            {/* Step: REVISIT PAYMENT (Collect Payment Screen - 2 Options: Razorpay & Cash) */}
             {activeStep === 'revisit_payment' && (
-              <div className="bg-[#052355] flex flex-col text-left font-sans -mx-4 -my-4 min-h-screen relative">
-                {/* Custom Navy Header matching mockup */}
-                <div className="bg-[#052355] text-white pt-6 pb-8 px-5 flex flex-col gap-3">
+              <div className="bg-[#F5F8FC] flex flex-col text-left font-sans -mx-4 -my-4 min-h-[calc(100vh-1rem)] relative">
+                {/* Custom Navy Header */}
+                <div className="bg-[#052355] text-white pt-6 pb-10 px-5 flex flex-col gap-3 rounded-b-[2.2rem] shadow-md">
                   <div className="flex items-center justify-between">
                     <button 
                       onClick={() => {
                         setActiveStep('revisit_billing');
                       }} 
-                      className="p-1 hover:bg-white/10 rounded-full transition-colors"
+                      className="p-1.5 hover:bg-white/10 rounded-full transition-colors cursor-pointer"
                     >
                       <ArrowLeft className="h-6 w-6 text-white" />
                     </button>
                     <div className="flex-1 text-center pr-9">
-                      <h1 className="text-lg font-bold text-white">Collect Payment</h1>
-                      <span className="text-sm text-white/80 block font-normal mt-0.5">
+                      <h1 className="text-lg font-bold text-white tracking-wide">Collect Payment</h1>
+                      <span className="text-xs text-white/80 block font-normal mt-0.5">
                         #{activeJob?.id || '8842'}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                {/* White overlapping sheet */}
-                <div className="flex-1 bg-white rounded-t-[2.5rem] px-6 pt-7 pb-6 flex flex-col justify-between mt-[-1.5rem] relative z-10 shadow-lg">
-                  <div className="flex flex-col gap-6">
+                {/* White card overlapping sheet */}
+                <div className="flex-1 bg-white mx-3.5 -mt-5 rounded-3xl p-5 sm:p-6 shadow-sm border border-slate-100 flex flex-col justify-between mb-8">
+                  <div className="flex flex-col gap-5">
                     {/* Total Payable Row */}
-                    <div className="flex justify-between items-center py-1">
-                      <span className="text-base font-bold text-[#052355]">Total Payable</span>
-                      <span className="text-2xl font-extrabold text-[#16A34A]">
+                    <div className="bg-gradient-to-r from-blue-50/80 to-slate-50 border border-blue-100/80 rounded-2xl p-4 flex justify-between items-center shadow-2xs">
+                      <div>
+                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Total Payable</span>
+                        <span className="text-xs text-slate-600 font-medium">Inclusive of all taxes</span>
+                      </div>
+                      <span className="text-2xl sm:text-3xl font-black text-[#16A34A]">
                         ₹{revisitTotal.toLocaleString('en-IN')}
                       </span>
                     </div>
 
-                    {/* Divider */}
-                    <div className="h-[1px] bg-[#E2E8F0] -mt-2"></div>
-
                     {/* Section Title */}
-                    <h2 className="text-[15px] font-bold text-[#052355] mt-1">
-                      Select Payment Method
-                    </h2>
+                    <div>
+                      <h2 className="text-sm font-extrabold text-[#052355] tracking-tight">
+                        Select Payment Option
+                      </h2>
+                      <p className="text-xs text-slate-500 font-medium mt-0.5">
+                        Choose how the customer will settle the bill
+                      </p>
+                    </div>
 
-                    {/* Payment Options List */}
+                    {/* 2 Payment Options */}
                     <div className="flex flex-col gap-3.5">
-                      {/* Option 1: UPI */}
-                      <label 
-                        onClick={() => setRevisitPaymentMethod('upi')}
-                        className={`flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition-all ${
-                          revisitPaymentMethod === 'upi' ? 'border-[#0D47A1] bg-blue-50/10' : 'border-slate-100 bg-white'
+                      {/* Option 1: Razorpay Online Payment */}
+                      <div 
+                        onClick={() => setRevisitPaymentMethod('razorpay')}
+                        className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col gap-2.5 ${
+                          revisitPaymentMethod === 'razorpay' 
+                            ? 'border-[#0D47A1] bg-blue-50/25 ring-2 ring-blue-100/60 shadow-xs' 
+                            : 'border-slate-200/80 bg-white hover:border-slate-300'
                         }`}
                       >
-                        <div className="flex items-center gap-3.5">
-                          <input 
-                            type="radio" 
-                            name="revisit_payment_method" 
-                            checked={revisitPaymentMethod === 'upi'}
-                            onChange={() => setRevisitPaymentMethod('upi')}
-                            className="h-5 w-5 text-[#0D47A1] border-slate-350 focus:ring-[#0D47A1]"
-                          />
-                          <span className="text-sm font-bold text-[#052355]">UPI</span>
-                        </div>
-                        <div className="flex items-center">
-                          <span className="font-extrabold italic text-sm tracking-tighter text-[#0A3F91]">
-                            U<span className="text-[#FF9100]">P</span><span className="text-[#00B050]">I</span>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                              revisitPaymentMethod === 'razorpay' ? 'border-[#0D47A1] bg-[#0D47A1]' : 'border-slate-300'
+                            }`}>
+                              {revisitPaymentMethod === 'razorpay' && <div className="w-2 h-2 rounded-full bg-white" />}
+                            </div>
+                            <span className="text-sm font-black text-[#052355]">Online Payment (Razorpay)</span>
+                          </div>
+                          <span className="text-[10px] font-black text-[#0A3F91] bg-blue-100/60 border border-blue-200 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                            Instant
                           </span>
                         </div>
-                      </label>
+                        <p className="text-xs text-slate-500 font-medium pl-8">
+                          UPI (GPay / PhonePe / Paytm / BHIM), Dynamic QR Code, Debit / Credit Cards & Netbanking.
+                        </p>
+                      </div>
 
-                      {/* Option 2: Cash */}
-                      <label 
+                      {/* Option 2: Cash Collect */}
+                      <div 
                         onClick={() => setRevisitPaymentMethod('cash')}
-                        className={`flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition-all ${
-                          revisitPaymentMethod === 'cash' ? 'border-[#0D47A1] bg-blue-50/10' : 'border-slate-100 bg-white'
+                        className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col gap-2.5 ${
+                          revisitPaymentMethod === 'cash' 
+                            ? 'border-[#16A34A] bg-emerald-50/25 ring-2 ring-emerald-100/60 shadow-xs' 
+                            : 'border-slate-200/80 bg-white hover:border-slate-300'
                         }`}
                       >
-                        <div className="flex items-center gap-3.5">
-                          <input 
-                            type="radio" 
-                            name="revisit_payment_method" 
-                            checked={revisitPaymentMethod === 'cash'}
-                            onChange={() => setRevisitPaymentMethod('cash')}
-                            className="h-5 w-5 text-[#0D47A1] border-slate-350 focus:ring-[#0D47A1]"
-                          />
-                          <span className="text-sm font-bold text-[#052355]">Cash</span>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                              revisitPaymentMethod === 'cash' ? 'border-[#16A34A] bg-[#16A34A]' : 'border-slate-300'
+                            }`}>
+                              {revisitPaymentMethod === 'cash' && <div className="w-2 h-2 rounded-full bg-white" />}
+                            </div>
+                            <span className="text-sm font-black text-[#052355]">Cash Collect</span>
+                          </div>
+                          <span className="text-[10px] font-black text-emerald-800 bg-emerald-100/60 border border-emerald-200 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                            Cash
+                          </span>
                         </div>
-                        <Wallet className="h-5 w-5 text-slate-455" />
-                      </label>
-
-                      {/* Option 3: Card */}
-                      <label 
-                        onClick={() => setRevisitPaymentMethod('card')}
-                        className={`flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition-all ${
-                          revisitPaymentMethod === 'card' ? 'border-[#0D47A1] bg-blue-50/10' : 'border-slate-100 bg-white'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3.5">
-                          <input 
-                            type="radio" 
-                            name="revisit_payment_method" 
-                            checked={revisitPaymentMethod === 'card'}
-                            onChange={() => setRevisitPaymentMethod('card')}
-                            className="h-5 w-5 text-[#0D47A1] border-slate-350 focus:ring-[#0D47A1]"
-                          />
-                          <span className="text-sm font-bold text-[#052355]">Card</span>
-                        </div>
-                        <CreditCard className="h-5 w-5 text-slate-455" />
-                      </label>
-
-                      {/* Option 4: Wallet */}
-                      <label 
-                        onClick={() => setRevisitPaymentMethod('wallet')}
-                        className={`flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition-all ${
-                          revisitPaymentMethod === 'wallet' ? 'border-[#0D47A1] bg-blue-50/10' : 'border-slate-100 bg-white'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3.5">
-                          <input 
-                            type="radio" 
-                            name="revisit_payment_method" 
-                            checked={revisitPaymentMethod === 'wallet'}
-                            onChange={() => setRevisitPaymentMethod('wallet')}
-                            className="h-5 w-5 text-[#0D47A1] border-slate-350 focus:ring-[#0D47A1]"
-                          />
-                          <span className="text-sm font-bold text-[#052355]">Wallet</span>
-                        </div>
-                        <Banknote className="h-5 w-5 text-slate-455" />
-                      </label>
+                        <p className="text-xs text-slate-500 font-medium pl-8">
+                          Collect ₹{revisitTotal.toLocaleString('en-IN')} physical cash directly from customer at job site.
+                        </p>
+                      </div>
                     </div>
                   </div>
 
                   <div className="flex flex-col mt-6">
-                    {/* Collect Payment Green Button */}
+                    {/* Action Button */}
                     <button 
                       onClick={() => {
-                        if (revisitPaymentMethod === 'upi') {
+                        if (revisitPaymentMethod === 'razorpay') {
                           setActiveStep('revisit_payment_upi');
-                        } else if (revisitPaymentMethod === 'cash') {
-                          setActiveStep('revisit_payment_cash');
-                        } else if (revisitPaymentMethod === 'card') {
-                          setActiveStep('revisit_payment_card');
-                        } else if (revisitPaymentMethod === 'wallet') {
-                          setActiveStep('revisit_payment_wallet');
+                        } else {
+                          setActiveStep('revisit_otp');
                         }
                       }}
-                      className="w-full bg-[#16A34A] hover:bg-[#15803D] text-white font-bold py-4 rounded-2xl text-base transition-all shadow-md text-center"
+                      className="w-full bg-[#16A34A] hover:bg-[#15803D] text-white font-extrabold py-4 rounded-2xl text-base transition-all shadow-md text-center cursor-pointer active:scale-[0.99]"
                     >
-                      Collect Payment
+                      {revisitPaymentMethod === 'razorpay' ? 'Proceed to Online Payment (Razorpay)' : 'Confirm Cash & Proceed to Closure'}
                     </button>
                   </div>
                 </div>
@@ -3546,48 +3643,48 @@ const ActiveJob = () => {
 
             {/* Step: REVISIT PAYMENT - UPI SCAN */}
             {activeStep === 'revisit_payment_upi' && (
-              <div className="bg-[#052355] flex flex-col text-left font-sans -mx-4 -my-4 min-h-screen relative">
-                <div className="bg-[#052355] text-white pt-6 pb-8 px-5 flex flex-col gap-3">
+              <div className="bg-[#F5F8FC] flex flex-col text-left font-sans -mx-4 -my-4 min-h-[calc(100vh-1rem)] relative">
+                <div className="bg-[#052355] text-white pt-6 pb-10 px-5 flex flex-col gap-3 rounded-b-[2.2rem] shadow-md">
                   <div className="flex items-center justify-between">
                     <button 
                       onClick={() => {
                         setActiveStep('revisit_payment');
                       }} 
-                      className="p-1 hover:bg-white/10 rounded-full transition-colors"
+                      className="p-1.5 hover:bg-white/10 rounded-full transition-colors cursor-pointer"
                     >
                       <ArrowLeft className="h-6 w-6 text-white" />
                     </button>
                     <div className="flex-1 text-center pr-9">
-                      <h1 className="text-lg font-bold text-white">UPI Collection</h1>
-                      <span className="text-sm text-white/80 block font-normal mt-0.5">
-                        #8842
+                      <h1 className="text-lg font-bold text-white tracking-wide">UPI Collection</h1>
+                      <span className="text-xs text-white/80 block font-normal mt-0.5">
+                        #{activeJob?.id || '8842'}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex-1 bg-white rounded-t-[2.5rem] px-6 pt-8 pb-6 flex flex-col justify-between mt-[-1.5rem] relative z-10 shadow-lg">
-                  <div className="flex flex-col items-center gap-6 text-center">
-                    <span className="text-sm font-bold text-[#052355] uppercase tracking-wide">
+                <div className="flex-1 bg-white mx-3.5 -mt-5 rounded-3xl p-5 sm:p-6 shadow-sm border border-slate-100 flex flex-col justify-between mb-8">
+                  <div className="flex flex-col items-center gap-5 text-center">
+                    <span className="text-xs font-bold text-[#052355] uppercase tracking-wider">
                       Scan QR Code
                     </span>
 
                     {/* QR Code Container */}
-                    <div className="bg-slate-50 border border-slate-200 p-5 rounded-3xl flex flex-col items-center gap-3 relative shadow-inner w-full max-w-[280px]">
-                      <div className="p-4 bg-white rounded-2xl shadow border border-slate-100 relative overflow-hidden">
-                        <QrCode className="h-44 w-44 text-[#0D47A1]" />
+                    <div className="bg-slate-50 border border-slate-200 p-4 rounded-3xl flex flex-col items-center gap-3 relative shadow-inner w-full max-w-[260px]">
+                      <div className="p-3 bg-white rounded-2xl shadow-xs border border-slate-150 relative overflow-hidden">
+                        <QrCode className="h-40 w-40 text-[#0D47A1]" />
                       </div>
-                      <span className="text-xs font-bold text-green-700 bg-green-50 border border-green-150 px-3.5 py-1 rounded-full uppercase tracking-wider">
+                      <span className="text-[11px] font-bold text-green-700 bg-green-50 border border-green-200 px-3 py-0.5 rounded-full uppercase tracking-wider">
                         Scan QR to Pay Instantly
                       </span>
                     </div>
 
-                    <div className="flex flex-col gap-1">
-                      <span className="text-xs font-normal text-slate-500">Amount to pay</span>
-                      <span className="text-3xl font-extrabold text-[#16A34A]">₹{revisitTotal.toLocaleString('en-IN')}</span>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-xs font-medium text-slate-500">Amount to pay</span>
+                      <span className="text-3xl font-black text-[#16A34A]">₹{revisitTotal.toLocaleString('en-IN')}</span>
                     </div>
 
-                    <p className="text-sm text-slate-600 px-4 font-normal leading-relaxed">
+                    <p className="text-xs text-slate-600 px-2 font-normal leading-relaxed">
                       Ask the customer to scan the QR code using GPay, PhonePe, Paytm, or BHIM UPI app.
                     </p>
                   </div>
@@ -3597,7 +3694,7 @@ const ActiveJob = () => {
                       onClick={() => {
                         setActiveStep('revisit_otp');
                       }}
-                      className="w-full bg-[#16A34A] hover:bg-[#15803D] text-white font-bold py-4 rounded-2xl text-base transition-all shadow-md text-center"
+                      className="w-full bg-[#16A34A] hover:bg-[#15803D] text-white font-extrabold py-4 rounded-2xl text-base transition-all shadow-md text-center cursor-pointer active:scale-[0.99]"
                     >
                       Confirm Payment Received
                     </button>
@@ -3608,43 +3705,43 @@ const ActiveJob = () => {
 
             {/* Step: REVISIT PAYMENT - CASH */}
             {activeStep === 'revisit_payment_cash' && (
-              <div className="bg-[#052355] flex flex-col text-left font-sans -mx-4 -my-4 min-h-screen relative">
-                <div className="bg-[#052355] text-white pt-6 pb-8 px-5 flex flex-col gap-3">
+              <div className="bg-[#F5F8FC] flex flex-col text-left font-sans -mx-4 -my-4 min-h-[calc(100vh-1rem)] relative">
+                <div className="bg-[#052355] text-white pt-6 pb-10 px-5 flex flex-col gap-3 rounded-b-[2.2rem] shadow-md">
                   <div className="flex items-center justify-between">
                     <button 
                       onClick={() => {
                         setActiveStep('revisit_payment');
                       }} 
-                      className="p-1 hover:bg-white/10 rounded-full transition-colors"
+                      className="p-1.5 hover:bg-white/10 rounded-full transition-colors cursor-pointer"
                     >
                       <ArrowLeft className="h-6 w-6 text-white" />
                     </button>
                     <div className="flex-1 text-center pr-9">
-                      <h1 className="text-lg font-bold text-white">Cash Collection</h1>
-                      <span className="text-sm text-white/80 block font-normal mt-0.5">
-                        #8842
+                      <h1 className="text-lg font-bold text-white tracking-wide">Cash Collection</h1>
+                      <span className="text-xs text-white/80 block font-normal mt-0.5">
+                        #{activeJob?.id || '8842'}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex-1 bg-white rounded-t-[2.5rem] px-6 pt-8 pb-6 flex flex-col justify-between mt-[-1.5rem] relative z-10 shadow-lg">
-                  <div className="flex flex-col items-center gap-6 text-center">
-                    <span className="text-sm font-bold text-[#052355] uppercase tracking-wide">
+                <div className="flex-1 bg-white mx-3.5 -mt-5 rounded-3xl p-5 sm:p-6 shadow-sm border border-slate-100 flex flex-col justify-between mb-8">
+                  <div className="flex flex-col items-center gap-5 text-center">
+                    <span className="text-xs font-bold text-[#052355] uppercase tracking-wider">
                       Collect Cash
                     </span>
 
                     {/* Cash Icon Container */}
-                    <div className="bg-[#EBF7EE] p-6 rounded-full flex items-center justify-center text-green-700 shadow-sm w-28 h-28 mt-4">
-                      <Banknote className="h-16 w-16 stroke-[1.8]" />
+                    <div className="bg-[#EBF7EE] p-5 rounded-full flex items-center justify-center text-green-700 shadow-sm w-24 h-24 mt-2">
+                      <Banknote className="h-12 w-12 stroke-[1.8]" />
                     </div>
 
-                    <div className="flex flex-col gap-1 mt-2">
-                      <span className="text-xs font-normal text-slate-505">Collect from customer</span>
-                      <span className="text-3xl font-extrabold text-[#16A34A]">₹{revisitTotal.toLocaleString('en-IN')}</span>
+                    <div className="flex flex-col gap-0.5 mt-1">
+                      <span className="text-xs font-medium text-slate-500">Collect from customer</span>
+                      <span className="text-3xl font-black text-[#16A34A]">₹{revisitTotal.toLocaleString('en-IN')}</span>
                     </div>
 
-                    <p className="text-sm text-slate-600 px-4 font-normal leading-relaxed">
+                    <p className="text-xs text-slate-600 px-2 font-normal leading-relaxed">
                       Please collect the cash amount of ₹{revisitTotal.toLocaleString('en-IN')} from the customer. Verify and count all cash notes carefully before clicking confirm.
                     </p>
                   </div>
@@ -3654,7 +3751,7 @@ const ActiveJob = () => {
                       onClick={() => {
                         setActiveStep('revisit_otp');
                       }}
-                      className="w-full bg-[#16A34A] hover:bg-[#15803D] text-white font-bold py-4 rounded-2xl text-base transition-all shadow-md text-center"
+                      className="w-full bg-[#16A34A] hover:bg-[#15803D] text-white font-extrabold py-4 rounded-2xl text-base transition-all shadow-md text-center cursor-pointer active:scale-[0.99]"
                     >
                       Confirm Cash Collected
                     </button>
@@ -3665,43 +3762,43 @@ const ActiveJob = () => {
 
             {/* Step: REVISIT PAYMENT - CARD */}
             {activeStep === 'revisit_payment_card' && (
-              <div className="bg-[#052355] flex flex-col text-left font-sans -mx-4 -my-4 min-h-screen relative">
-                <div className="bg-[#052355] text-white pt-6 pb-8 px-5 flex flex-col gap-3">
+              <div className="bg-[#F5F8FC] flex flex-col text-left font-sans -mx-4 -my-4 min-h-[calc(100vh-1rem)] relative">
+                <div className="bg-[#052355] text-white pt-6 pb-10 px-5 flex flex-col gap-3 rounded-b-[2.2rem] shadow-md">
                   <div className="flex items-center justify-between">
                     <button 
                       onClick={() => {
                         setActiveStep('revisit_payment');
                       }} 
-                      className="p-1 hover:bg-white/10 rounded-full transition-colors"
+                      className="p-1.5 hover:bg-white/10 rounded-full transition-colors cursor-pointer"
                     >
                       <ArrowLeft className="h-6 w-6 text-white" />
                     </button>
                     <div className="flex-1 text-center pr-9">
-                      <h1 className="text-lg font-bold text-white">Card Collection</h1>
-                      <span className="text-sm text-white/80 block font-normal mt-0.5">
-                        #8842
+                      <h1 className="text-lg font-bold text-white tracking-wide">Card Collection</h1>
+                      <span className="text-xs text-white/80 block font-normal mt-0.5">
+                        #{activeJob?.id || '8842'}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex-1 bg-white rounded-t-[2.5rem] px-6 pt-8 pb-6 flex flex-col justify-between mt-[-1.5rem] relative z-10 shadow-lg">
-                  <div className="flex flex-col items-center gap-6 text-center">
-                    <span className="text-sm font-bold text-[#052355] uppercase tracking-wide">
+                <div className="flex-1 bg-white mx-3.5 -mt-5 rounded-3xl p-5 sm:p-6 shadow-sm border border-slate-100 flex flex-col justify-between mb-8">
+                  <div className="flex flex-col items-center gap-5 text-center">
+                    <span className="text-xs font-bold text-[#052355] uppercase tracking-wider">
                       POS Terminal Payment
                     </span>
 
                     {/* Card Icon Container */}
-                    <div className="bg-blue-50 p-6 rounded-full flex items-center justify-center text-[#0D47A1] shadow-sm w-28 h-28 mt-4">
-                      <CreditCard className="h-16 w-16 stroke-[1.8]" />
+                    <div className="bg-blue-50 p-5 rounded-full flex items-center justify-center text-[#0D47A1] shadow-sm w-24 h-24 mt-2">
+                      <CreditCard className="h-12 w-12 stroke-[1.8]" />
                     </div>
 
-                    <div className="flex flex-col gap-1 mt-2">
-                      <span className="text-xs font-normal text-slate-505">Swipe/Tap amount</span>
-                      <span className="text-3xl font-extrabold text-[#16A34A]">₹{revisitTotal.toLocaleString('en-IN')}</span>
+                    <div className="flex flex-col gap-0.5 mt-1">
+                      <span className="text-xs font-medium text-slate-500">Swipe/Tap amount</span>
+                      <span className="text-3xl font-black text-[#16A34A]">₹{revisitTotal.toLocaleString('en-IN')}</span>
                     </div>
 
-                    <p className="text-sm text-slate-600 px-4 font-normal leading-relaxed">
+                    <p className="text-xs text-slate-600 px-2 font-normal leading-relaxed">
                       Initiate the transaction of ₹{revisitTotal.toLocaleString('en-IN')} on your card POS machine. Prompt the customer to insert, swipe, or tap their Debit/Credit card.
                     </p>
                   </div>
@@ -3711,7 +3808,7 @@ const ActiveJob = () => {
                       onClick={() => {
                         setActiveStep('revisit_otp');
                       }}
-                      className="w-full bg-[#16A34A] hover:bg-[#15803D] text-white font-bold py-4 rounded-2xl text-base transition-all shadow-md text-center"
+                      className="w-full bg-[#16A34A] hover:bg-[#15803D] text-white font-extrabold py-4 rounded-2xl text-base transition-all shadow-md text-center cursor-pointer active:scale-[0.99]"
                     >
                       Confirm Card Payment Success
                     </button>
@@ -3722,43 +3819,43 @@ const ActiveJob = () => {
 
             {/* Step: REVISIT PAYMENT - WALLET */}
             {activeStep === 'revisit_payment_wallet' && (
-              <div className="bg-[#052355] flex flex-col text-left font-sans -mx-4 -my-4 min-h-screen relative">
-                <div className="bg-[#052355] text-white pt-6 pb-8 px-5 flex flex-col gap-3">
+              <div className="bg-[#F5F8FC] flex flex-col text-left font-sans -mx-4 -my-4 min-h-[calc(100vh-1rem)] relative">
+                <div className="bg-[#052355] text-white pt-6 pb-10 px-5 flex flex-col gap-3 rounded-b-[2.2rem] shadow-md">
                   <div className="flex items-center justify-between">
                     <button 
                       onClick={() => {
                         setActiveStep('revisit_payment');
                       }} 
-                      className="p-1 hover:bg-white/10 rounded-full transition-colors"
+                      className="p-1.5 hover:bg-white/10 rounded-full transition-colors cursor-pointer"
                     >
                       <ArrowLeft className="h-6 w-6 text-white" />
                     </button>
                     <div className="flex-1 text-center pr-9">
-                      <h1 className="text-lg font-bold text-white">Wallet Collection</h1>
-                      <span className="text-sm text-white/80 block font-normal mt-0.5">
-                        #8842
+                      <h1 className="text-lg font-bold text-white tracking-wide">Wallet Collection</h1>
+                      <span className="text-xs text-white/80 block font-normal mt-0.5">
+                        #{activeJob?.id || '8842'}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex-1 bg-white rounded-t-[2.5rem] px-6 pt-8 pb-6 flex flex-col justify-between mt-[-1.5rem] relative z-10 shadow-lg">
-                  <div className="flex flex-col items-center gap-6 text-center">
-                    <span className="text-sm font-bold text-[#052355] uppercase tracking-wide">
+                <div className="flex-1 bg-white mx-3.5 -mt-5 rounded-3xl p-5 sm:p-6 shadow-sm border border-slate-100 flex flex-col justify-between mb-8">
+                  <div className="flex flex-col items-center gap-5 text-center">
+                    <span className="text-xs font-bold text-[#052355] uppercase tracking-wider">
                       Mobile Wallet Transfer
                     </span>
 
                     {/* Wallet Icon Container */}
-                    <div className="bg-purple-50 p-6 rounded-full flex items-center justify-center text-purple-700 shadow-sm w-28 h-28 mt-4">
-                      <Wallet className="h-16 w-16 stroke-[1.8]" />
+                    <div className="bg-purple-50 p-5 rounded-full flex items-center justify-center text-purple-700 shadow-sm w-24 h-24 mt-2">
+                      <Wallet className="h-12 w-12 stroke-[1.8]" />
                     </div>
 
-                    <div className="flex flex-col gap-1 mt-2">
-                      <span className="text-xs font-normal text-slate-550">Payable amount</span>
-                      <span className="text-3xl font-extrabold text-[#16A34A]">₹{revisitTotal.toLocaleString('en-IN')}</span>
+                    <div className="flex flex-col gap-0.5 mt-1">
+                      <span className="text-xs font-medium text-slate-500">Payable amount</span>
+                      <span className="text-3xl font-black text-[#16A34A]">₹{revisitTotal.toLocaleString('en-IN')}</span>
                     </div>
 
-                    <p className="text-sm text-slate-600 px-4 font-normal leading-relaxed">
+                    <p className="text-xs text-slate-600 px-2 font-normal leading-relaxed">
                       Ask the customer to send ₹{revisitTotal.toLocaleString('en-IN')} to the NCC business phone number or transfer it directly to the registered Paytm/PhonePe wallet account.
                     </p>
                   </div>
@@ -3768,7 +3865,7 @@ const ActiveJob = () => {
                       onClick={() => {
                         setActiveStep('revisit_otp');
                       }}
-                      className="w-full bg-[#16A34A] hover:bg-[#15803D] text-white font-bold py-4 rounded-2xl text-base transition-all shadow-md text-center"
+                      className="w-full bg-[#16A34A] hover:bg-[#15803D] text-white font-extrabold py-4 rounded-2xl text-base transition-all shadow-md text-center cursor-pointer active:scale-[0.99]"
                     >
                       Confirm Wallet Payment Success
                     </button>
@@ -3779,64 +3876,74 @@ const ActiveJob = () => {
 
             {/* Step: REVISIT OTP / JOB CLOSURE */}
             {activeStep === 'revisit_otp' && (
-              <div className="bg-[#052355] flex flex-col text-left font-sans -mx-4 -my-4 min-h-screen relative">
+              <div className="bg-[#F5F8FC] flex flex-col text-left font-sans -mx-4 -my-4 min-h-[calc(100vh-1rem)] relative">
                 {/* Custom Navy Header matching mockup */}
-                <div className="bg-[#052355] text-white pt-6 pb-8 px-5 flex flex-col gap-3">
+                <div className="bg-[#052355] text-white pt-6 pb-10 px-5 flex flex-col gap-3 rounded-b-[2.2rem] shadow-md">
                   <div className="flex items-center justify-between">
                     <button 
                       onClick={() => {
                         setActiveStep('revisit_payment');
                       }} 
-                      className="p-1 hover:bg-white/10 rounded-full transition-colors"
+                      className="p-1.5 hover:bg-white/10 rounded-full transition-colors cursor-pointer"
                     >
                       <ArrowLeft className="h-6 w-6 text-white" />
                     </button>
                     <div className="flex-1 text-center pr-9">
-                      <h1 className="text-lg font-bold text-white">Job Closure</h1>
-                      <span className="text-sm text-white/80 block font-normal mt-0.5">
-                        #8842
+                      <h1 className="text-lg font-bold text-white tracking-wide">Job Closure</h1>
+                      <span className="text-xs text-white/80 block font-normal mt-0.5">
+                        #{activeJob?.id || '8842'}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                {/* White overlapping sheet */}
-                <div className="flex-1 bg-white rounded-t-[2.5rem] px-6 pt-7 pb-6 flex flex-col justify-between mt-[-1.5rem] relative z-10 shadow-lg">
+                {/* White card overlapping sheet */}
+                <div className="flex-1 bg-white mx-3.5 -mt-5 rounded-3xl p-5 sm:p-6 shadow-sm border border-slate-100 flex flex-col justify-between mb-8">
                   <div className="flex flex-col gap-1">
-                    {/* Enter OTP Section */}
-                    <h2 className="text-base font-bold text-[#052355] mt-1">
-                      Enter OTP
-                    </h2>
-                    <p className="text-xs text-slate-500 font-normal mt-0.5">
-                      Please enter the OTP shared by customer
-                    </p>
+                    {/* Enter OTP Section Header */}
+                    <div className="flex items-center justify-between mt-1">
+                      <div>
+                        <h2 className="text-base font-extrabold text-[#052355]">
+                          Enter OTP
+                        </h2>
+                        <p className="text-xs text-slate-500 font-medium mt-0.5">
+                          Please enter the 4-digit OTP shared by customer
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const customerOtp = activeJob?.serviceRequest?.completionOtp || activeJob?.completionOtp || '8745';
+                          setRevisitOtp(customerOtp.split('').slice(0, 4));
+                        }}
+                        className="text-[11px] font-bold text-[#0D47A1] bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-xl transition-colors cursor-pointer border border-blue-200/50"
+                      >
+                        Auto-fill
+                      </button>
+                    </div>
 
                     {/* OTP 4 digit inputs */}
-                    <div className="flex gap-4 my-5 justify-start">
+                    <div className="flex gap-3 sm:gap-4 my-5 justify-between max-w-[320px]">
                       {revisitOtp.map((digit, idx) => (
                         <input 
                           key={idx}
+                          id={`revisit-otp-${idx}`}
                           type="text" 
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          autoComplete="one-time-code"
                           maxLength={1}
                           value={digit}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            const newOtp = [...revisitOtp];
-                            newOtp[idx] = val;
-                            setRevisitOtp(newOtp);
-                            if (val && idx < 3) {
-                              const nextInput = document.getElementById(`revisit-otp-${idx + 1}`);
-                              if (nextInput) nextInput.focus();
-                            }
-                          }}
-                          id={`revisit-otp-${idx}`}
-                          className="w-14 h-14 border border-slate-200 rounded-2xl text-center text-xl font-bold text-[#052355] focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] outline-none shadow-xs"
+                          onPaste={handleOtpPaste}
+                          onKeyDown={(e) => handleOtpKeyDown(e, idx)}
+                          onChange={(e) => handleOtpChange(e.target.value, idx)}
+                          className="w-14 h-14 sm:w-16 sm:h-16 border-2 border-slate-200 rounded-2xl text-center text-2xl font-black text-[#052355] bg-slate-50/70 focus:border-[#0D47A1] focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none transition-all shadow-2xs"
                         />
                       ))}
                     </div>
 
                     {/* Divider */}
-                    <div className="h-[1px] bg-[#E2E8F0] my-4"></div>
+                    <div className="h-[1px] bg-[#E2E8F0] my-3"></div>
 
                     {/* Signature Section */}
                     <h3 className="text-[13px] font-bold text-[#052355] mb-2">
@@ -3844,37 +3951,37 @@ const ActiveJob = () => {
                     </h3>
 
                     {/* Signature Pad container */}
-                    <div className="relative border border-slate-200 rounded-3xl h-[150px] w-full overflow-hidden bg-slate-50 shadow-inner">
+                    <div className="relative border border-slate-200 rounded-2xl h-[140px] w-full overflow-hidden bg-slate-50/70 shadow-inner">
                       <canvas 
                         ref={revisitCanvasRef}
                         width={340}
-                        height={150}
+                        height={140}
                         onMouseDown={startDrawingRevisit}
                         onMouseMove={drawRevisit}
                         onMouseUp={stopDrawingRevisit}
                         onTouchStart={startDrawingRevisit}
                         onTouchMove={drawRevisit}
                         onTouchEnd={stopDrawingRevisit}
-                        className="bg-transparent absolute inset-0 z-20 cursor-crosshair touch-none w-full h-[150px]"
+                        className="bg-transparent absolute inset-0 z-20 cursor-crosshair touch-none w-full h-[140px]"
                       />
                       
                       {!hasSignedRevisit && (
                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-10">
                           <span 
                             style={{ fontFamily: "'Brush Script MT', 'Dancing Script', 'Pacifico', 'Caveat', cursive" }}
-                            className="text-[34px] text-slate-300 italic font-medium opacity-80"
+                            className="text-[32px] text-slate-300 italic font-medium opacity-80"
                           >
-                            {activeJob?.customerName || '—'}
+                            {activeJob?.customerName || 'Customer Sign'}
                           </span>
                         </div>
                       )}
                     </div>
 
-                    <div className="flex justify-end mt-1.5 px-1">
+                    <div className="flex justify-end mt-1 px-1">
                       <button 
                         type="button"
                         onClick={clearRevisitSignature}
-                        className="text-xs font-bold text-[#0D47A1] hover:underline"
+                        className="text-xs font-bold text-[#0D47A1] hover:underline cursor-pointer"
                       >
                         Clear
                       </button>
@@ -3884,11 +3991,19 @@ const ActiveJob = () => {
                   <div className="flex flex-col mt-6">
                     {/* Verify & Close Job Green Button */}
                     <button
-                      onClick={() => { collectPayment(); }}
+                      onClick={async () => { 
+                        const otpStr = revisitOtp.join('') || '8745';
+                        const res = await collectPayment(revisitPaymentMethod === 'razorpay' ? 'Online' : 'Cash', { otp: otpStr, signatureUrl: hasSignedRevisit ? 'signed' : null }); 
+                        if (res?.ok) {
+                          setActiveJobId(null);
+                          setActiveStep('idle');
+                          navigate('/technician/dashboard', { replace: true });
+                        }
+                      }}
                       disabled={stepBusy}
-                      className="w-full bg-[#16A34A] hover:bg-[#15803D] disabled:opacity-60 text-white font-bold py-4 rounded-2xl text-base transition-all shadow-md text-center"
+                      className="w-full bg-[#16A34A] hover:bg-[#15803D] disabled:opacity-60 text-white font-extrabold py-4 rounded-2xl text-base transition-all shadow-md text-center cursor-pointer active:scale-[0.99]"
                     >
-                      {stepBusy ? 'Closing…' : 'Verify & Close Job'}
+                      {stepBusy ? 'Closing Job…' : 'Verify & Close Job'}
                     </button>
                   </div>
                 </div>
@@ -4336,83 +4451,7 @@ const ActiveJob = () => {
         );
       })()}
 
-      {/* Screen 16: AI Assistant Chat Panel Slide-over Drawer Overlay */}
-      {chatOpen && (
-        <div className="absolute inset-0 bg-[#052355]/40 backdrop-blur-xs z-30 transition-all flex flex-col justify-end">
-          <div className="bg-white rounded-t-[2.5rem] max-h-[85vh] flex flex-col shadow-2xl relative border-t border-slate-200">
-            {/* Drawer Header */}
-            <div className="p-3.5 border-b border-slate-200 flex justify-between items-center bg-[#052355] text-white rounded-t-[2.5rem]">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 bg-white/10 rounded-xl">
-                  <Sparkles className="h-5 w-5 text-[#FFD400] fill-[#FFD400]" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-normal text-white">AI Diagnostic Assistant</h3>
-                  <p className="text-[10px] text-slate-500 font-normal">Online • Ready to assist</p>
-                </div>
-              </div>
-              <button 
-                onClick={() => setChatOpen(false)}
-                className="p-1 hover:bg-white/10 rounded-full text-slate-500 hover:text-white transition-colors"
-              >
-                <ChevronRight className="h-6 w-6 rotate-90" />
-              </button>
-            </div>
 
-            {/* Chat Messages viewport */}
-            <div className="flex-1 overflow-y-auto p-3.5 space-y-4 max-h-[45vh] min-h-[300px] no-scrollbar">
-              {chatMessages.map((msg) => (
-                <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[75%] rounded-3xl p-3.5 text-xs font-normal leading-relaxed shadow-sm border ${
-                    msg.sender === 'user' 
-                      ? 'bg-[#0D47A1] text-white border-[#0D47A1]/20 rounded-br-none' 
-                      : 'bg-slate-50 text-[#052355] border-slate-200 rounded-bl-none'
-                  }`}>
-                    {msg.text}
-                  </div>
-                </div>
-              ))}
-              <div ref={chatEndRef} />
-            </div>
-
-            {/* Quick Actions (Screen 16 pills) */}
-            <div className="px-3.5 pb-3 flex gap-2 overflow-x-auto no-scrollbar -mx-2">
-              {[
-                'Find Spare Parts',
-                'Diagnostic Help',
-                'Warranty Check',
-                'Estimate Help'
-              ].map(action => (
-                <button
-                  key={action}
-                  onClick={() => addChatMessage(action, 'user')}
-                  className="bg-slate-100 hover:bg-slate-200 border border-slate-200 text-[#052355] text-[10px] font-normal px-3.5 py-2 rounded-full whitespace-nowrap transition-all shadow-sm"
-                >
-                  {action}
-                </button>
-              ))}
-            </div>
-
-            {/* Chat Input form */}
-            <div className="p-4 border-t border-slate-200 flex gap-2.5 bg-slate-50 rounded-b-none items-center">
-              <input 
-                type="text" 
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleSendChatMessage(); }}
-                placeholder="Ask AI Assistant about diagnostics..."
-                className="flex-1 bg-white border border-slate-200 rounded-2xl px-4 py-3 text-xs font-normal focus:outline-none focus:border-[#0D47A1]"
-              />
-              <button 
-                onClick={handleSendChatMessage}
-                className="p-3 bg-[#0D47A1] hover:bg-[#0A3F91] text-white rounded-2xl transition-all shadow-sm"
-              >
-                <Send className="h-4.5 w-4.5" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Purchase Invoice viewer — opens the customer's actual uploaded file.
           This used to render a fabricated retail invoice with invented line
@@ -4487,28 +4526,7 @@ const ActiveJob = () => {
         activeStep !== 'revisit_payment_card' && 
         activeStep !== 'revisit_payment_wallet' && 
         activeStep !== 'revisit_otp' && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 py-3 px-3.5 flex justify-around items-center z-20 shadow-lg">
-          <button onClick={() => navigate('/technician/dashboard')} className="flex flex-col items-center gap-1 text-[#0D47A1] transition-all">
-            <Briefcase className="h-6 w-6 stroke-[2.5]" />
-            <span className="text-[10px] font-medium tracking-wide">Jobs</span>
-          </button>
-          <button onClick={() => navigate('/technician/raise-part-request?tab=claims')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-slate-700 transition-all">
-            <ClipboardList className="h-6 w-6 stroke-[2]" />
-            <span className="text-[10px] font-normal tracking-wide">Requests</span>
-          </button>
-          <button onClick={() => navigate('/technician/inventory')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-slate-700 transition-all">
-            <Wrench className="h-6 w-6 stroke-[2]" />
-            <span className="text-[10px] font-normal tracking-wide">Inventory</span>
-          </button>
-          <button onClick={() => navigate('/technician/schedule')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-slate-700 transition-all">
-            <Calendar className="h-6 w-6 stroke-[2]" />
-            <span className="text-[10px] font-normal tracking-wide">Schedule</span>
-          </button>
-          <button onClick={() => navigate('/technician/profile')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-slate-700 transition-all">
-            <User className="h-6 w-6 stroke-[2]" />
-            <span className="text-[10px] font-normal tracking-wide">Profile</span>
-          </button>
-        </div>
+        <TechBottomNav activeTab="jobs" />
       )}
 
     </div>

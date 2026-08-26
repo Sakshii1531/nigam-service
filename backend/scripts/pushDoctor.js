@@ -83,13 +83,18 @@ function checkCredentials() {
 /** Does Firebase actually accept these credentials? */
 async function checkFirebaseAuth(account) {
   try {
-    const { default: admin } = await import('firebase-admin');
-    if (!admin.apps.length) {
-      admin.initializeApp({ credential: admin.credential.cert(account) });
+    const adminModule = await import('firebase-admin');
+    const admin = adminModule.default || adminModule;
+    const apps = admin.apps || admin.getApps?.() || [];
+    const certFn = admin.credential?.cert || adminModule.cert;
+    const initAppFn = admin.initializeApp || adminModule.initializeApp;
+
+    if (!apps.length) {
+      initAppFn({ credential: certFn(account) });
     }
     // getAccessToken() is the cheapest call that proves the key is live: it
     // round-trips to Google rather than just validating the JSON shape.
-    await admin.credential.cert(account).getAccessToken();
+    await certFn(account).getAccessToken();
     console.log(`${PASS} Firebase accepted the credentials`);
     return admin;
   } catch (err) {
