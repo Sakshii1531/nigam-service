@@ -9,10 +9,10 @@ import {
 } from 'lucide-react';
 
 const WEIGHT_META = [
-  { key: 'proximity', label: 'Location Proximity' },
-  { key: 'skill', label: 'Skill Match' },
-  { key: 'rating', label: 'Rating' },
-  { key: 'workload', label: 'Workload (fewer jobs)' },
+  { key: 'proximity', label: 'Location & Distance' },
+  { key: 'skill', label: 'Skill Matching' },
+  { key: 'rating', label: 'Customer Rating' },
+  { key: 'workload', label: 'Current Workload' },
 ];
 
 const Assignment = () => {
@@ -224,8 +224,8 @@ const Assignment = () => {
                   <SlidersHorizontal size={18} />
                 </div>
                 <div>
-                  <h3 className="font-bold text-[#1E293B]">Assignment Logic</h3>
-                  <p className="text-xs text-[#64748B]">Configure how the system ranks & assigns technicians</p>
+                  <h3 className="font-bold text-[#1E293B]">Assignment Mode</h3>
+                  <p className="text-xs text-[#64748B]">Choose how technicians are assigned to service requests</p>
                 </div>
               </div>
 
@@ -257,7 +257,7 @@ const Assignment = () => {
                   <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-start gap-2.5">
                     <Sparkles className="w-4 h-4 text-[#0D47A1] flex-shrink-0 mt-0.5" />
                     <p className="text-xs text-[#0D47A1] font-medium leading-relaxed">
-                      <strong>Automated Assignment Mode Active:</strong> Incoming service requests are evaluated against location proximity, rating, skills, and workload, and automatically assigned without requiring admin intervention.
+                      <strong>Auto Mode Active:</strong> Incoming service requests are automatically assigned using technician location, rating, skills, and current workload.
                     </p>
                   </div>
 
@@ -290,20 +290,20 @@ const Assignment = () => {
                   <div>
                     <div className="flex items-center gap-2 mb-3">
                       <Zap size={18} className="text-green-600" />
-                      <h4 className="text-sm font-bold text-[#1E293B]">Automatic Dispatch System</h4>
+                      <h4 className="text-sm font-bold text-[#1E293B]">Auto-Assign Status</h4>
                     </div>
 
                     <p className="text-xs text-slate-600 leading-relaxed">
-                      When Auto-Assignment is enabled, the system continuously pairs incoming service requests with the highest-scoring technician based on proximity, ratings, and workload balance.
+                      Auto-assignment matches each request with the best available technician based on distance, ratings, and active jobs.
                     </p>
 
                     <div className="mt-4 p-4 bg-white border border-slate-200 rounded-xl space-y-2">
                       <div className="flex justify-between text-xs font-semibold text-slate-700">
                         <span>System Mode:</span>
-                        <span className="text-green-600 font-bold uppercase tracking-wider">Fully Autonomous</span>
+                        <span className="text-green-600 font-bold uppercase tracking-wider">Automatic</span>
                       </div>
                       <div className="flex justify-between text-xs font-semibold text-slate-700">
-                        <span>Pending Unassigned Requests:</span>
+                        <span>Unassigned Requests:</span>
                         <span className="font-bold text-[#0D47A1]">{requests.length}</span>
                       </div>
                       <div className="flex justify-between text-xs font-semibold text-slate-700">
@@ -317,7 +317,7 @@ const Assignment = () => {
                     onClick={runAutoAssignment}
                     className="w-full mt-4 py-3 bg-[#0D47A1] text-white text-sm font-bold rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
                   >
-                    <Zap size={16} /> Run Auto-Assign Now ({requests.length} Pending)
+                    <Zap size={16} /> Assign All Automatically ({requests.length})
                   </button>
                 </div>
               </div>
@@ -325,7 +325,7 @@ const Assignment = () => {
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center gap-2">
                 <UserPlus className="w-4 h-4 text-slate-600 flex-shrink-0" />
                 <p className="text-xs text-slate-600 font-medium">
-                  <strong>Manual Assignment Mode Active:</strong> Select an unassigned request from the left column and pick an available technician from the right column to pair directly.
+                  <strong>Manual Mode Active:</strong> Select an unassigned request on the left, then pick a technician on the right to assign directly.
                 </p>
               </div>
             )}
