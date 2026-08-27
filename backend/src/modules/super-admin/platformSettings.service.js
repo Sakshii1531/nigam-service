@@ -7,8 +7,19 @@ export async function getSettings() {
   return settings;
 }
 
+export async function getPublicSettings() {
+  const settings = await getSettings();
+  return {
+    platformName: settings.platformName,
+    logoUrl: settings.logoUrl || null,
+    maintenanceMode: !!settings.maintenanceMode,
+    supportEmail: settings.supportEmail || null,
+  };
+}
+
 const EDITABLE_FIELDS = [
   'platformName',
+  'logoUrl',
   'supportEmail',
   'maintenanceMode',
   'emailNotifications',

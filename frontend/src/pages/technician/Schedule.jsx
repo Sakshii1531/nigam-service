@@ -7,6 +7,7 @@ import {
   MapPin, Phone, ArrowRight, RotateCw, Sparkles
 } from 'lucide-react';
 import TechBottomNav from '../../components/TechBottomNav';
+import TechTopNav from '../../components/TechTopNav';
 import { useTech } from '../../context/TechContext';
 import { useNotifications } from '../../context/NotificationContext';
 
@@ -78,10 +79,13 @@ const Schedule = () => {
   const currentMonthYear = today.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
   return (
-    <div className="min-h-screen bg-[#F4F7FC] flex flex-col pb-28 relative font-sans w-full max-w-full overflow-x-hidden text-left">
-      
-      {/* Header Section with Back Button & Signature Navy Gradient */}
-      <div className="bg-gradient-to-b from-[#052355] to-[#0A337A] text-white pt-5 pb-7 px-4 shadow-md rounded-b-[2.2rem] sticky top-0 z-20">
+    <div className="min-h-screen bg-[#F4F7FC] flex flex-col pb-28 lg:pb-8 lg:pt-14 font-sans relative">
+
+      {/* Desktop Top Nav */}
+      <TechTopNav activePage="schedule" />
+
+      {/* Header — mobile only */}
+      <div className="bg-gradient-to-b from-[#052355] to-[#0A337A] text-white pt-4 pb-5 px-4 shadow-md rounded-b-[2rem] sticky top-0 z-20 flex flex-col gap-2 lg:hidden">
         <div className="flex items-center justify-between">
           <button 
             type="button"
@@ -124,7 +128,7 @@ const Schedule = () => {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 px-3.5 pt-3.5 flex flex-col gap-4 w-full">
+      <div className="flex-1 px-3.5 pt-3.5 flex flex-col gap-4 max-w-screen-lg mx-auto w-full">
         
         {/* Horizontal Calendar Date Ribbon */}
         <div className="bg-white rounded-3xl p-3.5 border border-slate-200/80 shadow-2xs flex flex-col gap-2.5">

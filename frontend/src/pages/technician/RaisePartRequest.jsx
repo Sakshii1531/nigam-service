@@ -6,6 +6,7 @@ import {
   Package, ShoppingCart, Layers, Cpu, Wind, Droplets, Zap, Shield, Flame, Trash2, ArrowRight
 } from 'lucide-react';
 import TechBottomNav from '../../components/TechBottomNav';
+import TechTopNav from '../../components/TechTopNav';
 import { useTech } from '../../context/TechContext';
 import { useNotifications } from '../../context/NotificationContext';
 
@@ -170,7 +171,10 @@ const RaisePartRequest = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F4F7FC] flex flex-col pb-28 relative font-sans text-left">
+    <div className="min-h-screen bg-[#F4F7FC] flex flex-col pb-28 lg:pb-8 lg:pt-14 relative font-sans text-left">
+      
+      {/* Desktop Top Nav */}
+      <TechTopNav activePage="requests" />
       
       {/* Selected Pending Part Detail Drawer View */}
       {selectedPendingPart ? (
@@ -238,8 +242,8 @@ const RaisePartRequest = () => {
         </div>
       ) : (
         <>
-          {/* Header Section */}
-          <div className="bg-gradient-to-b from-[#052355] to-[#0A337A] text-white pt-5 pb-7 px-4 shadow-md rounded-b-[2.2rem] sticky top-0 z-20">
+          {/* Header Section — mobile only */}
+          <div className="bg-gradient-to-b from-[#052355] to-[#0A337A] text-white pt-5 pb-7 px-4 shadow-md rounded-b-[2.2rem] sticky top-0 z-20 lg:hidden">
             <div className="flex items-center justify-between">
               <button 
                 type="button"
@@ -334,12 +338,11 @@ const RaisePartRequest = () => {
           </div>
 
           {/* Main Content Area */}
-          <div className="flex-1 px-3.5 pt-3.5 flex flex-col gap-3.5">
+          <div className="flex-1 px-3.5 pt-3.5 flex flex-col gap-3.5 max-w-screen-lg mx-auto w-full">
             
             {/* VIEW 1: INVENTORY */}
             {activeTab === 'inventory' && (
               <div className="flex flex-col gap-3.5">
-                
                 {/* Search Bar */}
                 <div className="relative">
                   <input 

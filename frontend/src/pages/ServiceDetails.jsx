@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Search, Star, Tag, CreditCard, ChevronRight, Menu, X, CheckCircle2 } from 'lucide-react';
+import CustomerTopNav from '../components/CustomerTopNav';
 
 // Assets
 import acImg from '../assets/most_booked_ac_1.png';
@@ -346,10 +347,13 @@ const ServiceDetails = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F7FA] flex flex-col pb-0 relative">
+    <div className="min-h-screen bg-[#F5F7FA] flex flex-col pb-0 lg:pt-14 relative">
 
-      {/* ── Top Bar ── */}
-      <div className="bg-white px-4 pt-5 pb-3 flex items-center justify-between sticky top-0 z-20">
+      {/* Desktop Top Nav */}
+      <CustomerTopNav activePage="home" />
+
+      {/* ── Top Bar — mobile only ── */}
+      <div className="bg-white px-4 pt-5 pb-3 flex items-center justify-between sticky top-0 z-20 lg:hidden">
         <button
           onClick={() => navigate(-1)}
           className="p-1.5 hover:bg-slate-100 rounded-full transition-colors"
@@ -363,6 +367,9 @@ const ServiceDetails = () => {
           <Search className="h-5 w-5 text-slate-700" />
         </button>
       </div>
+
+      {/* Container wrapper for desktop */}
+      <div className="max-w-screen-lg mx-auto w-full flex-1 flex flex-col pb-24">
 
       {/* ── Offer Banners ── */}
       <div className="flex gap-2 px-4 pt-3 pb-2 overflow-x-auto no-scrollbar">
@@ -954,6 +961,7 @@ const ServiceDetails = () => {
         </div>
       )}
 
+      </div>
     </div>
   );
 };

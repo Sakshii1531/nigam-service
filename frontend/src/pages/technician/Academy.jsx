@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Award, Play, BookOpen, ChevronRight } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
+import TechTopNav from '../../components/TechTopNav';
 
 const CATEGORY_TONE = [
   'text-[#00C853] bg-green-50',
@@ -39,9 +40,13 @@ const Academy = () => {
   const activeBlog = blogs.find((b) => b.id === activeBlogId);
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-16 relative font-sans">
-      {/* Header */}
-      <div className="bg-[#052355] text-white px-4 py-3.5 flex items-center justify-between sticky top-0 z-10 shadow-md">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-16 lg:pb-8 lg:pt-14 relative font-sans">
+
+      {/* Desktop Top Nav */}
+      <TechTopNav activePage="profile" />
+
+      {/* Header — mobile only */}
+      <div className="bg-[#052355] text-white px-4 py-3.5 flex items-center justify-between sticky top-0 z-10 shadow-md lg:hidden">
         <div className="flex items-center gap-3">
           <button 
             onClick={() => {
@@ -119,7 +124,7 @@ const Academy = () => {
       ) : (
 
         /* Academy Hub List */
-        <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-5 bg-slate-50 pb-8 text-left">
+        <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-5 bg-slate-50 pb-8 text-left max-w-screen-lg mx-auto w-full">
           {error && (
             <div className="bg-rose-50 border border-rose-200 rounded-xl px-3 py-2 text-[11px] font-semibold text-rose-600">
               {error}

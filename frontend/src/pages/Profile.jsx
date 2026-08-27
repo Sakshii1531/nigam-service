@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { apiRequest } from '../lib/apiClient';
+import CustomerTopNav from '../components/CustomerTopNav';
 
 import partnerImg from '../assets/working/Gemini_Generated_Image_ahi7orahi7orahi7-removebg-preview (1).png';
 
@@ -86,10 +87,13 @@ const Profile = () => {
   }, [user]);
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-24">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-24 lg:pb-8 lg:pt-14">
       
-      {/* Header */}
-      <div className="px-6 pt-5 pb-3 flex justify-between items-center bg-white sticky top-0 z-50 shadow-xs border-b border-slate-100">
+      {/* Desktop Top Nav */}
+      <CustomerTopNav activePage="account" />
+
+      {/* Header — mobile only */}
+      <div className="px-6 pt-5 pb-3 flex justify-between items-center bg-white sticky top-0 z-50 shadow-xs border-b border-slate-100 lg:hidden">
         <h1 className="text-xl font-black text-slate-900">My Account</h1>
         <div className="flex items-center gap-4">
           <button 
@@ -102,7 +106,7 @@ const Profile = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-5 no-scrollbar">
+      <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-5 no-scrollbar max-w-screen-lg mx-auto w-full">
         
         {/* User Quick Info */}
         <div 

@@ -11,6 +11,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { apiRequest } from '../../lib/apiClient';
 import TechBottomNav from '../../components/TechBottomNav';
+import TechTopNav from '../../components/TechTopNav';
 import techAvatar from '../../assets/tech_avatar.png';
 
 const ProfilePage = () => {
@@ -49,10 +50,13 @@ const ProfilePage = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-[#F4F7FC] flex flex-col pb-28 font-sans relative text-left">
+    <div className="min-h-screen bg-[#F4F7FC] flex flex-col pb-28 lg:pb-8 lg:pt-14 font-sans relative text-left">
 
-      {/* Signature Dark Navy Header */}
-      <div className="bg-gradient-to-b from-[#052355] to-[#0A337A] text-white pt-5 pb-8 px-4 shadow-md rounded-b-[2.2rem] sticky top-0 z-20">
+      {/* Desktop Top Nav */}
+      <TechTopNav activePage="profile" />
+
+      {/* Signature Dark Navy Header — mobile only */}
+      <div className="bg-gradient-to-b from-[#052355] to-[#0A337A] text-white pt-5 pb-8 px-4 shadow-md rounded-b-[2.2rem] sticky top-0 z-20 lg:hidden">
         <div className="flex items-center justify-between">
           <button 
             type="button"
@@ -79,7 +83,7 @@ const ProfilePage = () => {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 px-3.5 -mt-4 flex flex-col gap-3.5 relative z-30">
+      <div className="flex-1 px-3.5 -mt-4 lg:mt-4 flex flex-col gap-3.5 relative z-30 max-w-screen-lg mx-auto w-full">
 
         {/* Profile Card */}
         <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-2xs flex flex-col gap-3">

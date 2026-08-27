@@ -9,6 +9,7 @@ import { useNotifications } from '../../context/NotificationContext';
 import { useAuth } from '../../context/AuthContext';
 import PushPermissionPrompt from '../../components/PushPermissionPrompt';
 import TechBottomNav from '../../components/TechBottomNav';
+import TechTopNav from '../../components/TechTopNav';
 import techAvatar from '../../assets/tech_avatar.png';
 
 const Dashboard = () => {
@@ -268,15 +269,18 @@ const Dashboard = () => {
   );
 
   return (
-    <div className="tech-app-container min-h-screen bg-[#F5F8FC] flex flex-col pb-20 relative font-sans">
+    <div className="tech-app-container min-h-screen bg-[#F5F8FC] flex flex-col pb-20 lg:pb-8 lg:pt-14 relative font-sans">
 
       {/* First-run push notification permission prompt */}
       <PushPermissionPrompt subtitle="Enable notifications to get new job alerts, payouts and announcements instantly." />
 
+      {/* Desktop Top Nav — hidden on mobile/tablet */}
+      <TechTopNav activePage="jobs" />
+
       {/* Top Banner / Header Section */}
       {showAllJobs ? (
-        /* White Header for Jobs List Screen (Screen 2) */
-        <div className="bg-white px-3.5 py-4 flex justify-between items-center z-10 border-b border-slate-200 shadow-xs">
+        /* White Header for Jobs List Screen (Screen 2) — hidden on desktop */
+        <div className="bg-white px-3.5 py-4 flex justify-between items-center z-10 border-b border-slate-200 shadow-xs lg:hidden">
           <button 
             onClick={() => setShowAllJobs(false)}
             className="p-1 hover:bg-slate-100 rounded-full transition-colors text-[#052355] cursor-pointer"
@@ -299,8 +303,8 @@ const Dashboard = () => {
           </div>
         </div>
       ) : (
-        /* Top Navy Blue Banner - Wraps both Header and Greeting Card */
-        <div className="bg-[#052355] text-white pt-4 pb-6 px-4 rounded-b-[2rem] flex flex-col gap-4 shadow-lg">
+        /* Top Navy Blue Banner - Wraps both Header and Greeting Card — hidden on desktop */
+        <div className="bg-[#052355] text-white pt-4 pb-6 px-4 rounded-b-[2rem] flex flex-col gap-4 shadow-lg lg:hidden">
           {/* Header Bar */}
           <div className="flex justify-between items-center text-white">
             <div className="flex items-center gap-2">
@@ -402,13 +406,13 @@ const Dashboard = () => {
       )}
 
       {/* Main Container below the Navy Blue Banner */}
-      <div className="flex-1 px-3.5 py-4 flex flex-col gap-5">
+      <div className="flex-1 px-3.5 py-4 lg:px-6 xl:px-8 flex flex-col gap-5 max-w-screen-xl mx-auto w-full">
 
         {/* VIEW 1: HOME DASHBOARD */}
         {!showAllJobs && (
           <>
-            {/* Redesigned Combined Stats Card (2x2 Grid) */}
-            <div className="bg-white rounded-[24px] border border-slate-200 shadow-sm p-4.5 grid grid-cols-2 -mt-8 relative z-10">
+            {/* Redesigned Combined Stats Card (2x2 Grid — 4-col on desktop) */}
+            <div className="bg-white rounded-[24px] border border-slate-200 shadow-sm p-4.5 grid grid-cols-2 lg:grid-cols-4 -mt-8 lg:mt-0 relative z-10">
               {/* Card 1: Available Jobs */}
               <div className="flex flex-col items-center text-center justify-between min-h-[76px] pb-3 pr-2 border-r border-b border-slate-100">
                 <div className="flex items-center gap-1.5 justify-center">
@@ -489,7 +493,7 @@ const Dashboard = () => {
               <p className="text-[10px] text-slate-500">Pending jobs requiring spare parts or follow-up visit</p>
 
               {revisitJobs.length > 0 ? (
-                <div className="flex flex-col gap-2.5 mt-1.5">
+                <div className="flex flex-col gap-2.5 mt-1.5 lg:grid lg:grid-cols-2">
                   {revisitJobs.map((job) => {
                     const isRevisitScheduled = job.activeStep === 'revisit_scheduled' || job.revisitScheduledDate;
                     const isRevisitOnTheWay = job.activeStep === 'revisit_ontheway';
@@ -607,7 +611,7 @@ const Dashboard = () => {
               </div>
 
               {/* List of Nearby Jobs */}
-              <div className="flex flex-col gap-2.5">
+              <div className="flex flex-col gap-2.5 lg:grid lg:grid-cols-2">
                 {nearbyJobs.length > 0 ? (
                   nearbyJobs.map((job) => {
                     const type = job.type.toLowerCase();
@@ -812,7 +816,7 @@ const Dashboard = () => {
             </div>
 
             {/* Jobs List (WITH Accept/Decline buttons) */}
-            <div className="flex flex-col gap-3.5 mt-1">
+            <div className="flex flex-col gap-3.5 mt-1 lg:grid lg:grid-cols-2">
               {filteredJobs.length > 0 ? (
                 filteredJobs.map((job) => {
                   const isExpanded = expandedJobId === job.id;

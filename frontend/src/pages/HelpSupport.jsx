@@ -11,6 +11,7 @@ import {
   MapPin,
   ChevronRight,
 } from 'lucide-react';
+import CustomerTopNav from '../components/CustomerTopNav';
 
 const HelpSupport = () => {
   const navigate = useNavigate();
@@ -55,10 +56,13 @@ const HelpSupport = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-10">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-10 lg:pb-8 lg:pt-14">
 
-      {/* Header */}
-      <div className="bg-white px-5 py-4 flex items-center gap-3 sticky top-0 z-50 shadow-sm border-b border-slate-100">
+      {/* Desktop Top Nav */}
+      <CustomerTopNav activePage="account" />
+
+      {/* Header — mobile only */}
+      <div className="bg-white px-5 py-4 flex items-center gap-3 sticky top-0 z-50 shadow-sm border-b border-slate-100 lg:hidden">
         <button
           onClick={() => navigate('/profile')}
           className="p-1.5 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
@@ -75,8 +79,8 @@ const HelpSupport = () => {
           <p className="text-xs font-black uppercase tracking-[3px] text-[#1565C0]">HELP & SUPPORT</p>
         </div>
 
-        {/* Main Menu List */}
-        <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-sm flex flex-col divide-y divide-slate-100">
+        {/* Main Menu List — 2-col on desktop */}
+        <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-sm flex flex-col lg:grid lg:grid-cols-2 divide-y lg:divide-y-0 lg:gap-px lg:bg-slate-100">
           {menuItems.map((item, i) => (
             <div
               key={i}

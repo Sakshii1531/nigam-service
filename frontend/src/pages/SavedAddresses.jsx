@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, MapPin, Home, Briefcase, Plus, X, Pencil, Trash2, Star, Check, Sparkles, RefreshCw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { apiRequest } from '../lib/apiClient';
+import CustomerTopNav from '../components/CustomerTopNav';
 
 const SavedAddresses = () => {
   const navigate = useNavigate();
@@ -166,7 +167,10 @@ const SavedAddresses = () => {
   };
 
   return (
-    <div className="min-h-screen bg-bg-light flex flex-col pb-20 relative">
+    <div className="min-h-screen bg-bg-light flex flex-col pb-20 lg:pb-8 lg:pt-14 relative">
+
+      {/* Desktop Top Nav */}
+      <CustomerTopNav activePage="account" />
 
       {/* Floating Toast Notification */}
       {toastMsg && (
@@ -176,8 +180,8 @@ const SavedAddresses = () => {
         </div>
       )}
 
-      {/* Header */}
-      <div className="bg-[#E3ECF9] p-6 rounded-b-[30px] shadow-sm flex items-center gap-4">
+      {/* Header — mobile only */}
+      <div className="bg-[#E3ECF9] p-6 rounded-b-[30px] shadow-sm flex items-center gap-4 lg:hidden">
         <button
           onClick={() => navigate(-1)}
           className="p-2 bg-white rounded-full shadow-sm hover:bg-slate-50 transition-colors cursor-pointer"
@@ -188,7 +192,7 @@ const SavedAddresses = () => {
       </div>
 
       {/* Content */}
-      <div className="flex-1 p-6 flex flex-col gap-4 max-w-3xl mx-auto w-full">
+      <div className="flex-1 p-6 flex flex-col lg:grid lg:grid-cols-2 gap-4 max-w-screen-lg mx-auto w-full">
         {loading ? (
           <div className="flex flex-col items-center justify-center p-12 text-slate-400 gap-2">
             <RefreshCw className="h-6 w-6 animate-spin text-[#0D47A1]" />
