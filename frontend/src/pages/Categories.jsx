@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Home as HomeIcon, ShoppingCart, Calendar, Wrench, User, LayoutGrid } from 'lucide-react';
+import CustomerTopNav from '../components/CustomerTopNav';
 
 // Import images for Sidebar
 import handymanSidebar from '../assets/categories/plumber_fixed.png';
@@ -445,9 +446,13 @@ const Categories = () => {
   };
 
   return (
-    <div className="h-screen bg-slate-50 flex flex-col overflow-hidden pb-16 relative">
-      {/* Header */}
-      <div className="bg-white px-5 pt-4 pb-0 flex items-center gap-3 shadow-sm border-b border-slate-100 flex-shrink-0">
+    <div className="h-screen bg-slate-50 flex flex-col overflow-hidden pb-16 lg:pb-0 lg:pt-14 relative">
+      
+      {/* Desktop Top Nav */}
+      <CustomerTopNav activePage="categories" />
+
+      {/* Header — mobile only */}
+      <div className="bg-white px-5 pt-4 pb-0 flex items-center gap-3 shadow-sm border-b border-slate-100 flex-shrink-0 lg:hidden">
         <button
           onClick={() => navigate(-1)}
           className="p-1.5 hover:bg-slate-100 rounded-full transition-colors cursor-pointer flex items-center justify-center"
@@ -458,7 +463,7 @@ const Categories = () => {
       </div>
 
       {/* Main Split Layout */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden max-w-screen-xl mx-auto w-full">
         {/* Left Sidebar */}
         <div className="w-24 bg-[#EAF4FF]/50 border-r border-slate-100 flex flex-col py-3 overflow-y-auto select-none flex-shrink-0">
           {sidebarCategories.map((cat) => {
@@ -499,8 +504,8 @@ const Categories = () => {
         </div>
       </div>
 
-      {/* Bottom Menu Bar (Custom Tabs) */}
-      <div className="fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-slate-200 px-6 flex justify-between items-center z-50 shadow-md overflow-visible">
+      {/* Bottom Menu Bar (Custom Tabs) — hidden on desktop */}
+      <div className="fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-slate-200 px-6 flex justify-between items-center z-50 shadow-md overflow-visible lg:hidden">
         <button 
           onClick={() => navigate('/dashboard')}
           className="flex flex-col items-center text-text-secondary hover:text-brand-blue"

@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
-import { Plus, Trash2, Edit2, RotateCcw, Image, Sparkles, LayoutGrid, Check } from 'lucide-react';
+import { Plus, Trash2, Edit2, RotateCcw, Image, Sparkles, LayoutGrid, Check, Package } from 'lucide-react';
 
 // Default static banners imported in Dashboard.jsx
 import acBanner from '../../assets/ac_service_banner.png';
@@ -443,18 +443,34 @@ async function hydrateTiles() {
         .filter((t) => t.placement === placement)
         .map(TILE_ADAPTERS[key].fromApi);
 
-      const uniqueItems = [];
-      const seen = new Set();
+      // Keep the last tile per name (highest sortOrder = most recently written).
+      // If duplicates exist (from a failed PUT that fell back to POST), auto-clean the stale ones.
+      const byName = new Map();
+      const staleIds = [];
       for (const item of items) {
         const identifier = (item.name || item.title || '').trim().toLowerCase();
-        if (identifier && !seen.has(identifier)) {
-          seen.add(identifier);
-          uniqueItems.push(item);
-        } else if (!identifier) {
-          uniqueItems.push(item);
+        if (!identifier) continue;
+        if (byName.has(identifier)) {
+          // Keep whichever has the higher sortOrder; discard the other
+          const existing = byName.get(identifier);
+          if (item.id && existing.id) {
+            staleIds.push(existing.id); // delete the older duplicate
+            byName.set(identifier, item);
+          }
+        } else {
+          byName.set(identifier, item);
         }
       }
+
+      const uniqueItems = [...byName.values(), ...items.filter((i) => !(i.name || i.title))];
       tileCache[key] = uniqueItems;
+
+      // Fire-and-forget cleanup of stale duplicate tiles in the DB
+      for (const staleId of staleIds) {
+        if (!String(staleId).match(/^\d+$/)) {
+          apiRequest(`/cms/home-tiles/${staleId}`, { method: 'DELETE', auth: true }).catch(() => {});
+        }
+      }
     }
   } catch (err) {
     console.warn('Could not load home tiles:', err.message);
@@ -479,15 +495,19 @@ async function writeTiles(key, list) {
   try {
     for (const [i, tile] of list.entries()) {
       const body = { ...toApi(tile), placement, sortOrder: i };
-      
-      const existing = previous.find((p) => 
+
+      // Prefer tile.id directly (preserved in state after edit) so we always PUT
+      // the correct DB document without relying on stale cache name-matching.
+      const directId = tile.id && !String(tile.id).match(/^\d+$/) ? String(tile.id) : null;
+      const cacheMatch = previous.find((p) =>
         (p.id && tile.id && String(p.id) === String(tile.id)) ||
         (p.name && tile.name && p.name.trim().toLowerCase() === tile.name.trim().toLowerCase()) ||
         (p.title && tile.title && p.title.trim().toLowerCase() === tile.title.trim().toLowerCase())
       );
+      const targetId = directId || (cacheMatch?.id && !String(cacheMatch.id).match(/^\d+$/) ? String(cacheMatch.id) : null);
 
-      if (existing && existing.id && !String(existing.id).match(/^\d+$/)) {
-        const updated = await apiRequest(`/cms/home-tiles/${existing.id}`, { method: 'PUT', auth: true, body });
+      if (targetId) {
+        const updated = await apiRequest(`/cms/home-tiles/${targetId}`, { method: 'PUT', auth: true, body });
         updatedList.push(fromApi(updated));
       } else {
         const created = await apiRequest('/cms/home-tiles', { method: 'POST', auth: true, body });
@@ -1251,11 +1271,7 @@ const CustomerAppCustomization = () => {
       }
     }
 
-    let selectedIcon = cat.icon || 'ac';
-    const detected = detectIconFromName(cat.name);
-    if (detected && (!selectedIcon || !selectedIcon.startsWith('data:image/'))) {
-      selectedIcon = detected;
-    }
+    let selectedIcon = cat.icon || detectIconFromName(cat.name) || 'ac';
 
     setCategoryForm({
       name: cat.name,
@@ -1308,6 +1324,7 @@ const CustomerAppCustomization = () => {
 
     let updated = [...categories];
     const newCat = {
+      id: isEditing ? categories[editIndex]?.id : undefined,
       name: categoryForm.name,
       icon: categoryForm.icon,
       service: categoryForm.service || undefined,
@@ -2236,76 +2253,101 @@ const CustomerAppCustomization = () => {
 
           {/* ---------------- SUBSECTION 1: CATEGORY CUSTOMIZATION ---------------- */}
           {activeSubSection === 'categories' && (
-            <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-[#E2E8F0] shadow-xs">
-                <div>
-                  <h2 className="text-sm font-bold text-[#1E293B]">Dashboard Categories</h2>
-                  <p className="text-xs text-slate-500 mt-1">Manage the top category bar icons that are displayed on the user dashboard.</p>
+            <div className="space-y-6 animate-in fade-in duration-300">
+              {/* Categories Header Card */}
+              <div className="flex flex-wrap justify-between items-center bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-[#0D47A1]">
+                      <LayoutGrid size={18} />
+                    </div>
+                    <h2 className="text-base font-extrabold text-slate-900 tracking-tight">Dashboard Categories</h2>
+                    <span className="bg-blue-50 border border-blue-100 text-[#0D47A1] text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                      {categories.length} Categories
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 font-medium pl-10">
+                    Configure the top category bar icons, booking services, and target routes shown on the customer app home screen.
+                  </p>
                 </div>
-                <div className="flex gap-2">
+
+                <div className="flex gap-2.5 items-center">
                   <button 
                     onClick={handleResetCategories}
-                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                    className="bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200/80 px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
                   >
-                    <RotateCcw size={14} /> Reset Defaults
+                    <RotateCcw size={14} className="text-slate-500" /> Reset Defaults
                   </button>
                   <button 
                     onClick={handleOpenAddCategory}
-                    className="bg-[#0D47A1] hover:bg-blue-800 text-white px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs"
+                    className="bg-[#0D47A1] hover:bg-blue-800 text-white px-4 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-98"
                   >
-                    <Plus size={14} /> Add Category
+                    <Plus size={15} /> Add Category
                   </button>
                 </div>
               </div>
 
-              <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-xs overflow-hidden">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="bg-slate-50 text-[#64748B] font-semibold border-b border-[#E2E8F0]">
-                      <th className="px-6 py-4">Position</th>
-                      <th className="px-6 py-4">Category Name</th>
-                      <th className="px-6 py-4">Icon Preview</th>
-                      <th className="px-6 py-4">Action Target / Route</th>
-                      <th className="px-6 py-4 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#E2E8F0]">
-                    {categories.map((cat, idx) => (
-                      <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="px-6 py-4 font-bold text-slate-500">{idx + 1}</td>
-                        <td className="px-6 py-4 font-bold text-[#1E293B]">{cat.name}</td>
-                        <td className="px-6 py-4">
-                          {cat.icon && cat.icon.startsWith('data:image/') ? (
-                            <img src={cat.icon} alt={cat.name} className="w-8 h-8 object-contain border border-slate-200 rounded-md p-0.5 bg-slate-50" />
-                          ) : (
-                            <span className="w-9 h-9 rounded-xl bg-blue-50/80 border border-blue-100 flex items-center justify-center shadow-2xs">
-                              <CategoryVectorIcon iconKey={cat.icon || detectIconFromName(cat.name)} className="w-5 h-5 text-[#0D47A1]" />
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 text-[#64748B] font-medium">
-                          {cat.isForYou ? 'For You Feed' : cat.isMore ? 'More Category Page' : cat.isFridge ? 'Refrigerator Booking' : cat.service ? `Service Details: ${cat.service}` : `Booking: /book/${cat.name}`}
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="flex gap-2 justify-end">
-                            <button 
-                              onClick={() => handleOpenEditCategory(idx)}
-                              className="p-1.5 text-slate-500 hover:text-[#0D47A1] hover:bg-slate-100 rounded-lg transition-colors"
-                            >
-                              <Edit2 size={14} />
-                            </button>
-                            <button 
-                              onClick={() => handleDeleteCategory(idx)}
-                              className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </td>
+              {/* Categories Table Container */}
+              <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-slate-50/80 text-slate-500 font-bold uppercase tracking-wider text-[10.5px] border-b border-slate-200/80">
+                        <th className="px-6 py-3.5 w-16">#</th>
+                        <th className="px-6 py-3.5">Category Name</th>
+                        <th className="px-6 py-3.5">Icon Preview</th>
+                        <th className="px-6 py-3.5">Target Route / Action</th>
+                        <th className="px-6 py-3.5 text-right">Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-medium">
+                      {categories.map((cat, idx) => (
+                        <tr key={idx} className="hover:bg-slate-50/80 transition-colors group">
+                          <td className="px-6 py-4 font-extrabold text-slate-400 font-mono text-xs">{idx + 1}</td>
+                          
+                          <td className="px-6 py-4 font-bold text-slate-900 text-sm">
+                            <span className="group-hover:text-[#0D47A1] transition-colors">{cat.name}</span>
+                          </td>
+
+                          <td className="px-6 py-4">
+                            {cat.icon && cat.icon.startsWith('data:image/') ? (
+                              <img src={cat.icon} alt={cat.name} className="w-9 h-9 object-contain border border-slate-200 rounded-xl p-1 bg-slate-50 shadow-2xs" />
+                            ) : (
+                              <div className="w-10 h-10 rounded-2xl bg-blue-50/80 border border-blue-100/90 flex items-center justify-center shadow-2xs group-hover:scale-105 transition-transform">
+                                <CategoryVectorIcon iconKey={cat.icon || detectIconFromName(cat.name)} className="w-5.5 h-5.5 text-[#0D47A1]" />
+                              </div>
+                            )}
+                          </td>
+
+                          <td className="px-6 py-4">
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200/60">
+                              {cat.isForYou ? '⚡ For You Feed' : cat.isMore ? '📂 More Category Page' : cat.isFridge ? '🧊 Refrigerator Booking' : cat.service ? `🛠️ Service: ${cat.service}` : `📅 Booking: /book/${cat.name}`}
+                            </span>
+                          </td>
+
+                          <td className="px-6 py-4 text-right">
+                            <div className="flex gap-2 justify-end items-center">
+                              <button 
+                                onClick={() => handleOpenEditCategory(idx)}
+                                className="p-2 text-slate-500 hover:text-[#0D47A1] hover:bg-blue-50 rounded-xl transition-all cursor-pointer"
+                                title="Edit Category"
+                              >
+                                <Edit2 size={15} />
+                              </button>
+                              <button 
+                                onClick={() => handleDeleteCategory(idx)}
+                                className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all cursor-pointer"
+                                title="Delete Category"
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}
@@ -2611,24 +2653,13 @@ const CustomerAppCustomization = () => {
                   <RotateCcw size={14} /> Reset Current Defaults
                 </button>
               </div>
-
-              {/* Sub-toggle for regular vs warranty banners */}
+              {/* Banner type label — only regular banners are shown */}
               <div className="flex gap-2 bg-slate-100 p-1 rounded-xl self-start w-fit">
                 <button
                   onClick={() => setBannerType('non-warranty')}
-                  className={`px-4 py-1.5 text-[10.5px] font-bold rounded-lg transition-all ${
-                    bannerType === 'non-warranty' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-800'
-                  }`}
+                  className="px-4 py-1.5 text-[10.5px] font-bold rounded-lg transition-all bg-white text-slate-900 shadow-2xs"
                 >
-                  Regular Banners (Non-Warranty)
-                </button>
-                <button
-                  onClick={() => setBannerType('warranty')}
-                  className={`px-4 py-1.5 text-[10.5px] font-bold rounded-lg transition-all ${
-                    bannerType === 'warranty' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-800'
-                  }`}
-                >
-                  Partner brand Banners (In-Warranty)
+                  Regular Banners
                 </button>
               </div>
 
@@ -2744,68 +2775,92 @@ const CustomerAppCustomization = () => {
 
           {/* ---------------- SUBSECTION 3: SERVICES CUSTOMIZATION ---------------- */}
           {activeSubSection === 'services' && (
-            <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-[#E2E8F0] shadow-xs">
-                <div>
-                  <h2 className="text-sm font-bold text-[#1E293B]">Dashboard Services Listing</h2>
-                  <p className="text-xs text-slate-500 mt-1">Manage the list of services shown under the 'Our Services' header on the user dashboard.</p>
+            <div className="space-y-6 animate-in fade-in duration-300">
+              {/* Services Header Card */}
+              <div className="flex flex-wrap justify-between items-center bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-[#0D47A1]">
+                      <Package size={18} />
+                    </div>
+                    <h2 className="text-base font-extrabold text-slate-900 tracking-tight">Dashboard Services Listing</h2>
+                    <span className="bg-blue-50 border border-blue-100 text-[#0D47A1] text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                      {services.length} Active Services
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 font-medium pl-10">
+                    Manage the primary service catalog grid displayed under 'Our Services' on the customer app dashboard.
+                  </p>
                 </div>
-                <div className="flex gap-2">
+
+                <div className="flex gap-2.5 items-center">
                   <button 
                     onClick={handleResetServices}
-                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                    className="bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200/80 px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
                   >
-                    <RotateCcw size={14} /> Reset Defaults
+                    <RotateCcw size={14} className="text-slate-500" /> Reset Defaults
                   </button>
                   <button 
                     onClick={handleOpenAddService}
-                    className="bg-[#0D47A1] hover:bg-blue-800 text-white px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs"
+                    className="bg-[#0D47A1] hover:bg-blue-800 text-white px-4 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-98"
                   >
-                    <Plus size={14} /> Add Service
+                    <Plus size={15} /> Add Service
                   </button>
                 </div>
               </div>
 
-              <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-xs overflow-hidden">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="bg-slate-50 text-[#64748B] font-semibold border-b border-[#E2E8F0]">
-                      <th className="px-6 py-4">Position</th>
-                      <th className="px-6 py-4">Service Name</th>
-                      <th className="px-6 py-4">Image Preview</th>
-                      <th className="px-6 py-4 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#E2E8F0]">
-                    {services.map((srv, idx) => (
-                      <tr key={srv.id || idx} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="px-6 py-4 font-bold text-slate-500">{idx + 1}</td>
-                        <td className="px-6 py-4 font-bold text-[#1E293B]">{srv.name}</td>
-                        <td className="px-6 py-4">
-                          {srv.img && (
-                            <img src={srv.img} alt={srv.name} className="w-10 h-10 object-contain border border-slate-200 rounded-lg p-0.5 bg-slate-50" />
-                          )}
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="flex gap-2 justify-end">
-                            <button 
-                              onClick={() => handleOpenEditService(idx)}
-                              className="p-1.5 text-slate-500 hover:text-[#0D47A1] hover:bg-slate-100 rounded-lg transition-colors"
-                            >
-                              <Edit2 size={14} />
-                            </button>
-                            <button 
-                              onClick={() => handleDeleteService(idx)}
-                              className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </td>
+              {/* Services Table Container */}
+              <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-slate-50/80 text-slate-500 font-bold uppercase tracking-wider text-[10.5px] border-b border-slate-200/80">
+                        <th className="px-6 py-3.5 w-16">#</th>
+                        <th className="px-6 py-3.5">Service Name</th>
+                        <th className="px-6 py-3.5">Image Preview</th>
+                        <th className="px-6 py-3.5 text-right">Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-medium">
+                      {services.map((srv, idx) => (
+                        <tr key={srv.id || idx} className="hover:bg-slate-50/80 transition-colors group">
+                          <td className="px-6 py-4 font-extrabold text-slate-400 font-mono text-xs">{idx + 1}</td>
+                          
+                          <td className="px-6 py-4 font-bold text-slate-900 text-sm">
+                            <span className="group-hover:text-[#0D47A1] transition-colors">{srv.name}</span>
+                          </td>
+
+                          <td className="px-6 py-4">
+                            {srv.img ? (
+                              <img src={srv.img} alt={srv.name} className="w-11 h-11 object-contain border border-slate-200/80 rounded-xl p-1 bg-slate-50 shadow-2xs group-hover:scale-105 transition-transform" />
+                            ) : (
+                              <span className="text-slate-400 text-xs italic">No image uploaded</span>
+                            )}
+                          </td>
+
+                          <td className="px-6 py-4 text-right">
+                            <div className="flex gap-2 justify-end items-center">
+                              <button 
+                                onClick={() => handleOpenEditService(idx)}
+                                className="p-2 text-slate-500 hover:text-[#0D47A1] hover:bg-blue-50 rounded-xl transition-all cursor-pointer"
+                                title="Edit Service Details"
+                              >
+                                <Edit2 size={15} />
+                              </button>
+                              <button 
+                                onClick={() => handleDeleteService(idx)}
+                                className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all cursor-pointer"
+                                title="Delete Service"
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}
@@ -3110,7 +3165,7 @@ const CustomerAppCustomization = () => {
                       setCategoryForm(prev => ({
                         ...prev,
                         name: newName,
-                        icon: (detected && iconMode === 'preset') ? detected : (prev.icon || 'ac')
+                        icon: (!isEditing && detected && iconMode === 'preset') ? detected : (prev.icon || 'ac')
                       }));
                     }}
                     placeholder="e.g. Microwave, Chimney"

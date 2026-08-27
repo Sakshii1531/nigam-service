@@ -1,6 +1,7 @@
 import React from 'react';
 import { ArrowLeft, Home as HomeIcon, Calendar, LayoutGrid, User, ShoppingCart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import CustomerTopNav from '../components/CustomerTopNav';
 import acImg from '../assets/categories/ac.png';
 import wasingImg from '../assets/categories/wasing.png';
 import electricianImg from '../assets/categories/electrician_fixed.png';
@@ -25,9 +26,13 @@ const AllServices = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-bg-light flex flex-col pb-20">
-      {/* Header */}
-      <div className="bg-[#E3ECF9] p-6 rounded-b-[30px] shadow-sm flex items-center gap-4">
+    <div className="min-h-screen bg-bg-light flex flex-col pb-20 lg:pb-8 lg:pt-14">
+      
+      {/* Desktop Top Nav */}
+      <CustomerTopNav activePage="categories" />
+
+      {/* Header — mobile only */}
+      <div className="bg-[#E3ECF9] p-6 rounded-b-[30px] shadow-sm flex items-center gap-4 lg:hidden">
         <button onClick={() => navigate(-1)} className="p-2 bg-white rounded-full shadow-sm">
           <ArrowLeft className="h-5 w-5 text-[#0D47A1]" />
         </button>
@@ -35,8 +40,8 @@ const AllServices = () => {
       </div>
 
       {/* Services Grid */}
-      <div className="p-6">
-        <div className="grid grid-cols-3 gap-6">
+      <div className="p-6 max-w-screen-lg mx-auto w-full">
+        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-6">
           {services.map((service) => (
             <div 
               key={service.id}
@@ -54,8 +59,8 @@ const AllServices = () => {
         </div>
       </div>
 
-      {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-border-color p-4 flex justify-around items-center z-10 overflow-visible">
+      {/* Bottom Navigation — mobile only */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-border-color p-4 flex justify-around items-center z-10 overflow-visible lg:hidden">
         <button 
           onClick={() => navigate('/dashboard')}
           className="flex flex-col items-center text-text-secondary hover:text-[#0D47A1]"

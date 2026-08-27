@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Bell, AlertTriangle } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
+import TechTopNav from '../../components/TechTopNav';
 
 const SEVERITY_TONE = {
   Critical: { border: 'border-red-500', chip: 'bg-red-50 text-red-600' },
@@ -40,9 +41,13 @@ const Announcements = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-16 relative font-sans">
-      {/* Header */}
-      <div className="bg-[#052355] text-white px-4 py-3.5 flex items-center justify-between sticky top-0 z-10 shadow-md">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-16 lg:pb-8 lg:pt-14 relative font-sans">
+
+      {/* Desktop Top Nav */}
+      <TechTopNav activePage="profile" />
+
+      {/* Header — mobile only */}
+      <div className="bg-[#052355] text-white px-4 py-3.5 flex items-center justify-between sticky top-0 z-10 shadow-md lg:hidden">
         <div className="flex items-center gap-3">
           <button 
             onClick={() => navigate(-1)} 
@@ -55,7 +60,7 @@ const Announcements = () => {
         <Bell className="h-5.5 w-5.5 text-white/90" />
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 bg-slate-50 text-left pb-8">
+      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 bg-slate-50 text-left pb-8 max-w-screen-lg mx-auto w-full">
         <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">Notice & alert from Headquarters</span>
 
         {loading && <p className="text-[11px] text-slate-400 font-semibold py-6 text-center">Loading announcements…</p>}

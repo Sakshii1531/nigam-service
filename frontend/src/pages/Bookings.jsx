@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { apiRequest, getStoredTokens } from '../lib/apiClient';
 import { io } from 'socket.io-client';
+import CustomerTopNav from '../components/CustomerTopNav';
 
 const SOCKET_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000').replace(/\/api\/v1\/?$/, '');
 
@@ -240,10 +241,13 @@ const Bookings = () => {
   };
 
   return (
-    <div className="min-h-screen bg-bg-light flex flex-col pb-24">
+    <div className="min-h-screen bg-bg-light flex flex-col pb-24 lg:pb-8 lg:pt-14">
       
-      {/* Top App Header */}
-      <div className="bg-white border-b border-slate-100 px-5 pt-4 pb-3 sticky top-0 z-30 shadow-xs">
+      {/* Desktop Top Nav */}
+      <CustomerTopNav activePage="bookings" />
+
+      {/* Top App Header — mobile only */}
+      <div className="bg-white border-b border-slate-100 px-5 pt-4 pb-3 sticky top-0 z-30 shadow-xs lg:hidden">
         <div className="flex items-center justify-between mb-3">
           <button 
             onClick={() => navigate(-1)}
@@ -331,8 +335,8 @@ const Bookings = () => {
         </div>
       )}
 
-      {/* Bookings List */}
-      <div className="flex-1 p-4 flex flex-col gap-3.5 overflow-y-auto">
+      {/* Bookings List — Grid on desktop */}
+      <div className="flex-1 p-4 flex flex-col gap-3.5 max-w-screen-xl mx-auto w-full lg:grid lg:grid-cols-2 lg:auto-rows-min overflow-y-auto">
         {loading ? (
           <div className="flex flex-col gap-3">
             {[1, 2, 3].map((n) => (

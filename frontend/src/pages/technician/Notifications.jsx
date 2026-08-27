@@ -6,6 +6,7 @@ import {
 import { apiRequest } from '../../lib/apiClient';
 import { relativeTime } from '../../lib/relativeTime';
 import { useNotifications } from '../../context/NotificationContext';
+import TechTopNav from '../../components/TechTopNav';
 
 // The backend's notification `type` vocabulary mapped onto this screen's three
 // filter tabs. Anything unmapped (a platform broadcast, a service update) is
@@ -92,10 +93,13 @@ const Notifications = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-8 relative font-sans">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-8 lg:pt-14 relative font-sans">
       
-      {/* Header */}
-      <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
+      {/* Desktop Top Nav */}
+      <TechTopNav activePage="jobs" />
+
+      {/* Header — mobile only */}
+      <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between sticky top-0 z-10 lg:hidden">
         <button 
           onClick={() => navigate(-1)} 
           className="p-1 hover:bg-slate-50 rounded-full text-slate-700 transition-colors"
@@ -106,7 +110,7 @@ const Notifications = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 p-3.5 flex flex-col gap-5">
+      <div className="flex-1 p-3.5 flex flex-col gap-5 max-w-screen-md mx-auto w-full">
         
         {/* Category Pills */}
         <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1">

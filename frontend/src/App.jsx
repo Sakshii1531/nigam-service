@@ -16,6 +16,7 @@ import { BookingProvider } from './context/BookingContext';
 import { AuthProvider } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { AdminSidebarProvider } from './context/AdminSidebarContext';
+import { LogoProvider } from './context/LogoContext';
 import Chat from './pages/Chat';
 import AllServices from './pages/AllServices';
 import Categories from './pages/Categories';
@@ -316,6 +317,7 @@ function PageTitleManager() {
 function App() {
   return (
     <Router>
+      <LogoProvider>
       <AuthProvider>
       <AdminSidebarProvider>
       <NotificationProvider>
@@ -537,6 +539,7 @@ function App() {
       </NotificationProvider>
       </AdminSidebarProvider>
       </AuthProvider>
+      </LogoProvider>
     </Router>
   );
 }

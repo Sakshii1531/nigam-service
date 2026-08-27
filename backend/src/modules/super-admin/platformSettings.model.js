@@ -6,6 +6,7 @@ import { applyStandardPlugins } from '../shared/plugins.js';
 const platformSettingsSchema = new mongoose.Schema(
   {
     platformName: { type: String, default: 'Nigam Care' },
+    logoUrl: String,
     supportEmail: String,
     maintenanceMode: { type: Boolean, default: false },
     emailNotifications: { type: Boolean, default: true },

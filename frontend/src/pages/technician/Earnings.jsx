@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Bell, ArrowLeft, Shield, Calendar, TrendingUp, ChevronDown, Check, Clock, Briefcase, ClipboardList, User, Wrench, Zap, FileText } from 'lucide-react';
 import TechBottomNav from '../../components/TechBottomNav';
+import TechTopNav from '../../components/TechTopNav';
 import { useTech } from '../../context/TechContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { apiRequest } from '../../lib/apiClient';
@@ -63,7 +64,7 @@ const EarningsPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-20 relative font-sans">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-20 lg:pb-8 lg:pt-14 relative font-sans">
 
       {/* Withdraw Modal */}
       {showWithdrawModal && (
@@ -131,8 +132,11 @@ const EarningsPage = () => {
         </div>
       )}
 
-      {/* Header */}
-      <div className="bg-white border-b border-slate-100 p-4 flex items-center justify-between sticky top-0 z-10">
+      {/* Desktop Top Nav */}
+      <TechTopNav activePage="jobs" />
+
+      {/* Header — mobile only */}
+      <div className="bg-white border-b border-slate-100 p-4 flex items-center justify-between sticky top-0 z-10 lg:hidden">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="p-1 hover:bg-slate-50 rounded-full">
             <ArrowLeft className="h-6 w-6 text-slate-700" />
@@ -151,7 +155,7 @@ const EarningsPage = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 p-4 flex flex-col gap-4">
+      <div className="flex-1 p-4 flex flex-col gap-4 max-w-screen-lg mx-auto w-full">
 
         {/* Available Balance Card */}
         <div className="bg-[#052355] text-white rounded-3xl p-5 shadow-sm text-left relative overflow-hidden">

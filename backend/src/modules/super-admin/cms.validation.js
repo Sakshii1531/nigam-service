@@ -59,7 +59,7 @@ export const setAppSettingSchema = z.object({
   key: z.string().min(1),
   value: z.unknown(),
 });
-export const appParamSchema = z.object({ app: z.enum(['customer', 'technician']) });
+export const appParamSchema = z.object({ app: z.string().min(1) });
 
 export const idParamSchema = z.object({ id: z.string().min(1) });
 

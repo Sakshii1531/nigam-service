@@ -14,8 +14,17 @@ const AuthContext = createContext(null);
 
 export const useAuth = () => {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used inside AuthProvider');
-  return ctx;
+  return ctx || {
+    user: null,
+    isAuthenticated: false,
+    login: async () => {},
+    verifyOtp: async () => {},
+    resendOtp: async () => {},
+    signupCheck: async () => {},
+    signupVerify: async () => {},
+    logout: async () => {},
+    updateUser: () => {},
+  };
 };
 
 const USER_KEY = 'ncc_user';
@@ -118,11 +127,15 @@ export const AuthProvider = ({ children }) => {
           }
         })
         .catch((err) => {
-          if (err?.status === 401 || err?.status === 404) {
+          // Only clear the session when the server explicitly says the token is
+          // invalid/expired (401). Network errors, 500s, or backend restarts
+          // should NOT log the admin/user out silently.
+          if (err?.status === 401) {
             clearTokens();
             localStorage.removeItem(USER_KEY);
             setUser(null);
           }
+          // 404 and other errors: keep the session, let subsequent requests handle it
         });
     }
   }, []);

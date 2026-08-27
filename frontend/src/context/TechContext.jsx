@@ -11,8 +11,22 @@ const TechContext = createContext(null);
 
 export const useTech = () => {
   const ctx = useContext(TechContext);
-  if (!ctx) throw new Error('useTech must be used inside TechProvider');
-  return ctx;
+  return ctx || {
+    jobs: [],
+    jobsLoading: false,
+    availability: null,
+    availabilityBusy: false,
+    activeSpecs: [],
+    inventory: [],
+    claims: [],
+    earningsTally: { today: 0, completedToday: 0 },
+    notifications: [],
+    acceptJob: async () => {},
+    dismissJob: async () => {},
+    selectJobForDetails: () => {},
+    toggleSpec: () => {},
+    setAvailability: async () => ({ ok: true }),
+  };
 };
 
 export const TechProvider = ({ children }) => {

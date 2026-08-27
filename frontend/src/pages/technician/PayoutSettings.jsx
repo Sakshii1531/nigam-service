@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
 import TechBottomNav from '../../components/TechBottomNav';
+import TechTopNav from '../../components/TechTopNav';
 
 const PayoutSettings = () => {
   const navigate = useNavigate();
@@ -105,10 +106,13 @@ const PayoutSettings = () => {
   const anyModalOpen = showMethodPicker || showBankForm || showUpiForm;
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-20 relative">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-20 lg:pb-8 lg:pt-14 relative">
 
-      {/* Header */}
-      <div className="bg-white border-b border-slate-100 p-4 flex items-center justify-between sticky top-0 z-10">
+      {/* Desktop Top Nav */}
+      <TechTopNav activePage="profile" />
+
+      {/* Header — mobile only */}
+      <div className="bg-white border-b border-slate-100 p-4 flex items-center justify-between sticky top-0 z-10 lg:hidden">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="p-1 hover:bg-slate-50 rounded-full">
             <ArrowLeft className="h-6 w-6 text-slate-700" />
@@ -122,7 +126,7 @@ const PayoutSettings = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 p-4 flex flex-col gap-4">
+      <div className="flex-1 p-4 flex flex-col gap-4 max-w-screen-md mx-auto w-full">
 
         {error && (
           <div className="bg-rose-50 border border-rose-200 rounded-xl px-3 py-2 text-[11px] font-semibold text-rose-600">

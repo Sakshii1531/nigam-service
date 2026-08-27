@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Phone, Mail, Lock, ShieldCheck, User, Gift, Eye, EyeOff } from 'lucide-react';
-import logo from '../assets/nigam-care.png';
 import { useAuth } from '../context/AuthContext';
+import { useAppLogo } from '../context/LogoContext';
+import defaultLogo from '../assets/nigam-care.png';
 import { ApiError } from '../lib/apiClient';
 
 const STATE_CITIES = {
@@ -48,6 +49,7 @@ const Login = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { login, signupCheck } = useAuth();
+  const { logoUrl } = useAppLogo();
 
   const [isSignup, setIsSignup] = useState(location.state?.isSignup || false);
   const [usePhone, setUsePhone] = useState(true);
@@ -218,11 +220,30 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-4 lg:p-0 relative overflow-hidden lg:flex-row">
       
-      {/* Background Decorative Blurs */}
-      <div className="absolute top-[-100px] left-[-100px] w-[300px] h-[300px] bg-[#0D47A1] opacity-10 rounded-full blur-3xl"></div>
-      <div className="absolute bottom-[-100px] right-[-100px] w-[300px] h-[300px] bg-[#FFD600] opacity-20 rounded-full blur-3xl"></div>
+      {/* Background Decorative Blurs — mobile only */}
+      <div className="absolute top-[-100px] left-[-100px] w-[300px] h-[300px] bg-[#0D47A1] opacity-10 rounded-full blur-3xl lg:hidden"></div>
+      <div className="absolute bottom-[-100px] right-[-100px] w-[300px] h-[300px] bg-[#FFD600] opacity-20 rounded-full blur-3xl lg:hidden"></div>
+
+      {/* Desktop Left Panel — brand illustration */}
+      <div className="hidden lg:flex lg:w-1/2 xl:w-3/5 min-h-screen bg-[#072C63] flex-col items-center justify-center p-12 gap-6">
+        <img src={logo} alt="Nigam Care" className="h-16 w-auto invert brightness-200" />
+        <div className="text-center">
+          <h2 className="text-white text-3xl font-black leading-tight">Your Trusted Home<br />Service Partner</h2>
+          <p className="text-white/70 text-sm mt-3 max-w-sm">Professional appliance repair, cleaning &amp; maintenance services at your doorstep.</p>
+        </div>
+        <div className="flex items-center gap-6 mt-4">
+          <div className="text-center"><div className="text-white text-2xl font-black">50K+</div><div className="text-white/60 text-xs">Customers Served</div></div>
+          <div className="w-px h-8 bg-white/20" />
+          <div className="text-center"><div className="text-white text-2xl font-black">200+</div><div className="text-white/60 text-xs">Cities Covered</div></div>
+          <div className="w-px h-8 bg-white/20" />
+          <div className="text-center"><div className="text-white text-2xl font-black">4.8★</div><div className="text-white/60 text-xs">Average Rating</div></div>
+        </div>
+      </div>
+
+      {/* Right Panel: existing form card */}
+      <div className="w-full lg:w-1/2 xl:w-2/5 flex items-center justify-center p-4 lg:p-8 min-h-screen lg:min-h-0 lg:h-screen lg:overflow-y-auto">
 
       <div className={`w-full ${isSignup ? 'max-w-xl' : 'max-w-md'} bg-white/90 backdrop-blur-xl rounded-[30px] shadow-[0_20px_50px_rgba(13,71,161,0.05)] border border-white/50 overflow-hidden flex flex-col p-8 relative z-10 transition-all duration-300`}>
         
@@ -549,6 +570,7 @@ const Login = () => {
           </button>
         </div>
 
+      </div>
       </div>
     </div>
   );

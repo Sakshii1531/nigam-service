@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 export const updateSettingsSchema = z.object({
   platformName: z.string().min(1).optional(),
+  logoUrl: z.string().nullable().optional(),
   supportEmail: z.string().optional(),
   maintenanceMode: z.boolean().optional(),
   emailNotifications: z.boolean().optional(),

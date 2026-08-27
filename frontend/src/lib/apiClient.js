@@ -120,17 +120,18 @@ export async function apiRequest(path, { method = 'GET', body, auth = false, acc
         const refreshed = await refreshAccessToken();
         return await rawRequest(path, { method, body, accessToken: refreshed.accessToken, envelope });
       } catch (refreshErr) {
-        clearTokens();
-        localStorage.removeItem('ncc_user');
-        window.dispatchEvent(new Event('auth:unauthorized'));
+        // Only log out if the refresh itself was rejected as unauthorized (401).
+        // Network errors, 500s, etc. should not silently kill the session.
+        if (refreshErr instanceof ApiError && refreshErr.status === 401) {
+          clearTokens();
+          localStorage.removeItem('ncc_user');
+          window.dispatchEvent(new Event('auth:unauthorized'));
+        }
         throw refreshErr;
       }
     }
-    if (err instanceof ApiError && (err.status === 401 || err.status === 404)) {
-      clearTokens();
-      localStorage.removeItem('ncc_user');
-      window.dispatchEvent(new Event('auth:unauthorized'));
-    }
+    // NOTE: Do NOT trigger logout on 404. A missing resource is not an auth failure.
+    // Only a 401 on the original request (that also fails to refresh) should end the session.
     throw err;
   }
 }

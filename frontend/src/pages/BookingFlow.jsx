@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { apiRequest, getStoredTokens, storeTokens } from '../lib/apiClient';
 import { useAuth } from '../context/AuthContext';
+import CustomerTopNav from '../components/CustomerTopNav';
 
 import { getCatalogEntry, preloadCatalogOverrides } from '../data/bookingCatalog';
 
@@ -499,10 +500,13 @@ const BookingFlow = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans max-w-md mx-auto shadow-2xl relative border-x border-slate-200">
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans max-w-md lg:max-w-screen-lg lg:pt-14 mx-auto shadow-2xl relative border-x border-slate-200">
 
-      {/* ── Fixed Header ── */}
-      <div className="bg-white/90 backdrop-blur-md sticky top-0 z-20 shadow-2xs border-b border-slate-100 px-4 py-3 flex items-center justify-between">
+      {/* Desktop Top Nav */}
+      <CustomerTopNav activePage="home" />
+
+      {/* ── Fixed Header — mobile only ── */}
+      <div className="bg-white/90 backdrop-blur-md sticky top-0 z-20 shadow-2xs border-b border-slate-100 px-4 py-3 flex items-center justify-between lg:hidden">
         <button
           type="button"
           onClick={goBack}

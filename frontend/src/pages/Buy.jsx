@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { apiRequest } from '../lib/apiClient';
 import { payWithRazorpay } from '../lib/razorpayCheckout';
 import { useAuth } from '../context/AuthContext';
+import CustomerTopNav from '../components/CustomerTopNav';
 
 // Import premium cutout assets for high-fidelity rendering
 import fridgeImg from '../assets/appliance_fridge.png';
@@ -262,11 +263,14 @@ const Buy = () => {
   const activeBrand = selectedBrand || defaultBrand;
 
   return (
-    <div className="min-h-screen bg-bg-light flex flex-col pb-24 relative">
+    <div className="min-h-screen bg-bg-light flex flex-col pb-24 lg:pb-8 lg:pt-14 relative">
       
-      {/* Header section with back navigation for sub-steps */}
+      {/* Desktop Top Nav */}
+      <CustomerTopNav activePage="buy" />
+
+      {/* Header section with back navigation for sub-steps — mobile only */}
       {step > 1 && step !== 7 && step !== 15 && (
-        <div className="bg-white px-6 py-4 flex items-center justify-between border-b border-border-color shadow-sm sticky top-0 z-30">
+        <div className="bg-white px-6 py-4 flex items-center justify-between border-b border-border-color shadow-sm sticky top-0 z-30 lg:hidden">
           <button 
             onClick={() => {
               if (step === 2) navigate('/buy');
@@ -308,7 +312,7 @@ const Buy = () => {
       )}
 
       {/* Dynamic Content Pages */}
-      <div className="flex-1 p-6 flex flex-col gap-6 overflow-y-auto">
+      <div className="flex-1 p-6 flex flex-col gap-6 overflow-y-auto max-w-screen-xl mx-auto w-full">
         
         {/* STEP 1: BUY SECTION - HOME */}
         {step === 1 && (
@@ -2499,8 +2503,8 @@ const Buy = () => {
         )}
       </div>
 
-      {/* Sticky Bottom Tab Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-border-color p-4 flex justify-around items-center z-40 shadow-lg rounded-t-3xl overflow-visible">
+      {/* Sticky Bottom Tab Bar — mobile only */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-border-color p-4 flex justify-around items-center z-40 shadow-lg rounded-t-3xl overflow-visible lg:hidden">
         <button 
           onClick={() => navigate('/dashboard')}
           className="flex flex-col items-center text-text-secondary hover:text-brand-blue transition-colors cursor-pointer"
