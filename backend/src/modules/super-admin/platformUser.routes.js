@@ -66,7 +66,7 @@ platformUserRouter.patch('/:id/status', validate(idParamSchema, 'params'), valid
 
 platformUserRouter.delete('/:id', validate(idParamSchema, 'params'), async (req, res, next) => {
   try {
-    ok(res, await platformUserService.closeUserAccount(req.params.id));
+    ok(res, await platformUserService.deleteUser(req.params.id));
   } catch (err) {
     next(err);
   }

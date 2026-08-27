@@ -74,6 +74,13 @@ export async function updateTechnicianStatus(id, status) {
   return technician;
 }
 
+export async function updateTechnicianPartner(id, servicePartnerId) {
+  const technician = await findOr404(id);
+  technician.servicePartner = servicePartnerId || null;
+  await technician.save();
+  return technician.populate('servicePartner', 'name');
+}
+
 export async function deleteTechnician(id) {
   const technician = await findOr404(id);
 

@@ -90,3 +90,9 @@ export async function removePartner(id, partnerId) {
   await asm.save();
   return asm;
 }
+
+export async function deleteAsm(id) {
+  const asm = await findOr404(id);
+  await asm.deleteOne();
+  return { message: 'ASM deleted successfully' };
+}

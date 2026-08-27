@@ -43,6 +43,18 @@ adminTechnicianRouter.patch(
   },
 );
 
+adminTechnicianRouter.patch(
+  '/:id/partner',
+  validate(idParamSchema, 'params'),
+  async (req, res, next) => {
+    try {
+      ok(res, await adminTechnicianService.updateTechnicianPartner(req.params.id, req.body.servicePartner));
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
 adminTechnicianRouter.delete('/:id', validate(idParamSchema, 'params'), async (req, res, next) => {
   try {
     ok(res, await adminTechnicianService.deleteTechnician(req.params.id));

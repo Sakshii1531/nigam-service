@@ -193,14 +193,14 @@ const Users = () => {
 
     try {
       await apiRequest(`/super-admin/users/${user._id}`, { method: 'DELETE', auth: true });
-      setUsers(users.map(u => (u.id === deletingUserId ? { ...u, status: 'Suspended' } : u)));
+      setUsers(prev => prev.filter(u => u.id !== deletingUserId));
       if (selectedUser?.id === deletingUserId) {
         setSelectedUser(null);
         setShowDrawer(false);
       }
-      showToast(`Account for "${user.name}" was closed and signed out.`);
+      showToast(`Customer account "${user.name}" permanently deleted.`);
     } catch (err) {
-      setLoadError(err.message || 'Could not close the account.');
+      setLoadError(err.message || 'Could not delete the user account.');
     } finally {
       setShowDeleteConfirm(false);
       setDeletingUserId(null);
@@ -1090,33 +1090,35 @@ const Users = () => {
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-2xl max-w-sm w-full p-6 space-y-4 text-center">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-2xl max-w-sm w-full p-6 space-y-4 text-center animate-in zoom-in-95 duration-200">
             <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center text-red-600 mx-auto">
               <Trash2 size={24} />
             </div>
             <div className="space-y-1">
-              <h3 className="font-bold text-[#1E293B] text-lg">Close Customer Account?</h3>
-              <p className="text-sm text-[#64748B]">The account is suspended and signed out immediately. Service history, warranty registrations and invoices are kept — they are referenced by past orders and cannot be removed.</p>
+              <h3 className="font-extrabold text-slate-900 text-lg">Permanently Delete Customer?</h3>
+              <p className="text-xs text-slate-500 font-semibold leading-relaxed">
+                Are you sure you want to permanently delete this customer account? This action cannot be undone and will remove the account from the database.
+              </p>
             </div>
 
-            <div className="flex gap-3 justify-center text-sm pt-2">
+            <div className="flex gap-3 justify-center text-xs font-bold pt-2">
               <button 
                 type="button"
                 onClick={() => {
                   setShowDeleteConfirm(false);
                   setDeletingUserId(null);
                 }}
-                className="bg-white text-[#64748B] border border-[#E2E8F0] px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-[#F8FAFC] transition-colors flex-1"
+                className="bg-slate-100 text-slate-700 hover:bg-slate-200 px-4 py-2.5 rounded-xl transition-colors flex-1 cursor-pointer"
               >
                 Cancel
               </button>
               <button 
                 type="button"
                 onClick={handleDeleteConfirm}
-                className="bg-red-600 text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors shadow-sm flex-1"
+                className="bg-red-600 text-white px-4 py-2.5 rounded-xl font-black hover:bg-red-700 transition-colors shadow-xs flex-1 cursor-pointer"
               >
-                Confirm Delete
+                Permanently Delete
               </button>
             </div>
           </div>

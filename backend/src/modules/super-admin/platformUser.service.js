@@ -110,6 +110,13 @@ export async function closeUserAccount(id) {
   return updateUserStatus(id, 'Suspended');
 }
 
+export async function deleteUser(id) {
+  const user = await findOr404(id);
+  await RefreshToken.deleteMany({ user: user._id });
+  await User.deleteOne({ _id: user._id });
+  return { deleted: true, message: 'User deleted permanently', id: user._id };
+}
+
 export async function getServiceReceipt(userId, requestId) {
   const user = await findOr404(userId);
   const request = await ServiceRequest.findOne({ _id: requestId, user: userId })

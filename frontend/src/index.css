@@ -160,3 +160,13 @@ body.tech-app-active .text-2xl,
   transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Prevent horizontal scroll on all super-admin pages */
+body.super-admin-active {
+  overflow-x: hidden;
+}
+
+body.super-admin-active #root {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
