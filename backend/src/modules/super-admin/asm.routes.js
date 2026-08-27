@@ -56,3 +56,11 @@ asmRouter.delete('/:id/partners/:partnerId', validate(partnerParamSchema, 'param
     next(err);
   }
 });
+
+asmRouter.delete('/:id', validate(idParamSchema, 'params'), async (req, res, next) => {
+  try {
+    ok(res, await asmService.deleteAsm(req.params.id));
+  } catch (err) {
+    next(err);
+  }
+});
