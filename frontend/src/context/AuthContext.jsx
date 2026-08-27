@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { apiRequest, getStoredTokens, storeTokens, clearTokens } from '../lib/apiClient';
-import { syncPushToken, disablePush } from '../lib/pushClient';
+import { syncPushToken, disablePush, enablePush } from '../lib/pushClient';
 
 // Phase 13 — real session state backed by the backend's two-step
 // login (password -> OTP -> tokens), scoped to the customer role for this
@@ -44,10 +44,17 @@ export const AuthProvider = ({ children }) => {
     storeTokens(data);
     localStorage.setItem(USER_KEY, JSON.stringify(data.user));
     setUser(data.user);
-    // Re-attach this device to the account that just signed in. Silent — it
-    // only does anything if permission was already granted, so it never
-    // prompts here (see pushClient.enablePush for the asking path).
-    syncPushToken();
+    
+    // Trigger push token registration during the user's verify click
+    try {
+      if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+        enablePush().catch(() => {});
+      } else {
+        syncPushToken();
+      }
+    } catch {
+      syncPushToken();
+    }
     return data.user;
   }, []);
 
@@ -70,7 +77,17 @@ export const AuthProvider = ({ children }) => {
     storeTokens(data);
     localStorage.setItem(USER_KEY, JSON.stringify(data.user));
     setUser(data.user);
-    syncPushToken();
+
+    // Trigger push token registration during the user's verify click
+    try {
+      if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+        enablePush().catch(() => {});
+      } else {
+        syncPushToken();
+      }
+    } catch {
+      syncPushToken();
+    }
     return data.user;
   }, []);
 

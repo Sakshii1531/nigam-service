@@ -4,28 +4,8 @@ import { Bell, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { usePushPermission, pushBlockedMessage } from '../hooks/usePushPermission';
 
-// Module-level flag: shown once per app session (resets on full refresh).
-let alreadyPrompted = false;
+const PROMPT_SESSION_KEY = 'ncc_push_prompted_session';
 
-/**
- * "Enable notifications?" bottom sheet — the soft ask that precedes the real
- * browser prompt.
- *
- * The soft ask matters: a browser permission prompt can only be shown once,
- * and a denial is permanent from the page's side. Asking in our own UI first
- * means a user who is not interested taps "Not now" and can still be asked
- * again later, instead of burning the one real prompt this origin gets.
- *
- * "Allow" runs the actual registration. It previously posted
- * JSON.stringify(pushSubscription) as the device token, which is not what the
- * backend sends to: User.fcmTokens goes straight into FCM's
- * sendEachForMulticast, which needs an FCM registration token and rejects a
- * serialized Web Push subscription as invalid — so the "registered" device
- * received nothing, and the bogus entry was pruned on the next send. It now
- * goes through enablePush(), which mints a real token via getToken().
- *
- * Props: accent ('#0D47A1' default), title/subtitle overrides optional.
- */
 const PushPermissionPrompt = ({
   accent = '#0D47A1',
   title = 'Stay in the loop',
@@ -35,14 +15,14 @@ const PushPermissionPrompt = ({
   const { permission, requesting, requestPush } = usePushPermission();
   const [open, setOpen] = useState(false);
 
-  // Only ask someone who is signed in (the token is registered against their
-  // account) and who has never been asked — 'granted' needs nothing, and
-  // 'denied' cannot be re-prompted from here, so opening the sheet for either
-  // would just be a dead end. Once per session, so declining is not nagged at.
   useEffect(() => {
-    if (!isAuthenticated || alreadyPrompted || permission !== 'default') return;
-    alreadyPrompted = true;
-    const timer = setTimeout(() => setOpen(true), 2500);
+    if (!isAuthenticated || permission !== 'default') return;
+    if (sessionStorage.getItem(PROMPT_SESSION_KEY) === 'true') return;
+
+    const timer = setTimeout(() => {
+      sessionStorage.setItem(PROMPT_SESSION_KEY, 'true');
+      setOpen(true);
+    }, 800);
     return () => clearTimeout(timer);
   }, [isAuthenticated, permission]);
 
