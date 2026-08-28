@@ -6,7 +6,6 @@ import {
 import { apiRequest } from '../../lib/apiClient';
 import { relativeTime } from '../../lib/relativeTime';
 import { useNotifications } from '../../context/NotificationContext';
-import TechTopNav from '../../components/TechTopNav';
 
 // The backend's notification `type` vocabulary mapped onto this screen's three
 // filter tabs. Anything unmapped (a platform broadcast, a service update) is
@@ -93,13 +92,11 @@ const Notifications = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-8 lg:pt-14 relative font-sans">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-8 relative font-sans">
       
-      {/* Desktop Top Nav */}
-      <TechTopNav activePage="jobs" />
 
       {/* Header — mobile only */}
-      <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between sticky top-0 z-10 lg:hidden">
+      <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between sticky top-0 lg:top-16 z-10">
         <button 
           onClick={() => navigate(-1)} 
           className="p-1 hover:bg-slate-50 rounded-full text-slate-700 transition-colors"

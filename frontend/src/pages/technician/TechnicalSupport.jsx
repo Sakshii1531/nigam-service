@@ -71,7 +71,7 @@ const TechnicalSupport = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-16 relative font-sans">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-16 lg:pb-8 relative font-sans">
       {/* Header */}
       <div className="bg-[#052355] text-white px-4 py-3.5 flex items-center justify-between sticky top-0 z-10 shadow-md">
         <div className="flex items-center gap-3">

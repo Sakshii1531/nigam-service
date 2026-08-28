@@ -205,7 +205,7 @@ const ExtendWarranty = () => {
   };
 
   return (
-    <div className="min-h-screen bg-bg-light flex flex-col pb-20">
+    <div className="min-h-screen bg-bg-light flex flex-col pb-20 lg:pb-8">
       
       {loadError && (
         <div className="mx-6 mt-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-xs font-semibold text-red-700">
@@ -392,7 +392,7 @@ const ExtendWarranty = () => {
                       />
                     </div>
 
-                    <div className="grid grid-cols-3 gap-2.5 max-h-56 overflow-y-auto pr-1">
+                    <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5 md:gap-4 max-h-56 md:max-h-none overflow-y-auto pr-1">
                       {brands
                         .filter(b => b.toLowerCase().includes(brandSearch.toLowerCase()))
                         .map((b) => (

@@ -39,7 +39,6 @@ import roSedimentImg from '../assets/ro_sediment_filter.png';
 import roCarbonImg from '../assets/ro_carbon_filter.png';
 import roPostCarbonImg from '../assets/ro_post_carbon.png';
 import Stories from '../components/home/Stories';
-import CustomerTopNav from '../components/CustomerTopNav';
 import star3d from '../assets/star_3d.png';
 import ac3d from '../assets/icon_3d_ac.png';
 import wm3d from '../assets/icon_3d_wm.png';
@@ -388,7 +387,7 @@ const Dashboard = ({ defaultType }) => {
   };
 
   return (
-    <div className="min-h-screen bg-bg-light flex flex-col pb-16 lg:pb-0 lg:pt-14">
+    <div className="min-h-screen bg-bg-light flex flex-col pb-16 lg:pb-0">
 
       {/* First-run push notification permission prompt */}
       <PushPermissionPrompt />
@@ -458,12 +457,11 @@ const Dashboard = ({ defaultType }) => {
         </div>
       )}
 
-      {/* Desktop Top Nav — hidden on mobile/tablet */}
-      <CustomerTopNav activePage="home" />
 
       {/* Header — hidden on desktop where top nav takes over */}
-      <div className="bg-section-bg px-6 pt-3 pb-0 rounded-b-[30px] shadow-sm lg:hidden">
-        
+      <div className="bg-section-bg px-6 md:px-8 pt-3 pb-0 rounded-b-[30px] shadow-sm lg:hidden">
+        <div className="max-w-screen-md md:max-w-screen-lg mx-auto w-full">
+
         {/* Quick Access Toggle */}
         <div className="flex bg-brand-navy p-1 rounded-full border border-brand-blue/10 mb-5 shadow-inner items-center -mx-3">
           <button 
@@ -563,7 +561,7 @@ const Dashboard = ({ defaultType }) => {
           />
         </div>
         {/* Horizontal Categories — scroll on mobile, grid on desktop */}
-        <div className="flex overflow-x-auto gap-3 mt-2 pb-1.5 snap-x no-scrollbar lg:grid lg:grid-cols-8 xl:grid-cols-10 lg:overflow-visible lg:pb-0">
+        <div className="flex overflow-x-auto gap-3 mt-2 pb-1.5 snap-x no-scrollbar md:grid md:grid-cols-8 xl:grid-cols-10 md:overflow-visible md:pb-0">
           {dashboardCategories.map((cat, index) => (
             <div 
               key={index}
@@ -607,18 +605,19 @@ const Dashboard = ({ defaultType }) => {
             </div>
           ))}
         </div>
+        </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 p-4 lg:p-6 xl:p-8 flex flex-col gap-6 max-w-screen-xl mx-auto w-full">
+      <div className="flex-1 p-4 md:px-6 md:py-6 lg:p-6 xl:p-8 flex flex-col gap-6 md:gap-8 max-w-screen-xl mx-auto w-full">
         {/* Service Banners — scroll on mobile, grid on desktop */}
-        <div ref={bannerRef} className="flex gap-4 overflow-x-auto pb-2 -mx-2 px-2 snap-x no-scrollbar lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:overflow-visible lg:mx-0 lg:px-0 lg:pb-0">
+        <div ref={bannerRef} className="flex gap-4 overflow-x-auto pb-2 -mx-2 px-2 snap-x no-scrollbar md:grid md:grid-cols-2 xl:grid-cols-3 md:overflow-visible md:mx-0 md:px-0 md:pb-0">
           {(activeType === 'non-warranty' ? regularBanners : warrantyBannersList).map((banner) => (
             <div 
               key={banner.id}
-              className="bg-white rounded-2xl shadow-sm border border-border-color overflow-hidden min-w-[300px] lg:min-w-0 snap-center"
+              className="bg-white rounded-2xl shadow-sm border border-border-color overflow-hidden min-w-[300px] md:min-w-0 snap-center"
             >
-              <div className="relative h-36 lg:h-44 w-full">
+              <div className="relative h-36 md:h-auto md:aspect-[25/12] w-full">
                 <img 
                   src={banner.image} 
                   alt="Service Banner" 
@@ -642,7 +641,7 @@ const Dashboard = ({ defaultType }) => {
               See All
             </button>
           </div>
-          <div className="flex overflow-x-auto gap-4 pb-4 -mx-2 px-2 snap-x no-scrollbar lg:grid lg:grid-cols-4 xl:grid-cols-7 lg:overflow-visible lg:mx-0 lg:px-0 lg:pb-0">
+          <div className="flex overflow-x-auto gap-4 pb-4 -mx-2 px-2 snap-x no-scrollbar md:grid md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 md:gap-3 md:overflow-visible md:mx-0 md:px-0 md:pb-0">
             {services.map((service) => (
               <div 
                 key={service.id}
@@ -675,12 +674,12 @@ const Dashboard = ({ defaultType }) => {
                     navigate(`/service-details?service=${encodeURIComponent(service.name)}`);
                   }
                 }}
-                className="flex flex-col items-center gap-2 cursor-pointer flex-shrink-0 w-24 snap-start lg:w-auto"
+                className="flex flex-col items-center gap-2 cursor-pointer flex-shrink-0 w-24 snap-start md:w-auto md:flex-shrink md:bg-white md:border md:border-border-color md:rounded-2xl md:p-3 md:hover:border-brand-blue md:hover:shadow-sm md:transition-all"
               >
-                <div className="w-24 h-24 bg-transparent rounded-2xl flex items-center justify-center transition-all overflow-hidden">
+                <div className="w-24 h-24 md:w-full md:h-20 lg:h-24 bg-transparent rounded-2xl flex items-center justify-center transition-all overflow-hidden">
                   <img src={service.img} alt={service.name} className="w-full h-full object-contain mix-blend-multiply p-2" />
                 </div>
-                <span className="text-xs font-semibold text-text-primary text-center truncate w-full">
+                <span className="text-xs font-semibold text-text-primary text-center truncate md:whitespace-normal md:leading-tight w-full">
                   {service.name}
                 </span>
               </div>
@@ -695,16 +694,16 @@ const Dashboard = ({ defaultType }) => {
               {activeType === 'in-warranty' ? 'Covered Benefits' : ''}
             </h2>
           </div>
-          <div className="flex gap-4 overflow-x-auto pb-2 -mx-2 px-2 snap-x no-scrollbar">
+          <div className="flex gap-4 overflow-x-auto pb-2 -mx-2 px-2 snap-x no-scrollbar md:grid md:grid-cols-2 md:overflow-visible md:mx-0 md:px-0 md:pb-0">
             {[
               { id: 1, image: warrantyBanner1 },
               { id: 2, image: warrantyBanner2 }
             ].map((banner) => (
               <div 
                 key={banner.id}
-                className="bg-white rounded-2xl shadow-sm border border-border-color overflow-hidden min-w-[300px] snap-center"
+                className="bg-white rounded-2xl shadow-sm border border-border-color overflow-hidden min-w-[300px] md:min-w-0 snap-center"
               >
-                <div className="relative h-36 w-full">
+                <div className="relative h-36 md:h-auto md:aspect-[25/12] w-full">
                   <img 
                     src={banner.image} 
                     alt="Warranty Banner" 
@@ -723,7 +722,7 @@ const Dashboard = ({ defaultType }) => {
           </div>
 
           {/* Brand Cards — scroll on mobile, grid on desktop */}
-          <div className="flex overflow-x-auto gap-4 pt-1.5 pb-4 -mx-2 px-2 snap-x no-scrollbar lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:overflow-visible lg:mx-0 lg:px-0 lg:pb-0">
+          <div className="flex overflow-x-auto gap-4 pt-1.5 pb-4 -mx-2 px-2 snap-x no-scrollbar md:grid md:grid-cols-2 xl:grid-cols-3 md:overflow-visible md:mx-0 md:px-0 md:pb-0">
             {brandCards.map((bc) => (
               <div 
                 key={bc.id}
@@ -734,7 +733,7 @@ const Dashboard = ({ defaultType }) => {
                     navigate(bc.actionUrl);
                   }
                 }}
-                className={`w-full sm:max-w-[340px] flex-shrink-0 h-[200px] rounded-[24px] bg-gradient-to-br ${bc.gradient} p-4 flex flex-col justify-between relative overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.03)] border border-slate-100/50 cursor-pointer snap-start`}
+                className={`w-full sm:max-w-[340px] md:max-w-none md:flex-shrink flex-shrink-0 h-[200px] md:h-[220px] rounded-[24px] bg-gradient-to-br ${bc.gradient} p-4 md:p-5 flex flex-col justify-between relative overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.03)] border border-slate-100/50 cursor-pointer snap-start`}
               >
                 <div className="flex flex-col items-start z-10 max-w-[65%]">
                   {bc.badgeText && (
@@ -764,7 +763,7 @@ const Dashboard = ({ defaultType }) => {
                   <img 
                     src={bc.image} 
                     alt={bc.brandName} 
-                    className="absolute -right-3 top-8 w-[140px] h-[100px] object-contain z-0 mix-blend-multiply" 
+                    className="absolute -right-3 top-8 w-[140px] md:w-[160px] h-[100px] md:h-[115px] object-contain z-0 mix-blend-multiply" 
                   />
                 )}
 
@@ -811,7 +810,7 @@ const Dashboard = ({ defaultType }) => {
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-bold text-text-primary">Most Booked Services</h2>
           </div>
-          <div className="flex gap-4 overflow-x-auto pb-4 -mx-2 px-2 snap-x no-scrollbar lg:grid lg:grid-cols-3 xl:grid-cols-5 lg:overflow-visible lg:mx-0 lg:px-0 lg:pb-0">
+          <div className="flex gap-4 overflow-x-auto pb-4 -mx-2 px-2 snap-x no-scrollbar md:grid md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 md:overflow-visible md:mx-0 md:px-0 md:pb-0">
             {mostBookedServices.map((service) => (
               <div 
                 key={service.id}
@@ -828,7 +827,7 @@ const Dashboard = ({ defaultType }) => {
                     }
                   }
                 }}
-                className="flex flex-col gap-2 cursor-pointer flex-shrink-0 w-40 snap-start lg:w-auto border border-border-color rounded-2xl p-2 bg-white hover:border-brand-blue transition-all"
+                className="flex flex-col gap-2 cursor-pointer flex-shrink-0 w-40 snap-start md:w-auto md:flex-shrink border border-border-color rounded-2xl p-2 bg-white hover:border-brand-blue transition-all"
               >
                 <div className="w-full h-32 bg-white rounded-xl flex items-center justify-center overflow-hidden relative">
                   <img src={service.image} alt={service.title} className="w-full h-full object-cover" />
@@ -866,7 +865,7 @@ const Dashboard = ({ defaultType }) => {
               See all
             </button>
           </div>
-          <div className="flex gap-4 overflow-x-auto pb-4 -mx-2 px-2 snap-x no-scrollbar lg:grid lg:grid-cols-3 xl:grid-cols-4 lg:overflow-visible lg:mx-0 lg:px-0 lg:pb-0">
+          <div className="flex gap-4 overflow-x-auto pb-4 -mx-2 px-2 snap-x no-scrollbar md:grid md:grid-cols-3 xl:grid-cols-4 md:overflow-visible md:mx-0 md:px-0 md:pb-0">
             {applianceServices.map((service) => (
               <div 
                 key={service.id}
@@ -894,7 +893,7 @@ const Dashboard = ({ defaultType }) => {
                     navigate(service.path || `/booking?service=${encodeURIComponent(service.title)}&price=${service.price}`);
                   }
                 }}
-                className="flex flex-col gap-2 cursor-pointer flex-shrink-0 w-40 snap-start lg:w-auto border border-border-color rounded-2xl p-2 bg-white hover:border-brand-blue transition-all h-[230px]"
+                className="flex flex-col gap-2 cursor-pointer flex-shrink-0 w-40 snap-start md:w-auto md:flex-shrink border border-border-color rounded-2xl p-2 bg-white hover:border-brand-blue transition-all h-[230px] md:h-auto md:min-h-[230px]"
               >
                 <div className="w-full h-32 bg-white rounded-xl flex items-center justify-center overflow-hidden relative">
                   <img src={service.image} alt={service.title} className="w-full h-full object-cover" />
@@ -932,7 +931,7 @@ const Dashboard = ({ defaultType }) => {
               See all
             </button>
           </div>
-          <div className="flex gap-4 overflow-x-auto pb-4 -mx-2 px-2 snap-x no-scrollbar lg:grid lg:grid-cols-4 xl:grid-cols-5 lg:overflow-visible lg:mx-0 lg:px-0 lg:pb-0">
+          <div className="flex gap-4 overflow-x-auto pb-4 -mx-2 px-2 snap-x no-scrollbar md:grid md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 md:overflow-visible md:mx-0 md:px-0 md:pb-0">
             {[
               { id: 1, title: 'Pre-Filter Candle', desc: 'RO Outer Candle', price: 199, image: roPreFilterImg, badge: 'Genuine' },
               { id: 2, title: 'RO Membrane', desc: 'High TDS Membrane', price: 899, image: roMembraneImg, badge: 'Best Seller' },
@@ -943,7 +942,7 @@ const Dashboard = ({ defaultType }) => {
               <div 
                 key={item.id}
                 onClick={() => navigate('/buy-product')}
-                className="flex flex-col gap-2 cursor-pointer flex-shrink-0 w-40 snap-start border border-border-color rounded-2xl p-2 bg-white hover:border-brand-blue transition-all h-[230px]"
+                className="flex flex-col gap-2 cursor-pointer flex-shrink-0 w-40 snap-start md:w-auto md:flex-shrink border border-border-color rounded-2xl p-2 bg-white hover:border-brand-blue transition-all h-[230px] md:h-auto md:min-h-[230px]"
               >
                 <div className="w-full h-32 bg-slate-50/50 rounded-xl flex items-center justify-center overflow-hidden relative">
                   <img src={item.image} alt={item.title} className="w-full h-full object-contain p-2 mix-blend-multiply" />

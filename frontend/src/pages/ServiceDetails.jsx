@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Search, Star, Tag, CreditCard, ChevronRight, Menu, X, CheckCircle2 } from 'lucide-react';
-import CustomerTopNav from '../components/CustomerTopNav';
 
 // Assets
 import acImg from '../assets/most_booked_ac_1.png';
@@ -347,13 +346,11 @@ const ServiceDetails = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F7FA] flex flex-col pb-0 lg:pt-14 relative">
+    <div className="min-h-screen bg-[#F5F7FA] flex flex-col pb-0 relative">
 
-      {/* Desktop Top Nav */}
-      <CustomerTopNav activePage="home" />
 
       {/* ── Top Bar — mobile only ── */}
-      <div className="bg-white px-4 pt-5 pb-3 flex items-center justify-between sticky top-0 z-20 lg:hidden">
+      <div className="bg-white px-4 pt-5 pb-3 flex items-center justify-between sticky top-0 lg:top-16 z-20">
         <button
           onClick={() => navigate(-1)}
           className="p-1.5 hover:bg-slate-100 rounded-full transition-colors"
@@ -390,7 +387,7 @@ const ServiceDetails = () => {
       </div>
 
       {/* ── Hero Banner ── */}
-      <div className="mx-4 rounded-2xl overflow-hidden relative h-44 bg-slate-800 shadow-md">
+      <div className="mx-4 md:mx-6 rounded-2xl overflow-hidden relative h-44 md:h-56 lg:h-64 bg-slate-800 shadow-md">
         <img
           src={config.bannerImg}
           alt={serviceName}
@@ -478,7 +475,7 @@ const ServiceDetails = () => {
 
       {/* ── Sticky Proceed Bottom Bar ── */}
       {getCartCount() > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-slate-100 px-5 py-4 flex items-center justify-between shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
+        <div className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-slate-100 px-5 py-4 flex items-center justify-between shadow-[0_-4px_12px_rgba(0,0,0,0.06)] md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-[min(100%,48rem)] md:rounded-t-2xl">
           <div className="flex flex-col">
             <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wide">Total Price</span>
             <span className="text-[18px] font-black text-slate-900 leading-none mt-0.5">₹{getCartTotal()}</span>
@@ -505,7 +502,7 @@ const ServiceDetails = () => {
           >
             {/* Card */}
             <div className="bg-white rounded-[28px] p-6 shadow-2xl w-full flex flex-col items-center justify-center">
-              <div className="grid grid-cols-3 gap-x-3 gap-y-5 w-full py-1">
+              <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-x-3 gap-y-5 md:gap-4 w-full py-1">
                 {config.subServices.map((sub) => (
                   <button
                     key={sub.name}

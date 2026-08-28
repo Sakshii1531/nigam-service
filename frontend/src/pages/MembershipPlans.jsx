@@ -313,7 +313,7 @@ const MembershipPlans = () => {
           <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest text-center mb-4">
             Membership Privileges & Assurances
           </h4>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {[
               { icon: '💰', title: 'Zero Visit Charges', desc: 'Saves ₹200 on every repair trip' },
               { icon: '⚡', title: 'Priority Dispatch', desc: 'Tech arrives within 4 hours' },

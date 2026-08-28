@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Home as HomeIcon, ShoppingCart, Calendar, Wrench, User, LayoutGrid } from 'lucide-react';
-import CustomerTopNav from '../components/CustomerTopNav';
 
 // Import images for Sidebar
 import handymanSidebar from '../assets/categories/plumber_fixed.png';
@@ -56,7 +55,7 @@ const Categories = () => {
             {/* Maintenance Section */}
             <div>
               <h3 className="text-xs font-black text-slate-800 mb-3 uppercase tracking-wider">Maintenance</h3>
-              <div className="grid grid-cols-3 gap-y-4 gap-x-2">
+              <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-y-4 gap-x-2 md:gap-4">
                 {[
                   { name: 'Electrician', img: electricianImg },
                   { name: 'Carpenter', img: plumberImg },
@@ -66,13 +65,13 @@ const Categories = () => {
                 ].map((item, idx) => (
                   <div 
                     key={idx} 
-                    className="flex flex-col items-center cursor-pointer"
+                    className="flex flex-col items-center cursor-pointer w-full min-w-0"
                     onClick={() => navigate(`/service-details?service=${encodeURIComponent(item.name)}`)}
                   >
-                    <div className="w-18 h-18 bg-white border border-slate-200/50 rounded-2xl flex items-center justify-center p-2.5 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="w-18 h-18 max-w-full md:w-full md:h-auto md:aspect-square bg-white border border-slate-200/50 rounded-2xl flex items-center justify-center p-2.5 md:p-4 shadow-sm hover:shadow-md transition-shadow">
                       <img src={item.img} alt={item.name} className="w-full h-full object-contain" />
                     </div>
-                    <span className="text-[11px] font-bold text-slate-700 text-center mt-1.5 w-18 leading-tight">
+                    <span className="text-[11px] md:text-xs font-bold text-slate-700 text-center mt-1.5 md:mt-2.5 w-full px-0.5 leading-tight">
                       {item.name}
                     </span>
                   </div>
@@ -83,7 +82,7 @@ const Categories = () => {
             {/* Installation Section */}
             <div>
               <h3 className="text-xs font-black text-slate-800 mb-3 uppercase tracking-wider">Installation</h3>
-              <div className="grid grid-cols-3 gap-y-4 gap-x-2">
+              <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-y-4 gap-x-2 md:gap-4">
                 {[
                   { name: 'Furniture Assembly', img: plumberImg },
                   { name: 'TV Installation', img: tvImg },
@@ -93,13 +92,13 @@ const Categories = () => {
                 ].map((item, idx) => (
                   <div 
                     key={idx} 
-                    className="flex flex-col items-center cursor-pointer"
+                    className="flex flex-col items-center cursor-pointer w-full min-w-0"
                     onClick={() => navigate(`/service-details?service=${encodeURIComponent(item.name)}`)}
                   >
-                    <div className="w-18 h-18 bg-white border border-slate-200/50 rounded-2xl flex items-center justify-center p-2.5 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="w-18 h-18 max-w-full md:w-full md:h-auto md:aspect-square bg-white border border-slate-200/50 rounded-2xl flex items-center justify-center p-2.5 md:p-4 shadow-sm hover:shadow-md transition-shadow">
                       <img src={item.img} alt={item.name} className="w-full h-full object-contain" />
                     </div>
-                    <span className="text-[11px] font-bold text-slate-700 text-center mt-1.5 w-18 leading-tight">
+                    <span className="text-[11px] md:text-xs font-bold text-slate-700 text-center mt-1.5 md:mt-2.5 w-full px-0.5 leading-tight">
                       {item.name}
                     </span>
                   </div>
@@ -110,7 +109,7 @@ const Categories = () => {
             {/* AC & Appliance Repair Section */}
             <div>
               <h3 className="text-xs font-black text-slate-800 mb-3 uppercase tracking-wider">AC & Appliance Repair</h3>
-              <div className="grid grid-cols-3 gap-y-4 gap-x-2">
+              <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-y-4 gap-x-2 md:gap-4">
                 {[
                   { name: 'AC Repair & Services', img: iconAc },
                   { name: 'Geyser Repair & Services', img: iconGeyser },
@@ -119,7 +118,7 @@ const Categories = () => {
                 ].map((item, idx) => (
                   <div 
                     key={idx} 
-                    className="flex flex-col items-center cursor-pointer"
+                    className="flex flex-col items-center cursor-pointer w-full min-w-0"
                     onClick={() => {
                       const catMap = {
                         'AC Repair & Services': 'AC',
@@ -131,10 +130,10 @@ const Categories = () => {
                       bookCat ? navigate(`/book/${encodeURIComponent(bookCat)}`) : navigate(`/service-details?service=${encodeURIComponent(item.name)}`);
                     }}
                   >
-                    <div className="w-18 h-18 bg-white border border-slate-200/50 rounded-2xl flex items-center justify-center p-2.5 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="w-18 h-18 max-w-full md:w-full md:h-auto md:aspect-square bg-white border border-slate-200/50 rounded-2xl flex items-center justify-center p-2.5 md:p-4 shadow-sm hover:shadow-md transition-shadow">
                       <img src={item.img} alt={item.name} className="w-full h-full object-contain" />
                     </div>
-                    <span className="text-[11px] font-bold text-slate-700 text-center mt-1.5 w-18 leading-tight">
+                    <span className="text-[11px] md:text-xs font-bold text-slate-700 text-center mt-1.5 md:mt-2.5 w-full px-0.5 leading-tight">
                       {item.name}
                     </span>
                   </div>
@@ -145,7 +144,7 @@ const Categories = () => {
             {/* Kitchen and Appliance Section */}
             <div>
               <h3 className="text-xs font-black text-slate-800 mb-3 uppercase tracking-wider">Kitchen and Appliance</h3>
-              <div className="grid grid-cols-3 gap-y-4 gap-x-2">
+              <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-y-4 gap-x-2 md:gap-4">
                 {[
                   { name: 'Chimney Repair & Services', img: iconChimney },
                   { name: 'Gas Stove & Hob Services', img: iconOven },
@@ -156,7 +155,7 @@ const Categories = () => {
                 ].map((item, idx) => (
                   <div 
                     key={idx} 
-                    className="flex flex-col items-center cursor-pointer"
+                    className="flex flex-col items-center cursor-pointer w-full min-w-0"
                     onClick={() => {
                       const catMap = {
                         'Chimney Repair & Services': 'Chimney',
@@ -168,10 +167,10 @@ const Categories = () => {
                       bookCat ? navigate(`/book/${encodeURIComponent(bookCat)}`) : navigate(`/service-details?service=${encodeURIComponent(item.name)}`);
                     }}
                   >
-                    <div className="w-18 h-18 bg-white border border-slate-200/50 rounded-2xl flex items-center justify-center p-2.5 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="w-18 h-18 max-w-full md:w-full md:h-auto md:aspect-square bg-white border border-slate-200/50 rounded-2xl flex items-center justify-center p-2.5 md:p-4 shadow-sm hover:shadow-md transition-shadow">
                       <img src={item.img} alt={item.name} className="w-full h-full object-contain" />
                     </div>
-                    <span className="text-[11px] font-bold text-slate-700 text-center mt-1.5 w-18 leading-tight">
+                    <span className="text-[11px] md:text-xs font-bold text-slate-700 text-center mt-1.5 md:mt-2.5 w-full px-0.5 leading-tight">
                       {item.name}
                     </span>
                   </div>
@@ -182,7 +181,7 @@ const Categories = () => {
             {/* Cleaning Section */}
             <div>
               <h3 className="text-xs font-black text-slate-800 mb-3 uppercase tracking-wider">Cleaning</h3>
-              <div className="grid grid-cols-3 gap-y-4 gap-x-2">
+              <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-y-4 gap-x-2 md:gap-4">
                 {[
                   { name: 'Full house cleaning', img: cleaningSidebar },
                   { name: 'Bathroom cleaning', img: tileImg },
@@ -190,13 +189,13 @@ const Categories = () => {
                 ].map((item, idx) => (
                   <div 
                     key={idx} 
-                    className="flex flex-col items-center cursor-pointer"
+                    className="flex flex-col items-center cursor-pointer w-full min-w-0"
                     onClick={() => navigate(`/service-details?service=${encodeURIComponent(item.name)}`)}
                   >
-                    <div className="w-18 h-18 bg-white border border-slate-200/50 rounded-2xl flex items-center justify-center p-2.5 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="w-18 h-18 max-w-full md:w-full md:h-auto md:aspect-square bg-white border border-slate-200/50 rounded-2xl flex items-center justify-center p-2.5 md:p-4 shadow-sm hover:shadow-md transition-shadow">
                       <img src={item.img} alt={item.name} className="w-full h-full object-contain" />
                     </div>
-                    <span className="text-[11px] font-bold text-slate-700 text-center mt-1.5 w-18 leading-tight">
+                    <span className="text-[11px] md:text-xs font-bold text-slate-700 text-center mt-1.5 md:mt-2.5 w-full px-0.5 leading-tight">
                       {item.name}
                     </span>
                   </div>
@@ -211,7 +210,7 @@ const Categories = () => {
             {/* AC & Appliance Repair Section */}
             <div>
               <h3 className="text-xs font-black text-slate-800 mb-3 uppercase tracking-wider">AC & Appliance Repair</h3>
-              <div className="grid grid-cols-3 gap-y-4 gap-x-2">
+              <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-y-4 gap-x-2 md:gap-4">
                 {[
                   { name: 'AC Repair & Services', img: iconAc },
                   { name: 'Geyser Repair & Services', img: iconGeyser },
@@ -220,7 +219,7 @@ const Categories = () => {
                 ].map((item, idx) => (
                   <div 
                     key={idx} 
-                    className="flex flex-col items-center cursor-pointer"
+                    className="flex flex-col items-center cursor-pointer w-full min-w-0"
                     onClick={() => {
                       const catMap = {
                         'AC Repair & Services': 'AC',
@@ -232,10 +231,10 @@ const Categories = () => {
                       bookCat ? navigate(`/book/${encodeURIComponent(bookCat)}`) : navigate(`/service-details?service=${encodeURIComponent(item.name)}`);
                     }}
                   >
-                    <div className="w-18 h-18 bg-white border border-slate-200/50 rounded-2xl flex items-center justify-center p-2.5 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="w-18 h-18 max-w-full md:w-full md:h-auto md:aspect-square bg-white border border-slate-200/50 rounded-2xl flex items-center justify-center p-2.5 md:p-4 shadow-sm hover:shadow-md transition-shadow">
                       <img src={item.img} alt={item.name} className="w-full h-full object-contain" />
                     </div>
-                    <span className="text-[11px] font-bold text-slate-700 text-center mt-1.5 w-18 leading-tight">
+                    <span className="text-[11px] md:text-xs font-bold text-slate-700 text-center mt-1.5 md:mt-2.5 w-full px-0.5 leading-tight">
                       {item.name}
                     </span>
                   </div>
@@ -246,7 +245,7 @@ const Categories = () => {
             {/* Kitchen and Appliance Section */}
             <div>
               <h3 className="text-xs font-black text-slate-800 mb-3 uppercase tracking-wider">Kitchen and Appliance</h3>
-              <div className="grid grid-cols-3 gap-y-4 gap-x-2">
+              <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-y-4 gap-x-2 md:gap-4">
                 {[
                   { name: 'Chimney Repair & Services', img: iconChimney },
                   { name: 'Gas Stove & Hob Services', img: iconOven },
@@ -257,7 +256,7 @@ const Categories = () => {
                 ].map((item, idx) => (
                   <div 
                     key={idx} 
-                    className="flex flex-col items-center cursor-pointer"
+                    className="flex flex-col items-center cursor-pointer w-full min-w-0"
                     onClick={() => {
                       const catMap = {
                         'Chimney Repair & Services': 'Chimney',
@@ -269,10 +268,10 @@ const Categories = () => {
                       bookCat ? navigate(`/book/${encodeURIComponent(bookCat)}`) : navigate(`/service-details?service=${encodeURIComponent(item.name)}`);
                     }}
                   >
-                    <div className="w-18 h-18 bg-white border border-slate-200/50 rounded-2xl flex items-center justify-center p-2.5 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="w-18 h-18 max-w-full md:w-full md:h-auto md:aspect-square bg-white border border-slate-200/50 rounded-2xl flex items-center justify-center p-2.5 md:p-4 shadow-sm hover:shadow-md transition-shadow">
                       <img src={item.img} alt={item.name} className="w-full h-full object-contain" />
                     </div>
-                    <span className="text-[11px] font-bold text-slate-700 text-center mt-1.5 w-18 leading-tight">
+                    <span className="text-[11px] md:text-xs font-bold text-slate-700 text-center mt-1.5 md:mt-2.5 w-full px-0.5 leading-tight">
                       {item.name}
                     </span>
                   </div>
@@ -287,7 +286,7 @@ const Categories = () => {
             {/* Cleaning Section */}
             <div>
               <h3 className="text-xs font-black text-slate-800 mb-3 uppercase tracking-wider">Cleaning</h3>
-              <div className="grid grid-cols-3 gap-y-4 gap-x-2">
+              <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-y-4 gap-x-2 md:gap-4">
                 {[
                   { name: 'Full house cleaning', img: cleaningSidebar },
                   { name: 'Bathroom cleaning', img: tileImg },
@@ -298,13 +297,13 @@ const Categories = () => {
                 ].map((item, idx) => (
                   <div 
                     key={idx} 
-                    className="flex flex-col items-center cursor-pointer"
+                    className="flex flex-col items-center cursor-pointer w-full min-w-0"
                     onClick={() => navigate(`/service-details?service=${encodeURIComponent(item.name)}`)}
                   >
-                    <div className="w-18 h-18 bg-white border border-slate-200/50 rounded-2xl flex items-center justify-center p-2.5 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="w-18 h-18 max-w-full md:w-full md:h-auto md:aspect-square bg-white border border-slate-200/50 rounded-2xl flex items-center justify-center p-2.5 md:p-4 shadow-sm hover:shadow-md transition-shadow">
                       <img src={item.img} alt={item.name} className="w-full h-full object-contain" />
                     </div>
-                    <span className="text-[11px] font-bold text-slate-700 text-center mt-1.5 w-18 leading-tight">
+                    <span className="text-[11px] md:text-xs font-bold text-slate-700 text-center mt-1.5 md:mt-2.5 w-full px-0.5 leading-tight">
                       {item.name}
                     </span>
                   </div>
@@ -315,7 +314,7 @@ const Categories = () => {
             {/* Pest Control Section */}
             <div>
               <h3 className="text-xs font-black text-slate-800 mb-3 uppercase tracking-wider">Pest Control</h3>
-              <div className="grid grid-cols-3 gap-y-4 gap-x-2">
+              <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-y-4 gap-x-2 md:gap-4">
                 {[
                   { name: 'Pest control', img: cleaningSidebar },
                   { name: 'Cockroach Control Treatment', img: cleaningSidebar },
@@ -325,13 +324,13 @@ const Categories = () => {
                 ].map((item, idx) => (
                   <div 
                     key={idx} 
-                    className="flex flex-col items-center cursor-pointer"
+                    className="flex flex-col items-center cursor-pointer w-full min-w-0"
                     onClick={() => navigate(`/service-details?service=${encodeURIComponent(item.name)}`)}
                   >
-                    <div className="w-18 h-18 bg-white border border-slate-200/50 rounded-2xl flex items-center justify-center p-2.5 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="w-18 h-18 max-w-full md:w-full md:h-auto md:aspect-square bg-white border border-slate-200/50 rounded-2xl flex items-center justify-center p-2.5 md:p-4 shadow-sm hover:shadow-md transition-shadow">
                       <img src={item.img} alt={item.name} className="w-full h-full object-contain" />
                     </div>
-                    <span className="text-[11px] font-bold text-slate-700 text-center mt-1.5 w-18 leading-tight">
+                    <span className="text-[11px] md:text-xs font-bold text-slate-700 text-center mt-1.5 md:mt-2.5 w-full px-0.5 leading-tight">
                       {item.name}
                     </span>
                   </div>
@@ -342,20 +341,20 @@ const Categories = () => {
             {/* Painting & Waterproofing Section */}
             <div>
               <h3 className="text-xs font-black text-slate-800 mb-3 uppercase tracking-wider">Painting & Water proofing</h3>
-              <div className="grid grid-cols-3 gap-y-4 gap-x-2">
+              <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-y-4 gap-x-2 md:gap-4">
                 {[
                   { name: 'Wall Painting', img: electricianImg },
                   { name: 'Waterproofing', img: plumberImg }
                 ].map((item, idx) => (
                   <div 
                     key={idx} 
-                    className="flex flex-col items-center cursor-pointer"
+                    className="flex flex-col items-center cursor-pointer w-full min-w-0"
                     onClick={() => navigate(`/service-details?service=${encodeURIComponent(item.name)}`)}
                   >
-                    <div className="w-18 h-18 bg-white border border-slate-200/50 rounded-2xl flex items-center justify-center p-2.5 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="w-18 h-18 max-w-full md:w-full md:h-auto md:aspect-square bg-white border border-slate-200/50 rounded-2xl flex items-center justify-center p-2.5 md:p-4 shadow-sm hover:shadow-md transition-shadow">
                       <img src={item.img} alt={item.name} className="w-full h-full object-contain" />
                     </div>
-                    <span className="text-[11px] font-bold text-slate-700 text-center mt-1.5 w-18 leading-tight">
+                    <span className="text-[11px] md:text-xs font-bold text-slate-700 text-center mt-1.5 md:mt-2.5 w-full px-0.5 leading-tight">
                       {item.name}
                     </span>
                   </div>
@@ -368,20 +367,20 @@ const Categories = () => {
         return (
           <div>
             <h3 className="text-xs font-black text-slate-800 mb-3 uppercase tracking-wider">Painting & Water proofing</h3>
-            <div className="grid grid-cols-3 gap-y-4 gap-x-2">
+            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-y-4 gap-x-2 md:gap-4">
               {[
                 { name: 'Wall Painting', img: electricianImg },
                 { name: 'Waterproofing', img: plumberImg }
               ].map((item, idx) => (
                 <div 
                   key={idx} 
-                  className="flex flex-col items-center cursor-pointer"
+                  className="flex flex-col items-center cursor-pointer w-full min-w-0"
                   onClick={() => navigate(`/service-details?service=${encodeURIComponent(item.name)}`)}
                 >
-                  <div className="w-18 h-18 bg-white border border-slate-200/50 rounded-2xl flex items-center justify-center p-2.5 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="w-18 h-18 max-w-full md:w-full md:h-auto md:aspect-square bg-white border border-slate-200/50 rounded-2xl flex items-center justify-center p-2.5 md:p-4 shadow-sm hover:shadow-md transition-shadow">
                     <img src={item.img} alt={item.name} className="w-full h-full object-contain" />
                   </div>
-                  <span className="text-[11px] font-bold text-slate-700 text-center mt-1.5 w-18 leading-tight">
+                  <span className="text-[11px] md:text-xs font-bold text-slate-700 text-center mt-1.5 md:mt-2.5 w-full px-0.5 leading-tight">
                     {item.name}
                   </span>
                 </div>
@@ -393,20 +392,20 @@ const Categories = () => {
         return (
           <div>
             <h3 className="text-xs font-black text-slate-800 mb-3 uppercase tracking-wider">Movers & Storage</h3>
-            <div className="grid grid-cols-3 gap-y-4 gap-x-2">
+            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-y-4 gap-x-2 md:gap-4">
               {[
                 { name: 'Home Shifting', img: moversSidebar },
                 { name: 'Office Relocation', img: moversSidebar }
               ].map((item, idx) => (
                 <div 
                   key={idx} 
-                  className="flex flex-col items-center cursor-pointer"
+                  className="flex flex-col items-center cursor-pointer w-full min-w-0"
                   onClick={() => navigate(`/service-details?service=${encodeURIComponent(item.name)}`)}
                 >
-                  <div className="w-18 h-18 bg-white border border-slate-200/50 rounded-2xl flex items-center justify-center p-2.5 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="w-18 h-18 max-w-full md:w-full md:h-auto md:aspect-square bg-white border border-slate-200/50 rounded-2xl flex items-center justify-center p-2.5 md:p-4 shadow-sm hover:shadow-md transition-shadow">
                     <img src={item.img} alt={item.name} className="w-full h-full object-contain" />
                   </div>
-                  <span className="text-[11px] font-bold text-slate-700 text-center mt-1.5 w-18 leading-tight">
+                  <span className="text-[11px] md:text-xs font-bold text-slate-700 text-center mt-1.5 md:mt-2.5 w-full px-0.5 leading-tight">
                     {item.name}
                   </span>
                 </div>
@@ -418,7 +417,7 @@ const Categories = () => {
         return (
           <div>
             <h3 className="text-xs font-black text-slate-800 mb-3 uppercase tracking-wider">Renovation</h3>
-            <div className="grid grid-cols-3 gap-y-4 gap-x-2">
+            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-y-4 gap-x-2 md:gap-4">
               {[
                 { name: 'Home Renovation', img: moversSidebar },
                 { name: 'Kitchen Renovation', img: moversSidebar },
@@ -426,13 +425,13 @@ const Categories = () => {
               ].map((item, idx) => (
                 <div 
                   key={idx} 
-                  className="flex flex-col items-center cursor-pointer"
+                  className="flex flex-col items-center cursor-pointer w-full min-w-0"
                   onClick={() => navigate(`/service-details?service=${encodeURIComponent(item.name)}`)}
                 >
-                  <div className="w-18 h-18 bg-white border border-slate-200/50 rounded-2xl flex items-center justify-center p-2.5 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="w-18 h-18 max-w-full md:w-full md:h-auto md:aspect-square bg-white border border-slate-200/50 rounded-2xl flex items-center justify-center p-2.5 md:p-4 shadow-sm hover:shadow-md transition-shadow">
                     <img src={item.img} alt={item.name} className="w-full h-full object-contain" />
                   </div>
-                  <span className="text-[11px] font-bold text-slate-700 text-center mt-1.5 w-18 leading-tight">
+                  <span className="text-[11px] md:text-xs font-bold text-slate-700 text-center mt-1.5 md:mt-2.5 w-full px-0.5 leading-tight">
                     {item.name}
                   </span>
                 </div>
@@ -446,13 +445,11 @@ const Categories = () => {
   };
 
   return (
-    <div className="h-screen bg-slate-50 flex flex-col overflow-hidden pb-16 lg:pb-0 lg:pt-14 relative">
+    <div className="h-screen bg-slate-50 flex flex-col overflow-hidden pb-16 lg:pb-0 relative">
       
-      {/* Desktop Top Nav */}
-      <CustomerTopNav activePage="categories" />
 
       {/* Header — mobile only */}
-      <div className="bg-white px-5 pt-4 pb-0 flex items-center gap-3 shadow-sm border-b border-slate-100 flex-shrink-0 lg:hidden">
+      <div className="bg-white px-5 pt-4 pb-0 flex items-center gap-3 shadow-sm border-b border-slate-100 flex-shrink-0">
         <button
           onClick={() => navigate(-1)}
           className="p-1.5 hover:bg-slate-100 rounded-full transition-colors cursor-pointer flex items-center justify-center"
@@ -465,7 +462,7 @@ const Categories = () => {
       {/* Main Split Layout */}
       <div className="flex-1 flex overflow-hidden max-w-screen-xl mx-auto w-full">
         {/* Left Sidebar */}
-        <div className="w-24 bg-[#EAF4FF]/50 border-r border-slate-100 flex flex-col py-3 overflow-y-auto select-none flex-shrink-0">
+        <div className="w-24 md:w-32 lg:w-40 bg-[#EAF4FF]/50 border-r border-slate-100 flex flex-col py-3 overflow-y-auto select-none flex-shrink-0">
           {sidebarCategories.map((cat) => {
             const isActive = activeCategory === cat.id;
             return (
@@ -499,7 +496,7 @@ const Categories = () => {
         </div>
 
         {/* Right Content */}
-        <div className="flex-1 bg-[#F8FAFC] p-4.5 overflow-y-auto flex flex-col gap-6">
+        <div className="flex-1 bg-[#F8FAFC] p-4.5 md:p-6 lg:p-8 overflow-y-auto flex flex-col gap-6 md:gap-8">
           {getSubcategoryContent()}
         </div>
       </div>

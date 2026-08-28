@@ -417,7 +417,7 @@ const Booking = () => {
         </div>
 
         {/* Sticky bottom gateway summary bar */}
-        <div className="fixed bottom-0 left-0 right-0 px-5 py-4 bg-white border-t border-slate-100 flex items-center justify-between shadow-[0_-4px_12px_rgba(0,0,0,0.06)] z-20">
+        <div className="fixed bottom-0 left-0 right-0 px-5 py-4 bg-white border-t border-slate-100 flex items-center justify-between shadow-[0_-4px_12px_rgba(0,0,0,0.06)] z-20 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-[min(100%,48rem)] md:rounded-t-2xl">
           <div className="flex flex-col">
             <span className="text-[18px] font-black text-slate-900 leading-none">₹{advance}</span>
             <button 
@@ -649,7 +649,7 @@ const Booking = () => {
       </div>
 
       {/* Sticky Bottom Summary Footer */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-100 shadow-[0_-4px_12px_rgba(0,0,0,0.03)] z-10">
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-100 shadow-[0_-4px_12px_rgba(0,0,0,0.03)] z-10 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-[min(100%,48rem)] md:rounded-t-2xl">
         {checkoutStep === 0 ? (
           <button
             onClick={() => setShowAddressDrawer(true)}

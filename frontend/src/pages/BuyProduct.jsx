@@ -96,7 +96,7 @@ const BuyProduct = () => {
   };
 
   return (
-    <div className="min-h-screen bg-bg-light flex flex-col pb-32">
+    <div className="min-h-screen bg-bg-light flex flex-col pb-32 lg:pb-8">
       
       {/* HEADER */}
       <div className="bg-[#E3ECF9] p-6 rounded-b-[30px] shadow-sm flex flex-col gap-4">
@@ -396,7 +396,7 @@ const BuyProduct = () => {
       </AnimatePresence>
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-border-color p-4 flex justify-around items-center z-40 overflow-visible">
+      <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-border-color p-4 flex justify-around items-center z-40 overflow-visible lg:hidden">
         <button 
           onClick={() => navigate('/dashboard')}
           className="flex flex-col items-center text-text-secondary hover:text-brand-blue"

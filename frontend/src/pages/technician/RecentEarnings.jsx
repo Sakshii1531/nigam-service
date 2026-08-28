@@ -29,7 +29,7 @@ const RecentEarnings = () => {
   }, []);
 
   return (
-    <div className="tech-app-container min-h-screen bg-[#F4F6FA] flex flex-col pb-16 relative font-sans">
+    <div className="tech-app-container min-h-screen bg-[#F4F6FA] flex flex-col pb-16 lg:pb-8 relative font-sans">
       {/* Header */}
       <div className="bg-white border-b border-slate-200 px-4 py-3.5 flex items-center gap-3 sticky top-0 z-10">
         <button

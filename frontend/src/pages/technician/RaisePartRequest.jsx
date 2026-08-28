@@ -6,7 +6,6 @@ import {
   Package, ShoppingCart, Layers, Cpu, Wind, Droplets, Zap, Shield, Flame, Trash2, ArrowRight
 } from 'lucide-react';
 import TechBottomNav from '../../components/TechBottomNav';
-import TechTopNav from '../../components/TechTopNav';
 import { useTech } from '../../context/TechContext';
 import { useNotifications } from '../../context/NotificationContext';
 
@@ -171,10 +170,8 @@ const RaisePartRequest = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F4F7FC] flex flex-col pb-28 lg:pb-8 lg:pt-14 relative font-sans text-left">
+    <div className="min-h-screen bg-[#F4F7FC] flex flex-col pb-28 lg:pb-8 relative font-sans text-left">
       
-      {/* Desktop Top Nav */}
-      <TechTopNav activePage="requests" />
       
       {/* Selected Pending Part Detail Drawer View */}
       {selectedPendingPart ? (
@@ -285,11 +282,11 @@ const RaisePartRequest = () => {
           </div>
 
           {/* Segmented Tab Navigation */}
-          <div className="px-3.5 -mt-3.5 relative z-30">
+          <div className="px-3.5 md:px-6 -mt-3.5 lg:mt-4 relative z-30">
             <div className="bg-white p-1.5 rounded-2xl shadow-sm border border-slate-200/80 flex items-center justify-between gap-1.5">
               <button
                 onClick={() => setActiveTab('inventory')}
-                className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 ${
+                className={`flex-1 py-2.5 px-1.5 sm:px-3 rounded-xl text-[11px] sm:text-xs font-extrabold transition-all flex items-center justify-center gap-1 sm:gap-1.5 min-w-0 ${
                   activeTab === 'inventory' 
                     ? 'bg-[#052355] text-white shadow-xs' 
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
@@ -300,7 +297,7 @@ const RaisePartRequest = () => {
               </button>
               <button
                 onClick={() => setActiveTab('order')}
-                className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 relative ${
+                className={`flex-1 py-2.5 px-1.5 sm:px-3 rounded-xl text-[11px] sm:text-xs font-extrabold transition-all flex items-center justify-center gap-1 sm:gap-1.5 relative min-w-0 ${
                   activeTab === 'order' 
                     ? 'bg-[#052355] text-white shadow-xs' 
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
@@ -318,7 +315,7 @@ const RaisePartRequest = () => {
               </button>
               <button
                 onClick={() => setActiveTab('claims')}
-                className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 relative ${
+                className={`flex-1 py-2.5 px-1.5 sm:px-3 rounded-xl text-[11px] sm:text-xs font-extrabold transition-all flex items-center justify-center gap-1 sm:gap-1.5 relative min-w-0 ${
                   activeTab === 'claims' 
                     ? 'bg-[#052355] text-white shadow-xs' 
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
@@ -391,7 +388,7 @@ const RaisePartRequest = () => {
                 </div>
 
                 {/* Inventory List */}
-                <div className="flex flex-col gap-2.5">
+                <div className="flex flex-col gap-2.5 lg:grid lg:grid-cols-2">
                   {filteredInventory.length > 0 ? (
                     filteredInventory.map(item => {
                       const iconData = getPartIcon(item.name, item.sku);
@@ -475,7 +472,7 @@ const RaisePartRequest = () => {
                       );
                     })
                   ) : (
-                    <div className="text-center py-12 bg-white rounded-3xl border border-dashed border-slate-200 p-6 text-slate-500 flex flex-col items-center gap-2">
+                    <div className="lg:col-span-2 text-center py-12 bg-white rounded-3xl border border-dashed border-slate-200 p-6 text-slate-500 flex flex-col items-center gap-2">
                       <Package className="h-10 w-10 text-slate-300 stroke-[1.5]" />
                       <p className="text-sm font-bold text-slate-700">No matching parts found</p>
                       <p className="text-xs text-slate-400 max-w-xs">Try adjusting your search terms or filter selection.</p>
@@ -696,7 +693,7 @@ const RaisePartRequest = () => {
                       </div>
                     ))
                   ) : (
-                    <div className="text-center py-12 bg-white rounded-3xl border border-dashed border-slate-200 p-6 text-slate-500 flex flex-col items-center gap-2">
+                    <div className="lg:col-span-2 text-center py-12 bg-white rounded-3xl border border-dashed border-slate-200 p-6 text-slate-500 flex flex-col items-center gap-2">
                       <ShieldCheck className="h-10 w-10 text-slate-300 stroke-[1.5]" />
                       <p className="text-sm font-bold text-slate-700">No {claimFilter.toLowerCase()} claims found</p>
                       <p className="text-xs text-slate-400">Claims submitted to brands will be tracked here.</p>

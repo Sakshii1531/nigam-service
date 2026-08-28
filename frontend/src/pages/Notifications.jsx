@@ -6,7 +6,6 @@ import {
 import { apiRequest } from '../lib/apiClient';
 import { relativeTime } from '../lib/relativeTime';
 import { useNotifications } from '../context/NotificationContext';
-import CustomerTopNav from '../components/CustomerTopNav';
 
 const ICONS = {
   assigned: { Icon: UserCheck, bg: 'bg-[#E8F5E9]', color: 'text-[#2E7D32]' },
@@ -67,13 +66,11 @@ const Notifications = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-10 lg:pb-8 lg:pt-14">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-10 lg:pb-8">
 
-      {/* Desktop Top Nav */}
-      <CustomerTopNav activePage="home" />
 
       {/* Header — mobile only */}
-      <div className="bg-white px-4 py-4 flex items-center gap-3 sticky top-0 z-50 shadow-sm border-b border-slate-100 lg:hidden">
+      <div className="bg-white px-4 py-4 flex items-center gap-3 sticky top-0 lg:top-16 z-50 shadow-sm border-b border-slate-100">
         <button onClick={() => navigate(-1)} className="p-1.5 hover:bg-slate-100 rounded-full transition-colors">
           <ArrowLeft className="h-5 w-5 text-slate-700" />
         </button>

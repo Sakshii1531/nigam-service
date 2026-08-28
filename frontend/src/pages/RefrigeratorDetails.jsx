@@ -46,7 +46,7 @@ const RefrigeratorDetails = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-bg-light flex flex-col pb-20">
+    <div className="min-h-screen bg-bg-light flex flex-col pb-20 lg:pb-8">
       
       {/* Warranty Modal */}
       {showWarrantyModal && (
@@ -205,7 +205,7 @@ const RefrigeratorDetails = () => {
       </div>
 
       {/* Footer / Action Button */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-border-color shadow-lg flex justify-between items-center z-10">
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-border-color shadow-lg flex justify-between items-center z-10 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-[min(100%,48rem)] md:rounded-t-2xl">
         <div>
           <span className="text-xs text-text-secondary block">Total</span>
           <span className="text-base font-bold text-text-primary">

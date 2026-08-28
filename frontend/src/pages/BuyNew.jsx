@@ -294,7 +294,7 @@ const BuyNew = () => {
   };
 
   return (
-    <div className="min-h-screen bg-bg-light flex flex-col pb-24 relative">
+    <div className="min-h-screen bg-bg-light flex flex-col pb-24 lg:pb-8 relative">
       
       {/* HEADER BAR WITH STYLISH BLUE ACCENTS */}
       <div className="bg-[#0B4EA2] text-white px-6 py-4 flex items-center justify-between border-b border-blue-900 shadow-md sticky top-0 z-30">
@@ -618,7 +618,7 @@ const BuyNew = () => {
             </div>
 
             {/* Badge features */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-4">
               {[
                 { title: 'Free Installation', desc: 'Doorstep setting', Icon: Wrench },
                 { title: '1 Year Warranty', desc: 'Brand certified', Icon: ShieldCheck },
@@ -1064,7 +1064,7 @@ const BuyNew = () => {
       </div>
 
       {/* Sticky Bottom Tab Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-border-color p-4 flex justify-around items-center z-40 shadow-lg rounded-t-3xl overflow-visible">
+      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-border-color p-4 flex justify-around items-center z-40 shadow-lg rounded-t-3xl overflow-visible lg:hidden">
         <button 
           onClick={() => navigate('/dashboard')}
           className="flex flex-col items-center text-text-secondary hover:text-brand-blue transition-colors cursor-pointer"

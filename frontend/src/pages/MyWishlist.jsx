@@ -51,7 +51,7 @@ const MyWishlist = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-24 relative">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-24 lg:pb-8 relative">
       {/* Header Bar */}
       <div className="bg-[#0B4EA2] text-white px-6 py-4 flex items-center justify-between border-b border-blue-900 shadow-md sticky top-0 z-30">
         <div className="flex items-center gap-3">
@@ -167,7 +167,7 @@ const MyWishlist = () => {
       </div>
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-100 p-4 flex justify-around items-center z-40 shadow-lg rounded-t-3xl">
+      <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-100 p-4 flex justify-around items-center z-40 shadow-lg rounded-t-3xl lg:hidden">
         <button 
           onClick={() => navigate('/dashboard')}
           className="flex flex-col items-center text-slate-400 hover:text-[#0B4EA2] cursor-pointer transition-colors"

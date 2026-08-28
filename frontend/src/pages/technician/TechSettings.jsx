@@ -6,7 +6,6 @@ import {
   Briefcase, ClipboardList, Calendar, Wrench, User
 } from 'lucide-react';
 import TechBottomNav from '../../components/TechBottomNav';
-import TechTopNav from '../../components/TechTopNav';
 import { apiRequest } from '../../lib/apiClient';
 import { usePushPermission, pushBlockedMessage } from '../../hooks/usePushPermission';
 
@@ -123,13 +122,11 @@ const TechSettings = () => {
   const [errorMsg, setErrorMsg] = useState('');
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-20 lg:pb-8 lg:pt-14 relative font-sans">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-20 lg:pb-8 relative font-sans">
 
-      {/* Desktop Top Nav */}
-      <TechTopNav activePage="profile" />
 
       {/* Header — mobile only */}
-      <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center sticky top-0 z-10 lg:hidden">
+      <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center sticky top-0 lg:top-16 z-10">
         <button onClick={() => navigate(-1)} className="p-1 hover:bg-slate-50 rounded-full text-slate-700 transition-colors">
           <ArrowLeft className="h-6 w-6 text-slate-700" />
         </button>

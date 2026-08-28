@@ -118,9 +118,10 @@ body.tech-app-active .text-2xl,
 .tech-app-container .text-2xl { font-size: 26px !important; }
 
 /* ─── Responsive layout for Customer & Technician panels ───────────────────
-   Mobile (< 768px): no constraint — existing mobile UI is preserved exactly.
-   Tablet (768px+):  content is full-width with proper padding; no phone frame.
-   Desktop (1024px+): sticky top navbar appears (handled per-page via lg:pt-14).
+   Mobile (< 768px):  untouched — the phone UI is the reference design.
+   Tablet (768px+):   content stays full-width but pages switch their rails to
+                      grids and constrain their own inner max-width.
+   Desktop (1024px+): the fixed top navbar (components/AppChrome.jsx) appears.
    ─────────────────────────────────────────────────────────────────────────── */
 @media (min-width: 768px) {
   body.customer-app-active,
@@ -132,7 +133,68 @@ body.tech-app-active .text-2xl,
   body.tech-app-active #root {
     width: 100%;
     max-width: 100%;
-    overflow-x: hidden;
+    /* `clip` rather than `hidden`: overflow-x:hidden silently turns #root into a
+       scroll container, which makes it the scrollport for every position:sticky
+       page header inside it. Since #root never scrolls (the document does), those
+       headers stopped sticking and instead rendered offset by their own `top`
+       value. `clip` contains the same overflow without creating a scroll box.
+       Safari < 16 has no `clip`; the @supports block below keeps overflow
+       contained there (at the cost of the old sticky behaviour, which is what
+       those browsers had anyway). A plain duplicate declaration does not work —
+       the minifier collapses same-property declarations to the last one. */
+    overflow-x: clip;
+  }
+
+  @supports not (overflow-x: clip) {
+    body.customer-app-active #root,
+    body.tech-app-active #root {
+      overflow-x: hidden;
+    }
+  }
+}
+
+/* The desktop navbar is fixed at the top, so every page in these two panels has
+   to start 4rem lower and give back that 4rem of viewport height. Doing it here
+   rather than as a per-page padding class is what lets AppChrome cover all ~100
+   routes without each one opting in — and keeps the offset from drifting out of
+   sync with the navbar's own h-16. */
+@media (min-width: 1024px) {
+  body.app-has-topnav #root {
+    padding-top: 4rem;
+  }
+
+  body.app-has-topnav .min-h-screen {
+    min-height: calc(100vh - 4rem);
+  }
+
+  body.app-has-topnav .h-screen {
+    height: calc(100vh - 4rem);
+  }
+
+  /* Overlays and drawers are positioned against the viewport, not the padded
+     document, so they must keep the full height they asked for. */
+  body.app-has-topnav .fixed.min-h-screen {
+    min-height: 100vh;
+  }
+  body.app-has-topnav .fixed.h-screen {
+    height: 100vh;
+  }
+
+  /* The navbar covers the top 4rem of the viewport, so a page header pinned to
+     `top: 0` would scroll in behind it. Shifting them here rather than adding
+     `lg:top-16` to ~60 page headers keeps the offset in one place and means
+     pages added later inherit it. */
+  body.app-has-topnav .sticky.top-0 {
+    top: 4rem;
+  }
+
+  /* …except where the sticky pins to something other than the page: content in
+     a viewport-positioned overlay, or in its own scroll box, is already
+     measuring from the right edge. */
+  body.app-has-topnav .fixed .sticky.top-0,
+  body.app-has-topnav .overflow-y-auto .sticky.top-0,
+  body.app-has-topnav .overflow-auto .sticky.top-0 {
+    top: 0;
   }
 }
 

@@ -10,7 +10,6 @@ import {
 } from 'lucide-react';
 import { useTech } from '../../context/TechContext';
 import TechBottomNav from '../../components/TechBottomNav';
-import TechTopNav from '../../components/TechTopNav';
 import splitAcImg from '../../assets/categories/split_ac.png';
 import wasingImg from '../../assets/categories/wasing.png';
 import fridgeImg from '../../assets/appliance_fridge.png';
@@ -519,7 +518,7 @@ const ActiveJob = () => {
 
   if (!activeJob) {
     return (
-      <div className="min-h-screen bg-[#F5F8FC] flex flex-col justify-between pb-20 relative font-sans">
+      <div className="min-h-screen bg-[#F5F8FC] flex flex-col justify-between pb-20 lg:pb-8 relative font-sans">
         {/* Header */}
         <div className="bg-white border-b border-slate-200 p-4 flex items-center justify-between sticky top-0 z-10 shadow-xs">
           <div className="flex items-center gap-3">
@@ -758,14 +757,12 @@ const ActiveJob = () => {
   };
 
   return (
-    <div className={`min-h-screen flex flex-col relative font-sans lg:pt-14 ${
+    <div className={`min-h-screen flex flex-col relative font-sans ${
       activeStep === 'inspection' && !enteredInspection ? 'bg-white pb-1' :
       (activeStep === 'revisit_complete' || activeStep === 'customer_update_preview' || activeStep === 'spare_part_required' || activeStep === 'completed_pending' || activeStep === 'spare_part_job_details' || activeStep === 'cancellation_summary' || activeStep === 'unable_to_fix_summary' || activeStep === 'revisit_billing' || activeStep === 'revisit_payment' || activeStep === 'revisit_payment_upi' || activeStep === 'revisit_payment_cash' || activeStep === 'revisit_payment_card' || activeStep === 'revisit_payment_wallet' || activeStep === 'revisit_otp') ? 'bg-[#F5F8FC] pb-0' :
       'bg-[#F5F8FC] pb-20'
     }`}>
 
-      {/* Desktop Top Nav */}
-      <TechTopNav activePage="jobs" />
 
       {/* A step that failed to save server-side must say so. The flow used to
           advance on local state alone, so a rejected write looked like success

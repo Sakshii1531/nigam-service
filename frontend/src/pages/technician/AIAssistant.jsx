@@ -107,7 +107,7 @@ const AIAssistant = () => {
 
           {/* Quick Prompts Grid */}
           {messages.length === 0 && (
-            <div className="grid grid-cols-2 gap-3.5 w-full">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 w-full">
               {quickPrompts.map((p, idx) => (
                 <button
                   key={idx}

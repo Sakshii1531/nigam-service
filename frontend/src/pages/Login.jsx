@@ -3,7 +3,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Phone, Mail, Lock, ShieldCheck, User, Gift, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useAppLogo } from '../context/LogoContext';
-import defaultLogo from '../assets/nigam-care.png';
 import { ApiError } from '../lib/apiClient';
 
 const STATE_CITIES = {
@@ -49,7 +48,7 @@ const Login = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { login, signupCheck } = useAuth();
-  const { logoUrl } = useAppLogo();
+  const { logoUrl, rawLogoUrl } = useAppLogo();
 
   const [isSignup, setIsSignup] = useState(location.state?.isSignup || false);
   const [usePhone, setUsePhone] = useState(true);
@@ -228,7 +227,11 @@ const Login = () => {
 
       {/* Desktop Left Panel — brand illustration */}
       <div className="hidden lg:flex lg:w-1/2 xl:w-3/5 min-h-screen bg-[#072C63] flex-col items-center justify-center p-12 gap-6">
-        <img src={logo} alt="Nigam Care" className="h-16 w-auto invert brightness-200" />
+        <img
+          src={logoUrl}
+          alt="Nigam Care"
+          className={`h-16 w-auto ${rawLogoUrl ? '' : 'invert brightness-200'}`}
+        />
         <div className="text-center">
           <h2 className="text-white text-3xl font-black leading-tight">Your Trusted Home<br />Service Partner</h2>
           <p className="text-white/70 text-sm mt-3 max-w-sm">Professional appliance repair, cleaning &amp; maintenance services at your doorstep.</p>
@@ -249,7 +252,7 @@ const Login = () => {
         
         {/* Logo/Brand */}
         <div className="flex flex-col items-center mt-2 mb-4">
-          <img src={logo} alt="Nigam Care" className="h-16 w-auto" />
+          <img src={logoUrl} alt="Nigam Care" className="h-16 w-auto" />
         </div>
 
         {/* Title */}

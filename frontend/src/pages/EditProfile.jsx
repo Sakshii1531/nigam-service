@@ -70,7 +70,7 @@ const EditProfile = () => {
   };
 
   return (
-    <div className="min-h-screen bg-bg-light flex flex-col pb-20">
+    <div className="min-h-screen bg-bg-light flex flex-col pb-20 lg:pb-8">
 
       {/* Header */}
       <div className="bg-[#E3ECF9] p-6 rounded-b-[30px] shadow-sm flex items-center gap-4">

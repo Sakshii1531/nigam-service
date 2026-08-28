@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Bell, Briefcase, ClipboardList, Calendar, Wrench, User, MessageCircle, Phone, FileText, ChevronDown, ChevronUp } from 'lucide-react';
 import TechBottomNav from '../../components/TechBottomNav';
-import TechTopNav from '../../components/TechTopNav';
 import { useTech } from '../../context/TechContext';
 
 const HelpSupport = () => {
@@ -37,13 +36,11 @@ const HelpSupport = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-20 lg:pb-8 lg:pt-14 relative font-sans">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-20 lg:pb-8 relative font-sans">
 
-      {/* Desktop Top Nav */}
-      <TechTopNav activePage="profile" />
 
       {/* Header — mobile only */}
-      <div className="bg-white border-b border-slate-100 p-4 flex items-center justify-between sticky top-0 z-10 lg:hidden">
+      <div className="bg-white border-b border-slate-100 p-4 flex items-center justify-between sticky top-0 lg:top-16 z-10">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="p-1 hover:bg-slate-50 rounded-full">
             <ArrowLeft className="h-6 w-6 text-slate-700" />

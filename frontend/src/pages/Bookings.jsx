@@ -8,7 +8,6 @@ import {
 } from 'lucide-react';
 import { apiRequest, getStoredTokens } from '../lib/apiClient';
 import { io } from 'socket.io-client';
-import CustomerTopNav from '../components/CustomerTopNav';
 
 const SOCKET_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000').replace(/\/api\/v1\/?$/, '');
 
@@ -241,13 +240,11 @@ const Bookings = () => {
   };
 
   return (
-    <div className="min-h-screen bg-bg-light flex flex-col pb-24 lg:pb-8 lg:pt-14">
+    <div className="min-h-screen bg-bg-light flex flex-col pb-24 lg:pb-8">
       
-      {/* Desktop Top Nav */}
-      <CustomerTopNav activePage="bookings" />
 
       {/* Top App Header — mobile only */}
-      <div className="bg-white border-b border-slate-100 px-5 pt-4 pb-3 sticky top-0 z-30 shadow-xs lg:hidden">
+      <div className="bg-white border-b border-slate-100 px-5 pt-4 pb-3 sticky top-0 lg:top-16 z-30 shadow-xs">
         <div className="flex items-center justify-between mb-3">
           <button 
             onClick={() => navigate(-1)}
@@ -336,9 +333,9 @@ const Bookings = () => {
       )}
 
       {/* Bookings List — Grid on desktop */}
-      <div className="flex-1 p-4 flex flex-col gap-3.5 max-w-screen-xl mx-auto w-full lg:grid lg:grid-cols-2 lg:auto-rows-min overflow-y-auto">
+      <div className="flex-1 p-4 md:p-6 flex flex-col gap-3.5 max-w-screen-xl mx-auto w-full md:grid md:grid-cols-2 md:auto-rows-min overflow-y-auto">
         {loading ? (
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3 md:col-span-2">
             {[1, 2, 3].map((n) => (
               <div key={n} className="bg-white rounded-3xl p-4 border border-slate-100 shadow-xs animate-pulse flex flex-col gap-3">
                 <div className="flex justify-between items-center">
@@ -352,7 +349,7 @@ const Bookings = () => {
             ))}
           </div>
         ) : filteredBookings.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-center p-8 gap-3 my-12">
+          <div className="flex-1 md:col-span-2 flex flex-col items-center justify-center text-center p-8 gap-3 my-12">
             <div className="w-16 h-16 bg-blue-50 text-[#0D47A1] rounded-3xl flex items-center justify-center shadow-xs">
               <Wrench className="h-8 w-8 text-[#0D47A1]" />
             </div>
@@ -804,7 +801,7 @@ const Bookings = () => {
       )}
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-border-color p-4 flex justify-around items-center z-40 overflow-visible">
+      <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-border-color p-4 flex justify-around items-center z-40 overflow-visible lg:hidden">
         <button 
           onClick={() => navigate('/dashboard')}
           className="flex flex-col items-center text-text-secondary hover:text-brand-blue"

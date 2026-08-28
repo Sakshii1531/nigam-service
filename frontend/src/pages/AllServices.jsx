@@ -1,7 +1,6 @@
 import React from 'react';
 import { ArrowLeft, Home as HomeIcon, Calendar, LayoutGrid, User, ShoppingCart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import CustomerTopNav from '../components/CustomerTopNav';
 import acImg from '../assets/categories/ac.png';
 import wasingImg from '../assets/categories/wasing.png';
 import electricianImg from '../assets/categories/electrician_fixed.png';
@@ -26,13 +25,11 @@ const AllServices = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-bg-light flex flex-col pb-20 lg:pb-8 lg:pt-14">
+    <div className="min-h-screen bg-bg-light flex flex-col pb-20 lg:pb-8">
       
-      {/* Desktop Top Nav */}
-      <CustomerTopNav activePage="categories" />
 
       {/* Header — mobile only */}
-      <div className="bg-[#E3ECF9] p-6 rounded-b-[30px] shadow-sm flex items-center gap-4 lg:hidden">
+      <div className="bg-[#E3ECF9] p-6 rounded-b-[30px] shadow-sm flex items-center gap-4">
         <button onClick={() => navigate(-1)} className="p-2 bg-white rounded-full shadow-sm">
           <ArrowLeft className="h-5 w-5 text-[#0D47A1]" />
         </button>
@@ -40,18 +37,18 @@ const AllServices = () => {
       </div>
 
       {/* Services Grid */}
-      <div className="p-6 max-w-screen-lg mx-auto w-full">
-        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-6">
+      <div className="p-6 md:p-8 max-w-screen-lg mx-auto w-full">
+        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-6 md:gap-5">
           {services.map((service) => (
             <div 
               key={service.id}
               onClick={() => navigate(`/service-details?service=${encodeURIComponent(service.name)}`)}
-              className="flex flex-col items-center gap-2 cursor-pointer"
+              className="flex flex-col items-center gap-2 cursor-pointer md:bg-white md:border md:border-border-color md:rounded-2xl md:p-4 md:hover:border-brand-blue md:hover:shadow-sm md:transition-all"
             >
-              <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center shadow-sm hover:border-[#0D47A1] border border-transparent transition-all overflow-hidden p-2">
+              <div className="w-20 h-20 md:w-full md:h-auto md:aspect-square bg-white rounded-2xl flex items-center justify-center shadow-sm md:shadow-none hover:border-[#0D47A1] border border-transparent md:border-0 transition-all overflow-hidden p-2">
                 <img src={service.img} alt={service.name} className="w-full h-full object-contain mix-blend-multiply" />
               </div>
-              <span className="text-xs font-semibold text-text-primary text-center truncate w-full">
+              <span className="text-xs font-semibold text-text-primary text-center truncate md:whitespace-normal md:leading-tight w-full">
                 {service.name}
               </span>
             </div>

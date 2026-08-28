@@ -58,7 +58,7 @@ const AllApplianceServices = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-bg-light flex flex-col pb-20">
+    <div className="min-h-screen bg-bg-light flex flex-col pb-20 lg:pb-8">
       {/* Header */}
       <div className="bg-[#E3ECF9] p-6 rounded-b-[30px] shadow-sm flex items-center gap-4">
         <button onClick={() => navigate(-1)} className="p-2 bg-white rounded-full shadow-sm">
@@ -76,7 +76,7 @@ const AllApplianceServices = () => {
           <p className="text-center text-xs font-semibold text-slate-400 py-10">No services published yet.</p>
         )}
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
           {services.map((service) => (
             <div 
               key={service.id}

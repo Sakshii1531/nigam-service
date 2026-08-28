@@ -167,7 +167,7 @@ const ProductDetails = () => {
     || { icon: '📦', colorTheme: 'from-slate-50 to-gray-50 border-slate-200' };
 
   return (
-    <div className="min-h-screen bg-bg-light flex flex-col pb-28 font-sans">
+    <div className="min-h-screen bg-bg-light flex flex-col pb-28 lg:pb-8 font-sans">
       
       {/* HEADER BAR */}
       <div className="bg-[#E3ECF9] p-4 flex items-center justify-between rounded-b-[25px] shadow-sm sticky top-0 z-30">
@@ -334,7 +334,7 @@ const ProductDetails = () => {
       </div>
 
       {/* STICKY BOTTOM BUTTONS BAR */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-border-color p-4.5 flex gap-3 z-20 shadow-lg">
+      <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-border-color p-4.5 flex gap-3 z-20 shadow-lg md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-[min(100%,48rem)] md:rounded-t-2xl">
         {/* Add to Cart button */}
         <button 
           onClick={handleAddToCart}
