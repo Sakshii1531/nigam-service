@@ -11,7 +11,6 @@ import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { apiRequest } from '../../lib/apiClient';
 import TechBottomNav from '../../components/TechBottomNav';
-import TechTopNav from '../../components/TechTopNav';
 import techAvatar from '../../assets/tech_avatar.png';
 
 const ProfilePage = () => {
@@ -50,13 +49,11 @@ const ProfilePage = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-[#F4F7FC] flex flex-col pb-28 lg:pb-8 lg:pt-14 font-sans relative text-left">
+    <div className="min-h-screen bg-[#F4F7FC] flex flex-col pb-28 lg:pb-8 font-sans relative text-left">
 
-      {/* Desktop Top Nav */}
-      <TechTopNav activePage="profile" />
 
       {/* Signature Dark Navy Header — mobile only */}
-      <div className="bg-gradient-to-b from-[#052355] to-[#0A337A] text-white pt-5 pb-8 px-4 shadow-md rounded-b-[2.2rem] sticky top-0 z-20 lg:hidden">
+      <div className="bg-gradient-to-b from-[#052355] to-[#0A337A] text-white pt-5 pb-8 px-4 shadow-md rounded-b-[2.2rem] sticky top-0 lg:top-16 z-20">
         <div className="flex items-center justify-between">
           <button 
             type="button"
@@ -169,7 +166,7 @@ const ProfilePage = () => {
         </div>
 
         {/* Quick Metrics Row */}
-        <div className="grid grid-cols-2 gap-2.5">
+        <div className="grid grid-cols-2 gap-2.5 md:gap-4">
           <div className="bg-white rounded-2xl p-3.5 border border-slate-200/80 shadow-2xs flex items-center gap-3">
             <div className="p-2.5 bg-blue-50 border border-blue-100 rounded-xl text-[#0D47A1]">
               <TrendingUp className="h-5 w-5" />
@@ -194,7 +191,7 @@ const ProfilePage = () => {
         </div>
 
         {/* Payout Breakdown Cards */}
-        <div className="grid grid-cols-2 gap-2.5">
+        <div className="grid grid-cols-2 gap-2.5 md:gap-4">
           {/* QuickPayout */}
           <button
             onClick={() => navigate('/technician/earnings?tab=quick')}

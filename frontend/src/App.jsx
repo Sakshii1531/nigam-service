@@ -173,6 +173,9 @@ import BrandForgotPassword from './pages/brand-admin/ForgotPassword';
 import SuperAdminVerifyOtp from './pages/super-admin/VerifyOtp';
 import SuperAdminForgotPassword from './pages/super-admin/ForgotPassword';
 
+// Desktop top navigation for the customer + technician panels
+import AppChrome, { isPhonePanelRoute, panelWidthClass } from './components/AppChrome';
+
 // Notifications
 import NotificationsFeed from './pages/Notifications';
 import NotificationDetail from './pages/NotificationDetail';
@@ -308,6 +311,19 @@ const ScrollToTop = () => {
   return null;
 };
 
+/**
+ * PanelContainer — centres the customer and technician panels on wide screens.
+ *
+ * Both are authored at phone width, so without a ceiling a 1920px monitor just
+ * stretches a 390px design across the whole display. Admin consoles and the
+ * marketing site are laid out for width already and pass through untouched.
+ */
+function PanelContainer({ children }) {
+  const { pathname } = useLocation();
+  if (!isPhonePanelRoute(pathname)) return children;
+  return <div className={`w-full mx-auto ${panelWidthClass(pathname)}`}>{children}</div>;
+}
+
 // Runs inside Router so useLocation is available
 function PageTitleManager() {
   usePageTitle();
@@ -325,6 +341,8 @@ function App() {
       <TechProvider>
       <PageTitleManager />
       <ScrollToTop />
+      <AppChrome />
+      <PanelContainer>
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/home" element={<Home />} />
@@ -534,6 +552,7 @@ function App() {
 
         <Route path="*" element={<PageHandler />} />
       </Routes>
+      </PanelContainer>
       </TechProvider>
       </BookingProvider>
       </NotificationProvider>

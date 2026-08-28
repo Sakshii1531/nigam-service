@@ -9,7 +9,6 @@ import { useNotifications } from '../../context/NotificationContext';
 import { useAuth } from '../../context/AuthContext';
 import PushPermissionPrompt from '../../components/PushPermissionPrompt';
 import TechBottomNav from '../../components/TechBottomNav';
-import TechTopNav from '../../components/TechTopNav';
 import techAvatar from '../../assets/tech_avatar.png';
 
 const Dashboard = () => {
@@ -269,13 +268,11 @@ const Dashboard = () => {
   );
 
   return (
-    <div className="tech-app-container min-h-screen bg-[#F5F8FC] flex flex-col pb-20 lg:pb-8 lg:pt-14 relative font-sans">
+    <div className="tech-app-container min-h-screen bg-[#F5F8FC] flex flex-col pb-20 lg:pb-8 relative font-sans">
 
       {/* First-run push notification permission prompt */}
       <PushPermissionPrompt subtitle="Enable notifications to get new job alerts, payouts and announcements instantly." />
 
-      {/* Desktop Top Nav — hidden on mobile/tablet */}
-      <TechTopNav activePage="jobs" />
 
       {/* Top Banner / Header Section */}
       {showAllJobs ? (
@@ -406,15 +403,15 @@ const Dashboard = () => {
       )}
 
       {/* Main Container below the Navy Blue Banner */}
-      <div className="flex-1 px-3.5 py-4 lg:px-6 xl:px-8 flex flex-col gap-5 max-w-screen-xl mx-auto w-full">
+      <div className="flex-1 px-3.5 py-4 md:px-6 md:py-6 xl:px-8 flex flex-col gap-5 md:gap-6 max-w-screen-xl mx-auto w-full">
 
         {/* VIEW 1: HOME DASHBOARD */}
         {!showAllJobs && (
           <>
             {/* Redesigned Combined Stats Card (2x2 Grid — 4-col on desktop) */}
-            <div className="bg-white rounded-[24px] border border-slate-200 shadow-sm p-4.5 grid grid-cols-2 lg:grid-cols-4 -mt-8 lg:mt-0 relative z-10">
+            <div className="bg-white rounded-[24px] border border-slate-200 shadow-sm p-4.5 md:p-5 grid grid-cols-2 md:grid-cols-4 -mt-8 md:mt-0 relative z-10">
               {/* Card 1: Available Jobs */}
-              <div className="flex flex-col items-center text-center justify-between min-h-[76px] pb-3 pr-2 border-r border-b border-slate-100">
+              <div className="flex flex-col items-center text-center justify-between min-h-[76px] pb-3 pr-2 border-r border-b border-slate-100 md:pb-0 md:px-2 md:border-b-0">
                 <div className="flex items-center gap-1.5 justify-center">
                   <div className="w-6.5 h-6.5 rounded-full bg-[#E3F2FD] flex items-center justify-center flex-shrink-0">
                     <Briefcase className="w-3.5 h-3.5 text-[#1565C0]" />
@@ -431,7 +428,7 @@ const Dashboard = () => {
               </div>
 
               {/* Card 2: Active Jobs */}
-              <div className="flex flex-col items-center text-center justify-between min-h-[76px] pb-3 pl-2 border-b border-slate-100">
+              <div className="flex flex-col items-center text-center justify-between min-h-[76px] pb-3 pl-2 border-b border-slate-100 md:pb-0 md:px-2 md:border-b-0 md:border-r">
                 <div className="flex items-center gap-1.5 justify-center">
                   <div className="w-6.5 h-6.5 rounded-full bg-[#E8F5E9] flex items-center justify-center flex-shrink-0">
                     <Wrench className="w-3.5 h-3.5 text-[#2E7D32]" />
@@ -448,7 +445,7 @@ const Dashboard = () => {
               </div>
 
               {/* Card 3: Revisit Jobs */}
-              <div className="flex flex-col items-center text-center justify-between min-h-[76px] pt-3 pr-2 border-r border-slate-100">
+              <div className="flex flex-col items-center text-center justify-between min-h-[76px] pt-3 pr-2 border-r border-slate-100 md:pt-0 md:px-2">
                 <div className="flex items-center gap-1.5 justify-center">
                   <div className="w-6.5 h-6.5 rounded-full bg-[#FFF3E0] flex items-center justify-center flex-shrink-0">
                     <RotateCw className="w-3.5 h-3.5 text-[#E65100]" />
@@ -465,7 +462,7 @@ const Dashboard = () => {
               </div>
 
               {/* Card 4: Completed Today */}
-              <div className="flex flex-col items-center text-center justify-between min-h-[76px] pt-3 pl-2">
+              <div className="flex flex-col items-center text-center justify-between min-h-[76px] pt-3 pl-2 md:pt-0 md:px-2">
                 <div className="flex items-center gap-1.5 justify-center">
                   <div className="w-6.5 h-6.5 rounded-full bg-[#F3E5F5] flex items-center justify-center flex-shrink-0">
                     <CheckCircle className="w-3.5 h-3.5 text-[#6A1B9A]" />
@@ -493,7 +490,7 @@ const Dashboard = () => {
               <p className="text-[10px] text-slate-500">Pending jobs requiring spare parts or follow-up visit</p>
 
               {revisitJobs.length > 0 ? (
-                <div className="flex flex-col gap-2.5 mt-1.5 lg:grid lg:grid-cols-2">
+                <div className="flex flex-col gap-2.5 mt-1.5 md:grid md:grid-cols-2 xl:grid-cols-3">
                   {revisitJobs.map((job) => {
                     const isRevisitScheduled = job.activeStep === 'revisit_scheduled' || job.revisitScheduledDate;
                     const isRevisitOnTheWay = job.activeStep === 'revisit_ontheway';
@@ -611,7 +608,7 @@ const Dashboard = () => {
               </div>
 
               {/* List of Nearby Jobs */}
-              <div className="flex flex-col gap-2.5 lg:grid lg:grid-cols-2">
+              <div className="flex flex-col gap-2.5 md:grid md:grid-cols-2 xl:grid-cols-3">
                 {nearbyJobs.length > 0 ? (
                   nearbyJobs.map((job) => {
                     const type = job.type.toLowerCase();
@@ -706,7 +703,7 @@ const Dashboard = () => {
                     );
                   })
                 ) : (
-                  <div className="text-center py-6 bg-white rounded-2xl border border-dashed border-slate-200 text-slate-500 text-xs">
+                  <div className="md:col-span-2 xl:col-span-3 text-center py-6 bg-white rounded-2xl border border-dashed border-slate-200 text-slate-500 text-xs">
                     No allocated jobs for active specifications.
                   </div>
                 )}
@@ -714,18 +711,18 @@ const Dashboard = () => {
             </div>
 
             {/* Quick Actions (Academy, Support, Announcements) */}
-            <div className="grid grid-cols-3 gap-2 mt-2.5">
+            <div className="grid grid-cols-3 gap-2 md:gap-3 mt-2.5">
               
               {/* NCC Academy Link */}
               <div 
                 onClick={() => navigate('/technician/academy')}
-                className="bg-white rounded-2xl p-2 border border-slate-200 shadow-xs flex items-center justify-between cursor-pointer hover:shadow-sm transition-all"
+                className="bg-white rounded-2xl p-2 md:p-3.5 border border-slate-200 shadow-xs flex items-center justify-between cursor-pointer hover:shadow-sm transition-all"
               >
-                <div className="flex items-center gap-1 min-w-0 flex-1">
-                  <div className="w-6.5 h-6.5 rounded-lg bg-[#E3F2FD] flex items-center justify-center flex-shrink-0">
-                    <GraduationCap className="w-3.5 h-3.5 text-[#1565C0]" />
+                <div className="flex items-center gap-1 md:gap-2.5 min-w-0 flex-1">
+                  <div className="w-6.5 h-6.5 md:w-9 md:h-9 rounded-lg bg-[#E3F2FD] flex items-center justify-center flex-shrink-0">
+                    <GraduationCap className="w-3.5 h-3.5 md:w-4.5 md:h-4.5 text-[#1565C0]" />
                   </div>
-                  <h5 className="text-[9px] font-semibold text-[#052355] truncate">NCC Academy</h5>
+                  <h5 className="text-[9px] md:text-xs font-semibold text-[#052355] truncate">NCC Academy</h5>
                 </div>
                 <ChevronRight className="w-2.5 h-2.5 text-slate-400 flex-shrink-0 ml-1" />
               </div>
@@ -733,13 +730,13 @@ const Dashboard = () => {
               {/* Need Help? Link */}
               <div 
                 onClick={() => navigate('/technician/technical-support')}
-                className="bg-white rounded-2xl p-2 border border-slate-200 shadow-xs flex items-center justify-between cursor-pointer hover:shadow-sm transition-all"
+                className="bg-white rounded-2xl p-2 md:p-3.5 border border-slate-200 shadow-xs flex items-center justify-between cursor-pointer hover:shadow-sm transition-all"
               >
-                <div className="flex items-center gap-1 min-w-0 flex-1">
-                  <div className="w-6.5 h-6.5 rounded-lg bg-[#E8F5E9] flex items-center justify-center flex-shrink-0">
-                    <MessageSquare className="w-3.5 h-3.5 text-[#2E7D32]" />
+                <div className="flex items-center gap-1 md:gap-2.5 min-w-0 flex-1">
+                  <div className="w-6.5 h-6.5 md:w-9 md:h-9 rounded-lg bg-[#E8F5E9] flex items-center justify-center flex-shrink-0">
+                    <MessageSquare className="w-3.5 h-3.5 md:w-4.5 md:h-4.5 text-[#2E7D32]" />
                   </div>
-                  <h5 className="text-[9px] font-semibold text-[#052355] truncate">Need Help?</h5>
+                  <h5 className="text-[9px] md:text-xs font-semibold text-[#052355] truncate">Need Help?</h5>
                 </div>
                 <ChevronRight className="w-2.5 h-2.5 text-slate-400 flex-shrink-0 ml-1" />
               </div>
@@ -747,13 +744,13 @@ const Dashboard = () => {
               {/* Announcements Link */}
               <div 
                 onClick={() => navigate('/technician/announcements')}
-                className="bg-white rounded-2xl p-2 border border-slate-200 shadow-xs flex items-center justify-between cursor-pointer hover:shadow-sm transition-all"
+                className="bg-white rounded-2xl p-2 md:p-3.5 border border-slate-200 shadow-xs flex items-center justify-between cursor-pointer hover:shadow-sm transition-all"
               >
-                <div className="flex items-center gap-1 min-w-0 flex-1">
-                  <div className="w-6.5 h-6.5 rounded-lg bg-[#FFF3E0] flex items-center justify-center flex-shrink-0">
-                    <Megaphone className="w-3.5 h-3.5 text-[#E65100]" />
+                <div className="flex items-center gap-1 md:gap-2.5 min-w-0 flex-1">
+                  <div className="w-6.5 h-6.5 md:w-9 md:h-9 rounded-lg bg-[#FFF3E0] flex items-center justify-center flex-shrink-0">
+                    <Megaphone className="w-3.5 h-3.5 md:w-4.5 md:h-4.5 text-[#E65100]" />
                   </div>
-                  <h5 className="text-[9px] font-semibold text-[#052355] truncate">Announcements</h5>
+                  <h5 className="text-[9px] md:text-xs font-semibold text-[#052355] truncate">Announcements</h5>
                 </div>
                 <ChevronRight className="w-2.5 h-2.5 text-slate-400 flex-shrink-0 ml-1" />
               </div>

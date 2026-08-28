@@ -121,7 +121,7 @@ const AMC = () => {
   const activeBrand = selectedBrand || applianceBrands[0];
 
   return (
-    <div className="min-h-screen bg-bg-light flex flex-col pb-24 relative">
+    <div className="min-h-screen bg-bg-light flex flex-col pb-24 lg:pb-8 relative">
 
       {plansError && (
         <p className="mx-6 mt-4 bg-red-50 border border-red-200 rounded-xl px-3 py-2 text-[11px] font-bold text-red-700">{plansError}</p>
@@ -197,7 +197,7 @@ const AMC = () => {
             </div>
 
             {/* Service Type Cards — NCC Shield, NCC AMC, Exchange, Buy New */}
-            <div className="flex gap-3 overflow-x-auto no-scrollbar py-2 px-1 -mx-6 px-6 mt-[-10px]">
+            <div className="flex gap-3 overflow-x-auto no-scrollbar py-2 px-1 -mx-6 px-6 mt-[-10px] md:grid md:grid-cols-3 md:gap-5 md:overflow-visible md:mx-0 md:px-1">
               {[
                 {
                   name: 'NCC Shield\nExtended Warranty',
@@ -328,7 +328,7 @@ const AMC = () => {
                 <div
                   key={idx}
                   onClick={card.onClick}
-                  className="flex-shrink-0 w-[136px] bg-white border border-slate-100 rounded-[24px] p-3.5 pt-4 pb-3.5 flex flex-col items-center text-center justify-between shadow-[0_4px_20px_rgb(0,0,0,0.02)] hover:shadow-md transition-all cursor-pointer min-h-[210px] group"
+                  className="flex-shrink-0 w-[136px] md:w-auto md:flex-shrink bg-white border border-slate-100 rounded-[24px] p-3.5 pt-4 pb-3.5 md:p-6 flex flex-col items-center text-center justify-between shadow-[0_4px_20px_rgb(0,0,0,0.02)] hover:shadow-md transition-all cursor-pointer min-h-[210px] md:min-h-[240px] group"
                 >
                   <div className="flex flex-col items-center w-full">
                     <div className="group-hover:scale-105 transition-transform duration-300">
@@ -385,7 +385,7 @@ const AMC = () => {
                 <h3 className="text-sm font-black text-brand-navy">Shop by Category</h3>
                 <button className="text-xs font-bold text-brand-blue hover:underline cursor-pointer">View All</button>
               </div>
-              <div className="flex items-center gap-3 overflow-x-auto no-scrollbar pb-1">
+              <div className="flex items-center gap-3 overflow-x-auto no-scrollbar pb-1 md:grid md:grid-cols-5 md:gap-4 md:overflow-visible">
                 {[
                   { name: 'TV', img: tvImg, appliance: 'Television' },
                   { name: 'Refrigerator', img: fridgeImg, appliance: 'Refrigerator' },
@@ -396,12 +396,12 @@ const AMC = () => {
                   <div
                     key={idx}
                     onClick={() => navigate(`/buy/amc/plans/${encodeURIComponent(item.appliance)}`)}
-                    className="flex-shrink-0 w-[72px] bg-white border border-slate-200/60 rounded-2xl p-2 flex flex-col items-center justify-center gap-1.5 cursor-pointer shadow-sm hover:border-brand-blue/30 hover:shadow-md transition-all text-center min-h-[88px]"
+                    className="flex-shrink-0 w-[72px] md:w-auto md:flex-shrink bg-white border border-slate-200/60 rounded-2xl p-2 md:p-4 flex flex-col items-center justify-center gap-1.5 md:gap-2.5 cursor-pointer shadow-sm hover:border-brand-blue/30 hover:shadow-md transition-all text-center min-h-[88px] md:min-h-[120px]"
                   >
-                    <div className="w-10 h-10 flex items-center justify-center overflow-hidden">
+                    <div className="w-10 h-10 md:w-16 md:h-16 flex items-center justify-center overflow-hidden">
                       <img src={item.img} alt={item.name} className="w-full h-full object-contain mix-blend-multiply" />
                     </div>
-                    <span className="text-[9px] font-semibold text-slate-700 leading-tight block text-center">{item.name}</span>
+                    <span className="text-[9px] md:text-xs font-semibold text-slate-700 leading-tight block text-center">{item.name}</span>
                   </div>
                 ))}
               </div>
@@ -447,7 +447,7 @@ const AMC = () => {
               <p className="text-xs text-text-secondary font-semibold">Select an appliance for AMC plan</p>
             </div>
 
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-3 md:grid md:grid-cols-2 xl:grid-cols-3">
               {[
                 { id: 'tv', name: 'Television', desc: 'NCC AMC Plans', price: '₹599', img: tvImg },
                 { id: 'refrigerator', name: 'Refrigerator', desc: 'NCC AMC Plans', price: '₹799', img: fridgeImg },
@@ -919,7 +919,7 @@ const AMC = () => {
       </div>
 
       {/* Sticky Bottom Tab Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-border-color p-4 flex justify-around items-center z-40 shadow-lg rounded-t-3xl overflow-visible">
+      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-border-color p-4 flex justify-around items-center z-40 shadow-lg rounded-t-3xl overflow-visible lg:hidden">
         <button 
           onClick={() => navigate('/dashboard')}
           className="flex flex-col items-center text-text-secondary hover:text-brand-blue transition-colors cursor-pointer"

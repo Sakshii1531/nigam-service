@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Award, Play, BookOpen, ChevronRight } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
-import TechTopNav from '../../components/TechTopNav';
 
 const CATEGORY_TONE = [
   'text-[#00C853] bg-green-50',
@@ -40,13 +39,11 @@ const Academy = () => {
   const activeBlog = blogs.find((b) => b.id === activeBlogId);
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-16 lg:pb-8 lg:pt-14 relative font-sans">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-16 lg:pb-8 relative font-sans">
 
-      {/* Desktop Top Nav */}
-      <TechTopNav activePage="profile" />
 
       {/* Header — mobile only */}
-      <div className="bg-[#052355] text-white px-4 py-3.5 flex items-center justify-between sticky top-0 z-10 shadow-md lg:hidden">
+      <div className="bg-[#052355] text-white px-4 py-3.5 flex items-center justify-between sticky top-0 lg:top-16 z-10 shadow-md">
         <div className="flex items-center gap-3">
           <button 
             onClick={() => {

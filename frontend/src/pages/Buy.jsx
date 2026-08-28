@@ -11,7 +11,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { apiRequest } from '../lib/apiClient';
 import { payWithRazorpay } from '../lib/razorpayCheckout';
 import { useAuth } from '../context/AuthContext';
-import CustomerTopNav from '../components/CustomerTopNav';
 
 // Import premium cutout assets for high-fidelity rendering
 import fridgeImg from '../assets/appliance_fridge.png';
@@ -263,10 +262,8 @@ const Buy = () => {
   const activeBrand = selectedBrand || defaultBrand;
 
   return (
-    <div className="min-h-screen bg-bg-light flex flex-col pb-24 lg:pb-8 lg:pt-14 relative">
+    <div className="min-h-screen bg-bg-light flex flex-col pb-24 lg:pb-8 relative">
       
-      {/* Desktop Top Nav */}
-      <CustomerTopNav activePage="buy" />
 
       {/* Header section with back navigation for sub-steps — mobile only */}
       {step > 1 && step !== 7 && step !== 15 && (
@@ -312,7 +309,7 @@ const Buy = () => {
       )}
 
       {/* Dynamic Content Pages */}
-      <div className="flex-1 p-6 flex flex-col gap-6 overflow-y-auto max-w-screen-xl mx-auto w-full">
+      <div className="flex-1 p-6 md:px-8 flex flex-col gap-6 md:gap-8 overflow-y-auto max-w-screen-xl mx-auto w-full">
         
         {/* STEP 1: BUY SECTION - HOME */}
         {step === 1 && (
@@ -356,7 +353,7 @@ const Buy = () => {
             </div>
 
             {/* Service Type Cards — NCC Shield, NCC AMC, Exchange, Buy New */}
-            <div className="flex gap-3 overflow-x-auto no-scrollbar py-2 px-1 -mx-6 px-6 mt-[-10px]">
+            <div className="flex gap-3 overflow-x-auto no-scrollbar py-2 px-1 -mx-6 px-6 mt-[-10px] md:grid md:grid-cols-3 md:gap-5 md:overflow-visible md:mx-0 md:px-1">
               {[
                 {
                   name: 'NCC Shield\nExtended Warranty',
@@ -487,7 +484,7 @@ const Buy = () => {
                 <div
                   key={idx}
                   onClick={card.onClick}
-                  className="flex-shrink-0 w-[136px] bg-white border border-slate-100 rounded-[24px] p-3.5 pt-4 pb-3.5 flex flex-col items-center text-center justify-between shadow-[0_4px_20px_rgb(0,0,0,0.02)] hover:shadow-md transition-all cursor-pointer min-h-[210px] group"
+                  className="flex-shrink-0 w-[136px] md:w-auto md:flex-shrink bg-white border border-slate-100 rounded-[24px] p-3.5 pt-4 pb-3.5 md:p-6 flex flex-col items-center text-center justify-between shadow-[0_4px_20px_rgb(0,0,0,0.02)] hover:shadow-md transition-all cursor-pointer min-h-[210px] md:min-h-[240px] group"
                 >
                   <div className="flex flex-col items-center w-full">
                     <div className="group-hover:scale-105 transition-transform duration-300">
@@ -671,7 +668,7 @@ const Buy = () => {
                   View All
                 </button>
               </div>
-              <div className="flex items-center gap-3 overflow-x-auto no-scrollbar pb-1">
+              <div className="flex items-center gap-3 overflow-x-auto no-scrollbar pb-1 md:grid md:grid-cols-5 md:gap-4 md:overflow-visible">
                 {[
                   { name: 'TV', img: tvImg, appliance: 'Television' },
                   { name: 'Refrigerator', img: fridgeImg, appliance: 'Refrigerator' },
@@ -684,12 +681,12 @@ const Buy = () => {
                     onClick={() => {
                       navigate(`/buy/select-tier/${encodeURIComponent(item.appliance)}`);
                     }}
-                    className="flex-shrink-0 w-[72px] bg-white border border-slate-200/60 rounded-2xl p-2 flex flex-col items-center justify-center gap-1.5 cursor-pointer shadow-sm hover:border-brand-blue/30 hover:shadow-md transition-all text-center min-h-[88px]"
+                    className="flex-shrink-0 w-[72px] md:w-auto md:flex-shrink bg-white border border-slate-200/60 rounded-2xl p-2 md:p-4 flex flex-col items-center justify-center gap-1.5 md:gap-2.5 cursor-pointer shadow-sm hover:border-brand-blue/30 hover:shadow-md transition-all text-center min-h-[88px] md:min-h-[120px]"
                   >
-                    <div className="w-10 h-10 flex items-center justify-center overflow-hidden">
+                    <div className="w-10 h-10 md:w-16 md:h-16 flex items-center justify-center overflow-hidden">
                       <img src={item.img} alt={item.name} className="w-full h-full object-contain mix-blend-multiply" />
                     </div>
-                    <span className="text-[9px] font-semibold text-slate-700 leading-tight block text-center">
+                    <span className="text-[9px] md:text-xs font-semibold text-slate-700 leading-tight block text-center">
                       {item.name}
                     </span>
                   </div>
@@ -705,8 +702,8 @@ const Buy = () => {
                   View All
                 </button>
               </div>
-              <div className="bg-white border border-slate-200/60 rounded-2xl p-3 shadow-sm">
-                <div className="flex items-center justify-between gap-2">
+              <div className="bg-white border border-slate-200/60 rounded-2xl p-3 md:p-4 shadow-sm">
+                <div className="flex items-center justify-between gap-2 md:gap-4">
                   {[
                     { name: 'SAMSUNG', color: '#1428A0' },
                     { name: 'LG', color: '#A50034' },
@@ -716,10 +713,10 @@ const Buy = () => {
                   ].map((brand, idx) => (
                     <div
                       key={idx}
-                      className="flex-1 flex items-center justify-center py-2 px-1 bg-slate-50 border border-slate-200/80 rounded-xl hover:bg-blue-50/30 hover:border-brand-blue/30 cursor-pointer transition-all shadow-xs"
+                      className="flex-1 flex items-center justify-center py-2 md:py-4 px-1 bg-slate-50 border border-slate-200/80 rounded-xl hover:bg-blue-50/30 hover:border-brand-blue/30 cursor-pointer transition-all shadow-xs"
                     >
                       <span 
-                        className="text-[8px] font-black tracking-tight text-center leading-tight"
+                        className="text-[8px] md:text-[11px] font-black tracking-tight text-center leading-tight"
                         style={{ color: brand.color }}
                       >
                         {brand.name}
@@ -754,7 +751,7 @@ const Buy = () => {
               </span>
             </div>
 
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-3 md:grid md:grid-cols-2 xl:grid-cols-3">
               {[
                 { id: 'tv', name: 'Television', desc: 'Extended Warranty', price: '₹999', img: tvImg },
                 { id: 'refrigerator', name: 'Refrigerator', desc: 'Extended Warranty', price: '₹999', img: fridgeImg },

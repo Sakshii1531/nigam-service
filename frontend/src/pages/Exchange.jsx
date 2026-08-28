@@ -187,7 +187,7 @@ const Exchange = () => {
   const payableAmount = newProductPrice === null ? null : Math.max(newProductPrice - exchangeValue, 0);
 
   return (
-    <div className="min-h-screen bg-bg-light flex flex-col pb-24 relative">
+    <div className="min-h-screen bg-bg-light flex flex-col pb-24 lg:pb-8 relative">
       
       {/* EXCHANGE FLOW MAIN TITLE HEADER */}
       <div className="bg-[#0B4EA2] text-white px-6 py-4 flex items-center justify-between border-b border-blue-900 shadow-md sticky top-0 z-30">
@@ -692,7 +692,7 @@ const Exchange = () => {
       </div>
 
       {/* Sticky Bottom Tab Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-border-color p-4 flex justify-around items-center z-40 shadow-lg rounded-t-3xl overflow-visible">
+      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-border-color p-4 flex justify-around items-center z-40 shadow-lg rounded-t-3xl overflow-visible lg:hidden">
         <button 
           onClick={() => navigate('/dashboard')}
           className="flex flex-col items-center text-text-secondary hover:text-brand-blue transition-colors cursor-pointer"

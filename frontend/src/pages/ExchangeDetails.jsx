@@ -63,7 +63,7 @@ const ExchangeDetails = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-slate-100 bg-white sticky top-[57px] z-40">
+      <div className="flex border-b border-slate-100 bg-white sticky top-[57px] lg:top-[121px] z-40">
         {tabs.map((tab) => (
           <button
             key={tab}

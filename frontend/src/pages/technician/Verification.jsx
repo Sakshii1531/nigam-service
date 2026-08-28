@@ -32,7 +32,7 @@ const Verification = () => {
 
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-20 relative font-sans">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-20 lg:pb-8 relative font-sans">
 
       {/* Header */}
       <div className="bg-white border-b border-slate-100 p-4 flex items-center justify-between sticky top-0 z-10">

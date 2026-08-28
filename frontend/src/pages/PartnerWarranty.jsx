@@ -18,7 +18,7 @@ const PartnerWarranty = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-bg-light flex flex-col pb-16">
+    <div className="min-h-screen bg-bg-light flex flex-col pb-16 lg:pb-8">
       
       {/* Header */}
       <div className="bg-white px-6 py-4 flex items-center justify-between border-b border-border-color shadow-sm relative">
@@ -72,7 +72,7 @@ const PartnerWarranty = () => {
           </h2>
 
           {/* Category Cards List */}
-          <div className="flex flex-col gap-3.5">
+          <div className="flex flex-col gap-3.5 md:grid md:grid-cols-2 xl:grid-cols-3">
             
             {/* Card 1: ElectroCare */}
             <motion.div 
@@ -302,7 +302,7 @@ const PartnerWarranty = () => {
       </div>
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-border-color p-4 flex justify-around items-center z-40 overflow-visible">
+      <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-border-color p-4 flex justify-around items-center z-40 overflow-visible lg:hidden">
         <button 
           onClick={() => navigate('/dashboard')}
           className="flex flex-col items-center text-brand-blue"

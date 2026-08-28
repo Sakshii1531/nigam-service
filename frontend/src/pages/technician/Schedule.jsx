@@ -7,7 +7,6 @@ import {
   MapPin, Phone, ArrowRight, RotateCw, Sparkles
 } from 'lucide-react';
 import TechBottomNav from '../../components/TechBottomNav';
-import TechTopNav from '../../components/TechTopNav';
 import { useTech } from '../../context/TechContext';
 import { useNotifications } from '../../context/NotificationContext';
 
@@ -79,13 +78,11 @@ const Schedule = () => {
   const currentMonthYear = today.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
   return (
-    <div className="min-h-screen bg-[#F4F7FC] flex flex-col pb-28 lg:pb-8 lg:pt-14 font-sans relative">
+    <div className="min-h-screen bg-[#F4F7FC] flex flex-col pb-28 lg:pb-8 font-sans relative">
 
-      {/* Desktop Top Nav */}
-      <TechTopNav activePage="schedule" />
 
       {/* Header — mobile only */}
-      <div className="bg-gradient-to-b from-[#052355] to-[#0A337A] text-white pt-4 pb-5 px-4 shadow-md rounded-b-[2rem] sticky top-0 z-20 flex flex-col gap-2 lg:hidden">
+      <div className="bg-gradient-to-b from-[#052355] to-[#0A337A] text-white pt-4 pb-5 px-4 shadow-md rounded-b-[2rem] sticky top-0 lg:top-16 z-20 flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <button 
             type="button"
@@ -180,7 +177,7 @@ const Schedule = () => {
           </div>
 
           {activeSchedules.length > 0 ? (
-            <div className="flex flex-col gap-3 relative w-full mt-1">
+            <div className="flex flex-col gap-3 relative w-full mt-1 lg:grid lg:grid-cols-2">
               {activeSchedules.map((item, idx) => (
                 <div 
                   key={item.id}

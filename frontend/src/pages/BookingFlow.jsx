@@ -6,7 +6,6 @@ import {
 } from 'lucide-react';
 import { apiRequest, getStoredTokens, storeTokens } from '../lib/apiClient';
 import { useAuth } from '../context/AuthContext';
-import CustomerTopNav from '../components/CustomerTopNav';
 
 import { getCatalogEntry, preloadCatalogOverrides } from '../data/bookingCatalog';
 
@@ -130,7 +129,7 @@ const OptionCard = ({ icon, name, desc, selected, onClick }) => (
 
 // ─── Bottom Summary Bar ────────────────────────────────────────────────────────
 const BottomBar = ({ icon, label, sublabel, price, btnLabel, btnDisabled, onBtn, onExpand, expanded }) => (
-  <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/80 shadow-[0_-8px_20px_rgba(0,0,0,0.08)] z-30 transition-all">
+  <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/80 shadow-[0_-8px_20px_rgba(0,0,0,0.08)] z-30 transition-all md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-[min(100%,48rem)] md:rounded-t-2xl">
     {/* Summary row */}
     <button
       type="button"
@@ -500,10 +499,8 @@ const BookingFlow = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans max-w-md lg:max-w-screen-lg lg:pt-14 mx-auto shadow-2xl relative border-x border-slate-200">
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans max-w-md md:max-w-2xl lg:max-w-screen-lg mx-auto shadow-2xl relative border-x border-slate-200">
 
-      {/* Desktop Top Nav */}
-      <CustomerTopNav activePage="home" />
 
       {/* ── Fixed Header — mobile only ── */}
       <div className="bg-white/90 backdrop-blur-md sticky top-0 z-20 shadow-2xs border-b border-slate-100 px-4 py-3 flex items-center justify-between lg:hidden">
@@ -1111,7 +1108,7 @@ const BookingFlow = () => {
           expanded={priceExpanded}
         />
       ) : (
-        <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/95 backdrop-blur-md border-t border-slate-200/80 shadow-[0_-8px_20px_rgba(0,0,0,0.08)] z-30 px-4 pb-4 pt-3 flex flex-col gap-2.5">
+        <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/95 backdrop-blur-md border-t border-slate-200/80 shadow-[0_-8px_20px_rgba(0,0,0,0.08)] z-30 px-4 pb-4 pt-3 flex flex-col gap-2.5 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-[min(100%,48rem)] md:rounded-t-2xl">
           {/* Summary Card */}
           <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3 flex items-center justify-between shadow-2xs">
             <div className="flex items-center gap-3">

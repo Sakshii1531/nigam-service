@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, MapPin, Home, Briefcase, Plus, X, Pencil, Trash2, Star, Check, Sparkles, RefreshCw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { apiRequest } from '../lib/apiClient';
-import CustomerTopNav from '../components/CustomerTopNav';
 
 const SavedAddresses = () => {
   const navigate = useNavigate();
@@ -167,10 +166,8 @@ const SavedAddresses = () => {
   };
 
   return (
-    <div className="min-h-screen bg-bg-light flex flex-col pb-20 lg:pb-8 lg:pt-14 relative">
+    <div className="min-h-screen bg-bg-light flex flex-col pb-20 lg:pb-8 relative">
 
-      {/* Desktop Top Nav */}
-      <CustomerTopNav activePage="account" />
 
       {/* Floating Toast Notification */}
       {toastMsg && (
@@ -181,7 +178,7 @@ const SavedAddresses = () => {
       )}
 
       {/* Header — mobile only */}
-      <div className="bg-[#E3ECF9] p-6 rounded-b-[30px] shadow-sm flex items-center gap-4 lg:hidden">
+      <div className="bg-[#E3ECF9] p-6 rounded-b-[30px] shadow-sm flex items-center gap-4">
         <button
           onClick={() => navigate(-1)}
           className="p-2 bg-white rounded-full shadow-sm hover:bg-slate-50 transition-colors cursor-pointer"

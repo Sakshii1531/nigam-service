@@ -11,7 +11,6 @@ import {
   MapPin,
   ChevronRight,
 } from 'lucide-react';
-import CustomerTopNav from '../components/CustomerTopNav';
 
 const HelpSupport = () => {
   const navigate = useNavigate();
@@ -56,13 +55,11 @@ const HelpSupport = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-10 lg:pb-8 lg:pt-14">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-10 lg:pb-8">
 
-      {/* Desktop Top Nav */}
-      <CustomerTopNav activePage="account" />
 
       {/* Header — mobile only */}
-      <div className="bg-white px-5 py-4 flex items-center gap-3 sticky top-0 z-50 shadow-sm border-b border-slate-100 lg:hidden">
+      <div className="bg-white px-5 py-4 flex items-center gap-3 sticky top-0 lg:top-16 z-50 shadow-sm border-b border-slate-100">
         <button
           onClick={() => navigate('/profile')}
           className="p-1.5 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"

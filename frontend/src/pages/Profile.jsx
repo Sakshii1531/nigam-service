@@ -24,7 +24,6 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { apiRequest } from '../lib/apiClient';
-import CustomerTopNav from '../components/CustomerTopNav';
 
 import partnerImg from '../assets/working/Gemini_Generated_Image_ahi7orahi7orahi7-removebg-preview (1).png';
 
@@ -87,13 +86,11 @@ const Profile = () => {
   }, [user]);
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-24 lg:pb-8 lg:pt-14">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-24 lg:pb-8">
       
-      {/* Desktop Top Nav */}
-      <CustomerTopNav activePage="account" />
 
       {/* Header — mobile only */}
-      <div className="px-6 pt-5 pb-3 flex justify-between items-center bg-white sticky top-0 z-50 shadow-xs border-b border-slate-100 lg:hidden">
+      <div className="px-6 pt-5 pb-3 flex justify-between items-center bg-white sticky top-0 lg:top-16 z-50 shadow-xs border-b border-slate-100">
         <h1 className="text-xl font-black text-slate-900">My Account</h1>
         <div className="flex items-center gap-4">
           <button 
@@ -476,7 +473,7 @@ const Profile = () => {
       </div>
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-border-color p-4 flex justify-around items-center z-40 shadow-lg rounded-t-3xl overflow-visible">
+      <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-border-color p-4 flex justify-around items-center z-40 shadow-lg rounded-t-3xl overflow-visible lg:hidden">
         <button 
           onClick={() => navigate('/dashboard')}
           className="flex flex-col items-center text-text-secondary hover:text-brand-blue cursor-pointer transition-colors"

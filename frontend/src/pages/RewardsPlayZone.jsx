@@ -380,7 +380,7 @@ const RewardsPlayZone = () => {
   const segmentAngle = 360 / Math.max(numSegs, 1);
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-12 relative overflow-x-hidden">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-12 relative overflow-x-clip">
       
       {showConfetti && <ConfettiEffect />}
 
