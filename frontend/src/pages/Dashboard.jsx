@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Search, Bell, MapPin, Wrench, Zap, Droplet, Thermometer, Shield, Home as HomeIcon, Calendar, MessageSquare, User, Star, X, Wind, WashingMachine, Refrigerator, Droplets, Sparkles, ShoppingCart, Tv, Flame, MousePointerClick, LayoutGrid } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import PushPermissionPrompt from '../components/PushPermissionPrompt';
+import Footer from '../components/layout/Footer';
 import { useNotifications } from '../context/NotificationContext';
 import { apiRequest } from '../lib/apiClient';
 import acBanner from '../assets/ac_service_banner.png';
@@ -243,7 +244,10 @@ const Dashboard = ({ defaultType }) => {
     { id: 2, title: "AC repair", image: mostBookedAc2, price: 299, badge: "Instant" },
     { id: 3, title: "Washing Machine", image: mostBookedWm, price: 499, badge: "Instant" },
     { id: 4, title: "Home Cleaning", image: mostBookedCleaning, price: 999, badge: "Trending" },
-    { id: 5, title: "Women Salon", image: mostBookedSalon, price: 799, badge: "Best Seller" }
+    { id: 5, title: "Women Salon", image: mostBookedSalon, price: 799, badge: "Best Seller" },
+    { id: 6, title: "Refrigerator Repair", image: applianceFridge, price: 899, badge: "Popular" },
+    { id: 7, title: "Electrician Service", image: electricianImg, price: 199, badge: "Instant" },
+    { id: 8, title: "Plumbing Checkup", image: plumberImg, price: 199, badge: "Instant" },
   ], (t) => ({ id: t.id, title: t.title, image: t.imageUrl, rating: t.rating, price: t.price, badge: t.badge }));
 
   const applianceServices = tilesFor('appliance-service', [
@@ -252,7 +256,9 @@ const Dashboard = ({ defaultType }) => {
     { id: 3, title: "Washing Machine", image: mostBookedWm, price: 499, badge: "Instant", path: '/booking' },
     { id: 4, title: "Refrigerator Repair & Service", image: applianceFridge, price: 899, badge: "Instant", path: '/refrigerator-details' },
     { id: 5, title: "Deep Clean AC", image: mostBookedAc1, price: 1198, badge: "2 ACs", path: '/booking' },
-    { id: 6, title: "WM Checkup", image: mostBookedWm, price: 199, badge: "Instant", path: '/booking' }
+    { id: 6, title: "WM Checkup", image: mostBookedWm, price: 199, badge: "Instant", path: '/booking' },
+    { id: 7, title: "Electrician Service", image: electricianImg, price: 199, badge: "Instant", path: '/booking' },
+    { id: 8, title: "Plumbing Checkup", image: plumberImg, price: 199, badge: "Instant", path: '/booking' }
   ], (t) => ({ id: t.id, title: t.title, image: t.imageUrl, rating: t.rating, price: t.price, badge: t.badge, path: t.link || '/booking' }));
 
   useEffect(() => {
@@ -268,6 +274,8 @@ const Dashboard = ({ defaultType }) => {
   const [billFile, setBillFile] = useState(null);
   const [selectedServiceForWarranty, setSelectedServiceForWarranty] = useState(null);
 
+  const serviceRef = useRef(null);
+
   useEffect(() => {
     const interval = setInterval(() => {
       if (bannerRef.current) {
@@ -280,6 +288,41 @@ const Dashboard = ({ defaultType }) => {
       }
     }, 3000);
     return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    let animId;
+    let isHovered = false;
+    const el = serviceRef.current;
+    if (!el) return;
+
+    const onMouseEnter = () => { isHovered = true; };
+    const onMouseLeave = () => { isHovered = false; };
+
+    el.addEventListener('mouseenter', onMouseEnter);
+    el.addEventListener('mouseleave', onMouseLeave);
+
+    const step = () => {
+      if (window.innerWidth >= 768 && !isHovered && el) {
+        const halfScroll = el.scrollWidth / 2;
+        if (el.scrollLeft >= halfScroll) {
+          el.scrollLeft -= halfScroll;
+        } else {
+          el.scrollLeft += 0.5;
+        }
+      }
+      animId = requestAnimationFrame(step);
+    };
+
+    animId = requestAnimationFrame(step);
+
+    return () => {
+      cancelAnimationFrame(animId);
+      if (el) {
+        el.removeEventListener('mouseenter', onMouseEnter);
+        el.removeEventListener('mouseleave', onMouseLeave);
+      }
+    };
   }, []);
 
   const services = tilesFor('dashboard-service', [
@@ -609,15 +652,15 @@ const Dashboard = ({ defaultType }) => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 p-4 md:px-6 md:py-6 lg:p-6 xl:p-8 flex flex-col gap-6 md:gap-8 max-w-screen-xl mx-auto w-full">
-        {/* Service Banners — scroll on mobile, grid on desktop */}
-        <div ref={bannerRef} className="flex gap-4 overflow-x-auto pb-2 -mx-2 px-2 snap-x no-scrollbar md:grid md:grid-cols-2 xl:grid-cols-3 md:overflow-visible md:mx-0 md:px-0 md:pb-0">
+      <div className="flex-1 p-4 md:px-10 md:py-6 lg:px-16 lg:py-8 xl:px-20 flex flex-col gap-6 md:gap-8 max-w-screen-2xl mx-auto w-full">
+        {/* Service Banners — horizontal auto-slide carousel */}
+        <div ref={bannerRef} className="flex gap-4 overflow-x-auto pb-2 -mx-2 px-2 snap-x snap-mandatory scroll-smooth no-scrollbar md:mx-auto md:px-0 md:pb-0 md:max-w-[1420px] md:w-full relative mt-6 md:mt-10">
           {(activeType === 'non-warranty' ? regularBanners : warrantyBannersList).map((banner) => (
             <div 
               key={banner.id}
-              className="bg-white rounded-2xl shadow-sm border border-border-color overflow-hidden min-w-[300px] md:min-w-0 snap-center"
+              className="bg-white rounded-2xl shadow-sm border border-border-color overflow-hidden min-w-[300px] md:min-w-full md:w-full flex-shrink-0 snap-center hover:shadow-md transition-shadow"
             >
-              <div className="relative h-36 md:h-auto md:aspect-[25/12] w-full">
+              <div className="relative h-36 md:h-auto md:aspect-[3.35/1] w-full">
                 <img 
                   src={banner.image} 
                   alt="Service Banner" 
@@ -631,79 +674,86 @@ const Dashboard = ({ defaultType }) => {
 
 
         {/* Categories */}
-        <div>
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-bold text-text-primary">Our Services</h2>
+        <div className="mt-6 md:mt-10">
+          <div className="flex justify-between items-center mb-6 md:mb-8 lg:mb-10 md:relative md:justify-center">
+            <h2 className="text-2xl md:text-3xl lg:text-4xl font-black text-text-primary md:text-center">Our Services</h2>
             <button 
               onClick={() => navigate('/services')}
-              className="text-sm font-semibold text-[#0B4EA2] hover:text-blue-800 transition-colors"
+              className="px-4 py-1.5 bg-[#0B4EA2] text-white hover:bg-[#072C63] text-xs font-bold rounded-xl shadow-xs hover:shadow-md transition-all active:scale-95 cursor-pointer md:absolute md:right-0"
             >
               See All
             </button>
           </div>
-          <div className="flex overflow-x-auto gap-4 pb-4 -mx-2 px-2 snap-x no-scrollbar md:grid md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 md:gap-3 md:overflow-visible md:mx-0 md:px-0 md:pb-0">
-            {services.map((service) => (
-              <div 
-                key={service.id}
-                onClick={() => {
-                  if (activeType === 'in-warranty') {
-                    setSelectedServiceForWarranty({ title: service.name, price: 499 });
-                    setShowWarrantyModal(true);
-                    return;
-                  }
-                  // Appliance categories → BookingFlow wizard
-                  const APPLIANCE_ROUTES = {
-                    'ac repair': 'AC',
-                    'washing machine': 'Washing Machine',
-                    'refrigerator': 'Refrigerator',
-                    'tv': 'TV',
-                    'television': 'TV',
-                    'geyser': 'Geyser',
-                    'water heater': 'Geyser',
-                    'ro water purifier': 'RO Water Purifier',
-                    'water purifier': 'RO Water Purifier',
-                    'microwave': 'Microwave',
-                    'chimney': 'Chimney',
-                    'air cooler': 'Air Cooler',
-                  };
-                  const nameNorm = service.name.toLowerCase();
-                  const bookCat = Object.keys(APPLIANCE_ROUTES).find(k => nameNorm.includes(k));
-                  if (bookCat) {
-                    navigate(`/book/${encodeURIComponent(APPLIANCE_ROUTES[bookCat])}`);
-                  } else {
-                    navigate(`/service-details?service=${encodeURIComponent(service.name)}`);
-                  }
-                }}
-                className="flex flex-col items-center gap-2 cursor-pointer flex-shrink-0 w-24 snap-start md:w-auto md:flex-shrink md:bg-white md:border md:border-border-color md:rounded-2xl md:p-3 md:hover:border-brand-blue md:hover:shadow-sm md:transition-all"
-              >
-                <div className="w-24 h-24 md:w-full md:h-20 lg:h-24 bg-transparent rounded-2xl flex items-center justify-center transition-all overflow-hidden">
-                  <img src={service.img} alt={service.name} className="w-full h-full object-contain mix-blend-multiply p-2" />
+          <div 
+            ref={serviceRef}
+            className="flex overflow-x-auto gap-4 pb-4 -mx-2 px-2 snap-x md:snap-none no-scrollbar md:w-full md:mx-0 md:px-0 md:pb-0 relative"
+          >
+            <div className="flex gap-4 min-w-full md:gap-8 lg:gap-10 md:w-max">
+              {[...services, ...services].map((service, index) => (
+                <div 
+                  key={`${service.id}-${index}`}
+                  onClick={() => {
+                    if (activeType === 'in-warranty') {
+                      setSelectedServiceForWarranty({ title: service.name, price: 499 });
+                      setShowWarrantyModal(true);
+                      return;
+                    }
+                    // Appliance categories → BookingFlow wizard
+                    const APPLIANCE_ROUTES = {
+                      'ac repair': 'AC',
+                      'washing machine': 'Washing Machine',
+                      'refrigerator': 'Refrigerator',
+                      'tv': 'TV',
+                      'television': 'TV',
+                      'geyser': 'Geyser',
+                      'water heater': 'Geyser',
+                      'ro water purifier': 'RO Water Purifier',
+                      'water purifier': 'RO Water Purifier',
+                      'microwave': 'Microwave',
+                      'chimney': 'Chimney',
+                      'air cooler': 'Air Cooler',
+                    };
+                    const nameNorm = service.name.toLowerCase();
+                    const bookCat = Object.keys(APPLIANCE_ROUTES).find(k => nameNorm.includes(k));
+                    if (bookCat) {
+                      navigate(`/book/${encodeURIComponent(APPLIANCE_ROUTES[bookCat])}`);
+                    } else {
+                      navigate(`/service-details?service=${encodeURIComponent(service.name)}`);
+                    }
+                  }}
+                  className={`flex flex-col items-center gap-2 cursor-pointer flex-shrink-0 w-24 snap-start md:snap-none md:w-44 md:bg-white md:rounded-2xl md:p-4 md:hover:shadow-md md:transition-all ${
+                    index >= services.length ? 'hidden md:flex' : ''
+                  }`}
+                >
+                  <div className="w-24 h-24 md:w-full md:h-20 lg:h-24 bg-transparent rounded-2xl flex items-center justify-center transition-all overflow-hidden">
+                    <img src={service.img} alt={service.name} className="w-full h-full object-contain mix-blend-multiply p-2" />
+                  </div>
+                  <span className="text-xs font-semibold text-text-primary text-center truncate md:whitespace-normal md:leading-tight w-full">
+                    {service.name}
+                  </span>
                 </div>
-                <span className="text-xs font-semibold text-text-primary text-center truncate md:whitespace-normal md:leading-tight w-full">
-                  {service.name}
-                </span>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Warranty Offers / Smart Detection */}
-        <div>
+        {/* Warranty Offers / Smart Detection — mobile only */}
+        <div className="md:hidden">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-bold text-text-primary">
               {activeType === 'in-warranty' ? 'Covered Benefits' : ''}
             </h2>
           </div>
-          <div className="flex gap-4 overflow-x-auto pb-2 -mx-2 px-2 snap-x no-scrollbar md:grid md:grid-cols-2 md:overflow-visible md:mx-0 md:px-0 md:pb-0">
+          <div className="flex gap-4 overflow-x-auto pb-2 -mx-2 px-2 snap-x snap-mandatory scroll-smooth no-scrollbar md:mx-auto md:px-0 md:pb-0 md:max-w-[1420px] md:w-full relative">
             {[
               { id: 1, image: warrantyBanner1 },
               { id: 2, image: warrantyBanner2 }
             ].map((banner) => (
               <div 
                 key={banner.id}
-                className="bg-white rounded-2xl shadow-sm border border-border-color overflow-hidden min-w-[300px] md:min-w-0 snap-center"
+                className="bg-white rounded-2xl shadow-sm border border-border-color overflow-hidden min-w-[300px] md:min-w-full md:w-full flex-shrink-0 snap-center hover:shadow-md transition-shadow"
               >
-                <div className="relative h-36 md:h-auto md:aspect-[25/12] w-full">
+                <div className="relative h-36 md:h-auto md:aspect-[3.8/1] w-full">
                   <img 
                     src={banner.image} 
                     alt="Warranty Banner" 
@@ -716,102 +766,111 @@ const Dashboard = ({ defaultType }) => {
         </div>
 
         {/* Brands & Offers */}
-        <div>
-          <div className="flex items-center mb-4">
-            <h2 className="text-lg font-bold text-text-primary">Brands & Offers</h2>
+        <div className="md:mt-10 lg:mt-14 xl:mt-16">
+          <div className="flex items-center mb-6 md:mb-8 lg:mb-10 md:justify-center">
+            <h2 className="text-lg font-bold md:text-2xl lg:text-3xl xl:text-4xl md:font-black text-text-primary md:text-center">Brands & Offers</h2>
           </div>
 
-          {/* Brand Cards — scroll on mobile, grid on desktop */}
-          <div className="flex overflow-x-auto gap-4 pt-1.5 pb-4 -mx-2 px-2 snap-x no-scrollbar md:grid md:grid-cols-2 xl:grid-cols-3 md:overflow-visible md:mx-0 md:px-0 md:pb-0">
-            {brandCards.map((bc) => (
-              <div 
-                key={bc.id}
-                onClick={() => {
-                  if (bc.actionUrl.startsWith('http')) {
-                    window.open(bc.actionUrl, '_blank');
-                  } else {
-                    navigate(bc.actionUrl);
-                  }
-                }}
-                className={`w-full sm:max-w-[340px] md:max-w-none md:flex-shrink flex-shrink-0 h-[200px] md:h-[220px] rounded-[24px] bg-gradient-to-br ${bc.gradient} p-4 md:p-5 flex flex-col justify-between relative overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.03)] border border-slate-100/50 cursor-pointer snap-start`}
-              >
-                <div className="flex flex-col items-start z-10 max-w-[65%]">
-                  {bc.badgeText && (
-                    <span 
-                      className="text-[9px] font-bold px-2 py-0.5 rounded-md tracking-wide mb-1"
-                      style={{ 
-                        backgroundColor: bc.textColor === '#014694' ? '#E3F2FD' : (bc.textColor === '#1B5E20' ? '#E8F5E9' : '#FCE4EC'),
-                        color: bc.textColor 
-                      }}
-                    >
-                      {bc.badgeText}
-                    </span>
-                  )}
-                  <span className="font-sans font-black text-xl tracking-tight" style={{ color: bc.textColor }}>
-                    {bc.brandName}
-                  </span>
-                  <h3 className="text-xs font-black text-slate-800 mt-1.5 leading-tight">
-                    {bc.title}
-                  </h3>
-                  <p className="text-[10px] font-semibold text-slate-600 mt-0.5 leading-tight">
-                    {bc.subtitle}
-                  </p>
-                </div>
-
-                {/* Absolute Appliance Image */}
-                {bc.image && (
-                  <img 
-                    src={bc.image} 
-                    alt={bc.brandName} 
-                    className="absolute -right-3 top-8 w-[140px] md:w-[160px] h-[100px] md:h-[115px] object-contain z-0 mix-blend-multiply" 
-                  />
-                )}
-
-                {/* CTA Button */}
-                <div className="z-10 mt-auto flex items-center">
-                  <div className="bg-white text-[#0D47A1] text-[11px] font-black py-2 px-4 rounded-full flex items-center gap-2 shadow-[0_2px_8px_rgba(0,0,0,0.05)] border border-slate-100/80 hover:bg-slate-50 transition-colors">
-                    <span>{bc.buttonText || 'Explore on NCC'}</span>
-                    {bc.buttonText?.toLowerCase().includes('site') ? (
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 text-[#0D47A1]">
-                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                        <polyline points="15 3 21 3 21 9" />
-                        <line x1="10" y1="14" x2="21" y2="3" />
-                      </svg>
-                    ) : (
-                      <ShoppingCart className="w-3.5 h-3.5 text-[#0D47A1]" />
+          {/* Master Card Container for Desktop */}
+          <div className="md:bg-slate-100 md:rounded-[32px] md:p-6 lg:p-8 md:border md:border-slate-200/80 md:shadow-[0_10px_30px_rgba(0,0,0,0.03)] md:max-w-[1300px] md:mx-auto">
+            {/* Brand Cards — scroll on mobile, 2x2 grid inside single card on desktop */}
+            <div className="flex overflow-x-auto gap-4 pt-1.5 pb-4 -mx-2 px-2 snap-x no-scrollbar md:grid md:grid-cols-2 md:gap-6 lg:gap-8 md:overflow-visible md:mx-0 md:px-0 md:pb-0 md:pt-0">
+              {brandCards.map((bc) => (
+                <div 
+                  key={bc.id}
+                  onClick={() => {
+                    if (bc.actionUrl.startsWith('http')) {
+                      window.open(bc.actionUrl, '_blank');
+                    } else {
+                      navigate(bc.actionUrl);
+                    }
+                  }}
+                  className={`w-full sm:max-w-[340px] md:max-w-none md:flex-shrink flex-shrink-0 h-[200px] md:h-[220px] rounded-[24px] bg-gradient-to-br ${bc.gradient} p-4 md:p-6 flex flex-col justify-between relative overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.03)] border border-slate-100/50 cursor-pointer snap-start`}
+                >
+                  <div className="flex flex-col items-start z-10 max-w-[65%]">
+                    {bc.badgeText && (
+                      <span 
+                        className="text-[9px] font-bold px-2 py-0.5 rounded-md tracking-wide mb-1"
+                        style={{ 
+                          backgroundColor: bc.textColor === '#014694' ? '#E3F2FD' : (bc.textColor === '#1B5E20' ? '#E8F5E9' : '#FCE4EC'),
+                          color: bc.textColor 
+                        }}
+                      >
+                        {bc.badgeText}
+                      </span>
                     )}
+                    <span className="font-sans font-black text-xl tracking-tight" style={{ color: bc.textColor }}>
+                      {bc.brandName}
+                    </span>
+                    <h3 className="text-xs font-black text-slate-800 mt-1.5 leading-tight">
+                      {bc.title}
+                    </h3>
+                    <p className="text-[10px] font-semibold text-slate-600 mt-0.5 leading-tight">
+                      {bc.subtitle}
+                    </p>
+                  </div>
+
+                  {/* Absolute Appliance Image */}
+                  {bc.image && (
+                    <img 
+                      src={bc.image} 
+                      alt={bc.brandName} 
+                      className="absolute -right-3 top-8 w-[140px] md:w-[160px] h-[100px] md:h-[115px] object-contain z-0 mix-blend-multiply" 
+                    />
+                  )}
+
+                  {/* CTA Button */}
+                  <div className="z-10 mt-auto flex items-center">
+                    <div className="bg-white text-[#0D47A1] text-[11px] font-black py-2 px-4 rounded-full flex items-center gap-2 shadow-[0_2px_8px_rgba(0,0,0,0.05)] border border-slate-100/80 hover:bg-slate-50 transition-colors">
+                      <span>{bc.buttonText || 'Explore on NCC'}</span>
+                      {bc.buttonText?.toLowerCase().includes('site') ? (
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 text-[#0D47A1]">
+                          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                          <polyline points="15 3 21 3 21 9" />
+                          <line x1="10" y1="14" x2="21" y2="3" />
+                        </svg>
+                      ) : (
+                        <ShoppingCart className="w-3.5 h-3.5 text-[#0D47A1]" />
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
 
-          {/* Description Legend */}
-          <div className="mt-1 pt-0 text-[9.5px] font-bold text-slate-500">
-            <div className="flex flex-col items-start gap-1.5 w-max mx-auto px-4">
-              <div className="flex items-center gap-2">
-                <ShoppingCart className="w-3.5 h-3.5 text-[#0D47A1] flex-shrink-0" />
-                <span>Click on 'Explore on NCC' to buy from our store</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 text-[#0D47A1] flex-shrink-0">
-                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                  <polyline points="15 3 21 3 21 9" />
-                  <line x1="10" y1="14" x2="21" y2="3" />
-                </svg>
-                <span>Click on 'Visit Official Site' to go to brand website</span>
+            {/* Description Legend */}
+            <div className="mt-4 md:mt-6 pt-3 text-[9.5px] md:text-xs font-bold text-slate-500 border-t border-transparent md:border-slate-100/80">
+              <div className="flex flex-col md:flex-row items-center justify-center gap-3 md:gap-8 w-max mx-auto px-4">
+                <div className="flex items-center gap-2">
+                  <ShoppingCart className="w-3.5 h-3.5 text-[#0D47A1] flex-shrink-0" />
+                  <span>Click on 'Explore on NCC' to buy from our store</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 text-[#0D47A1] flex-shrink-0">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                    <polyline points="15 3 21 3 21 9" />
+                    <line x1="10" y1="14" x2="21" y2="3" />
+                  </svg>
+                  <span>Click on 'Visit Official Site' to go to brand website</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
         {/* Most Booked Services */}
-        <div>
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-bold text-text-primary">Most Booked Services</h2>
+        <div className="mt-6 md:mt-12 lg:mt-16 xl:mt-20">
+          <div className="flex justify-between items-center mb-6 md:mb-8 lg:mb-10 md:relative md:justify-center">
+            <h2 className="text-lg font-bold md:text-2xl lg:text-3xl xl:text-4xl md:font-black text-text-primary md:text-center">Most Booked Services</h2>
+            <button 
+              onClick={() => navigate('/services')}
+              className="px-4 py-1.5 bg-[#0B4EA2] text-white hover:bg-[#072C63] text-xs font-bold rounded-xl shadow-xs hover:shadow-md transition-all active:scale-95 cursor-pointer md:absolute md:right-0"
+            >
+              See All
+            </button>
           </div>
-          <div className="flex gap-4 overflow-x-auto pb-4 -mx-2 px-2 snap-x no-scrollbar md:grid md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 md:overflow-visible md:mx-0 md:px-0 md:pb-0">
-            {mostBookedServices.map((service) => (
+          <div className="flex gap-4 overflow-x-auto pb-4 -mx-2 px-2 snap-x no-scrollbar md:grid md:grid-cols-4 xl:grid-cols-4 md:gap-5 md:overflow-visible md:mx-0 md:px-0 md:pb-0">
+            {mostBookedServices.slice(0, 8).map((service) => (
               <div 
                 key={service.id}
                 onClick={() => {
@@ -827,25 +886,25 @@ const Dashboard = ({ defaultType }) => {
                     }
                   }
                 }}
-                className="flex flex-col gap-2 cursor-pointer flex-shrink-0 w-40 snap-start md:w-auto md:flex-shrink border border-border-color rounded-2xl p-2 bg-white hover:border-brand-blue transition-all"
+                className="flex flex-col gap-2.5 cursor-pointer flex-shrink-0 w-40 snap-start md:w-auto md:flex-shrink border border-border-color rounded-2xl p-2 md:p-4 bg-white hover:border-brand-blue hover:shadow-md transition-all"
               >
-                <div className="w-full h-32 bg-white rounded-xl flex items-center justify-center overflow-hidden relative">
+                <div className="w-full h-32 md:h-44 lg:h-48 bg-white rounded-xl flex items-center justify-center overflow-hidden relative">
                   <img src={service.image} alt={service.title} className="w-full h-full object-cover" />
-                  <span className={`absolute top-2 right-2 text-xs font-bold px-2 py-0.5 rounded-full ${activeType === 'in-warranty' ? 'bg-[#E8F5E9] text-[#2E7D32]' : 'bg-[#E3F2FD] text-[#0D47A1]'}`}>
+                  <span className={`absolute top-2 right-2 text-xs font-bold px-2.5 py-1 rounded-full ${activeType === 'in-warranty' ? 'bg-[#E8F5E9] text-[#2E7D32]' : 'bg-[#E3F2FD] text-[#0D47A1]'}`}>
                     {service.badge}
                   </span>
                 </div>
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-sm font-semibold text-text-primary truncate">
+                <div className="flex flex-col gap-1 mt-1">
+                  <span className="text-sm md:text-base font-semibold md:font-bold text-text-primary truncate">
                     {service.title}
                   </span>
                   {service.rating ? (
                     <div className="flex items-center gap-1">
-                      <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
+                      <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500" />
                       <span className="text-xs text-text-secondary">{service.rating}</span>
                     </div>
                   ) : null}
-                  <span className={`text-sm font-bold ${activeType === 'in-warranty' ? 'text-green-600' : 'text-[#0B4EA2]'}`}>
+                  <span className={`text-sm md:text-base font-bold md:font-extrabold ${activeType === 'in-warranty' ? 'text-green-600' : 'text-[#0B4EA2]'}`}>
                     {activeType === 'in-warranty' ? '₹0 (Warranty)' : `₹${service.price}`}
                   </span>
                 </div>
@@ -855,18 +914,18 @@ const Dashboard = ({ defaultType }) => {
         </div>
 
         {/* Appliance repair & service */}
-        <div>
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-bold text-text-primary">Appliance repair & service</h2>
+        <div className="mt-6 md:mt-12 lg:mt-16 xl:mt-20">
+          <div className="flex justify-between items-center mb-6 md:mb-8 lg:mb-10 md:relative md:justify-center">
+            <h2 className="text-lg font-bold md:text-2xl lg:text-3xl xl:text-4xl md:font-black text-text-primary md:text-center">Appliance repair & service</h2>
             <button 
               onClick={() => navigate('/appliance-services')}
-              className="text-sm font-semibold text-[#0B4EA2] hover:text-blue-800 transition-colors"
+              className="px-4 py-1.5 bg-[#0B4EA2] text-white hover:bg-[#072C63] text-xs font-bold rounded-xl shadow-xs hover:shadow-md transition-all active:scale-95 cursor-pointer md:absolute md:right-0"
             >
-              See all
+              See All
             </button>
           </div>
-          <div className="flex gap-4 overflow-x-auto pb-4 -mx-2 px-2 snap-x no-scrollbar md:grid md:grid-cols-3 xl:grid-cols-4 md:overflow-visible md:mx-0 md:px-0 md:pb-0">
-            {applianceServices.map((service) => (
+          <div className="flex gap-4 overflow-x-auto pb-4 -mx-2 px-2 snap-x no-scrollbar md:grid md:grid-cols-4 xl:grid-cols-4 md:gap-5 md:overflow-visible md:mx-0 md:px-0 md:pb-0">
+            {applianceServices.slice(0, 8).map((service) => (
               <div 
                 key={service.id}
                 onClick={() => {
@@ -893,25 +952,25 @@ const Dashboard = ({ defaultType }) => {
                     navigate(service.path || `/booking?service=${encodeURIComponent(service.title)}&price=${service.price}`);
                   }
                 }}
-                className="flex flex-col gap-2 cursor-pointer flex-shrink-0 w-40 snap-start md:w-auto md:flex-shrink border border-border-color rounded-2xl p-2 bg-white hover:border-brand-blue transition-all h-[230px] md:h-auto md:min-h-[230px]"
+                className="flex flex-col gap-2.5 cursor-pointer flex-shrink-0 w-40 snap-start md:w-auto md:flex-shrink border border-border-color rounded-2xl p-2 md:p-4 bg-white hover:border-brand-blue hover:shadow-md transition-all"
               >
-                <div className="w-full h-32 bg-white rounded-xl flex items-center justify-center overflow-hidden relative">
+                <div className="w-full h-32 md:h-44 lg:h-48 bg-white rounded-xl flex items-center justify-center overflow-hidden relative">
                   <img src={service.image} alt={service.title} className="w-full h-full object-cover" />
-                  <span className={`absolute top-2 right-2 text-xs font-bold px-2 py-0.5 rounded-full ${service.badge === "2 ACs" ? "bg-[#5C0632] text-white" : (activeType === 'in-warranty' ? "bg-[#E8F5E9] text-green-600" : "bg-[#E3F2FD] text-[#0D47A1]")}`}>
+                  <span className={`absolute top-2 right-2 text-xs font-bold px-2.5 py-1 rounded-full ${service.badge === "2 ACs" ? "bg-[#5C0632] text-white" : (activeType === 'in-warranty' ? "bg-[#E8F5E9] text-green-600" : "bg-[#E3F2FD] text-[#0D47A1]")}`}>
                     {service.badge}
                   </span>
                 </div>
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-sm font-semibold text-text-primary truncate">
+                <div className="flex flex-col gap-1 mt-1">
+                  <span className="text-sm md:text-base font-semibold md:font-bold text-text-primary truncate">
                     {service.title}
                   </span>
                   {service.rating ? (
                     <div className="flex items-center gap-1">
-                      <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
+                      <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500" />
                       <span className="text-xs text-text-secondary">{service.rating}</span>
                     </div>
                   ) : null}
-                  <span className={`text-sm font-bold ${activeType === 'in-warranty' ? 'text-green-600' : 'text-[#0B4EA2]'}`}>
+                  <span className={`text-sm md:text-base font-bold md:font-extrabold ${activeType === 'in-warranty' ? 'text-green-600' : 'text-[#0B4EA2]'}`}>
                     {activeType === 'in-warranty' ? '₹0 (Warranty)' : `₹${service.price}`}
                   </span>
                 </div>
@@ -921,47 +980,43 @@ const Dashboard = ({ defaultType }) => {
         </div>
 
         {/* Spare Parts & Accessories */}
-        <div>
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-bold text-text-primary">Spare Parts & Accessories</h2>
+        <div className="mt-6 md:mt-12 lg:mt-16 xl:mt-20">
+          <div className="flex justify-between items-center mb-6 md:mb-8 lg:mb-10 md:relative md:justify-center">
+            <h2 className="text-lg font-bold md:text-2xl lg:text-3xl xl:text-4xl md:font-black text-text-primary md:text-center">Spare Parts & Accessories</h2>
             <button 
-            onClick={() => navigate('/buy-product')}
-              className="text-sm font-semibold text-[#0B4EA2] hover:text-blue-800 transition-colors cursor-pointer"
+              onClick={() => navigate('/buy-product')}
+              className="px-4 py-1.5 bg-[#0B4EA2] text-white hover:bg-[#072C63] text-xs font-bold rounded-xl shadow-xs hover:shadow-md transition-all active:scale-95 cursor-pointer md:absolute md:right-0"
             >
-              See all
+              See All
             </button>
           </div>
-          <div className="flex gap-4 overflow-x-auto pb-4 -mx-2 px-2 snap-x no-scrollbar md:grid md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 md:overflow-visible md:mx-0 md:px-0 md:pb-0">
+          <div className="flex gap-4 overflow-x-auto pb-4 -mx-2 px-2 snap-x no-scrollbar md:grid md:grid-cols-5 xl:grid-cols-5 md:gap-5 md:overflow-visible md:mx-0 md:px-0 md:pb-0">
             {[
               { id: 1, title: 'Pre-Filter Candle', desc: 'RO Outer Candle', price: 199, image: roPreFilterImg, badge: 'Genuine' },
               { id: 2, title: 'RO Membrane', desc: 'High TDS Membrane', price: 899, image: roMembraneImg, badge: 'Best Seller' },
               { id: 3, title: 'Sediment Filter', desc: 'RO Inner Filter', price: 249, image: roSedimentImg, badge: 'Genuine' },
               { id: 4, title: 'Carbon Filter', desc: 'Active Carbon', price: 299, image: roCarbonImg, badge: 'Trending' },
-              { id: 5, title: 'Post Carbon', desc: 'Taste Enhancer', price: 249, image: roPostCarbonImg, badge: 'Genuine' }
+              { id: 5, title: 'Post Carbon Filter', desc: 'Taste Enhancer', price: 249, image: roPostCarbonImg, badge: 'Genuine' }
             ].map((item) => (
               <div 
                 key={item.id}
                 onClick={() => navigate('/buy-product')}
-                className="flex flex-col gap-2 cursor-pointer flex-shrink-0 w-40 snap-start md:w-auto md:flex-shrink border border-border-color rounded-2xl p-2 bg-white hover:border-brand-blue transition-all h-[230px] md:h-auto md:min-h-[230px]"
+                className="flex flex-col gap-2.5 cursor-pointer flex-shrink-0 w-40 snap-start md:w-auto md:flex-shrink border border-border-color rounded-2xl p-2 md:p-4 bg-white hover:border-brand-blue hover:shadow-md transition-all"
               >
-                <div className="w-full h-32 bg-slate-50/50 rounded-xl flex items-center justify-center overflow-hidden relative">
+                <div className="w-full h-32 md:h-44 lg:h-48 bg-slate-50/50 rounded-xl flex items-center justify-center overflow-hidden relative">
                   <img src={item.image} alt={item.title} className="w-full h-full object-contain p-2 mix-blend-multiply" />
-                  <span className="absolute top-2 right-2 text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E3F2FD] text-[#0D47A1]">
+                  <span className="absolute top-2 right-2 text-[10px] md:text-xs font-bold px-2.5 py-1 rounded-full bg-[#E3F2FD] text-[#0D47A1]">
                     {item.badge}
                   </span>
                 </div>
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-sm font-semibold text-text-primary truncate">
+                <div className="flex flex-col gap-1 mt-1">
+                  <span className="text-sm md:text-base font-semibold md:font-bold text-text-primary truncate">
                     {item.title}
                   </span>
-                  <span className="text-[10px] text-text-secondary truncate">
+                  <span className="text-[10px] md:text-xs text-text-secondary truncate">
                     {item.desc}
                   </span>
-                  <div className="flex items-center gap-1">
-                    <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
-                    <span className="text-xs text-text-secondary">{item.rating}</span>
-                  </div>
-                  <span className="text-sm font-bold text-[#0B4EA2]">
+                  <span className="text-sm md:text-base font-bold md:font-extrabold text-[#0B4EA2]">
                     ₹{item.price}
                   </span>
                 </div>
@@ -1016,7 +1071,8 @@ const Dashboard = ({ defaultType }) => {
         </button>
       </div>
 
-      {/* Brand Selection Modal */}
+      {/* Desktop Footer */}
+      <Footer />
 
     </div>
   );

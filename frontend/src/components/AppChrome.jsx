@@ -121,7 +121,7 @@ const WIDE_ROUTES = [
   "/buy", "/buy-new", "/buy-product", "/product-details",
   "/extend-warranty", "/partner-warranty", "/bookings", "/book/",
   "/service-details", "/membership-plans", "/rewards-play-zone",
-  "/my-wishlist", "/wishlist", "/my-orders",
+  "/my-wishlist", "/wishlist", "/my-orders", "/help-support", "/about-ncc", "/terms-and-conditions", "/privacy-policy",
   "/technician/dashboard", "/technician/active-job", "/technician/schedule",
   "/technician/analytics", "/technician/academy", "/technician/inventory",
   "/technician/raise-part-request", "/technician/earnings",
@@ -131,7 +131,7 @@ const WIDE_ROUTES = [
 /** Tailwind max-width class for the panel container on a given route. */
 export function panelWidthClass(pathname) {
   const wide = WIDE_ROUTES.some((r) => pathname === r || pathname.startsWith(r + "/") || (r.endsWith("/") && pathname.startsWith(r)));
-  return wide ? "max-w-screen-xl" : "max-w-4xl";
+  return wide ? "max-w-screen-2xl" : "max-w-4xl";
 }
 
 function pickNav(pathname) {
