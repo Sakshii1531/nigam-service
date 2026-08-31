@@ -4,6 +4,7 @@ import { ArrowLeft, Check, Star, Zap, Shield, Sparkles, Crown } from 'lucide-rea
 import { useAuth } from '../context/AuthContext';
 import { apiRequest } from '../lib/apiClient';
 import { payWithRazorpay } from '../lib/razorpayCheckout';
+import Footer from '../components/layout/Footer';
 
 const plans = [
   {
@@ -191,27 +192,27 @@ const MembershipPlans = () => {
       )}
       </div>
 
-      <div className="flex flex-col gap-5 px-4 pt-5">
+      <div className="max-w-screen-xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-8 flex-1">
         
         {/* Banner Section */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-slate-900 to-blue-900 rounded-[28px] p-6 shadow-xl text-left border border-white/10">
+        <div className="relative overflow-hidden bg-gradient-to-r from-slate-900 to-blue-900 rounded-[28px] p-6 md:p-8 shadow-xl text-left border border-white/10">
           <div className="absolute top-0 right-0 w-[150px] h-[150px] bg-blue-500/10 rounded-full blur-2xl" />
           <div className="absolute bottom-0 left-0 w-[120px] h-[120px] bg-amber-500/10 rounded-full blur-2xl" />
           
-          <div className="flex items-center gap-2 text-amber-400 font-extrabold text-[10px] uppercase tracking-[3px]">
-            <Sparkles className="h-3.5 w-3.5" />
+          <div className="flex items-center gap-2 text-amber-400 font-extrabold text-[10px] md:text-xs uppercase tracking-[3px]">
+            <Sparkles className="h-4 w-4" />
             <span>Nigam Care Privilege</span>
           </div>
-          <h2 className="text-lg font-black text-white mt-1.5 leading-tight">
+          <h2 className="text-xl md:text-3xl font-black text-white mt-2 leading-tight">
             Unlock Seamless Priority Home Care
           </h2>
-          <p className="text-xs text-slate-300 font-medium mt-1 leading-relaxed">
+          <p className="text-xs md:text-sm text-slate-300 font-medium mt-1.5 leading-relaxed max-w-3xl">
             Subscribers receive flat discounts, zero visiting charges, faster response times, and premium warranty extensions.
           </p>
         </div>
 
-        {/* Plan Cards Stack */}
-        <div className="flex flex-col gap-4">
+        {/* Plan Cards Grid — 4 columns on desktop */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
           {plans.map((plan) => {
             const isCurrent = activePlanName === plan.name;
             const isSelected = selectedPlanId === plan.id;
@@ -220,61 +221,61 @@ const MembershipPlans = () => {
               <div
                 key={plan.id}
                 onClick={() => setSelectedPlanId(plan.id)}
-                className={`rounded-[24px] border-2 transition-all duration-300 relative overflow-hidden shadow-md bg-gradient-to-b ${plan.bgGradient} ${plan.borderColor} ${plan.glowColor} ${
-                  isSelected ? 'scale-[1.01] shadow-lg ring-1 ring-slate-200' : 'opacity-90'
+                className={`rounded-[24px] border-2 transition-all duration-300 relative overflow-hidden shadow-md bg-gradient-to-b ${plan.bgGradient} ${plan.borderColor} ${plan.glowColor} flex flex-col justify-between ${
+                  isSelected ? 'scale-[1.02] shadow-xl ring-2 ring-slate-400' : 'hover:scale-[1.01] opacity-95'
                 }`}
               >
                 {/* Popularity Badge */}
                 {plan.isPopular && (
                   <div
-                    className="absolute top-0 right-8 text-[8px] font-black px-3.5 py-1 rounded-b-xl text-white tracking-widest uppercase shadow-sm"
+                    className="absolute top-0 right-6 text-[9px] font-black px-3.5 py-1 rounded-b-xl text-white tracking-widest uppercase shadow-sm z-10"
                     style={{ background: plan.accentColor }}
                   >
                     {plan.badgeText}
                   </div>
                 )}
 
-                <div className="p-5 flex flex-col gap-4">
-                  {/* Top row */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
+                <div className="p-6 flex flex-col gap-5 h-full justify-between">
+                  {/* Top Header */}
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
                       <div
-                        className={`w-10 h-10 rounded-[14px] flex items-center justify-center flex-shrink-0 shadow-md ${plan.iconBg}`}
+                        className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-md ${plan.iconBg}`}
                       >
                         <PlanIcon id={plan.id} />
                       </div>
-                      <div className="text-left">
-                        <h3 className="text-[13px] font-black tracking-wide" style={{ color: plan.textColor }}>
-                          {plan.name}
-                        </h3>
-                        <p className="text-[9px] text-slate-400 font-extrabold tracking-widest uppercase mt-0.5">
-                          Annual Protection
-                        </p>
+                      <div className="text-right">
+                        <div className="flex items-baseline gap-0.5 justify-end">
+                          <span className="text-2xl font-black text-slate-900">
+                            {planFor(plan) ? `₹${planFor(plan).price.toLocaleString('en-IN')}` : 'N/A'}
+                          </span>
+                          <span className="text-[10px] text-slate-500 font-extrabold uppercase">/Yr</span>
+                        </div>
+                        <p className="text-[9px] text-emerald-600 font-extrabold mt-0.5">All-inclusive pricing</p>
                       </div>
                     </div>
-                    
-                    <div className="text-right">
-                      <div className="flex items-baseline gap-0.5 justify-end">
-                        <span className="text-[19px] font-black text-slate-900">
-                          {planFor(plan) ? `₹${planFor(plan).price.toLocaleString('en-IN')}` : 'Not on sale'}
-                        </span>
-                        <span className="text-[10px] text-slate-500 font-extrabold uppercase">/Yr</span>
-                      </div>
-                      <p className="text-[9px] text-emerald-600 font-extrabold mt-0.5">All-inclusive pricing</p>
+
+                    <div className="text-left mt-1">
+                      <h3 className="text-sm font-black tracking-wide" style={{ color: plan.textColor }}>
+                        {plan.name}
+                      </h3>
+                      <p className="text-[10px] text-slate-400 font-extrabold tracking-widest uppercase mt-0.5">
+                        Annual Protection
+                      </p>
                     </div>
                   </div>
 
                   {/* Divider line */}
-                  <div className="h-px bg-slate-200/60 w-full" />
+                  <div className="h-px bg-slate-200/80 w-full my-1" />
 
-                  {/* Benefits grid */}
-                  <div className="grid grid-cols-1 gap-2.5 text-left">
+                  {/* Benefits List */}
+                  <div className="flex flex-col gap-3 text-left flex-1">
                     {plan.benefits.map((benefit, i) => (
                       <div key={i} className="flex items-start gap-2.5">
-                        <div className="w-4.5 h-4.5 rounded-full bg-white flex items-center justify-center flex-shrink-0 shadow-xs border border-slate-100">
+                        <div className="w-4.5 h-4.5 rounded-full bg-white flex items-center justify-center flex-shrink-0 shadow-xs border border-slate-200 mt-0.5">
                           <Check className="h-3 w-3 stroke-[3]" style={{ color: plan.accentColor }} />
                         </div>
-                        <span className="text-[11.5px] text-slate-700 font-bold leading-tight">{benefit}</span>
+                        <span className="text-xs text-slate-700 font-bold leading-snug">{benefit}</span>
                       </div>
                     ))}
                   </div>
@@ -287,7 +288,7 @@ const MembershipPlans = () => {
                       handlePurchase(plan);
                     }}
                     disabled={isCurrent || isFetchingActive || purchasing || !planFor(plan)}
-                    className={`w-full py-3 rounded-xl text-xs font-black transition-all duration-150 cursor-pointer shadow-md flex items-center justify-center gap-1.5 uppercase tracking-wider ${
+                    className={`w-full py-3.5 rounded-xl text-xs font-black transition-all duration-150 cursor-pointer shadow-md flex items-center justify-center gap-1.5 uppercase tracking-wider mt-4 ${
                       isCurrent
                         ? 'bg-emerald-500 text-white border-none cursor-default shadow-none'
                         : `${plan.btnBg}`
@@ -308,28 +309,31 @@ const MembershipPlans = () => {
           })}
         </div>
 
-        {/* Redesigned Features Grid */}
-        <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm p-5 mt-2 mb-6">
-          <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest text-center mb-4">
+        {/* Features Grid */}
+        <div className="bg-white rounded-[28px] border border-slate-200/80 shadow-xs p-6 md:p-8 mt-4">
+          <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest text-center mb-6">
             Membership Privileges & Assurances
           </h4>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
             {[
               { icon: '💰', title: 'Zero Visit Charges', desc: 'Saves ₹200 on every repair trip' },
               { icon: '⚡', title: 'Priority Dispatch', desc: 'Tech arrives within 4 hours' },
               { icon: '🏷️', title: 'Exclusive Discounts', desc: 'Up to 20% off all appliance parts' },
               { icon: '🛠️', title: 'Extended Shield', desc: 'Long-term service warranty' },
             ].map((feature, i) => (
-              <div key={i} className="flex flex-col items-center text-center p-3 rounded-xl bg-slate-50 border border-slate-100">
-                <span className="text-2xl mb-1.5">{feature.icon}</span>
-                <span className="text-[10px] font-black text-slate-800 leading-tight">{feature.title}</span>
-                <span className="text-[8px] text-slate-400 font-bold mt-0.5 leading-tight">{feature.desc}</span>
+              <div key={i} className="flex flex-col items-center text-center p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                <span className="text-3xl mb-2">{feature.icon}</span>
+                <span className="text-xs font-black text-slate-800 leading-tight">{feature.title}</span>
+                <span className="text-[10px] text-slate-500 font-bold mt-1 leading-tight">{feature.desc}</span>
               </div>
             ))}
           </div>
         </div>
 
       </div>
+
+      {/* Desktop Footer */}
+      <Footer />
     </div>
   );
 };

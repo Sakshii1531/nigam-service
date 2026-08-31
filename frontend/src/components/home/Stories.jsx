@@ -151,21 +151,21 @@ const Stories = () => {
 
   return (
     <>
-      <section className="-mt-4 pt-0 pb-2 bg-bg-light">
+      <section className="mt-6 md:mt-12 lg:mt-16 xl:mt-20 pt-0 pb-2 bg-bg-light">
         <div className="max-w-7xl mx-auto">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-bold text-text-primary">Stories</h2>
+          <div className="flex justify-between items-center mb-6 md:mb-8 lg:mb-10 md:relative md:justify-center">
+            <h2 className="text-lg font-bold md:text-2xl lg:text-3xl xl:text-4xl md:font-black text-text-primary md:text-center">Stories</h2>
           </div>
 
-          {/* Horizontally scrollable container with snap physics */}
-          <div className="flex overflow-x-auto gap-4 pb-4 snap-x snap-mandatory no-scrollbar -mx-4 px-4">
+          {/* Horizontally scrollable on mobile, 4-column grid on desktop */}
+          <div className="flex overflow-x-auto gap-4 pb-4 snap-x snap-mandatory no-scrollbar -mx-4 px-4 md:grid md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 md:gap-6 md:overflow-visible md:mx-0 md:px-0 md:pb-0">
             {storiesList.map((story, index) => (
               <motion.div
                 key={story.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: index * 0.08 }}
-                className="flex-shrink-0 w-40 h-64 rounded-2xl overflow-hidden relative shadow-sm border border-border-color cursor-pointer snap-start"
+                className="flex-shrink-0 w-40 h-64 md:w-auto md:h-[450px] lg:h-[500px] md:flex-shrink rounded-2xl overflow-hidden relative shadow-sm border border-border-color cursor-pointer snap-start hover:shadow-md transition-all"
                 onClick={() => openStory(index)}
               >
                 {/* Story Image */}
@@ -179,8 +179,8 @@ const Stories = () => {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent pointer-events-none" />
 
                 {/* Floating Caption Overlay Box */}
-                <div className="absolute bottom-6 left-4 right-0 bg-white rounded-l-xl rounded-r-none py-3 pl-3 pr-2 shadow-md">
-                  <p className="text-xs font-normal text-text-primary leading-tight line-clamp-1">
+                <div className="absolute bottom-6 left-4 right-0 bg-white rounded-l-xl rounded-r-none py-3 pl-3 pr-2 md:py-3.5 md:pl-4 md:pr-3 shadow-md">
+                  <p className="text-xs md:text-sm font-semibold text-text-primary leading-tight line-clamp-1 md:line-clamp-2">
                     {story.title}
                   </p>
                 </div>

@@ -27,8 +27,8 @@ const CustomerTopNav = ({ activePage = "home" }) => {
   const firstName = user?.name ? user.name.split(" ")[0] : "Account";
 
   return (
-    <nav className="hidden lg:flex fixed top-0 left-0 right-0 z-50 h-16 bg-[#051F42]/95 backdrop-blur-md border-b border-white/10 shadow-[0_4px_20px_rgba(5,31,66,0.25)]">
-      <div className="max-w-screen-xl mx-auto w-full px-6 xl:px-8 flex items-center justify-between">
+    <nav className="hidden lg:flex fixed top-0 left-0 right-0 z-50 h-20 bg-[#051F42]/95 backdrop-blur-md border-b border-white/10 shadow-[0_4px_20px_rgba(5,31,66,0.25)]">
+      <div className="max-w-screen-2xl mx-auto w-full px-6 md:px-10 lg:px-16 xl:px-20 flex items-center justify-between">
         
         {/* Brand / Logo */}
         <div
@@ -38,21 +38,19 @@ const CustomerTopNav = ({ activePage = "home" }) => {
           <img
             src={logoUrl}
             alt="Nigam Care"
-            className={`h-8.5 w-auto object-contain group-hover:scale-105 transition-transform duration-200 ${
-              rawLogoUrl ? '' : 'invert brightness-200'
-            }`}
+            className="h-14 lg:h-15 w-auto object-contain group-hover:scale-105 transition-transform duration-200"
           />
         </div>
 
         {/* Navigation Items Pill Container */}
-        <div className="flex items-center gap-1.5 bg-white/5 p-1.5 rounded-2xl border border-white/10 backdrop-blur-xs">
+        <div className="flex items-center gap-3 lg:gap-4 bg-white/5 p-2 rounded-2xl border border-white/10 backdrop-blur-xs">
           {navItems.map(({ id, label, Icon, path }) => {
             const isActive = activePage === id;
             return (
               <button
                 key={id}
                 onClick={() => navigate(path)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
+                className={`flex items-center gap-2.5 px-4.5 lg:px-5 py-2.5 rounded-xl text-xs lg:text-sm font-bold transition-all duration-200 cursor-pointer ${
                   isActive
                     ? "bg-gradient-to-r from-[#FFD400] to-[#FFCA00] text-[#051F42] shadow-[0_2px_10px_rgba(255,212,0,0.3)] scale-[1.02]"
                     : "text-slate-200 hover:text-white hover:bg-white/10"

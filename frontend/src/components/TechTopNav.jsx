@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Briefcase, ClipboardList, Wrench, Calendar, User, Bell } from "lucide-react";
 import { useNotifications } from "../context/NotificationContext";
@@ -24,7 +24,7 @@ const TechTopNav = ({ activePage = "jobs" }) => {
   const firstName = user?.name ? user.name.split(" ")[0] : "Partner";
 
   return (
-    <nav className="hidden lg:flex fixed top-0 left-0 right-0 z-50 h-16 bg-[#051F42]/95 backdrop-blur-md border-b border-white/10 shadow-[0_4px_20px_rgba(5,31,66,0.25)]">
+    <nav className="hidden lg:flex fixed top-0 left-0 right-0 z-50 h-20 bg-[#051F42]/95 backdrop-blur-md border-b border-white/10 shadow-[0_4px_20px_rgba(5,31,66,0.25)]">
       <div className="max-w-screen-xl mx-auto w-full px-6 xl:px-8 flex items-center justify-between">
         
         {/* Brand */}

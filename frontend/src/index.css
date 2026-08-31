@@ -69,6 +69,25 @@ html {
   }
 }
 
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 28s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
 /* Technician App Font Size Scaling Overrides */
 body.tech-app-active,
 .tech-app-container {
@@ -160,15 +179,15 @@ body.tech-app-active .text-2xl,
    sync with the navbar's own h-16. */
 @media (min-width: 1024px) {
   body.app-has-topnav #root {
-    padding-top: 4rem;
+    padding-top: 5rem;
   }
 
   body.app-has-topnav .min-h-screen {
-    min-height: calc(100vh - 4rem);
+    min-height: calc(100vh - 5rem);
   }
 
   body.app-has-topnav .h-screen {
-    height: calc(100vh - 4rem);
+    height: calc(100vh - 5rem);
   }
 
   /* Overlays and drawers are positioned against the viewport, not the padded
@@ -180,12 +199,12 @@ body.tech-app-active .text-2xl,
     height: 100vh;
   }
 
-  /* The navbar covers the top 4rem of the viewport, so a page header pinned to
+  /* The navbar covers the top 5rem of the viewport, so a page header pinned to
      `top: 0` would scroll in behind it. Shifting them here rather than adding
-     `lg:top-16` to ~60 page headers keeps the offset in one place and means
+     `lg:top-20` to ~60 page headers keeps the offset in one place and means
      pages added later inherit it. */
   body.app-has-topnav .sticky.top-0 {
-    top: 4rem;
+    top: 5rem;
   }
 
   /* …except where the sticky pins to something other than the page: content in
