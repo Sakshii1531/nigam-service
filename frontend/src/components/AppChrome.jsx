@@ -21,7 +21,7 @@ import TechTopNav from "./TechTopNav";
 const CUSTOMER_CHROMELESS = new Set([
   "/", "/login", "/app", "/app/login", "/verify-otp",
   "/forgot-password", "/reset-password", "/onboarding",
-  "/home", "/about-ncc",
+  "/home", "/about-ncc", "/profile",
 ]);
 
 const TECH_CHROMELESS = new Set([
@@ -119,7 +119,7 @@ const WIDE_ROUTES = [
   "/buy", "/buy-new", "/buy-product", "/product-details",
   "/extend-warranty", "/partner-warranty", "/bookings", "/book", "/booking",
   "/service-details", "/membership-plans", "/rewards-play-zone",
-  "/my-wishlist", "/wishlist", "/my-orders", "/help-support", "/about-ncc", "/terms-and-conditions", "/privacy-policy",
+  "/my-wishlist", "/wishlist", "/my-orders", "/help-support", "/about-ncc", "/terms-and-conditions", "/privacy-policy", "/profile",
   "/technician/dashboard", "/technician/active-job", "/technician/schedule",
   "/technician/analytics", "/technician/academy", "/technician/inventory",
   "/technician/raise-part-request", "/technician/earnings",
