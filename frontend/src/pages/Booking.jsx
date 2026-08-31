@@ -506,150 +506,204 @@ const Booking = () => {
     <div className="min-h-screen bg-[#F8F9FA] flex flex-col relative font-sans">
       
       {/* Header */}
-      <div className="bg-white px-4 pt-5 pb-3 flex items-center justify-between border-b border-slate-100 sticky top-0 z-20">
-        <button 
-          onClick={() => navigate(-1)}
-          className="p-1.5 hover:bg-slate-100 rounded-full transition-colors"
-        >
-          <ArrowLeft className="h-5 w-5 text-slate-700" />
-        </button>
-        <h1 className="text-[15px] font-extrabold text-slate-900">
-          Electricians
-        </h1>
-        <div className="w-8 h-8" />
+      <div className="bg-white px-4 md:px-8 pt-5 pb-3 flex items-center justify-between border-b border-slate-100 sticky top-0 z-20">
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => navigate(-1)}
+            className="p-1.5 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
+          >
+            <ArrowLeft className="h-5 w-5 text-slate-700" />
+          </button>
+          <div className="flex flex-col text-left">
+            <h1 className="text-[15px] md:text-lg font-extrabold text-slate-900 leading-tight">
+              Select {preSelectedService} Type
+            </h1>
+            <span className="hidden md:block text-xs text-slate-400 font-semibold">Choose specification & quantity to proceed</span>
+          </div>
+        </div>
+        <div className="hidden md:flex items-center gap-2">
+          <span className="text-xs font-bold text-slate-500">Step {checkoutStep + 1} of 3</span>
+        </div>
       </div>
 
-      {/* Main summary list */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4 pb-28">
-        
-        {/* Selected Service Card */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex items-center justify-between">
-          <div className="flex-1 min-w-0">
-            <span className="text-[13px] font-extrabold text-slate-900 leading-snug block">
-              {preSelectedService}
-            </span>
-          </div>
-          <div className="flex items-center gap-4 flex-shrink-0">
-            {/* Numbering Selector capsule */}
-            <div className="w-20 flex items-center justify-between border border-[#0D47A1] bg-white rounded-xl text-[12px] font-extrabold overflow-hidden h-8">
-              <button
-                onClick={() => setQty(Math.max(1, qty - 1))}
-                className="w-7 h-full flex items-center justify-center text-[#0D47A1] hover:bg-slate-50 active:bg-slate-100 transition-colors"
-              >
-                -
-              </button>
-              <span className="text-[#0D47A1] flex-1 text-center select-none">{qty}</span>
-              <button
-                onClick={() => setQty(qty + 1)}
-                className="w-7 h-full flex items-center justify-center text-[#0D47A1] hover:bg-slate-50 active:bg-slate-100 transition-colors"
-              >
-                +
-              </button>
-            </div>
-            <span className="text-[13px] font-extrabold text-slate-900 w-16 text-right">
-              ₹{total}
-            </span>
-          </div>
-        </div>
-
-        {/* Payment Summary receipt */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex flex-col gap-3">
-          <h3 className="text-[13px] font-extrabold text-slate-900">Payment Summary</h3>
-          <div className="flex justify-between text-[11px] font-bold text-slate-500">
-            <span>Item total</span>
-            <span>₹{total}</span>
-          </div>
-          <div className="flex justify-between text-[11px] font-bold text-slate-500">
-            <span>Taxes and Fee</span>
-            <span>₹0</span>
-          </div>
-          <div className="h-px bg-slate-100 w-full" />
-          <div className="flex justify-between text-[13px] font-extrabold text-slate-900">
-            <span>Total</span>
-            <span>₹{total}</span>
-          </div>
-          <div className="h-px bg-slate-100 w-full" />
-          <div className="flex justify-between text-[13px] font-extrabold text-slate-900">
-            <span>Advance Payment</span>
-            <span>₹{advance}</span>
-          </div>
-          <span className="text-[10px] text-slate-400 font-semibold -mt-2.5">
-            (₹{remaining} payable after service)
-          </span>
-        </div>
-
-        {/* Bulleted notes */}
-        <div className="bg-[#F4F6F8] rounded-2xl p-4 border border-slate-100 flex flex-col gap-2">
-          <h3 className="text-[12px] font-bold text-slate-700">Notes</h3>
-          <ul className="flex flex-col gap-1.5 list-disc pl-4 text-[11px] text-slate-500 leading-normal font-semibold">
-            <li>The provided cost is an approximate estimate.</li>
-            <li>Final estimation will be provided after inspection.</li>
-          </ul>
-        </div>
-
-        {/* Address saved card details (Visible in step 1 and 2) */}
-        {checkoutStep >= 1 && (
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex items-center justify-between mt-2">
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center flex-shrink-0 mt-0.5">
-                {/* Home SVG Icon */}
-                <svg className="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                </svg>
+      {/* Main summary container — stacked on mobile, 2-column grid on desktop */}
+      <div className="flex-1 max-w-screen-xl mx-auto w-full px-4 md:px-8 py-4 md:py-8 pb-28 md:pb-12">
+        <div className="flex flex-col md:grid md:grid-cols-12 md:gap-8 items-start">
+          
+          {/* Left Column: Service Card, Notes, Saved Address & Slot */}
+          <div className="w-full md:col-span-7 flex flex-col gap-4">
+            
+            {/* Selected Service Card */}
+            <div className="bg-white rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-sm border border-slate-100 flex items-center justify-between text-left">
+              <div className="flex-1 min-w-0 pr-4">
+                <span className="text-[10px] font-black uppercase text-[#0D47A1] bg-blue-50 px-2.5 py-1 rounded-full w-fit block mb-1">
+                  {preSelectedService} Service
+                </span>
+                <span className="text-[14px] md:text-base font-black text-slate-900 leading-snug block">
+                  {preSelectedService}
+                </span>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[11px] font-black text-slate-800 uppercase tracking-wider">
-                  {saveAs} - {houseNo}{landmark ? `, ${landmark}` : ''}
-                </p>
-                <p className="text-[10px] text-slate-400 font-semibold leading-normal mt-0.5">
-                  {[houseNo, landmark, city, pincode].filter(Boolean).join(', ')}
-                </p>
+              <div className="flex items-center gap-4 flex-shrink-0">
+                <div className="w-20 md:w-28 flex items-center justify-between border border-[#0D47A1] bg-white rounded-xl md:rounded-2xl text-[12px] md:text-sm font-extrabold overflow-hidden h-8 md:h-10">
+                  <button
+                    onClick={() => setQty(Math.max(1, qty - 1))}
+                    className="w-7 md:w-9 h-full flex items-center justify-center text-[#0D47A1] hover:bg-slate-50 active:bg-slate-100 transition-colors"
+                  >
+                    -
+                  </button>
+                  <span className="text-[#0D47A1] flex-1 text-center select-none">{qty}</span>
+                  <button
+                    onClick={() => setQty(qty + 1)}
+                    className="w-7 md:w-9 h-full flex items-center justify-center text-[#0D47A1] hover:bg-slate-50 active:bg-slate-100 transition-colors"
+                  >
+                    +
+                  </button>
+                </div>
+                <span className="text-[13px] md:text-base font-black text-slate-900 w-16 md:w-20 text-right">
+                  ₹{total}
+                </span>
               </div>
             </div>
-            <button 
-              onClick={() => setShowAddressDrawer(true)} 
-              className="p-1.5 hover:bg-slate-100 rounded-full transition-colors flex-shrink-0 ml-2"
-            >
-              {/* Edit Icon */}
-              <svg className="w-4 h-4 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-              </svg>
-            </button>
-          </div>
-        )}
 
-        {/* Date and Time saved card details (Visible in step 2) */}
-        {checkoutStep >= 2 && (
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex items-center justify-between">
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center flex-shrink-0 mt-0.5">
-                {/* Calendar SVG Icon */}
-                <svg className="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
+            {/* Service Guarantee Card */}
+            <div className="bg-gradient-to-r from-blue-50/60 to-indigo-50/60 rounded-2xl md:rounded-3xl p-4 md:p-5 border border-blue-100 flex items-center gap-3 text-left">
+              <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-[#0D47A1] shadow-xs flex-shrink-0">
+                <Check className="h-4 w-4 stroke-[3]" />
               </div>
-              <div className="flex-1 min-w-0 flex items-center h-8">
-                <p className="text-[11px] font-black text-slate-800">
-                  Scheduled on {selectedDate}, {selectedTimeSlot.toLowerCase()}
-                </p>
+              <div className="flex flex-col">
+                <span className="text-xs md:text-sm font-black text-slate-900">{preSelectedService} Service Guarantee</span>
+                <span className="text-[10px] md:text-xs text-slate-500 font-semibold mt-0.5">Verified technicians • Genuine parts • 30-day service warranty</span>
               </div>
             </div>
-            <button 
-              onClick={() => setShowDateTimeDrawer(true)} 
-              className="p-1.5 hover:bg-slate-100 rounded-full transition-colors flex-shrink-0 ml-2"
-            >
-              {/* Edit Icon */}
-              <svg className="w-4 h-4 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-              </svg>
-            </button>
-          </div>
-        )}
 
+            {/* Address saved card details (Visible in step 1 and 2) */}
+            {checkoutStep >= 1 && (
+              <div className="bg-white rounded-2xl md:rounded-3xl p-4 md:p-5 shadow-sm border border-slate-100 flex items-center justify-between text-left">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <svg className="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] md:text-xs font-black text-slate-800 uppercase tracking-wider">
+                      {saveAs} - {houseNo}{landmark ? `, ${landmark}` : ''}
+                    </p>
+                    <p className="text-[10px] md:text-xs text-slate-400 font-semibold leading-normal mt-0.5">
+                      {[houseNo, landmark, city, pincode].filter(Boolean).join(', ')}
+                    </p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setShowAddressDrawer(true)} 
+                  className="p-1.5 hover:bg-slate-100 rounded-full transition-colors flex-shrink-0 ml-2"
+                >
+                  <svg className="w-4 h-4 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                </button>
+              </div>
+            )}
+
+            {/* Date and Time saved card details (Visible in step 2) */}
+            {checkoutStep >= 2 && (
+              <div className="bg-white rounded-2xl md:rounded-3xl p-4 md:p-5 shadow-sm border border-slate-100 flex items-center justify-between text-left">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <svg className="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0 flex items-center h-8">
+                    <p className="text-[11px] md:text-xs font-black text-slate-800">
+                      Scheduled on {selectedDate}, {selectedTimeSlot.toLowerCase()}
+                    </p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setShowDateTimeDrawer(true)} 
+                  className="p-1.5 hover:bg-slate-100 rounded-full transition-colors flex-shrink-0 ml-2"
+                >
+                  <svg className="w-4 h-4 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                </button>
+              </div>
+            )}
+
+            {/* Bulleted notes */}
+            <div className="bg-[#F4F6F8] rounded-2xl md:rounded-3xl p-4 md:p-5 border border-slate-100 flex flex-col gap-2 text-left">
+              <h3 className="text-[12px] md:text-xs font-bold text-slate-700">Notes</h3>
+              <ul className="flex flex-col gap-1.5 list-disc pl-4 text-[11px] md:text-xs text-slate-500 leading-normal font-semibold">
+                <li>The provided cost is an approximate estimate.</li>
+                <li>Final estimation will be provided after inspection.</li>
+              </ul>
+            </div>
+
+          </div>
+
+          {/* Right Column: Payment Receipt & Desktop Action Button */}
+          <div className="w-full md:col-span-5 flex flex-col gap-4 mt-4 md:mt-0 md:sticky md:top-24">
+            
+            {/* Payment Summary receipt */}
+            <div className="bg-white rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-sm border border-slate-100 flex flex-col gap-3 text-left">
+              <h3 className="text-[13px] md:text-base font-extrabold text-slate-900">Payment Summary</h3>
+              <div className="flex justify-between text-[11px] md:text-xs font-bold text-slate-500">
+                <span>Item total</span>
+                <span>₹{total}</span>
+              </div>
+              <div className="flex justify-between text-[11px] md:text-xs font-bold text-slate-500">
+                <span>Taxes and Fee</span>
+                <span>₹0</span>
+              </div>
+              <div className="h-px bg-slate-100 w-full" />
+              <div className="flex justify-between text-[13px] md:text-sm font-extrabold text-slate-900">
+                <span>Total</span>
+                <span>₹{total}</span>
+              </div>
+              <div className="h-px bg-slate-100 w-full" />
+              <div className="flex justify-between text-[13px] md:text-sm font-extrabold text-slate-900 bg-blue-50/60 p-3 rounded-xl">
+                <span>Advance Payment</span>
+                <span>₹{advance}</span>
+              </div>
+              <span className="text-[10px] md:text-xs text-slate-400 font-semibold text-center">
+                (₹{remaining} payable after service)
+              </span>
+
+              {/* Desktop Action Button */}
+              <div className="hidden md:block mt-2">
+                {checkoutStep === 0 ? (
+                  <button
+                    onClick={() => setShowAddressDrawer(true)}
+                    className="w-full bg-[#2F80ED] hover:bg-blue-600 text-white font-extrabold py-3.5 rounded-2xl text-sm shadow-md transition-all cursor-pointer"
+                  >
+                    Continue — Select Address →
+                  </button>
+                ) : checkoutStep === 1 ? (
+                  <button
+                    onClick={() => setShowDateTimeDrawer(true)}
+                    className="w-full bg-[#2F80ED] hover:bg-blue-600 text-white font-extrabold py-3.5 rounded-2xl text-sm shadow-md transition-all cursor-pointer"
+                  >
+                    Continue — Select Date & Time →
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setCheckoutStep(3)}
+                    className="w-full bg-[#2F80ED] hover:bg-blue-600 text-white font-extrabold py-3.5 rounded-2xl text-sm shadow-md transition-all cursor-pointer"
+                  >
+                    Proceed to Pay →
+                  </button>
+                )}
+              </div>
+            </div>
+
+          </div>
+
+        </div>
       </div>
 
-      {/* Sticky Bottom Summary Footer */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-100 shadow-[0_-4px_12px_rgba(0,0,0,0.03)] z-10 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-[min(100%,48rem)] md:rounded-t-2xl">
+      {/* Mobile Sticky Bottom Summary Footer */}
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-100 shadow-[0_-4px_12px_rgba(0,0,0,0.03)] z-10 md:hidden">
         {checkoutStep === 0 ? (
           <button
             onClick={() => setShowAddressDrawer(true)}

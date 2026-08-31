@@ -129,7 +129,7 @@ const OptionCard = ({ icon, name, desc, selected, onClick }) => (
 
 // ─── Bottom Summary Bar ────────────────────────────────────────────────────────
 const BottomBar = ({ icon, label, sublabel, price, btnLabel, btnDisabled, onBtn, onExpand, expanded }) => (
-  <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/80 shadow-[0_-8px_20px_rgba(0,0,0,0.08)] z-30 transition-all md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-[min(100%,48rem)] md:rounded-t-2xl">
+  <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/80 shadow-[0_-8px_20px_rgba(0,0,0,0.08)] z-30 transition-all md:hidden">
     {/* Summary row */}
     <button
       type="button"
@@ -499,11 +499,11 @@ const BookingFlow = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans max-w-md md:max-w-2xl lg:max-w-screen-lg mx-auto shadow-2xl relative border-x border-slate-200">
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans max-w-screen-xl mx-auto w-full relative">
 
 
-      {/* ── Fixed Header — mobile only ── */}
-      <div className="bg-white/90 backdrop-blur-md sticky top-0 z-20 shadow-2xs border-b border-slate-100 px-4 py-3 flex items-center justify-between lg:hidden">
+      {/* ── Fixed Header ── */}
+      <div className="bg-white/90 backdrop-blur-md sticky top-0 z-20 shadow-2xs border-b border-slate-100 px-4 md:px-8 py-3.5 flex items-center justify-between">
         <button
           type="button"
           onClick={goBack}
@@ -524,18 +524,22 @@ const BookingFlow = () => {
       </div>
 
       {/* ── Page Content ── */}
-      <div className={`flex-1 overflow-y-auto ${step === 3 ? 'pb-56' : 'pb-36'}`}>
-
-        {/* Step Title Header Banner */}
-        <div className="px-5 pt-6 pb-2">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-[10px] font-black uppercase tracking-widest text-[#0D47A1] bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100/80">
-              {catKey} Service
-            </span>
-          </div>
-          <h1 className="text-[22px] font-black text-slate-900 leading-tight">{title}</h1>
-          <p className="text-[12px] text-slate-500 font-semibold mt-0.5">{subtitle}</p>
-        </div>
+      <div className="flex-1 px-4 md:px-8 py-6 pb-36 md:pb-12 overflow-y-auto">
+        <div className="flex flex-col md:grid md:grid-cols-12 md:gap-8 items-start">
+          
+          {/* Left Column: Step Content */}
+          <div className="w-full md:col-span-7 lg:col-span-8 flex flex-col gap-6">
+            
+            {/* Step Title Header Banner */}
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[10px] font-black uppercase tracking-widest text-[#0D47A1] bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100/80">
+                  {catKey} Service
+                </span>
+              </div>
+              <h1 className="text-[22px] md:text-2xl font-black text-slate-900 leading-tight">{title}</h1>
+              <p className="text-[12px] md:text-sm text-slate-500 font-semibold mt-0.5">{subtitle}</p>
+            </div>
 
         {/* ══ STEP 1: SELECT TYPE & QUANTITY ══════════════════════════════════ */}
         {step === 1 && (
@@ -1092,6 +1096,78 @@ const BookingFlow = () => {
             </div>
           </div>
         )}
+          </div>
+
+          {/* Right Column: Desktop Order Summary & Primary Action Card */}
+          <div className="w-full md:col-span-5 lg:col-span-4 hidden md:flex flex-col gap-5 sticky top-24">
+            <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm flex flex-col gap-4 text-left">
+              
+              <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-4">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-xl flex-shrink-0">
+                    {isImageIcon(selectedServiceData?.icon || data.icon) ? (
+                      <img src={selectedServiceData?.icon || data.icon} alt="" className="w-6 h-6 object-contain" />
+                    ) : (
+                      selectedServiceData?.icon || data.icon || '🔧'
+                    )}
+                  </div>
+                  <div className="flex flex-col min-w-0 flex-1">
+                    <span className="text-sm font-black text-slate-900 line-clamp-2 leading-tight">{getBarLabel()}</span>
+                    <span className="text-xs font-semibold text-slate-400 truncate mt-0.5">{getBarSublabel()}</span>
+                  </div>
+                </div>
+                <span className="text-xs font-black text-[#0D47A1] bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100 flex-shrink-0 self-start">
+                  Step {step}/4
+                </span>
+              </div>
+
+              {/* Pricing breakdown */}
+              <div className="flex flex-col gap-2.5 text-xs font-semibold text-slate-600">
+                <div className="flex justify-between">
+                  <span>Base Service ({quantity} unit{quantity > 1 ? 's' : ''})</span>
+                  <span className="font-bold text-slate-900">₹{totalPrice}</span>
+                </div>
+                <div className="flex justify-between text-emerald-600 font-bold">
+                  <span>Inspection Fee</span>
+                  <span>FREE</span>
+                </div>
+                <div className="h-px bg-slate-100 my-1" />
+                <div className="flex justify-between text-sm font-black text-slate-900">
+                  <span>Total Estimate</span>
+                  <span>₹{totalPrice}</span>
+                </div>
+                {step === 4 && paymentMode === 'advance' && (
+                  <div className="flex justify-between text-sm font-black text-[#0D47A1] bg-blue-50 p-3 rounded-2xl border border-blue-100">
+                    <span>Advance Payable Now</span>
+                    <span>₹{advanceAmt}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Primary Action Button */}
+              <button
+                type="button"
+                disabled={getBarBtnDisabled()}
+                onClick={handleBarBtn}
+                className={`w-full font-black py-4 rounded-2xl text-sm transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                  getBarBtnDisabled()
+                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                    : 'bg-[#0D47A1] text-white hover:bg-[#1565C0] shadow-md shadow-[#0D47A1]/20 active:scale-[0.98]'
+                }`}
+              >
+                <span>{getBarBtnLabel()}</span>
+                <ArrowRight className="w-4 h-4 stroke-[2.5]" />
+              </button>
+
+              <div className="flex items-center justify-center gap-2 pt-1 text-slate-400 border-t border-slate-100">
+                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                <span className="text-[11px] font-bold text-slate-500">100% Verified Service Guarantee</span>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
       </div>
 
       {/* ── Fixed Bottom Bar ── */}
@@ -1108,7 +1184,7 @@ const BookingFlow = () => {
           expanded={priceExpanded}
         />
       ) : (
-        <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/95 backdrop-blur-md border-t border-slate-200/80 shadow-[0_-8px_20px_rgba(0,0,0,0.08)] z-30 px-4 pb-4 pt-3 flex flex-col gap-2.5 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-[min(100%,48rem)] md:rounded-t-2xl">
+        <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/80 shadow-[0_-8px_20px_rgba(0,0,0,0.08)] z-30 px-4 pb-4 pt-3 flex flex-col gap-2.5 md:hidden">
           {/* Summary Card */}
           <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3 flex items-center justify-between shadow-2xs">
             <div className="flex items-center gap-3">

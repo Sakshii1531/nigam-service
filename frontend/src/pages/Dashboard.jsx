@@ -653,6 +653,7 @@ const Dashboard = ({ defaultType }) => {
 
       {/* Main Content */}
       <div className="flex-1 p-4 md:px-10 md:py-6 lg:px-16 lg:py-8 xl:px-20 flex flex-col gap-6 md:gap-8 max-w-screen-2xl mx-auto w-full">
+
         {/* Service Banners — horizontal auto-slide carousel */}
         <div ref={bannerRef} className="flex gap-4 overflow-x-auto pb-2 -mx-2 px-2 snap-x snap-mandatory scroll-smooth no-scrollbar md:mx-auto md:px-0 md:pb-0 md:max-w-[1420px] md:w-full relative mt-6 md:mt-10">
           {(activeType === 'non-warranty' ? regularBanners : warrantyBannersList).map((banner) => (

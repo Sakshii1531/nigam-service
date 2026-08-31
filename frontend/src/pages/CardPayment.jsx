@@ -128,63 +128,121 @@ const CardPayment = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-[30px] shadow-2xl overflow-hidden flex flex-col h-[700px] border border-slate-100">
-        
-        {/* Header */}
-        <div className="p-5 flex items-center border-b border-border-color flex-shrink-0">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans">
+      
+      {/* Top Header */}
+      <div className="bg-white px-5 md:px-8 py-4 flex items-center justify-between sticky top-0 z-50 shadow-xs border-b border-slate-100">
+        <div className="flex items-center gap-3">
           <button 
             onClick={() => navigate(-1)}
-            className="p-2 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
+            className="p-1.5 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
           >
             <ArrowLeft className="h-5 w-5 text-[#0D47A1]" />
           </button>
-          <h1 className="text-base font-extrabold text-[#0D47A1] ml-3">Card Payment</h1>
+          <div className="flex flex-col text-left">
+            <h1 className="text-sm md:text-base font-black text-slate-900 leading-tight">Credit &amp; Debit Card Payment</h1>
+            <span className="hidden md:block text-xs text-slate-400 font-semibold">PCI-DSS Compliant 256-Bit SSL Encrypted Checkout</span>
+          </div>
         </div>
+        <div className="hidden md:flex items-center gap-2">
+          <span className="text-xs font-bold text-slate-500">Step 3 of 3</span>
+        </div>
+      </div>
 
-        {/* Content */}
-        <div className="flex-1 p-5 flex flex-col gap-5 overflow-y-auto">
+      {/* Main Container — Phone container on mobile, 2-column grid on desktop */}
+      <div className="flex-1 p-4 md:px-8 md:py-8 flex items-center justify-center md:items-start md:block">
+        
+        {/* Mobile View Wrap Container */}
+        <div className="w-full max-w-md md:max-w-screen-xl mx-auto bg-white md:bg-transparent rounded-[30px] md:rounded-none shadow-2xl md:shadow-none overflow-hidden flex flex-col h-[700px] md:h-auto border border-slate-100 md:border-0">
           
-          {/* Card Visual representation */}
-          {/* Card details are entered inside Razorpay Checkout, which is PCI-DSS
-              compliant. This screen used to collect the card number, expiry and
-              CVV itself — putting raw card data through our own app for no
-              reason, since Checkout asks for them again anyway. */}
-          <div className="bg-gradient-to-br from-[#072C63] via-[#0A3D80] to-[#0D47A1] rounded-2xl p-5 text-white shadow-lg relative overflow-hidden flex flex-col justify-between h-40">
-            <div className="absolute -top-10 -right-10 w-28 h-28 bg-[#FFD400]/10 rounded-full blur-2xl"></div>
-            <div className="flex justify-between items-start">
-              <span className="text-[8px] bg-[#FFD400] text-black font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wider">
-                Secure Card Pay
-              </span>
-              <span className="text-xs italic font-bold text-[#FFD400]">NIGAM SHIELD</span>
+          <div className="flex-1 flex flex-col md:grid md:grid-cols-12 md:gap-8 items-start overflow-y-auto md:overflow-visible">
+            
+            {/* Left Column: Card Visual & Security Badges */}
+            <div className="w-full md:col-span-7 lg:col-span-8 p-5 md:p-0 flex flex-col gap-6 text-left">
+              
+              {/* Card Visual representation */}
+              <div className="bg-gradient-to-br from-[#051F42] via-[#0A3D80] to-[#0D47A1] rounded-2xl md:rounded-3xl p-6 text-white shadow-xl relative overflow-hidden flex flex-col justify-between h-48 md:h-56">
+                <div className="absolute -top-10 -right-10 w-40 h-40 bg-[#FFD400]/10 rounded-full blur-2xl pointer-events-none"></div>
+                <div className="flex justify-between items-start">
+                  <span className="text-[9px] md:text-xs bg-[#FFD400] text-[#051F42] font-black px-2.5 py-1 rounded-full uppercase tracking-wider shadow-xs">
+                    Secure Card Pay
+                  </span>
+                  <span className="text-xs md:text-sm italic font-extrabold text-[#FFD400] tracking-widest">NIGAM SHIELD</span>
+                </div>
+                <div className="my-2">
+                  <span className="text-xs md:text-sm font-semibold text-white/80 block uppercase tracking-wider">Service Booking</span>
+                  <span className="text-base md:text-xl font-black block mt-0.5">{itemName}</span>
+                  <span className="text-2xl md:text-3xl font-black block mt-1 text-[#FFD400]">₹{finalPrice.toLocaleString('en-IN')}</span>
+                </div>
+                <div className="flex items-center justify-between text-xs text-white/70 pt-2 border-t border-white/10">
+                  <span>PCI-DSS Compliant Gateway</span>
+                  <span className="font-bold">Visa • Mastercard • RuPay</span>
+                </div>
+              </div>
+
+              {/* Information Notice */}
+              <div className="bg-blue-50/70 border border-blue-100 rounded-2xl md:rounded-3xl p-5 flex items-start gap-3.5">
+                <div className="w-9 h-9 rounded-2xl bg-white text-[#0D47A1] flex items-center justify-center font-black text-sm flex-shrink-0 shadow-xs">
+                  ℹ️
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xs md:text-sm font-black text-slate-900">Secure Gateway Redirect</span>
+                  <span className="text-[11px] md:text-xs text-slate-600 font-medium leading-normal mt-0.5">
+                    Clicking Proceed will open Razorpay's official secure payment dialog. You can enter your card details safely without storing sensitive credentials on this device.
+                  </span>
+                </div>
+              </div>
+
             </div>
-            <div className="my-2">
-              <span className="text-sm font-bold block">{itemName}</span>
-              <span className="text-2xl font-black block mt-1">₹{finalPrice.toLocaleString('en-IN')}</span>
+
+            {/* Right Column: Order Summary & Pay Action Button */}
+            <div className="w-full md:col-span-5 lg:col-span-4 p-5 md:p-0 flex flex-col gap-5 sticky top-24 text-left">
+              <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm flex flex-col gap-4">
+                
+                <h2 className="text-sm font-black text-slate-900 border-b border-slate-100 pb-3">Payment Summary</h2>
+
+                <div className="flex flex-col gap-3 text-xs font-semibold text-slate-600">
+                  <div className="flex justify-between items-center">
+                    <span>Selected Service</span>
+                    <span className="font-extrabold text-slate-900 truncate max-w-[150px]">{itemName}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Payment Mode</span>
+                    <span className="font-extrabold text-slate-900">Credit / Debit Card</span>
+                  </div>
+                  <div className="h-px bg-slate-100 my-1" />
+                  <div className="flex justify-between items-center text-sm font-black text-slate-900">
+                    <span>Total Amount</span>
+                    <span className="text-[#0D47A1]">₹{finalPrice.toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
+
+                {/* Primary Action Button */}
+                <button
+                  onClick={handlePay}
+                  disabled={loading}
+                  className={`w-full text-[#0D47A1] font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer text-sm mt-2 ${
+                    loading
+                      ? 'bg-slate-100 border border-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+                      : 'bg-[#FFD600] hover:bg-yellow-400 active:scale-[0.99]'
+                  }`}
+                >
+                  {loading ? 'Opening secure checkout…' : `Pay ₹${finalPrice.toLocaleString('en-IN')} Securely`}
+                </button>
+
+                <div className="flex items-center justify-center gap-2 pt-2 border-t border-slate-100 text-slate-400 text-xs font-bold">
+                  <span>🔒 100% Secure &amp; Verified Checkout</span>
+                </div>
+
+              </div>
             </div>
-            <span className="text-[10px] text-white/70">
-              You'll enter your card details on the secure payment screen.
-            </span>
+
           </div>
 
         </div>
 
-        {/* Footer */}
-        <div className="p-5 border-t border-slate-100 flex flex-col gap-2.5 flex-shrink-0 w-full">
-          <button
-            onClick={handlePay}
-            disabled={loading}
-            className={`w-full text-[#0D47A1] font-extrabold py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer ${
-              loading
-                ? 'bg-slate-100 border border-slate-200 text-text-secondary cursor-not-allowed shadow-none'
-                : 'bg-[#FFD600] hover:bg-yellow-400 active:scale-[0.99]'
-            }`}
-          >
-            {loading ? 'Opening secure checkout…' : `Pay ₹${finalPrice.toLocaleString('en-IN')} Securely`}
-          </button>
-        </div>
-
       </div>
+
     </div>
   );
 };

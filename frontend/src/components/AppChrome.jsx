@@ -102,10 +102,8 @@ function matchTab(pathname, table, fallback) {
 export function isPhonePanelRoute(pathname) {
   if (pathname.startsWith("/super-admin") || pathname.startsWith("/brand-admin")) return false;
   if (pathname === "/home" || pathname === "/about-ncc") return false;
-  // Login, OTP and the partner application build their own full-bleed desktop
-  // layouts (split hero + form). Centring those inside a column would strand
-  // their background art in the middle of the screen.
   if (CUSTOMER_CHROMELESS.has(pathname) || TECH_CHROMELESS.has(pathname)) return false;
+  if (pathname.startsWith("/book") || pathname.startsWith("/booking") || pathname.startsWith("/payment")) return false;
   return true;
 }
 
@@ -119,7 +117,7 @@ const WIDE_ROUTES = [
   "/dashboard", "/categories", "/services", "/all-services",
   "/cleaning-services", "/appliance-services", "/all-brands",
   "/buy", "/buy-new", "/buy-product", "/product-details",
-  "/extend-warranty", "/partner-warranty", "/bookings", "/book/",
+  "/extend-warranty", "/partner-warranty", "/bookings", "/book", "/booking",
   "/service-details", "/membership-plans", "/rewards-play-zone",
   "/my-wishlist", "/wishlist", "/my-orders", "/help-support", "/about-ncc", "/terms-and-conditions", "/privacy-policy",
   "/technician/dashboard", "/technician/active-job", "/technician/schedule",
@@ -130,7 +128,10 @@ const WIDE_ROUTES = [
 
 /** Tailwind max-width class for the panel container on a given route. */
 export function panelWidthClass(pathname) {
-  const wide = WIDE_ROUTES.some((r) => pathname === r || pathname.startsWith(r + "/") || (r.endsWith("/") && pathname.startsWith(r)));
+  const wide = WIDE_ROUTES.some((r) => {
+    const cleanR = r.replace(/\/+$/, "");
+    return pathname === cleanR || pathname.startsWith(cleanR + "/");
+  });
   return wide ? "max-w-screen-2xl" : "max-w-4xl";
 }
 
@@ -140,7 +141,7 @@ function pickNav(pathname) {
     return <TechTopNav activePage={matchTab(pathname, TECH_TABS, "jobs")} />;
   }
   if (pathname.startsWith("/super-admin") || pathname.startsWith("/brand-admin")) return null;
-  if (CUSTOMER_CHROMELESS.has(pathname)) return null;
+  if (CUSTOMER_CHROMELESS.has(pathname) || pathname.startsWith("/book") || pathname.startsWith("/booking") || pathname.startsWith("/payment")) return null;
   return <CustomerTopNav activePage={matchTab(pathname, CUSTOMER_TABS, "home")} />;
 }
 

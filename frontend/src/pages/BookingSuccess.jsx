@@ -196,198 +196,244 @@ const BookingSuccess = () => {
 
   return (
     <div className="min-h-screen bg-[#F0F4FF] flex flex-col font-sans">
-      <div className="flex-1 overflow-y-auto pb-6">
+      <div className="flex-1 max-w-screen-xl mx-auto w-full px-4 md:px-8 py-6 md:py-8 overflow-y-auto">
 
         {/* ── Hero Section ── */}
-        <div className="bg-gradient-to-b from-[#E8F0FF] to-[#F0F4FF] pt-12 pb-6 flex flex-col items-center gap-3 px-4">
+        <div className="bg-gradient-to-b from-[#E8F0FF] to-[#F0F4FF] pt-8 md:pt-12 pb-6 flex flex-col items-center gap-3 px-4 rounded-3xl md:border md:border-blue-100/50 mb-6 shadow-xs">
           {/* Animated checkmark */}
           <div className="relative">
             {/* Sparkles */}
             <span className="absolute -top-3 -left-4 text-yellow-400 text-lg animate-pulse">✦</span>
             <span className="absolute -top-2 right-0 text-blue-300 text-sm animate-pulse delay-75">✦</span>
             <span className="absolute bottom-0 -right-5 text-yellow-300 text-sm animate-pulse delay-150">✦</span>
-            <div className="w-20 h-20 rounded-full bg-[#0D47A1] flex items-center justify-center shadow-lg shadow-[#0D47A1]/30">
-              <svg viewBox="0 0 24 24" className="w-10 h-10 text-white" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-[#0D47A1] flex items-center justify-center shadow-lg shadow-[#0D47A1]/30">
+              <svg viewBox="0 0 24 24" className="w-10 h-10 md:w-12 md:h-12 text-white" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="20 6 9 17 4 12" />
               </svg>
             </div>
           </div>
 
           <div className="text-center">
-            <h1 className="text-[22px] font-extrabold text-slate-900 leading-tight">Booking Confirmed!</h1>
-            <p className="text-[12px] text-slate-500 font-medium mt-1">
-              We've received your booking request<br />and will be there on time.
+            <h1 className="text-[22px] md:text-3xl font-extrabold text-slate-900 leading-tight">Booking Confirmed!</h1>
+            <p className="text-[12px] md:text-sm text-slate-500 font-medium mt-1">
+              We've received your booking request and will be there on time.
             </p>
           </div>
         </div>
 
-        <div className="px-4 flex flex-col gap-4">
+        {/* 2-Column Responsive Layout */}
+        <div className="flex flex-col md:grid md:grid-cols-12 md:gap-8 items-start">
 
-          {/* ── Booking ID ── */}
-          <div className="bg-white rounded-2xl px-4 py-3 shadow-sm border border-slate-100 flex items-center justify-between">
-            <span className="text-[11px] text-slate-500 font-semibold">Booking ID</span>
-            <span className="text-[12px] font-extrabold text-slate-900 tracking-wider">{bookingId || '—'}</span>
-          </div>
+          {/* Left Column: Details, Live Tracker & Technician */}
+          <div className="w-full md:col-span-7 lg:col-span-8 flex flex-col gap-4 text-left">
 
-          {/* ── Booking Details Table ── */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-            {rows.map((row, i) => {
-              const { Icon, iconColor, label, value, valueColor } = row;
-              return (
-                <div
-                  key={label}
-                  className={`flex items-center gap-3 px-4 py-3.5 ${
-                    i < rows.length - 1 ? 'border-b border-slate-100' : ''
-                  }`}
-                >
-                  {/* Colored icon — no background box */}
-                  <Icon
-                    className="w-[18px] h-[18px] flex-shrink-0"
-                    style={{ color: iconColor }}
-                    strokeWidth={1.8}
-                  />
-                  {/* Label */}
-                  <span className="text-[12px] text-slate-500 font-medium flex-1">
-                    {label}
-                  </span>
-                  {/* Value */}
-                  <span
-                    className="text-[13px] font-extrabold"
-                    style={{ color: valueColor || '#0F172A' }}
-                  >
-                    {value}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* ── Instant Service Live Tracker ── */}
-          {isInstant && (
-            <div className={`text-white rounded-2xl p-4 shadow-md transition-all ${
-              technician ? 'bg-gradient-to-r from-blue-700 to-indigo-700 shadow-blue-500/20' : 'bg-gradient-to-r from-amber-500 to-orange-500 shadow-amber-500/20'
-            }`}>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-black uppercase tracking-wider bg-white/20 px-2.5 py-0.5 rounded-full flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                  ⚡ Live Express Dispatch
-                </span>
-                <span className="text-[11px] font-extrabold">
-                  {instantStatus === 'EN_ROUTE' ? '🚗 On The Way' : (technician ? '✅ Technician Assigned' : '⏳ Searching Nearby Tech...')}
-                </span>
-              </div>
-              <div className="flex items-center gap-3 mt-3">
-                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl font-bold">
-                  {technician ? '👨‍🔧' : '⏱️'}
-                </div>
-                <div className="flex-1">
-                  <p className="text-[13px] font-extrabold leading-tight">
-                    {technician ? `${technician.name || 'Technician'} is on the way!` : 'Connecting with nearest certified technician'}
-                  </p>
-                  <p className="text-[10px] text-white/90 font-medium mt-0.5">
-                    {technician ? 'Estimated arrival: within 20-35 minutes' : 'Estimated arrival: within 30-45 minutes'}
-                  </p>
-                </div>
-              </div>
+            {/* ── Booking ID ── */}
+            <div className="bg-white rounded-2xl md:rounded-3xl px-5 py-3.5 shadow-xs border border-slate-100 flex items-center justify-between">
+              <span className="text-[11px] md:text-xs text-slate-500 font-semibold">Booking ID</span>
+              <span className="text-[12px] md:text-sm font-extrabold text-slate-900 tracking-wider">{bookingId || '—'}</span>
             </div>
-          )}
 
-          {/* ── Assigned Technician ── */}
-          {technician ? (
-            <div className="bg-white rounded-2xl shadow-sm border border-blue-100 p-4 relative overflow-hidden">
-              <div className="absolute top-0 right-0 bg-blue-50 text-[#0D47A1] text-[9px] font-extrabold px-3 py-1 rounded-bl-xl border-l border-b border-blue-100 uppercase tracking-wider">
-                Assigned Expert
-              </div>
-              <div className="flex items-center gap-3">
-                {/* Avatar */}
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#0D47A1] to-[#1565C0] flex items-center justify-center flex-shrink-0 text-white text-lg font-extrabold shadow-md">
-                  {(technician.name || 'T').charAt(0).toUpperCase()}
-                </div>
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="text-[14px] font-extrabold text-slate-900 truncate">{technician.name || 'Technician'}</p>
-                    <span className="text-[9px] bg-emerald-50 text-emerald-700 font-extrabold px-2 py-0.5 rounded-full border border-emerald-200">
-                      Verified
+            {/* ── Booking Details Table ── */}
+            <div className="bg-white rounded-2xl md:rounded-3xl shadow-xs border border-slate-100 overflow-hidden">
+              {rows.map((row, i) => {
+                const { Icon, iconColor, label, value, valueColor } = row;
+                return (
+                  <div
+                    key={label}
+                    className={`flex items-center gap-3.5 px-5 py-4 ${
+                      i < rows.length - 1 ? 'border-b border-slate-100' : ''
+                    }`}
+                  >
+                    <Icon
+                      className="w-5 h-5 flex-shrink-0"
+                      style={{ color: iconColor }}
+                      strokeWidth={1.8}
+                    />
+                    <span className="text-xs md:text-sm text-slate-500 font-medium flex-1">
+                      {label}
+                    </span>
+                    <span
+                      className="text-xs md:text-sm font-black"
+                      style={{ color: valueColor || '#0F172A' }}
+                    >
+                      {value}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    {(technician.rating || 4.8) > 0 && (
-                      <div className="flex items-center gap-1">
-                        <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
-                        <span className="text-[11px] font-extrabold text-slate-700">{technician.rating || 4.8}</span>
-                      </div>
-                    )}
-                    {(category || technician.specs?.[0]) && (
-                      <span className="text-[10px] text-slate-400 font-medium truncate">
-                        • {category || technician.specs?.[0]} Specialist
-                      </span>
-                    )}
-                  </div>
-                </div>
-                {/* Call button */}
-                <button
-                  onClick={handleCallTechnician}
-                  disabled={callLoading}
-                  title="Call Assigned Technician"
-                  className="w-11 h-11 rounded-full bg-[#EAF4FF] flex items-center justify-center flex-shrink-0 active:scale-95 transition-all shadow-xs border border-blue-200 hover:bg-[#D6ECFF]"
-                >
-                  <Phone className="w-5 h-5 text-[#0D47A1]" />
-                </button>
-              </div>
-              <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
-                <span className="text-slate-500 font-medium">Technician Status</span>
-                <span className="text-[#0D47A1] font-extrabold flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  {instantStatus === 'EN_ROUTE' ? 'Driving to Location' : 'Accepted Job'}
-                </span>
-              </div>
+                );
+              })}
             </div>
-          ) : (
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 text-center">
-              <div className="w-8 h-8 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mx-auto mb-2 font-bold text-sm animate-pulse">
-                ⌛
-              </div>
-              <p className="text-[12px] font-bold text-slate-700">Connecting to nearest technician...</p>
-              <p className="text-[10px] text-slate-400 font-medium mt-1">
-                Your request is live. You'll see technician details as soon as accepted.
-              </p>
-            </div>
-          )}
 
-          {/* ── Action Buttons ── */}
-          <button
-            onClick={() => navigate('/my-bookings')}
-            className="w-full bg-[#0D47A1] text-white font-extrabold py-4 rounded-2xl text-[15px] shadow-md shadow-[#0D47A1]/25 hover:bg-[#1565C0] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-          >
-            View My Bookings
-            <ArrowRight className="w-5 h-5" />
-          </button>
-
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="w-full text-center text-[13px] font-extrabold text-slate-600 hover:text-slate-900 transition-colors py-1"
-          >
-            Go to Home
-          </button>
-
-          {/* ── Bottom trust bar ── */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 px-4 py-3 mt-1">
-            <div className="grid grid-cols-4 gap-2">
-              {[
-                { icon: '👨‍🔧', label: 'Verified\nTechnicians' },
-                { icon: '🔩',  label: 'Genuine\nSpare Parts' },
-                { icon: '🛡️', label: '7-Day\nWarranty' },
-                { icon: '🏠',  label: 'Doorstep\nService' },
-              ].map((item) => (
-                <div key={item.label} className="flex flex-col items-center gap-1.5 text-center">
-                  <span className="text-xl">{item.icon}</span>
-                  <span className="text-[9px] text-slate-500 font-semibold leading-tight whitespace-pre-line">
-                    {item.label}
+            {/* ── Instant Service Live Tracker ── */}
+            {isInstant && (
+              <div className={`text-white rounded-2xl md:rounded-3xl p-5 shadow-md transition-all ${
+                technician ? 'bg-gradient-to-r from-blue-700 to-indigo-700 shadow-blue-500/20' : 'bg-gradient-to-r from-amber-500 to-orange-500 shadow-amber-500/20'
+              }`}>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] md:text-xs font-black uppercase tracking-wider bg-white/20 px-3 py-1 rounded-full flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                    ⚡ Live Express Dispatch
+                  </span>
+                  <span className="text-[11px] md:text-xs font-extrabold">
+                    {instantStatus === 'EN_ROUTE' ? '🚗 On The Way' : (technician ? '✅ Technician Assigned' : '⏳ Searching Nearby Tech...')}
                   </span>
                 </div>
-              ))}
+                <div className="flex items-center gap-3.5 mt-3">
+                  <div className="w-11 h-11 rounded-2xl bg-white/20 flex items-center justify-center text-2xl font-bold flex-shrink-0">
+                    {technician ? '👨‍🔧' : '⏱️'}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs md:text-sm font-black leading-tight">
+                      {technician ? `${technician.name || 'Technician'} is on the way!` : 'Connecting with nearest certified technician'}
+                    </p>
+                    <p className="text-[11px] text-white/90 font-medium mt-0.5">
+                      {technician ? 'Estimated arrival: within 20-35 minutes' : 'Estimated arrival: within 30-45 minutes'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── Assigned Technician ── */}
+            {technician ? (
+              <div className="bg-white rounded-2xl md:rounded-3xl shadow-xs border border-blue-100 p-5 relative overflow-hidden">
+                <div className="absolute top-0 right-0 bg-blue-50 text-[#0D47A1] text-[9px] md:text-xs font-extrabold px-3.5 py-1 rounded-bl-2xl border-l border-b border-blue-100 uppercase tracking-wider">
+                  Assigned Expert
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#0D47A1] to-[#1565C0] flex items-center justify-center flex-shrink-0 text-white text-xl font-black shadow-md">
+                    {(technician.name || 'T').charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm md:text-base font-black text-slate-900 truncate">{technician.name || 'Technician'}</p>
+                      <span className="text-[9px] md:text-xs bg-emerald-50 text-emerald-700 font-extrabold px-2.5 py-0.5 rounded-full border border-emerald-200">
+                        Verified
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      {(technician.rating || 4.8) > 0 && (
+                        <div className="flex items-center gap-1">
+                          <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                          <span className="text-xs font-black text-slate-700">{technician.rating || 4.8}</span>
+                        </div>
+                      )}
+                      {(categoryParam || technician.specs?.[0]) && (
+                        <span className="text-xs text-slate-400 font-medium truncate">
+                          • {categoryParam || technician.specs?.[0]} Specialist
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleCallTechnician}
+                    disabled={callLoading}
+                    title="Call Assigned Technician"
+                    className="w-12 h-12 rounded-2xl bg-[#EAF4FF] flex items-center justify-center flex-shrink-0 active:scale-95 transition-all shadow-xs border border-blue-200 hover:bg-[#D6ECFF] cursor-pointer"
+                  >
+                    <Phone className="w-5 h-5 text-[#0D47A1]" />
+                  </button>
+                </div>
+                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                  <span className="text-slate-500 font-medium">Technician Status</span>
+                  <span className="text-[#0D47A1] font-black flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    {instantStatus === 'EN_ROUTE' ? 'Driving to Location' : 'Accepted Job'}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-white rounded-2xl md:rounded-3xl shadow-xs border border-slate-100 p-5 text-center">
+                <div className="w-10 h-10 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mx-auto mb-2 font-black text-base animate-pulse">
+                  ⌛
+                </div>
+                <p className="text-xs md:text-sm font-black text-slate-800">Connecting to nearest technician...</p>
+                <p className="text-xs text-slate-400 font-medium mt-1">
+                  Your request is live. You'll see technician details as soon as accepted.
+                </p>
+              </div>
+            )}
+
+            {/* Mobile Actions */}
+            <div className="flex flex-col gap-3 md:hidden mt-2">
+              <button
+                onClick={() => navigate('/my-bookings')}
+                className="w-full bg-[#0D47A1] text-white font-extrabold py-4 rounded-2xl text-[15px] shadow-md shadow-[#0D47A1]/25 hover:bg-[#1565C0] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+              >
+                View My Bookings
+                <ArrowRight className="w-5 h-5" />
+              </button>
+
+              <button
+                onClick={() => navigate('/dashboard')}
+                className="w-full text-center text-[13px] font-extrabold text-slate-600 hover:text-slate-900 transition-colors py-1"
+              >
+                Go to Home
+              </button>
             </div>
+
+            {/* Mobile Bottom Trust Bar */}
+            <div className="bg-white rounded-2xl shadow-xs border border-slate-100 px-4 py-3 md:hidden">
+              <div className="grid grid-cols-4 gap-2">
+                {[
+                  { icon: '👨‍🔧', label: 'Verified\nTechnicians' },
+                  { icon: '🔩',  label: 'Genuine\nSpare Parts' },
+                  { icon: '🛡️', label: '7-Day\nWarranty' },
+                  { icon: '🏠',  label: 'Doorstep\nService' },
+                ].map((item) => (
+                  <div key={item.label} className="flex flex-col items-center gap-1.5 text-center">
+                    <span className="text-xl">{item.icon}</span>
+                    <span className="text-[9px] text-slate-500 font-semibold leading-tight whitespace-pre-line">
+                      {item.label}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </div>
+
+          {/* Right Column: Desktop Actions & Trust Badges */}
+          <div className="w-full md:col-span-5 lg:col-span-4 hidden md:flex flex-col gap-6 sticky top-24 text-left">
+            
+            {/* Desktop Actions Card */}
+            <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm flex flex-col gap-4">
+              <h2 className="text-sm font-black text-slate-900 border-b border-slate-100 pb-3">Next Steps</h2>
+
+              <button
+                onClick={() => navigate('/my-bookings')}
+                className="w-full bg-[#0D47A1] text-white font-black py-4 rounded-2xl text-sm shadow-md shadow-[#0D47A1]/20 hover:bg-[#1565C0] active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                View My Bookings
+                <ArrowRight className="w-4 h-4" />
+              </button>
+
+              <button
+                onClick={() => navigate('/dashboard')}
+                className="w-full text-center text-xs font-black text-slate-600 hover:text-slate-900 transition-colors py-2 border border-slate-200 rounded-2xl hover:bg-slate-50 cursor-pointer"
+              >
+                Go to Home
+              </button>
+            </div>
+
+            {/* Desktop Trust Card */}
+            <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm flex flex-col gap-4">
+              <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider">Service Assurances</h3>
+              <div className="grid grid-cols-2 gap-4">
+                {[
+                  { icon: '👨‍🔧', title: 'Verified', sub: 'Certified Experts' },
+                  { icon: '🔩',  title: 'Genuine', sub: 'Spare Parts' },
+                  { icon: '🛡️', title: '7-Day', sub: 'Job Warranty' },
+                  { icon: '🏠',  title: 'Doorstep', sub: 'Service Delivery' },
+                ].map((item) => (
+                  <div key={item.title} className="flex flex-col gap-1 p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                    <span className="text-2xl">{item.icon}</span>
+                    <span className="text-xs font-black text-slate-900">{item.title}</span>
+                    <span className="text-[10px] font-semibold text-slate-400 leading-tight">{item.sub}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
           </div>
 
         </div>
