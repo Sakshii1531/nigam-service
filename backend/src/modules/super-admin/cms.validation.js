@@ -48,8 +48,25 @@ export const faqItemSchema = z.object({
   category: z.string().optional(),
 });
 
+export const sectionItemSchema = z.object({
+  heading: z.string().min(1),
+  text: z.string().min(1),
+  order: z.number().optional(),
+});
+
+export const statItemSchema = z.object({
+  label: z.string().min(1),
+  value: z.string().min(1),
+});
+
 export const upsertCmsPageSchema = z.object({
+  title: z.string().optional(),
+  subtitle: z.string().optional(),
   body: z.string().optional(),
+  version: z.string().optional(),
+  contactEmail: z.string().optional(),
+  stats: z.array(statItemSchema).optional(),
+  sections: z.array(sectionItemSchema).optional(),
   faqs: z.array(faqItemSchema).optional(),
   publishedAt: z.coerce.date().optional(),
 });

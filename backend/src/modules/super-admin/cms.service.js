@@ -136,6 +136,102 @@ const DEFAULT_FAQS = [
   },
 ];
 
+const DEFAULT_PRIVACY_SECTIONS = [
+  {
+    heading: '1. Information We Collect',
+    text: 'We collect personal information necessary to deliver doorstep services, including your name, contact phone number, service address, email address, and booking history. Payment details are processed through PCI-DSS compliant payment gateways (Razorpay) and are never stored on our servers.',
+    order: 0,
+  },
+  {
+    heading: '2. How We Use Your Data',
+    text: 'Your personal data is strictly utilized for service dispatch, booking updates via SMS/WhatsApp, technician verification, warranty tracking, and customer support resolution.',
+    order: 1,
+  },
+  {
+    heading: '3. Data Protection & Security Protocols',
+    text: 'We implement 256-bit SSL encryption, tokenized authentication, and strict role-based access controls to safeguard your personal details against unauthorized access or disclosure.',
+    order: 2,
+  },
+  {
+    heading: '4. Sharing Information with Service Technicians',
+    text: 'Your contact name and service address are shared exclusively with the assigned background-verified technician solely for the duration of the scheduled job slot.',
+    order: 3,
+  },
+  {
+    heading: '5. Cookies & Analytics',
+    text: 'We use essential session cookies to keep you logged in, save address preferences, and improve app responsiveness. You can manage cookie preferences via your browser settings.',
+    order: 4,
+  },
+  {
+    heading: '6. Your Data Rights & Contact Desk',
+    text: 'You maintain the right to view, update, or request deletion of your account profile at any time. For privacy inquiries or data requests, email privacy@nccservice.in.',
+    order: 5,
+  },
+];
+
+const DEFAULT_TERMS_SECTIONS = [
+  {
+    heading: '1. Service Booking & Technician Dispatch',
+    text: 'Nigam Care Center (NCC) acts as a verified home service platform connecting clients with certified technicians for AC repair, appliance servicing, electrical, plumbing, and cleaning tasks. By placing a booking, you agree to provide accurate location details and ensure adult supervision during doorstep appointments.',
+    order: 0,
+  },
+  {
+    heading: '2. Upfront Pricing & Payment Terms',
+    text: 'All visiting charges, diagnostic costs, and spare part prices are displayed upfront prior to job confirmation. Payments can be processed securely online via UPI, Credit/Debit Cards, NetBanking, or directly in cash to the technician upon satisfactory job completion.',
+    order: 1,
+  },
+  {
+    heading: '3. 30-Day Service Warranty Policy',
+    text: 'All repair services completed by NCC technicians include a complimentary 30-day service warranty. If the exact same issue reoccurs within 30 days of service, our team will dispatch a senior technician to rectify the problem free of any additional labor or visiting charge.',
+    order: 2,
+  },
+  {
+    heading: '4. Cancellation & Refund Policy',
+    text: 'Bookings may be cancelled or rescheduled free of penalty up to 2 hours prior to the scheduled slot. If cancelled after technician dispatch, a nominal visiting charge may apply. Approved refunds are processed to the original payment source within 5 to 7 business days.',
+    order: 3,
+  },
+  {
+    heading: '5. Genuine Parts Guarantee',
+    text: 'Spare parts supplied by NCC technicians are 100% original OEM parts. Replacement components carry manufacturer warranty as specified on the billing invoice.',
+    order: 4,
+  },
+  {
+    heading: '6. Limitation of Liability',
+    text: 'NCC carries comprehensive liability coverage for technician property damage during active job execution. For support or dispute resolution, contact support@nccservice.in or call 1800-123-6222.',
+    order: 5,
+  },
+];
+
+const DEFAULT_ABOUT_SECTIONS = [
+  {
+    heading: 'Certified & Verified Technicians',
+    text: 'Every technician undergoes rigorous background verification, technical testing, and safety protocols before taking any job.',
+    order: 0,
+  },
+  {
+    heading: '100% Transparent Pricing',
+    text: 'No hidden fees or unexpected charges. View exact service rates upfront before booking.',
+    order: 1,
+  },
+  {
+    heading: 'Genuine Spare Parts',
+    text: 'We use only authentic, high-grade OEM spare parts backed by warranty protection for long-lasting performance.',
+    order: 2,
+  },
+  {
+    heading: 'Instant Support & Warranty',
+    text: 'Dedicated 24/7 customer care desk with hassle-free claim processing for all covered home appliances.',
+    order: 3,
+  },
+];
+
+const DEFAULT_ABOUT_STATS = [
+  { label: 'Happy Customers', value: '50,000+' },
+  { label: 'Certified Technicians', value: '100+' },
+  { label: 'Satisfaction Rating', value: '4.8 ★' },
+  { label: 'Response Time', value: '30 Mins' },
+];
+
 export async function getCmsPage(slug) {
   let page = await CMSPage.findOne({ slug });
   if (!page) {
@@ -149,26 +245,59 @@ export async function getCmsPage(slug) {
     } else if (slug === 'privacy-policy') {
       page = await CMSPage.create({
         slug: 'privacy-policy',
-        body: 'Privacy Policy\n\nNigam Care values your privacy. We collect personal information to provide maintenance, repair, and customer support services.',
+        body: 'Official Privacy Policy Document',
+        version: 'v1.0',
+        contactEmail: 'privacy@nccservice.in',
+        sections: DEFAULT_PRIVACY_SECTIONS,
         publishedAt: new Date(),
       });
     } else if (slug === 'terms-and-conditions' || slug === 'terms') {
       page = await CMSPage.create({
         slug: slug,
-        body: 'Terms & Conditions\n\nWelcome to Nigam Care. By using our platform, mobile apps, or booking services, you agree to comply with our policies.',
+        body: 'Official Terms & Conditions Document',
+        version: 'v1.0',
+        contactEmail: 'support@nccservice.in',
+        sections: DEFAULT_TERMS_SECTIONS,
+        publishedAt: new Date(),
+      });
+    } else if (slug === 'about-us' || slug === 'about-ncc') {
+      page = await CMSPage.create({
+        slug: slug,
+        title: 'Empowering Smart Home Care & Appliance Solutions',
+        subtitle: "Nigam Care Center (NCC) is India's leading home service network. We connect households with top-rated, background-verified technicians for AC repair, appliance servicing, electrical work, plumbing, and genuine spare parts delivery.",
+        body: 'About Nigam Care Center',
+        version: 'v2.4.0',
+        contactEmail: 'support@nccservice.in',
+        stats: DEFAULT_ABOUT_STATS,
+        sections: DEFAULT_ABOUT_SECTIONS,
         publishedAt: new Date(),
       });
     } else {
-      page = { slug, body: '', faqs: [] };
+      page = { slug, body: '', faqs: [], sections: [], stats: [] };
     }
+  } else if ((slug === 'privacy-policy' || slug === 'terms-and-conditions') && (!page.sections || page.sections.length === 0)) {
+    page.sections = slug === 'privacy-policy' ? DEFAULT_PRIVACY_SECTIONS : DEFAULT_TERMS_SECTIONS;
+    await page.save();
+  } else if ((slug === 'about-us' || slug === 'about-ncc') && (!page.sections || page.sections.length === 0)) {
+    page.sections = DEFAULT_ABOUT_SECTIONS;
+    page.stats = DEFAULT_ABOUT_STATS;
+    page.title = page.title || 'Empowering Smart Home Care & Appliance Solutions';
+    page.subtitle = page.subtitle || "Nigam Care Center (NCC) is India's leading home service network.";
+    await page.save();
   }
   return page;
 }
 
-export async function upsertCmsPage(slug, { body, faqs, publishedAt }) {
+export async function upsertCmsPage(slug, { title, subtitle, body, sections, stats, faqs, version, contactEmail, publishedAt }) {
   const updateData = { slug, publishedAt: publishedAt || new Date() };
+  if (title !== undefined) updateData.title = title;
+  if (subtitle !== undefined) updateData.subtitle = subtitle;
   if (body !== undefined) updateData.body = body;
+  if (sections !== undefined) updateData.sections = sections;
+  if (stats !== undefined) updateData.stats = stats;
   if (faqs !== undefined) updateData.faqs = faqs;
+  if (version !== undefined) updateData.version = version;
+  if (contactEmail !== undefined) updateData.contactEmail = contactEmail;
 
   return CMSPage.findOneAndUpdate(
     { slug },
