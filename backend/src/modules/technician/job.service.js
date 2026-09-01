@@ -166,9 +166,15 @@ export async function listJobHistory(technicianId, { status = 'all', type = 'all
 
   const [items, total] = await Promise.all([
     Job.find(query)
-      .populate({ path: 'serviceRequest', populate: { path: 'user booking' } })
-      .populate(AMC_POPULATE)
-      .populate(EW_POPULATE)
+      .populate({
+        path: 'serviceRequest',
+        populate: [
+          { path: 'user' },
+          { path: 'booking' },
+          { path: 'amcSubscription', populate: { path: 'plan', select: 'name' } },
+          { path: 'extendedWarrantyOrder' },
+        ],
+      })
       .sort({ updatedAt: -1, createdAt: -1 })
       .skip(skip)
       .limit(Number(limit)),
