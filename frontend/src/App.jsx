@@ -515,6 +515,7 @@ function App() {
         <Route path="/technician/announcements" element={<Announcements />} />
         <Route path="/technician/earning-detail/:id" element={<EarningDetailPage />} />
         <Route path="/technician/history" element={<ServiceHistory />} />
+        <Route path="/technician/service-history" element={<ServiceHistory />} />
         
         {/* Super Admin Routes */}
         <Route path="/super-admin" element={<Navigate to="/super-admin/login" replace />} />

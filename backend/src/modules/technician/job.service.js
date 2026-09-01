@@ -146,16 +146,20 @@ export async function listJobHistory(technicianId, { status = 'all', type = 'all
     query.repairStatus = 'cancelled';
   } else if (status === 'in_progress') {
     query.activeStep = { $nin: ['completed', 'idle'] };
-  } else {
-    query.activeStep = { $in: ['completed', 'completed_pending', 'repaircomplete'] };
+  } else if (status === 'quick' || type === 'quick') {
+    query.type = 'NCC Paid Service';
+  } else if (status === 'warranty' || status === 'foc' || type === 'warranty' || type === 'foc') {
+    query.type = { $in: ['Brand Warranty', 'Under Warranty', 'NCC Extended Warranty'] };
+  } else if (status === 'amc' || type === 'amc') {
+    query.type = { $in: ['AMC Service', 'AMC Visit'] };
   }
 
   if (type === 'quick') {
     query.type = 'NCC Paid Service';
   } else if (type === 'warranty' || type === 'foc') {
-    query.type = { $in: ['Brand Warranty', 'Under Warranty'] };
+    query.type = { $in: ['Brand Warranty', 'Under Warranty', 'NCC Extended Warranty'] };
   } else if (type === 'amc') {
-    query.type = 'AMC Service';
+    query.type = { $in: ['AMC Service', 'AMC Visit'] };
   }
 
   const skip = (Math.max(1, Number(page)) - 1) * Number(limit);
