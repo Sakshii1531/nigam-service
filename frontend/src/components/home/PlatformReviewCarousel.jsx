@@ -90,17 +90,39 @@ const PlatformReviewCarousel = () => {
 
   useEffect(() => {
     let cancelled = false;
-    apiRequest('/reviews/featured')
-      .then((data) => {
-        if (!cancelled && Array.isArray(data) && data.length > 0) {
-          setReviews(data);
-        }
-      })
-      .catch((err) => {
-        console.warn('[PlatformReviewCarousel] Using fallback reviews:', err.message);
-      });
+
+    const fetchReviews = () => {
+      apiRequest('/reviews/featured')
+        .then((data) => {
+          if (!cancelled && Array.isArray(data) && data.length > 0) {
+            setReviews(data);
+          }
+        })
+        .catch((err) => {
+          console.warn('[PlatformReviewCarousel] Using fallback reviews:', err.message);
+        });
+    };
+
+    // Initial fetch
+    fetchReviews();
+
+    // Re-fetch whenever tab gets focus or admin saves changes
+    const onSync = () => fetchReviews();
+    window.addEventListener('focus', onSync);
+    window.addEventListener('ncc_reviews_updated', onSync);
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'ncc_reviews_updated') onSync();
+    });
+
+    // 10-second polling fallback for active sessions
+    const interval = setInterval(fetchReviews, 10000);
+
     return () => {
       cancelled = true;
+      window.removeEventListener('focus', onSync);
+      window.removeEventListener('ncc_reviews_updated', onSync);
+      window.removeEventListener('storage', onSync);
+      clearInterval(interval);
     };
   }, []);
 

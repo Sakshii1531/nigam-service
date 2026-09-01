@@ -138,6 +138,7 @@ import SuperAdminTransactions from './pages/super-admin/Transactions';
 import SuperAdminCMS from './pages/super-admin/CMS';
 import SuperAdminLoyaltyProgram from './pages/super-admin/LoyaltyProgram';
 import SuperAdminTechnicianAppCustomization from './pages/super-admin/TechnicianAppCustomization';
+import SuperAdminReviewsCustomization from './pages/super-admin/ReviewsCustomization';
 import TechDashboard from './pages/technician/Dashboard';
 import ActiveJob from './pages/technician/ActiveJob';
 import Schedule from './pages/technician/Schedule';
@@ -549,6 +550,7 @@ function App() {
         <Route path="/super-admin/cms" element={<SuperAdminCMS />} />
         <Route path="/super-admin/loyalty-program" element={<SuperAdminLoyaltyProgram />} />
         <Route path="/super-admin/technician-app-customization" element={<SuperAdminTechnicianAppCustomization />} />
+        <Route path="/super-admin/reviews-customization" element={<SuperAdminReviewsCustomization />} />
 
         <Route path="*" element={<PageHandler />} />
       </Routes>

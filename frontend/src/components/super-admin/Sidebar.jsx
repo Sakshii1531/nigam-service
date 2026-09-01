@@ -42,7 +42,8 @@ import {
   Ticket,
   Award,
   RefreshCw,
-  Search
+  Search,
+  Star
 } from 'lucide-react';
 import logo from '../../assets/nigam-care.png';
 
@@ -234,6 +235,12 @@ const Sidebar = () => {
       label: 'Stories Customization',
       path: '/super-admin/customer-app-customization?tab=stories',
       icon: <FileText size={18} />
+    },
+    {
+      type: 'link',
+      label: 'Reviews Customization',
+      path: '/super-admin/reviews-customization',
+      icon: <Star size={18} />
     },
     {
       type: 'link',

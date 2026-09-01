@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { validate } from '../../middleware/validate.js';
-import { requireAuth, requireBrandScope } from '../../middleware/auth.js';
+import { requireAuth, requireBrandScope, requireRole } from '../../middleware/auth.js';
 import { ok, created } from '../../utils/respond.js';
 import * as reviewService from './review.service.js';
 import { Review } from './review.model.js';
@@ -14,6 +14,40 @@ import {
 } from './review.validation.js';
 
 export const reviewRouter = Router();
+
+// ─── Super Admin: FeaturedReview CRUD ────────────────────────────────────────
+reviewRouter.get('/featured-admin', requireAuth, requireRole('super_admin'), async (req, res, next) => {
+  try {
+    ok(res, await reviewService.listAdminFeaturedReviews());
+  } catch (err) {
+    next(err);
+  }
+});
+
+reviewRouter.post('/featured-admin', requireAuth, requireRole('super_admin'), async (req, res, next) => {
+  try {
+    created(res, await reviewService.createAdminFeaturedReview(req.body));
+  } catch (err) {
+    next(err);
+  }
+});
+
+reviewRouter.patch('/featured-admin/:id', requireAuth, requireRole('super_admin'), async (req, res, next) => {
+  try {
+    ok(res, await reviewService.updateAdminFeaturedReview(req.params.id, req.body));
+  } catch (err) {
+    next(err);
+  }
+});
+
+reviewRouter.delete('/featured-admin/:id', requireAuth, requireRole('super_admin'), async (req, res, next) => {
+  try {
+    ok(res, await reviewService.deleteAdminFeaturedReview(req.params.id));
+  } catch (err) {
+    next(err);
+  }
+});
+
 
 // Public — customers browsing a technician's profile / brand-admin dashboards
 // read reviews without needing their own account.
