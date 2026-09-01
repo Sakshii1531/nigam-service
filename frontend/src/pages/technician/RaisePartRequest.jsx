@@ -941,7 +941,7 @@ const RaisePartRequest = () => {
       )}
 
       {/* Bottom Navigation */}
-      <TechBottomNav activeTab={activeTab === 'claims' ? 'requests' : 'inventory'} />
+      <TechBottomNav activeTab="requests" />
 
     </div>
   );

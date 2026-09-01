@@ -4,11 +4,28 @@ import {
   ArrowLeft, Search, Filter, Calendar, CheckCircle2, Clock, 
   MapPin, Star, User, Phone, Wrench, Shield, ChevronRight, 
   FileText, Sparkles, RefreshCw, X, AlertCircle, TrendingUp,
-  Tag, ExternalLink, Check, Briefcase, Zap, Flame, Wind, Droplets, Cpu
+  Tag, ExternalLink, Check, Briefcase, Zap, Flame, Wind, Droplets, Cpu,
+  CreditCard, Package, Receipt
 } from 'lucide-react';
 import TechBottomNav from '../../components/TechBottomNav';
 import { apiRequest } from '../../lib/apiClient';
 import { useTech } from '../../context/TechContext';
+
+function formatAddress(addr) {
+  if (!addr) return '—';
+  if (typeof addr === 'string') return addr;
+  if (typeof addr === 'object') {
+    const parts = [
+      addr.house,
+      addr.area,
+      addr.landmark,
+      addr.city,
+      addr.pincode,
+    ].filter(Boolean);
+    return parts.length ? parts.join(', ') : '—';
+  }
+  return String(addr);
+}
 
 const ServiceHistory = () => {
   const navigate = useNavigate();
@@ -18,7 +35,7 @@ const ServiceHistory = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState('all'); // 'all', 'completed', 'quick', 'warranty', 'amc'
+  const [activeFilter, setActiveFilter] = useState('all');
   const [selectedJob, setSelectedJob] = useState(null);
 
   // Fetch technician service history
@@ -62,6 +79,7 @@ const ServiceHistory = () => {
   const filterPills = [
     { id: 'all', label: 'All Services' },
     { id: 'completed', label: 'Completed' },
+    { id: 'in_progress', label: 'In Progress' },
     { id: 'quick', label: 'QuickPayout (D2C)' },
     { id: 'warranty', label: 'Warranty (FOC)' },
     { id: 'amc', label: 'AMC Service' },
@@ -143,7 +161,7 @@ const ServiceHistory = () => {
             <div>
               <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Jobs Revenue</span>
               <p className="text-xl font-black text-[#052355] mt-0.5">₹{(earningsTally?.total || totalEarned).toLocaleString('en-IN')}</p>
-              <span className="text-[9.5px] text-emerald-700 font-medium">Credited to wallet</span>
+              <span className="text-[9.5px] text-emerald-700 font-medium">Credited to ledger</span>
             </div>
           </div>
 
@@ -184,7 +202,7 @@ const ServiceHistory = () => {
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3.5 top-3 p-0.5 text-slate-400 hover:text-slate-600"
+                className="absolute right-3.5 top-3 p-0.5 text-slate-400 hover:text-slate-600 cursor-pointer"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -221,7 +239,7 @@ const ServiceHistory = () => {
             <span className="text-xs font-bold">{error}</span>
             <button 
               onClick={() => fetchHistory()}
-              className="mt-2 px-4 py-2 bg-rose-600 text-white rounded-xl text-xs font-bold"
+              className="mt-2 px-4 py-2 bg-rose-600 text-white rounded-xl text-xs font-bold cursor-pointer"
             >
               Try Again
             </button>
@@ -246,19 +264,21 @@ const ServiceHistory = () => {
               const sr = job.serviceRequest || {};
               const customerName = sr?.user?.name || sr?.contactName || 'Customer';
               const customerPhone = sr?.user?.phone || sr?.contactPhone || '';
-              const customerAddress = sr?.address?.locality || sr?.address?.city || sr?.location || 'On-Site Location';
+              const customerAddress = formatAddress(sr?.booking?.address || sr?.address || sr?.zone);
               const serviceTitle = sr?.title || sr?.serviceType || sr?.category || 'Appliance Repair & Service';
               const brandName = sr?.brand || 'Nigam Care Verified';
               const completedDate = job.updatedAt ? new Date(job.updatedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Recently';
               const earnings = job.billingEstimate?.technicianEarnings ?? job.billingEstimate?.totalAmount ?? 0;
-              const isWarranty = job.type === 'Brand Warranty' || job.type === 'Under Warranty';
-              const isAmc = job.type === 'AMC Service';
-              const jobIdShort = String(job._id || job.id).slice(-6).toUpperCase();
+              const isWarranty = job.type === 'Brand Warranty' || job.type === 'Under Warranty' || job.type === 'NCC Extended Warranty';
+              const isAmc = job.type === 'AMC Service' || job.type === 'AMC Visit';
+              const jobIdShort = String(sr?.humanId || job.humanId || job._id || job.id).slice(-8).toUpperCase();
+              const isCompleted = job.activeStep === 'completed' || job.repairStatus === 'completed';
 
               return (
                 <div
                   key={job._id || job.id}
-                  className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-2xs flex flex-col justify-between gap-4 hover:border-[#0D47A1]/40 hover:shadow-xs transition-all text-left group"
+                  onClick={() => setSelectedJob(job)}
+                  className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-2xs flex flex-col justify-between gap-4 hover:border-[#0D47A1]/40 hover:shadow-xs transition-all text-left group cursor-pointer"
                 >
                   {/* Top Bar: Category badge & Job ID */}
                   <div className="flex items-start justify-between gap-3">
@@ -276,15 +296,22 @@ const ServiceHistory = () => {
                       </div>
                     </div>
 
-                    <span className={`text-[9.5px] font-black px-2.5 py-1 rounded-full border uppercase tracking-wider flex-shrink-0 ${
-                      isWarranty 
-                        ? 'bg-blue-50 text-[#0D47A1] border-blue-200' 
-                        : isAmc 
-                          ? 'bg-purple-50 text-purple-700 border-purple-200' 
-                          : 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                    }`}>
-                      {job.type || 'D2C Service'}
-                    </span>
+                    <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                      <span className={`text-[9.5px] font-black px-2.5 py-0.5 rounded-full border uppercase tracking-wider ${
+                        isWarranty 
+                          ? 'bg-blue-50 text-[#0D47A1] border-blue-200' 
+                          : isAmc 
+                            ? 'bg-purple-50 text-purple-700 border-purple-200' 
+                            : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                      }`}>
+                        {job.type || 'D2C Service'}
+                      </span>
+                      <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md ${
+                        isCompleted ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'
+                      }`}>
+                        {isCompleted ? 'Completed' : 'In Progress'}
+                      </span>
+                    </div>
                   </div>
 
                   {/* Customer & Location Snippet */}
@@ -317,11 +344,16 @@ const ServiceHistory = () => {
                     <div className="flex items-center gap-3">
                       <div className="text-right">
                         <span className="text-xs font-black text-[#052355]">₹{earnings.toLocaleString('en-IN')}</span>
-                        <span className="text-[9px] text-emerald-600 font-bold block">Credited</span>
+                        <span className="text-[9px] text-emerald-600 font-bold block">
+                          {isCompleted ? 'Credited' : 'Estimated'}
+                        </span>
                       </div>
 
                       <button
-                        onClick={() => setSelectedJob(job)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedJob(job);
+                        }}
                         className="p-2 bg-slate-100 hover:bg-[#0D47A1] hover:text-white rounded-xl text-slate-500 transition-colors cursor-pointer"
                         title="View Job Details"
                       >
@@ -337,17 +369,19 @@ const ServiceHistory = () => {
 
       </div>
 
-      {/* Job Details Modal */}
+      {/* Comprehensive Service Job Details Modal */}
       {selectedJob && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl w-full max-w-lg p-6 shadow-2xl border border-slate-100 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+            
+            {/* Modal Header */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div>
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                  Service Summary • #{String(selectedJob._id || selectedJob.id).slice(-6).toUpperCase()}
+                  Service Summary • #{String(selectedJob.serviceRequest?.humanId || selectedJob.humanId || selectedJob._id || selectedJob.id).slice(-8).toUpperCase()}
                 </span>
                 <h3 className="text-base font-black text-[#052355]">
-                  {selectedJob.serviceRequest?.title || selectedJob.serviceRequest?.serviceType || 'Service Record'}
+                  {selectedJob.serviceRequest?.title || selectedJob.serviceRequest?.serviceType || selectedJob.serviceRequest?.category || 'Service Record'}
                 </h3>
               </div>
               <button 
@@ -358,59 +392,139 @@ const ServiceHistory = () => {
               </button>
             </div>
 
-            {/* Diagnosis & Parts Info */}
-            <div className="space-y-3 text-xs">
-              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/60 space-y-2">
+            {/* Modal Body */}
+            <div className="space-y-3.5 text-xs">
+              
+              {/* Status & Category Overview Card */}
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/60 space-y-2.5">
                 <div className="flex justify-between items-center text-slate-500">
                   <span>Job Status</span>
-                  <span className="font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
-                    Completed & Settled
+                  <span className={`font-bold px-2.5 py-0.5 rounded-full border ${
+                    selectedJob.activeStep === 'completed' 
+                      ? 'text-emerald-700 bg-emerald-50 border-emerald-200' 
+                      : 'text-blue-700 bg-blue-50 border-blue-200'
+                  }`}>
+                    {selectedJob.activeStep === 'completed' ? 'Completed & Settled' : (selectedJob.activeStep || 'In Progress')}
                   </span>
                 </div>
                 <div className="flex justify-between items-center text-slate-500">
-                  <span>Service Model / Brand</span>
-                  <span className="font-bold text-slate-800">{selectedJob.serviceRequest?.brand || 'Verified Appliance'}</span>
+                  <span>Service Type</span>
+                  <span className="font-bold text-slate-800">{selectedJob.type || 'NCC Paid Service'}</span>
                 </div>
                 <div className="flex justify-between items-center text-slate-500">
-                  <span>Customer Contact</span>
+                  <span>Appliance / Brand</span>
                   <span className="font-bold text-slate-800">
-                    {selectedJob.serviceRequest?.user?.name || selectedJob.serviceRequest?.contactName || 'Customer'}
+                    {selectedJob.serviceRequest?.brand || 'Nigam Care Verified'} {selectedJob.serviceRequest?.model ? `(${selectedJob.serviceRequest.model})` : ''}
                   </span>
+                </div>
+                {selectedJob.serviceRequest?.serialNo && (
+                  <div className="flex justify-between items-center text-slate-500">
+                    <span>Serial Number</span>
+                    <span className="font-bold text-slate-800">{selectedJob.serviceRequest.serialNo}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Customer Contact & Address Card */}
+              <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs space-y-2.5">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Customer Details</p>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-slate-800 font-bold">
+                    <User className="h-4 w-4 text-[#0D47A1]" />
+                    <span>{selectedJob.serviceRequest?.user?.name || selectedJob.serviceRequest?.contactName || 'Customer'}</span>
+                  </div>
+                  {selectedJob.serviceRequest?.user?.phone && (
+                    <a
+                      href={`tel:${selectedJob.serviceRequest.user.phone}`}
+                      className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg text-[11px] font-bold hover:bg-emerald-100 transition-colors"
+                    >
+                      <Phone className="h-3 w-3" />
+                      <span>{selectedJob.serviceRequest.user.phone}</span>
+                    </a>
+                  )}
+                </div>
+                <div className="flex items-start gap-2 text-slate-600 text-[11px] pt-1 border-t border-slate-100">
+                  <MapPin className="h-4 w-4 text-orange-500 flex-shrink-0 mt-0.5" />
+                  <span>{formatAddress(selectedJob.serviceRequest?.booking?.address || selectedJob.serviceRequest?.address || selectedJob.serviceRequest?.zone)}</span>
                 </div>
               </div>
 
+              {/* Complaint Description */}
+              {selectedJob.serviceRequest?.description && (
+                <div className="bg-amber-50/70 border border-amber-200/80 p-3.5 rounded-2xl">
+                  <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider block mb-1">Reported Complaint</span>
+                  <p className="text-slate-700 text-xs font-medium leading-relaxed">{selectedJob.serviceRequest.description}</p>
+                </div>
+              )}
+
               {/* Diagnosis notes if present */}
               {selectedJob.diagnosisNotes && (
-                <div className="bg-blue-50/60 border border-blue-200/70 p-4 rounded-2xl">
+                <div className="bg-blue-50/70 border border-blue-200/80 p-3.5 rounded-2xl">
                   <span className="text-[10px] font-bold text-blue-800 uppercase tracking-wider block mb-1">Diagnosis & Work Done</span>
                   <p className="text-slate-700 text-xs font-medium leading-relaxed">{selectedJob.diagnosisNotes}</p>
                 </div>
               )}
 
-              {/* Payment / Earnings Summary */}
-              <div className="bg-emerald-50/60 border border-emerald-200/70 p-4 rounded-2xl flex justify-between items-center">
-                <div>
-                  <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider block">Technician Payout</span>
-                  <span className="text-xs text-slate-600 font-medium">Credited to wallet ledger</span>
+              {/* Spare Parts Summary */}
+              {selectedJob.sparePartsUsed && selectedJob.sparePartsUsed.length > 0 && (
+                <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-2xl space-y-1.5">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Spare Parts Replaced</span>
+                  <div className="space-y-1">
+                    {selectedJob.sparePartsUsed.map((part, idx) => (
+                      <div key={idx} className="flex justify-between items-center text-xs">
+                        <span className="text-slate-700 font-semibold">{part.name || part.partName || `Part #${idx + 1}`} (x{part.qty || 1})</span>
+                        <span className="text-slate-900 font-bold">₹{part.price || part.amount || 0}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <span className="text-xl font-black text-emerald-800">
-                  ₹{(selectedJob.billingEstimate?.technicianEarnings ?? selectedJob.billingEstimate?.totalAmount ?? 0).toLocaleString('en-IN')}
-                </span>
+              )}
+
+              {/* Payout & Billing Breakdown */}
+              <div className="bg-emerald-50/80 border border-emerald-200 p-4 rounded-2xl space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-600 font-medium text-xs">Total Service Charge</span>
+                  <span className="text-slate-900 font-bold text-xs">
+                    ₹{(selectedJob.billingEstimate?.serviceCharge ?? selectedJob.billingEstimate?.totalAmount ?? 0).toLocaleString('en-IN')}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-slate-600 font-medium">Technician Share</span>
+                  <span className="text-emerald-800 font-black text-sm">
+                    ₹{(selectedJob.billingEstimate?.technicianEarnings ?? selectedJob.billingEstimate?.totalAmount ?? 0).toLocaleString('en-IN')}
+                  </span>
+                </div>
               </div>
+
             </div>
 
-            <button
-              onClick={() => setSelectedJob(null)}
-              className="w-full mt-2 py-3 bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-bold rounded-2xl text-xs transition-all cursor-pointer"
-            >
-              Close Summary
-            </button>
+            {/* Modal Actions */}
+            <div className="flex gap-2 pt-2">
+              <button
+                onClick={() => {
+                  const id = selectedJob._id || selectedJob.id;
+                  setSelectedJob(null);
+                  navigate(`/technician/earning-detail/${id}`);
+                }}
+                className="flex-1 py-3 bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-bold rounded-2xl text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
+              >
+                <Receipt className="h-4 w-4" />
+                <span>View Earning Slip</span>
+              </button>
+              <button
+                onClick={() => setSelectedJob(null)}
+                className="px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl text-xs transition-all cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+
           </div>
         </div>
       )}
 
       {/* Bottom Navigation */}
-      <TechBottomNav activeTab="profile" />
+      <TechBottomNav activeTab="history" />
 
     </div>
   );

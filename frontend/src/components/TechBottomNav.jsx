@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Briefcase, ClipboardList, Wrench, Calendar, User } from 'lucide-react';
+import { Briefcase, ClipboardList, History, Calendar, User } from 'lucide-react';
 
 const TechBottomNav = ({ activeTab }) => {
   const navigate = useNavigate();
@@ -29,13 +29,13 @@ const TechBottomNav = ({ activeTab }) => {
         : (currentPath.includes('/technician/raise-part-request') && currentSearch.includes('tab=claims')),
     },
     {
-      id: 'inventory',
-      label: 'Inventory',
-      icon: Wrench,
-      path: '/technician/inventory',
+      id: 'history',
+      label: 'History',
+      icon: History,
+      path: '/technician/history',
       isActive: activeTab 
-        ? activeTab === 'inventory' 
-        : (currentPath === '/technician/inventory' || (currentPath.includes('/technician/raise-part-request') && currentSearch.includes('tab=inventory'))),
+        ? activeTab === 'history' 
+        : (currentPath === '/technician/history' || currentPath === '/technician/service-history' || currentPath.startsWith('/technician/earning-detail')),
     },
     {
       id: 'schedule',

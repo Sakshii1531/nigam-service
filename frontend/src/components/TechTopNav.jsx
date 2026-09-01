@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { Briefcase, ClipboardList, Wrench, Calendar, User, Bell } from "lucide-react";
+import { Briefcase, ClipboardList, History, Calendar, User, Bell } from "lucide-react";
 import { useNotifications } from "../context/NotificationContext";
 import { useAuth } from "../context/AuthContext";
 
@@ -15,7 +15,7 @@ const TechTopNav = ({ activePage = "jobs" }) => {
   const navItems = [
     { id: "jobs",      label: "Jobs",      Icon: Briefcase,    path: "/technician/dashboard" },
     { id: "requests",  label: "Requests",  Icon: ClipboardList,path: "/technician/raise-part-request?tab=claims" },
-    { id: "inventory", label: "Inventory", Icon: Wrench,       path: "/technician/inventory" },
+    { id: "history",   label: "History",   Icon: History,      path: "/technician/history" },
     { id: "schedule",  label: "Schedule",  Icon: Calendar,     path: "/technician/schedule" },
     { id: "profile",   label: "Profile",   Icon: User,         path: "/technician/profile" },
   ];
