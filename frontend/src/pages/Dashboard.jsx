@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Search, Bell, MapPin, Wrench, Zap, Droplet, Thermometer, Shield, Home as HomeIcon, Calendar, MessageSquare, User, Star, X, Wind, WashingMachine, Refrigerator, Droplets, Sparkles, ShoppingCart, Tv, Flame, MousePointerClick, LayoutGrid, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import PushPermissionPrompt from '../components/PushPermissionPrompt';
 import Footer from '../components/layout/Footer';
 import { useNotifications } from '../context/NotificationContext';
 import { apiRequest } from '../lib/apiClient';
@@ -432,9 +431,6 @@ const Dashboard = ({ defaultType }) => {
 
   return (
     <div className="min-h-screen bg-bg-light flex flex-col pb-16 lg:pb-0">
-
-      {/* First-run push notification permission prompt */}
-      <PushPermissionPrompt />
 
       {/* Warranty Modal */}
       {showWarrantyModal && (

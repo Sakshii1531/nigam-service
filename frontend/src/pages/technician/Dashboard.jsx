@@ -7,7 +7,6 @@ import {
 import { useTech } from '../../context/TechContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { useAuth } from '../../context/AuthContext';
-import PushPermissionPrompt from '../../components/PushPermissionPrompt';
 import TechBottomNav from '../../components/TechBottomNav';
 import techAvatar from '../../assets/tech_avatar.png';
 
@@ -269,10 +268,6 @@ const Dashboard = () => {
 
   return (
     <div className="tech-app-container min-h-screen bg-[#F5F8FC] flex flex-col pb-20 lg:pb-8 relative font-sans">
-
-      {/* First-run push notification permission prompt */}
-      <PushPermissionPrompt subtitle="Enable notifications to get new job alerts, payouts and announcements instantly." />
-
 
       {/* Top Banner / Header Section */}
       {showAllJobs ? (
