@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation, useSearchParams } from 'react-router-dom';
 import { 
-  ArrowLeft, Shield, Award, Check, ChevronRight, ShoppingCart,
+  ArrowLeft, Shield, Award, Check, ChevronRight, ShoppingCart, Star,
   Home as HomeIcon, Calendar, Wrench, User, Sparkles, Zap, PackageOpen,
   MapPin, Bell, Search, Wind, Tv, ShieldCheck, FileText, CheckCircle2, 
   ChevronLeft, Info, HelpCircle, Phone, Mail, Lock, Landmark, Wallet, 
