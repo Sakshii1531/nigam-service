@@ -29,11 +29,11 @@ const reviewSchema = new mongoose.Schema(
 
 reviewSchema.index(
   { user: 1, booking: 1 },
-  { unique: true, partialFilterExpression: { booking: { $exists: true, $ne: null } } }
+  { unique: true, partialFilterExpression: { booking: { $type: 'objectId' } } }
 );
 reviewSchema.index(
   { user: 1, serviceRequest: 1 },
-  { unique: true, partialFilterExpression: { serviceRequest: { $exists: true, $ne: null } } }
+  { unique: true, partialFilterExpression: { serviceRequest: { $type: 'objectId' } } }
 );
 
 applyStandardPlugins(reviewSchema, { prefix: ID_PREFIXES.REVIEW });
