@@ -17,6 +17,7 @@ import { AuthProvider } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { AdminSidebarProvider } from './context/AdminSidebarContext';
 import { LogoProvider } from './context/LogoContext';
+import { ToastProvider } from './context/ToastContext';
 import Chat from './pages/Chat';
 import AllServices from './pages/AllServices';
 import Categories from './pages/Categories';
@@ -47,7 +48,6 @@ import TicketDetails from './pages/TicketDetails';
 import ServiceUpdates from './pages/ServiceUpdates';
 import RateService from './pages/RateService';
 import ProductDetails from './pages/ProductDetails';
-import Rewards from './pages/Rewards';
 import Wishlist from './pages/Wishlist';
 import MyWishlist from './pages/MyWishlist';
 import Coupons from './pages/Coupons';
@@ -334,6 +334,9 @@ function PageTitleManager() {
 function App() {
   return (
     <Router>
+      {/* Outermost so a failure in any other provider's own data fetch can still
+          surface — see lib/apiClient.js's api:error dispatch. */}
+      <ToastProvider>
       <LogoProvider>
       <AuthProvider>
       <AdminSidebarProvider>
@@ -428,7 +431,11 @@ function App() {
         <Route path="/terms-and-conditions" element={<CmsDocViewer />} />
         <Route path="/saved-addresses" element={<SavedAddresses />} />
         <Route path="/edit-profile" element={<EditProfile />} />
-        <Route path="/rewards" element={<Rewards />} />
+        {/* The real rewards screen is RewardsPlayZone. /rewards used to render a
+            separate static mock (hardcoded 250 coins, no API) that Profile still
+            links to — redirect rather than drop the path, so those links keep
+            working. */}
+        <Route path="/rewards" element={<Navigate to="/rewards-play-zone" replace />} />
         <Route path="/wishlist" element={<Wishlist />} />
         <Route path="/my-wishlist" element={<MyWishlist />} />
         <Route path="/coupons" element={<Coupons />} />
@@ -561,6 +568,7 @@ function App() {
       </AdminSidebarProvider>
       </AuthProvider>
       </LogoProvider>
+      </ToastProvider>
     </Router>
   );
 }

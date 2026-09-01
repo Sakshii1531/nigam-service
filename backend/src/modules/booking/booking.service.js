@@ -2,9 +2,10 @@ import { Booking } from './booking.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { findServiceItem } from '../catalog/catalog.service.js';
 import { findAvailableTechnician } from '../shared/assignmentEngine.js';
-import { createServiceRequest, transitionStatus } from '../service-requests/serviceRequest.service.js';
+import { createServiceRequest, transitionStatus, emitWarrantyClaimNotification } from '../service-requests/serviceRequest.service.js';
 import { emit as emitNotification } from '../notifications/notification.service.js';
 import { parsePagination, paginationMeta } from '../../utils/pagination.js';
+import { runInTransaction } from '../../utils/transaction.js';
 import { detectWarrantyForAppliance } from '../warranty-amc-exchange/warrantyDetector.service.js';
 import { PlatformSettings } from '../super-admin/platformSettings.model.js';
 import { Payment } from '../payments-wallet/payment.model.js';
@@ -75,71 +76,86 @@ export async function createBooking(userId, data) {
 
   const initialInstantStatus = isInstant ? (technician ? 'ASSIGNED' : 'SEARCHING') : null;
 
-  const booking = await Booking.create({
-    user: userId,
-    category: data.category,
-    productType: data.productType,
-    service: {
-      slug: serviceSlug,
-      name: serviceName,
-      price: itemPrice,
-      desc: serviceItem?.desc || serviceName,
-      unit: serviceItem?.unit || 'service'
-    },
-    brand: data.brand,
-    quantity,
-    scheduledDate: isInstant ? new Date() : data.scheduledDate,
-    timeSlot: isInstant ? { date: 'Today (ASAP)', time: 'ASAP (Right Now)' } : data.timeSlot,
-    address: data.address,
-    fullName: data.fullName,
-    mobile: data.mobile,
-    paymentMode: data.paymentMode || 'after',
-    advanceAmount: data.advanceAmount != null ? Number(data.advanceAmount) : (data.paymentMode === 'advance' ? Math.round(totalPrice * (advancePercent / 100)) : 0),
-    totalPrice,
-    // Not gated on isInstant: findAvailableTechnician above runs for every
-    // booking, and the transitionStatus(...'Assigned') + technician.assigned
-    // notification below both fire whenever it returns someone. Gating only
-    // these two writes (added with the instant-booking work) left a scheduled
-    // booking at status "Assigned", telling the customer a technician was
-    // assigned, while storing technician: null on both documents — so nothing
-    // could then be accepted or transitioned by that technician (403).
-    technician: technician ? technician._id : null,
-    status: isInstant ? 'Ongoing' : 'Upcoming',
-    isInstant,
-    instantStatus: initialInstantStatus,
-    instantRequestedAt: isInstant ? new Date() : null,
+  // Booking + ServiceRequest + the assignment transition + the back-link from
+  // booking to request are one unit of work: a failure partway through used to
+  // leave an orphaned Booking pointing at no service request (or a request
+  // pointing at a booking that never got its serviceRequest set), which nothing
+  // downstream could act on. Everything with an un-rollback-able side effect —
+  // the Razorpay order, notifications, the socket broadcast — stays outside.
+  const { booking, serviceRequest } = await runInTransaction(async (session) => {
+    const [booking] = await Booking.create([{
+      user: userId,
+      category: data.category,
+      productType: data.productType,
+      service: {
+        slug: serviceSlug,
+        name: serviceName,
+        price: itemPrice,
+        desc: serviceItem?.desc || serviceName,
+        unit: serviceItem?.unit || 'service'
+      },
+      brand: data.brand,
+      quantity,
+      scheduledDate: isInstant ? new Date() : data.scheduledDate,
+      timeSlot: isInstant ? { date: 'Today (ASAP)', time: 'ASAP (Right Now)' } : data.timeSlot,
+      address: data.address,
+      fullName: data.fullName,
+      mobile: data.mobile,
+      paymentMode: data.paymentMode || 'after',
+      advanceAmount: data.advanceAmount != null ? Number(data.advanceAmount) : (data.paymentMode === 'advance' ? Math.round(totalPrice * (advancePercent / 100)) : 0),
+      totalPrice,
+      // Not gated on isInstant: findAvailableTechnician above runs for every
+      // booking, and the transitionStatus(...'Assigned') + technician.assigned
+      // notification below both fire whenever it returns someone. Gating only
+      // these two writes (added with the instant-booking work) left a scheduled
+      // booking at status "Assigned", telling the customer a technician was
+      // assigned, while storing technician: null on both documents — so nothing
+      // could then be accepted or transitioned by that technician (403).
+      technician: technician ? technician._id : null,
+      status: isInstant ? 'Ongoing' : 'Upcoming',
+      isInstant,
+      instantStatus: initialInstantStatus,
+      instantRequestedAt: isInstant ? new Date() : null,
+    }], session ? { session } : {});
+
+    let serviceRequest = await createServiceRequest({
+      user: userId,
+      technician: technician ? technician._id : null,
+      booking: booking._id,
+      category: data.category,
+      description: `${data.category} — ${serviceName}`,
+      requestMode: 'B2C',
+      // Carried over from the booking address so later re-ranking (the assignment
+      // console, and the backlog sweep when a technician comes online) scores
+      // proximity against the real city. Without it every candidate got the
+      // neutral 50 and assignment was effectively city-blind once the booking
+      // itself was over.
+      zone: data.address?.city || undefined,
+      warranty: warrantyStatus === 'Out of Warranty' ? 'Out of Warranty' : 'In Warranty',
+      brand: brandId,
+      appliance: applianceId,
+      amcSubscription: amcSubscriptionId,
+      extendedWarrantyOrder: extendedWarrantyOrderId,
+      isInstant,
+      instantStatus: initialInstantStatus,
+    }, { session });
+
+    if (technician) {
+      serviceRequest = await transitionStatus(serviceRequest.id, 'Assigned', {
+        description: isInstant ? `Instant auto-assigned to ${technician.name}` : `Auto-assigned to ${technician.name}`,
+        session,
+      });
+    }
+
+    booking.serviceRequest = serviceRequest._id;
+    await booking.save(session ? { session } : undefined);
+
+    return { booking, serviceRequest };
   });
 
-  let serviceRequest = await createServiceRequest({
-    user: userId,
-    technician: technician ? technician._id : null,
-    booking: booking._id,
-    category: data.category,
-    description: `${data.category} — ${serviceName}`,
-    requestMode: 'B2C',
-    // Carried over from the booking address so later re-ranking (the assignment
-    // console, and the backlog sweep when a technician comes online) scores
-    // proximity against the real city. Without it every candidate got the
-    // neutral 50 and assignment was effectively city-blind once the booking
-    // itself was over.
-    zone: data.address?.city || undefined,
-    warranty: warrantyStatus === 'Out of Warranty' ? 'Out of Warranty' : 'In Warranty',
-    brand: brandId,
-    appliance: applianceId,
-    amcSubscription: amcSubscriptionId,
-    extendedWarrantyOrder: extendedWarrantyOrderId,
-    isInstant,
-    instantStatus: initialInstantStatus,
-  });
-
-  if (technician) {
-    serviceRequest = await transitionStatus(serviceRequest.id, 'Assigned', {
-      description: isInstant ? `Instant auto-assigned to ${technician.name}` : `Auto-assigned to ${technician.name}`,
-    });
-  }
-
-  booking.serviceRequest = serviceRequest._id;
-  await booking.save();
+  // Deferred out of the transaction above: createServiceRequest skips this when
+  // handed a session so a rolled-back claim never notifies the brand.
+  await emitWarrantyClaimNotification(serviceRequest);
 
   await emitNotification('booking.created', { user: userId, category: data.category, bookingId: booking.id });
   if (technician) {
