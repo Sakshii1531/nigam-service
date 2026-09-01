@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { apiRequest } from '../lib/apiClient';
+import { useCart } from '../lib/cartStore';
 import { payWithRazorpay } from '../lib/razorpayCheckout';
 
 // Import Exchange Modal & Configs
@@ -65,15 +66,16 @@ const BuyNew = () => {
     return tvImg;
   };
 
-  // State for shopping cart (stored in localStorage to persist across route transitions)
-  const [cart, setCart] = useState(() => {
-    const saved = localStorage.getItem('nigam_buy_new_cart');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  useEffect(() => {
-    localStorage.setItem('nigam_buy_new_cart', JSON.stringify(cart));
-  }, [cart]);
+  // Shared with ProductDetails.jsx and mirrored to the server cart once there is
+  // a session — see lib/cartStore.js.
+  const {
+    items: cart,
+    addItem: addCartItem,
+    adjustQty,
+    removeItem: removeCartItem,
+    replaceWith: replaceCart,
+    clear: clearCart,
+  } = useCart();
 
   // Derived list of products for category step
   const finalCategory = categoryParam || 'Water Purifier';
@@ -176,31 +178,19 @@ const BuyNew = () => {
 
   // Helper actions for Cart
   const addToCart = (product) => {
-    const existing = cart.find(item => item.id === product.id);
-    if (existing) {
-      setCart(cart.map(item => item.id === product.id ? { ...item, qty: item.qty + 1 } : item));
-    } else {
-      setCart([...cart, { ...product, qty: 1, category: finalCategory }]);
-    }
+    addCartItem(product, { category: finalCategory });
     navigate('/buy-new/cart');
   };
 
+  // Never drops the line: a decrement at qty 1 is a no-op here, same as before —
+  // removal is its own explicit action.
   const updateQty = (id, delta) => {
-    setCart(cart.map(item => {
-      if (item.id === id) {
-        const newQty = item.qty + delta;
-        return newQty > 0 ? { ...item, qty: newQty } : item;
-      }
-      return item;
-    }));
+    const existing = cart.find((item) => item.id === id);
+    if (existing && existing.qty + delta > 0) adjustQty(id, delta);
   };
 
   const removeFromCart = (id) => {
-    setCart(cart.filter(item => item.id !== id));
-  };
-
-  const clearCart = () => {
-    setCart([]);
+    removeCartItem(id);
   };
 
   const [paymentMode, setPaymentMode] = useState('UPI');
@@ -706,18 +696,12 @@ const BuyNew = () => {
               <button 
                 onClick={() => {
                   const productExchange = isCurrentExchangeApplied ? exchangeApplied : null;
-                  const itemToAdd = { ...finalProduct, qty: 1, category: finalCategory };
-                  if (productExchange) {
-                    itemToAdd.exchange = { ...productExchange, productId: finalProduct.id };
-                  }
-                  
-                  // Add to cart helper logic directly
-                  const existing = cart.find(item => item.id === finalProduct.id);
-                  if (existing) {
-                    setCart(cart.map(item => item.id === finalProduct.id ? { ...item, qty: item.qty + 1, exchange: itemToAdd.exchange || item.exchange } : item));
-                  } else {
-                    setCart([...cart, itemToAdd]);
-                  }
+                  addCartItem(finalProduct, {
+                    category: finalCategory,
+                    ...(productExchange
+                      ? { exchange: { ...productExchange, productId: finalProduct.id } }
+                      : {}),
+                  });
                   navigate('/buy-new/cart');
                 }}
                 className="w-full bg-[#0B4EA2] hover:bg-blue-800 text-white font-black py-4 rounded-2xl transition-all shadow-md text-sm cursor-pointer active:scale-98"
@@ -728,7 +712,7 @@ const BuyNew = () => {
                 onClick={() => {
                   // Instant Checkout with single item
                   const productExchange = isCurrentExchangeApplied ? { ...exchangeApplied, productId: finalProduct.id } : null;
-                  setCart([{ ...finalProduct, qty: 1, category: finalCategory, exchange: productExchange }]);
+                  replaceCart([{ ...finalProduct, qty: 1, category: finalCategory, exchange: productExchange }]);
                   navigate('/buy-new/payment');
                 }}
                 className="w-full bg-white border-2 border-brand-blue hover:bg-blue-50/20 text-brand-blue font-black py-3.5 rounded-2xl transition-all text-sm cursor-pointer"

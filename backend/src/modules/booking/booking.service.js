@@ -28,6 +28,16 @@ export async function createBooking(userId, data) {
     serviceItem = null;
   }
 
+  // findServiceItem throws for a slug that isn't in the catalog, which used to
+  // surface as a 404. The swallow above exists so the app can book work it
+  // describes itself (a custom job carries its own name/price), but that must
+  // not extend to a slug the client believed was a catalog service: without
+  // this guard a typo'd slug quietly books "Home Service" at the 299 default,
+  // and the unguarded serviceItem.name reads below turned it into a 500.
+  if (!serviceItem && !(data.serviceName || data.service)) {
+    throw new ApiError(404, `No service "${data.serviceSlug}" in category "${data.category}"`);
+  }
+
   const quantity = data.quantity || 1;
   const itemPrice = data.price != null ? Number(data.price) : (serviceItem?.price || 299);
   const basePrice = (data.totalPrice != null && Number(data.totalPrice) > 0) ? Number(data.totalPrice) : (itemPrice * quantity);
@@ -86,7 +96,14 @@ export async function createBooking(userId, data) {
     paymentMode: data.paymentMode || 'after',
     advanceAmount: data.advanceAmount != null ? Number(data.advanceAmount) : (data.paymentMode === 'advance' ? Math.round(totalPrice * (advancePercent / 100)) : 0),
     totalPrice,
-    technician: isInstant && technician ? technician._id : null,
+    // Not gated on isInstant: findAvailableTechnician above runs for every
+    // booking, and the transitionStatus(...'Assigned') + technician.assigned
+    // notification below both fire whenever it returns someone. Gating only
+    // these two writes (added with the instant-booking work) left a scheduled
+    // booking at status "Assigned", telling the customer a technician was
+    // assigned, while storing technician: null on both documents — so nothing
+    // could then be accepted or transitioned by that technician (403).
+    technician: technician ? technician._id : null,
     status: isInstant ? 'Ongoing' : 'Upcoming',
     isInstant,
     instantStatus: initialInstantStatus,
@@ -95,10 +112,10 @@ export async function createBooking(userId, data) {
 
   let serviceRequest = await createServiceRequest({
     user: userId,
-    technician: isInstant && technician ? technician._id : null,
+    technician: technician ? technician._id : null,
     booking: booking._id,
     category: data.category,
-    description: `${data.category} — ${serviceItem.name}`,
+    description: `${data.category} — ${serviceName}`,
     requestMode: 'B2C',
     // Carried over from the booking address so later re-ranking (the assignment
     // console, and the backlog sweep when a technician comes online) scores
@@ -143,7 +160,7 @@ export async function createBooking(userId, data) {
         bookingId: booking.id,
         serviceRequestId: serviceRequest.id,
         category: data.category,
-        serviceName: serviceItem.name,
+        serviceName,
         address: data.address,
         fullName: data.fullName,
         mobile: data.mobile,

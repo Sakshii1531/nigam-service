@@ -5,6 +5,7 @@ import {
   Trash2, CreditCard, ShoppingBag, Truck, Info, ChevronRight, X
 } from 'lucide-react';
 import { apiRequest } from '../lib/apiClient';
+import { useCart } from '../lib/cartStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 
@@ -21,9 +22,8 @@ const ProductDetails = () => {
   const productId = queryParams.get('id');
 
   // State variables
-  const [cartCount, setCartCount] = useState(0);
+  const { items: cartItems, count: cartCount, addItem, removeItem, clear: clearCart } = useCart();
   const [showCartDrawer, setShowCartDrawer] = useState(false);
-  const [cartItems, setCartItems] = useState([]);
   const [showAddedToast, setShowAddedToast] = useState(false);
   
   // Checkout Modal State
@@ -67,42 +67,9 @@ const ProductDetails = () => {
       .catch((err) => setProductError(err.message || 'Could not load this product.'));
   }, [productId]);
 
-  // Load cart from LocalStorage on mount
-  useEffect(() => {
-    const savedCart = localStorage.getItem('nigam_cart');
-    if (savedCart) {
-      const items = JSON.parse(savedCart);
-      setCartItems(items);
-      setCartCount(items.reduce((total, item) => total + item.quantity, 0));
-    }
-  }, []);
-
-  // Sync cart helper
-  const updateCart = (newItems) => {
-    setCartItems(newItems);
-    setCartCount(newItems.reduce((total, item) => total + item.quantity, 0));
-    localStorage.setItem('nigam_cart', JSON.stringify(newItems));
-  };
-
   // Add to Cart handler
   const handleAddToCart = () => {
-    const existingIndex = cartItems.findIndex(item => item.id === product.id);
-    let updatedCart = [...cartItems];
-
-    if (existingIndex > -1) {
-      updatedCart[existingIndex].quantity += 1;
-    } else {
-      updatedCart.push({
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        icon: style.icon,
-        condition: product.condition,
-        quantity: 1
-      });
-    }
-
-    updateCart(updatedCart);
+    addItem(product, { icon: style.icon, condition: product.condition });
     setShowAddedToast(true);
     setTimeout(() => {
       setShowAddedToast(false);
@@ -111,8 +78,7 @@ const ProductDetails = () => {
 
   // Remove from Cart
   const handleRemoveFromCart = (id) => {
-    const updated = cartItems.filter(item => item.id !== id);
-    updateCart(updated);
+    removeItem(id);
   };
 
   // Places a real order. This previously just waited two seconds and showed a
@@ -124,13 +90,13 @@ const ProductDetails = () => {
         method: 'POST',
         auth: true,
         body: {
-          items: cartItems.map((i) => ({ productId: i.id, quantity: i.quantity })),
+          items: cartItems.map((i) => ({ productId: i.id, quantity: i.qty })),
           address: { name: fullName, house: address },
           paymentMethod: 'Cash',
         },
       });
       setPlacedOrder(orderRes || null);
-      updateCart([]);
+      clearCart();
       setCheckoutStep('success');
     } catch (err) {
       setCheckoutError(err.message || 'Could not place your order.');
@@ -165,6 +131,9 @@ const ProductDetails = () => {
 
   const style = CATEGORY_STYLE[(product.category || '').toLowerCase()]
     || { icon: '📦', colorTheme: 'from-slate-50 to-gray-50 border-slate-200' };
+
+  // Only a real, higher original price is a discount worth rendering.
+  const hasDiscount = Number(product.originalPrice) > Number(product.price);
 
   return (
     <div className="min-h-screen bg-bg-light flex flex-col pb-28 lg:pb-8 font-sans">
@@ -254,19 +223,33 @@ const ProductDetails = () => {
         </div>
 
         {/* PRICING BLOCK */}
+        {/* originalPrice is optional on the Product model, and every reference
+            below used to dereference it unguarded — so a product saved without
+            one (nothing requires it) crashed this whole page to the error
+            boundary rather than simply showing no discount. */}
         <div className="bg-white border border-slate-200/60 p-4.5 rounded-2xl shadow-sm flex items-center justify-between">
-          <div className="flex flex-col">
-            <span className="text-[10px] text-text-secondary font-medium">Original Retail Price</span>
-            <span className="text-xs text-text-secondary line-through">₹{product.originalPrice.toLocaleString('en-IN')}.00</span>
-          </div>
-          
+          {hasDiscount ? (
+            <div className="flex flex-col">
+              <span className="text-[10px] text-text-secondary font-medium">Original Retail Price</span>
+              <span className="text-xs text-text-secondary line-through">₹{product.originalPrice.toLocaleString('en-IN')}.00</span>
+            </div>
+          ) : (
+            <div className="flex flex-col">
+              <span className="text-[10px] text-text-secondary font-medium">Price</span>
+            </div>
+          )}
+
           <div className="flex flex-col items-end">
-            <span className="text-[10px] text-green-600 font-bold bg-[#EBF7EE] px-2 py-0.5 rounded-full border border-green-100">
-              You Save ₹{(product.originalPrice - product.price).toLocaleString('en-IN')}
-            </span>
+            {hasDiscount && (
+              <span className="text-[10px] text-green-600 font-bold bg-[#EBF7EE] px-2 py-0.5 rounded-full border border-green-100">
+                You Save ₹{(product.originalPrice - product.price).toLocaleString('en-IN')}
+              </span>
+            )}
             <div className="flex items-baseline gap-1 mt-1">
-              <span className="text-2xl font-black text-brand-navy">₹{product.price.toLocaleString('en-IN')}</span>
-              <span className="text-green-600 text-xs font-bold">({Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}% OFF)</span>
+              <span className="text-2xl font-black text-brand-navy">₹{(product.price ?? 0).toLocaleString('en-IN')}</span>
+              {hasDiscount && (
+                <span className="text-green-600 text-xs font-bold">({Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}% OFF)</span>
+              )}
             </div>
           </div>
         </div>
@@ -408,7 +391,7 @@ const ProductDetails = () => {
                         
                         <div className="flex items-baseline gap-2 mt-1.5">
                           <span className="text-xs font-bold text-[#0D47A1]">₹{item.price.toLocaleString('en-IN')}</span>
-                          <span className="text-[10px] text-text-secondary">Qty: {item.quantity}</span>
+                          <span className="text-[10px] text-text-secondary">Qty: {item.qty}</span>
                         </div>
                       </div>
 
@@ -428,15 +411,15 @@ const ProductDetails = () => {
               {cartItems.length > 0 && (
                 <div className="p-5 border-t border-border-color bg-slate-50 flex flex-col gap-4">
                   <div className="flex justify-between items-baseline text-xs text-text-secondary">
-                    <span>Subtotal ({cartItems.reduce((acc, i) => acc + i.quantity, 0)} items)</span>
+                    <span>Subtotal ({cartItems.reduce((acc, i) => acc + i.qty, 0)} items)</span>
                     <strong className="text-sm font-black text-text-primary">
-                      ₹{cartItems.reduce((acc, i) => acc + (i.price * i.quantity), 0).toLocaleString('en-IN')}
+                      ₹{cartItems.reduce((acc, i) => acc + (i.price * i.qty), 0).toLocaleString('en-IN')}
                     </strong>
                   </div>
                   
                   <div className="flex gap-2">
                     <button 
-                      onClick={() => updateCart([])}
+                      onClick={() => clearCart()}
                       className="px-3 bg-white hover:bg-red-50 text-red-500 border border-red-200 rounded-xl transition-all cursor-pointer flex items-center justify-center shadow-sm"
                       title="Clear Cart"
                     >
