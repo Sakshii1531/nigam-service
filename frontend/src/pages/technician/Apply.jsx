@@ -12,16 +12,22 @@ const TechApply = () => {
     phone: '',
     password: '',
     confirmPassword: '',
-    city: 'Delhi NCR',
+    city: '',
   });
   
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [selectedServices, setSelectedServices] = useState(['AC Repair']);
-  const [availableCities, setAvailableCities] = useState([
-    'Delhi NCR', 'Mumbai', 'Bangalore', 'Chennai', 'Kolkata'
-  ]);
+  // Seeded empty on purpose. This list used to start as a hardcoded
+  // ['Delhi NCR', 'Mumbai', ...] that only got replaced when the fetch returned
+  // rows — so whenever no city was configured (or the request failed) an
+  // applicant was offered five cities the business does not operate in.
+  // /tech/register resolves this value with an exact City.findOne({ name }), so
+  // picking one of those saved the technician with city: null, which the
+  // assignment engine then has no proximity to score against.
+  const [availableCities, setAvailableCities] = useState([]);
+  const [citiesLoading, setCitiesLoading] = useState(true);
   
   const [availableServices, setAvailableServices] = useState([
     'AC Repair', 'Washing Machine', 'Electrician', 'Full Home Cleaning'
@@ -36,13 +42,19 @@ const TechApply = () => {
       try {
         // Use the public endpoint — no auth token required for technician registration
         const cityData = await apiRequest('/super-admin/cities/public');
-        if (Array.isArray(cityData) && cityData.length > 0) {
-          const cityList = cityData.map(c => c.name).filter(Boolean);
-          setAvailableCities(cityList);
-          setForm(prev => ({ ...prev, city: cityList[0] }));
+        // The name is what /tech/register matches on; the state is shown beside
+        // it so an applicant can tell two same-named cities apart.
+        const cityList = (Array.isArray(cityData) ? cityData : [])
+          .filter((c) => c?.name)
+          .map((c) => ({ name: c.name, state: c.state || '' }));
+        setAvailableCities(cityList);
+        if (cityList.length > 0) {
+          setForm(prev => ({ ...prev, city: cityList[0].name }));
         }
       } catch (err) {
         console.warn('Error reading admin operational cities:', err.message);
+      } finally {
+        setCitiesLoading(false);
       }
 
       try {
@@ -171,6 +183,14 @@ const TechApply = () => {
 
     if (!aadharFront || !aadharBack) {
       setError('Please upload both Aadhar Card Front and Back photos before submitting.');
+      return;
+    }
+
+    // The select is disabled while empty, and browsers skip validation on a
+    // disabled control — so `required` alone would let an application through
+    // with no city, which /tech/register stores as city: null.
+    if (!form.city) {
+      setError('Please select an operating city. If none are listed, service is not open in your area yet.');
       return;
     }
 
@@ -383,14 +403,26 @@ const TechApply = () => {
                 onChange={handleChange}
                 className="w-full pl-11 pr-8 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] outline-none transition-all text-xs appearance-none font-medium text-slate-800"
                 required
+                disabled={citiesLoading || availableCities.length === 0}
               >
+                {citiesLoading && <option value="">Loading cities…</option>}
+                {!citiesLoading && availableCities.length === 0 && (
+                  <option value="">No operational cities available</option>
+                )}
                 {availableCities.map((city) => (
-                  <option key={city} value={city}>
-                    {city}
+                  <option key={city.name} value={city.name}>
+                    {city.state ? `${city.name}, ${city.state}` : city.name}
                   </option>
                 ))}
               </select>
             </div>
+            {!citiesLoading && availableCities.length === 0 && (
+              // Better than silently offering nothing: this is the state an
+              // applicant hits before the admin has added any operational city.
+              <p className="text-[11px] text-amber-600 mt-0.5">
+                No service cities have been configured yet. Please check back soon or contact support.
+              </p>
+            )}
           </div>
 
           {/* Aadhar Photo Upload (WebP Converted -> Cloudinary) */}

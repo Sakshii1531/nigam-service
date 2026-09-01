@@ -58,10 +58,12 @@ const Cities = () => {
         console.warn('Super Admin cities endpoint error, using public endpoint fallback:', authErr.message);
         data = await apiRequest('/super-admin/cities/public');
       }
-      const rawList = data?.data || [];
-      if (rawList && Array.isArray(rawList)) {
-        setCities(rawList.map(formatCity));
-      }
+      // apiRequest already unwraps the { data, error, meta } envelope, so this
+      // IS the array. Reading `.data` off it again yielded undefined and left
+      // the table permanently empty — which made every successful "Add City"
+      // look like it had silently failed, when the POST had in fact saved.
+      const rawList = Array.isArray(data) ? data : [];
+      setCities(rawList.map(formatCity));
     } catch (err) {
       console.warn('Failed to load cities:', err.message);
     } finally {
