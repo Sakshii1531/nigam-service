@@ -1,5 +1,6 @@
 import { Technician } from '../technician/technician.model.js';
 import { Job } from '../technician/job.model.js';
+import { User } from '../auth/user.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { parsePagination, paginationMeta } from '../../utils/pagination.js';
 
@@ -71,6 +72,12 @@ export async function updateTechnicianStatus(id, status) {
   technician.status = status;
   if (status !== 'Active') technician.availability = 'Offline';
   await technician.save();
+
+  if (technician.user) {
+    const userStatus = status === 'Active' ? 'Active' : status === 'Pending' ? 'Pending' : 'Suspended';
+    await User.findByIdAndUpdate(technician.user, { status: userStatus });
+  }
+
   return technician;
 }
 
@@ -96,5 +103,8 @@ export async function deleteTechnician(id) {
   }
 
   await technician.deleteOne();
+  if (technician.user) {
+    await User.findByIdAndDelete(technician.user);
+  }
   return { deleted: true, humanId: technician.humanId, name: technician.name };
 }
