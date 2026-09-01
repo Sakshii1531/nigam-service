@@ -986,8 +986,16 @@ describe('CMS service page configs', () => {
     expect(await ServicePageConfig.countDocuments({ serviceKey: 'AC Repair' })).toBe(0);
   });
 
-  it('404s an unconfigured service and closes writes to non-admins', async () => {
-    await request(app).get('/api/v1/cms/service-pages/Nonexistent').expect(404);
+  it('returns null (not 404) for an unconfigured service and closes writes to non-admins', async () => {
+    // An unconfigured service page is an ordinary state, not an error: the
+    // customer app falls back to its built-in copy. This asserted 404 back when
+    // the route threw, which made every visit to an unstyled service page log a
+    // failed request; the route now returns the standard { data, error, meta }
+    // envelope with data: null (see servicePageConfig.routes.js).
+    const res = await request(app).get('/api/v1/cms/service-pages/Nonexistent').expect(200);
+    expect(res.body.data).toBeNull();
+    expect(res.body.error).toBeNull();
+
     await request(app).put('/api/v1/cms/service-pages/AC%20Repair').send({ tagline: 'x' }).expect(401);
   });
 });

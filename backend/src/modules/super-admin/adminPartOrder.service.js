@@ -58,40 +58,21 @@ export async function updatePartOrderStatus(partOrderId, { status, scheduledDate
     const job = await Job.findById(partOrder.job);
     const sr = job ? await ServiceRequest.findById(job.serviceRequest) : null;
 
-    if (status === 'Approved') {
-      if (job) {
-        if (!job.revisit) job.revisit = {};
-        job.revisit.status = 'Pending Approval';
-        job.revisit.partOrderId = partOrder._id;
-        await job.save();
-      }
-      if (sr) {
-        sr.timeline.push({
-          stepLabel: 'Spare Approved',
-          done: true,
-          timestamp: new Date(),
-          description: notes || 'Spare part approved by Super Admin — awaiting dispatch',
-        });
-        await sr.save();
-      }
-    } else if (status === 'Dispatched') {
-      if (job) {
-        if (!job.revisit) job.revisit = {};
-        job.revisit.status = 'Pending Approval';
-        job.revisit.partOrderId = partOrder._id;
-        await job.save();
-      }
-      if (sr) {
-        sr.timeline.push({
-          stepLabel: 'Spare Dispatched',
-          done: true,
-          timestamp: new Date(),
-          description: notes || 'Spare part dispatched to technician',
-        });
-        await sr.save();
-      }
-    } else if (status === 'Delivered') {
-      const parsedDate = scheduledDate ? new Date(scheduledDate) : new Date(Date.now() + 86400000);
+    const parsedDate = scheduledDate ? new Date(scheduledDate) : new Date(Date.now() + 86400000);
+    // Approved, Dispatched and Delivered all put the revisit on the calendar —
+    // the same three brandInsights.service.js schedules on. Only 'Delivered'
+    // did here, so a technician whose part was actioned by the NCC desk rather
+    // than a brand was left sitting at 'spareapproval' with no revisit at all:
+    // exactly the desk-dependent difference the note above says must not happen.
+    const REVISIT_STEP = {
+      Approved: ['Spare Approved', 'Spare part approved by Super Admin — revisit scheduled'],
+      Dispatched: ['Spare Dispatched', 'Spare part dispatched to technician — revisit scheduled'],
+      Delivered: ['Spare Received', 'Spare part delivered — revisit scheduled'],
+    };
+
+    if (REVISIT_STEP[status]) {
+      const [stepLabel, defaultNote] = REVISIT_STEP[status];
+
       if (job) {
         job.activeStep = 'revisit_scheduled';
         job.revisit = {
@@ -100,23 +81,28 @@ export async function updatePartOrderStatus(partOrderId, { status, scheduledDate
           timeSlot: timeSlot || '10:00 AM - 01:00 PM',
           status: 'Scheduled',
           partOrderId: partOrder._id,
-          notes: notes || 'Spare part delivered — revisit scheduled',
+          notes: notes || defaultNote,
         };
         await job.save();
       }
 
       if (sr) {
-        const alreadyReceived = sr.status === 'Spare Received';
         sr.status = 'Spare Received';
-        if (!alreadyReceived) {
-          sr.timeline.push({
-            stepLabel: 'Spare Received',
-            done: true,
-            timestamp: new Date(),
-            description: notes || 'Spare part delivered — revisit scheduled',
-          });
+        // One entry per desk action, deduped by label: submitSpareParts may
+        // already have walked the request to 'Spare Received', and an approve
+        // followed by a dispatch should read as two steps rather than two
+        // copies of the same one.
+        if (!sr.timeline.some((t) => t.stepLabel === stepLabel)) {
+          sr.timeline.push({ stepLabel, done: true, timestamp: new Date(), description: notes || defaultNote });
         }
         await sr.save();
+      }
+    }
+
+    // Only the actual delivery re-dates the customer's booking and tells them —
+    // firing that on approve as well would notify them twice for one revisit.
+    if (status === 'Delivered') {
+      if (sr) {
 
         let customerUserId = null;
         if (sr.booking) {
