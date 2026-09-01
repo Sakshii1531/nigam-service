@@ -317,7 +317,7 @@ const Catalog = () => {
                             <p className="text-xs font-bold text-slate-800 truncate">{svc.name}</p>
                             <div className="flex items-center gap-2 mt-0.5">
                               <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded ${serviceTypeColors[svc.type] || 'bg-slate-100 text-slate-600'}`}>{svc.type}</span>
-                              <span className="text-[10px] font-extrabold text-green-600">₹{svc.charge.toLocaleString()}</span>
+                              <span className="text-[10px] font-extrabold text-green-600">₹{(svc.charge ?? 0).toLocaleString()}</span>
                             </div>
                           </div>
                         </div>
@@ -476,7 +476,7 @@ const Catalog = () => {
                                                   <span className="text-xs font-semibold text-slate-700">{svc.name}</span>
                                                 </div>
                                                 <div className="flex items-center gap-2.5">
-                                                  <span className="text-xs font-extrabold text-green-600">₹{svc.charge.toLocaleString()}</span>
+                                                  <span className="text-xs font-extrabold text-green-600">₹{(svc.charge ?? 0).toLocaleString()}</span>
                                                   <button onClick={() => handleDeleteService(prod.id, svc.id)} className="p-1 text-slate-300 hover:text-red-500 rounded transition-colors cursor-pointer" title="Remove">
                                                     <Trash2 size={12} />
                                                   </button>
