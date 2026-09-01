@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { apiRequest, getStoredTokens, storeTokens, clearTokens } from '../lib/apiClient';
 import { syncPushToken, disablePush, enablePush } from '../lib/pushClient';
+import { syncOnLogin as syncCartOnLogin, clearLocalOnLogout as clearLocalCart } from '../lib/cartStore';
 
 // Phase 13 — real session state backed by the backend's two-step
 // login (password -> OTP -> tokens), scoped to the customer role for this
@@ -53,7 +54,12 @@ export const AuthProvider = ({ children }) => {
     storeTokens(data);
     localStorage.setItem(USER_KEY, JSON.stringify(data.user));
     setUser(data.user);
-    
+
+    // Fold anything added as a guest into this account's cart, then adopt the
+    // merged result — otherwise signing in silently discarded the cart the user
+    // had just filled. Not awaited: it must never delay landing the session.
+    syncCartOnLogin();
+
     // Trigger push token registration during the user's verify click
     try {
       if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
@@ -86,6 +92,8 @@ export const AuthProvider = ({ children }) => {
     storeTokens(data);
     localStorage.setItem(USER_KEY, JSON.stringify(data.user));
     setUser(data.user);
+
+    syncCartOnLogin();
 
     // Trigger push token registration during the user's verify click
     try {
@@ -147,6 +155,7 @@ export const AuthProvider = ({ children }) => {
     clearTokens();
     localStorage.removeItem(USER_KEY);
     setUser(null);
+    clearLocalCart();
 
     // Detach this device from the account, using the token captured above since
     // the stored session is already gone. Left attached, the next person to use
