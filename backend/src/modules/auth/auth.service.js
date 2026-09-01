@@ -1,5 +1,5 @@
-import crypto from 'crypto';
 import { User } from './user.model.js';
+import { Technician } from '../technician/technician.model.js';
 import { Otp } from './otp.model.js';
 import { RefreshToken } from './refreshToken.model.js';
 import { hashPassword, verifyPassword } from './password.js';
@@ -7,12 +7,40 @@ import { generateOtpCode, sendOtp, maskIdentifier } from './otpProvider.js';
 import { signAccessToken, signRefreshToken, verifyRefreshToken, hashToken, tokenExpiryDate } from './tokens.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { env } from '../../config/env.js';
+import { ROLES } from '../../config/constants.js';
 
 const OTP_TTL_MINUTES = 10;
 const MAX_OTP_ATTEMPTS = 5;
 
-function findUserByIdentifier(role, identifier) {
-  return User.findOne({ role, $or: [{ phone: identifier }, { email: identifier }] }).select('+passwordHash');
+async function findUserByIdentifier(role, identifier) {
+  if (!identifier) return null;
+  const trimmed = identifier.toString().trim();
+  let user = await User.findOne({
+    role,
+    $or: [{ phone: trimmed }, { email: trimmed }, { humanId: trimmed }],
+  }).select('+passwordHash');
+
+  if (!user && (role === ROLES.TECHNICIAN || role === 'technician')) {
+    const tech = await Technician.findOne({
+      $or: [{ humanId: trimmed }, { phone: trimmed }, { email: trimmed }],
+    });
+    if (tech && tech.user) {
+      user = await User.findById(tech.user).select('+passwordHash');
+    }
+  }
+
+  if (user && (user.role === ROLES.TECHNICIAN || role === 'technician')) {
+    const tech = await Technician.findOne({ user: user._id });
+    if (tech) {
+      const expectedUserStatus = tech.status === 'Active' ? 'Active' : tech.status === 'Pending' ? 'Pending' : 'Suspended';
+      if (user.status !== expectedUserStatus) {
+        user.status = expectedUserStatus;
+        await User.findByIdAndUpdate(user._id, { status: expectedUserStatus });
+      }
+    }
+  }
+
+  return user;
 }
 
 async function resolvePermissions(user) {
