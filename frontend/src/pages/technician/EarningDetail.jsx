@@ -13,6 +13,22 @@ const statusConfig = {
   'Verification':      { color: 'text-blue-600',   bg: 'bg-blue-50',   border: 'border-blue-200',  icon: <ShieldCheck className="h-4 w-4 text-blue-500" /> },
 };
 
+function formatAddress(addr) {
+  if (!addr) return '—';
+  if (typeof addr === 'string') return addr;
+  if (typeof addr === 'object') {
+    const parts = [
+      addr.house,
+      addr.area,
+      addr.landmark,
+      addr.city,
+      addr.pincode,
+    ].filter(Boolean);
+    return parts.length ? parts.join(', ') : '—';
+  }
+  return String(addr);
+}
+
 const EarningDetailPage = () => {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -30,15 +46,15 @@ const EarningDetailPage = () => {
         const sr = job.serviceRequest || {};
         const quick = job.type === 'NCC Paid Service';
         setEarning({
-          title: sr.category ? `${sr.category} — ${job.type}` : job.type,
+          title: sr.category ? `${sr.category} — ${job.type}` : (job.type || 'Service'),
           tag: quick ? 'QuickPayout' : 'InvoicePayout',
           status: job.activeStep === 'completed' ? 'Credited' : 'Pending',
           date: job.updatedAt
             ? new Date(job.updatedAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
             : '—',
-          jobId: sr.humanId || job.id,
-          customer: sr.user?.name || '—',
-          address: sr.booking?.address || sr.zone || '—',
+          jobId: sr.humanId || job.humanId || job.id,
+          customer: sr.user?.name || sr.customerName || '—',
+          address: formatAddress(sr.booking?.address || sr.zone),
           description: sr.description || '—',
           baseAmount: bill.serviceCharge || 0,
           platformFee: Math.max((bill.serviceCharge || 0) - (bill.technicianEarnings || 0), 0),
@@ -47,7 +63,7 @@ const EarningDetailPage = () => {
           payoutNote: quick
             ? 'Credited to your balance on job completion'
             : 'Settles on the brand invoice cycle',
-          transactionId: job.id,
+          transactionId: job.humanId || job.id,
           timeline: (job.serviceRequest?.timeline || []).map((t) => ({
             label: t.stepLabel,
             time: t.timestamp ? new Date(t.timestamp).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '',
