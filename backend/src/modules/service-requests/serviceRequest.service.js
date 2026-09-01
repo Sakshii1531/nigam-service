@@ -202,8 +202,22 @@ export async function declineAssignment(id, technicianId) {
     throw new ApiError(409, `Cannot reject a request in terminal status "${serviceRequest.status}"`);
   }
 
-  // Remove any active Job document created for this technician / service request
-  await Job.deleteMany({ serviceRequest: serviceRequest._id });
+  // You can only decline your own assignment. There was no check at all, so any
+  // technician who knew (or guessed) a request id could release somebody else's
+  // job out from under them — the caller's id was accepted and only ever used to
+  // record who declined. listAvailableJobs only ever surfaces requests assigned
+  // to the caller, so this is exactly the set the technician app can act on.
+  if (String(serviceRequest.technician || '') !== String(technicianId || '')) {
+    throw new ApiError(403, 'This request is not assigned to you');
+  }
+
+  // Once it has been accepted there is a Job carrying real progress (travel,
+  // diagnosis, parts, earnings). This used to fall straight through to
+  // Job.deleteMany() below, so a late decline silently destroyed that work.
+  // Same rule the available-jobs feed uses: any Job at all takes it out of play.
+  if (await Job.exists({ serviceRequest: serviceRequest._id })) {
+    throw new ApiError(409, 'This request has already been accepted and can no longer be rejected');
+  }
 
   if (technicianId && !serviceRequest.declinedBy.some((t) => String(t) === String(technicianId))) {
     serviceRequest.declinedBy.push(technicianId);
