@@ -162,6 +162,7 @@ import Academy from './pages/technician/Academy';
 import TechnicalSupport from './pages/technician/TechnicalSupport';
 import Announcements from './pages/technician/Announcements';
 import EarningDetailPage from './pages/technician/EarningDetail';
+import ServiceHistory from './pages/technician/ServiceHistory';
 
 // Auth (OTP + password recovery) — all panels
 import VerifyOtp from './pages/VerifyOtp';
@@ -513,6 +514,7 @@ function App() {
         <Route path="/technician/technical-support" element={<TechnicalSupport />} />
         <Route path="/technician/announcements" element={<Announcements />} />
         <Route path="/technician/earning-detail/:id" element={<EarningDetailPage />} />
+        <Route path="/technician/history" element={<ServiceHistory />} />
         
         {/* Super Admin Routes */}
         <Route path="/super-admin" element={<Navigate to="/super-admin/login" replace />} />

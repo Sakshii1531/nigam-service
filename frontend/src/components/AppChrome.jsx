@@ -78,6 +78,7 @@ const TECH_TABS = [
   ["/technician/skills", "profile"],
   ["/technician/verification", "profile"],
   ["/technician/partner-level", "profile"],
+  ["/technician/history", "profile"],
 ];
 
 function matchTab(pathname, table, fallback) {

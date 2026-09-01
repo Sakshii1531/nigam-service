@@ -37,6 +37,7 @@ const ProfilePage = () => {
   const techPartnerId = profile?.technician?.partnerId || (profile?.technician?._id ? `NCC-${profile.technician._id.slice(-6).toUpperCase()}` : 'NCC-TECH01');
 
   const exploreItems = [
+    { label: 'Service History', desc: 'All completed jobs & service logs', icon: <ClipboardList className="h-4.5 w-4.5 text-[#0D47A1]" />, path: '/technician/history', bg: 'bg-blue-50' },
     { label: 'Notifications', desc: 'Manage notifications & alerts', icon: <Bell className="h-4.5 w-4.5 text-[#0D47A1]" />, path: '/technician/notifications', bg: 'bg-blue-50' },
     { label: 'NCC Academy', desc: 'Blogs and video for learning', icon: <Award className="h-4.5 w-4.5 text-purple-600" />, path: '/technician/academy', bg: 'bg-purple-50' },
     { label: 'Need Technical Support', desc: 'Connect with support by call or message', icon: <HelpCircle className="h-4.5 w-4.5 text-amber-600" />, path: '/technician/support', bg: 'bg-amber-50' },
@@ -325,16 +326,19 @@ const ProfilePage = () => {
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-2xs flex items-center gap-3">
-              <div className="p-2.5 bg-emerald-50 border border-emerald-100 rounded-xl text-emerald-600 flex-shrink-0">
+            <button
+              onClick={() => navigate('/technician/history')}
+              className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-2xs flex items-center gap-3 hover:bg-slate-50 hover:border-[#0D47A1]/40 transition-all cursor-pointer text-left group"
+            >
+              <div className="p-2.5 bg-emerald-50 border border-emerald-100 rounded-xl text-emerald-600 flex-shrink-0 group-hover:scale-105 transition-transform">
                 <ClipboardList className="h-5 w-5" />
               </div>
               <div className="min-w-0">
                 <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider truncate">Jobs Done</p>
-                <p className="text-base font-black text-[#052355] mt-0.5">{earningsTally.completedTotal}</p>
-                <p className="text-[9.5px] text-slate-400 font-medium">All Time</p>
+                <p className="text-base font-black text-[#052355] group-hover:text-[#0D47A1] transition-colors mt-0.5">{earningsTally.completedTotal}</p>
+                <p className="text-[9.5px] text-slate-400 font-medium">View History</p>
               </div>
-            </div>
+            </button>
 
             <button
               onClick={() => navigate('/technician/recent-earnings')}
