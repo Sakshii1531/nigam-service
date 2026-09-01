@@ -42,8 +42,8 @@ const Academy = () => {
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-16 lg:pb-8 relative font-sans">
 
 
-      {/* Header — mobile only */}
-      <div className="bg-[#052355] text-white px-4 py-3.5 flex items-center justify-between sticky top-0 lg:top-16 z-10 shadow-md">
+      {/* Mobile Top Header */}
+      <div className="bg-[#052355] text-white px-4 py-3.5 flex items-center justify-between sticky top-0 z-10 shadow-md lg:hidden">
         <div className="flex items-center gap-3">
           <button 
             onClick={() => {
@@ -62,6 +62,33 @@ const Academy = () => {
           <h1 className="text-base font-semibold text-white">NCC Academy</h1>
         </div>
         <Award className="h-5.5 w-5.5 text-[#FFD400] fill-[#FFD400]" />
+      </div>
+
+      {/* Desktop Page Top Header Bar (lg+ only) */}
+      <div className="hidden lg:block max-w-screen-xl mx-auto w-full px-6 xl:px-8 pt-6 pb-2">
+        <div className="flex items-center justify-between bg-white rounded-3xl p-5 border border-slate-200/80 shadow-2xs">
+          <div className="flex items-center gap-3.5">
+            <button
+              onClick={() => {
+                if (activeBlogId !== null) {
+                  setActiveBlogId(null);
+                } else if (activeVideo !== null) {
+                  setActiveVideo(null);
+                } else {
+                  navigate(-1);
+                }
+              }}
+              className="p-2 bg-slate-100 hover:bg-slate-200 rounded-2xl text-[#052355] transition-colors cursor-pointer"
+              title="Back"
+            >
+              <ArrowLeft className="h-5 w-5 stroke-[2.5]" />
+            </button>
+            <div>
+              <h1 className="text-xl font-black text-[#052355] tracking-tight">NCC Training Academy</h1>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">Video courses, practical knowledge base and technical troubleshooting guides</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {activeVideo !== null ? (
@@ -121,7 +148,7 @@ const Academy = () => {
       ) : (
 
         /* Academy Hub List */
-        <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-5 bg-slate-50 pb-8 text-left max-w-screen-lg mx-auto w-full">
+        <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-5 bg-slate-50 pb-8 text-left max-w-screen-xl mx-auto w-full">
           {error && (
             <div className="bg-rose-50 border border-rose-200 rounded-xl px-3 py-2 text-[11px] font-semibold text-rose-600">
               {error}

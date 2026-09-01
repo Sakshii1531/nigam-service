@@ -15,7 +15,7 @@ const TechTopNav = ({ activePage = "jobs" }) => {
   const navItems = [
     { id: "jobs",      label: "Jobs",      Icon: Briefcase,    path: "/technician/dashboard" },
     { id: "requests",  label: "Requests",  Icon: ClipboardList,path: "/technician/raise-part-request?tab=claims" },
-    { id: "inventory", label: "Inventory", Icon: Wrench,       path: "/technician/raise-part-request?tab=inventory" },
+    { id: "inventory", label: "Inventory", Icon: Wrench,       path: "/technician/inventory" },
     { id: "schedule",  label: "Schedule",  Icon: Calendar,     path: "/technician/schedule" },
     { id: "profile",   label: "Profile",   Icon: User,         path: "/technician/profile" },
   ];

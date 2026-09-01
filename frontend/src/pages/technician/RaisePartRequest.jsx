@@ -281,8 +281,40 @@ const RaisePartRequest = () => {
             </div>
           </div>
 
+          {/* Desktop Page Top Header Bar (lg+ only) */}
+          <div className="hidden lg:block max-w-screen-xl mx-auto w-full px-6 xl:px-8 pt-6 pb-2">
+            <div className="flex items-center justify-between bg-white rounded-3xl p-5 border border-slate-200/80 shadow-2xs">
+              <div className="flex items-center gap-3.5">
+                <button
+                  type="button"
+                  onClick={() => navigate('/technician/dashboard')}
+                  className="p-2 bg-slate-100 hover:bg-slate-200 rounded-2xl text-[#052355] transition-colors cursor-pointer"
+                  title="Back to Dashboard"
+                >
+                  <ChevronLeft className="h-5 w-5 stroke-[2.5]" />
+                </button>
+                <div>
+                  <h1 className="text-xl font-black text-[#052355] tracking-tight">Parts & Inventory</h1>
+                  <p className="text-xs text-slate-500 font-medium mt-0.5">NCC Technician Service Hub — Order spare parts and track warranty claims</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-2xl text-xs font-bold text-slate-700">
+                  <span>SKUs: {inventory.length}</span>
+                </div>
+                <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-2xl text-xs font-bold text-emerald-700">
+                  <span>In Stock: {inStockCount + lowStockCount}</span>
+                </div>
+                <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-2xl text-xs font-bold text-amber-800">
+                  <span>Cart: {partsCart.length}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Segmented Tab Navigation */}
-          <div className="px-3.5 md:px-6 -mt-3.5 lg:mt-4 relative z-30">
+          <div className="px-3.5 md:px-6 -mt-3.5 lg:mt-2 max-w-screen-xl mx-auto w-full relative z-30">
             <div className="bg-white p-1.5 rounded-2xl shadow-sm border border-slate-200/80 flex items-center justify-between gap-1.5">
               <button
                 onClick={() => setActiveTab('inventory')}
@@ -335,7 +367,7 @@ const RaisePartRequest = () => {
           </div>
 
           {/* Main Content Area */}
-          <div className="flex-1 px-3.5 pt-3.5 flex flex-col gap-3.5 max-w-screen-lg mx-auto w-full">
+          <div className="flex-1 px-3.5 pt-3.5 flex flex-col gap-3.5 max-w-screen-xl mx-auto w-full">
             
             {/* VIEW 1: INVENTORY */}
             {activeTab === 'inventory' && (

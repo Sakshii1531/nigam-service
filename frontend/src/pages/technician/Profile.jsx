@@ -49,11 +49,10 @@ const ProfilePage = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-[#F4F7FC] flex flex-col pb-28 lg:pb-8 font-sans relative text-left">
-
+    <div className="min-h-screen bg-[#F4F7FC] flex flex-col pb-28 lg:pb-12 font-sans relative text-left">
 
       {/* Signature Dark Navy Header — mobile only */}
-      <div className="bg-gradient-to-b from-[#052355] to-[#0A337A] text-white pt-5 pb-8 px-4 shadow-md rounded-b-[2.2rem] sticky top-0 lg:top-16 z-20">
+      <div className="bg-gradient-to-b from-[#052355] to-[#0A337A] text-white pt-5 pb-8 px-4 shadow-md rounded-b-[2.2rem] sticky top-0 z-20 lg:hidden">
         <div className="flex items-center justify-between">
           <button 
             type="button"
@@ -79,263 +78,351 @@ const ProfilePage = () => {
         </div>
       </div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 px-3.5 -mt-4 lg:mt-4 flex flex-col gap-3.5 relative z-30 max-w-screen-lg mx-auto w-full">
-
-        {/* Profile Card */}
-        <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-2xs flex flex-col gap-3">
+      {/* Desktop Page Top Header Bar (lg+ only) */}
+      <div className="hidden lg:block max-w-screen-xl mx-auto w-full px-6 xl:px-8 pt-6 pb-2">
+        <div className="flex items-center justify-between bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-2xs">
           <div className="flex items-center gap-3.5">
-            <div
-              onClick={() => navigate('/technician/personal-info')}
-              className="w-16 h-16 sm:w-18 sm:h-18 rounded-2xl overflow-hidden border-2 border-[#0D47A1]/30 shadow-xs cursor-pointer flex-shrink-0 relative group"
+            <button
+              onClick={() => navigate('/technician/dashboard')}
+              className="p-2 bg-slate-100 hover:bg-slate-200 rounded-2xl text-[#052355] transition-colors cursor-pointer"
+              title="Back to Dashboard"
             >
-              <img src={techAvatar} alt={techName} className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-[#052355]/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                <Pencil className="w-4 h-4 text-white" />
+              <ChevronLeft className="h-5 w-5 stroke-[2.5]" />
+            </button>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-black text-[#052355] tracking-tight">Technician Profile</h1>
+                <span className="inline-flex items-center gap-1 bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-full text-[11px] font-bold text-[#0D47A1]">
+                  <BadgeCheck size={13} /> Verified Partner
+                </span>
               </div>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">Manage your credentials, performance metrics and payout settings</p>
             </div>
+          </div>
 
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between">
-                <h2 className="text-base sm:text-lg font-black text-[#052355] truncate">{techName}</h2>
-                <button 
-                  onClick={() => navigate('/technician/personal-info')} 
-                  className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-full text-slate-500 transition-colors cursor-pointer"
-                  title="Edit Profile"
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate('/technician/notifications')}
+              className="flex items-center gap-2 px-3.5 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-2xl text-xs font-bold text-slate-700 transition-colors relative cursor-pointer"
+            >
+              <Bell size={15} className="text-[#0D47A1]" />
+              <span>Notifications</span>
+              {unreadNotificationsCount > 0 && (
+                <span className="w-2 h-2 bg-red-500 rounded-full"></span>
+              )}
+            </button>
+            <button
+              onClick={() => navigate('/technician/settings')}
+              className="p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-2xl text-slate-600 hover:text-[#052355] transition-colors cursor-pointer"
+              title="App Settings"
+            >
+              <Settings size={16} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content Area: Responsive Grid (Single Column on Mobile, 2-Column Dashboard on Desktop) */}
+      <div className="flex-1 px-3.5 -mt-4 lg:mt-0 lg:px-6 xl:px-8 flex flex-col lg:grid lg:grid-cols-12 lg:gap-6 gap-3.5 relative z-30 max-w-screen-xl mx-auto w-full">
+
+        {/* LEFT COLUMN (Desktop col-span-4) */}
+        <div className="lg:col-span-4 xl:col-span-4 flex flex-col gap-3.5 lg:gap-4">
+
+          {/* Profile Card */}
+          <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-2xs flex flex-col gap-3.5">
+            <div className="flex items-center gap-3.5">
+              <div
+                onClick={() => navigate('/technician/personal-info')}
+                className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden border-2 border-[#0D47A1]/30 shadow-xs cursor-pointer flex-shrink-0 relative group"
+              >
+                <img src={techAvatar} alt={techName} className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-[#052355]/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Pencil className="w-4 h-4 text-white" />
+                </div>
               </div>
-              <p className="text-xs text-slate-500 font-semibold mt-0.5 truncate">{techSpecs}</p>
-              
-              <div className="flex items-center gap-2 mt-2 flex-wrap">
-                <button
-                  onClick={() => navigate('/technician/partner-level')}
-                  className="flex items-center gap-1 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full cursor-pointer hover:bg-amber-100/60 transition-colors"
-                >
-                  <Star className="h-3 w-3 text-amber-500 fill-amber-400" />
-                  <span className="text-[10.5px] font-black text-amber-800">{techRating}</span>
-                  <span className="text-[9.5px] text-amber-700 font-bold">(Verified)</span>
-                </button>
-                <div className="flex items-center gap-1 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
-                  <BadgeCheck className="h-3 w-3 text-[#0D47A1]" />
-                  <span className="text-[10px] font-black text-[#0D47A1]">Elite Partner</span>
+
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-base sm:text-lg font-black text-[#052355]">{techName}</h2>
+                  <button 
+                    onClick={() => navigate('/technician/personal-info')} 
+                    className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-full text-slate-500 transition-colors cursor-pointer"
+                    title="Edit Profile"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                <p className="text-xs text-slate-500 font-semibold mt-0.5 truncate">{techSpecs}</p>
+                
+                <div className="flex items-center gap-2 mt-2 flex-wrap">
+                  <button
+                    onClick={() => navigate('/technician/partner-level')}
+                    className="flex items-center gap-1 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full cursor-pointer hover:bg-amber-100/60 transition-colors"
+                  >
+                    <Star className="h-3 w-3 text-amber-500 fill-amber-400" />
+                    <span className="text-[10.5px] font-black text-amber-800">{techRating}</span>
+                    <span className="text-[9.5px] text-amber-700 font-bold">(Verified)</span>
+                  </button>
+                  <div className="flex items-center gap-1 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
+                    <BadgeCheck className="h-3 w-3 text-[#0D47A1]" />
+                    <span className="text-[10px] font-black text-[#0D47A1]">Elite Partner</span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <div className="border-t border-slate-100 pt-2 flex justify-between items-center text-[11px]">
-            <span className="text-slate-500 font-medium">Partner Identification</span>
-            <span className="text-[#052355] font-black bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-lg">
-              {techPartnerId}
-            </span>
-          </div>
-        </div>
-
-        {/* Wallet Balance Card */}
-        <div className="bg-gradient-to-r from-[#052355] to-[#0A337A] text-white rounded-3xl p-5 shadow-sm border border-blue-900/40 flex flex-col gap-3">
-          <div className="flex justify-between items-center">
-            <span className="text-[10px] text-blue-200 font-black uppercase tracking-wider">Wallet Balance</span>
-            <div className="inline-flex items-center gap-1.5 bg-emerald-500/25 border border-emerald-400/40 px-2.5 py-0.5 rounded-full">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span className="text-[9.5px] font-bold text-emerald-200">Available to Withdraw</span>
-            </div>
-          </div>
-
-          <div className="flex items-end justify-between">
-            <div>
-              <span className="text-3xl sm:text-4xl font-black text-white leading-none">
-                ₹{earningsTally.available.toLocaleString('en-IN')}
+            <div className="border-t border-slate-100 pt-2.5 flex justify-between items-center text-[11px]">
+              <span className="text-slate-500 font-medium">Partner Identification</span>
+              <span className="text-[#052355] font-black bg-slate-50 border border-slate-200 px-2.5 py-0.5 rounded-lg">
+                {techPartnerId}
               </span>
             </div>
 
             <button
-              onClick={() => navigate('/technician/payout-settings')}
-              className="flex items-center gap-1.5 bg-white text-[#052355] hover:bg-slate-100 text-xs font-black px-3.5 py-2.5 rounded-xl transition-all shadow-xs cursor-pointer active:scale-95"
+              onClick={() => navigate('/technician/personal-info')}
+              className="hidden lg:flex w-full items-center justify-center gap-2 py-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold text-[#052355] transition-colors cursor-pointer mt-1"
             >
-              <span>Request Withdraw</span>
-              <ChevronRight className="h-3.5 w-3.5" />
+              <Pencil size={13} />
+              <span>Edit Personal Details</span>
             </button>
           </div>
 
-          <p className="text-[10.5px] text-blue-200/80 mt-1 flex items-center gap-1 font-medium">
-            <Clock className="h-3.5 w-3.5" />
-            Withdrawal requests are processed & approved within 24 Hours
-          </p>
-        </div>
-
-        {/* Quick Metrics Row */}
-        <div className="grid grid-cols-2 gap-2.5 md:gap-4">
-          <div className="bg-white rounded-2xl p-3.5 border border-slate-200/80 shadow-2xs flex items-center gap-3">
-            <div className="p-2.5 bg-blue-50 border border-blue-100 rounded-xl text-[#0D47A1]">
-              <TrendingUp className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Total Earnings</p>
-              <p className="text-base font-black text-[#052355] mt-0.5">₹{earningsTally.total.toLocaleString('en-IN')}</p>
-              <p className="text-[9.5px] text-slate-400 font-medium">All Time</p>
-            </div>
+          {/* Bank Account / Payout Method (Desktop Left Sidebar Placement) */}
+          <div className="hidden lg:block">
+            <button
+              onClick={() => navigate('/technician/payout-settings')}
+              className="w-full bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-2xs flex flex-col gap-2.5 text-left hover:border-[#0D47A1]/40 transition-all cursor-pointer group"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2.5 bg-blue-50 border border-blue-100 rounded-xl text-[#0D47A1]">
+                    <Building2 className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-black text-[#052355] group-hover:text-[#0D47A1] transition-colors">
+                      {primaryPayout ? (primaryPayout.type === 'bank' ? 'Linked Bank Account' : 'UPI Payment ID') : 'Bank Account & Payouts'}
+                    </p>
+                    <p className="text-[10.5px] text-slate-500 font-medium mt-0.5">
+                      {primaryPayout 
+                        ? (primaryPayout.accountNo ? `A/C No. ••••••${primaryPayout.accountNo.slice(-4)} (${primaryPayout.name})` : primaryPayout.upiId || '')
+                        : 'Configure for withdrawal'}
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="h-4 w-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+              </div>
+              {primaryPayout && (
+                <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[10px]">
+                  <span className="text-slate-400 font-medium">Payout Method</span>
+                  <span className="font-bold text-[#0D47A1] bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">Primary</span>
+                </div>
+              )}
+            </button>
           </div>
 
-          <div className="bg-white rounded-2xl p-3.5 border border-slate-200/80 shadow-2xs flex items-center gap-3">
-            <div className="p-2.5 bg-emerald-50 border border-emerald-100 rounded-xl text-emerald-600">
-              <ClipboardList className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Jobs Done</p>
-              <p className="text-base font-black text-[#052355] mt-0.5">{earningsTally.completedTotal}</p>
-              <p className="text-[9.5px] text-slate-400 font-medium">All Time</p>
-            </div>
+          {/* Explore More Accordion (Mobile Only Placement) */}
+          <div className="block lg:hidden bg-white rounded-3xl border border-slate-200/80 shadow-2xs overflow-hidden">
+            <button
+              onClick={() => setExploreOpen(prev => !prev)}
+              className="w-full p-4 flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-[#0D47A1]" />
+                <h3 className="text-xs font-black text-[#052355] uppercase tracking-wider">Explore Services & Settings</h3>
+              </div>
+              {exploreOpen
+                ? <ChevronUp className="h-4 w-4 text-slate-400" />
+                : <ChevronDown className="h-4 w-4 text-slate-400" />
+              }
+            </button>
+
+            {exploreOpen && (
+              <div className="divide-y divide-slate-100 border-t border-slate-100">
+                {exploreItems.map((item, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => navigate(item.path)}
+                    className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors text-left cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 ${item.bg} rounded-xl flex-shrink-0 transition-transform group-hover:scale-105`}>
+                        {item.icon}
+                      </div>
+                      <div>
+                        <p className="text-xs font-extrabold text-[#052355] group-hover:text-[#0D47A1] transition-colors">{item.label}</p>
+                        <p className="text-[10px] text-slate-400 font-medium mt-0.5">{item.desc}</p>
+                      </div>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-slate-400 flex-shrink-0 group-hover:translate-x-0.5 transition-transform" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
+
+          {/* Logout Button (Desktop Sidebar Position) */}
+          <div className="hidden lg:block">
+            <button
+              onClick={() => setShowLogoutConfirm(true)}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 transition-all text-xs font-black cursor-pointer shadow-2xs active:scale-[0.99]"
+            >
+              <LogOut className="h-4 w-4" />
+              <span>Log Out Account</span>
+            </button>
+          </div>
+
         </div>
 
-        {/* Payout Breakdown Cards */}
-        <div className="grid grid-cols-2 gap-2.5 md:gap-4">
-          {/* QuickPayout */}
-          <button
-            onClick={() => navigate('/technician/earnings?tab=quick')}
-            className="bg-white rounded-2xl p-3.5 border border-slate-200/80 shadow-2xs text-left hover:border-[#0D47A1]/40 transition-all cursor-pointer group"
-          >
-            <div className="flex items-center justify-between mb-1.5">
-              <div className="flex items-center gap-1.5">
-                <div className="p-1.5 bg-amber-50 border border-amber-200 rounded-lg">
-                  <Zap className="h-3.5 w-3.5 text-amber-600 fill-amber-400" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-black text-[#052355]">QuickPayout</p>
-                  <p className="text-[9px] text-slate-400 font-medium">D2C Services</p>
-                </div>
-              </div>
-              <ChevronRight className="h-3.5 w-3.5 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
-            </div>
-            <p className="text-sm font-black text-[#052355]">₹{earningsTally.split.quick.amount.toLocaleString('en-IN')}</p>
-            <div className="flex items-center justify-between mt-1.5">
-              <p className="text-[9.5px] text-slate-400 font-bold">{earningsTally.split.quick.jobs} Jobs</p>
-              <span className="text-[8.5px] font-black text-amber-800 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-md">Instant</span>
-            </div>
-          </button>
+        {/* RIGHT COLUMN (Desktop col-span-8) */}
+        <div className="lg:col-span-8 xl:col-span-8 flex flex-col gap-3.5 lg:gap-4">
 
-          {/* InvoicePayout */}
-          <button
-            onClick={() => navigate('/technician/earnings?tab=invoice')}
-            className="bg-[#052355] rounded-2xl p-3.5 border border-[#052355] shadow-2xs text-left hover:bg-[#0a2c66] transition-all cursor-pointer group text-white"
-          >
-            <div className="flex items-center justify-between mb-1.5">
-              <div className="flex items-center gap-1.5">
-                <div className="p-1.5 bg-white/15 border border-white/20 rounded-lg">
-                  <FileText className="h-3.5 w-3.5 text-blue-200" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-black text-white">InvoicePayout</p>
-                  <p className="text-[9px] text-blue-200 font-medium">Warranty Jobs</p>
-                </div>
-              </div>
-              <ChevronRight className="h-3.5 w-3.5 text-blue-200 group-hover:translate-x-0.5 transition-transform" />
-            </div>
-            <p className="text-sm font-black text-white">₹{earningsTally.split.invoice.amount.toLocaleString('en-IN')}</p>
-            <div className="flex items-center justify-between mt-1.5">
-              <p className="text-[9.5px] text-blue-200 font-bold">{earningsTally.split.invoice.jobs} Jobs</p>
-              <span className="text-[8.5px] font-black text-orange-200 bg-orange-500/30 border border-orange-400/40 px-1.5 py-0.5 rounded-md">Pending</span>
-            </div>
-          </button>
-        </div>
+          {/* Wallet Balance Card */}
+          <div className="bg-gradient-to-br from-[#052355] via-[#082E6E] to-[#0D47A1] text-white rounded-3xl p-5 sm:p-6 shadow-md border border-blue-900/40 flex flex-col gap-3.5 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-2xl pointer-events-none"></div>
 
-        {/* Quick Links Section */}
-        <div className="flex flex-col gap-2">
-          {/* Recent Earnings Row */}
-          <button
-            onClick={() => navigate('/technician/recent-earnings')}
-            className="bg-white rounded-2xl p-3.5 border border-slate-200/80 shadow-2xs flex items-center justify-between hover:bg-slate-50 transition-all cursor-pointer"
-          >
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-700">
+            <div className="flex justify-between items-center relative z-10">
+              <span className="text-[11px] text-blue-200 font-black uppercase tracking-wider flex items-center gap-1.5">
+                <Wallet size={14} /> Wallet Balance
+              </span>
+              <div className="inline-flex items-center gap-1.5 bg-emerald-500/25 border border-emerald-400/40 px-2.5 py-0.5 rounded-full">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span className="text-[9.5px] font-bold text-emerald-200">Available to Withdraw</span>
+              </div>
+            </div>
+
+            <div className="flex items-end justify-between relative z-10 flex-wrap gap-3">
+              <div>
+                <span className="text-3xl sm:text-4xl font-black text-white leading-none">
+                  ₹{earningsTally.available.toLocaleString('en-IN')}
+                </span>
+              </div>
+
+              <button
+                onClick={() => navigate('/technician/earnings')}
+                className="flex items-center gap-1.5 bg-white text-[#052355] hover:bg-slate-100 text-xs font-black px-4 py-2.5 rounded-xl transition-all shadow-xs cursor-pointer active:scale-95"
+              >
+                <span>Request Withdraw</span>
+                <ChevronRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            <p className="text-[10.5px] text-blue-200/80 mt-0.5 flex items-center gap-1.5 font-medium relative z-10">
+              <Clock className="h-3.5 w-3.5" />
+              Withdrawal requests are processed & approved within 24 Hours
+            </p>
+          </div>
+
+          {/* Quick Metrics & History Row */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3.5">
+            <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-2xs flex items-center gap-3">
+              <div className="p-2.5 bg-blue-50 border border-blue-100 rounded-xl text-[#0D47A1] flex-shrink-0">
                 <TrendingUp className="h-5 w-5" />
               </div>
-              <div>
-                <p className="text-xs font-black text-[#052355]">Recent Earnings History</p>
-                <p className="text-[10.5px] text-slate-500 font-medium mt-0.5">View your daily transactions and credit logs</p>
+              <div className="min-w-0">
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider truncate">Total Earnings</p>
+                <p className="text-base font-black text-[#052355] mt-0.5">₹{earningsTally.total.toLocaleString('en-IN')}</p>
+                <p className="text-[9.5px] text-slate-400 font-medium">All Time</p>
               </div>
             </div>
-            <ChevronRight className="h-4 w-4 text-slate-400" />
-          </button>
 
-          {/* Bank Account / Payout Method */}
-          <button
-            onClick={() => navigate('/technician/payout-settings')}
-            className="bg-white rounded-2xl p-3.5 border border-slate-200/80 shadow-2xs flex items-center justify-between hover:bg-slate-50 transition-all cursor-pointer"
-          >
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-blue-50 border border-blue-100 rounded-xl text-[#0D47A1]">
-                <Building2 className="h-5 w-5" />
+            <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-2xs flex items-center gap-3">
+              <div className="p-2.5 bg-emerald-50 border border-emerald-100 rounded-xl text-emerald-600 flex-shrink-0">
+                <ClipboardList className="h-5 w-5" />
               </div>
-              <div>
-                <p className="text-xs font-black text-[#052355]">{primaryPayout ? (primaryPayout.type === 'bank' ? 'Linked Bank Account' : 'UPI Payment ID') : 'Bank Account & Payouts'}</p>
-                <p className="text-[10.5px] text-slate-500 font-medium mt-0.5">
-                  {primaryPayout 
-                    ? (primaryPayout.accountNo ? `A/C No. ••••••${primaryPayout.accountNo.slice(-4)} (${primaryPayout.name})` : primaryPayout.upiId || '')
-                    : 'Tap to configure for weekly earnings withdrawal'}
-                </p>
+              <div className="min-w-0">
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider truncate">Jobs Done</p>
+                <p className="text-base font-black text-[#052355] mt-0.5">{earningsTally.completedTotal}</p>
+                <p className="text-[9.5px] text-slate-400 font-medium">All Time</p>
               </div>
             </div>
-            <div className="flex items-center gap-1.5">
-              {primaryPayout && (
-                <span className="text-[9.5px] font-black text-[#0D47A1] bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">Primary</span>
-              )}
-              <ChevronRight className="h-4 w-4 text-slate-400" />
-            </div>
-          </button>
-        </div>
 
-        {/* Explore More Accordion Section */}
-        <div className="bg-white rounded-3xl border border-slate-200/80 shadow-2xs overflow-hidden">
-          <button
-            onClick={() => setExploreOpen(prev => !prev)}
-            className="w-full p-4 flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer"
-          >
-            <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate('/technician/recent-earnings')}
+              className="col-span-2 sm:col-span-1 bg-white rounded-2xl p-4 border border-slate-200/80 shadow-2xs flex items-center justify-between hover:bg-slate-50 hover:border-[#0D47A1]/40 transition-all cursor-pointer group text-left"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 flex-shrink-0">
+                  <TrendingUp className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-black text-[#052355] group-hover:text-[#0D47A1] transition-colors truncate">Earnings History</p>
+                  <p className="text-[10px] text-slate-400 font-medium mt-0.5 truncate">Daily credit logs</p>
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-slate-400 group-hover:translate-x-0.5 transition-transform flex-shrink-0 ml-1" />
+            </button>
+          </div>
+
+          {/* Bank Account / Payout Method (Mobile Only Placement) */}
+          <div className="block lg:hidden">
+            <button
+              onClick={() => navigate('/technician/payout-settings')}
+              className="w-full bg-white rounded-2xl p-4 border border-slate-200/80 shadow-2xs flex items-center justify-between hover:bg-slate-50 transition-all cursor-pointer group"
+            >
+              <div className="flex items-center gap-3.5">
+                <div className="p-2.5 bg-blue-50 border border-blue-100 rounded-xl text-[#0D47A1] flex-shrink-0">
+                  <Building2 className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-xs font-black text-[#052355] group-hover:text-[#0D47A1] transition-colors">
+                    {primaryPayout ? (primaryPayout.type === 'bank' ? 'Linked Bank Account' : 'UPI Payment ID') : 'Bank Account & Payouts'}
+                  </p>
+                  <p className="text-[10.5px] text-slate-500 font-medium mt-0.5">
+                    {primaryPayout 
+                      ? (primaryPayout.accountNo ? `A/C No. ••••••${primaryPayout.accountNo.slice(-4)} (${primaryPayout.name})` : primaryPayout.upiId || '')
+                      : 'Tap to configure for weekly earnings withdrawal'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {primaryPayout && (
+                  <span className="text-[10px] font-black text-[#0D47A1] bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-full">Primary</span>
+                )}
+                <ChevronRight className="h-4 w-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+              </div>
+            </button>
+          </div>
+
+          {/* Explore Services & Settings Grid (Desktop 2-Column Card Grid) */}
+          <div className="hidden lg:flex flex-col bg-white rounded-3xl p-5 border border-slate-200/80 shadow-2xs gap-3.5">
+            <div className="flex items-center gap-2 pb-1 border-b border-slate-100">
               <Sparkles className="w-4 h-4 text-[#0D47A1]" />
               <h3 className="text-xs font-black text-[#052355] uppercase tracking-wider">Explore Services & Settings</h3>
             </div>
-            {exploreOpen
-              ? <ChevronUp className="h-4 w-4 text-slate-400" />
-              : <ChevronDown className="h-4 w-4 text-slate-400" />
-            }
-          </button>
 
-          {exploreOpen && (
-            <div className="divide-y divide-slate-100 border-t border-slate-100">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {exploreItems.map((item, idx) => (
                 <button
                   key={idx}
                   onClick={() => navigate(item.path)}
-                  className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors text-left cursor-pointer group"
+                  className="p-3.5 rounded-2xl border border-slate-100 bg-slate-50/50 hover:bg-white hover:border-[#0D47A1]/30 hover:shadow-xs transition-all flex items-center justify-between text-left cursor-pointer group"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 ${item.bg} rounded-xl flex-shrink-0`}>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`p-2 ${item.bg} rounded-xl flex-shrink-0 transition-transform group-hover:scale-105`}>
                       {item.icon}
                     </div>
-                    <div>
-                      <p className="text-xs font-extrabold text-[#052355] group-hover:text-[#0D47A1] transition-colors">{item.label}</p>
-                      <p className="text-[10px] text-slate-400 font-medium mt-0.5">{item.desc}</p>
+                    <div className="min-w-0">
+                      <p className="text-xs font-extrabold text-[#052355] group-hover:text-[#0D47A1] transition-colors truncate">{item.label}</p>
+                      <p className="text-[10px] text-slate-400 font-medium mt-0.5 truncate">{item.desc}</p>
                     </div>
                   </div>
-                  <ChevronRight className="h-4 w-4 text-slate-400 flex-shrink-0 group-hover:translate-x-0.5 transition-transform" />
+                  <ChevronRight className="h-4 w-4 text-slate-400 flex-shrink-0 group-hover:translate-x-0.5 transition-transform ml-2" />
                 </button>
               ))}
             </div>
-          )}
-        </div>
+          </div>
 
-        {/* Logout Button */}
-        <div className="mb-3">
-          <button
-            onClick={() => setShowLogoutConfirm(true)}
-            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 transition-all text-xs font-black cursor-pointer shadow-2xs active:scale-[0.99]"
-          >
-            <LogOut className="h-4 w-4" />
-            <span>Log Out Account</span>
-          </button>
+          {/* Logout Button (Mobile Only Position at Bottom) */}
+          <div className="block lg:hidden mb-3">
+            <button
+              onClick={() => setShowLogoutConfirm(true)}
+              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 transition-all text-xs font-black cursor-pointer shadow-2xs active:scale-[0.99]"
+            >
+              <LogOut className="h-4 w-4" />
+              <span>Log Out Account</span>
+            </button>
+          </div>
+
         </div>
 
       </div>

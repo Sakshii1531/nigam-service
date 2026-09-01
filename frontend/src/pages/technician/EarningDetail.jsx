@@ -101,8 +101,8 @@ const EarningDetailPage = () => {
   return (
     <div className="min-h-screen bg-[#F4F6FA] flex flex-col pb-8 font-sans">
 
-      {/* Header */}
-      <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center gap-3 sticky top-0 z-10">
+      {/* Mobile Top Header */}
+      <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center gap-3 sticky top-0 z-10 lg:hidden">
         <button onClick={() => navigate(-1)} className="p-1 hover:bg-slate-50 rounded-full">
           <ArrowLeft className="h-5 w-5 text-slate-700" />
         </button>
@@ -113,7 +113,31 @@ const EarningDetailPage = () => {
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col gap-3 p-3.5">
+      {/* Desktop Page Top Header Bar (lg+ only) */}
+      <div className="hidden lg:block max-w-screen-xl mx-auto w-full px-6 xl:px-8 pt-6 pb-2">
+        <div className="flex items-center justify-between bg-white rounded-3xl p-5 border border-slate-200/80 shadow-2xs">
+          <div className="flex items-center gap-3.5">
+            <button
+              onClick={() => navigate(-1)}
+              className="p-2 bg-slate-100 hover:bg-slate-200 rounded-2xl text-[#052355] transition-colors cursor-pointer"
+              title="Back"
+            >
+              <ArrowLeft className="h-5 w-5 stroke-[2.5]" />
+            </button>
+            <div>
+              <h1 className="text-xl font-black text-[#052355] tracking-tight">Earning Settlement Detail</h1>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">Transaction reference, payout split and job earnings breakdown</p>
+            </div>
+          </div>
+
+          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-bold ${sc.bg} ${sc.border} ${sc.color}`}>
+            {sc.icon}
+            <span>{earning.status}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex-1 flex flex-col gap-3 p-3.5 lg:px-6 xl:px-8 max-w-screen-xl mx-auto w-full">
 
         {/* Amount Card */}
         <div className={`rounded-2xl p-4 ${isQuick ? 'bg-[#0A2D6E]' : 'bg-[#0A2D6E]'} shadow-lg`}>

@@ -123,22 +123,23 @@ const WIDE_ROUTES = [
   "/technician/dashboard", "/technician/active-job", "/technician/schedule",
   "/technician/analytics", "/technician/academy", "/technician/inventory",
   "/technician/raise-part-request", "/technician/earnings",
-  "/technician/billing-estimate", "/technician/apply",
+  "/technician/billing-estimate", "/technician/apply", "/technician/profile",
+  "/technician/personal-info",
 ];
 
 /** Tailwind max-width class for the panel container on a given route. */
 export function panelWidthClass(pathname) {
-  const wide = WIDE_ROUTES.some((r) => {
-    const cleanR = r.replace(/\/+$/, "");
-    return pathname === cleanR || pathname.startsWith(cleanR + "/");
-  });
-  return wide ? "max-w-screen-2xl" : "max-w-4xl";
+  return "max-w-screen-xl";
 }
 
-function pickNav(pathname) {
+function pickNav(pathname, search = "") {
   if (pathname.startsWith("/technician")) {
     if (TECH_CHROMELESS.has(pathname)) return null;
-    return <TechTopNav activePage={matchTab(pathname, TECH_TABS, "jobs")} />;
+    let activePage = matchTab(pathname, TECH_TABS, "jobs");
+    if (pathname === "/technician/raise-part-request" && search.includes("tab=inventory")) {
+      activePage = "inventory";
+    }
+    return <TechTopNav activePage={activePage} />;
   }
   if (pathname.startsWith("/super-admin") || pathname.startsWith("/brand-admin")) return null;
   if (CUSTOMER_CHROMELESS.has(pathname) || pathname.startsWith("/book") || pathname.startsWith("/booking") || pathname.startsWith("/payment")) return null;
@@ -146,8 +147,8 @@ function pickNav(pathname) {
 }
 
 const AppChrome = () => {
-  const { pathname } = useLocation();
-  const nav = pickNav(pathname);
+  const { pathname, search } = useLocation();
+  const nav = pickNav(pathname, search);
 
   // index.css keys the 4rem desktop top offset off this class rather than off the
   // panel's body class, so pages that render no navbar (login, OTP) don't get a
