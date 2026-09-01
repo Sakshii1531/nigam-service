@@ -57,17 +57,18 @@ const Dashboard = () => {
   const toast = (msg) => { setSuccessMsg(msg); setTimeout(() => setSuccessMsg(''), 3000); };
 
   const handleTrendMouseMove = (e) => {
+    if (!trendData.length) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const relativeX = (e.clientX - rect.left) / rect.width;
     const viewBoxX = relativeX * 500;
-    const index = Math.min(6, Math.max(0, Math.round(viewBoxX / 83.3)));
+    const step = trendData.length > 1 ? 500 / (trendData.length - 1) : 500;
+    const index = Math.min(trendData.length - 1, Math.max(0, Math.round(viewBoxX / step)));
     setActiveTrendIndex(index);
   };
 
   const handleTrendClick = () => {
-    if (activeTrendIndex !== null) {
-      if (trendData[activeTrendIndex] === undefined) return;
-      toast(`Complaints on ${trendLabels[activeTrendIndex]}: ${trendData[activeTrendIndex].toLocaleString()}`);
+    if (activeTrendIndex !== null && trendData[activeTrendIndex] !== undefined) {
+      toast(`Complaints on ${trendLabels[activeTrendIndex] || ''}: ${(trendData[activeTrendIndex] ?? 0).toLocaleString()}`);
     }
   };
 
@@ -138,8 +139,8 @@ const Dashboard = () => {
   /* ── Trend line: real requests per day over the last week. This was a fixed
      seven-point series labelled 15–21 May that never moved. ── */
   const trend = metrics?.trend || [];
-  const trendData = trend.map((t) => t.count);
-  const trendLabels = trend.map((t) => new Date(t.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }));
+  const trendData = trend.map((t) => t.count ?? 0);
+  const trendLabels = trend.map((t) => t.date ? new Date(t.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : '');
   const maxTrend = Math.max(1, ...trendData);
 
   /* ── Product wise: real category breakdown, previously a fixed five-row
@@ -147,6 +148,8 @@ const Dashboard = () => {
   const PRODUCT_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EF4444', '#0EA5E9'];
   const productWise = (metrics?.byProduct || []).map((p, i) => ({
     ...p,
+    value: p.value ?? p.count ?? 0,
+    pct: p.pct ?? 0,
     color: PRODUCT_COLORS[i % PRODUCT_COLORS.length],
   }));
 
@@ -247,24 +250,26 @@ const Dashboard = () => {
                       rejects outright ("attribute d: Expected number"). */}
                   {trendData.length > 0 && (
                     <path
-                      d={`M ${trendData.map((v, i) => `${i * 83.3},${100 - (v / maxTrend) * 85}`).join(' L ')} L ${(trendData.length - 1) * 83.3},100 L 0,100 Z`}
+                      d={`M ${trendData.map((v, i) => `${trendData.length > 1 ? i * (500 / (trendData.length - 1)) : 250},${100 - ((v ?? 0) / maxTrend) * 85}`).join(' L ')} L 500,100 L 0,100 Z`}
                       fill="url(#trendGrad)"
                     />
                   )}
                   {/* Line */}
-                  <polyline
-                    points={trendData.map((v, i) => `${i * 83.3},${100 - (v / maxTrend) * 85}`).join(' ')}
-                    fill="none"
-                    stroke="#3B82F6"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
+                  {trendData.length > 0 && (
+                    <polyline
+                      points={trendData.map((v, i) => `${trendData.length > 1 ? i * (500 / (trendData.length - 1)) : 250},${100 - ((v ?? 0) / maxTrend) * 85}`).join(' ')}
+                      fill="none"
+                      stroke="#3B82F6"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  )}
                   
                   {/* Node Circles */}
                   {trendData.map((v, i) => {
-                    const cx = i * 83.3;
-                    const cy = 100 - (v / maxTrend) * 85;
+                    const cx = trendData.length > 1 ? i * (500 / (trendData.length - 1)) : 250;
+                    const cy = 100 - ((v ?? 0) / maxTrend) * 85;
                     return (
                       <circle 
                         key={i}
@@ -280,9 +285,9 @@ const Dashboard = () => {
                   })}
 
                   {/* Active Tooltip and Guide */}
-                  {activeTrendIndex !== null && (() => {
-                    const val = trendData[activeTrendIndex];
-                    const cx = activeTrendIndex * 83.3;
+                  {activeTrendIndex !== null && trendData[activeTrendIndex] !== undefined && (() => {
+                    const val = trendData[activeTrendIndex] ?? 0;
+                    const cx = trendData.length > 1 ? activeTrendIndex * (500 / (trendData.length - 1)) : 250;
                     const cy = 100 - (val / maxTrend) * 85;
                     const tooltipY = cy > 40 ? cy - 35 : cy + 10;
                     return (
@@ -315,7 +320,7 @@ const Dashboard = () => {
                             fontSize="6" 
                             fontWeight="bold"
                           >
-                            {trendLabels[activeTrendIndex]}
+                            {trendLabels[activeTrendIndex] || ''}
                           </text>
                           <text 
                             x={Math.max(5, Math.min(415, cx - 40)) + 40} 
@@ -373,10 +378,14 @@ const Dashboard = () => {
                   </svg>
                   <div className="absolute flex flex-col items-center justify-center leading-none text-center pointer-events-none">
                     <span className="text-sm font-black text-[#1E293B] transition-all">
-                      {activeStatusIndex !== null ? statusSegments[activeStatusIndex].value.toLocaleString() : '12,568'}
+                      {activeStatusIndex !== null && statusSegments[activeStatusIndex] 
+                        ? (statusSegments[activeStatusIndex].value ?? 0).toLocaleString() 
+                        : (statusTotal ?? 0).toLocaleString()}
                     </span>
                     <span className="text-[7px] text-[#64748B] font-bold uppercase mt-0.5 tracking-tight transition-all">
-                      {activeStatusIndex !== null ? statusSegments[activeStatusIndex].label : 'Total'}
+                      {activeStatusIndex !== null && statusSegments[activeStatusIndex] 
+                        ? statusSegments[activeStatusIndex].label 
+                        : 'Total'}
                     </span>
                   </div>
                 </div>
@@ -398,7 +407,7 @@ const Dashboard = () => {
                         <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: s.color }} />
                         <span className={`text-[#64748B] font-medium truncate ${activeStatusIndex === i ? 'text-blue-600 font-bold' : ''}`}>{s.label}</span>
                       </span>
-                      <span className="font-bold text-[#1E293B] flex-shrink-0">{s.value.toLocaleString()} ({s.pct}%)</span>
+                      <span className="font-bold text-[#1E293B] flex-shrink-0">{(s.value ?? 0).toLocaleString()} ({s.pct ?? 0}%)</span>
                     </div>
                   ))}
                 </div>
@@ -430,7 +439,7 @@ const Dashboard = () => {
                   >
                     <div className="flex justify-between items-center mb-0.5">
                       <span className={`text-[10px] font-semibold transition-colors ${activeProductIndex === i ? 'text-blue-600 font-bold' : 'text-[#64748B]'}`}>{p.name}</span>
-                      <span className="text-[10px] font-bold text-[#1E293B]">{p.value.toLocaleString()} ({p.pct}%)</span>
+                      <span className="text-[10px] font-bold text-[#1E293B]">{(p.value ?? 0).toLocaleString()} ({p.pct ?? 0}%)</span>
                     </div>
                     <div className="w-full bg-[#F1F5F9] rounded-full h-1.5 overflow-hidden">
                       <div 
