@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Search, Bell, MapPin, Wrench, Zap, Droplet, Thermometer, Shield, Home as HomeIcon, Calendar, MessageSquare, User, Star, X, Wind, WashingMachine, Refrigerator, Droplets, Sparkles, ShoppingCart, Tv, Flame, MousePointerClick, LayoutGrid } from 'lucide-react';
+import { Search, Bell, MapPin, Wrench, Zap, Droplet, Thermometer, Shield, Home as HomeIcon, Calendar, MessageSquare, User, Star, X, Wind, WashingMachine, Refrigerator, Droplets, Sparkles, ShoppingCart, Tv, Flame, MousePointerClick, LayoutGrid, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import PushPermissionPrompt from '../components/PushPermissionPrompt';
 import Footer from '../components/layout/Footer';
@@ -40,6 +40,7 @@ import roSedimentImg from '../assets/ro_sediment_filter.png';
 import roCarbonImg from '../assets/ro_carbon_filter.png';
 import roPostCarbonImg from '../assets/ro_post_carbon.png';
 import Stories from '../components/home/Stories';
+import PlatformReviewCarousel from '../components/home/PlatformReviewCarousel';
 import star3d from '../assets/star_3d.png';
 import ac3d from '../assets/icon_3d_ac.png';
 import wm3d from '../assets/icon_3d_wm.png';
@@ -1023,6 +1024,11 @@ const Dashboard = ({ defaultType }) => {
                 </div>
               </div>
             ))}
+          </div>
+          
+          {/* Desktop-Only Featured Platform Reviews Carousel */}
+          <div className="hidden md:block">
+            <PlatformReviewCarousel />
           </div>
         </div>
         <Stories />

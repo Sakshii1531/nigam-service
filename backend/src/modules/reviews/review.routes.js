@@ -26,6 +26,16 @@ reviewRouter.get('/technicians/:technicianId', validate(technicianIdParamSchema,
   }
 });
 
+// Public — featured overall platform reviews for customer dashboard
+reviewRouter.get('/featured', async (req, res, next) => {
+  try {
+    const items = await reviewService.getFeaturedPlatformReviews();
+    ok(res, items);
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Declared before `/:id` — otherwise Express matches "brand" as an id.
 reviewRouter.get(
   '/brand',
