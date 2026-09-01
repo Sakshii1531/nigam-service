@@ -21,6 +21,7 @@ import iconWm from '../assets/icon_3d_wm.png';
 import electricianImg from '../assets/categories/electrician_fixed.png';
 import plumberImg from '../assets/categories/plumber_fixed.png';
 import cleaningImg from '../assets/categories/cleaning.png';
+import ServiceRatingCard from '../components/common/ServiceRatingCard';
 
 const SOCKET_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000').replace(/\/api\/v1\/?$/, '');
 
@@ -851,6 +852,20 @@ const Bookings = () => {
                   })}
                 </div>
               </div>
+
+              {/* Service Rating Card — ONLY when service is Completed */}
+              {(selectedBooking.status === 'Completed' || 
+                selectedBooking.instantStatus === 'COMPLETED' || 
+                selectedBooking.serviceRequest?.status === 'Repair Completed' || 
+                selectedBooking.serviceRequest?.status === 'Closed' || 
+                selectedBooking.serviceRequest?.status === 'Customer Confirmation') && (
+                <ServiceRatingCard 
+                  service={selectedBooking} 
+                  onRatingSubmitted={() => {
+                    setToastMessage('Thank you for rating your service!');
+                  }}
+                />
+              )}
 
               {/* Payment Summary */}
               <div className="bg-white rounded-2xl p-4 border border-slate-200/70 shadow-2xs flex flex-col gap-2.5">

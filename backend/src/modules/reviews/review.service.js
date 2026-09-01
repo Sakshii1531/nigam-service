@@ -1,8 +1,24 @@
 import { Review } from './review.model.js';
 import { FeaturedReview } from './featuredReview.model.js';
 import { ServiceRequest } from '../service-requests/serviceRequest.model.js';
+import { Booking } from '../booking/booking.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { parsePagination, paginationMeta } from '../../utils/pagination.js';
+
+export const COMPLETED_SERVICE_STATUSES = [
+  'Completed',
+  'COMPLETED',
+  'Closed',
+  'Repair Completed',
+  'Customer Confirmation',
+];
+
+export function isServiceCompleted(status) {
+  if (!status) return false;
+  return COMPLETED_SERVICE_STATUSES.some(
+    (s) => s.toLowerCase() === String(status).trim().toLowerCase()
+  );
+}
 
 /** One review per ServiceRequest, left by the customer who owns it. `tip` is
  * recorded but not yet paid out — no tip-settlement flow exists anywhere in
@@ -201,4 +217,136 @@ export async function deleteAdminFeaturedReview(id) {
   if (!doc) throw new ApiError(404, 'Featured review not found');
   return { deleted: true };
 }
+
+// ─── Customer Service Rating ────────────────────────────────────────────────
+
+export async function submitServiceRating(userId, { serviceId, bookingId, serviceRequestId, technicianRating, platformRating, rating, comment }) {
+  const techRatingNum = Number(technicianRating);
+  const platRatingNum = Number(platformRating);
+
+  if (!techRatingNum || techRatingNum < 1 || techRatingNum > 5) {
+    throw new ApiError(400, 'Technician rating must be between 1 and 5');
+  }
+  if (!platRatingNum || platRatingNum < 1 || platRatingNum > 5) {
+    throw new ApiError(400, 'Platform rating must be between 1 and 5');
+  }
+
+  const id = serviceId || bookingId || serviceRequestId;
+  if (!id) {
+    throw new ApiError(400, 'Service identifier is required');
+  }
+
+  // 1. Try to find in Booking collection
+  let booking = await Booking.findById(id).populate('serviceRequest');
+  let serviceRequest = null;
+
+  if (booking) {
+    serviceRequest = booking.serviceRequest;
+  } else {
+    // 2. Try to find in ServiceRequest collection
+    serviceRequest = await ServiceRequest.findById(id).populate('booking');
+    if (serviceRequest && serviceRequest.booking) {
+      booking = serviceRequest.booking;
+    }
+  }
+
+  const serviceDoc = booking || serviceRequest;
+  if (!serviceDoc) {
+    throw new ApiError(404, 'Service not found');
+  }
+
+  // Ownership validation
+  if (String(serviceDoc.user) !== String(userId)) {
+    throw new ApiError(403, 'Not authorized to rate this service');
+  }
+
+  // Completion validation
+  const bookingCompleted = booking && (isServiceCompleted(booking.status) || isServiceCompleted(booking.instantStatus));
+  const srCompleted = serviceRequest && (isServiceCompleted(serviceRequest.status) || isServiceCompleted(serviceRequest.instantStatus));
+
+  if (!bookingCompleted && !srCompleted) {
+    throw new ApiError(400, 'Service rating can only be submitted for completed services');
+  }
+
+  // Duplicate validation
+  const queryConditions = [];
+  if (booking?._id) queryConditions.push({ booking: booking._id });
+  if (serviceRequest?._id) queryConditions.push({ serviceRequest: serviceRequest._id });
+
+  const existingReview = await Review.findOne({
+    user: userId,
+    $or: queryConditions,
+  });
+
+  if (existingReview) {
+    throw new ApiError(409, 'Rating has already been submitted for this service');
+  }
+
+  const technicianId = serviceDoc.technician?._id || serviceDoc.technician || null;
+  const overallRating = Number(rating) || Number(((techRatingNum + platRatingNum) / 2).toFixed(1));
+
+  const newReview = await Review.create({
+    user: userId,
+    booking: booking?._id || null,
+    serviceRequest: serviceRequest?._id || null,
+    technician: technicianId,
+    technicianRating: techRatingNum,
+    platformRating: platRatingNum,
+    rating: overallRating,
+    comment: (comment || '').trim(),
+    status: 'Reviewed',
+  });
+
+  return newReview;
+}
+
+export async function getServiceRatingStatus(userId, serviceId) {
+  if (!serviceId) return { rated: false };
+
+  let bookingId = null;
+  let srId = null;
+
+  try {
+    const booking = await Booking.findById(serviceId).select('_id serviceRequest').lean();
+    if (booking) {
+      bookingId = booking._id;
+      srId = booking.serviceRequest;
+    } else {
+      const sr = await ServiceRequest.findById(serviceId).select('_id booking').lean();
+      if (sr) {
+        srId = sr._id;
+        bookingId = sr.booking;
+      }
+    }
+  } catch {
+    // If not a valid ObjectId, search by conditions
+  }
+
+  const conditions = [];
+  if (bookingId) conditions.push({ booking: bookingId });
+  if (srId) conditions.push({ serviceRequest: srId });
+  if (!bookingId && !srId) conditions.push({ booking: serviceId }, { serviceRequest: serviceId });
+
+  const review = await Review.findOne({
+    user: userId,
+    $or: conditions,
+  }).lean();
+
+  if (!review) {
+    return { rated: false };
+  }
+
+  return {
+    rated: true,
+    rating: {
+      id: String(review._id),
+      technicianRating: review.technicianRating || review.rating || 5,
+      platformRating: review.platformRating || review.rating || 5,
+      rating: review.rating || 5,
+      comment: review.comment || '',
+      createdAt: review.createdAt,
+    },
+  };
+}
+
 

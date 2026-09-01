@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
+import ServiceRatingCard from '../components/common/ServiceRatingCard';
 
 const TIMELINE = [
   { id: 'raised', label: 'Request Raised', date: '25 May 2024, 12:30 PM', done: true },
@@ -13,7 +14,8 @@ const TIMELINE = [
 const TicketDetails = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { ticketId } = location.state || { ticketId: 'NCCW-2024-000123' };
+  const { ticketId, status, isCompleted } = location.state || { ticketId: 'NCCW-2024-000123' };
+  const ticketCompleted = isCompleted || status === 'Completed' || status === 'Closed' || TIMELINE.find(t => t.id === 'completed')?.done;
 
   return (
     <div className="min-h-screen bg-blue-50/50 flex flex-col pb-8">
@@ -108,6 +110,11 @@ const TicketDetails = () => {
             })}
           </div>
         </div>
+
+        {/* Service Rating Card — ONLY when Ticket is Completed */}
+        {ticketCompleted && (
+          <ServiceRatingCard service={{ _id: ticketId, id: ticketId }} />
+        )}
 
       </div>
 

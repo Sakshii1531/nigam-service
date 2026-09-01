@@ -70,6 +70,23 @@ reviewRouter.get('/featured', async (req, res, next) => {
   }
 });
 
+// ─── Customer Service Rating Endpoints ─────────────────────────────────────
+reviewRouter.post('/service-rating', requireAuth, requireRole('customer'), async (req, res, next) => {
+  try {
+    created(res, await reviewService.submitServiceRating(req.user.id, req.body));
+  } catch (err) {
+    next(err);
+  }
+});
+
+reviewRouter.get('/service-rating/:serviceId', requireAuth, requireRole('customer'), async (req, res, next) => {
+  try {
+    ok(res, await reviewService.getServiceRatingStatus(req.user.id, req.params.serviceId));
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Declared before `/:id` — otherwise Express matches "brand" as an id.
 reviewRouter.get(
   '/brand',

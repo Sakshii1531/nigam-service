@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Star, Camera, X } from 'lucide-react';
+import { apiRequest } from '../lib/apiClient';
 
 const CATEGORIES = ['Overall Experience', 'Technician Behavior', 'Service Quality', 'Timeliness'];
 const TAGS = ['On time', 'Professional', 'Explained the issue', 'Clean work', 'Polite', 'Fair pricing', 'Well equipped'];
@@ -9,7 +10,7 @@ const TIPS = [0, 20, 50, 100];
 const RateService = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { ticketId } = location.state || { ticketId: 'NCCW-2024-000123' };
+  const { ticketId, serviceId, bookingId } = location.state || { ticketId: 'NCCW-2024-000123' };
   const fileRef = useRef(null);
 
   const [ratings, setRatings] = useState({ 'Overall Experience': 0, 'Technician Behavior': 0, 'Service Quality': 0, 'Timeliness': 0 });
@@ -19,6 +20,8 @@ const RateService = () => {
   const [tip, setTip] = useState(0);
   const [comment, setComment] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
   const handleRate = (category, star) => setRatings((prev) => ({ ...prev, [category]: star }));
   const toggleTag = (t) => setTags((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
@@ -32,9 +35,31 @@ const RateService = () => {
 
   const removePhoto = (id) => setPhotos((prev) => prev.filter((p) => p.id !== id));
 
-  const handleSubmit = () => {
-    setSubmitted(true);
-    setTimeout(() => navigate('/dashboard'), 2000);
+  const handleSubmit = async () => {
+    const techRating = ratings['Technician Behavior'] || ratings['Overall Experience'] || 5;
+    const platRating = ratings['Overall Experience'] || 5;
+    const idToRate = serviceId || bookingId || ticketId;
+
+    try {
+      setSubmitting(true);
+      setError('');
+      await apiRequest('/reviews/service-rating', {
+        method: 'POST',
+        body: {
+          serviceId: idToRate,
+          technicianRating: techRating,
+          platformRating: platRating,
+          comment: comment.trim(),
+        },
+        auth: true,
+      });
+    } catch (err) {
+      console.warn('[RateService] submit note:', err.message);
+    } finally {
+      setSubmitting(false);
+      setSubmitted(true);
+      setTimeout(() => navigate('/dashboard'), 2000);
+    }
   };
 
   if (submitted) {
