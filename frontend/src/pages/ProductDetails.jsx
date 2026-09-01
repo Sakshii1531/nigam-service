@@ -132,6 +132,9 @@ const ProductDetails = () => {
   const style = CATEGORY_STYLE[(product.category || '').toLowerCase()]
     || { icon: '📦', colorTheme: 'from-slate-50 to-gray-50 border-slate-200' };
 
+  // Only a real, higher original price is a discount worth rendering.
+  const hasDiscount = Number(product.originalPrice) > Number(product.price);
+
   return (
     <div className="min-h-screen bg-bg-light flex flex-col pb-28 lg:pb-8 font-sans">
       
@@ -220,19 +223,33 @@ const ProductDetails = () => {
         </div>
 
         {/* PRICING BLOCK */}
+        {/* originalPrice is optional on the Product model, and every reference
+            below used to dereference it unguarded — so a product saved without
+            one (nothing requires it) crashed this whole page to the error
+            boundary rather than simply showing no discount. */}
         <div className="bg-white border border-slate-200/60 p-4.5 rounded-2xl shadow-sm flex items-center justify-between">
-          <div className="flex flex-col">
-            <span className="text-[10px] text-text-secondary font-medium">Original Retail Price</span>
-            <span className="text-xs text-text-secondary line-through">₹{product.originalPrice.toLocaleString('en-IN')}.00</span>
-          </div>
-          
+          {hasDiscount ? (
+            <div className="flex flex-col">
+              <span className="text-[10px] text-text-secondary font-medium">Original Retail Price</span>
+              <span className="text-xs text-text-secondary line-through">₹{product.originalPrice.toLocaleString('en-IN')}.00</span>
+            </div>
+          ) : (
+            <div className="flex flex-col">
+              <span className="text-[10px] text-text-secondary font-medium">Price</span>
+            </div>
+          )}
+
           <div className="flex flex-col items-end">
-            <span className="text-[10px] text-green-600 font-bold bg-[#EBF7EE] px-2 py-0.5 rounded-full border border-green-100">
-              You Save ₹{(product.originalPrice - product.price).toLocaleString('en-IN')}
-            </span>
+            {hasDiscount && (
+              <span className="text-[10px] text-green-600 font-bold bg-[#EBF7EE] px-2 py-0.5 rounded-full border border-green-100">
+                You Save ₹{(product.originalPrice - product.price).toLocaleString('en-IN')}
+              </span>
+            )}
             <div className="flex items-baseline gap-1 mt-1">
-              <span className="text-2xl font-black text-brand-navy">₹{product.price.toLocaleString('en-IN')}</span>
-              <span className="text-green-600 text-xs font-bold">({Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}% OFF)</span>
+              <span className="text-2xl font-black text-brand-navy">₹{(product.price ?? 0).toLocaleString('en-IN')}</span>
+              {hasDiscount && (
+                <span className="text-green-600 text-xs font-bold">({Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}% OFF)</span>
+              )}
             </div>
           </div>
         </div>
