@@ -30,8 +30,8 @@ const PartnerLevel = () => {
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-12 relative font-sans">
       
-      {/* Header */}
-      <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center sticky top-0 z-10 shadow-sm">
+      {/* Mobile Header */}
+      <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center sticky top-0 z-10 shadow-sm lg:hidden">
         <button 
           onClick={() => navigate(-1)} 
           className="p-1 hover:bg-slate-50 rounded-full text-slate-700 transition-colors cursor-pointer"
@@ -41,8 +41,27 @@ const PartnerLevel = () => {
         <h1 className="text-base font-medium text-[#052355] flex-1 text-center pr-8">Partner Level & Ratings</h1>
       </div>
 
+      {/* Desktop Page Top Header Bar (lg+ only) */}
+      <div className="hidden lg:block max-w-screen-xl mx-auto w-full px-6 xl:px-8 pt-6 pb-2">
+        <div className="flex items-center justify-between bg-white rounded-3xl p-5 border border-slate-200/80 shadow-2xs">
+          <div className="flex items-center gap-3.5">
+            <button
+              onClick={() => navigate(-1)}
+              className="p-2 bg-slate-100 hover:bg-slate-200 rounded-2xl text-[#052355] transition-colors cursor-pointer"
+              title="Back"
+            >
+              <ArrowLeft className="h-5 w-5 stroke-[2.5]" />
+            </button>
+            <div>
+              <h1 className="text-xl font-black text-[#052355] tracking-tight">Partner Level & Ratings</h1>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">Tier benefits, rating metrics and job allocation specifications</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Scrollable Container */}
-      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-5 text-left pb-10">
+      <div className="flex-1 overflow-y-auto p-4 lg:px-6 xl:px-8 flex flex-col gap-5 text-left pb-10 max-w-screen-xl mx-auto w-full">
         
         {/* Top Section: Profile info & current tier */}
         <div className="bg-gradient-to-br from-[#052355] to-[#0A2C74] text-white rounded-3xl p-5 shadow-md flex flex-col gap-4">

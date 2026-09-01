@@ -32,32 +32,11 @@ const TechLogin = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F4F6F8] flex flex-col items-center justify-center p-4 lg:p-0 relative overflow-hidden lg:flex-row">
+    <div className="min-h-screen bg-[#F4F6F8] flex items-center justify-center p-4 relative overflow-hidden">
       
-      {/* Background Decorative Blurs — mobile only */}
-      <div className="absolute top-[-100px] left-[-100px] w-[300px] h-[300px] bg-[#0D47A1] opacity-10 rounded-full blur-3xl lg:hidden"></div>
-      <div className="absolute bottom-[-100px] right-[-100px] w-[300px] h-[300px] bg-[#FFD600] opacity-20 rounded-full blur-3xl lg:hidden"></div>
-
-      {/* Desktop Left Panel */}
-      <div className="hidden lg:flex lg:w-1/2 xl:w-3/5 min-h-screen bg-[#052355] flex-col items-center justify-center p-12 gap-6">
-        <div className="w-16 h-16 bg-[#FFD400] rounded-2xl flex items-center justify-center shadow-xl">
-          <Briefcase className="h-8 w-8 text-[#052355]" />
-        </div>
-        <div className="text-center">
-          <h2 className="text-white text-3xl font-black leading-tight">NCC Partner<br />Portal</h2>
-          <p className="text-white/70 text-sm mt-3 max-w-sm">Manage your jobs, earnings and schedule from one powerful dashboard.</p>
-        </div>
-        <div className="flex items-center gap-6 mt-4">
-          <div className="text-center"><div className="text-white text-2xl font-black">1200+</div><div className="text-white/60 text-xs">Partner Technicians</div></div>
-          <div className="w-px h-8 bg-white/20" />
-          <div className="text-center"><div className="text-white text-2xl font-black">₹45K</div><div className="text-white/60 text-xs">Avg. Monthly Earn</div></div>
-          <div className="w-px h-8 bg-white/20" />
-          <div className="text-center"><div className="text-white text-2xl font-black">4.9★</div><div className="text-white/60 text-xs">Partner Rating</div></div>
-        </div>
-      </div>
-
-      {/* Right Panel: existing form */}
-      <div className="w-full lg:w-1/2 xl:w-2/5 flex items-center justify-center p-4 lg:p-8 min-h-screen lg:min-h-0 lg:h-screen">
+      {/* Background Decorative Blurs */}
+      <div className="absolute top-[-100px] left-[-100px] w-[300px] h-[300px] bg-[#0D47A1] opacity-10 rounded-full blur-3xl"></div>
+      <div className="absolute bottom-[-100px] right-[-100px] w-[300px] h-[300px] bg-[#FFD600] opacity-20 rounded-full blur-3xl"></div>
 
       <div className="w-full max-w-md bg-white rounded-[30px] shadow-[0_20px_50px_rgba(5,150,105,0.05)] border border-slate-100 overflow-hidden flex flex-col pt-4 px-6 pb-4 relative z-10">
         
@@ -102,7 +81,6 @@ const TechLogin = () => {
                 placeholder="Enter your ID or Phone"
                 className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] outline-none transition-all text-sm"
                 required
-                defaultValue="9000000001"
               />
             </div>
           </div>
@@ -118,7 +96,6 @@ const TechLogin = () => {
                 placeholder="Enter Password"
                 className="w-full pl-12 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] outline-none transition-all text-sm"
                 required
-                defaultValue="password123"
               />
               <button
                 type="button"
@@ -161,7 +138,6 @@ const TechLogin = () => {
           </button>
         </div>
 
-      </div>
       </div>
     </div>
   );

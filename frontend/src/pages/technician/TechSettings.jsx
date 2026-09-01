@@ -125,16 +125,35 @@ const TechSettings = () => {
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-20 lg:pb-8 relative font-sans">
 
 
-      {/* Header — mobile only */}
-      <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center sticky top-0 lg:top-16 z-10">
+      {/* Mobile Top Header */}
+      <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center sticky top-0 z-10 lg:hidden">
         <button onClick={() => navigate(-1)} className="p-1 hover:bg-slate-50 rounded-full text-slate-700 transition-colors">
           <ArrowLeft className="h-6 w-6 text-slate-700" />
         </button>
         <h1 className="text-base font-medium text-[#052355] flex-1 text-center pr-8">Settings</h1>
       </div>
 
+      {/* Desktop Page Top Header Bar (lg+ only) */}
+      <div className="hidden lg:block max-w-screen-xl mx-auto w-full px-6 xl:px-8 pt-6 pb-2">
+        <div className="flex items-center justify-between bg-white rounded-3xl p-5 border border-slate-200/80 shadow-2xs">
+          <div className="flex items-center gap-3.5">
+            <button
+              onClick={() => navigate(-1)}
+              className="p-2 bg-slate-100 hover:bg-slate-200 rounded-2xl text-[#052355] transition-colors cursor-pointer"
+              title="Back"
+            >
+              <ArrowLeft className="h-5 w-5 stroke-[2.5]" />
+            </button>
+            <div>
+              <h1 className="text-xl font-black text-[#052355] tracking-tight">App Settings</h1>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">Preferences, push notifications, security and language configuration</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Content */}
-      <div className="flex-1 p-3.5 flex flex-col gap-4 max-w-screen-md mx-auto w-full">
+      <div className="flex-1 p-3.5 lg:px-6 xl:px-8 flex flex-col gap-4 max-w-screen-xl mx-auto w-full">
 
         {/* Notifications Section */}
         <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">

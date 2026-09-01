@@ -43,8 +43,8 @@ const Announcements = () => {
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-16 lg:pb-8 relative font-sans">
 
 
-      {/* Header — mobile only */}
-      <div className="bg-[#052355] text-white px-4 py-3.5 flex items-center justify-between sticky top-0 lg:top-16 z-10 shadow-md">
+      {/* Mobile Top Header */}
+      <div className="bg-[#052355] text-white px-4 py-3.5 flex items-center justify-between sticky top-0 z-10 shadow-md lg:hidden">
         <div className="flex items-center gap-3">
           <button 
             onClick={() => navigate(-1)} 
@@ -57,7 +57,26 @@ const Announcements = () => {
         <Bell className="h-5.5 w-5.5 text-white/90" />
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 bg-slate-50 text-left pb-8 max-w-screen-lg mx-auto w-full">
+      {/* Desktop Page Top Header Bar (lg+ only) */}
+      <div className="hidden lg:block max-w-screen-xl mx-auto w-full px-6 xl:px-8 pt-6 pb-2">
+        <div className="flex items-center justify-between bg-white rounded-3xl p-5 border border-slate-200/80 shadow-2xs">
+          <div className="flex items-center gap-3.5">
+            <button
+              onClick={() => navigate(-1)}
+              className="p-2 bg-slate-100 hover:bg-slate-200 rounded-2xl text-[#052355] transition-colors cursor-pointer"
+              title="Back"
+            >
+              <ArrowLeft className="h-5 w-5 stroke-[2.5]" />
+            </button>
+            <div>
+              <h1 className="text-xl font-black text-[#052355] tracking-tight">Announcements</h1>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">Notice, updates and official broadcasts from Headquarters</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-4 lg:px-6 xl:px-8 flex flex-col gap-4 text-left pb-8 max-w-screen-xl mx-auto w-full">
         <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">Notice & alert from Headquarters</span>
 
         {loading && <p className="text-[11px] text-slate-400 font-semibold py-6 text-center">Loading announcements…</p>}

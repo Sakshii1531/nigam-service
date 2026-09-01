@@ -69,8 +69,8 @@ const Notifications = () => {
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-10 lg:pb-8">
 
 
-      {/* Header — mobile only */}
-      <div className="bg-white px-4 py-4 flex items-center gap-3 sticky top-0 lg:top-16 z-50 shadow-sm border-b border-slate-100">
+      {/* Mobile Top Header */}
+      <div className="bg-white px-4 py-4 flex items-center gap-3 sticky top-0 z-50 shadow-sm border-b border-slate-100 lg:hidden">
         <button onClick={() => navigate(-1)} className="p-1.5 hover:bg-slate-100 rounded-full transition-colors">
           <ArrowLeft className="h-5 w-5 text-slate-700" />
         </button>
@@ -86,7 +86,44 @@ const Notifications = () => {
         </button>
       </div>
 
-      <div className="max-w-screen-md mx-auto w-full flex-1 flex flex-col">
+      {/* Desktop Page Top Header Bar (lg+ only) */}
+      <div className="hidden lg:block max-w-screen-xl mx-auto w-full px-6 xl:px-8 pt-6 pb-2">
+        <div className="flex items-center justify-between bg-white rounded-3xl p-5 border border-slate-200/80 shadow-2xs">
+          <div className="flex items-center gap-3.5">
+            <button
+              onClick={() => navigate(-1)}
+              className="p-2 bg-slate-100 hover:bg-slate-200 rounded-2xl text-[#052355] transition-colors cursor-pointer"
+              title="Back"
+            >
+              <ArrowLeft className="h-5 w-5 stroke-[2.5]" />
+            </button>
+            <div>
+              <h1 className="text-xl font-black text-[#052355] tracking-tight">Notifications</h1>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">Stay updated on your service bookings, warranty updates and account alerts</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {unread > 0 && (
+              <button 
+                onClick={markAllRead} 
+                className="px-4 py-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-2xl text-xs font-bold text-[#0D47A1] transition-all cursor-pointer shadow-xs"
+              >
+                Mark all read ({unread})
+              </button>
+            )}
+            <button
+              onClick={() => navigate('/notification-settings')}
+              className="p-2.5 bg-slate-100 hover:bg-slate-200 rounded-2xl transition-colors text-slate-600 cursor-pointer"
+              title="Notification Settings"
+            >
+              <Settings className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-screen-xl mx-auto w-full flex-1 flex flex-col px-3.5 lg:px-6 xl:px-8">
       <div className="px-4 pt-4 flex items-center justify-between">
         <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">Recent</span>
         {unread > 0 && (

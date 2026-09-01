@@ -366,7 +366,7 @@ const ServiceDetails = () => {
       </div>
 
       {/* Container wrapper for desktop */}
-      <div className="max-w-screen-lg mx-auto w-full flex-1 flex flex-col pb-24">
+      <div className="max-w-screen-xl mx-auto w-full flex-1 flex flex-col pb-24">
 
       {/* ── Offer Banners ── */}
       <div className="flex gap-2 px-4 pt-3 pb-2 overflow-x-auto no-scrollbar">

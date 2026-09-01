@@ -32,10 +32,10 @@ const TechBottomNav = ({ activeTab }) => {
       id: 'inventory',
       label: 'Inventory',
       icon: Wrench,
-      path: '/technician/raise-part-request?tab=inventory',
+      path: '/technician/inventory',
       isActive: activeTab 
         ? activeTab === 'inventory' 
-        : (currentPath === '/technician/inventory' || (currentPath.includes('/technician/raise-part-request') && !currentSearch.includes('tab=claims'))),
+        : (currentPath === '/technician/inventory' || (currentPath.includes('/technician/raise-part-request') && currentSearch.includes('tab=inventory'))),
     },
     {
       id: 'schedule',

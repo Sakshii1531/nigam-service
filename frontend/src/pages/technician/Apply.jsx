@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, User, Phone, Mail, Lock, Eye, EyeOff, Briefcase, MapPin, Check, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, User, Phone, Mail, Lock, Eye, EyeOff, Briefcase, MapPin, Check, ShieldCheck, ChevronDown, X } from 'lucide-react';
 import { BOOKING_CATALOG } from '../../data/bookingCatalog';
 import { apiRequest } from '../../lib/apiClient';
 
@@ -18,14 +18,22 @@ const TechApply = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const [selectedServices, setSelectedServices] = useState(['AC Repair']);
-  // Seeded empty on purpose. This list used to start as a hardcoded
-  // ['Delhi NCR', 'Mumbai', ...] that only got replaced when the fetch returned
-  // rows — so whenever no city was configured (or the request failed) an
-  // applicant was offered five cities the business does not operate in.
-  // /tech/register resolves this value with an exact City.findOne({ name }), so
-  // picking one of those saved the technician with city: null, which the
-  // assignment engine then has no proximity to score against.
+  const [selectedServices, setSelectedServices] = useState([]);
+  const [isServicesDropdownOpen, setIsServicesDropdownOpen] = useState(false);
+  const [serviceSearch, setServiceSearch] = useState('');
+  const servicesDropdownRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (servicesDropdownRef.current && !servicesDropdownRef.current.contains(event.target)) {
+        setIsServicesDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Seeded empty on purpose.
   const [availableCities, setAvailableCities] = useState([]);
   const [citiesLoading, setCitiesLoading] = useState(true);
   
@@ -35,6 +43,7 @@ const TechApply = () => {
   
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
 
   useEffect(() => {
     // Strictly load cities & service categories configured in the Admin Panel
@@ -61,13 +70,6 @@ const TechApply = () => {
         // The services a technician can pick are the ones merchandised on the
         // customer home screen, read from the CMS rather than another browser's
         // localStorage — which only ever worked on the admin's own machine.
-        // apiRequest returns the envelope's `data` payload directly, so the
-        // Array.isArray(tiles) guard failed while it was unwrapped twice, and
-        // this always fell through
-        // to /catalog/services — an endpoint that does not exist, so the
-        // specialisation list was always empty. A technician's specs are matched
-        // against a request's category by the assignment engine, so the category
-        // catalogue is the right source.
         let serviceList = [];
         const tiles = await apiRequest('/cms/home-tiles?placement=dashboard-service');
         serviceList = (tiles || []).map((t) => t.title).filter(Boolean);
@@ -77,14 +79,11 @@ const TechApply = () => {
           serviceList = (categories || []).map((c) => c.name).filter(Boolean);
         }
 
-        // Deduplicate: the same service is merchandised under more than one
-        // home tile, and the specialisation chips are keyed by name — repeats
-        // made React collapse them into one another.
+        // Deduplicate
         serviceList = [...new Set(serviceList)];
 
         if (serviceList.length > 0) {
           setAvailableServices(serviceList);
-          setSelectedServices([serviceList[0]]);
         }
       } catch (err) {
         console.warn('Error reading admin dashboard services:', err.message);
@@ -94,17 +93,87 @@ const TechApply = () => {
     loadFormMetadata();
   }, []);
 
+  const validateForm = () => {
+    const errors = {};
+
+    // Full Name validation
+    if (!form.name.trim()) {
+      errors.name = 'Full name is required';
+    } else if (!/^[A-Za-z\s]+$/.test(form.name.trim())) {
+      errors.name = 'Name must contain only letters and spaces';
+    } else if (form.name.trim().length < 2) {
+      errors.name = 'Name must be at least 2 characters';
+    }
+
+    // Email validation
+    if (!form.email.trim()) {
+      errors.email = 'Email address is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+      errors.email = 'Please enter a valid email address';
+    }
+
+    // Phone validation
+    if (!form.phone.trim()) {
+      errors.phone = 'Phone number is required';
+    } else if (!/^\d{10}$/.test(form.phone.trim())) {
+      errors.phone = 'Phone number must be exactly 10 digits';
+    }
+
+    // Password validation
+    if (!form.password) {
+      errors.password = 'Password is required';
+    } else if (form.password.length < 6) {
+      errors.password = 'Password must be at least 6 characters';
+    }
+
+    // Confirm Password validation
+    if (!form.confirmPassword) {
+      errors.confirmPassword = 'Confirm password is required';
+    } else if (form.password !== form.confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match';
+    }
+
+    // Services validation
+    if (!selectedServices || selectedServices.length === 0) {
+      errors.services = 'Please select at least one service';
+    }
+
+    // Operating City validation
+    if (!form.city) {
+      errors.city = 'Please select an operating city';
+    }
+
+    // Aadhar Card Photos validation
+    if (!aadharFront) {
+      errors.aadharFront = 'Aadhar front photo is required';
+    }
+    if (!aadharBack) {
+      errors.aadharBack = 'Aadhar back photo is required';
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleChange = (e) => {
     setError('');
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setForm(prev => ({ ...prev, [name]: value }));
+    if (fieldErrors[name]) {
+      setFieldErrors(prev => ({ ...prev, [name]: '' }));
+    }
   };
 
   const toggleService = (serviceName) => {
+    let nextServices;
     if (selectedServices.includes(serviceName)) {
-      if (selectedServices.length === 1) return;
-      setSelectedServices(selectedServices.filter(s => s !== serviceName));
+      nextServices = selectedServices.filter(s => s !== serviceName);
     } else {
-      setSelectedServices([...selectedServices, serviceName]);
+      nextServices = [...selectedServices, serviceName];
+    }
+    setSelectedServices(nextServices);
+    if (fieldErrors.services && nextServices.length > 0) {
+      setFieldErrors(prev => ({ ...prev, services: '' }));
     }
   };
 
@@ -147,6 +216,9 @@ const TechApply = () => {
   const handleAadharFrontChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    if (fieldErrors.aadharFront) {
+      setFieldErrors(prev => ({ ...prev, aadharFront: '' }));
+    }
     try {
       setUploading(true);
       const { webpFile, previewUrl } = await convertImageToWebP(file);
@@ -162,6 +234,9 @@ const TechApply = () => {
   const handleAadharBackChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    if (fieldErrors.aadharBack) {
+      setFieldErrors(prev => ({ ...prev, aadharBack: '' }));
+    }
     try {
       setUploading(true);
       const { webpFile, previewUrl } = await convertImageToWebP(file);
@@ -176,31 +251,17 @@ const TechApply = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (form.password !== form.confirmPassword) {
-      setError('Passwords do not match. Please verify your password.');
+    setError('');
+
+    if (!validateForm()) {
       return;
     }
 
-    if (!aadharFront || !aadharBack) {
-      setError('Please upload both Aadhar Card Front and Back photos before submitting.');
-      return;
-    }
-
-    // The select is disabled while empty, and browsers skip validation on a
-    // disabled control — so `required` alone would let an application through
-    // with no city, which /tech/register stores as city: null.
-    if (!form.city) {
-      setError('Please select an operating city. If none are listed, service is not open in your area yet.');
-      return;
-    }
-
-    // The application is the API call — a failure has to surface, not be
-    // swallowed behind a success screen.
     try {
       const formData = new FormData();
-      formData.append('name', form.name);
-      formData.append('email', form.email);
-      formData.append('phone', form.phone);
+      formData.append('name', form.name.trim());
+      formData.append('email', form.email.trim());
+      formData.append('phone', form.phone.trim());
       formData.append('password', form.password);
       formData.append('city', form.city);
       formData.append('specs', JSON.stringify(selectedServices));
@@ -245,7 +306,7 @@ const TechApply = () => {
             <Briefcase className="h-6 w-6 text-[#0D47A1]" />
           </div>
           <h1 className="text-xl font-bold text-slate-900">Partner Registration</h1>
-          <p className="text-slate-500 text-xs mt-1 text-center">Fill credentials & upload Aadhar WebP photos for verification</p>
+          <p className="text-slate-500 text-xs mt-1 text-center">Fill credentials & upload Aadhar card photos for verification</p>
         </div>
 
         {/* Error Message */}
@@ -256,7 +317,7 @@ const TechApply = () => {
         )}
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3.5">
+        <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-3.5">
           
           {/* Full Name & Email Row */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -264,34 +325,46 @@ const TechApply = () => {
             <div className="flex flex-col gap-1">
               <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Full Name</label>
               <div className="relative">
-                <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <User className={`absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 ${fieldErrors.name ? 'text-rose-400' : 'text-slate-400'}`} />
                 <input
                   type="text"
                   name="name"
                   value={form.name}
-                  onChange={handleChange}
+                  onChange={(e) => {
+                    const val = e.target.value
+                      .replace(/[^A-Za-z\s]/g, '')
+                      .replace(/\b\w/g, (char) => char.toUpperCase());
+                    setForm(prev => ({ ...prev, name: val }));
+                    if (fieldErrors.name) setFieldErrors(prev => ({ ...prev, name: '' }));
+                    if (error) setError('');
+                  }}
+                  autoCapitalize="words"
                   placeholder="Enter your name"
-                  className="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] outline-none transition-all text-xs"
-                  required
+                  className={`w-full pl-11 pr-4 py-2.5 bg-slate-50 border ${fieldErrors.name ? 'border-rose-400 focus:border-rose-400 focus:ring-rose-400' : 'border-slate-200 focus:border-[#0D47A1] focus:ring-[#0D47A1]'} rounded-2xl focus:ring-1 outline-none transition-all text-xs capitalize`}
                 />
               </div>
+              {fieldErrors.name && (
+                <span className="text-[10px] font-semibold text-rose-500 mt-0.5">{fieldErrors.name}</span>
+              )}
             </div>
 
             {/* Email Address */}
             <div className="flex flex-col gap-1">
               <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Email Address</label>
               <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Mail className={`absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 ${fieldErrors.email ? 'text-rose-400' : 'text-slate-400'}`} />
                 <input
                   type="email"
                   name="email"
                   value={form.email}
                   onChange={handleChange}
                   placeholder="name@example.com"
-                  className="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] outline-none transition-all text-xs"
-                  required
+                  className={`w-full pl-11 pr-4 py-2.5 bg-slate-50 border ${fieldErrors.email ? 'border-rose-400 focus:border-rose-400 focus:ring-rose-400' : 'border-slate-200 focus:border-[#0D47A1] focus:ring-[#0D47A1]'} rounded-2xl focus:ring-1 outline-none transition-all text-xs`}
                 />
               </div>
+              {fieldErrors.email && (
+                <span className="text-[10px] font-semibold text-rose-500 mt-0.5">{fieldErrors.email}</span>
+              )}
             </div>
           </div>
 
@@ -299,17 +372,25 @@ const TechApply = () => {
           <div className="flex flex-col gap-1">
             <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Phone Number</label>
             <div className="relative">
-              <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Phone className={`absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 ${fieldErrors.phone ? 'text-rose-400' : 'text-slate-400'}`} />
               <input
                 type="tel"
                 name="phone"
                 value={form.phone}
-                onChange={handleChange}
-                placeholder="Enter phone number"
-                className="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] outline-none transition-all text-xs"
-                required
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                  setForm(prev => ({ ...prev, phone: val }));
+                  if (fieldErrors.phone) setFieldErrors(prev => ({ ...prev, phone: '' }));
+                  if (error) setError('');
+                }}
+                maxLength={10}
+                placeholder="Enter 10-digit phone number"
+                className={`w-full pl-11 pr-4 py-2.5 bg-slate-50 border ${fieldErrors.phone ? 'border-rose-400 focus:border-rose-400 focus:ring-rose-400' : 'border-slate-200 focus:border-[#0D47A1] focus:ring-[#0D47A1]'} rounded-2xl focus:ring-1 outline-none transition-all text-xs`}
               />
             </div>
+            {fieldErrors.phone && (
+              <span className="text-[10px] font-semibold text-rose-500 mt-0.5">{fieldErrors.phone}</span>
+            )}
           </div>
 
           {/* Password & Confirm Password Row */}
@@ -318,15 +399,14 @@ const TechApply = () => {
             <div className="flex flex-col gap-1">
               <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Password</label>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Lock className={`absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 ${fieldErrors.password ? 'text-rose-400' : 'text-slate-400'}`} />
                 <input
                   type={showPassword ? "text" : "password"}
                   name="password"
                   value={form.password}
                   onChange={handleChange}
-                  placeholder="Create password"
-                  className="w-full pl-11 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] outline-none transition-all text-xs"
-                  required
+                  placeholder="Create password (min 6 chars)"
+                  className={`w-full pl-11 pr-10 py-2.5 bg-slate-50 border ${fieldErrors.password ? 'border-rose-400 focus:border-rose-400 focus:ring-rose-400' : 'border-slate-200 focus:border-[#0D47A1] focus:ring-[#0D47A1]'} rounded-2xl focus:ring-1 outline-none transition-all text-xs`}
                 />
                 <button
                   type="button"
@@ -336,21 +416,23 @@ const TechApply = () => {
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
+              {fieldErrors.password && (
+                <span className="text-[10px] font-semibold text-rose-500 mt-0.5">{fieldErrors.password}</span>
+              )}
             </div>
 
             {/* Confirm Password */}
             <div className="flex flex-col gap-1">
               <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Confirm Password</label>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Lock className={`absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 ${fieldErrors.confirmPassword ? 'text-rose-400' : 'text-slate-400'}`} />
                 <input
                   type={showConfirmPassword ? "text" : "password"}
                   name="confirmPassword"
                   value={form.confirmPassword}
                   onChange={handleChange}
                   placeholder="Re-enter password"
-                  className="w-full pl-11 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] outline-none transition-all text-xs"
-                  required
+                  className={`w-full pl-11 pr-10 py-2.5 bg-slate-50 border ${fieldErrors.confirmPassword ? 'border-rose-400 focus:border-rose-400 focus:ring-rose-400' : 'border-slate-200 focus:border-[#0D47A1] focus:ring-[#0D47A1]'} rounded-2xl focus:ring-1 outline-none transition-all text-xs`}
                 />
                 <button
                   type="button"
@@ -360,49 +442,136 @@ const TechApply = () => {
                   {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
+              {fieldErrors.confirmPassword && (
+                <span className="text-[10px] font-semibold text-rose-500 mt-0.5">{fieldErrors.confirmPassword}</span>
+              )}
             </div>
           </div>
 
-          {/* Service Categories Selection (Multi-select Chips) */}
-          <div className="flex flex-col gap-1.5">
+          {/* Service Categories Selection (Input Field with Dynamic Dropdown) */}
+          <div className="flex flex-col gap-1 relative" ref={servicesDropdownRef}>
             <div className="flex justify-between items-center">
               <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Services You Provide</label>
               <span className="text-[10px] text-[#0D47A1] font-bold">{selectedServices.length} Selected</span>
             </div>
             
-            <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-2 bg-slate-50 border border-slate-200 rounded-2xl">
-              {availableServices.map((srv) => {
-                const isSelected = selectedServices.includes(srv);
-                return (
-                  <button
-                    key={srv}
-                    type="button"
-                    onClick={() => toggleService(srv)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all border ${
-                      isSelected
-                        ? 'bg-[#0D47A1] text-white border-[#0D47A1] shadow-xs'
-                        : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
-                    }`}
-                  >
-                    {isSelected && <Check className="w-3.5 h-3.5" />}
-                    {srv}
-                  </button>
-                );
-              })}
+            {/* Input Trigger Field */}
+            <div
+              onClick={() => setIsServicesDropdownOpen(!isServicesDropdownOpen)}
+              className={`w-full min-h-[42px] pl-11 pr-10 py-2 bg-slate-50 border ${
+                fieldErrors.services
+                  ? 'border-rose-400 focus:ring-rose-400'
+                  : isServicesDropdownOpen
+                  ? 'border-[#0D47A1] ring-1 ring-[#0D47A1]'
+                  : 'border-slate-200 hover:border-slate-300'
+              } rounded-2xl cursor-pointer transition-all flex items-center flex-wrap gap-1 relative`}
+            >
+              <Briefcase className={`absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 ${fieldErrors.services ? 'text-rose-400' : 'text-slate-400'} pointer-events-none`} />
+              
+              {selectedServices.length === 0 ? (
+                <span className="text-xs text-slate-400">Select services from dropdown</span>
+              ) : (
+                <div className="flex flex-wrap gap-1 pr-2">
+                  {selectedServices.map((s) => (
+                    <span
+                      key={s}
+                      className="inline-flex items-center gap-1 bg-[#0D47A1] text-white text-[11px] font-semibold px-2.5 py-0.5 rounded-lg"
+                    >
+                      {s}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleService(s);
+                        }}
+                        className="hover:text-red-200 transition-colors ml-0.5"
+                      >
+                        <X size={12} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <ChevronDown
+                className={`absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 transition-transform duration-200 pointer-events-none ${
+                  isServicesDropdownOpen ? 'rotate-180 text-[#0D47A1]' : ''
+                }`}
+              />
             </div>
+
+            {/* Dropdown Menu */}
+            {isServicesDropdownOpen && (
+              <div className="absolute top-full left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-2 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
+                {availableServices.length > 5 && (
+                  <div className="p-1 mb-1 border-b border-slate-100">
+                    <input
+                      type="text"
+                      placeholder="Search services..."
+                      value={serviceSearch}
+                      onChange={(e) => setServiceSearch(e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-[#0D47A1]"
+                    />
+                  </div>
+                )}
+
+                <div className="max-h-48 overflow-y-auto flex flex-col gap-1">
+                  {availableServices
+                    .filter((s) => s.toLowerCase().includes(serviceSearch.toLowerCase()))
+                    .map((srv) => {
+                      const isSelected = selectedServices.includes(srv);
+                      return (
+                        <div
+                          key={srv}
+                          onClick={() => toggleService(srv)}
+                          className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
+                            isSelected
+                              ? 'bg-blue-50 text-[#0D47A1]'
+                              : 'text-slate-700 hover:bg-slate-50'
+                          }`}
+                        >
+                          <span className="flex items-center gap-2">
+                            <span className={`w-4 h-4 rounded-md flex items-center justify-center border transition-all ${
+                              isSelected ? 'bg-[#0D47A1] border-[#0D47A1] text-white' : 'border-slate-300 bg-white'
+                            }`}>
+                              {isSelected && <Check size={12} strokeWidth={3} />}
+                            </span>
+                            {srv}
+                          </span>
+                          {isSelected && (
+                            <span className="text-[10px] font-bold text-[#0D47A1] uppercase tracking-wider">
+                              Selected
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+
+                  {availableServices.filter((s) => s.toLowerCase().includes(serviceSearch.toLowerCase())).length === 0 && (
+                    <div className="py-3 text-center text-xs text-slate-400">
+                      No services found matching "{serviceSearch}"
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {fieldErrors.services && (
+              <span className="text-[10px] font-semibold text-rose-500 mt-0.5">{fieldErrors.services}</span>
+            )}
           </div>
 
           {/* Operational City Selection (Dropdown) */}
           <div className="flex flex-col gap-1">
             <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Operating City / Territory</label>
             <div className="relative">
-              <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none z-10" />
+              <MapPin className={`absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 ${fieldErrors.city ? 'text-rose-400' : 'text-slate-400'} pointer-events-none z-10`} />
               <select
                 name="city"
                 value={form.city}
                 onChange={handleChange}
-                className="w-full pl-11 pr-8 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] outline-none transition-all text-xs appearance-none font-medium text-slate-800"
-                required
+                className={`w-full pl-11 pr-8 py-2.5 bg-slate-50 border ${fieldErrors.city ? 'border-rose-400 focus:border-rose-400 focus:ring-rose-400' : 'border-slate-200 focus:border-[#0D47A1] focus:ring-[#0D47A1]'} rounded-2xl focus:ring-1 outline-none transition-all text-xs appearance-none font-medium text-slate-800`}
                 disabled={citiesLoading || availableCities.length === 0}
               >
                 {citiesLoading && <option value="">Loading cities…</option>}
@@ -416,47 +585,54 @@ const TechApply = () => {
                 ))}
               </select>
             </div>
+            {fieldErrors.city && (
+              <span className="text-[10px] font-semibold text-rose-500 mt-0.5">{fieldErrors.city}</span>
+            )}
             {!citiesLoading && availableCities.length === 0 && (
-              // Better than silently offering nothing: this is the state an
-              // applicant hits before the admin has added any operational city.
               <p className="text-[11px] text-amber-600 mt-0.5">
                 No service cities have been configured yet. Please check back soon or contact support.
               </p>
             )}
           </div>
 
-          {/* Aadhar Photo Upload (WebP Converted -> Cloudinary) */}
-          <div className="flex flex-col gap-2 p-3 bg-blue-50/60 border border-blue-200 rounded-2xl">
+          {/* Aadhar Photo Upload */}
+          <div className={`flex flex-col gap-2 p-3 bg-blue-50/60 border ${fieldErrors.aadharFront || fieldErrors.aadharBack ? 'border-rose-300 bg-rose-50/30' : 'border-blue-200'} rounded-2xl`}>
             <label className="text-xs font-bold text-[#0D47A1] uppercase tracking-wide flex items-center gap-1">
               <ShieldCheck size={14} /> Aadhar Card Photos (Required)
             </label>
-            <p className="text-[10px] text-slate-500">Photos will automatically convert to WebP format before Cloudinary upload.</p>
+            <p className="text-[10px] text-slate-500">Upload clear front and back photos of your Aadhar Card for identity verification.</p>
             
             <div className="grid grid-cols-2 gap-2">
               {/* Front Photo */}
               <div className="flex flex-col gap-1">
                 <span className="text-[10px] font-semibold text-slate-700">Aadhar Front</span>
-                <label className="border-2 border-dashed border-blue-300 hover:border-[#0D47A1] bg-white rounded-xl p-2 flex flex-col items-center justify-center cursor-pointer transition-all min-h-[65px] relative overflow-hidden">
+                <label className={`border-2 border-dashed ${fieldErrors.aadharFront ? 'border-rose-400 bg-rose-50/50' : 'border-blue-300 hover:border-[#0D47A1] bg-white'} rounded-xl p-2 flex flex-col items-center justify-center cursor-pointer transition-all min-h-[65px] relative overflow-hidden`}>
                   {aadharFrontPreview ? (
                     <img src={aadharFrontPreview} alt="Aadhar Front" className="w-full h-14 object-cover rounded-lg" />
                   ) : (
-                    <span className="text-[10px] font-bold text-[#0D47A1] text-center">📷 Upload Front (.webp)</span>
+                    <span className="text-[10px] font-bold text-[#0D47A1] text-center">📷 Upload Front</span>
                   )}
-                  <input type="file" accept="image/*" onChange={handleAadharFrontChange} className="hidden" required />
+                  <input type="file" accept="image/*" onChange={handleAadharFrontChange} className="hidden" />
                 </label>
+                {fieldErrors.aadharFront && (
+                  <span className="text-[10px] font-semibold text-rose-500">{fieldErrors.aadharFront}</span>
+                )}
               </div>
 
               {/* Back Photo */}
               <div className="flex flex-col gap-1">
                 <span className="text-[10px] font-semibold text-slate-700">Aadhar Back</span>
-                <label className="border-2 border-dashed border-blue-300 hover:border-[#0D47A1] bg-white rounded-xl p-2 flex flex-col items-center justify-center cursor-pointer transition-all min-h-[65px] relative overflow-hidden">
+                <label className={`border-2 border-dashed ${fieldErrors.aadharBack ? 'border-rose-400 bg-rose-50/50' : 'border-blue-300 hover:border-[#0D47A1] bg-white'} rounded-xl p-2 flex flex-col items-center justify-center cursor-pointer transition-all min-h-[65px] relative overflow-hidden`}>
                   {aadharBackPreview ? (
                     <img src={aadharBackPreview} alt="Aadhar Back" className="w-full h-14 object-cover rounded-lg" />
                   ) : (
-                    <span className="text-[10px] font-bold text-[#0D47A1] text-center">📷 Upload Back (.webp)</span>
+                    <span className="text-[10px] font-bold text-[#0D47A1] text-center">📷 Upload Back</span>
                   )}
-                  <input type="file" accept="image/*" onChange={handleAadharBackChange} className="hidden" required />
+                  <input type="file" accept="image/*" onChange={handleAadharBackChange} className="hidden" />
                 </label>
+                {fieldErrors.aadharBack && (
+                  <span className="text-[10px] font-semibold text-rose-500">{fieldErrors.aadharBack}</span>
+                )}
               </div>
             </div>
           </div>
@@ -471,7 +647,7 @@ const TechApply = () => {
                 : 'bg-[#FFD600] text-[#0D47A1] hover:bg-yellow-400 shadow-yellow-400/10'
             }`}
           >
-            {submitted ? '✓ Registration Request Sent!' : uploading ? 'Converting Image to WebP...' : 'Submit Verification Request'}
+            {submitted ? '✓ Registration Request Sent!' : uploading ? 'Processing Image...' : 'Submit Verification Request'}
           </button>
         </form>
 
