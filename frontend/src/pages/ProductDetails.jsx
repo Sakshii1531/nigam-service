@@ -5,6 +5,7 @@ import {
   Trash2, CreditCard, ShoppingBag, Truck, Info, ChevronRight, X
 } from 'lucide-react';
 import { apiRequest } from '../lib/apiClient';
+import { useCart } from '../lib/cartStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 
@@ -21,9 +22,8 @@ const ProductDetails = () => {
   const productId = queryParams.get('id');
 
   // State variables
-  const [cartCount, setCartCount] = useState(0);
+  const { items: cartItems, count: cartCount, addItem, removeItem, clear: clearCart } = useCart();
   const [showCartDrawer, setShowCartDrawer] = useState(false);
-  const [cartItems, setCartItems] = useState([]);
   const [showAddedToast, setShowAddedToast] = useState(false);
   
   // Checkout Modal State
@@ -67,42 +67,9 @@ const ProductDetails = () => {
       .catch((err) => setProductError(err.message || 'Could not load this product.'));
   }, [productId]);
 
-  // Load cart from LocalStorage on mount
-  useEffect(() => {
-    const savedCart = localStorage.getItem('nigam_cart');
-    if (savedCart) {
-      const items = JSON.parse(savedCart);
-      setCartItems(items);
-      setCartCount(items.reduce((total, item) => total + item.quantity, 0));
-    }
-  }, []);
-
-  // Sync cart helper
-  const updateCart = (newItems) => {
-    setCartItems(newItems);
-    setCartCount(newItems.reduce((total, item) => total + item.quantity, 0));
-    localStorage.setItem('nigam_cart', JSON.stringify(newItems));
-  };
-
   // Add to Cart handler
   const handleAddToCart = () => {
-    const existingIndex = cartItems.findIndex(item => item.id === product.id);
-    let updatedCart = [...cartItems];
-
-    if (existingIndex > -1) {
-      updatedCart[existingIndex].quantity += 1;
-    } else {
-      updatedCart.push({
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        icon: style.icon,
-        condition: product.condition,
-        quantity: 1
-      });
-    }
-
-    updateCart(updatedCart);
+    addItem(product, { icon: style.icon, condition: product.condition });
     setShowAddedToast(true);
     setTimeout(() => {
       setShowAddedToast(false);
@@ -111,8 +78,7 @@ const ProductDetails = () => {
 
   // Remove from Cart
   const handleRemoveFromCart = (id) => {
-    const updated = cartItems.filter(item => item.id !== id);
-    updateCart(updated);
+    removeItem(id);
   };
 
   // Places a real order. This previously just waited two seconds and showed a
@@ -124,13 +90,13 @@ const ProductDetails = () => {
         method: 'POST',
         auth: true,
         body: {
-          items: cartItems.map((i) => ({ productId: i.id, quantity: i.quantity })),
+          items: cartItems.map((i) => ({ productId: i.id, quantity: i.qty })),
           address: { name: fullName, house: address },
           paymentMethod: 'Cash',
         },
       });
       setPlacedOrder(orderRes || null);
-      updateCart([]);
+      clearCart();
       setCheckoutStep('success');
     } catch (err) {
       setCheckoutError(err.message || 'Could not place your order.');
@@ -408,7 +374,7 @@ const ProductDetails = () => {
                         
                         <div className="flex items-baseline gap-2 mt-1.5">
                           <span className="text-xs font-bold text-[#0D47A1]">₹{item.price.toLocaleString('en-IN')}</span>
-                          <span className="text-[10px] text-text-secondary">Qty: {item.quantity}</span>
+                          <span className="text-[10px] text-text-secondary">Qty: {item.qty}</span>
                         </div>
                       </div>
 
@@ -428,15 +394,15 @@ const ProductDetails = () => {
               {cartItems.length > 0 && (
                 <div className="p-5 border-t border-border-color bg-slate-50 flex flex-col gap-4">
                   <div className="flex justify-between items-baseline text-xs text-text-secondary">
-                    <span>Subtotal ({cartItems.reduce((acc, i) => acc + i.quantity, 0)} items)</span>
+                    <span>Subtotal ({cartItems.reduce((acc, i) => acc + i.qty, 0)} items)</span>
                     <strong className="text-sm font-black text-text-primary">
-                      ₹{cartItems.reduce((acc, i) => acc + (i.price * i.quantity), 0).toLocaleString('en-IN')}
+                      ₹{cartItems.reduce((acc, i) => acc + (i.price * i.qty), 0).toLocaleString('en-IN')}
                     </strong>
                   </div>
                   
                   <div className="flex gap-2">
                     <button 
-                      onClick={() => updateCart([])}
+                      onClick={() => clearCart()}
                       className="px-3 bg-white hover:bg-red-50 text-red-500 border border-red-200 rounded-xl transition-all cursor-pointer flex items-center justify-center shadow-sm"
                       title="Clear Cart"
                     >
