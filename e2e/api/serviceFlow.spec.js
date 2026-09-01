@@ -99,7 +99,9 @@ test.describe('technician rejects an assignment', () => {
     // spec running in parallel may legitimately have picked it up already —
     // which is the behaviour we want, just not something a test can pin down.
     expect(String(sr.technician?.id ?? sr.technician ?? '')).not.toBe(tech.technicianId);
-    expect(sr.timeline.some((t) => /Rejected by technician/.test(t.description || ''))).toBe(true);
+    // Wording is the service's to choose (it reads "Declined by technician — …");
+    // what matters is that the decline is recorded on the timeline at all.
+    expect(sr.timeline.some((t) => /(declined|rejected) by technician/i.test(t.description || ''))).toBe(true);
 
     // The customer must stop seeing the technician who is not coming.
     const bkRes = await request.get(`/api/v1/bookings/${booking.id}`, {
