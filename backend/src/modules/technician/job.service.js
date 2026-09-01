@@ -137,6 +137,63 @@ export async function listActiveJobs(technicianId) {
     .sort({ createdAt: -1 });
 }
 
+export async function listJobHistory(technicianId, { status = 'all', type = 'all', search = '', page = 1, limit = 50 } = {}) {
+  const query = { technician: technicianId };
+
+  if (status === 'completed') {
+    query.activeStep = 'completed';
+  } else if (status === 'cancelled') {
+    query.repairStatus = 'cancelled';
+  } else if (status === 'in_progress') {
+    query.activeStep = { $nin: ['completed', 'idle'] };
+  } else {
+    query.activeStep = { $in: ['completed', 'completed_pending', 'repaircomplete'] };
+  }
+
+  if (type === 'quick') {
+    query.type = 'NCC Paid Service';
+  } else if (type === 'warranty' || type === 'foc') {
+    query.type = { $in: ['Brand Warranty', 'Under Warranty'] };
+  } else if (type === 'amc') {
+    query.type = 'AMC Service';
+  }
+
+  const skip = (Math.max(1, Number(page)) - 1) * Number(limit);
+
+  const [items, total] = await Promise.all([
+    Job.find(query)
+      .populate({ path: 'serviceRequest', populate: { path: 'user booking' } })
+      .populate(AMC_POPULATE)
+      .populate(EW_POPULATE)
+      .sort({ updatedAt: -1, createdAt: -1 })
+      .skip(skip)
+      .limit(Number(limit)),
+    Job.countDocuments(query)
+  ]);
+
+  let filtered = items;
+  if (search && search.trim()) {
+    const s = search.trim().toLowerCase();
+    filtered = items.filter(j => {
+      const sr = j.serviceRequest;
+      const srTitle = (sr?.title || sr?.serviceType || '').toLowerCase();
+      const srCategory = (sr?.category || '').toLowerCase();
+      const srBrand = (sr?.brand || '').toLowerCase();
+      const custName = (sr?.user?.name || sr?.contactName || '').toLowerCase();
+      const jobId = String(j._id || j.id || '').toLowerCase();
+      const ticketId = (sr?.ticketId || '').toLowerCase();
+      return srTitle.includes(s) || srCategory.includes(s) || srBrand.includes(s) || custName.includes(s) || jobId.includes(s) || ticketId.includes(s);
+    });
+  }
+
+  return {
+    items: filtered,
+    total,
+    page: Number(page),
+    limit: Number(limit),
+  };
+}
+
 export async function getJob(technicianId, id) {
   return findOwnedJob(technicianId, id);
 }

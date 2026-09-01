@@ -38,6 +38,14 @@ jobRouter.get('/active', async (req, res, next) => {
   }
 });
 
+jobRouter.get('/history', async (req, res, next) => {
+  try {
+    ok(res, await jobService.listJobHistory(req.technician.id, req.query));
+  } catch (err) {
+    next(err);
+  }
+});
+
 jobRouter.post(
   '/accept/:serviceRequestId',
   validate(serviceRequestIdParamSchema, 'params'),
