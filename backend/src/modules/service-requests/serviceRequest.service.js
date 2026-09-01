@@ -10,20 +10,39 @@ import { parsePagination, paginationMeta } from '../../utils/pagination.js';
 import { emit as emitNotification } from '../notifications/notification.service.js';
 import { getIO } from '../../sockets/io.js';
 
-export async function createServiceRequest(data) {
-  const serviceRequest = await ServiceRequest.create({
-    ...data,
-    status: 'New',
-    timeline: [{ stepLabel: 'New', done: true, timestamp: new Date(), description: 'Request created' }],
-  });
+/** `session` opts this write into a caller's transaction (see
+ * utils/transaction.js) — createBooking uses it so a booking and its service
+ * request can never be half-created. Omitted, it behaves exactly as before. */
+export async function createServiceRequest(data, { session } = {}) {
+  // Model.create takes an array when given options, otherwise it reads the
+  // options object as a second document to insert.
+  const [serviceRequest] = await ServiceRequest.create(
+    [
+      {
+        ...data,
+        status: 'New',
+        timeline: [{ stepLabel: 'New', done: true, timestamp: new Date(), description: 'Request created' }],
+      },
+    ],
+    session ? { session } : {},
+  );
 
-  if (serviceRequest.brand && serviceRequest.warranty === 'In Warranty') {
-    await emitNotification('brand.warranty_claim', {
-      reason: `New Brand Warranty claim raised for Service Request ${serviceRequest.humanId || serviceRequest.id}`,
-    });
-  }
+  // Inside a transaction this is deliberately NOT sent here: a notification is
+  // an external side effect that cannot be rolled back, so telling a brand
+  // about a claim whose write later aborts would be a lie. The caller that
+  // owns the transaction re-runs this after the commit.
+  if (!session) await emitWarrantyClaimNotification(serviceRequest);
 
   return serviceRequest;
+}
+
+/** Post-commit half of createServiceRequest's brand notification. Safe to call
+ * with any service request — it no-ops unless the claim actually qualifies. */
+export async function emitWarrantyClaimNotification(serviceRequest) {
+  if (!serviceRequest?.brand || serviceRequest.warranty !== 'In Warranty') return;
+  await emitNotification('brand.warranty_claim', {
+    reason: `New Brand Warranty claim raised for Service Request ${serviceRequest.humanId || serviceRequest.id}`,
+  });
 }
 
 async function findOr404(id) {
@@ -50,8 +69,13 @@ export async function getServiceRequestDetail(id) {
 /** Server-side transition validation — the frontend's own status enum is not
  * trusted as the source of truth for what moves are legal (Phase 4 exit
  * criterion: "status transitions validated server-side, not client-trusted"). */
-export async function transitionStatus(id, toStatus, { description } = {}) {
-  const serviceRequest = await findOr404(id);
+export async function transitionStatus(id, toStatus, { description, session } = {}) {
+  // Read through the same session as the write, or the document created
+  // moments ago inside an uncommitted transaction is invisible here.
+  const serviceRequest = session
+    ? await ServiceRequest.findById(id).session(session)
+    : await findOr404(id);
+  if (!serviceRequest) throw new ApiError(404, 'Service request not found');
   const allowed = SERVICE_REQUEST_TRANSITIONS[serviceRequest.status] || [];
 
   if (!allowed.includes(toStatus)) {
@@ -63,7 +87,7 @@ export async function transitionStatus(id, toStatus, { description } = {}) {
 
   serviceRequest.status = toStatus;
   serviceRequest.timeline.push({ stepLabel: toStatus, done: true, timestamp: new Date(), description });
-  await serviceRequest.save();
+  await serviceRequest.save(session ? { session } : undefined);
   return serviceRequest;
 }
 
