@@ -457,13 +457,13 @@ const BuyNew = () => {
                   <div 
                     key={product.id}
                     onClick={() => navigate(`/buy-new/details/${encodeURIComponent(finalCategory)}/${encodeURIComponent(product.name)}`)}
-                    className="bg-white border border-slate-200/80 rounded-2xl p-3 flex flex-col gap-3.5 cursor-pointer hover:border-brand-blue/30 shadow-xs hover:shadow-sm transition-all"
+                    className="bg-white border border-slate-200/90 hover:border-[#0D47A1]/40 rounded-3xl p-4 md:p-5 flex flex-col gap-4 cursor-pointer shadow-xs hover:shadow-xl transition-all duration-300 relative group overflow-hidden"
                   >
-                    <div className="flex gap-4">
-                      {/* Left: Image Container with Heart Icon */}
-                      <div className="relative w-28 h-28 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center p-2.5 shrink-0">
+                    <div className="flex gap-4 md:gap-5 items-start">
+                      {/* Left: Image Container with Floating Heart */}
+                      <div className="relative w-28 h-28 md:w-32 md:h-32 bg-gradient-to-br from-slate-50 to-blue-50/30 border border-slate-100 rounded-2xl flex items-center justify-center p-2.5 shrink-0 overflow-hidden shadow-2xs">
                         <img 
-                          src={getApplianceImg(finalCategory)} 
+                          src={product.imageUrl || getApplianceImg(finalCategory)} 
                           alt={product.name} 
                           className="w-full h-full object-contain mix-blend-multiply" 
                         />
@@ -471,7 +471,7 @@ const BuyNew = () => {
                         {/* Floating Wishlist Heart */}
                         <button
                           onClick={(e) => toggleWishlist(product, e)}
-                          className="absolute top-1.5 right-1.5 w-7 h-7 bg-white/95 rounded-full flex items-center justify-center shadow-xs border border-slate-100 hover:scale-110 active:scale-95 transition-all cursor-pointer"
+                          className="absolute top-2 right-2 w-7 h-7 bg-white/90 backdrop-blur-xs rounded-full flex items-center justify-center shadow-md border border-slate-100 hover:scale-110 active:scale-95 transition-all cursor-pointer z-10"
                         >
                           <Heart 
                             size={14} 
@@ -481,73 +481,75 @@ const BuyNew = () => {
                         </button>
                       </div>
 
-                      {/* Right: Product details */}
-                      <div className="flex-1 flex flex-col text-left justify-between min-w-0">
+                      {/* Right: Product Details */}
+                      <div className="flex-1 flex flex-col text-left justify-between min-w-0 space-y-2">
                         <div>
-                          {/* Title & Specifications Description */}
-                          <h4 className="text-[13px] font-black text-slate-800 leading-snug truncate">
-                            {product.name}
-                          </h4>
-                          <p className="text-[10px] text-slate-400 font-semibold truncate mt-0.5">
-                            {(product.specs || []).join(' | ')}
-                          </p>
-
-                          {/* Ratings and Assured Tag — hidden until the product is actually rated */}
-                          <div className="flex items-center gap-1.5 mt-1.5">
-                            {rating && (
-                              <span className="bg-green-600 text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded flex items-center gap-0.5 shrink-0">
-                                {rating} <Star size={8} fill="currentColor" />
+                          {/* Brand & Assured Badges Row */}
+                          <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                            {product.brand && (
+                              <span className="text-[9px] font-mono font-black text-[#0D47A1] bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                {product.brand}
                               </span>
                             )}
-                            <span className="inline-flex items-center gap-0.5 text-[8px] font-black italic bg-[#E0F2FE] text-blue-700 border border-blue-200 px-1 rounded select-none">
+                            <span className="inline-flex items-center gap-1 text-[8px] font-black bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-2 py-0.5 rounded-full shadow-2xs">
                               ★ Assured
                             </span>
+                            {product.warrantyMonths && (
+                              <span className="inline-flex items-center text-[8px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full">
+                                🛡️ {product.warrantyMonths}M Warranty
+                              </span>
+                            )}
                           </div>
+
+                          {/* Product Title */}
+                          <h4 className="text-sm md:text-base font-black text-slate-900 leading-snug group-hover:text-[#0D47A1] transition-colors line-clamp-2">
+                            {product.name}
+                          </h4>
+
+                          {/* Feature Spec Pills (Clean & Uncluttered) */}
+                          {product.specs && product.specs.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {product.specs.slice(0, 4).map((spec, sIdx) => (
+                                <span 
+                                  key={sIdx} 
+                                  className="bg-slate-100/80 border border-slate-200/70 text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded-md"
+                                >
+                                  {spec}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
 
-                        {/* Price Details */}
-                        <div className="mt-2.5">
-                          <div className="flex items-center gap-2">
+                        {/* Pricing Details */}
+                        <div className="pt-1">
+                          <div className="flex flex-wrap items-baseline gap-2">
+                            <span className="text-slate-900 font-black text-base md:text-lg">
+                              ₹{product.price.toLocaleString()}
+                            </span>
                             {discount !== null && (
                               <>
-                                <span className="text-[#388E3C] font-black text-[11px]">
-                                  ↓{discount}%
-                                </span>
-                                <span className="text-slate-400 line-through text-[11px] font-bold">
+                                <span className="text-slate-400 line-through text-xs font-bold">
                                   ₹{originalPrice.toLocaleString()}
+                                </span>
+                                <span className="bg-emerald-100 text-emerald-800 text-[10px] font-black px-2 py-0.5 rounded-lg border border-emerald-200">
+                                  ↓{discount}% OFF
                                 </span>
                               </>
                             )}
-                            <span className="text-slate-800 font-extrabold text-sm">
-                              ₹{product.price.toLocaleString()}
-                            </span>
                           </div>
 
-                          {/* The trade-in value depends on the customer's own
-                              device, so it cannot be quoted on a product card.
-                              This showed a flat 15% off as an "exchange offer". */}
-                          <p className="text-[10px] text-[#0A52B5] font-extrabold mt-1">
-                            Exchange offer available
-                          </p>
-
-                          {/* Delivery info */}
-                          <p className="text-[10px] text-slate-500 font-semibold mt-0.5">
-                            Delivery by <span className="text-slate-700 font-extrabold">Tomorrow</span> &nbsp;|&nbsp; <span className="text-green-600 font-bold">Free Shipping</span>
-                          </p>
+                          {/* Shipping & Delivery Footer */}
+                          <div className="flex flex-wrap items-center justify-between gap-2 mt-2 pt-2 border-t border-slate-100 text-[10px]">
+                            <span className="text-[#0D47A1] font-black">
+                              ✓ Exchange offer available
+                            </span>
+                            <span className="text-slate-500 font-semibold">
+                              Delivery by <strong className="text-slate-800">Tomorrow</strong> &nbsp;|&nbsp; <strong className="text-emerald-600">Free Shipping</strong>
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-
-                    {/* Specification Badges Footer */}
-                    <div className="flex flex-wrap gap-1 border-t border-slate-100 pt-2">
-                      {product.specs.slice(0, 3).map((spec, sIdx) => (
-                        <span 
-                          key={sIdx} 
-                          className="bg-[#F1F5F9] border border-slate-200/80 text-slate-500 text-[9px] font-bold px-2 py-0.5 rounded-md"
-                        >
-                          {spec}
-                        </span>
-                      ))}
                     </div>
                   </div>
                 );
