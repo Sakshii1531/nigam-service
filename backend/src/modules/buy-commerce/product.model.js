@@ -18,6 +18,7 @@ const productSchema = new mongoose.Schema(
     stock: { type: Number, default: 0 },
     sku: { type: String, unique: true, sparse: true },
     imageUrl: String,
+    images: { type: [String], default: [] },
     isActive: { type: Boolean, default: true, index: true },
   },
   { timestamps: true },

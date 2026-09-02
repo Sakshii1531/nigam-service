@@ -45,6 +45,11 @@ const Products = () => {
     stock: item.stock ?? 0,
     warranty: item.warrantyMonths ? `${item.warrantyMonths} Months` : 'None',
     image: item.imageUrl || null,
+    rawPrice: item.price,
+    rawOriginalPrice: item.originalPrice,
+    rawSpecs: item.specs || [],
+    rawBenefits: item.benefits || [],
+    rawImages: item.images || (item.imageUrl ? [item.imageUrl] : []),
   });
 
   useEffect(() => {
@@ -63,6 +68,7 @@ const Products = () => {
 
   // Modal Form States
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
   const [newName, setNewName] = useState('');
   const [newSku, setNewSku] = useState('');
   const [newCategory, setNewCategory] = useState('Air Conditioner');
@@ -82,6 +88,7 @@ const Products = () => {
   const [customBenefitInput, setCustomBenefitInput] = useState('');
 
   const [newImage, setNewImage] = useState(null);
+  const [newImages, setNewImages] = useState([]);
 
   // Helper to generate SKU based on Product Name & Category
   const generateSkuFromName = (nameStr = '', categoryName = 'Air Conditioner') => {
@@ -125,6 +132,45 @@ const Products = () => {
     };
   }, [isModalOpen]);
 
+  const handleOpenAddModal = () => {
+    setEditingProduct(null);
+    setNewName('');
+    setNewSku('');
+    setNewCategory('Air Conditioner');
+    setNewBrand('');
+    setCustomBrand('');
+    setNewPrice('');
+    setNewOriginalPrice('');
+    setNewCondition('New');
+    setNewStock('');
+    setNewWarranty('None');
+    setSpecsTags([]);
+    setBenefitsTags(['Free Doorstep Installation', '7 Days Replacement Policy']);
+    setNewImage(null);
+    setNewImages([]);
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEditModal = (p) => {
+    setEditingProduct(p);
+    setNewName(p.name || '');
+    setNewSku(p.sku !== '—' ? p.sku : '');
+    setNewCategory(p.category || 'Air Conditioner');
+    setNewBrand(p.brand !== '—' ? p.brand : '');
+    setCustomBrand('');
+    setNewPrice(p.rawPrice ? String(p.rawPrice) : '');
+    setNewOriginalPrice(p.rawOriginalPrice ? String(p.rawOriginalPrice) : '');
+    setNewCondition(p.condition || 'New');
+    setNewStock(String(p.stock ?? 0));
+    setNewWarranty(p.warranty && p.warranty !== 'None' ? p.warranty.replace(/[^0-9]/g, '') : 'None');
+    setSpecsTags(p.rawSpecs || []);
+    setBenefitsTags(p.rawBenefits || ['Free Doorstep Installation', '7 Days Replacement Policy']);
+    const imgs = p.rawImages?.length ? p.rawImages : (p.image ? [p.image] : []);
+    setNewImages(imgs);
+    setNewImage(imgs[0] || null);
+    setIsModalOpen(true);
+  };
+
   const toggleSpecTag = (tag) => {
     setSpecsTags((prev) => 
       prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
@@ -159,32 +205,45 @@ const Products = () => {
     }
   };
 
-  const handleAddProduct = async (e) => {
+  const handleSaveProduct = async (e) => {
     e.preventDefault();
     setLoadError('');
     const finalBrand = newBrand === 'Custom' ? customBrand.trim() : newBrand;
 
-    try {
-      const res = await apiRequest('/products', {
-        method: 'POST',
-        auth: true,
-        body: {
-          name: newName,
-          sku: newSku || undefined,
-          category: newCategory,
-          brand: finalBrand || undefined,
-          price: Number(String(newPrice).replace(/[₹,]/g, '')) || 0,
-          originalPrice: newOriginalPrice ? Number(String(newOriginalPrice).replace(/[₹,]/g, '')) : undefined,
-          condition: newCondition,
-          stock: parseInt(newStock, 10) || 0,
-          warrantyMonths: newWarranty === 'None' ? undefined : parseInt(newWarranty, 10) || undefined,
-          specs: specsTags.length > 0 ? specsTags : undefined,
-          benefits: benefitsTags.length > 0 ? benefitsTags : undefined,
-          imageUrl: newImage || undefined,
-        },
-      });
-      setProducts((prev) => [toRow(res), ...prev]);
+    const payload = {
+      name: newName,
+      sku: newSku || undefined,
+      category: newCategory,
+      brand: finalBrand || undefined,
+      price: Number(String(newPrice).replace(/[₹,]/g, '')) || 0,
+      originalPrice: newOriginalPrice ? Number(String(newOriginalPrice).replace(/[₹,]/g, '')) : undefined,
+      condition: newCondition,
+      stock: parseInt(newStock, 10) || 0,
+      warrantyMonths: newWarranty === 'None' ? undefined : parseInt(newWarranty, 10) || undefined,
+      specs: specsTags.length > 0 ? specsTags : undefined,
+      benefits: benefitsTags.length > 0 ? benefitsTags : undefined,
+      imageUrl: newImages[0] || newImage || undefined,
+      images: newImages.length > 0 ? newImages : (newImage ? [newImage] : undefined),
+    };
 
+    try {
+      if (editingProduct) {
+        const res = await apiRequest(`/products/${editingProduct.id}`, {
+          method: 'PUT',
+          auth: true,
+          body: payload,
+        });
+        setProducts((prev) => prev.map((p) => (p.id === editingProduct.id ? toRow(res) : p)));
+      } else {
+        const res = await apiRequest('/products', {
+          method: 'POST',
+          auth: true,
+          body: payload,
+        });
+        setProducts((prev) => [toRow(res), ...prev]);
+      }
+
+      setEditingProduct(null);
       setNewName('');
       setNewSku('');
       setNewCategory('Air Conditioner');
@@ -198,9 +257,10 @@ const Products = () => {
       setSpecsTags([]);
       setBenefitsTags(['Free Doorstep Installation', '7 Days Replacement Policy']);
       setNewImage(null);
+      setNewImages([]);
       setIsModalOpen(false);
     } catch (err) {
-      setLoadError(err.message || 'Could not add the product.');
+      setLoadError(err.message || 'Could not save the product.');
     }
   };
 
@@ -242,16 +302,7 @@ const Products = () => {
               />
             </div>
             <button 
-              onClick={() => {
-                setIsModalOpen(true);
-                setNewName('');
-                setNewSku('');
-                setNewPrice('');
-                setNewOriginalPrice('');
-                setNewStock('');
-                setNewImage(null);
-                setSpecsTags([]);
-              }} 
+              onClick={handleOpenAddModal} 
               className="bg-[#0D47A1] hover:bg-blue-800 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-colors cursor-pointer shadow-sm"
             >
               <Plus size={16} /> Add Catalog Product
@@ -323,7 +374,14 @@ const Products = () => {
                       </span>
                     </td>
                     <td className="p-4 text-slate-500 font-semibold">{p.warranty}</td>
-                    <td className="p-4 pr-6 text-right space-x-2">
+                    <td className="p-4 pr-6 text-right space-x-1">
+                      <button 
+                        onClick={() => handleOpenEditModal(p)}
+                        className="text-slate-400 hover:text-[#0D47A1] inline-block p-1.5 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                        title="Edit Product Details"
+                      >
+                        <Edit2 size={16} />
+                      </button>
                       <button 
                         onClick={() => handleDelete(p.id)}
                         className="text-slate-400 hover:text-red-600 inline-block p-1.5 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
@@ -355,20 +413,22 @@ const Products = () => {
                   <Package size={20} />
                 </div>
                 <div>
-                  <h3 className="font-black text-lg text-slate-800 tracking-tight">Add New Catalog Product</h3>
+                  <h3 className="font-black text-lg text-slate-800 tracking-tight">
+                    {editingProduct ? 'Edit Product Details' : 'Add New Catalog Product'}
+                  </h3>
                   <p className="text-xs text-slate-400 font-semibold">Organized product details and quick-click spec chips</p>
                 </div>
               </div>
               <button 
                 type="button"
-                onClick={() => { setIsModalOpen(false); setNewImage(null); }} 
+                onClick={() => { setIsModalOpen(false); setNewImage(null); setEditingProduct(null); }} 
                 className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors cursor-pointer"
               >
                 <X size={18} />
               </button>
             </div>
             
-            <form onSubmit={handleAddProduct} className="flex-1 overflow-y-auto p-6 md:p-7 space-y-6 overscroll-contain custom-scrollbar text-left">
+            <form onSubmit={handleSaveProduct} className="flex-1 overflow-y-auto p-6 md:p-7 space-y-6 overscroll-contain custom-scrollbar text-left">
               
               {/* SECTION 1: Product Identity */}
               <div className="bg-slate-50/50 p-5 rounded-2xl border border-slate-200/70 space-y-4">
@@ -710,49 +770,105 @@ const Products = () => {
                   </div>
                 </div>
 
-                {/* Product Image Upload */}
+                {/* Product Images Upload (Maximum 5 Images) */}
                 <div className="pt-2 border-t border-slate-100">
-                  <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
-                    Product Image
-                  </label>
-                  <div className="group border-2 border-dashed border-slate-200 hover:border-[#0D47A1]/50 rounded-2xl p-4 flex flex-col items-center justify-center bg-slate-50/50 hover:bg-blue-50/30 transition-all cursor-pointer relative min-h-[100px]">
-                    {newImage ? (
-                      <div className="relative w-full h-24 flex items-center justify-center bg-white rounded-xl p-2 border border-slate-100 shadow-xs">
-                        <img src={newImage} className="h-full rounded-lg object-contain" alt="Preview" />
-                        <button 
-                          type="button" 
-                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setNewImage(null); }} 
-                          className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center transition-colors shadow-md text-xs font-black cursor-pointer"
-                          title="Remove Image"
-                        >
-                          <X size={14} />
-                        </button>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="w-9 h-9 rounded-full bg-blue-50 group-hover:bg-blue-100 text-[#0D47A1] flex items-center justify-center mb-1.5 transition-colors shadow-inner">
-                          <UploadCloud size={18} />
-                        </div>
-                        <span className="text-xs text-slate-700 font-bold mb-0.5 group-hover:text-[#0D47A1] transition-colors">
-                          Click to Upload Product Image
-                        </span>
-                        <span className="text-[10px] text-slate-400 font-medium">PNG, JPG, WEBP up to 5MB</span>
-                        <input 
-                          type="file" 
-                          accept="image/*"
-                          className="absolute inset-0 opacity-0 cursor-pointer" 
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              const reader = new FileReader();
-                              reader.onloadend = () => setNewImage(reader.result);
-                              reader.readAsDataURL(file);
-                            }
-                          }}
-                        />
-                      </>
-                    )}
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider">
+                      Product Images ({newImages.length}/5)
+                    </label>
+                    <span className="text-[10px] text-[#0D47A1] font-bold">
+                      {newImages.length >= 5 ? 'Max 5 Images Reached' : 'Upload Max 5 Images'}
+                    </span>
                   </div>
+
+                  {newImages.length > 0 ? (
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
+                        {newImages.map((imgSrc, idx) => (
+                          <div key={idx} className="relative group w-full h-24 bg-white rounded-xl p-1.5 border border-slate-200 shadow-2xs flex items-center justify-center overflow-hidden">
+                            <img src={imgSrc} className="max-h-full max-w-full object-contain" alt={`Preview ${idx + 1}`} />
+                            {idx === 0 && (
+                              <span className="absolute top-1 left-1 bg-[#0D47A1] text-white text-[8px] font-black px-1.5 py-0.5 rounded shadow-xs">
+                                Primary
+                              </span>
+                            )}
+                            <button 
+                              type="button" 
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                const updated = newImages.filter((_, i) => i !== idx);
+                                setNewImages(updated);
+                                setNewImage(updated[0] || null);
+                              }} 
+                              className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center transition-colors shadow-md text-xs font-black cursor-pointer"
+                              title="Remove Image"
+                            >
+                              <X size={12} />
+                            </button>
+                          </div>
+                        ))}
+
+                        {/* Add More Button Card (Only if under 5 images) */}
+                        {newImages.length < 5 && (
+                          <div className="relative group w-full h-24 border-2 border-dashed border-blue-200 hover:border-[#0D47A1] rounded-xl flex flex-col items-center justify-center bg-blue-50/30 hover:bg-blue-50/70 transition-all cursor-pointer">
+                            <PlusCircle size={20} className="text-[#0D47A1] mb-1" />
+                            <span className="text-[10px] font-black text-[#0D47A1]">+ Add More</span>
+                            <input 
+                              type="file" 
+                              accept="image/*"
+                              multiple
+                              className="absolute inset-0 opacity-0 cursor-pointer" 
+                              onChange={(e) => {
+                                const files = Array.from(e.target.files || []);
+                                const remaining = 5 - newImages.length;
+                                const allowedFiles = files.slice(0, remaining);
+                                allowedFiles.forEach((file) => {
+                                  const reader = new FileReader();
+                                  reader.onloadend = () => {
+                                    setNewImages((prev) => prev.length < 5 ? [...prev, reader.result] : prev);
+                                    setNewImage((prev) => prev || reader.result);
+                                  };
+                                  reader.readAsDataURL(file);
+                                });
+                              }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-[10px] font-medium text-slate-400">
+                        * Maximum 5 photos allowed. First image labeled <strong className="text-slate-600">Primary</strong> will be used as main thumbnail.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="group border-2 border-dashed border-slate-200 hover:border-[#0D47A1]/50 rounded-2xl p-4 flex flex-col items-center justify-center bg-slate-50/50 hover:bg-blue-50/30 transition-all cursor-pointer relative min-h-[110px]">
+                      <div className="w-10 h-10 rounded-full bg-blue-50 group-hover:bg-blue-100 text-[#0D47A1] flex items-center justify-center mb-1.5 transition-colors shadow-inner">
+                        <UploadCloud size={20} />
+                      </div>
+                      <span className="text-xs text-slate-700 font-bold mb-0.5 group-hover:text-[#0D47A1] transition-colors">
+                        Click to Upload Product Images (Max 5 Images)
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-medium">PNG, JPG, WEBP up to 5MB (Maximum 5 photos)</span>
+                      <input 
+                        type="file" 
+                        accept="image/*"
+                        multiple
+                        className="absolute inset-0 opacity-0 cursor-pointer" 
+                        onChange={(e) => {
+                          const files = Array.from(e.target.files || []);
+                          const allowedFiles = files.slice(0, 5);
+                          allowedFiles.forEach((file) => {
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              setNewImages((prev) => prev.length < 5 ? [...prev, reader.result] : prev);
+                              setNewImage((prev) => prev || reader.result);
+                            };
+                            reader.readAsDataURL(file);
+                          });
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
 
               </div>
@@ -770,7 +886,8 @@ const Products = () => {
                   type="submit" 
                   className="px-6 py-2.5 text-xs font-bold bg-[#0D47A1] hover:bg-blue-800 text-white rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-2"
                 >
-                  <Plus size={16} /> Save Product to Catalog
+                  {editingProduct ? <Check size={16} /> : <Plus size={16} />}
+                  {editingProduct ? 'Update Product Details' : 'Save Product to Catalog'}
                 </button>
               </div>
             </form>
