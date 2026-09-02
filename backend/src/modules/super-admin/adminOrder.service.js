@@ -15,6 +15,7 @@ export async function listOrders({ status, page, limit, sort } = {}) {
   const [items, total] = await Promise.all([
     Order.find(query)
       .populate('user', 'name phone email')
+      .populate('items.product', 'name imageUrl sku price category warrantyMonths')
       .sort(sortObj)
       .skip(skip)
       .limit(lim),
@@ -24,7 +25,9 @@ export async function listOrders({ status, page, limit, sort } = {}) {
 }
 
 export async function getOrder(id) {
-  const order = await Order.findById(id).populate('user', 'name phone email');
+  const order = await Order.findById(id)
+    .populate('user', 'name phone email')
+    .populate('items.product', 'name imageUrl sku price category warrantyMonths');
   if (!order) throw new ApiError(404, 'Order not found');
   return order;
 }

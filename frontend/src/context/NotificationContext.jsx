@@ -37,8 +37,11 @@ export function NotificationProvider({ children }) {
   /** Ask the server for the count rather than counting rows: the inbox is
    *  paginated, so a page of rows is not the total. limit=1 keeps it cheap. */
   const refreshUnread = useCallback(async () => {
-    // No signed-out branch: every caller is already behind an auth guard, and
-    // the exposed count is zeroed at read time when signed out.
+    const { accessToken } = getStoredTokens();
+    if (!accessToken) {
+      setUnreadCount(0);
+      return;
+    }
     try {
       const res = await apiRequest('/notifications?read=false&limit=1', { auth: true, envelope: true });
       setUnreadCount(res?.meta?.total ?? 0);

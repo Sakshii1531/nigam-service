@@ -206,7 +206,7 @@ const Buy = () => {
   const [plansError, setPlansError] = useState('');
 
   useEffect(() => {
-    apiRequest('/warranty-amc/extended-warranty/plans', { auth: true })
+    apiRequest('/warranty-amc/extended-warranty/plans')
       .then((res) => setEwPlans((res || []).map((pl) => ({
         id: pl.id,
         label: pl.name,
