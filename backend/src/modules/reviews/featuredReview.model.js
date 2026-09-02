@@ -1,4 +1,5 @@
-﻿import mongoose from 'mongoose';
+import mongoose from 'mongoose';
+import { applyStandardPlugins } from '../shared/plugins.js';
 
 const featuredReviewSchema = new mongoose.Schema(
   {
@@ -16,6 +17,8 @@ const featuredReviewSchema = new mongoose.Schema(
   },
   { timestamps: true },
 );
+
+applyStandardPlugins(featuredReviewSchema);
 
 export const FeaturedReview =
   mongoose.models.FeaturedReview ||
