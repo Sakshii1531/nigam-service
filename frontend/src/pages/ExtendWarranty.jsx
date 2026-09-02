@@ -65,7 +65,7 @@ const ExtendWarranty = () => {
           apiRequest('/catalog/categories'),
           apiRequest('/catalog/brands').catch(() => ({ data: [] })),
           apiRequest('/appliances', { auth: true }),
-          apiRequest('/warranty-amc/extended-warranty/plans', { auth: true }),
+          apiRequest('/warranty-amc/extended-warranty/plans'),
         ]);
         if (cancelled) return;
         setCategories((catRes || []).map((c) => ({ id: c.key || c.id, name: c.name, icon: c.icon || '🔧' })));

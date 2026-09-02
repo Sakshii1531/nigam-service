@@ -65,6 +65,37 @@ import { requireAuth } from '../../middleware/auth.js';
 
 const router = express.Router();
 
+/**
+ * @route   GET /api/v1/warranty-amc/amc/plans
+ * @desc    The purchasable AMC plans (public catalog)
+ */
+router.get('/amc/plans', async (req, res) => {
+  try {
+    const plans = await AMCPlan.find({ isActive: true }).sort({ price: 1 });
+    return res.json({ data: plans });
+  } catch (err) {
+    return res.status(500).json({ error: { message: err.message } });
+  }
+});
+
+/**
+ * @route   GET /api/v1/warranty-amc/extended-warranty/plans
+ * @desc    The purchasable extension packs (public catalog)
+ */
+router.get('/extended-warranty/plans', async (req, res) => {
+  try {
+    const query = { isActive: true };
+    if (req.query.category) {
+      query.$or = [{ applianceCategory: req.query.category }, { applianceCategory: null }];
+    }
+    const plans = await ExtendedWarrantyPlan.find(query).sort({ durationYears: 1, price: 1 });
+    return res.json({ data: plans });
+  } catch (err) {
+    return res.status(500).json({ error: { message: err.message } });
+  }
+});
+
+// Authentication middleware for user-specific operations
 router.use(requireAuth);
 
 /**
@@ -92,38 +123,6 @@ router.post('/extended-warranty/check-eligibility', (req, res) => {
         reason: eligible ? 'Eligible for Extended Warranty' : 'Appliance is older than 3 years limit for extended warranty'
       }
     });
-  } catch (err) {
-    return res.status(500).json({ error: { message: err.message } });
-  }
-});
-
-/**
- * @route   GET /api/v1/warranty-amc/amc/plans
- * @desc    The purchasable AMC plans. The customer app shipped its own
- *          per-appliance price list, so the plans on offer could not be changed
- *          without a redeploy and did not have to match what was charged.
- */
-router.get('/amc/plans', async (req, res) => {
-  try {
-    const plans = await AMCPlan.find({ isActive: true }).sort({ price: 1 });
-    return res.json({ data: plans });
-  } catch (err) {
-    return res.status(500).json({ error: { message: err.message } });
-  }
-});
-
-/**
- * @route   GET /api/v1/warranty-amc/extended-warranty/plans
- * @desc    The purchasable extension packs (super-admin managed catalogue)
- */
-router.get('/extended-warranty/plans', async (req, res) => {
-  try {
-    const query = { isActive: true };
-    if (req.query.category) {
-      query.$or = [{ applianceCategory: req.query.category }, { applianceCategory: null }];
-    }
-    const plans = await ExtendedWarrantyPlan.find(query).sort({ durationYears: 1, price: 1 });
-    return res.json({ data: plans });
   } catch (err) {
     return res.status(500).json({ error: { message: err.message } });
   }

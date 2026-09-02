@@ -214,7 +214,7 @@ export async function createOrder(userId, { items, useCart, address, couponCode,
 }
 
 async function findOwnedOr404(userId, id) {
-  const order = await Order.findById(id);
+  const order = await Order.findById(id).populate('items.product', 'name imageUrl sku price category warrantyMonths');
   if (!order) throw new ApiError(404, 'Order not found');
   if (String(order.user) !== userId) throw new ApiError(403, 'Not authorized to view this order');
   return order;
@@ -230,7 +230,7 @@ export async function listOrders(userId, { status, page, limit, sort } = {}) {
 
   const { skip, limit: lim, page: pg, sort: sortObj } = parsePagination({ page, limit, sort });
   const [items, total] = await Promise.all([
-    Order.find(query).sort(sortObj).skip(skip).limit(lim),
+    Order.find(query).populate('items.product', 'name imageUrl sku price category warrantyMonths').sort(sortObj).skip(skip).limit(lim),
     Order.countDocuments(query),
   ]);
   return { items, meta: paginationMeta({ page: pg, limit: lim, total }) };

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
-import { Search, Package, Plus, Edit2, Trash2 } from 'lucide-react';
+import { Search, Package, Plus, Edit2, Trash2, X, UploadCloud, RotateCw } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
 
 const Products = () => {
@@ -11,10 +11,6 @@ const Products = () => {
   const [products, setProducts] = useState([]);
   const [loadError, setLoadError] = useState('');
 
-  // The storefront catalogue. This screen shipped a `defaultProducts` array and
-  // fell back to it whenever the fetched value was not an array — which is what
-  // happened while the response was being unwrapped twice, so an admin always
-  // saw five invented products instead of the real catalogue.
   const toRow = (item) => ({
     id: item.id,
     name: item.name,
@@ -42,6 +38,48 @@ const Products = () => {
   const [newWarranty, setNewWarranty] = useState('None');
   const [newImage, setNewImage] = useState(null);
 
+  // Helper to generate SKU based on Product Name & Category
+  const generateSkuFromName = (nameStr = '', categoryName = 'Air Conditioner') => {
+    const prefixes = {
+      'Air Conditioner': 'AC',
+      'Water Purifier': 'RO',
+      'Refrigerator': 'REF',
+      'Washing Machine': 'WM',
+      'Television': 'TV',
+      'Others': 'GEN',
+    };
+    const catPrefix = prefixes[categoryName] || 'PRD';
+
+    const clean = nameStr
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9\s]/g, '');
+
+    if (!clean) {
+      return '';
+    }
+
+    const words = clean.split(/\s+/).filter(Boolean);
+    const codePart = words
+      .map((w) => w.slice(0, 4))
+      .join('-')
+      .slice(0, 16);
+
+    return `SKU-${catPrefix}-${codePart}`;
+  };
+
+  // Lock body scroll when modal is open to prevent background scrolling
+  useEffect(() => {
+    if (isModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isModalOpen]);
+
   const handleAddProduct = async (e) => {
     e.preventDefault();
     setLoadError('');
@@ -59,7 +97,7 @@ const Products = () => {
           imageUrl: newImage || undefined,
         },
       });
-      setProducts((prev) => [...prev, toRow(res)]);
+      setProducts((prev) => [toRow(res), ...prev]);
 
       setNewName('');
       setNewSku('');
@@ -109,8 +147,13 @@ const Products = () => {
               />
             </div>
             <button 
-              onClick={() => setIsModalOpen(true)}
-              className="bg-[#0D47A1] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors flex items-center gap-2 cursor-pointer shadow-sm"
+              onClick={() => {
+                setNewName('');
+                setNewSku('');
+                setNewCategory('Air Conditioner');
+                setIsModalOpen(true);
+              }}
+              className="bg-[#0D47A1] text-[#FFFFFF] px-4 py-2 rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors flex items-center gap-2 cursor-pointer shadow-sm"
             >
               <Plus size={16} /> Add Catalog Item
             </button>
@@ -176,48 +219,75 @@ const Products = () => {
 
       {/* Form Modal for Add Catalog Item */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-xl max-w-md w-full p-6 space-y-4 animate-in zoom-in-95 duration-200">
-            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-              <h3 className="font-extrabold text-base text-slate-800">Add New Catalog Product</h3>
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200 overscroll-contain">
+          <div className="bg-white rounded-3xl border border-slate-200/80 shadow-2xl shadow-blue-950/20 max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="px-6 pt-6 pb-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-[#0D47A1] shadow-inner">
+                  <Package size={20} />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-lg text-slate-800 tracking-tight">Add New Catalog Product</h3>
+                  <p className="text-xs text-slate-500 font-medium">Fill in details to add product to catalog</p>
+                </div>
+              </div>
               <button 
-                onClick={() => setIsModalOpen(false)} 
-                className="text-slate-400 hover:text-slate-600 font-extrabold text-lg select-none cursor-pointer p-1"
+                type="button"
+                onClick={() => { setIsModalOpen(false); setNewImage(null); }} 
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-700 flex items-center justify-center transition-colors cursor-pointer"
               >
-                ×
+                <X size={18} />
               </button>
             </div>
             
-            <form onSubmit={handleAddProduct} className="space-y-4">
+            <form onSubmit={handleAddProduct} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto overscroll-contain custom-scrollbar">
+              {/* Product Name */}
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Product Name</label>
+                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                  <span>Product Name</span>
+                  <span className="text-red-500 font-normal text-[10px]">*Required</span>
+                </label>
                 <input 
                   type="text" 
                   required
-                  placeholder="e.g. RO Filter Membrane" 
-                  className="w-full border border-slate-200 p-2.5 rounded-xl outline-none focus:ring-2 focus:ring-[#0D47A1] text-sm"
+                  placeholder="e.g. RO Filter Membrane 100 GPD" 
+                  className="w-full bg-slate-50/80 border border-slate-200 px-3.5 py-2.5 rounded-xl outline-none focus:bg-white focus:border-[#0D47A1] focus:ring-4 focus:ring-blue-500/10 text-sm font-medium text-slate-800 placeholder:text-slate-400 transition-all"
                   value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
+                  onChange={(e) => {
+                    const nameVal = e.target.value;
+                    setNewName(nameVal);
+                    setNewSku(generateSkuFromName(nameVal, newCategory));
+                  }}
                 />
               </div>
 
+              {/* SKU & Category */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">SKU / Code</label>
+                  <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
+                    SKU / Code
+                  </label>
                   <input 
                     type="text" 
-                    placeholder="e.g. SKU-RO-503" 
-                    className="w-full border border-slate-200 p-2.5 rounded-xl outline-none focus:ring-2 focus:ring-[#0D47A1] text-sm"
+                    placeholder="e.g. SKU-AC-INV-AC" 
+                    className="w-full bg-slate-50/80 border border-slate-200 px-3.5 py-2.5 rounded-xl outline-none focus:bg-white focus:border-[#0D47A1] focus:ring-4 focus:ring-blue-500/10 text-sm font-medium text-slate-800 placeholder:text-slate-400 transition-all font-mono"
                     value={newSku}
                     onChange={(e) => setNewSku(e.target.value)}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Category</label>
+                  <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
+                    Category
+                  </label>
                   <select 
-                    className="w-full border border-slate-200 p-2.5 rounded-xl outline-none focus:ring-2 focus:ring-[#0D47A1] text-sm bg-white font-semibold text-slate-700"
+                    className="w-full bg-slate-50/80 border border-slate-200 px-3.5 py-2.5 rounded-xl outline-none focus:bg-white focus:border-[#0D47A1] focus:ring-4 focus:ring-blue-500/10 text-sm font-semibold text-slate-700 transition-all cursor-pointer"
                     value={newCategory}
-                    onChange={(e) => setNewCategory(e.target.value)}
+                    onChange={(e) => {
+                      const selectedCat = e.target.value;
+                      setNewCategory(selectedCat);
+                      setNewSku(generateSkuFromName(newName, selectedCat));
+                    }}
                   >
                     <option value="Air Conditioner">Air Conditioner</option>
                     <option value="Water Purifier">Water Purifier</option>
@@ -229,35 +299,48 @@ const Products = () => {
                 </div>
               </div>
 
+              {/* Retail Price & Initial Stock */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Retail Price</label>
-                  <input 
-                    type="text" 
-                    required
-                    placeholder="e.g. 1,200" 
-                    className="w-full border border-slate-200 p-2.5 rounded-xl outline-none focus:ring-2 focus:ring-[#0D47A1] text-sm"
-                    value={newPrice}
-                    onChange={(e) => setNewPrice(e.target.value)}
-                  />
+                  <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                    <span>Retail Price</span>
+                    <span className="text-red-500 font-normal text-[10px]">*Required</span>
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">₹</span>
+                    <input 
+                      type="text" 
+                      required
+                      placeholder="1,200" 
+                      className="w-full bg-slate-50/80 border border-slate-200 pl-8 pr-3.5 py-2.5 rounded-xl outline-none focus:bg-white focus:border-[#0D47A1] focus:ring-4 focus:ring-blue-500/10 text-sm font-semibold text-slate-800 placeholder:text-slate-400 transition-all"
+                      value={newPrice}
+                      onChange={(e) => setNewPrice(e.target.value)}
+                    />
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Initial Stock Units</label>
+                  <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                    <span>Initial Stock Units</span>
+                    <span className="text-red-500 font-normal text-[10px]">*Required</span>
+                  </label>
                   <input 
                     type="number" 
                     required
-                    placeholder="e.g. 50" 
-                    className="w-full border border-slate-200 p-2.5 rounded-xl outline-none focus:ring-2 focus:ring-[#0D47A1] text-sm"
+                    placeholder="50" 
+                    className="w-full bg-slate-50/80 border border-slate-200 px-3.5 py-2.5 rounded-xl outline-none focus:bg-white focus:border-[#0D47A1] focus:ring-4 focus:ring-blue-500/10 text-sm font-medium text-slate-800 placeholder:text-slate-400 transition-all"
                     value={newStock}
                     onChange={(e) => setNewStock(e.target.value)}
                   />
                 </div>
               </div>
 
+              {/* Warranty Period */}
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Warranty Period</label>
+                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
+                  Warranty Period
+                </label>
                 <select 
-                  className="w-full border border-slate-200 p-2.5 rounded-xl outline-none focus:ring-2 focus:ring-[#0D47A1] text-sm bg-white font-semibold text-slate-700"
+                  className="w-full bg-slate-50/80 border border-slate-200 px-3.5 py-2.5 rounded-xl outline-none focus:bg-white focus:border-[#0D47A1] focus:ring-4 focus:ring-blue-500/10 text-sm font-semibold text-slate-700 transition-all cursor-pointer"
                   value={newWarranty}
                   onChange={(e) => setNewWarranty(e.target.value)}
                 >
@@ -268,25 +351,33 @@ const Products = () => {
                 </select>
               </div>
 
+              {/* Product Image Dropzone */}
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Product Image</label>
-                <div className="border border-dashed border-slate-200 rounded-xl p-3.5 flex flex-col items-center justify-center bg-slate-50 hover:bg-slate-100/70 transition-colors cursor-pointer relative min-h-[90px]">
+                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
+                  Product Image
+                </label>
+                <div className="group border-2 border-dashed border-slate-200 hover:border-[#0D47A1]/50 rounded-2xl p-4 flex flex-col items-center justify-center bg-slate-50/60 hover:bg-blue-50/30 transition-all cursor-pointer relative min-h-[110px]">
                   {newImage ? (
-                    <div className="relative w-full h-20 flex items-center justify-center">
+                    <div className="relative w-full h-24 flex items-center justify-center bg-white rounded-xl p-2 border border-slate-100 shadow-xs">
                       <img src={newImage} className="h-full rounded-lg object-contain" alt="Preview" />
                       <button 
                         type="button" 
                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setNewImage(null); }} 
-                        className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center hover:bg-red-600 transition-colors shadow-sm text-[10px] font-black cursor-pointer"
+                        className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center transition-colors shadow-md text-xs font-black cursor-pointer"
+                        title="Remove Image"
                       >
-                        ×
+                        <X size={14} />
                       </button>
                     </div>
                   ) : (
                     <>
-                      <Package size={18} className="text-slate-400 mb-1" />
-                      <span className="text-xs text-slate-500 font-bold mb-0.5">Click to Upload Image</span>
-                      <span className="text-[9px] text-slate-400">PNG, JPG up to 5MB</span>
+                      <div className="w-10 h-10 rounded-full bg-blue-50 group-hover:bg-blue-100 text-[#0D47A1] flex items-center justify-center mb-2 transition-colors shadow-inner">
+                        <UploadCloud size={20} />
+                      </div>
+                      <span className="text-xs text-slate-700 font-bold mb-0.5 group-hover:text-[#0D47A1] transition-colors">
+                        Click to Upload Image
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-medium">PNG, JPG, WEBP up to 5MB</span>
                     </>
                   )}
                   <input 
@@ -307,19 +398,20 @@ const Products = () => {
                 </div>
               </div>
               
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+              {/* Actions Footer */}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
                 <button 
                   type="button" 
                   onClick={() => { setIsModalOpen(false); setNewImage(null); }} 
-                  className="px-4 py-2 text-xs font-bold text-slate-500 hover:bg-slate-50 rounded-xl transition-colors cursor-pointer border border-slate-200"
+                  className="px-5 py-2.5 text-xs font-bold text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit" 
-                  className="px-4 py-2 text-xs font-bold bg-[#0D47A1] text-white rounded-xl hover:bg-blue-700 transition-colors cursor-pointer shadow-sm"
+                  className="px-6 py-2.5 text-xs font-bold bg-gradient-to-r from-[#0D47A1] to-[#1565C0] hover:from-[#0B3C88] hover:to-[#0D47A1] text-white rounded-xl shadow-lg shadow-blue-600/20 active:scale-[0.98] transition-all cursor-pointer flex items-center gap-1.5"
                 >
-                  Save Product
+                  <Plus size={15} /> Save Product
                 </button>
               </div>
             </form>
