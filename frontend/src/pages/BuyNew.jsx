@@ -296,6 +296,8 @@ const BuyNew = () => {
   };
 
   const [paymentMode, setPaymentMode] = useState('UPI');
+  const [selectedProductImg, setSelectedProductImg] = useState(null);
+  const [activeImageIdx, setActiveImageIdx] = useState(0);
 
   // Exchange states
   const [exchangeConfigs, setExchangeConfigs] = useState({});
@@ -727,14 +729,103 @@ const BuyNew = () => {
                 </div>
               </div>
 
-              {/* High Res Product Image */}
-              <div className="w-56 h-56 md:w-64 md:h-64 flex items-center justify-center p-4">
-                <img 
-                  src={finalProduct.imageUrl || getApplianceImg(finalCategory)} 
-                  alt={finalProduct.name} 
-                  className="w-full h-full object-contain mix-blend-multiply" 
-                />
-              </div>
+              {/* High Res Larger Product Image & Slide Gallery */}
+              {(() => {
+                const productImagesList = finalProduct?.images?.length
+                  ? finalProduct.images
+                  : (finalProduct?.imageUrl ? [finalProduct.imageUrl] : [getApplianceImg(finalCategory)]);
+                
+                const currentIdx = activeImageIdx < productImagesList.length ? activeImageIdx : 0;
+                const currentDisplayImg = productImagesList[currentIdx] || productImagesList[0];
+
+                const handlePrevImage = (e) => {
+                  e.stopPropagation();
+                  setActiveImageIdx((prev) => (prev > 0 ? prev - 1 : productImagesList.length - 1));
+                };
+
+                const handleNextImage = (e) => {
+                  e.stopPropagation();
+                  setActiveImageIdx((prev) => (prev < productImagesList.length - 1 ? prev + 1 : 0));
+                };
+
+                return (
+                  <div className="w-full flex flex-col items-center">
+                    {/* Main Image Box with Slide Arrows & Larger Container */}
+                    <div className="relative w-full max-w-lg h-64 sm:h-72 md:h-80 lg:h-84 flex items-center justify-center p-2 bg-[#f8fafc] rounded-2xl border border-slate-100 overflow-hidden group">
+                      
+                      {/* Left Slide Arrow */}
+                      {productImagesList.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={handlePrevImage}
+                          className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 bg-white/90 hover:bg-white text-slate-800 rounded-full flex items-center justify-center shadow-md border border-slate-200/80 transition-all z-20 cursor-pointer active:scale-90"
+                          title="Previous Image"
+                        >
+                          <ChevronLeft size={18} />
+                        </button>
+                      )}
+
+                      {/* Main Larger Product Image with Motion Slide */}
+                      <motion.img 
+                        key={currentIdx}
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        transition={{ duration: 0.2 }}
+                        src={currentDisplayImg} 
+                        alt={`${finalProduct.name} View ${currentIdx + 1}`} 
+                        className="max-h-full max-w-full object-contain p-2" 
+                      />
+
+                      {/* Right Slide Arrow */}
+                      {productImagesList.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={handleNextImage}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 bg-white/90 hover:bg-white text-slate-800 rounded-full flex items-center justify-center shadow-md border border-slate-200/80 transition-all z-20 cursor-pointer active:scale-90"
+                          title="Next Image"
+                        >
+                          <ChevronRight size={18} />
+                        </button>
+                      )}
+
+                      {/* Floating Image Counter Badge */}
+                      {productImagesList.length > 1 && (
+                        <span className="absolute bottom-2 right-2 bg-slate-900/70 backdrop-blur-xs text-white text-[10px] font-black px-2 py-0.5 rounded-md z-20">
+                          {currentIdx + 1} / {productImagesList.length}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Thumbnail Selector Row with Strict Index Highlight */}
+                    {productImagesList.length > 1 && (
+                      <div className="flex items-center justify-center gap-3 pt-4 border-t border-slate-100 w-full overflow-x-auto pb-1 mt-3">
+                        {productImagesList.map((imgUrl, idx) => {
+                          const isSelected = currentIdx === idx;
+                          return (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => setActiveImageIdx(idx)}
+                              className={`relative w-16 h-16 sm:w-20 sm:h-20 rounded-2xl p-1.5 bg-white flex items-center justify-center cursor-pointer transition-all shrink-0 ${
+                                isSelected
+                                  ? 'border-2 border-[#0D47A1] ring-4 ring-blue-100 shadow-md scale-105 opacity-100'
+                                  : 'border border-slate-200/80 opacity-60 hover:opacity-100 hover:border-slate-300'
+                              }`}
+                            >
+                              <img 
+                                src={imgUrl} 
+                                alt={`${finalProduct.name} Thumbnail ${idx + 1}`} 
+                                className="max-h-full max-w-full object-contain"
+                              />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
 
             {/* 2. PRODUCT TITLE & RATINGS SUMMARY */}

@@ -23,6 +23,7 @@ export const createProductSchema = z.object({
   stock: z.coerce.number().int().nonnegative().optional(),
   sku: z.string().optional(),
   imageUrl: z.string().optional(),
+  images: z.array(z.string()).optional(),
 });
 
 export const updateProductSchema = createProductSchema.partial();
