@@ -34,7 +34,7 @@ const Coupons = () => {
             const expiryStr = c.expiry ? `Expires on ${new Date(c.expiry).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}` : 'No Expiry';
 
             // Build dynamic applicability text
-            let scopeText = '';
+            let scopeText;
             if (c.applicableOn && c.applicableOn.length > 0) {
               if (c.applicableOn.length === 3) {
                 scopeText = 'Applicable globally on all products, services & protection plans';

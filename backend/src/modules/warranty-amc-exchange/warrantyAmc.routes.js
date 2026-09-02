@@ -104,7 +104,7 @@ router.use(requireAuth);
  */
 router.post('/extended-warranty/check-eligibility', (req, res) => {
   try {
-    const { purchaseDate, category } = req.body;
+    const { purchaseDate } = req.body;
     if (!purchaseDate) {
       return res.status(400).json({ error: { message: 'Purchase date is required' } });
     }

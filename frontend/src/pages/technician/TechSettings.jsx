@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Bell, Globe, Moon, Shield, Volume2, 
   HelpCircle, ChevronRight, Lock, Trash2, Smartphone, Check,
-  Briefcase, ClipboardList, Calendar, Wrench, User
+  Briefcase, ClipboardList, Calendar, Wrench, User, Eye, EyeOff
 } from 'lucide-react';
 import TechBottomNav from '../../components/TechBottomNav';
 import { apiRequest } from '../../lib/apiClient';

@@ -55,7 +55,7 @@ function toE164(phone) {
 }
 
 /** Return a masked phone string — what the REST layer is allowed to return. */
-function masked(phone) {
+function _masked(phone) {
   return phone ? maskIdentifier(phone) : null;
 }
 

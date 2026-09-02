@@ -78,7 +78,7 @@ async function clearDb() {
   const claimResult = await Claim.deleteMany({});
   const payoutResult = await Payout.deleteMany({});
   const tallyResult = await EarningsTally.deleteMany({});
-  console.log(`[clearDb] Deleted ${techInvResult.deletedCount} Tech Inventory Items, ${partOrderResult.deletedCount} Part Orders, ${claimResult.deletedCount} Claims, ${payoutResult.deletedCount} Payouts`);
+  console.log(`[clearDb] Deleted ${techInvResult.deletedCount} Tech Inventory Items, ${partOrderResult.deletedCount} Part Orders, ${claimResult.deletedCount} Claims, ${payoutResult.deletedCount} Payouts, ${tallyResult.deletedCount} Earnings Tallies`);
 
   // Delete AMC & Warranty subscriptions/orders/visits & exchange requests
   const amcSubResult = await AMCSubscription.deleteMany({});

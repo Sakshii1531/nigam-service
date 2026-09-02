@@ -1310,7 +1310,7 @@ const CustomerAppCustomization = () => {
     e.preventDefault();
     if (!categoryForm.name.trim()) return;
 
-    let parsedServices = [];
+    let parsedServices;
     try {
       parsedServices = JSON.parse(categoryForm.servicesJson);
       if (!Array.isArray(parsedServices)) {
@@ -3330,7 +3330,7 @@ const CustomerAppCustomization = () => {
                     type="button"
                     onClick={() => {
                       let currentList = [];
-                      try { currentList = JSON.parse(categoryForm.servicesJson); } catch(e) {}
+                      try { currentList = JSON.parse(categoryForm.servicesJson); } catch(_e) { /* ignore parse error */ }
                       if (!Array.isArray(currentList)) currentList = [];
                       currentList.push({
                         id: `service_${Date.now()}`,
@@ -3350,7 +3350,7 @@ const CustomerAppCustomization = () => {
                 {/* Visual Service Items List */}
                 {(() => {
                   let parsed = [];
-                  try { parsed = JSON.parse(categoryForm.servicesJson); } catch(e) {}
+                  try { parsed = JSON.parse(categoryForm.servicesJson); } catch(_e) { /* ignore parse error */ }
                   if (!Array.isArray(parsed)) parsed = [];
 
                   if (parsed.length === 0) {

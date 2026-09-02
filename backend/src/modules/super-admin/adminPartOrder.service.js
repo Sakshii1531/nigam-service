@@ -149,7 +149,9 @@ export async function updatePartOrderStatus(partOrderId, { status, scheduledDate
               serviceRequestId: sr._id,
               status: 'Spare Received',
             });
-          } catch {}
+          } catch (_err) {
+            // Non-critical socket emission failure
+          }
         }
 
         if (tech?.user) {
@@ -160,7 +162,9 @@ export async function updatePartOrderStatus(partOrderId, { status, scheduledDate
               activeStep: 'revisit_scheduled',
               revisit: job?.revisit,
             });
-          } catch {}
+          } catch (_err) {
+            // Non-critical socket emission failure
+          }
         }
       }
     } else if (status === 'Rejected') {

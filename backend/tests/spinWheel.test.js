@@ -48,7 +48,7 @@ beforeEach(async () => {
   });
 
   // Login to acquire token
-  const loginRes = await request(app)
+  const _loginRes = await request(app)
     .post('/api/v1/auth/login')
     .send({ role: 'customer', identifier: '9876543210', password: 'password123' });
   
