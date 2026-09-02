@@ -25,7 +25,7 @@ export async function createBooking(userId, data) {
   let serviceItem = null;
   try {
     serviceItem = await findServiceItem(data.category, data.serviceSlug);
-  } catch (err) {
+  } catch (_err) {
     serviceItem = null;
   }
 

@@ -437,7 +437,7 @@ export const getCatalogEntry = (category) => {
   }
 
   // Parse productTypes from override or static
-  let productTypes = [];
+  let productTypes;
   if (categoryConfig && categoryConfig.productTypes) {
     const rawTypes = typeof categoryConfig.productTypes === 'string'
       ? categoryConfig.productTypes.split(',').map(s => s.trim()).filter(Boolean)

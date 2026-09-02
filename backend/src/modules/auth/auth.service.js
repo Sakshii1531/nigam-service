@@ -141,7 +141,7 @@ export async function verifyLoginOtp({ role, identifier, code }) {
   return issueSession(user);
 }
 
-export async function signupCheck({ name, phone, email, password, address, referralCode }) {
+export async function signupCheck({ phone, email }) {
   const existingPhone = await User.findOne({ role: 'customer', phone });
   const existingEmail = await User.findOne({ role: 'customer', email });
 

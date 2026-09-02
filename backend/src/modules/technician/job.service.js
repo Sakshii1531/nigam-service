@@ -505,7 +505,9 @@ export async function requestSparePart(
           serviceRequestId: sr._id,
           status: 'Spare Ordered',
         });
-      } catch {}
+      } catch (_err) {
+        // Non-critical socket emission failure
+      }
     }
   }
 

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { validate } from '../../middleware/validate.js';
 import { requireAuth, requireBrandScope } from '../../middleware/auth.js';
 import { ok } from '../../utils/respond.js';
+import { ApiError } from '../../middleware/errorHandler.js';
 import * as brandInsights from './brandInsights.service.js';
 import { z } from 'zod';
 import {

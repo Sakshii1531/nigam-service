@@ -57,14 +57,8 @@ const Analytics = () => {
         >
           <ArrowLeft className="h-6 w-6 text-slate-700" />
         </button>
-        <h1 className="text-base font-medium text-[#052355] flex-1 text-center pl-8">Analytics</h1>
-        <button
-          onClick={() => setIsSidebarOpen(true)}
-          aria-label="Open menu"
-          className="p-1 hover:bg-slate-50 rounded-full text-slate-700 transition-colors"
-        >
-          <MoreVertical className="h-5 w-5 text-slate-700" />
-        </button>
+        <h1 className="text-base font-medium text-[#052355] flex-1 text-center">Analytics</h1>
+        <div className="w-8" />
       </div>
 
       {/* Desktop Page Top Header Bar (lg+ only) */}

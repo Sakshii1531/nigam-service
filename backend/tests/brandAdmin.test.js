@@ -113,9 +113,13 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await new Promise((resolve) => app.close(resolve));
-  await mongoose.connection.dropDatabase();
-  await mongoose.disconnect();
+  if (app) {
+    await new Promise((resolve) => app.close(resolve));
+  }
+  if (mongoose.connection.readyState !== 0) {
+    await mongoose.connection.dropDatabase().catch(() => {});
+    await mongoose.disconnect().catch(() => {});
+  }
 });
 
 beforeEach(async () => {
