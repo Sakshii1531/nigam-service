@@ -6,6 +6,7 @@ const reviewSchema = new mongoose.Schema(
   {
     serviceRequest: { type: mongoose.Schema.Types.ObjectId, ref: 'ServiceRequest', default: null, index: true },
     booking: { type: mongoose.Schema.Types.ObjectId, ref: 'Booking', default: null, index: true },
+    product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', default: null, index: true },
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     technician: { type: mongoose.Schema.Types.ObjectId, ref: 'Technician', default: null, index: true },
     technicianRating: { type: Number, min: 1, max: 5 },

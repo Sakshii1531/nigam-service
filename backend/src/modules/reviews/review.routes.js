@@ -70,6 +70,23 @@ reviewRouter.get('/featured', async (req, res, next) => {
   }
 });
 
+// ─── Product Catalog Ratings & Reviews Endpoints ─────────────────────────
+reviewRouter.get('/product/:productId', async (req, res, next) => {
+  try {
+    ok(res, await reviewService.listProductReviews(req.params.productId));
+  } catch (err) {
+    next(err);
+  }
+});
+
+reviewRouter.post('/product', requireAuth, async (req, res, next) => {
+  try {
+    created(res, await reviewService.createProductReview(req.user.id, req.body));
+  } catch (err) {
+    next(err);
+  }
+});
+
 // ─── Customer Service Rating Endpoints ─────────────────────────────────────
 reviewRouter.post('/service-rating', requireAuth, requireRole('customer'), async (req, res, next) => {
   try {
