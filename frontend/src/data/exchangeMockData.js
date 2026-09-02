@@ -493,28 +493,40 @@ export const initializeExchangeConfigs = async () => {
   // ExchangeOffers console and stored server-side — the customer's ExchangeModal
   // and the console must see the same data, which per-browser localStorage never
   // did. The bundled defaults above remain only as a seed for a fresh install.
-  const res = await apiRequest('/exchange/product-configs', { auth: true });
-  return Object.fromEntries((res || []).map((c) => [
-    c.product,
-    {
-      id: c.id,
-      productId: c.product,
-      exchangeEnabled: c.exchangeEnabled,
-      supportedCategories: c.supportedCategories || [],
-      questionSetId: c.questionSet?.id || c.questionSet || null,
-      badgeText: c.badgeText || '',
-      campaignId: c.campaign?.id || c.campaign || null,
-      maxVal: c.maxValue || 0,
-    },
-  ]));
+  try {
+    const res = await apiRequest('/exchange/product-configs', { auth: true }).catch(() => null);
+    return Object.fromEntries((res || []).map((c) => [
+      c.product,
+      {
+        id: c.id,
+        productId: c.product,
+        exchangeEnabled: c.exchangeEnabled,
+        supportedCategories: c.supportedCategories || [],
+        questionSetId: c.questionSet?.id || c.questionSet || null,
+        badgeText: c.badgeText || '',
+        campaignId: c.campaign?.id || c.campaign || null,
+        maxVal: c.maxValue || 0,
+      },
+    ]));
+  } catch {
+    return {};
+  }
 };
 
 export const initializeQuestionSets = async () => {
-  const res = await apiRequest('/exchange/question-sets', { auth: true });
-  return res || [];
+  try {
+    const res = await apiRequest('/exchange/question-sets', { auth: true }).catch(() => null);
+    return res || [];
+  } catch {
+    return [];
+  }
 };
 
 export const initializeCampaigns = async () => {
-  const res = await apiRequest('/exchange/campaigns', { auth: true });
-  return res || [];
+  try {
+    const res = await apiRequest('/exchange/campaigns', { auth: true }).catch(() => null);
+    return res || [];
+  } catch {
+    return [];
+  }
 };

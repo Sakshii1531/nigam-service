@@ -53,8 +53,12 @@ export async function payWithRazorpay({ razorpay, verifyPath, name, description,
       amount: razorpay.amount,
       currency: razorpay.currency || 'INR',
       name: name || 'Nigam Care',
-      description,
-      prefill,
+      description: description || 'Appliance Purchase',
+      prefill: {
+        name: prefill.name || 'Customer',
+        email: prefill.email || 'customer@example.com',
+        contact: prefill.contact || prefill.phone || '9876543210',
+      },
       handler: (response) => resolve(response),
       modal: {
         // Treated as a failure, not a success — an abandoned checkout has not paid.
