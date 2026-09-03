@@ -499,10 +499,14 @@ export async function updateBrandPartOrderStatus(brandId, partOrderId, payload) 
     if (job) {
       job.activeStep = 'revisit_scheduled';
       const parsedDate = scheduledDate ? new Date(scheduledDate) : new Date(Date.now() + 86400000);
+      // job.revisit.timeSlot is a plain String (see revisitSchema in job.model.js).
+      const timeSlotStr = typeof timeSlot === 'object' && timeSlot !== null
+        ? (timeSlot.time || '10:00 AM - 01:00 PM')
+        : (timeSlot || '10:00 AM - 01:00 PM');
       job.revisit = {
         scheduledDate: parsedDate,
         expectedDate: parsedDate,
-        timeSlot: timeSlot || '10:00 AM - 01:00 PM',
+        timeSlot: timeSlotStr,
         status: 'Scheduled',
         partOrderId: partOrder._id,
         notes: notes || 'Spare part approved/dispatched by brand',
