@@ -1,4 +1,5 @@
 import { Order } from '../buy-commerce/order.model.js';
+import { Payment } from '../payments-wallet/payment.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { parsePagination, paginationMeta } from '../../utils/pagination.js';
 
@@ -51,5 +52,29 @@ export async function updateOrderStatus(id, status, { trackingNumber, courierPar
   if (trackingNumber !== undefined) order.trackingNumber = trackingNumber;
   if (courierPartner !== undefined) order.courierPartner = courierPartner;
   await order.save();
+  return order;
+}
+
+/**
+ * Mark a COD order's payment as collected (Pending → Paid).
+ * Also updates the linked Payment document so the transactions ledger stays
+ * consistent — the Payment was created at 'Pending' when the COD order was placed.
+ */
+export async function updateOrderPaymentStatus(id, paymentStatus) {
+  const order = await Order.findById(id);
+  if (!order) throw new ApiError(404, 'Order not found');
+  if (order.paymentMethod !== 'COD') throw new ApiError(400, 'Payment status can only be changed for COD orders');
+  if (order.paymentStatus === 'Paid') throw new ApiError(409, 'This order payment is already marked as Paid');
+
+  order.paymentStatus = paymentStatus;
+  await order.save();
+
+  // Keep the Payment ledger in sync
+  const payment = await Payment.findOne({ targetType: 'order', targetId: order._id });
+  if (payment && payment.status !== 'Success') {
+    payment.status = 'Success';
+    await payment.save();
+  }
+
   return order;
 }
