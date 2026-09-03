@@ -18,7 +18,7 @@ const listQuerySchema = z.object({
   limit: z.coerce.number().int().positive().optional(),
   sort: z.string().optional(),
 });
-const idParamSchema = z.object({ id: z.string().length(24) });
+const idParamSchema = z.object({ id: z.string().min(1) });
 const updateStatusSchema = z.object({
   status: z.enum(STATUSES),
   trackingNumber: z.string().optional(),

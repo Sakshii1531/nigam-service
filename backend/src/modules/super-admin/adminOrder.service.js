@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { Order } from '../buy-commerce/order.model.js';
 import { Payment } from '../payments-wallet/payment.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
@@ -7,6 +8,23 @@ import { parsePagination, paginationMeta } from '../../utils/pagination.js';
 // customer-scoped GET /orders (which filters on `user: req.user.id`), so an
 // admin saw only the orders they had personally placed — the same mistake the
 // AMC console had.
+
+async function findOrderDoc(id) {
+  if (mongoose.Types.ObjectId.isValid(id)) {
+    const doc = await Order.findById(id);
+    if (doc) return doc;
+  }
+  const cleanId = String(id || '').replace(/^#/, '').trim();
+  return Order.findOne({
+    $or: [
+      { humanId: id },
+      { humanId: `#${id}` },
+      { humanId: cleanId },
+      { humanId: `#ORD-${cleanId}` },
+      { humanId: new RegExp(`${cleanId}$`, 'i') },
+    ],
+  });
+}
 
 export async function listOrders({ status, page, limit, sort } = {}) {
   const query = {};
@@ -26,11 +44,11 @@ export async function listOrders({ status, page, limit, sort } = {}) {
 }
 
 export async function getOrder(id) {
-  const order = await Order.findById(id)
+  const orderDoc = await findOrderDoc(id);
+  if (!orderDoc) throw new ApiError(404, 'Order not found');
+  return Order.findById(orderDoc._id)
     .populate('user', 'name phone email')
     .populate('items.product', 'name imageUrl sku price category warrantyMonths');
-  if (!order) throw new ApiError(404, 'Order not found');
-  return order;
 }
 
 // Fulfilment can only move forward, and a delivered or cancelled order is
@@ -38,7 +56,7 @@ export async function getOrder(id) {
 const FORWARD = ['Placed', 'Confirmed', 'Shipped', 'Delivered'];
 
 export async function updateOrderStatus(id, status, { trackingNumber, courierPartner } = {}) {
-  const order = await Order.findById(id);
+  const order = await findOrderDoc(id);
   if (!order) throw new ApiError(404, 'Order not found');
 
   if (['Delivered', 'Cancelled'].includes(order.status)) {
@@ -61,7 +79,7 @@ export async function updateOrderStatus(id, status, { trackingNumber, courierPar
  * consistent — the Payment was created at 'Pending' when the COD order was placed.
  */
 export async function updateOrderPaymentStatus(id, paymentStatus) {
-  const order = await Order.findById(id);
+  const order = await findOrderDoc(id);
   if (!order) throw new ApiError(404, 'Order not found');
   if (order.paymentMethod !== 'COD') throw new ApiError(400, 'Payment status can only be changed for COD orders');
   if (order.paymentStatus === 'Paid') throw new ApiError(409, 'This order payment is already marked as Paid');
