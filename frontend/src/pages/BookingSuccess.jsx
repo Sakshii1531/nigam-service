@@ -196,7 +196,7 @@ const BookingSuccess = () => {
 
   return (
     <div className="min-h-screen bg-[#F0F4FF] flex flex-col font-sans">
-      <div className="flex-1 max-w-screen-xl mx-auto w-full px-4 md:px-8 py-6 md:py-8 overflow-y-auto">
+      <div className="flex-1 max-w-screen-2xl mx-auto w-full px-4 md:px-8 py-6 md:py-8 overflow-y-auto">
 
         {/* ── Hero Section ── */}
         <div className="bg-gradient-to-b from-[#E8F0FF] to-[#F0F4FF] pt-8 md:pt-12 pb-6 flex flex-col items-center gap-3 px-4 rounded-3xl md:border md:border-blue-100/50 mb-6 shadow-xs">

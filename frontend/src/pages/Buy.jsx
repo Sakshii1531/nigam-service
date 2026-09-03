@@ -309,7 +309,7 @@ const Buy = () => {
       )}
 
       {/* Dynamic Content Pages */}
-      <div className="flex-1 p-6 md:px-8 flex flex-col gap-6 md:gap-8 overflow-y-auto max-w-screen-xl mx-auto w-full">
+      <div className="flex-1 p-6 md:px-8 flex flex-col gap-6 md:gap-8 overflow-y-auto max-w-screen-2xl mx-auto w-full">
         
         {/* STEP 1: BUY SECTION - HOME */}
         {step === 1 && (

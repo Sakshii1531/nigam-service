@@ -60,7 +60,7 @@ const Payment = () => {
       </div>
 
       {/* Main Content Area — 2-column grid on desktop */}
-      <div className="flex-1 max-w-screen-xl mx-auto w-full p-5 md:px-8 md:py-8">
+      <div className="flex-1 max-w-screen-2xl mx-auto w-full p-5 md:px-8 md:py-8">
         <div className="flex flex-col md:grid md:grid-cols-12 md:gap-8 items-start">
           
           {/* Left Column: Product Info, Coins & Payment Methods */}

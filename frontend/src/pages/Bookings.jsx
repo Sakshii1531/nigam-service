@@ -348,16 +348,26 @@ const Bookings = () => {
       {/* Desktop Header & Controls Bar */}
       <div className="hidden lg:flex flex-col gap-5 max-w-screen-2xl mx-auto w-full px-8 pt-6 pb-2">
         <div className="flex items-center justify-between bg-white p-6 rounded-3xl border border-slate-200/70 shadow-xs">
-          <div>
-            <div className="flex items-center gap-2.5">
-              <h1 className="text-2xl font-black text-slate-900 tracking-tight">My Bookings</h1>
-              <span className="bg-[#EAF4FF] text-[#0D47A1] text-xs font-bold px-3 py-1 rounded-full">
-                {bookings.length} {bookings.length === 1 ? 'Service' : 'Services'}
-              </span>
+          <div className="flex items-center gap-3.5">
+            <button 
+              onClick={() => navigate(-1)}
+              className="p-2.5 bg-slate-100 hover:bg-slate-200 rounded-2xl text-slate-700 transition-colors cursor-pointer flex-shrink-0"
+              title="Go Back"
+              aria-label="Go Back"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <div>
+              <div className="flex items-center gap-2.5">
+                <h1 className="text-2xl font-black text-slate-900 tracking-tight">My Bookings</h1>
+                <span className="bg-[#EAF4FF] text-[#0D47A1] text-xs font-bold px-3 py-1 rounded-full">
+                  {bookings.length} {bookings.length === 1 ? 'Service' : 'Services'}
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-1">
+                Track live service progress, view assigned technicians, and manage your appliance repairs
+              </p>
             </div>
-            <p className="text-xs text-slate-500 mt-1">
-              Track live service progress, view assigned technicians, and manage your appliance repairs
-            </p>
           </div>
 
           <div className="flex items-center gap-3">

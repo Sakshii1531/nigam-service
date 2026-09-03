@@ -130,7 +130,7 @@ const WIDE_ROUTES = [
 
 /** Tailwind max-width class for the panel container on a given route. */
 export function panelWidthClass(pathname) {
-  return "max-w-screen-xl";
+  return "max-w-screen-2xl";
 }
 
 function pickNav(pathname, search = "") {

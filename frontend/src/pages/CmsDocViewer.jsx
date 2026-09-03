@@ -143,7 +143,7 @@ const CmsDocViewer = () => {
         </div>
       </div>
 
-      <div className="flex-1 max-w-screen-xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-6">
+      <div className="flex-1 max-w-screen-2xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-6">
         
         {/* Document Banner */}
         <div className="bg-gradient-to-br from-[#051F42] via-[#0B4EA2] to-[#0D47A1] rounded-[32px] p-6 sm:p-8 md:p-10 text-white relative overflow-hidden shadow-xl flex flex-col gap-3 text-left">
