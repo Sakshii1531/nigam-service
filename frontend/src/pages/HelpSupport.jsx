@@ -114,7 +114,7 @@ const HelpSupport = () => {
         <h1 className="text-base font-black text-slate-900">Help & Support Desk</h1>
       </div>
 
-      <div className="flex-1 max-w-screen-xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-10">
+      <div className="flex-1 max-w-screen-2xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-10">
         
         {/* Hero Search Section */}
         <div className="bg-gradient-to-br from-[#051F42] via-[#0B4EA2] to-[#0D47A1] rounded-[32px] p-8 md:p-12 text-white relative overflow-hidden shadow-xl text-center flex flex-col items-center gap-4">

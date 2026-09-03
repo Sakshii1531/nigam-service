@@ -153,7 +153,7 @@ const CardPayment = () => {
       <div className="flex-1 p-4 md:px-8 md:py-8 flex items-center justify-center md:items-start md:block">
         
         {/* Mobile View Wrap Container */}
-        <div className="w-full max-w-md md:max-w-screen-xl mx-auto bg-white md:bg-transparent rounded-[30px] md:rounded-none shadow-2xl md:shadow-none overflow-hidden flex flex-col h-[700px] md:h-auto border border-slate-100 md:border-0">
+        <div className="w-full max-w-md md:max-w-screen-2xl mx-auto bg-white md:bg-transparent rounded-[30px] md:rounded-none shadow-2xl md:shadow-none overflow-hidden flex flex-col h-[700px] md:h-auto border border-slate-100 md:border-0">
           
           <div className="flex-1 flex flex-col md:grid md:grid-cols-12 md:gap-8 items-start overflow-y-auto md:overflow-visible">
             

@@ -499,7 +499,7 @@ const BookingFlow = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans max-w-screen-xl mx-auto w-full relative">
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans max-w-screen-2xl mx-auto w-full relative">
 
 
       {/* ── Fixed Header ── */}

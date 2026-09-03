@@ -192,7 +192,7 @@ const MembershipPlans = () => {
       )}
       </div>
 
-      <div className="max-w-screen-xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-8 flex-1">
+      <div className="max-w-screen-2xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-8 flex-1">
         
         {/* Banner Section */}
         <div className="relative overflow-hidden bg-gradient-to-r from-slate-900 to-blue-900 rounded-[28px] p-6 md:p-8 shadow-xl text-left border border-white/10">

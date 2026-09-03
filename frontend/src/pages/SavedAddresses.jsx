@@ -189,7 +189,7 @@ const SavedAddresses = () => {
       </div>
 
       {/* Content */}
-      <div className="flex-1 p-6 flex flex-col lg:grid lg:grid-cols-2 gap-4 max-w-screen-xl mx-auto w-full">
+      <div className="flex-1 p-6 flex flex-col lg:grid lg:grid-cols-2 gap-4 max-w-screen-2xl mx-auto w-full">
         {loading ? (
           <div className="flex flex-col items-center justify-center p-12 text-slate-400 gap-2">
             <RefreshCw className="h-6 w-6 animate-spin text-[#0D47A1]" />

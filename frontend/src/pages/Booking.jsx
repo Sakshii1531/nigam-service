@@ -527,7 +527,7 @@ const Booking = () => {
       </div>
 
       {/* Main summary container — stacked on mobile, 2-column grid on desktop */}
-      <div className="flex-1 max-w-screen-xl mx-auto w-full px-4 md:px-8 py-4 md:py-8 pb-28 md:pb-12">
+      <div className="flex-1 max-w-screen-2xl mx-auto w-full px-4 md:px-8 py-4 md:py-8 pb-28 md:pb-12">
         <div className="flex flex-col md:grid md:grid-cols-12 md:gap-8 items-start">
           
           {/* Left Column: Service Card, Notes, Saved Address & Slot */}

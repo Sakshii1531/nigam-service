@@ -87,7 +87,7 @@ const Notifications = () => {
       </div>
 
       {/* Desktop Page Top Header Bar (lg+ only) */}
-      <div className="hidden lg:block max-w-screen-xl mx-auto w-full px-6 xl:px-8 pt-6 pb-2">
+      <div className="hidden lg:block max-w-screen-2xl mx-auto w-full px-6 xl:px-8 pt-6 pb-2">
         <div className="flex items-center justify-between bg-white rounded-3xl p-5 border border-slate-200/80 shadow-2xs">
           <div className="flex items-center gap-3.5">
             <button
@@ -123,7 +123,7 @@ const Notifications = () => {
         </div>
       </div>
 
-      <div className="max-w-screen-xl mx-auto w-full flex-1 flex flex-col px-3.5 lg:px-6 xl:px-8">
+      <div className="max-w-screen-2xl mx-auto w-full flex-1 flex flex-col px-3.5 lg:px-6 xl:px-8">
       <div className="px-4 pt-4 flex items-center justify-between">
         <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">Recent</span>
         {unread > 0 && (
