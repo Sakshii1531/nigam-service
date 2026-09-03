@@ -566,11 +566,11 @@ const BuyNew = () => {
                   <div 
                     key={product.id}
                     onClick={() => navigate(`/buy-new/details/${encodeURIComponent(finalCategory)}/${encodeURIComponent(product.name)}`)}
-                    className="bg-white border border-slate-200/90 hover:border-[#0D47A1]/40 rounded-3xl p-4 md:p-5 flex flex-col gap-4 cursor-pointer shadow-xs hover:shadow-xl transition-all duration-300 relative group overflow-hidden"
+                    className="bg-white border border-slate-200/90 hover:border-[#0D47A1]/40 rounded-3xl p-4 md:p-5 flex flex-col justify-between min-h-[240px] cursor-pointer shadow-xs hover:shadow-xl transition-all duration-300 relative group overflow-hidden"
                   >
-                    <div className="flex gap-4 md:gap-5 items-start">
+                    <div className="flex gap-4 md:gap-5 items-stretch h-full">
                       {/* Left: Image Container with Floating Heart */}
-                      <div className="relative w-28 h-28 md:w-32 md:h-32 bg-gradient-to-br from-slate-50 to-blue-50/30 border border-slate-100 rounded-2xl flex items-center justify-center p-2.5 shrink-0 overflow-hidden shadow-2xs">
+                      <div className="relative w-28 h-28 md:w-32 md:h-32 bg-gradient-to-br from-slate-50 to-blue-50/30 border border-slate-100 rounded-2xl flex items-center justify-center p-2.5 shrink-0 overflow-hidden shadow-2xs self-start">
                         <img 
                           src={product.imageUrl || getApplianceImg(finalCategory)} 
                           alt={product.name} 
@@ -591,7 +591,7 @@ const BuyNew = () => {
                       </div>
 
                       {/* Right: Product Details */}
-                      <div className="flex-1 flex flex-col text-left justify-between min-w-0 space-y-2">
+                      <div className="flex-1 flex flex-col text-left justify-between min-w-0 h-full">
                         <div>
                           {/* Brand & Assured Badges Row */}
                           <div className="flex flex-wrap items-center gap-2 mb-1.5">
@@ -631,7 +631,7 @@ const BuyNew = () => {
                         </div>
 
                         {/* Pricing Details */}
-                        <div className="pt-1">
+                        <div className="pt-1 mt-auto">
                           <div className="flex flex-wrap items-baseline gap-2">
                             <span className="text-slate-900 font-black text-base md:text-lg">
                               ₹{product.price.toLocaleString()}
