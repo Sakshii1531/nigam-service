@@ -532,12 +532,14 @@ describe('brand reviews', () => {
 
   it('filters by status', async () => {
     const a = await seedBrandWithAdmin('Brand C');
-    const customer = await seedCustomer();
+    const customer1 = await seedCustomer();
+    const customer2 = await seedCustomer();
     const technician = await seedTechnician();
-    const sr = await seedServiceRequestForBrand(a.brand, customer, technician);
+    const sr1 = await seedServiceRequestForBrand(a.brand, customer1, technician);
+    const sr2 = await seedServiceRequestForBrand(a.brand, customer2, technician);
 
-    await Review.create({ serviceRequest: sr._id, user: customer._id, rating: 5, status: 'Reviewed' });
-    await Review.create({ serviceRequest: sr._id, user: customer._id, rating: 1, status: 'Escalated' });
+    await Review.create({ serviceRequest: sr1._id, user: customer1._id, rating: 5, status: 'Reviewed' });
+    await Review.create({ serviceRequest: sr2._id, user: customer2._id, rating: 1, status: 'Escalated' });
 
     const res = await request(app)
       .get('/api/v1/reviews/brand?status=Escalated')
