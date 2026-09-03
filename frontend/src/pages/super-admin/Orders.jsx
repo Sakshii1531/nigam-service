@@ -128,8 +128,23 @@ const Orders = () => {
     }, 3000);
   };
 
+  const resolveRawId = (target) => {
+    if (!target) return '';
+    if (typeof target === 'object') {
+      return target.rawId || target._id || target.id || '';
+    }
+    const found = orders.find(
+      (o) => o.rawId === target || o.id === target || o.humanId === target
+    );
+    return found?.rawId || target;
+  };
+
   const handleStatusChange = async (targetOrder, newStatus, extraData = {}) => {
-    const rawId = typeof targetOrder === 'object' ? (targetOrder.rawId || targetOrder.id) : targetOrder;
+    const rawId = resolveRawId(targetOrder);
+    if (!rawId) {
+      setLoadError('Invalid order identifier.');
+      return;
+    }
     const body = { status: newStatus, ...extraData };
 
     try {
@@ -144,7 +159,11 @@ const Orders = () => {
   };
 
   const handlePaymentStatusChange = async (targetOrder) => {
-    const rawId = typeof targetOrder === 'object' ? (targetOrder.rawId || targetOrder.id) : targetOrder;
+    const rawId = resolveRawId(targetOrder);
+    if (!rawId) {
+      setLoadError('Invalid order identifier.');
+      return;
+    }
     try {
       const res = await apiRequest(`/super-admin/orders/${rawId}/payment-status`, {
         method: 'PATCH',
@@ -160,8 +179,9 @@ const Orders = () => {
     }
   };
 
-  const openDispatchModal = (orderId) => {
-    setDispatchTargetId(orderId);
+  const openDispatchModal = (target) => {
+    const rawId = resolveRawId(target);
+    setDispatchTargetId(rawId);
     setCourierInput('');
     setTrackingInput('');
     setDispatchError('');
@@ -263,7 +283,7 @@ const Orders = () => {
                 <div className="flex items-center gap-3">
                   {selectedOrder.status === 'Placed' && (
                     <button
-                      onClick={() => handleStatusChange(selectedOrder.id, 'Confirmed')}
+                      onClick={() => handleStatusChange(selectedOrder, 'Confirmed')}
                       className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer flex items-center gap-2"
                     >
                       <CheckCircle size={16} /> Confirm Order
@@ -282,7 +302,7 @@ const Orders = () => {
 
                   {['Placed', 'Confirmed'].includes(selectedOrder.status) && (
                     <button
-                      onClick={() => openDispatchModal(selectedOrder.id)}
+                      onClick={() => openDispatchModal(selectedOrder)}
                       className="bg-gradient-to-r from-[#0D47A1] to-[#1565C0] hover:from-[#0B3C88] hover:to-[#0D47A1] text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer flex items-center gap-2"
                     >
                       <Truck size={16} /> Dispatch Order Now
@@ -291,7 +311,7 @@ const Orders = () => {
 
                   {selectedOrder.status === 'Shipped' && (
                     <button
-                      onClick={() => handleStatusChange(selectedOrder.id, 'Delivered')}
+                      onClick={() => handleStatusChange(selectedOrder, 'Delivered')}
                       className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer flex items-center gap-2"
                     >
                       <CheckCircle size={16} /> Mark Order Delivered
@@ -632,7 +652,7 @@ const Orders = () => {
                           
                           {['Placed', 'Confirmed'].includes(order.status) && (
                             <button 
-                              onClick={() => openDispatchModal(order.id)}
+                              onClick={() => openDispatchModal(order)}
                               className="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition-colors cursor-pointer border border-transparent hover:border-blue-100" 
                               title="Dispatch Now"
                             >
@@ -642,7 +662,7 @@ const Orders = () => {
 
                           {order.status === 'Shipped' && (
                             <button 
-                              onClick={() => handleStatusChange(order.id, 'Delivered')}
+                              onClick={() => handleStatusChange(order, 'Delivered')}
                               className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-xl transition-colors cursor-pointer border border-transparent hover:border-emerald-100" 
                               title="Mark Delivered"
                             >
