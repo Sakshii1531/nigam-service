@@ -125,7 +125,10 @@ export async function createOrder(userId, { items, useCart, address, couponCode,
   }
 
   const total = Math.max(0, remaining);
-  const needsGateway = total > 0 && paymentMethod !== 'Cash';
+  // COD = Pay on Delivery: no gateway interaction needed. Cash/zero-total
+  // orders also bypass the gateway (existing behaviour preserved).
+  const isCOD = paymentMethod === 'COD';
+  const needsGateway = total > 0 && !isCOD && paymentMethod !== 'Cash';
 
   // Riskiest-first ordering: coin redemption can fail on insufficient balance,
   // so do it before the harder-to-cleanly-reverse stock decrements.
@@ -166,13 +169,16 @@ export async function createOrder(userId, { items, useCart, address, couponCode,
       });
       razorpayCheckout = { orderId: razorpayOrder.id, amount: razorpayOrder.amount, currency: razorpayOrder.currency, keyId: env.razorpay.keyId };
     } else {
+      // COD or fully-discounted/cash orders: no gateway charge.
+      // COD payment stays 'Pending' until the admin marks it collected.
+      // Zero-total and Cash orders are instantly 'Success'.
       payment = await Payment.create({
         user: userId,
         targetType: 'order',
         targetId: orderId,
         amount: total,
-        method: paymentMethod,
-        status: 'Success',
+        method: isCOD ? 'Cash' : paymentMethod,
+        status: isCOD ? 'Pending' : 'Success',
         gatewayRef: null,
         coinsRedeemed: actualCoinsRedeemed,
       });
@@ -192,7 +198,13 @@ export async function createOrder(userId, { items, useCart, address, couponCode,
       coinsValue,
       total,
       payment: payment._id,
+      // COD orders are Confirmed immediately — the order is accepted and the
+      // customer pays on delivery. paymentStatus stays 'Pending' until admin
+      // marks it collected. Online pending-gateway orders stay 'Placed' until
+      // verifyOrderPayment() confirms the Razorpay charge.
       status: needsGateway ? 'Placed' : 'Confirmed',
+      paymentMethod: isCOD ? 'COD' : 'Online',
+      paymentStatus: isCOD ? 'Pending' : (needsGateway ? 'Pending' : 'Paid'),
       checkedOutFromCart: Boolean(useCart),
     });
 
@@ -258,6 +270,7 @@ export async function verifyOrderPayment(userId, orderId, { razorpayPaymentId, r
   await payment.save();
 
   order.status = 'Confirmed';
+  order.paymentStatus = 'Paid';
   await order.save();
 
   if (order.exchangeRequest) await markApplied(order.exchangeRequest, order._id);

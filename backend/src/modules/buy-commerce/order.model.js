@@ -49,6 +49,12 @@ const orderSchema = new mongoose.Schema(
     // browser, so a customer could be given a tracking id that tracks nothing.
     trackingNumber: String,
     courierPartner: String,
+    // How the customer chose to pay at checkout.
+    // 'Online' = Razorpay gateway; 'COD' = Pay on Delivery (cash collected on receipt).
+    paymentMethod: { type: String, enum: ['Online', 'COD'], default: 'Online' },
+    // For COD orders the admin must manually record collection.
+    // For Online orders this is set to 'Paid' automatically when Razorpay verify succeeds.
+    paymentStatus: { type: String, enum: ['Pending', 'Paid'], default: 'Pending' },
   },
   { timestamps: true },
 );

@@ -5,6 +5,7 @@ import { requireAuth, requireRole } from '../../middleware/auth.js';
 import { ok } from '../../utils/respond.js';
 import { ROLES } from '../../config/constants.js';
 import * as adminOrderService from './adminOrder.service.js';
+const PAYMENT_STATUSES = ['Pending', 'Paid'];
 
 export const adminOrderRouter = Router();
 adminOrderRouter.use(requireAuth, requireRole(ROLES.SUPER_ADMIN));
@@ -22,6 +23,9 @@ const updateStatusSchema = z.object({
   status: z.enum(STATUSES),
   trackingNumber: z.string().optional(),
   courierPartner: z.string().optional(),
+});
+const updatePaymentStatusSchema = z.object({
+  paymentStatus: z.enum(PAYMENT_STATUSES),
 });
 
 adminOrderRouter.get('/', validate(listQuerySchema, 'query'), async (req, res, next) => {
@@ -48,6 +52,19 @@ adminOrderRouter.patch(
   async (req, res, next) => {
     try {
       ok(res, await adminOrderService.updateOrderStatus(req.params.id, req.body.status, req.body));
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+adminOrderRouter.patch(
+  '/:id/payment-status',
+  validate(idParamSchema, 'params'),
+  validate(updatePaymentStatusSchema),
+  async (req, res, next) => {
+    try {
+      ok(res, await adminOrderService.updateOrderPaymentStatus(req.params.id, req.body.paymentStatus));
     } catch (err) {
       next(err);
     }

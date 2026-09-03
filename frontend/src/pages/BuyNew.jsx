@@ -295,7 +295,7 @@ const BuyNew = () => {
     removeCartItem(id);
   };
 
-  const [paymentMode, setPaymentMode] = useState('UPI');
+  const [paymentMode, setPaymentMode] = useState('COD'); // 'COD' | 'Online'
   const [selectedProductImg, setSelectedProductImg] = useState(null);
   const [activeImageIdx, setActiveImageIdx] = useState(0);
 
@@ -351,7 +351,7 @@ const BuyNew = () => {
   const [placingOrder, setPlacingOrder] = useState(false);
   const [orderError, setOrderError] = useState('');
 
-  const handlePlaceOrder = async () => {
+  const handlePlaceOrder = async (method = paymentMode) => {
     if (!cart.length) return;
     setOrderError('');
     setPlacingOrder(true);
@@ -362,15 +362,13 @@ const BuyNew = () => {
         auth: true,
         body: {
           items: cart.map((item) => ({ productId: item.id, quantity: item.qty || 1 })),
-          // Only an inspected-and-approved trade-in is accepted by the server;
-          // sending a pending one would 400 the whole checkout.
           exchangeRequestId: cart.find((i) => i.exchange?.status === 'Inspection Approved')?.exchange?.requestId,
-          paymentMethod: paymentMode || 'UPI',
+          paymentMethod: method, // 'COD' or 'Online' (mapped server-side)
         },
       });
       const order = res;
 
-      if (order.razorpay) {
+      if (method === 'Online' && order.razorpay) {
         await payWithRazorpay({
           razorpay: order.razorpay,
           verifyPath: `/orders/${order.id}/verify-payment`,
@@ -1564,27 +1562,27 @@ const BuyNew = () => {
           </motion.div>
         )}
 
-        {/* ── STEP 5: SECURE PAYMENT ── */}
+        {/* ── STEP 5: PAYMENT ── */}
         {step === 5 && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
-            className="flex flex-col gap-6 pb-12 text-left"
+            className="flex flex-col gap-5 pb-12 text-left"
           >
-            {/* Header Header */}
+            {/* Header */}
             <div className="flex items-center justify-between px-1 -mt-2">
               <div>
-                <h2 className="text-lg font-black text-slate-900 tracking-tight">Select Payment Option</h2>
-                <p className="text-xs text-slate-500 font-semibold mt-0.5">100% Encrypted & Instant Confirmation</p>
+                <h2 className="text-lg font-black text-slate-900 tracking-tight">Choose Payment</h2>
+                <p className="text-xs text-slate-500 font-semibold mt-0.5">Select how you'd like to pay</p>
               </div>
               <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200/80 px-2.5 py-1 rounded-full text-[10px] font-black text-emerald-700">
                 <ShieldCheck size={13} />
-                <span>256-Bit SSL</span>
+                <span>Secure & Safe</span>
               </div>
             </div>
 
-            {/* 1. ORDER SUMMARY MINI CARD */}
+            {/* Order Summary Mini Card */}
             {cart.length > 0 && (
               <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-blue-950 text-white rounded-3xl p-5 shadow-lg space-y-3 relative overflow-hidden">
                 <div className="flex items-center justify-between border-b border-white/10 pb-3">
@@ -1594,12 +1592,11 @@ const BuyNew = () => {
                     </div>
                     <div>
                       <span className="text-[10px] uppercase font-mono font-bold text-blue-300 block">Order Summary</span>
-                      <span className="text-xs font-black text-white">{cart.length} Appliance Item{cart.length > 1 ? 's' : ''}</span>
+                      <span className="text-xs font-black text-white">{cart.length} Item{cart.length > 1 ? 's' : ''}</span>
                     </div>
                   </div>
                   <span className="text-lg font-black text-[#FFD400]">₹{cartTotal.toLocaleString()}</span>
                 </div>
-
                 <div className="space-y-1.5">
                   {cart.map((item, idx) => (
                     <div key={idx} className="flex justify-between items-center text-xs text-slate-300 font-medium">
@@ -1608,146 +1605,107 @@ const BuyNew = () => {
                     </div>
                   ))}
                 </div>
-
                 <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[11px] font-semibold text-emerald-400">
-                  <span className="flex items-center gap-1">✓ Free Express Delivery Included</span>
-                  <span className="bg-emerald-500/20 border border-emerald-400/30 px-2 py-0.5 rounded text-[10px] font-bold text-emerald-300">
-                    Instant Dispatch
-                  </span>
+                  <span className="flex items-center gap-1">✓ Free Delivery Included</span>
+                  <span className="bg-emerald-500/20 border border-emerald-400/30 px-2 py-0.5 rounded text-[10px] font-bold text-emerald-300">Instant Dispatch</span>
                 </div>
               </div>
             )}
 
-            {/* 2. RECOMMENDED PAYMENT (UPI) */}
-            <div className="space-y-2.5">
-              <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider block px-1">
-                RECOMMENDED METHOD
-              </span>
+            {/* ─── 2-Option Payment Cards ─── */}
+            <div className="space-y-3">
+              <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider block px-1">Select Payment Method</span>
+
+              {/* Option 1 — Pay on Delivery */}
               <div
-                onClick={() => setPaymentMode('UPI')}
+                id="pay-on-delivery-option"
+                onClick={() => setPaymentMode('COD')}
                 className={`bg-white rounded-3xl p-5 transition-all shadow-xs cursor-pointer border-2 relative overflow-hidden ${
-                  paymentMode === 'UPI'
+                  paymentMode === 'COD'
+                    ? 'border-[#FF6B35] bg-gradient-to-r from-orange-50/80 via-amber-50/40 to-white ring-4 ring-orange-100'
+                    : 'border-slate-200/90 hover:border-slate-300'
+                }`}
+              >
+                {paymentMode === 'COD' && (
+                  <div className="absolute top-0 right-0 bg-[#FF6B35] text-white text-[9px] font-black px-3 py-1 rounded-bl-2xl">SELECTED</div>
+                )}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3.5">
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-xs transition-colors ${
+                      paymentMode === 'COD' ? 'bg-[#FF6B35] text-white' : 'bg-orange-50 text-orange-500'
+                    }`}>
+                      <Truck className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-black text-slate-900">Pay on Delivery</span>
+                        <span className="bg-orange-100 text-orange-700 font-extrabold text-[9px] px-2 py-0.5 rounded-md border border-orange-200">No Advance</span>
+                      </div>
+                      <span className="text-xs text-slate-500 font-semibold block mt-0.5">
+                        Pay cash when your order arrives at your door
+                      </span>
+                    </div>
+                  </div>
+                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                    paymentMode === 'COD' ? 'border-[#FF6B35] bg-[#FF6B35] text-white' : 'border-slate-300 bg-white'
+                  }`}>
+                    {paymentMode === 'COD' && <Check size={14} className="stroke-[3]" />}
+                  </div>
+                </div>
+                <div className="mt-4 pt-3 border-t border-slate-100/80 flex items-center gap-3 text-[10px] font-bold text-slate-500">
+                  <span className="flex items-center gap-1"><Check size={10} className="text-emerald-500" /> No card required</span>
+                  <span className="flex items-center gap-1"><Check size={10} className="text-emerald-500" /> Pay on receipt</span>
+                  <span className="flex items-center gap-1"><Check size={10} className="text-emerald-500" /> 100% safe</span>
+                </div>
+              </div>
+
+              {/* Option 2 — Pay Online */}
+              <div
+                id="pay-online-option"
+                onClick={() => setPaymentMode('Online')}
+                className={`bg-white rounded-3xl p-5 transition-all shadow-xs cursor-pointer border-2 relative overflow-hidden ${
+                  paymentMode === 'Online'
                     ? 'border-[#0D47A1] bg-gradient-to-r from-blue-50/70 via-indigo-50/40 to-white ring-4 ring-blue-100'
                     : 'border-slate-200/90 hover:border-slate-300'
                 }`}
               >
+                {paymentMode === 'Online' && (
+                  <div className="absolute top-0 right-0 bg-[#0D47A1] text-white text-[9px] font-black px-3 py-1 rounded-bl-2xl">SELECTED</div>
+                )}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3.5">
                     <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-xs transition-colors ${
-                      paymentMode === 'UPI' ? 'bg-[#0D47A1] text-white' : 'bg-slate-100 text-slate-700'
+                      paymentMode === 'Online' ? 'bg-[#0D47A1] text-white' : 'bg-slate-100 text-slate-700'
                     }`}>
-                      <Zap className="h-6 w-6" fill={paymentMode === 'UPI' ? "currentColor" : "none"} />
+                      <Zap className="h-6 w-6" fill={paymentMode === 'Online' ? 'currentColor' : 'none'} />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-black text-slate-900 block">UPI Instant Payment</span>
-                        <span className="bg-emerald-100 text-emerald-800 font-extrabold text-[9px] px-2 py-0.5 rounded-md border border-emerald-200">
-                          Fastest
-                        </span>
+                        <span className="text-sm font-black text-slate-900">Pay Online</span>
+                        <span className="bg-emerald-100 text-emerald-800 font-extrabold text-[9px] px-2 py-0.5 rounded-md border border-emerald-200">Instant Confirm</span>
                       </div>
                       <span className="text-xs text-slate-500 font-semibold block mt-0.5">
-                        Pay using Google Pay, PhonePe, Paytm, BHIM, or any UPI App
+                        UPI · Card · Net Banking · Wallet via Razorpay
                       </span>
                     </div>
                   </div>
-
                   <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                    paymentMode === 'UPI' ? 'border-[#0D47A1] bg-[#0D47A1] text-white' : 'border-slate-300 bg-white'
+                    paymentMode === 'Online' ? 'border-[#0D47A1] bg-[#0D47A1] text-white' : 'border-slate-300 bg-white'
                   }`}>
-                    {paymentMode === 'UPI' && <Check size={14} className="stroke-[3]" />}
+                    {paymentMode === 'Online' && <Check size={14} className="stroke-[3]" />}
                   </div>
                 </div>
-
-                {/* Popular App Badges */}
                 <div className="mt-4 pt-3 border-t border-slate-100/80 flex items-center gap-2 text-[10px] font-bold text-slate-500">
-                  <span>Supported Apps:</span>
+                  <span>Supported:</span>
                   <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-700 font-black">GPay</span>
                   <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-700 font-black">PhonePe</span>
-                  <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-700 font-black">Paytm</span>
-                  <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-700 font-black">BHIM</span>
+                  <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-700 font-black">Cards</span>
+                  <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-700 font-black">UPI</span>
                 </div>
               </div>
             </div>
 
-            {/* 3. OTHER PAYMENT OPTIONS */}
-            <div className="space-y-2.5">
-              <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider block px-1">
-                OTHER PAYMENT METHODS
-              </span>
-
-              <div className="grid grid-cols-1 gap-3">
-                {[
-                  { 
-                    id: 'Card', 
-                    label: 'Credit / Debit Card', 
-                    sub: 'Visa, Mastercard, RuPay, Diners Club', 
-                    Icon: Lock,
-                    badge: 'All Cards Supported'
-                  },
-                  { 
-                    id: 'NetBanking', 
-                    label: 'Net Banking', 
-                    sub: 'HDFC, ICICI, SBI, Axis, Kotak & 50+ Banks', 
-                    Icon: Landmark,
-                    badge: 'Instant Transfer'
-                  },
-                  { 
-                    id: 'Wallets', 
-                    label: 'Wallets & Pay Later', 
-                    sub: 'Paytm Wallet, Amazon Pay, Mobikwik', 
-                    Icon: Wallet,
-                    badge: '1-Click Checkout'
-                  },
-                  { 
-                    id: 'EMI', 
-                    label: 'Easy Card / Cardless EMI', 
-                    sub: 'No Cost EMI available on select credit cards', 
-                    Icon: Percent,
-                    badge: 'Low Monthly Cost'
-                  },
-                ].map(({ id, label, sub, Icon, badge }) => {
-                  const isSelected = paymentMode === id;
-                  return (
-                    <div
-                      key={id}
-                      onClick={() => setPaymentMode(id)}
-                      className={`bg-white rounded-3xl p-4.5 flex items-center justify-between cursor-pointer transition-all shadow-xs border-2 ${
-                        isSelected 
-                          ? 'border-[#0D47A1] bg-blue-50/30 ring-2 ring-blue-100' 
-                          : 'border-slate-200/90 hover:border-slate-300'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3.5">
-                        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 transition-colors ${
-                          isSelected ? 'bg-blue-100 text-[#0D47A1]' : 'bg-slate-100 text-slate-500'
-                        }`}>
-                          <Icon className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-black text-slate-900 block">{label}</span>
-                            {badge && (
-                              <span className="text-[9px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
-                                {badge}
-                              </span>
-                            )}
-                          </div>
-                          <span className="text-[10px] text-slate-500 font-semibold block mt-0.5">{sub}</span>
-                        </div>
-                      </div>
-
-                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                        isSelected ? 'border-[#0D47A1] bg-[#0D47A1] text-white' : 'border-slate-300 bg-white'
-                      }`}>
-                        {isSelected && <Check size={12} className="stroke-[3]" />}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* 4. TOTAL PAYABLE & ACTION BUTTON */}
+            {/* Total & Action Buttons */}
             <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-sm space-y-4">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div>
@@ -1755,27 +1713,45 @@ const BuyNew = () => {
                   <span className="text-2xl font-black text-slate-900 block mt-0.5">₹{cartTotal.toLocaleString()}</span>
                 </div>
                 <div className="text-right">
-                  <span className="text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full block">
-                    ✓ Zero Convenience Fee
-                  </span>
+                  {paymentMode === 'COD' ? (
+                    <span className="text-xs font-bold text-orange-600 bg-orange-50 border border-orange-200 px-2.5 py-1 rounded-full block">
+                      💵 Pay on Delivery
+                    </span>
+                  ) : (
+                    <span className="text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full block">
+                      ✓ Zero Convenience Fee
+                    </span>
+                  )}
                 </div>
               </div>
 
-              {/* Pay Button */}
-              <button
-                onClick={handlePlaceOrder}
-                disabled={placingOrder || cart.length === 0}
-                className="w-full bg-[#0D47A1] hover:bg-blue-800 disabled:opacity-60 text-white font-black py-4 rounded-2xl transition-all shadow-lg text-sm cursor-pointer active:scale-98 flex items-center justify-center gap-2"
-              >
-                <Lock className="h-4 w-4" />
-                {placingOrder ? 'Opening Secure Payment Gateway…' : `Pay ₹${cartTotal.toLocaleString()} & Complete Order`}
-              </button>
+              {/* CTA Button */}
+              {paymentMode === 'COD' ? (
+                <button
+                  id="place-order-cod-btn"
+                  onClick={() => handlePlaceOrder('COD')}
+                  disabled={placingOrder || cart.length === 0}
+                  className="w-full bg-[#FF6B35] hover:bg-orange-600 disabled:opacity-60 text-white font-black py-4 rounded-2xl transition-all shadow-lg text-sm cursor-pointer active:scale-98 flex items-center justify-center gap-2"
+                >
+                  <Truck className="h-4 w-4" />
+                  {placingOrder ? 'Placing Your Order…' : `Place Order — Pay ₹${cartTotal.toLocaleString()} on Delivery`}
+                </button>
+              ) : (
+                <button
+                  id="place-order-online-btn"
+                  onClick={() => handlePlaceOrder('Online')}
+                  disabled={placingOrder || cart.length === 0}
+                  className="w-full bg-[#0D47A1] hover:bg-blue-800 disabled:opacity-60 text-white font-black py-4 rounded-2xl transition-all shadow-lg text-sm cursor-pointer active:scale-98 flex items-center justify-center gap-2"
+                >
+                  <Lock className="h-4 w-4" />
+                  {placingOrder ? 'Opening Secure Payment Gateway…' : `Pay ₹${cartTotal.toLocaleString()} Online`}
+                </button>
+              )}
 
               {orderError && (
                 <p className="text-[11px] font-bold text-red-600 text-center px-2">{orderError}</p>
               )}
 
-              {/* Trust Badges Footer */}
               <div className="pt-2 flex items-center justify-center gap-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-t border-slate-100">
                 <span className="flex items-center gap-1">
                   <ShieldCheck className="h-3.5 w-3.5 text-green-600" />

@@ -22,7 +22,7 @@ export const createOrderSchema = z
     couponCode: z.string().optional(),
     exchangeRequestId: z.string().optional(),
     coinsToRedeem: z.coerce.number().int().nonnegative().optional(),
-    paymentMethod: z.enum(['Card', 'UPI', 'NetBanking', 'Cash', 'Wallet']).optional(),
+    paymentMethod: z.enum(['Card', 'UPI', 'NetBanking', 'Cash', 'Wallet', 'COD']).optional(),
   })
   .refine((data) => data.useCart || (data.items && data.items.length > 0), {
     message: 'Either useCart or a non-empty items array is required',
