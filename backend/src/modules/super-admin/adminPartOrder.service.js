@@ -70,6 +70,15 @@ export async function updatePartOrderStatus(partOrderId, { status, scheduledDate
       Delivered: ['Spare Received', 'Spare part delivered — revisit scheduled'],
     };
 
+    // Normalise timeSlot: job.revisit.timeSlot is a plain String; booking.timeSlot
+    // is { date, time }. Build both shapes once so each assignment is correct.
+    const timeSlotStr = typeof timeSlot === 'object' && timeSlot !== null
+      ? (timeSlot.time || '10:00 AM - 01:00 PM')
+      : (timeSlot || '10:00 AM - 01:00 PM');
+    const timeSlotObj = typeof timeSlot === 'object' && timeSlot !== null
+      ? timeSlot
+      : { date: parsedDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }), time: timeSlot || '10:00 AM - 01:00 PM' };
+
     if (REVISIT_STEP[status]) {
       const [stepLabel, defaultNote] = REVISIT_STEP[status];
 
@@ -78,7 +87,7 @@ export async function updatePartOrderStatus(partOrderId, { status, scheduledDate
         job.revisit = {
           scheduledDate: parsedDate,
           expectedDate: parsedDate,
-          timeSlot: timeSlot || '10:00 AM - 01:00 PM',
+          timeSlot: timeSlotStr,   // revisitSchema defines timeSlot as String
           status: 'Scheduled',
           partOrderId: partOrder._id,
           notes: notes || defaultNote,
@@ -112,7 +121,7 @@ export async function updatePartOrderStatus(partOrderId, { status, scheduledDate
             booking.status = 'Upcoming';
             booking.instantStatus = 'RESCHEDULED';
             booking.scheduledDate = parsedDate;
-            booking.timeSlot = timeSlot || '10:00 AM - 01:00 PM';
+            booking.timeSlot = timeSlotObj;  // bookingSchema defines timeSlot as { date, time }
             await booking.save();
           }
         } else if (sr.user) {
@@ -128,7 +137,7 @@ export async function updatePartOrderStatus(partOrderId, { status, scheduledDate
             category: sr.category,
             technicianName: tech?.name || 'Your technician',
             scheduledDate: formattedDate,
-            timeSlot: timeSlot || '10:00 AM - 01:00 PM',
+            timeSlot: timeSlotStr,
             bookingId: sr.booking ? String(sr.booking) : null,
           }).catch(() => {});
 
@@ -139,7 +148,7 @@ export async function updatePartOrderStatus(partOrderId, { status, scheduledDate
               status: 'Upcoming',
               instantStatus: 'RESCHEDULED',
               scheduledDate: parsedDate,
-              timeSlot: timeSlot || '10:00 AM - 01:00 PM',
+              timeSlot: timeSlotStr,
             });
             io.to(`user:${customerUserId}`).emit('instant:status_update', {
               bookingId: sr.booking,
