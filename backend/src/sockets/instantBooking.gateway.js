@@ -16,11 +16,26 @@ export function registerInstantBookingGateway(io) {
     // reason the room exists at all: what gets published here is customer
     // contact and address data, so a customer or brand-admin socket asking to
     // join must be turned away rather than quietly added.
-    socket.on('join-instant-feed', (_payload, ack) => {
-      if (socket.user.role !== ROLES.TECHNICIAN) {
+    socket.on('join-instant-feed', async (_payload, ack) => {
+      if (socket.user?.role !== ROLES.TECHNICIAN) {
         return ack?.({ ok: false, error: 'technician role required' });
       }
       socket.join(INSTANT_ROOM);
+      socket.join('technicians');
+      if (socket.user?.id) {
+        socket.join(`tech:${socket.user.id}`);
+        try {
+          const tech = await Technician.findOne({ user: socket.user.id });
+          if (tech) {
+            socket.join(`tech:${tech._id}`);
+            if (tech.serviceCityName) {
+              socket.join(`city:${tech.serviceCityName.toLowerCase().trim()}`);
+            }
+          }
+        } catch {
+          // ignore error finding tech record
+        }
+      }
       return ack?.({ ok: true, room: INSTANT_ROOM });
     });
 
@@ -73,7 +88,7 @@ export function registerInstantBookingGateway(io) {
         // technician whose update actually matched.
         const booking = await Booking.findOneAndUpdate(
           { _id: bookingId, $or: [{ technician: null }, { technician: technician._id }] },
-          { technician: technician._id, instantStatus: 'ASSIGNED' },
+          { technician: technician._id, instantStatus: 'ASSIGNED', isAccepted: true },
           { new: true },
         );
         if (!booking) {
@@ -88,6 +103,8 @@ export function registerInstantBookingGateway(io) {
         if (sr) {
           sr.technician = technician._id;
           sr.instantStatus = 'ASSIGNED';
+          sr.isAccepted = true;
+          sr.acceptedAt = new Date();
           await sr.save();
           sr = await transitionStatus(sr.id, 'Assigned', {
             description: `Instant booking accepted by ${technician.name}`,
@@ -100,6 +117,8 @@ export function registerInstantBookingGateway(io) {
           bookingId: booking.id,
           serviceRequestId: sr?.id,
           instantStatus: 'ASSIGNED',
+          isAccepted: true,
+          status: 'Engineer Accepted',
           technician: {
             id: technician._id,
             name: technician.name,
@@ -108,6 +127,7 @@ export function registerInstantBookingGateway(io) {
           },
         };
         io.to(`user:${booking.user}`).emit('instant:status_update', assignedPayload);
+        io.to(`user:${booking.user}`).emit('booking:accepted', assignedPayload);
         io.to(INSTANT_ROOM).emit('instant:status_update', assignedPayload);
 
         ack?.({ ok: true, booking, technician });

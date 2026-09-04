@@ -50,6 +50,13 @@ const serviceRequestSchema = new mongoose.Schema(
 
     slaDueAt: Date,
     zone: String,
+    customerLocation: {
+      latitude: Number,
+      longitude: Number,
+    },
+    isAccepted: { type: Boolean, default: false, index: true },
+    assignedAt: Date,
+    acceptedAt: Date,
     isInstant: { type: Boolean, default: false },
     instantStatus: {
       type: String,

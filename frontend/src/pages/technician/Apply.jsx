@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, User, Phone, Mail, Lock, Eye, EyeOff, Briefcase, MapPin, Check, ShieldCheck, ChevronDown, X } from 'lucide-react';
 import { BOOKING_CATALOG } from '../../data/bookingCatalog';
 import { apiRequest } from '../../lib/apiClient';
+import { SearchableSelect } from '../../components/common/SearchableSelect';
+import { STATE_CITIES } from '../../utils/indiaGeoData';
 
 const TechApply = () => {
   const navigate = useNavigate();
@@ -12,7 +14,8 @@ const TechApply = () => {
     phone: '',
     password: '',
     confirmPassword: '',
-    city: '',
+    state: 'Madhya Pradesh',
+    city: 'Indore',
   });
   
   const [showPassword, setShowPassword] = useState(false);
@@ -138,9 +141,12 @@ const TechApply = () => {
       errors.services = 'Please select at least one service';
     }
 
-    // Operating City validation
+    // Operating Territory validation (State & City)
+    if (!form.state) {
+      errors.state = 'Please select a serviceable state';
+    }
     if (!form.city) {
-      errors.city = 'Please select an operating city';
+      errors.city = 'Please select a serviceable city';
     }
 
     // Aadhar Card Photos validation
@@ -263,6 +269,7 @@ const TechApply = () => {
       formData.append('email', form.email.trim());
       formData.append('phone', form.phone.trim());
       formData.append('password', form.password);
+      formData.append('state', form.state);
       formData.append('city', form.city);
       formData.append('specs', JSON.stringify(selectedServices));
       formData.append('aadharFront', aadharFront);
@@ -562,36 +569,52 @@ const TechApply = () => {
             )}
           </div>
 
-          {/* Operational City Selection (Dropdown) */}
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Operating City / Territory</label>
-            <div className="relative">
-              <MapPin className={`absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 ${fieldErrors.city ? 'text-rose-400' : 'text-slate-400'} pointer-events-none z-10`} />
-              <select
-                name="city"
-                value={form.city}
-                onChange={handleChange}
-                className={`w-full pl-11 pr-8 py-2.5 bg-slate-50 border ${fieldErrors.city ? 'border-rose-400 focus:border-rose-400 focus:ring-rose-400' : 'border-slate-200 focus:border-[#0D47A1] focus:ring-[#0D47A1]'} rounded-2xl focus:ring-1 outline-none transition-all text-xs appearance-none font-medium text-slate-800`}
-                disabled={citiesLoading || availableCities.length === 0}
-              >
-                {citiesLoading && <option value="">Loading cities…</option>}
-                {!citiesLoading && availableCities.length === 0 && (
-                  <option value="">No operational cities available</option>
-                )}
-                {availableCities.map((city) => (
-                  <option key={city.name} value={city.name}>
-                    {city.state ? `${city.name}, ${city.state}` : city.name}
-                  </option>
-                ))}
-              </select>
+          {/* Operational Territory Selection: State then City */}
+          <div className="flex flex-col gap-2 p-3.5 bg-blue-50/50 border border-blue-150 rounded-2xl">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-[#0D47A1] uppercase tracking-wide flex items-center gap-1.5">
+                <MapPin className="h-4 w-4 text-[#0D47A1]" /> Serviceable Territory & Location *
+              </label>
+              <span className="text-[10px] text-slate-500 font-medium">Select State then City</span>
             </div>
-            {fieldErrors.city && (
-              <span className="text-[10px] font-semibold text-rose-500 mt-0.5">{fieldErrors.city}</span>
-            )}
-            {!citiesLoading && availableCities.length === 0 && (
-              <p className="text-[11px] text-amber-600 mt-0.5">
-                No service cities have been configured yet. Please check back soon or contact support.
-              </p>
+            <p className="text-[11px] text-slate-600 leading-snug">
+              You will strictly receive service bookings for customers located within your selected State & City.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
+              {/* Option 1: State Selection */}
+              <SearchableSelect
+                label="State *"
+                value={form.state}
+                options={Object.keys(STATE_CITIES)}
+                onChange={(st) => {
+                  const cities = STATE_CITIES[st] || ['Other'];
+                  setForm(prev => ({ ...prev, state: st, city: cities[0] }));
+                  if (fieldErrors.state || fieldErrors.city) {
+                    setFieldErrors(prev => ({ ...prev, state: '', city: '' }));
+                  }
+                }}
+                placeholder="Search state..."
+              />
+
+              {/* Option 2: City Selection */}
+              <SearchableSelect
+                label="City *"
+                value={form.city}
+                options={STATE_CITIES[form.state] || ['Other']}
+                onChange={(ct) => {
+                  setForm(prev => ({ ...prev, city: ct }));
+                  if (fieldErrors.city) {
+                    setFieldErrors(prev => ({ ...prev, city: '' }));
+                  }
+                }}
+                placeholder="Search city..."
+              />
+            </div>
+            {(fieldErrors.state || fieldErrors.city) && (
+              <span className="text-[10px] font-semibold text-rose-500 mt-0.5">
+                {fieldErrors.state || fieldErrors.city}
+              </span>
             )}
           </div>
 

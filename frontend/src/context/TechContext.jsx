@@ -269,17 +269,49 @@ export const TechProvider = ({ children }) => {
   useEffect(() => {
     if (!user || user.role !== 'technician' || availability !== 'Available') return undefined;
 
-    const { accessToken } = getStoredTokens();
+    const { accessToken } = getStoredTokens('technician');
     if (!accessToken) return undefined;
 
-    const socket = io(SOCKET_URL, { auth: { token: accessToken }, transports: ['websocket'] });
+    const socket = io(SOCKET_URL, { 
+      auth: { token: accessToken }, 
+      transports: ['websocket', 'polling'] 
+    });
     socketRef.current = socket;
-    socket.on('connect', () => socket.emit('join-instant-feed', {}));
-    socket.on('instant:new_request', () => { fetchRealJobs(); });
+
+    socket.on('connect', () => {
+      socket.emit('join-instant-feed', {});
+    });
+
+    const handleIncomingJobDispatch = (payload) => {
+      fetchRealJobs();
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('tech:incoming_job', { detail: payload }));
+      }
+    };
+
+    socket.on('instant:new_request', handleIncomingJobDispatch);
+    socket.on('job:assigned', handleIncomingJobDispatch);
+    socket.on('job:new_available', handleIncomingJobDispatch);
     socket.on('instant:status_update', () => { fetchRealJobs(); });
     socket.on('connect_error', (err) => console.warn('[tech] instant feed disconnected:', err.message));
 
-    return () => { socket.disconnect(); socketRef.current = null; };
+    return () => { 
+      socket.disconnect(); 
+      socketRef.current = null; 
+    };
+  }, [user, availability, fetchRealJobs]);
+
+  // Active fast polling fallback:
+  // When technician is Online / Available, refresh jobs every 4 seconds
+  // so newly booked customer requests appear instantly without needing page refresh
+  useEffect(() => {
+    if (!user || user.role !== 'technician' || availability !== 'Available') return undefined;
+
+    const pollInterval = setInterval(() => {
+      fetchRealJobs();
+    }, 4000);
+
+    return () => clearInterval(pollInterval);
   }, [user, availability, fetchRealJobs]);
 
   /**

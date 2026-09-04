@@ -8,5 +8,10 @@
 // databases make that class of race impossible by construction.
 export function testDbUri(suffix) {
   const base = process.env.MONGODB_TEST_URI || 'mongodb://127.0.0.1:27017/nigam_care_test';
+  if (base.includes('?')) {
+    const [path, query] = base.split('?');
+    return `${path}_${suffix}?${query}`;
+  }
   return `${base}_${suffix}`;
 }
+

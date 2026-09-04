@@ -153,3 +153,97 @@ test.describe('forgot / reset password', () => {
     expect(newLoginRes.status()).toBe(200);
   });
 });
+
+test.describe('customer signup & address flow', () => {
+  test('detects duplicate phone and email on signup check', async ({ request }) => {
+    const existingPhone = uniquePhone();
+    const existingEmail = `existing-${randomUUID()}@e2e.test`;
+    await createTestUser(request, { role: 'customer', phone: existingPhone, email: existingEmail, password: 'password123' });
+
+    // 1. Phone duplicate check
+    const phoneRes = await request.post('/api/v1/auth/signup/check', {
+      data: {
+        name: 'New Customer',
+        phone: existingPhone,
+        email: `unique-${randomUUID()}@e2e.test`,
+        password: 'password123',
+        confirmPassword: 'password123',
+        address: '404 Galaxy, Pune (City: Pune, State: Maharashtra)',
+      },
+    });
+    expect(phoneRes.status()).toBe(409);
+    const phoneBody = await phoneRes.json();
+    expect(phoneBody.error?.details?.errorType).toBe('phone');
+
+    // 2. Email duplicate check
+    const emailRes = await request.post('/api/v1/auth/signup/check', {
+      data: {
+        name: 'New Customer',
+        phone: uniquePhone(),
+        email: existingEmail,
+        password: 'password123',
+        confirmPassword: 'password123',
+        address: '404 Galaxy, Pune (City: Pune, State: Maharashtra)',
+      },
+    });
+    expect(emailRes.status()).toBe(409);
+    const emailBody = await emailRes.json();
+    expect(emailBody.error?.details?.errorType).toBe('email');
+
+    // 3. Both duplicate check
+    const bothRes = await request.post('/api/v1/auth/signup/check', {
+      data: {
+        name: 'New Customer',
+        phone: existingPhone,
+        email: existingEmail,
+        password: 'password123',
+        confirmPassword: 'password123',
+        address: '404 Galaxy, Pune (City: Pune, State: Maharashtra)',
+      },
+    });
+    expect(bothRes.status()).toBe(409);
+    const bothBody = await bothRes.json();
+    expect(bothBody.error?.details?.errorType).toBe('both');
+  });
+
+  test('successfully checks unique details, sends OTP, and verifies customer with address', async ({ request }) => {
+    const phone = uniquePhone();
+    const email = `signup-${randomUUID()}@e2e.test`;
+    const fullAddress = 'Flat 501, Blue Sky Apartments, Andheri West (City: Mumbai, State: Maharashtra)';
+
+    const checkRes = await request.post('/api/v1/auth/signup/check', {
+      data: {
+        name: 'Rohan Gupta',
+        phone,
+        email,
+        password: 'SecurePassword123',
+        confirmPassword: 'SecurePassword123',
+        address: fullAddress,
+      },
+    });
+    expect(checkRes.status()).toBe(200);
+    const checkBody = await checkRes.json();
+    expect(checkBody.data.status).toBe('otp_sent');
+
+    const code = await getOtpCode(request, phone);
+    expect(code).toBeTruthy();
+
+    const verifyRes = await request.post('/api/v1/auth/signup/verify', {
+      data: {
+        name: 'Rohan Gupta',
+        phone,
+        email,
+        password: 'SecurePassword123',
+        address: fullAddress,
+        code,
+      },
+    });
+    expect(verifyRes.status()).toBe(200);
+    const verifyBody = await verifyRes.json();
+    expect(verifyBody.data.accessToken).toBeTruthy();
+    expect(verifyBody.data.user.role).toBe('customer');
+    expect(verifyBody.data.user.phone).toBe(phone);
+    expect(verifyBody.data.user.addresses?.length).toBeGreaterThan(0);
+    expect(verifyBody.data.user.addresses[0].city).toBe('Mumbai');
+  });
+});

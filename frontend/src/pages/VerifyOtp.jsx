@@ -10,6 +10,8 @@ import { useAuth } from '../context/AuthContext';
 // against, so it falls back to the component's original demo behavior rather
 // than throwing — same reasoning as the other three portals, which don't have
 // a real backend flow wired up yet at all.
+import { getActiveCities, isCityServiceable } from '../utils/serviceableCities';
+
 const VerifyOtp = () => {
   const { state } = useLocation();
   const navigate = useNavigate();
@@ -20,11 +22,25 @@ const VerifyOtp = () => {
 
   const handleVerify = async (code) => {
     if (isSignup) {
-      await signupVerify({ ...state.signupData, code });
-      navigate('/dashboard');
+      const newUser = await signupVerify({ ...state.signupData, code });
+      const city = state?.signupData?.city || newUser?.addresses?.[0]?.city || '';
+      const activeCities = await getActiveCities();
+      if (city && !isCityServiceable(city, activeCities)) {
+        navigate('/area-not-serviceable', { replace: true });
+        return;
+      }
+      navigate('/dashboard', { replace: true });
     } else {
-      await verifyOtp({ role: state.role, identifier: state.identifier, code });
-      navigate('/dashboard');
+      const sessionUser = await verifyOtp({ role: state.role, identifier: state.identifier, code });
+      const city = sessionUser?.addresses?.[0]?.city || '';
+      if (city) {
+        const activeCities = await getActiveCities();
+        if (!isCityServiceable(city, activeCities)) {
+          navigate('/area-not-serviceable', { replace: true });
+          return;
+        }
+      }
+      navigate('/dashboard', { replace: true });
     }
   };
 

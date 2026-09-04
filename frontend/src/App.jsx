@@ -63,6 +63,8 @@ import PaymentMethods from './pages/PaymentMethods';
 import NotificationSettings from './pages/NotificationSettings';
 import Faqs from './pages/Faqs';
 import AboutNCC from './pages/AboutNCC';
+import AreaNotServiceable from './pages/AreaNotServiceable';
+import { getActiveCities, isCityServiceable } from './utils/serviceableCities';
 import CmsDocViewer from './pages/CmsDocViewer';
 import AllBrands from './pages/AllBrands';
 import Onboarding from './pages/Onboarding';
@@ -212,59 +214,81 @@ const ScrollToTop = () => {
   const { user } = useAuth();
 
   useEffect(() => {
-    // Strict Role-Based Portal Protection Guard
+    // Strict Independent Portal Protection Guard
     const superAdminAuthPages = ['/super-admin/login', '/super-admin/verify-otp', '/super-admin/forgot-password'];
     const brandAdminAuthPages = ['/brand-admin/login', '/brand-admin/verify-otp', '/brand-admin/forgot-password'];
     const techAuthPages = ['/technician/login', '/technician/verify-otp', '/technician/forgot-password', '/technician/apply'];
-    const customerAuthPages = ['/', '/login', '/app/login', '/app', '/verify-otp', '/forgot-password', '/reset-password'];
+    const customerAuthPages = ['/', '/login', '/signup', '/app/login', '/app', '/verify-otp', '/forgot-password', '/reset-password'];
+    const publicInfoPages = ['/about-ncc'];
 
-    const role = user?.role;
-
-    if (role === 'super_admin') {
-      if (!pathname.startsWith('/super-admin') || superAdminAuthPages.includes(pathname)) {
-        navigate('/super-admin/dashboard', { replace: true });
-        return;
-      }
-    } else if (role === 'brand_admin') {
-      if (!pathname.startsWith('/brand-admin') || brandAdminAuthPages.includes(pathname)) {
-        navigate('/brand-admin/dashboard', { replace: true });
-        return;
-      }
-    } else if (role === 'technician') {
-      if (!pathname.startsWith('/technician') || (techAuthPages.includes(pathname) && pathname !== '/technician/apply')) {
-        navigate('/technician/dashboard', { replace: true });
-        return;
-      }
-    } else if (role === 'customer') {
-      if (pathname.startsWith('/super-admin') || pathname.startsWith('/brand-admin') || (pathname.startsWith('/technician') && pathname !== '/technician/apply')) {
-        navigate('/dashboard', { replace: true });
-        return;
-      }
-      if (customerAuthPages.includes(pathname)) {
-        navigate('/dashboard', { replace: true });
-        return;
-      }
-    } else {
-      // Unauthenticated visitor (not logged in)
-      if (pathname.startsWith('/super-admin')) {
+    // 1. SUPER ADMIN PORTAL
+    if (pathname.startsWith('/super-admin')) {
+      if (user && user.role === 'super_admin') {
+        if (superAdminAuthPages.includes(pathname)) {
+          navigate('/super-admin/dashboard', { replace: true });
+          return;
+        }
+      } else {
         if (!superAdminAuthPages.includes(pathname)) {
           navigate('/super-admin/login', { replace: true });
           return;
         }
-      } else if (pathname.startsWith('/brand-admin')) {
+      }
+    } 
+    // 2. BRAND ADMIN PORTAL
+    else if (pathname.startsWith('/brand-admin')) {
+      if (user && user.role === 'brand_admin') {
+        if (brandAdminAuthPages.includes(pathname)) {
+          navigate('/brand-admin/dashboard', { replace: true });
+          return;
+        }
+      } else {
         if (!brandAdminAuthPages.includes(pathname)) {
           navigate('/brand-admin/login', { replace: true });
           return;
         }
-      } else if (pathname.startsWith('/technician')) {
+      }
+    } 
+    // 3. TECHNICIAN PORTAL
+    else if (pathname.startsWith('/technician')) {
+      if (user && user.role === 'technician') {
+        if (techAuthPages.includes(pathname) && pathname !== '/technician/apply') {
+          navigate('/technician/dashboard', { replace: true });
+          return;
+        }
+      } else {
         if (!techAuthPages.includes(pathname)) {
           navigate('/technician/login', { replace: true });
           return;
         }
+      }
+    } 
+    // 4. CUSTOMER APP PORTAL (all other routes)
+    else {
+      if (user && user.role === 'customer') {
+        const defaultAddress = user?.addresses?.find(a => a?.isDefault) || user?.addresses?.[0];
+        const customerCity = user?.city || defaultAddress?.city || '';
+        if (customerCity) {
+          getActiveCities().then((cities) => {
+            const serviceable = isCityServiceable(customerCity, cities);
+            if (!serviceable) {
+              if (pathname !== '/area-not-serviceable') {
+                navigate('/area-not-serviceable', { replace: true });
+              }
+            } else {
+              if (pathname === '/area-not-serviceable' || customerAuthPages.includes(pathname)) {
+                navigate('/dashboard', { replace: true });
+              }
+            }
+          }).catch(() => {});
+          return;
+        }
+
+        if (customerAuthPages.includes(pathname)) {
+          navigate('/dashboard', { replace: true });
+          return;
+        }
       } else {
-        // Customer app: Protect ALL app routes (dashboard, booking, buy, categories, profile, etc.)
-        // Only allow auth pages (login, verify-otp, etc.) and public info pages (about-ncc)
-        const publicInfoPages = ['/about-ncc'];
         if (!customerAuthPages.includes(pathname) && !publicInfoPages.includes(pathname)) {
           navigate('/login', { replace: true });
           return;
@@ -352,9 +376,11 @@ function App() {
         <Route path="/" element={<Login />} />
         <Route path="/home" element={<Home />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Login initialSignup={true} />} />
         <Route path="/app/login" element={<Navigate to="/login" replace />} />
         <Route path="/app" element={<Navigate to="/login" replace />} />
         <Route path="/verify-otp" element={<VerifyOtp />} />
+        <Route path="/area-not-serviceable" element={<AreaNotServiceable />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/dashboard" element={<Dashboard defaultType="non-warranty" />} />
@@ -408,6 +434,8 @@ function App() {
         <Route path="/buy-new/products/:category" element={<BuyNew />} />
         <Route path="/buy-new/details/:category/:productName" element={<BuyNew />} />
         <Route path="/buy-new/cart" element={<BuyNew />} />
+        <Route path="/buy-new/checkout" element={<BuyNew />} />
+        <Route path="/buy-new/address" element={<BuyNew />} />
         <Route path="/buy-new/payment" element={<BuyNew />} />
         <Route path="/buy-new/success" element={<BuyNew />} />
         <Route path="/extend-warranty" element={<ExtendWarranty />} />

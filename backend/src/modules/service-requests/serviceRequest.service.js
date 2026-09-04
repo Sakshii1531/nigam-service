@@ -155,10 +155,38 @@ export async function suggestTechnicians(id) {
  * re-routing work already underway is a different operation with different
  * side-effects, and is deliberately not folded in here.
  */
+export function scheduleDispatchTimeout(serviceRequestId, technicianId, timeoutMs = 60000) {
+  setTimeout(async () => {
+    try {
+      const sr = await ServiceRequest.findById(serviceRequestId);
+      if (
+        sr &&
+        sr.status === 'Assigned' &&
+        !sr.isAccepted &&
+        String(sr.technician) === String(technicianId)
+      ) {
+        console.log(`[dispatch-cascade] 60s timeout expired for technician ${technicianId} on SR ${serviceRequestId}. Cascading to next nearest technician.`);
+        await declineAssignment(serviceRequestId, technicianId);
+      }
+    } catch (err) {
+      console.warn('[dispatch-cascade] Timeout cascade notice:', err.message);
+    }
+  }, timeoutMs);
+}
+
+/**
+ * Assign a technician (named, or the engine's top pick) and move the request to
+ * 'Assigned'. Only requests that have not been picked up yet are assignable.
+ */
 export async function assignTechnician(id, technicianId) {
   const serviceRequest = await findOr404(id);
   if (!['New', 'Assigned'].includes(serviceRequest.status)) {
     throw new ApiError(409, `Cannot assign a request in status "${serviceRequest.status}"`);
+  }
+
+  let booking = null;
+  if (serviceRequest.booking) {
+    booking = await Booking.findById(serviceRequest.booking);
   }
 
   let technician;
@@ -169,13 +197,18 @@ export async function assignTechnician(id, technicianId) {
   } else {
     technician = await findAvailableTechnician({
       category: serviceRequest.category,
-      city: serviceRequest.zone,
+      city: serviceRequest.zone || booking?.address?.city,
+      state: booking?.address?.state,
+      latitude: serviceRequest.customerLocation?.latitude || booking?.address?.latitude,
+      longitude: serviceRequest.customerLocation?.longitude || booking?.address?.longitude,
       exclude: serviceRequest.declinedBy || [],
     });
     if (!technician) throw new ApiError(409, 'No available technician to assign');
   }
 
   serviceRequest.technician = technician._id;
+  serviceRequest.isAccepted = false;
+  serviceRequest.assignedAt = new Date();
   if (serviceRequest.status === 'New') serviceRequest.status = 'Assigned';
   if (serviceRequest.isInstant) serviceRequest.instantStatus = 'ASSIGNED';
   serviceRequest.timeline.push({
@@ -186,18 +219,41 @@ export async function assignTechnician(id, technicianId) {
   });
   await serviceRequest.save();
 
-  // The customer's booking screens read Booking.technician, not the service
-  // request behind it. A console assignment only ever touched the
-  // ServiceRequest, so the customer kept seeing an unassigned booking (and an
-  // instant booking stayed stuck on "SEARCHING") no matter what the admin did.
-  if (serviceRequest.booking) {
-    const booking = await Booking.findById(serviceRequest.booking);
-    if (booking) {
-      booking.technician = technician._id;
-      if (booking.isInstant) booking.instantStatus = 'ASSIGNED';
-      await booking.save();
-    }
+  if (booking) {
+    booking.technician = technician._id;
+    booking.isAccepted = false;
+    if (booking.isInstant) booking.instantStatus = 'ASSIGNED';
+    await booking.save();
   }
+
+  // Socket notification dispatched strictly to the targeted technician
+  try {
+    const io = getIO();
+    const jobPayload = {
+      bookingId: booking?.id || String(serviceRequest.booking),
+      serviceRequestId: String(serviceRequest._id),
+      category: serviceRequest.category,
+      service: serviceRequest.description || 'Appliance Service',
+      totalPrice: booking?.totalPrice || 299,
+      estEarnings: Math.round((booking?.totalPrice || 299) * 0.3) || 150,
+      isInstant: serviceRequest.isInstant,
+      scheduledTime: booking?.timeSlot?.time || (serviceRequest.isInstant ? 'ASAP' : 'Scheduled'),
+      scheduledDateLabel: booking?.timeSlot?.date || 'Today',
+      assignedTechnicianId: String(technician._id),
+      assignedTechnicianUserId: String(technician.user),
+      instantStatus: serviceRequest.isInstant ? 'ASSIGNED' : null,
+      isAvailableRequest: false,
+    };
+    io.to(`tech:${technician._id}`).emit('job:assigned', jobPayload);
+    io.to(`tech:${technician.user}`).emit('job:assigned', jobPayload);
+    io.to(`tech:${technician._id}`).emit('instant:new_request', jobPayload);
+    io.to(`tech:${technician.user}`).emit('instant:new_request', jobPayload);
+  } catch (_e) {
+    // Socket emit optional
+  }
+
+  // Schedule auto-timeout cascade (60s)
+  scheduleDispatchTimeout(serviceRequest._id, technician._id);
 
   await emitNotification('technician.assigned', {
     user: serviceRequest.user,

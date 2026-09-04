@@ -8,8 +8,8 @@ const SavedAddresses = () => {
   const navigate = useNavigate();
   const { user, updateUser } = useAuth();
   
-  const [addresses, setAddresses] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [addresses, setAddresses] = useState(() => user?.addresses || []);
+  const [loading, setLoading] = useState(() => !(user?.addresses && user.addresses.length > 0));
   const [submitting, setSubmitting] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -20,7 +20,10 @@ const SavedAddresses = () => {
     address: '',
     detail: '',
     city: 'Delhi',
+    state: '',
     pincode: '110054',
+    latitude: null,
+    longitude: null,
     isDefault: false
   });
 
@@ -35,29 +38,35 @@ const SavedAddresses = () => {
     setTimeout(() => setToastMsg(null), 3000);
   };
 
-  const loadAddresses = async () => {
-    setLoading(true);
+  const loadAddresses = async (showSpinner = false) => {
+    if (showSpinner) setLoading(true);
     try {
       if (user) {
-        const res = await apiRequest('/auth/addresses', { auth: true });
+        const res = await apiRequest('/auth/addresses', { auth: true, portal: 'customer', silentError: true });
         const list = Array.isArray(res) ? res : [];
         setAddresses(list);
         updateUser({ addresses: list });
-      } else {
-        // Guest mode fallback
-        setAddresses(user?.addresses || []);
+      } else if (user?.addresses) {
+        setAddresses(user.addresses);
       }
     } catch (err) {
       console.warn('Error loading addresses:', err);
-      setAddresses(user?.addresses || []);
+      if (user?.addresses && user.addresses.length > 0) {
+        setAddresses(user.addresses);
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  // Keep addresses reactive to changes in user profile
   useEffect(() => {
-    loadAddresses();
-  }, [user?.id]);
+    if (user?.addresses && user.addresses.length > 0) {
+      setAddresses(user.addresses);
+      setLoading(false);
+    }
+    loadAddresses(!user?.addresses || user.addresses.length === 0);
+  }, [user?.id, user?._id]);
 
   const handleOpenAdd = () => {
     setEditingId(null);
@@ -66,7 +75,10 @@ const SavedAddresses = () => {
       address: '',
       detail: '',
       city: 'Delhi',
+      state: '',
       pincode: '110054',
+      latitude: null,
+      longitude: null,
       isDefault: addresses.length === 0
     });
     setShowForm(true);
@@ -79,7 +91,10 @@ const SavedAddresses = () => {
       address: addr.house || addr.address || '',
       detail: addr.landmark || addr.detail || '',
       city: addr.city || 'Delhi',
+      state: addr.state || '',
       pincode: addr.pincode || '110054',
+      latitude: addr.latitude || null,
+      longitude: addr.longitude || null,
       isDefault: Boolean(addr.isDefault)
     });
     setShowForm(true);
@@ -96,7 +111,10 @@ const SavedAddresses = () => {
         house: form.address,
         landmark: form.detail,
         city: form.city || 'Delhi',
+        state: form.state || '',
         pincode: form.pincode || '110054',
+        latitude: form.latitude ? Number(form.latitude) : undefined,
+        longitude: form.longitude ? Number(form.longitude) : undefined,
         isDefault: form.isDefault
       };
 
@@ -105,6 +123,7 @@ const SavedAddresses = () => {
         const res = await apiRequest(`/auth/addresses/${editingId}`, {
           method: 'PUT',
           auth: true,
+          portal: 'customer',
           body: payload
         });
         const updatedList = Array.isArray(res) ? res : (res || []);
@@ -116,6 +135,7 @@ const SavedAddresses = () => {
         const res = await apiRequest('/auth/addresses', {
           method: 'POST',
           auth: true,
+          portal: 'customer',
           body: payload
         });
         const updatedList = Array.isArray(res) ? res : (res || []);
@@ -137,7 +157,8 @@ const SavedAddresses = () => {
     try {
       const res = await apiRequest(`/auth/addresses/${addrId}`, {
         method: 'DELETE',
-        auth: true
+        auth: true,
+        portal: 'customer'
       });
       const updatedList = Array.isArray(res) ? res : (res || []);
       setAddresses(updatedList);
@@ -153,7 +174,8 @@ const SavedAddresses = () => {
     try {
       const res = await apiRequest(`/auth/addresses/${addrId}/default`, {
         method: 'PATCH',
-        auth: true
+        auth: true,
+        portal: 'customer'
       });
       const updatedList = Array.isArray(res) ? res : (res || []);
       setAddresses(updatedList);
@@ -239,6 +261,17 @@ const SavedAddresses = () => {
                       <p className="text-xs text-text-secondary mt-0.5 leading-snug">
                         {landmarkDetail}
                       </p>
+                    )}
+                    {(item.city || item.state) && (
+                      <p className="text-xs text-slate-500 mt-0.5 font-medium">
+                        {[item.city, item.state, item.pincode].filter(Boolean).join(', ')}
+                      </p>
+                    )}
+                    {item.latitude && item.longitude && (
+                      <div className="mt-1 flex items-center gap-1.5 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md w-fit border border-emerald-200">
+                        <MapPin className="h-3 w-3 text-emerald-600 flex-shrink-0" />
+                        <span>Coordinates: {Number(item.latitude).toFixed(4)}, {Number(item.longitude).toFixed(4)}</span>
+                      </div>
                     )}
                   </div>
                 </div>
