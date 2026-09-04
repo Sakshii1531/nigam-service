@@ -309,7 +309,7 @@ const Buy = () => {
       )}
 
       {/* Dynamic Content Pages */}
-      <div className="flex-1 p-6 md:px-8 flex flex-col gap-6 md:gap-8 overflow-y-auto max-w-screen-2xl mx-auto w-full">
+      <div className="flex-1 p-3.5 sm:p-6 md:px-8 flex flex-col gap-4 sm:gap-6 md:gap-8 overflow-y-auto max-w-screen-2xl mx-auto w-full">
         
         {/* STEP 1: BUY SECTION - HOME */}
         {step === 1 && (
@@ -317,25 +317,25 @@ const Buy = () => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
-            className="flex flex-col gap-5"
+            className="flex flex-col gap-4 sm:gap-5"
           >
             {/* Location & Profile Bar */}
-            <div className="flex justify-between items-center -mt-2">
+            <div className="flex justify-between items-center -mt-1 sm:-mt-2">
               <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-brand-blue" />
+                <MapPin className="h-4 w-4 text-brand-blue flex-shrink-0" />
                 <div>
-                  <span className="text-[10px] text-text-secondary block font-semibold">Your Location</span>
-                  <span className="text-sm font-bold text-text-primary">Civil Lines, Delhi</span>
+                  <span className="text-[10px] text-text-secondary block font-semibold leading-tight">Your Location</span>
+                  <span className="text-xs sm:text-sm font-bold text-text-primary">Civil Lines, Delhi</span>
                 </div>
               </div>
               <div className="flex items-center gap-2.5">
-                <button className="w-9 h-9 bg-white hover:bg-slate-50 rounded-full relative flex items-center justify-center border border-slate-200 shadow-sm">
-                  <Bell className="h-4.5 w-4.5 text-text-primary" />
+                <button className="w-8.5 h-8.5 sm:w-9 sm:h-9 bg-white hover:bg-slate-50 rounded-full relative flex items-center justify-center border border-slate-200 shadow-2xs">
+                  <Bell className="h-4 w-4 text-text-primary" />
                   <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
                 </button>
                 <div 
                   onClick={() => navigate('/profile')}
-                  className="w-9 h-9 bg-brand-blue rounded-full flex items-center justify-center text-white text-sm font-bold cursor-pointer hover:bg-blue-800 transition-colors shadow-sm"
+                  className="w-8.5 h-8.5 sm:w-9 sm:h-9 bg-brand-blue rounded-full flex items-center justify-center text-white text-xs sm:text-sm font-bold cursor-pointer hover:bg-blue-800 transition-colors shadow-2xs"
                 >
                   U
                 </div>
@@ -347,19 +347,19 @@ const Buy = () => {
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <input
                 type="text"
-                placeholder="Search for services (AC, Geyser...)"
-                className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:border-brand-blue focus:ring-1 focus:ring-brand-blue outline-none transition-all text-xs shadow-sm"
+                placeholder="Search appliances, protection plans, warranties..."
+                className="w-full pl-9.5 pr-4 py-2 sm:py-2.5 bg-white border border-slate-200/90 rounded-xl focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20 outline-none transition-all text-xs shadow-2xs placeholder:text-slate-400"
               />
             </div>
 
-            {/* Service Type Cards — NCC Shield, NCC AMC, Exchange, Buy New */}
-            <div className="flex gap-3 overflow-x-auto no-scrollbar py-2 px-1 -mx-6 px-6 mt-[-10px] md:grid md:grid-cols-3 md:gap-5 md:overflow-visible md:mx-0 md:px-1">
+            {/* Service Type Cards — NCC Shield, NCC AMC, Buy New */}
+            <div className="flex gap-2.5 sm:gap-3 overflow-x-auto no-scrollbar py-1.5 -mx-3.5 px-3.5 sm:-mx-6 sm:px-6 md:grid md:grid-cols-3 md:gap-5 md:overflow-visible md:mx-0 md:px-1">
               {[
                 {
                   name: 'NCC Shield\nExtended Warranty',
                   desc: 'Extra protection for\nlonger peace of mind',
                   icon: (
-                    <div className="relative w-16 h-16 flex items-center justify-center filter drop-shadow-[0_3px_6px_rgba(13,71,161,0.25)]">
+                    <div className="relative w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center filter drop-shadow-[0_3px_6px_rgba(13,71,161,0.25)]">
                       <svg viewBox="0 0 100 100" className="w-full h-full">
                         <defs>
                           <linearGradient id="bevelGrad" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -414,7 +414,7 @@ const Buy = () => {
                   name: 'NCC AMC\nPlans',
                   desc: 'Regular care for\nreliable performance',
                   icon: (
-                    <div className="relative w-16 h-16 flex items-center justify-center filter drop-shadow-[0_3px_6px_rgba(13,71,161,0.25)]">
+                    <div className="relative w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center filter drop-shadow-[0_3px_6px_rgba(13,71,161,0.25)]">
                       <svg viewBox="0 0 100 100" className="w-full h-full">
                         <defs>
                           <linearGradient id="bevelGrad2" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -470,8 +470,8 @@ const Buy = () => {
                   name: 'Buy\nNew',
                   desc: 'Shop latest\nappliances & more',
                   icon: (
-                    <div className="w-16 h-16 flex items-center justify-center text-[#0B4EA2]">
-                      <svg viewBox="0 0 100 100" className="w-11 h-11 stroke-[#0B4EA2] stroke-[5.5] fill-none">
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center text-[#0B4EA2]">
+                      <svg viewBox="0 0 100 100" className="w-10 h-10 sm:w-11 sm:h-11 stroke-[#0B4EA2] stroke-[5.5] fill-none">
                         <circle cx="35" cy="80" r="5" fill="#0B4EA2" />
                         <circle cx="75" cy="80" r="5" fill="#0B4EA2" />
                         <path d="M15 20 H30 L45 60 H80 L90 30 H35" strokeLinecap="round" strokeLinejoin="round" />
@@ -484,20 +484,20 @@ const Buy = () => {
                 <div
                   key={idx}
                   onClick={card.onClick}
-                  className="flex-shrink-0 w-[136px] md:w-auto md:flex-shrink bg-white border border-slate-100 rounded-[24px] p-3.5 pt-4 pb-3.5 md:p-6 flex flex-col items-center text-center justify-between shadow-[0_4px_20px_rgb(0,0,0,0.02)] hover:shadow-md transition-all cursor-pointer min-h-[210px] md:min-h-[240px] group"
+                  className="flex-shrink-0 w-[130px] sm:w-[145px] md:w-auto md:flex-shrink bg-white border border-slate-200/80 rounded-[20px] sm:rounded-[24px] p-3 sm:p-3.5 md:p-6 flex flex-col items-center text-center justify-between shadow-2xs hover:shadow-md transition-all cursor-pointer min-h-[195px] md:min-h-[240px] group"
                 >
                   <div className="flex flex-col items-center w-full">
                     <div className="group-hover:scale-105 transition-transform duration-300">
                       {card.icon}
                     </div>
-                    <h3 className="text-[11px] font-black text-[#0A2D6E] leading-snug mt-3 mb-1 min-h-[30px] flex items-center justify-center whitespace-pre-line">
+                    <h3 className="text-[11px] sm:text-xs font-black text-[#0A2D6E] leading-snug mt-2.5 mb-1 min-h-[28px] sm:min-h-[30px] flex items-center justify-center whitespace-pre-line">
                       {card.name}
                     </h3>
-                    <p className="text-[8.5px] text-slate-500 font-semibold leading-normal line-clamp-2 px-0.5 whitespace-pre-line">
+                    <p className="text-[8.5px] sm:text-[9px] text-slate-500 font-semibold leading-normal line-clamp-2 px-0.5 whitespace-pre-line">
                       {card.desc}
                     </p>
                   </div>
-                  <div className="w-6 h-6 rounded-full bg-white border border-slate-100 flex items-center justify-center shadow-sm mt-2.5 group-hover:bg-slate-50 transition-colors">
+                  <div className="w-5.5 h-5.5 sm:w-6 sm:h-6 rounded-full bg-white border border-slate-100 flex items-center justify-center shadow-2xs mt-2 group-hover:bg-slate-50 transition-colors">
                     <ChevronRight className="h-3.5 w-3.5 text-[#0B4EA2] stroke-[3]" />
                   </div>
                 </div>
@@ -505,7 +505,7 @@ const Buy = () => {
             </div>
 
             {/* Promotional Banners Carousel */}
-            <div className="relative w-full overflow-hidden rounded-2xl group">
+            <div className="relative w-full overflow-hidden rounded-2xl group shadow-2xs">
               <div 
                 className="flex transition-transform duration-500 ease-in-out"
                 style={{ transform: `translateX(-${activeBanner * 100}%)` }}
@@ -515,28 +515,28 @@ const Buy = () => {
                 <div className="w-full flex-shrink-0 px-0.5">
                   <div 
                     onClick={() => setStep(2)}
-                    className="bg-gradient-to-br from-[#E8F1FF] to-[#C9DEFF] rounded-2xl p-4 border border-blue-100 shadow-sm flex items-center gap-4 relative overflow-hidden cursor-pointer hover:shadow-md transition-all text-left min-h-[142px]"
+                    className="bg-gradient-to-br from-[#E8F1FF] to-[#C9DEFF] rounded-2xl p-3.5 sm:p-4 border border-blue-100 shadow-2xs flex items-center gap-3 sm:gap-4 relative overflow-hidden cursor-pointer hover:shadow-md transition-all text-left min-h-[135px] sm:min-h-[142px]"
                   >
                     <div className="absolute top-0 right-0 w-20 h-20 bg-blue-300/20 rounded-full blur-2xl"></div>
                     
                     {/* Left shield illustration */}
-                    <div className="w-[80px] h-[80px] flex-shrink-0 relative flex items-center justify-center rounded-2xl overflow-hidden bg-gradient-to-b from-brand-blue/90 to-[#0B4EA2] shadow-md">
-                      <Shield className="h-10 w-10 text-white drop-shadow-lg z-10" />
+                    <div className="w-[68px] h-[68px] sm:w-[80px] sm:h-[80px] flex-shrink-0 relative flex items-center justify-center rounded-2xl overflow-hidden bg-gradient-to-b from-brand-blue/90 to-[#0B4EA2] shadow-sm">
+                      <Shield className="h-8 w-8 sm:h-10 sm:w-10 text-white drop-shadow-lg z-10" />
                     </div>
 
                     {/* Right content */}
                     <div className="flex-1 flex flex-col items-start relative z-10">
-                      <h3 className="text-xs font-black text-brand-navy leading-tight mb-2">
+                      <h3 className="text-[11px] sm:text-xs font-black text-brand-navy leading-tight mb-1.5 sm:mb-2">
                         Protect appliances with Extended Warranty
                       </h3>
-                      <ul className="flex flex-col gap-0.5 mb-2.5">
-                        <li className="flex items-center gap-1.5 text-[9px] font-semibold text-slate-700">
+                      <ul className="flex flex-col gap-0.5 mb-2">
+                        <li className="flex items-center gap-1.5 text-[8.5px] sm:text-[9px] font-semibold text-slate-700">
                           <Check className="h-2.5 w-2.5 text-green-600 flex-shrink-0" /> Genuine Parts
                         </li>
-                        <li className="flex items-center gap-1.5 text-[9px] font-semibold text-slate-700">
+                        <li className="flex items-center gap-1.5 text-[8.5px] sm:text-[9px] font-semibold text-slate-700">
                           <Check className="h-2.5 w-2.5 text-green-600 flex-shrink-0" /> Expert Support
                         </li>
-                        <li className="flex items-center gap-1.5 text-[9px] font-semibold text-slate-700">
+                        <li className="flex items-center gap-1.5 text-[8.5px] sm:text-[9px] font-semibold text-slate-700">
                           <Check className="h-2.5 w-2.5 text-green-600 flex-shrink-0" /> Hassle Free Claims
                         </li>
                       </ul>
@@ -545,7 +545,7 @@ const Buy = () => {
                           e.stopPropagation();
                           setStep(2);
                         }}
-                        className="bg-brand-blue hover:bg-blue-800 text-white text-[9px] font-black px-3.5 py-1.5 rounded-xl shadow-md transition-all active:scale-95 cursor-pointer"
+                        className="bg-brand-blue hover:bg-blue-800 text-white text-[8.5px] sm:text-[9px] font-black px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer"
                       >
                         Explore Plans
                       </button>
@@ -557,28 +557,28 @@ const Buy = () => {
                 <div className="w-full flex-shrink-0 px-0.5">
                   <div 
                     onClick={() => navigate('/buy-new')}
-                    className="bg-gradient-to-br from-[#FFF5E6] to-[#FFE6C9] rounded-2xl p-4 border border-amber-100 shadow-sm flex items-center gap-4 relative overflow-hidden cursor-pointer hover:shadow-md transition-all text-left min-h-[142px]"
+                    className="bg-gradient-to-br from-[#FFF5E6] to-[#FFE6C9] rounded-2xl p-3.5 sm:p-4 border border-amber-100 shadow-2xs flex items-center gap-3 sm:gap-4 relative overflow-hidden cursor-pointer hover:shadow-md transition-all text-left min-h-[135px] sm:min-h-[142px]"
                   >
                     <div className="absolute top-0 right-0 w-20 h-20 bg-amber-300/20 rounded-full blur-2xl"></div>
                     
                     {/* Left shopping cart illustration */}
-                    <div className="w-[80px] h-[80px] flex-shrink-0 relative flex items-center justify-center rounded-2xl overflow-hidden bg-gradient-to-b from-[#F59E0B] to-[#D97706] shadow-md">
-                      <ShoppingCart className="h-10 w-10 text-white drop-shadow-lg z-10" />
+                    <div className="w-[68px] h-[68px] sm:w-[80px] sm:h-[80px] flex-shrink-0 relative flex items-center justify-center rounded-2xl overflow-hidden bg-gradient-to-b from-[#F59E0B] to-[#D97706] shadow-sm">
+                      <ShoppingCart className="h-8 w-8 sm:h-10 sm:w-10 text-white drop-shadow-lg z-10" />
                     </div>
 
                     {/* Right content */}
                     <div className="flex-1 flex flex-col items-start relative z-10">
-                      <h3 className="text-xs font-black text-brand-navy leading-tight mb-2">
+                      <h3 className="text-[11px] sm:text-xs font-black text-brand-navy leading-tight mb-1.5 sm:mb-2">
                         Shop Latest Appliances & Electronics
                       </h3>
-                      <ul className="flex flex-col gap-0.5 mb-2.5">
-                        <li className="flex items-center gap-1.5 text-[9px] font-semibold text-slate-700">
+                      <ul className="flex flex-col gap-0.5 mb-2">
+                        <li className="flex items-center gap-1.5 text-[8.5px] sm:text-[9px] font-semibold text-slate-700">
                           <Check className="h-2.5 w-2.5 text-green-600 flex-shrink-0" /> Free Doorstep Installation
                         </li>
-                        <li className="flex items-center gap-1.5 text-[9px] font-semibold text-slate-700">
+                        <li className="flex items-center gap-1.5 text-[8.5px] sm:text-[9px] font-semibold text-slate-700">
                           <Check className="h-2.5 w-2.5 text-green-600 flex-shrink-0" /> 1 Year Brand Warranty
                         </li>
-                        <li className="flex items-center gap-1.5 text-[9px] font-semibold text-slate-700">
+                        <li className="flex items-center gap-1.5 text-[8.5px] sm:text-[9px] font-semibold text-slate-700">
                           <Check className="h-2.5 w-2.5 text-green-600 flex-shrink-0" /> No Cost EMI Options
                         </li>
                       </ul>
@@ -587,7 +587,7 @@ const Buy = () => {
                           e.stopPropagation();
                           navigate('/buy-new');
                         }}
-                        className="bg-[#D97706] hover:bg-amber-700 text-white text-[9px] font-black px-3.5 py-1.5 rounded-xl shadow-md transition-all active:scale-95 cursor-pointer"
+                        className="bg-[#D97706] hover:bg-amber-700 text-white text-[8.5px] sm:text-[9px] font-black px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer"
                       >
                         Shop New
                       </button>
@@ -599,28 +599,28 @@ const Buy = () => {
                 <div className="w-full flex-shrink-0 px-0.5">
                   <div 
                     onClick={() => navigate('/buy/amc')}
-                    className="bg-gradient-to-br from-[#E6F4EA] to-[#C9EAD2] rounded-2xl p-4 border border-emerald-100 shadow-sm flex items-center gap-4 relative overflow-hidden cursor-pointer hover:shadow-md transition-all text-left min-h-[142px]"
+                    className="bg-gradient-to-br from-[#E6F4EA] to-[#C9EAD2] rounded-2xl p-3.5 sm:p-4 border border-emerald-100 shadow-2xs flex items-center gap-3 sm:gap-4 relative overflow-hidden cursor-pointer hover:shadow-md transition-all text-left min-h-[135px] sm:min-h-[142px]"
                   >
                     <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-300/20 rounded-full blur-2xl"></div>
                     
                     {/* Left check-shield illustration */}
-                    <div className="w-[80px] h-[80px] flex-shrink-0 relative flex items-center justify-center rounded-2xl overflow-hidden bg-gradient-to-b from-[#10B981] to-[#059669] shadow-md">
-                      <ShieldCheck className="h-10 w-10 text-white drop-shadow-lg z-10" />
+                    <div className="w-[68px] h-[68px] sm:w-[80px] sm:h-[80px] flex-shrink-0 relative flex items-center justify-center rounded-2xl overflow-hidden bg-gradient-to-b from-[#10B981] to-[#059669] shadow-sm">
+                      <ShieldCheck className="h-8 w-8 sm:h-10 sm:w-10 text-white drop-shadow-lg z-10" />
                     </div>
 
                     {/* Right content */}
                     <div className="flex-1 flex flex-col items-start relative z-10">
-                      <h3 className="text-xs font-black text-brand-navy leading-tight mb-2">
+                      <h3 className="text-[11px] sm:text-xs font-black text-brand-navy leading-tight mb-1.5 sm:mb-2">
                         NCC AMC Maintenance & Care Plans
                       </h3>
-                      <ul className="flex flex-col gap-0.5 mb-2.5">
-                        <li className="flex items-center gap-1.5 text-[9px] font-semibold text-slate-700">
+                      <ul className="flex flex-col gap-0.5 mb-2">
+                        <li className="flex items-center gap-1.5 text-[8.5px] sm:text-[9px] font-semibold text-slate-700">
                           <Check className="h-2.5 w-2.5 text-green-600 flex-shrink-0" /> Regular Preventive Visits
                         </li>
-                        <li className="flex items-center gap-1.5 text-[9px] font-semibold text-slate-700">
+                        <li className="flex items-center gap-1.5 text-[8.5px] sm:text-[9px] font-semibold text-slate-700">
                           <Check className="h-2.5 w-2.5 text-green-600 flex-shrink-0" /> Free Spare Repairs
                         </li>
-                        <li className="flex items-center gap-1.5 text-[9px] font-semibold text-slate-700">
+                        <li className="flex items-center gap-1.5 text-[8.5px] sm:text-[9px] font-semibold text-slate-700">
                           <Check className="h-2.5 w-2.5 text-green-600 flex-shrink-0" /> Zero Labor & Service Charges
                         </li>
                       </ul>
@@ -629,7 +629,7 @@ const Buy = () => {
                           e.stopPropagation();
                           navigate('/buy/amc');
                         }}
-                        className="bg-[#059669] hover:bg-emerald-700 text-white text-[9px] font-black px-3.5 py-1.5 rounded-xl shadow-md transition-all active:scale-95 cursor-pointer"
+                        className="bg-[#059669] hover:bg-emerald-700 text-white text-[8.5px] sm:text-[9px] font-black px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer"
                       >
                         Explore AMC
                       </button>
@@ -640,7 +640,7 @@ const Buy = () => {
               </div>
 
               {/* Dots indicator at the bottom center of the carousel wrapper */}
-              <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex gap-1.5 z-20">
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5 z-20">
                 {[0, 1, 2].map((idx) => (
                   <button
                     key={idx}
@@ -648,8 +648,8 @@ const Buy = () => {
                       e.stopPropagation();
                       setActiveBanner(idx);
                     }}
-                    className={`w-1.5 h-1.5 rounded-full transition-all cursor-pointer ${
-                      activeBanner === idx ? 'bg-brand-navy w-3' : 'bg-slate-400/40'
+                    className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                      activeBanner === idx ? 'bg-brand-navy w-3' : 'bg-slate-400/40 w-1.5'
                     }`}
                   />
                 ))}
@@ -658,9 +658,9 @@ const Buy = () => {
             </div>
 
             {/* Shop by Category */}
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2.5 sm:gap-3">
               <div className="flex justify-between items-center">
-                <h3 className="text-sm font-black text-brand-navy">Shop by Category</h3>
+                <h3 className="text-xs sm:text-sm font-black text-brand-navy">Shop by Category</h3>
                 <button 
                   onClick={() => setStep(2)}
                   className="text-xs font-bold text-brand-blue hover:underline cursor-pointer"
@@ -668,7 +668,7 @@ const Buy = () => {
                   View All
                 </button>
               </div>
-              <div className="flex items-center gap-3 overflow-x-auto no-scrollbar pb-1 md:grid md:grid-cols-5 md:gap-4 md:overflow-visible">
+              <div className="flex items-center gap-2.5 sm:gap-3 overflow-x-auto no-scrollbar pb-1 md:grid md:grid-cols-5 md:gap-4 md:overflow-visible">
                 {[
                   { name: 'TV', img: tvImg, appliance: 'Television' },
                   { name: 'Refrigerator', img: fridgeImg, appliance: 'Refrigerator' },
@@ -681,12 +681,12 @@ const Buy = () => {
                     onClick={() => {
                       navigate(`/buy/select-tier/${encodeURIComponent(item.appliance)}`);
                     }}
-                    className="flex-shrink-0 w-[72px] md:w-auto md:flex-shrink bg-white border border-slate-200/60 rounded-2xl p-2 md:p-4 flex flex-col items-center justify-center gap-1.5 md:gap-2.5 cursor-pointer shadow-sm hover:border-brand-blue/30 hover:shadow-md transition-all text-center min-h-[88px] md:min-h-[120px]"
+                    className="flex-shrink-0 w-[76px] sm:w-24 md:w-auto md:flex-shrink bg-white border border-slate-200/80 rounded-2xl p-2 sm:p-3 md:p-4 flex flex-col items-center justify-center gap-1.5 cursor-pointer shadow-2xs hover:border-brand-blue/40 hover:shadow-md transition-all text-center min-h-[86px] md:min-h-[120px]"
                   >
-                    <div className="w-10 h-10 md:w-16 md:h-16 flex items-center justify-center overflow-hidden">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 flex items-center justify-center overflow-hidden">
                       <img src={item.img} alt={item.name} className="w-full h-full object-contain mix-blend-multiply" />
                     </div>
-                    <span className="text-[9px] md:text-xs font-semibold text-slate-700 leading-tight block text-center">
+                    <span className="text-[9px] sm:text-[10px] md:text-xs font-semibold text-slate-700 leading-tight block text-center truncate w-full px-0.5">
                       {item.name}
                     </span>
                   </div>
@@ -695,15 +695,15 @@ const Buy = () => {
             </div>
 
             {/* Buy Brand New */}
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2.5 sm:gap-3">
               <div className="flex justify-between items-center">
-                <h3 className="text-sm font-black text-brand-navy">Buy Brand New</h3>
+                <h3 className="text-xs sm:text-sm font-black text-brand-navy">Buy Brand New</h3>
                 <button className="text-xs font-bold text-brand-blue hover:underline cursor-pointer">
                   View All
                 </button>
               </div>
-              <div className="bg-white border border-slate-200/60 rounded-2xl p-3 md:p-4 shadow-sm">
-                <div className="flex items-center justify-between gap-2 md:gap-4">
+              <div className="bg-white border border-slate-200/80 rounded-2xl p-2.5 sm:p-3 md:p-4 shadow-2xs">
+                <div className="flex items-center gap-1.5 sm:gap-2 md:gap-4 overflow-x-auto no-scrollbar">
                   {[
                     { name: 'SAMSUNG', color: '#1428A0' },
                     { name: 'LG', color: '#A50034' },
@@ -713,10 +713,10 @@ const Buy = () => {
                   ].map((brand, idx) => (
                     <div
                       key={idx}
-                      className="flex-1 flex items-center justify-center py-2 md:py-4 px-1 bg-slate-50 border border-slate-200/80 rounded-xl hover:bg-blue-50/30 hover:border-brand-blue/30 cursor-pointer transition-all shadow-xs"
+                      className="flex-1 min-w-[62px] sm:min-w-0 flex items-center justify-center py-2 md:py-4 px-1.5 bg-slate-50 border border-slate-200/80 rounded-xl hover:bg-blue-50/30 hover:border-brand-blue/30 cursor-pointer transition-all shadow-2xs"
                     >
                       <span 
-                        className="text-[8px] md:text-[11px] font-black tracking-tight text-center leading-tight"
+                        className="text-[8.5px] sm:text-[10px] md:text-[11px] font-black tracking-tight text-center leading-tight truncate w-full"
                         style={{ color: brand.color }}
                       >
                         {brand.name}
@@ -2501,20 +2501,21 @@ const Buy = () => {
       </div>
 
       {/* Sticky Bottom Tab Bar — mobile only */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-border-color p-4 flex justify-around items-center z-40 shadow-lg rounded-t-3xl overflow-visible lg:hidden">
+      <div className="fixed bottom-0 left-0 right-0 h-16 bg-white/95 backdrop-blur-xl border-t border-slate-200/80 px-3 sm:px-8 flex justify-around items-center z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] lg:hidden">
         <button 
           onClick={() => navigate('/dashboard')}
-          className="flex flex-col items-center text-text-secondary hover:text-brand-blue transition-colors cursor-pointer"
+          className="flex flex-col items-center justify-center py-1 px-2.5 text-slate-500 hover:text-brand-blue transition-colors cursor-pointer"
         >
-          <HomeIcon className="h-6 w-6" />
-          <span className="text-xs font-semibold mt-0.5">Home</span>
+          <HomeIcon className="h-5 w-5" />
+          <span className="text-[10px] font-medium tracking-tight mt-0.5">Home</span>
         </button>
+
         <button 
           onClick={() => navigate('/categories')}
-          className="flex flex-col items-center text-text-secondary hover:text-brand-blue transition-colors cursor-pointer"
+          className="flex flex-col items-center justify-center py-1 px-2.5 text-slate-500 hover:text-brand-blue transition-colors cursor-pointer"
         >
-          <LayoutGrid className="h-6 w-6" />
-          <span className="text-xs font-semibold mt-0.5">Categories</span>
+          <LayoutGrid className="h-5 w-5" />
+          <span className="text-[10px] font-medium tracking-tight mt-0.5">Categories</span>
         </button>
 
         <button 
@@ -2522,25 +2523,29 @@ const Buy = () => {
             setShowSuccess(false);
             goTo(1);
           }}
-          className="flex flex-col items-center text-brand-blue cursor-pointer transition-colors"
+          className="flex flex-col items-center justify-center relative py-1 px-2.5 text-brand-blue cursor-pointer"
         >
-          <ShoppingCart className="h-6 w-6" />
-          <span className="text-xs font-semibold mt-0.5">Buy</span>
+          <div className="absolute -top-3 w-8 h-1 bg-brand-blue rounded-b-full shadow-2xs" />
+          <div className="p-1 rounded-xl bg-blue-50/90 text-brand-blue">
+            <ShoppingCart className="h-5 w-5" />
+          </div>
+          <span className="text-[10px] font-bold tracking-tight mt-0.5">Buy</span>
         </button>
 
         <button 
           onClick={() => navigate('/bookings')}
-          className="flex flex-col items-center text-text-secondary hover:text-brand-blue transition-colors cursor-pointer"
+          className="flex flex-col items-center justify-center py-1 px-2.5 text-slate-500 hover:text-brand-blue transition-colors cursor-pointer"
         >
-          <Calendar className="h-6 w-6" />
-          <span className="text-xs font-semibold mt-0.5">Bookings</span>
+          <Calendar className="h-5 w-5" />
+          <span className="text-[10px] font-medium tracking-tight mt-0.5">Bookings</span>
         </button>
+
         <button 
           onClick={() => navigate('/profile')}
-          className="flex flex-col items-center text-text-secondary hover:text-brand-blue transition-colors cursor-pointer"
+          className="flex flex-col items-center justify-center py-1 px-2.5 text-slate-500 hover:text-brand-blue transition-colors cursor-pointer"
         >
-          <User className="h-6 w-6" />
-          <span className="text-xs font-semibold mt-0.5">Account</span>
+          <User className="h-5 w-5" />
+          <span className="text-[10px] font-medium tracking-tight mt-0.5">Account</span>
         </button>
       </div>
 

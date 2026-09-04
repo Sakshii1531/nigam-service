@@ -272,53 +272,53 @@ const Bookings = () => {
     <div className="min-h-screen bg-slate-50/70 flex flex-col pb-24 lg:pb-12 font-sans">
       
       {/* Top App Header — Mobile only */}
-      <div className="bg-white border-b border-slate-200/80 px-4 py-3 sticky top-0 z-30 shadow-xs lg:hidden flex flex-col gap-3">
+      <div className="bg-white/95 backdrop-blur-md border-b border-slate-100 px-3.5 py-2.5 sticky top-0 z-30 shadow-2xs lg:hidden flex flex-col gap-2.5">
         <div className="flex items-center justify-between">
           <button 
             onClick={() => navigate(-1)}
-            className="p-2 hover:bg-slate-100 rounded-full transition-colors cursor-pointer text-slate-700"
+            className="w-8 h-8 rounded-full bg-slate-100/90 active:scale-95 flex items-center justify-center text-slate-700 transition-all cursor-pointer"
             aria-label="Go Back"
           >
-            <ArrowLeft className="h-5 w-5" />
+            <ArrowLeft className="h-4 w-4" />
           </button>
           
           <div className="text-center">
-            <h1 className="text-base font-extrabold text-slate-900 tracking-tight">My Bookings</h1>
-            <p className="text-[10px] text-slate-500 font-semibold">{bookings.length} total services</p>
+            <h1 className="text-sm font-extrabold text-slate-900 tracking-tight">My Bookings</h1>
+            <p className="text-[10px] text-slate-400 font-semibold">{bookings.length} total {bookings.length === 1 ? 'service' : 'services'}</p>
           </div>
 
           <button 
             onClick={() => loadBookings(true)}
             disabled={refreshing}
-            className="p-2 hover:bg-slate-100 rounded-full transition-colors cursor-pointer text-slate-700 disabled:opacity-50"
+            className="w-8 h-8 rounded-full bg-slate-100/90 hover:bg-slate-200/80 active:scale-95 flex items-center justify-center transition-all cursor-pointer text-slate-700 disabled:opacity-50"
             title="Refresh Bookings"
           >
-            <RefreshCw className={`h-4.5 w-4.5 ${refreshing ? 'animate-spin text-[#0D47A1]' : ''}`} />
+            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin text-[#0D47A1]' : ''}`} />
           </button>
         </div>
 
         {/* Mobile Search Bar */}
         <div className="relative">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
           <input 
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search booking ID, appliance, or brand..."
-            className="w-full bg-slate-50 border border-slate-200/80 rounded-xl pl-9 pr-9 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0D47A1] focus:bg-white transition-all"
+            className="w-full bg-slate-50 border border-slate-200/90 rounded-xl pl-8.5 pr-8 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0D47A1] focus:ring-2 focus:ring-[#0D47A1]/20 focus:bg-white transition-all shadow-2xs"
           />
           {searchQuery && (
             <button 
               onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-600"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-600"
             >
               <X className="h-3.5 w-3.5" />
             </button>
           )}
         </div>
 
-        {/* Mobile Filter Tabs */}
-        <div className="flex gap-2 overflow-x-auto no-scrollbar pt-0.5 pb-1">
+        {/* Mobile Filter Tabs — Edge-to-edge horizontal scroll with no scrollbar */}
+        <div className="flex gap-2 overflow-x-auto no-scrollbar pt-0.5 pb-1 -mx-3.5 px-3.5">
           {TABS.map((tab) => {
             const count = tab === 'All' 
               ? bookings.length 
@@ -329,14 +329,14 @@ const Bookings = () => {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer flex-shrink-0 ${
                   isSelected
-                    ? 'bg-[#0D47A1] text-white shadow-xs'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200/70'
+                    ? 'bg-[#0D47A1] text-white shadow-2xs'
+                    : 'bg-slate-100/90 text-slate-600 hover:bg-slate-200/80 border border-slate-200/50'
                 }`}
               >
                 <span>{tab}</span>
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${isSelected ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'}`}>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-extrabold ${isSelected ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'}`}>
                   {count}
                 </span>
               </button>
@@ -962,40 +962,49 @@ const Bookings = () => {
       )}
 
       {/* Bottom Navigation — Mobile only */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 p-3.5 flex justify-around items-center z-40 overflow-visible lg:hidden">
+      {/* Bottom Menu Bar (Custom Mobile Tabs) — hidden on desktop */}
+      <div className="fixed bottom-0 left-0 right-0 h-16 bg-white/95 backdrop-blur-xl border-t border-slate-200/80 px-3 sm:px-8 flex justify-around items-center z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] lg:hidden">
         <button 
           onClick={() => navigate('/dashboard')}
-          className="flex flex-col items-center text-slate-500 hover:text-[#0D47A1]"
+          className="flex flex-col items-center justify-center py-1 px-2.5 text-slate-500 hover:text-[#0D47A1] transition-colors cursor-pointer"
         >
-          <HomeIcon className="h-6 w-6" />
-          <span className="text-xs font-medium">Home</span>
+          <HomeIcon className="h-5 w-5" />
+          <span className="text-[10px] font-medium tracking-tight mt-0.5">Home</span>
         </button>
+
         <button 
           onClick={() => navigate('/categories')}
-          className="flex flex-col items-center text-slate-500 hover:text-[#0D47A1]"
+          className="flex flex-col items-center justify-center py-1 px-2.5 text-slate-500 hover:text-[#0D47A1] transition-colors cursor-pointer"
         >
-          <LayoutGrid className="h-6 w-6" />
-          <span className="text-xs font-medium">Categories</span>
+          <LayoutGrid className="h-5 w-5" />
+          <span className="text-[10px] font-medium tracking-tight mt-0.5">Categories</span>
         </button>
+
         <button 
           onClick={() => navigate('/buy')}
-          className="flex flex-col items-center text-slate-500 hover:text-[#0D47A1]"
+          className="flex flex-col items-center justify-center py-1 px-2.5 text-slate-500 hover:text-[#0D47A1] transition-colors cursor-pointer"
         >
-          <ShoppingCart className="h-6 w-6" />
-          <span className="text-xs font-medium">Buy</span>
+          <ShoppingCart className="h-5 w-5" />
+          <span className="text-[10px] font-medium tracking-tight mt-0.5">Buy</span>
         </button>
+
         <button 
-          className="flex flex-col items-center text-[#0D47A1]"
+          onClick={() => navigate('/bookings')}
+          className="flex flex-col items-center justify-center relative py-1 px-2.5 text-[#0D47A1] cursor-pointer"
         >
-          <Calendar className="h-6 w-6" />
-          <span className="text-xs font-medium font-bold">Bookings</span>
+          <div className="absolute -top-3 w-8 h-1 bg-[#0D47A1] rounded-b-full shadow-2xs" />
+          <div className="p-1 rounded-xl bg-blue-50/90 text-[#0D47A1]">
+            <Calendar className="h-5 w-5" />
+          </div>
+          <span className="text-[10px] font-bold tracking-tight mt-0.5">Bookings</span>
         </button>
+
         <button 
           onClick={() => navigate('/profile')}
-          className="flex flex-col items-center text-slate-500 hover:text-[#0D47A1]"
+          className="flex flex-col items-center justify-center py-1 px-2.5 text-slate-500 hover:text-[#0D47A1] transition-colors cursor-pointer"
         >
-          <User className="h-6 w-6" />
-          <span className="text-xs font-medium">Account</span>
+          <User className="h-5 w-5" />
+          <span className="text-[10px] font-medium tracking-tight mt-0.5">Account</span>
         </button>
       </div>
 
