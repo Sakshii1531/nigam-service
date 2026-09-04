@@ -24,6 +24,7 @@ const registerSchema = z.object({
   email: z.string().optional(),
   password: z.string().min(6),
   city: z.string().optional(),
+  state: z.string().optional(),
   specs: z.string().optional(),
 });
 
@@ -47,13 +48,22 @@ technicianRegistrationRouter.post(
       if (!parsed.success) {
         throw new ApiError(400, 'Validation failed', parsed.error.issues);
       }
-      const { name, phone, email, password, city, specs } = parsed.data;
+      const { name, phone, email, password, city, state, specs } = parsed.data;
 
       if (await User.findOne({ role: ROLES.TECHNICIAN, phone })) {
         throw new ApiError(409, 'An application already exists for this phone number');
       }
 
-      const cityDoc = city ? await City.findOne({ name: city }) : null;
+      let cityDoc = null;
+      if (city) {
+        cityDoc = await City.findOne({
+          name: new RegExp(`^${city.trim()}$`, 'i'),
+          ...(state ? { state: new RegExp(`^${state.trim()}$`, 'i') } : {}),
+        });
+        if (!cityDoc) {
+          cityDoc = await City.findOne({ name: new RegExp(`^${city.trim()}$`, 'i') });
+        }
+      }
 
       const [front, back] = await Promise.all([
         req.files?.aadharFront?.[0] ? storeUploadedFile(req.files.aadharFront[0]) : null,
@@ -75,6 +85,8 @@ technicianRegistrationRouter.post(
         phone,
         email,
         city: cityDoc ? cityDoc._id : null,
+        serviceCityName: city ? city.trim() : '',
+        serviceStateName: state ? state.trim() : (cityDoc?.state || ''),
         specs: parseSpecs(specs),
         status: 'Pending',
         availability: 'Offline',

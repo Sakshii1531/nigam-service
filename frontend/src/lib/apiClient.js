@@ -14,8 +14,16 @@ function getBaseUrl() {
 
 const BASE_URL = getBaseUrl();
 
-const ACCESS_TOKEN_KEY = 'ncc_access_token';
-const REFRESH_TOKEN_KEY = 'ncc_refresh_token';
+/**
+ * Determine the active portal context based on route pathname.
+ * Enables simultaneous multi-role sessions across separate browser tabs.
+ */
+export function getCurrentPortal(pathname = typeof window !== 'undefined' ? window.location.pathname : '') {
+  if (pathname.startsWith('/super-admin')) return 'super_admin';
+  if (pathname.startsWith('/brand-admin')) return 'brand_admin';
+  if (pathname.startsWith('/technician')) return 'technician';
+  return 'customer';
+}
 
 export class ApiError extends Error {
   constructor(status, message, details) {
@@ -27,21 +35,50 @@ export class ApiError extends Error {
   }
 }
 
-export function getStoredTokens() {
-  return {
-    accessToken: localStorage.getItem(ACCESS_TOKEN_KEY),
-    refreshToken: localStorage.getItem(REFRESH_TOKEN_KEY),
-  };
+export function getStoredTokens(portal = getCurrentPortal()) {
+  if (typeof window === 'undefined') return { accessToken: null, refreshToken: null };
+  const specificAccess = localStorage.getItem(`ncc_access_token_${portal}`);
+  const specificRefresh = localStorage.getItem(`ncc_refresh_token_${portal}`);
+
+  if (specificAccess || specificRefresh) {
+    return {
+      accessToken: specificAccess,
+      refreshToken: specificRefresh,
+    };
+  }
+
+  // Fallback to legacy single key for backwards compatibility
+  if (portal === 'customer') {
+    return {
+      accessToken: localStorage.getItem('ncc_access_token'),
+      refreshToken: localStorage.getItem('ncc_refresh_token'),
+    };
+  }
+
+  return { accessToken: null, refreshToken: null };
 }
 
-export function storeTokens({ accessToken, refreshToken }) {
-  if (accessToken) localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
-  if (refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+export function storeTokens({ accessToken, refreshToken }, portal = getCurrentPortal()) {
+  if (typeof window === 'undefined') return;
+  if (accessToken) localStorage.setItem(`ncc_access_token_${portal}`, accessToken);
+  if (refreshToken) localStorage.setItem(`ncc_refresh_token_${portal}`, refreshToken);
+
+  // Maintain legacy keys when working in customer portal
+  if (portal === 'customer') {
+    if (accessToken) localStorage.setItem('ncc_access_token', accessToken);
+    if (refreshToken) localStorage.setItem('ncc_refresh_token', refreshToken);
+  }
 }
 
-export function clearTokens() {
-  localStorage.removeItem(ACCESS_TOKEN_KEY);
-  localStorage.removeItem(REFRESH_TOKEN_KEY);
+export function clearTokens(portal = getCurrentPortal()) {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(`ncc_access_token_${portal}`);
+  localStorage.removeItem(`ncc_refresh_token_${portal}`);
+
+  if (portal === 'customer') {
+    localStorage.removeItem('ncc_access_token');
+    localStorage.removeItem('ncc_refresh_token');
+  }
 }
 
 /**
@@ -57,8 +94,6 @@ export function clearTokens() {
  *    would fire noise on ordinary screens;
  *  - a 401 is the session-expiry path, already handled by refresh + the
  *    `auth:unauthorized` redirect — a toast on top of that is just confusing.
- *
- * Callers that want silence regardless can pass `silentError: true`.
  */
 function reportError(err, { method, silentError }) {
   if (silentError || typeof window === 'undefined') return;
@@ -74,9 +109,6 @@ function reportError(err, { method, silentError }) {
 }
 
 async function rawRequest(path, { method = 'GET', body, accessToken, envelope = false } = {}) {
-  // A FormData body is sent as-is: the browser must set its own multipart
-  // Content-Type (with the boundary), and JSON.stringify would turn the file
-  // into "{}". This is what file uploads (invoices, ID proofs) go through.
   const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
 
   let res;
@@ -90,11 +122,6 @@ async function rawRequest(path, { method = 'GET', body, accessToken, envelope = 
       body: body === undefined ? undefined : isFormData ? body : JSON.stringify(body),
     });
   } catch {
-    // fetch rejects (rather than resolving non-ok) when the request never
-    // reached the server at all — offline, DNS failure, backend down, CORS.
-    // Callers only ever branched on ApiError.status, so a bare TypeError here
-    // read as an unexpected crash; status 0 keeps them on the known path and
-    // gives the user a sentence that means something.
     throw new ApiError(0, 'Cannot reach the server. Check your connection and try again.');
   }
 
@@ -108,46 +135,45 @@ async function rawRequest(path, { method = 'GET', body, accessToken, envelope = 
   if (!res.ok) {
     throw new ApiError(res.status, json?.error?.message || 'Request failed', json?.error?.details);
   }
-  // Callers that need pagination meta (an unread COUNT, not the rows) ask for
-  // the whole envelope; everything else keeps getting just the payload.
   return envelope ? json : json.data;
 }
 
-// One-time refresh, not a queue — good enough for this phase's scoped Auth
-// integration (Login + OTP verify). A concurrent-request queue is real extra
-// complexity that belongs with the fuller cutover this phase deliberately
-// isn't attempting yet (see frontend/docs/PHASE13_INTEGRATION.md).
-let refreshInFlight = null;
+const refreshInFlightByPortal = {};
 
-async function refreshAccessToken() {
-  const { refreshToken } = getStoredTokens();
+async function refreshAccessToken(portal = getCurrentPortal()) {
+  const { refreshToken } = getStoredTokens(portal);
   if (!refreshToken) throw new ApiError(401, 'No refresh token available');
 
-  if (!refreshInFlight) {
-    refreshInFlight = rawRequest('/auth/refresh', { method: 'POST', body: { refreshToken } })
+  if (!refreshInFlightByPortal[portal]) {
+    refreshInFlightByPortal[portal] = rawRequest('/auth/refresh', { method: 'POST', body: { refreshToken } })
       .then((data) => {
-        storeTokens(data);
+        storeTokens(data, portal);
         return data;
       })
       .finally(() => {
-        refreshInFlight = null;
+        delete refreshInFlightByPortal[portal];
       });
   }
-  return refreshInFlight;
+  return refreshInFlightByPortal[portal];
 }
 
 /**
  * apiRequest('/catalog/categories') — public GET.
  * apiRequest('/bookings', { method: 'POST', body: {...}, auth: true }) — attaches
- * the stored access token and retries once via /auth/refresh on a 401 before
- * giving up (a token that expired mid-session shouldn't force a full re-login).
- *
- * `accessToken` overrides the stored one. Logout needs this: it clears the
- * session synchronously so route guards update instantly, then still has to
- * make one authenticated call (de-registering the push token) with the
- * credentials it just discarded.
+ * the stored access token for the active portal and retries once via /auth/refresh on a 401.
  */
-export async function apiRequest(path, { method = 'GET', body, auth = false, accessToken: explicitToken, envelope = false, silentError = false } = {}) {
+export async function apiRequest(
+  path, 
+  { 
+    method = 'GET', 
+    body, 
+    auth = false, 
+    accessToken: explicitToken, 
+    portal: explicitPortal, 
+    envelope = false, 
+    silentError = false 
+  } = {}
+) {
   if (!auth) {
     try {
       return await rawRequest(path, { method, body, envelope });
@@ -157,28 +183,29 @@ export async function apiRequest(path, { method = 'GET', body, auth = false, acc
     }
   }
 
-  const accessToken = explicitToken || getStoredTokens().accessToken;
+  const portal = explicitPortal || getCurrentPortal();
+  const accessToken = explicitToken || getStoredTokens(portal).accessToken;
+
   try {
     return await rawRequest(path, { method, body, accessToken, envelope });
   } catch (err) {
     if (err instanceof ApiError && err.status === 401 && accessToken) {
       try {
-        const refreshed = await refreshAccessToken();
+        const refreshed = await refreshAccessToken(portal);
         return await rawRequest(path, { method, body, accessToken: refreshed.accessToken, envelope });
       } catch (refreshErr) {
-        // Only log out if the refresh itself was rejected as unauthorized (401).
-        // Network errors, 500s, etc. should not silently kill the session.
         if (refreshErr instanceof ApiError && refreshErr.status === 401) {
-          clearTokens();
-          localStorage.removeItem('ncc_user');
-          window.dispatchEvent(new Event('auth:unauthorized'));
+          clearTokens(portal);
+          localStorage.removeItem(`ncc_user_${portal}`);
+          if (portal === 'customer') {
+            localStorage.removeItem('ncc_user');
+          }
+          window.dispatchEvent(new CustomEvent('auth:unauthorized', { detail: { portal } }));
         }
         reportError(refreshErr, { method, silentError });
         throw refreshErr;
       }
     }
-    // NOTE: Do NOT trigger logout on 404. A missing resource is not an auth failure.
-    // Only a 401 on the original request (that also fails to refresh) should end the session.
     reportError(err, { method, silentError });
     throw err;
   }

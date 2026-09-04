@@ -18,10 +18,10 @@ function nextPhone() {
   return String(phoneCounter++);
 }
 
-async function createTechnician({ specs, city, rating = 0, activeJobsCount = 0, availability = 'Available', status = 'Active' }) {
+async function createTechnician({ specs, city, serviceCityName, serviceStateName, rating = 0, activeJobsCount = 0, availability = 'Available', status = 'Active' }) {
   const phone = nextPhone();
   const user = await User.create({ role: ROLES.TECHNICIAN, phone, name: 'Fixture Technician', passwordHash: await hashPassword('password123') });
-  return Technician.create({ user: user._id, name: 'Fixture Technician', phone, specs, city, rating, activeJobsCount, availability, status });
+  return Technician.create({ user: user._id, name: 'Fixture Technician', phone, specs, city, serviceCityName, serviceStateName, rating, activeJobsCount, availability, status });
 }
 
 beforeAll(async () => {
@@ -124,14 +124,56 @@ describe('findAvailableTechnician — weighted scoring', () => {
     const result = await findAvailableTechnician({ category: 'AC' });
     expect(String(result._id)).toBe(String(leastBusy._id));
   });
+
+  it('strictly enforces territory isolation: an Indore booking NEVER assigns Delhi/Bangalore technician', async () => {
+    // Delhi technician has 5-star rating and perfect AC specs
+    const delhiTech = await createTechnician({
+      specs: ['AC'],
+      serviceCityName: 'Delhi',
+      serviceStateName: 'Delhi',
+      rating: 5,
+      activeJobsCount: 0,
+    });
+    // Indore technician is a fresh fixture with 0 rating
+    const indoreTech = await createTechnician({
+      specs: ['AC'],
+      serviceCityName: 'Indore',
+      serviceStateName: 'Madhya Pradesh',
+      rating: 0,
+      activeJobsCount: 0,
+    });
+
+    const result = await findAvailableTechnician({ category: 'AC', city: 'Indore', state: 'Madhya Pradesh' });
+    expect(result).not.toBeNull();
+    expect(String(result._id)).toBe(String(indoreTech._id));
+    expect(String(result._id)).not.toBe(String(delhiTech._id));
+  });
+
+  it('returns null if no technician is registered in the customer city, even if out-of-city technicians are available', async () => {
+    await createTechnician({
+      specs: ['AC'],
+      serviceCityName: 'Delhi',
+      serviceStateName: 'Delhi',
+      rating: 5,
+    });
+    await createTechnician({
+      specs: ['AC'],
+      serviceCityName: 'Bengaluru',
+      serviceStateName: 'Karnataka',
+      rating: 5,
+    });
+
+    const result = await findAvailableTechnician({ category: 'AC', city: 'Indore', state: 'Madhya Pradesh' });
+    expect(result).toBeNull();
+  });
 });
 
 describe('rankTechnicians — the shortlist the assignment console shows', () => {
   it('returns every candidate ordered by score, with the same winner as findAvailableTechnician', async () => {
     const lucknow = await City.create({ name: 'Lucknow' });
-    const specialist = await createTechnician({ specs: ['AC'], city: lucknow._id, rating: 5 });
-    await createTechnician({ specs: ['TV'], city: lucknow._id, rating: 1 });
-    await createTechnician({ specs: ['TV'], city: lucknow._id, rating: 0, activeJobsCount: 4 });
+    const specialist = await createTechnician({ specs: ['AC'], city: lucknow._id, serviceCityName: 'Lucknow', rating: 5 });
+    await createTechnician({ specs: ['TV'], city: lucknow._id, serviceCityName: 'Lucknow', rating: 1 });
+    await createTechnician({ specs: ['TV'], city: lucknow._id, serviceCityName: 'Lucknow', rating: 0, activeJobsCount: 4 });
 
     const ranked = await rankTechnicians({ category: 'AC', city: 'Lucknow' });
     expect(ranked).toHaveLength(3);
@@ -146,9 +188,22 @@ describe('rankTechnicians — the shortlist the assignment console shows', () =>
     expect(String(best._id)).toBe(String(specialist._id));
   });
 
+  it('strictly filters out out-of-territory candidates from rankTechnicians shortlist', async () => {
+    await createTechnician({ specs: ['AC'], serviceCityName: 'Delhi', rating: 5 });
+    const indore1 = await createTechnician({ specs: ['AC'], serviceCityName: 'Indore', rating: 4 });
+    const indore2 = await createTechnician({ specs: ['AC'], serviceCityName: 'Indore', rating: 2 });
+
+    const shortlist = await rankTechnicians({ category: 'AC', city: 'Indore' });
+    expect(shortlist).toHaveLength(2);
+    const shortlistIds = shortlist.map(s => String(s.technician._id));
+    expect(shortlistIds).toContain(String(indore1._id));
+    expect(shortlistIds).toContain(String(indore2._id));
+  });
+
   it('excludes technicians the hard filter rejects, and returns [] when none qualify', async () => {
     await createTechnician({ specs: ['AC'], status: 'Inactive' });
     await createTechnician({ specs: ['AC'], availability: 'Busy' });
     expect(await rankTechnicians({ category: 'AC' })).toEqual([]);
   });
 });
+

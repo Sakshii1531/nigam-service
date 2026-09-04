@@ -42,10 +42,10 @@ async function createCustomer(request) {
   return { phone, token };
 }
 
-async function createTechnician(request, { specs, availability = 'Available' }) {
+async function createTechnician(request, { specs, availability = 'Available', serviceCityName, serviceStateName }) {
   const phone = uniquePhone();
   const createRes = await request.post('/api/v1/_dev/test-technician', {
-    data: { phone, password: 'password123', specs, availability },
+    data: { phone, password: 'password123', specs, availability, serviceCityName, serviceStateName },
   });
   const { technicianId } = (await createRes.json()).data;
   const token = await loginAndVerify(request, { role: 'technician', identifier: phone, password: 'password123' });
@@ -191,3 +191,108 @@ test.describe('POST /bookings/:id/cancel', () => {
     expect((await srRes.json()).data.status).toBe('Cancelled');
   });
 });
+
+test.describe('POST /bookings — territory isolation (Indore vs Delhi)', () => {
+  test('strictly assigns the technician in Indore for an Indore booking, never the Delhi technician', async ({ request }) => {
+    const categoryKey = `E2E-Territory-${randomUUID()}`;
+
+    const adminEmail = `admin-territory-${randomUUID()}@e2e.test`;
+    await request.post('/api/v1/_dev/test-user', { data: { role: 'super_admin', email: adminEmail, password: 'password123' } });
+    const adminToken = await loginAndVerify(request, { role: 'super_admin', identifier: adminEmail, password: 'password123' });
+
+    await request.post('/api/v1/catalog/categories', {
+      headers: { Authorization: `Bearer ${adminToken}` },
+      data: { key: categoryKey, name: categoryKey },
+    });
+    await request.post(`/api/v1/catalog/categories/${categoryKey}/services`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+      data: { slug: 'repair', name: 'Repair', price: 350 },
+    });
+
+    // Create a Delhi technician
+    const delhiTech = await createTechnician(request, {
+      specs: [categoryKey],
+      serviceCityName: 'Delhi',
+      serviceStateName: 'Delhi',
+    });
+
+    // Create an Indore technician
+    const indoreTech = await createTechnician(request, {
+      specs: [categoryKey],
+      serviceCityName: 'Indore',
+      serviceStateName: 'Madhya Pradesh',
+    });
+
+    const customer = await createCustomer(request);
+
+    // Customer places a booking located in Indore, Madhya Pradesh
+    const res = await request.post('/api/v1/bookings', {
+      headers: { Authorization: `Bearer ${customer.token}` },
+      data: {
+        category: categoryKey,
+        serviceSlug: 'repair',
+        address: {
+          city: 'Indore',
+          state: 'Madhya Pradesh',
+          house: '123 Vijay Nagar',
+        },
+      },
+    });
+
+    expect(res.status()).toBe(201);
+    const { booking, serviceRequest } = (await res.json()).data;
+
+    // Must be assigned strictly to the Indore technician
+    expect(booking.technician).toBe(indoreTech.technicianId);
+    expect(booking.technician).not.toBe(delhiTech.technicianId);
+    expect(serviceRequest.status).toBe('Assigned');
+  });
+
+  test('does not assign an out-of-city technician when booking in an unserviced city and only Delhi technician exists', async ({ request }) => {
+    const categoryKey = `E2E-Territory-Solo-${randomUUID()}`;
+
+    const adminEmail = `admin-territory-solo-${randomUUID()}@e2e.test`;
+    await request.post('/api/v1/_dev/test-user', { data: { role: 'super_admin', email: adminEmail, password: 'password123' } });
+    const adminToken = await loginAndVerify(request, { role: 'super_admin', identifier: adminEmail, password: 'password123' });
+
+    await request.post('/api/v1/catalog/categories', {
+      headers: { Authorization: `Bearer ${adminToken}` },
+      data: { key: categoryKey, name: categoryKey },
+    });
+    await request.post(`/api/v1/catalog/categories/${categoryKey}/services`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+      data: { slug: 'repair', name: 'Repair', price: 350 },
+    });
+
+    // Only Delhi technician is created
+    const delhiTech = await createTechnician(request, {
+      specs: [categoryKey],
+      serviceCityName: 'Delhi',
+      serviceStateName: 'Delhi',
+    });
+
+    const customer = await createCustomer(request);
+
+    // Customer places booking in Bhopal where no technician exists
+    const res = await request.post('/api/v1/bookings', {
+      headers: { Authorization: `Bearer ${customer.token}` },
+      data: {
+        category: categoryKey,
+        serviceSlug: 'repair',
+        address: {
+          city: 'Bhopal',
+          state: 'Madhya Pradesh',
+          house: '456 MP Nagar',
+        },
+      },
+    });
+
+    expect(res.status()).toBe(201);
+    const { booking, serviceRequest } = (await res.json()).data;
+
+    // Must NOT assign Delhi technician!
+    expect(booking.technician).not.toBe(delhiTech.technicianId);
+    expect(booking.technician).toBeNull();
+  });
+});
+

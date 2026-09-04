@@ -119,16 +119,39 @@ const AMC_POPULATE = { path: 'amcSubscription', populate: { path: 'plan', select
 const EW_POPULATE = { path: 'extendedWarrantyOrder' };
 
 export async function listAvailableJobs(technicianId) {
+  const tech = await Technician.findById(technicianId).populate('city');
+  const techCity = (tech?.serviceCityName || tech?.city?.name || '').toLowerCase().trim();
+
   const acceptedServiceRequestIds = await Job.distinct('serviceRequest');
-  return ServiceRequest.find({
-    technician: technicianId,
-    status: 'Assigned',
+  const srs = await ServiceRequest.find({
+    $or: [
+      { technician: technicianId, status: 'Assigned' },
+      { technician: null, status: { $in: ['New', 'Assigned', 'Pending'] } },
+    ],
     _id: { $nin: acceptedServiceRequestIds },
   })
     .populate('user booking')
     .populate(AMC_POPULATE)
     .populate(EW_POPULATE)
     .sort({ createdAt: -1 });
+
+  return srs.filter((sr) => {
+    // If specifically assigned to this technician
+    if (sr.technician && String(sr.technician) === String(technicianId)) {
+      if (techCity) {
+        const jobCity = (sr.zone || sr.booking?.address?.city || '').toLowerCase().trim();
+        if (jobCity && jobCity !== techCity && !jobCity.includes(techCity) && !techCity.includes(jobCity)) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    // For broadcast unassigned jobs, only show if in technician's city
+    if (!techCity) return false;
+    const jobCity = (sr.zone || sr.booking?.address?.city || '').toLowerCase().trim();
+    return jobCity && (jobCity === techCity || jobCity.includes(techCity) || techCity.includes(jobCity));
+  });
 }
 
 export async function listActiveJobs(technicianId) {
@@ -300,6 +323,44 @@ export async function acceptJob(technicianId, serviceRequestId, { type, amcSubsc
   // is 'Assigned' — booking.service.js's auto-assign flow already puts it there
   // for D2C jobs; non-D2C fixtures must do the same before calling acceptJob.
   await transitionStatus(serviceRequest._id, 'Engineer Accepted', { description: 'Technician accepted the job' });
+
+  serviceRequest.isAccepted = true;
+  serviceRequest.acceptedAt = new Date();
+  await serviceRequest.save();
+
+  if (booking) {
+    booking.isAccepted = true;
+    booking.status = 'Ongoing';
+    booking.technician = technicianId;
+    if (booking.isInstant) booking.instantStatus = 'EN_ROUTE';
+    await booking.save();
+  }
+
+  // Real-time broadcast to the customer that their technician is accepted & booked!
+  try {
+    const io = getIO();
+    const tech = await Technician.findById(technicianId);
+    const acceptPayload = {
+      bookingId: booking?.id || String(serviceRequest.booking),
+      serviceRequestId: serviceRequest.id,
+      status: 'Engineer Accepted',
+      isAccepted: true,
+      technician: {
+        id: tech?._id || technicianId,
+        name: tech?.name || 'Technician',
+        phone: tech?.phone || '',
+        rating: tech?.rating || 4.8,
+        specs: tech?.specs || [],
+      },
+    };
+    if (serviceRequest.user) {
+      io.to(`user:${serviceRequest.user}`).emit('booking:accepted', acceptPayload);
+      io.to(`user:${serviceRequest.user}`).emit('instant:status_update', acceptPayload);
+      io.to(`user:${serviceRequest.user}`).emit('service_request:updated', acceptPayload);
+    }
+  } catch (err) {
+    // Socket emit optional
+  }
 
   // Customer<->technician chat only makes sense once both sides of a real,
   // verified pairing exist — this is that moment (see chat.routes.js's doc

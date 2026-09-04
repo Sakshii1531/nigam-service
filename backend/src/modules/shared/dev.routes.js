@@ -124,10 +124,13 @@ if (isTest) {
     password: z.string().min(6),
     specs: z.array(z.string()).optional(),
     availability: z.enum(['Available', 'Busy', 'Offline']).optional(),
+    city: z.string().optional(),
+    serviceCityName: z.string().optional(),
+    serviceStateName: z.string().optional(),
   });
   devRouter.post('/_dev/test-technician', validate(testTechnicianSchema), async (req, res, next) => {
     try {
-      const { phone, password, specs = ['AC'], availability = 'Available' } = req.body;
+      const { phone, password, specs = ['AC'], availability = 'Available', city, serviceCityName, serviceStateName } = req.body;
 
       await User.deleteOne({ role: ROLES.TECHNICIAN, phone });
       const user = await User.create({
@@ -146,6 +149,9 @@ if (isTest) {
         status: 'Active',
         availability,
         specs,
+        city: city || null,
+        serviceCityName: serviceCityName || undefined,
+        serviceStateName: serviceStateName || undefined,
       });
 
       ok(res, { userId: user.id, technicianId: technician.id }, {}, 201);

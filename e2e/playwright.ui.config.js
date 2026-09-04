@@ -25,7 +25,7 @@ export default defineConfig({
       env: {
         NODE_ENV: 'test',
         PORT: String(API_PORT),
-        MONGODB_URI: 'mongodb://127.0.0.1:27017/nigam_care_e2e_ui',
+        MONGODB_URI: process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/nigam_care_e2e_ui',
         JWT_ACCESS_SECRET: 'ui-access-secret',
         JWT_REFRESH_SECRET: 'ui-refresh-secret',
         OTP_PROVIDER: 'test',

@@ -1,15 +1,19 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { apiRequest, getStoredTokens, storeTokens, clearTokens } from '../lib/apiClient';
+import { useLocation } from 'react-router-dom';
+import { 
+  apiRequest, 
+  getStoredTokens, 
+  storeTokens, 
+  clearTokens, 
+  getCurrentPortal 
+} from '../lib/apiClient';
 import { syncPushToken, disablePush, enablePush } from '../lib/pushClient';
 import { syncOnLogin as syncCartOnLogin, clearLocalOnLogout as clearLocalCart } from '../lib/cartStore';
 
-// Phase 13 — real session state backed by the backend's two-step
-// login (password -> OTP -> tokens), scoped to the customer role for this
-// pass (see frontend/docs/PHASE13_INTEGRATION.md). `user` is rehydrated from
-// localStorage on load so a refresh doesn't bounce a logged-in customer back
-// to /login; the access token itself is validated lazily by whatever
-// authenticated request happens to run first (401 -> refresh -> retry, see
-// apiClient.js), not eagerly on mount.
+// Multi-Portal AuthContext:
+// Manages distinct session states for customer, super_admin, brand_admin,
+// and technician portals. Allows simultaneous logins across 4 browser tabs
+// without session collision or cross-portal routing lockouts.
 
 const AuthContext = createContext(null);
 
@@ -18,6 +22,8 @@ export const useAuth = () => {
   return ctx || {
     user: null,
     isAuthenticated: false,
+    currentPortal: 'customer',
+    usersByPortal: {},
     login: async () => {},
     verifyOtp: async () => {},
     resendOtp: async () => {},
@@ -28,39 +34,72 @@ export const useAuth = () => {
   };
 };
 
-const USER_KEY = 'ncc_user';
-
-function loadStoredUser() {
+function loadStoredUser(portal) {
+  if (typeof window === 'undefined') return null;
   try {
-    const raw = localStorage.getItem(USER_KEY);
-    return raw ? JSON.parse(raw) : null;
+    const specific = localStorage.getItem(`ncc_user_${portal}`);
+    if (specific) return JSON.parse(specific);
+    // Legacy single key fallback for customer
+    if (portal === 'customer') {
+      const legacy = localStorage.getItem('ncc_user');
+      return legacy ? JSON.parse(legacy) : null;
+    }
+    return null;
   } catch {
     return null;
   }
 }
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(loadStoredUser);
+  const location = useLocation();
+  const currentPortal = getCurrentPortal(location.pathname);
+
+  const [usersByPortal, setUsersByPortal] = useState(() => ({
+    customer: loadStoredUser('customer'),
+    super_admin: loadStoredUser('super_admin'),
+    brand_admin: loadStoredUser('brand_admin'),
+    technician: loadStoredUser('technician')
+  }));
+
+  // Active user matches the portal of the current tab/route
+  const activeUser = usersByPortal[currentPortal] || null;
 
   /** Step 1: password check -> server sends an OTP. Returns the masked destination to display. */
   const login = useCallback(async ({ role, identifier, password }) => {
-    const data = await apiRequest('/auth/login', { method: 'POST', body: { role, identifier, password } });
-    return data; // { destination }
-  }, []);
+    const portal = role || getCurrentPortal(location.pathname);
+    const data = await apiRequest('/auth/login', { 
+      method: 'POST', 
+      body: { role, identifier, password },
+      portal
+    });
+    return data;
+  }, [location.pathname]);
 
-  /** Step 2: OTP verify -> real tokens + user, session now active. */
+  /** Step 2: OTP verify -> real tokens + user, session now active for this role. */
   const verifyOtp = useCallback(async ({ role, identifier, code }) => {
-    const data = await apiRequest('/auth/otp/verify', { method: 'POST', body: { role, identifier, code } });
-    storeTokens(data);
-    localStorage.setItem(USER_KEY, JSON.stringify(data.user));
-    setUser(data.user);
+    const portal = role || getCurrentPortal(location.pathname);
+    const data = await apiRequest('/auth/otp/verify', { 
+      method: 'POST', 
+      body: { role, identifier, code },
+      portal 
+    });
 
-    // Fold anything added as a guest into this account's cart, then adopt the
-    // merged result — otherwise signing in silently discarded the cart the user
-    // had just filled. Not awaited: it must never delay landing the session.
-    syncCartOnLogin();
+    storeTokens(data, portal);
+    localStorage.setItem(`ncc_user_${portal}`, JSON.stringify(data.user));
+    if (portal === 'customer') {
+      localStorage.setItem('ncc_user', JSON.stringify(data.user));
+    }
 
-    // Trigger push token registration during the user's verify click
+    setUsersByPortal(prev => ({
+      ...prev,
+      [portal]: data.user
+    }));
+
+    if (portal === 'customer') {
+      syncCartOnLogin();
+    }
+
+    // Trigger push token registration
     try {
       if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
         enablePush().catch(() => {});
@@ -71,31 +110,44 @@ export const AuthProvider = ({ children }) => {
       syncPushToken();
     }
     return data.user;
-  }, []);
+  }, [location.pathname]);
 
   const resendOtp = useCallback(async ({ role, identifier, purpose }) => {
-    return apiRequest('/auth/otp/send', { method: 'POST', body: { role, identifier, purpose } });
-  }, []);
+    const portal = role || getCurrentPortal(location.pathname);
+    return apiRequest('/auth/otp/send', { 
+      method: 'POST', 
+      body: { role, identifier, purpose },
+      portal 
+    });
+  }, [location.pathname]);
 
-  const signupCheck = useCallback(async ({ name, phone, email, password, confirmPassword, address, referralCode }) => {
+  const signupCheck = useCallback(async (payload) => {
     return apiRequest('/auth/signup/check', {
       method: 'POST',
-      body: { name, phone, email, password, confirmPassword, address, referralCode }
+      body: payload,
+      portal: 'customer'
     });
   }, []);
 
-  const signupVerify = useCallback(async ({ name, phone, email, password, address, referralCode, code }) => {
+  const signupVerify = useCallback(async (payload) => {
+    const portal = 'customer';
     const data = await apiRequest('/auth/signup/verify', {
       method: 'POST',
-      body: { name, phone, email, password, address, referralCode, code }
+      body: payload,
+      portal
     });
-    storeTokens(data);
-    localStorage.setItem(USER_KEY, JSON.stringify(data.user));
-    setUser(data.user);
+
+    storeTokens(data, portal);
+    localStorage.setItem(`ncc_user_${portal}`, JSON.stringify(data.user));
+    localStorage.setItem('ncc_user', JSON.stringify(data.user));
+
+    setUsersByPortal(prev => ({
+      ...prev,
+      [portal]: data.user
+    }));
 
     syncCartOnLogin();
 
-    // Trigger push token registration during the user's verify click
     try {
       if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
         enablePush().catch(() => {});
@@ -108,80 +160,115 @@ export const AuthProvider = ({ children }) => {
     return data.user;
   }, []);
 
+  // Handle unauthorized session expiry event for a specific portal
   useEffect(() => {
-    const handleUnauthorized = () => {
-      clearTokens();
-      localStorage.removeItem(USER_KEY);
-      setUser(null);
+    const handleUnauthorized = (e) => {
+      const unauthorizedPortal = e?.detail?.portal || currentPortal;
+      clearTokens(unauthorizedPortal);
+      localStorage.removeItem(`ncc_user_${unauthorizedPortal}`);
+      if (unauthorizedPortal === 'customer') {
+        localStorage.removeItem('ncc_user');
+      }
+      setUsersByPortal(prev => ({
+        ...prev,
+        [unauthorizedPortal]: null
+      }));
     };
 
     window.addEventListener('auth:unauthorized', handleUnauthorized);
     return () => window.removeEventListener('auth:unauthorized', handleUnauthorized);
-  }, []);
+  }, [currentPortal]);
 
+  // Validate current portal session against backend on mount/route change
   useEffect(() => {
-    // Validate stored user session against backend on mount
-    const { accessToken } = getStoredTokens();
+    const { accessToken } = getStoredTokens(currentPortal);
     if (accessToken) {
-      apiRequest('/auth/me', { auth: true })
+      apiRequest('/auth/me', { auth: true, portal: currentPortal, silentError: true })
         .then((freshUser) => {
           if (freshUser) {
-            localStorage.setItem(USER_KEY, JSON.stringify(freshUser));
-            setUser(freshUser);
-            // FCM rotates tokens (reinstall, cleared data, long silence) and the
-            // backend prunes stale ones, so a session that registered once would
-            // eventually go quiet. Re-check on every start.
+            localStorage.setItem(`ncc_user_${currentPortal}`, JSON.stringify(freshUser));
+            if (currentPortal === 'customer') {
+              localStorage.setItem('ncc_user', JSON.stringify(freshUser));
+            }
+            setUsersByPortal(prev => ({
+              ...prev,
+              [currentPortal]: freshUser
+            }));
             syncPushToken();
           }
         })
         .catch((err) => {
-          // Only clear the session when the server explicitly says the token is
-          // invalid/expired (401). Network errors, 500s, or backend restarts
-          // should NOT log the admin/user out silently.
           if (err?.status === 401) {
-            clearTokens();
-            localStorage.removeItem(USER_KEY);
-            setUser(null);
+            clearTokens(currentPortal);
+            localStorage.removeItem(`ncc_user_${currentPortal}`);
+            if (currentPortal === 'customer') {
+              localStorage.removeItem('ncc_user');
+            }
+            setUsersByPortal(prev => ({
+              ...prev,
+              [currentPortal]: null
+            }));
           }
-          // 404 and other errors: keep the session, let subsequent requests handle it
         });
     }
-  }, []);
+  }, [currentPortal]);
 
-  const logout = useCallback(async () => {
-    const { refreshToken, accessToken } = getStoredTokens();
+  const logout = useCallback(async (explicitPortal) => {
+    const portal = explicitPortal || getCurrentPortal(location.pathname);
+    const { refreshToken, accessToken } = getStoredTokens(portal);
 
-    // Clear local tokens & state synchronously FIRST so UI & route guards update instantly
-    clearTokens();
-    localStorage.removeItem(USER_KEY);
-    setUser(null);
-    clearLocalCart();
+    clearTokens(portal);
+    localStorage.removeItem(`ncc_user_${portal}`);
+    if (portal === 'customer') {
+      localStorage.removeItem('ncc_user');
+      clearLocalCart();
+    }
 
-    // Detach this device from the account, using the token captured above since
-    // the stored session is already gone. Left attached, the next person to use
-    // this device would keep receiving the previous user's notifications — on a
-    // shared technician handset that is a disclosure, not untidiness.
-    await disablePush({ accessToken });
+    setUsersByPortal(prev => ({
+      ...prev,
+      [portal]: null
+    }));
+
+    if (portal === 'customer') {
+      await disablePush({ accessToken });
+    }
 
     if (refreshToken) {
       try {
-        await apiRequest('/auth/logout', { method: 'POST', body: { refreshToken } });
+        await apiRequest('/auth/logout', { method: 'POST', body: { refreshToken }, portal });
       } catch {
         // Best-effort server notification
       }
     }
-  }, []);
+  }, [location.pathname]);
 
-  const updateUser = useCallback((updates) => {
-    setUser((prev) => {
-      if (!prev) return null;
-      const updated = { ...prev, ...updates };
-      localStorage.setItem(USER_KEY, JSON.stringify(updated));
-      return updated;
+  const updateUser = useCallback((updates, explicitPortal) => {
+    const portal = explicitPortal || getCurrentPortal(location.pathname);
+    setUsersByPortal(prev => {
+      const current = prev[portal];
+      if (!current) return prev;
+      const updated = { ...current, ...updates };
+      localStorage.setItem(`ncc_user_${portal}`, JSON.stringify(updated));
+      if (portal === 'customer') {
+        localStorage.setItem('ncc_user', JSON.stringify(updated));
+      }
+      return { ...prev, [portal]: updated };
     });
-  }, []);
+  }, [location.pathname]);
 
-  const value = { user, isAuthenticated: !!user, login, verifyOtp, resendOtp, signupCheck, signupVerify, logout, updateUser };
+  const value = { 
+    user: activeUser, 
+    isAuthenticated: !!activeUser, 
+    currentPortal,
+    usersByPortal,
+    login, 
+    verifyOtp, 
+    resendOtp, 
+    signupCheck, 
+    signupVerify, 
+    logout, 
+    updateUser 
+  };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

@@ -19,9 +19,9 @@ import TechTopNav from "./TechTopNav";
  */
 
 const CUSTOMER_CHROMELESS = new Set([
-  "/", "/login", "/app", "/app/login", "/verify-otp",
+  "/", "/login", "/signup", "/app", "/app/login", "/verify-otp",
   "/forgot-password", "/reset-password", "/onboarding",
-  "/home", "/about-ncc", "/profile",
+  "/home", "/about-ncc", "/profile", "/area-not-serviceable",
 ]);
 
 const TECH_CHROMELESS = new Set([

@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   ArrowRight, Phone, Star,
   Wrench, Snowflake, Tag, Package, CalendarDays, Clock, Flame, CheckSquare,
+  Radio, CheckCircle2, ShieldCheck,
 } from 'lucide-react';
 import { apiRequest, getStoredTokens } from '../lib/apiClient';
 import { io } from 'socket.io-client';
@@ -17,15 +18,9 @@ const BookingSuccess = () => {
   const serviceRequestId = p.get('serviceRequestId') || p.get('bookingId');
 
   const [bookingId, setBookingId] = useState('');
-  const [technician, setTechnician] = useState(() => {
-    const name = p.get('technicianName');
-    if (!name) return null;
-    return {
-      name,
-      rating: parseFloat(p.get('technicianRating') || '4.8'),
-      phone: p.get('technicianPhone') || '',
-    };
-  });
+  const [isAccepted, setIsAccepted] = useState(false);
+  const [technician, setTechnician] = useState(null);
+  const [city, setCity] = useState(p.get('city') || '');
   const [charged, setCharged] = useState(null);
 
   const handleCallTechnician = async () => {
@@ -72,9 +67,19 @@ const BookingSuccess = () => {
       if (res?.humanId || res?.id) {
         setBookingId(res?.humanId || res?.id);
       }
-      if (res?.technician) {
-        setTechnician(typeof res.technician === 'object' ? res.technician : { name: 'Assigned Technician' });
+      if (res?.address?.city && !city) {
+        setCity(res.address.city);
       }
+
+      const isReqAccepted = Boolean(
+        res?.isAccepted ||
+        ['Engineer Accepted', 'Visit Scheduled', 'Engineer Reached', 'Diagnosis Done', 'Spare Approval Pending', 'Work In Progress', 'Repair Completed', 'Completed'].includes(res?.status) ||
+        ['EN_ROUTE', 'IN_PROGRESS', 'COMPLETED'].includes(res?.instantStatus)
+      );
+
+      let foundAccepted = isReqAccepted;
+      let matchedTech = isReqAccepted && res?.technician ? res.technician : null;
+
       if (res?.instantStatus) {
         setInstantStatus(res.instantStatus);
       }
@@ -84,8 +89,19 @@ const BookingSuccess = () => {
           ? res.booking
           : await apiRequest(`/bookings/${res.booking}`, { auth: true }).catch(() => null);
         if (bk) {
-          if (bk.technician && !res?.technician) {
-            setTechnician(typeof bk.technician === 'object' ? bk.technician : { name: 'Assigned Technician' });
+          if (bk.address?.city && !city) {
+            setCity(bk.address.city);
+          }
+          const bkAccepted = Boolean(
+            bk.isAccepted ||
+            ['Engineer Accepted', 'Visit Scheduled', 'Engineer Reached', 'Diagnosis Done', 'Spare Approval Pending', 'Work In Progress', 'Repair Completed', 'Completed'].includes(bk.status) ||
+            ['EN_ROUTE', 'IN_PROGRESS', 'COMPLETED'].includes(bk.instantStatus)
+          );
+          if (bkAccepted) {
+            foundAccepted = true;
+          }
+          if (bk.technician && (foundAccepted || bkAccepted) && !matchedTech) {
+            matchedTech = bk.technician;
           }
           if (bk.instantStatus && !res?.instantStatus) {
             setInstantStatus(bk.instantStatus);
@@ -103,10 +119,17 @@ const BookingSuccess = () => {
           });
         }
       }
+
+      setIsAccepted(foundAccepted);
+      if (foundAccepted && matchedTech) {
+        setTechnician(typeof matchedTech === 'object' ? matchedTech : { name: 'Assigned Technician' });
+      } else if (!foundAccepted) {
+        setTechnician(null);
+      }
     } catch (err) {
       console.error('[booking] Could not load booking reference:', err.message);
     }
-  }, [serviceRequestId]);
+  }, [serviceRequestId, city]);
 
   // Initial load + interval polling every 3 seconds to catch live status changes
   useEffect(() => {
@@ -115,7 +138,7 @@ const BookingSuccess = () => {
     return () => clearInterval(interval);
   }, [loadBookingData]);
 
-  // Real-time socket updates for instant dispatch and tracking
+  // Real-time socket updates for instant dispatch, acceptance and tracking
   useEffect(() => {
     const { accessToken } = getStoredTokens();
     const socket = io(SOCKET_URL, {
@@ -123,17 +146,71 @@ const BookingSuccess = () => {
       transports: ['websocket'],
     });
 
-    socket.on('instant:status_update', (data) => {
-      if (data?.bookingId || data?.serviceRequestId === serviceRequestId) {
+    const handleAccepted = (data) => {
+      const match =
+        !data ||
+        data.serviceRequestId === serviceRequestId ||
+        data.bookingId === serviceRequestId ||
+        (bookingId && (data.bookingId === bookingId || data.serviceRequestId === bookingId)) ||
+        data.isAccepted;
+
+      if (match) {
+        setIsAccepted(true);
         if (data.technician) setTechnician(data.technician);
         if (data.instantStatus) setInstantStatus(data.instantStatus);
+        loadBookingData();
+      }
+    };
+
+    socket.on('booking:accepted', handleAccepted);
+
+    socket.on('instant:status_update', (data) => {
+      const match =
+        !data ||
+        data.serviceRequestId === serviceRequestId ||
+        data.bookingId === serviceRequestId ||
+        (bookingId && (data.bookingId === bookingId || data.serviceRequestId === bookingId));
+
+      if (match) {
+        if (data.instantStatus === 'SEARCHING' || data.isAccepted === false) {
+          setIsAccepted(false);
+          setTechnician(null);
+        } else if (data.technician && (data.isAccepted || ['EN_ROUTE', 'IN_PROGRESS', 'COMPLETED'].includes(data.instantStatus))) {
+          setIsAccepted(true);
+          setTechnician(data.technician);
+        }
+        if (data.instantStatus) setInstantStatus(data.instantStatus);
+        loadBookingData();
+      }
+    });
+
+    socket.on('service_request:updated', (data) => {
+      const match =
+        !data ||
+        data.serviceRequestId === serviceRequestId ||
+        (bookingId && data.serviceRequestId === bookingId);
+
+      if (match) {
+        if (data.status === 'New' || data.isAccepted === false || !data.technician) {
+          setIsAccepted(false);
+          setTechnician(null);
+        } else if (
+          data.isAccepted ||
+          ['Engineer Accepted', 'Visit Scheduled', 'Engineer Reached', 'Diagnosis Done', 'Work In Progress', 'Repair Completed', 'Completed'].includes(data.status)
+        ) {
+          setIsAccepted(true);
+          if (data.technician) setTechnician(data.technician);
+        }
         loadBookingData();
       }
     });
 
     socket.on('tracking:update', (data) => {
       if (data?.serviceRequestId === serviceRequestId) {
-        if (data.technician) setTechnician(data.technician);
+        if (data.technician) {
+          setIsAccepted(true);
+          setTechnician(data.technician);
+        }
         loadBookingData();
       }
     });
@@ -141,7 +218,7 @@ const BookingSuccess = () => {
     return () => {
       socket.disconnect();
     };
-  }, [serviceRequestId, loadBookingData]);
+  }, [serviceRequestId, bookingId, loadBookingData]);
 
   const service     = serviceParam     || charged?.service     || 'Home Service';
   const category    = categoryParam    || charged?.category    || '';
@@ -265,8 +342,8 @@ const BookingSuccess = () => {
 
             {/* ── Instant Service Live Tracker ── */}
             {isInstant && (
-              <div className={`text-white rounded-2xl md:rounded-3xl p-5 shadow-md transition-all ${
-                technician ? 'bg-gradient-to-r from-blue-700 to-indigo-700 shadow-blue-500/20' : 'bg-gradient-to-r from-amber-500 to-orange-500 shadow-amber-500/20'
+              <div className={`text-white rounded-2xl md:rounded-3xl p-5 shadow-md transition-all duration-300 ${
+                isAccepted && technician ? 'bg-gradient-to-r from-blue-700 to-indigo-700 shadow-blue-500/20' : 'bg-gradient-to-r from-amber-500 to-orange-500 shadow-amber-500/20'
               }`}>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-[10px] md:text-xs font-black uppercase tracking-wider bg-white/20 px-3 py-1 rounded-full flex items-center gap-1.5">
@@ -274,82 +351,161 @@ const BookingSuccess = () => {
                     ⚡ Live Express Dispatch
                   </span>
                   <span className="text-[11px] md:text-xs font-extrabold">
-                    {instantStatus === 'EN_ROUTE' ? '🚗 On The Way' : (technician ? '✅ Technician Assigned' : '⏳ Searching Nearby Tech...')}
+                    {isAccepted && technician ? (instantStatus === 'EN_ROUTE' ? '🚗 On The Way' : '✅ Technician Booked') : '⏳ Looking for Nearby Tech...'}
                   </span>
                 </div>
                 <div className="flex items-center gap-3.5 mt-3">
                   <div className="w-11 h-11 rounded-2xl bg-white/20 flex items-center justify-center text-2xl font-bold flex-shrink-0">
-                    {technician ? '👨‍🔧' : '⏱️'}
+                    {isAccepted && technician ? '👨‍🔧' : '⏱️'}
                   </div>
                   <div className="flex-1">
                     <p className="text-xs md:text-sm font-black leading-tight">
-                      {technician ? `${technician.name || 'Technician'} is on the way!` : 'Connecting with nearest certified technician'}
+                      {isAccepted && technician ? `${technician.name || 'Technician'} is on the way!` : 'Searching nearest certified technician in your territory'}
                     </p>
                     <p className="text-[11px] text-white/90 font-medium mt-0.5">
-                      {technician ? 'Estimated arrival: within 20-35 minutes' : 'Estimated arrival: within 30-45 minutes'}
+                      {isAccepted && technician ? 'Estimated arrival: within 20-35 minutes' : 'Dispatching candidate by proximity • Nearest to farthest'}
                     </p>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* ── Assigned Technician ── */}
-            {technician ? (
-              <div className="bg-white rounded-2xl md:rounded-3xl shadow-xs border border-blue-100 p-5 relative overflow-hidden">
-                <div className="absolute top-0 right-0 bg-blue-50 text-[#0D47A1] text-[9px] md:text-xs font-extrabold px-3.5 py-1 rounded-bl-2xl border-l border-b border-blue-100 uppercase tracking-wider">
-                  Assigned Expert
+            {/* ── Technician Assignment State ── */}
+            {isAccepted && technician ? (
+              /* ── CONFIRMED & ACCEPTED STATE ── */
+              <div className="bg-white rounded-2xl md:rounded-3xl shadow-md border-2 border-emerald-500/30 p-5 md:p-6 relative overflow-hidden transition-all duration-500">
+                {/* Top Badge */}
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3.5 mb-4">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-xs md:text-sm font-black text-emerald-700 uppercase tracking-wide">
+                      {instantStatus === 'EN_ROUTE' ? 'Technician On The Way' : 'Technician Booked for Your Service'}
+                    </span>
+                  </div>
+                  <span className="text-[10px] md:text-xs bg-emerald-50 text-emerald-700 font-extrabold px-3 py-1 rounded-full border border-emerald-200 flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                    Accepted Service
+                  </span>
                 </div>
+
                 <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#0D47A1] to-[#1565C0] flex items-center justify-center flex-shrink-0 text-white text-xl font-black shadow-md">
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#0D47A1] to-[#1E88E5] flex items-center justify-center flex-shrink-0 text-white text-2xl font-black shadow-lg shadow-blue-500/20 ring-4 ring-blue-50">
                     {(technician.name || 'T').charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm md:text-base font-black text-slate-900 truncate">{technician.name || 'Technician'}</p>
-                      <span className="text-[9px] md:text-xs bg-emerald-50 text-emerald-700 font-extrabold px-2.5 py-0.5 rounded-full border border-emerald-200">
-                        Verified
+                      <p className="text-base md:text-lg font-black text-slate-900 truncate">{technician.name || 'Certified Technician'}</p>
+                      <span className="text-[10px] bg-blue-50 text-[#0D47A1] font-extrabold px-2 py-0.5 rounded-full border border-blue-200 shrink-0">
+                        Verified Pro
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 mt-1">
-                      {(technician.rating || 4.8) > 0 && (
-                        <div className="flex items-center gap-1">
-                          <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                          <span className="text-xs font-black text-slate-700">{technician.rating || 4.8}</span>
-                        </div>
-                      )}
-                      {(categoryParam || technician.specs?.[0]) && (
-                        <span className="text-xs text-slate-400 font-medium truncate">
-                          • {categoryParam || technician.specs?.[0]} Specialist
-                        </span>
-                      )}
+                    <div className="flex items-center gap-2.5 mt-1">
+                      <div className="flex items-center gap-1 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200/60">
+                        <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                        <span className="text-xs font-black text-amber-900">{technician.rating || '4.8'}</span>
+                      </div>
+                      <span className="text-xs text-slate-500 font-medium truncate">
+                        {technician.specs?.[0] || categoryParam || 'Appliance'} Specialist
+                      </span>
                     </div>
                   </div>
                   <button
                     onClick={handleCallTechnician}
                     disabled={callLoading}
-                    title="Call Assigned Technician"
-                    className="w-12 h-12 rounded-2xl bg-[#EAF4FF] flex items-center justify-center flex-shrink-0 active:scale-95 transition-all shadow-xs border border-blue-200 hover:bg-[#D6ECFF] cursor-pointer"
+                    title="Call Technician"
+                    className="h-12 px-4 rounded-2xl bg-[#0D47A1] text-white flex items-center gap-2 flex-shrink-0 active:scale-95 transition-all shadow-md shadow-blue-900/20 hover:bg-[#1565C0] cursor-pointer"
                   >
-                    <Phone className="w-5 h-5 text-[#0D47A1]" />
+                    <Phone className="w-4 h-4" />
+                    <span className="hidden sm:inline text-xs font-bold">Call</span>
                   </button>
                 </div>
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-                  <span className="text-slate-500 font-medium">Technician Status</span>
-                  <span className="text-[#0D47A1] font-black flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    {instantStatus === 'EN_ROUTE' ? 'Driving to Location' : 'Accepted Job'}
+
+                <div className="mt-4 pt-3.5 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                  <span className="text-slate-500 font-medium flex items-center gap-1.5">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                    This technician is booked for your service and on the way to your doorstep.
+                  </span>
+                  <span className="text-[#0D47A1] font-black shrink-0">
+                    {instantStatus === 'EN_ROUTE' ? '🚗 Driving to Location' : '⚡ On the way'}
                   </span>
                 </div>
               </div>
             ) : (
-              <div className="bg-white rounded-2xl md:rounded-3xl shadow-xs border border-slate-100 p-5 text-center">
-                <div className="w-10 h-10 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mx-auto mb-2 font-black text-base animate-pulse">
-                  ⌛
+              /* ── SEARCHING & DISPATCHING STATE ── */
+              <div className="bg-gradient-to-b from-white to-[#F8FAFF] rounded-2xl md:rounded-3xl shadow-sm border border-blue-100/80 p-5 md:p-6 text-left relative overflow-hidden">
+                {/* Ambient Radar Glow */}
+                <div className="absolute -top-12 -right-12 w-40 h-40 bg-blue-400/10 rounded-full blur-2xl pointer-events-none" />
+
+                <div className="flex items-start justify-between gap-4 mb-4">
+                  <div className="flex items-center gap-3">
+                    {/* Animated Radar Beacon */}
+                    <div className="relative flex items-center justify-center w-12 h-12 rounded-2xl bg-blue-50 border border-blue-200/60 flex-shrink-0">
+                      <span className="absolute w-full h-full rounded-2xl bg-blue-400/20 animate-ping" />
+                      <Radio className="w-6 h-6 text-[#0D47A1] animate-pulse" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                        <h3 className="text-sm md:text-base font-black text-slate-900">
+                          Looking for a nearby technician...
+                        </h3>
+                      </div>
+                      <p className="text-xs text-slate-500 font-medium mt-0.5">
+                        Dispatching to certified technicians near {city || 'your area'} (ordered nearest to farthest)
+                      </p>
+                    </div>
+                  </div>
+                  <span className="hidden sm:flex items-center gap-1 text-[11px] font-extrabold text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1 rounded-full shrink-0">
+                    <Clock className="w-3.5 h-3.5" />
+                    Connecting...
+                  </span>
                 </div>
-                <p className="text-xs md:text-sm font-black text-slate-800">Connecting to nearest technician...</p>
-                <p className="text-xs text-slate-400 font-medium mt-1">
-                  Your request is live. You'll see technician details as soon as accepted.
-                </p>
+
+                {/* Live Progression Tracker */}
+                <div className="bg-slate-50/80 border border-slate-200/60 rounded-2xl p-4 my-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                    <div className="flex items-center gap-2.5 text-slate-700">
+                      <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs flex-shrink-0">
+                        ✓
+                      </div>
+                      <div>
+                        <p className="font-bold leading-tight">Request Received</p>
+                        <p className="text-[10px] text-slate-400">Order confirmed</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2.5 text-blue-900">
+                      <div className="w-6 h-6 rounded-full bg-blue-100 text-[#0D47A1] flex items-center justify-center font-bold text-xs flex-shrink-0 animate-spin">
+                        ⟳
+                      </div>
+                      <div>
+                        <p className="font-black leading-tight">Matching Technician</p>
+                        <p className="text-[10px] text-blue-600 font-semibold">Offering to nearest pro...</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2.5 text-slate-400">
+                      <div className="w-6 h-6 rounded-full bg-slate-200/80 text-slate-500 flex items-center justify-center font-bold text-xs flex-shrink-0">
+                        3
+                      </div>
+                      <div>
+                        <p className="font-bold leading-tight">On The Way</p>
+                        <p className="text-[10px] text-slate-400">Awaiting acceptance</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Reassurance Footer */}
+                <div className="pt-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-[11px] text-slate-500">
+                  <span className="flex items-center gap-1.5 font-medium">
+                    <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0" />
+                    Once a technician accepts, their live details and contact button will appear here instantly.
+                  </span>
+                  <span className="font-bold text-slate-600 bg-white px-2.5 py-1 rounded-lg border border-slate-200 shrink-0">
+                    ⚡ Auto-cascading dispatch
+                  </span>
+                </div>
               </div>
             )}
 

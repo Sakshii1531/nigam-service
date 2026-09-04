@@ -35,6 +35,12 @@ const technicianSchema = new mongoose.Schema(
     // Home address as entered on the technician's Personal Info screen.
     address: String,
     city: { type: mongoose.Schema.Types.ObjectId, ref: 'City', default: null, index: true },
+    serviceCityName: { type: String, index: true },
+    serviceStateName: { type: String, index: true },
+    location: {
+      latitude: { type: Number },
+      longitude: { type: Number },
+    },
     specs: [String], // active specializations, e.g. ['AC', 'Refrigerator', 'Washing Machine'] — drives job-feed filtering
     skills: [skillSchema],
     certifications: [certificationSchema],

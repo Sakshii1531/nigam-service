@@ -166,7 +166,7 @@ export async function signupCheck({ phone, email }) {
   return { status: 'otp_sent', destination: maskIdentifier(phone) };
 }
 
-export async function signupVerify({ name, phone, email, password, address, referralCode, code }) {
+export async function signupVerify({ name, phone, email, password, address, state, city, streetAddress, latitude, longitude, pincode, referralCode, code }) {
   // 1. Verify OTP first
   await consumeOtp({ role: 'customer', identifier: phone, code, purpose: 'signup' });
 
@@ -195,21 +195,37 @@ export async function signupVerify({ name, phone, email, password, address, refe
   const myReferralCode = Math.random().toString(36).substring(2, 8).toUpperCase();
   const hashed = await hashPassword(password);
 
-  let parsedCity = '';
-  if (address && address.includes('(City:')) {
+  let cleanStreet = streetAddress || address || '';
+  if (cleanStreet && cleanStreet.includes('(City:')) {
+    cleanStreet = cleanStreet.split('(City:')[0].trim();
+  }
+
+  let finalCity = city || '';
+  if (!finalCity && address && address.includes('(City:')) {
     const match = address.match(/\(City:\s*([^,]+)/);
     if (match) {
-      parsedCity = match[1].trim();
+      finalCity = match[1].trim();
+    }
+  }
+
+  let finalState = state || '';
+  if (!finalState && address && address.includes('State:')) {
+    const match = address.match(/State:\s*([^)]+)/);
+    if (match) {
+      finalState = match[1].trim();
     }
   }
 
   const userAddress = {
     type: 'Home',
-    house: address,
+    house: cleanStreet || address || '',
     landmark: '',
-    city: parsedCity || '',
-    pincode: '',
+    city: finalCity || '',
+    state: finalState || '',
+    pincode: pincode || '',
     name: name,
+    latitude: latitude !== undefined && latitude !== null && latitude !== '' ? Number(latitude) : undefined,
+    longitude: longitude !== undefined && longitude !== null && longitude !== '' ? Number(longitude) : undefined,
     isDefault: true
   };
 
@@ -303,12 +319,19 @@ export async function addAddress(userId, addressData) {
     house: addressData.house || addressData.address || '',
     landmark: addressData.landmark || addressData.detail || '',
     city: addressData.city || 'Delhi',
+    state: addressData.state || '',
     pincode: addressData.pincode || '110001',
     name: addressData.name || user.name || '',
+    latitude: addressData.latitude !== undefined && addressData.latitude !== null && addressData.latitude !== '' ? Number(addressData.latitude) : undefined,
+    longitude: addressData.longitude !== undefined && addressData.longitude !== null && addressData.longitude !== '' ? Number(addressData.longitude) : undefined,
     isDefault,
   };
 
-  user.addresses.push(newAddress);
+  if (isDefault) {
+    user.addresses.unshift(newAddress);
+  } else {
+    user.addresses.push(newAddress);
+  }
   await user.save();
   return user.addresses;
 }
@@ -332,9 +355,20 @@ export async function updateAddress(userId, addressId, updateData) {
   if (updateData.landmark !== undefined) addr.landmark = updateData.landmark;
   if (updateData.detail !== undefined) addr.landmark = updateData.detail;
   if (updateData.city !== undefined) addr.city = updateData.city;
+  if (updateData.state !== undefined) addr.state = updateData.state;
   if (updateData.pincode !== undefined) addr.pincode = updateData.pincode;
   if (updateData.name !== undefined) addr.name = updateData.name;
+  if (updateData.latitude !== undefined) addr.latitude = updateData.latitude ? Number(updateData.latitude) : undefined;
+  if (updateData.longitude !== undefined) addr.longitude = updateData.longitude ? Number(updateData.longitude) : undefined;
   if (updateData.isDefault !== undefined) addr.isDefault = updateData.isDefault;
+
+  if (addr.isDefault) {
+    const idx = user.addresses.findIndex((a) => a._id.toString() === addressId.toString());
+    if (idx > 0) {
+      const [item] = user.addresses.splice(idx, 1);
+      user.addresses.unshift(item);
+    }
+  }
 
   await user.save();
   return user.addresses;

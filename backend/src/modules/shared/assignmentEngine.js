@@ -42,22 +42,62 @@ async function pendingAssignmentCounts() {
  * Weighted by the admin-configurable AssignmentWeighting singleton (defaults
  * 40/30/20/10 if none exists yet, matching the model's schema defaults).
  */
-export async function rankTechnicians({ category, city, includeUnavailable = false, exclude = [] } = {}) {
+export function calculateDistanceKm(lat1, lon1, lat2, lon2) {
+  if (lat1 == null || lon1 == null || lat2 == null || lon2 == null) return null;
+  const numLat1 = Number(lat1);
+  const numLon1 = Number(lon1);
+  const numLat2 = Number(lat2);
+  const numLon2 = Number(lon2);
+  if (isNaN(numLat1) || isNaN(numLon1) || isNaN(numLat2) || isNaN(numLon2)) return null;
+
+  const R = 6371; // Earth's radius in km
+  const dLat = (numLat2 - numLat1) * (Math.PI / 180);
+  const dLon = (numLon2 - numLon1) * (Math.PI / 180);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(numLat1 * (Math.PI / 180)) * Math.cos(numLat2 * (Math.PI / 180)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Math.round(R * c * 10) / 10;
+}
+
+export async function rankTechnicians({ category, city, state, latitude, longitude, includeUnavailable = false, exclude = [] } = {}) {
   // Auto-assignment only ever considers technicians who have marked themselves
   // Available. The super-admin console passes includeUnavailable so an operator
-  // can still hand-pick an Active technician who is Busy or Offline — an
-  // override has to reach the technicians the automatic path deliberately
-  // skips, otherwise the manual panel renders empty in exactly the situation
-  // where an operator went looking for it.
+  // can still hand-pick an Active technician who is Busy or Offline.
   const filter = { status: 'Active' };
   if (!includeUnavailable) filter.availability = 'Available';
-  // Technicians who already turned this request down. Without this a rejected
-  // job is handed straight back to the same person, who is usually the
-  // top-ranked candidate that made them the assignee in the first place.
   if (exclude.length) filter._id = { $nin: exclude };
 
-  const candidates = await Technician.find(filter).populate('city');
+  let candidates = await Technician.find(filter).populate('city');
   if (candidates.length === 0) return [];
+
+  // Territory restriction: If a booking has a city, only match technicians registered in that city territory.
+  // A technician registered in Indore, MP will never receive or be assigned jobs from Delhi, Bangalore, etc.
+  if (city && city.trim()) {
+    const targetCity = city.trim().toLowerCase();
+    const targetState = state ? state.trim().toLowerCase() : '';
+
+    candidates = candidates.filter((tech) => {
+      const techCity = (tech.serviceCityName || tech.city?.name || '').trim().toLowerCase();
+      const techState = (tech.serviceStateName || tech.city?.state || '').trim().toLowerCase();
+
+      // If technician has a registered city, it MUST match the booking city
+      if (techCity) {
+        const cityMatch = techCity === targetCity || techCity.includes(targetCity) || targetCity.includes(techCity);
+        if (!cityMatch) return false;
+
+        if (targetState && techState) {
+          const stateMatch = techState === targetState || techState.includes(targetState) || targetState.includes(techState);
+          if (!stateMatch) return false;
+        }
+        return true;
+      }
+      return false;
+    });
+
+    if (candidates.length === 0) return [];
+  }
 
   const pending = await pendingAssignmentCounts();
 
@@ -70,9 +110,22 @@ export async function rankTechnicians({ category, city, includeUnavailable = fal
 
   function breakdown(tech) {
     let proximity = 50;
-    if (city && tech.city && tech.city.name) {
-      proximity = tech.city.name.toLowerCase().trim() === city.toLowerCase().trim() ? 100 : 0;
+    let distanceKm = null;
+    const techCity = (tech.serviceCityName || tech.city?.name || '').trim().toLowerCase();
+
+    // Check GPS coordinates for distance-based ranking (nearest to farthest)
+    const techLat = tech.location?.latitude ?? tech.latitude;
+    const techLon = tech.location?.longitude ?? tech.longitude;
+    if (latitude != null && longitude != null && techLat != null && techLon != null) {
+      distanceKm = calculateDistanceKm(latitude, longitude, techLat, techLon);
+      if (distanceKm != null) {
+        // Proximity score decreases as distance increases (0 km = 100, 25 km = 0)
+        proximity = clamp0to100(100 - distanceKm * 4);
+      }
+    } else if (city && techCity) {
+      proximity = techCity === city.trim().toLowerCase() ? 100 : 0;
     }
+
     const skill = tech.specs.includes(category) ? 100 : 40;
     const rating = clamp0to100((tech.rating / 5) * 100);
     const load = tech.activeJobsCount + (pending.get(String(tech._id)) || 0);
@@ -85,17 +138,22 @@ export async function rankTechnicians({ category, city, includeUnavailable = fal
         workload * weighting.workloadPercent) /
       100;
 
-    return { proximity, skill, rating, workload, score };
+    return { proximity, distanceKm, skill, rating, workload, score };
   }
 
-  // The console shows the whole ranked shortlist with the same numbers auto-assign
-  // uses, so an operator overriding the top pick can see exactly why it ranked first.
+  // Order from nearest to farthest (when GPS distance exists) or highest weighted score
   return candidates
     .map((technician) => ({ technician, ...breakdown(technician) }))
-    .sort((a, b) => b.score - a.score);
+    .sort((a, b) => {
+      if (a.distanceKm != null && b.distanceKm != null && a.distanceKm !== b.distanceKm) {
+        return a.distanceKm - b.distanceKm;
+      }
+      return b.score - a.score;
+    });
 }
 
-export async function findAvailableTechnician({ category, city, exclude = [] } = {}) {
-  const [best] = await rankTechnicians({ category, city, exclude });
+export async function findAvailableTechnician({ category, city, state, latitude, longitude, exclude = [] } = {}) {
+  const [best] = await rankTechnicians({ category, city, state, latitude, longitude, exclude });
   return best ? best.technician : null;
 }
+

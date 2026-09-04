@@ -403,11 +403,6 @@ const BookingFlow = () => {
           paymentMode: 'after',
           isInstant: isInstant ? 'true' : 'false',
         });
-        if (result.technician?.name) {
-          params.set('technicianName', result.technician.name);
-          params.set('technicianRating', String(result.technician.rating || '4.8'));
-          if (result.technician.phone) params.set('technicianPhone', result.technician.phone);
-        }
         navigate(`/booking-success?${params.toString()}`);
       } catch (err) {
         console.error('Failed to create booking:', err);

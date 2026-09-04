@@ -58,17 +58,83 @@ const Dashboard = () => {
   const [declinedInstantIds, setDeclinedInstantIds] = useState([]);
   const [acceptedInstantIds, setAcceptedInstantIds] = useState([]);
 
-  // Auto-detect instant booking requests from job list
+  const playDispatchChime = () => {
+    try {
+      if (typeof window === 'undefined') return;
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0.2, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.6);
+    } catch {
+      // Audio might be restricted prior to user gesture
+    }
+  };
+
+  // 1. Listen for real-time WebSocket job dispatch events
   React.useEffect(() => {
-    const instantJob = jobs.find(j => (
-      j.isAvailableRequest &&
-      (j.isInstant || j.scheduledTime === 'ASAP' || j.scheduledTime?.includes('ASAP'))
-      && !declinedInstantIds.includes(j.id)
-      && !acceptedInstantIds.includes(j.id)
-    ));
-    if (instantJob && !instantAlertJob) {
-      setInstantAlertJob(instantJob);
+    const handleIncomingEvent = (e) => {
+      const payload = e.detail;
+      if (!payload) return;
+
+      const jobId = payload.bookingId || payload.serviceRequestId;
+      if (declinedInstantIds.includes(jobId) || acceptedInstantIds.includes(jobId)) return;
+
+      const newJobObj = {
+        id: jobId,
+        serviceRequestId: payload.serviceRequestId,
+        bookingId: payload.bookingId,
+        product: payload.serviceName || payload.product || `${payload.category || 'Service'} Repair`,
+        category: payload.category || 'Service',
+        address: payload.address || 'Nearby Customer Location',
+        city: payload.city || '',
+        state: payload.state || '',
+        customerName: payload.fullName || payload.customerName || 'Customer',
+        phone: payload.mobile || null,
+        totalPrice: payload.totalPrice || 500,
+        estEarnings: payload.estEarnings || Math.round((payload.totalPrice || 500) * 0.3) || 180,
+        scheduledTime: payload.scheduledTime || 'ASAP',
+        scheduledDateLabel: payload.scheduledDateLabel || 'Today',
+        isInstant: Boolean(payload.isInstant),
+      };
+
+      setInstantAlertJob(newJobObj);
       setCountdown(60);
+      playDispatchChime();
+    };
+
+    window.addEventListener('tech:incoming_job', handleIncomingEvent);
+    return () => window.removeEventListener('tech:incoming_job', handleIncomingEvent);
+  }, [declinedInstantIds, acceptedInstantIds]);
+
+  // 2. Auto-detect any newly assigned or waiting available job from `jobs`
+  React.useEffect(() => {
+    const pendingJob = jobs.find(j => {
+      const isUnresponded = !declinedInstantIds.includes(j.id) && !acceptedInstantIds.includes(j.id);
+      if (!isUnresponded) return false;
+
+      // Newly assigned job awaiting confirmation
+      if (j.activeStep === 'assigned') return true;
+
+      // Broadcast or instant request in territory
+      if (j.isAvailableRequest) return true;
+
+      return false;
+    });
+
+    if (pendingJob && !instantAlertJob) {
+      setInstantAlertJob(pendingJob);
+      setCountdown(60);
+      playDispatchChime();
     }
   }, [jobs, declinedInstantIds, acceptedInstantIds, instantAlertJob]);
 
@@ -101,7 +167,7 @@ const Dashboard = () => {
   const declineInstantJob = async () => {
     const job = instantAlertJob;
     setInstantAlertJob(null);
-    if (job) await rejectJob(job.id);
+    if (job) await rejectJob(job.serviceRequestId || job.id);
   };
 
   // Countdown timer for the instant job alert. Running out is a rejection: an
@@ -114,11 +180,11 @@ const Dashboard = () => {
 
     if (countdown <= 0) {
       // Guard against the effect re-running and rejecting the same job twice.
-      if (autoRejectedRef.current !== instantAlertJob.id) {
-        autoRejectedRef.current = instantAlertJob.id;
+      if (autoRejectedRef.current !== (instantAlertJob.serviceRequestId || instantAlertJob.id)) {
+        autoRejectedRef.current = instantAlertJob.serviceRequestId || instantAlertJob.id;
         const job = instantAlertJob;
         setInstantAlertJob(null);
-        rejectJob(job.id).then((res) => {
+        rejectJob(job.serviceRequestId || job.id).then((res) => {
           if (res?.ok) {
             setDutyMessage(
               res.reassignedTo
@@ -983,60 +1049,102 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* ⚡ Emergency / Instant Request Broadcast Modal */}
+      {/* ⚡ Redesigned Real-Time Partner Service Dispatch Modal */}
       {instantAlertJob && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-[110] animate-fade-in">
-          <div className="bg-white border-2 border-amber-500 rounded-[28px] p-6 max-w-sm w-full flex flex-col gap-4 shadow-2xl relative overflow-hidden">
-            {/* Header banner */}
-            <div className="bg-gradient-to-r from-amber-500 to-orange-500 -mx-6 -mt-6 p-4 text-white flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Zap className="w-5 h-5 fill-white animate-bounce" />
-                <span className="text-xs font-black tracking-wider uppercase">⚡ INSTANT SERVICE DISPATCH</span>
+        <div className="fixed inset-0 bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-4 z-[120] animate-fade-in">
+          <div className="bg-white border border-blue-100 rounded-[32px] max-w-md w-full flex flex-col shadow-2xl relative overflow-hidden transform transition-all animate-scale-up">
+            {/* Signature Royal Blue Header */}
+            <div className="bg-gradient-to-r from-[#0D47A1] via-[#1565C0] to-[#0A387E] p-5 text-white flex items-center justify-between relative overflow-hidden">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center border border-white/20 shadow-inner relative">
+                  <Zap className="w-5 h-5 text-[#FFD600] animate-pulse" />
+                  <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-extrabold tracking-widest text-blue-200 uppercase block">LIVE DISPATCH</span>
+                  <h3 className="text-sm font-black text-white tracking-wide">New Service Request</h3>
+                </div>
               </div>
-              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-xs font-black">
-                {countdown}s
+
+              {/* Countdown Timer */}
+              <div className="flex items-center gap-1.5 bg-black/25 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/15">
+                <Clock className="w-3.5 h-3.5 text-[#FFD600]" />
+                <span className="text-xs font-black text-white tabular-nums">{countdown}s</span>
               </div>
             </div>
 
-            <div className="flex flex-col gap-2 mt-1">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-extrabold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
-                  URGENT / ASAP REQUEST
+            {/* Modal Body Content */}
+            <div className="p-5 flex flex-col gap-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <span className="text-[10px] font-extrabold text-[#0D47A1] bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-full uppercase tracking-wider inline-block mb-1">
+                    {instantAlertJob.category || 'Home Service'}
+                  </span>
+                  <h4 className="text-base font-extrabold text-slate-900 leading-snug">
+                    {instantAlertJob.product || `${instantAlertJob.category || 'Appliance'} Service`}
+                  </h4>
+                </div>
+                <div className="flex flex-col items-end flex-shrink-0">
+                  <span className="text-[10px] font-bold text-slate-500">Est. Payout</span>
+                  <span className="text-base font-black text-emerald-600 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-xl">
+                    ₹{instantAlertJob.estEarnings || 250}
+                  </span>
+                </div>
+              </div>
+
+              {/* Territory & Location Card */}
+              <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3.5 flex flex-col gap-2.5">
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1.5 text-[#0D47A1] font-bold">
+                    <MapPin className="w-4 h-4 text-[#0D47A1] flex-shrink-0" />
+                    <span>
+                      {instantAlertJob.city ? `${instantAlertJob.city}` : ''}
+                      {instantAlertJob.state ? `, ${instantAlertJob.state}` : 'Service Territory'}
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full">
+                    {instantAlertJob.scheduledTime || 'ASAP'} ({instantAlertJob.scheduledDateLabel || 'Today'})
+                  </span>
+                </div>
+
+                <p className="text-xs text-slate-600 font-medium leading-relaxed border-t border-slate-200/50 pt-2">
+                  {instantAlertJob.address || 'Customer Location'}
+                </p>
+              </div>
+
+              {/* Customer & Status Bar */}
+              <div className="flex items-center justify-between text-xs font-semibold text-slate-600 px-1">
+                <span>Customer: <strong className="text-slate-900">{instantAlertJob.customerName || 'Verified Customer'}</strong></span>
+                <span className="text-emerald-600 font-bold flex items-center gap-1">
+                  <CheckCircle className="w-3.5 h-3.5" /> Assigned to You
                 </span>
-                <span className="text-xs font-black text-slate-900">Est. ₹{instantAlertJob.estEarnings || 250}</span>
               </div>
-              <h3 className="text-base font-black text-slate-900">{instantAlertJob.product || instantAlertJob.category}</h3>
-              <p className="text-xs font-medium text-slate-600 flex items-center gap-1">
-                <MapPin className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                {instantAlertJob.address || 'Nearby Customer Location'}
-              </p>
-            </div>
 
-            <div className="bg-slate-50 rounded-2xl p-3 border border-slate-100 flex justify-between items-center text-xs font-bold text-slate-700">
-              <span>Customer: {instantAlertJob.customerName || 'Customer'}</span>
-              <span className="text-amber-600">Arrival in &lt; 45 mins</span>
-            </div>
-
-            <div className="flex gap-2.5 w-full mt-2">
-              <button
-                onClick={declineInstantJob}
-                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold py-3 rounded-xl transition-colors cursor-pointer"
-              >
-                Decline
-              </button>
-              <button
-                onClick={async () => {
-                  const jobId = instantAlertJob.id;
-                  setAcceptedInstantIds((prev) => [...prev, jobId]);
-                  setInstantAlertJob(null);
-                  await acceptJob(jobId);
-                  navigate('/technician/active-job');
-                }}
-                className="flex-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-black py-3 rounded-xl transition-all cursor-pointer shadow-lg shadow-amber-500/30 flex items-center justify-center gap-1.5"
-              >
-                <Zap className="w-4 h-4 fill-white" />
-                Accept Instant Job
-              </button>
+              {/* Action Buttons */}
+              <div className="flex items-center gap-3 pt-1">
+                <button
+                  onClick={declineInstantJob}
+                  className="flex-1 py-3.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-2xl transition-all cursor-pointer text-center"
+                >
+                  Decline
+                </button>
+                <button
+                  onClick={async () => {
+                    const jobId = instantAlertJob.id || instantAlertJob.serviceRequestId;
+                    setAcceptedInstantIds((prev) => [...prev, jobId]);
+                    setInstantAlertJob(null);
+                    await acceptJob(jobId);
+                    navigate('/technician/active-job');
+                  }}
+                  className="flex-[2] py-3.5 px-4 bg-[#FFD600] hover:bg-yellow-400 active:scale-95 text-[#0D47A1] font-black text-xs rounded-2xl transition-all cursor-pointer shadow-lg shadow-yellow-400/20 flex items-center justify-center gap-1.5"
+                >
+                  <Zap className="w-4 h-4 fill-[#0D47A1]" />
+                  <span>Accept & Start Job</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

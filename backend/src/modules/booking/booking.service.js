@@ -2,7 +2,7 @@ import { Booking } from './booking.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { findServiceItem } from '../catalog/catalog.service.js';
 import { findAvailableTechnician } from '../shared/assignmentEngine.js';
-import { createServiceRequest, transitionStatus, emitWarrantyClaimNotification } from '../service-requests/serviceRequest.service.js';
+import { createServiceRequest, transitionStatus, emitWarrantyClaimNotification, scheduleDispatchTimeout } from '../service-requests/serviceRequest.service.js';
 import { emit as emitNotification } from '../notifications/notification.service.js';
 import { parsePagination, paginationMeta } from '../../utils/pagination.js';
 import { runInTransaction } from '../../utils/transaction.js';
@@ -72,7 +72,19 @@ export async function createBooking(userId, data) {
   // Apply pricing benefits: covered visits are free (price resolves to 0)
   const totalPrice = warrantyStatus === 'Out of Warranty' ? basePrice : 0;
 
-  const technician = await findAvailableTechnician({ category: data.category, city: data.address?.city });
+  const customerCity = data.address?.city || '';
+  const customerState = data.address?.state || '';
+  const customerLat = data.address?.latitude != null ? Number(data.address.latitude) : null;
+  const customerLng = data.address?.longitude != null ? Number(data.address.longitude) : null;
+
+  // Nearest-to-farthest 1-by-1 technician selection in the territory
+  const technician = await findAvailableTechnician({
+    category: data.category,
+    city: customerCity,
+    state: customerState,
+    latitude: customerLat,
+    longitude: customerLng,
+  });
 
   const initialInstantStatus = isInstant ? (technician ? 'ASSIGNED' : 'SEARCHING') : null;
 
@@ -104,14 +116,8 @@ export async function createBooking(userId, data) {
       paymentMode: data.paymentMode || 'after',
       advanceAmount: data.advanceAmount != null ? Number(data.advanceAmount) : (data.paymentMode === 'advance' ? Math.round(totalPrice * (advancePercent / 100)) : 0),
       totalPrice,
-      // Not gated on isInstant: findAvailableTechnician above runs for every
-      // booking, and the transitionStatus(...'Assigned') + technician.assigned
-      // notification below both fire whenever it returns someone. Gating only
-      // these two writes (added with the instant-booking work) left a scheduled
-      // booking at status "Assigned", telling the customer a technician was
-      // assigned, while storing technician: null on both documents — so nothing
-      // could then be accepted or transitioned by that technician (403).
       technician: technician ? technician._id : null,
+      isAccepted: false,
       status: isInstant ? 'Ongoing' : 'Upcoming',
       isInstant,
       instantStatus: initialInstantStatus,
@@ -121,15 +127,13 @@ export async function createBooking(userId, data) {
     let serviceRequest = await createServiceRequest({
       user: userId,
       technician: technician ? technician._id : null,
+      isAccepted: false,
+      assignedAt: technician ? new Date() : null,
+      customerLocation: (customerLat != null && customerLng != null) ? { latitude: customerLat, longitude: customerLng } : undefined,
       booking: booking._id,
       category: data.category,
       description: `${data.category} — ${serviceName}`,
       requestMode: 'B2C',
-      // Carried over from the booking address so later re-ranking (the assignment
-      // console, and the backlog sweep when a technician comes online) scores
-      // proximity against the real city. Without it every candidate got the
-      // neutral 50 and assignment was effectively city-blind once the booking
-      // itself was over.
       zone: data.address?.city || undefined,
       warranty: warrantyStatus === 'Out of Warranty' ? 'Out of Warranty' : 'In Warranty',
       brand: brandId,
@@ -166,23 +170,43 @@ export async function createBooking(userId, data) {
     });
   }
 
-  // Broadcast instant booking event via Socket.IO if instant request
-  if (isInstant) {
-    const io = getIO();
-    if (io) {
-      // Scoped to the technicians' room — this payload carries the customer's
-      // name, mobile and address, and used to go to every connected socket.
-      io.to(INSTANT_ROOM).emit('instant:new_request', {
-        bookingId: booking.id,
-        serviceRequestId: serviceRequest.id,
-        category: data.category,
-        serviceName,
-        address: data.address,
-        fullName: data.fullName,
-        mobile: data.mobile,
-        assignedTechnicianId: technician ? String(technician._id) : null,
-        instantStatus: initialInstantStatus,
-      });
+  // Broadcast real-time dispatch event via Socket.IO for instant pop-up on technician apps
+  const io = getIO();
+  if (io) {
+    const jobPayload = {
+      bookingId: booking.id,
+      serviceRequestId: serviceRequest.id,
+      category: data.category,
+      serviceName,
+      product: serviceName,
+      address: data.address ? `${data.address.house || ''}, ${data.address.landmark || ''}, ${data.address.city || ''}`.trim().replace(/^,\s*/, '') : 'Customer Address',
+      city: customerCity,
+      state: customerState,
+      fullName: data.fullName,
+      customerName: data.fullName,
+      mobile: data.mobile,
+      totalPrice: booking.totalPrice,
+      estEarnings: Math.round((booking.totalPrice || 500) * 0.3) || 180,
+      isInstant,
+      scheduledTime: booking.timeSlot?.time || (isInstant ? 'ASAP' : 'Scheduled'),
+      scheduledDateLabel: booking.timeSlot?.date || 'Today',
+      assignedTechnicianId: technician ? String(technician._id) : null,
+      assignedTechnicianUserId: technician ? String(technician.user) : null,
+      instantStatus: initialInstantStatus,
+      isAvailableRequest: !technician,
+    };
+
+    if (technician) {
+      io.to(`tech:${technician._id}`).emit('job:assigned', jobPayload);
+      io.to(`tech:${technician.user}`).emit('job:assigned', jobPayload);
+      io.to(`tech:${technician._id}`).emit('instant:new_request', jobPayload);
+      io.to(`tech:${technician.user}`).emit('instant:new_request', jobPayload);
+
+      // Schedule 60-second waterfall cascade timeout for Candidate #1
+      scheduleDispatchTimeout(serviceRequest._id, technician._id);
+    } else if (customerCity) {
+      // If no single candidate matched, broadcast to city channel
+      io.to(`city:${customerCity.toLowerCase().trim()}`).emit('job:new_available', jobPayload);
     }
   }
 

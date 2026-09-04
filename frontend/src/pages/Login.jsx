@@ -1,59 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Phone, Mail, Lock, ShieldCheck, User, Gift, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, Phone, Mail, Lock, ShieldCheck, User, Gift, Eye, EyeOff, Navigation, MapPin, Loader2, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useAppLogo } from '../context/LogoContext';
 import { ApiError } from '../lib/apiClient';
+import SearchableSelect from '../components/common/SearchableSelect';
+import { STATE_CITIES, INDIAN_STATES, normalizeStateName } from '../utils/indiaGeoData';
 
-const STATE_CITIES = {
-  'Delhi NCR': ['Delhi', 'Noida', 'Gurgaon', 'Ghaziabad', 'Faridabad'],
-  'Andhra Pradesh': ['Visakhapatnam', 'Vijayawada', 'Guntur', 'Nellore', 'Tirupati', 'Kakinada', 'Kurnool', 'Rajahmundry'],
-  'Arunachal Pradesh': ['Itanagar', 'Naharlagun', 'Pasighat', 'Tawang'],
-  'Assam': ['Guwahati', 'Silchar', 'Dibrugarh', 'Jorhat', 'Nagaon', 'Tinsukia', 'Tezpur'],
-  'Bihar': ['Patna', 'Gaya', 'Bhagalpur', 'Muzaffarpur', 'Purnia', 'Darbhanga', 'Bihar Sharif', 'Arrah'],
-  'Chhattisgarh': ['Raipur', 'Bhilai', 'Bilaspur', 'Korba', 'Durg', 'Rajnandgaon'],
-  'Goa': ['Panaji', 'Margao', 'Vasco da Gama', 'Mapusa', 'Ponda'],
-  'Gujarat': ['Ahmedabad', 'Surat', 'Vadodara', 'Rajkot', 'Bhavnagar', 'Jamnagar', 'Gandhinagar', 'Junagadh'],
-  'Haryana': ['Gurgaon', 'Faridabad', 'Panipat', 'Ambala', 'Yamunanagar', 'Rohtak', 'Hisar', 'Karnal'],
-  'Himachal Pradesh': ['Shimla', 'Dharamshala', 'Mandi', 'Solan', 'Bilaspur', 'Kullu'],
-  'Jharkhand': ['Ranchi', 'Jamshedpur', 'Dhanbad', 'Bokaro', 'Hazaribagh', 'Deoghar'],
-  'Karnataka': ['Bangalore', 'Mysore', 'Hubli-Dharwad', 'Mangalore', 'Belgaum', 'Gulbarga', 'Davangere', 'Bellary'],
-  'Kerala': ['Thiruvananthapuram', 'Kochi', 'Kozhikode', 'Thrissur', 'Kollam', 'Palakkad', 'Kannur', 'Alappuzha'],
-  'Madhya Pradesh': ['Indore', 'Bhopal', 'Jabalpur', 'Gwalior', 'Ujjain', 'Sagar', 'Dewas', 'Satna', 'Ratlam'],
-  'Maharashtra': ['Mumbai', 'Pune', 'Nagpur', 'Thane', 'Nashik', 'Kalyan-Dombivli', 'Vasai-Virar', 'Aurangabad', 'Solapur', 'Amravati', 'Kolhapur'],
-  'Manipur': ['Imphal', 'Churachandpur', 'Thoubal'],
-  'Meghalaya': ['Shillong', 'Tura', 'Jowai'],
-  'Mizoram': ['Aizawl', 'Lunglei', 'Champhai'],
-  'Nagaland': ['Kohima', 'Dimapur', 'Mokokchung'],
-  'Odisha': ['Bhubaneswar', 'Cuttack', 'Rourkela', 'Berhampur', 'Sambalpur', 'Puri', 'Balasore'],
-  'Punjab': ['Ludhiana', 'Amritsar', 'Jalandhar', 'Patiala', 'Bathinda', 'Mohali', 'Pathankot'],
-  'Rajasthan': ['Jaipur', 'Jodhpur', 'Kota', 'Bikaner', 'Ajmer', 'Udaipur', 'Bhilwara', 'Alwar', 'Sikar'],
-  'Sikkim': ['Gangtok', 'Namchi', 'Geyzing'],
-  'Tamil Nadu': ['Chennai', 'Coimbatore', 'Madurai', 'Tiruchirappalli', 'Salem', 'Tiruppur', 'Erode', 'Vellore', 'Tirunelveli'],
-  'Telangana': ['Hyderabad', 'Warangal', 'Nizamabad', 'Khammam', 'Karimnagar', 'Ramagundam', 'Mahbubnagar'],
-  'Tripura': ['Agartala', 'Udaipur', 'Dharmanagar'],
-  'Uttar Pradesh': ['Lucknow', 'Kanpur', 'Ghaziabad', 'Agra', 'Varanasi', 'Meerut', 'Prayagraj', 'Noida', 'Bareilly', 'Aligarh', 'Moradabad', 'Saharanpur', 'Gorakhpur'],
-  'Uttarakhand': ['Dehradun', 'Haridwar', 'Roorkee', 'Haldwani', 'Rudrapur', 'Rishikesh', 'Nainital'],
-  'West Bengal': ['Kolkata', 'Howrah', 'Durgapur', 'Asansol', 'Siliguri', 'Kharagpur', 'Bardhaman'],
-  'Andaman and Nicobar Islands': ['Port Blair'],
-  'Chandigarh': ['Chandigarh'],
-  'Dadra and Nagar Haveli and Daman and Diu': ['Daman', 'Diu', 'Silvassa'],
-  'Jammu and Kashmir': ['Srinagar', 'Jammu', 'Anantnag', 'Baramulla', 'Udhampur'],
-  'Ladakh': ['Leh', 'Kargil'],
-  'Lakshadweep': ['Kavaratti'],
-  'Puducherry': ['Puducherry', 'Karaikal', 'Mahe', 'Yanam']
-};
-
-const Login = () => {
+const Login = ({ initialSignup = false }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { login, signupCheck } = useAuth();
   const { logoUrl, rawLogoUrl } = useAppLogo();
 
-  const [isSignup, setIsSignup] = useState(location.state?.isSignup || false);
+  const isSignupRoute = location.pathname === '/signup' || initialSignup;
+  const [isSignup, setIsSignup] = useState(location.state?.isSignup || isSignupRoute || false);
   const [usePhone, setUsePhone] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  // Location detection states
+  const [detectingLocation, setDetectingLocation] = useState(false);
+  const [locationStatus, setLocationStatus] = useState('');
+
+  // Sync signup toggle if route changes
+  useEffect(() => {
+    if (location.pathname === '/signup' || initialSignup) {
+      setIsSignup(true);
+    }
+  }, [location.pathname, initialSignup]);
 
   // Password visibility state
   const [showPassword, setShowPassword] = useState(false);
@@ -66,9 +41,11 @@ const Login = () => {
     email: location.state?.signupData?.email || '',
     password: location.state?.signupData?.password || '',
     confirmPassword: location.state?.signupData?.password || '',
-    state: 'Delhi NCR',
-    city: 'Delhi',
-    address: location.state?.signupData?.address?.split(' (City:')[0] || '',
+    state: location.state?.signupData?.state || 'Delhi NCR',
+    city: location.state?.signupData?.city || 'Delhi',
+    address: location.state?.signupData?.streetAddress || location.state?.signupData?.address?.split(' (City:')[0] || '',
+    latitude: location.state?.signupData?.latitude || null,
+    longitude: location.state?.signupData?.longitude || null,
     referralCode: location.state?.signupData?.referralCode || ''
   });
 
@@ -81,6 +58,183 @@ const Login = () => {
     confirmPassword: '',
     address: ''
   });
+
+  const resolveAndFillAddress = async (latitude, longitude, hintCity = '', hintState = '') => {
+    let resolvedAddress = '';
+    let resolvedCity = hintCity;
+    let resolvedState = hintState;
+
+    // 1. Google Maps Geocoding API using VITE_GOOGLE_MAPS_API_KEY
+    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+    if (apiKey && latitude && longitude) {
+      try {
+        const res = await fetch(
+          `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${apiKey}`
+        );
+        const data = await res.json();
+        if (data.status === 'OK' && data.results && data.results.length > 0) {
+          const result = data.results[0];
+          resolvedAddress = result.formatted_address || '';
+
+          for (const comp of result.address_components) {
+            if (comp.types.includes('locality') || comp.types.includes('administrative_area_level_2')) {
+              if (!resolvedCity) resolvedCity = comp.long_name;
+            }
+            if (comp.types.includes('administrative_area_level_1')) {
+              resolvedState = comp.long_name;
+            }
+          }
+        }
+      } catch (gErr) {
+        console.warn('[geocode:google] Error calling Google Maps Geocoding API:', gErr);
+      }
+    }
+
+    // 2. OpenStreetMap Nominatim reverse geocode fallback
+    if (!resolvedAddress && latitude && longitude) {
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
+        );
+        const data = await res.json();
+        if (data) {
+          resolvedAddress = data.display_name || '';
+          if (!resolvedCity) {
+            resolvedCity = data.address?.city || data.address?.town || data.address?.district || data.address?.county || '';
+          }
+          if (!resolvedState) {
+            resolvedState = data.address?.state || '';
+          }
+        }
+      } catch (nErr) {
+        console.warn('[geocode:nominatim] Error calling Nominatim fallback:', nErr);
+      }
+    }
+
+    // 3. Fallback to hint city/state if address is still blank
+    if (!resolvedAddress && (resolvedCity || resolvedState)) {
+      resolvedAddress = `${resolvedCity ? resolvedCity + ', ' : ''}${resolvedState || ''}`.trim();
+    }
+
+    // Match resolved state to STATE_CITIES keys
+    let matchedState = '';
+    if (resolvedState) {
+      const cleanState = resolvedState.toLowerCase().replace(/state|pradesh|ncr/g, '').trim();
+      const foundState = Object.keys(STATE_CITIES).find(
+        (st) =>
+          st.toLowerCase() === resolvedState.toLowerCase() ||
+          st.toLowerCase().includes(cleanState) ||
+          resolvedState.toLowerCase().includes(st.toLowerCase())
+      );
+      if (foundState) matchedState = foundState;
+    }
+
+    // Match resolved city to state cities
+    let matchedCity = '';
+    const activeState = matchedState || signupForm.state;
+    const stateCities = STATE_CITIES[activeState] || [];
+    if (resolvedCity) {
+      const cleanCity = resolvedCity.toLowerCase().trim();
+      const foundCity = stateCities.find(
+        (ct) =>
+          ct.toLowerCase() === cleanCity ||
+          ct.toLowerCase().includes(cleanCity) ||
+          cleanCity.includes(ct.toLowerCase())
+      );
+      if (foundCity) {
+        matchedCity = foundCity;
+      } else if (stateCities.length > 0) {
+        matchedCity = stateCities[0];
+      }
+    }
+
+    setSignupForm((prev) => ({
+      ...prev,
+      state: matchedState || prev.state,
+      city: matchedCity || (matchedState ? (STATE_CITIES[matchedState] || ['Other'])[0] : prev.city),
+      address: resolvedAddress || prev.address || (latitude ? `${latitude.toFixed(6)}, ${longitude.toFixed(6)}` : ''),
+      latitude: latitude !== undefined && latitude !== null ? Number(latitude) : prev.latitude,
+      longitude: longitude !== undefined && longitude !== null ? Number(longitude) : prev.longitude,
+    }));
+
+    setFieldErrors((prev) => ({ ...prev, address: '' }));
+    setLocationStatus('Address detected and filled successfully!');
+    setTimeout(() => setLocationStatus(''), 5000);
+  };
+
+  const handleDetectLocation = async () => {
+    setDetectingLocation(true);
+    setError('');
+    setLocationStatus('');
+
+    // Strategy 1: Browser Geolocation (with enableHighAccuracy: false so Mac laptops without GPS don't timeout)
+    if (navigator.geolocation) {
+      try {
+        const position = await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(
+            resolve,
+            reject,
+            { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
+          );
+        });
+
+        if (position && position.coords) {
+          await resolveAndFillAddress(position.coords.latitude, position.coords.longitude);
+          setDetectingLocation(false);
+          return;
+        }
+      } catch (browserErr) {
+        console.warn('[geolocation:browser] Browser position unavailable, using IP fallback:', browserErr);
+      }
+    }
+
+    // Strategy 2: Fast IP Geolocation fallback (works reliably on Macs/desktops without GPS)
+    try {
+      let ipData = null;
+      try {
+        const res = await fetch('https://ipwho.is/');
+        const data = await res.json();
+        if (data && data.success) {
+          ipData = {
+            latitude: data.latitude,
+            longitude: data.longitude,
+            city: data.city,
+            region: data.region
+          };
+        }
+      } catch (e1) {
+        // try secondary provider
+      }
+
+      if (!ipData) {
+        try {
+          const res = await fetch('https://freeipapi.com/api/json');
+          const data = await res.json();
+          if (data && data.latitude) {
+            ipData = {
+              latitude: data.latitude,
+              longitude: data.longitude,
+              city: data.cityName,
+              region: data.regionName
+            };
+          }
+        } catch (e2) {
+          // both failed
+        }
+      }
+
+      if (ipData && ipData.latitude && ipData.longitude) {
+        await resolveAndFillAddress(ipData.latitude, ipData.longitude, ipData.city, ipData.region);
+        setDetectingLocation(false);
+        return;
+      }
+    } catch (ipErr) {
+      console.warn('[geolocation:ip] IP fallback failed:', ipErr);
+    }
+
+    setDetectingLocation(false);
+    setError('Unable to detect location. Please type your address manually.');
+  };
 
   const validateSignupForm = () => {
     const errors = {};
@@ -122,7 +276,7 @@ const Login = () => {
 
     // Address validation
     if (!signupForm.address.trim()) {
-      errors.address = 'Full address is required';
+      errors.address = 'Street address is required';
     }
 
     setFieldErrors(errors);
@@ -167,6 +321,11 @@ const Login = () => {
         password: signupForm.password,
         confirmPassword: signupForm.confirmPassword,
         address: formattedAddress,
+        state: signupForm.state,
+        city: signupForm.city,
+        streetAddress: signupForm.address.trim(),
+        latitude: signupForm.latitude !== null && signupForm.latitude !== undefined ? Number(signupForm.latitude) : undefined,
+        longitude: signupForm.longitude !== null && signupForm.longitude !== undefined ? Number(signupForm.longitude) : undefined,
         referralCode: signupForm.referralCode.trim() || undefined
       });
 
@@ -182,7 +341,12 @@ const Login = () => {
               phone: signupForm.phone,
               email: signupForm.email.trim(),
               password: signupForm.password,
+              state: signupForm.state,
+              city: signupForm.city,
+              streetAddress: signupForm.address.trim(),
               address: formattedAddress,
+              latitude: signupForm.latitude !== null && signupForm.latitude !== undefined ? Number(signupForm.latitude) : undefined,
+              longitude: signupForm.longitude !== null && signupForm.longitude !== undefined ? Number(signupForm.longitude) : undefined,
               referralCode: signupForm.referralCode.trim() || undefined
             }
           }
@@ -192,20 +356,20 @@ const Login = () => {
       const errType = err?.details?.errorType;
       const errMsg = err?.message || 'Something went wrong. Please try again.';
       if (errType === 'both') {
-        setError(errMsg);
+        setError('An account with this phone number and email already exists.');
         setFieldErrors(prev => ({
           ...prev,
-          phone: 'This phone is already registered',
-          email: 'This email is already registered'
+          phone: 'This number is already registered, kindly login or use another number',
+          email: 'This email already exists, kindly login or enter a different email'
         }));
       } else if (errType === 'phone') {
-        setError(errMsg);
+        setError('This number is already registered. Kindly login or use another number.');
         setFieldErrors(prev => ({
           ...prev,
           phone: 'This number is already registered, kindly login or use another number'
         }));
       } else if (errType === 'email') {
-        setError(errMsg);
+        setError('This email already exists. Kindly login or enter a different email.');
         setFieldErrors(prev => ({
           ...prev,
           email: 'This email already exists, kindly login or enter a different email'
@@ -452,52 +616,77 @@ const Login = () => {
             </div>
 
             {/* Location & Address Sector */}
-            <div className="bg-slate-50 border border-slate-100 rounded-2xl p-3.5 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-extrabold text-[#0D47A1] uppercase tracking-wider">Location & Address</span>
+            <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[11px] font-extrabold text-[#0D47A1] uppercase tracking-wider flex items-center gap-1.5">
+                  <MapPin size={13} /> Location & Address
+                </span>
+                
+                {/* Detect Location Button using Google Maps Geocoding API */}
+                <button
+                  type="button"
+                  onClick={handleDetectLocation}
+                  disabled={detectingLocation}
+                  title="Detect current location using GPS & Google Maps"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold text-[#0D47A1] bg-[#E3ECF9] hover:bg-[#D3E3F8] active:scale-95 rounded-lg transition-all shadow-xs disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {detectingLocation ? (
+                    <>
+                      <Loader2 size={12} className="animate-spin text-[#0D47A1]" />
+                      <span>Detecting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Navigation size={12} className="text-[#0D47A1]" />
+                      <span>Detect Location</span>
+                    </>
+                  )}
+                </button>
               </div>
 
-              {/* State & City Dropdowns */}
-              <div className="grid grid-cols-2 gap-2 text-left">
-                <div className="flex flex-col gap-1">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">State *</label>
-                  <select
-                    value={signupForm.state}
-                    onChange={(e) => {
-                      const st = e.target.value;
-                      const cities = STATE_CITIES[st] || ['Other'];
-                      setSignupForm({ ...signupForm, state: st, city: cities[0] });
-                    }}
-                    className="w-full bg-white border border-slate-200 rounded-lg py-1.5 px-2 outline-none text-xs focus:border-[#0D47A1] transition-all"
-                  >
-                    {Object.keys(STATE_CITIES).map(st => (
-                      <option key={st} value={st}>{st}</option>
-                    ))}
-                  </select>
+              {locationStatus && (
+                <div className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1.5 rounded-lg animate-in fade-in">
+                  <CheckCircle2 size={13} className="text-emerald-600 shrink-0" />
+                  <span>{locationStatus}</span>
                 </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">City *</label>
-                  <select
-                    value={signupForm.city}
-                    onChange={(e) => setSignupForm({ ...signupForm, city: e.target.value })}
-                    className="w-full bg-white border border-slate-200 rounded-lg py-1.5 px-2 outline-none text-xs focus:border-[#0D47A1] transition-all"
-                  >
-                    {(STATE_CITIES[signupForm.state] || ['Other']).map(ct => (
-                      <option key={ct} value={ct}>{ct}</option>
-                    ))}
-                  </select>
-                </div>
+              )}
+
+              {/* State & City Searchable Dropdowns */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
+                <SearchableSelect
+                  label="State *"
+                  value={signupForm.state}
+                  options={Object.keys(STATE_CITIES)}
+                  onChange={(st) => {
+                    const cities = STATE_CITIES[st] || ['Other'];
+                    setSignupForm({ ...signupForm, state: st, city: cities[0] });
+                  }}
+                  placeholder="Select or search state..."
+                />
+                
+                <SearchableSelect
+                  label="City *"
+                  value={signupForm.city}
+                  options={STATE_CITIES[signupForm.state] || ['Other']}
+                  onChange={(ct) => setSignupForm({ ...signupForm, city: ct })}
+                  placeholder="Select or search city..."
+                />
               </div>
 
-              {/* Full Address Input */}
+              {/* Street Address Input */}
               <div className="flex flex-col gap-1 text-left">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Street Address *</label>
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Street Address (House/Flat No., Road, Landmark) *</label>
+                </div>
                 <div className="relative">
                   <textarea
                     rows={2}
                     value={signupForm.address}
-                    onChange={(e) => setSignupForm({ ...signupForm, address: e.target.value })}
-                    placeholder="Enter house/flat number, road, landmark"
+                    onChange={(e) => {
+                      setSignupForm({ ...signupForm, address: e.target.value });
+                      if (fieldErrors.address) setFieldErrors(prev => ({ ...prev, address: '' }));
+                    }}
+                    placeholder="e.g. Flat 402, Sunshine Heights, Near City Mall"
                     className={`w-full p-2.5 bg-white border ${fieldErrors.address ? 'border-rose-400 focus:ring-rose-400' : 'border-slate-200 focus:border-[#0D47A1]'} rounded-xl focus:ring-1 outline-none transition-all text-xs resize-none`}
                   />
                 </div>
