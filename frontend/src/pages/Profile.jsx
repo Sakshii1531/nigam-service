@@ -96,63 +96,64 @@ const Profile = () => {
       {/* ========================================================================= */}
       <div className="lg:hidden flex flex-col min-h-screen pb-24">
         {/* Header — mobile only */}
-        <div className="px-6 pt-5 pb-3 flex justify-between items-center bg-white sticky top-0 z-50 shadow-xs border-b border-slate-100">
-          <div className="flex items-center gap-3">
+        <div className="px-3.5 py-2.5 flex justify-between items-center bg-white/95 backdrop-blur-md sticky top-0 z-50 shadow-2xs border-b border-slate-100">
+          <div className="flex items-center gap-2.5">
             <button 
               onClick={() => navigate(-1)} 
-              className="p-1 hover:bg-slate-50 rounded-full transition-colors cursor-pointer text-slate-700"
+              className="w-8 h-8 rounded-full bg-slate-100/90 active:scale-95 flex items-center justify-center text-slate-700 transition-all cursor-pointer"
               aria-label="Go Back"
             >
-              <ArrowLeft className="h-5 w-5" />
+              <ArrowLeft className="h-4 w-4" />
             </button>
-            <h1 className="text-xl font-black text-slate-900">My Account</h1>
+            <h1 className="text-sm font-extrabold text-slate-900 tracking-tight">My Account</h1>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             <button 
               onClick={() => navigate('/edit-profile')} 
-              className="p-1 hover:bg-slate-50 rounded-full transition-colors cursor-pointer"
+              className="w-8 h-8 rounded-full bg-slate-100/90 active:scale-95 flex items-center justify-center text-slate-700 transition-all cursor-pointer"
+              aria-label="Settings"
             >
-              <Settings className="h-6 w-6 text-slate-800" />
+              <Settings className="h-4 w-4 text-slate-800" />
             </button>
           </div>
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-5 no-scrollbar max-w-screen-lg mx-auto w-full">
+        <div className="flex-1 overflow-y-auto px-3.5 py-3.5 flex flex-col gap-4 no-scrollbar max-w-screen-lg mx-auto w-full">
           
           {/* User Quick Info */}
           <div 
             onClick={() => navigate('/edit-profile')}
-            className="bg-white border border-slate-100 p-4 rounded-[24px] flex items-center justify-between gap-4 shadow-sm hover:shadow-md transition-all cursor-pointer"
+            className="bg-white border border-slate-200/80 p-3.5 rounded-[22px] flex items-center justify-between gap-3.5 shadow-2xs hover:shadow-md transition-all cursor-pointer group"
           >
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-[#0D47A1] rounded-full flex items-center justify-center text-white text-xl font-extrabold shadow-inner uppercase">
+            <div className="flex items-center gap-3.5">
+              <div className="w-13 h-13 bg-gradient-to-br from-[#0D47A1] to-blue-700 rounded-full flex items-center justify-center text-white text-lg font-black shadow-md border-2 border-blue-100 shrink-0 uppercase">
                 {user?.name ? user.name[0] : 'U'}
               </div>
               <div className="flex flex-col">
-                <h2 className="text-[15px] font-black text-slate-900 leading-tight">{user?.name || 'Customer User'}</h2>
-                <span className="text-xs text-slate-500 font-semibold mt-1">{user?.phone || '—'}</span>
-                <span className="text-xs font-bold text-[#0D47A1] hover:underline mt-1">
+                <h2 className="text-sm font-black text-slate-900 leading-tight group-hover:text-[#0D47A1] transition-colors">{user?.name || 'Customer User'}</h2>
+                <span className="text-[11px] text-slate-500 font-semibold mt-0.5">{user?.phone || '—'}</span>
+                <span className="text-[11px] font-bold text-[#0D47A1] hover:underline mt-0.5 inline-flex items-center gap-0.5">
                   Edit Profile
                 </span>
               </div>
             </div>
-            <ChevronRight className="h-5 w-5 text-slate-400" />
+            <ChevronRight className="h-4.5 w-4.5 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
           </div>
 
           {/* Plus Gold Membership Card */}
           {hasMembership && (
-            <div className="bg-gradient-to-r from-[#0C1D33] via-[#102747] to-[#0C1D33] rounded-[18px] p-3.5 text-white shadow-md relative overflow-hidden border border-white/5">
+            <div className="bg-gradient-to-r from-[#0C1D33] via-[#102747] to-[#0C1D33] rounded-[20px] p-3.5 text-white shadow-xs relative overflow-hidden border border-white/10">
               <div className="flex justify-between items-start mb-2.5">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 bg-gradient-to-tr from-[#FFD54F] via-[#FF8F00] to-[#FFD54F] rounded-xl flex items-center justify-center shadow-md border border-amber-300">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <div className="w-8.5 h-8.5 bg-gradient-to-tr from-[#FFD54F] via-[#FF8F00] to-[#FFD54F] rounded-xl flex items-center justify-center shadow-md border border-amber-300 shrink-0">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M12 17L17 21L15.5 14L21 9.5H14L12 3L10 9.5H3L8.5 14L7 21L12 17Z" fill="white" stroke="#FF8F00" strokeWidth="1.5" strokeLinejoin="round" />
                     </svg>
                   </div>
                   <div className="flex flex-col">
                     <span className="text-slate-300 text-[9px] font-bold uppercase tracking-wider">My Membership</span>
-                    <span className="text-[#FFDF00] text-sm font-black tracking-wide leading-tight mt-0.5">{membershipName}</span>
+                    <span className="text-[#FFDF00] text-xs font-black tracking-wide leading-tight mt-0.5">{membershipName}</span>
                   </div>
                 </div>
                 <ChevronRight className="h-4 w-4 text-[#FFDF00] mt-0.5" />
@@ -174,175 +175,175 @@ const Profile = () => {
           )}
 
           {/* 3 Status Cards (Horizontal Grid) */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-2.5">
             
             {/* My Bookings */}
-            <div className="bg-white border border-slate-100 rounded-2xl p-2.5 flex flex-col gap-0.5 shadow-2xs hover:shadow-xs transition-all">
-              <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider truncate">My Bookings</span>
-              <span className="text-lg font-black text-slate-900 mt-0.5">{bookingsCount}</span>
-              <button 
-                onClick={() => navigate('/my-bookings')} 
-                className="text-[9px] font-extrabold text-[#0D47A1] hover:underline self-start mt-0.5 cursor-pointer"
-              >
+            <div 
+              onClick={() => navigate('/my-bookings')}
+              className="bg-white border border-slate-200/80 rounded-2xl p-2.5 flex flex-col gap-0.5 shadow-2xs hover:shadow-xs transition-all cursor-pointer group"
+            >
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate">My Bookings</span>
+              <span className="text-base sm:text-lg font-black text-slate-900 mt-0.5">{bookingsCount}</span>
+              <span className="text-[9px] font-extrabold text-[#0D47A1] group-hover:underline self-start mt-0.5">
                 View All
-              </button>
+              </span>
             </div>
 
             {/* Rewards */}
             <div 
               onClick={() => navigate('/rewards-play-zone')}
-              className="bg-white border border-slate-100 rounded-2xl p-2.5 flex flex-col gap-0.5 shadow-2xs hover:shadow-xs transition-all cursor-pointer"
+              className="bg-white border border-slate-200/80 rounded-2xl p-2.5 flex flex-col gap-0.5 shadow-2xs hover:shadow-xs transition-all cursor-pointer"
             >
-              <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider truncate">Rewards</span>
-              <span className="text-lg font-black text-slate-900 mt-0.5">{userCoins.toLocaleString('en-IN')}</span>
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate">Rewards</span>
+              <span className="text-base sm:text-lg font-black text-slate-900 mt-0.5">{userCoins.toLocaleString('en-IN')}</span>
               <span className="text-[9px] font-extrabold text-slate-400 self-start mt-0.5">Coins</span>
             </div>
 
             {/* Play & Win */}
-            <div className="bg-white border border-slate-100 rounded-2xl p-2.5 flex flex-col gap-0.5 shadow-2xs hover:shadow-xs transition-all">
-              <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider truncate">Play & Win</span>
-              <span className="text-lg font-black text-slate-900 mt-0.5">Level {Math.max(1, Math.floor(userCoins / 500) + 1)}</span>
-              <button 
-                onClick={() => navigate('/rewards-play-zone')} 
-                className="text-[9px] font-extrabold text-[#0D47A1] hover:underline self-start mt-0.5 cursor-pointer"
-              >
+            <div 
+              onClick={() => navigate('/rewards-play-zone')}
+              className="bg-white border border-slate-200/80 rounded-2xl p-2.5 flex flex-col gap-0.5 shadow-2xs hover:shadow-xs transition-all cursor-pointer group"
+            >
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate">Play & Win</span>
+              <span className="text-base sm:text-lg font-black text-slate-900 mt-0.5">Level {Math.max(1, Math.floor(userCoins / 500) + 1)}</span>
+              <span className="text-[9px] font-extrabold text-[#0D47A1] group-hover:underline self-start mt-0.5">
                 Spin Now
-              </button>
+              </span>
             </div>
 
           </div>
 
           {/* Categorized Settings */}
-          <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-4">
 
             {/* Category: My Activity */}
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">My Activity</h3>
-              <div className="bg-white border border-slate-100 rounded-[20px] overflow-hidden shadow-2xs flex flex-col divide-y divide-slate-100">
+              <div className="bg-white border border-slate-200/80 rounded-[20px] overflow-hidden shadow-2xs flex flex-col divide-y divide-slate-100/80">
 
                 {/* My Bookings */}
                 <div 
                   onClick={() => navigate('/my-bookings')}
-                  className="p-4 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer"
+                  className="p-3.5 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer"
                 >
-                  <div className="flex items-center gap-3.5">
-                    <div className="p-2 bg-blue-50 text-[#0D47A1] rounded-xl">
-                      <Calendar className="h-4.5 w-4.5" />
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-50 text-[#0D47A1] rounded-xl shrink-0">
+                      <Calendar className="h-4 w-4" />
                     </div>
-                    <span className="text-[13px] font-bold text-slate-800">My Bookings</span>
+                    <span className="text-xs sm:text-[13px] font-bold text-slate-800">My Bookings</span>
                   </div>
-                  <ChevronRight className="h-4.5 w-4.5 text-slate-400" />
+                  <ChevronRight className="h-4 w-4 text-slate-400" />
                 </div>
 
                 {/* My Orders */}
                 <div 
                   onClick={() => navigate('/my-orders')}
-                  className="p-4 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer"
+                  className="p-3.5 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer"
                 >
-                  <div className="flex items-center gap-3.5">
-                    <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
-                      <Package className="h-4.5 w-4.5" />
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl shrink-0">
+                      <Package className="h-4 w-4" />
                     </div>
-                    <span className="text-[13px] font-bold text-slate-800">My Orders</span>
+                    <span className="text-xs sm:text-[13px] font-bold text-slate-800">My Orders</span>
                   </div>
-                  <ChevronRight className="h-4.5 w-4.5 text-slate-400" />
+                  <ChevronRight className="h-4 w-4 text-slate-400" />
                 </div>
 
                 {/* Exchange Details */}
                 <div 
                   onClick={() => navigate('/exchange-details')}
-                  className="p-4 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer"
+                  className="p-3.5 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer"
                 >
-                  <div className="flex items-center gap-3.5">
-                    <div className="p-2 bg-amber-50 text-amber-600 rounded-xl">
-                      <RefreshCw className="h-4.5 w-4.5" />
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-amber-50 text-amber-600 rounded-xl shrink-0">
+                      <RefreshCw className="h-4 w-4" />
                     </div>
-                    <span className="text-[13px] font-bold text-slate-800">Exchange Details</span>
+                    <span className="text-xs sm:text-[13px] font-bold text-slate-800">Exchange Details</span>
                   </div>
-                  <ChevronRight className="h-4.5 w-4.5 text-slate-400" />
+                  <ChevronRight className="h-4 w-4 text-slate-400" />
                 </div>
 
                 {/* My Protection Plans */}
                 <div 
                   onClick={() => navigate('/buy/my-warranty')}
-                  className="p-4 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer"
+                  className="p-3.5 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer"
                 >
-                  <div className="flex items-center gap-3.5">
-                    <div className="p-2 bg-blue-50 text-[#0D47A1] rounded-xl">
-                      <Shield className="h-4.5 w-4.5" />
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-50 text-[#0D47A1] rounded-xl shrink-0">
+                      <Shield className="h-4 w-4" />
                     </div>
-                    <span className="text-[13px] font-bold text-slate-800">My Protection Plans</span>
+                    <span className="text-xs sm:text-[13px] font-bold text-slate-800">My Protection Plans</span>
                   </div>
-                  <ChevronRight className="h-4.5 w-4.5 text-slate-400" />
+                  <ChevronRight className="h-4 w-4 text-slate-400" />
                 </div>
 
               </div>
             </div>
 
             {/* Category: Rewards & Offers */}
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Rewards & Offers</h3>
-              <div className="bg-white border border-slate-100 rounded-[20px] overflow-hidden shadow-2xs flex flex-col divide-y divide-slate-100">
+              <div className="bg-white border border-slate-200/80 rounded-[20px] overflow-hidden shadow-2xs flex flex-col divide-y divide-slate-100/80">
 
                 {/* Membership Plan */}
                 <div 
                   onClick={() => navigate('/membership-plans')}
-                  className="p-4 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer"
+                  className="p-3.5 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer"
                 >
-                  <div className="flex items-center gap-3.5">
-                    <div className="p-2 bg-amber-50 text-amber-600 rounded-xl">
-                      <Shield className="h-4.5 w-4.5" />
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-amber-50 text-amber-600 rounded-xl shrink-0">
+                      <Shield className="h-4 w-4" />
                     </div>
-                    <span className="text-[13px] font-bold text-slate-800">Membership Plan</span>
+                    <span className="text-xs sm:text-[13px] font-bold text-slate-800">Membership Plan</span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     <span className="text-xs text-slate-400 font-semibold">{hasMembership ? membershipName : 'No Active Plan'}</span>
-                    <ChevronRight className="h-4.5 w-4.5 text-slate-400" />
+                    <ChevronRight className="h-4 w-4 text-slate-400" />
                   </div>
                 </div>
 
                 {/* Rewards & Play Zone */}
                 <div 
                   onClick={() => navigate('/rewards-play-zone')}
-                  className="p-4 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer"
+                  className="p-3.5 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer"
                 >
-                  <div className="flex items-center gap-3.5">
-                    <div className="p-2 bg-purple-50 text-purple-600 rounded-xl">
-                      <Gift className="h-4.5 w-4.5" />
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-purple-50 text-purple-600 rounded-xl shrink-0">
+                      <Gift className="h-4 w-4" />
                     </div>
-                    <span className="text-[13px] font-bold text-slate-800">Rewards & Play Zone</span>
+                    <span className="text-xs sm:text-[13px] font-bold text-slate-800">Rewards & Play Zone</span>
                   </div>
-                  <ChevronRight className="h-4.5 w-4.5 text-slate-400" />
+                  <ChevronRight className="h-4 w-4 text-slate-400" />
                 </div>
 
                 {/* My Coupons */}
                 <div 
                   onClick={() => navigate('/coupons')}
-                  className="p-4 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer"
+                  className="p-3.5 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer"
                 >
-                  <div className="flex items-center gap-3.5">
-                    <div className="p-2 bg-rose-50 text-rose-600 rounded-xl">
-                      <Ticket className="h-4.5 w-4.5" />
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-rose-50 text-rose-600 rounded-xl shrink-0">
+                      <Ticket className="h-4 w-4" />
                     </div>
-                    <span className="text-[13px] font-bold text-slate-800">My Coupons</span>
+                    <span className="text-xs sm:text-[13px] font-bold text-slate-800">My Coupons</span>
                   </div>
-                  <ChevronRight className="h-4.5 w-4.5 text-slate-400" />
+                  <ChevronRight className="h-4 w-4 text-slate-400" />
                 </div>
 
                 {/* My Wishlist */}
                 <div 
                   onClick={() => navigate('/my-wishlist')}
-                  className="p-4 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer"
+                  className="p-3.5 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer"
                 >
-                  <div className="flex items-center gap-3.5">
-                    <div className="p-2 bg-red-50 text-red-500 rounded-xl">
-                      <Heart className="h-4.5 w-4.5" />
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-red-50 text-red-500 rounded-xl shrink-0">
+                      <Heart className="h-4 w-4" />
                     </div>
-                    <span className="text-[13px] font-bold text-slate-800">My Wishlist</span>
+                    <span className="text-xs sm:text-[13px] font-bold text-slate-800">My Wishlist</span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     <span className="text-xs text-slate-400 font-semibold">{wishlistCount} items</span>
-                    <ChevronRight className="h-4.5 w-4.5 text-slate-400" />
+                    <ChevronRight className="h-4 w-4 text-slate-400" />
                   </div>
                 </div>
 
@@ -350,100 +351,100 @@ const Profile = () => {
             </div>
 
             {/* Category: Account & Settings */}
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Account & Settings</h3>
-              <div className="bg-white border border-slate-100 rounded-[20px] overflow-hidden shadow-2xs flex flex-col divide-y divide-slate-100">
+              <div className="bg-white border border-slate-200/80 rounded-[20px] overflow-hidden shadow-2xs flex flex-col divide-y divide-slate-100/80">
 
                 {/* Saved Addresses */}
                 <div 
                   onClick={() => navigate('/saved-addresses')}
-                  className="p-4 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer"
+                  className="p-3.5 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer"
                 >
-                  <div className="flex items-center gap-3.5">
-                    <div className="p-2 bg-blue-50 text-[#0D47A1] rounded-xl">
-                      <MapPin className="h-4.5 w-4.5" />
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-50 text-[#0D47A1] rounded-xl shrink-0">
+                      <MapPin className="h-4 w-4" />
                     </div>
-                    <span className="text-[13px] font-bold text-slate-800">Saved Addresses</span>
+                    <span className="text-xs sm:text-[13px] font-bold text-slate-800">Saved Addresses</span>
                   </div>
-                  <ChevronRight className="h-4.5 w-4.5 text-slate-400" />
+                  <ChevronRight className="h-4 w-4 text-slate-400" />
                 </div>
 
                 {/* Payment Methods */}
                 <div 
                   onClick={() => navigate('/payment-methods')}
-                  className="p-4 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer"
+                  className="p-3.5 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer"
                 >
-                  <div className="flex items-center gap-3.5">
-                    <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
-                      <CreditCard className="h-4.5 w-4.5" />
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl shrink-0">
+                      <CreditCard className="h-4 w-4" />
                     </div>
-                    <span className="text-[13px] font-bold text-slate-800">Payment Methods</span>
+                    <span className="text-xs sm:text-[13px] font-bold text-slate-800">Payment Methods</span>
                   </div>
-                  <ChevronRight className="h-4.5 w-4.5 text-slate-400" />
+                  <ChevronRight className="h-4 w-4 text-slate-400" />
                 </div>
 
                 {/* Notification Settings */}
                 <div 
                   onClick={() => navigate('/notification-settings')}
-                  className="p-4 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer"
+                  className="p-3.5 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer"
                 >
-                  <div className="flex items-center gap-3.5">
-                    <div className="p-2 bg-pink-50 text-pink-600 rounded-xl">
-                      <Bell className="h-4.5 w-4.5" />
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-pink-50 text-pink-600 rounded-xl shrink-0">
+                      <Bell className="h-4 w-4" />
                     </div>
-                    <span className="text-[13px] font-bold text-slate-800">Notification Settings</span>
+                    <span className="text-xs sm:text-[13px] font-bold text-slate-800">Notification Settings</span>
                   </div>
-                  <ChevronRight className="h-4.5 w-4.5 text-slate-400" />
+                  <ChevronRight className="h-4 w-4 text-slate-400" />
                 </div>
 
               </div>
             </div>
 
             {/* Category: More */}
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">More</h3>
-              <div className="bg-white border border-slate-100 rounded-[20px] overflow-hidden shadow-2xs flex flex-col divide-y divide-slate-100">
+              <div className="bg-white border border-slate-200/80 rounded-[20px] overflow-hidden shadow-2xs flex flex-col divide-y divide-slate-100/80">
 
                 {/* Help & Support */}
                 <div 
                   onClick={() => navigate('/help-support')}
-                  className="p-4 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer"
+                  className="p-3.5 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer"
                 >
-                  <div className="flex items-center gap-3.5">
-                    <div className="p-2 bg-teal-50 text-teal-600 rounded-xl">
-                      <Headphones className="h-4.5 w-4.5" />
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-teal-50 text-teal-600 rounded-xl shrink-0">
+                      <Headphones className="h-4 w-4" />
                     </div>
-                    <span className="text-[13px] font-bold text-slate-800">Help & Support</span>
+                    <span className="text-xs sm:text-[13px] font-bold text-slate-800">Help & Support</span>
                   </div>
-                  <ChevronRight className="h-4.5 w-4.5 text-slate-400" />
+                  <ChevronRight className="h-4 w-4 text-slate-400" />
                 </div>
 
                 {/* About NCC */}
                 <div 
                   onClick={() => navigate('/about-ncc')}
-                  className="p-4 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer"
+                  className="p-3.5 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer"
                 >
-                  <div className="flex items-center gap-3.5">
-                    <div className="p-2 bg-slate-50 text-slate-600 rounded-xl">
-                      <FileText className="h-4.5 w-4.5" />
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-slate-50 text-slate-600 rounded-xl shrink-0">
+                      <FileText className="h-4 w-4" />
                     </div>
-                    <span className="text-[13px] font-bold text-slate-800">About NCC</span>
+                    <span className="text-xs sm:text-[13px] font-bold text-slate-800">About NCC</span>
                   </div>
-                  <ChevronRight className="h-4.5 w-4.5 text-slate-400" />
+                  <ChevronRight className="h-4 w-4 text-slate-400" />
                 </div>
 
                 {/* Logout */}
                 <div 
                   onClick={() => setShowLogoutConfirm(true)}
-                  className="p-4 flex items-center justify-between gap-3 hover:bg-red-50/50 transition-colors cursor-pointer group"
+                  className="p-3.5 flex items-center justify-between gap-3 hover:bg-red-50/50 transition-colors cursor-pointer group"
                 >
-                  <div className="flex items-center gap-3.5">
-                    <div className="p-2 bg-red-50 text-red-600 rounded-xl">
-                      <LogOut className="h-4.5 w-4.5" />
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-red-50 text-red-600 rounded-xl shrink-0">
+                      <LogOut className="h-4 w-4" />
                     </div>
-                    <span className="text-[13px] font-bold text-red-600">Log Out</span>
+                    <span className="text-xs sm:text-[13px] font-bold text-red-600">Log Out</span>
                   </div>
-                  <ChevronRight className="h-4.5 w-4.5 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+                  <ChevronRight className="h-4 w-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
                 </div>
 
               </div>
@@ -454,20 +455,20 @@ const Profile = () => {
           {/* Refer & Earn Banner */}
           <div 
             onClick={() => navigate('/refer-earn')}
-            className="bg-gradient-to-r from-[#FFF8F0] to-[#FFF0E0] rounded-[24px] p-5 relative overflow-hidden shadow-2xs flex items-center justify-between mt-1 min-h-[120px] border border-amber-200/50 cursor-pointer hover:shadow-md transition-all"
+            className="bg-gradient-to-r from-[#FFF8F0] via-[#FFF3E0] to-[#FFE8CC] rounded-[22px] p-4 relative overflow-hidden shadow-2xs flex items-center justify-between mt-1 min-h-[115px] border border-amber-200/70 cursor-pointer hover:shadow-md transition-all"
           >
-            <div className="flex-1 flex flex-col gap-1 pr-24 z-10">
-              <h4 className="text-[13px] font-black text-amber-900">Refer & Earn</h4>
-              <p className="text-[10px] text-amber-700 font-extrabold leading-snug">Earn 100 Coins for every friend who joins</p>
+            <div className="flex-1 flex flex-col gap-1 pr-20 z-10">
+              <h4 className="text-xs font-black text-amber-900">Refer & Earn</h4>
+              <p className="text-[10px] text-amber-800 font-bold leading-snug">Earn 100 Coins for every friend who joins</p>
               <button 
                 onClick={(e) => { e.stopPropagation(); navigate('/refer-earn'); }} 
-                className="bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-black px-4.5 py-2 rounded-xl mt-2 transition-all cursor-pointer self-start shadow-sm"
+                className="bg-amber-600 hover:bg-amber-700 text-white text-[9.5px] font-black px-4 py-1.5 rounded-xl mt-1.5 transition-all cursor-pointer self-start shadow-2xs"
               >
                 Refer Now
               </button>
             </div>
-            <div className="absolute bottom-2 right-4 h-[90px] w-24 flex items-center justify-center pointer-events-none z-0">
-              <svg viewBox="0 0 100 100" className="h-18 w-18 text-amber-500 drop-shadow-[0_4px_8px_rgba(245,158,11,0.25)]">
+            <div className="absolute bottom-2 right-3 h-[85px] w-20 flex items-center justify-center pointer-events-none z-0">
+              <svg viewBox="0 0 100 100" className="h-16 w-16 text-amber-500 drop-shadow-[0_4px_8px_rgba(245,158,11,0.25)]">
                 <rect x="25" y="40" width="50" height="45" rx="6" fill="#F59E0B" />
                 <rect x="20" y="30" width="60" height="12" rx="4" fill="#FBBF24" />
                 <rect x="46" y="30" width="8" height="55" fill="#EF4444" />
@@ -481,43 +482,46 @@ const Profile = () => {
         </div>
 
         {/* Bottom Navigation — Mobile only */}
-        <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 p-4 flex justify-around items-center z-40 shadow-lg rounded-t-3xl overflow-visible">
+        <div className="fixed bottom-0 left-0 right-0 h-16 bg-white/95 backdrop-blur-xl border-t border-slate-200/80 px-3 sm:px-8 flex justify-around items-center z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
           <button 
             onClick={() => navigate('/dashboard')}
-            className="flex flex-col items-center text-slate-500 hover:text-[#0D47A1] cursor-pointer transition-colors"
+            className="flex flex-col items-center justify-center py-1 px-2.5 text-slate-500 hover:text-[#0D47A1] transition-colors cursor-pointer"
           >
-            <HomeIcon className="h-6 w-6" />
-            <span className="text-xs font-semibold mt-0.5">Home</span>
+            <HomeIcon className="h-5 w-5" />
+            <span className="text-[10px] font-medium tracking-tight mt-0.5">Home</span>
           </button>
           <button 
             onClick={() => navigate('/categories')}
-            className="flex flex-col items-center text-slate-500 hover:text-[#0D47A1] cursor-pointer transition-colors"
+            className="flex flex-col items-center justify-center py-1 px-2.5 text-slate-500 hover:text-[#0D47A1] transition-colors cursor-pointer"
           >
-            <LayoutGrid className="h-6 w-6" />
-            <span className="text-xs font-semibold mt-0.5">Categories</span>
+            <LayoutGrid className="h-5 w-5" />
+            <span className="text-[10px] font-medium tracking-tight mt-0.5">Categories</span>
           </button>
 
           <button 
             onClick={() => navigate('/buy')}
-            className="flex flex-col items-center text-slate-500 hover:text-[#0D47A1] cursor-pointer transition-colors"
+            className="flex flex-col items-center justify-center py-1 px-2.5 text-slate-500 hover:text-[#0D47A1] transition-colors cursor-pointer"
           >
-            <ShoppingCart className="h-6 w-6" />
-            <span className="text-xs font-semibold mt-0.5">Buy</span>
+            <ShoppingCart className="h-5 w-5" />
+            <span className="text-[10px] font-medium tracking-tight mt-0.5">Buy</span>
           </button>
 
           <button 
             onClick={() => navigate('/bookings')}
-            className="flex flex-col items-center text-slate-500 hover:text-[#0D47A1] cursor-pointer transition-colors"
+            className="flex flex-col items-center justify-center py-1 px-2.5 text-slate-500 hover:text-[#0D47A1] transition-colors cursor-pointer"
           >
-            <Calendar className="h-6 w-6" />
-            <span className="text-xs font-semibold mt-0.5">Bookings</span>
+            <Calendar className="h-5 w-5" />
+            <span className="text-[10px] font-medium tracking-tight mt-0.5">Bookings</span>
           </button>
           <button 
             onClick={() => navigate('/profile')}
-            className="flex flex-col items-center text-[#0D47A1] cursor-pointer transition-colors"
+            className="flex flex-col items-center justify-center relative py-1 px-2.5 text-[#0D47A1] cursor-pointer"
           >
-            <User className="h-6 w-6" />
-            <span className="text-xs font-semibold mt-0.5">Account</span>
+            <div className="absolute -top-3 w-8 h-1 bg-[#0D47A1] rounded-b-full shadow-2xs" />
+            <div className="p-1 rounded-xl bg-blue-50/90 text-[#0D47A1]">
+              <User className="h-5 w-5" />
+            </div>
+            <span className="text-[10px] font-bold tracking-tight mt-0.5">Account</span>
           </button>
         </div>
       </div>
