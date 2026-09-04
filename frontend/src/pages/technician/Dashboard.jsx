@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Bell, Briefcase, ClipboardList, Calendar, Wrench, User, MapPin, ChevronRight, ChevronLeft, Menu,
-  Clock, Shield, Star, GraduationCap, MessageSquare, Megaphone, Scan, CheckCircle, RotateCw, X, LogOut, Sparkles, CreditCard, ShieldCheck, Award, Settings, HelpCircle, ArrowLeft, Zap
+  Clock, Shield, Star, GraduationCap, MessageSquare, Megaphone, Scan, CheckCircle, RotateCw, X, LogOut, Sparkles, CreditCard, ShieldCheck, Award, Settings, HelpCircle, ArrowLeft, Zap, ArrowRight, PackageCheck
 } from 'lucide-react';
 import { useTech } from '../../context/TechContext';
 import { useNotifications } from '../../context/NotificationContext';
@@ -541,35 +541,61 @@ const Dashboard = () => {
             </div>
 
             {/* Revisit Schedule Section */}
-            <div className="flex flex-col gap-1.5 mt-2">
+            <div className="flex flex-col gap-2 mt-3">
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2">
-                  <RotateCw className="w-4 h-4 text-[#E65100]" />
-                  <h3 className="text-sm font-bold text-[#052355]">Revisit Schedule</h3>
+                  <div className="w-7 h-7 rounded-xl bg-blue-50 text-[#0D47A1] flex items-center justify-center border border-blue-100/80 shadow-2xs">
+                    <RotateCw className="w-4 h-4 text-[#0D47A1]" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-black text-[#052355]">Revisit Schedule</h3>
+                    {revisitJobs.length > 0 && (
+                      <span className="px-2 py-0.5 rounded-full text-[10.5px] font-black bg-blue-100 text-[#0D47A1]">
+                        {revisitJobs.length}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
-              <p className="text-[10px] text-slate-500">Pending jobs requiring spare parts or follow-up visit</p>
+              <p className="text-[11px] text-slate-500 font-medium">Pending jobs requiring spare parts or follow-up visit</p>
 
               {revisitJobs.length > 0 ? (
-                <div className="flex flex-col gap-2.5 mt-1.5 md:grid md:grid-cols-2 xl:grid-cols-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5 mt-1">
                   {revisitJobs.map((job) => {
                     const isRevisitScheduled = job.activeStep === 'revisit_scheduled' || job.revisitScheduledDate;
                     const isRevisitOnTheWay = job.activeStep === 'revisit_ontheway';
                     const isRevisitArrived = job.activeStep === 'revisit_arrived';
 
-                    let statusBadgeLabel = 'Spare Part Pending';
-                    let statusBadgeStyle = 'bg-[#FFF3E0] text-[#E65100] border-[#FFE0B2]';
+                    // Dynamic badge styling based on revisit lifecycle
+                    let badgeBg = 'bg-amber-50 text-amber-800 border-amber-200/80';
+                    let dotBg = 'bg-amber-500';
+                    let statusLabel = 'Part Dispatch Pending';
+                    let actionLabel = 'Open Job';
+                    let borderAccent = 'border-l-amber-500';
 
                     if (isRevisitScheduled) {
-                      statusBadgeLabel = 'Spare Received — Revisit Scheduled';
-                      statusBadgeStyle = 'bg-blue-50 text-blue-700 border-blue-200';
+                      badgeBg = 'bg-blue-50 text-[#0D47A1] border-blue-200';
+                      dotBg = 'bg-[#0D47A1]';
+                      statusLabel = 'Spare Received • Scheduled';
+                      actionLabel = 'Start Revisit';
+                      borderAccent = 'border-l-[#0D47A1]';
                     } else if (isRevisitOnTheWay) {
-                      statusBadgeLabel = 'On The Way to Revisit';
-                      statusBadgeStyle = 'bg-amber-50 text-amber-700 border-amber-200';
+                      badgeBg = 'bg-emerald-50 text-emerald-800 border-emerald-200';
+                      dotBg = 'bg-emerald-500 animate-pulse';
+                      statusLabel = 'Driving to Customer';
+                      actionLabel = 'Continue Revisit';
+                      borderAccent = 'border-l-emerald-600';
                     } else if (isRevisitArrived) {
-                      statusBadgeLabel = 'At Customer Location';
-                      statusBadgeStyle = 'bg-purple-50 text-purple-700 border-purple-200';
+                      badgeBg = 'bg-purple-50 text-purple-700 border-purple-200';
+                      dotBg = 'bg-purple-500';
+                      statusLabel = 'Arrived at Location';
+                      actionLabel = 'Resume Service';
+                      borderAccent = 'border-l-purple-600';
                     }
+
+                    const dateDisplay = job.revisitScheduledDate
+                      ? new Date(job.revisitScheduledDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                      : null;
 
                     return (
                       <div 
@@ -578,42 +604,94 @@ const Dashboard = () => {
                           selectJobForDetails(job.id);
                           navigate('/technician/active-job');
                         }}
-                        className="bg-[#FFFDF9] border border-[#FFE0B2] rounded-2xl p-3.5 shadow-sm flex justify-between items-center cursor-pointer hover:shadow-md transition-all"
+                        className={`group bg-white rounded-[22px] p-4.5 shadow-[0_4px_20px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgba(13,71,161,0.08)] border border-slate-200/90 border-l-[5px] ${borderAccent} flex flex-col justify-between gap-3.5 transition-all duration-200 cursor-pointer hover:border-slate-300 hover:-translate-y-0.5`}
                       >
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-[#FFF3E0] flex items-center justify-center text-[#E65100] flex-shrink-0">
-                            <RotateCw className="w-4.5 h-4.5" />
-                          </div>
-                          <div>
-                            <h4 className="text-xs font-bold text-[#052355]">{job.product || job.category}</h4>
-                            <p className="text-[10px] text-slate-500 font-semibold mt-0.5">
-                              Customer: <span className="text-slate-800 font-bold">{job.customerName}</span>
-                            </p>
-                            {job.revisitScheduledDate && (
-                              <p className="text-[9.5px] font-bold text-slate-600 mt-0.5">
-                                📅 {new Date(job.revisitScheduledDate).toLocaleDateString()} {job.revisitTimeSlot ? `• ${job.revisitTimeSlot}` : ''}
-                              </p>
-                            )}
-                            <span className={`inline-block text-[9px] font-bold px-2 py-0.5 border rounded-full mt-1 ${statusBadgeStyle}`}>
-                              {statusBadgeLabel}
+                        {/* Top Meta Row */}
+                        <div>
+                          <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-slate-100">
+                            <div className="flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full bg-[#0D47A1]" />
+                              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                                {job.category || 'Revisit Job'}
+                              </span>
+                            </div>
+                            <span className={`inline-flex items-center gap-1.5 text-[10px] font-extrabold px-2.5 py-1 rounded-full border shadow-2xs ${badgeBg}`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${dotBg}`} />
+                              {statusLabel}
                             </span>
                           </div>
+
+                          {/* Product Title */}
+                          <h4 className="text-sm font-black text-[#052355] group-hover:text-[#0D47A1] transition-colors mt-2.5 leading-snug line-clamp-1">
+                            {job.product || job.category || 'Service Follow-up'}
+                          </h4>
+
+                          {/* Customer & Location Details */}
+                          <div className="flex flex-col gap-1 mt-2 text-xs">
+                            <div className="flex items-center gap-2 text-slate-600">
+                              <div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
+                                <User className="w-3 h-3 text-slate-500" />
+                              </div>
+                              <span className="font-bold text-slate-900 truncate">{job.customerName || 'Customer'}</span>
+                            </div>
+                            {job.address && (
+                              <div className="flex items-center gap-2 text-slate-500 text-[11px] font-medium">
+                                <div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
+                                  <MapPin className="w-3 h-3 text-slate-400" />
+                                </div>
+                                <span className="truncate">{job.address}</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[11px] font-bold text-[#052355] bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3 py-1.5 rounded-xl flex items-center gap-1 transition-colors">
-                            {isRevisitScheduled ? 'Start Revisit' : 'Open Job'}
-                            <ChevronRight className="w-3.5 h-3.5 text-[#052355]" />
+
+                        {/* Middle Schedule Capsule */}
+                        {dateDisplay && (
+                          <div className="bg-gradient-to-r from-blue-50/60 to-slate-50/80 border border-blue-100/70 rounded-xl px-3 py-2 flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className="w-7 h-7 rounded-lg bg-white shadow-2xs flex items-center justify-center shrink-0 text-[#0D47A1] border border-blue-100">
+                                <Calendar className="w-3.5 h-3.5" />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">Scheduled Time</p>
+                                <p className="text-xs font-black text-slate-800 truncate">
+                                  {dateDisplay} {job.revisitTimeSlot ? `• ${job.revisitTimeSlot}` : ''}
+                                </p>
+                              </div>
+                            </div>
+                            <span className="text-[10px] font-black text-[#0D47A1] bg-white border border-blue-200 px-2 py-0.5 rounded-md shrink-0 shadow-2xs">
+                              Confirmed
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Bottom CTA Button */}
+                        <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+                          <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1">
+                            <RotateCw className="w-3 h-3 text-[#0D47A1]" />
+                            Follow-up visit
                           </span>
+                          <button
+                            type="button"
+                            className="px-4 py-2 bg-[#0D47A1] hover:bg-[#1565C0] active:scale-95 text-white text-xs font-black rounded-xl flex items-center gap-1.5 shadow-sm shadow-[#0D47A1]/20 transition-all cursor-pointer"
+                          >
+                            <span>{actionLabel}</span>
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </div>
                     );
                   })}
                 </div>
               ) : (
-                <div className="bg-[#FFFDF9] border border-[#FFE0B2] rounded-2xl p-4 shadow-sm flex flex-col items-center justify-center text-center gap-1.5 mt-1.5">
-                  <RotateCw className="w-6 h-6 text-amber-400" />
-                  <p className="text-xs font-bold text-slate-700">No Revisit Jobs Scheduled</p>
-                  <p className="text-[10px] text-slate-400">Revisit requests assigned to you will appear here.</p>
+                <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs flex flex-col items-center justify-center text-center gap-2 mt-1">
+                  <div className="w-12 h-12 rounded-2xl bg-blue-50 text-[#0D47A1] flex items-center justify-center shadow-2xs">
+                    <RotateCw className="w-5 h-5" />
+                  </div>
+                  <p className="text-xs font-black text-slate-800">No Revisit Jobs Scheduled</p>
+                  <p className="text-[11px] text-slate-400 font-medium max-w-xs">
+                    Jobs requiring spare part replacements or follow-up customer visits will appear here.
+                  </p>
                 </div>
               )}
             </div>
