@@ -1,0 +1,30 @@
+name: Security Scan
+
+# Backstop for the pre-commit hook in .githooks/pre-commit. The hook only
+# protects machines that have run `git config core.hooksPath .githooks`, and
+# the malware this scans for arrived three times from two different developer
+# machines — so the same check runs here, where it cannot be bypassed with
+# --no-verify or skipped by an unconfigured clone.
+#
+# Deliberately has no `paths:` filter: the payload was appended to a frontend
+# build config, which the backend-only CI would never have looked at.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  malware-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # No dependencies to install — the scanner is dependency-free on purpose,
+      # so a compromised lockfile cannot disable the thing meant to catch it.
+      - name: Scan tracked files for injected loader signatures
+        run: node scripts/scan-malware.mjs

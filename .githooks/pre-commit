@@ -1,0 +1,14 @@
+#!/bin/sh
+# Blocks commits carrying the config-appender malware that was purged from this
+# repo's history on 2026-09-07. Lives in .githooks/ (not .git/hooks/) so it is
+# version-controlled and every clone gets it; enable with:
+#
+#   git config core.hooksPath .githooks
+#
+# Bypass with --no-verify only if you are certain a match is a false positive.
+
+if command -v node >/dev/null 2>&1; then
+  node "$(git rev-parse --show-toplevel)/scripts/scan-malware.mjs" --staged || exit 1
+else
+  echo "pre-commit: node not found — malware scan SKIPPED" >&2
+fi
