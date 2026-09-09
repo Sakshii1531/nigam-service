@@ -49,7 +49,7 @@ test.describe('City -> ASM', () => {
     const cityRes = await request.post('/api/v1/super-admin/cities', { ...auth, data: { name: cityName, state: 'UP' } });
     const city = (await cityRes.json()).data;
 
-    const asmRes = await request.post('/api/v1/super-admin/asms', { ...auth, data: { name: 'E2E ASM', city: city.id } });
+    const asmRes = await request.post('/api/v1/super-admin/asms', { ...auth, data: { name: 'E2E ASM', city: city.id, password: 'password123' } });
     const asm = (await asmRes.json()).data;
     expect(asm.name).toBe('E2E ASM');
   });
