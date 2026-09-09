@@ -6,7 +6,7 @@ function round2(n) {
 
 /**
  * Computes a charge breakdown from resolved inputs (a RateCard/ServiceCatalogItem's
- * laborRate + partsMarkupPercent, plus whatever parts/extras a technician added
+ * laborRate + partsMarkupPercent, plus whatever parts/extras a service provider added
  * during diagnosis) — pure function, no DB access. GST defaults to 18% flat
  * everywhere (GST_PERCENT_DEFAULT) — confirmed by the user; the frontend's 10%
  * sighting (BACKEND_CONTEXT.md §9) was mock-data inconsistency, not a real second rate.

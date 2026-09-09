@@ -9,8 +9,8 @@ const replacementApprovalSchema = new mongoose.Schema(
     product: String,
     model: String,
     reason: String,
-    techNotes: String,
-    technician: { type: mongoose.Schema.Types.ObjectId, ref: 'Technician', default: null },
+    serviceProviderNotes: String,
+    serviceProvider: { type: mongoose.Schema.Types.ObjectId, ref: 'ServiceProvider', default: null },
     status: {
       type: String,
       enum: ['Pending', 'Approved', 'Rejected', 'Info Requested'],

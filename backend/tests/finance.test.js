@@ -1,11 +1,10 @@
 /**
  * finance.test.js
  *
- * The four finance modules whose models existed but had no service or routes:
+ * The finance modules whose models existed but had no service or routes:
  *   1. Revenue              — aggregated commission/margin rows
- *   2. PartnerPayout        — money owed to a service partner
- *   3. BillingTransaction   — platform-side money movements
- *   4. GatewayTransaction   — raw payment-gateway log
+ *   2. BillingTransaction   — platform-side money movements
+ *   3. GatewayTransaction   — raw payment-gateway log
  *
  * Focus is on the invariants each service enforces (derived figures, terminal
  * states, double-settlement guards), not just CRUD happy paths.
@@ -18,10 +17,7 @@ import { createApp } from '../src/app.js';
 import { registerAllModels } from '../src/config/registerModels.js';
 import { ensureIndexes } from '../src/config/db.js';
 import { User } from '../src/modules/auth/user.model.js';
-import { City } from '../src/modules/super-admin/city.model.js';
-import { ServicePartner } from '../src/modules/super-admin/servicePartner.model.js';
 import { Revenue } from '../src/modules/super-admin/revenue.model.js';
-import { PartnerPayout } from '../src/modules/super-admin/partnerPayout.model.js';
 import { BillingTransaction } from '../src/modules/super-admin/billingTransaction.model.js';
 import { GatewayTransaction } from '../src/modules/super-admin/gatewayTransaction.model.js';
 import { AuditLog } from '../src/modules/super-admin/auditLog.model.js';
@@ -65,12 +61,6 @@ async function seedCustomer(name = 'Amit Sharma') {
   });
 }
 
-async function seedPartner(name = 'Care Tech Solutions') {
-  const city = await City.create({ name: `City ${counter++}`, state: 'UP' });
-  const partner = await ServicePartner.create({ name, city: city._id });
-  return { partner, city };
-}
-
 beforeAll(async () => {
   await registerAllModels();
   await mongoose.connect(TEST_DB_URI);
@@ -87,10 +77,7 @@ afterAll(async () => {
 beforeEach(async () => {
   await Promise.all([
     User.deleteMany({}),
-    City.deleteMany({}),
-    ServicePartner.deleteMany({}),
     Revenue.deleteMany({}),
-    PartnerPayout.deleteMany({}),
     BillingTransaction.deleteMany({}),
     GatewayTransaction.deleteMany({}),
     AuditLog.deleteMany({}),
@@ -202,125 +189,7 @@ describe('Revenue', () => {
   });
 });
 
-// ── 2. Partner payouts ────────────────────────────────────────────────────────
-
-describe('PartnerPayout', () => {
-  it('creates a payout, defaulting the region to the partner\'s own city', async () => {
-    const token = await seedSuperAdmin();
-    const { partner, city } = await seedPartner();
-
-    const res = await request(app)
-      .post('/api/v1/super-admin/payouts')
-      .set('Authorization', `Bearer ${token}`)
-      .send({ partner: partner.id, balance: 42500 })
-      .expect(201);
-
-    expect(res.body.data.partner.name).toBe('Care Tech Solutions');
-    expect(res.body.data.city.id).toBe(city.id);
-    expect(res.body.data.status).toBe('Pending Approval');
-  });
-
-  it('404s for an unknown partner', async () => {
-    const token = await seedSuperAdmin();
-    await request(app)
-      .post('/api/v1/super-admin/payouts')
-      .set('Authorization', `Bearer ${token}`)
-      .send({ partner: String(new mongoose.Types.ObjectId()), balance: 100 })
-      .expect(404);
-  });
-
-  it('settles a payout: records the amount, zeroes the balance, writes an audit entry', async () => {
-    const token = await seedSuperAdmin();
-    const { partner } = await seedPartner();
-    const payout = await PartnerPayout.create({ partner: partner._id, balance: 42500 });
-
-    const res = await request(app)
-      .patch(`/api/v1/super-admin/payouts/${payout.id}/pay`)
-      .set('Authorization', `Bearer ${token}`)
-      .expect(200);
-
-    expect(res.body.data.status).toBe('Paid');
-    expect(res.body.data.balance).toBe(0);
-    expect(res.body.data.lastPaidAmount).toBe(42500);
-    expect(res.body.data.lastPaidAt).toBeDefined();
-
-    const audit = await AuditLog.findOne({ type: 'Finance' });
-    expect(audit.action).toMatch(/Settled partner payout/);
-  });
-
-  it('refuses to settle twice — the guard against double-paying', async () => {
-    const token = await seedSuperAdmin();
-    const { partner } = await seedPartner();
-    const payout = await PartnerPayout.create({ partner: partner._id, balance: 100 });
-
-    await request(app)
-      .patch(`/api/v1/super-admin/payouts/${payout.id}/pay`)
-      .set('Authorization', `Bearer ${token}`)
-      .expect(200);
-
-    await request(app)
-      .patch(`/api/v1/super-admin/payouts/${payout.id}/pay`)
-      .set('Authorization', `Bearer ${token}`)
-      .expect(409);
-
-    const inDb = await PartnerPayout.findById(payout.id);
-    expect(inDb.lastPaidAmount).toBe(100);
-  });
-
-  it('refuses to settle a payout with nothing outstanding', async () => {
-    const token = await seedSuperAdmin();
-    const { partner } = await seedPartner();
-    const payout = await PartnerPayout.create({ partner: partner._id, balance: 0 });
-
-    await request(app)
-      .patch(`/api/v1/super-admin/payouts/${payout.id}/pay`)
-      .set('Authorization', `Bearer ${token}`)
-      .expect(400);
-  });
-
-  it('accrues onto a pending payout but never onto a settled one', async () => {
-    const token = await seedSuperAdmin();
-    const { partner } = await seedPartner();
-    const payout = await PartnerPayout.create({ partner: partner._id, balance: 100 });
-
-    const accrued = await request(app)
-      .patch(`/api/v1/super-admin/payouts/${payout.id}/accrue`)
-      .set('Authorization', `Bearer ${token}`)
-      .send({ amount: 50 })
-      .expect(200);
-    expect(accrued.body.data.balance).toBe(150);
-
-    await request(app)
-      .patch(`/api/v1/super-admin/payouts/${payout.id}/pay`)
-      .set('Authorization', `Bearer ${token}`)
-      .expect(200);
-
-    await request(app)
-      .patch(`/api/v1/super-admin/payouts/${payout.id}/accrue`)
-      .set('Authorization', `Bearer ${token}`)
-      .send({ amount: 25 })
-      .expect(409);
-  });
-
-  it('summarises outstanding vs settled', async () => {
-    const token = await seedSuperAdmin();
-    const { partner } = await seedPartner();
-    await PartnerPayout.create({ partner: partner._id, balance: 1000 });
-    await PartnerPayout.create({ partner: partner._id, balance: 500 });
-    await PartnerPayout.create({ partner: partner._id, balance: 0, status: 'Paid' });
-
-    const res = await request(app)
-      .get('/api/v1/super-admin/payouts/summary')
-      .set('Authorization', `Bearer ${token}`)
-      .expect(200);
-
-    expect(res.body.data.pendingAmount).toBe(1500);
-    expect(res.body.data.pendingCount).toBe(2);
-    expect(res.body.data.paidCount).toBe(1);
-  });
-});
-
-// ── 3. Billing transactions ───────────────────────────────────────────────────
+// ── 2. Billing transactions ───────────────────────────────────────────────────
 
 describe('BillingTransaction', () => {
   it('creates a transaction against a real user and resolves them on read', async () => {
@@ -416,7 +285,7 @@ describe('BillingTransaction', () => {
   });
 });
 
-// ── 4. Gateway transactions ───────────────────────────────────────────────────
+// ── 3. Gateway transactions ───────────────────────────────────────────────────
 
 describe('GatewayTransaction', () => {
   it('creates a transaction and resolves the customer', async () => {
@@ -549,7 +418,7 @@ describe('finance modules — authorization', () => {
     });
     const token = await loginAndVerify({ role: ROLES.CUSTOMER, identifier: '9600099999', password: 'password123' });
 
-    for (const path of ['revenue', 'payouts', 'billing', 'transactions']) {
+    for (const path of ['revenue', 'billing', 'transactions']) {
       await request(app).get(`/api/v1/super-admin/${path}`).expect(401);
       await request(app)
         .get(`/api/v1/super-admin/${path}`)
@@ -560,7 +429,7 @@ describe('finance modules — authorization', () => {
 
   it('routes /summary to the aggregate, not to the id lookup', async () => {
     const token = await seedSuperAdmin();
-    for (const path of ['revenue', 'payouts', 'billing', 'transactions']) {
+    for (const path of ['revenue', 'billing', 'transactions']) {
       const res = await request(app)
         .get(`/api/v1/super-admin/${path}/summary`)
         .set('Authorization', `Bearer ${token}`)

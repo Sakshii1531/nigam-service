@@ -1,33 +1,33 @@
-import { Technician } from './technician.model.js';
+import { ServiceProvider } from './serviceProvider.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { autoAssignPendingRequests } from '../service-requests/serviceRequest.service.js';
 
 const ONLINE = 'Available';
 
 /**
- * The technician's own online/offline switch.
+ * The service provider's own online/offline switch.
  *
  * Nothing could set this before: registration hardcodes 'Offline'
- * (technicianRegistration.routes.js) and the admin console only ever forces it
- * back to 'Offline' (adminTechnician.service.js). The only writer of
+ * (serviceProviderRegistration.routes.js) and the admin console only ever forces it
+ * back to 'Offline' (adminServiceProvider.service.js). The only writer of
  * 'Available' was the seed script and the /_dev test route. Since
- * rankTechnicians hard-filters on availability: 'Available', that meant a real
- * technician was never a candidate — auto-assignment silently found nobody and
+ * rankServiceProviders hard-filters on availability: 'Available', that meant a real
+ * service provider was never a candidate — auto-assignment silently found nobody and
  * the assignment console's shortlist came back empty.
  */
-export async function setAvailability(technicianId, availability) {
-  const technician = await Technician.findById(technicianId);
-  if (!technician) throw new ApiError(404, 'Technician not found');
-  if (availability === ONLINE && technician.status !== 'Active') {
+export async function setAvailability(serviceProviderId, availability) {
+  const serviceProvider = await ServiceProvider.findById(serviceProviderId);
+  if (!serviceProvider) throw new ApiError(404, 'Service Provider not found');
+  if (availability === ONLINE && serviceProvider.status !== 'Active') {
     throw new ApiError(
       409,
-      `Your account is ${technician.status} — an admin has to activate it before you can go online`,
+      `Your account is ${serviceProvider.status} — an admin has to activate it before you can go online`,
     );
   }
 
-  const wasOffline = technician.availability !== ONLINE;
-  technician.availability = availability;
-  await technician.save();
+  const wasOffline = serviceProvider.availability !== ONLINE;
+  serviceProvider.availability = availability;
+  await serviceProvider.save();
 
   // Coming online is exactly when a request that had no candidate at booking
   // time becomes assignable, so drain the backlog now instead of leaving it for
@@ -37,25 +37,25 @@ export async function setAvailability(technicianId, availability) {
       ? await autoAssignPendingRequests()
       : { assignedCount: 0, assigned: [] };
 
-  return { technician, autoAssigned };
+  return { serviceProvider, autoAssigned };
 }
 
-export async function getProfile(technicianId) {
-  const technician = await Technician.findById(technicianId).select('+payoutMethods.accountNo');
-  if (!technician) throw new ApiError(404, 'Technician not found');
-  return technician;
+export async function getProfile(serviceProviderId) {
+  const serviceProvider = await ServiceProvider.findById(serviceProviderId).select('+payoutMethods.accountNo');
+  if (!serviceProvider) throw new ApiError(404, 'Service Provider not found');
+  return serviceProvider;
 }
 
 const EDITABLE_FIELDS = ['name', 'phone', 'email', 'address', 'specs'];
 
-export async function updateProfile(technicianId, data) {
+export async function updateProfile(serviceProviderId, data) {
   const updates = {};
   for (const field of EDITABLE_FIELDS) {
     if (data[field] !== undefined) updates[field] = data[field];
   }
-  const technician = await Technician.findByIdAndUpdate(technicianId, updates, { new: true });
-  if (!technician) throw new ApiError(404, 'Technician not found');
-  return technician;
+  const serviceProvider = await ServiceProvider.findByIdAndUpdate(serviceProviderId, updates, { new: true });
+  if (!serviceProvider) throw new ApiError(404, 'Service Provider not found');
+  return serviceProvider;
 }
 
 function maskDetail(method) {
@@ -64,21 +64,21 @@ function maskDetail(method) {
   return method.detail;
 }
 
-export async function addPayoutMethod(technicianId, method) {
-  const technician = await Technician.findById(technicianId);
-  if (!technician) throw new ApiError(404, 'Technician not found');
+export async function addPayoutMethod(serviceProviderId, method) {
+  const serviceProvider = await ServiceProvider.findById(serviceProviderId);
+  if (!serviceProvider) throw new ApiError(404, 'Service Provider not found');
 
-  if (method.isPrimary) technician.payoutMethods.forEach((m) => { m.isPrimary = false; });
-  technician.payoutMethods.push({ ...method, detail: maskDetail(method) });
-  await technician.save();
-  return technician;
+  if (method.isPrimary) serviceProvider.payoutMethods.forEach((m) => { m.isPrimary = false; });
+  serviceProvider.payoutMethods.push({ ...method, detail: maskDetail(method) });
+  await serviceProvider.save();
+  return serviceProvider;
 }
 
-export async function removePayoutMethod(technicianId, methodId) {
-  const technician = await Technician.findById(technicianId);
-  if (!technician) throw new ApiError(404, 'Technician not found');
+export async function removePayoutMethod(serviceProviderId, methodId) {
+  const serviceProvider = await ServiceProvider.findById(serviceProviderId);
+  if (!serviceProvider) throw new ApiError(404, 'Service Provider not found');
 
-  technician.payoutMethods = technician.payoutMethods.filter((m) => String(m._id) !== methodId);
-  await technician.save();
-  return technician;
+  serviceProvider.payoutMethods = serviceProvider.payoutMethods.filter((m) => String(m._id) !== methodId);
+  await serviceProvider.save();
+  return serviceProvider;
 }

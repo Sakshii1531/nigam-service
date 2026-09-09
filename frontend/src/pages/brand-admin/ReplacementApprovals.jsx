@@ -23,8 +23,8 @@ function shape(approval) {
     product: approval.product || 'Product',
     model: approval.model || '—',
     reason: approval.reason || '—',
-    techNotes: approval.techNotes || '—',
-    tech: approval.technician?.name || 'Unassigned',
+    serviceProviderNotes: approval.serviceProviderNotes || '—',
+    serviceProvider: approval.serviceProvider?.name || 'Unassigned',
     date: approval.createdAt ? dateFormatter.format(new Date(approval.createdAt)) : '—',
     status: approval.status || 'Pending',
   };
@@ -91,7 +91,7 @@ const ReplacementApprovals = () => {
     <div className="min-h-screen bg-[#F1F5F9] flex relative">
       <Sidebar />
       <div className="flex-1 ml-64 flex flex-col">
-        <Topbar title="Replacement Approvals" subtitle="Review and approve product replacement requests raised by technicians" />
+        <Topbar title="Replacement Approvals" subtitle="Review and approve product replacement requests raised by serviceProviders" />
         <div className="p-5 space-y-5">
 
           <div className="grid grid-cols-4 gap-4">
@@ -142,12 +142,12 @@ const ReplacementApprovals = () => {
                       <div className="grid grid-cols-2 gap-2 text-xs mb-2">
                         <div><span className="text-[#94A3B8] font-semibold">Customer: </span><span className="text-[#1E293B] font-bold">{r.customer}</span></div>
                         <div><span className="text-[#94A3B8] font-semibold">Product: </span><span className="text-[#1E293B]">{r.product} ({r.model})</span></div>
-                        <div><span className="text-[#94A3B8] font-semibold">Technician: </span><span className="text-[#1E293B]">{r.tech}</span></div>
+                        <div><span className="text-[#94A3B8] font-semibold">ServiceProvider: </span><span className="text-[#1E293B]">{r.provider}</span></div>
                         <div><span className="text-[#94A3B8] font-semibold">Date: </span><span className="text-[#1E293B]">{r.date}</span></div>
                       </div>
                       <div className="bg-[#F8FAFC] rounded-lg p-2 text-[10px]">
                         <p className="font-semibold text-[#64748B] mb-0.5">Reason: <span className="text-[#1E293B]">{r.reason}</span></p>
-                        <p className="font-semibold text-[#64748B]">Tech Notes: <span className="text-[#1E293B]">{r.techNotes}</span></p>
+                        <p className="font-semibold text-[#64748B]">Tech Notes: <span className="text-[#1E293B]">{r.serviceProviderNotes}</span></p>
                       </div>
                     </div>
                     <div className="flex flex-col gap-1.5 ml-4">

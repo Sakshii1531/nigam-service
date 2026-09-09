@@ -1,13 +1,13 @@
 import { test, expect } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
 
-// The parts of the service flow that had no coverage at all: a technician
+// The parts of the service flow that had no coverage at all: a service provider
 // rejecting an assignment, spare part requests actually reaching an approver,
 // the revisit that a part approval schedules, how work is shared between more
-// than one technician, and collecting a booking advance successfully (only the
+// than one service provider, and collecting a booking advance successfully (only the
 // forged-signature case was covered before).
 //
-// Same /_dev fixture routes as technician.spec.js — they only mount under
+// Same /_dev fixture routes as service provider.spec.js — they only mount under
 // NODE_ENV=test.
 
 function uniquePhone() {
@@ -34,14 +34,14 @@ async function createCustomer(request) {
   return { id, phone, token };
 }
 
-async function createTechnician(request, { specs, availability = 'Available' }) {
+async function createServiceProvider(request, { specs, availability = 'Available' }) {
   const phone = uniquePhone();
-  const createRes = await request.post('/api/v1/_dev/test-technician', {
+  const createRes = await request.post('/api/v1/_dev/test-serviceProvider', {
     data: { phone, password: 'password123', specs, availability },
   });
-  const { technicianId } = (await createRes.json()).data;
-  const token = await loginAndVerify(request, { role: 'technician', identifier: phone, password: 'password123' });
-  return { phone, technicianId, token };
+  const { serviceProviderId } = (await createRes.json()).data;
+  const token = await loginAndVerify(request, { role: 'service_provider', identifier: phone, password: 'password123' });
+  return { phone, serviceProviderId, token };
 }
 
 async function createSuperAdmin(request) {
@@ -74,18 +74,18 @@ async function book(request, customer, categoryKey, extra = {}) {
   return (await res.json()).data;
 }
 
-test.describe('technician rejects an assignment', () => {
+test.describe('serviceProvider rejects an assignment', () => {
   test('releases the request, records the rejection, and frees the customer booking', async ({ request }) => {
     const { categoryKey, adminToken } = await isolatedCategory(request);
-    const tech = await createTechnician(request, { specs: [categoryKey] });
+    const provider = await createServiceProvider(request, { specs: [categoryKey] });
     const customer = await createCustomer(request);
 
-    const { serviceRequest, booking, technician } = await book(request, customer, categoryKey);
+    const { serviceRequest, booking, serviceProvider } = await book(request, customer, categoryKey);
     expect(serviceRequest.status).toBe('Assigned');
-    expect(technician.id).toBe(tech.technicianId);
+    expect(serviceProvider.id).toBe(provider.serviceProviderId);
 
-    const rejectRes = await request.post(`/api/v1/tech/jobs/reject/${serviceRequest.id}`, {
-      headers: { Authorization: `Bearer ${tech.token}` },
+    const rejectRes = await request.post(`/api/v1/service-provider/jobs/reject/${serviceRequest.id}`, {
+      headers: { Authorization: `Bearer ${provider.token}` },
       data: {},
     });
     expect(rejectRes.status()).toBe(200);
@@ -95,35 +95,35 @@ test.describe('technician rejects an assignment', () => {
     });
     const sr = (await srRes.json()).data;
     // Released from the decliner. Not asserted as null: the engine treats any
-    // available technician as a candidate, so a technician belonging to another
+    // available service provider as a candidate, so a service provider belonging to another
     // spec running in parallel may legitimately have picked it up already —
     // which is the behaviour we want, just not something a test can pin down.
-    expect(String(sr.technician?.id ?? sr.technician ?? '')).not.toBe(tech.technicianId);
-    // Wording is the service's to choose (it reads "Declined by technician — …");
+    expect(String(sr.serviceProvider?.id ?? sr.serviceProvider ?? '')).not.toBe(provider.serviceProviderId);
+    // Wording is the service's to choose (it reads "Declined by service provider — …");
     // what matters is that the decline is recorded on the timeline at all.
-    expect(sr.timeline.some((t) => /(declined|rejected) by technician/i.test(t.description || ''))).toBe(true);
+    expect(sr.timeline.some((t) => /(declined|rejected) by serviceProvider/i.test(t.description || ''))).toBe(true);
 
-    // The customer must stop seeing the technician who is not coming.
+    // The customer must stop seeing the service provider who is not coming.
     const bkRes = await request.get(`/api/v1/bookings/${booking.id}`, {
       headers: { Authorization: `Bearer ${customer.token}` },
     });
-    expect(String((await bkRes.json()).data.technician ?? '')).not.toBe(tech.technicianId);
+    expect(String((await bkRes.json()).data.serviceProvider ?? '')).not.toBe(provider.serviceProviderId);
 
     // And it must be gone from the decliner's own feed.
-    const feedRes = await request.get('/api/v1/tech/jobs/available', {
-      headers: { Authorization: `Bearer ${tech.token}` },
+    const feedRes = await request.get('/api/v1/service-provider/jobs/available', {
+      headers: { Authorization: `Bearer ${provider.token}` },
     });
     expect((await feedRes.json()).data.some((s) => s.id === serviceRequest.id)).toBe(false);
   });
 
-  test('will not hand the request straight back to the technician who declined it', async ({ request }) => {
+  test('will not hand the request straight back to the serviceProvider who declined it', async ({ request }) => {
     const { categoryKey, adminToken } = await isolatedCategory(request);
-    const tech = await createTechnician(request, { specs: [categoryKey] });
+    const provider = await createServiceProvider(request, { specs: [categoryKey] });
     const customer = await createCustomer(request);
     const { serviceRequest } = await book(request, customer, categoryKey);
 
-    await request.post(`/api/v1/tech/jobs/reject/${serviceRequest.id}`, {
-      headers: { Authorization: `Bearer ${tech.token}` },
+    await request.post(`/api/v1/service-provider/jobs/reject/${serviceRequest.id}`, {
+      headers: { Authorization: `Bearer ${provider.token}` },
       data: {},
     });
 
@@ -135,7 +135,7 @@ test.describe('technician rejects an assignment', () => {
     });
     if (retry.status() === 200) {
       const reassigned = (await retry.json()).data;
-      expect(String(reassigned.technician?.id ?? reassigned.technician)).not.toBe(tech.technicianId);
+      expect(String(reassigned.serviceProvider?.id ?? reassigned.serviceProvider)).not.toBe(provider.serviceProviderId);
     } else {
       expect(retry.status()).toBe(409);
     }
@@ -143,22 +143,22 @@ test.describe('technician rejects an assignment', () => {
 
   test('rejects a request that is not yours, and one already accepted', async ({ request }) => {
     const { categoryKey } = await isolatedCategory(request);
-    const mine = await createTechnician(request, { specs: [categoryKey] });
-    const stranger = await createTechnician(request, { specs: ['SomethingElse'] });
+    const mine = await createServiceProvider(request, { specs: [categoryKey] });
+    const stranger = await createServiceProvider(request, { specs: ['SomethingElse'] });
     const customer = await createCustomer(request);
     const { serviceRequest } = await book(request, customer, categoryKey);
 
-    const notYours = await request.post(`/api/v1/tech/jobs/reject/${serviceRequest.id}`, {
+    const notYours = await request.post(`/api/v1/service-provider/jobs/reject/${serviceRequest.id}`, {
       headers: { Authorization: `Bearer ${stranger.token}` },
       data: {},
     });
     expect(notYours.status()).toBe(403);
 
-    await request.post(`/api/v1/tech/jobs/accept/${serviceRequest.id}`, {
+    await request.post(`/api/v1/service-provider/jobs/accept/${serviceRequest.id}`, {
       headers: { Authorization: `Bearer ${mine.token}` },
       data: {},
     });
-    const tooLate = await request.post(`/api/v1/tech/jobs/reject/${serviceRequest.id}`, {
+    const tooLate = await request.post(`/api/v1/service-provider/jobs/reject/${serviceRequest.id}`, {
       headers: { Authorization: `Bearer ${mine.token}` },
       data: {},
     });
@@ -166,18 +166,18 @@ test.describe('technician rejects an assignment', () => {
   });
 });
 
-test.describe('more than one technician', () => {
-  test('a rejected request is handed to the other available technician', async ({ request }) => {
+test.describe('more than one serviceProvider', () => {
+  test('a rejected request is handed to the other available serviceProvider', async ({ request }) => {
     const { categoryKey, adminToken } = await isolatedCategory(request);
-    const first = await createTechnician(request, { specs: [categoryKey] });
-    const second = await createTechnician(request, { specs: [categoryKey] });
+    const first = await createServiceProvider(request, { specs: [categoryKey] });
+    const second = await createServiceProvider(request, { specs: [categoryKey] });
     const customer = await createCustomer(request);
 
-    const { serviceRequest, technician } = await book(request, customer, categoryKey);
-    const assigned = technician.id === first.technicianId ? first : second;
+    const { serviceRequest, serviceProvider } = await book(request, customer, categoryKey);
+    const assigned = serviceProvider.id === first.serviceProviderId ? first : second;
     const other = assigned === first ? second : first;
 
-    const rejectRes = await request.post(`/api/v1/tech/jobs/reject/${serviceRequest.id}`, {
+    const rejectRes = await request.post(`/api/v1/service-provider/jobs/reject/${serviceRequest.id}`, {
       headers: { Authorization: `Bearer ${assigned.token}` },
       data: {},
     });
@@ -190,63 +190,63 @@ test.describe('more than one technician', () => {
     });
     const sr = (await srRes.json()).data;
     expect(sr.status).toBe('Assigned');
-    expect(String(sr.technician.id ?? sr.technician)).toBe(other.technicianId);
+    expect(String(sr.serviceProvider.id ?? sr.serviceProvider)).toBe(other.serviceProviderId);
   });
 
-  test('workload spreads across technicians instead of stacking on the top-ranked one', async ({ request }) => {
+  test('workload spreads across serviceProviders instead of stacking on the top-ranked one', async ({ request }) => {
     const { categoryKey } = await isolatedCategory(request);
-    const a = await createTechnician(request, { specs: [categoryKey] });
-    const b = await createTechnician(request, { specs: [categoryKey] });
+    const a = await createServiceProvider(request, { specs: [categoryKey] });
+    const b = await createServiceProvider(request, { specs: [categoryKey] });
     const customer = await createCustomer(request);
 
     const assignees = [];
     for (let i = 0; i < 4; i += 1) {
-      const { technician } = await book(request, customer, categoryKey);
-      assignees.push(technician.id);
+      const { serviceProvider } = await book(request, customer, categoryKey);
+      assignees.push(serviceProvider.id);
     }
 
     // Assigned-but-unaccepted work counts toward the workload score, so four
     // bookings must not all land on whoever happened to rank first.
     expect(new Set(assignees).size).toBe(2);
-    const forA = assignees.filter((id) => id === a.technicianId).length;
-    const forB = assignees.filter((id) => id === b.technicianId).length;
+    const forA = assignees.filter((id) => id === a.serviceProviderId).length;
+    const forB = assignees.filter((id) => id === b.serviceProviderId).length;
     expect(Math.abs(forA - forB)).toBeLessThanOrEqual(1);
   });
 
-  test('an offline technician is never auto-assigned but can still be picked by an admin', async ({ request }) => {
+  test('an offline serviceProvider is never auto-assigned but can still be picked by an admin', async ({ request }) => {
     const { categoryKey, adminToken } = await isolatedCategory(request);
-    const offline = await createTechnician(request, { specs: [categoryKey], availability: 'Offline' });
+    const offline = await createServiceProvider(request, { specs: [categoryKey], availability: 'Offline' });
     const customer = await createCustomer(request);
 
-    const { serviceRequest, technician } = await book(request, customer, categoryKey);
-    // Whoever auto-assign picked, it cannot have been the offline technician.
-    // (It may pick an available technician from a spec running alongside this
-    // one — the engine considers any available technician a candidate.)
-    expect(String(technician?.id ?? '')).not.toBe(offline.technicianId);
+    const { serviceRequest, serviceProvider } = await book(request, customer, categoryKey);
+    // Whoever auto-assign picked, it cannot have been the offline service provider.
+    // (It may pick an available service provider from a spec running alongside this
+    // one — the engine considers any available service provider a candidate.)
+    expect(String(serviceProvider?.id ?? '')).not.toBe(offline.serviceProviderId);
 
     // The console still offers them, so a manual override is possible.
-    const suggestRes = await request.get(`/api/v1/service-requests/${serviceRequest.id}/technician-suggestions`, {
+    const suggestRes = await request.get(`/api/v1/service-requests/${serviceRequest.id}/service-provider-suggestions`, {
       headers: { Authorization: `Bearer ${adminToken}` },
     });
     const shortlist = (await suggestRes.json()).data;
-    const row = shortlist.find((t) => t.id === offline.technicianId);
+    const row = shortlist.find((t) => t.id === offline.serviceProviderId);
     expect(row).toBeTruthy();
     expect(row.availability).toBe('Offline');
 
     const assignRes = await request.patch(`/api/v1/service-requests/${serviceRequest.id}/assign`, {
       headers: { Authorization: `Bearer ${adminToken}` },
-      data: { technician: offline.technicianId },
+      data: { serviceProvider: offline.serviceProviderId },
     });
     expect(assignRes.status()).toBe(200);
   });
 
   test('coming online drains requests left unassigned', async ({ request }) => {
     const { categoryKey, adminToken } = await isolatedCategory(request);
-    const tech = await createTechnician(request, { specs: [categoryKey], availability: 'Offline' });
+    const provider = await createServiceProvider(request, { specs: [categoryKey], availability: 'Offline' });
     const customer = await createCustomer(request);
 
     // Created directly so it starts unassigned: booking would run auto-assign
-    // immediately, and an available technician from a parallel spec could take
+    // immediately, and an available service provider from a parallel spec could take
     // it before this test ever gets to the part it is checking.
     const srRes = await request.post('/api/v1/_dev/test-service-request', {
       data: { customerId: customer.id, category: categoryKey },
@@ -258,8 +258,8 @@ test.describe('more than one technician', () => {
     });
     expect((await before.json()).data.status).toBe('New');
 
-    const onlineRes = await request.patch('/api/v1/tech/profile/availability', {
-      headers: { Authorization: `Bearer ${tech.token}` },
+    const onlineRes = await request.patch('/api/v1/service-provider/profile/availability', {
+      headers: { Authorization: `Bearer ${provider.token}` },
       data: { availability: 'Available' },
     });
     expect(onlineRes.status()).toBe(200);
@@ -271,7 +271,7 @@ test.describe('more than one technician', () => {
     });
     const sr = (await after.json()).data;
     expect(sr.status).toBe('Assigned');
-    expect(sr.technician).toBeTruthy();
+    expect(sr.serviceProvider).toBeTruthy();
   });
 });
 
@@ -279,28 +279,28 @@ test.describe('spare part request reaches an approver', () => {
   /** Drives a job to the point where a spare part is needed. */
   async function jobAwaitingPart(request) {
     const { categoryKey, adminToken } = await isolatedCategory(request);
-    const tech = await createTechnician(request, { specs: [categoryKey] });
+    const provider = await createServiceProvider(request, { specs: [categoryKey] });
     const customer = await createCustomer(request);
     const { serviceRequest } = await book(request, customer, categoryKey);
-    const auth = { headers: { Authorization: `Bearer ${tech.token}` } };
+    const auth = { headers: { Authorization: `Bearer ${provider.token}` } };
 
-    const acceptRes = await request.post(`/api/v1/tech/jobs/accept/${serviceRequest.id}`, { ...auth, data: {} });
+    const acceptRes = await request.post(`/api/v1/service-provider/jobs/accept/${serviceRequest.id}`, { ...auth, data: {} });
     const jobId = (await acceptRes.json()).data.id;
-    await request.post(`/api/v1/tech/jobs/${jobId}/start-travel`, auth);
-    await request.post(`/api/v1/tech/jobs/${jobId}/arrive`, auth);
-    await request.post(`/api/v1/tech/jobs/${jobId}/diagnosis`, { ...auth, data: { notes: 'needs a part' } });
-    await request.post(`/api/v1/tech/jobs/${jobId}/spare-parts`, {
+    await request.post(`/api/v1/service-provider/jobs/${jobId}/start-travel`, auth);
+    await request.post(`/api/v1/service-provider/jobs/${jobId}/arrive`, auth);
+    await request.post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`, { ...auth, data: { notes: 'needs a part' } });
+    await request.post(`/api/v1/service-provider/jobs/${jobId}/spare-parts`, {
       ...auth,
       data: { parts: [{ name: 'Compressor', price: 3200, checked: true }], additionalServices: [] },
     });
-    return { jobId, srId: serviceRequest.id, tech, customer, adminToken, auth };
+    return { jobId, srId: serviceRequest.id, provider, customer, adminToken, auth };
   }
 
   test('a request raised against a job reaches the NCC queue', async ({ request }) => {
-    const { jobId, tech, adminToken } = await jobAwaitingPart(request);
+    const { jobId, provider, adminToken } = await jobAwaitingPart(request);
 
-    const poRes = await request.post('/api/v1/tech/inventory/part-orders', {
-      headers: { Authorization: `Bearer ${tech.token}` },
+    const poRes = await request.post('/api/v1/service-provider/inventory/part-orders', {
+      headers: { Authorization: `Bearer ${provider.token}` },
       data: { job: jobId, partName: 'Compressor', qty: 1, price: 3200, orderSource: 'NCC Warehouse' },
     });
     expect(poRes.status()).toBe(201);
@@ -317,9 +317,9 @@ test.describe('spare part request reaches an approver', () => {
   });
 
   test('approving it schedules the revisit and advances the request', async ({ request }) => {
-    const { jobId, srId, tech, adminToken } = await jobAwaitingPart(request);
-    const poRes = await request.post('/api/v1/tech/inventory/part-orders', {
-      headers: { Authorization: `Bearer ${tech.token}` },
+    const { jobId, srId, provider, adminToken } = await jobAwaitingPart(request);
+    const poRes = await request.post('/api/v1/service-provider/inventory/part-orders', {
+      headers: { Authorization: `Bearer ${provider.token}` },
       data: { job: jobId, partName: 'Compressor', qty: 1, price: 3200, orderSource: 'NCC Warehouse' },
     });
     const partOrder = (await poRes.json()).data;
@@ -330,8 +330,8 @@ test.describe('spare part request reaches an approver', () => {
     });
     expect(apprRes.status()).toBe(200);
 
-    const jobRes = await request.get(`/api/v1/tech/jobs/${jobId}`, {
-      headers: { Authorization: `Bearer ${tech.token}` },
+    const jobRes = await request.get(`/api/v1/service-provider/jobs/${jobId}`, {
+      headers: { Authorization: `Bearer ${provider.token}` },
     });
     const job = (await jobRes.json()).data;
     expect(job.activeStep).toBe('revisit_scheduled');
@@ -344,9 +344,9 @@ test.describe('spare part request reaches an approver', () => {
     expect((await srRes.json()).data.status).toBe('Spare Received');
   });
 
-  test('the technician can finish the revisit and get paid for it', async ({ request }) => {
-    const { jobId, srId, tech, customer, adminToken, auth } = await jobAwaitingPart(request);
-    const poRes = await request.post('/api/v1/tech/inventory/part-orders', {
+  test('the serviceProvider can finish the revisit and get paid for it', async ({ request }) => {
+    const { jobId, srId, provider, customer, adminToken, auth } = await jobAwaitingPart(request);
+    const poRes = await request.post('/api/v1/service-provider/inventory/part-orders', {
       ...auth,
       data: { job: jobId, partName: 'Compressor', qty: 1, price: 3200, orderSource: 'NCC Warehouse' },
     });
@@ -358,18 +358,18 @@ test.describe('spare part request reaches an approver', () => {
 
     // The return visit reuses the ordinary endpoints; the server aliases them
     // into the revisit branch.
-    const travel = await request.post(`/api/v1/tech/jobs/${jobId}/start-travel`, auth);
+    const travel = await request.post(`/api/v1/service-provider/jobs/${jobId}/start-travel`, auth);
     expect((await travel.json()).data.activeStep).toBe('revisit_ontheway');
-    const arrive = await request.post(`/api/v1/tech/jobs/${jobId}/arrive`, auth);
+    const arrive = await request.post(`/api/v1/service-provider/jobs/${jobId}/arrive`, auth);
     expect((await arrive.json()).data.activeStep).toBe('revisit_arrived');
-    const done = await request.post(`/api/v1/tech/jobs/${jobId}/repair-complete`, auth);
+    const done = await request.post(`/api/v1/service-provider/jobs/${jobId}/repair-complete`, auth);
     expect((await done.json()).data.activeStep).toBe('revisit_complete');
 
-    const billing = await request.post(`/api/v1/tech/jobs/${jobId}/billing`, auth);
+    const billing = await request.post(`/api/v1/service-provider/jobs/${jobId}/billing`, auth);
     expect(billing.status()).toBe(200);
     expect((await billing.json()).data.activeStep).toBe('revisit_billing');
 
-    const pay = await request.post(`/api/v1/tech/jobs/${jobId}/collect-payment`, { ...auth, data: { paymentMethod: 'Cash' } });
+    const pay = await request.post(`/api/v1/service-provider/jobs/${jobId}/collect-payment`, { ...auth, data: { paymentMethod: 'Cash' } });
     expect(pay.status()).toBe(200);
     expect((await pay.json()).data.job.activeStep).toBe('completed');
 
@@ -386,9 +386,9 @@ test.describe('spare part request reaches an approver', () => {
   });
 
   test('is closed to anyone who is not a super admin', async ({ request }) => {
-    const { tech } = await jobAwaitingPart(request);
+    const { provider } = await jobAwaitingPart(request);
     const res = await request.get('/api/v1/super-admin/part-orders', {
-      headers: { Authorization: `Bearer ${tech.token}` },
+      headers: { Authorization: `Bearer ${provider.token}` },
     });
     expect(res.status()).toBe(403);
   });
@@ -397,7 +397,7 @@ test.describe('spare part request reaches an approver', () => {
 test.describe('booking advance payment', () => {
   test('a verified signature marks the advance paid', async ({ request }) => {
     const { categoryKey } = await isolatedCategory(request);
-    await createTechnician(request, { specs: [categoryKey] });
+    await createServiceProvider(request, { specs: [categoryKey] });
     const customer = await createCustomer(request);
     const auth = { headers: { Authorization: `Bearer ${customer.token}` } };
 

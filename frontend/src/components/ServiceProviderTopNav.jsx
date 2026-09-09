@@ -5,19 +5,19 @@ import { useNotifications } from "../context/NotificationContext";
 import { useAuth } from "../context/AuthContext";
 
 /**
- * TechTopNav — Enhanced Sticky Top Navigation for Technician Panel (Desktop lg+).
+ * ServiceProviderTopNav — Enhanced Sticky Top Navigation for Service Provider Panel (Desktop lg+).
  */
-const TechTopNav = ({ activePage = "jobs" }) => {
+const ServiceProviderTopNav = ({ activePage = "jobs" }) => {
   const navigate = useNavigate();
   const { unreadCount } = useNotifications();
   const { user } = useAuth();
 
   const navItems = [
-    { id: "jobs",      label: "Jobs",      Icon: Briefcase,    path: "/technician/dashboard" },
-    { id: "requests",  label: "Requests",  Icon: ClipboardList,path: "/technician/raise-part-request?tab=claims" },
-    { id: "history",   label: "History",   Icon: History,      path: "/technician/history" },
-    { id: "schedule",  label: "Schedule",  Icon: Calendar,     path: "/technician/schedule" },
-    { id: "profile",   label: "Profile",   Icon: User,         path: "/technician/profile" },
+    { id: "jobs",      label: "Jobs",      Icon: Briefcase,    path: "/service-provider/dashboard" },
+    { id: "requests",  label: "Requests",  Icon: ClipboardList,path: "/service-provider/raise-part-request?tab=claims" },
+    { id: "history",   label: "History",   Icon: History,      path: "/service-provider/history" },
+    { id: "schedule",  label: "Schedule",  Icon: Calendar,     path: "/service-provider/schedule" },
+    { id: "profile",   label: "Profile",   Icon: User,         path: "/service-provider/profile" },
   ];
 
   const userInitial = user?.name ? user.name.charAt(0).toUpperCase() : "T";
@@ -30,7 +30,7 @@ const TechTopNav = ({ activePage = "jobs" }) => {
         {/* Brand */}
         <div
           className="flex items-center gap-2.5 cursor-pointer group flex-shrink-0"
-          onClick={() => navigate("/technician/dashboard")}
+          onClick={() => navigate("/service-provider/dashboard")}
         >
           <div className="w-8.5 h-8.5 bg-gradient-to-tr from-[#FFD400] to-[#FFE566] rounded-xl flex items-center justify-center shadow-md ring-2 ring-white/20 group-hover:scale-105 transition-transform duration-200">
             <Wrench className="h-4.5 w-4.5 text-[#051F42]" />
@@ -65,7 +65,7 @@ const TechTopNav = ({ activePage = "jobs" }) => {
         {/* Right Side: Bell + Avatar */}
         <div className="flex items-center gap-3 flex-shrink-0">
           <button
-            onClick={() => navigate("/technician/notifications")}
+            onClick={() => navigate("/service-provider/notifications")}
             className="relative w-10 h-10 rounded-xl bg-white/5 hover:bg-white/12 border border-white/10 flex items-center justify-center transition-all cursor-pointer group shadow-2xs"
             title="Notifications"
           >
@@ -78,7 +78,7 @@ const TechTopNav = ({ activePage = "jobs" }) => {
           </button>
 
           <div
-            onClick={() => navigate("/technician/profile")}
+            onClick={() => navigate("/service-provider/profile")}
             className="flex items-center gap-2.5 bg-white/5 hover:bg-white/12 border border-white/10 p-1 pr-3.5 rounded-full cursor-pointer transition-all group"
           >
             <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#FFD400] to-[#FFE566] text-[#051F42] font-black text-xs flex items-center justify-center shadow-md ring-2 ring-white/20 group-hover:ring-white/40 transition-all">
@@ -95,4 +95,4 @@ const TechTopNav = ({ activePage = "jobs" }) => {
   );
 };
 
-export default TechTopNav;
+export default ServiceProviderTopNav;

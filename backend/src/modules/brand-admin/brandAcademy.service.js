@@ -1,8 +1,8 @@
-import { TrainingGuide } from '../technician/trainingGuide.model.js';
-import { Course } from '../technician/course.model.js';
+import { TrainingGuide } from '../service-provider/trainingGuide.model.js';
+import { Course } from '../service-provider/course.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 
-// A brand's own technician-training library. Platform-wide content (brand: null)
+// A brand's own service provider-training library. Platform-wide content (brand: null)
 // is authored by super-admin and is deliberately NOT editable here — a brand can
 // only manage what it published itself.
 

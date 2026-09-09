@@ -49,7 +49,7 @@ notificationRouter.patch('/:id/read', validate(idParamSchema, 'params'), async (
 });
 
 // ── Admin ad-hoc dispatch ─────────────────────────────────────────────────────
-// Super-admin console composes one-off pushes/SMS (e.g. technician approval).
+// Super-admin console composes one-off pushes/SMS (e.g. service provider approval).
 
 notificationRouter.post(
   '/push',

@@ -4,7 +4,7 @@ import { applyStandardPlugins } from '../shared/plugins.js';
 const messageSchema = new mongoose.Schema(
   {
     conversation: { type: mongoose.Schema.Types.ObjectId, ref: 'Conversation', required: true, index: true },
-    sender: { type: String, enum: ['customer', 'technician', 'ai', 'agent'], required: true },
+    sender: { type: String, enum: ['customer', 'service_provider', 'ai', 'agent'], required: true },
     text: String,
     attachmentUrl: String,
     // The original filename, so the chat bubble can label the attachment

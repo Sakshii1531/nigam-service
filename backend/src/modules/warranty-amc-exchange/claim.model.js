@@ -2,12 +2,12 @@ import mongoose from 'mongoose';
 import { applyStandardPlugins } from '../shared/plugins.js';
 import { ID_PREFIXES } from '../../config/constants.js';
 
-// Raised by either a customer (extended-warranty/AMC/D2C claim) or a technician
+// Raised by either a customer (extended-warranty/AMC/D2C claim) or a service provider
 // (FOC parts claim) — polymorphic via raisedByModel/refPath rather than two collections,
 // since both flow through the same approve/reject pipeline (BACKEND_CONTEXT.md §3.7, §4.4).
 const claimSchema = new mongoose.Schema(
   {
-    raisedByModel: { type: String, enum: ['User', 'Technician'], required: true },
+    raisedByModel: { type: String, enum: ['User', 'ServiceProvider'], required: true },
     raisedBy: { type: mongoose.Schema.Types.ObjectId, required: true, refPath: 'raisedByModel', index: true },
     serviceRequest: { type: mongoose.Schema.Types.ObjectId, ref: 'ServiceRequest', default: null },
     brand: String, // e.g. "NCC Warehouse Order", "LG Partner Warranty", "NCC EW Claim"

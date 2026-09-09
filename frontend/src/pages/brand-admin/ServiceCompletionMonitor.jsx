@@ -21,7 +21,7 @@ function shape(r) {
     ref: r.humanId || r.id,
     customer: r.user?.name || 'Customer',
     product: r.category || '—',
-    tech: r.technician?.name || 'Unassigned',
+    serviceProvider: r.serviceProvider?.name || 'Unassigned',
     completedAt: r.updatedAt ? dateFormatter.format(new Date(r.updatedAt)) : '—',
     qcStatus: qcFor(r.status),
     feedbackStatus: r.feedbackStatus || 'Pending',
@@ -133,7 +133,7 @@ const ServiceCompletionMonitor = () => {
                     <th className="px-3 py-3">Job ID</th>
                     <th className="px-3 py-3">Customer</th>
                     <th className="px-3 py-3">Product</th>
-                    <th className="px-3 py-3">Technician</th>
+                    <th className="px-3 py-3">Service Provider</th>
                     <th className="px-3 py-3">Completed At</th>
                     <th className="px-3 py-3">QC Status</th>
                     <th className="px-3 py-3">Feedback</th>
@@ -156,7 +156,7 @@ const ServiceCompletionMonitor = () => {
                       <td className="px-3 py-3 text-[#0D47A1] font-semibold">{j.ref}</td>
                       <td className="px-3 py-3 font-semibold text-[#1E293B]">{j.customer}</td>
                       <td className="px-3 py-3 text-[#64748B]">{j.product}</td>
-                      <td className="px-3 py-3 text-[#64748B]">{j.tech}</td>
+                      <td className="px-3 py-3 text-[#64748B]">{j.provider}</td>
                       <td className="px-3 py-3 text-[#64748B]">{j.completedAt}</td>
                       <td className="px-3 py-3">
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${qcColors[j.qcStatus]}`}>{j.qcStatus}</span>
@@ -192,7 +192,7 @@ const ServiceCompletionMonitor = () => {
             <div className="p-5 space-y-3 text-xs">
               {[
                 ['Customer', selectedJob.customer], ['Product', selectedJob.product],
-                ['Technician', selectedJob.tech], ['Completed At', selectedJob.completedAt],
+                ['ServiceProvider', selectedJob.provider], ['Completed At', selectedJob.completedAt],
                 ['QC Status', selectedJob.qcStatus], ['Feedback', selectedJob.feedbackStatus],
                 ['Rating', selectedJob.rating ? `★ ${selectedJob.rating}` : 'Not yet received'],
               ].map(([k, v]) => (

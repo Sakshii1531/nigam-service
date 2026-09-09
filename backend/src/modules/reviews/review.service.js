@@ -35,7 +35,7 @@ export async function createReview(userId, { serviceRequest, rating, categoryRat
   return Review.create({
     serviceRequest,
     user: userId,
-    technician: sr.technician,
+    serviceProvider: sr.serviceProvider,
     rating,
     categoryRatings,
     tags,
@@ -51,8 +51,8 @@ export async function getReview(id) {
   return review;
 }
 
-export async function listTechnicianReviews(technicianId, { page, limit, sort } = {}) {
-  const query = { technician: technicianId };
+export async function listServiceProviderReviews(serviceProviderId, { page, limit, sort } = {}) {
+  const query = { serviceProvider: serviceProviderId };
   const { skip, limit: lim, page: pg, sort: sortObj } = parsePagination({ page, limit, sort });
   const [items, total] = await Promise.all([
     Review.find(query).sort(sortObj).skip(skip).limit(lim),
@@ -81,7 +81,7 @@ export async function listBrandReviews(brandId, { status, page, limit, sort } = 
   const [items, total] = await Promise.all([
     Review.find(query)
       .populate('user', 'name')
-      .populate('technician', 'name')
+      .populate('serviceProvider', 'name')
       .populate('serviceRequest', 'humanId applianceCategory')
       .sort(sortObj)
       .skip(skip)
@@ -220,12 +220,12 @@ export async function deleteAdminFeaturedReview(id) {
 
 // ─── Customer Service Rating ────────────────────────────────────────────────
 
-export async function submitServiceRating(userId, { serviceId, bookingId, serviceRequestId, technicianRating, platformRating, rating, comment }) {
-  const techRatingNum = Number(technicianRating);
+export async function submitServiceRating(userId, { serviceId, bookingId, serviceRequestId, serviceProviderRating, platformRating, rating, comment }) {
+  const serviceProviderRatingNum = Number(serviceProviderRating);
   const platRatingNum = Number(platformRating);
 
-  if (!techRatingNum || techRatingNum < 1 || techRatingNum > 5) {
-    throw new ApiError(400, 'Technician rating must be between 1 and 5');
+  if (!serviceProviderRatingNum || serviceProviderRatingNum < 1 || serviceProviderRatingNum > 5) {
+    throw new ApiError(400, 'ServiceProvider rating must be between 1 and 5');
   }
   if (!platRatingNum || platRatingNum < 1 || platRatingNum > 5) {
     throw new ApiError(400, 'Platform rating must be between 1 and 5');
@@ -282,15 +282,15 @@ export async function submitServiceRating(userId, { serviceId, bookingId, servic
     throw new ApiError(409, 'Rating has already been submitted for this service');
   }
 
-  const technicianId = serviceDoc.technician?._id || serviceDoc.technician || null;
-  const overallRating = Number(rating) || Number(((techRatingNum + platRatingNum) / 2).toFixed(1));
+  const serviceProviderId = serviceDoc.serviceProvider?._id || serviceDoc.serviceProvider || null;
+  const overallRating = Number(rating) || Number(((serviceProviderRatingNum + platRatingNum) / 2).toFixed(1));
 
   const newReview = await Review.create({
     user: userId,
     booking: booking?._id || null,
     serviceRequest: serviceRequest?._id || null,
-    technician: technicianId,
-    technicianRating: techRatingNum,
+    serviceProvider: serviceProviderId,
+    serviceProviderRating: serviceProviderRatingNum,
     platformRating: platRatingNum,
     rating: overallRating,
     comment: (comment || '').trim(),
@@ -340,7 +340,7 @@ export async function getServiceRatingStatus(userId, serviceId) {
     rated: true,
     rating: {
       id: String(review._id),
-      technicianRating: review.technicianRating || review.rating || 5,
+      serviceProviderRating: review.serviceProviderRating || review.rating || 5,
       platformRating: review.platformRating || review.rating || 5,
       rating: review.rating || 5,
       comment: review.comment || '',

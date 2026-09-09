@@ -6,7 +6,7 @@ import { applyStandardPlugins } from '../shared/plugins.js';
 const liveTrackingSchema = new mongoose.Schema(
   {
     job: { type: mongoose.Schema.Types.ObjectId, ref: 'Job', required: true, unique: true },
-    technician: { type: mongoose.Schema.Types.ObjectId, ref: 'Technician', required: true, index: true },
+    serviceProvider: { type: mongoose.Schema.Types.ObjectId, ref: 'ServiceProvider', required: true, index: true },
     status: { type: String, enum: ['On the way', 'Repairing', 'Completed'], default: 'On the way' },
     eta: String,
     location: String,

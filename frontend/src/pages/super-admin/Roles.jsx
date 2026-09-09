@@ -23,7 +23,7 @@ import {
 // untouched on every save so this screen never silently revokes them.
 const MATRIX = [
   { key: 'users', label: 'Manage Users', desc: 'Can view, edit, suspend, and delete customers.' },
-  { key: 'techs', label: 'Manage Technicians', desc: 'Can approve, suspend, and assign jobs to techs.' },
+  { key: 'techs', label: 'Manage ServiceProviders', desc: 'Can approve, suspend, and assign jobs to techs.' },
   { key: 'brands', label: 'Manage Brands', desc: 'Can approve brands and manage their requests.' },
   { key: 'billing', label: 'Manage Billing', desc: 'Can view transactions, process refunds, and payouts.' },
   { key: 'settings', label: 'Manage System Settings', desc: 'Full access to app configuration and logs.' },
@@ -287,7 +287,7 @@ const Roles = () => {
                 
                 {[
                   { key: 'users', label: 'Manage Users' },
-                  { key: 'techs', label: 'Manage Technicians' },
+                  { key: 'techs', label: 'Manage ServiceProviders' },
                   { key: 'brands', label: 'Manage Brands' },
                   { key: 'billing', label: 'Manage Billing' },
                   { key: 'settings', label: 'Manage System Settings' },

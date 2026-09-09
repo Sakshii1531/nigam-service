@@ -55,7 +55,7 @@ const Notifications = () => {
   }, []);
 
   // Reach is audience-specific: showing platform-wide device counts while the
-  // admin has "Technicians" selected overstates who this will actually land on.
+  // admin has "ServiceProviders" selected overstates who this will actually land on.
   const loadStats = React.useCallback(async (audience) => {
     try {
       const stats = await apiRequest(
@@ -141,7 +141,7 @@ const Notifications = () => {
       {/* Main Content */}
       <div className="flex-1 ml-64 min-h-screen flex flex-col">
         {/* Topbar */}
-        <Topbar title="Broadcast & Push Notification Center" subtitle="Send real-time alerts, push notifications, and WhatsApp updates to clients, technicians, and brand managers" />
+        <Topbar title="Broadcast & Push Notification Center" subtitle="Send real-time alerts, push notifications, and WhatsApp updates to clients, serviceProviders, and brand managers" />
 
         {/* Body */}
         <div className="p-6 space-y-6 flex-1 flex flex-col text-left">
@@ -200,7 +200,7 @@ const Notifications = () => {
                       {[
                         { id: 'All', label: 'All Users', icon: <Users size={12} /> },
                         { id: 'Customers', label: 'Customers', icon: <Users size={12} /> },
-                        { id: 'Technicians', label: 'Technicians', icon: <UserCheck size={12} /> },
+                        { id: 'ServiceProviders', label: 'ServiceProviders', icon: <UserCheck size={12} /> },
                         { id: 'Brands', label: 'Brand Admins', icon: <Building size={12} /> }
                       ].map((t) => (
                         <button
@@ -377,7 +377,7 @@ const Notifications = () => {
                           <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
                             log.target === 'All' ? 'bg-blue-50 text-blue-700' :
                             log.target === 'Users' || log.target === 'Customers' ? 'bg-emerald-50 text-emerald-700' :
-                            log.target === 'Technicians' ? 'bg-amber-50 text-amber-700' :
+                            log.target === 'ServiceProviders' ? 'bg-amber-50 text-amber-700' :
                             'bg-purple-50 text-purple-700'
                           }`}>
                             To: {log.target}

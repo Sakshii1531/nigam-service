@@ -35,7 +35,7 @@ const TechnicalSupport = () => {
         if (cancelled) return;
         setSupportChatMessages((history || []).map((m) => ({
           id: m.id,
-          sender: m.sender === 'technician' ? 'user' : 'agent',
+          sender: m.sender === 'service_provider' ? 'user' : 'agent',
           text: m.text,
         })));
 
@@ -47,7 +47,7 @@ const TechnicalSupport = () => {
           setSupportChatMessages((prev) => (
             prev.some((x) => x.id === m.id)
               ? prev
-              : [...prev, { id: m.id, sender: m.sender === 'technician' ? 'user' : 'agent', text: m.text }]
+              : [...prev, { id: m.id, sender: m.sender === 'service_provider' ? 'user' : 'agent', text: m.text }]
           ));
         });
         socket.on('connect_error', () => setChatError('Lost connection to support.'));

@@ -8,7 +8,7 @@ import {
   createReviewSchema,
   respondSchema,
   idParamSchema,
-  technicianIdParamSchema,
+  serviceProviderIdParamSchema,
   listQuerySchema,
   brandListQuerySchema,
 } from './review.validation.js';
@@ -49,11 +49,11 @@ reviewRouter.delete('/featured-admin/:id', requireAuth, requireRole('super_admin
 });
 
 
-// Public — customers browsing a technician's profile / brand-admin dashboards
+// Public — customers browsing a service provider's profile / brand-admin dashboards
 // read reviews without needing their own account.
-reviewRouter.get('/technicians/:technicianId', validate(technicianIdParamSchema, 'params'), validate(listQuerySchema, 'query'), async (req, res, next) => {
+reviewRouter.get('/service-providers/:serviceProviderId', validate(serviceProviderIdParamSchema, 'params'), validate(listQuerySchema, 'query'), async (req, res, next) => {
   try {
-    const { items, meta } = await reviewService.listTechnicianReviews(req.params.technicianId, req.query);
+    const { items, meta } = await reviewService.listServiceProviderReviews(req.params.serviceProviderId, req.query);
     ok(res, items, meta);
   } catch (err) {
     next(err);

@@ -6,7 +6,7 @@ import { apiRequest } from '../../lib/apiClient';
 import { SearchableSelect } from '../../components/common/SearchableSelect';
 import { STATE_CITIES } from '../../utils/indiaGeoData';
 
-const TechApply = () => {
+const ServiceProviderApply = () => {
   const navigate = useNavigate();
   const [form, setForm] = useState({
     name: '',
@@ -52,9 +52,9 @@ const TechApply = () => {
     // Strictly load cities & service categories configured in the Admin Panel
     async function loadFormMetadata() {
       try {
-        // Use the public endpoint — no auth token required for technician registration
+        // Use the public endpoint — no auth token required for service provider registration
         const cityData = await apiRequest('/super-admin/cities/public');
-        // The name is what /tech/register matches on; the state is shown beside
+        // The name is what /service-provider/register matches on; the state is shown beside
         // it so an applicant can tell two same-named cities apart.
         const cityList = (Array.isArray(cityData) ? cityData : [])
           .filter((c) => c?.name)
@@ -70,7 +70,7 @@ const TechApply = () => {
       }
 
       try {
-        // The services a technician can pick are the ones merchandised on the
+        // The services a service provider can pick are the ones merchandised on the
         // customer home screen, read from the CMS rather than another browser's
         // localStorage — which only ever worked on the admin's own machine.
         let serviceList = [];
@@ -274,7 +274,7 @@ const TechApply = () => {
       formData.append('specs', JSON.stringify(selectedServices));
       formData.append('aadharFront', aadharFront);
       formData.append('aadharBack', aadharBack);
-      await apiRequest('/tech/register', { method: 'POST', body: formData });
+      await apiRequest('/service-provider/register', { method: 'POST', body: formData });
     } catch (err) {
       setError(err.message || 'Could not submit your application. Please try again.');
       return;
@@ -283,7 +283,7 @@ const TechApply = () => {
     setSubmitted(true);
     setTimeout(() => {
       setSubmitted(false);
-      navigate('/technician/login');
+      navigate('/service-provider/login');
     }, 2000);
   };
 
@@ -299,7 +299,7 @@ const TechApply = () => {
         {/* Header */}
         <div className="flex items-center mb-2">
           <button 
-            onClick={() => navigate('/technician/login')}
+            onClick={() => navigate('/service-provider/login')}
             className="p-2 hover:bg-slate-50 rounded-full transition-all border border-transparent hover:border-slate-100"
           >
             <ArrowLeft className="h-5 w-5 text-[#0D47A1]" />
@@ -679,4 +679,4 @@ const TechApply = () => {
   );
 };
 
-export default TechApply;
+export default ServiceProviderApply;

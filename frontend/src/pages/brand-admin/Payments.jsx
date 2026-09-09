@@ -26,7 +26,7 @@ function shapePayment(p) {
 function shapePayout(p) {
   return {
     id: p.id,
-    party: p.technician?.name || 'Technician',
+    party: p.serviceProvider?.name || 'ServiceProvider',
     complaintId: p.job?.serviceRequest?.humanId || '—',
     jobsCompleted: 1,
     amount: currency.format(p.netAmount || 0),
@@ -72,7 +72,7 @@ const Payments = () => {
   const [successMsg, setSuccessMsg] = useState('');
 
   const [customerPayments, setCustomerPayments] = useState([]);
-  const [techPayouts, setTechPayouts] = useState([]);
+  const [serviceProviderPayouts, setTechPayouts] = useState([]);
   const [dues, setDues] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -104,12 +104,12 @@ const Payments = () => {
     return () => { cancelled = true; };
   }, []);
 
-  const tabs = ['Customer Payments', 'Technician Payouts', 'Pending Dues'];
+  const tabs = ['Customer Payments', 'ServiceProvider Payouts', 'Pending Dues'];
 
   // Pending Dues is its own server-side view (unsettled invoices), not a
   // client-side filter over the other two tabs.
   const activeData = tab === 'Customer Payments' ? customerPayments :
-    tab === 'Technician Payouts' ? techPayouts : dues;
+    tab === 'ServiceProvider Payouts' ? serviceProviderPayouts : dues;
 
   const filtered = activeData.filter(p => {
     const matchSearch = p.party.toLowerCase().includes(searchQ.toLowerCase()) || p.id.toLowerCase().includes(searchQ.toLowerCase());
@@ -119,7 +119,7 @@ const Payments = () => {
 
   const summaryCards = [
     { label: 'Total Collected', value: '₹40,30,020', sub: 'This month', bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-600' },
-    { label: 'Total Paid Out', value: '₹8,24,320', sub: 'To technicians', bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-600' },
+    { label: 'Total Paid Out', value: '₹8,24,320', sub: 'To serviceProviders', bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-600' },
     { label: 'Outstanding Dues', value: '₹9,910', sub: '2 pending', bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-600' },
     { label: 'Overdue Amount', value: '₹3,186', sub: '1 overdue', bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-600' },
   ];
@@ -128,7 +128,7 @@ const Payments = () => {
     <div className="min-h-screen bg-[#F1F5F9] flex relative">
       <Sidebar />
       <div className="flex-1 ml-64 flex flex-col">
-        <Topbar title="Payments" subtitle="Track customer payments, technician payouts, and pending dues" />
+        <Topbar title="Payments" subtitle="Track customer payments, serviceProvider payouts, and pending dues" />
         <div className="p-5 space-y-5">
 
           {/* Summary cards */}
@@ -173,9 +173,9 @@ const Payments = () => {
                 <thead className="bg-[#F8FAFC] text-[#64748B] text-[10px] uppercase">
                   <tr>
                     <th className="px-3 py-3">Pay ID</th>
-                    <th className="px-3 py-3">{tab === 'Technician Payouts' ? 'Technician' : 'Customer'}</th>
-                    {tab !== 'Technician Payouts' && <th className="px-3 py-3">Complaint ID</th>}
-                    {tab === 'Technician Payouts' && <th className="px-3 py-3">Jobs Completed</th>}
+                    <th className="px-3 py-3">{tab === 'ServiceProvider Payouts' ? 'ServiceProvider' : 'Customer'}</th>
+                    {tab !== 'ServiceProvider Payouts' && <th className="px-3 py-3">Complaint ID</th>}
+                    {tab === 'ServiceProvider Payouts' && <th className="px-3 py-3">Jobs Completed</th>}
                     <th className="px-3 py-3">Amount</th>
                     <th className="px-3 py-3">Mode</th>
                     <th className="px-3 py-3">Date</th>
@@ -197,8 +197,8 @@ const Payments = () => {
                     <tr key={i} className="hover:bg-[#F8FAFC] transition-colors">
                       <td className="px-3 py-3 text-[#0D47A1] font-semibold">{p.id}</td>
                       <td className="px-3 py-3 font-semibold text-[#1E293B]">{p.party}</td>
-                      {tab !== 'Technician Payouts' && <td className="px-3 py-3 text-[#64748B]">{p.complaintId || '—'}</td>}
-                      {tab === 'Technician Payouts' && <td className="px-3 py-3 text-[#64748B]">{p.jobsCompleted}</td>}
+                      {tab !== 'ServiceProvider Payouts' && <td className="px-3 py-3 text-[#64748B]">{p.complaintId || '—'}</td>}
+                      {tab === 'ServiceProvider Payouts' && <td className="px-3 py-3 text-[#64748B]">{p.jobsCompleted}</td>}
                       <td className="px-3 py-3 font-bold text-[#1E293B]">{p.amount}</td>
                       <td className="px-3 py-3">
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${modeColors[p.mode] || 'bg-gray-100 text-gray-700'}`}>{p.mode}</span>

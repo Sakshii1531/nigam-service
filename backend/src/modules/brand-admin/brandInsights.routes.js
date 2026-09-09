@@ -28,9 +28,9 @@ brandInsightsRouter.get('/customers', validate(listCustomersQuerySchema, 'query'
   }
 });
 
-brandInsightsRouter.get('/technicians', validate(listPaginatedQuerySchema, 'query'), async (req, res, next) => {
+brandInsightsRouter.get('/service-providers', validate(listPaginatedQuerySchema, 'query'), async (req, res, next) => {
   try {
-    const { items, meta } = await brandInsights.listBrandTechnicians(req.user.brand, req.query);
+    const { items, meta } = await brandInsights.listBrandServiceProviders(req.user.brand, req.query);
     ok(res, items, meta);
   } catch (err) {
     next(err);
@@ -141,7 +141,7 @@ brandInsightsRouter.get('/payments/customer', validate(listPaymentsQuerySchema, 
 
 brandInsightsRouter.get('/payments/payouts', validate(listPayoutsQuerySchema, 'query'), async (req, res, next) => {
   try {
-    const { items, meta } = await brandInsights.listBrandTechnicianPayouts(req.user.brand, req.query);
+    const { items, meta } = await brandInsights.listBrandServiceProviderPayouts(req.user.brand, req.query);
     ok(res, items, meta);
   } catch (err) {
     next(err);

@@ -19,9 +19,9 @@ import washingIconImg from '../assets/categories/wasing.png';
 import cleaningIconImg from '../assets/categories/cleaning.png';
 import tvImg from '../assets/categories/television.png';
 import roImg from '../assets/categories/water_purifier.png';
-import techImg1 from '../assets/working/Gemini_Generated_Image_h5cyvch5cyvch5cy-removebg-preview.png';
-import techImg2 from '../assets/working/Gemini_Generated_Image_kutaj9kutaj9kuta-removebg-preview.png';
-import techImg3 from '../assets/working/Gemini_Generated_Image_p3wn1kp3wn1kp3wn-removebg-preview.png';
+import serviceProviderImg1 from '../assets/working/Gemini_Generated_Image_h5cyvch5cyvch5cy-removebg-preview.png';
+import serviceProviderImg2 from '../assets/working/Gemini_Generated_Image_kutaj9kutaj9kuta-removebg-preview.png';
+import serviceProviderImg3 from '../assets/working/Gemini_Generated_Image_p3wn1kp3wn1kp3wn-removebg-preview.png';
 import { apiRequest } from '../lib/apiClient';
 
 // ─── Service config ───────────────────────────────────────────────────────────
@@ -52,7 +52,7 @@ const SERVICE_CONFIG = {
   },
   'AC Repair': {
     tagline: 'Cool Again Today',
-    subtitle: 'Certified AC Technicians\nFor All Brands',
+    subtitle: 'Certified AC ServiceProviders\nFor All Brands',
     bannerImg: acBanner,
     subServices: [
       { name: 'Book a consultation', img: acIconImg },
@@ -91,7 +91,7 @@ const SERVICE_CATALOG = [
           'Not sure where to start?',
           'Book a consultation to discuss your needs, get a detailed quote, source materials, and enjoy seamless execution.',
         ],
-        img: techImg1,
+        img: serviceProviderImg1,
       },
     ],
   },
@@ -673,10 +673,10 @@ const ServiceDetails = () => {
 
                 <div className="h-px bg-slate-100" />
 
-                {/* Vetted Technicians Banner */}
+                {/* Vetted ServiceProviders Banner */}
                 <div className="rounded-2xl overflow-hidden bg-[#1a2744] flex items-center relative" style={{minHeight: '140px'}}>
                   <div className="flex-1 px-4 py-5 z-10">
-                    <p className="text-white text-[15px] font-extrabold mb-3 leading-tight">Vetted Technicians</p>
+                    <p className="text-white text-[15px] font-extrabold mb-3 leading-tight">Vetted ServiceProviders</p>
                     {[
                       'Trusted for Quality',
                       'Background Verified',
@@ -692,7 +692,7 @@ const ServiceDetails = () => {
                   <div className="flex-shrink-0 w-28 h-full flex items-end justify-center overflow-hidden">
                     <img
                       src={detailItem.img}
-                      alt="technician"
+                      alt="service provider"
                       className="h-36 w-28 object-contain object-bottom"
                     />
                   </div>
@@ -705,7 +705,7 @@ const ServiceDetails = () => {
                   <h3 className="text-[13px] font-extrabold text-slate-900 mb-2">Frequently Asked Questions</h3>
                   <div className="flex flex-col">
                     {(detailItem.faqs || [
-                      { q: 'What is included in this consultation?', a: 'The technician will assess your requirements, provide a quote, and suggest the best solution for your needs.' },
+                      { q: 'What is included in this consultation?', a: 'The serviceProvider will assess your requirements, provide a quote, and suggest the best solution for your needs.' },
                       { q: 'Will the electrician perform repairs during the consultation?', a: 'The consultation is for assessment and quoting. Repairs are done only after your approval.' },
                       { q: 'Does the consultation fee include service work?', a: 'No, the consultation fee is separate. The service fee is charged only after you approve the quote.' },
                       { q: 'Will the consultation fee be adjusted in the final bill?', a: 'Yes, the consultation fee will be adjusted against the final service bill if you proceed.' },

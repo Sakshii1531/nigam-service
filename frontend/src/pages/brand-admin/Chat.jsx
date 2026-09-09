@@ -50,7 +50,7 @@ function shapeConversation(c) {
 }
 
 const Chat = () => {
-  const [activeChannel, setActiveChannel] = useState('cust-1'); // 'cust-1', 'tech-1'
+  const [activeChannel, setActiveChannel] = useState('cust-1'); // 'cust-1', 'service-provider-1'
   const [inputText, setInputText] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -107,7 +107,7 @@ const Chat = () => {
   useEffect(() => {
     const socket = socketRef.current;
     if (!activeChannel || !socket) return undefined;
-    // 'cust-1'/'tech-1' are the placeholder channel ids this screen starts on
+    // 'cust-1'/'service-provider-1' are the placeholder channel ids this screen starts on
     // until a real conversation is opened. Sending those to the API asks Mongo
     // to cast them to an ObjectId, which failed the request outright.
     if (!/^[0-9a-fA-F]{24}$/.test(activeChannel)) return undefined;
@@ -166,7 +166,7 @@ const Chat = () => {
   const templates = [
     'We are verifying the warranty coverage for your selected parts. Will update shortly.',
     'Spare part has been approved and dispatched to local warehouse hub.',
-    'Technician has been notified to coordinate visit directly with you.',
+    'Service Provider has been notified to coordinate visit directly with you.',
     'Please upload clear photos of the appliance model serial number plate.'
   ];
 
@@ -213,7 +213,7 @@ const Chat = () => {
                   }`}
                 >
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white flex-shrink-0 relative ${
-                    chat.role === 'Technician' ? 'bg-[#FF8F00]' : 'bg-[#0D47A1]'
+                    chat.role === 'Service Provider' ? 'bg-[#FF8F00]' : 'bg-[#0D47A1]'
                   }`}>
                     {chat.name.split(' ').map(n => n[0]).join('')}
                     {chat.lastSeen === 'Online' && (
@@ -251,7 +251,7 @@ const Chat = () => {
             <div className="bg-white border-b border-[#E2E8F0] px-6 py-4 flex justify-between items-center shadow-sm">
               <div className="flex items-center gap-3">
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white ${
-                  activeChat.role === 'Technician' ? 'bg-[#FF8F00]' : 'bg-[#0D47A1]'
+                  activeChat.role === 'Service Provider' ? 'bg-[#FF8F00]' : 'bg-[#0D47A1]'
                 }`}>
                   {activeChat.name.split(' ').map(n => n[0]).join('')}
                 </div>

@@ -37,15 +37,15 @@ const Assignment = () => {
   const [loadError, setLoadError] = useState('');
   const [assigning, setAssigning] = useState(false);
 
-  // Requests still waiting on a technician, plus the admin-configured weighting
-  // the scoring engine uses. The technician shortlist is per-request and is
+  // Requests still waiting on a service provider, plus the admin-configured weighting
+  // the scoring engine uses. The service provider shortlist is per-request and is
   // fetched when one is selected.
   const loadData = React.useCallback(async () => {
     try {
       const res = await apiRequest('/service-requests?limit=200&sort=-createdAt', { auth: true });
       const items = Array.isArray(res) ? res : [];
       const unassigned = items
-        .filter(item => !item.technician && !['Closed', 'Cancelled'].includes(item.status))
+        .filter(item => !item.serviceProvider && !['Closed', 'Cancelled'].includes(item.status))
         .map(item => ({
           id: item.id,
           ref: item.humanId || item.id,
@@ -57,7 +57,7 @@ const Assignment = () => {
             ? new Date(item.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
             : '—',
           status: item.status,
-          technician: 'Unassigned',
+          serviceProvider: 'Unassigned',
         }));
       setRequests(unassigned);
       setLoadError('');
@@ -90,7 +90,7 @@ const Assignment = () => {
     let cancelled = false;
     (async () => {
       try {
-        const res = await apiRequest(`/service-requests/${selectedRequest.id}/technician-suggestions`, { auth: true });
+        const res = await apiRequest(`/service-requests/${selectedRequest.id}/service-provider-suggestions`, { auth: true });
         if (cancelled) return;
         const items = Array.isArray(res) ? res : [];
         setTechs(items.map(t => ({
@@ -106,7 +106,7 @@ const Assignment = () => {
       } catch (err) {
         if (!cancelled) {
           setTechs([]);
-          setLoadError(err.message || 'Could not load technician suggestions.');
+          setLoadError(err.message || 'Could not load serviceProvider suggestions.');
         }
       }
     })();
@@ -143,7 +143,7 @@ const Assignment = () => {
     }
   };
 
-  // Auto-assignment sends no technician, which tells the server to use the
+  // Auto-assignment sends no service provider, which tells the server to use the
   // engine's top-ranked candidate for each request.
   const runAutoAssignment = async () => {
     if (requests.length === 0) {
@@ -168,7 +168,7 @@ const Assignment = () => {
     showToast(
       failures.length
         ? `Auto-assigned ${assigned} request(s); ${failures.length} could not be assigned.`
-        : `Auto-assigned ${assigned} request(s) to the best-matching technicians.`,
+        : `Auto-assigned ${assigned} request(s) to the best-matching serviceProviders.`,
     );
     if (failures.length) console.warn('[assignment] Unassigned:', failures);
   };
@@ -180,7 +180,7 @@ const Assignment = () => {
 
   const handleAssign = async () => {
     if (!selectedRequest || !selectedTech) {
-      showToast('Please select a request from the left and a technician from the right.');
+      showToast('Please select a request from the left and a serviceProvider from the right.');
       return;
     }
     setAssigning(true);
@@ -188,14 +188,14 @@ const Assignment = () => {
       await apiRequest(`/service-requests/${selectedRequest.id}/assign`, {
         method: 'PATCH',
         auth: true,
-        body: { technician: selectedTech.id },
+        body: { serviceProvider: selectedTech.id },
       });
       showToast(`Assigned ${selectedTech.name} to request ${selectedRequest.ref}`);
       setSelectedRequest(null);
       setSelectedTech(null);
       await loadData();
     } catch (err) {
-      showToast(err.message || 'Could not assign technician.');
+      showToast(err.message || 'Could not assign serviceProvider.');
     } finally {
       setAssigning(false);
     }
@@ -213,7 +213,7 @@ const Assignment = () => {
       <Sidebar />
 
       <div className="flex-1 ml-64 min-h-screen flex flex-col">
-        <Topbar title="Technician Assignment" />
+        <Topbar title="Service Provider Assignment" />
 
         <div className="p-6 space-y-6 flex-1">
           {/* ---- Assignment Logic Config ---- */}
@@ -225,7 +225,7 @@ const Assignment = () => {
                 </div>
                 <div>
                   <h3 className="font-bold text-[#1E293B]">Assignment Mode</h3>
-                  <p className="text-xs text-[#64748B]">Choose how technicians are assigned to service requests</p>
+                  <p className="text-xs text-[#64748B]">Choose how serviceProviders are assigned to service requests</p>
                 </div>
               </div>
 
@@ -257,7 +257,7 @@ const Assignment = () => {
                   <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-start gap-2.5">
                     <Sparkles className="w-4 h-4 text-[#0D47A1] flex-shrink-0 mt-0.5" />
                     <p className="text-xs text-[#0D47A1] font-medium leading-relaxed">
-                      <strong>Auto Mode Active:</strong> Incoming service requests are automatically assigned using technician location, rating, skills, and current workload.
+                      <strong>Auto Mode Active:</strong> Incoming service requests are automatically assigned using serviceProvider location, rating, skills, and current workload.
                     </p>
                   </div>
 
@@ -294,7 +294,7 @@ const Assignment = () => {
                     </div>
 
                     <p className="text-xs text-slate-600 leading-relaxed">
-                      Auto-assignment matches each request with the best available technician based on distance, ratings, and active jobs.
+                      Auto-assignment matches each request with the best available serviceProvider based on distance, ratings, and active jobs.
                     </p>
 
                     <div className="mt-4 p-4 bg-white border border-slate-200 rounded-xl space-y-2">
@@ -307,7 +307,7 @@ const Assignment = () => {
                         <span className="font-bold text-[#0D47A1]">{requests.length}</span>
                       </div>
                       <div className="flex justify-between text-xs font-semibold text-slate-700">
-                        <span>Available Technicians:</span>
+                        <span>Available ServiceProviders:</span>
                         <span className="font-bold text-green-600">{techs.length} Online</span>
                       </div>
                     </div>
@@ -325,7 +325,7 @@ const Assignment = () => {
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center gap-2">
                 <UserPlus className="w-4 h-4 text-slate-600 flex-shrink-0" />
                 <p className="text-xs text-slate-600 font-medium">
-                  <strong>Manual Mode Active:</strong> Select an unassigned request on the left, then pick a technician on the right to assign directly.
+                  <strong>Manual Mode Active:</strong> Select an unassigned request on the left, then pick a serviceProvider on the right to assign directly.
                 </p>
               </div>
             )}
@@ -385,55 +385,55 @@ const Assignment = () => {
               </div>
             </div>
 
-            {/* Right Column: Available Technicians */}
+            {/* Right Column: Available ServiceProviders */}
             <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] flex flex-col h-[calc(100vh-12rem)] shadow-sm">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="font-bold text-[#1E293B]">Available Technicians</h3>
+                <h3 className="font-bold text-[#1E293B]">Available ServiceProviders</h3>
                 <span className="bg-green-50 text-green-600 px-2.5 py-1 rounded-full text-xs font-medium">{techs.length} Online</span>
               </div>
 
               <div className="space-y-3 flex-1 overflow-y-auto pr-1">
-                {techs.map((tech) => (
+                {techs.map((provider) => (
                   <div
-                    key={tech.id}
-                    onClick={() => setSelectedTech(tech)}
+                    key={provider.id}
+                    onClick={() => setSelectedTech(provider)}
                     className={`p-4 border rounded-xl cursor-pointer transition-colors ${
-                      selectedTech?.id === tech.id ? 'border-green-600 bg-green-50' : 'border-[#E2E8F0] hover:bg-[#F8FAFC]'
+                      selectedTech?.id === provider.id ? 'border-green-600 bg-green-50' : 'border-[#E2E8F0] hover:bg-[#F8FAFC]'
                     }`}
                   >
                     <div className="flex justify-between items-start">
                       <div className="flex gap-3">
                         <div className="w-10 h-10 bg-[#0D47A1] text-white rounded-full flex items-center justify-center font-bold text-sm">
-                          {tech.name.split(' ').map((n) => n[0]).join('')}
+                          {provider.name.split(' ').map((n) => n[0]).join('')}
                         </div>
                         <div>
-                          <p className="font-bold text-[#1E293B]">{tech.name}</p>
-                          <p className="text-xs text-[#64748B]">{tech.skill}</p>
+                          <p className="font-bold text-[#1E293B]">{provider.name}</p>
+                          <p className="text-xs text-[#64748B]">{provider.skill}</p>
                         </div>
                       </div>
                       <div className="text-right">
                         <span className="text-sm font-bold text-amber-500 flex items-center gap-0.5 justify-end">
-                          <Star size={14} fill="currentColor" /> {tech.rating}
+                          <Star size={14} fill="currentColor" /> {provider.rating}
                         </span>
-                        <span className="text-xs text-[#64748B]">{tech.city}</span>
+                        <span className="text-xs text-[#64748B]">{provider.city}</span>
                       </div>
                     </div>
                     <div className="mt-2 flex justify-between items-center text-xs text-[#64748B]">
-                      <span>Active Jobs: {tech.activeJobs}</span>
-                      {/* The shortlist now includes Active-but-offline technicians so a
+                      <span>Active Jobs: {provider.activeJobs}</span>
+                      {/* The shortlist now includes Active-but-offline serviceProviders so a
                           manual override is possible when nobody is online — which
                           means it has to say who is actually online rather than
                           labelling everyone "Ready to assign". */}
                       <span
                         className={`font-medium ${
-                          tech.availability === 'Available'
+                          provider.availability === 'Available'
                             ? 'text-green-600'
-                            : tech.availability === 'Busy'
+                            : provider.availability === 'Busy'
                               ? 'text-amber-600'
                               : 'text-[#94A3B8]'
                         }`}
                       >
-                        {tech.availability === 'Available' ? 'Online • Ready to assign' : `${tech.availability} • manual override`}
+                        {provider.availability === 'Available' ? 'Online • Ready to assign' : `${provider.availability} • manual override`}
                       </span>
                     </div>
                   </div>
@@ -458,7 +458,7 @@ const Assignment = () => {
                     selectedRequest && selectedTech && !assigning ? 'bg-[#0D47A1] text-white hover:bg-blue-700' : 'bg-[#F1F5F9] text-[#64748B] cursor-not-allowed'
                   }`}
                 >
-                  <UserPlus size={18} /> {assigning ? 'Assigning…' : 'Assign Technician'}
+                  <UserPlus size={18} /> {assigning ? 'Assigning…' : 'Assign Service Provider'}
                 </button>
               </div>
             </div>

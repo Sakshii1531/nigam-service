@@ -8,8 +8,8 @@ import {
   ChevronRight, AlertTriangle, AlertCircle, Package, CreditCard, Wallet, Banknote, QrCode,
   RotateCw, RefreshCw, Navigation
 } from 'lucide-react';
-import { useTech } from '../../context/TechContext';
-import TechBottomNav from '../../components/TechBottomNav';
+import { useTech } from '../../context/ServiceProviderContext';
+import ServiceProviderBottomNav from '../../components/ServiceProviderBottomNav';
 import splitAcImg from '../../assets/categories/split_ac.png';
 import wasingImg from '../../assets/categories/wasing.png';
 import fridgeImg from '../../assets/appliance_fridge.png';
@@ -244,7 +244,7 @@ const ActiveJob = () => {
   const [activeTab, setActiveTab] = useState('Overview'); // 'Overview', 'Diagnosis', 'Parts', 'Notes', 'History'
   const [showAIModal, setShowAIModal] = useState(false);
   const [showSignaturePad, setShowSignaturePad] = useState(false);
-  // Mirrored into TechContext so completing the inspection submits these notes
+  // Mirrored into ServiceProviderContext so completing the inspection submits these notes
   // with the diagnosis, not just the separate 'Save Notes' button.
   const [notesText, setNotesTextLocal] = useState('');
   const setNotesText = (v) => { setNotesTextLocal(v); setDiagnosisNotes(typeof v === 'string' ? v : ''); };
@@ -282,7 +282,7 @@ const ActiveJob = () => {
       if (activeJob.activeStep === 'completed' || activeJob.status === 'Completed' || activeJob.status === 'Customer Confirmation' || activeJob.status === 'Closed') {
         setActiveJobId(null);
         setActiveStep('idle');
-        navigate('/technician/dashboard', { replace: true });
+        navigate('/service-provider/dashboard', { replace: true });
         return;
       }
       if (!activeJob.isAvailableRequest && (activeStep === 'details' || activeStep === 'idle')) {
@@ -306,7 +306,7 @@ const ActiveJob = () => {
   const [revisitReason, setRevisitReason] = useState('');
 
   // The brand's decision on the FOC parts claim for this job. Polled while the
-  // approval step is on screen, so the technician sees the real outcome rather
+  // approval step is on screen, so the service provider sees the real outcome rather
   // than being able to wave the job through themselves.
   const [approvalClaimStatus, setApprovalClaimStatus] = useState(null);
 
@@ -316,7 +316,7 @@ const ActiveJob = () => {
 
     const poll = async () => {
       try {
-        const res = await apiRequest('/tech/claims', { auth: true });
+        const res = await apiRequest('/service-provider/claims', { auth: true });
         if (cancelled) return;
         const claim = (res || []).find(
           (c) => String(c.serviceRequest?.id || c.serviceRequest) === String(activeJob.serviceRequestId),
@@ -447,7 +447,7 @@ const ActiveJob = () => {
   });
 
   // Recommended Parts cart matching Screen 7
-  // Parts offered here come from the technician's own stock. They were three
+  // Parts offered here come from the service provider's own stock. They were three
   // hardcoded items whose prices went straight onto the customer's invoice.
   const [partsCartChecked, setPartsCartChecked] = useState([]);
 
@@ -522,7 +522,7 @@ const ActiveJob = () => {
         {/* Header */}
         <div className="bg-white border-b border-slate-200 p-4 flex items-center justify-between sticky top-0 z-10 shadow-xs">
           <div className="flex items-center gap-3">
-            <button onClick={() => navigate('/technician/dashboard')} className="p-1 hover:bg-slate-50 rounded-full">
+            <button onClick={() => navigate('/service-provider/dashboard')} className="p-1 hover:bg-slate-50 rounded-full">
               <ArrowLeft className="h-6 w-6 text-slate-700" />
             </button>
             <h1 className="text-lg font-bold text-[#052355]">Active Job Details</h1>
@@ -564,7 +564,7 @@ const ActiveJob = () => {
           )}
 
           <button
-            onClick={() => navigate('/technician/dashboard')}
+            onClick={() => navigate('/service-provider/dashboard')}
             className="mt-2 bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-bold py-3 px-4 rounded-2xl text-sm transition-all shadow-sm cursor-pointer"
           >
             Go to Dashboard
@@ -572,7 +572,7 @@ const ActiveJob = () => {
         </div>
 
         {/* Bottom Nav */}
-        <TechBottomNav activeTab="jobs" />
+        <ServiceProviderBottomNav activeTab="jobs" />
       </div>
     );
   }
@@ -784,7 +784,7 @@ const ActiveJob = () => {
           <button 
             onClick={() => {
               setActiveStep('idle');
-              navigate('/technician/dashboard');
+              navigate('/service-provider/dashboard');
             }} 
             className="p-1 hover:bg-slate-100 rounded-full transition-colors text-[#052355]"
           >
@@ -2247,7 +2247,7 @@ const ActiveJob = () => {
                         // Diagnosis notes belong on the job, not in a toast.
                         if (!activeJob?.id || !notesText.trim()) return;
                         try {
-                          await apiRequest(`/tech/jobs/${activeJob.id}/diagnosis`, {
+                          await apiRequest(`/service-provider/jobs/${activeJob.id}/diagnosis`, {
                             method: 'POST',
                             auth: true,
                             body: { notes: notesText },
@@ -2277,7 +2277,7 @@ const ActiveJob = () => {
                       <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex justify-between items-start">
                         <div>
                           <p className="text-xs font-normal text-[#052355]">Routine Wet Cleaning</p>
-                          <p className="text-[10px] text-slate-600 font-normal mt-0.5">Technician: Inderjeet Singh</p>
+                          <p className="text-[10px] text-slate-600 font-normal mt-0.5">ServiceProvider: Inderjeet Singh</p>
                         </div>
                         <span className="text-[10px] font-normal text-slate-500 bg-slate-200/50 px-2 py-0.5 rounded-md">24 May 2025</span>
                       </div>
@@ -2285,7 +2285,7 @@ const ActiveJob = () => {
                       <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex justify-between items-start">
                         <div>
                           <p className="text-xs font-normal text-[#052355]">Power Cord Replacement</p>
-                          <p className="text-[10px] text-slate-600 font-normal mt-0.5">Technician: Inderjeet Singh</p>
+                          <p className="text-[10px] text-slate-600 font-normal mt-0.5">ServiceProvider: Inderjeet Singh</p>
                         </div>
                         <span className="text-[10px] font-normal text-slate-500 bg-slate-200/50 px-2 py-0.5 rounded-md">11 Jan 2024</span>
                       </div>
@@ -2334,7 +2334,7 @@ const ActiveJob = () => {
 
                   {/* Advancing on covered work is gated on the brand's real
                       decision (this was once a "Simulate Approval" button, so a
-                      technician could self-approve FOC parts nobody authorised).
+                      serviceProvider could self-approve FOC parts nobody authorised).
                       A D2C job has no claim to approve — the customer is billed
                       for the parts — and job.service.js only raises claims when
                       !isD2C, so gating those too left every paid job stuck here
@@ -2437,22 +2437,22 @@ const ActiveJob = () => {
                   <h4 className="text-xs font-semibold text-[#052355] uppercase tracking-wider">Availability</h4>
                   
                   <div className="flex flex-col gap-3 mt-1">
-                    {/* Option 1: In Technician Stock */}
+                    {/* Option 1: In Service Provider Stock */}
                     <label 
-                      onClick={() => setPartAvailability('technician_stock')}
+                      onClick={() => setPartAvailability('serviceProvider_stock')}
                       className={`flex items-center justify-between p-3.5 rounded-2xl cursor-pointer select-none border transition-all ${
-                        partAvailability === 'technician_stock' 
+                        partAvailability === 'serviceProvider_stock' 
                           ? 'bg-blue-50/40 border-[#0D47A1]' 
                           : 'bg-slate-50 border-slate-100 hover:border-slate-200'
                       }`}
                     >
                       <div className="flex items-center gap-3">
                         <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                          partAvailability === 'technician_stock' ? 'border-[#0D47A1]' : 'border-slate-300'
+                          partAvailability === 'serviceProvider_stock' ? 'border-[#0D47A1]' : 'border-slate-300'
                         }`}>
-                          {partAvailability === 'technician_stock' && <div className="w-2 h-2 rounded-full bg-[#0D47A1]" />}
+                          {partAvailability === 'serviceProvider_stock' && <div className="w-2 h-2 rounded-full bg-[#0D47A1]" />}
                         </div>
-                        <span className="text-xs font-medium text-slate-800">In Technician Stock</span>
+                        <span className="text-xs font-medium text-slate-800">In Service Provider Stock</span>
                       </div>
                       <span className="bg-emerald-50 text-emerald-700 font-semibold rounded-md px-2 py-0.5 text-[9px] uppercase tracking-wider border border-emerald-150">
                         In Hand
@@ -2624,7 +2624,7 @@ const ActiveJob = () => {
 
                   {/* Footer Note */}
                   <p className="text-xs text-slate-600 font-normal leading-relaxed text-left mt-3 px-1">
-                    You will be updated once the part is available and technician visits again to complete the repair.
+                    You will be updated once the part is available and serviceProvider visits again to complete the repair.
                   </p>
 
                   {/* Send Update Button */}
@@ -2694,7 +2694,7 @@ const ActiveJob = () => {
                   <button 
                     onClick={() => {
                       resetActiveJob();
-                      navigate('/technician/dashboard');
+                      navigate('/service-provider/dashboard');
                     }}
                     className="w-full bg-slate-100 hover:bg-slate-250 text-[#052355] font-semibold py-4 rounded-2xl text-sm transition-all border border-slate-200 shadow-sm text-center"
                   >
@@ -2759,7 +2759,7 @@ const ActiveJob = () => {
                     <h4 className="text-base font-bold text-[#FF9100]">Spare Part Pending</h4>
                     <p className="text-xs text-slate-600 font-normal leading-relaxed">
                       Waiting for part availability. <br />
-                      Technician will revisit within 48 hours.
+                      Service Provider will revisit within 48 hours.
                     </p>
                   </div>
 
@@ -2832,7 +2832,7 @@ const ActiveJob = () => {
                   <button 
                     onClick={() => {
                       resetActiveJob();
-                      navigate('/technician/dashboard');
+                      navigate('/service-provider/dashboard');
                     }}
                     className="w-full bg-[#052355] hover:bg-[#031c45] text-white font-semibold py-4 rounded-2xl text-sm transition-all shadow-md mt-4 text-center"
                   >
@@ -2915,7 +2915,7 @@ const ActiveJob = () => {
                 <div className="bg-[#052355] text-white pt-4 pb-6 px-4 flex flex-col gap-3 rounded-b-[2.5rem] relative z-10 shadow-md -mx-4 -mt-4">
                   <div className="flex items-center justify-between">
                     <button 
-                      onClick={() => navigate('/technician/dashboard')} 
+                      onClick={() => navigate('/service-provider/dashboard')} 
                       className="p-1 hover:bg-white/10 rounded-full transition-colors"
                     >
                       <ArrowLeft className="h-6 w-6 text-white" />
@@ -3030,7 +3030,7 @@ const ActiveJob = () => {
                     <button 
                       onClick={() => {
                         setActiveStep('idle');
-                        navigate('/technician/dashboard');
+                        navigate('/service-provider/dashboard');
                       }} 
                       className="p-1 hover:bg-white/10 rounded-full transition-colors"
                     >
@@ -3331,7 +3331,7 @@ const ActiveJob = () => {
                     onClick={() => {
                       setActiveStep('idle');
                       resetActiveJob();
-                      navigate('/technician/dashboard');
+                      navigate('/service-provider/dashboard');
                     }}
                     className="w-full bg-[#052355] hover:bg-[#0a2c66] text-white font-bold py-4 rounded-2xl text-sm transition-all shadow-md mt-auto mb-6 text-center"
                   >
@@ -3396,7 +3396,7 @@ const ActiveJob = () => {
                         <span className="text-sm font-bold text-slate-700">₹0</span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-xs font-bold text-[#052355]">Technician Payout</span>
+                        <span className="text-xs font-bold text-[#052355]">Service Provider Payout</span>
                         <span className="text-sm font-bold text-slate-700">₹0</span>
                       </div>
                     </div>
@@ -3405,7 +3405,7 @@ const ActiveJob = () => {
                   <div className="bg-blue-50 border border-blue-200/60 rounded-2xl p-4 flex gap-3 items-start">
                     <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
                     <p className="text-[11px] text-blue-800 leading-relaxed font-normal">
-                      The job has been logged as unresolved due to technician/part issue. A refund or re-assignment request has been initiated for the customer.
+                      The job has been logged as unresolved due to serviceProvider/part issue. A refund or re-assignment request has been initiated for the customer.
                     </p>
                   </div>
 
@@ -3414,7 +3414,7 @@ const ActiveJob = () => {
                     onClick={() => {
                       setActiveStep('idle');
                       resetActiveJob();
-                      navigate('/technician/dashboard');
+                      navigate('/service-provider/dashboard');
                     }}
                     className="w-full bg-[#052355] hover:bg-[#0a2c66] text-white font-bold py-4 rounded-2xl text-sm transition-all shadow-md mt-auto mb-6 text-center"
                   >
@@ -3432,7 +3432,7 @@ const ActiveJob = () => {
                   <div className="flex items-center justify-between">
                     <button 
                       onClick={() => {
-                        navigate('/technician/dashboard');
+                        navigate('/service-provider/dashboard');
                       }} 
                       className="p-1.5 hover:bg-white/10 rounded-full transition-colors cursor-pointer"
                       title="Back to Dashboard"
@@ -3998,7 +3998,7 @@ const ActiveJob = () => {
                         if (res?.ok) {
                           setActiveJobId(null);
                           setActiveStep('idle');
-                          navigate('/technician/dashboard', { replace: true });
+                          navigate('/service-provider/dashboard', { replace: true });
                         }
                       }}
                       disabled={stepBusy}
@@ -4048,7 +4048,7 @@ const ActiveJob = () => {
                     <span className="text-xl font-medium text-green-600">₹{finalAmountCollected.toLocaleString('en-IN')}</span>
                   </div>
                   <div className="flex justify-between items-center py-1">
-                    <span className="text-xs font-normal text-slate-500">Technician Earnings</span>
+                    <span className="text-xs font-normal text-slate-500">Service Provider Earnings</span>
                     <span className="text-base font-medium text-[#0D47A1]">₹{activeJob.estEarnings.toLocaleString('en-IN')}</span>
                   </div>
                 </div>
@@ -4231,7 +4231,7 @@ const ActiveJob = () => {
             <button 
               onClick={() => {
                 resetActiveJob();
-                navigate('/technician/dashboard');
+                navigate('/service-provider/dashboard');
               }}
               className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-bold py-4 rounded-2xl text-base transition-all shadow-md mt-2 text-center"
             >
@@ -4527,7 +4527,7 @@ const ActiveJob = () => {
         activeStep !== 'revisit_payment_card' && 
         activeStep !== 'revisit_payment_wallet' && 
         activeStep !== 'revisit_otp' && (
-        <TechBottomNav activeTab="jobs" />
+        <ServiceProviderBottomNav activeTab="jobs" />
       )}
 
     </div>

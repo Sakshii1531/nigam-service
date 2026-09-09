@@ -12,7 +12,7 @@ import {
   conversationStatusSchema,
 } from './chat.validation.js';
 
-// Job conversations (customer<->technician) stay system-derived: they are a
+// Job conversations (customer<->service provider) stay system-derived: they are a
 // side effect of job.service.js's acceptJob(), never user-initiated with
 // arbitrary participant ids. The one exception below is a brand opening a
 // SUPPORT thread with its own customer — the brand is fixed from the caller's

@@ -5,7 +5,7 @@ import { applyStandardPlugins } from '../shared/plugins.js';
 //
 // A personally-addressed notification carries its own `read` flag, which works
 // because it has exactly one reader. A broadcast has many, and the single
-// shared flag on the document cannot represent "read by this technician, still
+// shared flag on the document cannot represent "read by this service provider, still
 // unread for that one" — marking it read for one recipient would clear it for
 // the entire role at once. That was a documented gap for as long as
 // role-targeted broadcasts were invisible in every inbox; once they actually

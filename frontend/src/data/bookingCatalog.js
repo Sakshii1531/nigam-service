@@ -79,11 +79,11 @@ export const BOOKING_CATALOG = {
     },
     brands: ['Voltas', 'LG', 'Samsung', 'Daikin', 'Whirlpool', 'Lloyd', 'Panasonic', 'Blue Star', 'Hitachi', 'Carrier', 'O General'],
     whyBrandPoints: [
-      'Technicians carry brand-specific gas & parts',
+      'ServiceProviders carry brand-specific gas & parts',
       'AC model-specific calibration & settings',
       'Correct refrigerant type (R22 vs R410A)',
     ],
-    categoryNote: 'Prices shown are indicative. The technician will confirm exact charges after inspection.',
+    categoryNote: 'Prices shown are indicative. The serviceProvider will confirm exact charges after inspection.',
   },
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -113,7 +113,7 @@ export const BOOKING_CATALOG = {
       'Correct drum belt & bearing specifications',
       'Model-specific error code diagnosis',
     ],
-    categoryNote: 'Prices are indicative. Exact charges are confirmed after inspection by the technician.',
+    categoryNote: 'Prices are indicative. Exact charges are confirmed after inspection by the serviceProvider.',
   },
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -145,7 +145,7 @@ export const BOOKING_CATALOG = {
       'Correct refrigerant type (R600a vs R134a)',
       'Model-specific PCB & sensor calibration',
     ],
-    categoryNote: 'Cooling issues may need gas refilling — exact diagnosis done by the technician on-site.',
+    categoryNote: 'Cooling issues may need gas refilling — exact diagnosis done by the serviceProvider on-site.',
   },
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -176,7 +176,7 @@ export const BOOKING_CATALOG = {
       'Firmware & software issues diagnosed correctly',
       'Correct T-Con board & power supply components',
     ],
-    categoryNote: 'Panel repairs depend on part availability. Technician will confirm before proceeding.',
+    categoryNote: 'Panel repairs depend on part availability. ServiceProvider will confirm before proceeding.',
   },
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -267,7 +267,7 @@ export const BOOKING_CATALOG = {
       'Correct turntable motor & coupler replacements',
       'Model-specific control panel & keypad parts',
     ],
-    categoryNote: 'Never use metal containers inside. Technician will inspect for any magnetron damage.',
+    categoryNote: 'Never use metal containers inside. ServiceProvider will inspect for any magnetron damage.',
   },
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -411,7 +411,7 @@ export const getCatalogEntry = (category) => {
       brands: categoryConfig.brands?.length ? categoryConfig.brands : (staticDefault.brands || ['LG', 'Samsung', 'Whirlpool', 'Panasonic']),
       whyBrandPoints: categoryConfig.whyBrandPoints?.length
         ? categoryConfig.whyBrandPoints
-        : (staticDefault.whyBrandPoints || ['Brand certified expert technicians', 'Correct parts calibration', 'Genuine brand replacement parts']),
+        : (staticDefault.whyBrandPoints || ['Brand certified expert serviceProviders', 'Correct parts calibration', 'Genuine brand replacement parts']),
       categoryNote: categoryConfig.categoryNote || staticDefault.categoryNote || 'Prices shown are indicative.',
       bannerImg: config.bannerImg || '',
       tagline: config.tagline || '',
@@ -495,7 +495,7 @@ export const getCatalogEntry = (category) => {
   const whyBrandPoints = (categoryConfig && categoryConfig.whyBrandPoints && categoryConfig.whyBrandPoints.length)
     ? categoryConfig.whyBrandPoints
     : (staticDefault.whyBrandPoints || [
-        'Brand certified expert technicians',
+        'Brand certified expert serviceProviders',
         'Correct parts calibration',
         'Genuine brand replacement parts'
       ]);

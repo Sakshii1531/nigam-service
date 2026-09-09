@@ -25,7 +25,7 @@ const Reports = () => {
   }, []);
   const [isPdfExporting, setIsPdfExporting] = useState(false);
   const [isExcelExporting, setIsExcelExporting] = useState(false);
-  const [report, setReport] = useState({ requestsByCity: [], requestsByCategory: [], requestsByStatus: [], revenueBySource: [], requestsWithoutTechnician: 0 });
+  const [report, setReport] = useState({ requestsByCity: [], requestsByCategory: [], requestsByStatus: [], revenueBySource: [], requestsWithoutServiceProvider: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -46,7 +46,7 @@ const Reports = () => {
   }, []);
 
   // Requests carry no city of their own — the location comes from the assigned
-  // technician, so unassigned requests are necessarily outside this split.
+  // service provider, so unassigned requests are necessarily outside this split.
   const cityMax = Math.max(1, ...report.requestsByCity.map((c) => c.count));
   const cityBars = report.requestsByCity.map((c) => ({
     label: c.label,
@@ -207,7 +207,7 @@ const Reports = () => {
                     request volume each city actually handled. */}
                 <h3 className="font-bold text-[#1E293B]">Requests by City</h3>
                 <span className="text-[#64748B] text-xs font-semibold bg-slate-50 px-2 py-0.5 rounded">
-                  {report.requestsWithoutTechnician} unassigned
+                  {report.requestsWithoutServiceProvider} unassigned
                 </span>
               </div>
               <div className="space-y-4">
@@ -238,7 +238,7 @@ const Reports = () => {
             <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] shadow-sm">
               <div className="flex justify-between items-center mb-4">
                 <div>
-                  <h3 className="font-bold text-[#1E293B]">Technician Productivity</h3>
+                  <h3 className="font-bold text-[#1E293B]">Service Provider Productivity</h3>
                   <p className="text-xs text-[#64748B]">Click bars to see exact job count</p>
                 </div>
                 <span className="text-xs text-[#64748B] font-semibold bg-[#F8FAFC] px-2 py-1 rounded-md">Avg Jobs/Day</span>
@@ -250,7 +250,7 @@ const Reports = () => {
                     className="w-12 flex flex-col items-center gap-2 cursor-pointer group"
                     onClick={() => {
                       setActiveTechBar(activeTechBar === i ? null : i);
-                      showToast(`Technician Productivity on ${item.day}: ${item.val}`);
+                      showToast(`Service Provider Productivity on ${item.day}: ${item.val}`);
                     }}
                   >
                     <div className="w-full relative">

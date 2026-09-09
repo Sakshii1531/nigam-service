@@ -8,28 +8,28 @@ import Footer from '../components/layout/Footer';
 
 const defaultTerms = [
   {
-    heading: '1. Service Booking & Technician Dispatch',
-    text: 'Nigam Care Center (NCC) acts as a verified home service platform connecting clients with certified technicians for AC repair, appliance servicing, electrical, plumbing, and cleaning tasks. By placing a booking, you agree to provide accurate location details and ensure adult supervision during doorstep appointments.',
+    heading: '1. Service Booking & Service Provider Dispatch',
+    text: 'Nigam Care Center (NCC) acts as a verified home service platform connecting clients with certified serviceProviders for AC repair, appliance servicing, electrical, plumbing, and cleaning tasks. By placing a booking, you agree to provide accurate location details and ensure adult supervision during doorstep appointments.',
   },
   {
     heading: '2. Upfront Pricing & Payment Terms',
-    text: 'All visiting charges, diagnostic costs, and spare part prices are displayed upfront prior to job confirmation. Payments can be processed securely online via UPI, Credit/Debit Cards, NetBanking, or directly in cash to the technician upon satisfactory job completion.',
+    text: 'All visiting charges, diagnostic costs, and spare part prices are displayed upfront prior to job confirmation. Payments can be processed securely online via UPI, Credit/Debit Cards, NetBanking, or directly in cash to the serviceProvider upon satisfactory job completion.',
   },
   {
     heading: '3. 30-Day Service Warranty Policy',
-    text: 'All repair services completed by NCC technicians include a complimentary 30-day service warranty. If the exact same issue reoccurs within 30 days of service, our team will dispatch a senior technician to rectify the problem free of any additional labor or visiting charge.',
+    text: 'All repair services completed by NCC serviceProviders include a complimentary 30-day service warranty. If the exact same issue reoccurs within 30 days of service, our team will dispatch a senior serviceProvider to rectify the problem free of any additional labor or visiting charge.',
   },
   {
     heading: '4. Cancellation & Refund Policy',
-    text: 'Bookings may be cancelled or rescheduled free of penalty up to 2 hours prior to the scheduled slot. If cancelled after technician dispatch, a nominal visiting charge may apply. Approved refunds are processed to the original payment source within 5 to 7 business days.',
+    text: 'Bookings may be cancelled or rescheduled free of penalty up to 2 hours prior to the scheduled slot. If cancelled after serviceProvider dispatch, a nominal visiting charge may apply. Approved refunds are processed to the original payment source within 5 to 7 business days.',
   },
   {
     heading: '5. Genuine Parts Guarantee',
-    text: 'Spare parts supplied by NCC technicians are 100% original OEM parts. Replacement components carry manufacturer warranty as specified on the billing invoice.',
+    text: 'Spare parts supplied by NCC serviceProviders are 100% original OEM parts. Replacement components carry manufacturer warranty as specified on the billing invoice.',
   },
   {
     heading: '6. Limitation of Liability',
-    text: 'NCC carries comprehensive liability coverage for technician property damage during active job execution. For support or dispute resolution, contact support@nccservice.in or call 1800-123-6222.',
+    text: 'NCC carries comprehensive liability coverage for serviceProvider property damage during active job execution. For support or dispute resolution, contact support@nccservice.in or call 1800-123-6222.',
   },
 ];
 
@@ -40,15 +40,15 @@ const defaultPrivacy = [
   },
   {
     heading: '2. How We Use Your Data',
-    text: 'Your personal data is strictly utilized for service dispatch, booking updates via SMS/WhatsApp, technician verification, warranty tracking, and customer support resolution.',
+    text: 'Your personal data is strictly utilized for service dispatch, booking updates via SMS/WhatsApp, serviceProvider verification, warranty tracking, and customer support resolution.',
   },
   {
     heading: '3. Data Protection & Security Protocols',
     text: 'We implement 256-bit SSL encryption, tokenized authentication, and strict role-based access controls to safeguard your personal details against unauthorized access or disclosure.',
   },
   {
-    heading: '4. Sharing Information with Service Technicians',
-    text: 'Your contact name and service address are shared exclusively with the assigned background-verified technician solely for the duration of the scheduled job slot.',
+    heading: '4. Sharing Information with Service Providers',
+    text: 'Your contact name and service address are shared exclusively with the assigned background-verified serviceProvider solely for the duration of the scheduled job slot.',
   },
   {
     heading: '5. Cookies & Analytics',

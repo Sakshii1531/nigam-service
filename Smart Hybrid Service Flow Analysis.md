@@ -4,7 +4,7 @@ Note: _This is purely the output of the chat conversation and does not contain a
 
 ### User Input
 
-Theplatform is a SmartHybridServiceManagement System that enables users to: Raise service requests (warranty / non-warranty) Automatically detect warranty eligibility Get instant technician assignment Track technician live via map Communicate securely using masked numbers The system eliminates manual vendor dependency and introduces privacy-first communication. 🎯 Key Objectives Automate service request lifecycle Enable real-time technician tracking Protect user & technician privacy via number masking Provide seamless warranty + paid service integration Build a scalable, high-performance service ecosystem 🧠 Core Business Logic 👉 Warranty Valid → Apply benefits → Notify brand → Assign technician Warranty Invalid → Paid service → Assign technician In all cases: Technician assignment is system-driven (no vendor assignment)APPLICATION TIMELINE: A PLAN FOR SUCCESS 🟢 🔄 End-to-End Workflow Step 1: User Request Initiation User can: Claim warranty OR Book normal service Inputs: Appliance details Issue description Address Time slot Media upload 🟡 Step 2: Smart Warranty Detection System checks: Invoice data Purchase date Warranty period Brand rules 👉 Warranty auto-applied if eligible 🔵 Step 3: Validation & Request Creation Request ID generated Service category validated Location mapped 🔴 Step 4: Intelligent Technician Assignment System assigns technician based on: Location proximity Skill match Availability Rating WorkloadAPPLICATION TIMELINE: A PLAN FOR SUCCESS 📍 Step5:LiveTrackingSystem(Google Maps Integration) Features: Real-time technician location tracking Route navigation using Google Maps ETA (Estimated Time of Arrival) Live movement updates User View: Technician on map Distance + arrival time Technician View: Navigation assistance Route optimization 🔐 Step 6: Secure Communication (Number Masking) Problem Solved: Direct number sharing leads to: Privacy issues Off-platform communication Solution: Number Masking System Temporary virtual numbers assigned User ↔ Technician communication via masked number Real numbers never exposed Features: Call masking Optional chat masking Session-based communication Auto-expiry after job completionAPPLICATION TIMELINE: A PLAN FOR SUCCESS Flow: 1.Job assigned 2.System generates masked number 3.Both parties communicate securely 4.Number expires after job closure 🏢 Step 7: Brand (Vendor) Role Warranty visibility Service monitoring Analy tics Escalation handling 👉 No technician assignment rights 🛠 Step 8: Service Execution Technician: Accepts job Navigates using maps Updates status: En Route In Progress Completes service 💳 Step 9: Payment System Warranty Case: Discount / free service Non-Warranty: Full payment Modes: UPI Card Wallet CashAPPLICATION TIMELINE: A PLAN FOR SUCCESS 🟣 Step 10: Job Completion&Closure Report + images uploaded Job marked complete User feedback collected Invoice generated Request closed 🔔 Step 11: Notification System Triggers: Request created Technician assigned Technician en route (with live tracking link) Job completed Payment done Channels: Push SMS WhatsApp 👥 Role-Based Modules 🧑‍💻 USER PANEL Raise request Upload warranty Track technician live Communicate via masked number Make payment Give feedbackAPPLICATION TIMELINE: A PLAN FOR SUCCESS 🏢 🛠 🧑‍💼 BRAND PANEL View warranty jobs Monitor service Analytics dashboard Escalation control TECHNICIAN PANEL Receive jobs Accept/reject Navigate via Google Maps Update status Communicate via masked number Upload reports ADMIN PANEL Manage users, brands, technicians Configure assignment logic Manage masking system Monitor live tracking Commission control Reports & analytics
+Theplatform is a SmartHybridServiceManagement System that enables users to: Raise service requests (warranty / non-warranty) Automatically detect warranty eligibility Get instant serviceProvider assignment Track serviceProvider live via map Communicate securely using masked numbers The system eliminates manual vendor dependency and introduces privacy-first communication. 🎯 Key Objectives Automate service request lifecycle Enable real-time serviceProvider tracking Protect user & serviceProvider privacy via number masking Provide seamless warranty + paid service integration Build a scalable, high-performance service ecosystem 🧠 Core Business Logic 👉 Warranty Valid → Apply benefits → Notify brand → Assign serviceProvider Warranty Invalid → Paid service → Assign serviceProvider In all cases: ServiceProvider assignment is system-driven (no vendor assignment)APPLICATION TIMELINE: A PLAN FOR SUCCESS 🟢 🔄 End-to-End Workflow Step 1: User Request Initiation User can: Claim warranty OR Book normal service Inputs: Appliance details Issue description Address Time slot Media upload 🟡 Step 2: Smart Warranty Detection System checks: Invoice data Purchase date Warranty period Brand rules 👉 Warranty auto-applied if eligible 🔵 Step 3: Validation & Request Creation Request ID generated Service category validated Location mapped 🔴 Step 4: Intelligent ServiceProvider Assignment System assigns serviceProvider based on: Location proximity Skill match Availability Rating WorkloadAPPLICATION TIMELINE: A PLAN FOR SUCCESS 📍 Step5:LiveTrackingSystem(Google Maps Integration) Features: Real-time serviceProvider location tracking Route navigation using Google Maps ETA (Estimated Time of Arrival) Live movement updates User View: ServiceProvider on map Distance + arrival time ServiceProvider View: Navigation assistance Route optimization 🔐 Step 6: Secure Communication (Number Masking) Problem Solved: Direct number sharing leads to: Privacy issues Off-platform communication Solution: Number Masking System Temporary virtual numbers assigned User ↔ ServiceProvider communication via masked number Real numbers never exposed Features: Call masking Optional chat masking Session-based communication Auto-expiry after job completionAPPLICATION TIMELINE: A PLAN FOR SUCCESS Flow: 1.Job assigned 2.System generates masked number 3.Both parties communicate securely 4.Number expires after job closure 🏢 Step 7: Brand (Vendor) Role Warranty visibility Service monitoring Analy tics Escalation handling 👉 No serviceProvider assignment rights 🛠 Step 8: Service Execution ServiceProvider: Accepts job Navigates using maps Updates status: En Route In Progress Completes service 💳 Step 9: Payment System Warranty Case: Discount / free service Non-Warranty: Full payment Modes: UPI Card Wallet CashAPPLICATION TIMELINE: A PLAN FOR SUCCESS 🟣 Step 10: Job Completion&Closure Report + images uploaded Job marked complete User feedback collected Invoice generated Request closed 🔔 Step 11: Notification System Triggers: Request created ServiceProvider assigned ServiceProvider en route (with live tracking link) Job completed Payment done Channels: Push SMS WhatsApp 👥 Role-Based Modules 🧑‍💻 USER PANEL Raise request Upload warranty Track serviceProvider live Communicate via masked number Make payment Give feedbackAPPLICATION TIMELINE: A PLAN FOR SUCCESS 🏢 🛠 🧑‍💼 BRAND PANEL View warranty jobs Monitor service Analytics dashboard Escalation control SERVICE_PROVIDER PANEL Receive jobs Accept/reject Navigate via Google Maps Update status Communicate via masked number Upload reports ADMIN PANEL Manage users, brands, serviceProviders Configure assignment logic Manage masking system Monitor live tracking Commission control Reports & analytics
 
 this the scope of work for this project so please deeply analyze and tell me the exact flow of 
 extended warranty
@@ -44,7 +44,7 @@ Let's carefully construct a comprehensive, structured, step-by-step breakdown (E
 3. **Buy (New Appliance / Spare Parts Purchase) Flow**
 4. **AMC (Annual Maintenance Contract) Plans Flow**
 
-We will map out each flow stage-by-stage from **User Panel**, **System/Smart Detection Engine**, **Brand/Vendor Panel**, **Technician Panel**, to **Admin Panel**, including payment, verification, status updates, and notifications.
+We will map out each flow stage-by-stage from **User Panel**, **System/Smart Detection Engine**, **Brand/Vendor Panel**, **ServiceProvider Panel**, to **Admin Panel**, including payment, verification, status updates, and notifications.
 
 No code modifications will be made as requested ("do not change anything and do not make any changes").
 
@@ -81,13 +81,13 @@ Extended Warranty service users ko unke appliance ki primary manufacturer warran
      - Defect type policy coverage T&C ke under aata hai ya nahi?
    - **Eligible**: Zero-cost / discounted service request create hoti hai.
    - **Ineligible**: Paid request me convert hota hai (user confirmation se).
-3. **Intelligent Technician Assignment:**
-   - System proximity, skill, workload, aur rating ke aadhar par nearest technician auto-assign karta hai.
+3. **Intelligent ServiceProvider Assignment:**
+   - System proximity, skill, workload, aur rating ke aadhar par nearest serviceProvider auto-assign karta hai.
 4. **Live Tracking & Masked Communication:**
-   - Technician accept karta hai -> User ko live tracking link (Google Maps integration) milta hai.
-   - Masked virtual number assign hota hai (User ↔ Technician direct number shared nahi hota).
+   - ServiceProvider accept karta hai -> User ko live tracking link (Google Maps integration) milta hai.
+   - Masked virtual number assign hota hai (User ↔ ServiceProvider direct number shared nahi hota).
 5. **Execution & Inspection:**
-   - Technician location par pahunchta hai, status *En Route -> In Progress* update karta hai.
+   - ServiceProvider location par pahunchta hai, status *En Route -> In Progress* update karta hai.
    - Fault diagnose karta hai aur app me repair report + defective part pictures upload karta hai.
 6. **Brand/Vendor & Admin Visibility:**
    - Brand Panel me extended warranty claim sync hota hai inspection and spare parts claim tracking ke liye.
@@ -108,11 +108,11 @@ Old appliance exchange flow users ko apna purana product dekar new appliance kha
 2. **Instant Estimated Valuation Engine:**
    - System AI/Rule-Engine se instant Estimated Exchange Value calculate karke user ko screen par dikhata hai.
    - User estimated price accept karta hai aur Doorstep Physical Inspection booking slot choose karta hai.
-3. **Technician (Evaluator) Assignment:**
-   - System exchange verification skill wale nearest Technician/Evaluator ko inspection job assign karta hai.
+3. **ServiceProvider (Evaluator) Assignment:**
+   - System exchange verification skill wale nearest ServiceProvider/Evaluator ko inspection job assign karta hai.
 4. **Doorstep Physical Verification & Final Assessment:**
-   - Technician user spot par visit karta hai (Live tracking enabled).
-   - Technician App me Checklist fill karta hai:
+   - ServiceProvider user spot par visit karta hai (Live tracking enabled).
+   - ServiceProvider App me Checklist fill karta hai:
      - Physical Body Inspection
      - Functional Testing (Power, Heating/Cooling, Noise, Spare health)
      - Serial Number Verification
@@ -121,7 +121,7 @@ Old appliance exchange flow users ko apna purana product dekar new appliance kha
    - Aggreed price accept karne ke liye User app par OTP share karta hai.
    - System final Exchange Voucher / Discount Code / Cash Payout request lock karta hai.
 6. **Appliance Pickup & Logistic Closure:**
-   - Technician purana product collect karta hai, pickup tag attach karta hai, aur transit status update karta hai.
+   - ServiceProvider purana product collect karta hai, pickup tag attach karta hai, aur transit status update karta hai.
    - System Admin/Warehouse Panel ko inform karta hai stock entry ke liye.
 7. **Payment / Coupon Disbursement:**
    - Exchange Value user ke Wallet/Bank account me credit hoti hai ya new purchase checkout coupon ke roop me apply ho jati hai.
@@ -150,9 +150,9 @@ Platform se naye products, genuine spare parts, ya accessories kharidne ka direc
    - Delivery partner tracking number sync hota hai User Panel me.
 6. **Product Delivery & Automated Installation Assignment:**
    - Delivery complete hone par status *Delivered* update hota hai.
-   - Agar user ne Installation Service add ki thi, to system immediately auto-assign karta hai Technician ko installation ke liye.
+   - Agar user ne Installation Service add ki thi, to system immediately auto-assign karta hai ServiceProvider ko installation ke liye.
 7. **Installation Execution & Secure Communication:**
-   - Technician live tracking, masked number communication, installation completion OTP, aur warranty tag generation.
+   - ServiceProvider live tracking, masked number communication, installation completion OTP, aur warranty tag generation.
 8. **Feedback & Warranty Tagging:**
    - Purchased item Automatically User ke *“My Appliances”* section me warranty details ke saath add ho jata hai.
 
@@ -168,8 +168,8 @@ AMC plan users ko regular maintenance, periodic checkups, Free breakdown visits,
    - Plans browse karta hai (e.g., Basic AMC: 2 Services/yr, Comprehensive AMC: Free Spares + 3 Services/yr).
    - Appliance serial number, age, aur photos input karta hai.
 2. **Pre-AMC Inspection (Condition Verification):**
-   - Agar product old hai (> 1 year), system automatic *Pre-AMC Technician Inspection* schedule karta hai.
-   - Technician check karta hai ki product working state me hai ya pehle se fault hai.
+   - Agar product old hai (> 1 year), system automatic *Pre-AMC ServiceProvider Inspection* schedule karta hai.
+   - ServiceProvider check karta hai ki product working state me hai ya pehle se fault hai.
    - Approval ke baad AMC status **Verified & Eligible** update hota hai.
 3. **Payment & AMC Contract Activation:**
    - User subscription fee pay karta hai (Monthly / Yearly).
@@ -179,10 +179,10 @@ AMC plan users ko regular maintenance, periodic checkups, Free breakdown visits,
 1. **Automated Preventive Maintenance Scheduling:**
    - Calendar date aane par System automatically **Service Request Ticket** generate kar deta hai.
    - User ko pre-notification SMS/Push milta hai slot choose karne ke liye.
-2. **Technician Auto-Assignment & Dispatch:**
-   - System technician assign karta hai -> Live tracking -> Masked Call.
+2. **ServiceProvider Auto-Assignment & Dispatch:**
+   - System serviceProvider assign karta hai -> Live tracking -> Masked Call.
 3. **Execution & Service Checklist:**
-   - Technician maintenance checklist perform karta hai (Cleaning, Pressure check, Gas leak check, Part wear check).
+   - ServiceProvider maintenance checklist perform karta hai (Cleaning, Pressure check, Gas leak check, Part wear check).
    - Before & After photos app me upload karta hai.
 4. **Job Closure:**
    - User OTP verify karta hai, AMC quota me se 1 Service deduction complete dikhati hai (e.g., 2 Services remaining out of 3).
@@ -203,11 +203,11 @@ AMC plan users ko regular maintenance, periodic checkups, Free breakdown visits,
 | Module | Trigger Point | Validation / Engine | Primary Outcome | Key Panel Stakeholders |
 | :--- | :--- | :--- | :--- | :--- |
 | **Extended Warranty** | Primary Warranty expiry or Post-Purchase | Invoice & Age Smart Eligibility Engine | Digital Warranty Policy & Automated Claim Engine | User, Brand Panel, Admin |
-| **Exchange** | Old product replacement request | AI/Rule Price Engine + Technician Physical Verification | Exchange Coupon / Cash Payout & Old Product Pickup | User, Technician, Warehouse/Admin |
-| **Buy** | Purchasing Spares, Accessories, New Items | Spare Part Compatibility & Inventory Check | Order Delivery + Auto Installation Ticket Creation | User, Brand/Vendor, Delivery Partner, Technician |
-| **AMC Plans** | Annual Subscription for periodic maintenance | Pre-Inspection Check + AMC Contract Engine | Scheduled Maintenance Reminders + Free Breakdown Repairs | User, Technician, Admin |
+| **Exchange** | Old product replacement request | AI/Rule Price Engine + ServiceProvider Physical Verification | Exchange Coupon / Cash Payout & Old Product Pickup | User, ServiceProvider, Warehouse/Admin |
+| **Buy** | Purchasing Spares, Accessories, New Items | Spare Part Compatibility & Inventory Check | Order Delivery + Auto Installation Ticket Creation | User, Brand/Vendor, Delivery Partner, ServiceProvider |
+| **AMC Plans** | Annual Subscription for periodic maintenance | Pre-Inspection Check + AMC Contract Engine | Scheduled Maintenance Reminders + Free Breakdown Repairs | User, ServiceProvider, Admin |
 
-All of these flows integrate seamlessly into your core **Smart Hybrid Service Management System** with **Intelligent Technician Auto-Assignment**, **Live Google Maps Tracking**, **Virtual Number Masking**, and **Role-Based Panels (User, Technician, Brand, Admin)**.
+All of these flows integrate seamlessly into your core **Smart Hybrid Service Management System** with **Intelligent ServiceProvider Auto-Assignment**, **Live Google Maps Tracking**, **Virtual Number Masking**, and **Role-Based Panels (User, ServiceProvider, Brand, Admin)**.
 
 ### User Input
 

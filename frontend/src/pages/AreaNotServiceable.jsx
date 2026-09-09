@@ -369,7 +369,7 @@ const AreaNotServiceable = () => {
               </div>
 
               <p className="text-xs text-slate-500 mt-2 mb-4">
-                Nigam Care doorstep technicians and verified experts are currently operating in these regions:
+                Nigam Care doorstep serviceProviders and verified experts are currently operating in these regions:
               </p>
 
               <div className="overflow-y-auto space-y-2 pr-1 max-h-72">

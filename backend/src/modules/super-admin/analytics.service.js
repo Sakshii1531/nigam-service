@@ -1,5 +1,5 @@
 import { ServiceRequest } from '../service-requests/serviceRequest.model.js';
-import { Technician } from '../technician/technician.model.js';
+import { ServiceProvider } from '../service-provider/serviceProvider.model.js';
 import { Escalation } from './escalation.model.js';
 import { Revenue } from './revenue.model.js';
 import { Order } from '../buy-commerce/order.model.js';
@@ -37,7 +37,7 @@ export async function getDashboard() {
     openEscalations,
   ] = await Promise.all([
     ServiceRequest.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
-    Technician.aggregate([{ $group: { _id: '$availability', count: { $sum: 1 } } }]),
+    ServiceProvider.aggregate([{ $group: { _id: '$availability', count: { $sum: 1 } } }]),
     Revenue.aggregate([{ $group: { _id: null, gross: { $sum: '$gross' }, net: { $sum: '$net' } } }]),
     ServiceRequest.countDocuments({ status: { $nin: TERMINAL_STATUSES } }),
     AMCSubscription.countDocuments({ status: 'Active' }),
@@ -61,7 +61,7 @@ export async function getDashboard() {
       cancelled: byStatus.Cancelled || 0,
       total: Object.values(byStatus).reduce((a, b) => a + b, 0),
     },
-    technicians: tally(availabilityRows, ['Available', 'Busy', 'Offline']),
+    serviceProviders: tally(availabilityRows, ['Available', 'Busy', 'Offline']),
     // Revenue rows are posted by the reporting job; absent rows mean zero, not
     // "unknown" — the dashboard shows a figure either way.
     revenue: { gross: revenueRows[0]?.gross || 0, net: revenueRows[0]?.net || 0 },
@@ -77,7 +77,7 @@ export async function getDashboard() {
  * Reports break the same data down by dimension.
  *
  * Requests carry no city of their own — the location lives on the assigned
- * technician — so the city split necessarily excludes unassigned requests.
+ * service provider — so the city split necessarily excludes unassigned requests.
  * That's stated in the payload rather than left for the reader to guess.
  */
 export async function getReports({ from, to } = {}) {
@@ -102,13 +102,13 @@ export async function getReports({ from, to } = {}) {
       { $sort: { gross: -1 } },
     ]),
     ServiceRequest.aggregate([
-      { $match: { ...match, technician: { $ne: null } } },
-      { $lookup: { from: 'technicians', localField: 'technician', foreignField: '_id', as: 'tech' } },
-      { $unwind: '$tech' },
-      { $group: { _id: '$tech.city', count: { $sum: 1 } } },
+      { $match: { ...match, serviceProvider: { $ne: null } } },
+      { $lookup: { from: 'serviceproviders', localField: 'serviceProvider', foreignField: '_id', as: 'provider' } },
+      { $unwind: '$provider' },
+      { $group: { _id: '$provider.city', count: { $sum: 1 } } },
       { $sort: { count: -1 } },
     ]),
-    ServiceRequest.countDocuments({ ...match, technician: null }),
+    ServiceRequest.countDocuments({ ...match, serviceProvider: null }),
   ]);
 
   const cities = await City.find({ _id: { $in: cityRows.map((r) => r._id).filter(Boolean) } })
@@ -121,11 +121,11 @@ export async function getReports({ from, to } = {}) {
     requestsByStatus: byStatus.map((r) => ({ label: r._id, count: r.count })),
     revenueBySource: revenueBySource.map((r) => ({ label: r._id, gross: r.gross, net: r.net })),
     requestsByCity: cityRows.map((r) => ({
-      label: r._id ? cityName.get(String(r._id)) || 'Unknown city' : 'No city on technician',
+      label: r._id ? cityName.get(String(r._id)) || 'Unknown city' : 'No city on serviceProvider',
       count: r.count,
     })),
     // Excluded from requestsByCity above — surfaced so the totals reconcile.
-    requestsWithoutTechnician: unassigned,
+    requestsWithoutServiceProvider: unassigned,
   };
 }
 

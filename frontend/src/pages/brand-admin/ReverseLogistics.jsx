@@ -22,7 +22,7 @@ function shape(ret) {
   return {
     id: ret.id,
     ref: ret.humanId || ret.id,
-    technician: ret.technician?.name || 'Unknown',
+    serviceProvider: ret.serviceProvider?.name || 'Unknown',
     partName: ret.partName,
     sku: ret.sku || '—',
     ticketId: ret.serviceRequest?.humanId || '—',
@@ -68,7 +68,7 @@ const ReverseLogistics = () => {
     setReturns(prev => prev.map(r => (r.id === id ? { ...r, ...patch } : r)));
     try {
       const updated = await apiRequest(`/brand/returns/${id}`, { method: 'PATCH', auth: true, body: patch });
-      setReturns(prev => prev.map(r => (r.id === id ? shape({ ...updated, technician: { name: r.technician } }) : r)));
+      setReturns(prev => prev.map(r => (r.id === id ? shape({ ...updated, serviceProvider: { name: r.serviceProvider } }) : r)));
       setSuccessMessage('Return updated.');
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (err) {
@@ -107,7 +107,7 @@ const ReverseLogistics = () => {
     const matchesSearch = ret.ref.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           ret.partName.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           ret.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          ret.technician.toLowerCase().includes(searchQuery.toLowerCase());
+                          ret.serviceProvider.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesTransit = selectedTransit === 'All Transit Status' || ret.transitStatus === selectedTransit;
     const matchesVerification = selectedVerification === 'All Verification Status' || ret.status === selectedVerification;
     return matchesSearch && matchesTransit && matchesVerification;
@@ -162,8 +162,8 @@ const ReverseLogistics = () => {
                   <h3 className="text-xs uppercase text-[#64748B] font-semibold mb-2">Logistics & Tracking</h3>
                   <div className="bg-[#F8FAFC] p-4 rounded-xl space-y-2">
                     <div className="flex justify-between">
-                      <span className="text-[#64748B]">Technician:</span>
-                      <span className="font-medium text-[#1E293B]">{selectedReturn.technician}</span>
+                      <span className="text-[#64748B]">ServiceProvider:</span>
+                      <span className="font-medium text-[#1E293B]">{selectedReturn.serviceProvider}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-[#64748B]">Courier Provider:</span>
@@ -280,7 +280,7 @@ const ReverseLogistics = () => {
                 <thead className="bg-[#F8FAFC] text-[#64748B] text-xs uppercase">
                   <tr>
                     <th className="px-6 py-4">Return ID</th>
-                    <th className="px-6 py-4">Technician</th>
+                    <th className="px-6 py-4">Service Provider</th>
                     <th className="px-6 py-4">Part Name (SKU)</th>
                     <th className="px-6 py-4">Ticket Link</th>
                     <th className="px-6 py-4">Replace Date</th>
@@ -306,7 +306,7 @@ const ReverseLogistics = () => {
                       onClick={() => handleRowClick(ret)}
                     >
                       <td className="px-6 py-4 font-medium text-[#0D47A1]">{ret.ref}</td>
-                      <td className="px-6 py-4 text-[#1E293B]">{ret.technician}</td>
+                      <td className="px-6 py-4 text-[#1E293B]">{ret.serviceProvider}</td>
                       <td className="px-6 py-4">
                         <div>
                           <p className="text-[#1E293B] font-medium">{ret.partName}</p>

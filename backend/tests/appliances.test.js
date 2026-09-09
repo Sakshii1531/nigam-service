@@ -28,10 +28,8 @@ import { Product } from '../src/modules/buy-commerce/product.model.js';
 import { Escalation } from '../src/modules/super-admin/escalation.model.js';
 import { AMCPlan } from '../src/modules/warranty-amc-exchange/amcPlan.model.js';
 import { AMCSubscription } from '../src/modules/warranty-amc-exchange/amcSubscription.model.js';
-import { ServicePartner } from '../src/modules/super-admin/servicePartner.model.js';
-import { City } from '../src/modules/super-admin/city.model.js';
-import { Technician } from '../src/modules/technician/technician.model.js';
-import { Job } from '../src/modules/technician/job.model.js';
+import { ServiceProvider } from '../src/modules/service-provider/serviceProvider.model.js';
+import { Job } from '../src/modules/service-provider/job.model.js';
 import { hashPassword } from '../src/modules/auth/password.js';
 import { ROLES } from '../src/config/constants.js';
 import { testDbUri } from './helpers/testDb.js';
@@ -109,19 +107,17 @@ beforeEach(async () => {
     Escalation.deleteMany({}),
     AMCPlan.deleteMany({}),
     AMCSubscription.deleteMany({}),
-    ServicePartner.deleteMany({}),
-    City.deleteMany({}),
-    Technician.deleteMany({}),
+    ServiceProvider.deleteMany({}),
     Job.deleteMany({}),
   ]);
 });
 
-async function seedTechnician({ servicePartner } = {}) {
+async function seedServiceProvider() {
   const phone = nextPhone();
-  const user = await User.create({ role: ROLES.TECHNICIAN, phone, name: 'Test Technician', passwordHash: await hashPassword('password123') });
-  const technician = await Technician.create({ user: user._id, name: 'Test Technician', phone, status: 'Active', servicePartner: servicePartner || undefined });
-  const token = await loginAndVerify({ role: ROLES.TECHNICIAN, identifier: phone, password: 'password123' });
-  return { user, technician, token };
+  const user = await User.create({ role: ROLES.SERVICE_PROVIDER, phone, name: 'Test ServiceProvider', passwordHash: await hashPassword('password123') });
+  const serviceProvider = await ServiceProvider.create({ user: user._id, name: 'Test ServiceProvider', phone, status: 'Active' });
+  const token = await loginAndVerify({ role: ROLES.SERVICE_PROVIDER, identifier: phone, password: 'password123' });
+  return { user, serviceProvider, token };
 }
 
 describe('customer appliance registry', () => {
@@ -963,39 +959,10 @@ describe('AMC plan catalogue', () => {
   });
 });
 
-describe('super-admin service partner console', () => {
-  it('reports a real technician count and populated city, and rolls both into no fabricated tile numbers', async () => {
-    const adminToken = await seedSuperAdmin();
-    const auth = { Authorization: `Bearer ${adminToken}` };
-    const city = await City.create({ name: 'Kanpur', state: 'UP' });
-
-    const busyPartner = await ServicePartner.create({ name: 'NCC Kanpur', city: city._id, status: 'Active' });
-    const quietPartner = await ServicePartner.create({ name: 'NCC Idle Center', city: city._id, status: 'Inactive' });
-
-    await seedTechnician({ servicePartner: busyPartner._id });
-    await seedTechnician({ servicePartner: busyPartner._id });
-    await seedTechnician({ servicePartner: quietPartner._id });
-
-    const res = await request(app)
-      .get('/api/v1/super-admin/service-partners')
-      .set(auth)
-      .expect(200);
-
-    const busy = res.body.data.find((p) => p.id === busyPartner.id);
-    const quiet = res.body.data.find((p) => p.id === quietPartner.id);
-
-    // Both used to read 0 — the list endpoint never computed a per-partner
-    // technician count, and never populated city, unlike the single-item route.
-    expect(busy.technicianCount).toBe(2);
-    expect(quiet.technicianCount).toBe(1);
-    expect(busy.city.name).toBe('Kanpur');
-  });
-});
-
-describe('technician job screen shows the real AMC/EW coverage', () => {
+describe('serviceProvider job screen shows the real AMC/EW coverage', () => {
   it('snapshots the AMC subscription and its plan onto the job at accept time', async () => {
     const customer = await seedCustomer();
-    const { technician, token } = await seedTechnician();
+    const { serviceProvider, token } = await seedServiceProvider();
     const plan = await AMCPlan.create({ name: 'Gold AMC', tier: 'Gold', price: 2499, visitsTotal: 4 });
     const subscription = await AMCSubscription.create({
       user: customer.user._id,
@@ -1007,7 +974,7 @@ describe('technician job screen shows the real AMC/EW coverage', () => {
     });
     const sr = await ServiceRequest.create({
       user: customer.user._id,
-      technician: technician._id,
+      serviceProvider: serviceProvider._id,
       category: 'AC',
       description: 'AMC visit',
       requestMode: 'B2C',
@@ -1015,13 +982,13 @@ describe('technician job screen shows the real AMC/EW coverage', () => {
     });
 
     await request(app)
-      .post(`/api/v1/tech/jobs/accept/${sr.id}`)
+      .post(`/api/v1/service-provider/jobs/accept/${sr.id}`)
       .set('Authorization', `Bearer ${token}`)
       .send({ type: 'AMC Visit', amcSubscriptionId: subscription.id })
       .expect(200);
 
     const res = await request(app)
-      .get('/api/v1/tech/jobs/active')
+      .get('/api/v1/service-provider/jobs/active')
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
 
@@ -1036,7 +1003,7 @@ describe('technician job screen shows the real AMC/EW coverage', () => {
   it("refuses to accept as an AMC job using another customer's subscription", async () => {
     const owner = await seedCustomer();
     const stranger = await seedCustomer();
-    const { technician, token } = await seedTechnician();
+    const { serviceProvider, token } = await seedServiceProvider();
     const plan = await AMCPlan.create({ name: 'Gold AMC', tier: 'Gold', price: 2499, visitsTotal: 4 });
     const subscription = await AMCSubscription.create({
       user: owner.user._id,
@@ -1048,17 +1015,17 @@ describe('technician job screen shows the real AMC/EW coverage', () => {
     });
     const sr = await ServiceRequest.create({
       user: stranger.user._id,
-      technician: technician._id,
+      serviceProvider: serviceProvider._id,
       category: 'AC',
       description: 'AMC visit',
       requestMode: 'B2C',
       status: 'Assigned',
     });
 
-    // Assigned to this technician, so the assignment check passes — the
+    // Assigned to this service provider, so the assignment check passes — the
     // subscription-ownership check is what must reject it.
     const res = await request(app)
-      .post(`/api/v1/tech/jobs/accept/${sr.id}`)
+      .post(`/api/v1/service-provider/jobs/accept/${sr.id}`)
       .set('Authorization', `Bearer ${token}`)
       .send({ type: 'AMC Visit', amcSubscriptionId: subscription.id })
       .expect(403);

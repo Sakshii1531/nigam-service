@@ -28,7 +28,7 @@ const Complaints = () => {
   const [loadError, setLoadError] = useState('');
 
   // Field names are the Escalation schema's — `raisedBy` is a role label
-  // ('Customer' | 'Technician' | …), not a populated user, and there is no
+  // ('Customer' | 'Service Provider' | …), not a populated user, and there is no
   // `subject`/`details` field, so those reads always fell through to defaults.
   const shapeComplaint = (c) => ({
     id: c.id,

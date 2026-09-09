@@ -20,10 +20,10 @@ const serviceRequestSchema = new mongoose.Schema(
     brandTicketNo: { type: String, index: true, sparse: true }, // brand's own numbering, e.g. SOM-GKP-YYMMDD-######
 
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    technician: { type: mongoose.Schema.Types.ObjectId, ref: 'Technician', default: null, index: true },
-    // Technicians who rejected this request. Auto-assignment skips them, so a
+    serviceProvider: { type: mongoose.Schema.Types.ObjectId, ref: 'ServiceProvider', default: null, index: true },
+    // ServiceProviders who rejected this request. Auto-assignment skips them, so a
     // rejected job goes to somebody else instead of bouncing straight back.
-    declinedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Technician' }],
+    declinedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'ServiceProvider' }],
     brand: { type: mongoose.Schema.Types.ObjectId, ref: 'Brand', default: null, index: true },
     booking: { type: mongoose.Schema.Types.ObjectId, ref: 'Booking', default: null },
     appliance: { type: mongoose.Schema.Types.ObjectId, ref: 'OwnedAppliance', default: null },
@@ -68,7 +68,7 @@ const serviceRequestSchema = new mongoose.Schema(
 );
 
 serviceRequestSchema.index({ brand: 1, status: 1, createdAt: -1 });
-serviceRequestSchema.index({ technician: 1, status: 1 });
+serviceRequestSchema.index({ serviceProvider: 1, status: 1 });
 
 applyStandardPlugins(serviceRequestSchema, { prefix: ID_PREFIXES.SERVICE_REQUEST });
 

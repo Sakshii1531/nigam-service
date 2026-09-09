@@ -17,7 +17,7 @@ export async function listInvoices(brandId, { status, page, limit, sort } = {}) 
     // both refs here instead of leaving the client with bare ObjectIds.
     Invoice.find(query)
       .populate('customer', 'name email')
-      .populate('technician', 'name')
+      .populate('serviceProvider', 'name')
       .sort(sortObj)
       .skip(skip)
       .limit(lim),
@@ -39,7 +39,7 @@ export async function getInvoice(brandId, id) {
 
 /** total is always server-computed from the line items, never trusted from the
  * client, same convention as every other money total in this codebase. */
-export async function createInvoice(brandId, { serviceRequest, customer, technician, product, serviceCharge = 0, partCharge = 0, gst = 0 }) {
+export async function createInvoice(brandId, { serviceRequest, customer, serviceProvider, product, serviceCharge = 0, partCharge = 0, gst = 0 }) {
   const sr = await ServiceRequest.findById(serviceRequest);
   if (!sr) throw new ApiError(404, 'Service request not found');
   if (sr.brand && String(sr.brand) !== brandId) throw new ApiError(403, 'That service request belongs to a different brand');
@@ -48,7 +48,7 @@ export async function createInvoice(brandId, { serviceRequest, customer, technic
     brand: brandId,
     serviceRequest,
     customer,
-    technician: technician || null,
+    serviceProvider: serviceProvider || null,
     product,
     serviceCharge,
     partCharge,

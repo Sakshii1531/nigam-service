@@ -35,7 +35,7 @@ function shape(invoice) {
     id: invoice.id,
     ref: invoice.humanId || invoice.id,
     customer: invoice.customer?.name || 'Customer',
-    technician: invoice.technician?.name || 'Unassigned',
+    serviceProvider: invoice.serviceProvider?.name || 'Unassigned',
     product: invoice.product || '—',
     // Keep the raw total alongside the display string so the tiles can sum it.
     totalAmount: invoice.total || 0,
@@ -92,8 +92,8 @@ const Invoices = () => {
   const triggerExport = () => {
     const written = exportCsv(
       'brand-invoices',
-      ['Invoice', 'Customer', 'Technician', 'Product', 'Service Charge', 'Part Charge', 'GST', 'Total', 'Status'],
-      filteredInvoices.map((i) => [i.ref, i.customer, i.technician, i.product, i.serviceCharge, i.partCharge, i.gst, i.total, i.status]),
+      ['Invoice', 'Customer', 'Service Provider', 'Product', 'Service Charge', 'Part Charge', 'GST', 'Total', 'Status'],
+      filteredInvoices.map((i) => [i.ref, i.customer, i.serviceProvider, i.product, i.serviceCharge, i.partCharge, i.gst, i.total, i.status]),
     );
     setSuccessMessage(written ? 'Billing summary exported as CSV.' : 'There are no invoices matching the current filters.');
     setTimeout(() => setSuccessMessage(''), 3000);
@@ -110,7 +110,7 @@ const Invoices = () => {
     const matchesSearch = inv.ref.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           inv.customer.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           inv.product.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          inv.technician.toLowerCase().includes(searchQuery.toLowerCase());
+                          inv.serviceProvider.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = selectedStatus === 'All Status' || inv.status === selectedStatus;
     return matchesSearch && matchesStatus;
   });
@@ -154,8 +154,8 @@ const Invoices = () => {
                       <span className="font-medium text-[#1E293B]">{selectedInvoice.customer}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-[#64748B]">Technician Assigned:</span>
-                      <span className="font-medium text-[#1E293B]">{selectedInvoice.technician}</span>
+                      <span className="text-[#64748B]">Service Provider Assigned:</span>
+                      <span className="font-medium text-[#1E293B]">{selectedInvoice.serviceProvider}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-[#64748B]">Appliance:</span>
@@ -302,7 +302,7 @@ const Invoices = () => {
                       <td className="px-6 py-4">
                         <div>
                           <p className="text-[#1E293B] font-medium">{inv.customer}</p>
-                          <p className="text-[#64748B] text-xs">{inv.technician}</p>
+                          <p className="text-[#64748B] text-xs">{inv.serviceProvider}</p>
                         </div>
                       </td>
                       <td className="px-6 py-4 text-[#1E293B]">{inv.product}</td>

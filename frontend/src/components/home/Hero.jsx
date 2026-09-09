@@ -87,7 +87,7 @@ const Hero = () => {
               
               <img 
                 src={heroImg} 
-                alt="Service Technician" 
+                alt="Service Service Provider" 
                 className="w-full h-auto rounded-3xl subtle-shadow bg-white"
               />
             </div>

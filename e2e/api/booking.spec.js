@@ -6,17 +6,17 @@ import { randomUUID } from 'node:crypto';
 // Phase 4 exit criterion ("full booking-creation -> service-request ->
 // status-timeline flow").
 //
-// Every test creates its OWN category (unique key) + service + technician
+// Every test creates its OWN category (unique key) + service + service provider
 // (specs = that same unique key) rather than reusing the shared seeded 'AC'
 // category. Phase 8's real weighted assignmentEngine.js scores every
-// Active+Available technician (not just specs-matching ones), but a specs match
-// is worth a fixed 60-point skill-score gap versus any non-matching technician —
+// Active+Available service provider (not just specs-matching ones), but a specs match
+// is worth a fixed 60-point skill-score gap versus any non-matching service provider —
 // with no city passed (proximity ties at 50 for everyone) and fresh
 // rating/activeJobsCount (0 for every fixture), that gap dominates every other
 // scoring factor combined, so the specialist created by this test always wins
-// regardless of what other tests' technicians are doing concurrently. A unique
+// regardless of what other tests' service providers are doing concurrently. A unique
 // category per test still matters: without it, a shared category means multiple
-// tests' technicians would ALL score the 100-skill bonus, and workload/tie-break
+// tests' service providers would ALL score the 100-skill bonus, and workload/tie-break
 // order between them would be genuinely nondeterministic under parallel workers.
 
 function uniquePhone() {
@@ -42,17 +42,17 @@ async function createCustomer(request) {
   return { phone, token };
 }
 
-async function createTechnician(request, { specs, availability = 'Available', serviceCityName, serviceStateName }) {
+async function createServiceProvider(request, { specs, availability = 'Available', serviceCityName, serviceStateName }) {
   const phone = uniquePhone();
-  const createRes = await request.post('/api/v1/_dev/test-technician', {
+  const createRes = await request.post('/api/v1/_dev/test-serviceProvider', {
     data: { phone, password: 'password123', specs, availability, serviceCityName, serviceStateName },
   });
-  const { technicianId } = (await createRes.json()).data;
-  const token = await loginAndVerify(request, { role: 'technician', identifier: phone, password: 'password123' });
-  return { phone, technicianId, token };
+  const { serviceProviderId } = (await createRes.json()).data;
+  const token = await loginAndVerify(request, { role: 'service_provider', identifier: phone, password: 'password123' });
+  return { phone, serviceProviderId, token };
 }
 
-/** category/service/technician all scoped to one random key — see file header. */
+/** category/service/service provider all scoped to one random key — see file header. */
 async function setupIsolatedFixture(request, { price = 299 } = {}) {
   const categoryKey = `E2E-Booking-${randomUUID()}`;
 
@@ -69,26 +69,26 @@ async function setupIsolatedFixture(request, { price = 299 } = {}) {
     data: { slug: 'repair', name: 'Repair', price },
   });
 
-  const tech = await createTechnician(request, { specs: [categoryKey] });
+  const provider = await createServiceProvider(request, { specs: [categoryKey] });
   const customer = await createCustomer(request);
 
-  return { categoryKey, tech, customer };
+  return { categoryKey, provider, customer };
 }
 
 test.describe('POST /bookings — booking -> service-request -> auto-assign', () => {
-  test('creates a booking with a server-priced total and an auto-assigned technician', async ({ request }) => {
-    const { categoryKey, tech, customer } = await setupIsolatedFixture(request);
+  test('creates a booking with a server-priced total and an auto-assigned serviceProvider', async ({ request }) => {
+    const { categoryKey, provider, customer } = await setupIsolatedFixture(request);
 
     const res = await request.post('/api/v1/bookings', {
       headers: { Authorization: `Bearer ${customer.token}` },
       data: { category: categoryKey, serviceSlug: 'repair', quantity: 2 },
     });
     expect(res.status()).toBe(201);
-    const { booking, serviceRequest, technician } = (await res.json()).data;
+    const { booking, serviceRequest, serviceProvider } = (await res.json()).data;
 
     expect(booking.totalPrice).toBe(598); // 299 * 2 from the catalog, not client-supplied
-    expect(booking.technician).toBe(tech.technicianId);
-    expect(technician.id).toBe(tech.technicianId);
+    expect(booking.serviceProvider).toBe(provider.serviceProviderId);
+    expect(serviceProvider.id).toBe(provider.serviceProviderId);
     expect(serviceRequest.status).toBe('Assigned');
     expect(serviceRequest.timeline.map((t) => t.stepLabel)).toEqual(['New', 'Assigned']);
   });
@@ -102,10 +102,10 @@ test.describe('POST /bookings — booking -> service-request -> auto-assign', ()
     expect(res.status()).toBe(404);
   });
 
-  test('rejects a booking attempt from a technician role with 403', async ({ request }) => {
-    const { categoryKey, tech } = await setupIsolatedFixture(request);
+  test('rejects a booking attempt from a serviceProvider role with 403', async ({ request }) => {
+    const { categoryKey, provider } = await setupIsolatedFixture(request);
     const res = await request.post('/api/v1/bookings', {
-      headers: { Authorization: `Bearer ${tech.token}` },
+      headers: { Authorization: `Bearer ${provider.token}` },
       data: { category: categoryKey, serviceSlug: 'repair' },
     });
     expect(res.status()).toBe(403);
@@ -132,19 +132,19 @@ test.describe('booking ownership', () => {
 
 test.describe('service request status transitions', () => {
   async function createAssignedBooking(request) {
-    const { categoryKey, tech, customer } = await setupIsolatedFixture(request);
+    const { categoryKey, provider, customer } = await setupIsolatedFixture(request);
     const createRes = await request.post('/api/v1/bookings', {
       headers: { Authorization: `Bearer ${customer.token}` },
       data: { category: categoryKey, serviceSlug: 'repair' },
     });
     const { serviceRequest } = (await createRes.json()).data;
-    return { srId: serviceRequest.id, tech, customer };
+    return { srId: serviceRequest.id, provider, customer };
   }
 
-  test('lets the assigned technician make a valid transition', async ({ request }) => {
-    const { srId, tech } = await createAssignedBooking(request);
+  test('lets the assigned serviceProvider make a valid transition', async ({ request }) => {
+    const { srId, provider } = await createAssignedBooking(request);
     const res = await request.patch(`/api/v1/service-requests/${srId}/status`, {
-      headers: { Authorization: `Bearer ${tech.token}` },
+      headers: { Authorization: `Bearer ${provider.token}` },
       data: { status: 'Engineer Accepted' },
     });
     expect(res.status()).toBe(200);
@@ -152,9 +152,9 @@ test.describe('service request status transitions', () => {
   });
 
   test('rejects an out-of-order transition with 400', async ({ request }) => {
-    const { srId, tech } = await createAssignedBooking(request);
+    const { srId, provider } = await createAssignedBooking(request);
     const res = await request.patch(`/api/v1/service-requests/${srId}/status`, {
-      headers: { Authorization: `Bearer ${tech.token}` },
+      headers: { Authorization: `Bearer ${provider.token}` },
       data: { status: 'Closed' },
     });
     expect(res.status()).toBe(400);
@@ -193,7 +193,7 @@ test.describe('POST /bookings/:id/cancel', () => {
 });
 
 test.describe('POST /bookings — territory isolation (Indore vs Delhi)', () => {
-  test('strictly assigns the technician in Indore for an Indore booking, never the Delhi technician', async ({ request }) => {
+  test('strictly assigns the serviceProvider in Indore for an Indore booking, never the Delhi serviceProvider', async ({ request }) => {
     const categoryKey = `E2E-Territory-${randomUUID()}`;
 
     const adminEmail = `admin-territory-${randomUUID()}@e2e.test`;
@@ -209,15 +209,15 @@ test.describe('POST /bookings — territory isolation (Indore vs Delhi)', () => 
       data: { slug: 'repair', name: 'Repair', price: 350 },
     });
 
-    // Create a Delhi technician
-    const delhiTech = await createTechnician(request, {
+    // Create a Delhi service provider
+    const delhiTech = await createServiceProvider(request, {
       specs: [categoryKey],
       serviceCityName: 'Delhi',
       serviceStateName: 'Delhi',
     });
 
-    // Create an Indore technician
-    const indoreTech = await createTechnician(request, {
+    // Create an Indore service provider
+    const indoreTech = await createServiceProvider(request, {
       specs: [categoryKey],
       serviceCityName: 'Indore',
       serviceStateName: 'Madhya Pradesh',
@@ -242,13 +242,13 @@ test.describe('POST /bookings — territory isolation (Indore vs Delhi)', () => 
     expect(res.status()).toBe(201);
     const { booking, serviceRequest } = (await res.json()).data;
 
-    // Must be assigned strictly to the Indore technician
-    expect(booking.technician).toBe(indoreTech.technicianId);
-    expect(booking.technician).not.toBe(delhiTech.technicianId);
+    // Must be assigned strictly to the Indore service provider
+    expect(booking.serviceProvider).toBe(indoreTech.serviceProviderId);
+    expect(booking.serviceProvider).not.toBe(delhiTech.serviceProviderId);
     expect(serviceRequest.status).toBe('Assigned');
   });
 
-  test('does not assign an out-of-city technician when booking in an unserviced city and only Delhi technician exists', async ({ request }) => {
+  test('does not assign an out-of-city serviceProvider when booking in an unserviced city and only Delhi serviceProvider exists', async ({ request }) => {
     const categoryKey = `E2E-Territory-Solo-${randomUUID()}`;
 
     const adminEmail = `admin-territory-solo-${randomUUID()}@e2e.test`;
@@ -264,8 +264,8 @@ test.describe('POST /bookings — territory isolation (Indore vs Delhi)', () => 
       data: { slug: 'repair', name: 'Repair', price: 350 },
     });
 
-    // Only Delhi technician is created
-    const delhiTech = await createTechnician(request, {
+    // Only Delhi service provider is created
+    const delhiTech = await createServiceProvider(request, {
       specs: [categoryKey],
       serviceCityName: 'Delhi',
       serviceStateName: 'Delhi',
@@ -273,7 +273,7 @@ test.describe('POST /bookings — territory isolation (Indore vs Delhi)', () => 
 
     const customer = await createCustomer(request);
 
-    // Customer places booking in Bhopal where no technician exists
+    // Customer places booking in Bhopal where no service provider exists
     const res = await request.post('/api/v1/bookings', {
       headers: { Authorization: `Bearer ${customer.token}` },
       data: {
@@ -290,9 +290,9 @@ test.describe('POST /bookings — territory isolation (Indore vs Delhi)', () => 
     expect(res.status()).toBe(201);
     const { booking, serviceRequest } = (await res.json()).data;
 
-    // Must NOT assign Delhi technician!
-    expect(booking.technician).not.toBe(delhiTech.technicianId);
-    expect(booking.technician).toBeNull();
+    // Must NOT assign Delhi service provider!
+    expect(booking.serviceProvider).not.toBe(delhiTech.serviceProviderId);
+    expect(booking.serviceProvider).toBeNull();
   });
 });
 

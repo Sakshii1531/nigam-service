@@ -36,7 +36,7 @@ Creates one `User` per role you can log in as (via `POST /api/v1/auth/login` →
 | Role | Identifier | Password |
 |---|---|---|
 | customer | `9876543210` | `password123` |
-| technician | `9000000001` | `password123` |
+| serviceProvider | `9000000001` | `password123` |
 | brand_admin | `admin123@gmail.com` | `admin123` |
 | super_admin | `admin123@gmail.com` | `admin123` |
 

@@ -11,14 +11,14 @@ const SOCKET_URL = import.meta.env.VITE_API_BASE_URL
 const Chat = () => {
   const navigate = useNavigate();
   const [message, setMessage] = useState('');
-  // A real conversation over the same chat gateway the technician app uses.
+  // A real conversation over the same chat gateway the service provider app uses.
   // This screen used to seed two invented messages and answer with a rotating
-  // list of canned technician replies, so a customer believed they were talking
+  // list of canned service provider replies, so a customer believed they were talking
   // to their engineer when nothing was sent anywhere.
   const [messages, setMessages] = useState([]);
   const [conversationId, setConversationId] = useState(null);
   const [chatError, setChatError] = useState('');
-  const [techTyping] = useState(false);
+  const [serviceProviderTyping] = useState(false);
   const [attachment, setAttachment] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [sessionEnded, setSessionEnded] = useState(false);
@@ -40,7 +40,7 @@ const Chat = () => {
         if (cancelled) return;
         setMessages((history || []).map((m) => ({
           id: m.id,
-          from: m.sender === 'customer' ? 'user' : 'technician',
+          from: m.sender === 'customer' ? 'user' : 'service_provider',
           text: m.text,
           attachment: m.attachmentUrl ? { name: m.attachmentName || 'Attachment', url: m.attachmentUrl } : null,
           time: new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -54,7 +54,7 @@ const Chat = () => {
         socket.on('message:new', (m) => {
           setMessages((prev) => (prev.some((x) => x.id === m.id) ? prev : [...prev, {
             id: m.id,
-            from: m.sender === 'customer' ? 'user' : 'technician',
+            from: m.sender === 'customer' ? 'user' : 'service_provider',
             text: m.text,
             time: new Date(m.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             status: 'read',
@@ -73,7 +73,7 @@ const Chat = () => {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, techTyping]);
+  }, [messages, serviceProviderTyping]);
 
   const handleSend = (e) => {
     e.preventDefault();
@@ -142,7 +142,7 @@ const Chat = () => {
         </div>
 
         {messages.map((msg) =>
-          msg.from === 'technician' ? (
+          msg.from === 'service_provider' ? (
             <div key={msg.id} className="flex flex-col items-start gap-1">
               <div className="bg-white p-3.5 rounded-t-2xl rounded-r-2xl max-w-[80%] shadow-sm text-sm text-text-primary">
                 {msg.text}
@@ -172,7 +172,7 @@ const Chat = () => {
           )
         )}
 
-        {techTyping && (
+        {serviceProviderTyping && (
           <div className="flex items-start">
             <div className="bg-white px-4 py-3 rounded-t-2xl rounded-r-2xl shadow-sm flex items-center gap-1">
               {[0, 1, 2].map((i) => (

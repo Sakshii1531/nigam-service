@@ -1,4 +1,4 @@
-import { Technician } from '../technician/technician.model.js';
+import { ServiceProvider } from '../service-provider/serviceProvider.model.js';
 import { ROLES } from '../../config/constants.js';
 
 // Shared by the socket gateway and the HTTP send/close endpoints so both
@@ -11,9 +11,9 @@ export const PLATFORM_DESK = 'platform';
 
 export async function resolveParticipant(user) {
   if (user.role === ROLES.CUSTOMER) return { kind: 'customer', id: user.id };
-  if (user.role === ROLES.TECHNICIAN) {
-    const technician = await Technician.findOne({ user: user.id });
-    return technician ? { kind: 'technician', id: technician.id } : null;
+  if (user.role === ROLES.SERVICE_PROVIDER) {
+    const serviceProvider = await ServiceProvider.findOne({ user: user.id });
+    return serviceProvider ? { kind: 'service_provider', id: serviceProvider.id } : null;
   }
   // A brand admin participates as their brand's support desk, not as an
   // individual — messages they send are attributed to 'agent'. An account with
@@ -30,7 +30,7 @@ export async function resolveParticipant(user) {
 export async function isParticipant(conversation, participant) {
   if (!participant) return false;
   if (participant.kind === 'customer') return String(conversation.customer) === participant.id;
-  if (participant.kind === 'technician') return conversation.technician && String(conversation.technician) === participant.id;
+  if (participant.kind === 'service_provider') return conversation.serviceProvider && String(conversation.serviceProvider) === participant.id;
   if (participant.kind === 'agent') {
     return participant.id === PLATFORM_DESK
       ? Boolean(conversation.platformSupport)

@@ -10,11 +10,9 @@ import {
   Star, 
   MapPin, 
   Edit, 
-  Trash2, 
-  CheckCircle2, 
-  Building2, 
-  Briefcase, 
-  TrendingUp, 
+  Trash2,
+  CheckCircle2,
+  TrendingUp,
   ShieldCheck,
   X
 } from 'lucide-react';
@@ -29,8 +27,6 @@ function shape(asm) {
     phone: asm.phone || '—',
     city: asm.city?.name || 'Unassigned',
     rating: asm.rating ?? 0,
-    partners: asm.partners?.length ?? 0,
-    activeJobs: asm.activeJobs ?? 0,
   };
 }
 
@@ -50,6 +46,7 @@ const ASM = () => {
   const [newAsmEmail, setNewAsmEmail] = useState('');
   const [newAsmPhone, setNewAsmPhone] = useState('');
   const [newAsmCity, setNewAsmCity] = useState('');
+  const [newAsmPassword, setNewAsmPassword] = useState('');
 
   // Modal State for Edit
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -58,6 +55,7 @@ const ASM = () => {
   const [editAsmEmail, setEditAsmEmail] = useState('');
   const [editAsmPhone, setEditAsmPhone] = useState('');
   const [editAsmCity, setEditAsmCity] = useState('');
+  const [editAsmPassword, setEditAsmPassword] = useState('');
 
   const showToast = (msg) => {
     setSuccessMessage(msg);
@@ -105,12 +103,16 @@ const ASM = () => {
       setError('Create a city first — an ASM must be assigned to one.');
       return;
     }
+    if (newAsmPassword.length < 6) {
+      setError('Set a password of at least 6 characters — this is what the ASM signs in with.');
+      return;
+    }
     setSaving(true);
     try {
       const created = await apiRequest('/super-admin/asms', {
         method: 'POST',
         auth: true,
-        body: { name: newAsmName, email: newAsmEmail, phone: newAsmPhone, city: newAsmCity },
+        body: { name: newAsmName, email: newAsmEmail, phone: newAsmPhone, city: newAsmCity, password: newAsmPassword },
       });
       const cityObj = cities.find(c => c.id === newAsmCity);
       setAsms(prev => [...prev, shape({ ...created, city: cityObj })]);
@@ -119,6 +121,7 @@ const ASM = () => {
       setNewAsmEmail('');
       setNewAsmPhone('');
       setNewAsmCity(cities[0]?.id || '');
+      setNewAsmPassword('');
       setIsModalOpen(false);
       setError('');
       showToast('New Area Service Manager added successfully!');
@@ -136,11 +139,16 @@ const ASM = () => {
     setEditAsmPhone(asm.phone === '—' ? '' : asm.phone);
     const matchedCity = cities.find(c => c.name === asm.city || c.id === asm.rawCityId);
     setEditAsmCity(matchedCity?.id || cities[0]?.id || '');
+    setEditAsmPassword('');
     setIsEditModalOpen(true);
   };
 
   const handleEditAsm = async (e) => {
     e.preventDefault();
+    if (editAsmPassword && editAsmPassword.length < 6) {
+      setError('New password must be at least 6 characters.');
+      return;
+    }
     setSaving(true);
     try {
       const updated = await apiRequest(`/super-admin/asms/${editingAsmId}`, {
@@ -151,6 +159,9 @@ const ASM = () => {
           email: editAsmEmail,
           phone: editAsmPhone,
           city: editAsmCity,
+          // Only sent when the super-admin actually typed a new one — leaves
+          // the ASM's existing password untouched otherwise.
+          ...(editAsmPassword ? { password: editAsmPassword } : {}),
         },
       });
       const cityObj = cities.find(c => c.id === editAsmCity);
@@ -186,7 +197,6 @@ const ASM = () => {
   });
 
   const activeCities = new Set(asms.map(a => a.city).filter(c => c !== 'Unassigned' && c !== '—')).size;
-  const totalPartners = asms.reduce((acc, a) => acc + a.partners, 0);
   const avgRating = asms.length
     ? (asms.reduce((acc, a) => acc + a.rating, 0) / asms.length).toFixed(1)
     : '0.0';
@@ -211,7 +221,7 @@ const ASM = () => {
         <div className="p-6 space-y-6 flex-1 bg-[#F8FAFC]">
           
           {/* Top Metric Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-all duration-200 flex items-center justify-between group">
               <div>
                 <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total ASMs</p>
@@ -231,17 +241,6 @@ const ASM = () => {
               </div>
               <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:scale-105 transition-transform">
                 <MapPin size={22} />
-              </div>
-            </div>
-
-            <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-all duration-200 flex items-center justify-between group">
-              <div>
-                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Partners Monitored</p>
-                <h3 className="text-2xl font-black text-slate-900 mt-1">{totalPartners}</h3>
-                <span className="text-[11px] font-semibold text-slate-500 mt-1 inline-block">Service partners</span>
-              </div>
-              <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-105 transition-transform">
-                <Building2 size={22} />
               </div>
             </div>
 
@@ -302,8 +301,6 @@ const ASM = () => {
                     <th className="py-3.5 px-6">ASM Details</th>
                     <th className="py-3.5 px-4">Contact Details</th>
                     <th className="py-3.5 px-4">Region</th>
-                    <th className="py-3.5 px-4 text-center">Partners</th>
-                    <th className="py-3.5 px-4 text-center">Active Jobs</th>
                     <th className="py-3.5 px-4">Performance</th>
                     <th className="py-3.5 px-6 text-right">Actions</th>
                   </tr>
@@ -343,20 +340,6 @@ const ASM = () => {
                         }`}>
                           <MapPin size={12} className={asm.city !== 'Unassigned' && asm.city !== '—' ? 'text-[#0D47A1]' : 'text-slate-400'} /> 
                           {asm.city}
-                        </span>
-                      </td>
-
-                      {/* Partners Count */}
-                      <td className="py-4 px-4 text-center">
-                        <span className="inline-block px-3 py-1 bg-slate-100 text-slate-800 font-bold rounded-lg text-xs">
-                          {asm.partners}
-                        </span>
-                      </td>
-
-                      {/* Active Jobs Count */}
-                      <td className="py-4 px-4 text-center">
-                        <span className="inline-block px-3 py-1 bg-slate-100 text-slate-800 font-bold rounded-lg text-xs">
-                          {asm.activeJobs}
                         </span>
                       </td>
 
@@ -472,7 +455,7 @@ const ASM = () => {
               
               <div>
                 <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Assign City / Region *</label>
-                <select 
+                <select
                   className="w-full border border-slate-200 p-2.5 rounded-xl outline-none focus:ring-2 focus:ring-[#0D47A1] text-xs font-semibold text-slate-800 bg-white"
                   value={newAsmCity}
                   onChange={(e) => setNewAsmCity(e.target.value)}
@@ -483,7 +466,21 @@ const ASM = () => {
                   ))}
                 </select>
               </div>
-              
+
+              <div>
+                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Login Password *</label>
+                <input
+                  type="password"
+                  required
+                  minLength={6}
+                  placeholder="At least 6 characters"
+                  className="w-full border border-slate-200 p-2.5 rounded-xl outline-none focus:ring-2 focus:ring-[#0D47A1] text-xs font-semibold text-slate-800"
+                  value={newAsmPassword}
+                  onChange={(e) => setNewAsmPassword(e.target.value)}
+                />
+                <p className="text-[10px] text-slate-400 mt-1">This is what the ASM signs in with at the ASM Portal — share it with them directly.</p>
+              </div>
+
               <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
                 <button 
                   type="button" 
@@ -572,11 +569,23 @@ const ASM = () => {
                   ))}
                 </select>
               </div>
-              
+
+              <div>
+                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Reset Password (optional)</label>
+                <input
+                  type="password"
+                  minLength={6}
+                  placeholder="Leave blank to keep the current password"
+                  className="w-full border border-slate-200 p-2.5 rounded-xl outline-none focus:ring-2 focus:ring-[#0D47A1] text-xs font-semibold text-slate-800"
+                  value={editAsmPassword}
+                  onChange={(e) => setEditAsmPassword(e.target.value)}
+                />
+              </div>
+
               <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
-                <button 
-                  type="button" 
-                  onClick={() => setIsEditModalOpen(false)} 
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(false)}
                   className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer border border-slate-200"
                 >
                   Cancel

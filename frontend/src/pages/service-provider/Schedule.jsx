@@ -6,8 +6,8 @@ import {
   HelpCircle, LogOut, CheckCircle2, ChevronLeft, ChevronRight, Bell, Clock, 
   MapPin, Phone, ArrowRight, RotateCw, Sparkles
 } from 'lucide-react';
-import TechBottomNav from '../../components/TechBottomNav';
-import { useTech } from '../../context/TechContext';
+import ServiceProviderBottomNav from '../../components/ServiceProviderBottomNav';
+import { useTech } from '../../context/ServiceProviderContext';
 import { useNotifications } from '../../context/NotificationContext';
 
 const Schedule = () => {
@@ -69,9 +69,9 @@ const Schedule = () => {
   const handleJobClick = (jobId, status) => {
     selectJobForDetails(jobId);
     if (status === 'Completed') {
-      navigate('/technician/billing-estimate');
+      navigate('/service-provider/billing-estimate');
     } else {
-      navigate('/technician/active-job');
+      navigate('/service-provider/active-job');
     }
   };
 
@@ -86,7 +86,7 @@ const Schedule = () => {
         <div className="flex items-center justify-between">
           <button 
             type="button"
-            onClick={() => navigate('/technician/dashboard')} 
+            onClick={() => navigate('/service-provider/dashboard')} 
             className="p-1.5 hover:bg-white/10 rounded-full text-white transition-colors cursor-pointer"
             title="Back to Dashboard"
           >
@@ -97,7 +97,7 @@ const Schedule = () => {
             <span className="text-[11px] text-white/80 font-normal">{currentMonthYear}</span>
           </div>
           <button 
-            onClick={() => navigate('/technician/notifications')}
+            onClick={() => navigate('/service-provider/notifications')}
             className="p-2 hover:bg-white/10 rounded-full transition-colors relative cursor-pointer"
           >
             <Bell className="h-5 w-5 text-white" />
@@ -129,7 +129,7 @@ const Schedule = () => {
         <div className="flex items-center justify-between bg-white rounded-3xl p-5 border border-slate-200/80 shadow-2xs">
           <div className="flex items-center gap-3.5">
             <button
-              onClick={() => navigate('/technician/dashboard')}
+              onClick={() => navigate('/service-provider/dashboard')}
               className="p-2 bg-slate-100 hover:bg-slate-200 rounded-2xl text-[#052355] transition-colors cursor-pointer"
               title="Back to Dashboard"
             >
@@ -278,7 +278,7 @@ const Schedule = () => {
                 </p>
               </div>
               <button
-                onClick={() => navigate('/technician/dashboard')}
+                onClick={() => navigate('/service-provider/dashboard')}
                 className="mt-2 text-xs font-bold text-[#0D47A1] hover:underline"
               >
                 Go to Dashboard →
@@ -315,7 +315,7 @@ const Schedule = () => {
       </div>
 
       {/* Bottom Navigation */}
-      <TechBottomNav activeTab="schedule" />
+      <ServiceProviderBottomNav activeTab="schedule" />
 
     </div>
   );

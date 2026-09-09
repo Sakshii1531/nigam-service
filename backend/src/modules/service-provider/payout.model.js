@@ -3,7 +3,7 @@ import { applyStandardPlugins } from '../shared/plugins.js';
 
 const payoutSchema = new mongoose.Schema(
   {
-    technician: { type: mongoose.Schema.Types.ObjectId, ref: 'Technician', required: true, index: true },
+    serviceProvider: { type: mongoose.Schema.Types.ObjectId, ref: 'ServiceProvider', required: true, index: true },
     job: { type: mongoose.Schema.Types.ObjectId, ref: 'Job', default: null },
     baseAmount: { type: Number, required: true },
     platformFee: { type: Number, default: 0 },

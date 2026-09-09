@@ -614,7 +614,7 @@ const BookingFlow = () => {
               <div>
                 <p className="text-[12px] font-black text-slate-900">{catKey} Service Guarantee</p>
                 <p className="text-[10px] text-slate-500 font-medium mt-0.5 leading-snug">
-                  Verified technicians · Genuine parts · 30-day service warranty
+                  Verified serviceProviders · Genuine parts · 30-day service warranty
                 </p>
               </div>
             </div>
@@ -687,7 +687,7 @@ const BookingFlow = () => {
               <div>
                 <p className="text-[11px] font-black text-amber-900">Price Transparency Note</p>
                 <p className="text-[10px] text-amber-800 font-medium mt-0.5 leading-relaxed">
-                  {data.categoryNote || 'Prices shown are indicative. The technician will confirm exact charges after inspection.'}
+                  {data.categoryNote || 'Prices shown are indicative. The serviceProvider will confirm exact charges after inspection.'}
                 </p>
               </div>
             </div>

@@ -85,7 +85,7 @@ const Inventory = () => {
   };
 
   // Persists to the catalogue. Both handlers used to mutate local state only, so
-  // a part "added" here disappeared on reload and no technician ever saw it.
+  // a part "added" here disappeared on reload and no service provider ever saw it.
   const handleAddPartSubmit = async (e) => {
     e.preventDefault();
     if (!newPart.name || newPart.stock === '' || !newPart.price) {

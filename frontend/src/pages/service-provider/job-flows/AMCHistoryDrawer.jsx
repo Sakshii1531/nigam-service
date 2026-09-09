@@ -3,7 +3,7 @@ import { CheckCircle, AlertTriangle, Clock, ChevronRight } from 'lucide-react';
 import { apiRequest } from '../../../lib/apiClient';
 
 // The visit history behind this contract, read from the server. This file used
-// to ship two invented visits — including a TDS reading and the technician
+// to ship two invented visits — including a TDS reading and the service provider
 // names "Rahul S." and "Amir K." — that were shown for every AMC job against
 // real customers.
 
@@ -24,7 +24,7 @@ const AMCHistoryDrawer = ({ job, onStartVisit }) => {
   useEffect(() => {
     if (!job?.id) return;
     let cancelled = false;
-    apiRequest(`/tech/jobs/${job.id}/amc-history`, { auth: true })
+    apiRequest(`/service-provider/jobs/${job.id}/amc-history`, { auth: true })
       .then((res) => { if (!cancelled) setHistory(res || { subscription: null, visits: [] }); })
       .catch((err) => { if (!cancelled) setLoadError(err.message || 'Could not load the AMC history.'); });
     return () => { cancelled = true; };
@@ -37,7 +37,7 @@ const AMCHistoryDrawer = ({ job, onStartVisit }) => {
     date: v.scheduledDate ? new Date(v.scheduledDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Not scheduled',
     label: `Visit ${v.visitNumber}${history.subscription?.visitsTotal ? ` of ${history.subscription.visitsTotal}` : ''} — ${v.status}`,
     tasks: v.tasks,
-    technician: v.technician || 'Unassigned',
+    serviceProvider: v.serviceProvider || 'Unassigned',
     status: v.status === 'Completed' ? 'completed' : 'pending',
     notes: v.notes,
   }));
@@ -146,7 +146,7 @@ const AMCHistoryDrawer = ({ job, onStartVisit }) => {
 
                 <div className="border-t border-slate-200/70 pt-1.5 mt-0.5">
                   <span className="text-[10px] text-slate-500 font-normal">
-                    Technician: <strong className="text-[#052355]">{entry.technician}</strong>
+                    ServiceProvider: <strong className="text-[#052355]">{entry.serviceProvider}</strong>
                   </span>
                 </div>
               </div>

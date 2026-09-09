@@ -19,13 +19,13 @@ const BookingSuccess = () => {
 
   const [bookingId, setBookingId] = useState('');
   const [isAccepted, setIsAccepted] = useState(false);
-  const [technician, setTechnician] = useState(null);
+  const [serviceProvider, setServiceProvider] = useState(null);
   const [city, setCity] = useState(p.get('city') || '');
   const [charged, setCharged] = useState(null);
 
-  const handleCallTechnician = async () => {
-    if (technician?.phone) {
-      window.location.href = `tel:${technician.phone}`;
+  const handleCallServiceProvider = async () => {
+    if (serviceProvider?.phone) {
+      window.location.href = `tel:${serviceProvider.phone}`;
       return;
     }
     if (!serviceRequestId) return;
@@ -78,7 +78,7 @@ const BookingSuccess = () => {
       );
 
       let foundAccepted = isReqAccepted;
-      let matchedTech = isReqAccepted && res?.technician ? res.technician : null;
+      let matchedTech = isReqAccepted && res?.serviceProvider ? res.serviceProvider : null;
 
       if (res?.instantStatus) {
         setInstantStatus(res.instantStatus);
@@ -100,8 +100,8 @@ const BookingSuccess = () => {
           if (bkAccepted) {
             foundAccepted = true;
           }
-          if (bk.technician && (foundAccepted || bkAccepted) && !matchedTech) {
-            matchedTech = bk.technician;
+          if (bk.serviceProvider && (foundAccepted || bkAccepted) && !matchedTech) {
+            matchedTech = bk.serviceProvider;
           }
           if (bk.instantStatus && !res?.instantStatus) {
             setInstantStatus(bk.instantStatus);
@@ -122,9 +122,9 @@ const BookingSuccess = () => {
 
       setIsAccepted(foundAccepted);
       if (foundAccepted && matchedTech) {
-        setTechnician(typeof matchedTech === 'object' ? matchedTech : { name: 'Assigned Technician' });
+        setServiceProvider(typeof matchedTech === 'object' ? matchedTech : { name: 'Assigned Service Provider' });
       } else if (!foundAccepted) {
-        setTechnician(null);
+        setServiceProvider(null);
       }
     } catch (err) {
       console.error('[booking] Could not load booking reference:', err.message);
@@ -156,7 +156,7 @@ const BookingSuccess = () => {
 
       if (match) {
         setIsAccepted(true);
-        if (data.technician) setTechnician(data.technician);
+        if (data.serviceProvider) setServiceProvider(data.serviceProvider);
         if (data.instantStatus) setInstantStatus(data.instantStatus);
         loadBookingData();
       }
@@ -174,10 +174,10 @@ const BookingSuccess = () => {
       if (match) {
         if (data.instantStatus === 'SEARCHING' || data.isAccepted === false) {
           setIsAccepted(false);
-          setTechnician(null);
-        } else if (data.technician && (data.isAccepted || ['EN_ROUTE', 'IN_PROGRESS', 'COMPLETED'].includes(data.instantStatus))) {
+          setServiceProvider(null);
+        } else if (data.serviceProvider && (data.isAccepted || ['EN_ROUTE', 'IN_PROGRESS', 'COMPLETED'].includes(data.instantStatus))) {
           setIsAccepted(true);
-          setTechnician(data.technician);
+          setServiceProvider(data.serviceProvider);
         }
         if (data.instantStatus) setInstantStatus(data.instantStatus);
         loadBookingData();
@@ -191,15 +191,15 @@ const BookingSuccess = () => {
         (bookingId && data.serviceRequestId === bookingId);
 
       if (match) {
-        if (data.status === 'New' || data.isAccepted === false || !data.technician) {
+        if (data.status === 'New' || data.isAccepted === false || !data.serviceProvider) {
           setIsAccepted(false);
-          setTechnician(null);
+          setServiceProvider(null);
         } else if (
           data.isAccepted ||
           ['Engineer Accepted', 'Visit Scheduled', 'Engineer Reached', 'Diagnosis Done', 'Work In Progress', 'Repair Completed', 'Completed'].includes(data.status)
         ) {
           setIsAccepted(true);
-          if (data.technician) setTechnician(data.technician);
+          if (data.serviceProvider) setServiceProvider(data.serviceProvider);
         }
         loadBookingData();
       }
@@ -207,9 +207,9 @@ const BookingSuccess = () => {
 
     socket.on('tracking:update', (data) => {
       if (data?.serviceRequestId === serviceRequestId) {
-        if (data.technician) {
+        if (data.serviceProvider) {
           setIsAccepted(true);
-          setTechnician(data.technician);
+          setServiceProvider(data.serviceProvider);
         }
         loadBookingData();
       }
@@ -301,7 +301,7 @@ const BookingSuccess = () => {
         {/* 2-Column Responsive Layout */}
         <div className="flex flex-col md:grid md:grid-cols-12 md:gap-8 items-start">
 
-          {/* Left Column: Details, Live Tracker & Technician */}
+          {/* Left Column: Details, Live Tracker & ServiceProvider */}
           <div className="w-full md:col-span-7 lg:col-span-8 flex flex-col gap-4 text-left">
 
             {/* ── Booking ID ── */}
@@ -343,7 +343,7 @@ const BookingSuccess = () => {
             {/* ── Instant Service Live Tracker ── */}
             {isInstant && (
               <div className={`text-white rounded-2xl md:rounded-3xl p-5 shadow-md transition-all duration-300 ${
-                isAccepted && technician ? 'bg-gradient-to-r from-blue-700 to-indigo-700 shadow-blue-500/20' : 'bg-gradient-to-r from-amber-500 to-orange-500 shadow-amber-500/20'
+                isAccepted && serviceProvider ? 'bg-gradient-to-r from-blue-700 to-indigo-700 shadow-blue-500/20' : 'bg-gradient-to-r from-amber-500 to-orange-500 shadow-amber-500/20'
               }`}>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-[10px] md:text-xs font-black uppercase tracking-wider bg-white/20 px-3 py-1 rounded-full flex items-center gap-1.5">
@@ -351,27 +351,27 @@ const BookingSuccess = () => {
                     ⚡ Live Express Dispatch
                   </span>
                   <span className="text-[11px] md:text-xs font-extrabold">
-                    {isAccepted && technician ? (instantStatus === 'EN_ROUTE' ? '🚗 On The Way' : '✅ Technician Booked') : '⏳ Looking for Nearby Tech...'}
+                    {isAccepted && serviceProvider ? (instantStatus === 'EN_ROUTE' ? '🚗 On The Way' : '✅ Service Provider Booked') : '⏳ Looking for Nearby Tech...'}
                   </span>
                 </div>
                 <div className="flex items-center gap-3.5 mt-3">
                   <div className="w-11 h-11 rounded-2xl bg-white/20 flex items-center justify-center text-2xl font-bold flex-shrink-0">
-                    {isAccepted && technician ? '👨‍🔧' : '⏱️'}
+                    {isAccepted && serviceProvider ? '👨‍🔧' : '⏱️'}
                   </div>
                   <div className="flex-1">
                     <p className="text-xs md:text-sm font-black leading-tight">
-                      {isAccepted && technician ? `${technician.name || 'Technician'} is on the way!` : 'Searching nearest certified technician in your territory'}
+                      {isAccepted && serviceProvider ? `${serviceProvider.name || 'Service Provider'} is on the way!` : 'Searching nearest certified serviceProvider in your territory'}
                     </p>
                     <p className="text-[11px] text-white/90 font-medium mt-0.5">
-                      {isAccepted && technician ? 'Estimated arrival: within 20-35 minutes' : 'Dispatching candidate by proximity • Nearest to farthest'}
+                      {isAccepted && serviceProvider ? 'Estimated arrival: within 20-35 minutes' : 'Dispatching candidate by proximity • Nearest to farthest'}
                     </p>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* ── Technician Assignment State ── */}
-            {isAccepted && technician ? (
+            {/* ── ServiceProvider Assignment State ── */}
+            {isAccepted && serviceProvider ? (
               /* ── CONFIRMED & ACCEPTED STATE ── */
               <div className="bg-white rounded-2xl md:rounded-3xl shadow-md border-2 border-emerald-500/30 p-5 md:p-6 relative overflow-hidden transition-all duration-500">
                 {/* Top Badge */}
@@ -379,7 +379,7 @@ const BookingSuccess = () => {
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
                     <span className="text-xs md:text-sm font-black text-emerald-700 uppercase tracking-wide">
-                      {instantStatus === 'EN_ROUTE' ? 'Technician On The Way' : 'Technician Booked for Your Service'}
+                      {instantStatus === 'EN_ROUTE' ? 'Service Provider On The Way' : 'Service Provider Booked for Your Service'}
                     </span>
                   </div>
                   <span className="text-[10px] md:text-xs bg-emerald-50 text-emerald-700 font-extrabold px-3 py-1 rounded-full border border-emerald-200 flex items-center gap-1">
@@ -390,11 +390,11 @@ const BookingSuccess = () => {
 
                 <div className="flex items-center gap-4">
                   <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#0D47A1] to-[#1E88E5] flex items-center justify-center flex-shrink-0 text-white text-2xl font-black shadow-lg shadow-blue-500/20 ring-4 ring-blue-50">
-                    {(technician.name || 'T').charAt(0).toUpperCase()}
+                    {(serviceProvider.name || 'T').charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="text-base md:text-lg font-black text-slate-900 truncate">{technician.name || 'Certified Technician'}</p>
+                      <p className="text-base md:text-lg font-black text-slate-900 truncate">{serviceProvider.name || 'Certified Service Provider'}</p>
                       <span className="text-[10px] bg-blue-50 text-[#0D47A1] font-extrabold px-2 py-0.5 rounded-full border border-blue-200 shrink-0">
                         Verified Pro
                       </span>
@@ -402,17 +402,17 @@ const BookingSuccess = () => {
                     <div className="flex items-center gap-2.5 mt-1">
                       <div className="flex items-center gap-1 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200/60">
                         <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-                        <span className="text-xs font-black text-amber-900">{technician.rating || '4.8'}</span>
+                        <span className="text-xs font-black text-amber-900">{serviceProvider.rating || '4.8'}</span>
                       </div>
                       <span className="text-xs text-slate-500 font-medium truncate">
-                        {technician.specs?.[0] || categoryParam || 'Appliance'} Specialist
+                        {serviceProvider.specs?.[0] || categoryParam || 'Appliance'} Specialist
                       </span>
                     </div>
                   </div>
                   <button
-                    onClick={handleCallTechnician}
+                    onClick={handleCallServiceProvider}
                     disabled={callLoading}
-                    title="Call Technician"
+                    title="Call Service Provider"
                     className="h-12 px-4 rounded-2xl bg-[#0D47A1] text-white flex items-center gap-2 flex-shrink-0 active:scale-95 transition-all shadow-md shadow-blue-900/20 hover:bg-[#1565C0] cursor-pointer"
                   >
                     <Phone className="w-4 h-4" />
@@ -423,7 +423,7 @@ const BookingSuccess = () => {
                 <div className="mt-4 pt-3.5 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
                   <span className="text-slate-500 font-medium flex items-center gap-1.5">
                     <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-                    This technician is booked for your service and on the way to your doorstep.
+                    This serviceProvider is booked for your service and on the way to your doorstep.
                   </span>
                   <span className="text-[#0D47A1] font-black shrink-0">
                     {instantStatus === 'EN_ROUTE' ? '🚗 Driving to Location' : '⚡ On the way'}
@@ -447,11 +447,11 @@ const BookingSuccess = () => {
                       <div className="flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
                         <h3 className="text-sm md:text-base font-black text-slate-900">
-                          Looking for a nearby technician...
+                          Looking for a nearby serviceProvider...
                         </h3>
                       </div>
                       <p className="text-xs text-slate-500 font-medium mt-0.5">
-                        Dispatching to certified technicians near {city || 'your area'} (ordered nearest to farthest)
+                        Dispatching to certified serviceProviders near {city || 'your area'} (ordered nearest to farthest)
                       </p>
                     </div>
                   </div>
@@ -479,7 +479,7 @@ const BookingSuccess = () => {
                         ⟳
                       </div>
                       <div>
-                        <p className="font-black leading-tight">Matching Technician</p>
+                        <p className="font-black leading-tight">Matching Service Provider</p>
                         <p className="text-[10px] text-blue-600 font-semibold">Offering to nearest pro...</p>
                       </div>
                     </div>
@@ -500,7 +500,7 @@ const BookingSuccess = () => {
                 <div className="pt-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-[11px] text-slate-500">
                   <span className="flex items-center gap-1.5 font-medium">
                     <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0" />
-                    Once a technician accepts, their live details and contact button will appear here instantly.
+                    Once a serviceProvider accepts, their live details and contact button will appear here instantly.
                   </span>
                   <span className="font-bold text-slate-600 bg-white px-2.5 py-1 rounded-lg border border-slate-200 shrink-0">
                     ⚡ Auto-cascading dispatch
@@ -531,7 +531,7 @@ const BookingSuccess = () => {
             <div className="bg-white rounded-2xl shadow-xs border border-slate-100 px-4 py-3 md:hidden">
               <div className="grid grid-cols-4 gap-2">
                 {[
-                  { icon: '👨‍🔧', label: 'Verified\nTechnicians' },
+                  { icon: '👨‍🔧', label: 'Verified\nServiceProviders' },
                   { icon: '🔩',  label: 'Genuine\nSpare Parts' },
                   { icon: '🛡️', label: '7-Day\nWarranty' },
                   { icon: '🏠',  label: 'Doorstep\nService' },

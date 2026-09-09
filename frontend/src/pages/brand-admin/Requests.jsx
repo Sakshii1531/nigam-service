@@ -44,7 +44,7 @@ function shape(req) {
     // ServiceRequest records only whether an invoice exists, not its number.
     invoice: req.invoiceAvailable ? 'Provided' : 'Not provided',
     warranty: req.warranty || 'Unknown',
-    technician: req.technician?.name || 'Unassigned',
+    serviceProvider: req.serviceProvider?.name || 'Unassigned',
     priority: req.priority || 'Medium',
     // Keep the API's own status alongside the coarse bucket the UI filters on.
     apiStatus: req.status,
@@ -119,14 +119,14 @@ const Requests = () => {
     }
   };
 
-  // No endpoint exists to reassign a service request's technician — the API
+  // No endpoint exists to reassign a service request's service provider — the API
   // exposes only a status transition. Kept as a local no-op with an explicit
   // notice rather than pretending the change was saved.
   const handleReassignSubmit = (e) => {
     e.preventDefault();
     setShowReassignModal(false);
     setShowDrawer(false);
-    setError('Reassigning a technician is not supported by the API yet — no change was saved.');
+    setError('Reassigning a serviceProvider is not supported by the API yet — no change was saved.');
   };
 
   const handleRowClick = (req) => {
@@ -237,7 +237,7 @@ const Requests = () => {
                       </div>
                       <div className="relative">
                         <div className="absolute -left-[21px] top-1 w-3 h-3 bg-[#0D47A1] rounded-full"></div>
-                        <p className="text-sm font-medium text-[#1E293B]">Technician Assigned</p>
+                        <p className="text-sm font-medium text-[#1E293B]">Service Provider Assigned</p>
                         <p className="text-xs text-[#64748B]">12 May, 2026 - 11:30 AM</p>
                       </div>
                     </div>
@@ -366,7 +366,7 @@ const Requests = () => {
                     <th className="px-6 py-4">Customer</th>
                     <th className="px-6 py-4">Product</th>
                     <th className="px-6 py-4">Warranty</th>
-                    <th className="px-6 py-4">Technician</th>
+                    <th className="px-6 py-4">Service Provider</th>
                     <th className="px-6 py-4">Priority</th>
                     <th className="px-6 py-4">Status</th>
                     <th className="px-6 py-4">Date</th>
@@ -402,7 +402,7 @@ const Requests = () => {
                           {req.warranty}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-[#1E293B]">{req.technician}</td>
+                      <td className="px-6 py-4 text-[#1E293B]">{req.serviceProvider}</td>
                       <td className="px-6 py-4">
                         <span className={`px-2 py-0.5 rounded text-xs font-medium ${
                           req.priority === 'High' ? 'bg-red-50 text-red-600' :
@@ -481,7 +481,7 @@ const Requests = () => {
             <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-2xl max-w-md w-full overflow-hidden">
               <div className="p-6 border-b border-[#E2E8F0] flex justify-between items-center bg-[#F8FAFC]">
                 <div>
-                  <h3 className="text-lg font-bold text-[#1E293B]">Reassign Technician</h3>
+                  <h3 className="text-lg font-bold text-[#1E293B]">Reassign Service Provider</h3>
                   <p className="text-xs text-[#64748B]">Select a new service partner for ticket {selectedRequest.ref}</p>
                 </div>
                 <button onClick={() => setShowReassignModal(false)} className="text-[#64748B] hover:text-[#1E293B] p-2 hover:bg-[#EEF2F6] rounded-full">
@@ -491,7 +491,7 @@ const Requests = () => {
               
               <form onSubmit={handleReassignSubmit} className="p-6 space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-[#64748B] uppercase mb-1">Select Technician</label>
+                  <label className="block text-xs font-semibold text-[#64748B] uppercase mb-1">Select Service Provider</label>
                   <select
                     value={reassignTechName}
                     onChange={(e) => setReassignTechName(e.target.value)}

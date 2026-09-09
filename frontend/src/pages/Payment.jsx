@@ -73,7 +73,7 @@ const Payment = () => {
                 <span className="font-black text-slate-800 text-sm md:text-base mt-0.5 block">{itemName}</span>
               </div>
               <div className="text-right">
-                <span className="text-[10px] md:text-xs text-slate-400 font-extrabold block uppercase tracking-wider">{isProductBuy ? 'Seller' : 'Technician'}</span>
+                <span className="text-[10px] md:text-xs text-slate-400 font-extrabold block uppercase tracking-wider">{isProductBuy ? 'Seller' : 'ServiceProvider'}</span>
                 <span className="font-black text-[#0D47A1] text-xs md:text-sm mt-0.5 block">{isProductBuy ? 'Nigam Store' : 'Rahul Sharma'}</span>
               </div>
             </div>

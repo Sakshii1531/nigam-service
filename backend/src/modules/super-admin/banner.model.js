@@ -4,12 +4,12 @@ import { applyStandardPlugins } from '../shared/plugins.js';
 const bannerSchema = new mongoose.Schema(
   {
     imageUrl: { type: String, required: true },
-    // The technician app renders banners as titled cards with supporting copy;
+    // The service provider app renders banners as titled cards with supporting copy;
     // the customer app uses artwork only, so both are optional.
     title: String,
     description: String,
     segment: { type: String, enum: ['warranty', 'non-warranty'], default: 'non-warranty' },
-    app: { type: String, enum: ['customer', 'technician'], default: 'customer', index: true },
+    app: { type: String, enum: ['customer', 'service_provider'], default: 'customer', index: true },
     isActive: { type: Boolean, default: true },
     sortOrder: { type: Number, default: 0 },
   },

@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import { applyStandardPlugins } from '../shared/plugins.js';
 
-const techBlogSchema = new mongoose.Schema(
+const serviceProviderBlogSchema = new mongoose.Schema(
   {
     title: { type: String, required: true },
     category: String,
@@ -12,6 +12,6 @@ const techBlogSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-applyStandardPlugins(techBlogSchema);
+applyStandardPlugins(serviceProviderBlogSchema);
 
-export const TechBlog = mongoose.models.TechBlog || mongoose.model('TechBlog', techBlogSchema);
+export const ServiceProviderBlog = mongoose.models.ServiceProviderBlog || mongoose.model('ServiceProviderBlog', serviceProviderBlogSchema);

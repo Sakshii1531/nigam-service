@@ -6,12 +6,12 @@ import {
   TrendingUp, Send, Zap, FileText, Building2, ChevronDown, ChevronUp, BadgeCheck,
   AlertTriangle, Clock, Pencil, ChevronLeft, Wallet, Shield, CheckCircle2
 } from 'lucide-react';
-import { useTech } from '../../context/TechContext';
+import { useTech } from '../../context/ServiceProviderContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { apiRequest } from '../../lib/apiClient';
-import TechBottomNav from '../../components/TechBottomNav';
-import techAvatar from '../../assets/tech_avatar.png';
+import ServiceProviderBottomNav from '../../components/ServiceProviderBottomNav';
+import serviceProviderAvatar from '../../assets/service_provider_avatar.png';
 
 const ProfilePage = () => {
   const navigate = useNavigate();
@@ -24,29 +24,29 @@ const ProfilePage = () => {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   useEffect(() => {
-    apiRequest('/tech/profile/profile', { auth: true })
+    apiRequest('/service-provider/profile/profile', { auth: true })
       .then((res) => setProfile(res))
       .catch((err) => console.warn('Could not load profile:', err.message));
   }, []);
 
   const primaryPayout = profile?.payoutMethods?.find(m => m.isPrimary) || profile?.payoutMethods?.[0] || null;
 
-  const techName = profile?.technician?.name || user?.name || 'Rahul Sharma';
-  const techSpecs = profile?.technician?.specs?.length ? profile.technician.specs.join(', ') : 'Expert Appliance Specialist';
-  const techRating = profile?.technician?.rating || 4.9;
-  const techPartnerId = profile?.technician?.partnerId || (profile?.technician?._id ? `NCC-${profile.technician._id.slice(-6).toUpperCase()}` : 'NCC-TECH01');
+  const serviceProviderName = profile?.serviceProvider?.name || user?.name || 'Rahul Sharma';
+  const serviceProviderSpecs = profile?.serviceProvider?.specs?.length ? profile.serviceProvider.specs.join(', ') : 'Expert Appliance Specialist';
+  const serviceProviderRating = profile?.serviceProvider?.rating || 4.9;
+  const serviceProviderPartnerId = profile?.serviceProvider?.partnerId || (profile?.serviceProvider?._id ? `NCC-${profile.serviceProvider._id.slice(-6).toUpperCase()}` : 'NCC-TECH01');
 
   const exploreItems = [
-    { label: 'Service History', desc: 'All completed jobs & service logs', icon: <ClipboardList className="h-4.5 w-4.5 text-[#0D47A1]" />, path: '/technician/history', bg: 'bg-blue-50' },
-    { label: 'Notifications', desc: 'Manage notifications & alerts', icon: <Bell className="h-4.5 w-4.5 text-[#0D47A1]" />, path: '/technician/notifications', bg: 'bg-blue-50' },
-    { label: 'NCC Academy', desc: 'Blogs and video for learning', icon: <Award className="h-4.5 w-4.5 text-purple-600" />, path: '/technician/academy', bg: 'bg-purple-50' },
-    { label: 'Need Technical Support', desc: 'Connect with support by call or message', icon: <HelpCircle className="h-4.5 w-4.5 text-amber-600" />, path: '/technician/support', bg: 'bg-amber-50' },
-    { label: 'Announcements', desc: 'Notice & alert from Headquarters', icon: <Bell className="h-4.5 w-4.5 text-rose-600" />, path: '/technician/announcements', bg: 'bg-rose-50' },
-    { label: 'Analytics', desc: 'View performance & earnings', icon: <TrendingUp className="h-4.5 w-4.5 text-emerald-600" />, path: '/technician/analytics', bg: 'bg-emerald-50' },
-    { label: 'KYC Verification', desc: 'Aadhaar, PAN, Bank account verification', icon: <ShieldCheck className="h-4.5 w-4.5 text-teal-600" />, path: '/technician/verification', bg: 'bg-teal-50' },
-    { label: 'Skills & Certifications', desc: 'HVAC, Refrigeration, AC', icon: <Award className="h-4.5 w-4.5 text-indigo-600" />, path: '/technician/skills-certifications', bg: 'bg-indigo-50' },
-    { label: 'Partner Level & Allocations', desc: 'Tiers, ratings and automatic job specs', icon: <BadgeCheck className="h-4.5 w-4.5 text-[#052355]" />, path: '/technician/partner-level', bg: 'bg-slate-100' },
-    { label: 'App Settings', desc: 'Preferences, security and language', icon: <Settings className="h-4.5 w-4.5 text-slate-700" />, path: '/technician/settings', bg: 'bg-slate-100' },
+    { label: 'Service History', desc: 'All completed jobs & service logs', icon: <ClipboardList className="h-4.5 w-4.5 text-[#0D47A1]" />, path: '/service-provider/history', bg: 'bg-blue-50' },
+    { label: 'Notifications', desc: 'Manage notifications & alerts', icon: <Bell className="h-4.5 w-4.5 text-[#0D47A1]" />, path: '/service-provider/notifications', bg: 'bg-blue-50' },
+    { label: 'NCC Academy', desc: 'Blogs and video for learning', icon: <Award className="h-4.5 w-4.5 text-purple-600" />, path: '/service-provider/academy', bg: 'bg-purple-50' },
+    { label: 'Need Technical Support', desc: 'Connect with support by call or message', icon: <HelpCircle className="h-4.5 w-4.5 text-amber-600" />, path: '/service-provider/support', bg: 'bg-amber-50' },
+    { label: 'Announcements', desc: 'Notice & alert from Headquarters', icon: <Bell className="h-4.5 w-4.5 text-rose-600" />, path: '/service-provider/announcements', bg: 'bg-rose-50' },
+    { label: 'Analytics', desc: 'View performance & earnings', icon: <TrendingUp className="h-4.5 w-4.5 text-emerald-600" />, path: '/service-provider/analytics', bg: 'bg-emerald-50' },
+    { label: 'KYC Verification', desc: 'Aadhaar, PAN, Bank account verification', icon: <ShieldCheck className="h-4.5 w-4.5 text-teal-600" />, path: '/service-provider/verification', bg: 'bg-teal-50' },
+    { label: 'Skills & Certifications', desc: 'HVAC, Refrigeration, AC', icon: <Award className="h-4.5 w-4.5 text-indigo-600" />, path: '/service-provider/skills-certifications', bg: 'bg-indigo-50' },
+    { label: 'Partner Level & Allocations', desc: 'Tiers, ratings and automatic job specs', icon: <BadgeCheck className="h-4.5 w-4.5 text-[#052355]" />, path: '/service-provider/partner-level', bg: 'bg-slate-100' },
+    { label: 'App Settings', desc: 'Preferences, security and language', icon: <Settings className="h-4.5 w-4.5 text-slate-700" />, path: '/service-provider/settings', bg: 'bg-slate-100' },
   ];
 
   return (
@@ -57,18 +57,18 @@ const ProfilePage = () => {
         <div className="flex items-center justify-between">
           <button 
             type="button"
-            onClick={() => navigate('/technician/dashboard')} 
+            onClick={() => navigate('/service-provider/dashboard')} 
             className="p-1.5 hover:bg-white/10 rounded-full text-white transition-colors cursor-pointer"
             title="Back to Dashboard"
           >
             <ChevronLeft className="h-6 w-6 text-white stroke-[2.5]" />
           </button>
           <div className="text-center flex-1 pr-2">
-            <h1 className="text-base font-extrabold text-white tracking-wide">Technician Profile</h1>
+            <h1 className="text-base font-extrabold text-white tracking-wide">Service Provider Profile</h1>
             <span className="text-[11px] text-white/80 font-normal">NCC Verified Partner</span>
           </div>
           <button 
-            onClick={() => navigate('/technician/notifications')}
+            onClick={() => navigate('/service-provider/notifications')}
             className="p-2 hover:bg-white/10 rounded-full transition-colors relative cursor-pointer"
           >
             <Bell className="h-5 w-5 text-white" />
@@ -84,7 +84,7 @@ const ProfilePage = () => {
         <div className="flex items-center justify-between bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-2xs">
           <div className="flex items-center gap-3.5">
             <button
-              onClick={() => navigate('/technician/dashboard')}
+              onClick={() => navigate('/service-provider/dashboard')}
               className="p-2 bg-slate-100 hover:bg-slate-200 rounded-2xl text-[#052355] transition-colors cursor-pointer"
               title="Back to Dashboard"
             >
@@ -92,7 +92,7 @@ const ProfilePage = () => {
             </button>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-xl font-black text-[#052355] tracking-tight">Technician Profile</h1>
+                <h1 className="text-xl font-black text-[#052355] tracking-tight">Service Provider Profile</h1>
                 <span className="inline-flex items-center gap-1 bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-full text-[11px] font-bold text-[#0D47A1]">
                   <BadgeCheck size={13} /> Verified Partner
                 </span>
@@ -103,7 +103,7 @@ const ProfilePage = () => {
 
           <div className="flex items-center gap-3">
             <button
-              onClick={() => navigate('/technician/notifications')}
+              onClick={() => navigate('/service-provider/notifications')}
               className="flex items-center gap-2 px-3.5 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-2xl text-xs font-bold text-slate-700 transition-colors relative cursor-pointer"
             >
               <Bell size={15} className="text-[#0D47A1]" />
@@ -113,7 +113,7 @@ const ProfilePage = () => {
               )}
             </button>
             <button
-              onClick={() => navigate('/technician/settings')}
+              onClick={() => navigate('/service-provider/settings')}
               className="p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-2xl text-slate-600 hover:text-[#052355] transition-colors cursor-pointer"
               title="App Settings"
             >
@@ -133,10 +133,10 @@ const ProfilePage = () => {
           <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-2xs flex flex-col gap-3.5">
             <div className="flex items-center gap-3.5">
               <div
-                onClick={() => navigate('/technician/personal-info')}
+                onClick={() => navigate('/service-provider/personal-info')}
                 className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden border-2 border-[#0D47A1]/30 shadow-xs cursor-pointer flex-shrink-0 relative group"
               >
-                <img src={techAvatar} alt={techName} className="w-full h-full object-cover" />
+                <img src={serviceProviderAvatar} alt={serviceProviderName} className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-[#052355]/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                   <Pencil className="w-4 h-4 text-white" />
                 </div>
@@ -144,24 +144,24 @@ const ProfilePage = () => {
 
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-base sm:text-lg font-black text-[#052355]">{techName}</h2>
+                  <h2 className="text-base sm:text-lg font-black text-[#052355]">{serviceProviderName}</h2>
                   <button 
-                    onClick={() => navigate('/technician/personal-info')} 
+                    onClick={() => navigate('/service-provider/personal-info')} 
                     className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-full text-slate-500 transition-colors cursor-pointer"
                     title="Edit Profile"
                   >
                     <Pencil className="h-3.5 w-3.5" />
                   </button>
                 </div>
-                <p className="text-xs text-slate-500 font-semibold mt-0.5 truncate">{techSpecs}</p>
+                <p className="text-xs text-slate-500 font-semibold mt-0.5 truncate">{serviceProviderSpecs}</p>
                 
                 <div className="flex items-center gap-2 mt-2 flex-wrap">
                   <button
-                    onClick={() => navigate('/technician/partner-level')}
+                    onClick={() => navigate('/service-provider/partner-level')}
                     className="flex items-center gap-1 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full cursor-pointer hover:bg-amber-100/60 transition-colors"
                   >
                     <Star className="h-3 w-3 text-amber-500 fill-amber-400" />
-                    <span className="text-[10.5px] font-black text-amber-800">{techRating}</span>
+                    <span className="text-[10.5px] font-black text-amber-800">{serviceProviderRating}</span>
                     <span className="text-[9.5px] text-amber-700 font-bold">(Verified)</span>
                   </button>
                   <div className="flex items-center gap-1 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
@@ -175,12 +175,12 @@ const ProfilePage = () => {
             <div className="border-t border-slate-100 pt-2.5 flex justify-between items-center text-[11px]">
               <span className="text-slate-500 font-medium">Partner Identification</span>
               <span className="text-[#052355] font-black bg-slate-50 border border-slate-200 px-2.5 py-0.5 rounded-lg">
-                {techPartnerId}
+                {serviceProviderPartnerId}
               </span>
             </div>
 
             <button
-              onClick={() => navigate('/technician/personal-info')}
+              onClick={() => navigate('/service-provider/personal-info')}
               className="hidden lg:flex w-full items-center justify-center gap-2 py-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold text-[#052355] transition-colors cursor-pointer mt-1"
             >
               <Pencil size={13} />
@@ -191,7 +191,7 @@ const ProfilePage = () => {
           {/* Bank Account / Payout Method (Desktop Left Sidebar Placement) */}
           <div className="hidden lg:block">
             <button
-              onClick={() => navigate('/technician/payout-settings')}
+              onClick={() => navigate('/service-provider/payout-settings')}
               className="w-full bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-2xs flex flex-col gap-2.5 text-left hover:border-[#0D47A1]/40 transition-all cursor-pointer group"
             >
               <div className="flex items-center justify-between">
@@ -299,7 +299,7 @@ const ProfilePage = () => {
               </div>
 
               <button
-                onClick={() => navigate('/technician/earnings')}
+                onClick={() => navigate('/service-provider/earnings')}
                 className="flex items-center gap-1.5 bg-white text-[#052355] hover:bg-slate-100 text-xs font-black px-4 py-2.5 rounded-xl transition-all shadow-xs cursor-pointer active:scale-95"
               >
                 <span>Request Withdraw</span>
@@ -327,7 +327,7 @@ const ProfilePage = () => {
             </div>
 
             <button
-              onClick={() => navigate('/technician/history')}
+              onClick={() => navigate('/service-provider/history')}
               className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-2xs flex items-center gap-3 hover:bg-slate-50 hover:border-[#0D47A1]/40 transition-all cursor-pointer text-left group"
             >
               <div className="p-2.5 bg-emerald-50 border border-emerald-100 rounded-xl text-emerald-600 flex-shrink-0 group-hover:scale-105 transition-transform">
@@ -341,7 +341,7 @@ const ProfilePage = () => {
             </button>
 
             <button
-              onClick={() => navigate('/technician/recent-earnings')}
+              onClick={() => navigate('/service-provider/recent-earnings')}
               className="col-span-2 sm:col-span-1 bg-white rounded-2xl p-4 border border-slate-200/80 shadow-2xs flex items-center justify-between hover:bg-slate-50 hover:border-[#0D47A1]/40 transition-all cursor-pointer group text-left"
             >
               <div className="flex items-center gap-3 min-w-0">
@@ -360,7 +360,7 @@ const ProfilePage = () => {
           {/* Bank Account / Payout Method (Mobile Only Placement) */}
           <div className="block lg:hidden">
             <button
-              onClick={() => navigate('/technician/payout-settings')}
+              onClick={() => navigate('/service-provider/payout-settings')}
               className="w-full bg-white rounded-2xl p-4 border border-slate-200/80 shadow-2xs flex items-center justify-between hover:bg-slate-50 transition-all cursor-pointer group"
             >
               <div className="flex items-center gap-3.5">
@@ -432,7 +432,7 @@ const ProfilePage = () => {
       </div>
 
       {/* Bottom Navigation */}
-      <TechBottomNav activeTab="profile" />
+      <ServiceProviderBottomNav activeTab="profile" />
 
       {/* Logout Confirmation Modal Overlay */}
       {showLogoutConfirm && (
@@ -444,7 +444,7 @@ const ProfilePage = () => {
             <div>
               <h4 className="text-base font-black text-[#052355] mb-1">Confirm Log Out</h4>
               <p className="text-xs text-slate-500 font-semibold leading-relaxed">
-                Are you sure you want to log out of your NCC Technician account?
+                Are you sure you want to log out of your NCC Service Provider account?
               </p>
             </div>
             <div className="flex gap-2.5 w-full mt-2">
@@ -458,7 +458,7 @@ const ProfilePage = () => {
                 onClick={async () => {
                   setShowLogoutConfirm(false);
                   await logout();
-                  navigate('/technician/login', { replace: true });
+                  navigate('/service-provider/login', { replace: true });
                 }}
                 className="flex-1 bg-red-600 hover:bg-red-700 text-white text-xs font-black py-3 rounded-xl transition-colors cursor-pointer shadow-sm"
               >

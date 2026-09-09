@@ -13,7 +13,7 @@ import { apiRequest } from '../../lib/apiClient';
  * carrying identifier across a navigation would be lost on a page refresh.
  *
  * Props:
- *  - role: 'customer' | 'technician' | 'brand_admin' | 'super_admin'
+ *  - role: 'customer' | 'service provider' | 'brand_admin' | 'super_admin'
  *  - variant: 'mobile' | 'admin'
  *  - portalLabel, backTo
  */

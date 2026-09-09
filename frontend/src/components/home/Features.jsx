@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const features = [
   { id: 2, title: 'Google Maps', desc: 'Seamless navigation and location services.', icon: MapPin },
-  { id: 3, title: 'AI Assignment', desc: 'Smart matching for the best technician.', icon: Zap },
+  { id: 3, title: 'AI Assignment', desc: 'Smart matching for the best serviceProvider.', icon: Zap },
   { id: 4, title: 'Number Masking', desc: 'Secure communication for privacy.', icon: PhoneOff },
   { id: 5, title: 'Warranty Vault', desc: 'Automated warranty management.', icon: ShieldCheck },
   { id: 6, title: 'Secure Payments', desc: 'Safe transactions via Razorpay/Stripe.', icon: CreditCard },

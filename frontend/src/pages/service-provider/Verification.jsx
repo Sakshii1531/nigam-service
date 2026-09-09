@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Bell, Briefcase, ClipboardList, Calendar, Wrench, User, Shield, Check } from 'lucide-react';
-import TechBottomNav from '../../components/TechBottomNav';
+import ServiceProviderBottomNav from '../../components/ServiceProviderBottomNav';
 import { apiRequest } from '../../lib/apiClient';
 
 const TONE = {
@@ -16,7 +16,7 @@ const Verification = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    apiRequest('/tech/profile/profile', { auth: true })
+    apiRequest('/service-provider/profile/profile', { auth: true })
       .then((res) => {
         const v = res?.verification || {};
         setDocuments([
@@ -43,7 +43,7 @@ const Verification = () => {
           <h1 className="text-lg font-semibold text-slate-900">Verification</h1>
         </div>
         <button 
-          onClick={() => navigate('/technician/notifications')}
+          onClick={() => navigate('/service-provider/notifications')}
           className="p-2 hover:bg-slate-50 rounded-full transition-colors relative"
         >
           <Bell className="h-5 w-5 text-slate-700" />
@@ -73,7 +73,7 @@ const Verification = () => {
       {/* Main Content */}
       <div className="flex-1 p-4 lg:px-6 xl:px-8 flex flex-col gap-4 max-w-screen-xl mx-auto w-full">
 
-        {/* Status Header — reflects the technician's real verification record,
+        {/* Status Header — reflects the serviceProvider's real verification record,
             which used to read "Verified Partner" for everyone. */}
         <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm flex flex-col items-center gap-2">
           <div className={`w-16 h-16 rounded-full flex items-center justify-center ${allVerified ? 'bg-green-50' : 'bg-amber-50'}`}>
@@ -120,7 +120,7 @@ const Verification = () => {
       </div>
 
       {/* Bottom Navigation */}
-      <TechBottomNav activeTab="profile" />
+      <ServiceProviderBottomNav activeTab="profile" />
 
     </div>
   );

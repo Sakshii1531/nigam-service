@@ -61,7 +61,7 @@ const Cities = () => {
     state: normalizeStateName(item.state) || item.state || '—',
     district: item.district || item.name,
     area: item.coverageAreaSqkm ? `${item.coverageAreaSqkm} sq km` : (item.area || '—'),
-    techs: item.techniciansCount || item.techs || 0,
+    techs: item.serviceProvidersCount || item.techs || 0,
     status: item.status || 'Active'
   });
 
@@ -583,7 +583,7 @@ const Cities = () => {
               {/* Active Techs & Status */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
-                  <label className="text-xs font-semibold text-[#64748B] mb-1 block">Active Technicians (Fleet)</label>
+                  <label className="text-xs font-semibold text-[#64748B] mb-1 block">Active ServiceProviders (Fleet)</label>
                   <input
                     type="number"
                     min="0"
@@ -757,7 +757,7 @@ const Cities = () => {
               {/* Active Techs & Status */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
-                  <label className="text-xs font-semibold text-[#64748B] mb-1 block">Active Technicians</label>
+                  <label className="text-xs font-semibold text-[#64748B] mb-1 block">Active ServiceProviders</label>
                   <input
                     type="number"
                     min="0"

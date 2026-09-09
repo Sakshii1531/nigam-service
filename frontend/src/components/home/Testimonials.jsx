@@ -7,7 +7,7 @@ const testimonials = [
     id: 1,
     name: 'Anjali Sharma',
     role: 'Homeowner',
-    content: 'The AC repair service was incredibly fast. The technician arrived on time and fixed the issue within 30 minutes. Highly recommended!',
+    content: 'The AC repair service was incredibly fast. The serviceProvider arrived on time and fixed the issue within 30 minutes. Highly recommended!',
     rating: 5,
     initials: 'AS',
     color: 'bg-blue-50 text-brand-blue'

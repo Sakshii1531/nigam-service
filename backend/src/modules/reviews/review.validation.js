@@ -6,7 +6,7 @@ export const createReviewSchema = z.object({
   categoryRatings: z
     .object({
       overall: z.number().min(1).max(5).optional(),
-      technicianBehavior: z.number().min(1).max(5).optional(),
+      serviceProviderBehavior: z.number().min(1).max(5).optional(),
       serviceQuality: z.number().min(1).max(5).optional(),
       timeliness: z.number().min(1).max(5).optional(),
     })
@@ -21,7 +21,7 @@ export const respondSchema = z.object({ response: z.string().min(1) });
 
 export const idParamSchema = z.object({ id: z.string().min(1) });
 
-export const technicianIdParamSchema = z.object({ technicianId: z.string().min(1) });
+export const serviceProviderIdParamSchema = z.object({ serviceProviderId: z.string().min(1) });
 
 export const listQuerySchema = z.object({
   page: z.coerce.number().int().positive().optional(),

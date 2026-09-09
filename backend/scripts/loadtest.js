@@ -55,11 +55,11 @@ async function setupFixture() {
     body: JSON.stringify({ slug: 'repair', name: 'Repair', price: 299 }),
   });
 
-  const techPhone = `9${String(suffix).slice(-9)}`;
-  await fetch(`${BASE_URL}/_dev/test-technician`, {
+  const serviceProviderPhone = `9${String(suffix).slice(-9)}`;
+  await fetch(`${BASE_URL}/_dev/test-serviceProvider`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ phone: techPhone, password: 'password123', specs: [categoryKey] }),
+    body: JSON.stringify({ phone: serviceProviderPhone, password: 'password123', specs: [categoryKey] }),
   });
 
   const custPhone = `8${String(suffix).slice(-9)}`;

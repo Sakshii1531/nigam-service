@@ -26,13 +26,13 @@ const payoutMethodSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-const technicianSchema = new mongoose.Schema(
+const serviceProviderSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
     name: { type: String, required: true },
     phone: String,
     email: String,
-    // Home address as entered on the technician's Personal Info screen.
+    // Home address as entered on the service provider's Personal Info screen.
     address: String,
     city: { type: mongoose.Schema.Types.ObjectId, ref: 'City', default: null, index: true },
     serviceCityName: { type: String, index: true },
@@ -62,13 +62,12 @@ const technicianSchema = new mongoose.Schema(
     weeklyTargetAmount: { type: Number, default: 0 },
     trustScore: { type: Number, default: 0 },
     tier: { type: String, enum: ['TSP', 'SP', 'Senior SP'], default: 'TSP' }, // job-count-based ladder, recomputed in Phase 6 service layer
-    servicePartner: { type: mongoose.Schema.Types.ObjectId, ref: 'ServicePartner', default: null, index: true },
     payoutMethods: [payoutMethodSchema],
     joinedAt: Date,
   },
   { timestamps: true },
 );
 
-applyStandardPlugins(technicianSchema, { prefix: ID_PREFIXES.TECHNICIAN });
+applyStandardPlugins(serviceProviderSchema, { prefix: ID_PREFIXES.SERVICE_PROVIDER });
 
-export const Technician = mongoose.models.Technician || mongoose.model('Technician', technicianSchema);
+export const ServiceProvider = mongoose.models.ServiceProvider || mongoose.model('ServiceProvider', serviceProviderSchema);

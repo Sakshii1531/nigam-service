@@ -17,7 +17,7 @@ import { usePushPermission, pushBlockedMessage } from '../../hooks/usePushPermis
 // tab's unsaved values.
 const TAB_FIELDS = {
   profile: ['supportEmail', 'supportPhone', 'website'],
-  service: ['autoAssignTechnician', 'requireCompletionPhoto'],
+  service: ['autoAssignServiceProvider', 'requireCompletionPhoto'],
   notifications: ['emailNotifications', 'smsAlerts'],
 };
 
@@ -67,7 +67,7 @@ const Settings = () => {
         setSupportEmail(s.supportEmail || '');
         setSupportPhone(s.supportPhone || '');
         setWebsite(s.website || '');
-        setAutoAssign(s.autoAssignTechnician !== false);
+        setAutoAssign(s.autoAssignServiceProvider !== false);
         setRequirePhoto(s.requireCompletionPhoto !== false);
         setEmailNotifs(s.emailNotifications !== false);
         setSmsAlerts(!!s.smsAlerts);
@@ -106,7 +106,7 @@ const Settings = () => {
         supportEmail,
         supportPhone,
         website,
-        autoAssignTechnician: autoAssign,
+        autoAssignServiceProvider: autoAssign,
         requireCompletionPhoto: requirePhoto,
         emailNotifications: emailNotifs,
         smsAlerts,
@@ -302,15 +302,15 @@ const Settings = () => {
                 <div className="space-y-4">
                   <div className="flex justify-between items-center py-3 border-b border-[#E2E8F0]">
                     <div>
-                      <p className="text-sm font-medium text-[#1E293B]">Auto-assign Technicians</p>
-                      <p className="text-xs text-[#64748B]">Automatically assign closest available technician to new requests.</p>
+                      <p className="text-sm font-medium text-[#1E293B]">Auto-assign ServiceProviders</p>
+                      <p className="text-xs text-[#64748B]">Automatically assign closest available serviceProvider to new requests.</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input 
                         type="checkbox" 
                         className="sr-only peer" 
                         checked={autoAssign} 
-                        onChange={() => handleToggle('Auto-assign Technicians', setAutoAssign, autoAssign, 'autoAssignTechnician')} 
+                        onChange={() => handleToggle('Auto-assign ServiceProviders', setAutoAssign, autoAssign, 'autoAssignServiceProvider')} 
                       />
                       <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0D47A1]"></div>
                     </label>
@@ -319,7 +319,7 @@ const Settings = () => {
                   <div className="flex justify-between items-center py-3 border-b border-[#E2E8F0]">
                     <div>
                       <p className="text-sm font-medium text-[#1E293B]">Require Photo Proof</p>
-                      <p className="text-xs text-[#64748B]">Technicians must upload photo after service completion.</p>
+                      <p className="text-xs text-[#64748B]">ServiceProviders must upload photo after service completion.</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input 

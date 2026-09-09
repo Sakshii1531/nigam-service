@@ -8,10 +8,10 @@ export async function listReturns(brandId, { status, page, limit, sort } = {}) {
 
   const { skip, limit: lim, page: pg, sort: sortObj } = parsePagination({ page, limit, sort });
   const [items, total] = await Promise.all([
-    // The returns table names the technician who sent the part back and the
+    // The returns table names the service provider who sent the part back and the
     // ticket it came off, so resolve both refs here.
     ReverseLogisticsReturn.find(query)
-      .populate('technician', 'name')
+      .populate('serviceProvider', 'name')
       .populate('serviceRequest', 'humanId')
       .sort(sortObj)
       .skip(skip)
@@ -33,10 +33,10 @@ export async function getReturn(brandId, id) {
 }
 
 /** Same reasoning as replacementApproval.service.js's createReplacementApproval:
- * no technician-side "log a returned part" trigger exists yet, so this is the
+ * no service provider-side "log a returned part" trigger exists yet, so this is the
  * entry point for now, logged by brand-admin/ops. */
-export async function createReturn(brandId, { technician, partName, sku, serviceRequest, replaceDate }) {
-  return ReverseLogisticsReturn.create({ brand: brandId, technician, partName, sku, serviceRequest: serviceRequest || null, replaceDate });
+export async function createReturn(brandId, { serviceProvider, partName, sku, serviceRequest, replaceDate }) {
+  return ReverseLogisticsReturn.create({ brand: brandId, serviceProvider, partName, sku, serviceRequest: serviceRequest || null, replaceDate });
 }
 
 export async function updateReturn(brandId, id, updates) {

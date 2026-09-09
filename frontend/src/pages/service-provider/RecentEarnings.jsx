@@ -11,11 +11,11 @@ const RecentEarnings = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    apiRequest('/tech/earnings/recent?limit=50', { auth: true })
+    apiRequest('/service-provider/earnings/recent?limit=50', { auth: true })
       .then((res) => setEarnings((res || []).map((e) => ({
         id: e.id,
         title: e.title,
-        // 'NCC Paid Service' is settled directly to the technician; the other
+        // 'NCC Paid Service' is settled directly to the service provider; the other
         // job types are billed through and settle on the invoice cycle.
         tag: e.type === 'NCC Paid Service' ? 'QuickPayout' : 'InvoicePayout',
         icon: e.type === 'NCC Paid Service' ? 'zap' : 'file',
@@ -29,11 +29,11 @@ const RecentEarnings = () => {
   }, []);
 
   return (
-    <div className="tech-app-container min-h-screen bg-[#F4F6FA] flex flex-col pb-16 lg:pb-8 relative font-sans">
+    <div className="service-provider-app-container min-h-screen bg-[#F4F6FA] flex flex-col pb-16 lg:pb-8 relative font-sans">
       {/* Mobile Top Header */}
       <div className="bg-white border-b border-slate-200 px-4 py-3.5 flex items-center gap-3 sticky top-0 z-10 lg:hidden">
         <button
-          onClick={() => navigate('/technician/profile')}
+          onClick={() => navigate('/service-provider/profile')}
           className="p-1 hover:bg-slate-100 rounded-full transition-colors"
         >
           <ArrowLeft className="h-5 w-5 text-slate-700" />
@@ -46,7 +46,7 @@ const RecentEarnings = () => {
         <div className="flex items-center justify-between bg-white rounded-3xl p-5 border border-slate-200/80 shadow-2xs">
           <div className="flex items-center gap-3.5">
             <button
-              onClick={() => navigate('/technician/profile')}
+              onClick={() => navigate('/service-provider/profile')}
               className="p-2 bg-slate-100 hover:bg-slate-200 rounded-2xl text-[#052355] transition-colors cursor-pointer"
               title="Back"
             >
@@ -73,7 +73,7 @@ const RecentEarnings = () => {
             {earnings.map((item) => (
               <button
                 key={item.id}
-                onClick={() => navigate(`/technician/earning-detail/${item.id}`)}
+                onClick={() => navigate(`/service-provider/earning-detail/${item.id}`)}
                 className="w-full px-4 py-3.5 flex items-center gap-3 hover:bg-slate-50 transition-colors text-left"
               >
                 <div className={`p-2 rounded-lg flex-shrink-0 ${item.icon === 'zap' ? 'bg-amber-50' : 'bg-blue-50'}`}>

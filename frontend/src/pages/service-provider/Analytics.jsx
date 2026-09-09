@@ -6,8 +6,8 @@ import {
   ClipboardList, Wrench, Calendar, User, ShieldCheck, HelpCircle, LogOut, CreditCard, X,
   ArrowLeft
 } from 'lucide-react';
-import techAvatar from '../../assets/tech_avatar.png';
-import TechBottomNav from '../../components/TechBottomNav';
+import serviceProviderAvatar from '../../assets/service_provider_avatar.png';
+import ServiceProviderBottomNav from '../../components/ServiceProviderBottomNav';
 import { apiRequest } from '../../lib/apiClient';
 
 const TIMEFRAME_DAYS = { 'Last 7 Days': 7, 'Last 30 Days': 30, 'Last 90 Days': 90 };
@@ -27,7 +27,7 @@ const Analytics = () => {
   useEffect(() => {
     const days = TIMEFRAME_DAYS[selectedTimeframe] || 30;
     let cancelled = false;
-    apiRequest(`/tech/earnings/analytics?days=${days}`, { auth: true })
+    apiRequest(`/service-provider/earnings/analytics?days=${days}`, { auth: true })
       .then((res) => { if (!cancelled) { setStats(res); setError(''); } })
       .catch((err) => { if (!cancelled) setError(err.message || 'Could not load your analytics.'); });
     return () => { cancelled = true; };
@@ -206,7 +206,7 @@ const Analytics = () => {
 
 
       {/* Bottom Navigation */}
-      <TechBottomNav activeTab="profile" />
+      <ServiceProviderBottomNav activeTab="profile" />
 
       {/* Logout Confirmation Modal Overlay */}
       {showLogoutConfirm && (
@@ -235,7 +235,7 @@ const Analytics = () => {
                   // navigating alone left the tokens in place, so the route
                   // guard saw an authenticated user and sent them straight back.
                   await logout();
-                  navigate('/technician/login', { replace: true });
+                  navigate('/service-provider/login', { replace: true });
                 }}
                 className="flex-1 bg-red-600 hover:bg-red-700 text-white text-[10.5px] font-black py-2.5 rounded-xl transition-colors cursor-pointer shadow-sm"
               >

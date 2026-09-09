@@ -10,7 +10,7 @@ import { apiRequest } from '../../lib/apiClient';
 
 const FALLBACK_BANNER_IMAGE = 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=150';
 
-// The five sections below are authored here and consumed by the technician app.
+// The five sections below are authored here and consumed by the service provider app.
 // Each row keeps the shape the table markup already expects, so mapping happens
 // only at the API boundary.
 const toBanner = (d) => ({
@@ -37,7 +37,7 @@ const toAnnouncement = (d) => ({
 });
 const toSkill = (d) => ({ id: d.id, name: d.name, code: d.code, group: d.group || 'General' });
 
-const TechnicianAppCustomization = () => {
+const ServiceProviderAppCustomization = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'banners';
 
@@ -79,11 +79,11 @@ const TechnicianAppCustomization = () => {
       // The console has to show inactive rows too, so banners/videos use the
       // /admin readers rather than the publish-filtered public ones.
       const [bannerRes, videoRes, announceRes, skillRes, settingRes] = await Promise.all([
-        apiRequest('/cms/banners/admin?app=technician', { auth: true }),
+        apiRequest('/cms/banners/admin?app=service_provider', { auth: true }),
         apiRequest('/cms/videos/admin', { auth: true }),
         apiRequest('/cms/announcements', { auth: true }),
         apiRequest('/cms/skills', { auth: true }),
-        apiRequest('/cms/app-settings/technician'),
+        apiRequest('/cms/app-settings/service-provider'),
       ]);
       setBanners((bannerRes || []).map(toBanner));
       setVideos((videoRes || []).map(toVideo));
@@ -91,7 +91,7 @@ const TechnicianAppCustomization = () => {
       setSkills((skillRes || []).map(toSkill));
       setSettings((prev) => ({ ...prev, ...(settingRes || {}) }));
     } catch (err) {
-      setLoadError(err.message || 'Failed to load technician app content.');
+      setLoadError(err.message || 'Failed to load service provider app content.');
     } finally {
       setLoading(false);
     }
@@ -110,13 +110,13 @@ const TechnicianAppCustomization = () => {
         body: {
           imageUrl: FALLBACK_BANNER_IMAGE,
           title: newBanner.title,
-          description: newBanner.desc || 'Technician Alert Announcement Banner',
-          app: 'technician',
+          description: newBanner.desc || 'Service Provider Alert Announcement Banner',
+          app: 'service_provider',
         },
       });
       setBanners((prev) => [...prev, toBanner(res)]);
       setNewBanner({ title: '', desc: '' });
-      showToast('New technician banner published!');
+      showToast('New service provider banner published!');
     } catch (err) {
       showToast(err.message || 'Could not publish banner.');
     }
@@ -227,18 +227,18 @@ const TechnicianAppCustomization = () => {
     }
   };
 
-  // 5. SETTINGS — stored as flat key/value rows under the 'technician' app.
+  // 5. SETTINGS — stored as flat key/value rows under the 'service provider' app.
   const handleSaveSettings = async (e) => {
     e.preventDefault();
     try {
       for (const [key, value] of Object.entries(settings)) {
-        await apiRequest('/cms/app-settings/technician', {
+        await apiRequest('/cms/app-settings/service-provider', {
           method: 'PUT',
           auth: true,
           body: { key, value },
         });
       }
-      showToast('Technician app system settings updated.');
+      showToast('Service Provider app system settings updated.');
     } catch (err) {
       showToast(err.message || 'Could not save settings.');
     }
@@ -252,7 +252,7 @@ const TechnicianAppCustomization = () => {
       {/* Main Container */}
       <div className="flex-1 ml-64 min-h-screen flex flex-col">
         {/* Topbar */}
-        <Topbar title="Technician App Customization" />
+        <Topbar title="Service Provider App Customization" />
 
         {/* Inner Content */}
         <div className="p-6 flex-1 flex flex-col gap-6 max-w-5xl">
@@ -266,7 +266,7 @@ const TechnicianAppCustomization = () => {
 
           {loading && (
             <div className="bg-white border border-slate-100 rounded-xl p-4 text-xs font-bold text-slate-400">
-              Loading technician app content…
+              Loading service provider app content…
             </div>
           )}
           {loadError && (
@@ -289,8 +289,8 @@ const TechnicianAppCustomization = () => {
               <div className="flex flex-col gap-6">
                 <div className="flex justify-between items-center">
                   <div>
-                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">Technician App Banners</h3>
-                    <p className="text-xs text-slate-400 font-semibold mt-1">Configure dashboard banner promos and notices displayed in the technician client.</p>
+                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">Service Provider App Banners</h3>
+                    <p className="text-xs text-slate-400 font-semibold mt-1">Configure dashboard banner promos and notices displayed in the service provider client.</p>
                   </div>
                   <button 
                     onClick={() => setShowAddBannerModal(true)}
@@ -400,7 +400,7 @@ const TechnicianAppCustomization = () => {
                 <div className="flex justify-between items-center">
                   <div>
                     <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">Training & Support Videos</h3>
-                    <p className="text-xs text-slate-400 font-semibold mt-1">Configure instructional training classes and video links for technician app.</p>
+                    <p className="text-xs text-slate-400 font-semibold mt-1">Configure instructional training classes and video links for the service provider app.</p>
                   </div>
                   <button 
                     onClick={() => setShowAddVideoModal(true)}
@@ -526,7 +526,7 @@ const TechnicianAppCustomization = () => {
                 <div className="flex justify-between items-center">
                   <div>
                     <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">Broadcasting Alerts</h3>
-                    <p className="text-xs text-slate-400 font-semibold mt-1">Publish critical service announcements to all online technician apps.</p>
+                    <p className="text-xs text-slate-400 font-semibold mt-1">Publish critical service announcements to all online service provider apps.</p>
                   </div>
                   <button 
                     onClick={() => setShowAddAnnounceModal(true)}
@@ -630,7 +630,7 @@ const TechnicianAppCustomization = () => {
                 <div className="flex justify-between items-center">
                   <div>
                     <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">Dynamic Skills Tags</h3>
-                    <p className="text-xs text-slate-400 font-semibold mt-1">Manage certification tags assigned to technicians for dynamic job allocation logic.</p>
+                    <p className="text-xs text-slate-400 font-semibold mt-1">Manage certification tags assigned to service providers for dynamic job allocation logic.</p>
                   </div>
                   <button 
                     onClick={() => setShowAddSkillModal(true)}
@@ -753,7 +753,7 @@ const TechnicianAppCustomization = () => {
             {activeTab === 'settings' && (
               <form onSubmit={handleSaveSettings} className="flex flex-col gap-6 text-left">
                 <div>
-                  <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">Technician Client Configuration</h3>
+                  <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">Service Provider Client Configuration</h3>
                   <p className="text-xs text-slate-400 font-semibold mt-1">Configure global application parameters and driver behavior settings.</p>
                 </div>
 
@@ -761,7 +761,7 @@ const TechnicianAppCustomization = () => {
                   <div className="border border-slate-150 rounded-2xl p-4.5 bg-[#FAFBFF] shadow-3xs flex justify-between items-center">
                     <div>
                       <span className="text-xs font-bold text-slate-800 block">Allow Offline Booking Sync</span>
-                      <span className="text-[10px] text-slate-400 font-semibold block mt-0.5">Let technicians close tickets in areas without cell network.</span>
+                      <span className="text-[10px] text-slate-400 font-semibold block mt-0.5">Let service providers close tickets in areas without cell network.</span>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input 
@@ -777,7 +777,7 @@ const TechnicianAppCustomization = () => {
                   <div className="border border-slate-150 rounded-2xl p-4.5 bg-[#FAFBFF] shadow-3xs flex justify-between items-center">
                     <div>
                       <span className="text-xs font-bold text-slate-800 block">Auto-Assign Jobs to Partners</span>
-                      <span className="text-[10px] text-slate-400 font-semibold block mt-0.5">Algorithms automatically allocate tasks to closest nearby tech.</span>
+                      <span className="text-[10px] text-slate-400 font-semibold block mt-0.5">Algorithms automatically allocate tasks to closest nearby provider.</span>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input 
@@ -838,4 +838,4 @@ const TechnicianAppCustomization = () => {
   );
 };
 
-export default TechnicianAppCustomization;
+export default ServiceProviderAppCustomization;

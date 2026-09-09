@@ -19,7 +19,7 @@ export function isWithinBrandWarranty(purchaseDate, warrantyMonths = DEFAULT_BRA
 /**
  * Computes OwnedAppliance.warrantyStatus. Precedence: an active Extended Warranty
  * overlay wins over AMC, which wins over the base brand warranty — matches how the
- * frontend's technician job `type` field prioritizes NCC Extended Warranty / AMC
+ * frontend's service provider job `type` field prioritizes NCC Extended Warranty / AMC
  * Visit jobs over plain brand-warranty ones (BACKEND_CONTEXT.md §4.2).
  */
 export function computeWarrantyStatus({

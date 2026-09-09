@@ -1,11 +1,11 @@
 import mongoose from 'mongoose';
 import { applyStandardPlugins } from '../shared/plugins.js';
 
-// The catalogue of skills a technician can be certified in, maintained by
-// super-admin. Technician.specs holds free-text strings today; this gives the
+// The catalogue of skills a service provider can be certified in, maintained by
+// super-admin. ServiceProvider.specs holds free-text strings today; this gives the
 // console a controlled vocabulary to pick from rather than inventing one per
-// technician.
-const technicianSkillSchema = new mongoose.Schema(
+// service provider.
+const serviceProviderSkillSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
     // Short operational code, e.g. 'AC-SPLIT-INST'.
@@ -16,7 +16,7 @@ const technicianSkillSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-applyStandardPlugins(technicianSkillSchema);
+applyStandardPlugins(serviceProviderSkillSchema);
 
-export const TechnicianSkill =
-  mongoose.models.TechnicianSkill || mongoose.model('TechnicianSkill', technicianSkillSchema);
+export const ServiceProviderSkill =
+  mongoose.models.ServiceProviderSkill || mongoose.model('ServiceProviderSkill', serviceProviderSkillSchema);

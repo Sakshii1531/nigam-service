@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Bell, Briefcase, ClipboardList, Calendar, Wrench, User, MessageCircle, Phone, FileText, ChevronDown, ChevronUp } from 'lucide-react';
-import TechBottomNav from '../../components/TechBottomNav';
-import { useTech } from '../../context/TechContext';
+import ServiceProviderBottomNav from '../../components/ServiceProviderBottomNav';
+import { useTech } from '../../context/ServiceProviderContext';
 
 const HelpSupport = () => {
   const navigate = useNavigate();
@@ -26,7 +26,7 @@ const HelpSupport = () => {
       a: "Mark 'Spare Part Required' on the job flow. The request goes to Super Admin/Brand for approval, dispatch, and delivery. Once delivered, your revisit will be scheduled automatically."
     },
     {
-      q: "When are technician payouts settled?",
+      q: "When are serviceProvider payouts settled?",
       a: "Quick payouts are credited immediately to your balance upon customer payment. Invoice-based jobs settle with brand cycle."
     },
     {
@@ -47,7 +47,7 @@ const HelpSupport = () => {
           </button>
           <h1 className="text-lg font-semibold text-slate-900">Help & Support</h1>
         </div>
-        <button onClick={() => navigate('/technician/notifications')} className="p-2 hover:bg-slate-50 rounded-full transition-colors relative">
+        <button onClick={() => navigate('/service-provider/notifications')} className="p-2 hover:bg-slate-50 rounded-full transition-colors relative">
           <Bell className="h-5 w-5 text-slate-700" />
           {unreadCount > 0 && <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>}
         </button>
@@ -66,7 +66,7 @@ const HelpSupport = () => {
             </button>
             <div>
               <h1 className="text-xl font-black text-[#052355] tracking-tight">Help & Technical Support</h1>
-              <p className="text-xs text-slate-500 font-medium mt-0.5">Contact operations support, live technician helpline and view FAQs</p>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">Contact operations support, live serviceProvider helpline and view FAQs</p>
             </div>
           </div>
         </div>
@@ -78,7 +78,7 @@ const HelpSupport = () => {
         {/* Contact Options */}
         <div className="grid grid-cols-2 gap-4">
           <button 
-            onClick={() => navigate('/technician/technical-support')}
+            onClick={() => navigate('/service-provider/technical-support')}
             className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm flex flex-col items-center gap-2 hover:bg-slate-50 transition-colors cursor-pointer"
           >
             <div className="w-10 h-10 bg-[#E3ECF9] rounded-full flex items-center justify-center">
@@ -131,7 +131,7 @@ const HelpSupport = () => {
       </div>
 
       {/* Bottom Navigation */}
-      <TechBottomNav activeTab="profile" />
+      <ServiceProviderBottomNav activeTab="profile" />
 
     </div>
   );

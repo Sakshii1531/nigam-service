@@ -15,12 +15,12 @@ export const callRouter = Router();
  * their counterpart on the given service request. Neither party's real phone
  * number is returned — both legs ring via the platform's virtual Twilio number.
  *
- * Auth: customer or technician only.
+ * Auth: customer or service provider only.
  */
 callRouter.post(
   '/initiate',
   requireAuth,
-  requireRole(ROLES.CUSTOMER, ROLES.TECHNICIAN),
+  requireRole(ROLES.CUSTOMER, ROLES.SERVICE_PROVIDER),
   validate(initiateCallSchema),
   async (req, res, next) => {
     try {
@@ -54,15 +54,15 @@ callRouter.post('/status', validate(twilioStatusCallbackSchema), async (req, res
  * GET /api/v1/calls/:serviceRequestId
  *
  * Returns call history for a service request. Verifies the requester is a
- * participant (customer or technician of that SR). Real phone numbers are never
+ * participant (customer or service provider of that SR). Real phone numbers are never
  * included in the response.
  *
- * Auth: customer or technician only.
+ * Auth: customer or service provider only.
  */
 callRouter.get(
   '/:serviceRequestId',
   requireAuth,
-  requireRole(ROLES.CUSTOMER, ROLES.TECHNICIAN),
+  requireRole(ROLES.CUSTOMER, ROLES.SERVICE_PROVIDER),
   async (req, res, next) => {
     try {
       const logs = await callService.getCallLogs(req.user, req.params.serviceRequestId);

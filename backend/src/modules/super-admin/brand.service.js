@@ -3,7 +3,7 @@ import { ApiError } from '../../middleware/errorHandler.js';
 import { logAudit } from '../shared/auditLog.js';
 import { ServiceRequest } from '../service-requests/serviceRequest.model.js';
 import { Review } from '../../modules/reviews/review.model.js';
-import { Job } from '../technician/job.model.js';
+import { Job } from '../service-provider/job.model.js';
 
 export async function listBrands() {
   return Brand.find().sort({ name: 1 });

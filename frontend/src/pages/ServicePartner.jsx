@@ -63,7 +63,7 @@ const ServicePartner = () => {
 
           {/* Join Now Button */}
           <button
-            onClick={() => navigate('/technician/login')}
+            onClick={() => navigate('/service-provider/login')}
             className="w-full mt-5 bg-[#1565C0] hover:bg-blue-800 text-white text-sm font-black py-3.5 rounded-2xl transition-all cursor-pointer shadow-md relative z-10"
           >
             Join Now

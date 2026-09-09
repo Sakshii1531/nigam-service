@@ -21,7 +21,7 @@ const AIAssistant = () => {
 
   const [sending, setSending] = useState(false);
 
-  // The assistant answers from this technician's real job and van stock, which
+  // The assistant answers from this service provider's real job and van stock, which
   // the server assembles per request. It replaced a keyword matcher that stated
   // invented stock levels and a named customer's warranty date.
   const handleSendMessage = async (text) => {
@@ -34,7 +34,7 @@ const AIAssistant = () => {
     setSending(true);
 
     try {
-      const res = await apiRequest('/tech/assistant', {
+      const res = await apiRequest('/service-provider/assistant', {
         method: 'POST',
         auth: true,
         body: {
@@ -95,7 +95,7 @@ const AIAssistant = () => {
             </button>
             <div>
               <h1 className="text-xl font-black text-[#052355] tracking-tight">AI Diagnostic Assistant</h1>
-              <p className="text-xs text-slate-500 font-medium mt-0.5">Smart technician copilot for appliance diagnostics, parts and estimates</p>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">Smart serviceProvider copilot for appliance diagnostics, parts and estimates</p>
             </div>
           </div>
         </div>
@@ -160,7 +160,7 @@ const AIAssistant = () => {
                   {msg.text}
                   {msg.offerSupport && (
                     <button
-                      onClick={() => navigate('/technician/technical-support')}
+                      onClick={() => navigate('/service-provider/technical-support')}
                       className="mt-2 block w-full bg-[#0D47A1] text-white font-semibold text-[11px] py-2 rounded-xl"
                     >
                       Open Technical Support
@@ -197,7 +197,7 @@ const AIAssistant = () => {
             </button>
           ) : (
             <button 
-              onClick={() => navigate('/technician/technical-support')}
+              onClick={() => navigate('/service-provider/technical-support')}
               className="w-9 h-9 bg-[#0D47A1] text-white rounded-full flex items-center justify-center shadow-sm hover:bg-blue-700 transition-colors"
             >
               <Mic className="h-4.5 w-4.5 stroke-[2.5]" />

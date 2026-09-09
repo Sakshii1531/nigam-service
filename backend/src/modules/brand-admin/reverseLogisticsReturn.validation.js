@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const createReturnSchema = z.object({
-  technician: z.string().min(1),
+  serviceProvider: z.string().min(1),
   partName: z.string().min(1),
   sku: z.string().optional(),
   serviceRequest: z.string().optional(),

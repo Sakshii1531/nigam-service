@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const upsertTrackingSchema = z.object({
   job: z.string().min(1),
-  technician: z.string().min(1),
+  serviceProvider: z.string().min(1),
   status: z.enum(['On the way', 'Repairing', 'Completed']).optional(),
   eta: z.string().optional(),
   location: z.string().optional(),

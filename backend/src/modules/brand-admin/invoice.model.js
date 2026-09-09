@@ -7,7 +7,7 @@ const invoiceSchema = new mongoose.Schema(
     brand: { type: mongoose.Schema.Types.ObjectId, ref: 'Brand', required: true, index: true },
     serviceRequest: { type: mongoose.Schema.Types.ObjectId, ref: 'ServiceRequest', required: true },
     customer: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    technician: { type: mongoose.Schema.Types.ObjectId, ref: 'Technician', default: null },
+    serviceProvider: { type: mongoose.Schema.Types.ObjectId, ref: 'ServiceProvider', default: null },
     product: String,
     serviceCharge: { type: Number, default: 0 },
     partCharge: { type: Number, default: 0 },

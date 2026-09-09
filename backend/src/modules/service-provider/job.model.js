@@ -2,10 +2,10 @@ import mongoose from 'mongoose';
 import { applyStandardPlugins } from '../shared/plugins.js';
 import { ID_PREFIXES, JOB_STEPS, JOB_REVISIT_STEPS } from '../../config/constants.js';
 
-// A technician "job" = a ServiceRequest joined with tech-facing metadata and the
+// A service provider "job" = a ServiceRequest joined with service-provider-facing metadata and the
 // in-progress work state (diagnosis, proofs, billing, revisit). One Job per
 // ServiceRequest (1:1) — kept as its own collection rather than bolted onto
-// ServiceRequest because most of this only exists once a technician is engaged,
+// ServiceRequest because most of this only exists once a service provider is engaged,
 // and because the sub-documents below (diagnosis/proofs/billing/revisit) are only
 // ever read/written together with the job, never independently (BACKEND_CONTEXT.md §4.2-4.3).
 
@@ -86,7 +86,7 @@ const billingEstimateSchema = new mongoose.Schema(
     additionalServicesTotal: { type: Number, default: 0 },
     gstPercent: { type: Number, default: 18 },
     total: { type: Number, default: 0 },
-    technicianEarnings: { type: Number, default: 0 },
+    serviceProviderEarnings: { type: Number, default: 0 },
   },
   { _id: false },
 );
@@ -94,7 +94,7 @@ const billingEstimateSchema = new mongoose.Schema(
 const jobSchema = new mongoose.Schema(
   {
     serviceRequest: { type: mongoose.Schema.Types.ObjectId, ref: 'ServiceRequest', required: true, unique: true },
-    technician: { type: mongoose.Schema.Types.ObjectId, ref: 'Technician', required: true, index: true },
+    serviceProvider: { type: mongoose.Schema.Types.ObjectId, ref: 'ServiceProvider', required: true, index: true },
 
     type: {
       type: String,
@@ -131,7 +131,7 @@ const jobSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-jobSchema.index({ technician: 1, activeStep: 1 });
+jobSchema.index({ serviceProvider: 1, activeStep: 1 });
 
 applyStandardPlugins(jobSchema, { prefix: ID_PREFIXES.JOB });
 

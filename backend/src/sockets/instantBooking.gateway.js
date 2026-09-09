@@ -1,66 +1,66 @@
 import { Booking } from '../modules/booking/booking.model.js';
 import { ServiceRequest } from '../modules/service-requests/serviceRequest.model.js';
-import { Technician } from '../modules/technician/technician.model.js';
+import { ServiceProvider } from '../modules/service-provider/serviceProvider.model.js';
 import { transitionStatus, declineAssignment } from '../modules/service-requests/serviceRequest.service.js';
 import { ROLES } from '../config/constants.js';
 
-// Technicians who are online and listening for ASAP work. Exported because
+// ServiceProviders who are online and listening for ASAP work. Exported because
 // booking.service.js announces new instant requests into this same room —
 // broadcasting them to every connected socket would hand a customer's name,
 // phone number and street address to every other logged-in user.
-export const INSTANT_ROOM = 'instant:technicians';
+export const INSTANT_ROOM = 'instant:serviceProviders';
 
 export function registerInstantBookingGateway(io) {
   io.on('connection', (socket) => {
-    // Technicians join instant job broadcast room. Role-gated for the same
+    // ServiceProviders join instant job broadcast room. Role-gated for the same
     // reason the room exists at all: what gets published here is customer
     // contact and address data, so a customer or brand-admin socket asking to
     // join must be turned away rather than quietly added.
     socket.on('join-instant-feed', async (_payload, ack) => {
-      if (socket.user?.role !== ROLES.TECHNICIAN) {
-        return ack?.({ ok: false, error: 'technician role required' });
+      if (socket.user?.role !== ROLES.SERVICE_PROVIDER) {
+        return ack?.({ ok: false, error: 'serviceProvider role required' });
       }
       socket.join(INSTANT_ROOM);
-      socket.join('technicians');
+      socket.join('serviceProviders');
       if (socket.user?.id) {
-        socket.join(`tech:${socket.user.id}`);
+        socket.join(`service-provider:${socket.user.id}`);
         try {
-          const tech = await Technician.findOne({ user: socket.user.id });
-          if (tech) {
-            socket.join(`tech:${tech._id}`);
-            if (tech.serviceCityName) {
-              socket.join(`city:${tech.serviceCityName.toLowerCase().trim()}`);
+          const provider = await ServiceProvider.findOne({ user: socket.user.id });
+          if (provider) {
+            socket.join(`service-provider:${provider._id}`);
+            if (provider.serviceCityName) {
+              socket.join(`city:${provider.serviceCityName.toLowerCase().trim()}`);
             }
           }
         } catch {
-          // ignore error finding tech record
+          // ignore error finding provider record
         }
       }
       return ack?.({ ok: true, room: INSTANT_ROOM });
     });
 
     // Turning down an instant job. Without this the popup could only be hidden
-    // client-side, so the request stayed pinned to the technician who ignored
+    // client-side, so the request stayed pinned to the service provider who ignored
     // it and no one else was ever offered the work.
     socket.on('instant:reject_job', async ({ serviceRequestId }, ack) => {
       try {
-        if (socket.user.role !== ROLES.TECHNICIAN) {
-          return ack?.({ ok: false, error: 'technician role required' });
+        if (socket.user.role !== ROLES.SERVICE_PROVIDER) {
+          return ack?.({ ok: false, error: 'serviceProvider role required' });
         }
-        const technician = await Technician.findOne({ user: socket.user.id });
-        if (!technician) return ack?.({ ok: false, error: 'Technician profile not found' });
+        const serviceProvider = await ServiceProvider.findOne({ user: socket.user.id });
+        if (!serviceProvider) return ack?.({ ok: false, error: 'ServiceProvider profile not found' });
 
-        const result = await declineAssignment(serviceRequestId, String(technician._id));
+        const result = await declineAssignment(serviceRequestId, String(serviceProvider._id));
 
         // Put it back in front of everyone still listening, so the next
-        // technician sees it immediately rather than on their next refresh.
+        // service provider sees it immediately rather than on their next refresh.
         const sr = await ServiceRequest.findById(serviceRequestId).populate('booking');
         io.to(INSTANT_ROOM).emit('instant:new_request', {
           bookingId: sr?.booking?.id || null,
           serviceRequestId: sr?.id,
           category: sr?.category,
           instantStatus: sr?.instantStatus,
-          assignedTechnicianId: sr?.technician ? String(sr.technician) : null,
+          assignedServiceProviderId: sr?.serviceProvider ? String(sr.serviceProvider) : null,
         });
 
         return ack?.({ ok: true, ...result });
@@ -69,49 +69,49 @@ export function registerInstantBookingGateway(io) {
       }
     });
 
-    // Technician accepts an instant job request
+    // Service Provider accepts an instant job request
     socket.on('instant:accept_job', async ({ bookingId, serviceRequestId }, ack) => {
       try {
-        if (socket.user.role !== ROLES.TECHNICIAN) {
-          return ack?.({ ok: false, error: 'technician role required' });
+        if (socket.user.role !== ROLES.SERVICE_PROVIDER) {
+          return ack?.({ ok: false, error: 'serviceProvider role required' });
         }
 
-        const technician = await Technician.findOne({ user: socket.user.id });
-        if (!technician) return ack?.({ ok: false, error: 'Technician profile not found' });
+        const serviceProvider = await ServiceProvider.findOne({ user: socket.user.id });
+        if (!serviceProvider) return ack?.({ ok: false, error: 'ServiceProvider profile not found' });
 
-        // Claim atomically. Reading the booking, checking `technician`, then
-        // saving is a check-then-set: two technicians tapping Accept at the same
+        // Claim atomically. Reading the booking, checking `service provider`, then
+        // saving is a check-then-set: two service providers tapping Accept at the same
         // moment both pass the check before either writes, and the second
         // silently overwrites the first — leaving the customer told that one
-        // technician is coming while a different one believes the job is theirs.
+        // service provider is coming while a different one believes the job is theirs.
         // Matching on "unclaimed, or already mine" makes the winner the single
-        // technician whose update actually matched.
+        // service provider whose update actually matched.
         const booking = await Booking.findOneAndUpdate(
-          { _id: bookingId, $or: [{ technician: null }, { technician: technician._id }] },
-          { technician: technician._id, instantStatus: 'ASSIGNED', isAccepted: true },
+          { _id: bookingId, $or: [{ serviceProvider: null }, { serviceProvider: serviceProvider._id }] },
+          { serviceProvider: serviceProvider._id, instantStatus: 'ASSIGNED', isAccepted: true },
           { new: true },
         );
         if (!booking) {
           const exists = await Booking.exists({ _id: bookingId });
           return ack?.({
             ok: false,
-            error: exists ? 'Job has already been accepted by another technician' : 'Booking not found',
+            error: exists ? 'Job has already been accepted by another serviceProvider' : 'Booking not found',
           });
         }
 
         let sr = await ServiceRequest.findById(serviceRequestId || booking.serviceRequest);
         if (sr) {
-          sr.technician = technician._id;
+          sr.serviceProvider = serviceProvider._id;
           sr.instantStatus = 'ASSIGNED';
           sr.isAccepted = true;
           sr.acceptedAt = new Date();
           await sr.save();
           sr = await transitionStatus(sr.id, 'Assigned', {
-            description: `Instant booking accepted by ${technician.name}`,
+            description: `Instant booking accepted by ${serviceProvider.name}`,
           });
         }
 
-        // The customer gets their technician's details; the technician room
+        // The customer gets their service provider's details; the service provider room
         // gets the claim so the job disappears from everyone else's feed.
         const assignedPayload = {
           bookingId: booking.id,
@@ -119,24 +119,24 @@ export function registerInstantBookingGateway(io) {
           instantStatus: 'ASSIGNED',
           isAccepted: true,
           status: 'Engineer Accepted',
-          technician: {
-            id: technician._id,
-            name: technician.name,
-            phone: technician.phone,
-            rating: technician.rating,
+          serviceProvider: {
+            id: serviceProvider._id,
+            name: serviceProvider.name,
+            phone: serviceProvider.phone,
+            rating: serviceProvider.rating,
           },
         };
         io.to(`user:${booking.user}`).emit('instant:status_update', assignedPayload);
         io.to(`user:${booking.user}`).emit('booking:accepted', assignedPayload);
         io.to(INSTANT_ROOM).emit('instant:status_update', assignedPayload);
 
-        ack?.({ ok: true, booking, technician });
+        ack?.({ ok: true, booking, serviceProvider });
       } catch (err) {
         ack?.({ ok: false, error: err.message });
       }
     });
 
-    // Technician updates en-route / in-progress status for instant booking
+    // Service Provider updates en-route / in-progress status for instant booking
     socket.on('instant:update_status', async ({ bookingId, status }, ack) => {
       try {
         const booking = await Booking.findById(bookingId);

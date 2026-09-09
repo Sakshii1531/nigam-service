@@ -5,14 +5,14 @@ import { createApp } from '../src/app.js';
 import { registerAllModels } from '../src/config/registerModels.js';
 import { ensureIndexes } from '../src/config/db.js';
 import { User } from '../src/modules/auth/user.model.js';
-import { Technician } from '../src/modules/technician/technician.model.js';
+import { ServiceProvider } from '../src/modules/service-provider/serviceProvider.model.js';
 import { Category } from '../src/modules/catalog/category.model.js';
 import { ProductType } from '../src/modules/catalog/productType.model.js';
 import { ServiceCatalogItem } from '../src/modules/catalog/serviceCatalogItem.model.js';
 import { Booking } from '../src/modules/booking/booking.model.js';
 import { ServiceRequest } from '../src/modules/service-requests/serviceRequest.model.js';
-import { Job } from '../src/modules/technician/job.model.js';
-import { EarningsTally } from '../src/modules/technician/earningsTally.model.js';
+import { Job } from '../src/modules/service-provider/job.model.js';
+import { EarningsTally } from '../src/modules/service-provider/earningsTally.model.js';
 import { Payment } from '../src/modules/payments-wallet/payment.model.js';
 import { Review } from '../src/modules/reviews/review.model.js';
 import { Notification } from '../src/modules/notifications/notification.model.js';
@@ -47,7 +47,7 @@ afterAll(async () => {
 beforeEach(async () => {
   await Promise.all([
     User.deleteMany({}),
-    Technician.deleteMany({}),
+    ServiceProvider.deleteMany({}),
     Category.deleteMany({}),
     ProductType.deleteMany({}),
     ServiceCatalogItem.deleteMany({}),
@@ -62,26 +62,29 @@ beforeEach(async () => {
   ]);
 });
 
-describe('Phase 10 — the real customer journey end to end: browse -> book -> technician completes -> pay -> review', () => {
+describe('Phase 10 — the real customer journey end to end: browse -> book -> serviceProvider completes -> pay -> review', () => {
   it('walks the entire flow through real HTTP calls against every layer, asserting the side effects at each step', async () => {
-    // 1. Seed catalog + a real technician who will win auto-assignment.
+    // 1. Seed catalog + a real service provider who will win auto-assignment.
     const category = await Category.create({ key: 'AC', name: 'AC', color: '#000' });
     await ProductType.create({ category: category._id, slug: 'split', name: 'Split AC' });
     await ServiceCatalogItem.create({ category: category._id, slug: 'repair', name: 'Repair', price: 999 });
 
-    const techUser = await User.create({ role: ROLES.TECHNICIAN, phone: '9199999001', name: 'Journey Tech', passwordHash: await hashPassword('password123') });
-    const technician = await Technician.create({ user: techUser._id, name: 'Journey Tech', phone: '9199999001', status: 'Active', availability: 'Available', specs: ['AC'] });
+    const serviceProviderUser = await User.create({ role: ROLES.SERVICE_PROVIDER, phone: '9199999001', name: 'Journey Tech', passwordHash: await hashPassword('password123') });
+    // assignmentEngine.js hard-filters by territory: a service provider with no
+    // registered city is excluded from every city-scoped booking, not just
+    // scored lower — so this seed must carry the same city the booking below sends.
+    const serviceProvider = await ServiceProvider.create({ user: serviceProviderUser._id, name: 'Journey Tech', phone: '9199999001', status: 'Active', availability: 'Available', specs: ['AC'], serviceCityName: 'Lucknow' });
 
     await User.create({ role: ROLES.CUSTOMER, phone: '9199999002', name: 'Journey Customer', passwordHash: await hashPassword('password123') });
 
     const customerToken = await loginAndVerify({ role: ROLES.CUSTOMER, identifier: '9199999002', password: 'password123' });
-    const techToken = await loginAndVerify({ role: ROLES.TECHNICIAN, identifier: '9199999001', password: 'password123' });
+    const serviceProviderToken = await loginAndVerify({ role: ROLES.SERVICE_PROVIDER, identifier: '9199999001', password: 'password123' });
 
     // 2. Browse the catalog (public read).
     const catalogRes = await request(app).get('/api/v1/catalog/categories').expect(200);
     expect(catalogRes.body.data.some((c) => c.key === 'AC')).toBe(true);
 
-    // 3. Book — auto-assigns the technician, fires notifications, opens no
+    // 3. Book — auto-assigns the service provider, fires notifications, opens no
     // conversation yet (that happens on job acceptance).
     const bookingRes = await request(app)
       .post('/api/v1/bookings')
@@ -96,10 +99,10 @@ describe('Phase 10 — the real customer journey end to end: browse -> book -> t
     expect(notifsAfterBooking.body.data.some((n) => n.type === 'created')).toBe(true);
     expect(notifsAfterBooking.body.data.some((n) => n.type === 'assigned')).toBe(true);
 
-    // 4. Technician accepts — auto-creates the chat conversation.
+    // 4. Service Provider accepts — auto-creates the chat conversation.
     const acceptRes = await request(app)
-      .post(`/api/v1/tech/jobs/accept/${serviceRequest.id}`)
-      .set('Authorization', `Bearer ${techToken}`)
+      .post(`/api/v1/service-provider/jobs/accept/${serviceRequest.id}`)
+      .set('Authorization', `Bearer ${serviceProviderToken}`)
       .send({})
       .expect(200);
     const jobId = acceptRes.body.data.id;
@@ -108,21 +111,21 @@ describe('Phase 10 — the real customer journey end to end: browse -> book -> t
     expect(convoRes.body.data).toHaveLength(1);
 
     // 5. Full job lifecycle to completion.
-    await request(app).post(`/api/v1/tech/jobs/${jobId}/start-travel`).set('Authorization', `Bearer ${techToken}`).expect(200);
-    await request(app).post(`/api/v1/tech/jobs/${jobId}/arrive`).set('Authorization', `Bearer ${techToken}`).expect(200);
-    await request(app).post(`/api/v1/tech/jobs/${jobId}/diagnosis`).set('Authorization', `Bearer ${techToken}`).send({ notes: 'Gas leak' }).expect(200);
+    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/start-travel`).set('Authorization', `Bearer ${serviceProviderToken}`).expect(200);
+    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/arrive`).set('Authorization', `Bearer ${serviceProviderToken}`).expect(200);
+    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`).set('Authorization', `Bearer ${serviceProviderToken}`).send({ notes: 'Gas leak' }).expect(200);
     await request(app)
-      .post(`/api/v1/tech/jobs/${jobId}/spare-parts`)
-      .set('Authorization', `Bearer ${techToken}`)
+      .post(`/api/v1/service-provider/jobs/${jobId}/spare-parts`)
+      .set('Authorization', `Bearer ${serviceProviderToken}`)
       .send({ parts: [{ name: 'Gas Refill', price: 300, checked: true }] })
       .expect(200);
-    await request(app).post(`/api/v1/tech/jobs/${jobId}/repair-complete`).set('Authorization', `Bearer ${techToken}`).expect(200);
-    const billingRes = await request(app).post(`/api/v1/tech/jobs/${jobId}/billing`).set('Authorization', `Bearer ${techToken}`).expect(200);
+    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/repair-complete`).set('Authorization', `Bearer ${serviceProviderToken}`).expect(200);
+    const billingRes = await request(app).post(`/api/v1/service-provider/jobs/${jobId}/billing`).set('Authorization', `Bearer ${serviceProviderToken}`).expect(200);
     const { total: billedTotal } = billingRes.body.data.billingEstimate;
 
     const payRes = await request(app)
-      .post(`/api/v1/tech/jobs/${jobId}/collect-payment`)
-      .set('Authorization', `Bearer ${techToken}`)
+      .post(`/api/v1/service-provider/jobs/${jobId}/collect-payment`)
+      .set('Authorization', `Bearer ${serviceProviderToken}`)
       .send({ paymentMethod: 'Cash' })
       .expect(200);
     expect(payRes.body.data.job.activeStep).toBe('completed');
@@ -135,7 +138,7 @@ describe('Phase 10 — the real customer journey end to end: browse -> book -> t
     expect(notifsAfterPayment.body.data.some((n) => n.type === 'payment')).toBe(true);
     expect(notifsAfterPayment.body.data.some((n) => n.type === 'completed')).toBe(true);
 
-    const tally = await EarningsTally.findOne({ technician: technician._id });
+    const tally = await EarningsTally.findOne({ serviceProvider: serviceProvider._id });
     expect(tally.total).toBeGreaterThan(0);
 
     // 6. Customer leaves a review.
@@ -144,12 +147,12 @@ describe('Phase 10 — the real customer journey end to end: browse -> book -> t
       .set('Authorization', `Bearer ${customerToken}`)
       .send({ serviceRequest: serviceRequest.id, rating: 5, comment: 'Fixed it fast!', tags: ['On time', 'Professional'] })
       .expect(201);
-    expect(reviewRes.body.data.technician).toBe(technician.id);
+    expect(reviewRes.body.data.serviceProvider).toBe(serviceProvider.id);
 
-    // 7. The technician's public review list reflects it.
-    const techReviewsRes = await request(app).get(`/api/v1/reviews/technicians/${technician.id}`).expect(200);
-    expect(techReviewsRes.body.data).toHaveLength(1);
-    expect(techReviewsRes.body.data[0].rating).toBe(5);
+    // 7. The service provider's public review list reflects it.
+    const serviceProviderReviewsRes = await request(app).get(`/api/v1/reviews/service-providers/${serviceProvider.id}`).expect(200);
+    expect(serviceProviderReviewsRes.body.data).toHaveLength(1);
+    expect(serviceProviderReviewsRes.body.data[0].rating).toBe(5);
 
     // 8. A second review attempt on the same request is rejected — one review per job.
     await request(app)

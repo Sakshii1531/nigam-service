@@ -15,6 +15,6 @@ export const updateSettingsSchema = z.object({
   referralBonusAmount: z.number().min(0).optional(),
   defaultSparePartMarkupPercent: z.number().min(0).max(100).optional(),
   bookingAdvancePercent: z.number().min(0).max(100).optional(),
-  technicianCommissionPercent: z.number().min(0).max(100).optional(),
+  serviceProviderCommissionPercent: z.number().min(0).max(100).optional(),
   visitFeeAmount: z.number().min(0).optional(),
 });

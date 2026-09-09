@@ -5,7 +5,7 @@ import {
   HelpCircle, ChevronRight, Lock, Trash2, Smartphone, Check,
   Briefcase, ClipboardList, Calendar, Wrench, User, Eye, EyeOff
 } from 'lucide-react';
-import TechBottomNav from '../../components/TechBottomNav';
+import ServiceProviderBottomNav from '../../components/ServiceProviderBottomNav';
 import { apiRequest } from '../../lib/apiClient';
 import { usePushPermission, pushBlockedMessage } from '../../hooks/usePushPermission';
 
@@ -25,10 +25,10 @@ const Toggle = ({ enabled, onToggle, disabled = false }) => (
   </button>
 );
 
-const TechSettings = () => {
+const ServiceProviderSettings = () => {
   const navigate = useNavigate();
 
-  // These were local-only state: a technician could switch push off, walk away,
+  // These were local-only state: a service provider could switch push off, walk away,
   // come back and find it on again, and the server never heard about it either.
   // They now read and write the same /notifications/preferences the backend
   // actually gates delivery on.
@@ -222,7 +222,7 @@ const TechSettings = () => {
       </div>
 
       {/* Bottom Navigation */}
-      <TechBottomNav activeTab="profile" />
+      <ServiceProviderBottomNav activeTab="profile" />
 
       {/* Change Password Drawer */}
       {isChangingPassword && (
@@ -382,4 +382,4 @@ const TechSettings = () => {
   );
 };
 
-export default TechSettings;
+export default ServiceProviderSettings;

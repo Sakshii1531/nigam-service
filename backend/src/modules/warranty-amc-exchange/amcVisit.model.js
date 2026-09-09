@@ -6,7 +6,7 @@ const amcVisitSchema = new mongoose.Schema(
     subscription: { type: mongoose.Schema.Types.ObjectId, ref: 'AMCSubscription', required: true, index: true },
     visitNumber: { type: Number, required: true },
     scheduledDate: Date,
-    technician: { type: mongoose.Schema.Types.ObjectId, ref: 'Technician', default: null },
+    serviceProvider: { type: mongoose.Schema.Types.ObjectId, ref: 'ServiceProvider', default: null },
     status: { type: String, enum: ['Scheduled', 'Completed', 'Missed'], default: 'Scheduled' },
     tasks: [{ label: String, done: Boolean, note: String, urgent: Boolean }],
     notes: String,

@@ -7,10 +7,10 @@ const SOCKET_URL = import.meta.env.VITE_API_BASE_URL
   ? import.meta.env.VITE_API_BASE_URL.replace('/api/v1', '')
   : 'http://localhost:4000';
 
-const TechContext = createContext(null);
+const ServiceProviderContext = createContext(null);
 
 export const useTech = () => {
-  const ctx = useContext(TechContext);
+  const ctx = useContext(ServiceProviderContext);
   return ctx || {
     jobs: [],
     jobsLoading: false,
@@ -29,20 +29,20 @@ export const useTech = () => {
   };
 };
 
-export const TechProvider = ({ children }) => {
+export const ServiceProviderProvider = ({ children }) => {
   const { user } = useAuth();
   const [jobs, setJobs] = useState([]);
   // Distinguishes "no jobs" from "jobs not loaded yet". Without it the stat
   // cards rendered a confident 0 for the several seconds the fetch takes,
-  // which reads as "the technician has been assigned nothing".
+  // which reads as "the service provider has been assigned nothing".
   const [jobsLoading, setJobsLoading] = useState(true);
-  // The technician's own online switch. Auto-assignment only ever considers
-  // technicians whose availability is 'Available', so until this could be set a
-  // technician was never a candidate for any job.
+  // The service provider's own online switch. Auto-assignment only ever considers
+  // service providers whose availability is 'Available', so until this could be set a
+  // service provider was never a candidate for any job.
   //
   // null means "not read back from the server yet" — deliberately not 'Offline',
   // because defaulting to a real value made a reload render a confident
-  // "Offline" for an technician who was actually online, and the pill kept
+  // "Offline" for an service provider who was actually online, and the pill kept
   // showing that stale value if the hydrating request failed.
   const [availability, setAvailabilityState] = useState(null);
   const [availabilityBusy, setAvailabilityBusy] = useState(false);
@@ -64,9 +64,9 @@ export const TechProvider = ({ children }) => {
     split: { quick: { amount: 0, jobs: 0 }, invoice: { amount: 0, jobs: 0 } },
   });
 
-  // Fetch real jobs, inventory, claims, and earnings from backend when logged in as technician
+  // Fetch real jobs, inventory, claims, and earnings from backend when logged in as service provider
   const fetchRealJobs = useCallback(async () => {
-    if (!user || user.role !== 'technician') return;
+    if (!user || user.role !== 'service_provider') return;
     setJobsLoading(true);
     try {
       // 1. Fetch jobs. In parallel, not one after the other: /jobs/available is
@@ -74,13 +74,13 @@ export const TechProvider = ({ children }) => {
       // and running /jobs/active behind it pushed the job list past ten seconds
       // on a remote database, long enough that the dashboard looked empty.
       const [availableRes, activeRes] = await Promise.all([
-        apiRequest('/tech/jobs/available', { auth: true }),
-        apiRequest('/tech/jobs/active', { auth: true }),
+        apiRequest('/service-provider/jobs/available', { auth: true }),
+        apiRequest('/service-provider/jobs/active', { auth: true }),
       ]);
       // apiRequest already returns the envelope's `data` (apiClient.js's
       // rawRequest ends in `return json.data`), so reaching for `.data` again
       // yields undefined and every list here silently rendered empty — the
-      // technician saw "0 Available Jobs" while the API was returning five.
+      // service provider saw "0 Available Jobs" while the API was returning five.
       const availableSRs = Array.isArray(availableRes) ? availableRes : [];
       const activeJobs = Array.isArray(activeRes) ? activeRes : [];
 
@@ -92,7 +92,7 @@ export const TechProvider = ({ children }) => {
         brand: sr.booking?.brand || sr.category || 'Brand',
         model: sr.model || 'Universal Model',
         // No fake fallbacks: a fabricated serial confuses warranty/diagnostic
-        // lookups, a fabricated distance misleads which job a technician picks
+        // lookups, a fabricated distance misleads which job a service provider picks
         // to accept, and a fabricated phone number is actively dangerous — it
         // used to be dialled/WhatsApped as if it were the real customer.
         serialNo: sr.serialNo || null,
@@ -178,10 +178,10 @@ export const TechProvider = ({ children }) => {
 
       // 2. Fetch real inventory
       try {
-        const invRes = await apiRequest('/tech/inventory', { auth: true });
+        const invRes = await apiRequest('/service-provider/inventory', { auth: true });
         if (Array.isArray(invRes)) {
           setInventory(invRes.map(item => {
-            // techInventoryItem stores the count as `qty`. This read only tried
+            // serviceProviderInventoryItem stores the count as `qty`. This read only tried
             // `stock`/`quantity`, so every item came back as 0 — the whole
             // inventory showed "Out of Stock" and the job flow's parts picker,
             // which lists only items with qty > 0, was permanently empty.
@@ -197,12 +197,12 @@ export const TechProvider = ({ children }) => {
           }));
         }
       } catch (e) {
-        console.warn('Technician inventory fetch warning:', e.message);
+        console.warn('Service Provider inventory fetch warning:', e.message);
       }
 
       // 3. Fetch real claims
       try {
-        const claimsRes = await apiRequest('/tech/claims', { auth: true });
+        const claimsRes = await apiRequest('/service-provider/claims', { auth: true });
         if (Array.isArray(claimsRes)) {
           setClaims(claimsRes.map(c => ({
             id: c._id || c.id,
@@ -215,7 +215,7 @@ export const TechProvider = ({ children }) => {
           })));
         }
       } catch (e) {
-        console.warn('Technician claims fetch warning:', e.message);
+        console.warn('Service Provider claims fetch warning:', e.message);
       }
 
       // 4. Fetch real earnings summary
@@ -224,7 +224,7 @@ export const TechProvider = ({ children }) => {
         // and the Quick/Invoice split. The field names here are the API's own —
         // this previously read `totalEarnings`/`todayEarnings`, which the API has
         // never returned, so the tally was permanently zero.
-        const earnRes = await apiRequest('/tech/earnings/breakdown', { auth: true });
+        const earnRes = await apiRequest('/service-provider/earnings/breakdown', { auth: true });
         if (earnRes) {
           const d = earnRes;
           setEarningsTally({
@@ -239,11 +239,11 @@ export const TechProvider = ({ children }) => {
           });
         }
       } catch (e) {
-        console.warn('Technician earnings summary fetch warning:', e.message);
+        console.warn('ServiceProvider earnings summary fetch warning:', e.message);
       }
 
     } catch (err) {
-      console.error('Failed to fetch real jobs for technician:', err.message);
+      console.error('Failed to fetch real jobs for serviceProvider:', err.message);
     } finally {
       setJobsLoading(false);
     }
@@ -258,18 +258,18 @@ export const TechProvider = ({ children }) => {
    *
    * The backend has broadcast `instant:new_request` since instant bookings were
    * added (sockets/instantBooking.gateway.js), but nothing on the client ever
-   * listened — so an ASAP booking reached a technician only if they happened to
-   * reload. Joining the technicians' room and refetching on each event is what
+   * listened — so an ASAP booking reached a service provider only if they happened to
+   * reload. Joining the service providers' room and refetching on each event is what
    * makes "right now" actually mean right now.
    *
-   * Only while online: an offline technician should not be pulled into a job,
+   * Only while online: an offline service provider should not be pulled into a job,
    * which is also why the socket is torn down when they go offline.
    */
   const socketRef = useRef(null);
   useEffect(() => {
-    if (!user || user.role !== 'technician' || availability !== 'Available') return undefined;
+    if (!user || user.role !== 'service_provider' || availability !== 'Available') return undefined;
 
-    const { accessToken } = getStoredTokens('technician');
+    const { accessToken } = getStoredTokens('service_provider');
     if (!accessToken) return undefined;
 
     const socket = io(SOCKET_URL, { 
@@ -285,7 +285,7 @@ export const TechProvider = ({ children }) => {
     const handleIncomingJobDispatch = (payload) => {
       fetchRealJobs();
       if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('tech:incoming_job', { detail: payload }));
+        window.dispatchEvent(new CustomEvent('service-provider:incoming_job', { detail: payload }));
       }
     };
 
@@ -293,7 +293,7 @@ export const TechProvider = ({ children }) => {
     socket.on('job:assigned', handleIncomingJobDispatch);
     socket.on('job:new_available', handleIncomingJobDispatch);
     socket.on('instant:status_update', () => { fetchRealJobs(); });
-    socket.on('connect_error', (err) => console.warn('[tech] instant feed disconnected:', err.message));
+    socket.on('connect_error', (err) => console.warn('[provider] instant feed disconnected:', err.message));
 
     return () => { 
       socket.disconnect(); 
@@ -302,10 +302,10 @@ export const TechProvider = ({ children }) => {
   }, [user, availability, fetchRealJobs]);
 
   // Active fast polling fallback:
-  // When technician is Online / Available, refresh jobs every 4 seconds
+  // When service provider is Online / Available, refresh jobs every 4 seconds
   // so newly booked customer requests appear instantly without needing page refresh
   useEffect(() => {
-    if (!user || user.role !== 'technician' || availability !== 'Available') return undefined;
+    if (!user || user.role !== 'service_provider' || availability !== 'Available') return undefined;
 
     const pollInterval = setInterval(() => {
       fetchRealJobs();
@@ -331,22 +331,22 @@ export const TechProvider = ({ children }) => {
   }, [fetchRealJobs]);
 
   /**
-   * Read the technician's online state back from the server.
+   * Read the service provider's online state back from the server.
    *
    * Deliberately its own request/effect rather than a step inside
    * fetchRealJobs: availability lived at the end of that function's try block,
-   * so any failure in the job fetches skipped it entirely and the technician
+   * so any failure in the job fetches skipped it entirely and the service provider
    * was shown as Offline — on every reload — while the server had them online.
    * The switch has to survive a reload, and it must not depend on unrelated
    * calls succeeding.
    */
   const fetchAvailability = useCallback(async () => {
-    if (!user || user.role !== 'technician') return;
+    if (!user || user.role !== 'service_provider') return;
     try {
-      const res = await apiRequest('/tech/profile/profile', { auth: true });
+      const res = await apiRequest('/service-provider/profile/profile', { auth: true });
       if (res?.availability) setAvailabilityState(res.availability);
     } catch (err) {
-      console.warn('Technician availability fetch warning:', err.message);
+      console.warn('ServiceProvider availability fetch warning:', err.message);
     }
   }, [user]);
 
@@ -362,15 +362,15 @@ export const TechProvider = ({ children }) => {
   const setAvailability = useCallback(async (next) => {
     setAvailabilityBusy(true);
     try {
-      // technicianRouter is mounted at /tech/profile (app.js), so its own
+      // serviceProviderRouter is mounted at /service-provider/profile (app.js), so its own
       // '/availability' route lives under that prefix — same shape as the
-      // sibling '/tech/profile/payout-methods' calls.
-      const res = await apiRequest('/tech/profile/availability', {
+      // sibling '/service-provider/profile/payout-methods' calls.
+      const res = await apiRequest('/service-provider/profile/availability', {
         method: 'PATCH',
         auth: true,
         body: { availability: next },
       });
-      setAvailabilityState(res?.technician?.availability || next);
+      setAvailabilityState(res?.serviceProvider?.availability || next);
       await fetchRealJobs();
       return { ok: true, assignedCount: res?.autoAssigned?.assignedCount || 0 };
     } catch (err) {
@@ -392,11 +392,11 @@ export const TechProvider = ({ children }) => {
   // 'repaircomplete' (Screen 4: step 5), 
   // 'billing' (Screen 12),
   // 'completed' (Success screen after Collect Payment)
-  // Which job the technician currently has open. Persisted because it was
+  // Which job the service provider currently has open. Persisted because it was
   // in-memory only: accepting a job and then reloading (or navigating away and
   // back) left this null, and the Active Job screen announced "No Active Job In
-  // Progress" to a technician who had work underway — with no way back into it.
-  const ACTIVE_JOB_KEY = 'ncc_tech_active_job';
+  // Progress" to a service provider who had work underway — with no way back into it.
+  const ACTIVE_JOB_KEY = 'ncc_service_provider_active_job';
   const [activeJobId, setActiveJobIdState] = useState(() => {
     try {
       return localStorage.getItem(ACTIVE_JOB_KEY) || null;
@@ -416,7 +416,7 @@ export const TechProvider = ({ children }) => {
   const [activeStep, setActiveStep] = useState('idle');
   const [selectedParts, setSelectedParts] = useState([]);
   // Notes typed during inspection, submitted with the diagnosis when the
-  // technician completes that step.
+  // service provider completes that step.
   const [diagnosisNotes, setDiagnosisNotes] = useState(''); // Parts selected during diagnosis
   
   // Signature, photos uploads state
@@ -432,7 +432,7 @@ export const TechProvider = ({ children }) => {
   const [partsCart, setPartsCart] = useState([]);
   
   // AI assistant messages
-  // Greets by the signed-in technician's name, not a hardcoded "Alex".
+  // Greets by the signed-in service provider's name, not a hardcoded "Alex".
   const [chatMessages, setChatMessages] = useState([
     { id: 1, sender: 'ai', text: 'Hello! I am your AI assistant. How can I help with this job?' }
   ]);
@@ -443,9 +443,9 @@ export const TechProvider = ({ children }) => {
    * Re-open a restored job at the step the server says it is on.
    *
    * activeStep starts at 'idle' on every load, so a job restored from storage
-   * would render the empty state until the technician clicked something. Runs
+   * would render the empty state until the service provider clicked something. Runs
    * only while the UI is still idle, so it never overrides a step the
-   * technician is actively moving through.
+   * service provider is actively moving through.
    */
   useEffect(() => {
     if (!activeJob) return;
@@ -459,7 +459,7 @@ export const TechProvider = ({ children }) => {
     }
   }, [activeJob, activeStep]);
 
-  /** Jobs the technician has accepted and not finished — what the Active Job
+  /** Jobs the service provider has accepted and not finished — what the Active Job
    *  screen offers when nothing is open, instead of claiming there are none. */
   const resumableJobs = jobs.filter((j) => !j.isAvailableRequest && j.activeStep !== 'completed' && j.status !== 'Completed' && j.status !== 'Customer Confirmation' && j.status !== 'Closed');
 
@@ -482,7 +482,7 @@ export const TechProvider = ({ children }) => {
     const jobObj = jobs.find(j => j.id === id || j.serviceRequestId === id);
     if (jobObj?.isAvailableRequest) {
       try {
-        const result = await apiRequest(`/tech/jobs/accept/${jobObj.serviceRequestId}`, {
+        const result = await apiRequest(`/service-provider/jobs/accept/${jobObj.serviceRequestId}`, {
           method: 'POST',
           body: { type: jobObj.type },
           auth: true,
@@ -533,13 +533,13 @@ export const TechProvider = ({ children }) => {
   }, [jobs, fetchRealJobs]);
 
   /**
-   * Each technician-visible step is advanced by exactly one backend call. This
+   * Each service provider-visible step is advanced by exactly one backend call. This
    * table only says which endpoint moves which step — the real state machine
    * (JOB_STEP_TRANSITIONS, server-side) stays the authority, and the step we
    * store is whatever the server reports back.
    *
    * This used to be a local `switch` that moved React state and called nothing:
-   * a technician could walk the entire job to completion while, on the server,
+   * a service provider could walk the entire job to completion while, on the server,
    * nothing past diagnosis had happened — no billing, no payment, no earnings,
    * the service request frozen at "Engineer Accepted" and the customer's
    * booking never completing.
@@ -597,14 +597,14 @@ export const TechProvider = ({ children }) => {
       // the spare-parts call below then needs it there — sending parts straight
       // from Engineer Reached is rejected as an illegal status transition.
       if (move.needsParts) {
-        await apiRequest(`/tech/jobs/${activeJobId}/diagnosis`, {
+        await apiRequest(`/service-provider/jobs/${activeJobId}/diagnosis`, {
           method: 'POST',
           auth: true,
           body: { notes: diagnosisNotes || undefined },
         });
       }
 
-      const job = await apiRequest(`/tech/jobs/${activeJobId}/${move.path}`, { method: 'POST', auth: true, body });
+      const job = await apiRequest(`/service-provider/jobs/${activeJobId}/${move.path}`, { method: 'POST', auth: true, body });
       // Trust the server's step over a locally-guessed one.
       setActiveStep(job?.activeStep || current);
       await fetchRealJobs();
@@ -662,7 +662,7 @@ export const TechProvider = ({ children }) => {
    */
   const advanceStepsTo = useCallback(async (target) => {
     for (let i = 0; i < 6; i += 1) {
-      const job = await apiRequest(`/tech/jobs/${activeJobId}`, { auth: true }).catch(() => null);
+      const job = await apiRequest(`/service-provider/jobs/${activeJobId}`, { auth: true }).catch(() => null);
       const current = job?.activeStep;
       if (!current) return { ok: false, error: 'Could not read the job.' };
       if (current === target) { setActiveStep(current); return { ok: true }; }
@@ -679,7 +679,7 @@ export const TechProvider = ({ children }) => {
     setStepBusy(true);
     setStepError(null);
     try {
-      const res = await apiRequest(`/tech/jobs/${targetJobId}/request-part`, {
+      const res = await apiRequest(`/service-provider/jobs/${targetJobId}/request-part`, {
         method: 'POST',
         auth: true,
         body: partPayload,
@@ -701,7 +701,7 @@ export const TechProvider = ({ children }) => {
    *  block was previously copied into four callers, each free to drift. */
   const refreshEarnings = useCallback(async (merge = false) => {
     try {
-      const d = await apiRequest('/tech/earnings/breakdown', { auth: true });
+      const d = await apiRequest('/service-provider/earnings/breakdown', { auth: true });
       if (!d) return;
       const next = {
         today: d.today || 0,
@@ -715,7 +715,7 @@ export const TechProvider = ({ children }) => {
       };
       setEarningsTally((prev) => (merge ? { ...prev, ...next } : next));
     } catch (err) {
-      console.warn('[tech] Could not refresh earnings:', err.message);
+      console.warn('[provider] Could not refresh earnings:', err.message);
     }
   }, []);
 
@@ -726,7 +726,7 @@ export const TechProvider = ({ children }) => {
    * back, under the assumption that "the server credits the tally as part of
    * completing the job" — but nothing ever told the server the job was done, so
    * it read an unchanged tally and left the service request, the customer's
-   * booking and the technician's payout untouched.
+   * booking and the service provider's payout untouched.
    *
    * A Cash job completes synchronously. Anything routed through the gateway
    * comes back as 'awaitingpayment' with a razorpay order, which the caller has
@@ -738,7 +738,7 @@ export const TechProvider = ({ children }) => {
     setStepError(null);
     try {
       const payload = typeof paymentMethod === 'object' ? paymentMethod : { paymentMethod, ...extraData };
-      const res = await apiRequest(`/tech/jobs/${activeJobId}/collect-payment`, {
+      const res = await apiRequest(`/service-provider/jobs/${activeJobId}/collect-payment`, {
         method: 'POST',
         auth: true,
         body: payload,
@@ -755,22 +755,22 @@ export const TechProvider = ({ children }) => {
     }
   }, [activeJobId, fetchRealJobs, refreshEarnings]);
 
-  // Credits the visit fee for a job the technician travelled to but could not
+  // Credits the visit fee for a job the service provider travelled to but could not
   // complete. The server owns the amount (PlatformSettings.visitFeeAmount) and
   // the idempotency — an earlier version added ₹150 client-side, showing the
-  // technician earnings the platform had no record of. Returns the credited
+  // service provider earnings the platform had no record of. Returns the credited
   // amount so the summary screen can show the real figure.
   const creditTravelFee = useCallback(async (jobId) => {
     let credited = null;
     if (jobId) {
       try {
-        const res = await apiRequest(`/tech/earnings/visit-fee/${jobId}`, { method: 'POST', auth: true });
+        const res = await apiRequest(`/service-provider/earnings/visit-fee/${jobId}`, { method: 'POST', auth: true });
         credited = res;
       } catch (err) {
-        console.warn('[tech] Could not credit visit fee:', err.message);
+        console.warn('[provider] Could not credit visit fee:', err.message);
       }
     }
-    await apiRequest('/tech/earnings/breakdown', { auth: true })
+    await apiRequest('/service-provider/earnings/breakdown', { auth: true })
       .then((d) => {
         if (!d) return;
         setEarningsTally((prev) => ({
@@ -785,7 +785,7 @@ export const TechProvider = ({ children }) => {
           split: d.split || prev.split,
         }));
       })
-      .catch((err) => console.warn('[tech] Could not refresh earnings:', err.message));
+      .catch((err) => console.warn('[provider] Could not refresh earnings:', err.message));
     return credited;
   }, []);
 
@@ -809,14 +809,14 @@ export const TechProvider = ({ children }) => {
 
   // Places real part orders. This only pushed rows into browser state with an
   // invented "NC#####" reference, so nothing was ordered and the number the
-  // technician quoted matched no record.
+  // service provider quoted matched no record.
   const placePartsOrder = useCallback(async (sourceName) => {
     if (!partsCart.length) return { ok: false, error: 'Your parts cart is empty.' };
 
     const orderSource = sourceName === 'Partner Brand' || sourceName === 'Nearby Store' ? sourceName : 'NCC Warehouse';
 
     try {
-      const placed = await Promise.all(partsCart.map((item) => apiRequest('/tech/inventory/part-orders', {
+      const placed = await Promise.all(partsCart.map((item) => apiRequest('/service-provider/inventory/part-orders', {
         method: 'POST',
         auth: true,
         body: {
@@ -843,7 +843,7 @@ export const TechProvider = ({ children }) => {
   // Raises the claim server-side so the brand can actually see and decide it.
   const raiseClaim = useCallback(async (claimData) => {
     try {
-      const res = await apiRequest('/tech/claims', {
+      const res = await apiRequest('/service-provider/claims', {
         method: 'POST',
         auth: true,
         body: {
@@ -876,9 +876,9 @@ export const TechProvider = ({ children }) => {
    * Turn down an assigned request so somebody else can take it.
    *
    * This only filtered the card out of local state, so the request stayed
-   * assigned to the technician who declined it, came back on the next refresh,
+   * assigned to the service provider who declined it, came back on the next refresh,
    * and was never offered to anyone else. The server now releases it and
-   * immediately looks for the next best technician.
+   * immediately looks for the next best service provider.
    */
   const dismissJob = useCallback(async (jobId) => {
     const job = jobs.find((j) => j.id === jobId || j.serviceRequestId === jobId);
@@ -889,7 +889,7 @@ export const TechProvider = ({ children }) => {
 
     setJobs((prev) => prev.filter((j) => j.id !== jobId && j.serviceRequestId !== serviceRequestId));
     try {
-      const res = await apiRequest(`/tech/jobs/reject/${serviceRequestId}`, { method: 'POST', auth: true });
+      const res = await apiRequest(`/service-provider/jobs/reject/${serviceRequestId}`, { method: 'POST', auth: true });
       await fetchRealJobs();
       return { ok: true, reassignedTo: res?.reassignedTo || null };
     } catch (err) {
@@ -903,11 +903,11 @@ export const TechProvider = ({ children }) => {
     try {
       await apiRequest('/notifications/read-all', { method: 'PATCH', auth: true });
     } catch (err) {
-      console.warn('[tech] Could not mark notifications read:', err.message);
+      console.warn('[provider] Could not mark notifications read:', err.message);
     }
   }, []);
 
-  // Routes the in-job assistant through the same grounded /tech/assistant
+  // Routes the in-job assistant through the same grounded /service-provider/assistant
   // endpoint the AIAssistant screen uses. It used to be a keyword matcher that
   // stated a specific SKU as "in stock at NCC Warehouse Gurugram" and a "72%
   // probability" of capacitor failure — figures nothing produced.
@@ -920,7 +920,7 @@ export const TechProvider = ({ children }) => {
     setChatMessages((prev) => { history = prev; return prev; });
 
     try {
-      const res = await apiRequest('/tech/assistant', {
+      const res = await apiRequest('/service-provider/assistant', {
         method: 'POST',
         auth: true,
         body: {
@@ -942,7 +942,7 @@ export const TechProvider = ({ children }) => {
   }, []);
 
   return (
-    <TechContext.Provider value={{
+    <ServiceProviderContext.Provider value={{
       jobs,
       activeJobId,
       setActiveJobId,
@@ -994,8 +994,8 @@ export const TechProvider = ({ children }) => {
       acceptInstantJob
     }}>
       {children}
-    </TechContext.Provider>
+    </ServiceProviderContext.Provider>
   );
 };
 
-export default TechContext;
+export default ServiceProviderContext;

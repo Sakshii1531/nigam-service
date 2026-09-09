@@ -27,7 +27,7 @@ const Announcements = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    apiRequest('/tech/academy/announcements', { auth: true })
+    apiRequest('/service-provider/academy/announcements', { auth: true })
       .then((res) => setNotices((res || []).map((n) => ({
         id: n.id,
         message: n.message,

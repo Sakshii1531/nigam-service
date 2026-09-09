@@ -83,9 +83,9 @@ const PartRequests = () => {
         status === 'Approved'
           ? 'Approved — request approved and ready for dispatch.'
           : status === 'Dispatched'
-          ? 'Dispatched — spare parts are on the way to technician.'
+          ? 'Dispatched — spare parts are on the way to serviceProvider.'
           : status === 'Delivered'
-          ? 'Delivered — parts delivered & technician revisit has been rescheduled!'
+          ? 'Delivered — parts delivered & serviceProvider revisit has been rescheduled!'
           : `Request marked ${status}.`,
       );
       setTimeout(() => setToast(''), 4000);
@@ -108,7 +108,7 @@ const PartRequests = () => {
       <div className="flex-1 ml-64 min-h-screen flex flex-col">
         <Topbar 
           title="Spare Part Requests" 
-          subtitle="Manage technician spare part requests and warehouse fulfillment" 
+          subtitle="Manage serviceProvider spare part requests and warehouse fulfillment" 
         />
 
         <div className="p-6 flex flex-col gap-5">
@@ -148,7 +148,7 @@ const PartRequests = () => {
                 <Package size={32} className="text-slate-300" />
                 <p className="text-sm font-bold text-[#1E293B]">No part requests{filter === 'All' ? '' : ` marked ${filter}`}</p>
                 <p className="text-xs text-slate-500 max-w-sm">
-                  When a technician needs a spare part to finish a job, the request lands here for approval.
+                  When a serviceProvider needs a spare part to finish a job, the request lands here for approval.
                 </p>
               </div>
             ) : (
@@ -158,7 +158,7 @@ const PartRequests = () => {
                     <tr>
                       <th className="px-5 py-3.5 font-bold">Request ID</th>
                       <th className="px-5 py-3.5 font-bold">Part Details</th>
-                      <th className="px-5 py-3.5 font-bold">Technician</th>
+                      <th className="px-5 py-3.5 font-bold">Service Provider</th>
                       <th className="px-5 py-3.5 font-bold">Job / Service Request</th>
                       <th className="px-5 py-3.5 font-bold">Source</th>
                       <th className="px-5 py-3.5 font-bold">Status</th>
@@ -184,9 +184,9 @@ const PartRequests = () => {
                           </td>
 
                           <td className="px-5 py-4 text-slate-700">
-                            <p className="font-bold text-slate-800">{r.technician?.name || '—'}</p>
-                            {r.technician?.phone && (
-                              <p className="text-[11px] text-slate-500 font-medium">{r.technician.phone}</p>
+                            <p className="font-bold text-slate-800">{r.serviceProvider?.name || '—'}</p>
+                            {r.serviceProvider?.phone && (
+                              <p className="text-[11px] text-slate-500 font-medium">{r.serviceProvider.phone}</p>
                             )}
                           </td>
 
@@ -385,21 +385,21 @@ const PartRequests = () => {
                     </div>
                   </div>
                 ) : (
-                  <p className="text-slate-500 italic text-xs">Direct technician warehouse restock (no specific job ticket).</p>
+                  <p className="text-slate-500 italic text-xs">Direct serviceProvider warehouse restock (no specific job ticket).</p>
                 )}
               </div>
 
-              {/* Technician Info */}
+              {/* ServiceProvider Info */}
               <div className="p-4 bg-white rounded-xl border border-slate-200/80 space-y-2">
                 <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                  <User size={13} className="text-[#0D47A1]" /> Requesting Technician
+                  <User size={13} className="text-[#0D47A1]" /> Requesting Service Provider
                 </h4>
 
                 <div className="flex items-center justify-between text-xs font-semibold bg-slate-50 p-3 rounded-lg border border-slate-100">
-                  <span className="font-bold text-slate-900">{selectedRequest.technician?.name || '—'}</span>
-                  {selectedRequest.technician?.phone && (
+                  <span className="font-bold text-slate-900">{selectedRequest.serviceProvider?.name || '—'}</span>
+                  {selectedRequest.serviceProvider?.phone && (
                     <span className="text-slate-600 flex items-center gap-1">
-                      <Phone size={12} className="text-slate-400" /> {selectedRequest.technician.phone}
+                      <Phone size={12} className="text-slate-400" /> {selectedRequest.serviceProvider.phone}
                     </span>
                   )}
                 </div>

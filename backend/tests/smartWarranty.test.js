@@ -3,26 +3,26 @@ import mongoose from 'mongoose';
 import { testDbUri } from './helpers/testDb.js';
 import { detectWarrantyForAppliance } from '../src/modules/warranty-amc-exchange/warrantyDetector.service.js';
 import { createBooking } from '../src/modules/booking/booking.service.js';
-import { acceptJob } from '../src/modules/technician/job.service.js';
+import { acceptJob } from '../src/modules/service-provider/job.service.js';
 import { User } from '../src/modules/auth/user.model.js';
 import { Brand } from '../src/modules/super-admin/brand.model.js';
 import { ServiceCatalogItem } from '../src/modules/catalog/serviceCatalogItem.model.js';
 import { Category } from '../src/modules/catalog/category.model.js';
-import { Technician } from '../src/modules/technician/technician.model.js';
+import { ServiceProvider } from '../src/modules/service-provider/serviceProvider.model.js';
 import { OwnedAppliance } from '../src/modules/service-requests/ownedAppliance.model.js';
 import { AMCPlan } from '../src/modules/warranty-amc-exchange/amcPlan.model.js';
 import { AMCSubscription } from '../src/modules/warranty-amc-exchange/amcSubscription.model.js';
 import { ExtendedWarrantyOrder } from '../src/modules/warranty-amc-exchange/extendedWarrantyOrder.model.js';
 import { Booking } from '../src/modules/booking/booking.model.js';
 import { ServiceRequest } from '../src/modules/service-requests/serviceRequest.model.js';
-import { Job } from '../src/modules/technician/job.model.js';
+import { Job } from '../src/modules/service-provider/job.model.js';
 import { City } from '../src/modules/super-admin/city.model.js';
 import { AssignmentWeighting } from '../src/modules/super-admin/assignmentWeighting.model.js';
 
 describe('Smart Warranty Detection Pipeline', () => {
   let customer;
-  let techUser;
-  let technician;
+  let serviceProviderUser;
+  let serviceProvider;
   let brand;
   let category;
 
@@ -47,7 +47,7 @@ describe('Smart Warranty Detection Pipeline', () => {
       Brand.deleteMany({}),
       ServiceCatalogItem.deleteMany({}),
       Category.deleteMany({}),
-      Technician.deleteMany({}),
+      ServiceProvider.deleteMany({}),
       OwnedAppliance.deleteMany({}),
       AMCPlan.deleteMany({}),
       AMCSubscription.deleteMany({}),
@@ -67,16 +67,16 @@ describe('Smart Warranty Detection Pipeline', () => {
       status: 'Active',
     });
 
-    techUser = await User.create({
-      role: 'technician',
+    serviceProviderUser = await User.create({
+      role: 'service_provider',
       name: 'Smart Warranty Tech',
       phone: '9988776654',
       passwordHash: 'stub',
       status: 'Active',
     });
 
-    technician = await Technician.create({
-      user: techUser._id,
+    serviceProvider = await ServiceProvider.create({
+      user: serviceProviderUser._id,
       name: 'Smart Warranty Tech',
       phone: '9988776654',
       status: 'Active',
@@ -238,12 +238,12 @@ describe('Smart Warranty Detection Pipeline', () => {
         brand: 'LG Electronics',
       });
 
-      // Update ServiceRequest technician manually for acceptance
-      serviceRequest.technician = technician._id;
+      // Update ServiceRequest service provider manually for acceptance
+      serviceRequest.serviceProvider = serviceProvider._id;
       await serviceRequest.save();
 
       // Accept job WITHOUT explicitly specifying jobType or amcSubscriptionId
-      const job = await acceptJob(technician.id, serviceRequest.id);
+      const job = await acceptJob(serviceProvider.id, serviceRequest.id);
 
       expect(job.type).toBe('AMC Visit');
       expect(String(job.amc.amcSubscription)).toBe(amc.id);

@@ -5,7 +5,7 @@ import { createApp } from '../src/app.js';
 import { registerAllModels } from '../src/config/registerModels.js';
 import { ensureIndexes } from '../src/config/db.js';
 import { User } from '../src/modules/auth/user.model.js';
-import { Technician } from '../src/modules/technician/technician.model.js';
+import { ServiceProvider } from '../src/modules/service-provider/serviceProvider.model.js';
 import { Category } from '../src/modules/catalog/category.model.js';
 import { ProductType } from '../src/modules/catalog/productType.model.js';
 import { ServiceCatalogItem } from '../src/modules/catalog/serviceCatalogItem.model.js';
@@ -41,16 +41,16 @@ async function seedCustomer(phone = '9200000001') {
   return loginAndVerify({ role: ROLES.CUSTOMER, identifier: phone, password: 'password123' });
 }
 
-async function seedTechnician({ phone = '9300000001', specs = ['AC'], availability = 'Available' } = {}) {
+async function seedServiceProvider({ phone = '9300000001', specs = ['AC'], availability = 'Available' } = {}) {
   const user = await User.create({
-    role: ROLES.TECHNICIAN,
+    role: ROLES.SERVICE_PROVIDER,
     phone,
-    name: 'Test Technician',
+    name: 'Test Service Provider',
     passwordHash: await hashPassword('password123'),
   });
-  const technician = await Technician.create({ user: user._id, name: 'Test Technician', phone, status: 'Active', availability, specs });
-  const token = await loginAndVerify({ role: ROLES.TECHNICIAN, identifier: phone, password: 'password123' });
-  return { technician, token };
+  const serviceProvider = await ServiceProvider.create({ user: user._id, name: 'Test Service Provider', phone, status: 'Active', availability, specs });
+  const token = await loginAndVerify({ role: ROLES.SERVICE_PROVIDER, identifier: phone, password: 'password123' });
+  return { serviceProvider, token };
 }
 
 beforeAll(async () => {
@@ -69,7 +69,7 @@ afterAll(async () => {
 beforeEach(async () => {
   await Promise.all([
     User.deleteMany({}),
-    Technician.deleteMany({}),
+    ServiceProvider.deleteMany({}),
     Category.deleteMany({}),
     ProductType.deleteMany({}),
     ServiceCatalogItem.deleteMany({}),
@@ -79,9 +79,9 @@ beforeEach(async () => {
 });
 
 describe('POST /bookings — full booking -> service-request -> auto-assign flow', () => {
-  it('creates a booking with a server-priced total, an auto-assigned technician, and a linked ServiceRequest at status Assigned', async () => {
+  it('creates a booking with a server-priced total, an auto-assigned serviceProvider, and a linked ServiceRequest at status Assigned', async () => {
     await seedCatalog();
-    const { technician } = await seedTechnician();
+    const { serviceProvider } = await seedServiceProvider();
     const token = await seedCustomer();
 
     const res = await request(app)
@@ -90,11 +90,11 @@ describe('POST /bookings — full booking -> service-request -> auto-assign flow
       .send({ category: 'AC', serviceSlug: 'repair', quantity: 2 })
       .expect(201);
 
-    const { booking, serviceRequest, technician: assigned } = res.body.data;
+    const { booking, serviceRequest, serviceProvider: assigned } = res.body.data;
     expect(booking.totalPrice).toBe(598); // 299 * 2, computed server-side from the catalog, not client-supplied
     expect(booking.humanId).toMatch(/^NCC-\d{6}-\d{4}$/);
-    expect(booking.technician).toBe(technician.id);
-    expect(assigned.name).toBe('Test Technician');
+    expect(booking.serviceProvider).toBe(serviceProvider.id);
+    expect(assigned.name).toBe('Test Service Provider');
 
     expect(serviceRequest.status).toBe('Assigned');
     expect(serviceRequest.timeline.map((t) => t.stepLabel)).toEqual(['New', 'Assigned']);
@@ -104,7 +104,7 @@ describe('POST /bookings — full booking -> service-request -> auto-assign flow
 
   it('ignores a client-supplied price — total is always derived from the catalog', async () => {
     await seedCatalog();
-    await seedTechnician();
+    await seedServiceProvider();
     const token = await seedCustomer();
 
     const res = await request(app)
@@ -116,9 +116,9 @@ describe('POST /bookings — full booking -> service-request -> auto-assign flow
     expect(res.body.data.booking.totalPrice).toBe(299);
   });
 
-  it('creates the booking with no technician assigned (and ServiceRequest stays "New") when none are available', async () => {
+  it('creates the booking with no serviceProvider assigned (and ServiceRequest stays "New") when none are available', async () => {
     await seedCatalog();
-    // no technician seeded at all
+    // no service provider seeded at all
     const token = await seedCustomer();
 
     const res = await request(app)
@@ -127,9 +127,9 @@ describe('POST /bookings — full booking -> service-request -> auto-assign flow
       .send({ category: 'AC', serviceSlug: 'repair' })
       .expect(201);
 
-    expect(res.body.data.booking.technician).toBeNull();
+    expect(res.body.data.booking.serviceProvider).toBeNull();
     expect(res.body.data.serviceRequest.status).toBe('New');
-    expect(res.body.data.technician).toBeNull();
+    expect(res.body.data.serviceProvider).toBeNull();
   });
 
   it('404s for an unknown category/service combination', async () => {
@@ -146,9 +146,9 @@ describe('POST /bookings — full booking -> service-request -> auto-assign flow
     await request(app).post('/api/v1/bookings').send({ category: 'AC', serviceSlug: 'repair' }).expect(401);
   });
 
-  it('rejects a non-customer role (e.g. technician) with 403', async () => {
+  it('rejects a non-customer role (e.g. serviceProvider) with 403', async () => {
     await seedCatalog();
-    const { token } = await seedTechnician();
+    const { token } = await seedServiceProvider();
     await request(app)
       .post('/api/v1/bookings')
       .set('Authorization', `Bearer ${token}`)
@@ -160,7 +160,7 @@ describe('POST /bookings — full booking -> service-request -> auto-assign flow
 describe('GET /bookings, GET /bookings/:id — ownership', () => {
   it('lists only the requesting customer\'s own bookings', async () => {
     await seedCatalog();
-    await seedTechnician();
+    await seedServiceProvider();
     const tokenA = await seedCustomer('9200000002');
     const tokenB = await seedCustomer('9200000003');
 
@@ -175,7 +175,7 @@ describe('GET /bookings, GET /bookings/:id — ownership', () => {
 
   it('rejects viewing another customer\'s booking with 403', async () => {
     await seedCatalog();
-    await seedTechnician();
+    await seedServiceProvider();
     const tokenA = await seedCustomer('9200000004');
     const tokenB = await seedCustomer('9200000005');
 
@@ -194,7 +194,7 @@ describe('GET /bookings, GET /bookings/:id — ownership', () => {
 describe('POST /bookings/:id/cancel', () => {
   it('cancels the booking and its linked ServiceRequest', async () => {
     await seedCatalog();
-    await seedTechnician();
+    await seedServiceProvider();
     const token = await seedCustomer('9200000006');
 
     const createRes = await request(app)
@@ -217,21 +217,21 @@ describe('POST /bookings/:id/cancel', () => {
 describe('service request status transitions — server-side state machine', () => {
   async function createAssignedBooking() {
     await seedCatalog();
-    const { token: techToken } = await seedTechnician({ phone: '9300000002' });
+    const { token: serviceProviderToken } = await seedServiceProvider({ phone: '9300000002' });
     const custToken = await seedCustomer('9200000007');
     const createRes = await request(app)
       .post('/api/v1/bookings')
       .set('Authorization', `Bearer ${custToken}`)
       .send({ category: 'AC', serviceSlug: 'repair' });
-    return { srId: createRes.body.data.serviceRequest.id, techToken, custToken };
+    return { srId: createRes.body.data.serviceRequest.id, serviceProviderToken, custToken };
   }
 
-  it('lets the assigned technician make a valid transition and records it in the timeline', async () => {
-    const { srId, techToken } = await createAssignedBooking();
+  it('lets the assigned serviceProvider make a valid transition and records it in the timeline', async () => {
+    const { srId, serviceProviderToken } = await createAssignedBooking();
 
     const res = await request(app)
       .patch(`/api/v1/service-requests/${srId}/status`)
-      .set('Authorization', `Bearer ${techToken}`)
+      .set('Authorization', `Bearer ${serviceProviderToken}`)
       .send({ status: 'Engineer Accepted' })
       .expect(200);
 
@@ -240,11 +240,11 @@ describe('service request status transitions — server-side state machine', () 
   });
 
   it('rejects an out-of-order transition (skipping steps) with 400', async () => {
-    const { srId, techToken } = await createAssignedBooking();
+    const { srId, serviceProviderToken } = await createAssignedBooking();
 
     await request(app)
       .patch(`/api/v1/service-requests/${srId}/status`)
-      .set('Authorization', `Bearer ${techToken}`)
+      .set('Authorization', `Bearer ${serviceProviderToken}`)
       .send({ status: 'Closed' })
       .expect(400);
   });
@@ -259,9 +259,9 @@ describe('service request status transitions — server-side state machine', () 
       .expect(403);
   });
 
-  it('rejects a transition attempt from a technician who is not the one assigned', async () => {
+  it('rejects a transition attempt from a serviceProvider who is not the one assigned', async () => {
     const { srId } = await createAssignedBooking();
-    const { token: otherTechToken } = await seedTechnician({ phone: '9300000003' });
+    const { token: otherTechToken } = await seedServiceProvider({ phone: '9300000003' });
 
     await request(app)
       .patch(`/api/v1/service-requests/${srId}/status`)
@@ -271,7 +271,7 @@ describe('service request status transitions — server-side state machine', () 
   });
 
   it('walks a request through the full happy-path lifecycle to Closed', async () => {
-    const { srId, techToken } = await createAssignedBooking();
+    const { srId, serviceProviderToken } = await createAssignedBooking();
     const steps = [
       'Engineer Accepted',
       'Visit Scheduled',
@@ -285,19 +285,19 @@ describe('service request status transitions — server-side state machine', () 
     for (const status of steps) {
       const res = await request(app)
         .patch(`/api/v1/service-requests/${srId}/status`)
-        .set('Authorization', `Bearer ${techToken}`)
+        .set('Authorization', `Bearer ${serviceProviderToken}`)
         .send({ status });
       expect(res.status).toBe(200);
     }
 
-    const final = await request(app).get(`/api/v1/service-requests/${srId}`).set('Authorization', `Bearer ${techToken}`);
+    const final = await request(app).get(`/api/v1/service-requests/${srId}`).set('Authorization', `Bearer ${serviceProviderToken}`);
     expect(final.body.data.status).toBe('Closed');
     expect(final.body.data.timeline).toHaveLength(9); // New, Assigned, + the 7 steps above
 
     // Closed is terminal — no further transitions allowed.
     await request(app)
       .patch(`/api/v1/service-requests/${srId}/status`)
-      .set('Authorization', `Bearer ${techToken}`)
+      .set('Authorization', `Bearer ${serviceProviderToken}`)
       .send({ status: 'New' })
       .expect(400);
   });
@@ -310,7 +310,7 @@ describe('manual assignment from the super-admin console', () => {
     return loginAndVerify({ role: ROLES.SUPER_ADMIN, identifier: email, password: 'password123' });
   }
 
-  // A request with no technician: created directly rather than through /bookings,
+  // A request with no service provider: created directly rather than through /bookings,
   // which auto-assigns on the way in.
   async function seedUnassignedRequest() {
     const customer = await User.create({
@@ -321,30 +321,30 @@ describe('manual assignment from the super-admin console', () => {
 
   it('ranks candidates and assigns the chosen one, moving the request to Assigned', async () => {
     const adminToken = await seedSuperAdmin();
-    const { technician } = await seedTechnician({ phone: '9300000031' });
+    const { serviceProvider } = await seedServiceProvider({ phone: '9300000031' });
     const sr = await seedUnassignedRequest();
 
     const suggestRes = await request(app)
-      .get(`/api/v1/service-requests/${sr.id}/technician-suggestions`)
+      .get(`/api/v1/service-requests/${sr.id}/serviceProvider-suggestions`)
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(200);
-    expect(suggestRes.body.data[0]).toMatchObject({ id: technician.id, name: 'Test Technician' });
+    expect(suggestRes.body.data[0]).toMatchObject({ id: serviceProvider.id, name: 'Test Service Provider' });
     expect(typeof suggestRes.body.data[0].score).toBe('number');
     expect(suggestRes.body.data[0].breakdown).toBeDefined();
 
     const assignRes = await request(app)
       .patch(`/api/v1/service-requests/${sr.id}/assign`)
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ technician: technician.id })
+      .send({ serviceProvider: serviceProvider.id })
       .expect(200);
     expect(assignRes.body.data.status).toBe('Assigned');
-    expect(assignRes.body.data.technician.name).toBe('Test Technician');
+    expect(assignRes.body.data.serviceProvider.name).toBe('Test Service Provider');
     expect(assignRes.body.data.timeline.map((t) => t.stepLabel)).toContain('Assigned');
   });
 
-  it('falls back to the weighted engine when no technician is named', async () => {
+  it('falls back to the weighted engine when no serviceProvider is named', async () => {
     const adminToken = await seedSuperAdmin();
-    const { technician } = await seedTechnician({ phone: '9300000032' });
+    const { serviceProvider } = await seedServiceProvider({ phone: '9300000032' });
     const sr = await seedUnassignedRequest();
 
     const res = await request(app)
@@ -352,7 +352,7 @@ describe('manual assignment from the super-admin console', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .send({})
       .expect(200);
-    expect(String(res.body.data.technician.id)).toBe(String(technician.id));
+    expect(String(res.body.data.serviceProvider.id)).toBe(String(serviceProvider.id));
   });
 
   it('409s when there is nobody available to auto-assign to', async () => {
@@ -364,12 +364,12 @@ describe('manual assignment from the super-admin console', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .send({})
       .expect(409);
-    expect(res.body.error.message).toMatch(/No available technician/);
+    expect(res.body.error.message).toMatch(/No available serviceProvider/);
   });
 
   it('refuses to re-route a request that is already underway', async () => {
     const adminToken = await seedSuperAdmin();
-    const { technician } = await seedTechnician({ phone: '9300000033' });
+    const { serviceProvider } = await seedServiceProvider({ phone: '9300000033' });
     const sr = await seedUnassignedRequest();
     sr.status = 'Engineer Reached';
     await sr.save();
@@ -377,22 +377,22 @@ describe('manual assignment from the super-admin console', () => {
     const res = await request(app)
       .patch(`/api/v1/service-requests/${sr.id}/assign`)
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ technician: technician.id })
+      .send({ serviceProvider: serviceProvider.id })
       .expect(409);
     expect(res.body.error.message).toMatch(/Engineer Reached/);
   });
 
-  it('rejects an inactive technician and a non-super-admin caller', async () => {
+  it('rejects an inactive serviceProvider and a non-super-admin caller', async () => {
     const adminToken = await seedSuperAdmin();
-    const { technician } = await seedTechnician({ phone: '9300000034' });
+    const { serviceProvider } = await seedServiceProvider({ phone: '9300000034' });
     const custToken = await seedCustomer('9200000034');
     const sr = await seedUnassignedRequest();
 
-    await Technician.findByIdAndUpdate(technician.id, { status: 'Inactive' });
+    await ServiceProvider.findByIdAndUpdate(serviceProvider.id, { status: 'Inactive' });
     const res = await request(app)
       .patch(`/api/v1/service-requests/${sr.id}/assign`)
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ technician: technician.id })
+      .send({ serviceProvider: serviceProvider.id })
       .expect(409);
     expect(res.body.error.message).toMatch(/not Active/);
 
@@ -401,6 +401,6 @@ describe('manual assignment from the super-admin console', () => {
       .set('Authorization', `Bearer ${custToken}`)
       .send({})
       .expect(403);
-    await request(app).get(`/api/v1/service-requests/${sr.id}/technician-suggestions`).expect(401);
+    await request(app).get(`/api/v1/service-requests/${sr.id}/serviceProvider-suggestions`).expect(401);
   });
 });

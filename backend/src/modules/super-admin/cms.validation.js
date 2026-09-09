@@ -5,11 +5,11 @@ export const createBannerSchema = z.object({
   title: z.string().optional(),
   description: z.string().optional(),
   segment: z.enum(['warranty', 'non-warranty']).optional(),
-  app: z.enum(['customer', 'technician']).optional(),
+  app: z.enum(['customer', 'service_provider']).optional(),
   sortOrder: z.number().optional(),
 });
 export const updateBannerSchema = createBannerSchema.partial().extend({ isActive: z.boolean().optional() });
-export const listBannersQuerySchema = z.object({ app: z.enum(['customer', 'technician']).optional() });
+export const listBannersQuerySchema = z.object({ app: z.enum(['customer', 'service_provider']).optional() });
 
 const storySlideSchema = z.object({
   image: z.string().optional(),

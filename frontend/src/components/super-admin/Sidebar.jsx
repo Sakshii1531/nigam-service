@@ -13,9 +13,8 @@ import {
   UserPlus, 
   MapPin, 
   Package, 
-  Truck, 
-  CreditCard, 
-  AlertTriangle, 
+  Truck,
+  AlertTriangle,
   Headphones, 
   Bell, 
   BarChart3, 
@@ -139,12 +138,6 @@ const Sidebar = () => {
       icon: <Users size={18} />
     },
     {
-      type: 'link',
-      label: 'Service Partners',
-      path: '/super-admin/service-partners',
-      icon: <Building size={18} />
-    },
-    {
       type: 'header',
       label: 'BUSINESS'
     },
@@ -250,42 +243,42 @@ const Sidebar = () => {
     },
     {
       type: 'header',
-      label: 'TECHNICIAN APP'
+      label: 'SERVICE_PROVIDER APP'
     },
     {
       type: 'link',
-      label: 'Technicians',
-      path: '/super-admin/technicians',
+      label: 'ServiceProviders',
+      path: '/super-admin/service-providers',
       icon: <UserCheck size={18} />
     },
     {
       type: 'link',
       label: 'Banner Customization',
-      path: '/super-admin/technician-app-customization?tab=banners',
+      path: '/super-admin/service-provider-app-customization?tab=banners',
       icon: <Image size={18} />
     },
     {
       type: 'link',
       label: 'Training & Videos',
-      path: '/super-admin/technician-app-customization?tab=training',
+      path: '/super-admin/service-provider-app-customization?tab=training',
       icon: <Video size={18} />
     },
     {
       type: 'link',
       label: 'Announcements',
-      path: '/super-admin/technician-app-customization?tab=announcements',
+      path: '/super-admin/service-provider-app-customization?tab=announcements',
       icon: <Bell size={18} />
     },
     {
       type: 'link',
       label: 'Skills & Certs',
-      path: '/super-admin/technician-app-customization?tab=skills',
+      path: '/super-admin/service-provider-app-customization?tab=skills',
       icon: <Award size={18} />
     },
     {
       type: 'link',
       label: 'App Settings',
-      path: '/super-admin/technician-app-customization?tab=settings',
+      path: '/super-admin/service-provider-app-customization?tab=settings',
       icon: <Settings size={18} />
     },
     {
@@ -369,12 +362,6 @@ const Sidebar = () => {
       label: 'Revenue Dashboard',
       path: '/super-admin/revenue',
       icon: <TrendingUp size={18} />
-    },
-    {
-      type: 'link',
-      label: 'Partner Payouts',
-      path: '/super-admin/payouts',
-      icon: <CreditCard size={18} />
     },
     {
       type: 'link',

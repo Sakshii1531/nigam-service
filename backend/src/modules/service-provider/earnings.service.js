@@ -3,16 +3,16 @@ import { EarningsTally } from './earningsTally.model.js';
 import { Payout } from './payout.model.js';
 import { Job } from './job.model.js';
 import { PlatformSettings } from '../super-admin/platformSettings.model.js';
-import { Technician } from './technician.model.js';
+import { ServiceProvider } from './serviceProvider.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { parsePagination, paginationMeta } from '../../utils/pagination.js';
 
 const PLATFORM_FEE_PERCENT = 2; // flat fee on instant 'Quick' payouts; 'Invoice' payouts settle fee-free on the next billing cycle
 
-export async function getEarningsSummary(technicianId) {
+export async function getEarningsSummary(serviceProviderId) {
   return EarningsTally.findOneAndUpdate(
-    { technician: technicianId },
-    { $setOnInsert: { technician: technicianId } },
+    { serviceProvider: serviceProviderId },
+    { $setOnInsert: { serviceProvider: serviceProviderId } },
     { upsert: true, new: true },
   );
 }
@@ -23,18 +23,18 @@ export async function getEarningsSummary(technicianId) {
  * since there's no multi-document transaction available locally (Phase 5's
  * documented, user-approved tradeoff).
  */
-export async function requestPayout(technicianId, { amount, payoutType = 'Quick' }) {
-  const technician = await Technician.findById(technicianId);
-  if (!technician) throw new ApiError(404, 'Technician not found');
+export async function requestPayout(serviceProviderId, { amount, payoutType = 'Quick' }) {
+  const serviceProvider = await ServiceProvider.findById(serviceProviderId);
+  if (!serviceProvider) throw new ApiError(404, 'Service Provider not found');
 
-  const primaryMethod = technician.payoutMethods.find((m) => m.isPrimary) || technician.payoutMethods[0];
+  const primaryMethod = serviceProvider.payoutMethods.find((m) => m.isPrimary) || serviceProvider.payoutMethods[0];
   if (!primaryMethod) throw new ApiError(400, 'No payout method on file — add one before requesting a payout');
 
   const platformFee = payoutType === 'Quick' ? Math.round((amount * PLATFORM_FEE_PERCENT) / 100) : 0;
   const netAmount = amount - platformFee;
 
   const updatedTally = await EarningsTally.findOneAndUpdate(
-    { technician: technicianId, total: { $gte: amount } },
+    { serviceProvider: serviceProviderId, total: { $gte: amount } },
     { $inc: { total: -amount } },
     { new: true },
   );
@@ -42,7 +42,7 @@ export async function requestPayout(technicianId, { amount, payoutType = 'Quick'
 
   try {
     return await Payout.create({
-      technician: technicianId,
+      serviceProvider: serviceProviderId,
       baseAmount: amount,
       platformFee,
       netAmount,
@@ -52,13 +52,13 @@ export async function requestPayout(technicianId, { amount, payoutType = 'Quick'
       transactionId: `PAYOUT-${Date.now()}`,
     });
   } catch (err) {
-    await EarningsTally.findOneAndUpdate({ technician: technicianId }, { $inc: { total: amount } });
+    await EarningsTally.findOneAndUpdate({ serviceProvider: serviceProviderId }, { $inc: { total: amount } });
     throw err;
   }
 }
 
-export async function listPayouts(technicianId, { status, page, limit, sort } = {}) {
-  const query = { technician: technicianId };
+export async function listPayouts(serviceProviderId, { status, page, limit, sort } = {}) {
+  const query = { serviceProvider: serviceProviderId };
   if (status) query.status = status;
 
   const { skip, limit: lim, page: pg, sort: sortObj } = parsePagination({ page, limit, sort });
@@ -70,16 +70,16 @@ export async function listPayouts(technicianId, { status, page, limit, sort } = 
 }
 
 /**
- * Per-job earnings history for the technician app's Recent Earnings screen.
+ * Per-job earnings history for the service provider app's Recent Earnings screen.
  *
  * The EarningsTally is only a running total, so the individual lines come from
- * the jobs themselves — billing.technicianEarnings is what the technician was
+ * the jobs themselves — billing.serviceProviderEarnings is what the service provider was
  * credited for each completed job. Jobs that earned nothing (fully covered AMC
- * visits with no chargeable work) are still listed: the technician did the
+ * visits with no chargeable work) are still listed: the service provider did the
  * visit, and hiding it would look like missing history.
  */
-export async function listRecentEarnings(technicianId, { page, limit } = {}) {
-  const query = { technician: technicianId, activeStep: 'completed' };
+export async function listRecentEarnings(serviceProviderId, { page, limit } = {}) {
+  const query = { serviceProvider: serviceProviderId, activeStep: 'completed' };
   const { skip, limit: lim, page: pg } = parsePagination({ page, limit, sort: '-updatedAt' });
 
   const [jobs, total] = await Promise.all([
@@ -98,7 +98,7 @@ export async function listRecentEarnings(technicianId, { page, limit } = {}) {
       : job.type,
     reference: job.serviceRequest?.humanId || null,
     type: job.type,
-    amount: job.billingEstimate?.technicianEarnings || 0,
+    amount: job.billingEstimate?.serviceProviderEarnings || 0,
     paymentMethod: job.paymentMethod || null,
     completedAt: job.updatedAt,
   }));
@@ -107,14 +107,14 @@ export async function listRecentEarnings(technicianId, { page, limit } = {}) {
 }
 
 /**
- * The technician app's Analytics screen: performance over a rolling window, plus
+ * The service provider app's Analytics screen: performance over a rolling window, plus
  * the same window immediately before it for the change figures.
  *
  * Completion rate is jobs reaching 'completed' as a share of jobs assigned in
  * the window. The category split comes from each job's ServiceRequest, which is
  * where the appliance category actually lives.
  */
-export async function getTechnicianAnalytics(technicianId, { days = 30 } = {}) {
+export async function getServiceProviderAnalytics(serviceProviderId, { days = 30 } = {}) {
   // UTC throughout — the daily buckets below are keyed by toISOString(), so a
   // local-time window would drop the current day whenever the two dates differ.
   const end = new Date();
@@ -129,12 +129,12 @@ export async function getTechnicianAnalytics(technicianId, { days = 30 } = {}) {
   prevStart.setUTCHours(0, 0, 0, 0);
 
   async function windowStats(from, to) {
-    const jobs = await Job.find({ technician: technicianId, createdAt: { $gte: from, $lte: to } })
+    const jobs = await Job.find({ serviceProvider: serviceProviderId, createdAt: { $gte: from, $lte: to } })
       .populate({ path: 'serviceRequest', select: 'category' });
 
     const completed = jobs.filter((j) => j.activeStep === 'completed');
     return {
-      earnings: completed.reduce((sum, j) => sum + (j.billingEstimate?.technicianEarnings || 0), 0),
+      earnings: completed.reduce((sum, j) => sum + (j.billingEstimate?.serviceProviderEarnings || 0), 0),
       completedCount: completed.length,
       assignedCount: jobs.length,
       completionRate: jobs.length ? Math.round((completed.length / jobs.length) * 100) : null,
@@ -142,10 +142,10 @@ export async function getTechnicianAnalytics(technicianId, { days = 30 } = {}) {
     };
   }
 
-  const [current, previous, technician] = await Promise.all([
+  const [current, previous, serviceProvider] = await Promise.all([
     windowStats(start, end),
     windowStats(prevStart, prevEnd),
-    Technician.findById(technicianId).select('rating weeklyTargetAmount'),
+    ServiceProvider.findById(serviceProviderId).select('rating weeklyTargetAmount'),
   ]);
 
   // Category mix over completed jobs in the window.
@@ -167,7 +167,7 @@ export async function getTechnicianAnalytics(technicianId, { days = 30 } = {}) {
   const dailyMap = {};
   for (const job of current.completedJobs) {
     const key = new Date(job.updatedAt).toISOString().slice(0, 10);
-    dailyMap[key] = (dailyMap[key] || 0) + (job.billingEstimate?.technicianEarnings || 0);
+    dailyMap[key] = (dailyMap[key] || 0) + (job.billingEstimate?.serviceProviderEarnings || 0);
   }
   const daily = [];
   for (let i = 0; i < days; i += 1) {
@@ -180,43 +180,43 @@ export async function getTechnicianAnalytics(technicianId, { days = 30 } = {}) {
   return {
     days,
     daily,
-    weeklyTargetAmount: technician?.weeklyTargetAmount || 0,
+    weeklyTargetAmount: serviceProvider?.weeklyTargetAmount || 0,
     earnings: current.earnings,
     earningsChangePercent: delta(current.earnings, previous.earnings),
     completedCount: current.completedCount,
     completedChangePercent: delta(current.completedCount, previous.completedCount),
     completionRate: current.completionRate,
     previousCompletionRate: previous.completionRate,
-    rating: technician?.rating || 0,
+    rating: serviceProvider?.rating || 0,
     byCategory,
   };
 }
 
 /**
- * The figures the technician's Profile and Earnings screens show.
+ * The figures the service provider's Profile and Earnings screens show.
  *
  * `available` is the withdrawable balance (EarningsTally.total, which payouts
  * debit). `lifetimeEarned` adds back everything already paid out, since the
- * tally alone under-reports what the technician has actually earned.
+ * tally alone under-reports what the service provider has actually earned.
  *
  * The Quick/Invoice split is by job type rather than by Payout rows: it covers
  * work that has been completed but not yet withdrawn, which is what the two
  * cards on those screens are describing.
  */
-export async function getEarningsBreakdown(technicianId) {
+export async function getEarningsBreakdown(serviceProviderId) {
   const [tally, paidOutRows, jobs] = await Promise.all([
-    getEarningsSummary(technicianId),
+    getEarningsSummary(serviceProviderId),
     Payout.aggregate([
-      { $match: { technician: new mongoose.Types.ObjectId(String(technicianId)), status: 'Settled' } },
+      { $match: { serviceProvider: new mongoose.Types.ObjectId(String(serviceProviderId)), status: 'Settled' } },
       { $group: { _id: null, base: { $sum: '$baseAmount' }, net: { $sum: '$netAmount' } } },
     ]),
-    Job.find({ technician: technicianId, activeStep: 'completed' }).select('type billingEstimate'),
+    Job.find({ serviceProvider: serviceProviderId, activeStep: 'completed' }).select('type billingEstimate'),
   ]);
 
   const split = { quick: { amount: 0, jobs: 0 }, invoice: { amount: 0, jobs: 0 } };
   for (const job of jobs) {
     const bucket = job.type === 'NCC Paid Service' ? split.quick : split.invoice;
-    bucket.amount += job.billingEstimate?.technicianEarnings || 0;
+    bucket.amount += job.billingEstimate?.serviceProviderEarnings || 0;
     bucket.jobs += 1;
   }
 
@@ -234,7 +234,7 @@ export async function getEarningsBreakdown(technicianId) {
 }
 
 /**
- * Credits the configured visit fee for a job the technician travelled to but
+ * Credits the configured visit fee for a job the service provider travelled to but
  * could not complete (customer cancelled, or was not available).
  *
  * Idempotent per job: the EarningsTally is the running balance and a second
@@ -242,10 +242,10 @@ export async function getEarningsBreakdown(technicianId) {
  * Returns { credited: false } rather than throwing when the fee is disabled —
  * a zero fee is a valid configuration, not an error.
  */
-export async function creditVisitFee(technicianId, jobId) {
+export async function creditVisitFee(serviceProviderId, jobId) {
   const job = await Job.findById(jobId);
   if (!job) throw new ApiError(404, 'Job not found');
-  if (String(job.technician) !== String(technicianId)) {
+  if (String(job.serviceProvider) !== String(serviceProviderId)) {
     throw new ApiError(403, 'Not authorized to access this job');
   }
   if (job.activeStep === 'completed') {
@@ -256,11 +256,11 @@ export async function creditVisitFee(technicianId, jobId) {
   const amount = settings?.visitFeeAmount ?? 150;
   if (amount <= 0) return { credited: false, amount: 0 };
 
-  const existing = await Payout.findOne({ technician: technicianId, job: jobId, payoutType: 'Visit' });
+  const existing = await Payout.findOne({ serviceProvider: serviceProviderId, job: jobId, payoutType: 'Visit' });
   if (existing) return { credited: false, amount: existing.netAmount, alreadyCredited: true };
 
   const payout = await Payout.create({
-    technician: technicianId,
+    serviceProvider: serviceProviderId,
     job: jobId,
     baseAmount: amount,
     platformFee: 0,
@@ -270,7 +270,7 @@ export async function creditVisitFee(technicianId, jobId) {
   });
 
   await EarningsTally.findOneAndUpdate(
-    { technician: technicianId },
+    { serviceProvider: serviceProviderId },
     { $inc: { total: amount, today: amount } },
     { upsert: true, new: true },
   );

@@ -5,19 +5,19 @@ import {
   CreditCard, Plus, X, Building2, CheckCircle, ChevronRight
 } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
-import TechBottomNav from '../../components/TechBottomNav';
+import ServiceProviderBottomNav from '../../components/ServiceProviderBottomNav';
 
 const PayoutSettings = () => {
   const navigate = useNavigate();
 
-  // Payout methods live on the technician's profile — they have to survive a
+  // Payout methods live on the service provider's profile — they have to survive a
   // reinstall and be the same account payouts actually settle to.
   const [accounts, setAccounts] = useState([]);
   const [error, setError] = useState('');
 
   const loadAccounts = React.useCallback(async () => {
     try {
-      const res = await apiRequest('/tech/profile/profile', { auth: true });
+      const res = await apiRequest('/service-provider/profile/profile', { auth: true });
       setAccounts((res?.payoutMethods || []).map((m) => ({
         id: m._id || m.id,
         type: m.type,
@@ -62,7 +62,7 @@ const PayoutSettings = () => {
       return;
     }
     try {
-      await apiRequest('/tech/profile/payout-methods', {
+      await apiRequest('/service-provider/profile/payout-methods', {
         method: 'POST',
         auth: true,
         body: {
@@ -87,7 +87,7 @@ const PayoutSettings = () => {
   const handleAddUpi = async () => {
     if (!upiId.includes('@')) return;
     try {
-      await apiRequest('/tech/profile/payout-methods', {
+      await apiRequest('/service-provider/profile/payout-methods', {
         method: 'POST',
         auth: true,
         body: { type: 'upi', name: upiId, upiId, isPrimary: accounts.length === 0 },
@@ -117,7 +117,7 @@ const PayoutSettings = () => {
           <h1 className="text-lg font-semibold text-slate-900">Payout Settings</h1>
         </div>
         <button 
-          onClick={() => navigate('/technician/notifications')}
+          onClick={() => navigate('/service-provider/notifications')}
           className="p-2 hover:bg-slate-50 rounded-full transition-colors relative"
         >
           <Bell className="h-5 w-5 text-slate-700" />
@@ -414,7 +414,7 @@ const PayoutSettings = () => {
       )}
 
       {/* Bottom Navigation */}
-      <TechBottomNav activeTab="profile" />
+      <ServiceProviderBottomNav activeTab="profile" />
 
     </div>
   );

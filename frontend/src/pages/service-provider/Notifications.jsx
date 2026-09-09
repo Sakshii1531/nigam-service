@@ -11,7 +11,7 @@ import { useNotifications } from '../../context/NotificationContext';
 // filter tabs. Anything unmapped (a platform broadcast, a service update) is
 // still listed under "All" — it just has no tab of its own.
 const TAB_FOR_TYPE = {
-  jobs: 'Jobs', assigned: 'Jobs', tech: 'Jobs', service: 'Jobs', dispatch: 'Jobs',
+  jobs: 'Jobs', assigned: 'Jobs', provider: 'Jobs', service: 'Jobs', dispatch: 'Jobs',
   claims: 'Claims',
   payments: 'Payments', payment: 'Payments',
 };
@@ -20,9 +20,9 @@ const Notifications = () => {
   const navigate = useNavigate();
   const [filterTab, setFilterTab] = useState('All'); // 'All', 'Jobs', 'Claims', 'Payments'
 
-  // This screen used to read TechContext's in-memory list, which started empty
+  // This screen used to read ServiceProviderContext's in-memory list, which started empty
   // and was only ever appended to locally when a job was accepted in the mock
-  // branch. It never fetched, so a technician saw none of what the platform
+  // branch. It never fetched, so a service provider saw none of what the platform
   // actually sent them — not an assignment, not a super-admin broadcast.
   const [notifications, setNotifications] = useState([]);
   const [loadError, setLoadError] = useState('');

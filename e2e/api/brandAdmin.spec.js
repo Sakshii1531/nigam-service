@@ -7,7 +7,7 @@ import { randomUUID } from 'node:crypto';
 //
 // Brand and non-booking ServiceRequest both have no real HTTP surface yet
 // (Brand is Phase 8 scope; a Brand-Warranty complaint-raising flow is deferred —
-// same reasoning as e2e/api/technician.spec.js's AMC fixtures), so this spec
+// same reasoning as e2e/api/service provider.spec.js's AMC fixtures), so this spec
 // uses the NODE_ENV=test-only /_dev/test-brand and /_dev/test-service-request
 // fixture routes to get real, separate tenants to test isolation against.
 
@@ -35,11 +35,11 @@ async function createCustomer(request) {
   return { id, phone, token };
 }
 
-async function createTechnician(request) {
+async function createServiceProvider(request) {
   const phone = uniquePhone();
-  const createRes = await request.post('/api/v1/_dev/test-technician', { data: { phone, password: 'password123', specs: ['AC'] } });
-  const { technicianId } = (await createRes.json()).data;
-  return { technicianId };
+  const createRes = await request.post('/api/v1/_dev/test-serviceProvider', { data: { phone, password: 'password123', specs: ['AC'] } });
+  const { serviceProviderId } = (await createRes.json()).data;
+  return { serviceProviderId };
 }
 
 /** A fresh Brand tenant + its own brand_admin account, isolated by a random
@@ -56,9 +56,9 @@ async function createBrandWithAdmin(request) {
   return { brandId, token };
 }
 
-async function createServiceRequestForBrand(request, { brandId, customerId, technicianId }) {
+async function createServiceRequestForBrand(request, { brandId, customerId, serviceProviderId }) {
   const res = await request.post('/api/v1/_dev/test-service-request', {
-    data: { customerId, technicianId, category: 'AC', brand: brandId },
+    data: { customerId, serviceProviderId, category: 'AC', brand: brandId },
   });
   return (await res.json()).data.id;
 }
@@ -68,13 +68,13 @@ test.describe('cross-tenant isolation — the Phase 7 exit criterion', () => {
     const brandA = await createBrandWithAdmin(request);
     const brandB = await createBrandWithAdmin(request);
     const customer = await createCustomer(request);
-    const technician = await createTechnician(request);
+    const serviceProvider = await createServiceProvider(request);
 
-    const srA = await createServiceRequestForBrand(request, { brandId: brandA.brandId, customerId: customer.id, technicianId: technician.technicianId });
+    const srA = await createServiceRequestForBrand(request, { brandId: brandA.brandId, customerId: customer.id, serviceProviderId: serviceProvider.serviceProviderId });
 
     const invoiceRes = await request.post('/api/v1/brand/invoices', {
       headers: { Authorization: `Bearer ${brandA.token}` },
-      data: { serviceRequest: srA, customer: customer.id, technician: technician.technicianId, serviceCharge: 500 },
+      data: { serviceRequest: srA, customer: customer.id, serviceProvider: serviceProvider.serviceProviderId, serviceCharge: 500 },
     });
     expect(invoiceRes.status()).toBe(201);
     const invoiceA = (await invoiceRes.json()).data;
@@ -162,8 +162,8 @@ test.describe('replacement approvals and returns', () => {
   test('creates a replacement approval and approves it', async ({ request }) => {
     const brandA = await createBrandWithAdmin(request);
     const customer = await createCustomer(request);
-    const technician = await createTechnician(request);
-    const srA = await createServiceRequestForBrand(request, { brandId: brandA.brandId, customerId: customer.id, technicianId: technician.technicianId });
+    const serviceProvider = await createServiceProvider(request);
+    const srA = await createServiceRequestForBrand(request, { brandId: brandA.brandId, customerId: customer.id, serviceProviderId: serviceProvider.serviceProviderId });
 
     const createRes = await request.post('/api/v1/brand/replacement-approvals', {
       headers: { Authorization: `Bearer ${brandA.token}` },

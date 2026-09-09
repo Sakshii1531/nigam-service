@@ -11,11 +11,11 @@ import { randomUUID } from 'node:crypto';
  *     already unwrapped, so the table rendered empty no matter what was in the
  *     database — every successful "Add City" looked like it had silently
  *     failed.
- *  2. technician/Apply.jsx seeded its dropdown with a hardcoded
+ *  2. service provider/Apply.jsx seeded its dropdown with a hardcoded
  *     ['Delhi NCR', 'Mumbai', ...] that was only replaced when the fetch
- *     returned rows. /tech/register resolves that value with an exact
+ *     returned rows. /service-provider/register resolves that value with an exact
  *     City.findOne({ name }), so applying from one of those fabricated options
- *     stored the technician with city: null.
+ *     stored the service provider with city: null.
  */
 
 const API = `${process.env.UI_API_ORIGIN || 'http://localhost:4111'}/api/v1`;
@@ -68,12 +68,12 @@ test('a city added by the admin is listed in the Cities table', async ({ page, r
   await expect(page.getByText(name).first()).toBeVisible({ timeout: 15_000 });
 });
 
-test('the technician application offers admin-configured cities, not hardcoded ones', async ({ page, request }) => {
+test('the serviceProvider application offers admin-configured cities, not hardcoded ones', async ({ page, request }) => {
   const session = await superAdminSession(request);
   const name = `Techville ${randomUUID().slice(0, 8)}`;
   await createCity(request, session.accessToken, { name, state: 'Testrajya', district: name });
 
-  await page.goto('/technician/apply');
+  await page.goto('/service-provider/apply');
 
   const select = page.locator('select[name="city"]');
   await expect(select).toBeEnabled({ timeout: 15_000 });
@@ -86,7 +86,7 @@ test('the technician application offers admin-configured cities, not hardcoded o
   // document, so it could only ever have come from the hardcoded seed list.
   await expect(select.locator('option', { hasText: 'Delhi NCR' })).toHaveCount(0);
 
-  // The value posted to /tech/register must be the bare name it matches on.
+  // The value posted to /service-provider/register must be the bare name it matches on.
   await expect(select).toHaveValue(/.+/);
 });
 
@@ -98,7 +98,7 @@ test('with no operational cities configured, the application offers none rather 
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [], error: null, meta: {} }) }),
   );
 
-  await page.goto('/technician/apply');
+  await page.goto('/service-provider/apply');
 
   const select = page.locator('select[name="city"]');
   await expect(select).toBeDisabled();

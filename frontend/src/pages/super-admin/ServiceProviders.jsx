@@ -27,7 +27,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 
-const Technicians = () => {
+const ServiceProviders = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -38,26 +38,26 @@ const Technicians = () => {
   const [selectedTechProfile, setSelectedTechProfile] = useState(null);
 
   const [showModal, setShowModal] = useState(false);
-  const [techToDelete, setTechToDelete] = useState(null);
+  const [serviceProviderToDelete, setTechToDelete] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [newTech, setNewTech] = useState({ name: '', skill: 'AC & Refrigerator', city: 'Delhi', rating: '5.0', availability: 'Available', status: 'Active' });
 
-  const [technicians, setTechnicians] = useState([]);
+  const [serviceProviders, setServiceProviders] = useState([]);
   const [loadError, setLoadError] = useState('');
 
-  // Applications submitted from /technician/apply land here as Pending
-  // technicians — the console is where they get approved or rejected.
+  // Applications submitted from /service provider/apply land here as Pending
+  // service providers — the console is where they get approved or rejected.
   const fetchTechs = React.useCallback(async () => {
     try {
-      const res = await apiRequest('/super-admin/technicians?limit=200', { auth: true });
+      const res = await apiRequest('/super-admin/service-providers?limit=200', { auth: true });
       const items = Array.isArray(res) ? res : [];
-      setTechnicians(items.map((item) => ({
+      setServiceProviders(items.map((item) => ({
         id: item.id,
         ref: item.humanId || item.id,
-        // Notifications address the underlying User, not the Technician doc.
+        // Notifications address the underlying User, not the Service Provider doc.
         userId: item.user || null,
         phone: item.phone || '',
-        name: item.name || 'Technician',
+        name: item.name || 'Service Provider',
         skill: item.specs?.length ? item.specs.join(', ') : 'General Repair',
         city: item.city?.name || '—',
         rating: item.rating || 0,
@@ -74,7 +74,7 @@ const Technicians = () => {
       })));
       setLoadError('');
     } catch (err) {
-      setLoadError(err.message || 'Could not load technicians.');
+      setLoadError(err.message || 'Could not load serviceProviders.');
     }
   }, []);
 
@@ -95,14 +95,14 @@ const Technicians = () => {
   };
 
   const handleStatusChange = async (id, newStatus) => {
-    const tech = technicians.find(t => t.id === id);
-    if (!tech) return;
+    const provider = serviceProviders.find(t => t.id === id);
+    if (!provider) return;
 
     // Persist first, then mirror the server's own availability decision back into
     // state — the server forces Offline for any non-Active status.
     let saved = null;
     try {
-      saved = await apiRequest(`/super-admin/technicians/${id}/status`, {
+      saved = await apiRequest(`/super-admin/service-providers/${id}/status`, {
         method: 'PATCH',
         auth: true,
         body: { status: newStatus }
@@ -112,28 +112,28 @@ const Technicians = () => {
       return;
     }
 
-    setTechnicians(technicians.map(t => (
+    setServiceProviders(serviceProviders.map(t => (
       t.id === id
         ? { ...t, status: saved?.status || newStatus, availability: saved?.availability ?? t.availability }
         : t
     )));
 
     if (newStatus !== 'Active') {
-      showToast(`Technician status updated to ${newStatus}`);
+      showToast(`Service Provider status updated to ${newStatus}`);
       return;
     }
 
-    const msg = `Congratulations ${tech.name}! Your Nigam Care Technician Partner account has been verified and approved. You can now login to access your job dashboard.`;
+    const msg = `Congratulations ${provider.name}! Your Nigam Care Service Provider Partner account has been verified and approved. You can now login to access your job dashboard.`;
     const delivered = [];
 
-    // Push addresses the User behind the Technician record.
-    if (tech.userId) {
+    // Push addresses the User behind the Service Provider record.
+    if (provider.userId) {
       try {
         await apiRequest('/notifications/push', {
           method: 'POST',
           auth: true,
           body: {
-            recipientId: tech.userId,
+            recipientId: provider.userId,
             title: '🎉 Account Approved!',
             body: msg,
           }
@@ -145,14 +145,14 @@ const Technicians = () => {
     }
 
     // SMS via SMSIndiaHub. Send only to a real number — no placeholder fallback.
-    if (tech.phone) {
+    if (provider.phone) {
       try {
         await apiRequest('/notifications/sms', {
           method: 'POST',
           auth: true,
           body: {
             provider: 'smsindiahub',
-            phone: tech.phone,
+            phone: provider.phone,
             message: msg
           }
         });
@@ -164,20 +164,20 @@ const Technicians = () => {
 
     showToast(
       delivered.length
-        ? `Partner approved! Sent ${delivered.join(' & ')} to ${tech.name}`
-        : `Partner approved — no contact channel available for ${tech.name}`
+        ? `Partner approved! Sent ${delivered.join(' & ')} to ${provider.name}`
+        : `Partner approved — no contact channel available for ${provider.name}`
     );
   };
 
-  const confirmDeleteTechnician = async () => {
-    if (!techToDelete) return;
-    const id = techToDelete.id;
-    const name = techToDelete.name;
+  const confirmDeleteServiceProvider = async () => {
+    if (!serviceProviderToDelete) return;
+    const id = serviceProviderToDelete.id;
+    const name = serviceProviderToDelete.name;
 
-    // The server refuses to delete a technician who still has active jobs, so
+    // The server refuses to delete a service provider who still has active jobs, so
     // surface that rather than dropping the row from the table regardless.
     try {
-      await apiRequest(`/super-admin/technicians/${id}`, { method: 'DELETE', auth: true });
+      await apiRequest(`/super-admin/service-providers/${id}`, { method: 'DELETE', auth: true });
     } catch (err) {
       showToast(`Could not delete "${name}": ${err.message}`);
       setShowDeleteConfirm(false);
@@ -185,7 +185,7 @@ const Technicians = () => {
       return;
     }
 
-    setTechnicians(prev => prev.filter(t => t.id !== id));
+    setServiceProviders(prev => prev.filter(t => t.id !== id));
 
     if (selectedTechProfile && selectedTechProfile.id === id) {
       setSelectedTechProfile(null);
@@ -193,18 +193,18 @@ const Technicians = () => {
 
     setShowDeleteConfirm(false);
     setTechToDelete(null);
-    showToast(`Technician "${name}" (${id}) removed permanently.`);
+    showToast(`Service Provider "${name}" (${id}) removed permanently.`);
   };
 
   const handleAddTechSubmit = (e) => {
     e.preventDefault();
     if (!newTech.name) {
-      showToast('Please enter a technician name.');
+      showToast('Please enter a serviceProvider name.');
       return;
     }
 
     const addedTech = {
-      id: `TECH-00${technicians.length + 1}`,
+      id: `TECH-00${serviceProviders.length + 1}`,
       name: newTech.name,
       skill: newTech.skill,
       city: newTech.city,
@@ -215,13 +215,13 @@ const Technicians = () => {
       availability: newTech.availability
     };
 
-    setTechnicians([addedTech, ...technicians]);
+    setServiceProviders([addedTech, ...serviceProviders]);
     setNewTech({ name: '', skill: 'AC & Refrigerator', city: 'Delhi', rating: '5.0', availability: 'Available', status: 'Active' });
     setShowModal(false);
-    showToast(`Technician "${addedTech.name}" onboarded successfully!`);
+    showToast(`Service Provider "${addedTech.name}" onboarded successfully!`);
   };
 
-  const filteredTechs = technicians.filter(t => {
+  const filteredTechs = serviceProviders.filter(t => {
     const matchesSearch = t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           (t.ref || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchesSkill = selectedSkill === 'All Skills' || t.skill === selectedSkill;
@@ -230,19 +230,19 @@ const Technicians = () => {
   });
 
   const renderFullPageProfile = () => {
-    const tech = selectedTechProfile;
-    const email = tech.email || '—';
-    const phone = tech.phone || '—';
-    const joinedDate = tech.appliedDate || '—';
+    const provider = selectedTechProfile;
+    const email = provider.email || '—';
+    const phone = provider.phone || '—';
+    const joinedDate = provider.appliedDate || '—';
     
     // Dynamic or specific activity history
-    const recentActivity = tech.activity || [
-      { id: 1, title: `${tech.skill.split(',')[0] || 'Appliance'} Diagnostic & Repair`, ticket: `#NC-${Math.floor(50000 + Math.random() * 9000)}`, status: 'Completed' },
+    const recentActivity = provider.activity || [
+      { id: 1, title: `${provider.skill.split(',')[0] || 'Appliance'} Diagnostic & Repair`, ticket: `#NC-${Math.floor(50000 + Math.random() * 9000)}`, status: 'Completed' },
       { id: 2, title: `General Maintenance Inspection`, ticket: `#NC-${Math.floor(50000 + Math.random() * 9000)}`, status: 'Completed' },
     ];
 
-    const reviews = tech.reviews || [
-      { id: 1, author: "Rajesh S.", text: `Excellent work by ${tech.name}. Resolved the ${tech.skill.split(',')[0]} issue quickly.`, rating: 5, date: "Recently" },
+    const reviews = provider.reviews || [
+      { id: 1, author: "Rajesh S.", text: `Excellent work by ${provider.name}. Resolved the ${provider.skill.split(',')[0]} issue quickly.`, rating: 5, date: "Recently" },
     ];
     
     return (
@@ -253,16 +253,16 @@ const Technicians = () => {
             onClick={() => setSelectedTechProfile(null)}
             className="flex items-center gap-2 text-sm font-semibold text-[#0D47A1] hover:text-blue-800 transition-colors"
           >
-            <ArrowLeft size={16} /> Back to Technicians
+            <ArrowLeft size={16} /> Back to ServiceProviders
           </button>
           
           <div className="flex gap-2">
-            {tech.status === 'Pending' && (
+            {provider.status === 'Pending' && (
               <>
                 <button 
                   onClick={() => {
-                    handleStatusChange(tech.id, 'Active');
-                    setSelectedTechProfile({ ...tech, status: 'Active' });
+                    handleStatusChange(provider.id, 'Active');
+                    setSelectedTechProfile({ ...provider, status: 'Active' });
                   }}
                   className="bg-green-600 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-green-700 transition-colors flex items-center gap-1.5 shadow-sm"
                 >
@@ -270,8 +270,8 @@ const Technicians = () => {
                 </button>
                 <button 
                   onClick={() => {
-                    handleStatusChange(tech.id, 'Inactive');
-                    setSelectedTechProfile({ ...tech, status: 'Inactive' });
+                    handleStatusChange(provider.id, 'Inactive');
+                    setSelectedTechProfile({ ...provider, status: 'Inactive' });
                   }}
                   className="bg-red-600 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-red-700 transition-colors flex items-center gap-1.5 shadow-sm"
                 >
@@ -280,11 +280,11 @@ const Technicians = () => {
               </>
             )}
 
-            {tech.status === 'Active' && (
+            {provider.status === 'Active' && (
               <button 
                 onClick={() => {
-                  handleStatusChange(tech.id, 'Inactive');
-                  setSelectedTechProfile({ ...tech, status: 'Inactive' });
+                  handleStatusChange(provider.id, 'Inactive');
+                  setSelectedTechProfile({ ...provider, status: 'Inactive' });
                 }}
                 className="bg-red-600 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-red-700 transition-colors flex items-center gap-1.5 shadow-sm"
               >
@@ -292,11 +292,11 @@ const Technicians = () => {
               </button>
             )}
 
-            {tech.status === 'Inactive' && (
+            {provider.status === 'Inactive' && (
               <button 
                 onClick={() => {
-                  handleStatusChange(tech.id, 'Active');
-                  setSelectedTechProfile({ ...tech, status: 'Active' });
+                  handleStatusChange(provider.id, 'Active');
+                  setSelectedTechProfile({ ...provider, status: 'Active' });
                 }}
                 className="bg-green-600 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-green-700 transition-colors flex items-center gap-1.5 shadow-sm"
               >
@@ -306,11 +306,11 @@ const Technicians = () => {
 
             <button 
               onClick={() => {
-                setTechToDelete(tech);
+                setTechToDelete(provider);
                 setShowDeleteConfirm(true);
               }}
               className="bg-red-50 text-red-600 border border-red-200 px-3.5 py-2 rounded-lg text-xs font-semibold hover:bg-red-100 transition-colors flex items-center gap-1.5 shadow-xs"
-              title="Delete Technician"
+              title="Delete Service Provider"
             >
               <Trash2 size={14} /> Delete
             </button>
@@ -325,17 +325,17 @@ const Technicians = () => {
               {/* Left: Avatar + Details */}
               <div className="flex items-center gap-4">
                 <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 flex items-center justify-center text-white font-extrabold text-2xl uppercase flex-shrink-0 shadow-inner">
-                  {tech.name ? tech.name.split(' ').map(n => n[0]).join('') : 'T'}
+                  {provider.name ? provider.name.split(' ').map(n => n[0]).join('') : 'T'}
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h1 className="text-2xl font-bold text-white tracking-tight">{tech.name}</h1>
+                    <h1 className="text-2xl font-bold text-white tracking-tight">{provider.name}</h1>
                     <span className="bg-yellow-400 text-[#0D47A1] text-[10px] font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wider">
                       Partner
                     </span>
                   </div>
                   <p className="text-xs text-blue-100 font-medium mt-1">
-                    ID: <span className="font-bold text-white">{tech.ref}</span> • Verified Nigam Service Partner
+                    ID: <span className="font-bold text-white">{provider.ref}</span> • Verified Nigam Service Partner
                   </p>
                 </div>
               </div>
@@ -343,14 +343,14 @@ const Technicians = () => {
               {/* Right: Status Badges */}
               <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md p-2 rounded-xl border border-white/10">
                 <span className={`px-3 py-1.5 rounded-lg text-xs font-bold ${
-                  tech.status === 'Active' ? 'bg-emerald-500 text-white' :
-                  tech.status === 'Inactive' ? 'bg-rose-500 text-white' :
+                  provider.status === 'Active' ? 'bg-emerald-500 text-white' :
+                  provider.status === 'Inactive' ? 'bg-rose-500 text-white' :
                   'bg-amber-400 text-slate-900'
                 }`}>
-                  Status: {tech.status}
+                  Status: {provider.status}
                 </span>
                 <span className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/20 text-white">
-                  Availability: {tech.availability}
+                  Availability: {provider.availability}
                 </span>
               </div>
 
@@ -358,12 +358,12 @@ const Technicians = () => {
           </div>
           <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-6 text-xs text-slate-600 font-medium">
-              <span>📍 Operating City: <strong className="text-slate-900">{tech.city}</strong></span>
-              <span>⭐ Rating: <strong className="text-slate-900">{tech.rating || '5.0'} / 5.0</strong></span>
-              <span>🛠️ Active Jobs: <strong className="text-slate-900">{tech.activeJobs || 0}</strong></span>
+              <span>📍 Operating City: <strong className="text-slate-900">{provider.city}</strong></span>
+              <span>⭐ Rating: <strong className="text-slate-900">{provider.rating || '5.0'} / 5.0</strong></span>
+              <span>🛠️ Active Jobs: <strong className="text-slate-900">{provider.activeJobs || 0}</strong></span>
             </div>
-            {tech.appliedDate && (
-              <span className="text-[11px] text-slate-400 font-medium">Applied: {tech.appliedDate}</span>
+            {provider.appliedDate && (
+              <span className="text-[11px] text-slate-400 font-medium">Applied: {provider.appliedDate}</span>
             )}
           </div>
         </div>
@@ -386,7 +386,7 @@ const Technicians = () => {
                     </div>
                     <div className="flex items-center gap-3 text-slate-700">
                       <MapPin size={16} className="text-[#64748B] flex-shrink-0" />
-                      <span>{tech.city}, India</span>
+                      <span>{provider.city}, India</span>
                     </div>
                     <div className="flex items-center gap-3 text-slate-700">
                       <CalendarIcon size={16} className="text-[#64748B] flex-shrink-0" />
@@ -399,9 +399,9 @@ const Technicians = () => {
                   <h3 className="text-sm font-bold text-[#1E293B] mb-4">Specialization</h3>
                   <div className="space-y-2">
                     <span className="inline-block bg-blue-50 text-[#0D47A1] text-xs font-semibold px-3 py-1 rounded-full border border-blue-100">
-                      {tech.skill}
+                      {provider.skill}
                     </span>
-                    <p className="text-xs text-[#64748B] mt-2">Certified Nigam Technician authorized to verify, repair and troubleshoot consumer products and appliances.</p>
+                    <p className="text-xs text-[#64748B] mt-2">Certified Nigam Service Provider authorized to verify, repair and troubleshoot consumer products and appliances.</p>
                   </div>
                 </div>
 
@@ -410,29 +410,29 @@ const Technicians = () => {
                   <div className="space-y-3 text-xs">
                     <div className="flex items-center justify-between py-1 border-b border-slate-100">
                       <span className="text-[#64748B] font-medium">Aadhar Card Verification</span>
-                      <span className={`font-semibold flex items-center gap-1 ${tech.status === 'Pending' ? 'text-amber-600' : 'text-green-600'}`}>
-                        <ShieldCheck size={14} /> {tech.status === 'Pending' ? 'Pending Approval' : 'Verified'}
+                      <span className={`font-semibold flex items-center gap-1 ${provider.status === 'Pending' ? 'text-amber-600' : 'text-green-600'}`}>
+                        <ShieldCheck size={14} /> {provider.status === 'Pending' ? 'Pending Approval' : 'Verified'}
                       </span>
                     </div>
 
                     {/* Render Uploaded WebP Aadhar Photos */}
-                    {(tech.aadharFrontUrl || tech.aadharBackUrl) && (
+                    {(provider.aadharFrontUrl || provider.aadharBackUrl) && (
                       <div className="mt-3 space-y-2 pt-2 border-t border-slate-200">
                         <p className="text-[10px] font-bold text-[#0D47A1] uppercase tracking-wider">Uploaded WebP Aadhar Photos (Cloudinary)</p>
                         <div className="grid grid-cols-2 gap-2">
-                          {tech.aadharFrontUrl && (
+                          {provider.aadharFrontUrl && (
                             <div>
                               <p className="text-[9.5px] font-semibold text-slate-500 mb-1">Aadhar Front (.webp)</p>
-                              <a href={tech.aadharFrontUrl} target="_blank" rel="noopener noreferrer">
-                                <img src={tech.aadharFrontUrl} alt="Aadhar Front" className="w-full h-24 object-cover rounded-lg border border-slate-300 hover:opacity-90 shadow-2xs" />
+                              <a href={provider.aadharFrontUrl} target="_blank" rel="noopener noreferrer">
+                                <img src={provider.aadharFrontUrl} alt="Aadhar Front" className="w-full h-24 object-cover rounded-lg border border-slate-300 hover:opacity-90 shadow-2xs" />
                               </a>
                             </div>
                           )}
-                          {tech.aadharBackUrl && (
+                          {provider.aadharBackUrl && (
                             <div>
                               <p className="text-[9.5px] font-semibold text-slate-500 mb-1">Aadhar Back (.webp)</p>
-                              <a href={tech.aadharBackUrl} target="_blank" rel="noopener noreferrer">
-                                <img src={tech.aadharBackUrl} alt="Aadhar Back" className="w-full h-24 object-cover rounded-lg border border-slate-300 hover:opacity-90 shadow-2xs" />
+                              <a href={provider.aadharBackUrl} target="_blank" rel="noopener noreferrer">
+                                <img src={provider.aadharBackUrl} alt="Aadhar Back" className="w-full h-24 object-cover rounded-lg border border-slate-300 hover:opacity-90 shadow-2xs" />
                               </a>
                             </div>
                           )}
@@ -463,21 +463,21 @@ const Technicians = () => {
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                   <div className="bg-white p-4 rounded-xl border border-[#E2E8F0] shadow-sm text-center">
                     <p className="text-xs text-[#64748B] font-medium">Completed Jobs</p>
-                    <p className="text-2xl font-bold text-[#1E293B] mt-1">{tech.completedJobs || 0}</p>
+                    <p className="text-2xl font-bold text-[#1E293B] mt-1">{provider.completedJobs || 0}</p>
                   </div>
                   <div className="bg-white p-4 rounded-xl border border-[#E2E8F0] shadow-sm text-center">
                     <p className="text-xs text-[#64748B] font-medium">Active Jobs</p>
-                    <p className="text-2xl font-bold text-[#1E293B] mt-1">{tech.activeJobs || 0}</p>
+                    <p className="text-2xl font-bold text-[#1E293B] mt-1">{provider.activeJobs || 0}</p>
                   </div>
                   <div className="bg-white p-4 rounded-xl border border-[#E2E8F0] shadow-sm text-center">
                     <p className="text-xs text-[#64748B] font-medium">Avg Rating</p>
                     <p className="text-2xl font-bold text-amber-500 mt-1 flex items-center justify-center gap-1">
-                      <Star size={20} fill="currentColor" /> {tech.rating || '0'}
+                      <Star size={20} fill="currentColor" /> {provider.rating || '0'}
                     </p>
                   </div>
                   <div className="bg-white p-4 rounded-xl border border-[#E2E8F0] shadow-sm text-center">
                     <p className="text-xs text-[#64748B] font-medium">Nigam Trust Score</p>
-                    <p className="text-2xl font-bold text-green-600 mt-1">{tech.trustScore || 0}%</p>
+                    <p className="text-2xl font-bold text-green-600 mt-1">{provider.trustScore || 0}%</p>
                   </div>
                 </div>
 
@@ -489,7 +489,7 @@ const Technicians = () => {
                       <div key={idx} className="flex justify-between items-start pb-3 border-b border-slate-100 last:border-0 last:pb-0">
                         <div>
                           <p className="text-sm font-semibold text-slate-800">{act.title}</p>
-                          <p className="text-xs text-slate-500">{act.ticket} • {tech.city}</p>
+                          <p className="text-xs text-slate-500">{act.ticket} • {provider.city}</p>
                         </div>
                         <span className="bg-green-50 text-green-600 text-xs font-semibold px-2.5 py-0.5 rounded-full">
                           {act.status}
@@ -537,7 +537,7 @@ const Technicians = () => {
       {/* Main Content */}
       <div className="flex-1 ml-64 min-h-screen flex flex-col">
         {/* Topbar */}
-        <Topbar title="Technician Management" />
+        <Topbar title="Service Provider Management" />
 
         {/* Body */}
         {selectedTechProfile ? (
@@ -547,12 +547,12 @@ const Technicians = () => {
           
           {/* Header Actions */}
           <div className="flex justify-between items-center">
-            <h2 className="text-lg font-bold text-[#1E293B]">Technicians</h2>
+            <h2 className="text-lg font-bold text-[#1E293B]">ServiceProviders</h2>
             <button 
               onClick={() => setShowModal(true)}
               className="bg-[#0D47A1] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-sm"
             >
-              <Plus size={16} /> Add Technician
+              <Plus size={16} /> Add Service Provider
             </button>
           </div>
 
@@ -618,7 +618,7 @@ const Technicians = () => {
               <table className="w-full text-sm text-left">
                 <thead className="bg-[#F8FAFC] text-[#64748B] text-xs uppercase">
                   <tr>
-                    <th className="px-6 py-4">Technician</th>
+                    <th className="px-6 py-4">Service Provider</th>
                     <th className="px-6 py-4">Skill</th>
                     <th className="px-6 py-4">City</th>
                     <th className="px-6 py-4">Rating</th>
@@ -629,74 +629,74 @@ const Technicians = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E2E8F0]">
-                  {filteredTechs.map((tech) => (
-                    <tr key={tech.id} className="hover:bg-[#F8FAFC] transition-colors">
+                  {filteredTechs.map((provider) => (
+                    <tr key={provider.id} className="hover:bg-[#F8FAFC] transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 bg-[#EEF4FF] rounded-full flex items-center justify-center text-[#0D47A1] font-bold">
-                            {tech.name.split(' ').map(n => n[0]).join('')}
+                            {provider.name.split(' ').map(n => n[0]).join('')}
                           </div>
                           <div>
-                            <p className="text-[#1E293B] font-medium">{tech.name}</p>
-                            <p className="text-[#64748B] text-xs">{tech.ref}</p>
+                            <p className="text-[#1E293B] font-medium">{provider.name}</p>
+                            <p className="text-[#64748B] text-xs">{provider.ref}</p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-[#1E293B]">{tech.skill}</td>
+                      <td className="px-6 py-4 text-[#1E293B]">{provider.skill}</td>
                       <td className="px-6 py-4 text-[#64748B]">
                         <div className="flex items-center gap-1">
-                          <MapPin size={14} /> {tech.city}
+                          <MapPin size={14} /> {provider.city}
                         </div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-1 text-amber-500 font-medium">
-                          <Star size={14} fill="currentColor" /> {tech.rating}
+                          <Star size={14} fill="currentColor" /> {provider.rating}
                         </div>
                       </td>
                       <td className="px-6 py-4">
                         <div>
-                          <span className="text-[#1E293B] font-medium">{tech.activeJobs}</span>
-                          <span className="text-[#64748B]"> / {tech.completedJobs}</span>
+                          <span className="text-[#1E293B] font-medium">{provider.activeJobs}</span>
+                          <span className="text-[#64748B]"> / {provider.completedJobs}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4">
                         <span className={`text-xs font-medium ${
-                          tech.availability === 'Available' ? 'text-green-600' :
-                          tech.availability === 'Busy' ? 'text-yellow-600' : 'text-gray-500'
+                          provider.availability === 'Available' ? 'text-green-600' :
+                          provider.availability === 'Busy' ? 'text-yellow-600' : 'text-gray-500'
                         }`}>
-                          {tech.availability}
+                          {provider.availability}
                         </span>
                       </td>
                       <td className="px-6 py-4">
                         <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
-                          tech.status === 'Active' ? 'bg-green-50 text-green-600' :
-                          tech.status === 'Inactive' ? 'bg-red-50 text-red-600' :
+                          provider.status === 'Active' ? 'bg-green-50 text-green-600' :
+                          provider.status === 'Inactive' ? 'bg-red-50 text-red-600' :
                           'bg-yellow-50 text-yellow-600'
                         }`}>
-                          {tech.status}
+                          {provider.status}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-center">
                         <div className="flex gap-2 justify-center">
                           <button 
-                            onClick={() => setSelectedTechProfile(tech)}
+                            onClick={() => setSelectedTechProfile(provider)}
                             className="p-1.5 text-[#64748B] hover:text-[#0D47A1] hover:bg-[#EEF4FF] rounded" 
                             title="View Profile"
                           >
                             <Eye size={16} />
                           </button>
                           
-                          {tech.status === 'Pending' && (
+                          {provider.status === 'Pending' && (
                             <>
                               <button 
-                                onClick={() => handleStatusChange(tech.id, 'Active')}
+                                onClick={() => handleStatusChange(provider.id, 'Active')}
                                 className="p-1.5 text-green-600 hover:bg-green-50 rounded" 
                                 title="Approve"
                               >
                                 <CheckCircle size={16} />
                               </button>
                               <button 
-                                onClick={() => handleStatusChange(tech.id, 'Inactive')}
+                                onClick={() => handleStatusChange(provider.id, 'Inactive')}
                                 className="p-1.5 text-red-600 hover:bg-red-50 rounded" 
                                 title="Reject"
                               >
@@ -705,9 +705,9 @@ const Technicians = () => {
                             </>
                           )}
 
-                          {tech.status === 'Active' && (
+                          {provider.status === 'Active' && (
                             <button 
-                              onClick={() => handleStatusChange(tech.id, 'Inactive')}
+                              onClick={() => handleStatusChange(provider.id, 'Inactive')}
                               className="p-1.5 text-red-600 hover:bg-red-50 rounded" 
                               title="Suspend"
                             >
@@ -715,9 +715,9 @@ const Technicians = () => {
                             </button>
                           )}
 
-                          {tech.status === 'Inactive' && (
+                          {provider.status === 'Inactive' && (
                             <button 
-                              onClick={() => handleStatusChange(tech.id, 'Active')}
+                              onClick={() => handleStatusChange(provider.id, 'Active')}
                               className="p-1.5 text-green-600 hover:bg-green-50 rounded" 
                               title="Activate"
                             >
@@ -727,11 +727,11 @@ const Technicians = () => {
 
                           <button
                             onClick={() => {
-                              setTechToDelete(tech);
+                              setTechToDelete(provider);
                               setShowDeleteConfirm(true);
                             }}
                             className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
-                            title="Delete Technician"
+                            title="Delete Service Provider"
                           >
                             <Trash2 size={16} />
                           </button>
@@ -747,7 +747,7 @@ const Technicians = () => {
             {filteredTechs.length === 0 && (
               <div className="text-center py-12 bg-white">
                 <UsersIcon size={48} className="text-[#64748B] mx-auto mb-4 text-slate-400" />
-                <h3 className="text-lg font-bold text-[#1E293B] mb-1">No Technicians Found</h3>
+                <h3 className="text-lg font-bold text-[#1E293B] mb-1">No ServiceProviders Found</h3>
                 <p className="text-sm text-[#64748B]">Try adjusting your search or filters.</p>
               </div>
             )}
@@ -757,12 +757,12 @@ const Technicians = () => {
 
       </div>
 
-      {/* Add Technician Modal */}
+      {/* Add ServiceProvider Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-30 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="p-6 border-b border-[#E2E8F0] flex justify-between items-center">
-              <h2 className="text-lg font-bold text-[#1E293B]">Onboard Technician</h2>
+              <h2 className="text-lg font-bold text-[#1E293B]">Onboard Service Provider</h2>
               <button 
                 onClick={() => setShowModal(false)}
                 className="text-[#64748B] hover:text-[#1E293B] p-2 hover:bg-[#F8FAFC] rounded-full"
@@ -863,7 +863,7 @@ const Technicians = () => {
       )}
 
       {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && techToDelete && (
+      {showDeleteConfirm && serviceProviderToDelete && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 flex flex-col items-center text-center">
             
@@ -871,9 +871,9 @@ const Technicians = () => {
               <Trash2 size={28} />
             </div>
 
-            <h3 className="text-lg font-bold text-slate-900">Delete Technician?</h3>
+            <h3 className="text-lg font-bold text-slate-900">Delete Service Provider?</h3>
             <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-              Are you sure you want to permanently delete <strong className="text-slate-800">{techToDelete.name}</strong> (<span className="text-[#0D47A1] font-semibold">{techToDelete.id}</span>)?
+              Are you sure you want to permanently delete <strong className="text-slate-800">{serviceProviderToDelete.name}</strong> (<span className="text-[#0D47A1] font-semibold">{serviceProviderToDelete.id}</span>)?
               This action cannot be undone.
             </p>
 
@@ -890,7 +890,7 @@ const Technicians = () => {
               </button>
               <button
                 type="button"
-                onClick={confirmDeleteTechnician}
+                onClick={confirmDeleteServiceProvider}
                 className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-2xl text-xs transition-all shadow-md shadow-red-500/20"
               >
                 Delete Permanently
@@ -918,4 +918,4 @@ const Technicians = () => {
   );
 };
 
-export default Technicians;
+export default ServiceProviders;

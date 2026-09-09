@@ -5,7 +5,7 @@ import { ArrowLeft } from 'lucide-react';
 const UPDATES = [
   {
     id: 'assigned',
-    label: 'Technician Assigned',
+    label: 'Service Provider Assigned',
     desc: 'Rohit Kumar has been assigned to your request.',
     date: '25 May 2024, 03:15 PM',
     done: true,
@@ -13,14 +13,14 @@ const UPDATES = [
   {
     id: 'onway',
     label: 'On the Way',
-    desc: 'Technician is on the way to your location.',
+    desc: 'Service Provider is on the way to your location.',
     date: '25 May 2024, 04:05 PM',
     done: true,
   },
   {
     id: 'started',
     label: 'Service Started',
-    desc: 'Technician has started working on your product.',
+    desc: 'Service Provider has started working on your product.',
     date: '25 May 2024, 04:20 PM',
     done: true,
   },

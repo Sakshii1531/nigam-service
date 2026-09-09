@@ -5,8 +5,8 @@ import {
   MapPin, Check, Plus, AlertTriangle, ShieldCheck, ChevronRight, ChevronLeft, X,
   Package, ShoppingCart, Layers, Cpu, Wind, Droplets, Zap, Shield, Flame, Trash2, ArrowRight
 } from 'lucide-react';
-import TechBottomNav from '../../components/TechBottomNav';
-import { useTech } from '../../context/TechContext';
+import ServiceProviderBottomNav from '../../components/ServiceProviderBottomNav';
+import { useTech } from '../../context/ServiceProviderContext';
 import { useNotifications } from '../../context/NotificationContext';
 
 const RaisePartRequest = () => {
@@ -244,17 +244,17 @@ const RaisePartRequest = () => {
             <div className="flex items-center justify-between">
               <button 
                 type="button"
-                onClick={() => navigate('/technician/dashboard')} 
+                onClick={() => navigate('/service-provider/dashboard')} 
                 className="p-1.5 hover:bg-white/10 rounded-full text-white transition-colors cursor-pointer"
               >
                 <ChevronLeft className="h-6 w-6 text-white stroke-[2.5]" />
               </button>
               <div className="text-center flex-1 pr-2">
                 <h1 className="text-base font-extrabold text-white tracking-wide">Parts & Inventory</h1>
-                <span className="text-[11px] text-white/80 font-normal">NCC Technician Service Hub</span>
+                <span className="text-[11px] text-white/80 font-normal">NCC Service Provider Service Hub</span>
               </div>
               <button 
-                onClick={() => navigate('/technician/notifications')}
+                onClick={() => navigate('/service-provider/notifications')}
                 className="p-2 hover:bg-white/10 rounded-full transition-colors relative"
               >
                 <Bell className="h-5 w-5 text-white" />
@@ -287,7 +287,7 @@ const RaisePartRequest = () => {
               <div className="flex items-center gap-3.5">
                 <button
                   type="button"
-                  onClick={() => navigate('/technician/dashboard')}
+                  onClick={() => navigate('/service-provider/dashboard')}
                   className="p-2 bg-slate-100 hover:bg-slate-200 rounded-2xl text-[#052355] transition-colors cursor-pointer"
                   title="Back to Dashboard"
                 >
@@ -295,7 +295,7 @@ const RaisePartRequest = () => {
                 </button>
                 <div>
                   <h1 className="text-xl font-black text-[#052355] tracking-tight">Parts & Inventory</h1>
-                  <p className="text-xs text-slate-500 font-medium mt-0.5">NCC Technician Service Hub — Order spare parts and track warranty claims</p>
+                  <p className="text-xs text-slate-500 font-medium mt-0.5">NCC Service Provider Service Hub — Order spare parts and track warranty claims</p>
                 </div>
               </div>
 
@@ -941,7 +941,7 @@ const RaisePartRequest = () => {
       )}
 
       {/* Bottom Navigation */}
-      <TechBottomNav activeTab="requests" />
+      <ServiceProviderBottomNav activeTab="requests" />
 
     </div>
   );

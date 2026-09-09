@@ -173,10 +173,10 @@ const Dashboard = () => {
     { label: 'Cancelled', count: metrics?.requests?.cancelled || 0, stroke: '#EF4444', routeVal: 'cancelled' },
   ]);
 
-  const techSegments = buildSegments([
-    { label: 'Online', count: metrics?.technicians?.Available || 0, stroke: '#10B981', statusKey: 'online' },
-    { label: 'On Job', count: metrics?.technicians?.Busy || 0, stroke: '#0D47A1', statusKey: 'on-job' },
-    { label: 'Offline', count: metrics?.technicians?.Offline || 0, stroke: '#94A3B8', statusKey: 'offline' },
+  const serviceProviderSegments = buildSegments([
+    { label: 'Online', count: metrics?.serviceProviders?.Available || 0, stroke: '#10B981', statusKey: 'online' },
+    { label: 'On Job', count: metrics?.serviceProviders?.Busy || 0, stroke: '#0D47A1', statusKey: 'on-job' },
+    { label: 'Offline', count: metrics?.serviceProviders?.Offline || 0, stroke: '#94A3B8', statusKey: 'offline' },
   ]);
 
   const showToast = (message) => {
@@ -205,7 +205,7 @@ const Dashboard = () => {
   const quickActions = [
     { label: 'Add Service Partner', icon: <Building size={18} />, color: 'text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-100', path: '/super-admin/service-partners' },
     { label: 'Add ASM', icon: <Users size={18} />, color: 'text-green-600 bg-green-50 hover:bg-green-100 border border-green-100', path: '/super-admin/asm' },
-    { label: 'Add Technician', icon: <UserCheck size={18} />, color: 'text-purple-600 bg-purple-50 hover:bg-purple-100 border border-purple-100', path: '/super-admin/technicians?add=true' },
+    { label: 'Add Service Provider', icon: <UserCheck size={18} />, color: 'text-purple-600 bg-purple-50 hover:bg-purple-100 border border-purple-100', path: '/super-admin/service-providers?add=true' },
     { label: 'Create AMC Plan', icon: <FileText size={18} />, color: 'text-orange-600 bg-orange-50 hover:bg-orange-100 border border-orange-100', path: '/super-admin/amc' },
     { label: 'Add Product', icon: <Package size={18} />, color: 'text-teal-600 bg-teal-50 hover:bg-teal-100 border border-teal-100', path: '/super-admin/products' },
     { label: 'Add Brand', icon: <Shield size={18} />, color: 'text-pink-600 bg-pink-50 hover:bg-pink-100 border border-pink-100', path: '/super-admin/brands?add=true' },
@@ -552,7 +552,7 @@ const Dashboard = () => {
 
           </div>
 
-          {/* Third Row: Lists / Ranking & Technician Status */}
+          {/* Third Row: Lists / Ranking & ServiceProvider Status */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             
             {/* Top Cities by Requests */}
@@ -683,10 +683,10 @@ const Dashboard = () => {
               </button>
             </div>
 
-            {/* Live Technician Status (Circular Ring Chart) */}
+            {/* Live ServiceProvider Status (Circular Ring Chart) */}
             <div className="bg-white p-5 rounded-2xl border border-[#E2E8F0] flex flex-col justify-between">
               <div className="flex justify-between items-center mb-3">
-                <h3 className="font-extrabold text-xs text-[#1E293B] tracking-wider uppercase">Live Technician Status</h3>
+                <h3 className="font-extrabold text-xs text-[#1E293B] tracking-wider uppercase">Live Service Provider Status</h3>
               </div>
 
               <div className="flex-1 flex flex-col items-center justify-center space-y-4">
@@ -694,7 +694,7 @@ const Dashboard = () => {
                 <div className="relative w-28 h-28 flex items-center justify-center">
                   <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
                     <circle cx="50" cy="50" r="40" fill="transparent" stroke="#F1F5F9" strokeWidth="8"/>
-                    {techSegments.map((segment, i) => (
+                    {serviceProviderSegments.map((segment, i) => (
                       <circle 
                         key={i}
                         cx="50" 
@@ -709,25 +709,25 @@ const Dashboard = () => {
                         onMouseEnter={() => setActiveTechSegment(i)}
                         onMouseLeave={() => setActiveTechSegment(null)}
                         onClick={() => {
-                          showToast(`Viewing all ${segment.label} technicians`);
-                          navigate(`/super-admin/technicians?status=${segment.statusKey}`);
+                          showToast(`Viewing all ${segment.label} serviceProviders`);
+                          navigate(`/super-admin/service-providers?status=${segment.statusKey}`);
                         }}
                       />
                     ))}
                   </svg>
                   <div className="absolute flex flex-col items-center leading-none text-center">
                     <span className="text-base font-extrabold text-[#1E293B] transition-all">
-                      {activeTechSegment !== null ? techSegments[activeTechSegment].value : '1,284'}
+                      {activeTechSegment !== null ? serviceProviderSegments[activeTechSegment].value : '1,284'}
                     </span>
                     <span className="text-[8px] text-slate-400 font-bold uppercase mt-1 transition-all">
-                      {activeTechSegment !== null ? techSegments[activeTechSegment].label : 'Total Techs'}
+                      {activeTechSegment !== null ? serviceProviderSegments[activeTechSegment].label : 'Total Techs'}
                     </span>
                   </div>
                 </div>
 
                 {/* Legend list below */}
                 <div className="w-full space-y-1.5 px-2">
-                  {techSegments.map((segment, i) => (
+                  {serviceProviderSegments.map((segment, i) => (
                     <div 
                       key={i} 
                       className={`flex items-center justify-between text-[11px] font-bold p-1 rounded-lg transition-all cursor-pointer ${
@@ -736,8 +736,8 @@ const Dashboard = () => {
                       onMouseEnter={() => setActiveTechSegment(i)}
                       onMouseLeave={() => setActiveTechSegment(null)}
                       onClick={() => {
-                        showToast(`Viewing all ${segment.label} technicians`);
-                        navigate(`/super-admin/technicians?status=${segment.statusKey}`);
+                        showToast(`Viewing all ${segment.label} serviceProviders`);
+                        navigate(`/super-admin/service-providers?status=${segment.statusKey}`);
                       }}
                     >
                       <span className="flex items-center gap-1.5">
@@ -773,7 +773,7 @@ const Dashboard = () => {
               <div className="space-y-4 flex-1 overflow-y-auto pr-1">
                 {[
                   { text: 'New service request #SR-125853 received from Amit Sharma', city: 'Lucknow', time: '2 mins ago', color: 'bg-blue-50 text-[#0D47A1]' },
-                  { text: 'Technician Rahul Kumar started job #SR-125589', city: 'Kanpur', time: '5 mins ago', color: 'bg-green-50 text-green-600' },
+                  { text: 'Service Provider Rahul Kumar started job #SR-125589', city: 'Kanpur', time: '5 mins ago', color: 'bg-green-50 text-green-600' },
                   { text: 'AMC plan sold: Gold Plan to Neha Gupta', city: 'Kanpur', time: '10 mins ago', color: 'bg-yellow-50 text-yellow-600' },
                   { text: 'NCC Shield claim #CLM-8893 approved for LG Refrigerator', city: 'Delhi', time: '15 mins ago', color: 'bg-purple-50 text-purple-600' },
                   { text: 'Spare part request #SPR-4458 approved and dispatched', city: 'Varanasi', time: '20 mins ago', color: 'bg-emerald-50 text-emerald-600' },
@@ -806,7 +806,7 @@ const Dashboard = () => {
               <div className="space-y-3.5 flex-1 overflow-y-auto pr-1">
                 {[
                   { id: '#ESC-5554', desc: 'AC not cooling - Delay in service', city: 'Lucknow', time: '25 mins ago' },
-                  { id: '#ESC-5553', desc: 'Technician behavior complaint', city: 'Kanpur', time: '35 mins ago' },
+                  { id: '#ESC-5553', desc: 'Service Provider behavior complaint', city: 'Kanpur', time: '35 mins ago' },
                   { id: '#ESC-5552', desc: 'Warranty claim rejected by brand', city: 'Delhi', time: '1 hr ago' },
                   { id: '#ESC-5551', desc: 'Spare part not available', city: 'Gorakhpur', time: '1 hr ago' },
                 ].map((esc, idx) => (

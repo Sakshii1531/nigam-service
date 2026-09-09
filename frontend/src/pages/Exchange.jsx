@@ -409,7 +409,7 @@ const Exchange = () => {
               <div className="flex flex-col gap-3.5">
                 {[
                   { step: '1', title: 'Schedule pick up', desc: 'Choose a convenient date & time for pickup.' },
-                  { step: '2', title: 'Product inspection', desc: 'Our technician will inspect the working condition at your doorstep.' },
+                  { step: '2', title: 'Product inspection', desc: 'Our serviceProvider will inspect the working condition at your doorstep.' },
                   { step: '3', title: 'Instant discount on new product', desc: 'Exchange discount is applied directly to your purchase invoice.' }
                 ].map((w, idx) => (
                   <div key={idx} className="flex gap-3">

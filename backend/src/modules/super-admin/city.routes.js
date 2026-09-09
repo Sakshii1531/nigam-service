@@ -8,7 +8,7 @@ import { createCitySchema, updateCitySchema, idParamSchema } from './city.valida
 
 export const cityRouter = Router();
 
-// ── Public route: list active cities (used by technician registration) ──────
+// ── Public route: list active cities (used by service provider registration) ──────
 cityRouter.get('/public', async (req, res, next) => {
   try {
     ok(res, await cityService.listActiveCities());

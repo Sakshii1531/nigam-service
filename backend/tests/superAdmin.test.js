@@ -9,9 +9,8 @@ import { Role } from '../src/modules/auth/role.model.js';
 import { Permission } from '../src/modules/auth/permission.model.js';
 import { Brand } from '../src/modules/super-admin/brand.model.js';
 import { City } from '../src/modules/super-admin/city.model.js';
-import { ServicePartner } from '../src/modules/super-admin/servicePartner.model.js';
 import { ASM } from '../src/modules/super-admin/asm.model.js';
-import { Technician } from '../src/modules/technician/technician.model.js';
+import { ServiceProvider } from '../src/modules/service-provider/serviceProvider.model.js';
 import { ExtendedWarrantyOrder } from '../src/modules/warranty-amc-exchange/extendedWarrantyOrder.model.js';
 import { AssignmentWeighting } from '../src/modules/super-admin/assignmentWeighting.model.js';
 import { PlatformSettings } from '../src/modules/super-admin/platformSettings.model.js';
@@ -21,11 +20,11 @@ import { AuditLog } from '../src/modules/super-admin/auditLog.model.js';
 import { Revenue } from '../src/modules/super-admin/revenue.model.js';
 import { HomeTile } from '../src/modules/super-admin/homeTile.model.js';
 import { ServicePageConfig } from '../src/modules/super-admin/servicePageConfig.model.js';
-import { Announcement } from '../src/modules/technician/announcement.model.js';
+import { Announcement } from '../src/modules/service-provider/announcement.model.js';
 import { ReferralCampaign } from '../src/modules/rewards-loyalty/referralCampaign.model.js';
 import { AMCSubscription } from '../src/modules/warranty-amc-exchange/amcSubscription.model.js';
 import { AMCPlan } from '../src/modules/warranty-amc-exchange/amcPlan.model.js';
-import { TechnicianSkill } from '../src/modules/technician/technicianSkill.model.js';
+import { ServiceProviderSkill } from '../src/modules/service-provider/serviceProviderSkill.model.js';
 import { Banner } from '../src/modules/super-admin/banner.model.js';
 import { Story } from '../src/modules/super-admin/story.model.js';
 import { Video } from '../src/modules/super-admin/video.model.js';
@@ -87,9 +86,8 @@ beforeEach(async () => {
     Permission.deleteMany({}),
     Brand.deleteMany({}),
     City.deleteMany({}),
-    ServicePartner.deleteMany({}),
     ASM.deleteMany({}),
-    Technician.deleteMany({}),
+    ServiceProvider.deleteMany({}),
     ExtendedWarrantyOrder.deleteMany({}),
     AssignmentWeighting.deleteMany({}),
     PlatformSettings.deleteMany({}),
@@ -103,7 +101,7 @@ beforeEach(async () => {
     ReferralCampaign.deleteMany({}),
     AMCSubscription.deleteMany({}),
     AMCPlan.deleteMany({}),
-    TechnicianSkill.deleteMany({}),
+    ServiceProviderSkill.deleteMany({}),
     Banner.deleteMany({}),
     Story.deleteMany({}),
     Video.deleteMany({}),
@@ -157,8 +155,8 @@ describe('Brand', () => {
   });
 });
 
-describe('City, ServicePartner, ASM', () => {
-  it('creates a city, a service partner in it, and an ASM overseeing that partner', async () => {
+describe('City, ASM', () => {
+  it('creates a city and an ASM assigned to it', async () => {
     const { token } = await seedSuperAdmin();
 
     const cityRes = await request(app)
@@ -173,77 +171,19 @@ describe('City, ServicePartner, ASM', () => {
       .send({ name: 'Lucknow', state: 'UP' })
       .expect(409);
 
-    const partnerRes = await request(app)
-      .post('/api/v1/super-admin/service-partners')
-      .set('Authorization', `Bearer ${token}`)
-      .send({ name: 'NCC Lucknow', city: cityRes.body.data.id })
-      .expect(201);
-
-    const getPartnerRes = await request(app)
-      .get(`/api/v1/super-admin/service-partners/${partnerRes.body.data.id}`)
-      .set('Authorization', `Bearer ${token}`)
-      .expect(200);
-    expect(getPartnerRes.body.data.technicianCount).toBe(0);
-
     const asmRes = await request(app)
       .post('/api/v1/super-admin/asms')
       .set('Authorization', `Bearer ${token}`)
-      .send({ name: 'Vikas Kumar', city: cityRes.body.data.id })
+      .send({ name: 'Vikas Kumar', city: cityRes.body.data.id, password: 'password123' })
       .expect(201);
+    expect(asmRes.body.data.name).toBe('Vikas Kumar');
 
-    const addPartnerRes = await request(app)
-      .post(`/api/v1/super-admin/asms/${asmRes.body.data.id}/partners`)
-      .set('Authorization', `Bearer ${token}`)
-      .send({ partnerId: partnerRes.body.data.id })
-      .expect(200);
-    expect(addPartnerRes.body.data.partners).toContain(partnerRes.body.data.id);
-
-    const removePartnerRes = await request(app)
-      .delete(`/api/v1/super-admin/asms/${asmRes.body.data.id}/partners/${partnerRes.body.data.id}`)
-      .set('Authorization', `Bearer ${token}`)
-      .expect(200);
-    expect(removePartnerRes.body.data.partners).not.toContain(partnerRes.body.data.id);
-  });
-
-  it('reports each ASM\'s region name and live open-job count across their partners', async () => {
-    const { token } = await seedSuperAdmin();
-    const city = await City.create({ name: 'Kanpur', state: 'UP' });
-    const partner = await ServicePartner.create({ name: 'NCC Kanpur', city: city._id });
-    const otherPartner = await ServicePartner.create({ name: 'NCC Elsewhere', city: city._id });
-
-    const customer = await User.create({ role: ROLES.CUSTOMER, phone: '9700000010', name: 'C', passwordHash: await hashPassword('x') });
-    const techUser = await User.create({ role: ROLES.TECHNICIAN, phone: '9700000011', name: 'T', passwordHash: await hashPassword('x') });
-    const tech = await Technician.create({ user: techUser._id, name: 'T', servicePartner: partner._id, status: 'Active' });
-
-    // Two open, one Closed and one Cancelled — only the open pair should count.
-    await ServiceRequest.create({ user: customer._id, technician: tech._id, category: 'AC', status: 'Assigned', timeline: [] });
-    await ServiceRequest.create({ user: customer._id, technician: tech._id, category: 'AC', status: 'Diagnosis Done', timeline: [] });
-    await ServiceRequest.create({ user: customer._id, technician: tech._id, category: 'AC', status: 'Closed', timeline: [] });
-    await ServiceRequest.create({ user: customer._id, technician: tech._id, category: 'AC', status: 'Cancelled', timeline: [] });
-
-    const asm = await ASM.create({ name: 'Amit Singh', city: city._id, partners: [partner._id, otherPartner._id] });
-
-    const res = await request(app)
+    const listRes = await request(app)
       .get('/api/v1/super-admin/asms')
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
-
-    const row = res.body.data.find((a) => a.id === asm.id);
-    expect(row.city.name).toBe('Kanpur');
-    expect(row.activeJobs).toBe(2);
-    expect(row.partners).toHaveLength(2);
-  });
-
-  it('reports zero open jobs for an ASM with no partners', async () => {
-    const { token } = await seedSuperAdmin();
-    const city = await City.create({ name: 'Patna', state: 'BR' });
-    await ASM.create({ name: 'Solo', city: city._id, partners: [] });
-
-    const res = await request(app)
-      .get('/api/v1/super-admin/asms')
-      .set('Authorization', `Bearer ${token}`)
-      .expect(200);
-    expect(res.body.data[0].activeJobs).toBe(0);
+    const row = listRes.body.data.find((a) => a.id === asmRes.body.data.id);
+    expect(row.city.name).toBe('Lucknow');
   });
 });
 
@@ -439,12 +379,12 @@ describe('CMS — public reads, admin-gated writes', () => {
   it('sets and reads an app setting as a flat key/value map', async () => {
     const { token } = await seedSuperAdmin();
     await request(app)
-      .put('/api/v1/cms/app-settings/technician')
+      .put('/api/v1/cms/app-settings/serviceProvider')
       .set('Authorization', `Bearer ${token}`)
       .send({ key: 'autoAssign', value: true })
       .expect(200);
 
-    const getRes = await request(app).get('/api/v1/cms/app-settings/technician').expect(200);
+    const getRes = await request(app).get('/api/v1/cms/app-settings/serviceProvider').expect(200);
     expect(getRes.body.data).toEqual({ autoAssign: true });
   });
 });
@@ -666,11 +606,11 @@ describe('platform-wide RBAC', () => {
 
   it('lists/filters users across all roles without ever leaking passwordHash, and can suspend one', async () => {
     const { token } = await seedSuperAdmin();
-    await User.create({ role: ROLES.TECHNICIAN, phone: '9700000003', name: 'Tech', passwordHash: await hashPassword('x') });
+    await User.create({ role: ROLES.SERVICE_PROVIDER, phone: '9700000003', name: 'Tech', passwordHash: await hashPassword('x') });
 
     const listRes = await request(app)
       .get('/api/v1/super-admin/users')
-      .query({ role: ROLES.TECHNICIAN })
+      .query({ role: ROLES.SERVICE_PROVIDER })
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
     expect(listRes.body.data).toHaveLength(1);
@@ -794,14 +734,14 @@ describe('platform analytics', () => {
     expect(res.body.data.openEscalations).toBe(1);
   });
 
-  it('splits reports by city via the assigned technician, and reports what it excluded', async () => {
+  it('splits reports by city via the assigned serviceProvider, and reports what it excluded', async () => {
     const { token } = await seedSuperAdmin();
     const city = await City.create({ name: 'Chennai', state: 'TN' });
     const customer = await User.create({ role: ROLES.CUSTOMER, phone: '9700000202', name: 'C', passwordHash: await hashPassword('x') });
-    const techUser = await User.create({ role: ROLES.TECHNICIAN, phone: '9700000203', name: 'T', passwordHash: await hashPassword('x') });
-    const tech = await Technician.create({ user: techUser._id, name: 'T', city: city._id, status: 'Active' });
+    const serviceProviderUser = await User.create({ role: ROLES.SERVICE_PROVIDER, phone: '9700000203', name: 'T', passwordHash: await hashPassword('x') });
+    const provider = await ServiceProvider.create({ user: serviceProviderUser._id, name: 'T', city: city._id, status: 'Active' });
 
-    await ServiceRequest.create({ user: customer._id, technician: tech._id, category: 'AC', status: 'New', timeline: [] });
+    await ServiceRequest.create({ user: customer._id, serviceProvider: provider._id, category: 'AC', status: 'New', timeline: [] });
     // Unassigned requests have no city and must not silently vanish from the totals.
     await ServiceRequest.create({ user: customer._id, category: 'TV', status: 'New', timeline: [] });
 
@@ -811,7 +751,7 @@ describe('platform analytics', () => {
       .expect(200);
 
     expect(res.body.data.requestsByCity).toEqual([{ label: 'Chennai', count: 1 }]);
-    expect(res.body.data.requestsWithoutTechnician).toBe(1);
+    expect(res.body.data.requestsWithoutServiceProvider).toBe(1);
     expect(res.body.data.requestsByCategory).toEqual(
       expect.arrayContaining([{ label: 'AC', count: 1 }, { label: 'TV', count: 1 }]),
     );
@@ -937,7 +877,7 @@ describe('CMS service page configs', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({
         tagline: 'Cool Again Today',
-        subtitle: 'Certified AC Technicians',
+        subtitle: 'Certified AC ServiceProviders',
         subServices: 'Book a consultation, Gas Refilling',
         catalog: [
           {
@@ -1000,8 +940,8 @@ describe('CMS service page configs', () => {
   });
 });
 
-describe('CMS technician app content — announcements and skill catalogue', () => {
-  it('broadcasts an announcement that the technician app then reads', async () => {
+describe('CMS serviceProvider app content — announcements and skill catalogue', () => {
+  it('broadcasts an announcement that the serviceProvider app then reads', async () => {
     const { token } = await seedSuperAdmin();
 
     const created = await request(app)
@@ -1054,10 +994,10 @@ describe('CMS technician app content — announcements and skill catalogue', () 
       .expect(409);
     expect(dup.body.error.message).toMatch(/already exists/);
 
-    expect(await TechnicianSkill.countDocuments()).toBe(1);
+    expect(await ServiceProviderSkill.countDocuments()).toBe(1);
   });
 
-  it('exposes the skill catalogue publicly so the technician profile can offer it', async () => {
+  it('exposes the skill catalogue publicly so the serviceProvider profile can offer it', async () => {
     const { token } = await seedSuperAdmin();
     const created = await request(app)
       .post('/api/v1/cms/skills')
@@ -1076,32 +1016,32 @@ describe('CMS technician app content — announcements and skill catalogue', () 
       .delete(`/api/v1/cms/skills/${created.body.data.id}`)
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
-    expect(await TechnicianSkill.countDocuments()).toBe(0);
+    expect(await ServiceProviderSkill.countDocuments()).toBe(0);
   });
 
-  it('carries banner title/copy and video category through, which the technician console renders', async () => {
+  it('carries banner title/copy and video category through, which the serviceProvider console renders', async () => {
     const { token } = await seedSuperAdmin();
 
     const banner = await request(app)
       .post('/api/v1/cms/banners')
       .set('Authorization', `Bearer ${token}`)
-      .send({ imageUrl: 'https://cdn/x.png', title: 'Safety First Protocol', description: 'Mask & gloves on all jobs.', app: 'technician' })
+      .send({ imageUrl: 'https://cdn/x.png', title: 'Safety First Protocol', description: 'Mask & gloves on all jobs.', app: 'service_provider' })
       .expect(201);
     expect(banner.body.data.title).toBe('Safety First Protocol');
     expect(banner.body.data.description).toBe('Mask & gloves on all jobs.');
 
-    // The technician console filters by app, so a customer banner must not leak in.
+    // The service provider console filters by app, so a customer banner must not leak in.
     await request(app)
       .post('/api/v1/cms/banners')
       .set('Authorization', `Bearer ${token}`)
       .send({ imageUrl: 'https://cdn/customer.png', app: 'customer' })
       .expect(201);
 
-    const techOnly = await request(app)
-      .get('/api/v1/cms/banners/admin?app=technician')
+    const serviceProviderOnly = await request(app)
+      .get('/api/v1/cms/banners/admin?app=service_provider')
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
-    expect(techOnly.body.data).toHaveLength(1);
+    expect(serviceProviderOnly.body.data).toHaveLength(1);
 
     const video = await request(app)
       .post('/api/v1/cms/videos')

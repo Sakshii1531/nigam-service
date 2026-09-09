@@ -38,7 +38,7 @@ const DEFAULT_STORIES = [
       {
         image: geyserImg3,
         caption: 'Back to warm showers in no time',
-        subCaption: 'Our certified technicians get your geyser fixed fast.',
+        subCaption: 'Our certified serviceProviders get your geyser fixed fast.',
       },
     ],
   },
@@ -60,7 +60,7 @@ const DEFAULT_STORIES = [
       {
         image: winterImg3,
         caption: 'Trust the experts. Leave the repairs to us.',
-        subCaption: 'Nigam Care technicians — certified, background-checked, on-time.',
+        subCaption: 'Nigam Care serviceProviders — certified, background-checked, on-time.',
       },
     ],
   },

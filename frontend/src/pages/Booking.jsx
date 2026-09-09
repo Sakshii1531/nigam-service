@@ -572,7 +572,7 @@ const Booking = () => {
               </div>
               <div className="flex flex-col">
                 <span className="text-xs md:text-sm font-black text-slate-900">{preSelectedService} Service Guarantee</span>
-                <span className="text-[10px] md:text-xs text-slate-500 font-semibold mt-0.5">Verified technicians • Genuine parts • 30-day service warranty</span>
+                <span className="text-[10px] md:text-xs text-slate-500 font-semibold mt-0.5">Verified serviceProviders • Genuine parts • 30-day service warranty</span>
               </div>
             </div>
 

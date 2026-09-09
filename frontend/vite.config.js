@@ -57,8 +57,8 @@ export default defineConfig({
               priority: 5,
             },
             {
-              name: 'pages-technician',
-              test: /src[\\/]pages[\\/]technician/,
+              name: 'pages-serviceProvider',
+              test: /src[\\/]pages[\\/]serviceProvider/,
               priority: 5,
             },
             {

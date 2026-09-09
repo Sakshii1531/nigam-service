@@ -2,7 +2,7 @@
 
 > Reverse-engineered from the existing React frontend (`frontend/`) which is a **pure UI mock**: no backend calls exist anywhere (no `fetch`/`axios`), all "persistence" is `localStorage`, in-memory `useState`, or React Router `location.state`. This document exists to give backend development a single source of truth for the data model, workflows, and API surface implied by the UI, so the backend can be built to match what the frontend already expects.
 >
-> Stack of the frontend: React 19 + Vite + React Router v7 + Tailwind v4 + Framer Motion. No state management library beyond two small Context providers (`BookingContext`, `TechContext`) — most pages just use local `useState`, which is a strong signal that **almost everything currently "faked" client-side needs to become a real API call**.
+> Stack of the frontend: React 19 + Vite + React Router v7 + Tailwind v4 + Framer Motion. No state management library beyond two small Context providers (`BookingContext`, `ServiceProviderContext`) — most pages just use local `useState`, which is a strong signal that **almost everything currently "faked" client-side needs to become a real API call**.
 
 ---
 
@@ -13,9 +13,9 @@ Nigam Care is a home-appliance **services marketplace** (Urban-Company/Servify s
 | App | Route prefix | Users |
 |---|---|---|
 | Customer app (mobile-simulated) | `/`, `/home`, `/dashboard`, `/buy`, `/booking`, `/partner-warranty`, ... | End consumers |
-| Technician app | `/technician/*` | Field service technicians |
+| ServiceProvider app | `/serviceProvider/*` | Field service serviceProviders |
 | Brand-admin panel | `/brand-admin/*` | Appliance brand partners (LG, Samsung, Voltas...) managing their warranty ops within the marketplace |
-| Super-admin panel | `/super-admin/*` | Platform operator — manages brands, technicians, cities, pricing, content, finance |
+| Super-admin panel | `/super-admin/*` | Platform operator — manages brands, serviceProviders, cities, pricing, content, finance |
 
 The business spans several overlapping sub-domains that all funnel into one **complaint/service-request** core:
 1. **On-demand repair/install/maintenance booking** (D2C paid service)
@@ -35,7 +35,7 @@ All four apps share the **same auth UI pattern** (`components/auth/OtpVerificati
 - **Login**: phone+password or email+password (toggle), no real validation in UI (demo creds hardcoded per app: e.g. `admin123@gmail.com`/`admin123` for admin panels, `9876543210`/`password123` for customer).
 - **OTP verify**: 6-digit, 30s resend timer. Needed: `POST /auth/otp/send`, `POST /auth/otp/verify`.
 - **Forgot/Reset password**: `POST /auth/forgot-password`, `POST /auth/reset-password`.
-- Suggested roles/tenancy: `customer`, `technician`, `brand_admin` (scoped to a `brand_id`), `super_admin`. Brand-admin further implies **sub-roles** (see §7.6 RBAC).
+- Suggested roles/tenancy: `customer`, `serviceProvider`, `brand_admin` (scoped to a `brand_id`), `super_admin`. Brand-admin further implies **sub-roles** (see §7.6 RBAC).
 - Session: no token handling visible in UI — assume JWT/session cookie is entirely a backend decision; UI just needs `POST /auth/login` → redirect on success.
 
 ---
@@ -91,10 +91,10 @@ Booking {
   address_id, full_name, mobile,
   payment_mode (advance|after), advance_amount, total_price,
   status (Upcoming|Ongoing|Completed|Cancelled),
-  technician_id (assigned on creation, e.g. auto-assigned)
+  serviceProvider_id (assigned on creation, e.g. auto-assigned)
 }
 ```
-`POST /bookings` should return `bookingId` + assigned technician (BookingSuccess.jsx shows this immediately). `GET /bookings?status=`.
+`POST /bookings` should return `bookingId` + assigned serviceProvider (BookingSuccess.jsx shows this immediately). `GET /bookings?status=`.
 
 ### 3.6 Service Request / Complaint / Warranty Ticket (the central entity)
 This is the same underlying entity viewed differently by each app — **brand-admin explicitly encodes dual IDs** (brand ticket no. `SOM-GKP-YYMMDD-######` + platform ID `NCC-YYMMDD-#####`), confirming multi-tenant ticket numbering is required.
@@ -102,7 +102,7 @@ This is the same underlying entity viewed differently by each app — **brand-ad
 ```
 ServiceRequest {
   id, ncc_id, brand_ticket_no,
-  user_id, technician_id, brand_id,
+  user_id, serviceProvider_id, brand_id,
   category, product (owned_appliance_id), model, serial_no,
   complaint_type (Breakdown|No Power|Noise|Performance|Physical Damage|Intermittent),
   description, priority (Critical/High/P1..Low/P3),
@@ -132,8 +132,8 @@ AMCSubscription {
   expiry_date, status (Active|Expiring Soon|Expired),
   visits_total, visits_remaining, visit_number
 }
-AMCVisit { id, amc_subscription_id, visit_number, scheduled_date, technician_id, status, tasks[], notes }
-Claim { id (NC#####), user_or_tech_id, brand, item, claim_type (Brand|Extended Warranty|D2C), amount, status (Pending Approval|Approved|Rejected), reason, date }
+AMCVisit { id, amc_subscription_id, visit_number, scheduled_date, serviceProvider_id, status, tasks[], notes }
+Claim { id (NC#####), user_or_service_provider_id, brand, item, claim_type (Brand|Extended Warranty|D2C), amount, status (Pending Approval|Approved|Rejected), reason, date }
 ```
 
 ### 3.8 Buy / Commerce (three overlapping sub-domains found in UI, should likely be unified into one Product+Order model)
@@ -180,7 +180,7 @@ LoyaltyMilestone { title, threshold, benefit, status }
 ### 3.12 Notifications
 ```
 Notification {
-  id, user_id (or role/target: All|Technicians|Brands), type (assigned|created|payment|completed|jobs|claims|payments|service|tech|dispatch),
+  id, user_id (or role/target: All|ServiceProviders|Brands), type (assigned|created|payment|completed|jobs|claims|payments|service|provider|dispatch),
   title, message, detail, cta_label, cta_route, priority, read, created_at
 }
 NotificationPreference { user_id, channel (push|sms|email), enabled }
@@ -189,25 +189,25 @@ NotificationPreference { user_id, channel (push|sms|email), enabled }
 
 ### 3.13 Chat / Messaging
 ```
-Conversation { id, service_request_id, customer_id, technician_id, status }
-Message { id, conversation_id, sender (customer|technician|ai|agent), text, attachment_url, sent_at, status (sent|delivered|read) }
+Conversation { id, service_request_id, customer_id, serviceProvider_id, status }
+Message { id, conversation_id, sender (customer|serviceProvider|ai|agent), text, attachment_url, sent_at, status (sent|delivered|read) }
 ```
-Needs a **real-time layer** (WebSocket) scoped per booking/ticket, with phone-number masking for customer↔technician calls. Also present: an **AI Assistant chat** (technician-facing, keyword-canned replies today — candidate for real LLM integration later) and a **Technical Support chat** (agent-facing).
+Needs a **real-time layer** (WebSocket) scoped per booking/ticket, with phone-number masking for customer↔serviceProvider calls. Also present: an **AI Assistant chat** (serviceProvider-facing, keyword-canned replies today — candidate for real LLM integration later) and a **Technical Support chat** (agent-facing).
 
 ### 3.14 Reviews
 ```
-Review { id (REV-###), service_request_id, user_id, technician_id, rating (1-5),
-  category_ratings {overall, technician_behavior, service_quality, timeliness},
+Review { id (REV-###), service_request_id, user_id, serviceProvider_id, rating (1-5),
+  category_ratings {overall, serviceProvider_behavior, service_quality, timeliness},
   tags[], photos[], tip, comment, status (Reviewed|Responded|Escalated), brand_response }
 ```
 
 ---
 
-## 4. Technician Domain
+## 4. ServiceProvider Domain
 
-### 4.1 Technician profile
+### 4.1 ServiceProvider profile
 ```
-Technician {
+ServiceProvider {
   id (TECH-###), name, phone, email, city, skills[]/specs[] (AC|Refrigerator|Washing Machine|RO|TV|Chimney),
   rating, active_jobs_count, completed_jobs_count,
   status (Active|Inactive|Pending), availability (Available|Busy|Offline),
@@ -216,12 +216,12 @@ Technician {
   bank_account: { bank_name, account_no, ifsc, holder_name, is_primary },
   upi_accounts[]
 }
-Certification { id, technician_id, name, issuer, date, status }
-Skill { technician_id, name, level (Expert|Advanced|Intermediate), years }
+Certification { id, serviceProvider_id, name, issuer, date, status }
+Skill { serviceProvider_id, name, level (Expert|Advanced|Intermediate), years }
 ```
 
-### 4.2 Job (technician's view of a ServiceRequest/Booking)
-A technician "job" is a `ServiceRequest`/`Booking` joined with type-specific metadata. Frontend `TechContext.jobs` shows the full shape needed per-job:
+### 4.2 Job (serviceProvider's view of a ServiceRequest/Booking)
+A serviceProvider "job" is a `ServiceRequest`/`Booking` joined with type-specific metadata. Frontend `ServiceProviderContext.jobs` shows the full shape needed per-job:
 ```
 Job = ServiceRequest ⨝ {
   type (NCC Paid Service|Brand Warranty|NCC Extended Warranty|AMC Visit),
@@ -245,21 +245,21 @@ JobAdditionalService { job_id, service_name, price, checked }  // e.g. Deep Clea
 JobSparePart { job_id, part_id, name, price, checked, source (recommended_ai|manual) }
 JobProof { job_id, photos_count, videos_count, voice_note, signature_url, geo_location }
 JobRevisit { job_id, expected_date, repair_status (completed|unable|cancelled), reason, otp, signature_url }
-JobBillingEstimate { job_id, service_charge, spare_parts_total, additional_services_total, gst_pct(18), total, technician_earnings }
+JobBillingEstimate { job_id, service_charge, spare_parts_total, additional_services_total, gst_pct(18), total, serviceProvider_earnings }
 ```
 Job-type-specific "overview" views (AMC/Brand-Warranty/Extended-Warranty) always show spare parts at **₹0 "Covered"** and only chargeable "extras" — pricing engine must know which job types are non-billable for parts/labor.
 
-### 4.4 Inventory & Parts (technician-held stock + ordering)
+### 4.4 Inventory & Parts (serviceProvider-held stock + ordering)
 ```
-TechInventoryItem { id, technician_id, name, sku, qty, price, status(In/Low/Out of Stock — derived from qty thresholds) }
-PartOrder { id, technician_id, job_id?, part_id, qty, order_source (NCC Warehouse|Partner Brand|Nearby Store), status }
+ServiceProviderInventoryItem { id, serviceProvider_id, name, sku, qty, price, status(In/Low/Out of Stock — derived from qty thresholds) }
+PartOrder { id, serviceProvider_id, job_id?, part_id, qty, order_source (NCC Warehouse|Partner Brand|Nearby Store), status }
 ```
 `raiseClaim`/FOC claims reuse the `Claim` entity (§3.7).
 
 ### 4.5 Earnings & Payouts
 ```
-EarningsTally { technician_id, today, total, completed_today, completed_total }
-Payout { id, technician_id, job_id, base_amount, platform_fee, net_amount, payout_type (Quick|Invoice), status (Settled|Pending), credited_to, transaction_id, created_at }
+EarningsTally { serviceProvider_id, today, total, completed_today, completed_total }
+Payout { id, serviceProvider_id, job_id, base_amount, platform_fee, net_amount, payout_type (Quick|Invoice), status (Settled|Pending), credited_to, transaction_id, created_at }
 ```
 `POST /payouts/withdraw`.
 
@@ -267,7 +267,7 @@ Payout { id, technician_id, job_id, base_amount, platform_fee, net_amount, payou
 ```
 TrainingGuide { id (GD-###), title, type (PDF|Video), product, downloads, url }
 Course { id (CRS-###), name, modules[], test_required, min_score, status }
-TechBlog { id, title, category, read_time, author, body }
+ServiceProviderBlog { id, title, category, read_time, author, body }
 ```
 
 ### 4.7 Announcements
@@ -279,15 +279,15 @@ Announcement { id, message, severity, scope (all|city|role), created_at }
 
 ## 5. Brand-Admin Domain
 
-Brand-admin is a **tenant-scoped** view (`brand_id`) over the shared `ServiceRequest`, `Claim`, `Technician`, `Invoice` entities, plus brand-owned config:
+Brand-admin is a **tenant-scoped** view (`brand_id`) over the shared `ServiceRequest`, `Claim`, `ServiceProvider`, `Invoice` entities, plus brand-owned config:
 
 ```
-Invoice { id (INV-YYYY-###), service_request_id, customer_id, technician_id, brand_id,
+Invoice { id (INV-YYYY-###), service_request_id, customer_id, serviceProvider_id, brand_id,
   product, service_charge, part_charge, gst, total, status (Paid|Pending|Failed) }
 RateCard { id, brand_id, category, service_type, labor_rate, parts_markup_pct, total_base (computed) }
   // pricing engine config feeding invoice generation
-ReplacementApproval { id (RPL-###), request_id, product, reason, tech_notes, status (Pending|Approved|Rejected|Info Requested) }
-ReverseLogisticsReturn { id (RET-###), technician_id, part_name, sku, request_id, transit_status, status, tracking_no, damage_flag }
+ReplacementApproval { id (RPL-###), request_id, product, reason, service_provider_notes, status (Pending|Approved|Rejected|Info Requested) }
+ReverseLogisticsReturn { id (RET-###), serviceProvider_id, part_name, sku, request_id, transit_status, status, tracking_no, damage_flag }
 BrandCatalog: MasterService { id, name, type, charge } → SubBrand { id, name, category } → Product { id, name, model } → mapped services
   // 3-level hierarchy: brand → sub-brand → product → services (from Catalog.jsx, the schema-richest brand-admin page)
 Team { id, name, department (Field Service|QA|Remote Support|Installation), lead, members[], active_requests, region }
@@ -306,11 +306,11 @@ Platform-level entities not owned by any single brand:
 
 ```
 Brand { id, name, category, status(Active|Pending), sla_resolution_time, sla_adherence_pct, csat, contract_terms }
-City { id, name, state, district, coverage_area_sqkm, technician_count, status }
-ServicePartner { id, name, manager, email, phone, city, technician_count, rating, status }  // "centers" employing technicians
+City { id, name, state, district, coverage_area_sqkm, serviceProvider_count, status }
+ServicePartner { id, name, manager, email, phone, city, serviceProvider_count, rating, status }  // "centers" employing serviceProviders
 ASM { id, name, email, phone, city, rating, partner_count, active_jobs }  // Area Service Manager oversees partners in a city
 AssignmentWeighting { proximity_pct, skill_pct, rating_pct, workload_pct }  // auto-assign scoring engine, must sum to 100
-LiveTracking { job_id, technician_id, status, eta, coords{lat,lng}, updated_at }  // GPS feed
+LiveTracking { job_id, serviceProvider_id, status, eta, coords{lat,lng}, updated_at }  // GPS feed
 Escalation { id, ticket_id, description, city, priority (High|Critical), manager, status (Unassigned|In Progress|Resolved) }
 AuditLog { id, user_id, action, type (System|Support|User|Finance|Inventory), created_at }
 SparePartCatalog { id, name, brand, code, cost_price, markup_pct, retail_price, stock, status }
@@ -325,14 +325,14 @@ Payout { id, partner_id, city, balance, last_paid, status (Pending Approval|Paid
 GatewayTransaction { id, ref, customer_id, amount, gateway (UPI|Card|NetBanking), status (Success|Failed|Refunded) }
 ```
 
-### 6.2 CMS / App Customization (super-admin authored, consumed by customer & technician apps)
+### 6.2 CMS / App Customization (super-admin authored, consumed by customer & serviceProvider apps)
 ```
-Banner { id, image, segment (warranty|non-warranty), app (customer|technician) }
+Banner { id, image, segment (warranty|non-warranty), app (customer|serviceProvider) }
 Story { id, title, type (Promo Banner|Customer Help Slider|Informational), aspect_ratio, clicks, status (Active|Scheduled) }
 Video { id, title, duration, size, views, active }
 Advertisement { id, name, type (App Header Banner|Category Popup|Cart Bottom Banner), budget, clicks, status }
 CMSPage { slug (privacy-policy|terms|faqs), body, published_at }
-AppSetting { app (customer|technician), key, value }  // e.g. offlineMode, autoAssign, gpsInterval, payoutCycle
+AppSetting { app (customer|serviceProvider), key, value }  // e.g. offlineMode, autoAssign, gpsInterval, payoutCycle
 ```
 `CustomerAppCustomization.jsx` is the largest single page in the codebase (~165KB) — it's essentially a merchandising/CMS builder for the entire customer-app catalog (categories, banners, services, brand offer cards, most-booked services). This strongly implies the backend needs a proper **admin-editable content service**, replacing today's localStorage-based overrides in `bookingCatalog.js`/`Dashboard.jsx`.
 
@@ -352,11 +352,11 @@ AppSetting { app (customer|technician), key, value }  // e.g. offlineMode, autoA
 3. **Warranty-status computation** must be a shared service (purchase_date + brand warranty period + any AMC/EW overlay), queried from Bookings, Requests, PartRequests, Customers views, and the pre-booking warranty-check modal on the customer dashboard.
 4. **Every admin list page follows the same UI pattern**: KPI/stat cards (→ aggregation endpoints), filter/search, paginated table, row detail drawer, one or more status-transition actions, CSV/PDF export. Design a consistent list-endpoint contract (`?status=&search=&page=&date_from=&date_to=`) once and reuse it.
 5. **Pricing engine**: `RateCard` (brand-admin `CallRatesCharges.jsx`) drives invoice/labor pricing; GST is a confirmed flat 18% everywhere (the 10% in Buy.jsx extended-warranty checkout was mock-data inconsistency, not a real second rate — see §9); job types AMC/BrandWarranty/ExtendedWarranty always show parts/labor as ₹0 "Covered" with only extras chargeable.
-6. **Real-time requirements**: chat (customer↔technician), live GPS tracking (super-admin Tracking.jsx), and notification push — these need WebSocket/SSE, not just REST polling.
-7. **File uploads**: invoices, warranty cards, product photos, complaint photos (up to 4), signatures (canvas-drawn), documents for technician verification (Aadhar/PAN/background check), brand-admin bulk upload for complaints.
-8. **Auto-assignment engine**: super-admin `Assignment.jsx` implies a scoring service (`score = w1*proximity + w2*skill + w3*rating + w4*workload`, weights configurable, sum to 100%) — needed for both manual-override assignment and the "technician auto-assigned on booking" flow seen in customer BookingSuccess.
+6. **Real-time requirements**: chat (customer↔serviceProvider), live GPS tracking (super-admin Tracking.jsx), and notification push — these need WebSocket/SSE, not just REST polling.
+7. **File uploads**: invoices, warranty cards, product photos, complaint photos (up to 4), signatures (canvas-drawn), documents for serviceProvider verification (Aadhar/PAN/background check), brand-admin bulk upload for complaints.
+8. **Auto-assignment engine**: super-admin `Assignment.jsx` implies a scoring service (`score = w1*proximity + w2*skill + w3*rating + w4*workload`, weights configurable, sum to 100%) — needed for both manual-override assignment and the "serviceProvider auto-assigned on booking" flow seen in customer BookingSuccess.
 9. **Multi-tenancy**: brand-admin pages must scope all queries by `brand_id`, and a `ServiceRequest` can simultaneously carry a platform ID and a brand-specific ticket number.
-10. **Demo/seed data reference**: hardcoded persona "Sakshi Dwivedi" (customer), "Rahul Sharma" (technician, 4.8★, 128 jobs) recur across screens — useful as consistent seed data during backend dev so the existing UI "just works" against real data without visual diffs.
+10. **Demo/seed data reference**: hardcoded persona "Sakshi Dwivedi" (customer), "Rahul Sharma" (serviceProvider, 4.8★, 128 jobs) recur across screens — useful as consistent seed data during backend dev so the existing UI "just works" against real data without visual diffs.
 
 ---
 
@@ -377,15 +377,15 @@ Exchange:        GET /exchange/question-sets, POST /exchange/valuate, POST /exch
 Payments:        POST /payments/intent, POST /payments/{id}/confirm, GET /wallet/ledger
 Notifications:   GET /notifications, PATCH /notifications/{id}/read, PATCH /notifications/read-all
 Chat:            WS /conversations/{id}, GET /conversations/{id}/messages, POST /conversations/{id}/messages
-Technician:      GET /tech/jobs, POST /tech/jobs/{id}/accept, POST /tech/jobs/{id}/transition,
-                 POST /tech/jobs/{id}/diagnosis, POST /tech/jobs/{id}/billing-estimate,
-                 GET/POST /tech/inventory, POST /tech/part-orders, POST /tech/claims,
-                 GET /tech/earnings, POST /tech/payouts/withdraw, GET/POST /tech/payout-methods,
-                 GET /tech/academy/guides, /tech/academy/courses
-Brand-admin:     GET /brand/{brandId}/requests, /invoices, /technicians, /inventory, /rate-cards,
+ServiceProvider:      GET /service-provider/jobs, POST /service-provider/jobs/{id}/accept, POST /service-provider/jobs/{id}/transition,
+                 POST /service-provider/jobs/{id}/diagnosis, POST /service-provider/jobs/{id}/billing-estimate,
+                 GET/POST /service-provider/inventory, POST /service-provider/part-orders, POST /service-provider/claims,
+                 GET /service-provider/earnings, POST /service-provider/payouts/withdraw, GET/POST /service-provider/payout-methods,
+                 GET /service-provider/academy/guides, /service-provider/academy/courses
+Brand-admin:     GET /brand/{brandId}/requests, /invoices, /serviceProviders, /inventory, /rate-cards,
                  /amcs, /exchanges, /warranty-claims, /replacement-approvals, /reverse-logistics,
                  /catalog, /reviews, /teams, /users, /documents
-Super-admin:     GET/POST /admin/brands, /cities, /technicians, /service-partners, /asm, /users,
+Super-admin:     GET/POST /admin/brands, /cities, /serviceProviders, /service-partners, /asm, /users,
                  /roles, /assignment/auto, /tracking, /escalations, /billing, /revenue, /payouts,
                  /transactions, /cms/*, /loyalty/*, /reports, /logs, /settings
 ```
@@ -394,11 +394,11 @@ Super-admin:     GET/POST /admin/brands, /cities, /technicians, /service-partner
 
 ## 9. Open Questions to Confirm Before/While Building
 
-- Is `ServiceRequest`/`Booking`/warranty "ticket" meant to be **one unified table** with a `type` discriminator (recommended, given the technician `Job` view already unifies them), or genuinely separate systems that later merge for the technician? — resolved as a single `ServiceRequest` collection (Phase 1); `Job` (Phase 6) is the technician-facing join on top of it.
+- Is `ServiceRequest`/`Booking`/warranty "ticket" meant to be **one unified table** with a `type` discriminator (recommended, given the serviceProvider `Job` view already unifies them), or genuinely separate systems that later merge for the serviceProvider? — resolved as a single `ServiceRequest` collection (Phase 1); `Job` (Phase 6) is the serviceProvider-facing join on top of it.
 - ~~GST rate: 18% appears almost everywhere, but Buy.jsx extended-warranty checkout computes 10% — confirm the correct rate(s) per product line.~~ **Resolved (user confirmed, post-Phase-6): flat 18% everywhere.** The 10% sighting was mock-data inconsistency, not a real second rate. See `GST_PERCENT_DEFAULT` in `backend/src/config/constants.js`.
 - Real payment gateway choice (Razorpay key field appears in super-admin Settings.jsx — likely Razorpay). Still open — `paymentGateway.js` remains a stub.
 - ~~Real-time transport choice for chat/tracking (WebSocket vs SSE vs polling) and infra (self-hosted vs managed, e.g. Pusher/Ably/Socket.IO).~~ **Resolved (Phase 9): self-hosted Socket.IO**, attached directly to the API's own `http.Server` — no third-party real-time service. See `DATA_MODEL.md`'s Phase 9 addendum.
 - File storage (S3-compatible?) for invoices, photos, signatures, documents. Still open — `fileUpload.js` has a local-disk dev fallback, S3/R2 config is a no-op until env vars are set.
 - Whether brand-admin "sub-roles" and super-admin "roles" should be one unified RBAC system or intentionally separate (brand-scoped vs platform-scoped). Still open — current `Role` model uses a `scope` discriminator (Phase 1 deviation, see `DATA_MODEL.md`), leaning unified, but not explicitly confirmed with the user.
-- Technician payout rate on warranty/AMC/EW-covered visits — still a flat ₹150/visit placeholder (`FLAT_COVERED_VISIT_EARNINGS` in `job.service.js`), pending real brand `RateCard`s (Phase 7). **User confirmed (post-Phase-6): fine to leave as-is for now, not urgent.**
+- ServiceProvider payout rate on warranty/AMC/EW-covered visits — still a flat ₹150/visit placeholder (`FLAT_COVERED_VISIT_EARNINGS` in `job.service.js`), pending real brand `RateCard`s (Phase 7). **User confirmed (post-Phase-6): fine to leave as-is for now, not urgent.**
 - Whether to build the AMC/Extended-Warranty purchase flow and Referral/Membership/SpinWheel/Loyalty modules earlier than their planned phases — **user confirmed (post-Phase-6): no, stick to the original 16-phase roadmap order.**

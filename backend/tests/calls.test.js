@@ -33,7 +33,7 @@ const { initiateCall, handleStatusCallback, getCallLogs } = await import(
 const { CallLog } = await import('../src/modules/calls/callLog.model.js');
 const { ServiceRequest } = await import('../src/modules/service-requests/serviceRequest.model.js');
 const { User } = await import('../src/modules/auth/user.model.js');
-const { Technician } = await import('../src/modules/technician/technician.model.js');
+const { ServiceProvider } = await import('../src/modules/service-provider/serviceProvider.model.js');
 
 // ── DB setup ──────────────────────────────────────────────────────────────────
 beforeAll(async () => {
@@ -49,7 +49,7 @@ beforeEach(async () => {
   await CallLog.deleteMany({});
   await ServiceRequest.deleteMany({});
   await User.deleteMany({});
-  await Technician.deleteMany({});
+  await ServiceProvider.deleteMany({});
   mockCallsCreate.mockReset();
 
   // Set up Twilio Voice env vars for each test
@@ -73,15 +73,15 @@ async function makeFixtures() {
     passwordHash: 'hash',
   });
 
-  const techUser = await User.create({
-    role: 'technician',
+  const serviceProviderUser = await User.create({
+    role: 'service_provider',
     name: 'Test Tech',
     phone: '9000000001',
     passwordHash: 'hash',
   });
 
-  const technician = await Technician.create({
-    user: techUser._id,
+  const serviceProvider = await ServiceProvider.create({
+    user: serviceProviderUser._id,
     name: 'Test Tech',
     phone: '9000000001',
     status: 'Active',
@@ -91,7 +91,7 @@ async function makeFixtures() {
 
   const sr = await ServiceRequest.create({
     user: customerUser._id,
-    technician: technician._id,
+    serviceProvider: serviceProvider._id,
     category: 'AC',
     description: 'Test SR',
     requestMode: 'B2C',
@@ -99,7 +99,7 @@ async function makeFixtures() {
     timeline: [{ stepLabel: 'New', done: true, timestamp: new Date() }],
   });
 
-  return { customerUser, techUser, technician, sr };
+  return { customerUser, serviceProviderUser, serviceProvider, sr };
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -120,9 +120,9 @@ describe('initiateCall', () => {
     // Real phone numbers must NEVER appear as named fields in the response
     expect(result).not.toHaveProperty('phone');
     expect(result).not.toHaveProperty('customerPhone');
-    expect(result).not.toHaveProperty('technicianPhone');
+    expect(result).not.toHaveProperty('serviceProviderPhone');
     expect(result).not.toHaveProperty('customer');
-    expect(result).not.toHaveProperty('technician');
+    expect(result).not.toHaveProperty('serviceProvider');
 
     // Verify CallLog was persisted
     const log = await CallLog.findOne({ callSid: 'CA_test_sid_001' });
@@ -165,29 +165,29 @@ describe('initiateCall', () => {
     ).rejects.toMatchObject({ statusCode: 422 });
   });
 
-  test('technician can initiate the call too', async () => {
-    const { techUser, sr } = await makeFixtures();
-    mockCallsCreate.mockResolvedValue({ sid: 'CA_tech_init' });
+  test('serviceProvider can initiate the call too', async () => {
+    const { serviceProviderUser, sr } = await makeFixtures();
+    mockCallsCreate.mockResolvedValue({ sid: 'CA_service_provider_init' });
 
     const result = await initiateCall(
-      { id: String(techUser._id), role: 'technician' },
+      { id: String(serviceProviderUser._id), role: 'service_provider' },
       String(sr._id),
     );
 
     expect(result.status).toBe('initiated');
-    expect(result.initiatedBy).toBe('technician');
+    expect(result.initiatedBy).toBe('service_provider');
   });
 });
 
 describe('handleStatusCallback', () => {
   test('updates CallLog to completed with duration', async () => {
-    const { customerUser, technician, sr } = await makeFixtures();
+    const { customerUser, serviceProvider, sr } = await makeFixtures();
 
     const log = await CallLog.create({
       callSid: 'CA_webhook_test',
       serviceRequest: sr._id,
       customer: customerUser._id,
-      technician: technician._id,
+      serviceProvider: serviceProvider._id,
       initiatedBy: 'customer',
       status: 'in-progress',
     });
@@ -205,13 +205,13 @@ describe('handleStatusCallback', () => {
   });
 
   test('updates CallLog to no-answer', async () => {
-    const { customerUser, technician, sr } = await makeFixtures();
+    const { customerUser, serviceProvider, sr } = await makeFixtures();
 
     await CallLog.create({
       callSid: 'CA_noanswer',
       serviceRequest: sr._id,
       customer: customerUser._id,
-      technician: technician._id,
+      serviceProvider: serviceProvider._id,
       initiatedBy: 'customer',
       status: 'ringing',
     });
@@ -226,13 +226,13 @@ describe('handleStatusCallback', () => {
 
 describe('getCallLogs', () => {
   test('returns call history for the customer participant', async () => {
-    const { customerUser, technician, sr } = await makeFixtures();
+    const { customerUser, serviceProvider, sr } = await makeFixtures();
 
     await CallLog.create({
       callSid: 'CA_history_01',
       serviceRequest: sr._id,
       customer: customerUser._id,
-      technician: technician._id,
+      serviceProvider: serviceProvider._id,
       initiatedBy: 'customer',
       status: 'completed',
       duration: 60,
@@ -249,9 +249,9 @@ describe('getCallLogs', () => {
     // Real phone numbers must NEVER appear as named fields in the response
     expect(logs[0]).not.toHaveProperty('phone');
     expect(logs[0]).not.toHaveProperty('customerPhone');
-    expect(logs[0]).not.toHaveProperty('technicianPhone');
+    expect(logs[0]).not.toHaveProperty('serviceProviderPhone');
     expect(logs[0]).not.toHaveProperty('customer');
-    expect(logs[0]).not.toHaveProperty('technician');
+    expect(logs[0]).not.toHaveProperty('serviceProvider');
   });
 
   test('throws 403 for a non-participant', async () => {

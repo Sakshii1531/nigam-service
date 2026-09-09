@@ -1,7 +1,7 @@
 import React, { useLayoutEffect } from "react";
 import { useLocation } from "react-router-dom";
 import CustomerTopNav from "./CustomerTopNav";
-import TechTopNav from "./TechTopNav";
+import ServiceProviderTopNav from "./ServiceProviderTopNav";
 
 /**
  * AppChrome — renders the desktop (lg+) top navigation for whichever panel the
@@ -10,8 +10,8 @@ import TechTopNav from "./TechTopNav";
  * The nav used to be pasted into each page, which meant the ~50 pages that never
  * got around to it rendered a stretched phone layout with no navigation at all on
  * a desktop screen. Mounting it once from the router guarantees every customer and
- * technician route gets the same chrome; the matching top offset lives in
- * index.css against body.customer-app-active / body.tech-app-active, so pages
+ * service provider route gets the same chrome; the matching top offset lives in
+ * index.css against body.customer-app-active / body.service-provider-app-active, so pages
  * don't each have to remember a padding class either.
  *
  * Auth and marketing routes are excluded — they're full-bleed layouts of their own
@@ -25,8 +25,8 @@ const CUSTOMER_CHROMELESS = new Set([
 ]);
 
 const TECH_CHROMELESS = new Set([
-  "/technician/login", "/technician/verify-otp",
-  "/technician/forgot-password", "/technician/apply",
+  "/service-provider/login", "/service-provider/verify-otp",
+  "/service-provider/forgot-password", "/service-provider/apply",
 ]);
 
 /** Longest-prefix match wins, so /profile doesn't shadow /profile-something. */
@@ -63,22 +63,22 @@ const CUSTOMER_TABS = [
 ];
 
 const TECH_TABS = [
-  ["/technician/raise-part-request", "requests"],
-  ["/technician/inventory", "inventory"],
-  ["/technician/schedule", "schedule"],
-  ["/technician/profile", "profile"],
-  ["/technician/personal-info", "profile"],
-  ["/technician/settings", "profile"],
-  ["/technician/payout-settings", "profile"],
-  ["/technician/earnings", "profile"],
-  ["/technician/analytics", "profile"],
-  ["/technician/academy", "profile"],
-  ["/technician/help-support", "profile"],
-  ["/technician/announcements", "profile"],
-  ["/technician/skills", "profile"],
-  ["/technician/verification", "profile"],
-  ["/technician/partner-level", "profile"],
-  ["/technician/history", "profile"],
+  ["/service-provider/raise-part-request", "requests"],
+  ["/service-provider/inventory", "inventory"],
+  ["/service-provider/schedule", "schedule"],
+  ["/service-provider/profile", "profile"],
+  ["/service-provider/personal-info", "profile"],
+  ["/service-provider/settings", "profile"],
+  ["/service-provider/payout-settings", "profile"],
+  ["/service-provider/earnings", "profile"],
+  ["/service-provider/analytics", "profile"],
+  ["/service-provider/academy", "profile"],
+  ["/service-provider/help-support", "profile"],
+  ["/service-provider/announcements", "profile"],
+  ["/service-provider/skills", "profile"],
+  ["/service-provider/verification", "profile"],
+  ["/service-provider/partner-level", "profile"],
+  ["/service-provider/history", "profile"],
 ];
 
 function matchTab(pathname, table, fallback) {
@@ -96,7 +96,7 @@ function matchTab(pathname, table, fallback) {
 }
 
 /**
- * True for routes that belong to the customer or technician phone app — the two
+ * True for routes that belong to the customer or service provider phone app — the two
  * panels whose pages are authored at phone width and therefore need centring
  * rather than stretching once the viewport gets wide.
  */
@@ -121,11 +121,11 @@ const WIDE_ROUTES = [
   "/extend-warranty", "/partner-warranty", "/bookings", "/book", "/booking",
   "/service-details", "/membership-plans", "/rewards-play-zone",
   "/my-wishlist", "/wishlist", "/my-orders", "/help-support", "/about-ncc", "/terms-and-conditions", "/privacy-policy", "/profile",
-  "/technician/dashboard", "/technician/active-job", "/technician/schedule",
-  "/technician/analytics", "/technician/academy", "/technician/inventory",
-  "/technician/raise-part-request", "/technician/earnings",
-  "/technician/billing-estimate", "/technician/apply", "/technician/profile",
-  "/technician/personal-info",
+  "/service-provider/dashboard", "/service-provider/active-job", "/service-provider/schedule",
+  "/service-provider/analytics", "/service-provider/academy", "/service-provider/inventory",
+  "/service-provider/raise-part-request", "/service-provider/earnings",
+  "/service-provider/billing-estimate", "/service-provider/apply", "/service-provider/profile",
+  "/service-provider/personal-info",
 ];
 
 /** Tailwind max-width class for the panel container on a given route. */
@@ -134,13 +134,13 @@ export function panelWidthClass(pathname) {
 }
 
 function pickNav(pathname, search = "") {
-  if (pathname.startsWith("/technician")) {
+  if (pathname.startsWith("/service-provider")) {
     if (TECH_CHROMELESS.has(pathname)) return null;
     let activePage = matchTab(pathname, TECH_TABS, "jobs");
-    if (pathname === "/technician/raise-part-request" && search.includes("tab=inventory")) {
+    if (pathname === "/service-provider/raise-part-request" && search.includes("tab=inventory")) {
       activePage = "inventory";
     }
-    return <TechTopNav activePage={activePage} />;
+    return <ServiceProviderTopNav activePage={activePage} />;
   }
   if (pathname.startsWith("/super-admin") || pathname.startsWith("/brand-admin")) return null;
   if (CUSTOMER_CHROMELESS.has(pathname) || pathname.startsWith("/book") || pathname.startsWith("/booking") || pathname.startsWith("/payment")) return null;

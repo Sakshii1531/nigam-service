@@ -42,7 +42,7 @@ npm test
 `nigam_care_e2e` Mongo database on port 4100, so this never collides with a `npm run dev`
 instance you might have running on the default port/database. `global-setup.js` runs the
 real `backend/scripts/seed.js` (idempotent) against that same database first, so
-catalog/booking specs have real categories, services, and a technician to work with —
+catalog/booking specs have real categories, services, and a serviceProvider to work with —
 one seed source of truth, not a duplicated fixture.
 
 ## Structure

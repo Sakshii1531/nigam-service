@@ -1,11 +1,11 @@
 import mongoose from 'mongoose';
 import { applyStandardPlugins } from '../shared/plugins.js';
 
-// One doc per technician — a running cache updated whenever a Payout settles,
+// One doc per service provider — a running cache updated whenever a Payout settles,
 // so the dashboard doesn't have to aggregate the Payout collection on every render.
 const earningsTallySchema = new mongoose.Schema(
   {
-    technician: { type: mongoose.Schema.Types.ObjectId, ref: 'Technician', required: true, unique: true },
+    serviceProvider: { type: mongoose.Schema.Types.ObjectId, ref: 'ServiceProvider', required: true, unique: true },
     today: { type: Number, default: 0 },
     total: { type: Number, default: 0 },
     completedToday: { type: Number, default: 0 },

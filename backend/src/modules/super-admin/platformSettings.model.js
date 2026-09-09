@@ -29,9 +29,9 @@ const platformSettingsSchema = new mongoose.Schema(
 
     // Share of the total taken as an advance when a customer picks "pay advance".
     bookingAdvancePercent: { type: Number, default: 20 },
-    // Share of a D2C job's subtotal paid to the technician.
-    technicianCommissionPercent: { type: Number, default: 30 },
-    // Paid to a technician who travelled to a job the customer then cancelled
+    // Share of a D2C job's subtotal paid to the service provider.
+    serviceProviderCommissionPercent: { type: Number, default: 30 },
+    // Paid to a service provider who travelled to a job the customer then cancelled
     // or was unavailable for. 0 disables the payment entirely.
     visitFeeAmount: { type: Number, default: 150 },
   },

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Award, CheckCircle, Clock, Briefcase, ClipboardList, Calendar, Wrench, User } from 'lucide-react';
-import TechBottomNav from '../../components/TechBottomNav';
+import ServiceProviderBottomNav from '../../components/ServiceProviderBottomNav';
 import { apiRequest } from '../../lib/apiClient';
 
 const levelColor = {
@@ -12,14 +12,14 @@ const levelColor = {
 
 const SkillsCertifications = () => {
   const navigate = useNavigate();
-  // Skills and certifications are part of the technician's own profile record.
+  // Skills and certifications are part of the service provider's own profile record.
   const [skills, setSkills] = useState([]);
   const [certifications, setCertifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    apiRequest('/tech/profile/profile', { auth: true })
+    apiRequest('/service-provider/profile/profile', { auth: true })
       .then((res) => {
         setSkills((res?.skills || []).map((sk) => ({
           name: sk.name,
@@ -133,7 +133,7 @@ const SkillsCertifications = () => {
       </div>
 
       {/* Bottom Navigation */}
-      <TechBottomNav activeTab="profile" />
+      <ServiceProviderBottomNav activeTab="profile" />
 
     </div>
   );

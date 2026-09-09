@@ -7,7 +7,7 @@ import { apiRequest } from '../../lib/apiClient';
  * 
  * Clean, reusable rating card for completed service bookings and tickets.
  * Handles:
- * - Technician rating (1–5 stars)
+ * - Service Provider rating (1–5 stars)
  * - Platform rating (1–5 stars)
  * - Optional written review
  * - Duplicate rating check on mount
@@ -15,10 +15,10 @@ import { apiRequest } from '../../lib/apiClient';
  */
 const ServiceRatingCard = ({ service, onRatingSubmitted }) => {
   const serviceId = service?._id || service?.id;
-  const technicianName = service?.technician?.name || service?.technicianName || 'Technician';
+  const serviceProviderName = service?.serviceProvider?.name || service?.serviceProviderName || 'Service Provider';
 
-  const [techRating, setTechRating] = useState(0);
-  const [techHover, setTechHover] = useState(0);
+  const [serviceProviderRating, setTechRating] = useState(0);
+  const [serviceProviderHover, setTechHover] = useState(0);
   const [platformRating, setPlatformRating] = useState(0);
   const [platformHover, setPlatformHover] = useState(0);
   const [comment, setComment] = useState('');
@@ -65,8 +65,8 @@ const ServiceRatingCard = ({ service, onRatingSubmitted }) => {
     e?.preventDefault();
     setErrorMsg('');
 
-    if (techRating < 1 || techRating > 5) {
-      setErrorMsg('Please select a rating for your technician (1 to 5 stars).');
+    if (serviceProviderRating < 1 || serviceProviderRating > 5) {
+      setErrorMsg('Please select a rating for your serviceProvider (1 to 5 stars).');
       return;
     }
 
@@ -79,7 +79,7 @@ const ServiceRatingCard = ({ service, onRatingSubmitted }) => {
       setIsSubmitting(true);
       const payload = {
         serviceId,
-        technicianRating: techRating,
+        serviceProviderRating: serviceProviderRating,
         platformRating: platformRating,
         comment: comment.trim(),
       };
@@ -91,7 +91,7 @@ const ServiceRatingCard = ({ service, onRatingSubmitted }) => {
       });
 
       const savedRating = {
-        technicianRating: techRating,
+        serviceProviderRating: serviceProviderRating,
         platformRating: platformRating,
         comment: comment.trim(),
         createdAt: new Date().toISOString(),
@@ -150,7 +150,7 @@ const ServiceRatingCard = ({ service, onRatingSubmitted }) => {
           {/* Tech Rating */}
           <div className="bg-white/90 p-3 rounded-xl border border-slate-200/70 flex flex-col gap-1">
             <span className="text-[10px] font-bold text-slate-500 flex items-center gap-1">
-              <User className="w-3 h-3 text-[#0D47A1]" /> Technician ({technicianName})
+              <User className="w-3 h-3 text-[#0D47A1]" /> ServiceProvider ({serviceProviderName})
             </span>
             <div className="flex items-center gap-1.5 mt-0.5">
               <div className="flex items-center gap-0.5">
@@ -158,7 +158,7 @@ const ServiceRatingCard = ({ service, onRatingSubmitted }) => {
                   <Star
                     key={star}
                     className={`w-3.5 h-3.5 ${
-                      star <= (existingRating.technicianRating || existingRating.rating || 5)
+                      star <= (existingRating.serviceProviderRating || existingRating.rating || 5)
                         ? 'text-amber-400 fill-amber-400'
                         : 'text-slate-200 fill-slate-200'
                     }`}
@@ -166,7 +166,7 @@ const ServiceRatingCard = ({ service, onRatingSubmitted }) => {
                 ))}
               </div>
               <span className="text-xs font-black text-slate-900">
-                {Number(existingRating.technicianRating || existingRating.rating || 5).toFixed(1)}
+                {Number(existingRating.serviceProviderRating || existingRating.rating || 5).toFixed(1)}
               </span>
             </div>
           </div>
@@ -233,20 +233,20 @@ const ServiceRatingCard = ({ service, onRatingSubmitted }) => {
         </div>
       )}
 
-      {/* 1. Rate Technician */}
+      {/* 1. Rate ServiceProvider */}
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between">
           <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
             <User className="w-3.5 h-3.5 text-[#0D47A1]" />
-            <span>Rate Technician <strong className="text-slate-900">({technicianName})</strong></span>
+            <span>Rate Service Provider <strong className="text-slate-900">({serviceProviderName})</strong></span>
           </label>
           <span className="text-[11px] font-black text-amber-600 font-mono">
-            {techRating > 0 ? `${techRating}.0 ★` : 'Select'}
+            {serviceProviderRating > 0 ? `${serviceProviderRating}.0 ★` : 'Select'}
           </span>
         </div>
         <div className="flex items-center gap-2 p-2 bg-slate-50 rounded-xl border border-slate-100">
           {[1, 2, 3, 4, 5].map((star) => {
-            const isFilled = (techHover || techRating) >= star;
+            const isFilled = (serviceProviderHover || serviceProviderRating) >= star;
             return (
               <button
                 key={star}
@@ -255,7 +255,7 @@ const ServiceRatingCard = ({ service, onRatingSubmitted }) => {
                 onMouseLeave={() => setTechHover(0)}
                 onClick={() => setTechRating(star)}
                 className="p-1 cursor-pointer transition-transform hover:scale-110 active:scale-95"
-                aria-label={`Rate technician ${star} stars`}
+                aria-label={`Rate serviceProvider ${star} stars`}
               >
                 <Star
                   className={`w-6 h-6 transition-colors ${

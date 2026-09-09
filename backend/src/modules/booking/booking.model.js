@@ -37,7 +37,7 @@ const bookingSchema = new mongoose.Schema(
       index: true,
     },
     completionOtp: { type: String, default: () => Math.floor(1000 + Math.random() * 9000).toString() },
-    technician: { type: mongoose.Schema.Types.ObjectId, ref: 'Technician', default: null, index: true },
+    serviceProvider: { type: mongoose.Schema.Types.ObjectId, ref: 'ServiceProvider', default: null, index: true },
     isAccepted: { type: Boolean, default: false, index: true },
     serviceRequest: { type: mongoose.Schema.Types.ObjectId, ref: 'ServiceRequest', default: null },
     isInstant: { type: Boolean, default: false },

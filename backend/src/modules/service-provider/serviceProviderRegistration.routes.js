@@ -7,16 +7,16 @@ import { ROLES } from '../../config/constants.js';
 import { User } from '../auth/user.model.js';
 import { hashPassword } from '../auth/password.js';
 import { City } from '../super-admin/city.model.js';
-import { Technician } from './technician.model.js';
+import { ServiceProvider } from './serviceProvider.model.js';
 
-// Public technician application (the /technician/apply screen). Deliberately not
-// on technicianRouter, which requires an authenticated technician — an applicant
+// Public service provider application (the /service provider/apply screen). Deliberately not
+// on serviceProviderRouter, which requires an authenticated service provider — an applicant
 // has no account yet.
 //
 // The account is created immediately but lands in status 'Pending' with
 // availability 'Offline', so it cannot be assigned work and cannot pass login
 // until a super-admin activates it from the console.
-export const technicianRegistrationRouter = Router();
+export const serviceProviderRegistrationRouter = Router();
 
 const registerSchema = z.object({
   name: z.string().min(1),
@@ -39,7 +39,7 @@ function parseSpecs(raw) {
   }
 }
 
-technicianRegistrationRouter.post(
+serviceProviderRegistrationRouter.post(
   '/',
   upload.fields([{ name: 'aadharFront', maxCount: 1 }, { name: 'aadharBack', maxCount: 1 }]),
   async (req, res, next) => {
@@ -50,7 +50,7 @@ technicianRegistrationRouter.post(
       }
       const { name, phone, email, password, city, state, specs } = parsed.data;
 
-      if (await User.findOne({ role: ROLES.TECHNICIAN, phone })) {
+      if (await User.findOne({ role: ROLES.SERVICE_PROVIDER, phone })) {
         throw new ApiError(409, 'An application already exists for this phone number');
       }
 
@@ -71,7 +71,7 @@ technicianRegistrationRouter.post(
       ]);
 
       const user = await User.create({
-        role: ROLES.TECHNICIAN,
+        role: ROLES.SERVICE_PROVIDER,
         name,
         phone,
         email,
@@ -79,7 +79,7 @@ technicianRegistrationRouter.post(
         status: 'Pending',
       });
 
-      const technician = await Technician.create({
+      const serviceProvider = await ServiceProvider.create({
         user: user._id,
         name,
         phone,
@@ -94,9 +94,9 @@ technicianRegistrationRouter.post(
       });
 
       created(res, {
-        id: technician.id,
-        humanId: technician.humanId,
-        status: technician.status,
+        id: serviceProvider.id,
+        humanId: serviceProvider.humanId,
+        status: serviceProvider.status,
         message: 'Application received — you can sign in once it is approved.',
       });
     } catch (err) {

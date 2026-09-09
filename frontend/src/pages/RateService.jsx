@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Star, Camera, X } from 'lucide-react';
 import { apiRequest } from '../lib/apiClient';
 
-const CATEGORIES = ['Overall Experience', 'Technician Behavior', 'Service Quality', 'Timeliness'];
+const CATEGORIES = ['Overall Experience', 'Service Provider Behavior', 'Service Quality', 'Timeliness'];
 const TAGS = ['On time', 'Professional', 'Explained the issue', 'Clean work', 'Polite', 'Fair pricing', 'Well equipped'];
 const TIPS = [0, 20, 50, 100];
 
@@ -13,7 +13,7 @@ const RateService = () => {
   const { ticketId, serviceId, bookingId } = location.state || { ticketId: 'NCCW-2024-000123' };
   const fileRef = useRef(null);
 
-  const [ratings, setRatings] = useState({ 'Overall Experience': 0, 'Technician Behavior': 0, 'Service Quality': 0, 'Timeliness': 0 });
+  const [ratings, setRatings] = useState({ 'Overall Experience': 0, 'Service Provider Behavior': 0, 'Service Quality': 0, 'Timeliness': 0 });
   const [hovered, setHovered] = useState({ category: null, star: 0 });
   const [tags, setTags] = useState([]);
   const [photos, setPhotos] = useState([]);
@@ -36,7 +36,7 @@ const RateService = () => {
   const removePhoto = (id) => setPhotos((prev) => prev.filter((p) => p.id !== id));
 
   const handleSubmit = async () => {
-    const techRating = ratings['Technician Behavior'] || ratings['Overall Experience'] || 5;
+    const serviceProviderRating = ratings['Service Provider Behavior'] || ratings['Overall Experience'] || 5;
     const platRating = ratings['Overall Experience'] || 5;
     const idToRate = serviceId || bookingId || ticketId;
 
@@ -47,7 +47,7 @@ const RateService = () => {
         method: 'POST',
         body: {
           serviceId: idToRate,
-          technicianRating: techRating,
+          serviceProviderRating: serviceProviderRating,
           platformRating: platRating,
           comment: comment.trim(),
         },

@@ -19,14 +19,14 @@ import { apiRequest } from '../../lib/apiClient';
 
 const currency = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
 
-// Rows are aggregated per SKU across the technicians serving this brand, so
-// there is no single owning technician — `technicians` is how many carry it.
+// Rows are aggregated per SKU across the service providers serving this brand, so
+// there is no single owning service provider — `service providers` is how many carry it.
 function shape(item) {
   return {
     id: item.sku,
     name: item.name,
     category: '—',
-    compatible: `${item.technicians} technician${item.technicians === 1 ? '' : 's'}`,
+    compatible: `${item.serviceProviders} serviceProvider${item.serviceProviders === 1 ? '' : 's'}`,
     stock: item.totalQty,
     price: currency.format(item.price || 0),
     status: item.status,
@@ -36,7 +36,7 @@ function shape(item) {
 const Inventory = () => {
   const [parts, setParts] = useState([]);
   const STOCK_READ_ONLY =
-    'Stock belongs to each technician\'s own van inventory — a brand console can view it but not change it.';
+    'Stock belongs to each serviceProvider\'s own van inventory — a brand console can view it but not change it.';
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -45,7 +45,7 @@ const Inventory = () => {
     let cancelled = false;
     async function loadInventory() {
       try {
-        // Stock held by the technicians who work this brand's jobs — a brand
+        // Stock held by the service providers who work this brand's jobs — a brand
         // does not own parts, so this is the closest real answer.
         const data = await apiRequest('/brand/inventory', { auth: true });
         if (!cancelled) setParts((data || []).map(shape));
@@ -89,7 +89,7 @@ const Inventory = () => {
   };
 
   // Adding a part here only ever pushed a row into browser state — this view
-  // is an aggregate of what the brand's technicians carry in their vans, not a
+  // is an aggregate of what the brand's service providers carry in their vans, not a
   // catalogue the brand owns, so there is nothing to add to.
   const handleAddPartSubmit = (e) => {
     e.preventDefault();
@@ -245,7 +245,7 @@ const Inventory = () => {
                     <tr><td colSpan={8} className="px-6 py-10 text-center text-red-600 font-semibold">{error}</td></tr>
                   )}
                   {!loading && !error && filteredParts.length === 0 && (
-                    <tr><td colSpan={8} className="px-6 py-10 text-center text-[#64748B] font-semibold">No stock held by technicians serving this brand.</td></tr>
+                    <tr><td colSpan={8} className="px-6 py-10 text-center text-[#64748B] font-semibold">No stock held by serviceProviders serving this brand.</td></tr>
                   )}
                   {filteredParts.map((part) => (
                     <tr key={part.id} className="hover:bg-[#F8FAFC] transition-colors">

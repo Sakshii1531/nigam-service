@@ -43,14 +43,14 @@ async function createCustomer(request) {
   return { phone, token };
 }
 
-async function createTechnician(request, { specs }) {
+async function createServiceProvider(request, { specs }) {
   const phone = uniquePhone();
-  const createRes = await request.post('/api/v1/_dev/test-technician', {
+  const createRes = await request.post('/api/v1/_dev/test-serviceProvider', {
     data: { phone, password: 'password123', specs, availability: 'Available' },
   });
-  const { technicianId } = (await createRes.json()).data;
-  const token = await loginAndVerify(request, { role: 'technician', identifier: phone, password: 'password123' });
-  return { phone, technicianId, token };
+  const { serviceProviderId } = (await createRes.json()).data;
+  const token = await loginAndVerify(request, { role: 'service_provider', identifier: phone, password: 'password123' });
+  return { phone, serviceProviderId, token };
 }
 
 async function setupFixture(request) {
@@ -69,7 +69,7 @@ async function setupFixture(request) {
     data: { slug: 'repair', name: 'Repair', price: 299 },
   });
 
-  const tech = await createTechnician(request, { specs: [categoryKey] });
+  const provider = await createServiceProvider(request, { specs: [categoryKey] });
   const customer = await createCustomer(request);
 
   // Create a booking to get an assigned service request
@@ -80,7 +80,7 @@ async function setupFixture(request) {
   expect(bookingRes.status()).toBe(201);
   const { serviceRequest } = (await bookingRes.json()).data;
 
-  return { categoryKey, tech, customer, serviceRequest };
+  return { categoryKey, provider, customer, serviceRequest };
 }
 
 test.describe('POST /api/v1/calls/initiate', () => {

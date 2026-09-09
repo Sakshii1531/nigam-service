@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { validate } from '../../middleware/validate.js';
 import { requireAuth, requireRole } from '../../middleware/auth.js';
-import { attachTechnician } from '../../middleware/technician.js';
+import { attachServiceProvider } from '../../middleware/serviceProvider.js';
 import { ok } from '../../utils/respond.js';
 import * as serviceRequestService from '../service-requests/serviceRequest.service.js';
 import { ROLES } from '../../config/constants.js';
@@ -18,13 +18,13 @@ import {
 } from './job.validation.js';
 
 export const jobRouter = Router();
-jobRouter.use(requireAuth, requireRole(ROLES.TECHNICIAN), attachTechnician);
+jobRouter.use(requireAuth, requireRole(ROLES.SERVICE_PROVIDER), attachServiceProvider);
 
 // Static paths first — must be registered before '/:id' or Express would treat
 // "available"/"active" as a job id.
 jobRouter.get('/available', async (req, res, next) => {
   try {
-    ok(res, await jobService.listAvailableJobs(req.technician.id));
+    ok(res, await jobService.listAvailableJobs(req.serviceProvider.id));
   } catch (err) {
     next(err);
   }
@@ -32,7 +32,7 @@ jobRouter.get('/available', async (req, res, next) => {
 
 jobRouter.get('/active', async (req, res, next) => {
   try {
-    ok(res, await jobService.listActiveJobs(req.technician.id));
+    ok(res, await jobService.listActiveJobs(req.serviceProvider.id));
   } catch (err) {
     next(err);
   }
@@ -40,7 +40,7 @@ jobRouter.get('/active', async (req, res, next) => {
 
 jobRouter.get('/history', async (req, res, next) => {
   try {
-    ok(res, await jobService.listJobHistory(req.technician.id, req.query));
+    ok(res, await jobService.listJobHistory(req.serviceProvider.id, req.query));
   } catch (err) {
     next(err);
   }
@@ -52,7 +52,7 @@ jobRouter.post(
   validate(acceptJobSchema),
   async (req, res, next) => {
     try {
-      ok(res, await jobService.acceptJob(req.technician.id, req.params.serviceRequestId, req.body));
+      ok(res, await jobService.acceptJob(req.serviceProvider.id, req.params.serviceRequestId, req.body));
     } catch (err) {
       next(err);
     }
@@ -67,7 +67,7 @@ jobRouter.post(
   validate(serviceRequestIdParamSchema, 'params'),
   async (req, res, next) => {
     try {
-      ok(res, await serviceRequestService.declineAssignment(req.params.serviceRequestId, req.technician.id));
+      ok(res, await serviceRequestService.declineAssignment(req.params.serviceRequestId, req.serviceProvider.id));
     } catch (err) {
       next(err);
     }
@@ -76,7 +76,7 @@ jobRouter.post(
 
 jobRouter.get('/:id', validate(jobIdParamSchema, 'params'), async (req, res, next) => {
   try {
-    ok(res, await jobService.getJob(req.technician.id, req.params.id));
+    ok(res, await jobService.getJob(req.serviceProvider.id, req.params.id));
   } catch (err) {
     next(err);
   }
@@ -84,7 +84,7 @@ jobRouter.get('/:id', validate(jobIdParamSchema, 'params'), async (req, res, nex
 
 jobRouter.post('/:id/start-travel', validate(jobIdParamSchema, 'params'), async (req, res, next) => {
   try {
-    ok(res, await jobService.startTravel(req.technician.id, req.params.id));
+    ok(res, await jobService.startTravel(req.serviceProvider.id, req.params.id));
   } catch (err) {
     next(err);
   }
@@ -92,7 +92,7 @@ jobRouter.post('/:id/start-travel', validate(jobIdParamSchema, 'params'), async 
 
 jobRouter.post('/:id/arrive', validate(jobIdParamSchema, 'params'), async (req, res, next) => {
   try {
-    ok(res, await jobService.arrive(req.technician.id, req.params.id));
+    ok(res, await jobService.arrive(req.serviceProvider.id, req.params.id));
   } catch (err) {
     next(err);
   }
@@ -104,7 +104,7 @@ jobRouter.post(
   validate(submitDiagnosisSchema),
   async (req, res, next) => {
     try {
-      ok(res, await jobService.submitDiagnosis(req.technician.id, req.params.id, req.body));
+      ok(res, await jobService.submitDiagnosis(req.serviceProvider.id, req.params.id, req.body));
     } catch (err) {
       next(err);
     }
@@ -117,7 +117,7 @@ jobRouter.post(
   validate(submitSparePartsSchema),
   async (req, res, next) => {
     try {
-      ok(res, await jobService.submitSpareParts(req.technician.id, req.params.id, req.body));
+      ok(res, await jobService.submitSpareParts(req.serviceProvider.id, req.params.id, req.body));
     } catch (err) {
       next(err);
     }
@@ -130,7 +130,7 @@ jobRouter.post(
   validate(requestPartSchema),
   async (req, res, next) => {
     try {
-      ok(res, await jobService.requestSparePart(req.technician.id, req.params.id, req.body));
+      ok(res, await jobService.requestSparePart(req.serviceProvider.id, req.params.id, req.body));
     } catch (err) {
       next(err);
     }
@@ -139,7 +139,7 @@ jobRouter.post(
 
 jobRouter.post('/:id/repair-complete', validate(jobIdParamSchema, 'params'), async (req, res, next) => {
   try {
-    ok(res, await jobService.confirmRepairComplete(req.technician.id, req.params.id));
+    ok(res, await jobService.confirmRepairComplete(req.serviceProvider.id, req.params.id));
   } catch (err) {
     next(err);
   }
@@ -147,7 +147,7 @@ jobRouter.post('/:id/repair-complete', validate(jobIdParamSchema, 'params'), asy
 
 jobRouter.post('/:id/billing', validate(jobIdParamSchema, 'params'), async (req, res, next) => {
   try {
-    ok(res, await jobService.generateBilling(req.technician.id, req.params.id));
+    ok(res, await jobService.generateBilling(req.serviceProvider.id, req.params.id));
   } catch (err) {
     next(err);
   }
@@ -159,7 +159,7 @@ jobRouter.post(
   validate(collectPaymentSchema),
   async (req, res, next) => {
     try {
-      ok(res, await jobService.collectPayment(req.technician.id, req.params.id, req.body));
+      ok(res, await jobService.collectPayment(req.serviceProvider.id, req.params.id, req.body));
     } catch (err) {
       next(err);
     }
@@ -175,7 +175,7 @@ jobRouter.post(
   validate(verifyJobPaymentSchema),
   async (req, res, next) => {
     try {
-      ok(res, await jobService.verifyJobPayment(req.technician.id, req.params.id, req.body));
+      ok(res, await jobService.verifyJobPayment(req.serviceProvider.id, req.params.id, req.body));
     } catch (err) {
       next(err);
     }
@@ -184,7 +184,7 @@ jobRouter.post(
 
 jobRouter.get('/:id/amc-history', validate(jobIdParamSchema, 'params'), async (req, res, next) => {
   try {
-    ok(res, await jobService.getJobAmcHistory(req.technician.id, req.params.id));
+    ok(res, await jobService.getJobAmcHistory(req.serviceProvider.id, req.params.id));
   } catch (err) {
     next(err);
   }

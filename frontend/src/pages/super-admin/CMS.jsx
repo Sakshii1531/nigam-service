@@ -66,12 +66,12 @@ const CMS = () => {
         setSectionsList(Array.isArray(pageData.sections) && pageData.sections.length > 0 ? pageData.sections : []);
         setStatsList(Array.isArray(pageData.stats) && pageData.stats.length > 0 ? pageData.stats : [
           { label: 'Happy Customers', value: '50,000+' },
-          { label: 'Certified Technicians', value: '100+' },
+          { label: 'Certified ServiceProviders', value: '100+' },
           { label: 'Satisfaction Rating', value: '4.8 ★' },
           { label: 'Response Time', value: '30 Mins' }
         ]);
         setDocTitle(pageData.title || 'Empowering Smart Home Care & Appliance Solutions');
-        setDocSubtitle(pageData.subtitle || "Nigam Care Center (NCC) is India's leading home service network. We connect households with top-rated, background-verified technicians.");
+        setDocSubtitle(pageData.subtitle || "Nigam Care Center (NCC) is India's leading home service network. We connect households with top-rated, background-verified serviceProviders.");
         setTextContent(pageData.body || '');
         setDocVersion(pageData.version || 'v2.4.0');
         setDocContactEmail(pageData.contactEmail || (activeTab === 'policy' ? 'privacy@nccservice.in' : 'support@nccservice.in'));
@@ -743,7 +743,7 @@ const CMS = () => {
                 <input 
                   type="text"
                   required
-                  placeholder="e.g. 1. Certified & Verified Technicians"
+                  placeholder="e.g. 1. Certified & Verified ServiceProviders"
                   value={sectionForm.heading}
                   onChange={(e) => setSectionForm({ ...sectionForm, heading: e.target.value })}
                   className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-800 outline-none focus:border-blue-600"

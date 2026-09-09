@@ -188,7 +188,7 @@ const ExtendedWarrantyOverview = ({ job, additionalServices, setAdditionalServic
             </span>
           </div>
           <div className="flex justify-between items-center text-slate-500 text-[10px] -mt-1">
-            <span>NCC Claim Payout to Technician</span>
+            <span>NCC Claim Payout to Service Provider</span>
             <span className="font-medium text-[#7C4DFF]">₹{(job?.estEarnings || 0).toLocaleString('en-IN')}</span>
           </div>
         </div>

@@ -36,7 +36,7 @@ const MobileApp = () => {
             <span className="inline-block text-xs font-semibold text-yellow-600 uppercase tracking-wider bg-yellow-50 px-3 py-1 rounded-full border border-yellow-200">Download App</span>
             <h2 className="mt-3 text-3xl font-bold text-[#0d47a1] sm:text-4xl">All Services in Your Pocket</h2>
             <p className="mt-1 text-lg text-text-secondary max-w-lg">
-              Download the Nigam Care app to book services, track technicians, and manage your appliance warranties on the go.
+              Download the Nigam Care app to book services, track serviceProviders, and manage your appliance warranties on the go.
             </p>
             
             <div className="mt-8 flex flex-wrap gap-4">

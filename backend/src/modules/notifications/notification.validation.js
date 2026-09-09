@@ -35,11 +35,11 @@ export const deviceTokenSchema = z.object({
 // exclusive — the service enforces that one and only one is present.
 export const adHocPushSchema = z.object({
   recipientId: z.string().min(1).optional(),
-  broadcastRole: z.enum(['All', 'Technicians', 'Brands', 'Customers']).optional(),
+  broadcastRole: z.enum(['All', 'ServiceProviders', 'Brands', 'Customers']).optional(),
   title: z.string().min(1, 'Title is required'),
   body: z.string().min(1, 'Body is required'),
   type: z
-    .enum(['assigned', 'created', 'payment', 'completed', 'jobs', 'claims', 'payments', 'service', 'tech', 'dispatch', 'promo'])
+    .enum(['assigned', 'created', 'payment', 'completed', 'jobs', 'claims', 'payments', 'service', 'provider', 'dispatch', 'promo'])
     .optional(),
   priority: z.enum(['Low', 'Medium', 'High']).optional(),
   cta: z.object({ label: z.string(), route: z.string() }).optional(),
@@ -62,5 +62,5 @@ export const adHocSmsSchema = z.object({
 
 // Reach preview for the composer: which audience the admin is about to target.
 export const pushStatsQuerySchema = z.object({
-  broadcastRole: z.enum(['All', 'Technicians', 'Brands', 'Customers']).optional(),
+  broadcastRole: z.enum(['All', 'ServiceProviders', 'Brands', 'Customers']).optional(),
 });

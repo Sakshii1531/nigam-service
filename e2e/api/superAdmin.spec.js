@@ -40,8 +40,8 @@ test.describe('Brand', () => {
   });
 });
 
-test.describe('City -> ServicePartner -> ASM', () => {
-  test('creates the chain and manages ASM partner assignment', async ({ request }) => {
+test.describe('City -> ASM', () => {
+  test('creates a city and an ASM assigned to it', async ({ request }) => {
     const { token } = await createSuperAdmin(request);
     const auth = { headers: { Authorization: `Bearer ${token}` } };
     const cityName = `E2E City ${randomUUID()}`;
@@ -49,14 +49,9 @@ test.describe('City -> ServicePartner -> ASM', () => {
     const cityRes = await request.post('/api/v1/super-admin/cities', { ...auth, data: { name: cityName, state: 'UP' } });
     const city = (await cityRes.json()).data;
 
-    const partnerRes = await request.post('/api/v1/super-admin/service-partners', { ...auth, data: { name: 'E2E Partner', city: city.id } });
-    const partner = (await partnerRes.json()).data;
-
     const asmRes = await request.post('/api/v1/super-admin/asms', { ...auth, data: { name: 'E2E ASM', city: city.id } });
     const asm = (await asmRes.json()).data;
-
-    const addRes = await request.post(`/api/v1/super-admin/asms/${asm.id}/partners`, { ...auth, data: { partnerId: partner.id } });
-    expect((await addRes.json()).data.partners).toContain(partner.id);
+    expect(asm.name).toBe('E2E ASM');
   });
 });
 

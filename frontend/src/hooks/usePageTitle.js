@@ -6,7 +6,7 @@ const BASE_NAME = 'NIGAM SERVICE COMPANY';
 function getPanelLabel(pathname) {
   if (pathname.startsWith('/super-admin')) return `${BASE_NAME} - ADMIN`;
   if (pathname.startsWith('/brand-admin')) return `${BASE_NAME} - BRAND`;
-  if (pathname.startsWith('/technician')) return `${BASE_NAME} - TECHNICIAN`;
+  if (pathname.startsWith('/service-provider')) return `${BASE_NAME} - SERVICE_PROVIDER`;
   return `${BASE_NAME} - CUSTOMER`;
 }
 

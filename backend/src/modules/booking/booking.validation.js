@@ -24,7 +24,7 @@ export const createBookingSchema = z.object({
   mobile: z.string().optional(),
   paymentMode: z.enum(['advance', 'after']).optional(),
   // How the advance is collected. 'Cash' (or omitting it) means no gateway
-  // order is created — the technician collects on site.
+  // order is created — the service provider collects on site.
   paymentMethod: z.enum(['Card', 'UPI', 'NetBanking', 'Cash', 'Wallet']).optional(),
   purchaseDate: z.coerce.date().optional(),
   serialNo: z.string().optional(),

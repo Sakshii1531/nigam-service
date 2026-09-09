@@ -12,7 +12,7 @@ async function clearDb() {
   console.log('[clearDb] Wiping non-admin users and transactional data...');
 
   const User = mongoose.model('User');
-  const Technician = mongoose.model('Technician');
+  const ServiceProvider = mongoose.model('ServiceProvider');
   const ServiceRequest = mongoose.model('ServiceRequest');
   const Booking = mongoose.model('Booking');
   const Job = mongoose.model('Job');
@@ -31,7 +31,7 @@ async function clearDb() {
   const PartOrder = mongoose.model('PartOrder');
   const Payout = mongoose.model('Payout');
   const EarningsTally = mongoose.model('EarningsTally');
-  const TechInventoryItem = mongoose.model('TechInventoryItem');
+  const ServiceProviderInventoryItem = mongoose.model('ServiceProviderInventoryItem');
   const AMCSubscription = mongoose.model('AMCSubscription');
   const ExtendedWarrantyOrder = mongoose.model('ExtendedWarrantyOrder');
   const AMCVisit = mongoose.model('AMCVisit');
@@ -46,12 +46,12 @@ async function clearDb() {
   const RefreshToken = mongoose.model('RefreshToken');
 
   // Delete non-admin users (keeping super_admin and brand_admin)
-  const userResult = await User.deleteMany({ role: { $in: [ROLES.CUSTOMER, ROLES.TECHNICIAN] } });
-  console.log(`[clearDb] Deleted ${userResult.deletedCount} non-admin Users (Customer & Technician)`);
+  const userResult = await User.deleteMany({ role: { $in: [ROLES.CUSTOMER, ROLES.SERVICE_PROVIDER] } });
+  console.log(`[clearDb] Deleted ${userResult.deletedCount} non-admin Users (Customer & ServiceProvider)`);
 
-  // Delete all technicians
-  const techResult = await Technician.deleteMany({});
-  console.log(`[clearDb] Deleted ${techResult.deletedCount} Technician profiles`);
+  // Delete all service providers
+  const serviceProviderResult = await ServiceProvider.deleteMany({});
+  console.log(`[clearDb] Deleted ${serviceProviderResult.deletedCount} Service Provider profiles`);
 
   // Delete bookings & service requests & jobs
   const srResult = await ServiceRequest.deleteMany({});
@@ -72,13 +72,13 @@ async function clearDb() {
   const walletResult = await WalletLedger.deleteMany({});
   console.log(`[clearDb] Deleted ${orderResult.deletedCount} Orders, ${payResult.deletedCount} Payments, ${cartResult.deletedCount} Carts, ${wishResult.deletedCount} Wishlists, ${walletResult.deletedCount} Wallet Ledgers`);
 
-  // Delete technician inventory & claims & payouts
-  const techInvResult = await TechInventoryItem.deleteMany({});
+  // Delete service provider inventory & claims & payouts
+  const serviceProviderInvResult = await ServiceProviderInventoryItem.deleteMany({});
   const partOrderResult = await PartOrder.deleteMany({});
   const claimResult = await Claim.deleteMany({});
   const payoutResult = await Payout.deleteMany({});
   const tallyResult = await EarningsTally.deleteMany({});
-  console.log(`[clearDb] Deleted ${techInvResult.deletedCount} Tech Inventory Items, ${partOrderResult.deletedCount} Part Orders, ${claimResult.deletedCount} Claims, ${payoutResult.deletedCount} Payouts, ${tallyResult.deletedCount} Earnings Tallies`);
+  console.log(`[clearDb] Deleted ${serviceProviderInvResult.deletedCount} Tech Inventory Items, ${partOrderResult.deletedCount} Part Orders, ${claimResult.deletedCount} Claims, ${payoutResult.deletedCount} Payouts, ${tallyResult.deletedCount} Earnings Tallies`);
 
   // Delete AMC & Warranty subscriptions/orders/visits & exchange requests
   const amcSubResult = await AMCSubscription.deleteMany({});

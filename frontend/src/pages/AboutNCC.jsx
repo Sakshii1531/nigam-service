@@ -9,15 +9,15 @@ import { apiRequest } from '../lib/apiClient';
 
 const defaultStats = [
   { label: 'Happy Customers', value: '50,000+', icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
-  { label: 'Certified Technicians', value: '100+', icon: Award, color: 'text-amber-600', bg: 'bg-amber-50' },
+  { label: 'Certified ServiceProviders', value: '100+', icon: Award, color: 'text-amber-600', bg: 'bg-amber-50' },
   { label: 'Satisfaction Rating', value: '4.8 ★', icon: ThumbsUp, color: 'text-emerald-600', bg: 'bg-emerald-50' },
   { label: 'Response Time', value: '30 Mins', icon: Clock, color: 'text-indigo-600', bg: 'bg-indigo-50' },
 ];
 
 const defaultCoreValues = [
   {
-    title: 'Certified & Verified Technicians',
-    desc: 'Every technician undergoes rigorous background verification, technical testing, and safety protocols before taking any job.',
+    title: 'Certified & Verified ServiceProviders',
+    desc: 'Every serviceProvider undergoes rigorous background verification, technical testing, and safety protocols before taking any job.',
     icon: ShieldCheck,
     color: 'bg-blue-600',
   },
@@ -48,7 +48,7 @@ const AboutNCC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [heroTitle, setHeroTitle] = useState('Empowering Smart Home Care & Appliance Solutions');
-  const [heroSubtitle, setHeroSubtitle] = useState("Nigam Care Center (NCC) is India's leading home service network. We connect households with top-rated, background-verified technicians for AC repair, appliance servicing, electrical work, plumbing, and genuine spare parts delivery.");
+  const [heroSubtitle, setHeroSubtitle] = useState("Nigam Care Center (NCC) is India's leading home service network. We connect households with top-rated, background-verified serviceProviders for AC repair, appliance servicing, electrical work, plumbing, and genuine spare parts delivery.");
   const [appVersion, setAppVersion] = useState('v2.4.0');
   const [stats, setStats] = useState(defaultStats);
   const [coreValues, setCoreValues] = useState(defaultCoreValues);
@@ -183,7 +183,7 @@ const AboutNCC = () => {
           <div className="flex flex-col gap-2 text-center md:text-left">
             <h3 className="text-xl font-black text-slate-900">Need Instant Repair or Servicing?</h3>
             <p className="text-xs md:text-sm text-slate-500 font-medium max-w-xl">
-              Book certified AC technicians, washing machine experts, electricians, or plumbers in under 60 seconds with 30-day service warranty.
+              Book certified AC serviceProviders, washing machine experts, electricians, or plumbers in under 60 seconds with 30-day service warranty.
             </p>
           </div>
           <button

@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 // Runs the real backend/scripts/seed.js (idempotent) against the e2e database
 // before the suite starts, so catalog/booking specs have real categories,
-// services, and a technician to work with — same seed logic used for local dev,
+// services, and a service provider to work with — same seed logic used for local dev,
 // not a duplicated fixture. auth.spec.js doesn't depend on this (it creates its
 // own users via /_dev/test-user) but benefits from the RBAC data too.
 export default function globalSetup() {

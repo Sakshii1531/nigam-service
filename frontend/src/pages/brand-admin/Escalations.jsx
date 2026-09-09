@@ -73,7 +73,7 @@ const Escalations = () => {
         body: { status: 'Assigned to Senior' },
         auth: true,
       });
-      toast(`Complaint ${id} assigned to Senior Technician!`);
+      toast(`Complaint ${id} assigned to Senior Service Provider!`);
       fetchEscalations();
     } catch (err) {
       toast(`Error: ${err.message}`);

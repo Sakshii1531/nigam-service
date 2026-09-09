@@ -28,7 +28,7 @@ function shape(review) {
     rating: review.rating,
     date: review.createdAt ? dateFormatter.format(new Date(review.createdAt)) : '—',
     comment: review.comment || '',
-    technician: review.technician?.name || 'Unassigned',
+    serviceProvider: review.serviceProvider?.name || 'Unassigned',
     status: review.status || 'Reviewed',
     response: review.brandResponse || '',
   };
@@ -107,7 +107,7 @@ const Reviews = () => {
   const filteredReviews = reviews.filter(rev => {
     const matchesSearch = rev.customer.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           rev.comment.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          rev.technician.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          rev.serviceProvider.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           rev.ticketId.toLowerCase().includes(searchQuery.toLowerCase());
     
     let matchesRating = true;
@@ -224,7 +224,7 @@ const Reviews = () => {
                 </p>
 
                 <div className="flex justify-between items-center text-xs text-[#64748B] pt-2">
-                  <p>Technician: <span className="font-semibold text-[#1E293B]">{rev.technician}</span></p>
+                  <p>ServiceProvider: <span className="font-semibold text-[#1E293B]">{rev.serviceProvider}</span></p>
                   
                   <div className="flex gap-3">
                     {rev.status === 'Reviewed' && (

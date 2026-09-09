@@ -4,7 +4,7 @@ import { ID_PREFIXES } from '../../config/constants.js';
 
 const partOrderSchema = new mongoose.Schema(
   {
-    technician: { type: mongoose.Schema.Types.ObjectId, ref: 'Technician', required: true, index: true },
+    serviceProvider: { type: mongoose.Schema.Types.ObjectId, ref: 'ServiceProvider', required: true, index: true },
     job: { type: mongoose.Schema.Types.ObjectId, ref: 'Job', default: null },
     partName: { type: String, required: true },
     sku: String,

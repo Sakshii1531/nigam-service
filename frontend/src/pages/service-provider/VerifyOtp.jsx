@@ -13,14 +13,14 @@ const VerifyOtp = () => {
   return (
     <OtpVerification
       variant="mobile"
-      portalLabel="Technician Portal"
+      portalLabel="Service Provider Portal"
       destination={state?.destination || '+91 90•••••001'}
-      backTo="/technician/login"
+      backTo="/service-provider/login"
       onSubmit={
         hasRealSession
           ? async (code) => {
               await verifyOtp({ role: state.role, identifier: state.identifier, code });
-              navigate('/technician/dashboard');
+              navigate('/service-provider/dashboard');
             }
           : undefined
       }

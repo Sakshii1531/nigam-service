@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import { applyStandardPlugins } from '../shared/plugins.js';
 
-// Records every Twilio Voice relay attempt between a customer and technician.
+// Records every Twilio Voice relay attempt between a customer and service provider.
 // Both real phone numbers are stored server-side (never returned to clients);
 // all REST responses return masked identifiers only.
 const callLogSchema = new mongoose.Schema(
@@ -16,10 +16,10 @@ const callLogSchema = new mongoose.Schema(
       index: true,
     },
     customer: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    technician: { type: mongoose.Schema.Types.ObjectId, ref: 'Technician', required: true },
+    serviceProvider: { type: mongoose.Schema.Types.ObjectId, ref: 'ServiceProvider', required: true },
 
     // Who pressed "Call" — determines which direction the relay dials first.
-    initiatedBy: { type: String, enum: ['customer', 'technician'], required: true },
+    initiatedBy: { type: String, enum: ['customer', 'service_provider'], required: true },
 
     status: {
       type: String,

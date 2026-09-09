@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
 
 // The console-facing endpoints added while wiring the admin panels away from
-// mock data: the platform technician directory, ad-hoc notification dispatch,
+// mock data: the platform service provider directory, ad-hoc notification dispatch,
 // the CMS readers that show unpublished content, warranty-registration
 // verification, and the brand-wide review list.
 
@@ -33,57 +33,57 @@ async function createCustomer(request) {
   return { ...(await res.json()).data, phone };
 }
 
-async function createTechnician(request) {
+async function createServiceProvider(request) {
   const phone = `9${Math.floor(100000000 + Math.random() * 899999999)}`;
-  const res = await request.post('/api/v1/_dev/test-technician', {
+  const res = await request.post('/api/v1/_dev/test-serviceProvider', {
     data: { phone, password: 'password123', specs: ['AC'] },
   });
   return { ...(await res.json()).data, phone };
 }
 
-test.describe('platform technician directory', () => {
-  test('lists every technician, filters by status, and escapes regex in search', async ({ request }) => {
+test.describe('platform serviceProvider directory', () => {
+  test('lists every serviceProvider, filters by status, and escapes regex in search', async ({ request }) => {
     const { token } = await createSuperAdmin(request);
     const auth = { headers: { Authorization: `Bearer ${token}` } };
-    await createTechnician(request);
+    await createServiceProvider(request);
 
-    const listRes = await request.get('/api/v1/super-admin/technicians', auth);
+    const listRes = await request.get('/api/v1/super-admin/service-providers', auth);
     expect(listRes.status()).toBe(200);
     const items = (await listRes.json()).data;
     expect(items.length).toBeGreaterThan(0);
     // Notifications address the underlying User, so it must survive serialisation.
     expect(items[0].user).toBeDefined();
 
-    const activeRes = await request.get('/api/v1/super-admin/technicians?status=Active', auth);
+    const activeRes = await request.get('/api/v1/super-admin/service-providers?status=Active', auth);
     expect(activeRes.status()).toBe(200);
     for (const t of (await activeRes.json()).data) expect(t.status).toBe('Active');
 
     // Would blow up as "Invalid regular expression" if the term were not escaped.
-    const literalRes = await request.get('/api/v1/super-admin/technicians?search=a%2B%2B', auth);
+    const literalRes = await request.get('/api/v1/super-admin/service-providers?search=a%2B%2B', auth);
     expect(literalRes.status()).toBe(200);
 
-    const badRes = await request.get('/api/v1/super-admin/technicians?status=Bogus', auth);
+    const badRes = await request.get('/api/v1/super-admin/service-providers?status=Bogus', auth);
     expect(badRes.status()).toBe(400);
   });
 
-  test('forces a non-Active technician offline when status changes', async ({ request }) => {
+  test('forces a non-Active serviceProvider offline when status changes', async ({ request }) => {
     const { token } = await createSuperAdmin(request);
     const auth = { headers: { Authorization: `Bearer ${token}` } };
-    const tech = await createTechnician(request);
+    const provider = await createServiceProvider(request);
 
-    const res = await request.patch(`/api/v1/super-admin/technicians/${tech.technicianId || tech.id}/status`, {
+    const res = await request.patch(`/api/v1/super-admin/service-providers/${provider.serviceProviderId || provider.id}/status`, {
       ...auth,
       data: { status: 'Inactive' },
     });
     expect(res.status()).toBe(200);
     const updated = (await res.json()).data;
     expect(updated.status).toBe('Inactive');
-    // An inactive technician must stop advertising availability to the job feed.
+    // An inactive service provider must stop advertising availability to the job feed.
     expect(updated.availability).toBe('Offline');
   });
 
   test('is closed to unauthenticated callers', async ({ request }) => {
-    const res = await request.get('/api/v1/super-admin/technicians');
+    const res = await request.get('/api/v1/super-admin/service-providers');
     expect(res.status()).toBe(401);
   });
 });
@@ -106,7 +106,7 @@ test.describe('ad-hoc notification dispatch', () => {
     const { token } = await createSuperAdmin(request);
     const res = await request.post('/api/v1/notifications/push', {
       headers: { Authorization: `Bearer ${token}` },
-      data: { broadcastRole: 'Technicians', title: 'Maintenance', body: 'App update tonight.' },
+      data: { broadcastRole: 'ServiceProviders', title: 'Maintenance', body: 'App update tonight.' },
     });
     expect(res.status()).toBe(201);
     expect((await res.json()).data.recipient).toBeNull();
@@ -363,7 +363,7 @@ test.describe('brand exchange list', () => {
   });
 });
 
-test.describe('technician app content — announcements and skill catalogue', () => {
+test.describe('serviceProvider app content — announcements and skill catalogue', () => {
   test('broadcasts an announcement and recalls it', async ({ request }) => {
     const { token } = await createSuperAdmin(request);
     const auth = { headers: { Authorization: `Bearer ${token}` } };
@@ -380,14 +380,14 @@ test.describe('technician app content — announcements and skill catalogue', ()
     expect(listRes.status()).toBe(200);
     expect((await listRes.json()).data.some((a) => a.id === announcement.id)).toBe(true);
 
-    // Authoring is admin-only — the technician app only reads.
+    // Authoring is admin-only — the service provider app only reads.
     expect((await request.get('/api/v1/cms/announcements')).status()).toBe(401);
 
     const delRes = await request.delete(`/api/v1/cms/announcements/${announcement.id}`, auth);
     expect(delRes.status()).toBe(200);
   });
 
-  test('publishes a skill the technician app can read, and rejects a duplicate code', async ({ request }) => {
+  test('publishes a skill the serviceProvider app can read, and rejects a duplicate code', async ({ request }) => {
     const { token } = await createSuperAdmin(request);
     const auth = { headers: { Authorization: `Bearer ${token}` } };
     const code = `AC-SPLIT-${randomUUID().slice(0, 8).toUpperCase()}`;
@@ -405,7 +405,7 @@ test.describe('technician app content — announcements and skill catalogue', ()
     });
     expect(dupRes.status()).toBe(409);
 
-    // The catalogue is public so a technician's profile can offer it.
+    // The catalogue is public so a service provider's profile can offer it.
     const publicRes = await request.get('/api/v1/cms/skills');
     expect(publicRes.status()).toBe(200);
     expect((await publicRes.json()).data.some((s) => s.code === code)).toBe(true);
@@ -414,28 +414,28 @@ test.describe('technician app content — announcements and skill catalogue', ()
     expect((await request.delete(`/api/v1/cms/skills/${skill.id}`, auth)).status()).toBe(200);
   });
 
-  test('scopes the technician banner list by app so customer artwork never shows', async ({ request }) => {
+  test('scopes the serviceProvider banner list by app so customer artwork never shows', async ({ request }) => {
     const { token } = await createSuperAdmin(request);
     const auth = { headers: { Authorization: `Bearer ${token}` } };
     const title = `Safety First ${randomUUID().slice(0, 8)}`;
 
-    const techRes = await request.post('/api/v1/cms/banners', {
+    const serviceProviderRes = await request.post('/api/v1/cms/banners', {
       ...auth,
-      data: { imageUrl: 'https://cdn.example/tech.png', title, description: 'Mask & gloves on all jobs.', app: 'technician' },
+      data: { imageUrl: 'https://cdn.example/provider.png', title, description: 'Mask & gloves on all jobs.', app: 'service_provider' },
     });
-    expect(techRes.status()).toBe(201);
+    expect(serviceProviderRes.status()).toBe(201);
     const customerRes = await request.post('/api/v1/cms/banners', {
       ...auth,
       data: { imageUrl: 'https://cdn.example/customer.png', app: 'customer' },
     });
     expect(customerRes.status()).toBe(201);
 
-    const listRes = await request.get('/api/v1/cms/banners/admin?app=technician', auth);
+    const listRes = await request.get('/api/v1/cms/banners/admin?app=service_provider', auth);
     const banners = (await listRes.json()).data;
     expect(banners.some((b) => b.title === title)).toBe(true);
-    expect(banners.every((b) => b.app === 'technician')).toBe(true);
+    expect(banners.every((b) => b.app === 'service_provider')).toBe(true);
 
-    await request.delete(`/api/v1/cms/banners/${(await techRes.json()).data.id}`, auth);
+    await request.delete(`/api/v1/cms/banners/${(await serviceProviderRes.json()).data.id}`, auth);
     await request.delete(`/api/v1/cms/banners/${(await customerRes.json()).data.id}`, auth);
   });
 });
@@ -445,7 +445,7 @@ test.describe('assignment console', () => {
     const { token } = await createSuperAdmin(request);
     const auth = { headers: { Authorization: `Bearer ${token}` } };
     const customer = await createCustomer(request);
-    const tech = await createTechnician(request);
+    const provider = await createServiceProvider(request);
 
     const srRes = await request.post('/api/v1/_dev/test-service-request', {
       data: { customerId: customer.userId || customer.id, category: 'AC' },
@@ -453,7 +453,7 @@ test.describe('assignment console', () => {
     expect(srRes.status()).toBe(201);
     const srId = (await srRes.json()).data.id;
 
-    const suggestRes = await request.get(`/api/v1/service-requests/${srId}/technician-suggestions`, auth);
+    const suggestRes = await request.get(`/api/v1/service-requests/${srId}/service-provider-suggestions`, auth);
     expect(suggestRes.status()).toBe(200);
     const ranked = (await suggestRes.json()).data;
     expect(ranked.length).toBeGreaterThan(0);
@@ -463,19 +463,19 @@ test.describe('assignment console', () => {
 
     const assignRes = await request.patch(`/api/v1/service-requests/${srId}/assign`, {
       ...auth,
-      data: { technician: tech.technicianId },
+      data: { serviceProvider: provider.serviceProviderId },
     });
     expect(assignRes.status()).toBe(200);
     const assigned = (await assignRes.json()).data;
     expect(assigned.status).toBe('Assigned');
-    expect(assigned.technician.id).toBe(tech.technicianId);
+    expect(assigned.serviceProvider.id).toBe(provider.serviceProviderId);
   });
 
-  test('auto-assigns when no technician is named, and stays admin-only', async ({ request }) => {
+  test('auto-assigns when no serviceProvider is named, and stays admin-only', async ({ request }) => {
     const { token } = await createSuperAdmin(request);
     const auth = { headers: { Authorization: `Bearer ${token}` } };
     const customer = await createCustomer(request);
-    await createTechnician(request);
+    await createServiceProvider(request);
 
     const srRes = await request.post('/api/v1/_dev/test-service-request', {
       data: { customerId: customer.userId || customer.id, category: 'AC' },
@@ -486,7 +486,7 @@ test.describe('assignment console', () => {
 
     const res = await request.patch(`/api/v1/service-requests/${srId}/assign`, { ...auth, data: {} });
     expect(res.status()).toBe(200);
-    expect((await res.json()).data.technician).toBeTruthy();
+    expect((await res.json()).data.serviceProvider).toBeTruthy();
   });
 });
 

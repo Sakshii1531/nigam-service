@@ -6,7 +6,7 @@ import { ROLES } from '../../config/constants.js';
 import * as liveTrackingService from './liveTracking.service.js';
 import { upsertTrackingSchema, jobIdParamSchema } from './liveTracking.validation.js';
 
-// Super-admin only for now — the real write path (a technician's live GPS ping)
+// Super-admin only for now — the real write path (a service provider's live GPS ping)
 // is Phase 9's Socket.IO handler, not this HTTP route. This is a read surface
 // for super-admin's Tracking.jsx plus a manual-correction write, not the feed itself.
 export const liveTrackingRouter = Router();

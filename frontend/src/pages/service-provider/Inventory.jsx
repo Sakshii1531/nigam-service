@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { 
   ChevronLeft, Search, Filter, Briefcase, ClipboardList, Wrench, Calendar, User, Check, X, ShieldAlert
 } from 'lucide-react';
-import TechBottomNav from '../../components/TechBottomNav';
-import { useTech } from '../../context/TechContext';
+import ServiceProviderBottomNav from '../../components/ServiceProviderBottomNav';
+import { useTech } from '../../context/ServiceProviderContext';
 
 const Inventory = () => {
   const navigate = useNavigate();
@@ -164,7 +164,7 @@ const Inventory = () => {
       </div>
 
       {/* Bottom Navigation */}
-      <TechBottomNav activeTab="inventory" />
+      <ServiceProviderBottomNav activeTab="inventory" />
 
     </div>
   );

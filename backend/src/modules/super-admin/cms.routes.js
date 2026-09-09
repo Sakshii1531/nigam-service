@@ -241,7 +241,7 @@ cmsRouter.put(
   },
 );
 
-// ── Technician app content ────────────────────────────────────────────────────
+// ── Service Provider app content ────────────────────────────────────────────────────
 
 cmsRouter.get('/announcements', ...requireAdmin, async (req, res, next) => {
   try {
@@ -279,7 +279,7 @@ cmsRouter.delete('/announcements/:id', ...requireAdmin, validate(idParamSchema, 
   }
 });
 
-// Public — the technician profile reads the catalogue to offer a controlled
+// Public — the service provider profile reads the catalogue to offer a controlled
 // list of specialisations.
 cmsRouter.get('/skills', async (req, res, next) => {
   try {

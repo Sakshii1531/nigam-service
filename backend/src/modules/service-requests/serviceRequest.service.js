@@ -1,9 +1,9 @@
 import { ServiceRequest } from './serviceRequest.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
-import { rankTechnicians, findAvailableTechnician } from '../shared/assignmentEngine.js';
-import { Technician } from '../technician/technician.model.js';
+import { rankServiceProviders, findAvailableServiceProvider } from '../shared/assignmentEngine.js';
+import { ServiceProvider } from '../service-provider/serviceProvider.model.js';
 import { Booking } from '../booking/booking.model.js';
-import { Job } from '../technician/job.model.js';
+import { Job } from '../service-provider/job.model.js';
 import { SERVICE_REQUEST_TRANSITIONS } from '../../config/constants.js';
 import { parsePagination, paginationMeta } from '../../utils/pagination.js';
 
@@ -56,14 +56,14 @@ export async function getServiceRequest(id) {
 }
 
 /**
- * Same document with its technician resolved, for the detail views that render
+ * Same document with its service provider resolved, for the detail views that render
  * a name. Deliberately separate from getServiceRequest: the authorization
- * helpers compare `String(sr.technician)` against an id, which a populated
+ * helpers compare `String(sr.service provider)` against an id, which a populated
  * document would silently break.
  */
 export async function getServiceRequestDetail(id) {
   await findOr404(id);
-  return ServiceRequest.findById(id).populate('technician', 'name rating specs');
+  return ServiceRequest.findById(id).populate('serviceProvider', 'name rating specs');
 }
 
 /** Server-side transition validation — the frontend's own status enum is not
@@ -92,10 +92,10 @@ export async function transitionStatus(id, toStatus, { description, session } = 
 }
 
 
-export async function listServiceRequests({ user, technician, brand, status, page, limit, sort } = {}) {
+export async function listServiceRequests({ user, serviceProvider, brand, status, page, limit, sort } = {}) {
   const query = {};
   if (user) query.user = user;
-  if (technician) query.technician = technician;
+  if (serviceProvider) query.serviceProvider = serviceProvider;
   if (brand) query.brand = brand;
   if (status) query.status = status;
 
@@ -106,7 +106,7 @@ export async function listServiceRequests({ user, technician, brand, status, pag
     // refs here instead of making each caller fan out.
     ServiceRequest.find(query)
       .populate('user', 'name email phone')
-      .populate('technician', 'name phone')
+      .populate('serviceProvider', 'name phone')
       .populate('brand', 'name')
       .sort(sortObj)
       .skip(skip)
@@ -121,41 +121,41 @@ export async function listServiceRequests({ user, technician, brand, status, pag
  * Ranked shortlist for the assignment console, scored by the same weighted
  * engine that auto-assignment uses so the operator sees the real numbers.
  */
-export async function suggestTechnicians(id) {
+export async function suggestServiceProviders(id) {
   const serviceRequest = await findOr404(id);
-  const ranked = await rankTechnicians({
+  const ranked = await rankServiceProviders({
     category: serviceRequest.category,
     city: serviceRequest.zone,
     // The operator is overriding auto-assignment, so they get every Active
-    // technician — including the Busy/Offline ones auto-assign skips. The
+    // service provider — including the Busy/Offline ones auto-assign skips. The
     // shortlist used to be filtered to Available only, which meant that with
-    // nobody online it came back empty and the "Assign Technician" button had
+    // nobody online it came back empty and the "Assign Service Provider" button had
     // nothing to select: manual assignment was impossible precisely when
     // automatic assignment had already failed.
     includeUnavailable: true,
   });
-  return ranked.map(({ technician, score, proximity, skill, rating, workload }) => ({
-    id: technician.id,
-    name: technician.name,
-    specs: technician.specs,
-    rating: technician.rating,
-    activeJobsCount: technician.activeJobsCount,
+  return ranked.map(({ serviceProvider, score, proximity, skill, rating, workload }) => ({
+    id: serviceProvider.id,
+    name: serviceProvider.name,
+    specs: serviceProvider.specs,
+    rating: serviceProvider.rating,
+    activeJobsCount: serviceProvider.activeJobsCount,
     // Surfaced so the console can mark who is actually online — an operator
-    // picking an Offline technician should be able to see that they are.
-    availability: technician.availability,
-    city: technician.city?.name || null,
+    // picking an Offline service provider should be able to see that they are.
+    availability: serviceProvider.availability,
+    city: serviceProvider.city?.name || null,
     score: Math.round(score),
     breakdown: { proximity, skill, rating, workload },
   }));
 }
 
 /**
- * Assign a technician (named, or the engine's top pick) and move the request to
+ * Assign a service provider (named, or the engine's top pick) and move the request to
  * 'Assigned'. Only requests that have not been picked up yet are assignable —
  * re-routing work already underway is a different operation with different
  * side-effects, and is deliberately not folded in here.
  */
-export function scheduleDispatchTimeout(serviceRequestId, technicianId, timeoutMs = 60000) {
+export function scheduleDispatchTimeout(serviceRequestId, serviceProviderId, timeoutMs = 60000) {
   setTimeout(async () => {
     try {
       const sr = await ServiceRequest.findById(serviceRequestId);
@@ -163,10 +163,10 @@ export function scheduleDispatchTimeout(serviceRequestId, technicianId, timeoutM
         sr &&
         sr.status === 'Assigned' &&
         !sr.isAccepted &&
-        String(sr.technician) === String(technicianId)
+        String(sr.serviceProvider) === String(serviceProviderId)
       ) {
-        console.log(`[dispatch-cascade] 60s timeout expired for technician ${technicianId} on SR ${serviceRequestId}. Cascading to next nearest technician.`);
-        await declineAssignment(serviceRequestId, technicianId);
+        console.log(`[dispatch-cascade] 60s timeout expired for serviceProvider ${serviceProviderId} on SR ${serviceRequestId}. Cascading to next nearest serviceProvider.`);
+        await declineAssignment(serviceRequestId, serviceProviderId);
       }
     } catch (err) {
       console.warn('[dispatch-cascade] Timeout cascade notice:', err.message);
@@ -175,10 +175,10 @@ export function scheduleDispatchTimeout(serviceRequestId, technicianId, timeoutM
 }
 
 /**
- * Assign a technician (named, or the engine's top pick) and move the request to
+ * Assign a service provider (named, or the engine's top pick) and move the request to
  * 'Assigned'. Only requests that have not been picked up yet are assignable.
  */
-export async function assignTechnician(id, technicianId) {
+export async function assignServiceProvider(id, serviceProviderId) {
   const serviceRequest = await findOr404(id);
   if (!['New', 'Assigned'].includes(serviceRequest.status)) {
     throw new ApiError(409, `Cannot assign a request in status "${serviceRequest.status}"`);
@@ -189,13 +189,13 @@ export async function assignTechnician(id, technicianId) {
     booking = await Booking.findById(serviceRequest.booking);
   }
 
-  let technician;
-  if (technicianId) {
-    technician = await Technician.findById(technicianId);
-    if (!technician) throw new ApiError(404, 'Technician not found');
-    if (technician.status !== 'Active') throw new ApiError(409, `Technician is ${technician.status}, not Active`);
+  let serviceProvider;
+  if (serviceProviderId) {
+    serviceProvider = await ServiceProvider.findById(serviceProviderId);
+    if (!serviceProvider) throw new ApiError(404, 'Service Provider not found');
+    if (serviceProvider.status !== 'Active') throw new ApiError(409, `Service Provider is ${serviceProvider.status}, not Active`);
   } else {
-    technician = await findAvailableTechnician({
+    serviceProvider = await findAvailableServiceProvider({
       category: serviceRequest.category,
       city: serviceRequest.zone || booking?.address?.city,
       state: booking?.address?.state,
@@ -203,10 +203,10 @@ export async function assignTechnician(id, technicianId) {
       longitude: serviceRequest.customerLocation?.longitude || booking?.address?.longitude,
       exclude: serviceRequest.declinedBy || [],
     });
-    if (!technician) throw new ApiError(409, 'No available technician to assign');
+    if (!serviceProvider) throw new ApiError(409, 'No available serviceProvider to assign');
   }
 
-  serviceRequest.technician = technician._id;
+  serviceRequest.serviceProvider = serviceProvider._id;
   serviceRequest.isAccepted = false;
   serviceRequest.assignedAt = new Date();
   if (serviceRequest.status === 'New') serviceRequest.status = 'Assigned';
@@ -215,18 +215,18 @@ export async function assignTechnician(id, technicianId) {
     stepLabel: 'Assigned',
     done: true,
     timestamp: new Date(),
-    description: `Assigned to ${technician.name}`,
+    description: `Assigned to ${serviceProvider.name}`,
   });
   await serviceRequest.save();
 
   if (booking) {
-    booking.technician = technician._id;
+    booking.serviceProvider = serviceProvider._id;
     booking.isAccepted = false;
     if (booking.isInstant) booking.instantStatus = 'ASSIGNED';
     await booking.save();
   }
 
-  // Socket notification dispatched strictly to the targeted technician
+  // Socket notification dispatched strictly to the targeted service provider
   try {
     const io = getIO();
     const jobPayload = {
@@ -239,42 +239,42 @@ export async function assignTechnician(id, technicianId) {
       isInstant: serviceRequest.isInstant,
       scheduledTime: booking?.timeSlot?.time || (serviceRequest.isInstant ? 'ASAP' : 'Scheduled'),
       scheduledDateLabel: booking?.timeSlot?.date || 'Today',
-      assignedTechnicianId: String(technician._id),
-      assignedTechnicianUserId: String(technician.user),
+      assignedServiceProviderId: String(serviceProvider._id),
+      assignedServiceProviderUserId: String(serviceProvider.user),
       instantStatus: serviceRequest.isInstant ? 'ASSIGNED' : null,
       isAvailableRequest: false,
     };
-    io.to(`tech:${technician._id}`).emit('job:assigned', jobPayload);
-    io.to(`tech:${technician.user}`).emit('job:assigned', jobPayload);
-    io.to(`tech:${technician._id}`).emit('instant:new_request', jobPayload);
-    io.to(`tech:${technician.user}`).emit('instant:new_request', jobPayload);
+    io.to(`service-provider:${serviceProvider._id}`).emit('job:assigned', jobPayload);
+    io.to(`service-provider:${serviceProvider.user}`).emit('job:assigned', jobPayload);
+    io.to(`service-provider:${serviceProvider._id}`).emit('instant:new_request', jobPayload);
+    io.to(`service-provider:${serviceProvider.user}`).emit('instant:new_request', jobPayload);
   } catch (_e) {
     // Socket emit optional
   }
 
   // Schedule auto-timeout cascade (60s)
-  scheduleDispatchTimeout(serviceRequest._id, technician._id);
+  scheduleDispatchTimeout(serviceRequest._id, serviceProvider._id);
 
-  await emitNotification('technician.assigned', {
+  await emitNotification('serviceProvider.assigned', {
     user: serviceRequest.user,
-    technicianName: technician.name,
+    serviceProviderName: serviceProvider.name,
     serviceRequestId: serviceRequest.id,
   });
 
-  return ServiceRequest.findById(id).populate('technician', 'name rating specs');
+  return ServiceRequest.findById(id).populate('serviceProvider', 'name rating specs');
 }
 
 /**
- * A technician turns down a request that was assigned to them.
+ * A service provider turns down a request that was assigned to them.
  *
- * There was no reject at all before: the technician app's "Decline" only
+ * There was no reject at all before: the service provider app's "Decline" only
  * filtered the card out of local state, so the request stayed assigned to them
  * forever, reappeared on the next refresh, and was never offered to anybody
  * else. Rejecting has to actually release the work — clear the assignee, put
  * the request back in the pool, remember who said no, and immediately look for
- * the next best technician.
+ * the next best service provider.
  */
-export async function declineAssignment(id, technicianId) {
+export async function declineAssignment(id, serviceProviderId) {
   const serviceRequest = await findOr404(id);
 
   // If already at terminal states (Completed / Closed / Cancelled), cannot reject
@@ -283,11 +283,11 @@ export async function declineAssignment(id, technicianId) {
   }
 
   // You can only decline your own assignment. There was no check at all, so any
-  // technician who knew (or guessed) a request id could release somebody else's
+  // service provider who knew (or guessed) a request id could release somebody else's
   // job out from under them — the caller's id was accepted and only ever used to
   // record who declined. listAvailableJobs only ever surfaces requests assigned
-  // to the caller, so this is exactly the set the technician app can act on.
-  if (String(serviceRequest.technician || '') !== String(technicianId || '')) {
+  // to the caller, so this is exactly the set the service provider app can act on.
+  if (String(serviceRequest.serviceProvider || '') !== String(serviceProviderId || '')) {
     throw new ApiError(403, 'This request is not assigned to you');
   }
 
@@ -299,28 +299,28 @@ export async function declineAssignment(id, technicianId) {
     throw new ApiError(409, 'This request has already been accepted and can no longer be rejected');
   }
 
-  if (technicianId && !serviceRequest.declinedBy.some((t) => String(t) === String(technicianId))) {
-    serviceRequest.declinedBy.push(technicianId);
+  if (serviceProviderId && !serviceRequest.declinedBy.some((t) => String(t) === String(serviceProviderId))) {
+    serviceRequest.declinedBy.push(serviceProviderId);
   }
-  serviceRequest.technician = null;
+  serviceRequest.serviceProvider = null;
   serviceRequest.status = 'New';
   if (serviceRequest.isInstant) serviceRequest.instantStatus = 'SEARCHING';
   serviceRequest.timeline.push({
     stepLabel: 'New',
     done: true,
     timestamp: new Date(),
-    description: 'Declined by technician — searching for another technician',
+    description: 'Declined by serviceProvider — searching for another serviceProvider',
   });
   await serviceRequest.save();
 
   // The customer's screens read the booking, so it has to let go of the
-  // technician too or they keep seeing someone who is not coming.
+  // service provider too or they keep seeing someone who is not coming.
   let customerUserId = null;
   if (serviceRequest.booking) {
     const booking = await Booking.findById(serviceRequest.booking);
     if (booking) {
       customerUserId = booking.user ? String(booking.user._id || booking.user) : null;
-      booking.technician = null;
+      booking.serviceProvider = null;
       if (booking.isInstant) booking.instantStatus = 'SEARCHING';
       booking.status = 'Upcoming';
       await booking.save();
@@ -329,7 +329,7 @@ export async function declineAssignment(id, technicianId) {
     customerUserId = String(serviceRequest.user._id || serviceRequest.user);
   }
 
-  // Emit realtime updates to the customer and technician rooms
+  // Emit realtime updates to the customer and service provider rooms
   try {
     const io = getIO();
     if (customerUserId) {
@@ -337,34 +337,34 @@ export async function declineAssignment(id, technicianId) {
         bookingId: serviceRequest.booking ? String(serviceRequest.booking) : null,
         serviceRequestId: serviceRequest.id,
         instantStatus: 'SEARCHING',
-        technician: null,
+        serviceProvider: null,
       });
       io.to(`user:${customerUserId}`).emit('service_request:updated', {
         serviceRequestId: serviceRequest.id,
         status: 'New',
-        technician: null,
+        serviceProvider: null,
       });
       io.to(`user:${customerUserId}`).emit('booking:updated', {
         bookingId: serviceRequest.booking ? String(serviceRequest.booking) : null,
-        technician: null,
+        serviceProvider: null,
       });
     }
-    io.to('instant:technicians').emit('instant:status_update', {
+    io.to('instant:serviceProviders').emit('instant:status_update', {
       bookingId: serviceRequest.booking ? String(serviceRequest.booking) : null,
       serviceRequestId: serviceRequest.id,
       instantStatus: 'SEARCHING',
-      technician: null,
+      serviceProvider: null,
     });
   } catch {
     // Socket might not be initialized during isolated tests
   }
 
-  // Offer it to the next best technician right away. Nobody else being
+  // Offer it to the next best service provider right away. Nobody else being
   // available is a normal outcome — it stays queued for the next sweep.
   let reassignedTo = null;
   try {
-    const updated = await assignTechnician(String(serviceRequest._id), null);
-    reassignedTo = updated.technician?.name || null;
+    const updated = await assignServiceProvider(String(serviceRequest._id), null);
+    reassignedTo = updated.serviceProvider?.name || null;
   } catch {
     reassignedTo = null;
   }
@@ -376,13 +376,13 @@ export async function declineAssignment(id, technicianId) {
  * Drains the backlog of requests that were created while nobody was online.
  *
  * Auto-assignment used to run exactly once, inside createBooking: if no
- * technician was Available at that instant the request was written with
- * technician: null and nothing ever looked at it again, so it sat in the
- * super-admin queue forever. This is called when a technician comes online —
+ * service provider was Available at that instant the request was written with
+ * service provider: null and nothing ever looked at it again, so it sat in the
+ * super-admin queue forever. This is called when a service provider comes online —
  * the moment a previously-unassignable request becomes assignable.
  */
 export async function autoAssignPendingRequests({ limit = 25 } = {}) {
-  const pending = await ServiceRequest.find({ technician: null, status: 'New' })
+  const pending = await ServiceRequest.find({ serviceProvider: null, status: 'New' })
     .sort({ createdAt: 1 })
     .limit(limit)
     .select('_id');
@@ -393,10 +393,10 @@ export async function autoAssignPendingRequests({ limit = 25 } = {}) {
       // Sequential on purpose: each assignment feeds the workload term the next
       // one is ranked against, so these must not run in parallel or the whole
       // backlog lands on whoever happens to rank first.
-      const updated = await assignTechnician(String(_id), null);
+      const updated = await assignServiceProvider(String(_id), null);
       assigned.push(updated.humanId || String(_id));
     } catch {
-      // No eligible technician for this one, or it moved on under us. Leave it
+      // No eligible service provider for this one, or it moved on under us. Leave it
       // queued for the next sweep rather than failing the whole batch.
     }
   }

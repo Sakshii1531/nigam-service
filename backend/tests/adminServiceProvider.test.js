@@ -1,11 +1,11 @@
 /**
- * adminTechnician.test.js
+ * adminServiceProvider.test.js
  *
  * Covers the two routes the super-admin console was calling before they existed:
- *   1. /api/v1/super-admin/technicians — the platform-wide technician directory
+ *   1. /api/v1/super-admin/service providers — the platform-wide service provider directory
  *   2. /api/v1/notifications/push|sms  — ad-hoc dispatch from the console
  *
- * Both were 404s reached from Assignment.jsx and Technicians.jsx.
+ * Both were 404s reached from Assignment.jsx and ServiceProviders.jsx.
  */
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
@@ -15,8 +15,8 @@ import { createApp } from '../src/app.js';
 import { registerAllModels } from '../src/config/registerModels.js';
 import { ensureIndexes } from '../src/config/db.js';
 import { User } from '../src/modules/auth/user.model.js';
-import { Technician } from '../src/modules/technician/technician.model.js';
-import { Job } from '../src/modules/technician/job.model.js';
+import { ServiceProvider } from '../src/modules/service-provider/serviceProvider.model.js';
+import { Job } from '../src/modules/service-provider/job.model.js';
 import { Notification } from '../src/modules/notifications/notification.model.js';
 import { City } from '../src/modules/super-admin/city.model.js';
 import { ServiceRequest } from '../src/modules/service-requests/serviceRequest.model.js';
@@ -25,7 +25,7 @@ import { ROLES } from '../src/config/constants.js';
 import { testDbUri } from './helpers/testDb.js';
 import { readOtpCode } from './helpers/otp.js';
 
-const TEST_DB_URI = testDbUri('adminTechnician');
+const TEST_DB_URI = testDbUri('adminServiceProvider');
 
 let app;
 let emailCounter = 0;
@@ -39,7 +39,7 @@ async function loginAndVerify({ role, identifier, password }) {
 }
 
 async function seedSuperAdmin() {
-  const email = `admin-tech-${emailCounter++}@test.local`;
+  const email = `admin-service-provider-${emailCounter++}@test.local`;
   const password = 'password123';
   await User.create({
     role: ROLES.SUPER_ADMIN,
@@ -52,17 +52,17 @@ async function seedSuperAdmin() {
 }
 
 let phoneCounter = 0;
-async function seedTechnician(overrides = {}) {
+async function seedServiceProvider(overrides = {}) {
   const phone = `98000${String(phoneCounter++).padStart(5, '0')}`;
   const user = await User.create({
-    role: ROLES.TECHNICIAN,
+    role: ROLES.SERVICE_PROVIDER,
     name: overrides.name || 'Tech User',
     phone,
     passwordHash: 'stub',
     status: 'Active',
     fcmTokens: overrides.fcmTokens || [],
   });
-  const technician = await Technician.create({
+  const serviceProvider = await ServiceProvider.create({
     user: user._id,
     name: overrides.name || 'Tech User',
     phone,
@@ -71,7 +71,7 @@ async function seedTechnician(overrides = {}) {
     availability: overrides.availability || 'Offline',
     ...(overrides.city ? { city: overrides.city } : {}),
   });
-  return { user, technician };
+  return { user, serviceProvider };
 }
 
 beforeAll(async () => {
@@ -90,7 +90,7 @@ afterAll(async () => {
 beforeEach(async () => {
   await Promise.all([
     User.deleteMany({}),
-    Technician.deleteMany({}),
+    ServiceProvider.deleteMany({}),
     Job.deleteMany({}),
     Notification.deleteMany({}),
     City.deleteMany({}),
@@ -98,9 +98,9 @@ beforeEach(async () => {
   ]);
 });
 
-describe('GET /super-admin/technicians', () => {
+describe('GET /super-admin/service-providers', () => {
   it('rejects unauthenticated and non-super-admin callers', async () => {
-    await request(app).get('/api/v1/super-admin/technicians').expect(401);
+    await request(app).get('/api/v1/super-admin/service-providers').expect(401);
 
     await User.create({
       role: ROLES.CUSTOMER,
@@ -110,18 +110,18 @@ describe('GET /super-admin/technicians', () => {
     });
     const token = await loginAndVerify({ role: ROLES.CUSTOMER, identifier: '9700000001', password: 'password123' });
     await request(app)
-      .get('/api/v1/super-admin/technicians')
+      .get('/api/v1/super-admin/service-providers')
       .set('Authorization', `Bearer ${token}`)
       .expect(403);
   });
 
-  it('lists every technician on the platform, not just the caller', async () => {
+  it('lists every serviceProvider on the platform, not just the caller', async () => {
     const token = await seedSuperAdmin();
-    await seedTechnician({ name: 'Rahul' });
-    await seedTechnician({ name: 'Amit' });
+    await seedServiceProvider({ name: 'Rahul' });
+    await seedServiceProvider({ name: 'Amit' });
 
     const res = await request(app)
-      .get('/api/v1/super-admin/technicians')
+      .get('/api/v1/super-admin/service-providers')
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
 
@@ -131,13 +131,13 @@ describe('GET /super-admin/technicians', () => {
     expect(res.body.data[0].user).toBeDefined();
   });
 
-  it('filters by status — Assignment.jsx only offers Active technicians', async () => {
+  it('filters by status — Assignment.jsx only offers Active serviceProviders', async () => {
     const token = await seedSuperAdmin();
-    await seedTechnician({ name: 'Active One', status: 'Active' });
-    await seedTechnician({ name: 'Pending One', status: 'Pending' });
+    await seedServiceProvider({ name: 'Active One', status: 'Active' });
+    await seedServiceProvider({ name: 'Pending One', status: 'Pending' });
 
     const res = await request(app)
-      .get('/api/v1/super-admin/technicians?status=Active')
+      .get('/api/v1/super-admin/service-providers?status=Active')
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
 
@@ -147,18 +147,18 @@ describe('GET /super-admin/technicians', () => {
 
   it('searches by name and treats regex metacharacters literally', async () => {
     const token = await seedSuperAdmin();
-    await seedTechnician({ name: 'Suresh Raina' });
-    await seedTechnician({ name: 'Vikram Batra' });
+    await seedServiceProvider({ name: 'Suresh Raina' });
+    await seedServiceProvider({ name: 'Vikram Batra' });
 
     const hit = await request(app)
-      .get('/api/v1/super-admin/technicians?search=Raina')
+      .get('/api/v1/super-admin/service-providers?search=Raina')
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
     expect(hit.body.data).toHaveLength(1);
 
     // Would throw "Invalid regular expression" if the term were not escaped.
     const literal = await request(app)
-      .get('/api/v1/super-admin/technicians?search=a%2B%2B')
+      .get('/api/v1/super-admin/service-providers?search=a%2B%2B')
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
     expect(literal.body.data).toHaveLength(0);
@@ -167,19 +167,19 @@ describe('GET /super-admin/technicians', () => {
   it('rejects an unknown status value', async () => {
     const token = await seedSuperAdmin();
     await request(app)
-      .get('/api/v1/super-admin/technicians?status=Bogus')
+      .get('/api/v1/super-admin/service-providers?status=Bogus')
       .set('Authorization', `Bearer ${token}`)
       .expect(400);
   });
 });
 
-describe('PATCH /super-admin/technicians/:id/status', () => {
-  it('persists the new status and forces a non-Active technician offline', async () => {
+describe('PATCH /super-admin/service-providers/:id/status', () => {
+  it('persists the new status and forces a non-Active serviceProvider offline', async () => {
     const token = await seedSuperAdmin();
-    const { technician } = await seedTechnician({ status: 'Active', availability: 'Available' });
+    const { serviceProvider } = await seedServiceProvider({ status: 'Active', availability: 'Available' });
 
     const res = await request(app)
-      .patch(`/api/v1/super-admin/technicians/${technician._id}/status`)
+      .patch(`/api/v1/super-admin/service-providers/${serviceProvider._id}/status`)
       .set('Authorization', `Bearer ${token}`)
       .send({ status: 'Inactive' })
       .expect(200);
@@ -187,36 +187,36 @@ describe('PATCH /super-admin/technicians/:id/status', () => {
     expect(res.body.data.status).toBe('Inactive');
     expect(res.body.data.availability).toBe('Offline');
 
-    const inDb = await Technician.findById(technician._id);
+    const inDb = await ServiceProvider.findById(serviceProvider._id);
     expect(inDb.status).toBe('Inactive');
   });
 
-  it('404s for an unknown technician', async () => {
+  it('404s for an unknown serviceProvider', async () => {
     const token = await seedSuperAdmin();
     await request(app)
-      .patch(`/api/v1/super-admin/technicians/${new mongoose.Types.ObjectId()}/status`)
+      .patch(`/api/v1/super-admin/service-providers/${new mongoose.Types.ObjectId()}/status`)
       .set('Authorization', `Bearer ${token}`)
       .send({ status: 'Active' })
       .expect(404);
   });
 });
 
-describe('DELETE /super-admin/technicians/:id', () => {
-  it('deletes a technician with no active jobs', async () => {
+describe('DELETE /super-admin/service-providers/:id', () => {
+  it('deletes a serviceProvider with no active jobs', async () => {
     const token = await seedSuperAdmin();
-    const { technician } = await seedTechnician();
+    const { serviceProvider } = await seedServiceProvider();
 
     await request(app)
-      .delete(`/api/v1/super-admin/technicians/${technician._id}`)
+      .delete(`/api/v1/super-admin/service-providers/${serviceProvider._id}`)
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
 
-    expect(await Technician.findById(technician._id)).toBeNull();
+    expect(await ServiceProvider.findById(serviceProvider._id)).toBeNull();
   });
 
-  it('refuses to delete a technician who is mid-job', async () => {
+  it('refuses to delete a serviceProvider who is mid-job', async () => {
     const token = await seedSuperAdmin();
-    const { user, technician } = await seedTechnician({ status: 'Active' });
+    const { user, serviceProvider } = await seedServiceProvider({ status: 'Active' });
 
     const serviceRequest = await ServiceRequest.create({
       user: user._id,
@@ -224,25 +224,25 @@ describe('DELETE /super-admin/technicians/:id', () => {
     });
     await Job.create({
       serviceRequest: serviceRequest._id,
-      technician: technician._id,
+      serviceProvider: serviceProvider._id,
       type: 'NCC Paid Service',
       activeStep: 'inspection',
     });
 
     const res = await request(app)
-      .delete(`/api/v1/super-admin/technicians/${technician._id}`)
+      .delete(`/api/v1/super-admin/service-providers/${serviceProvider._id}`)
       .set('Authorization', `Bearer ${token}`)
       .expect(409);
 
     expect(res.body.error.message).toMatch(/active job/i);
-    expect(await Technician.findById(technician._id)).not.toBeNull();
+    expect(await ServiceProvider.findById(serviceProvider._id)).not.toBeNull();
   });
 });
 
 describe('POST /notifications/push — ad-hoc admin dispatch', () => {
   it('writes an in-app notification addressed to the recipient', async () => {
     const token = await seedSuperAdmin();
-    const { user } = await seedTechnician();
+    const { user } = await seedServiceProvider();
 
     const res = await request(app)
       .post('/api/v1/notifications/push')
@@ -263,10 +263,10 @@ describe('POST /notifications/push — ad-hoc admin dispatch', () => {
     await request(app)
       .post('/api/v1/notifications/push')
       .set('Authorization', `Bearer ${token}`)
-      .send({ broadcastRole: 'Technicians', title: 'Maintenance', body: 'App update tonight.' })
+      .send({ broadcastRole: 'ServiceProviders', title: 'Maintenance', body: 'App update tonight.' })
       .expect(201);
 
-    const inDb = await Notification.findOne({ broadcastRole: 'Technicians' });
+    const inDb = await Notification.findOne({ broadcastRole: 'ServiceProviders' });
     expect(inDb).not.toBeNull();
     expect(inDb.recipient).toBeNull();
   });
@@ -282,7 +282,7 @@ describe('POST /notifications/push — ad-hoc admin dispatch', () => {
 
   it('rejects a payload carrying both', async () => {
     const token = await seedSuperAdmin();
-    const { user } = await seedTechnician();
+    const { user } = await seedServiceProvider();
     await request(app)
       .post('/api/v1/notifications/push')
       .set('Authorization', `Bearer ${token}`)
@@ -331,7 +331,7 @@ describe('POST /notifications/sms — ad-hoc admin dispatch', () => {
 
   it('resolves the number from a recipientId when no phone is given', async () => {
     const token = await seedSuperAdmin();
-    const { user } = await seedTechnician();
+    const { user } = await seedServiceProvider();
 
     const res = await request(app)
       .post('/api/v1/notifications/sms')
@@ -352,13 +352,13 @@ describe('POST /notifications/sms — ad-hoc admin dispatch', () => {
   });
 });
 
-describe('public technician application (/tech/register)', () => {
-  it('creates a Pending, Offline technician the console then sees', async () => {
+describe('public serviceProvider application (/service-provider/register)', () => {
+  it('creates a Pending, Offline serviceProvider the console then sees', async () => {
     const token = await seedSuperAdmin();
     const city = await City.create({ name: 'Lucknow' });
 
     const res = await request(app)
-      .post('/api/v1/tech/register')
+      .post('/api/v1/service-provider/register')
       .field('name', 'Applicant One')
       .field('phone', '9811100011')
       .field('email', 'applicant1@test.com')
@@ -369,15 +369,15 @@ describe('public technician application (/tech/register)', () => {
 
     expect(res.body.data.status).toBe('Pending');
 
-    const technician = await Technician.findById(res.body.data.id);
+    const serviceProvider = await ServiceProvider.findById(res.body.data.id);
     // Must not be assignable until a human approves it.
-    expect(technician.status).toBe('Pending');
-    expect(technician.availability).toBe('Offline');
-    expect(technician.specs).toEqual(['AC', 'Refrigerator']);
-    expect(String(technician.city)).toBe(String(city._id));
+    expect(serviceProvider.status).toBe('Pending');
+    expect(serviceProvider.availability).toBe('Offline');
+    expect(serviceProvider.specs).toEqual(['AC', 'Refrigerator']);
+    expect(String(serviceProvider.city)).toBe(String(city._id));
 
     const listed = await request(app)
-      .get('/api/v1/super-admin/technicians?status=Pending')
+      .get('/api/v1/super-admin/service-providers?status=Pending')
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
     expect(listed.body.data.some((t) => t.id === res.body.data.id)).toBe(true);
@@ -385,14 +385,14 @@ describe('public technician application (/tech/register)', () => {
 
   it('rejects a second application for the same phone with 409', async () => {
     await request(app)
-      .post('/api/v1/tech/register')
+      .post('/api/v1/service-provider/register')
       .field('name', 'Applicant Two')
       .field('phone', '9811100022')
       .field('password', 'password123')
       .expect(201);
 
     const dup = await request(app)
-      .post('/api/v1/tech/register')
+      .post('/api/v1/service-provider/register')
       .field('name', 'Impostor')
       .field('phone', '9811100022')
       .field('password', 'password123')
@@ -402,14 +402,14 @@ describe('public technician application (/tech/register)', () => {
 
   it('400s a short password and a missing name, and needs no auth to apply', async () => {
     await request(app)
-      .post('/api/v1/tech/register')
+      .post('/api/v1/service-provider/register')
       .field('name', 'Applicant Three')
       .field('phone', '9811100033')
       .field('password', 'short')
       .expect(400);
 
     await request(app)
-      .post('/api/v1/tech/register')
+      .post('/api/v1/service-provider/register')
       .field('phone', '9811100044')
       .field('password', 'password123')
       .expect(400);
@@ -417,13 +417,13 @@ describe('public technician application (/tech/register)', () => {
 
   it('accepts an unknown city rather than failing the application', async () => {
     const res = await request(app)
-      .post('/api/v1/tech/register')
+      .post('/api/v1/service-provider/register')
       .field('name', 'Applicant Four')
       .field('phone', '9811100055')
       .field('password', 'password123')
       .field('city', 'Nowhere-Ville')
       .expect(201);
 
-    expect((await Technician.findById(res.body.data.id)).city).toBeNull();
+    expect((await ServiceProvider.findById(res.body.data.id)).city).toBeNull();
   });
 });

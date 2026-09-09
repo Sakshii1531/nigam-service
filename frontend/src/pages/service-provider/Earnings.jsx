@@ -5,8 +5,8 @@ import {
   Briefcase, ClipboardList, User, Wrench, Zap, FileText, Building2, ChevronRight,
   AlertCircle, RefreshCw, Download, ArrowUpRight
 } from 'lucide-react';
-import TechBottomNav from '../../components/TechBottomNav';
-import { useTech } from '../../context/TechContext';
+import ServiceProviderBottomNav from '../../components/ServiceProviderBottomNav';
+import { useTech } from '../../context/ServiceProviderContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { apiRequest } from '../../lib/apiClient';
 
@@ -41,7 +41,7 @@ const EarningsPage = () => {
 
   // Load Primary Payout Account
   useEffect(() => {
-    apiRequest('/tech/profile/profile', { auth: true })
+    apiRequest('/service-provider/profile/profile', { auth: true })
       .then((res) => {
         const methods = res?.payoutMethods || [];
         const primary = methods.find(m => m.isPrimary) || methods[0] || null;
@@ -53,7 +53,7 @@ const EarningsPage = () => {
   // Load Analytics
   const loadAnalytics = useCallback(() => {
     setLoadingAnalytics(true);
-    apiRequest(`/tech/earnings/analytics?days=${trendDays}`, { auth: true })
+    apiRequest(`/service-provider/earnings/analytics?days=${trendDays}`, { auth: true })
       .then((res) => setStats(res))
       .catch((err) => console.warn('[earnings] Could not load analytics:', err.message))
       .finally(() => setLoadingAnalytics(false));
@@ -66,7 +66,7 @@ const EarningsPage = () => {
   // Load Payouts List
   const loadPayouts = useCallback(() => {
     setLoadingPayouts(true);
-    apiRequest('/tech/earnings/payouts?limit=20', { auth: true })
+    apiRequest('/service-provider/earnings/payouts?limit=20', { auth: true })
       .then((res) => setPayouts(res || []))
       .catch((err) => console.warn('[earnings] Could not load payouts:', err.message))
       .finally(() => setLoadingPayouts(false));
@@ -106,7 +106,7 @@ const EarningsPage = () => {
     setWithdrawSubmitting(true);
     setWithdrawError('');
     try {
-      await apiRequest('/tech/earnings/payouts', {
+      await apiRequest('/service-provider/earnings/payouts', {
         method: 'POST',
         auth: true,
         body: {
@@ -173,7 +173,7 @@ const EarningsPage = () => {
                   <div className="bg-amber-50 border border-amber-200 rounded-xl p-2.5 text-amber-800 text-[11px] font-medium text-center">
                     No primary payout method configured.
                     <button 
-                      onClick={() => { setShowWithdrawModal(false); navigate('/technician/payout-settings'); }}
+                      onClick={() => { setShowWithdrawModal(false); navigate('/service-provider/payout-settings'); }}
                       className="text-[#0D47A1] font-bold underline ml-1 cursor-pointer"
                     >
                       Add Bank Account
@@ -232,7 +232,7 @@ const EarningsPage = () => {
           <h1 className="text-lg font-black text-[#052355]">Earnings & Payouts</h1>
         </div>
         <button 
-          onClick={() => navigate('/technician/notifications')}
+          onClick={() => navigate('/service-provider/notifications')}
           className="p-2 hover:bg-slate-50 rounded-full transition-colors relative"
         >
           <Bell className="h-5 w-5 text-slate-700" />
@@ -261,14 +261,14 @@ const EarningsPage = () => {
 
           <div className="flex items-center gap-3">
             <button
-              onClick={() => navigate('/technician/payout-settings')}
+              onClick={() => navigate('/service-provider/payout-settings')}
               className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200/80 border border-slate-200 text-slate-700 text-xs font-bold rounded-2xl transition-all cursor-pointer shadow-2xs"
             >
               <Building2 className="h-4 w-4 text-[#0D47A1]" />
               <span>Payout Settings</span>
             </button>
             <button
-              onClick={() => navigate('/technician/recent-earnings')}
+              onClick={() => navigate('/service-provider/recent-earnings')}
               className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-[#0D47A1] text-xs font-bold rounded-2xl transition-all cursor-pointer shadow-2xs"
             >
               <FileText className="h-4 w-4 text-[#0D47A1]" />
@@ -324,7 +324,7 @@ const EarningsPage = () => {
               </button>
 
               <button 
-                onClick={() => navigate('/technician/payout-settings')}
+                onClick={() => navigate('/service-provider/payout-settings')}
                 className="w-full bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold py-2.5 rounded-2xl text-xs transition-all cursor-pointer flex items-center justify-center gap-2"
               >
                 <Building2 className="h-3.5 w-3.5 text-blue-200" />
@@ -353,7 +353,7 @@ const EarningsPage = () => {
             </div>
             
             <button
-              onClick={() => navigate('/technician/recent-earnings')}
+              onClick={() => navigate('/service-provider/recent-earnings')}
               className="p-2 bg-slate-50 hover:bg-slate-100 rounded-xl text-slate-400 hover:text-[#0D47A1] transition-colors cursor-pointer"
               title="View detailed logs"
             >
@@ -507,7 +507,7 @@ const EarningsPage = () => {
               </div>
 
               <button 
-                onClick={() => navigate('/technician/recent-earnings')}
+                onClick={() => navigate('/service-provider/recent-earnings')}
                 className="text-xs text-[#0D47A1] font-extrabold hover:underline flex items-center gap-1 cursor-pointer"
               >
                 <span>View Full History</span>
@@ -569,7 +569,7 @@ const EarningsPage = () => {
       </div>
 
       {/* Bottom Navigation */}
-      <TechBottomNav activeTab="profile" />
+      <ServiceProviderBottomNav activeTab="profile" />
 
     </div>
   );

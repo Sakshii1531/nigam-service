@@ -5,7 +5,9 @@ export const createAsmSchema = z.object({
   email: z.string().optional(),
   phone: z.string().optional(),
   city: z.string().min(1),
-  user: z.string().optional(),
+  // The ASM's login is created alongside the profile — see asm.service.js's
+  // createAsm — so a password is required, not optional, on create.
+  password: z.string().min(6),
 });
 
 export const updateAsmSchema = z.object({
@@ -14,15 +16,10 @@ export const updateAsmSchema = z.object({
   phone: z.string().optional(),
   city: z.string().optional(),
   rating: z.number().min(0).max(5).optional(),
-  user: z.string().optional(),
+  // Optional — only present when the super-admin is resetting this ASM's password.
+  password: z.string().min(6).optional(),
 });
-
-export const partnerSchema = z.object({ partnerId: z.string().min(1) });
 
 export const listQuerySchema = z.object({ city: z.string().optional() });
 
 export const idParamSchema = z.object({ id: z.string().min(1) });
-
-// Must list every dynamic segment (see team.validation.js's memberParamSchema
-// for why) — the remove-partner route has both :id and :partnerId.
-export const partnerParamSchema = z.object({ id: z.string().min(1), partnerId: z.string().min(1) });

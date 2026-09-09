@@ -26,7 +26,7 @@ const Footer = () => {
               </span>
             </div>
             <p className="text-sm text-slate-300 leading-relaxed max-w-md">
-              India's trusted smart appliance repair & home services platform. Certified technicians, transparent pricing, and instant doorstep support guaranteed.
+              India's trusted smart appliance repair & home services platform. Certified serviceProviders, transparent pricing, and instant doorstep support guaranteed.
             </p>
             <div className="flex items-center gap-3 mt-2">
               <button onClick={() => handleNav('/help-support')} className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors cursor-pointer">

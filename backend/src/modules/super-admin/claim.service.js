@@ -1,5 +1,5 @@
 import { Claim } from '../warranty-amc-exchange/claim.model.js';
-import { Technician } from '../technician/technician.model.js';
+import { ServiceProvider } from '../service-provider/serviceProvider.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { parsePagination, paginationMeta } from '../../utils/pagination.js';
 import { emit as emitNotification } from '../notifications/notification.service.js';
@@ -16,7 +16,7 @@ export async function listClaims({ status, page, limit, sort } = {}) {
   const { skip, limit: lim, page: pg, sort: sortObj } = parsePagination({ page, limit, sort });
   const [items, total] = await Promise.all([
     // The raiser is populated so the console can show who actually raised the
-    // claim — refPath resolves to a User or a Technician document.
+    // claim — refPath resolves to a User or a Service Provider document.
     Claim.find(query).populate('raisedBy', 'name phone email').populate('serviceRequest', 'humanId category').sort(sortObj).skip(skip).limit(lim),
     Claim.countDocuments(query),
   ]);
@@ -38,11 +38,11 @@ export async function getClaim(id) {
 }
 
 /** Resolves the claim's raiser to a real User id for notification purposes —
- * a technician-raised claim's `raisedBy` points at a Technician doc, not a User. */
+ * a service provider-raised claim's `raisedBy` points at a Service Provider doc, not a User. */
 async function resolveRaiserUserId(claim) {
   if (claim.raisedByModel === 'User') return claim.raisedBy;
-  const technician = await Technician.findById(claim.raisedBy);
-  return technician ? technician.user : null;
+  const serviceProvider = await ServiceProvider.findById(claim.raisedBy);
+  return serviceProvider ? serviceProvider.user : null;
 }
 
 export async function updateClaimStatus(id, status) {

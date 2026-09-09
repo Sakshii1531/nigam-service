@@ -1746,7 +1746,7 @@ const BuyNew = () => {
                         <span>≈ ₹{pendingExchangeSavings.toLocaleString()}</span>
                       </div>
                       <span className="text-[10px] text-amber-700 leading-snug">
-                        Credited after our technician inspects your old device at pickup. Today you pay the full price.
+                        Credited after our serviceProvider inspects your old device at pickup. Today you pay the full price.
                       </span>
                     </div>
                   )}
@@ -2631,7 +2631,7 @@ const BuyNew = () => {
               <div className="flex flex-col gap-3.5">
                 {[
                   'SONY', 'Samsung', 'LG', 'TCL', 'XIAOMI', 
-                  'MOTOROLA', 'Thomson', 'realme TechLife', 'TOSHIBA', 'iFFALCON'
+                  'MOTOROLA', 'Thomson', 'realme ServiceProviderLife', 'TOSHIBA', 'iFFALCON'
                 ]
                   .filter(brand => brand.toLowerCase().includes(searchBrandQuery.toLowerCase()))
                   .map((brand) => {

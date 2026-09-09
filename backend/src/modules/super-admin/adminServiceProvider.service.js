@@ -1,18 +1,17 @@
-import { Technician } from '../technician/technician.model.js';
-import { Job } from '../technician/job.model.js';
+import { ServiceProvider } from '../service-provider/serviceProvider.model.js';
+import { Job } from '../service-provider/job.model.js';
 import { User } from '../auth/user.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { parsePagination, paginationMeta } from '../../utils/pagination.js';
 
-// Platform-wide technician directory for the super-admin console. Distinct from
-// modules/technician/technician.service.js, which is the technician's own
+// Platform-wide service provider directory for the super-admin console. Distinct from
+// modules/service provider/service provider.service.js, which is the service provider's own
 // self-service view of a single profile (their id comes from the JWT).
 
-export async function listTechnicians({
+export async function listServiceProviders({
   status,
   availability,
   city,
-  servicePartner,
   search,
   spec,
   page,
@@ -23,7 +22,6 @@ export async function listTechnicians({
   if (status) query.status = status;
   if (availability) query.availability = availability;
   if (city) query.city = city;
-  if (servicePartner) query.servicePartner = servicePartner;
   if (spec) query.specs = spec;
 
   if (search) {
@@ -35,76 +33,73 @@ export async function listTechnicians({
 
   const { skip, limit: lim, page: pg, sort: sortObj } = parsePagination({ page, limit, sort });
   const [items, total] = await Promise.all([
-    Technician.find(query)
+    ServiceProvider.find(query)
       .populate('city', 'name')
-      .populate('servicePartner', 'name')
       .sort(sortObj)
       .skip(skip)
       .limit(lim),
-    Technician.countDocuments(query),
+    ServiceProvider.countDocuments(query),
   ]);
 
   return { items, meta: paginationMeta({ page: pg, limit: lim, total }) };
 }
 
-async function findOr404(id) {
-  const technician = await Technician.findById(id)
-    .populate('city', 'name')
-    .populate('servicePartner', 'name');
-  if (!technician) throw new ApiError(404, 'Technician not found');
-  return technician;
+// scopedCity is only ever set for an ASM caller (see adminServiceProvider.routes.js's
+// scopeCityForCaller) — a super-admin passes none and sees every provider. An
+// ASM reaching for an id outside their own zone gets the same 404 as a
+// nonexistent id, rather than a 403 that would confirm the id is real.
+async function findOr404(id, scopedCity) {
+  const serviceProvider = await ServiceProvider.findById(id).populate('city', 'name');
+  if (!serviceProvider) throw new ApiError(404, 'ServiceProvider not found');
+  if (scopedCity && String(serviceProvider.city?._id || serviceProvider.city) !== scopedCity) {
+    throw new ApiError(404, 'ServiceProvider not found');
+  }
+  return serviceProvider;
 }
 
-export async function getTechnician(id) {
-  return findOr404(id);
+export async function getServiceProvider(id, scopedCity) {
+  return findOr404(id, scopedCity);
 }
 
 /**
- * Approve / suspend / reset a technician to pending.
+ * Approve / suspend / reset a service provider to pending.
  *
- * A technician who is not Active must not keep advertising themselves as
+ * A service provider who is not Active must not keep advertising themselves as
  * Available to the job feed, so availability is forced Offline alongside.
- * Re-activating leaves availability Offline — the technician marks themselves
+ * Re-activating leaves availability Offline — the service provider marks themselves
  * Available from their own app.
  */
-export async function updateTechnicianStatus(id, status) {
-  const technician = await findOr404(id);
-  technician.status = status;
-  if (status !== 'Active') technician.availability = 'Offline';
-  await technician.save();
+export async function updateServiceProviderStatus(id, status, scopedCity) {
+  const serviceProvider = await findOr404(id, scopedCity);
+  serviceProvider.status = status;
+  if (status !== 'Active') serviceProvider.availability = 'Offline';
+  await serviceProvider.save();
 
-  if (technician.user) {
+  if (serviceProvider.user) {
     const userStatus = status === 'Active' ? 'Active' : status === 'Pending' ? 'Pending' : 'Suspended';
-    await User.findByIdAndUpdate(technician.user, { status: userStatus });
+    await User.findByIdAndUpdate(serviceProvider.user, { status: userStatus });
   }
 
-  return technician;
+  return serviceProvider;
 }
 
-export async function updateTechnicianPartner(id, servicePartnerId) {
-  const technician = await findOr404(id);
-  technician.servicePartner = servicePartnerId || null;
-  await technician.save();
-  return technician.populate('servicePartner', 'name');
-}
+export async function deleteServiceProvider(id) {
+  const serviceProvider = await findOr404(id);
 
-export async function deleteTechnician(id) {
-  const technician = await findOr404(id);
-
-  // Jobs carry a required technician ref, so removing a technician mid-job would
+  // Jobs carry a required service provider ref, so removing a service provider mid-job would
   // orphan them. Callers should reassign or close those jobs first. 'idle' and
   // 'completed' are the two steps where nobody is mid-engagement.
   const activeJobs = await Job.countDocuments({
-    technician: technician._id,
+    serviceProvider: serviceProvider._id,
     activeStep: { $nin: ['idle', 'completed'] },
   });
   if (activeJobs > 0) {
-    throw new ApiError(409, `Technician has ${activeJobs} active job(s) — reassign them before deleting`);
+    throw new ApiError(409, `Service Provider has ${activeJobs} active job(s) — reassign them before deleting`);
   }
 
-  await technician.deleteOne();
-  if (technician.user) {
-    await User.findByIdAndDelete(technician.user);
+  await serviceProvider.deleteOne();
+  if (serviceProvider.user) {
+    await User.findByIdAndDelete(serviceProvider.user);
   }
-  return { deleted: true, humanId: technician.humanId, name: technician.name };
+  return { deleted: true, humanId: serviceProvider.humanId, name: serviceProvider.name };
 }

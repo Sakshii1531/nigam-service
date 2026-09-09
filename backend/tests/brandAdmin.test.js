@@ -7,7 +7,7 @@ import { ensureIndexes } from '../src/config/db.js';
 import { User } from '../src/modules/auth/user.model.js';
 import { Role } from '../src/modules/auth/role.model.js';
 import { Permission } from '../src/modules/auth/permission.model.js';
-import { Technician } from '../src/modules/technician/technician.model.js';
+import { ServiceProvider } from '../src/modules/service-provider/serviceProvider.model.js';
 import { Brand } from '../src/modules/super-admin/brand.model.js';
 import { OwnedAppliance } from '../src/modules/service-requests/ownedAppliance.model.js';
 import { ServiceRequest } from '../src/modules/service-requests/serviceRequest.model.js';
@@ -23,13 +23,13 @@ import { GeneratedDocument } from '../src/modules/brand-admin/generatedDocument.
 import { Review } from '../src/modules/reviews/review.model.js';
 import { ExtendedWarrantyOrder } from '../src/modules/warranty-amc-exchange/extendedWarrantyOrder.model.js';
 import { BrandSettings } from '../src/modules/brand-admin/brandSettings.model.js';
-import { Job } from '../src/modules/technician/job.model.js';
-import { PartOrder } from '../src/modules/technician/partOrder.model.js';
-import { TechInventoryItem } from '../src/modules/technician/techInventoryItem.model.js';
-import { TrainingGuide } from '../src/modules/technician/trainingGuide.model.js';
-import { Course } from '../src/modules/technician/course.model.js';
+import { Job } from '../src/modules/service-provider/job.model.js';
+import { PartOrder } from '../src/modules/service-provider/partOrder.model.js';
+import { ServiceProviderInventoryItem } from '../src/modules/service-provider/serviceProviderInventoryItem.model.js';
+import { TrainingGuide } from '../src/modules/service-provider/trainingGuide.model.js';
+import { Course } from '../src/modules/service-provider/course.model.js';
 import { Payment } from '../src/modules/payments-wallet/payment.model.js';
-import { Payout } from '../src/modules/technician/payout.model.js';
+import { Payout } from '../src/modules/service-provider/payout.model.js';
 import { createServiceRequest, transitionStatus } from '../src/modules/service-requests/serviceRequest.service.js';
 import { hashPassword } from '../src/modules/auth/password.js';
 import { AMCPlan } from '../src/modules/warranty-amc-exchange/amcPlan.model.js';
@@ -86,16 +86,16 @@ async function seedCustomer() {
   return user;
 }
 
-async function seedTechnician() {
+async function seedServiceProvider() {
   const phone = nextPhone();
-  const user = await User.create({ role: ROLES.TECHNICIAN, phone, name: 'Test Technician', passwordHash: await hashPassword('password123') });
-  return Technician.create({ user: user._id, name: 'Test Technician', phone, status: 'Active', availability: 'Available', specs: ['AC'] });
+  const user = await User.create({ role: ROLES.SERVICE_PROVIDER, phone, name: 'Test Service Provider', passwordHash: await hashPassword('password123') });
+  return ServiceProvider.create({ user: user._id, name: 'Test Service Provider', phone, status: 'Active', availability: 'Available', specs: ['AC'] });
 }
 
-async function seedServiceRequestForBrand(brand, customer, technician) {
+async function seedServiceRequestForBrand(brand, customer, serviceProvider) {
   let sr = await createServiceRequest({
     user: customer._id,
-    technician: technician._id,
+    serviceProvider: serviceProvider._id,
     brand: brand._id,
     category: 'AC',
     description: 'Brand-warranty fixture',
@@ -127,7 +127,7 @@ beforeEach(async () => {
     User.deleteMany({}),
     Role.deleteMany({}),
     Permission.deleteMany({}),
-    Technician.deleteMany({}),
+    ServiceProvider.deleteMany({}),
     Brand.deleteMany({}),
     OwnedAppliance.deleteMany({}),
     ServiceRequest.deleteMany({}),
@@ -145,7 +145,7 @@ beforeEach(async () => {
     BrandSettings.deleteMany({}),
     Job.deleteMany({}),
     PartOrder.deleteMany({}),
-    TechInventoryItem.deleteMany({}),
+    ServiceProviderInventoryItem.deleteMany({}),
     TrainingGuide.deleteMany({}),
     Course.deleteMany({}),
     Payment.deleteMany({}),
@@ -162,14 +162,14 @@ describe('cross-tenant isolation — the Phase 7 exit criterion', () => {
     const brandA = await seedBrandWithAdmin('Brand A');
     const brandB = await seedBrandWithAdmin('Brand B');
     const customer = await seedCustomer();
-    const technician = await seedTechnician();
+    const serviceProvider = await seedServiceProvider();
 
-    const srA = await seedServiceRequestForBrand(brandA.brand, customer, technician);
+    const srA = await seedServiceRequestForBrand(brandA.brand, customer, serviceProvider);
     const invoiceA = await Invoice.create({
       brand: brandA.brand._id,
       serviceRequest: srA._id,
       customer: customer._id,
-      technician: technician._id,
+      serviceProvider: serviceProvider._id,
       serviceCharge: 500,
       total: 500,
     });
@@ -249,13 +249,13 @@ describe('invoices', () => {
     const brandA = await seedBrandWithAdmin('Brand A');
     const brandB = await seedBrandWithAdmin('Brand B');
     const customer = await seedCustomer();
-    const technician = await seedTechnician();
-    const srA = await seedServiceRequestForBrand(brandA.brand, customer, technician);
+    const serviceProvider = await seedServiceProvider();
+    const srA = await seedServiceRequestForBrand(brandA.brand, customer, serviceProvider);
 
     const res = await request(app)
       .post('/api/v1/brand/invoices')
       .set('Authorization', `Bearer ${brandA.token}`)
-      .send({ serviceRequest: srA.id, customer: customer.id, technician: technician.id, serviceCharge: 500, partCharge: 100, gst: 108 })
+      .send({ serviceRequest: srA.id, customer: customer.id, serviceProvider: serviceProvider.id, serviceCharge: 500, partCharge: 100, gst: 108 })
       .expect(201);
     expect(res.body.data.total).toBe(708);
 
@@ -269,8 +269,8 @@ describe('invoices', () => {
   it('updates invoice status', async () => {
     const brandA = await seedBrandWithAdmin('Brand A');
     const customer = await seedCustomer();
-    const technician = await seedTechnician();
-    const srA = await seedServiceRequestForBrand(brandA.brand, customer, technician);
+    const serviceProvider = await seedServiceProvider();
+    const srA = await seedServiceRequestForBrand(brandA.brand, customer, serviceProvider);
 
     const createRes = await request(app)
       .post('/api/v1/brand/invoices')
@@ -312,8 +312,8 @@ describe('replacement approvals', () => {
   it('creates and transitions status', async () => {
     const brandA = await seedBrandWithAdmin('Brand A');
     const customer = await seedCustomer();
-    const technician = await seedTechnician();
-    const srA = await seedServiceRequestForBrand(brandA.brand, customer, technician);
+    const serviceProvider = await seedServiceProvider();
+    const srA = await seedServiceRequestForBrand(brandA.brand, customer, serviceProvider);
 
     const createRes = await request(app)
       .post('/api/v1/brand/replacement-approvals')
@@ -334,12 +334,12 @@ describe('replacement approvals', () => {
 describe('reverse logistics returns', () => {
   it('creates and updates transit/verification status', async () => {
     const brandA = await seedBrandWithAdmin('Brand A');
-    const technician = await seedTechnician();
+    const serviceProvider = await seedServiceProvider();
 
     const createRes = await request(app)
       .post('/api/v1/brand/returns')
       .set('Authorization', `Bearer ${brandA.token}`)
-      .send({ technician: technician.id, partName: 'Compressor' })
+      .send({ serviceProvider: serviceProvider.id, partName: 'Compressor' })
       .expect(201);
 
     const updateRes = await request(app)
@@ -480,8 +480,8 @@ describe('generated documents', () => {
   it('generates a document record scoped to the brand', async () => {
     const brandA = await seedBrandWithAdmin('Brand A');
     const customer = await seedCustomer();
-    const technician = await seedTechnician();
-    const srA = await seedServiceRequestForBrand(brandA.brand, customer, technician);
+    const serviceProvider = await seedServiceProvider();
+    const srA = await seedServiceRequestForBrand(brandA.brand, customer, serviceProvider);
 
     const res = await request(app)
       .post('/api/v1/brand/documents')
@@ -500,13 +500,13 @@ describe('brand reviews', () => {
     const a = await seedBrandWithAdmin('Brand A');
     const b = await seedBrandWithAdmin('Brand B');
     const customer = await seedCustomer();
-    const technician = await seedTechnician();
+    const serviceProvider = await seedServiceProvider();
 
-    const srA = await seedServiceRequestForBrand(a.brand, customer, technician);
-    const srB = await seedServiceRequestForBrand(b.brand, customer, technician);
+    const srA = await seedServiceRequestForBrand(a.brand, customer, serviceProvider);
+    const srB = await seedServiceRequestForBrand(b.brand, customer, serviceProvider);
 
-    await Review.create({ serviceRequest: srA._id, user: customer._id, technician: technician._id, rating: 5, comment: 'Great work' });
-    await Review.create({ serviceRequest: srB._id, user: customer._id, technician: technician._id, rating: 2, comment: 'Other brand' });
+    await Review.create({ serviceRequest: srA._id, user: customer._id, serviceProvider: serviceProvider._id, rating: 5, comment: 'Great work' });
+    await Review.create({ serviceRequest: srB._id, user: customer._id, serviceProvider: serviceProvider._id, rating: 2, comment: 'Other brand' });
 
     const res = await request(app)
       .get('/api/v1/reviews/brand')
@@ -517,7 +517,7 @@ describe('brand reviews', () => {
     expect(res.body.data[0].comment).toBe('Great work');
     // Refs the console renders must come back resolved, not as bare ids.
     expect(res.body.data[0].user.name).toBe('Test Customer');
-    expect(res.body.data[0].technician.name).toBe('Test Technician');
+    expect(res.body.data[0].serviceProvider.name).toBe('Test Service Provider');
     expect(res.body.data[0].serviceRequest.humanId).toBeDefined();
   });
 
@@ -534,9 +534,9 @@ describe('brand reviews', () => {
     const a = await seedBrandWithAdmin('Brand C');
     const customer1 = await seedCustomer();
     const customer2 = await seedCustomer();
-    const technician = await seedTechnician();
-    const sr1 = await seedServiceRequestForBrand(a.brand, customer1, technician);
-    const sr2 = await seedServiceRequestForBrand(a.brand, customer2, technician);
+    const serviceProvider = await seedServiceProvider();
+    const sr1 = await seedServiceRequestForBrand(a.brand, customer1, serviceProvider);
+    const sr2 = await seedServiceRequestForBrand(a.brand, customer2, serviceProvider);
 
     await Review.create({ serviceRequest: sr1._id, user: customer1._id, rating: 5, status: 'Reviewed' });
     await Review.create({ serviceRequest: sr2._id, user: customer2._id, rating: 1, status: 'Escalated' });
@@ -560,11 +560,11 @@ describe('brand insights — derived read-only views', () => {
     const b = await seedBrandWithAdmin('Insights B');
     const mine = await seedCustomer();
     const theirs = await seedCustomer();
-    const technician = await seedTechnician();
+    const serviceProvider = await seedServiceProvider();
 
-    await seedServiceRequestForBrand(a.brand, mine, technician);
-    await seedServiceRequestForBrand(a.brand, mine, technician);
-    await seedServiceRequestForBrand(b.brand, theirs, technician);
+    await seedServiceRequestForBrand(a.brand, mine, serviceProvider);
+    await seedServiceRequestForBrand(a.brand, mine, serviceProvider);
+    await seedServiceRequestForBrand(b.brand, theirs, serviceProvider);
 
     const res = await request(app)
       .get('/api/v1/brand/customers')
@@ -577,24 +577,24 @@ describe('brand insights — derived read-only views', () => {
     expect(res.body.data[0].complaints).toBe(2);
   });
 
-  it('scopes technician workload to this brand, not platform-wide totals', async () => {
+  it('scopes serviceProvider workload to this brand, not platform-wide totals', async () => {
     const a = await seedBrandWithAdmin('Insights C');
     const b = await seedBrandWithAdmin('Insights D');
     const customer = await seedCustomer();
-    const technician = await seedTechnician();
+    const serviceProvider = await seedServiceProvider();
 
-    await seedServiceRequestForBrand(a.brand, customer, technician);
-    // The same technician also serves another brand — that must not be counted here.
-    await seedServiceRequestForBrand(b.brand, customer, technician);
+    await seedServiceRequestForBrand(a.brand, customer, serviceProvider);
+    // The same service provider also serves another brand — that must not be counted here.
+    await seedServiceRequestForBrand(b.brand, customer, serviceProvider);
 
     const res = await request(app)
-      .get('/api/v1/brand/technicians')
+      .get('/api/v1/brand/service-providers')
       .set('Authorization', `Bearer ${a.token}`)
       .expect(200);
 
     expect(res.body.data).toHaveLength(1);
     expect(res.body.data[0].totalJobs).toBe(1);
-    expect(res.body.data[0].name).toBe('Test Technician');
+    expect(res.body.data[0].name).toBe('Test Service Provider');
   });
 
   it('lists warranty registrations and AMC subscriptions matched on brand name', async () => {
@@ -613,7 +613,7 @@ describe('brand insights — derived read-only views', () => {
   });
 
   it('is closed to unauthenticated and non-brand callers', async () => {
-    for (const path of ['customers', 'technicians', 'completions', 'warranty-registrations', 'amc-subscriptions', 'claims']) {
+    for (const path of ['customers', 'serviceProviders', 'completions', 'warranty-registrations', 'amc-subscriptions', 'claims']) {
       await request(app).get(`/api/v1/brand/${path}`).expect(401);
     }
   });
@@ -645,7 +645,7 @@ describe('POST /service-requests — brand-admin logs a complaint', () => {
 
   it('404s an unknown customer and rejects a non-customer subject', async () => {
     const a = await seedBrandWithAdmin('Register C');
-    const technicianUser = await User.findOne({ role: ROLES.TECHNICIAN });
+    const serviceProviderUser = await User.findOne({ role: ROLES.SERVICE_PROVIDER });
 
     await request(app)
       .post('/api/v1/service-requests')
@@ -653,16 +653,16 @@ describe('POST /service-requests — brand-admin logs a complaint', () => {
       .send({ user: String(new mongoose.Types.ObjectId()), category: 'AC' })
       .expect(404);
 
-    if (technicianUser) {
+    if (serviceProviderUser) {
       await request(app)
         .post('/api/v1/service-requests')
         .set('Authorization', `Bearer ${a.token}`)
-        .send({ user: String(technicianUser._id), category: 'AC' })
+        .send({ user: String(serviceProviderUser._id), category: 'AC' })
         .expect(400);
     }
   });
 
-  it('is closed to customers and technicians', async () => {
+  it('is closed to customers and serviceProviders', async () => {
     const customer = await seedCustomer();
     const token = await loginAndVerify({ role: ROLES.CUSTOMER, identifier: customer.phone, password: 'password123' });
     await request(app)
@@ -682,7 +682,7 @@ describe('brand settings', () => {
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
 
-    expect(res.body.data.autoAssignTechnician).toBe(true);
+    expect(res.body.data.autoAssignServiceProvider).toBe(true);
     expect(res.body.data.emailNotifications).toBe(true);
     expect(res.body.data.smsAlerts).toBe(false);
     // Identity comes from the Brand document, which super-admin owns.
@@ -697,7 +697,7 @@ describe('brand settings', () => {
     await request(app)
       .put('/api/v1/brand/settings')
       .set('Authorization', `Bearer ${a.token}`)
-      .send({ supportEmail: 'help@a.test', smsAlerts: true, autoAssignTechnician: false })
+      .send({ supportEmail: 'help@a.test', smsAlerts: true, autoAssignServiceProvider: false })
       .expect(200);
 
     const aRes = await request(app)
@@ -706,7 +706,7 @@ describe('brand settings', () => {
       .expect(200);
     expect(aRes.body.data.supportEmail).toBe('help@a.test');
     expect(aRes.body.data.smsAlerts).toBe(true);
-    expect(aRes.body.data.autoAssignTechnician).toBe(false);
+    expect(aRes.body.data.autoAssignServiceProvider).toBe(false);
 
     // B is untouched — settings are per brand, not global.
     const bRes = await request(app)
@@ -739,10 +739,10 @@ describe('brand dashboard and reports', () => {
     const a = await seedBrandWithAdmin('Dash A');
     const b = await seedBrandWithAdmin('Dash B');
     const customer = await seedCustomer();
-    const technician = await seedTechnician();
+    const serviceProvider = await seedServiceProvider();
 
-    const mine = await seedServiceRequestForBrand(a.brand, customer, technician);
-    await seedServiceRequestForBrand(b.brand, customer, technician);
+    const mine = await seedServiceRequestForBrand(a.brand, customer, serviceProvider);
+    await seedServiceRequestForBrand(b.brand, customer, serviceProvider);
 
     await Invoice.create({ brand: a.brand._id, serviceRequest: mine._id, customer: customer._id, total: 1500, status: 'Paid' });
     // Pending money has not moved and must not be counted as billed.
@@ -757,23 +757,23 @@ describe('brand dashboard and reports', () => {
     expect(res.body.data.totalInvoiceValue).toBe(1500);
   });
 
-  it('reports by category and ranks technicians by this brand\'s jobs only', async () => {
+  it('reports by category and ranks serviceProviders by this brand\'s jobs only', async () => {
     const a = await seedBrandWithAdmin('Dash C');
     const b = await seedBrandWithAdmin('Dash D');
     const customer = await seedCustomer();
-    const technician = await seedTechnician();
+    const serviceProvider = await seedServiceProvider();
 
-    await seedServiceRequestForBrand(a.brand, customer, technician);
-    // Same technician on another brand — must not inflate their ranking here.
-    await seedServiceRequestForBrand(b.brand, customer, technician);
+    await seedServiceRequestForBrand(a.brand, customer, serviceProvider);
+    // Same service provider on another brand — must not inflate their ranking here.
+    await seedServiceRequestForBrand(b.brand, customer, serviceProvider);
 
     const res = await request(app)
       .get('/api/v1/brand/reports')
       .set('Authorization', `Bearer ${a.token}`)
       .expect(200);
 
-    expect(res.body.data.topTechnicians).toHaveLength(1);
-    expect(res.body.data.topTechnicians[0].total).toBe(1);
+    expect(res.body.data.topServiceProviders).toHaveLength(1);
+    expect(res.body.data.topServiceProviders[0].total).toBe(1);
     expect(res.body.data.requestsByCategory[0].count).toBe(1);
   });
 
@@ -788,18 +788,18 @@ describe('brand parts — orders and inventory', () => {
     const a = await seedBrandWithAdmin('Parts A');
     const b = await seedBrandWithAdmin('Parts B');
     const customer = await seedCustomer();
-    const technician = await seedTechnician();
+    const serviceProvider = await seedServiceProvider();
 
-    const mineSr = await seedServiceRequestForBrand(a.brand, customer, technician);
-    const theirsSr = await seedServiceRequestForBrand(b.brand, customer, technician);
+    const mineSr = await seedServiceRequestForBrand(a.brand, customer, serviceProvider);
+    const theirsSr = await seedServiceRequestForBrand(b.brand, customer, serviceProvider);
 
-    const mineJob = await Job.create({ serviceRequest: mineSr._id, technician: technician._id, type: 'NCC Paid Service' });
-    const theirsJob = await Job.create({ serviceRequest: theirsSr._id, technician: technician._id, type: 'NCC Paid Service' });
+    const mineJob = await Job.create({ serviceRequest: mineSr._id, serviceProvider: serviceProvider._id, type: 'NCC Paid Service' });
+    const theirsJob = await Job.create({ serviceRequest: theirsSr._id, serviceProvider: serviceProvider._id, type: 'NCC Paid Service' });
 
-    await PartOrder.create({ technician: technician._id, job: mineJob._id, partName: 'Compressor', orderSource: 'NCC Warehouse' });
-    await PartOrder.create({ technician: technician._id, job: theirsJob._id, partName: 'Other Brand Part', orderSource: 'NCC Warehouse' });
+    await PartOrder.create({ serviceProvider: serviceProvider._id, job: mineJob._id, partName: 'Compressor', orderSource: 'NCC Warehouse' });
+    await PartOrder.create({ serviceProvider: serviceProvider._id, job: theirsJob._id, partName: 'Other Brand Part', orderSource: 'NCC Warehouse' });
     // No job attached — belongs to no brand and must be excluded entirely.
-    await PartOrder.create({ technician: technician._id, partName: 'General Restock', orderSource: 'Nearby Store' });
+    await PartOrder.create({ serviceProvider: serviceProvider._id, partName: 'General Restock', orderSource: 'Nearby Store' });
 
     const res = await request(app)
       .get('/api/v1/brand/part-orders')
@@ -808,19 +808,19 @@ describe('brand parts — orders and inventory', () => {
 
     expect(res.body.data).toHaveLength(1);
     expect(res.body.data[0].partName).toBe('Compressor');
-    expect(res.body.data[0].technician.name).toBe('Test Technician');
+    expect(res.body.data[0].serviceProvider.name).toBe('Test Service Provider');
     expect(res.body.data[0].job.serviceRequest.humanId).toBeDefined();
   });
 
   it('filters part orders by status', async () => {
     const a = await seedBrandWithAdmin('Parts C');
     const customer = await seedCustomer();
-    const technician = await seedTechnician();
-    const sr = await seedServiceRequestForBrand(a.brand, customer, technician);
-    const job = await Job.create({ serviceRequest: sr._id, technician: technician._id, type: 'NCC Paid Service' });
+    const serviceProvider = await seedServiceProvider();
+    const sr = await seedServiceRequestForBrand(a.brand, customer, serviceProvider);
+    const job = await Job.create({ serviceRequest: sr._id, serviceProvider: serviceProvider._id, type: 'NCC Paid Service' });
 
-    await PartOrder.create({ technician: technician._id, job: job._id, partName: 'P1', orderSource: 'NCC Warehouse', status: 'Pending' });
-    await PartOrder.create({ technician: technician._id, job: job._id, partName: 'P2', orderSource: 'NCC Warehouse', status: 'Dispatched' });
+    await PartOrder.create({ serviceProvider: serviceProvider._id, job: job._id, partName: 'P1', orderSource: 'NCC Warehouse', status: 'Pending' });
+    await PartOrder.create({ serviceProvider: serviceProvider._id, job: job._id, partName: 'P2', orderSource: 'NCC Warehouse', status: 'Dispatched' });
 
     const res = await request(app)
       .get('/api/v1/brand/part-orders?status=Dispatched')
@@ -830,20 +830,20 @@ describe('brand parts — orders and inventory', () => {
     expect(res.body.data[0].partName).toBe('P2');
   });
 
-  it('aggregates stock by SKU across the technicians serving this brand', async () => {
+  it('aggregates stock by SKU across the serviceProviders serving this brand', async () => {
     const a = await seedBrandWithAdmin('Parts D');
     const customer = await seedCustomer();
-    const tech1 = await seedTechnician();
-    const tech2 = await seedTechnician();
-    const outsider = await seedTechnician();
+    const provider1 = await seedServiceProvider();
+    const provider2 = await seedServiceProvider();
+    const outsider = await seedServiceProvider();
 
-    await seedServiceRequestForBrand(a.brand, customer, tech1);
-    await seedServiceRequestForBrand(a.brand, customer, tech2);
+    await seedServiceRequestForBrand(a.brand, customer, provider1);
+    await seedServiceRequestForBrand(a.brand, customer, provider2);
 
-    await TechInventoryItem.create({ technician: tech1._id, name: 'Compressor', sku: 'CMP-1', qty: 3, price: 2000 });
-    await TechInventoryItem.create({ technician: tech2._id, name: 'Compressor', sku: 'CMP-1', qty: 2, price: 2000 });
-    // A technician who never worked this brand — their stock is not visible here.
-    await TechInventoryItem.create({ technician: outsider._id, name: 'Compressor', sku: 'CMP-1', qty: 99, price: 2000 });
+    await ServiceProviderInventoryItem.create({ serviceProvider: provider1._id, name: 'Compressor', sku: 'CMP-1', qty: 3, price: 2000 });
+    await ServiceProviderInventoryItem.create({ serviceProvider: provider2._id, name: 'Compressor', sku: 'CMP-1', qty: 2, price: 2000 });
+    // A service provider who never worked this brand — their stock is not visible here.
+    await ServiceProviderInventoryItem.create({ serviceProvider: outsider._id, name: 'Compressor', sku: 'CMP-1', qty: 99, price: 2000 });
 
     const res = await request(app)
       .get('/api/v1/brand/inventory')
@@ -851,13 +851,13 @@ describe('brand parts — orders and inventory', () => {
       .expect(200);
 
     expect(res.body.data).toHaveLength(1);
-    // 3 + 2 from the brand's own technicians; the outsider's 99 is excluded.
+    // 3 + 2 from the brand's own service providers; the outsider's 99 is excluded.
     expect(res.body.data[0].totalQty).toBe(5);
-    expect(res.body.data[0].technicians).toBe(2);
+    expect(res.body.data[0].serviceProviders).toBe(2);
     expect(res.body.data[0].status).toBe('In Stock');
   });
 
-  it('returns empty rather than erroring for a brand with no technicians', async () => {
+  it('returns empty rather than erroring for a brand with no serviceProviders', async () => {
     const a = await seedBrandWithAdmin('Parts E');
     for (const path of ['part-orders', 'inventory']) {
       const res = await request(app)
@@ -971,9 +971,9 @@ describe('brand academy', () => {
 });
 
 describe('brand payments', () => {
-  async function seedJobFor(brand, customer, technician) {
-    const sr = await seedServiceRequestForBrand(brand, customer, technician);
-    const job = await Job.create({ serviceRequest: sr._id, technician: technician._id, type: 'NCC Paid Service' });
+  async function seedJobFor(brand, customer, serviceProvider) {
+    const sr = await seedServiceRequestForBrand(brand, customer, serviceProvider);
+    const job = await Job.create({ serviceRequest: sr._id, serviceProvider: serviceProvider._id, type: 'NCC Paid Service' });
     return { sr, job };
   }
 
@@ -981,10 +981,10 @@ describe('brand payments', () => {
     const a = await seedBrandWithAdmin('Pay A');
     const b = await seedBrandWithAdmin('Pay B');
     const customer = await seedCustomer();
-    const technician = await seedTechnician();
+    const serviceProvider = await seedServiceProvider();
 
-    const mine = await seedJobFor(a.brand, customer, technician);
-    const theirs = await seedJobFor(b.brand, customer, technician);
+    const mine = await seedJobFor(a.brand, customer, serviceProvider);
+    const theirs = await seedJobFor(b.brand, customer, serviceProvider);
 
     await Payment.create({ user: customer._id, targetType: 'job', targetId: mine.job._id, amount: 2596, method: 'UPI', status: 'Success' });
     await Payment.create({ user: customer._id, targetType: 'job', targetId: theirs.job._id, amount: 999, method: 'Cash', status: 'Success' });
@@ -1002,17 +1002,17 @@ describe('brand payments', () => {
     expect(res.body.data[0].user.name).toBe('Test Customer');
   });
 
-  it('lists technician payouts earned on this brand\'s jobs', async () => {
+  it('lists serviceProvider payouts earned on this brand\'s jobs', async () => {
     const a = await seedBrandWithAdmin('Pay C');
     const b = await seedBrandWithAdmin('Pay D');
     const customer = await seedCustomer();
-    const technician = await seedTechnician();
+    const serviceProvider = await seedServiceProvider();
 
-    const mine = await seedJobFor(a.brand, customer, technician);
-    const theirs = await seedJobFor(b.brand, customer, technician);
+    const mine = await seedJobFor(a.brand, customer, serviceProvider);
+    const theirs = await seedJobFor(b.brand, customer, serviceProvider);
 
-    await Payout.create({ technician: technician._id, job: mine.job._id, baseAmount: 800, netAmount: 720, status: 'Settled' });
-    await Payout.create({ technician: technician._id, job: theirs.job._id, baseAmount: 500, netAmount: 450, status: 'Settled' });
+    await Payout.create({ serviceProvider: serviceProvider._id, job: mine.job._id, baseAmount: 800, netAmount: 720, status: 'Settled' });
+    await Payout.create({ serviceProvider: serviceProvider._id, job: theirs.job._id, baseAmount: 500, netAmount: 450, status: 'Settled' });
 
     const res = await request(app)
       .get('/api/v1/brand/payments/payouts')
@@ -1021,15 +1021,15 @@ describe('brand payments', () => {
 
     expect(res.body.data).toHaveLength(1);
     expect(res.body.data[0].netAmount).toBe(720);
-    expect(res.body.data[0].technician.name).toBe('Test Technician');
+    expect(res.body.data[0].serviceProvider.name).toBe('Test Service Provider');
     expect(res.body.data[0].job.serviceRequest.humanId).toBeDefined();
   });
 
   it('lists unsettled invoices as pending dues, excluding paid ones', async () => {
     const a = await seedBrandWithAdmin('Pay E');
     const customer = await seedCustomer();
-    const technician = await seedTechnician();
-    const { sr } = await seedJobFor(a.brand, customer, technician);
+    const serviceProvider = await seedServiceProvider();
+    const { sr } = await seedJobFor(a.brand, customer, serviceProvider);
 
     await Invoice.create({ brand: a.brand._id, serviceRequest: sr._id, customer: customer._id, total: 1500, status: 'Pending' });
     await Invoice.create({ brand: a.brand._id, serviceRequest: sr._id, customer: customer._id, total: 900, status: 'Failed' });

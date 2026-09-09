@@ -16,7 +16,7 @@ export const createEscalationSchema = z.object({
   reason: z.string().min(1),
   description: z.string().optional(),
   priority: z.enum(PRIORITIES).default('Medium'),
-  raisedBy: z.enum(['Customer', 'Technician', 'System Auto', 'QA Team']).default('Customer'),
+  raisedBy: z.enum(['Customer', 'ServiceProvider', 'System Auto', 'QA Team']).default('Customer'),
 });
 
 export const updateStatusSchema = z.object({

@@ -6,7 +6,7 @@
  * identifiers (e.g. "98••••••10") so neither party can see the other's real number.
  *
  * Flow:
- *   1. Caller (customer or technician) hits POST /api/v1/calls/initiate.
+ *   1. Caller (customer or service provider) hits POST /api/v1/calls/initiate.
  *   2. We verify they are a participant of the service request.
  *   3. We fetch the real phone numbers of both parties from DB (server-side only).
  *   4. We call Twilio Voice API: "Ring the caller from our virtual number. When they
@@ -16,7 +16,7 @@
  */
 
 import { ServiceRequest } from '../service-requests/serviceRequest.model.js';
-import { Technician } from '../technician/technician.model.js';
+import { ServiceProvider } from '../service-provider/serviceProvider.model.js';
 import { User } from '../auth/user.model.js';
 import { CallLog } from './callLog.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
@@ -62,7 +62,7 @@ function _masked(phone) {
 // ── Core service functions ────────────────────────────────────────────────────
 
 /**
- * Initiate a click-to-call relay between customer and technician.
+ * Initiate a click-to-call relay between customer and service provider.
  *
  * @param {object} reqUser  — authenticated user from req.user (id + role)
  * @param {string} serviceRequestId
@@ -80,11 +80,11 @@ export async function initiateCall(reqUser, serviceRequestId) {
   if (!sr) throw new ApiError(404, 'Service request not found');
 
   const isCustomer = String(sr.user) === reqUser.id;
-  let technicianDoc = null;
+  let serviceProviderDoc = null;
   if (!isCustomer) {
-    technicianDoc = await Technician.findOne({ user: reqUser.id });
-    const isTechnician = technicianDoc && String(sr.technician) === technicianDoc.id;
-    if (!isTechnician) throw new ApiError(403, 'You are not a participant of this service request');
+    serviceProviderDoc = await ServiceProvider.findOne({ user: reqUser.id });
+    const isServiceProvider = serviceProviderDoc && String(sr.serviceProvider) === serviceProviderDoc.id;
+    if (!isServiceProvider) throw new ApiError(403, 'You are not a participant of this service request');
   }
 
   // ── 2. Check Twilio Voice config ──────────────────────────────────────────
@@ -102,18 +102,18 @@ export async function initiateCall(reqUser, serviceRequestId) {
 
   // Resolve real phone numbers (server-side only — never returned to client).
   const customerUser = await User.findById(sr.user).select('+phone');
-  if (!technicianDoc) technicianDoc = await Technician.findById(sr.technician);
+  if (!serviceProviderDoc) serviceProviderDoc = await ServiceProvider.findById(sr.serviceProvider);
 
   const customerPhone = toE164(customerUser?.phone);
-  const technicianPhone = toE164(technicianDoc?.phone);
+  const serviceProviderPhone = toE164(serviceProviderDoc?.phone);
 
   if (!customerPhone) throw new ApiError(422, 'Customer phone number is not registered');
-  if (!technicianPhone) throw new ApiError(422, 'Technician phone number is not registered');
+  if (!serviceProviderPhone) throw new ApiError(422, 'Service Provider phone number is not registered');
 
   // Determine caller and callee.
-  const callerPhone = isCustomer ? customerPhone : technicianPhone;
-  const calleePhone = isCustomer ? technicianPhone : customerPhone;
-  const initiatedBy = isCustomer ? 'customer' : 'technician';
+  const callerPhone = isCustomer ? customerPhone : serviceProviderPhone;
+  const calleePhone = isCustomer ? serviceProviderPhone : customerPhone;
+  const initiatedBy = isCustomer ? 'customer' : 'service_provider';
 
   // Build TwiML: when the caller picks up, Twilio bridges to the other party.
   // <Dial> connects the two legs through our virtual Twilio number.
@@ -140,7 +140,7 @@ export async function initiateCall(reqUser, serviceRequestId) {
     callSid,
     serviceRequest: sr._id,
     customer: sr.user,
-    technician: sr.technician,
+    serviceProvider: sr.serviceProvider,
     initiatedBy,
     status: 'initiated',
     startedAt: new Date(),
@@ -193,12 +193,12 @@ export async function getCallLogs(reqUser, serviceRequestId) {
   if (!sr) throw new ApiError(404, 'Service request not found');
 
   const isCustomer = reqUser.role === ROLES.CUSTOMER && String(sr.user) === reqUser.id;
-  let isTechnician = false;
-  if (reqUser.role === ROLES.TECHNICIAN) {
-    const tech = await Technician.findOne({ user: reqUser.id });
-    isTechnician = tech && String(sr.technician) === tech.id;
+  let isServiceProvider = false;
+  if (reqUser.role === ROLES.SERVICE_PROVIDER) {
+    const provider = await ServiceProvider.findOne({ user: reqUser.id });
+    isServiceProvider = provider && String(sr.serviceProvider) === provider.id;
   }
-  if (!isCustomer && !isTechnician) throw new ApiError(403, 'You are not a participant of this service request');
+  if (!isCustomer && !isServiceProvider) throw new ApiError(403, 'You are not a participant of this service request');
 
   const logs = await CallLog.find({ serviceRequest: sr._id }).sort({ createdAt: -1 });
   return logs.map(formatCallLog);
@@ -212,7 +212,7 @@ export async function getCallLogs(reqUser, serviceRequestId) {
  */
 function formatCallLog(doc) {
   const obj = doc.toJSON ? doc.toJSON() : doc;
-  // Deliberately omit customer/technician ObjectId refs from the response \u2014
+  // Deliberately omit customer/service provider ObjectId refs from the response \u2014
   // callers only need the call metadata (status, duration, timing).
   return {
     id: obj.id || obj._id,

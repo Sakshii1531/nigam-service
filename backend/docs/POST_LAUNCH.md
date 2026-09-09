@@ -51,7 +51,7 @@ each marked with what it needs to move forward.
   payment gateway (#1 above) wired up first — webhook-driven data is what
   would actually populate these.
 - **AMC/Extended-Warranty *purchase* flow** (Phase 5): the models and the
-  technician-side *consumption* of an existing subscription/order both
+  serviceProvider-side *consumption* of an existing subscription/order both
   exist (Phase 6), but there's no customer-facing "buy an AMC plan" or "buy
   extended warranty" checkout endpoint — `acceptJob()` still accepts an
   explicit override for testing/fixture purposes standing in for it. User
@@ -61,15 +61,15 @@ each marked with what it needs to move forward.
   flows** (Phase 8): super-admin CRUD over the *configuration* exists; the
   actual customer earn/redeem/spin/referral-claim endpoints don't. Same
   "stays deferred" confirmation as above.
-- **Technician payout on warranty/AMC/EW visits** — flat ₹150/visit
+- **ServiceProvider payout on warranty/AMC/EW visits** — flat ₹150/visit
   placeholder (`FLAT_COVERED_VISIT_EARNINGS`), pending a real brand
   `RateCard`-driven calculation. User confirmed post-Phase-6 this is fine
   as-is, not urgent.
 - **Tip settlement** (Phase 10) — `Review.tip` is captured but never paid
   out; no tip-payout flow exists.
-- **Technician-set spare-part pricing** (flagged, not fixed, in Phase 11's
+- **ServiceProvider-set spare-part pricing** (flagged, not fixed, in Phase 11's
   security review at 7/10 confidence — below the skill's ≥8 inclusion bar,
-  so not treated as confirmed) — a technician can currently name their own
+  so not treated as confirmed) — a serviceProvider can currently name their own
   price for a claimed spare part with no catalog-price cross-check. Worth a
   deliberate human look, not a false-positive dismissal.
 - **Broadcast notification read-state** (Phase 9) — broadcast notifications
@@ -78,7 +78,7 @@ each marked with what it needs to move forward.
   collection, documented as a schema limitation rather than silently
   mishandled in the meantime.
 - **Frontend integration beyond Auth** (Phase 13) — Booking flow, and the
-  other three portals' login (technician/brand-admin/super-admin), are
+  other three portals' login (serviceProvider/brand-admin/super-admin), are
   still on their original mocked/simulated behavior. See
   `frontend/docs/PHASE13_INTEGRATION.md` for the specific reasoning on why
   Booking wasn't attempted in that pass and what the next slice looks like.

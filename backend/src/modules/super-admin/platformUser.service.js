@@ -9,7 +9,7 @@ import { ExtendedWarrantyOrder } from '../warranty-amc-exchange/extendedWarranty
 import { ServiceRequest } from '../service-requests/serviceRequest.model.js';
 import { Order } from '../buy-commerce/order.model.js';
 import { ExchangeRequest } from '../warranty-amc-exchange/exchangeRequest.model.js';
-import { Job } from '../technician/job.model.js';
+import { Job } from '../service-provider/job.model.js';
 import { PlatformSettings } from './platformSettings.model.js';
 
 export async function listUsers({ role, status, page, limit, sort } = {}) {
@@ -57,7 +57,7 @@ export async function getUser(id) {
       Referral.find({ referrer: user._id }).populate('referredUser'),
       AMCSubscription.find({ user: user._id }).populate('plan'),
       ExtendedWarrantyOrder.find({ user: user._id }),
-      ServiceRequest.find({ user: user._id }).populate('technician').populate('appliance'),
+      ServiceRequest.find({ user: user._id }).populate('serviceProvider').populate('appliance'),
       Order.find({ user: user._id }).populate('items.product'),
       ExchangeRequest.find({ user: user._id })
     ]);
@@ -120,7 +120,7 @@ export async function deleteUser(id) {
 export async function getServiceReceipt(userId, requestId) {
   const user = await findOr404(userId);
   const request = await ServiceRequest.findOne({ _id: requestId, user: userId })
-    .populate('technician')
+    .populate('serviceProvider')
     .populate('appliance');
   
   if (!request) {
@@ -198,7 +198,7 @@ export async function getServiceReceipt(userId, requestId) {
               <strong>Appliance:</strong> ${request.appliance?.brand || request.brand || 'Appliance'} ${request.appliance?.type || request.category || ''}<br/>
               <strong>Model:</strong> ${request.appliance?.model || request.model || '—'}<br/>
               <strong>Status:</strong> <span style="color:#22C55E; font-weight: 700;">${request.status}</span><br/>
-              <strong>Technician:</strong> ${request.technician?.name || 'Assigned Agent'}
+              <strong>ServiceProvider:</strong> ${request.serviceProvider?.name || 'Assigned Agent'}
             </div>
           </div>
         </div>

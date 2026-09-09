@@ -204,7 +204,7 @@ describe('emit() — WhatsApp delivery', () => {
     process.env.TWILIO_AUTH_TOKEN = 'authtest';
     process.env.NOTIFICATION_WHATSAPP_ENABLED = 'true';
     const user = await seedUser({ phone: '9876543210' });
-    await emit('technician.assigned', { user: user._id, technicianName: 'Ravi Kumar' });
+    await emit('serviceProvider.assigned', { user: user._id, serviceProviderName: 'Ravi Kumar' });
     await new Promise((r) => setTimeout(r, 80));
     expect(mockMessagesCreate).toHaveBeenCalledTimes(1);
     const arg = mockMessagesCreate.mock.calls[0][0];
@@ -219,7 +219,7 @@ describe('emit() — WhatsApp delivery', () => {
     process.env.TWILIO_AUTH_TOKEN = 'authtest';
     process.env.NOTIFICATION_WHATSAPP_ENABLED = 'false';
     const user = await seedUser({ phone: '9876543210' });
-    await emit('technician.assigned', { user: user._id, technicianName: 'Ravi' });
+    await emit('serviceProvider.assigned', { user: user._id, serviceProviderName: 'Ravi' });
     await new Promise((r) => setTimeout(r, 80));
     expect(mockMessagesCreate).not.toHaveBeenCalled();
     delete process.env.TWILIO_ACCOUNT_SID;
@@ -357,16 +357,16 @@ describe('sendAdHocPush() — broadcast fan-out', () => {
   });
 
   test('a role broadcast pushes to that role only', async () => {
-    await seedRoleUser('technician', { tokens: ['tech-1'] });
-    await seedRoleUser('technician', { tokens: ['tech-2'] });
+    await seedRoleUser('service_provider', { tokens: ['service-provider-1'] });
+    await seedRoleUser('service_provider', { tokens: ['service-provider-2'] });
     await seedRoleUser('customer', { tokens: ['cust-1'] });
     await seedRoleUser('brand_admin', { tokens: ['brand-1'] });
 
-    await sendAdHocPush({ broadcastRole: 'Technicians', title: 'Payout', body: 'Wednesdays', type: 'promo' });
+    await sendAdHocPush({ broadcastRole: 'ServiceProviders', title: 'Payout', body: 'Wednesdays', type: 'promo' });
     await awaitPendingDeliveries();
 
     const sent = tokensSentToFcm();
-    expect(sent.sort()).toEqual(['tech-1', 'tech-2']);
+    expect(sent.sort()).toEqual(['service-provider-1', 'service-provider-2']);
     expect(sent).not.toContain('cust-1');
     expect(sent).not.toContain('brand-1');
   });
@@ -388,37 +388,37 @@ describe('sendAdHocPush() — broadcast fan-out', () => {
   });
 
   test('"All" reaches every role', async () => {
-    await seedRoleUser('technician', { tokens: ['tech-1'] });
+    await seedRoleUser('service_provider', { tokens: ['service-provider-1'] });
     await seedRoleUser('customer', { tokens: ['cust-1'] });
     await seedRoleUser('brand_admin', { tokens: ['brand-1'] });
 
     await sendAdHocPush({ broadcastRole: 'All', title: 'Maintenance', body: '2 AM', type: 'promo' });
     await awaitPendingDeliveries();
 
-    expect(tokensSentToFcm().sort()).toEqual(['brand-1', 'cust-1', 'tech-1']);
+    expect(tokensSentToFcm().sort()).toEqual(['brand-1', 'cust-1', 'service-provider-1']);
   });
 
   test('carries the notification title/body and its id in the data payload', async () => {
-    await seedRoleUser('technician', { tokens: ['tech-1'] });
+    await seedRoleUser('service_provider', { tokens: ['service-provider-1'] });
 
-    const notif = await sendAdHocPush({ broadcastRole: 'Technicians', title: 'Heads up', body: 'Read this', type: 'promo' });
+    const notif = await sendAdHocPush({ broadcastRole: 'ServiceProviders', title: 'Heads up', body: 'Read this', type: 'promo' });
     await awaitPendingDeliveries();
 
     const arg = mockSendEachForMulticast.mock.calls[0][0];
     expect(arg.notification).toEqual({ title: 'Heads up', body: 'Read this' });
     expect(arg.data.notificationId).toBe(String(notif._id));
-    expect(arg.data.broadcastRole).toBe('Technicians');
+    expect(arg.data.broadcastRole).toBe('ServiceProviders');
   });
 
   test('splits into 500-token batches — FCM rejects more in one call', async () => {
-    // 60 technicians x 10 devices = 600 tokens => 500 + 100.
+    // 60 service providers x 10 devices = 600 tokens => 500 + 100.
     await Promise.all(
       Array.from({ length: 60 }, (_, u) =>
-        seedRoleUser('technician', { tokens: Array.from({ length: 10 }, (_, t) => `t${u}-d${t}`) }),
+        seedRoleUser('service_provider', { tokens: Array.from({ length: 10 }, (_, t) => `t${u}-d${t}`) }),
       ),
     );
 
-    await sendAdHocPush({ broadcastRole: 'Technicians', title: 'Bulk', body: 'Fan out', type: 'promo' });
+    await sendAdHocPush({ broadcastRole: 'ServiceProviders', title: 'Bulk', body: 'Fan out', type: 'promo' });
     await awaitPendingDeliveries();
 
     expect(mockSendEachForMulticast).toHaveBeenCalledTimes(2);
@@ -429,11 +429,11 @@ describe('sendAdHocPush() — broadcast fan-out', () => {
   });
 
   test('skips users who opted out of push', async () => {
-    const optedIn = await seedRoleUser('technician', { tokens: ['in-1'] });
-    const optedOut = await seedRoleUser('technician', { tokens: ['out-1'] });
+    const optedIn = await seedRoleUser('service_provider', { tokens: ['in-1'] });
+    const optedOut = await seedRoleUser('service_provider', { tokens: ['out-1'] });
     await NotificationPreference.create({ user: optedOut._id, push: false });
 
-    await sendAdHocPush({ broadcastRole: 'Technicians', title: 'Notice', body: 'Body', type: 'promo' });
+    await sendAdHocPush({ broadcastRole: 'ServiceProviders', title: 'Notice', body: 'Body', type: 'promo' });
     await awaitPendingDeliveries();
 
     const sent = tokensSentToFcm();
@@ -455,26 +455,26 @@ describe('sendAdHocPush() — broadcast fan-out', () => {
 
   test('sends nothing when NOTIFICATION_PUSH_ENABLED=false', async () => {
     process.env.NOTIFICATION_PUSH_ENABLED = 'false';
-    await seedRoleUser('technician', { tokens: ['tech-1'] });
+    await seedRoleUser('service_provider', { tokens: ['service-provider-1'] });
 
-    await sendAdHocPush({ broadcastRole: 'Technicians', title: 'Off', body: 'Body', type: 'promo' });
+    await sendAdHocPush({ broadcastRole: 'ServiceProviders', title: 'Off', body: 'Body', type: 'promo' });
     await awaitPendingDeliveries();
 
     expect(mockSendEachForMulticast).not.toHaveBeenCalled();
   });
 
   test('users without device tokens are not sent to', async () => {
-    await seedRoleUser('technician', { tokens: [] });
+    await seedRoleUser('service_provider', { tokens: [] });
 
-    await sendAdHocPush({ broadcastRole: 'Technicians', title: 'Nobody', body: 'Body', type: 'promo' });
+    await sendAdHocPush({ broadcastRole: 'ServiceProviders', title: 'Nobody', body: 'Body', type: 'promo' });
     await awaitPendingDeliveries();
 
     expect(mockSendEachForMulticast).not.toHaveBeenCalled();
   });
 
   test('prunes stale tokens across the whole audience in one pass', async () => {
-    const a = await seedRoleUser('technician', { tokens: ['good-1', 'dead-1'] });
-    const b = await seedRoleUser('technician', { tokens: ['dead-2'] });
+    const a = await seedRoleUser('service_provider', { tokens: ['good-1', 'dead-1'] });
+    const b = await seedRoleUser('service_provider', { tokens: ['dead-2'] });
 
     mockSendEachForMulticast.mockImplementation(async ({ tokens }) => ({
       responses: tokens.map((t) => (t.startsWith('dead')
@@ -482,7 +482,7 @@ describe('sendAdHocPush() — broadcast fan-out', () => {
         : { success: true })),
     }));
 
-    await sendAdHocPush({ broadcastRole: 'Technicians', title: 'Prune', body: 'Body', type: 'promo' });
+    await sendAdHocPush({ broadcastRole: 'ServiceProviders', title: 'Prune', body: 'Body', type: 'promo' });
     await awaitPendingDeliveries();
 
     const [afterA, afterB] = await Promise.all([User.findById(a._id).lean(), User.findById(b._id).lean()]);
@@ -493,7 +493,7 @@ describe('sendAdHocPush() — broadcast fan-out', () => {
   test('a personal ad-hoc push is unaffected by the broadcast path', async () => {
     const user = await seedRoleUser('customer', { tokens: ['solo-1'] });
 
-    await sendAdHocPush({ recipientId: String(user._id), title: 'Just you', body: 'Body', type: 'tech' });
+    await sendAdHocPush({ recipientId: String(user._id), title: 'Just you', body: 'Body', type: 'provider' });
     await awaitPendingDeliveries();
 
     expect(tokensSentToFcm()).toEqual(['solo-1']);
@@ -515,10 +515,10 @@ describe('sendAdHocPush() — channel selection', () => {
   });
 
   test('channels: ["inapp"] still records the broadcast but sends no device push', async () => {
-    await seedRoleUser('technician', { tokens: ['tech-1'] });
+    await seedRoleUser('service_provider', { tokens: ['service-provider-1'] });
 
     const notif = await sendAdHocPush({
-      broadcastRole: 'Technicians', title: 'Quiet notice', body: 'Body', type: 'promo', channels: ['inapp'],
+      broadcastRole: 'ServiceProviders', title: 'Quiet notice', body: 'Body', type: 'promo', channels: ['inapp'],
     });
     await awaitPendingDeliveries();
 
@@ -528,33 +528,33 @@ describe('sendAdHocPush() — channel selection', () => {
   });
 
   test('an in-app-only broadcast still reaches the role\'s inbox', async () => {
-    const tech = { id: String((await seedRoleUser('technician'))._id), role: 'technician' };
-    await sendAdHocPush({ broadcastRole: 'Technicians', title: 'Quiet notice', body: 'Body', type: 'promo', channels: ['inapp'] });
+    const provider = { id: String((await seedRoleUser('service_provider'))._id), role: 'service_provider' };
+    await sendAdHocPush({ broadcastRole: 'ServiceProviders', title: 'Quiet notice', body: 'Body', type: 'promo', channels: ['inapp'] });
 
-    const { items } = await listNotifications(tech);
+    const { items } = await listNotifications(provider);
     expect(items.map((i) => i.title)).toContain('Quiet notice');
   });
 
   test('channels: ["inapp","push"] fans out to devices', async () => {
-    await seedRoleUser('technician', { tokens: ['tech-1'] });
+    await seedRoleUser('service_provider', { tokens: ['service-provider-1'] });
     await sendAdHocPush({
-      broadcastRole: 'Technicians', title: 'Loud notice', body: 'Body', type: 'promo', channels: ['inapp', 'push'],
+      broadcastRole: 'ServiceProviders', title: 'Loud notice', body: 'Body', type: 'promo', channels: ['inapp', 'push'],
     });
     await awaitPendingDeliveries();
-    expect(tokensSentToFcm()).toEqual(['tech-1']);
+    expect(tokensSentToFcm()).toEqual(['service-provider-1']);
   });
 
   test('omitting channels keeps the previous behaviour — push is sent', async () => {
-    await seedRoleUser('technician', { tokens: ['tech-1'] });
-    await sendAdHocPush({ broadcastRole: 'Technicians', title: 'Default', body: 'Body', type: 'promo' });
+    await seedRoleUser('service_provider', { tokens: ['service-provider-1'] });
+    await sendAdHocPush({ broadcastRole: 'ServiceProviders', title: 'Default', body: 'Body', type: 'promo' });
     await awaitPendingDeliveries();
-    expect(tokensSentToFcm()).toEqual(['tech-1']);
+    expect(tokensSentToFcm()).toEqual(['service-provider-1']);
   });
 
   test('an in-app-only personal dispatch sends no push either', async () => {
     const user = await seedRoleUser('customer', { tokens: ['cust-1'] });
     await sendAdHocPush({
-      recipientId: String(user._id), title: 'Quiet personal', body: 'Body', type: 'tech', channels: ['inapp'],
+      recipientId: String(user._id), title: 'Quiet personal', body: 'Body', type: 'provider', channels: ['inapp'],
     });
     await awaitPendingDeliveries();
     expect(mockSendEachForMulticast).not.toHaveBeenCalled();
@@ -565,22 +565,22 @@ describe('sendAdHocPush() — channel selection', () => {
 // 7. Broadcast inbox visibility + isolation
 //
 // Regression guard: listNotifications() hardcoded `broadcastRole: 'All'`, so a
-// broadcast to Technicians/Brands/Customers never appeared in ANY inbox — and
+// broadcast to ServiceProviders/Brands/Customers never appeared in ANY inbox — and
 // getNotification() let any user open any broadcast by id.
 // ─────────────────────────────────────────────────────────────────────────────
 describe('broadcast inbox visibility', () => {
   test('a role broadcast lands in that role\'s inbox', async () => {
-    const tech = await seedRoleUser('technician');
-    await sendAdHocPush({ broadcastRole: 'Technicians', title: 'Payout moved', body: 'Wednesdays', type: 'promo' });
+    const provider = await seedRoleUser('service_provider');
+    await sendAdHocPush({ broadcastRole: 'ServiceProviders', title: 'Payout moved', body: 'Wednesdays', type: 'promo' });
 
-    const { items } = await listNotifications({ id: String(tech._id), role: 'technician' });
+    const { items } = await listNotifications({ id: String(provider._id), role: 'service_provider' });
     expect(items.map((i) => i.title)).toContain('Payout moved');
   });
 
   test('and stays out of every other role\'s inbox', async () => {
     const customer = await seedRoleUser('customer');
     const brand = await seedRoleUser('brand_admin');
-    await sendAdHocPush({ broadcastRole: 'Technicians', title: 'Tech only', body: 'Body', type: 'promo' });
+    await sendAdHocPush({ broadcastRole: 'ServiceProviders', title: 'Tech only', body: 'Body', type: 'promo' });
 
     const cust = await listNotifications({ id: String(customer._id), role: 'customer' });
     const brnd = await listNotifications({ id: String(brand._id), role: 'brand_admin' });
@@ -589,13 +589,13 @@ describe('broadcast inbox visibility', () => {
   });
 
   test('an "All" broadcast reaches every role, super_admin included', async () => {
-    const tech = await seedRoleUser('technician');
+    const provider = await seedRoleUser('service_provider');
     const customer = await seedRoleUser('customer');
     const brand = await seedRoleUser('brand_admin');
     const admin = await seedRoleUser('super_admin');
     await sendAdHocPush({ broadcastRole: 'All', title: 'Maintenance tonight', body: '2 AM', type: 'promo' });
 
-    for (const [u, role] of [[tech, 'technician'], [customer, 'customer'], [brand, 'brand_admin'], [admin, 'super_admin']]) {
+    for (const [u, role] of [[provider, 'service_provider'], [customer, 'customer'], [brand, 'brand_admin'], [admin, 'super_admin']]) {
       const { items } = await listNotifications({ id: String(u._id), role });
       expect(items.map((i) => i.title)).toContain('Maintenance tonight');
     }
@@ -610,12 +610,12 @@ describe('broadcast inbox visibility', () => {
   });
 
   test('personal notifications still reach their recipient alongside broadcasts', async () => {
-    const tech = await seedRoleUser('technician');
-    await sendAdHocPush({ recipientId: String(tech._id), title: 'Just you', body: 'Body', type: 'tech' });
-    await sendAdHocPush({ broadcastRole: 'Technicians', title: 'All techs', body: 'Body', type: 'promo' });
+    const provider = await seedRoleUser('service_provider');
+    await sendAdHocPush({ recipientId: String(provider._id), title: 'Just you', body: 'Body', type: 'provider' });
+    await sendAdHocPush({ broadcastRole: 'ServiceProviders', title: 'All techs', body: 'Body', type: 'promo' });
     await sendAdHocPush({ broadcastRole: 'Customers', title: 'Not for you', body: 'Body', type: 'promo' });
 
-    const { items } = await listNotifications({ id: String(tech._id), role: 'technician' });
+    const { items } = await listNotifications({ id: String(provider._id), role: 'service_provider' });
     const titles = items.map((i) => i.title);
     expect(titles).toEqual(expect.arrayContaining(['Just you', 'All techs']));
     expect(titles).not.toContain('Not for you');
@@ -623,7 +623,7 @@ describe('broadcast inbox visibility', () => {
 
   test('getNotification refuses a broadcast aimed at another role', async () => {
     const customer = await seedRoleUser('customer');
-    const notif = await sendAdHocPush({ broadcastRole: 'Technicians', title: 'Tech only', body: 'Body', type: 'promo' });
+    const notif = await sendAdHocPush({ broadcastRole: 'ServiceProviders', title: 'Tech only', body: 'Body', type: 'promo' });
 
     await expect(
       getNotification({ id: String(customer._id), role: 'customer' }, String(notif._id)),
@@ -631,10 +631,10 @@ describe('broadcast inbox visibility', () => {
   });
 
   test('getNotification allows a broadcast aimed at the caller\'s role', async () => {
-    const tech = await seedRoleUser('technician');
-    const notif = await sendAdHocPush({ broadcastRole: 'Technicians', title: 'Tech only', body: 'Body', type: 'promo' });
+    const provider = await seedRoleUser('service_provider');
+    const notif = await sendAdHocPush({ broadcastRole: 'ServiceProviders', title: 'Tech only', body: 'Body', type: 'promo' });
 
-    const found = await getNotification({ id: String(tech._id), role: 'technician' }, String(notif._id));
+    const found = await getNotification({ id: String(provider._id), role: 'service_provider' }, String(notif._id));
     expect(found.title).toBe('Tech only');
   });
 });
@@ -643,20 +643,20 @@ describe('broadcast inbox visibility', () => {
 // 8. Per-user broadcast read state
 //
 // A broadcast has many readers, so the document's single `read` flag cannot say
-// "read by this technician, unread for that one". Read state for a broadcast
+// "read by this service provider, unread for that one". Read state for a broadcast
 // lives in a NotificationReceipt row instead.
 // ─────────────────────────────────────────────────────────────────────────────
 describe('per-user broadcast read state', () => {
   async function twoTechs() {
     return [
-      { id: String((await seedRoleUser('technician'))._id), role: 'technician' },
-      { id: String((await seedRoleUser('technician'))._id), role: 'technician' },
+      { id: String((await seedRoleUser('service_provider'))._id), role: 'service_provider' },
+      { id: String((await seedRoleUser('service_provider'))._id), role: 'service_provider' },
     ];
   }
 
   test('one user reading a broadcast leaves it unread for everyone else', async () => {
     const [alice, bob] = await twoTechs();
-    const notif = await sendAdHocPush({ broadcastRole: 'Technicians', title: 'Shift change', body: 'Body', type: 'promo' });
+    const notif = await sendAdHocPush({ broadcastRole: 'ServiceProviders', title: 'Shift change', body: 'Body', type: 'promo' });
 
     await markRead(alice, String(notif._id));
 
@@ -668,7 +668,7 @@ describe('per-user broadcast read state', () => {
 
   test('read=false excludes a broadcast this user has read, but not others', async () => {
     const [alice, bob] = await twoTechs();
-    const notif = await sendAdHocPush({ broadcastRole: 'Technicians', title: 'Shift change', body: 'Body', type: 'promo' });
+    const notif = await sendAdHocPush({ broadcastRole: 'ServiceProviders', title: 'Shift change', body: 'Body', type: 'promo' });
     await markRead(alice, String(notif._id));
 
     const aUnread = await listNotifications(alice, { read: false });
@@ -679,7 +679,7 @@ describe('per-user broadcast read state', () => {
 
   test('read=true returns it for the reader only', async () => {
     const [alice, bob] = await twoTechs();
-    const notif = await sendAdHocPush({ broadcastRole: 'Technicians', title: 'Shift change', body: 'Body', type: 'promo' });
+    const notif = await sendAdHocPush({ broadcastRole: 'ServiceProviders', title: 'Shift change', body: 'Body', type: 'promo' });
     await markRead(alice, String(notif._id));
 
     expect((await listNotifications(alice, { read: true })).items.map((i) => i.title)).toEqual(['Shift change']);
@@ -688,8 +688,8 @@ describe('per-user broadcast read state', () => {
 
   test('meta.total reflects the per-user filter, not the raw document count', async () => {
     const [alice, bob] = await twoTechs();
-    const n1 = await sendAdHocPush({ broadcastRole: 'Technicians', title: 'One', body: 'Body', type: 'promo' });
-    await sendAdHocPush({ broadcastRole: 'Technicians', title: 'Two', body: 'Body', type: 'promo' });
+    const n1 = await sendAdHocPush({ broadcastRole: 'ServiceProviders', title: 'One', body: 'Body', type: 'promo' });
+    await sendAdHocPush({ broadcastRole: 'ServiceProviders', title: 'Two', body: 'Body', type: 'promo' });
     await markRead(alice, String(n1._id));
 
     expect((await listNotifications(alice, { read: false })).meta.total).toBe(1);
@@ -698,7 +698,7 @@ describe('per-user broadcast read state', () => {
 
   test('marking the same broadcast read twice is idempotent', async () => {
     const [alice] = await twoTechs();
-    const notif = await sendAdHocPush({ broadcastRole: 'Technicians', title: 'Twice', body: 'Body', type: 'promo' });
+    const notif = await sendAdHocPush({ broadcastRole: 'ServiceProviders', title: 'Twice', body: 'Body', type: 'promo' });
 
     await markRead(alice, String(notif._id));
     await expect(markRead(alice, String(notif._id))).resolves.toBeTruthy();
@@ -707,7 +707,7 @@ describe('per-user broadcast read state', () => {
 
   test('markRead refuses a broadcast aimed at another role', async () => {
     const customer = { id: String((await seedRoleUser('customer'))._id), role: 'customer' };
-    const notif = await sendAdHocPush({ broadcastRole: 'Technicians', title: 'Tech only', body: 'Body', type: 'promo' });
+    const notif = await sendAdHocPush({ broadcastRole: 'ServiceProviders', title: 'Tech only', body: 'Body', type: 'promo' });
 
     await expect(markRead(customer, String(notif._id))).rejects.toThrow(/Not authorized/);
     expect(await NotificationReceipt.countDocuments({})).toBe(0);
@@ -715,8 +715,8 @@ describe('per-user broadcast read state', () => {
 
   test('markAllRead clears broadcasts as well as personal notifications', async () => {
     const [alice, bob] = await twoTechs();
-    await sendAdHocPush({ recipientId: alice.id, title: 'Personal', body: 'Body', type: 'tech' });
-    await sendAdHocPush({ broadcastRole: 'Technicians', title: 'Broadcast', body: 'Body', type: 'promo' });
+    await sendAdHocPush({ recipientId: alice.id, title: 'Personal', body: 'Body', type: 'provider' });
+    await sendAdHocPush({ broadcastRole: 'ServiceProviders', title: 'Broadcast', body: 'Body', type: 'promo' });
     await sendAdHocPush({ broadcastRole: 'All', title: 'Platform', body: 'Body', type: 'promo' });
 
     await markAllRead(alice);
@@ -729,7 +729,7 @@ describe('per-user broadcast read state', () => {
 
   test('markAllRead is safe to run twice (no duplicate receipts)', async () => {
     const [alice] = await twoTechs();
-    await sendAdHocPush({ broadcastRole: 'Technicians', title: 'Once', body: 'Body', type: 'promo' });
+    await sendAdHocPush({ broadcastRole: 'ServiceProviders', title: 'Once', body: 'Body', type: 'promo' });
 
     await markAllRead(alice);
     await expect(markAllRead(alice)).resolves.not.toThrow();
@@ -738,7 +738,7 @@ describe('per-user broadcast read state', () => {
 
   test('a personal notification still uses its own read flag', async () => {
     const [alice] = await twoTechs();
-    const notif = await sendAdHocPush({ recipientId: alice.id, title: 'Mine', body: 'Body', type: 'tech' });
+    const notif = await sendAdHocPush({ recipientId: alice.id, title: 'Mine', body: 'Body', type: 'provider' });
 
     await markRead(alice, String(notif._id));
 
@@ -748,7 +748,7 @@ describe('per-user broadcast read state', () => {
 
   test('list items expose `id` — the toJSON plugin does not run on aggregation output', async () => {
     const [alice] = await twoTechs();
-    await sendAdHocPush({ broadcastRole: 'Technicians', title: 'Shape', body: 'Body', type: 'promo' });
+    await sendAdHocPush({ broadcastRole: 'ServiceProviders', title: 'Shape', body: 'Body', type: 'promo' });
 
     const { items } = await listNotifications(alice);
     expect(items[0].id).toBeDefined();
@@ -763,11 +763,11 @@ describe('per-user broadcast read state', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 describe('getPushStats', () => {
   test('scopes device counts to the targeted audience', async () => {
-    await seedRoleUser('technician', { tokens: ['t1', 't2'] });
-    await seedRoleUser('technician', { tokens: ['t3'] });
+    await seedRoleUser('service_provider', { tokens: ['t1', 't2'] });
+    await seedRoleUser('service_provider', { tokens: ['t3'] });
     await seedRoleUser('customer', { tokens: ['c1'] });
 
-    const techs = await getPushStats({ broadcastRole: 'Technicians' });
+    const techs = await getPushStats({ broadcastRole: 'ServiceProviders' });
     expect(techs.deviceHolders).toBe(2);
     expect(techs.activeDevices).toBe(3);
 
@@ -777,7 +777,7 @@ describe('getPushStats', () => {
   });
 
   test('"All" counts every role', async () => {
-    await seedRoleUser('technician', { tokens: ['t1'] });
+    await seedRoleUser('service_provider', { tokens: ['t1'] });
     await seedRoleUser('customer', { tokens: ['c1'] });
     const all = await getPushStats({ broadcastRole: 'All' });
     expect(all.deviceHolders).toBe(2);
@@ -785,21 +785,21 @@ describe('getPushStats', () => {
   });
 
   test('excludes opted-out users, so reach matches what the fan-out will send', async () => {
-    await seedRoleUser('technician', { tokens: ['keep'] });
-    const out = await seedRoleUser('technician', { tokens: ['skip-1', 'skip-2'] });
+    await seedRoleUser('service_provider', { tokens: ['keep'] });
+    const out = await seedRoleUser('service_provider', { tokens: ['skip-1', 'skip-2'] });
     await NotificationPreference.create({ user: out._id, push: false });
 
-    const stats = await getPushStats({ broadcastRole: 'Technicians' });
+    const stats = await getPushStats({ broadcastRole: 'ServiceProviders' });
     expect(stats.deviceHolders).toBe(1);
     expect(stats.activeDevices).toBe(1);
   });
 
   test('reports audience size separately from how many can be reached', async () => {
-    await seedRoleUser('technician', { tokens: ['t1'] });
-    await seedRoleUser('technician'); // no device
-    await seedRoleUser('technician'); // no device
+    await seedRoleUser('service_provider', { tokens: ['t1'] });
+    await seedRoleUser('service_provider'); // no device
+    await seedRoleUser('service_provider'); // no device
 
-    const stats = await getPushStats({ broadcastRole: 'Technicians' });
+    const stats = await getPushStats({ broadcastRole: 'ServiceProviders' });
     expect(stats.audience).toBe(3);
     expect(stats.deviceHolders).toBe(1);
   });
@@ -809,7 +809,7 @@ describe('getPushStats', () => {
   });
 
   test('no audience given still reports platform-wide totals', async () => {
-    await seedRoleUser('technician', { tokens: ['t1'] });
+    await seedRoleUser('service_provider', { tokens: ['t1'] });
     await seedRoleUser('customer', { tokens: ['c1'] });
     const stats = await getPushStats();
     expect(stats.deviceHolders).toBe(2);
@@ -824,8 +824,8 @@ describe('listBroadcasts', () => {
   test('returns role-wide broadcasts newest-first and excludes personal notifications', async () => {
     const user = await seedUser();
 
-    await sendAdHocPush({ recipientId: String(user._id), title: 'Just for you', body: 'personal', type: 'tech' });
-    await sendAdHocPush({ broadcastRole: 'Technicians', title: 'New payout cycle', body: 'Wednesdays', type: 'promo' });
+    await sendAdHocPush({ recipientId: String(user._id), title: 'Just for you', body: 'personal', type: 'provider' });
+    await sendAdHocPush({ broadcastRole: 'ServiceProviders', title: 'New payout cycle', body: 'Wednesdays', type: 'promo' });
     await sendAdHocPush({ broadcastRole: 'All', title: 'App update tonight', body: '2 AM', type: 'promo' });
 
     const { items, meta } = await listBroadcasts({});

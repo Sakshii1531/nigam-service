@@ -35,7 +35,7 @@ function shape(request) {
     mobile: request.user?.phone || '—',
     product: request.category || '—',
     model: request.model || '—',
-    tech: request.technician?.name || 'Unassigned',
+    serviceProvider: request.serviceProvider?.name || 'Unassigned',
     status: displayStatus(request, sla.breached),
     sla: sla.label,
     priority: request.priority || 'Medium',
@@ -102,7 +102,7 @@ const ComplaintMonitoring = () => {
   const kpis = [
     { label: 'Open Complaints', value: String(countBy(c => c.status !== 'Completed')), icon: <BarChart2 size={18} />, bg: 'bg-blue-600' },
     { label: 'SLA Breached', value: String(countBy(c => c.status === 'SLA Breached')), icon: <AlertTriangle size={18} />, bg: 'bg-red-600' },
-    { label: 'Unassigned', value: String(countBy(c => c.tech === 'Unassigned')), icon: <Clock size={18} />, bg: 'bg-purple-600' },
+    { label: 'Unassigned', value: String(countBy(c => c.provider === 'Unassigned')), icon: <Clock size={18} />, bg: 'bg-purple-600' },
     { label: 'Completed', value: String(countBy(c => c.status === 'Completed')), icon: <Zap size={18} />, bg: 'bg-green-600' },
   ];
 
@@ -156,7 +156,7 @@ const ComplaintMonitoring = () => {
                     <th className="px-3 py-3">Ticket ID</th>
                     <th className="px-3 py-3">Customer</th>
                     <th className="px-3 py-3">Product</th>
-                    <th className="px-3 py-3">Technician</th>
+                    <th className="px-3 py-3">Service Provider</th>
                     <th className="px-3 py-3">Zone</th>
                     <th className="px-3 py-3">SLA Remaining</th>
                     <th className="px-3 py-3">Status</th>
@@ -190,7 +190,7 @@ const ComplaintMonitoring = () => {
                         <p className="text-[#1E293B] font-medium">{c.product}</p>
                         <p className="text-[#94A3B8] text-[9px]">{c.model}</p>
                       </td>
-                      <td className="px-3 py-3 text-[#64748B]">{c.tech}</td>
+                      <td className="px-3 py-3 text-[#64748B]">{c.provider}</td>
                       <td className="px-3 py-3 text-[#64748B]">{c.zone}</td>
                       <td className="px-3 py-3">
                         <span className={`font-bold text-xs ${c.sla === '0m' ? 'text-red-600' : 'text-[#1E293B]'}`}>{c.sla || '—'}</span>

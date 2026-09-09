@@ -111,7 +111,7 @@ const TeamsDepartments = () => {
     <div className="min-h-screen bg-[#F1F5F9] flex relative">
       <Sidebar />
       <div className="flex-1 ml-64 flex flex-col">
-        <Topbar title="Teams & Departments" subtitle="Manage service zones, field teams, and technician departments" />
+        <Topbar title="Teams & Departments" subtitle="Manage service zones, field teams, and serviceProvider departments" />
         <div className="p-5 space-y-5">
 
           {/* Top Actions */}

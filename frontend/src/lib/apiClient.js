@@ -2,6 +2,7 @@
 // { data, error, meta } envelope (backend/src/utils/respond.js,
 // backend/src/middleware/errorHandler.js). Deliberately no axios dependency —
 // native fetch covers everything this needs.
+import { getDeviceId } from './deviceId';
 
 function getBaseUrl() {
   let url = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api/v1').trim();
@@ -21,7 +22,8 @@ const BASE_URL = getBaseUrl();
 export function getCurrentPortal(pathname = typeof window !== 'undefined' ? window.location.pathname : '') {
   if (pathname.startsWith('/super-admin')) return 'super_admin';
   if (pathname.startsWith('/brand-admin')) return 'brand_admin';
-  if (pathname.startsWith('/technician')) return 'technician';
+  if (pathname.startsWith('/service-provider')) return 'service_provider';
+  if (pathname.startsWith('/asm')) return 'asm';
   return 'customer';
 }
 
@@ -113,11 +115,16 @@ async function rawRequest(path, { method = 'GET', body, accessToken, envelope = 
 
   let res;
   try {
+    const deviceId = getDeviceId();
     res = await fetch(`${BASE_URL}${path}`, {
       method,
       headers: {
         ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
         ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        // Only the OTP resend / forgot-password rate limiter reads this
+        // (backend/src/middleware/otpRateLimit.js) — harmless on every other
+        // route, so it's simplest to just always send it.
+        ...(deviceId ? { 'X-Device-Id': deviceId } : {}),
       },
       body: body === undefined ? undefined : isFormData ? body : JSON.stringify(body),
     });

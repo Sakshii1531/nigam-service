@@ -7,10 +7,10 @@ export const CATALOG_SEED = [
     name: 'AC',
     color: '#0D47A1',
     lightBg: '#EAF4FF',
-    categoryNote: 'Prices shown are indicative. The technician will confirm exact charges after inspection.',
+    categoryNote: 'Prices shown are indicative. The serviceProvider will confirm exact charges after inspection.',
     brands: ['Voltas', 'LG', 'Samsung', 'Daikin', 'Whirlpool', 'Lloyd', 'Panasonic', 'Blue Star', 'Hitachi', 'Carrier', 'O General'],
     whyBrandPoints: [
-      'Technicians carry brand-specific gas & parts',
+      'ServiceProviders carry brand-specific gas & parts',
       'AC model-specific calibration & settings',
       'Correct refrigerant type (R22 vs R410A)',
     ],
@@ -35,7 +35,7 @@ export const CATALOG_SEED = [
     name: 'Washing Machine',
     color: '#1565C0',
     lightBg: '#E3F2FD',
-    categoryNote: 'Prices are indicative. Exact charges are confirmed after inspection by the technician.',
+    categoryNote: 'Prices are indicative. Exact charges are confirmed after inspection by the serviceProvider.',
     brands: ['LG', 'Samsung', 'Whirlpool', 'IFB', 'Bosch', 'Haier', 'Godrej', 'Panasonic', 'Voltas', 'Siemens'],
     whyBrandPoints: [
       'Brand-specific PCB & motor spare parts stocked',
@@ -60,7 +60,7 @@ export const CATALOG_SEED = [
     name: 'Refrigerator',
     color: '#4527A0',
     lightBg: '#EDE7F6',
-    categoryNote: 'Cooling issues may need gas refilling — exact diagnosis done by the technician on-site.',
+    categoryNote: 'Cooling issues may need gas refilling — exact diagnosis done by the serviceProvider on-site.',
     brands: ['LG', 'Samsung', 'Whirlpool', 'Godrej', 'Haier', 'Panasonic', 'Bosch', 'Voltas', 'Hitachi', 'Liebherr'],
     whyBrandPoints: [
       'Brand-specific compressor & thermostat parts',
@@ -87,7 +87,7 @@ export const CATALOG_SEED = [
     name: 'TV',
     color: '#B71C1C',
     lightBg: '#FFEBEE',
-    categoryNote: 'Panel repairs depend on part availability. Technician will confirm before proceeding.',
+    categoryNote: 'Panel repairs depend on part availability. ServiceProvider will confirm before proceeding.',
     brands: ['LG', 'Samsung', 'Sony', 'Panasonic', 'Mi', 'OnePlus', 'TCL', 'Haier', 'VU', 'Philips', 'Hisense'],
     whyBrandPoints: [
       'Brand-specific display panels & backlights stocked',
@@ -164,7 +164,7 @@ export const CATALOG_SEED = [
     name: 'Microwave',
     color: '#37474F',
     lightBg: '#ECEFF1',
-    categoryNote: 'Never use metal containers inside. Technician will inspect for any magnetron damage.',
+    categoryNote: 'Never use metal containers inside. ServiceProvider will inspect for any magnetron damage.',
     brands: ['LG', 'Samsung', 'IFB', 'Morphy Richards', 'Bajaj', 'Panasonic', 'Godrej', 'Whirlpool', 'Philips', 'Bosch'],
     whyBrandPoints: [
       'Brand-specific magnetron & waveguide cover parts',

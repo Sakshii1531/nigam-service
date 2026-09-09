@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import { ServiceRequest } from '../service-requests/serviceRequest.model.js';
-import { Technician } from '../technician/technician.model.js';
+import { ServiceProvider } from '../service-provider/serviceProvider.model.js';
 import { User } from '../auth/user.model.js';
 import { Brand } from '../super-admin/brand.model.js';
 import { ExtendedWarrantyOrder } from '../warranty-amc-exchange/extendedWarrantyOrder.model.js';
@@ -8,11 +8,11 @@ import { AMCSubscription } from '../warranty-amc-exchange/amcSubscription.model.
 import { Claim } from '../warranty-amc-exchange/claim.model.js';
 import { Review } from '../reviews/review.model.js';
 import { Invoice } from './invoice.model.js';
-import { PartOrder } from '../technician/partOrder.model.js';
-import { TechInventoryItem } from '../technician/techInventoryItem.model.js';
-import { Job } from '../technician/job.model.js';
+import { PartOrder } from '../service-provider/partOrder.model.js';
+import { ServiceProviderInventoryItem } from '../service-provider/serviceProviderInventoryItem.model.js';
+import { Job } from '../service-provider/job.model.js';
 import { Payment } from '../payments-wallet/payment.model.js';
-import { Payout } from '../technician/payout.model.js';
+import { Payout } from '../service-provider/payout.model.js';
 import { Escalation } from '../super-admin/escalation.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { parsePagination, paginationMeta } from '../../utils/pagination.js';
@@ -23,7 +23,7 @@ import { computeWarrantyStatus, DEFAULT_BRAND_WARRANTY_MONTHS, addMonths } from 
 //
 // Two different linkage strengths are at play, and it matters which:
 //
-//  - Customers, technicians and completions are derived through
+//  - Customers, service providers and completions are derived through
 //    ServiceRequest.brand, which is a real ObjectId ref — reliable.
 //  - Warranty registrations, AMC subscriptions and claims carry `brand` as a
 //    free-text String (the label captured at purchase), so those are matched by
@@ -116,18 +116,18 @@ function nameMatcherLoose(term) {
 }
 
 /**
- * Technicians who have actually worked this brand's requests, with their
+ * ServiceProviders who have actually worked this brand's requests, with their
  * workload on this brand specifically — not their platform-wide totals, which
  * would be misleading on a brand console.
  */
-export async function listBrandTechnicians(brandId, { page, limit } = {}) {
+export async function listBrandServiceProviders(brandId, { page, limit } = {}) {
   const { skip, limit: lim, page: pg } = parsePagination({ page, limit });
 
   const rows = await ServiceRequest.aggregate([
-    { $match: { brand: asObjectId(brandId), technician: { $ne: null } } },
+    { $match: { brand: asObjectId(brandId), serviceProvider: { $ne: null } } },
     {
       $group: {
-        _id: '$technician',
+        _id: '$serviceProvider',
         totalJobs: { $sum: 1 },
         activeJobs: { $sum: { $cond: [{ $in: ['$status', TERMINAL_STATUSES] }, 0, 1] } },
         completedJobs: { $sum: { $cond: [{ $eq: ['$status', 'Closed'] }, 1, 0] } },
@@ -136,24 +136,24 @@ export async function listBrandTechnicians(brandId, { page, limit } = {}) {
     { $sort: { totalJobs: -1 } },
   ]);
 
-  const technicians = await Technician.find({ _id: { $in: rows.map((r) => r._id) } })
+  const serviceProviders = await ServiceProvider.find({ _id: { $in: rows.map((r) => r._id) } })
     .populate('city', 'name')
     .select('name phone specs rating status availability city')
     .lean();
-  const byId = new Map(technicians.map((t) => [String(t._id), t]));
+  const byId = new Map(serviceProviders.map((t) => [String(t._id), t]));
 
   const items = rows.map((r) => {
     const t = byId.get(String(r._id));
     return {
       id: String(r._id),
-      name: t?.name || 'Technician',
+      name: t?.name || 'Service Provider',
       phone: t?.phone || '',
       skill: t?.specs?.length ? t.specs.join(', ') : 'General Repair',
       city: t?.city?.name || '—',
       rating: t?.rating ?? 0,
       status: t?.status || 'Active',
       availability: t?.availability || 'Offline',
-      // Scoped to this brand, not the technician's platform-wide counters.
+      // Scoped to this brand, not the service provider's platform-wide counters.
       activeJobs: r.activeJobs,
       completedJobs: r.completedJobs,
       totalJobs: r.totalJobs,
@@ -171,7 +171,7 @@ export async function listBrandCompletions(brandId, { page, limit, sort } = {}) 
   const [requests, total] = await Promise.all([
     ServiceRequest.find(query)
       .populate('user', 'name phone')
-      .populate('technician', 'name')
+      .populate('serviceProvider', 'name')
       .sort(sortObj)
       .skip(skip)
       .limit(lim)
@@ -234,8 +234,8 @@ export async function listBrandClaims(brandId, { status, page, limit, sort } = {
 
   const { skip, limit: lim, page: pg, sort: sortObj } = parsePagination({ page, limit, sort });
   const [items, total] = await Promise.all([
-    // raisedBy is polymorphic (refPath) — a technician-raised claim points at a
-    // Technician doc, a customer-raised one at a User. populate follows either.
+    // raisedBy is polymorphic (refPath) — a service provider-raised claim points at a
+    // Service Provider doc, a customer-raised one at a User. populate follows either.
     Claim.find(query)
       .populate('serviceRequest', 'humanId category')
       .populate('raisedBy', 'name phone')
@@ -330,7 +330,7 @@ export async function getBrandDashboard(brandId) {
   };
 }
 
-/** Same data split by appliance and by technician, for the reports screen. */
+/** Same data split by appliance and by service provider, for the reports screen. */
 export async function getBrandReports(brandId, { from, to } = {}) {
   const brandObjectId = asObjectId(brandId);
   const dateFilter = {};
@@ -342,17 +342,17 @@ export async function getBrandReports(brandId, { from, to } = {}) {
   // the server's timezone.
   const monthStart = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() - 5, 1));
 
-  const [byCategory, techRows, sentimentRows, monthlyRows] = await Promise.all([
+  const [byCategory, serviceProviderRows, sentimentRows, monthlyRows] = await Promise.all([
     ServiceRequest.aggregate([
       { $match: match },
       { $group: { _id: '$category', count: { $sum: 1 } } },
       { $sort: { count: -1 } },
     ]),
     ServiceRequest.aggregate([
-      { $match: { ...match, technician: { $ne: null } } },
+      { $match: { ...match, serviceProvider: { $ne: null } } },
       {
         $group: {
-          _id: '$technician',
+          _id: '$serviceProvider',
           total: { $sum: 1 },
           completed: { $sum: { $cond: [{ $eq: ['$status', 'Closed'] }, 1, 0] } },
         },
@@ -401,10 +401,10 @@ export async function getBrandReports(brandId, { from, to } = {}) {
     ? Number((((current.count - prev.count) / prev.count) * 100).toFixed(1))
     : null;
 
-  const technicians = await Technician.find({ _id: { $in: techRows.map((r) => r._id) } })
+  const serviceProviders = await ServiceProvider.find({ _id: { $in: serviceProviderRows.map((r) => r._id) } })
     .select('name rating')
     .lean();
-  const byId = new Map(technicians.map((t) => [String(t._id), t]));
+  const byId = new Map(serviceProviders.map((t) => [String(t._id), t]));
 
   const sentiment = sentimentRows[0];
   const reviewTotal = sentiment?.total || 0;
@@ -422,14 +422,14 @@ export async function getBrandReports(brandId, { from, to } = {}) {
       neutralPercent: share(sentiment?.neutral || 0),
       unhappyPercent: share(sentiment?.unhappy || 0),
     },
-    topTechnicians: techRows.map((r) => {
+    topServiceProviders: serviceProviderRows.map((r) => {
       const t = byId.get(String(r._id));
       return {
-        name: t?.name || 'Technician',
+        name: t?.name || 'Service Provider',
         rating: t?.rating ?? 0,
         total: r.total,
         completed: r.completed,
-        // Share of this technician's brand jobs that reached Closed.
+        // Share of this service provider's brand jobs that reached Closed.
         completionRate: r.total ? Math.round((r.completed / r.total) * 100) : 0,
       };
     }),
@@ -445,7 +445,7 @@ export async function getBrandReports(brandId, { from, to } = {}) {
  * raised for, and a Job references the ServiceRequest — which is where brand
  * ownership actually lives. So this walks PartOrder -> Job -> ServiceRequest
  * rather than guessing from the part name. Orders with no job attached (a
- * technician restocking generally) belong to no brand and are excluded.
+ * service provider restocking generally) belong to no brand and are excluded.
  */
 export async function listBrandPartOrders(brandId, { status, page, limit, sort } = {}) {
   const brandRequests = await ServiceRequest.find({ brand: asObjectId(brandId) }).select('_id').lean();
@@ -466,7 +466,7 @@ export async function listBrandPartOrders(brandId, { status, page, limit, sort }
   const { skip, limit: lim, page: pg, sort: sortObj } = parsePagination({ page, limit, sort });
   const [items, total] = await Promise.all([
     PartOrder.find(query)
-      .populate('technician', 'name phone')
+      .populate('serviceProvider', 'name phone')
       .populate({ path: 'job', select: 'serviceRequest', populate: { path: 'serviceRequest', select: 'humanId category' } })
       .sort(sortObj)
       .skip(skip)
@@ -539,30 +539,30 @@ export async function updateBrandPartOrderStatus(brandId, partOrderId, payload) 
 }
 
 /**
- * Spare-part stock held by the technicians who serve this brand.
+ * Spare-part stock held by the service providers who serve this brand.
  *
- * Inventory belongs to a technician's own van stock, not to a brand — a brand
+ * Inventory belongs to a service provider's own van stock, not to a brand — a brand
  * does not own parts. The useful brand-side question is "what can the people
  * working my jobs actually fit today", which is what this answers. Rows are
  * grouped by SKU so the console sees total availability rather than one line
- * per technician.
+ * per service provider.
  */
 export async function listBrandInventory(brandId, { page, limit } = {}) {
-  const technicianIds = await ServiceRequest.distinct('technician', {
+  const serviceProviderIds = await ServiceRequest.distinct('serviceProvider', {
     brand: asObjectId(brandId),
-    technician: { $ne: null },
+    serviceProvider: { $ne: null },
   });
-  if (technicianIds.length === 0) {
+  if (serviceProviderIds.length === 0) {
     return { items: [], meta: paginationMeta({ page: 1, limit: 20, total: 0 }) };
   }
 
-  const rows = await TechInventoryItem.aggregate([
-    { $match: { technician: { $in: technicianIds } } },
+  const rows = await ServiceProviderInventoryItem.aggregate([
+    { $match: { serviceProvider: { $in: serviceProviderIds } } },
     {
       $group: {
         _id: { sku: '$sku', name: '$name' },
         totalQty: { $sum: '$qty' },
-        technicians: { $sum: 1 },
+        serviceProviders: { $sum: 1 },
         price: { $max: '$price' },
       },
     },
@@ -574,10 +574,10 @@ export async function listBrandInventory(brandId, { page, limit } = {}) {
     sku: r._id.sku || '—',
     name: r._id.name,
     totalQty: r.totalQty,
-    // How many of the brand's technicians carry this part at all.
-    technicians: r.technicians,
+    // How many of the brand's service providers carry this part at all.
+    serviceProviders: r.serviceProviders,
     price: r.price || 0,
-    // Same thresholds the technician-side model uses for a single holding.
+    // Same thresholds the service provider-side model uses for a single holding.
     status: r.totalQty <= 0 ? 'Out of Stock' : r.totalQty === 1 ? 'Low Stock' : 'In Stock',
   }));
 
@@ -618,8 +618,8 @@ export async function listBrandCustomerPayments(brandId, { status, page, limit, 
   return { items, meta: paginationMeta({ page: pg, limit: lim, total }) };
 }
 
-/** What technicians earned on this brand's jobs. */
-export async function listBrandTechnicianPayouts(brandId, { status, page, limit, sort } = {}) {
+/** What service providers earned on this brand's jobs. */
+export async function listBrandServiceProviderPayouts(brandId, { status, page, limit, sort } = {}) {
   const jobIds = await brandJobIds(brandId);
   if (jobIds.length === 0) return { items: [], meta: paginationMeta({ page: 1, limit: 20, total: 0 }) };
 
@@ -629,7 +629,7 @@ export async function listBrandTechnicianPayouts(brandId, { status, page, limit,
   const { skip, limit: lim, page: pg, sort: sortObj } = parsePagination({ page, limit, sort });
   const [items, total] = await Promise.all([
     Payout.find(query)
-      .populate('technician', 'name phone')
+      .populate('serviceProvider', 'name phone')
       .populate({ path: 'job', select: 'serviceRequest', populate: { path: 'serviceRequest', select: 'humanId' } })
       .sort(sortObj)
       .skip(skip)

@@ -12,7 +12,7 @@ const escalationSchema = new mongoose.Schema(
     serviceRequest: { type: mongoose.Schema.Types.ObjectId, ref: 'ServiceRequest', required: true },
     reason: String,
     description: String,
-    raisedBy: { type: String, enum: ['Customer', 'Technician', 'System Auto', 'QA Team'], default: 'Customer' },
+    raisedBy: { type: String, enum: ['Customer', 'ServiceProvider', 'System Auto', 'QA Team'], default: 'Customer' },
     manager: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     priority: { type: String, enum: ['Critical', 'High', 'P1', 'P2', 'Medium', 'P3', 'Low'], default: 'Medium' },
     status: {

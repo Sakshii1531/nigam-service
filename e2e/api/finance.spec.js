@@ -77,49 +77,6 @@ test.describe('revenue', () => {
   });
 });
 
-test.describe('partner payouts', () => {
-  test('settles a payout once, recording the amount and refusing a second settlement', async ({ request }) => {
-    const { token } = await createSuperAdmin(request);
-    const auth = { headers: { Authorization: `Bearer ${token}` } };
-
-    const cityRes = await request.post('/api/v1/super-admin/cities', {
-      ...auth,
-      data: { name: `Payout City ${randomUUID()}`, state: 'UP' },
-    });
-    const city = (await cityRes.json()).data;
-
-    const partnerRes = await request.post('/api/v1/super-admin/service-partners', {
-      ...auth,
-      data: { name: `Payout Partner ${randomUUID()}`, city: city.id },
-    });
-    const partner = (await partnerRes.json()).data;
-
-    const createRes = await request.post('/api/v1/super-admin/payouts', {
-      ...auth,
-      data: { partner: partner.id, balance: 42500 },
-    });
-    expect(createRes.status()).toBe(201);
-    const payout = (await createRes.json()).data;
-    expect(payout.status).toBe('Pending Approval');
-
-    const accrueRes = await request.patch(`/api/v1/super-admin/payouts/${payout.id}/accrue`, {
-      ...auth,
-      data: { amount: 7500 },
-    });
-    expect((await accrueRes.json()).data.balance).toBe(50000);
-
-    const payRes = await request.patch(`/api/v1/super-admin/payouts/${payout.id}/pay`, auth);
-    const paid = (await payRes.json()).data;
-    expect(paid.status).toBe('Paid');
-    expect(paid.balance).toBe(0);
-    expect(paid.lastPaidAmount).toBe(50000);
-
-    // Paying twice would double-disburse.
-    const secondPay = await request.patch(`/api/v1/super-admin/payouts/${payout.id}/pay`, auth);
-    expect(secondPay.status()).toBe(409);
-  });
-});
-
 test.describe('billing transactions', () => {
   test('settles a pending transaction and refuses to re-open it', async ({ request }) => {
     const { token } = await createSuperAdmin(request);

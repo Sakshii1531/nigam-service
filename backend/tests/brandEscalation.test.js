@@ -107,7 +107,7 @@ describe('brand-scoped escalations API', () => {
       .set('Authorization', `Bearer ${brandA.token}`)
       .send({
         serviceRequest: srA.id,
-        reason: 'Repeated technician delay',
+        reason: 'Repeated serviceProvider delay',
         description: 'Needs immediate senior supervisor attention',
         priority: 'P1',
         raisedBy: 'Customer',
@@ -125,7 +125,7 @@ describe('brand-scoped escalations API', () => {
       .set('Authorization', `Bearer ${brandA.token}`)
       .expect(200);
     expect(listResA.body.data).toHaveLength(1);
-    expect(listResA.body.data[0].reason).toBe('Repeated technician delay');
+    expect(listResA.body.data[0].reason).toBe('Repeated serviceProvider delay');
     expect(listResA.body.data[0].serviceRequest.id).toBe(srA.id);
 
     // Brand B Admin should see 0 escalations

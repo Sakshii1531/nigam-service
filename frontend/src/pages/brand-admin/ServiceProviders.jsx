@@ -26,7 +26,7 @@ function shape(t) {
     skill: t.skill || 'General Repair',
     city: t.city || '—',
     rating: t.rating ?? 0,
-    // Scoped to this brand by the API — not the technician's platform-wide totals.
+    // Scoped to this brand by the API — not the service provider's platform-wide totals.
     activeJobs: t.activeJobs ?? 0,
     completedJobs: t.completedJobs ?? 0,
     status: t.status || 'Active',
@@ -34,25 +34,25 @@ function shape(t) {
   };
 }
 
-const Technicians = () => {
-  const [technicians, setTechnicians] = useState([]);
+const ServiceProviders = () => {
+  const [serviceProviders, setServiceProviders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
     let cancelled = false;
-    async function loadTechnicians() {
+    async function loadServiceProviders() {
       try {
-        // Technicians who have actually worked this brand's requests.
-        const data = await apiRequest('/brand/technicians', { auth: true });
-        if (!cancelled) setTechnicians((data || []).map(shape));
+        // ServiceProviders who have actually worked this brand's requests.
+        const data = await apiRequest('/brand/service-providers', { auth: true });
+        if (!cancelled) setServiceProviders((data || []).map(shape));
       } catch (err) {
         if (!cancelled) setError(err.message);
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
-    loadTechnicians();
+    loadServiceProviders();
     return () => { cancelled = true; };
   }, []);
 
@@ -73,20 +73,20 @@ const Technicians = () => {
   const [selectedCity, setSelectedCity] = useState('All Cities');
   const [selectedAvailability, setSelectedAvailability] = useState('All Availabilities');
 
-  const countAvail = (a) => technicians.filter(t => t.availability === a).length;
+  const countAvail = (a) => serviceProviders.filter(t => t.availability === a).length;
   const stats = [
-    { title: 'Total Technicians', value: String(technicians.length), icon: <Users size={20} />, color: 'bg-blue-600' },
+    { title: 'Total ServiceProviders', value: String(serviceProviders.length), icon: <Users size={20} />, color: 'bg-blue-600' },
     { title: 'Active (On Duty)', value: String(countAvail('Available')), icon: <UserCheck size={20} />, color: 'bg-green-600' },
     { title: 'Busy (In Job)', value: String(countAvail('Busy')), icon: <Briefcase size={20} />, color: 'bg-yellow-600' },
     { title: 'Offline', value: String(countAvail('Offline')), icon: <UserX size={20} />, color: 'bg-gray-500' },
   ];
 
-  // Technicians belong to the platform, not to a brand — a brand admin sees who
-  // has worked their requests but cannot change a technician's account. Those
-  // actions live on super-admin's own technician directory
-  // (PATCH /super-admin/technicians/:id/status).
+  // ServiceProviders belong to the platform, not to a brand — a brand admin sees who
+  // has worked their requests but cannot change a service provider's account. Those
+  // actions live on super-admin's own service provider directory
+  // (PATCH /super-admin/service providers/:id/status).
   const READ_ONLY_NOTICE =
-    'Technician accounts are managed by the platform — this view is read-only.';
+    'Service Provider accounts are managed by the platform — this view is read-only.';
 
   const handleSuspend = () => {
     setError(READ_ONLY_NOTICE);
@@ -99,15 +99,15 @@ const Technicians = () => {
     setError(READ_ONLY_NOTICE);
   };
 
-  const filteredTechnicians = technicians.filter(tech => {
-    const matchesSearch = tech.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          tech.id.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesSkill = selectedSkill === 'All Skills' || tech.skill === selectedSkill;
-    const matchesCity = selectedCity === 'All Cities' || tech.city === selectedCity;
+  const filteredServiceProviders = serviceProviders.filter(provider => {
+    const matchesSearch = provider.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          provider.id.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSkill = selectedSkill === 'All Skills' || provider.skill === selectedSkill;
+    const matchesCity = selectedCity === 'All Cities' || provider.city === selectedCity;
     
     let matchesAvailability = true;
     if (selectedAvailability !== 'All Availabilities' && selectedAvailability !== 'Availability') {
-      matchesAvailability = tech.availability === selectedAvailability;
+      matchesAvailability = provider.availability === selectedAvailability;
     }
     
     return matchesSearch && matchesSkill && matchesCity && matchesAvailability;
@@ -121,7 +121,7 @@ const Technicians = () => {
       {/* Main Content */}
       <div className="flex-1 ml-64 min-h-screen flex flex-col">
         {/* Topbar */}
-        <Topbar title="Technician Management" />
+        <Topbar title="Service Provider Management" />
 
         {/* Body */}
         <div className="p-6 space-y-6 flex-1">
@@ -154,7 +154,7 @@ const Technicians = () => {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] focus:border-[#0D47A1] outline-none transition-all text-sm bg-[#F8FAFC]"
-                  placeholder="Search Technician Name or ID..."
+                  placeholder="Search Service Provider Name or ID..."
                 />
               </div>
 
@@ -209,17 +209,17 @@ const Technicians = () => {
               }}
               className="bg-[#0D47A1] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
             >
-              <Users size={16} /> Add Technician
+              <Users size={16} /> Add Service Provider
             </button>
           </div>
 
-          {/* Technicians Table */}
+          {/* ServiceProviders Table */}
           <div className="bg-white rounded-2xl border border-[#E2E8F0] overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
                 <thead className="bg-[#F8FAFC] text-[#64748B] text-xs uppercase">
                   <tr>
-                    <th className="px-6 py-4">Technician</th>
+                    <th className="px-6 py-4">Service Provider</th>
                     <th className="px-6 py-4">Skill Type</th>
                     <th className="px-6 py-4">City</th>
                     <th className="px-6 py-4">Rating</th>
@@ -230,66 +230,66 @@ const Technicians = () => {
                 </thead>
                 <tbody className="divide-y divide-[#E2E8F0]">
                   {loading && (
-                    <tr><td colSpan={9} className="px-6 py-10 text-center text-[#64748B] font-semibold">Loading technicians…</td></tr>
+                    <tr><td colSpan={9} className="px-6 py-10 text-center text-[#64748B] font-semibold">Loading serviceProviders…</td></tr>
                   )}
                   {!loading && error && (
                     <tr><td colSpan={9} className="px-6 py-10 text-center text-red-600 font-semibold">{error}</td></tr>
                   )}
-                  {!loading && !error && filteredTechnicians.length === 0 && (
-                    <tr><td colSpan={9} className="px-6 py-10 text-center text-[#64748B] font-semibold">No technicians have worked this brand's requests yet.</td></tr>
+                  {!loading && !error && filteredServiceProviders.length === 0 && (
+                    <tr><td colSpan={9} className="px-6 py-10 text-center text-[#64748B] font-semibold">No serviceProviders have worked this brand's requests yet.</td></tr>
                   )}
-                  {filteredTechnicians.map((tech) => (
-                    <tr key={tech.id} className="hover:bg-[#F8FAFC] transition-colors">
+                  {filteredServiceProviders.map((provider) => (
+                    <tr key={provider.id} className="hover:bg-[#F8FAFC] transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 bg-[#EEF4FF] rounded-full flex items-center justify-center text-[#0D47A1] font-bold">
-                            {tech.name.split(' ').map(n => n[0]).join('')}
+                            {provider.name.split(' ').map(n => n[0]).join('')}
                           </div>
                           <div>
-                            <p className="text-[#1E293B] font-medium">{tech.name}</p>
-                            <p className="text-[#64748B] text-xs">{tech.id}</p>
+                            <p className="text-[#1E293B] font-medium">{provider.name}</p>
+                            <p className="text-[#64748B] text-xs">{provider.id}</p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-[#1E293B]">{tech.skill}</td>
+                      <td className="px-6 py-4 text-[#1E293B]">{provider.skill}</td>
                       <td className="px-6 py-4 text-[#64748B]">
                         <div className="flex items-center gap-1">
                           <MapPin size={14} />
-                          {tech.city}
+                          {provider.city}
                         </div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-1 text-amber-500 font-medium">
                           <Star size={16} fill="currentColor" />
-                          {tech.rating}
+                          {provider.rating}
                         </div>
                       </td>
                       <td className="px-6 py-4">
                         <div>
-                          <p className="text-[#1E293B] font-medium">{tech.activeJobs} Active</p>
-                          <p className="text-[#64748B] text-xs">{tech.completedJobs} Completed</p>
+                          <p className="text-[#1E293B] font-medium">{provider.activeJobs} Active</p>
+                          <p className="text-[#64748B] text-xs">{provider.completedJobs} Completed</p>
                         </div>
                       </td>
                       <td className="px-6 py-4">
                         <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
-                          tech.availability === 'Available' ? 'bg-green-50 text-green-600' :
-                          tech.availability === 'Busy' ? 'bg-yellow-50 text-yellow-600' :
+                          provider.availability === 'Available' ? 'bg-green-50 text-green-600' :
+                          provider.availability === 'Busy' ? 'bg-yellow-50 text-yellow-600' :
                           'bg-gray-50 text-gray-600'
                         }`}>
-                          {tech.availability}
+                          {provider.availability}
                         </span>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex gap-2">
                           <button 
                             onClick={() => {
-                              setEditingTech(tech);
+                              setEditingTech(provider);
                               setNewTech({
-                                name: tech.name,
-                                skill: tech.skill,
-                                city: tech.city,
-                                rating: tech.rating,
-                                availability: tech.availability
+                                name: provider.name,
+                                skill: provider.skill,
+                                city: provider.city,
+                                rating: provider.rating,
+                                availability: provider.availability
                               });
                               setShowModal(true);
                             }}
@@ -299,9 +299,9 @@ const Technicians = () => {
                             <Edit size={16} />
                           </button>
                           <button 
-                            onClick={() => handleSuspend(tech.id)}
+                            onClick={() => handleSuspend(provider.id)}
                             className="p-2 text-[#64748B] hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" 
-                            title={tech.availability === 'Offline' ? 'Activate' : 'Suspend'}
+                            title={provider.availability === 'Offline' ? 'Activate' : 'Suspend'}
                           >
                             <Power size={16} />
                           </button>
@@ -309,14 +309,14 @@ const Technicians = () => {
                             <button 
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setOpenMenuTechId(openMenuTechId === tech.id ? null : tech.id);
+                                setOpenMenuTechId(openMenuTechId === provider.id ? null : provider.id);
                               }}
                               className="p-2 text-[#64748B] hover:text-[#1E293B] hover:bg-[#F8FAFC] rounded-lg transition-colors"
                             >
                               <MoreVertical size={16} />
                             </button>
                             
-                            {openMenuTechId === tech.id && (
+                            {openMenuTechId === provider.id && (
                               <>
                                 <div 
                                   className="fixed inset-0 z-10" 
@@ -326,13 +326,13 @@ const Technicians = () => {
                                   <button
                                     onClick={() => {
                                       setOpenMenuTechId(null);
-                                      setEditingTech(tech);
+                                      setEditingTech(provider);
                                       setNewTech({
-                                        name: tech.name,
-                                        skill: tech.skill,
-                                        city: tech.city,
-                                        rating: tech.rating,
-                                        availability: tech.availability
+                                        name: provider.name,
+                                        skill: provider.skill,
+                                        city: provider.city,
+                                        rating: provider.rating,
+                                        availability: provider.availability
                                       });
                                       setShowModal(true);
                                     }}
@@ -344,17 +344,17 @@ const Technicians = () => {
                                   <button
                                     onClick={() => {
                                       setOpenMenuTechId(null);
-                                      handleSuspend(tech.id);
+                                      handleSuspend(provider.id);
                                     }}
                                     className="w-full text-left px-3 py-2 text-xs text-[#1E293B] hover:bg-[#F8FAFC] flex items-center gap-2"
                                   >
                                     <Power size={14} className="text-[#64748B]" />
-                                    <span>{tech.availability === 'Offline' ? 'Activate' : 'Suspend'}</span>
+                                    <span>{provider.availability === 'Offline' ? 'Activate' : 'Suspend'}</span>
                                   </button>
                                   <button
                                     onClick={() => {
                                       setOpenMenuTechId(null);
-                                      setSuccessMessage(`Viewing history of ${tech.name}...`);
+                                      setSuccessMessage(`Viewing history of ${provider.name}...`);
                                       setTimeout(() => setSuccessMessage(''), 3000);
                                     }}
                                     className="w-full text-left px-3 py-2 text-xs text-[#1E293B] hover:bg-[#F8FAFC] flex items-center gap-2"
@@ -389,14 +389,14 @@ const Technicians = () => {
         </div>
       </div>
 
-      {/* Add Technician Modal */}
+      {/* Add ServiceProvider Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="p-6 border-b border-[#E2E8F0] flex justify-between items-center bg-[#F8FAFC]">
               <div>
                 <h3 className="text-lg font-bold text-[#1E293B]">
-                  {editingTech ? 'Edit Technician Profile' : 'Add New Technician'}
+                  {editingTech ? 'Edit Service Provider Profile' : 'Add New Service Provider'}
                 </h3>
                 <p className="text-xs text-[#64748B]">
                   {editingTech ? 'Modify service partner details' : 'Register a new service partner to the platform'}
@@ -492,7 +492,7 @@ const Technicians = () => {
                   type="submit"
                   className="flex-1 bg-[#0D47A1] text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
                 >
-                  {editingTech ? 'Update Details' : 'Save Technician'}
+                  {editingTech ? 'Update Details' : 'Save Service Provider'}
                 </button>
               </div>
             </form>
@@ -511,4 +511,4 @@ const Technicians = () => {
   );
 };
 
-export default Technicians;
+export default ServiceProviders;

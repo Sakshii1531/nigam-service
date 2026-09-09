@@ -68,13 +68,17 @@ import { getActiveCities, isCityServiceable } from './utils/serviceableCities';
 import CmsDocViewer from './pages/CmsDocViewer';
 import AllBrands from './pages/AllBrands';
 import Onboarding from './pages/Onboarding';
-import TechLogin from './pages/technician/Login';
-import { TechProvider } from './context/TechContext';
+import ServiceProviderLogin from './pages/service-provider/Login';
+import { ServiceProviderProvider } from './context/ServiceProviderContext';
 import BrandLogin from './pages/brand-admin/Login';
 import BrandDashboard from './pages/brand-admin/Dashboard';
+import AsmLogin from './pages/asm/Login';
+import AsmVerifyOtp from './pages/asm/VerifyOtp';
+import AsmForgotPassword from './pages/asm/ForgotPassword';
+import AsmDashboard from './pages/asm/Dashboard';
 import BrandRequests from './pages/brand-admin/Requests';
 import BrandWarranty from './pages/brand-admin/Warranty';
-import BrandTechnicians from './pages/brand-admin/Technicians';
+import BrandServiceProviders from './pages/brand-admin/ServiceProviders';
 import BrandInventory from './pages/brand-admin/Inventory';
 import BrandPartRequests from './pages/brand-admin/PartRequests';
 import BrandInvoices from './pages/brand-admin/Invoices';
@@ -100,11 +104,11 @@ import BrandPayments from './pages/brand-admin/Payments';
 import BrandUserRoleManagement from './pages/brand-admin/UserRoleManagement';
 import BrandTeamsDepartments from './pages/brand-admin/TeamsDepartments';
 import BrandRegisterComplaint from './pages/brand-admin/RegisterComplaint';
-import TechApply from './pages/technician/Apply';
+import ServiceProviderApply from './pages/service-provider/Apply';
 import SuperAdminLogin from './pages/super-admin/Login';
 import SuperAdminDashboard from './pages/super-admin/Dashboard';
 import SuperAdminUsers from './pages/super-admin/Users';
-import SuperAdminTechnicians from './pages/super-admin/Technicians';
+import SuperAdminServiceProviders from './pages/super-admin/ServiceProviders';
 import SuperAdminBrands from './pages/super-admin/Brands';
 import SuperAdminRequests from './pages/super-admin/Requests';
 import SuperAdminWarranty from './pages/super-admin/Warranty';
@@ -125,7 +129,6 @@ import SuperAdminLogs from './pages/super-admin/Logs';
 import CustomerAppCustomization from './pages/super-admin/CustomerAppCustomization';
 import SuperAdminExchangeOffers from './pages/super-admin/ExchangeOffers';
 import SuperAdminASM from './pages/super-admin/ASM';
-import SuperAdminServicePartners from './pages/super-admin/ServicePartners';
 import SuperAdminAMC from './pages/super-admin/AMC';
 import SuperAdminProducts from './pages/super-admin/Products';
 import SuperAdminWarrantyVerification from './pages/super-admin/WarrantyVerification';
@@ -135,49 +138,48 @@ import SuperAdminStories from './pages/super-admin/Stories';
 import SuperAdminVideos from './pages/super-admin/Videos';
 import SuperAdminAdvertisements from './pages/super-admin/Advertisements';
 import SuperAdminRevenue from './pages/super-admin/Revenue';
-import SuperAdminPayouts from './pages/super-admin/Payouts';
 import SuperAdminTransactions from './pages/super-admin/Transactions';
 import SuperAdminCMS from './pages/super-admin/CMS';
 import SuperAdminLoyaltyProgram from './pages/super-admin/LoyaltyProgram';
-import SuperAdminTechnicianAppCustomization from './pages/super-admin/TechnicianAppCustomization';
+import SuperAdminServiceProviderAppCustomization from './pages/super-admin/ServiceProviderAppCustomization';
 import SuperAdminReviewsCustomization from './pages/super-admin/ReviewsCustomization';
-import TechDashboard from './pages/technician/Dashboard';
-import ActiveJob from './pages/technician/ActiveJob';
-import Schedule from './pages/technician/Schedule';
-import ProfilePage from './pages/technician/Profile';
-import EarningsPage from './pages/technician/Earnings';
-import RecentEarnings from './pages/technician/RecentEarnings';
-import PersonalInfo from './pages/technician/PersonalInfo';
-import PayoutSettings from './pages/technician/PayoutSettings';
-import Verification from './pages/technician/Verification';
-import HelpSupportTech from './pages/technician/HelpSupport';
-import RaisePartRequest from './pages/technician/RaisePartRequest';
-import TechNotifications from './pages/technician/Notifications';
-import AIAssistant from './pages/technician/AIAssistant';
-import Analytics from './pages/technician/Analytics';
-import Inventory from './pages/technician/Inventory';
-import BillingEstimate from './pages/technician/BillingEstimate';
-import SkillsCertifications from './pages/technician/SkillsCertifications';
-import TechSettings from './pages/technician/TechSettings';
-import PartnerLevel from './pages/technician/PartnerLevel';
-import Academy from './pages/technician/Academy';
-import TechnicalSupport from './pages/technician/TechnicalSupport';
-import Announcements from './pages/technician/Announcements';
-import EarningDetailPage from './pages/technician/EarningDetail';
-import ServiceHistory from './pages/technician/ServiceHistory';
+import ServiceProviderDashboard from './pages/service-provider/Dashboard';
+import ActiveJob from './pages/service-provider/ActiveJob';
+import Schedule from './pages/service-provider/Schedule';
+import ProfilePage from './pages/service-provider/Profile';
+import EarningsPage from './pages/service-provider/Earnings';
+import RecentEarnings from './pages/service-provider/RecentEarnings';
+import PersonalInfo from './pages/service-provider/PersonalInfo';
+import PayoutSettings from './pages/service-provider/PayoutSettings';
+import Verification from './pages/service-provider/Verification';
+import HelpSupportTech from './pages/service-provider/HelpSupport';
+import RaisePartRequest from './pages/service-provider/RaisePartRequest';
+import ServiceProviderNotifications from './pages/service-provider/Notifications';
+import AIAssistant from './pages/service-provider/AIAssistant';
+import Analytics from './pages/service-provider/Analytics';
+import Inventory from './pages/service-provider/Inventory';
+import BillingEstimate from './pages/service-provider/BillingEstimate';
+import SkillsCertifications from './pages/service-provider/SkillsCertifications';
+import ServiceProviderSettings from './pages/service-provider/ServiceProviderSettings';
+import PartnerLevel from './pages/service-provider/PartnerLevel';
+import Academy from './pages/service-provider/Academy';
+import TechnicalSupport from './pages/service-provider/TechnicalSupport';
+import Announcements from './pages/service-provider/Announcements';
+import EarningDetailPage from './pages/service-provider/EarningDetail';
+import ServiceHistory from './pages/service-provider/ServiceHistory';
 
 // Auth (OTP + password recovery) — all panels
 import VerifyOtp from './pages/VerifyOtp';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
-import TechVerifyOtp from './pages/technician/VerifyOtp';
-import TechForgotPassword from './pages/technician/ForgotPassword';
+import ServiceProviderVerifyOtp from './pages/service-provider/VerifyOtp';
+import ServiceProviderForgotPassword from './pages/service-provider/ForgotPassword';
 import BrandVerifyOtp from './pages/brand-admin/VerifyOtp';
 import BrandForgotPassword from './pages/brand-admin/ForgotPassword';
 import SuperAdminVerifyOtp from './pages/super-admin/VerifyOtp';
 import SuperAdminForgotPassword from './pages/super-admin/ForgotPassword';
 
-// Desktop top navigation for the customer + technician panels
+// Desktop top navigation for the customer + service provider panels
 import AppChrome, { isPhonePanelRoute, panelWidthClass } from './components/AppChrome';
 
 // Notifications
@@ -217,7 +219,8 @@ const ScrollToTop = () => {
     // Strict Independent Portal Protection Guard
     const superAdminAuthPages = ['/super-admin/login', '/super-admin/verify-otp', '/super-admin/forgot-password'];
     const brandAdminAuthPages = ['/brand-admin/login', '/brand-admin/verify-otp', '/brand-admin/forgot-password'];
-    const techAuthPages = ['/technician/login', '/technician/verify-otp', '/technician/forgot-password', '/technician/apply'];
+    const serviceProviderAuthPages = ['/service-provider/login', '/service-provider/verify-otp', '/service-provider/forgot-password', '/service-provider/apply'];
+    const asmAuthPages = ['/asm/login', '/asm/verify-otp', '/asm/forgot-password'];
     const customerAuthPages = ['/', '/login', '/signup', '/app/login', '/app', '/verify-otp', '/forgot-password', '/reset-password'];
     const publicInfoPages = ['/about-ncc'];
 
@@ -249,21 +252,35 @@ const ScrollToTop = () => {
         }
       }
     } 
-    // 3. TECHNICIAN PORTAL
-    else if (pathname.startsWith('/technician')) {
-      if (user && user.role === 'technician') {
-        if (techAuthPages.includes(pathname) && pathname !== '/technician/apply') {
-          navigate('/technician/dashboard', { replace: true });
+    // 3. SERVICE_PROVIDER PORTAL
+    else if (pathname.startsWith('/service-provider')) {
+      if (user && user.role === 'service_provider') {
+        if (serviceProviderAuthPages.includes(pathname) && pathname !== '/service-provider/apply') {
+          navigate('/service-provider/dashboard', { replace: true });
           return;
         }
       } else {
-        if (!techAuthPages.includes(pathname)) {
-          navigate('/technician/login', { replace: true });
+        if (!serviceProviderAuthPages.includes(pathname)) {
+          navigate('/service-provider/login', { replace: true });
           return;
         }
       }
-    } 
-    // 4. CUSTOMER APP PORTAL (all other routes)
+    }
+    // 4. ASM PORTAL
+    else if (pathname.startsWith('/asm')) {
+      if (user && user.role === 'asm') {
+        if (asmAuthPages.includes(pathname)) {
+          navigate('/asm/dashboard', { replace: true });
+          return;
+        }
+      } else {
+        if (!asmAuthPages.includes(pathname)) {
+          navigate('/asm/login', { replace: true });
+          return;
+        }
+      }
+    }
+    // 5. CUSTOMER APP PORTAL (all other routes)
     else {
       if (user && user.role === 'customer') {
         const defaultAddress = user?.addresses?.find(a => a?.isDefault) || user?.addresses?.[0];
@@ -297,20 +314,20 @@ const ScrollToTop = () => {
     }
 
     // Toggle application specific styling class on body
-    if (pathname.startsWith('/technician')) {
-      document.body.classList.add('tech-app-active');
+    if (pathname.startsWith('/service-provider')) {
+      document.body.classList.add('service-provider-app-active');
       document.body.classList.remove('super-admin-active', 'brand-admin-active', 'customer-app-active');
     } else if (pathname.startsWith('/super-admin')) {
       document.body.classList.add('super-admin-active');
-      document.body.classList.remove('tech-app-active', 'brand-admin-active', 'customer-app-active');
+      document.body.classList.remove('service-provider-app-active', 'brand-admin-active', 'customer-app-active');
     } else if (pathname.startsWith('/brand-admin')) {
       document.body.classList.add('brand-admin-active');
-      document.body.classList.remove('tech-app-active', 'super-admin-active', 'customer-app-active');
+      document.body.classList.remove('service-provider-app-active', 'super-admin-active', 'customer-app-active');
     } else if (pathname === '/home' || pathname === '/about-ncc') {
-      document.body.classList.remove('tech-app-active', 'super-admin-active', 'brand-admin-active', 'customer-app-active');
+      document.body.classList.remove('service-provider-app-active', 'super-admin-active', 'brand-admin-active', 'customer-app-active');
     } else {
       document.body.classList.add('customer-app-active');
-      document.body.classList.remove('tech-app-active', 'super-admin-active', 'brand-admin-active');
+      document.body.classList.remove('service-provider-app-active', 'super-admin-active', 'brand-admin-active');
     }
 
     // Scroll window and document immediately
@@ -338,7 +355,7 @@ const ScrollToTop = () => {
 };
 
 /**
- * PanelContainer — centres the customer and technician panels on wide screens.
+ * PanelContainer — centres the customer and service provider panels on wide screens.
  *
  * Both are authored at phone width, so without a ceiling a 1920px monitor just
  * stretches a 390px design across the whole display. Admin consoles and the
@@ -367,7 +384,7 @@ function App() {
       <AdminSidebarProvider>
       <NotificationProvider>
       <BookingProvider>
-      <TechProvider>
+      <ServiceProviderProvider>
       <PageTitleManager />
       <ScrollToTop />
       <AppChrome />
@@ -483,16 +500,20 @@ function App() {
         <Route path="/about-ncc" element={<AboutNCC />} />
         <Route path="/all-brands" element={<AllBrands />} />
         <Route path="/onboarding" element={<Onboarding />} />
-        <Route path="/technician/login" element={<TechLogin />} />
-        <Route path="/technician/verify-otp" element={<TechVerifyOtp />} />
-        <Route path="/technician/forgot-password" element={<TechForgotPassword />} />
+        <Route path="/service-provider/login" element={<ServiceProviderLogin />} />
+        <Route path="/service-provider/verify-otp" element={<ServiceProviderVerifyOtp />} />
+        <Route path="/service-provider/forgot-password" element={<ServiceProviderForgotPassword />} />
         <Route path="/brand-admin/login" element={<BrandLogin />} />
         <Route path="/brand-admin/verify-otp" element={<BrandVerifyOtp />} />
         <Route path="/brand-admin/forgot-password" element={<BrandForgotPassword />} />
         <Route path="/brand-admin/dashboard" element={<BrandDashboard />} />
+        <Route path="/asm/login" element={<AsmLogin />} />
+        <Route path="/asm/verify-otp" element={<AsmVerifyOtp />} />
+        <Route path="/asm/forgot-password" element={<AsmForgotPassword />} />
+        <Route path="/asm/dashboard" element={<AsmDashboard />} />
         <Route path="/brand-admin/requests" element={<BrandRegisterComplaint />} />
         <Route path="/brand-admin/warranty" element={<BrandWarranty />} />
-        <Route path="/brand-admin/technicians" element={<BrandTechnicians />} />
+        <Route path="/brand-admin/service-providers" element={<BrandServiceProviders />} />
         <Route path="/brand-admin/inventory" element={<BrandInventory />} />
         <Route path="/brand-admin/part-requests" element={<BrandPartRequests />} />
         <Route path="/brand-admin/invoices" element={<BrandInvoices />} />
@@ -518,32 +539,32 @@ function App() {
         <Route path="/brand-admin/payments" element={<BrandPayments />} />
         <Route path="/brand-admin/users" element={<BrandUserRoleManagement />} />
         <Route path="/brand-admin/teams" element={<BrandTeamsDepartments />} />
-        <Route path="/technician/apply" element={<TechApply />} />
-        <Route path="/technician/dashboard" element={<TechDashboard />} />
-        <Route path="/technician/active-job" element={<ActiveJob />} />
-        <Route path="/technician/schedule" element={<Schedule />} />
-        <Route path="/technician/profile" element={<ProfilePage />} />
-        <Route path="/technician/earnings" element={<EarningsPage />} />
-        <Route path="/technician/recent-earnings" element={<RecentEarnings />} />
-        <Route path="/technician/personal-info" element={<PersonalInfo />} />
-        <Route path="/technician/payout-settings" element={<PayoutSettings />} />
-        <Route path="/technician/verification" element={<Verification />} />
-        <Route path="/technician/support" element={<HelpSupportTech />} />
-        <Route path="/technician/raise-part-request" element={<RaisePartRequest />} />
-        <Route path="/technician/notifications" element={<TechNotifications />} />
-        <Route path="/technician/ai-assistant" element={<AIAssistant />} />
-        <Route path="/technician/analytics" element={<Analytics />} />
-        <Route path="/technician/inventory" element={<Inventory />} />
-        <Route path="/technician/billing-estimate" element={<BillingEstimate />} />
-        <Route path="/technician/skills-certifications" element={<SkillsCertifications />} />
-        <Route path="/technician/settings" element={<TechSettings />} />
-        <Route path="/technician/partner-level" element={<PartnerLevel />} />
-        <Route path="/technician/academy" element={<Academy />} />
-        <Route path="/technician/technical-support" element={<TechnicalSupport />} />
-        <Route path="/technician/announcements" element={<Announcements />} />
-        <Route path="/technician/earning-detail/:id" element={<EarningDetailPage />} />
-        <Route path="/technician/history" element={<ServiceHistory />} />
-        <Route path="/technician/service-history" element={<ServiceHistory />} />
+        <Route path="/service-provider/apply" element={<ServiceProviderApply />} />
+        <Route path="/service-provider/dashboard" element={<ServiceProviderDashboard />} />
+        <Route path="/service-provider/active-job" element={<ActiveJob />} />
+        <Route path="/service-provider/schedule" element={<Schedule />} />
+        <Route path="/service-provider/profile" element={<ProfilePage />} />
+        <Route path="/service-provider/earnings" element={<EarningsPage />} />
+        <Route path="/service-provider/recent-earnings" element={<RecentEarnings />} />
+        <Route path="/service-provider/personal-info" element={<PersonalInfo />} />
+        <Route path="/service-provider/payout-settings" element={<PayoutSettings />} />
+        <Route path="/service-provider/verification" element={<Verification />} />
+        <Route path="/service-provider/support" element={<HelpSupportTech />} />
+        <Route path="/service-provider/raise-part-request" element={<RaisePartRequest />} />
+        <Route path="/service-provider/notifications" element={<ServiceProviderNotifications />} />
+        <Route path="/service-provider/ai-assistant" element={<AIAssistant />} />
+        <Route path="/service-provider/analytics" element={<Analytics />} />
+        <Route path="/service-provider/inventory" element={<Inventory />} />
+        <Route path="/service-provider/billing-estimate" element={<BillingEstimate />} />
+        <Route path="/service-provider/skills-certifications" element={<SkillsCertifications />} />
+        <Route path="/service-provider/settings" element={<ServiceProviderSettings />} />
+        <Route path="/service-provider/partner-level" element={<PartnerLevel />} />
+        <Route path="/service-provider/academy" element={<Academy />} />
+        <Route path="/service-provider/technical-support" element={<TechnicalSupport />} />
+        <Route path="/service-provider/announcements" element={<Announcements />} />
+        <Route path="/service-provider/earning-detail/:id" element={<EarningDetailPage />} />
+        <Route path="/service-provider/history" element={<ServiceHistory />} />
+        <Route path="/service-provider/service-history" element={<ServiceHistory />} />
         
         {/* Super Admin Routes */}
         <Route path="/super-admin" element={<Navigate to="/super-admin/login" replace />} />
@@ -552,7 +573,7 @@ function App() {
         <Route path="/super-admin/forgot-password" element={<SuperAdminForgotPassword />} />
         <Route path="/super-admin/dashboard" element={<SuperAdminDashboard />} />
         <Route path="/super-admin/users" element={<SuperAdminUsers />} />
-        <Route path="/super-admin/technicians" element={<SuperAdminTechnicians />} />
+        <Route path="/super-admin/service-providers" element={<SuperAdminServiceProviders />} />
         <Route path="/super-admin/brands" element={<SuperAdminBrands />} />
         <Route path="/super-admin/customer-app-customization" element={<CustomerAppCustomization />} />
         <Route path="/super-admin/requests" element={<SuperAdminRequests />} />
@@ -573,7 +594,6 @@ function App() {
         <Route path="/super-admin/logs" element={<SuperAdminLogs />} />
         <Route path="/super-admin/exchange-offers" element={<SuperAdminExchangeOffers />} />
         <Route path="/super-admin/asm" element={<SuperAdminASM />} />
-        <Route path="/super-admin/service-partners" element={<SuperAdminServicePartners />} />
         <Route path="/super-admin/amc" element={<SuperAdminAMC />} />
         <Route path="/super-admin/products" element={<SuperAdminProducts />} />
         <Route path="/super-admin/warranty-verification" element={<SuperAdminWarrantyVerification />} />
@@ -583,17 +603,16 @@ function App() {
         <Route path="/super-admin/videos" element={<SuperAdminVideos />} />
         <Route path="/super-admin/advertisements" element={<SuperAdminAdvertisements />} />
         <Route path="/super-admin/revenue" element={<SuperAdminRevenue />} />
-        <Route path="/super-admin/payouts" element={<SuperAdminPayouts />} />
         <Route path="/super-admin/transactions" element={<SuperAdminTransactions />} />
         <Route path="/super-admin/cms" element={<SuperAdminCMS />} />
         <Route path="/super-admin/loyalty-program" element={<SuperAdminLoyaltyProgram />} />
-        <Route path="/super-admin/technician-app-customization" element={<SuperAdminTechnicianAppCustomization />} />
+        <Route path="/super-admin/service-provider-app-customization" element={<SuperAdminServiceProviderAppCustomization />} />
         <Route path="/super-admin/reviews-customization" element={<SuperAdminReviewsCustomization />} />
 
         <Route path="*" element={<PageHandler />} />
       </Routes>
       </PanelContainer>
-      </TechProvider>
+      </ServiceProviderProvider>
       </BookingProvider>
       </NotificationProvider>
       </AdminSidebarProvider>

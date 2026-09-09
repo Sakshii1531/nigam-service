@@ -76,7 +76,7 @@ const Requests = () => {
         date: item.createdAt
           ? new Date(item.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
           : '—',
-        technician: item.technician?.name || 'Unassigned',
+        serviceProvider: item.serviceProvider?.name || 'Unassigned',
         description: item.description || '—',
         mode: item.requestMode || 'B2C',
         isInstant: Boolean(item.isInstant || item.instantStatus || item.booking?.isInstant),
@@ -228,9 +228,9 @@ const Requests = () => {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <span className="text-xs font-semibold text-[#64748B] uppercase block">Technician Assigned</span>
+                      <span className="text-xs font-semibold text-[#64748B] uppercase block">Service Provider Assigned</span>
                       <span className="text-sm font-bold text-indigo-600 block mt-1">
-                        {selectedRequest.technician}
+                        {selectedRequest.serviceProvider}
                       </span>
                     </div>
                     <div>
@@ -255,7 +255,7 @@ const Requests = () => {
                       setShowDrawer(false);
                       setSuccessCardData({
                         title: "Initiating Assignment",
-                        message: "Preparing redirection to the technician assignment console for Ticket ID:",
+                        message: "Preparing redirection to the serviceProvider assignment console for Ticket ID:",
                         ticketId: selectedRequest.ref,
                         onClose: () => {
                           navigate(`/super-admin/assignment?req=${selectedRequest.id}`);
@@ -268,7 +268,7 @@ const Requests = () => {
                     }}
                     className="bg-[#0D47A1] text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-1.5 shadow-sm"
                   >
-                    <UserPlus size={14} /> Assign Technician
+                    <UserPlus size={14} /> Assign Service Provider
                   </button>
                 )}
                 <button 
@@ -434,7 +434,7 @@ const Requests = () => {
                     <th className="px-6 py-4">Brand</th>
                     <th className="px-6 py-4">Priority</th>
                     <th className="px-6 py-4">Status</th>
-                    <th className="px-6 py-4">Technician</th>
+                    <th className="px-6 py-4">Service Provider</th>
                     <th className="px-6 py-4">Date</th>
                     <th className="px-6 py-4 text-center">Actions</th>
                   </tr>
@@ -489,7 +489,7 @@ const Requests = () => {
                           {req.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-[#1E293B] font-medium">{req.technician}</td>
+                      <td className="px-6 py-4 text-[#1E293B] font-medium">{req.serviceProvider}</td>
                       <td className="px-6 py-4 text-[#64748B]">{req.date}</td>
                       <td className="px-6 py-4 text-center" onClick={(e) => e.stopPropagation()}>
                         <div className="flex gap-2 justify-center w-20 mx-auto">
@@ -506,7 +506,7 @@ const Requests = () => {
                               onClick={() => {
                                 setSuccessCardData({
                                   title: "Initiating Assignment",
-                                  message: "Preparing redirection to the technician assignment console for Ticket ID:",
+                                  message: "Preparing redirection to the serviceProvider assignment console for Ticket ID:",
                                   ticketId: req.ref,
                                   onClose: () => {
                                     navigate(`/super-admin/assignment?req=${req.id}`);
@@ -518,7 +518,7 @@ const Requests = () => {
                                 }, 2000);
                               }}
                               className="p-1.5 text-green-600 hover:bg-green-50 rounded transition-colors" 
-                              title="Assign Technician"
+                              title="Assign Service Provider"
                             >
                               <UserPlus size={16} />
                             </button>

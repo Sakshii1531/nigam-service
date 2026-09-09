@@ -1,7 +1,7 @@
 import { Booking } from './booking.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { findServiceItem } from '../catalog/catalog.service.js';
-import { findAvailableTechnician } from '../shared/assignmentEngine.js';
+import { findAvailableServiceProvider } from '../shared/assignmentEngine.js';
 import { createServiceRequest, transitionStatus, emitWarrantyClaimNotification, scheduleDispatchTimeout } from '../service-requests/serviceRequest.service.js';
 import { emit as emitNotification } from '../notifications/notification.service.js';
 import { parsePagination, paginationMeta } from '../../utils/pagination.js';
@@ -14,7 +14,7 @@ import { env } from '../../config/env.js';
 
 /**
  * Creates a Booking + its linked ServiceRequest in one flow, matching
- * BookingSuccess.jsx's expectation of an immediately-assigned technician
+ * BookingSuccess.jsx's expectation of an immediately-assigned service provider
  * (BACKEND_CONTEXT.md §3.5). Price is resolved server-side from the catalog —
  * never trust a client-supplied price for what's actually charged.
  */
@@ -77,8 +77,8 @@ export async function createBooking(userId, data) {
   const customerLat = data.address?.latitude != null ? Number(data.address.latitude) : null;
   const customerLng = data.address?.longitude != null ? Number(data.address.longitude) : null;
 
-  // Nearest-to-farthest 1-by-1 technician selection in the territory
-  const technician = await findAvailableTechnician({
+  // Nearest-to-farthest 1-by-1 service provider selection in the territory
+  const serviceProvider = await findAvailableServiceProvider({
     category: data.category,
     city: customerCity,
     state: customerState,
@@ -86,7 +86,7 @@ export async function createBooking(userId, data) {
     longitude: customerLng,
   });
 
-  const initialInstantStatus = isInstant ? (technician ? 'ASSIGNED' : 'SEARCHING') : null;
+  const initialInstantStatus = isInstant ? (serviceProvider ? 'ASSIGNED' : 'SEARCHING') : null;
 
   // Booking + ServiceRequest + the assignment transition + the back-link from
   // booking to request are one unit of work: a failure partway through used to
@@ -116,7 +116,7 @@ export async function createBooking(userId, data) {
       paymentMode: data.paymentMode || 'after',
       advanceAmount: data.advanceAmount != null ? Number(data.advanceAmount) : (data.paymentMode === 'advance' ? Math.round(totalPrice * (advancePercent / 100)) : 0),
       totalPrice,
-      technician: technician ? technician._id : null,
+      serviceProvider: serviceProvider ? serviceProvider._id : null,
       isAccepted: false,
       status: isInstant ? 'Ongoing' : 'Upcoming',
       isInstant,
@@ -126,9 +126,9 @@ export async function createBooking(userId, data) {
 
     let serviceRequest = await createServiceRequest({
       user: userId,
-      technician: technician ? technician._id : null,
+      serviceProvider: serviceProvider ? serviceProvider._id : null,
       isAccepted: false,
-      assignedAt: technician ? new Date() : null,
+      assignedAt: serviceProvider ? new Date() : null,
       customerLocation: (customerLat != null && customerLng != null) ? { latitude: customerLat, longitude: customerLng } : undefined,
       booking: booking._id,
       category: data.category,
@@ -144,9 +144,9 @@ export async function createBooking(userId, data) {
       instantStatus: initialInstantStatus,
     }, { session });
 
-    if (technician) {
+    if (serviceProvider) {
       serviceRequest = await transitionStatus(serviceRequest.id, 'Assigned', {
-        description: isInstant ? `Instant auto-assigned to ${technician.name}` : `Auto-assigned to ${technician.name}`,
+        description: isInstant ? `Instant auto-assigned to ${serviceProvider.name}` : `Auto-assigned to ${serviceProvider.name}`,
         session,
       });
     }
@@ -162,15 +162,15 @@ export async function createBooking(userId, data) {
   await emitWarrantyClaimNotification(serviceRequest);
 
   await emitNotification('booking.created', { user: userId, category: data.category, bookingId: booking.id });
-  if (technician) {
-    await emitNotification('technician.assigned', {
+  if (serviceProvider) {
+    await emitNotification('serviceProvider.assigned', {
       user: userId,
-      technicianName: technician.name,
+      serviceProviderName: serviceProvider.name,
       serviceRequestId: serviceRequest.id,
     });
   }
 
-  // Broadcast real-time dispatch event via Socket.IO for instant pop-up on technician apps
+  // Broadcast real-time dispatch event via Socket.IO for instant pop-up on service provider apps
   const io = getIO();
   if (io) {
     const jobPayload = {
@@ -190,20 +190,20 @@ export async function createBooking(userId, data) {
       isInstant,
       scheduledTime: booking.timeSlot?.time || (isInstant ? 'ASAP' : 'Scheduled'),
       scheduledDateLabel: booking.timeSlot?.date || 'Today',
-      assignedTechnicianId: technician ? String(technician._id) : null,
-      assignedTechnicianUserId: technician ? String(technician.user) : null,
+      assignedServiceProviderId: serviceProvider ? String(serviceProvider._id) : null,
+      assignedServiceProviderUserId: serviceProvider ? String(serviceProvider.user) : null,
       instantStatus: initialInstantStatus,
-      isAvailableRequest: !technician,
+      isAvailableRequest: !serviceProvider,
     };
 
-    if (technician) {
-      io.to(`tech:${technician._id}`).emit('job:assigned', jobPayload);
-      io.to(`tech:${technician.user}`).emit('job:assigned', jobPayload);
-      io.to(`tech:${technician._id}`).emit('instant:new_request', jobPayload);
-      io.to(`tech:${technician.user}`).emit('instant:new_request', jobPayload);
+    if (serviceProvider) {
+      io.to(`service-provider:${serviceProvider._id}`).emit('job:assigned', jobPayload);
+      io.to(`service-provider:${serviceProvider.user}`).emit('job:assigned', jobPayload);
+      io.to(`service-provider:${serviceProvider._id}`).emit('instant:new_request', jobPayload);
+      io.to(`service-provider:${serviceProvider.user}`).emit('instant:new_request', jobPayload);
 
       // Schedule 60-second waterfall cascade timeout for Candidate #1
-      scheduleDispatchTimeout(serviceRequest._id, technician._id);
+      scheduleDispatchTimeout(serviceRequest._id, serviceProvider._id);
     } else if (customerCity) {
       // If no single candidate matched, broadcast to city channel
       io.to(`city:${customerCity.toLowerCase().trim()}`).emit('job:new_available', jobPayload);
@@ -237,7 +237,7 @@ export async function createBooking(userId, data) {
     };
   }
 
-  return { booking, serviceRequest, technician, razorpay };
+  return { booking, serviceRequest, serviceProvider, razorpay };
 }
 
 /**
@@ -271,7 +271,7 @@ export async function verifyBookingPayment(userId, bookingId, { razorpayPaymentI
 
 async function findOwnedOr404(userId, id) {
   const booking = await Booking.findById(id)
-    .populate('technician', 'name phone rating avatar photo')
+    .populate('serviceProvider', 'name phone rating avatar photo')
     .populate({
       path: 'serviceRequest',
       select: 'humanId status timeline tracking warranty brand category description job',
@@ -301,7 +301,7 @@ export async function listBookings(userId, { status, page, limit, sort } = {}) {
   const { skip, limit: lim, page: pg, sort: sortObj } = parsePagination({ page, limit, sort });
   const [items, total] = await Promise.all([
     Booking.find(query)
-      .populate('technician', 'name phone rating avatar photo')
+      .populate('serviceProvider', 'name phone rating avatar photo')
       .populate({
         path: 'serviceRequest',
         select: 'humanId status timeline tracking warranty category description brand instantStatus',

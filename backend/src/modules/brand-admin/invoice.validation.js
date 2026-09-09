@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const createInvoiceSchema = z.object({
   serviceRequest: z.string().min(1),
   customer: z.string().min(1),
-  technician: z.string().optional(),
+  serviceProvider: z.string().optional(),
   product: z.string().optional(),
   serviceCharge: z.number().min(0).optional(),
   partCharge: z.number().min(0).optional(),

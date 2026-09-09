@@ -2,6 +2,7 @@ import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { validate } from '../../middleware/validate.js';
 import { requireAuth } from '../../middleware/auth.js';
+import { otpResendRateLimit, forgotPasswordOtpRateLimit } from '../../middleware/otpRateLimit.js';
 import { User } from './user.model.js';
 import { ok } from '../../utils/respond.js';
 import { isTest, isProd } from '../../config/env.js';
@@ -37,6 +38,12 @@ const authRateLimit = rateLimit({
 });
 if (!isTest) authRouter.use(authRateLimit);
 
+// Separate, role+device-aware budgets for the two endpoints that actually
+// send an OTP (see otpRateLimit.js) — narrower and more targeted than the
+// generic per-IP authRateLimit above, which still also applies to these.
+const otpSendMiddlewares = isTest ? [] : [otpResendRateLimit];
+const forgotPasswordMiddlewares = isTest ? [] : [forgotPasswordOtpRateLimit];
+
 authRouter.post('/signup/check', validate(signupCheckSchema), async (req, res, next) => {
   try {
     ok(res, await authService.signupCheck(req.body));
@@ -61,7 +68,7 @@ authRouter.post('/login', validate(loginSchema), async (req, res, next) => {
   }
 });
 
-authRouter.post('/otp/send', validate(otpSendSchema), async (req, res, next) => {
+authRouter.post('/otp/send', ...otpSendMiddlewares, validate(otpSendSchema), async (req, res, next) => {
   try {
     ok(res, await authService.resendOtp(req.body));
   } catch (err) {
@@ -77,7 +84,7 @@ authRouter.post('/otp/verify', validate(otpVerifySchema), async (req, res, next)
   }
 });
 
-authRouter.post('/forgot-password', validate(forgotPasswordSchema), async (req, res, next) => {
+authRouter.post('/forgot-password', ...forgotPasswordMiddlewares, validate(forgotPasswordSchema), async (req, res, next) => {
   try {
     ok(res, await authService.forgotPassword(req.body));
   } catch (err) {

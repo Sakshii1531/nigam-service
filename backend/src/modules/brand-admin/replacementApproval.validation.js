@@ -5,8 +5,8 @@ export const createReplacementApprovalSchema = z.object({
   product: z.string().optional(),
   model: z.string().optional(),
   reason: z.string().optional(),
-  techNotes: z.string().optional(),
-  technician: z.string().optional(),
+  serviceProviderNotes: z.string().optional(),
+  serviceProvider: z.string().optional(),
 });
 
 export const updateStatusSchema = z.object({

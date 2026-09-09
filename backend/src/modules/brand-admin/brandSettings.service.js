@@ -21,7 +21,7 @@ const EDITABLE_FIELDS = [
   'supportEmail',
   'supportPhone',
   'website',
-  'autoAssignTechnician',
+  'autoAssignServiceProvider',
   'requireCompletionPhoto',
   'emailNotifications',
   'smsAlerts',

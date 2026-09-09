@@ -1,8 +1,8 @@
-import { PartOrder } from '../technician/partOrder.model.js';
-import { Job } from '../technician/job.model.js';
+import { PartOrder } from '../service-provider/partOrder.model.js';
+import { Job } from '../service-provider/job.model.js';
 import { ServiceRequest } from '../service-requests/serviceRequest.model.js';
 import { Booking } from '../booking/booking.model.js';
-import { Technician } from '../technician/technician.model.js';
+import { ServiceProvider } from '../service-provider/serviceProvider.model.js';
 import { emit as emitNotification } from '../notifications/notification.service.js';
 import { getIO } from '../../sockets/io.js';
 import { ApiError } from '../../middleware/errorHandler.js';
@@ -26,7 +26,7 @@ export async function listPartOrders({ status, orderSource, page, limit, sort } 
   const { skip, limit: lim, page: pg, sort: sortObj } = parsePagination({ page, limit, sort });
   const [items, total] = await Promise.all([
     PartOrder.find(query)
-      .populate('technician', 'name phone')
+      .populate('serviceProvider', 'name phone')
       .populate({
         path: 'job',
         select: 'serviceRequest type',
@@ -44,7 +44,7 @@ export async function listPartOrders({ status, orderSource, page, limit, sort } 
 /**
  * Approve/dispatch/reject a request, and — for an approval on a job that is
  * waiting on the part — put the revisit back on the calendar. Mirrors the brand
- * console's behaviour deliberately: a technician should not get a different
+ * console's behaviour deliberately: a service provider should not get a different
  * outcome depending on which desk happened to action their request.
  */
 export async function updatePartOrderStatus(partOrderId, { status, scheduledDate, timeSlot, notes } = {}) {
@@ -61,12 +61,12 @@ export async function updatePartOrderStatus(partOrderId, { status, scheduledDate
     const parsedDate = scheduledDate ? new Date(scheduledDate) : new Date(Date.now() + 86400000);
     // Approved, Dispatched and Delivered all put the revisit on the calendar —
     // the same three brandInsights.service.js schedules on. Only 'Delivered'
-    // did here, so a technician whose part was actioned by the NCC desk rather
+    // did here, so a service provider whose part was actioned by the NCC desk rather
     // than a brand was left sitting at 'spareapproval' with no revisit at all:
     // exactly the desk-dependent difference the note above says must not happen.
     const REVISIT_STEP = {
       Approved: ['Spare Approved', 'Spare part approved by Super Admin — revisit scheduled'],
-      Dispatched: ['Spare Dispatched', 'Spare part dispatched to technician — revisit scheduled'],
+      Dispatched: ['Spare Dispatched', 'Spare part dispatched to serviceProvider — revisit scheduled'],
       Delivered: ['Spare Received', 'Spare part delivered — revisit scheduled'],
     };
 
@@ -128,14 +128,14 @@ export async function updatePartOrderStatus(partOrderId, { status, scheduledDate
           customerUserId = sr.user;
         }
 
-        const tech = job ? await Technician.findById(job.technician) : null;
+        const provider = job ? await ServiceProvider.findById(job.serviceProvider) : null;
         const formattedDate = parsedDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 
         if (customerUserId) {
           await emitNotification('service.rescheduled', {
             user: customerUserId,
             category: sr.category,
-            technicianName: tech?.name || 'Your technician',
+            serviceProviderName: provider?.name || 'Your serviceProvider',
             scheduledDate: formattedDate,
             timeSlot: timeSlotStr,
             bookingId: sr.booking ? String(sr.booking) : null,
@@ -163,10 +163,10 @@ export async function updatePartOrderStatus(partOrderId, { status, scheduledDate
           }
         }
 
-        if (tech?.user) {
+        if (provider?.user) {
           try {
             const io = getIO();
-            io.to(`user:${tech.user}`).emit('job:updated', {
+            io.to(`user:${provider.user}`).emit('job:updated', {
               jobId: job?._id,
               activeStep: 'revisit_scheduled',
               revisit: job?.revisit,
@@ -190,6 +190,6 @@ export async function updatePartOrderStatus(partOrderId, { status, scheduledDate
   }
 
   return PartOrder.findById(partOrderId)
-    .populate('technician', 'name phone')
+    .populate('serviceProvider', 'name phone')
     .populate({ path: 'job', select: 'serviceRequest', populate: { path: 'serviceRequest', select: 'humanId category' } });
 }

@@ -5,7 +5,7 @@ import { createApp } from '../src/app.js';
 import { registerAllModels } from '../src/config/registerModels.js';
 import { ensureIndexes } from '../src/config/db.js';
 import { User } from '../src/modules/auth/user.model.js';
-import { Technician } from '../src/modules/technician/technician.model.js';
+import { ServiceProvider } from '../src/modules/service-provider/serviceProvider.model.js';
 import { Conversation } from '../src/modules/chat/conversation.model.js';
 import { Brand } from '../src/modules/super-admin/brand.model.js';
 import { Message } from '../src/modules/chat/message.model.js';
@@ -54,10 +54,10 @@ async function createCustomer(phone = nextPhone()) {
   return { user, token: tokenFor(user) };
 }
 
-async function createTechnician(phone = nextPhone()) {
-  const user = await User.create({ role: ROLES.TECHNICIAN, phone, name: 'Test Technician', passwordHash: await hashPassword('x') });
-  const technician = await Technician.create({ user: user._id, name: 'Test Technician', phone, status: 'Active', availability: 'Available', specs: ['AC'] });
-  return { user, technician, token: tokenFor(user) };
+async function createServiceProvider(phone = nextPhone()) {
+  const user = await User.create({ role: ROLES.SERVICE_PROVIDER, phone, name: 'Test Service Provider', passwordHash: await hashPassword('x') });
+  const serviceProvider = await ServiceProvider.create({ user: user._id, name: 'Test Service Provider', phone, status: 'Active', availability: 'Available', specs: ['AC'] });
+  return { user, serviceProvider, token: tokenFor(user) };
 }
 
 beforeAll(async () => {
@@ -74,17 +74,17 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  await Promise.all([User.deleteMany({}), Technician.deleteMany({}), Conversation.deleteMany({}), Message.deleteMany({}), Brand.deleteMany({})]);
+  await Promise.all([User.deleteMany({}), ServiceProvider.deleteMany({}), Conversation.deleteMany({}), Message.deleteMany({}), Brand.deleteMany({})]);
 });
 
 describe('getOrCreateConversation', () => {
   it('is idempotent for the same serviceRequest', async () => {
     const customer = await createCustomer();
-    const tech = await createTechnician();
+    const provider = await createServiceProvider();
     const serviceRequestId = new mongoose.Types.ObjectId();
 
-    const first = await getOrCreateConversation({ serviceRequest: serviceRequestId, customer: customer.user._id, technician: tech.technician._id });
-    const second = await getOrCreateConversation({ serviceRequest: serviceRequestId, customer: customer.user._id, technician: tech.technician._id });
+    const first = await getOrCreateConversation({ serviceRequest: serviceRequestId, customer: customer.user._id, serviceProvider: provider.serviceProvider._id });
+    const second = await getOrCreateConversation({ serviceRequest: serviceRequestId, customer: customer.user._id, serviceProvider: provider.serviceProvider._id });
 
     expect(String(first.id)).toBe(String(second.id));
     expect(await Conversation.countDocuments({})).toBe(1);
@@ -92,32 +92,32 @@ describe('getOrCreateConversation', () => {
 
   it('masks both participants\' phone numbers in the assembled response', async () => {
     const customer = await createCustomer('9955512345');
-    const tech = await createTechnician('9955567890');
+    const provider = await createServiceProvider('9955567890');
 
     const conversation = await getOrCreateConversation({
       serviceRequest: new mongoose.Types.ObjectId(),
       customer: customer.user._id,
-      technician: tech.technician._id,
+      serviceProvider: provider.serviceProvider._id,
     });
 
     expect(conversation.customer.phone).not.toBe('9955512345');
     expect(conversation.customer.phone).toMatch(/^\d{2}\*+\d{2}$/);
-    expect(conversation.technician.phone).not.toBe('9955567890');
+    expect(conversation.serviceProvider.phone).not.toBe('9955567890');
   });
 });
 
 describe('GET /chat/conversations', () => {
-  it('scopes to the requesting customer or technician, not both', async () => {
+  it('scopes to the requesting customer or serviceProvider, not both', async () => {
     const customer = await createCustomer();
-    const tech = await createTechnician();
+    const provider = await createServiceProvider();
     const otherCustomer = await createCustomer();
 
-    await getOrCreateConversation({ serviceRequest: new mongoose.Types.ObjectId(), customer: customer.user._id, technician: tech.technician._id });
+    await getOrCreateConversation({ serviceRequest: new mongoose.Types.ObjectId(), customer: customer.user._id, serviceProvider: provider.serviceProvider._id });
 
     const listAsCustomer = await request(app).get('/api/v1/chat/conversations').set('Authorization', `Bearer ${customer.token}`).expect(200);
     expect(listAsCustomer.body.data).toHaveLength(1);
 
-    const listAsTech = await request(app).get('/api/v1/chat/conversations').set('Authorization', `Bearer ${tech.token}`).expect(200);
+    const listAsTech = await request(app).get('/api/v1/chat/conversations').set('Authorization', `Bearer ${provider.token}`).expect(200);
     expect(listAsTech.body.data).toHaveLength(1);
 
     const listAsOther = await request(app).get('/api/v1/chat/conversations').set('Authorization', `Bearer ${otherCustomer.token}`).expect(200);
@@ -128,15 +128,15 @@ describe('GET /chat/conversations', () => {
 describe('GET /chat/conversations/:id and /messages', () => {
   it('rejects a non-participant, and returns message history for a participant', async () => {
     const customer = await createCustomer();
-    const tech = await createTechnician();
+    const provider = await createServiceProvider();
     const intruder = await createCustomer();
 
     const conversation = await getOrCreateConversation({
       serviceRequest: new mongoose.Types.ObjectId(),
       customer: customer.user._id,
-      technician: tech.technician._id,
+      serviceProvider: provider.serviceProvider._id,
     });
-    await Message.create({ conversation: conversation.id, sender: 'technician', text: 'Hi there', status: 'sent' });
+    await Message.create({ conversation: conversation.id, sender: 'service_provider', text: 'Hi there', status: 'sent' });
 
     const conversationId = String(conversation.id);
     await request(app).get(`/api/v1/chat/conversations/${conversationId}`).set('Authorization', `Bearer ${intruder.token}`).expect(403);
@@ -147,7 +147,7 @@ describe('GET /chat/conversations/:id and /messages', () => {
 
     const messagesRes = await request(app)
       .get(`/api/v1/chat/conversations/${conversationId}/messages`)
-      .set('Authorization', `Bearer ${tech.token}`)
+      .set('Authorization', `Bearer ${provider.token}`)
       .expect(200);
     expect(messagesRes.body.data).toHaveLength(1);
     expect(messagesRes.body.data[0].text).toBe('Hi there');
@@ -167,8 +167,8 @@ describe('brand support conversations', () => {
 
     expect(first.body.data.kind).toBe('support');
     expect(String(first.body.data.brand)).toBe(String(brand._id));
-    // Support threads have no technician — they must not collapse into a job chat.
-    expect(first.body.data.technician).toBeNull();
+    // Support threads have no service provider — they must not collapse into a job chat.
+    expect(first.body.data.serviceProvider).toBeNull();
 
     const second = await request(app)
       .post('/api/v1/chat/conversations/brand')
@@ -182,9 +182,9 @@ describe('brand support conversations', () => {
   it('keeps a support thread separate from the same customer\'s job chat', async () => {
     const { token } = await createBrandAdmin('Chat Brand B');
     const { user: customer } = await createCustomer();
-    const { technician } = await createTechnician();
+    const { serviceProvider } = await createServiceProvider();
 
-    await getOrCreateConversation({ customer: customer._id, technician: technician._id });
+    await getOrCreateConversation({ customer: customer._id, serviceProvider: serviceProvider._id });
     await request(app)
       .post('/api/v1/chat/conversations/brand')
       .set('Authorization', `Bearer ${token}`)
@@ -237,19 +237,19 @@ describe('brand support conversations', () => {
 
   it('rejects opening a thread with a non-customer, and without a brand', async () => {
     const a = await createBrandAdmin('Chat Brand G');
-    const { user: techUser } = await createTechnician();
+    const { user: serviceProviderUser } = await createServiceProvider();
 
     await request(app)
       .post('/api/v1/chat/conversations/brand')
       .set('Authorization', `Bearer ${a.token}`)
-      .send({ customerId: techUser.id })
+      .send({ customerId: serviceProviderUser.id })
       .expect(400);
 
     const { token: customerToken } = await createCustomer();
     await request(app)
       .post('/api/v1/chat/conversations/brand')
       .set('Authorization', `Bearer ${customerToken}`)
-      .send({ customerId: techUser.id })
+      .send({ customerId: serviceProviderUser.id })
       .expect(403);
   });
 });
@@ -277,12 +277,12 @@ describe('platform support desk', () => {
     const { token: adminToken } = await createSuperAdmin();
     const { token: customerToken } = await createCustomer();
     const { user: otherCustomer } = await createCustomer();
-    const { technician } = await createTechnician();
+    const { serviceProvider } = await createServiceProvider();
     const { token: brandToken } = await createBrandAdmin('Support Brand A');
 
     await request(app).post('/api/v1/chat/conversations/support').set('Authorization', `Bearer ${customerToken}`).expect(201);
     // A job chat and a brand thread must stay private to their participants.
-    await getOrCreateConversation({ customer: otherCustomer._id, technician: technician._id });
+    await getOrCreateConversation({ customer: otherCustomer._id, serviceProvider: serviceProvider._id });
     await request(app)
       .post('/api/v1/chat/conversations/brand')
       .set('Authorization', `Bearer ${brandToken}`)
@@ -301,9 +301,9 @@ describe('platform support desk', () => {
   it('refuses super-admin direct access to a job chat', async () => {
     const { token: adminToken } = await createSuperAdmin();
     const { user: customer } = await createCustomer();
-    const { technician } = await createTechnician();
+    const { serviceProvider } = await createServiceProvider();
 
-    const job = await getOrCreateConversation({ customer: customer._id, technician: technician._id });
+    const job = await getOrCreateConversation({ customer: customer._id, serviceProvider: serviceProvider._id });
 
     await request(app)
       .get(`/api/v1/chat/conversations/${job.id}`)

@@ -82,9 +82,9 @@ const Warranty = () => {
   const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—');
 
   // Raises a real ServiceRequest against the looked-up appliance. Both of the
-  // buttons below used to be success toasts — "Technician assigned
+  // buttons below used to be success toasts — "Service Provider assigned
   // successfully!" and "Paid service request created successfully!" — with no
-  // ticket created and no technician assigned.
+  // ticket created and no service provider assigned.
   const raiseRequest = async (warranty) => {
     if (!lookup?.customer?.id) {
       setError('This record has no linked customer account, so a request cannot be raised against it.');
@@ -237,7 +237,7 @@ const Warranty = () => {
                       onClick={() => raiseRequest('In Warranty')}
                       className="bg-[#0D47A1] text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
                     >
-                      Assign Technician
+                      Assign Service Provider
                     </button>
                   </div>
                 </div>

@@ -1,13 +1,12 @@
 import { City } from '../src/modules/super-admin/city.model.js';
-import { ServicePartner } from '../src/modules/super-admin/servicePartner.model.js';
 import { Brand } from '../src/modules/super-admin/brand.model.js';
 import { Product } from '../src/modules/buy-commerce/product.model.js';
 import { SparePartCatalog } from '../src/modules/super-admin/sparePartCatalog.model.js';
-import { TechInventoryItem } from '../src/modules/technician/techInventoryItem.model.js';
-import { Technician } from '../src/modules/technician/technician.model.js';
-import { PartOrder } from '../src/modules/technician/partOrder.model.js';
+import { ServiceProviderInventoryItem } from '../src/modules/service-provider/serviceProviderInventoryItem.model.js';
+import { ServiceProvider } from '../src/modules/service-provider/serviceProvider.model.js';
+import { PartOrder } from '../src/modules/service-provider/partOrder.model.js';
 import { ServiceRequest } from '../src/modules/service-requests/serviceRequest.model.js';
-import { Job } from '../src/modules/technician/job.model.js';
+import { Job } from '../src/modules/service-provider/job.model.js';
 
 export const CITIES_DATA = [
   { name: 'Lucknow', state: 'Uttar Pradesh', district: 'Lucknow', coverageAreaSqkm: 350, status: 'Active' },
@@ -15,14 +14,6 @@ export const CITIES_DATA = [
   { name: 'Mumbai', state: 'Maharashtra', district: 'Mumbai Suburban', coverageAreaSqkm: 600, status: 'Active' },
   { name: 'Bengaluru', state: 'Karnataka', district: 'Bengaluru Urban', coverageAreaSqkm: 740, status: 'Active' },
   { name: 'Kanpur', state: 'Uttar Pradesh', district: 'Kanpur Nagar', coverageAreaSqkm: 400, status: 'Active' },
-];
-
-export const SERVICE_PARTNERS_DATA = [
-  { name: 'NCC Lucknow Service Center', manager: 'Vikram Singh', email: 'lucknow.partner@nigamcare.com', phone: '9810011223', cityName: 'Lucknow', rating: 4.8, status: 'Active' },
-  { name: 'NCC Delhi Central Hub', manager: 'Rajesh Sharma', email: 'delhi.partner@nigamcare.com', phone: '9810011224', cityName: 'New Delhi', rating: 4.9, status: 'Active' },
-  { name: 'NCC Mumbai West Service Hub', manager: 'Amit Verma', email: 'mumbai.partner@nigamcare.com', phone: '9810011225', cityName: 'Mumbai', rating: 4.7, status: 'Active' },
-  { name: 'NCC Bengaluru Tech Care Center', manager: 'Suresh Kumar', email: 'bengaluru.partner@nigamcare.com', phone: '9810011226', cityName: 'Bengaluru', rating: 4.8, status: 'Active' },
-  { name: 'NCC Kanpur Service Station', manager: 'Manoj Gupta', email: 'kanpur.partner@nigamcare.com', phone: '9810011227', cityName: 'Kanpur', rating: 4.6, status: 'Active' },
 ];
 
 export const BRANDS_DATA = [
@@ -341,7 +332,7 @@ export const SPARE_PARTS_DATA = [
     markupPercent: 25,
     stock: 40,
     reorderThreshold: 10,
-    supplier: 'TechParts India',
+    supplier: 'ServiceProviderParts India',
     leadTimeDays: 1,
   },
   {
@@ -389,7 +380,7 @@ export const SPARE_PARTS_DATA = [
     markupPercent: 30,
     stock: 50,
     reorderThreshold: 10,
-    supplier: 'TechParts India',
+    supplier: 'ServiceProviderParts India',
     leadTimeDays: 1,
   },
   {
@@ -401,7 +392,7 @@ export const SPARE_PARTS_DATA = [
     markupPercent: 25,
     stock: 65,
     reorderThreshold: 12,
-    supplier: 'TechParts India',
+    supplier: 'ServiceProviderParts India',
     leadTimeDays: 1,
   },
   {
@@ -425,7 +416,7 @@ export const SPARE_PARTS_DATA = [
     markupPercent: 35,
     stock: 80,
     reorderThreshold: 15,
-    supplier: 'TechParts India',
+    supplier: 'ServiceProviderParts India',
     leadTimeDays: 1,
   },
   {
@@ -485,7 +476,7 @@ export const SPARE_PARTS_DATA = [
     markupPercent: 30,
     stock: 60,
     reorderThreshold: 15,
-    supplier: 'TechParts India',
+    supplier: 'ServiceProviderParts India',
     leadTimeDays: 1,
   },
   {
@@ -497,7 +488,7 @@ export const SPARE_PARTS_DATA = [
     markupPercent: 25,
     stock: 12,
     reorderThreshold: 4,
-    supplier: 'TechParts India',
+    supplier: 'ServiceProviderParts India',
     leadTimeDays: 2,
   },
   {
@@ -509,7 +500,7 @@ export const SPARE_PARTS_DATA = [
     markupPercent: 20,
     stock: 15,
     reorderThreshold: 5,
-    supplier: 'TechParts India',
+    supplier: 'ServiceProviderParts India',
     leadTimeDays: 2,
   },
   {
@@ -541,23 +532,7 @@ export async function seedDemoEntities() {
   }
   console.log(`[demo-seed] ${CITIES_DATA.length} Cities seeded`);
 
-  // 2. Seed Service Partners
-  const servicePartnersMap = {};
-  for (const spData of SERVICE_PARTNERS_DATA) {
-    const { cityName, ...rest } = spData;
-    const city = citiesMap[cityName];
-    if (!city) continue;
-
-    const sp = await ServicePartner.findOneAndUpdate(
-      { name: rest.name },
-      { ...rest, city: city._id },
-      { upsert: true, new: true, setDefaultsOnInsert: true },
-    );
-    servicePartnersMap[rest.name] = sp;
-  }
-  console.log(`[demo-seed] ${SERVICE_PARTNERS_DATA.length} Service Partners seeded`);
-
-  // 3. Seed Brand Partners
+  // 2. Seed Brand Partners
   const brandsMap = {};
   for (const bData of BRANDS_DATA) {
     const brand = await Brand.findOneAndUpdate(
@@ -569,7 +544,7 @@ export async function seedDemoEntities() {
   }
   console.log(`[demo-seed] ${BRANDS_DATA.length} Brand Partners seeded`);
 
-  // 4. Seed NCC Products
+  // 3. Seed NCC Products
   for (const pData of NCC_PRODUCTS_DATA) {
     await Product.findOneAndUpdate(
       { sku: pData.sku },
@@ -579,7 +554,7 @@ export async function seedDemoEntities() {
   }
   console.log(`[demo-seed] ${NCC_PRODUCTS_DATA.length} NCC Commerce Products seeded`);
 
-  // 5. Seed Spare Parts Catalog (Inventory Management)
+  // 4. Seed Spare Parts Catalog (Inventory Management)
   for (const spcData of SPARE_PARTS_DATA) {
     await SparePartCatalog.findOneAndUpdate(
       { code: spcData.code },
@@ -589,29 +564,29 @@ export async function seedDemoEntities() {
   }
   console.log(`[demo-seed] ${SPARE_PARTS_DATA.length} Platform Spare Parts Catalog items seeded`);
 
-  // 6. Seed Technician Inventory Items (Technician Stock)
-  const technicians = await Technician.find({ status: 'Active' });
-  if (technicians.length > 0) {
-    const sampleTech = technicians[0];
-    const techInventoryData = [
-      { technician: sampleTech._id, name: 'AC Gas R32 Canister (3kg)', sku: 'SP-AC-GAS-R32', qty: 4, price: 1380 },
-      { technician: sampleTech._id, name: 'Inverter AC Main PCB Board', sku: 'SP-AC-PCB-01', qty: 2, price: 2250 },
-      { technician: sampleTech._id, name: 'Universal Copper Pipe Coil (5m)', sku: 'SP-AC-COPPER-5M', qty: 3, price: 1298 },
-      { technician: sampleTech._id, name: 'Washing Machine Drain Pump', sku: 'SP-WM-PMP-01', qty: 1, price: 585 },
-      { technician: sampleTech._id, name: 'RO Membrane 75 GPD', sku: 'SP-RO-MEM-75', qty: 5, price: 812 },
-      { technician: sampleTech._id, name: 'Defrost Sensor', sku: 'SP-REF-SEN-01', qty: 0, price: 432 }, // Out of stock example
+  // 5. Seed Service Provider Inventory Items (Service Provider Stock)
+  const serviceProviders = await ServiceProvider.find({ status: 'Active' });
+  if (serviceProviders.length > 0) {
+    const sampleTech = serviceProviders[0];
+    const serviceProviderInventoryData = [
+      { serviceProvider: sampleTech._id, name: 'AC Gas R32 Canister (3kg)', sku: 'SP-AC-GAS-R32', qty: 4, price: 1380 },
+      { serviceProvider: sampleTech._id, name: 'Inverter AC Main PCB Board', sku: 'SP-AC-PCB-01', qty: 2, price: 2250 },
+      { serviceProvider: sampleTech._id, name: 'Universal Copper Pipe Coil (5m)', sku: 'SP-AC-COPPER-5M', qty: 3, price: 1298 },
+      { serviceProvider: sampleTech._id, name: 'Washing Machine Drain Pump', sku: 'SP-WM-PMP-01', qty: 1, price: 585 },
+      { serviceProvider: sampleTech._id, name: 'RO Membrane 75 GPD', sku: 'SP-RO-MEM-75', qty: 5, price: 812 },
+      { serviceProvider: sampleTech._id, name: 'Defrost Sensor', sku: 'SP-REF-SEN-01', qty: 0, price: 432 }, // Out of stock example
     ];
 
-    for (const item of techInventoryData) {
-      await TechInventoryItem.findOneAndUpdate(
-        { technician: sampleTech._id, sku: item.sku },
+    for (const item of serviceProviderInventoryData) {
+      await ServiceProviderInventoryItem.findOneAndUpdate(
+        { serviceProvider: sampleTech._id, sku: item.sku },
         item,
         { upsert: true, new: true, setDefaultsOnInsert: true },
       );
     }
-    console.log(`[demo-seed] ${techInventoryData.length} Technician Inventory Items seeded for tech: ${sampleTech.name}`);
+    console.log(`[demo-seed] ${serviceProviderInventoryData.length} Service Provider Inventory Items seeded for service-provider: ${sampleTech.name}`);
 
-    // 7. Seed Sample Part Orders for Brand Admin dashboards
+    // 6. Seed Sample Part Orders for Brand Admin dashboards
     const brandList = await Brand.find({ status: 'Active' });
     let totalPartOrdersSeeded = 0;
     for (const b of brandList) {
@@ -629,7 +604,7 @@ export async function seedDemoEntities() {
       let job = await Job.findOne({ serviceRequest: sr._id });
       if (!job) {
         job = await Job.create({
-          technician: sampleTech._id,
+          serviceProvider: sampleTech._id,
           serviceRequest: sr._id,
           type: 'Brand Warranty',
           activeStep: 'spareapproval',
@@ -642,8 +617,8 @@ export async function seedDemoEntities() {
       ];
       for (const pOrder of samplePartOrders) {
         await PartOrder.findOneAndUpdate(
-          { technician: sampleTech._id, job: job._id, partName: pOrder.partName },
-          { technician: sampleTech._id, job: job._id, ...pOrder },
+          { serviceProvider: sampleTech._id, job: job._id, partName: pOrder.partName },
+          { serviceProvider: sampleTech._id, job: job._id, ...pOrder },
           { upsert: true, new: true, setDefaultsOnInsert: true },
         );
         totalPartOrdersSeeded++;

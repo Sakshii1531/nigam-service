@@ -200,10 +200,10 @@ const Bookings = () => {
       },
       {
         id: 'assigned',
-        title: 'Technician Assigned',
-        desc: booking.technician?.name ? `${booking.technician.name} (Verified Partner)` : 'Assigning nearest verified engineer',
-        time: booking.technician ? 'Assigned' : '',
-        completed: Boolean(booking.technician),
+        title: 'Service Provider Assigned',
+        desc: booking.serviceProvider?.name ? `${booking.serviceProvider.name} (Verified Partner)` : 'Assigning nearest verified engineer',
+        time: booking.serviceProvider ? 'Assigned' : '',
+        completed: Boolean(booking.serviceProvider),
         current: false,
       },
     ];
@@ -223,7 +223,7 @@ const Bookings = () => {
         steps.push({
           id: 'spare_dispatched',
           title: isSpareDispatched ? 'Spare Part Dispatched' : 'Spare Part Approved',
-          desc: isSpareDispatched ? 'Part dispatched to technician via logistics' : 'Approved by warehouse admin',
+          desc: isSpareDispatched ? 'Part dispatched to serviceProvider via logistics' : 'Approved by warehouse admin',
           time: 'Processed',
           completed: true,
           current: !isSpareReceived && !isCompleted,
@@ -238,7 +238,7 @@ const Bookings = () => {
         steps.push({
           id: 'revisit_scheduled',
           title: 'Revisit Scheduled',
-          desc: `Spare delivered to technician. Revisit confirmed for ${revisitDateStr} (${timeSlotStr}) to complete repair.`,
+          desc: `Spare delivered to serviceProvider. Revisit confirmed for ${revisitDateStr} (${timeSlotStr}) to complete repair.`,
           time: 'Scheduled',
           completed: true,
           current: !isCompleted,
@@ -248,7 +248,7 @@ const Bookings = () => {
       steps.push({
         id: 'in_progress',
         title: 'Service In Progress',
-        desc: sr?.status === 'Work in Progress' || sr?.status === 'Inspection' || sr?.status === 'Engineer Reached' ? 'Technician inspecting appliance' : 'Inspection & repair',
+        desc: sr?.status === 'Work in Progress' || sr?.status === 'Inspection' || sr?.status === 'Engineer Reached' ? 'Service Provider inspecting appliance' : 'Inspection & repair',
         time: '',
         completed: isCompleted,
         current: booking.status === 'Ongoing' && !isCompleted && !isCancelled,
@@ -365,7 +365,7 @@ const Bookings = () => {
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-1">
-                Track live service progress, view assigned technicians, and manage your appliance repairs
+                Track live service progress, view assigned serviceProviders, and manage your appliance repairs
               </p>
             </div>
           </div>
@@ -577,15 +577,15 @@ const Bookings = () => {
                     </div>
                   </div>
 
-                  {/* Technician details if assigned */}
-                  {b.technician ? (
+                  {/* ServiceProvider details if assigned */}
+                  {b.serviceProvider ? (
                     <div className="flex items-center justify-between bg-[#EAF4FF]/50 p-2.5 rounded-2xl border border-blue-100/70">
                       <div className="flex items-center gap-2.5">
                         <div className="w-8 h-8 rounded-xl bg-[#0D47A1] text-white flex items-center justify-center text-xs font-black shadow-2xs">
-                          {b.technician.name?.charAt(0) || 'T'}
+                          {b.serviceProvider.name?.charAt(0) || 'T'}
                         </div>
                         <div>
-                          <p className="text-xs font-bold text-slate-900 leading-tight">{b.technician.name}</p>
+                          <p className="text-xs font-bold text-slate-900 leading-tight">{b.serviceProvider.name}</p>
                           <p className="text-[10px] text-slate-500 font-semibold">Service Engineer</p>
                         </div>
                       </div>
@@ -771,8 +771,8 @@ const Bookings = () => {
                 )}
               </div>
 
-              {/* Technician Info Card */}
-              {selectedBooking.technician ? (
+              {/* ServiceProvider Info Card */}
+              {selectedBooking.serviceProvider ? (
                 <div className="bg-white rounded-2xl p-4 border border-slate-200/70 shadow-2xs flex flex-col gap-2.5">
                   <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
                     <User className="h-4 w-4 text-[#0D47A1]" /> Assigned Expert
@@ -781,25 +781,25 @@ const Bookings = () => {
                   <div className="flex items-center justify-between bg-[#EAF4FF]/50 p-3 rounded-xl border border-blue-100">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-[#0D47A1] text-white flex items-center justify-center text-sm font-black shadow-xs">
-                        {selectedBooking.technician.name?.charAt(0) || 'T'}
+                        {selectedBooking.serviceProvider.name?.charAt(0) || 'T'}
                       </div>
                       <div>
-                        <h5 className="text-xs font-bold text-slate-900">{selectedBooking.technician.name}</h5>
+                        <h5 className="text-xs font-bold text-slate-900">{selectedBooking.serviceProvider.name}</h5>
                         <p className="text-[10px] text-slate-500 font-semibold">Nigam Verified Service Partner</p>
-                        {selectedBooking.technician.rating && (
+                        {selectedBooking.serviceProvider.rating && (
                           <div className="flex items-center gap-1 text-[10px] text-amber-700 font-bold mt-0.5">
                             <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                            <span>{selectedBooking.technician.rating} Rating</span>
+                            <span>{selectedBooking.serviceProvider.rating} Rating</span>
                           </div>
                         )}
                       </div>
                     </div>
 
-                    {selectedBooking.technician.phone && (
+                    {selectedBooking.serviceProvider.phone && (
                       <button 
-                        onClick={() => window.location.href = `tel:${selectedBooking.technician.phone}`}
+                        onClick={() => window.location.href = `tel:${selectedBooking.serviceProvider.phone}`}
                         className="p-2.5 bg-[#0D47A1] text-white rounded-xl shadow-xs hover:bg-[#083679] transition-all cursor-pointer flex items-center gap-1.5 text-xs font-bold"
-                        title="Call Technician"
+                        title="Call Service Provider"
                       >
                         <Phone className="h-3.5 w-3.5" />
                         <span>Call</span>
@@ -813,7 +813,7 @@ const Bookings = () => {
                     <ShieldCheck className="h-5 w-5" />
                   </div>
                   <div>
-                    <h5 className="text-xs font-bold text-slate-900">Assigning Technician</h5>
+                    <h5 className="text-xs font-bold text-slate-900">Assigning Service Provider</h5>
                     <p className="text-[10px] text-slate-500 font-normal">A verified engineer in your area will be allocated before your appointment time.</p>
                   </div>
                 </div>

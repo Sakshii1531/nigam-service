@@ -59,16 +59,16 @@ function loadGoogleMaps() {
 }
 
 function getDerivedFields(tracking) {
-  const techName =
-    tracking.technician?.user?.name ||
-    tracking.technician?.name ||
-    'Unknown Technician';
-  const techPhone = tracking.technician?.phone || tracking.technician?.user?.phone || '';
+  const serviceProviderName =
+    tracking.serviceProvider?.user?.name ||
+    tracking.serviceProvider?.name ||
+    'Unknown Service Provider';
+  const serviceProviderPhone = tracking.serviceProvider?.phone || tracking.serviceProvider?.user?.phone || '';
   const customerName =
     tracking.job?.serviceRequest?.user?.name || 'Unknown Customer';
   const jobHumanId = tracking.job?.humanId || tracking.job?.id || 'N/A';
 
-  return { techName, techPhone, customerName, jobHumanId };
+  return { serviceProviderName, serviceProviderPhone, customerName, jobHumanId };
 }
 
 const Tracking = () => {
@@ -101,17 +101,17 @@ const Tracking = () => {
     const mapsApi = mapsApiRef.current;
     const position = new mapsApi.LatLng(lat, lng);
     const trackingId = tracking.id || tracking._id;
-    const { techName } = getDerivedFields(tracking);
+    const { serviceProviderName } = getDerivedFields(tracking);
     const colors = STATUS_COLORS[tracking.status] || STATUS_COLORS['On the way'];
 
     if (markersRef.current[trackingId]) {
       markersRef.current[trackingId].setPosition(position);
-      markersRef.current[trackingId].setTitle(`${techName} — ${tracking.status}`);
+      markersRef.current[trackingId].setTitle(`${serviceProviderName} — ${tracking.status}`);
     } else {
       const marker = new mapsApi.Marker({
         position,
         map: mapRef.current,
-        title: `${techName} — ${tracking.status}`,
+        title: `${serviceProviderName} — ${tracking.status}`,
         icon: {
           path: mapsApi.SymbolPath.CIRCLE,
           fillColor: colors.dot,
@@ -255,10 +255,10 @@ const Tracking = () => {
   // ── Filter list ────────────────────────────────────────────────────────────
 
   const filteredJobs = jobs.filter((j) => {
-    const { techName, customerName, jobHumanId } = getDerivedFields(j);
+    const { serviceProviderName, customerName, jobHumanId } = getDerivedFields(j);
     const q = searchQuery.toLowerCase();
     return (
-      techName.toLowerCase().includes(q) ||
+      serviceProviderName.toLowerCase().includes(q) ||
       jobHumanId.toLowerCase().includes(q) ||
       customerName.toLowerCase().includes(q)
     );
@@ -305,7 +305,7 @@ const Tracking = () => {
                 <input
                   type="text"
                   className="w-full pl-9 pr-4 py-2 border border-[#E2E8F0] rounded-xl text-xs outline-none bg-[#F8FAFC] focus:ring-2 focus:ring-[#0D47A1]"
-                  placeholder="Search by Technician, Job ID..."
+                  placeholder="Search by ServiceProvider, Job ID..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -313,7 +313,7 @@ const Tracking = () => {
 
               <div className="space-y-3 flex-1 overflow-y-auto pr-1">
                 {filteredJobs.map((job) => {
-                  const { techName, customerName, jobHumanId } = getDerivedFields(job);
+                  const { serviceProviderName, customerName, jobHumanId } = getDerivedFields(job);
                   const jobId = job.id || job._id;
                   const colors = STATUS_COLORS[job.status] || STATUS_COLORS['On the way'];
                   const isSelected = (selectedJob?.id || selectedJob?._id) === jobId;
@@ -330,7 +330,7 @@ const Tracking = () => {
                         <div>
                           <p className="font-bold text-[#1E293B] text-sm">{jobHumanId}</p>
                           <p className="text-xs font-semibold text-[#0D47A1] flex items-center gap-1 mt-0.5">
-                            <User size={11} /> {techName}
+                            <User size={11} /> {serviceProviderName}
                           </p>
                         </div>
                         <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${colors.text}`}>
@@ -362,7 +362,7 @@ const Tracking = () => {
                   <div className="text-center pt-8">
                     <MapPin size={32} className="mx-auto text-slate-300 mb-2" />
                     <p className="text-xs text-[#64748B]">No active live jobs</p>
-                    <p className="text-[10px] text-slate-400 mt-1">Waiting for technicians to go online...</p>
+                    <p className="text-[10px] text-slate-400 mt-1">Waiting for serviceProviders to go online...</p>
                   </div>
                 )}
               </div>
@@ -397,7 +397,7 @@ const Tracking = () => {
 
               {/* Selected job overlay card */}
               {selectedJob && !mapError && (() => {
-                const { techName, techPhone, customerName, jobHumanId } = getDerivedFields(selectedJob);
+                const { serviceProviderName, serviceProviderPhone, customerName, jobHumanId } = getDerivedFields(selectedJob);
                 const colors = STATUS_COLORS[selectedJob.status] || STATUS_COLORS['On the way'];
                 return (
                   <div className="absolute bottom-8 right-8 bg-white p-4 rounded-xl shadow-xl border border-[#E2E8F0] max-w-xs w-full z-20 animate-in slide-in-from-bottom-2">
@@ -409,7 +409,7 @@ const Tracking = () => {
                         <div className="flex justify-between items-start mb-1">
                           <div>
                             <p className="text-[11px] font-black text-[#1E293B]">Job {jobHumanId}</p>
-                            <p className="text-sm font-bold text-[#0D47A1] truncate">{techName}</p>
+                            <p className="text-sm font-bold text-[#0D47A1] truncate">{serviceProviderName}</p>
                           </div>
                           <span className={`px-2 py-0.5 rounded text-[10px] font-bold flex-shrink-0 ml-2 ${colors.text}`}>
                             {selectedJob.status}
@@ -426,14 +426,14 @@ const Tracking = () => {
                           )}
                         </div>
                         <div className="flex gap-2 justify-end pt-2">
-                          {/* Dials the technician's real number. This used to
+                          {/* Dials the serviceProvider's real number. This used to
                               show "Contacting <name>…" and place no call. */}
-                          {techPhone ? (
+                          {serviceProviderPhone ? (
                             <a
-                              href={`tel:${techPhone}`}
+                              href={`tel:${serviceProviderPhone}`}
                               className="px-3 py-1 bg-slate-100 hover:bg-[#EEF4FF] text-[#0D47A1] text-xs font-bold rounded-lg transition-colors flex items-center gap-1 border border-slate-200"
                             >
-                              <Phone size={12} /> {techPhone}
+                              <Phone size={12} /> {serviceProviderPhone}
                             </a>
                           ) : (
                             <span className="px-3 py-1 bg-slate-50 text-slate-400 text-xs font-bold rounded-lg border border-slate-200 flex items-center gap-1">

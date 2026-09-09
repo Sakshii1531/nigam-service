@@ -3,29 +3,32 @@
 
 export const ROLES = Object.freeze({
   CUSTOMER: 'customer',
-  TECHNICIAN: 'technician',
+  SERVICE_PROVIDER: 'service_provider',
   BRAND_ADMIN: 'brand_admin',
   SUPER_ADMIN: 'super_admin',
+  // Area Service Manager — oversees the service providers in one zone (City).
+  // Provisioned by super-admin (asm.service.js's createAsm), not self-registered.
+  ASM: 'asm',
 });
 
 // The audiences the super-admin console's broadcast composer can target, and
 // the User.role each one selects ('All' = every role, no filter).
 //
 // Lives here rather than in the notifications module because three separate
-// layers have to agree on who "Technicians" means: the push fan-out, the inbox
+// layers have to agree on who "ServiceProviders" means: the push fan-out, the inbox
 // query, and the socket room a connection joins. They drifted before — the
 // socket layer only ever joined 'broadcast:All', so a role-targeted broadcast
 // was emitted into an empty room.
 export const BROADCAST_AUDIENCES = Object.freeze({
   ALL: 'All',
-  TECHNICIANS: 'Technicians',
+  SERVICE_PROVIDERS: 'ServiceProviders',
   BRANDS: 'Brands',
   CUSTOMERS: 'Customers',
 });
 
 export const BROADCAST_ROLE_FILTER = Object.freeze({
   [BROADCAST_AUDIENCES.ALL]: null,
-  [BROADCAST_AUDIENCES.TECHNICIANS]: ROLES.TECHNICIAN,
+  [BROADCAST_AUDIENCES.SERVICE_PROVIDERS]: ROLES.SERVICE_PROVIDER,
   [BROADCAST_AUDIENCES.BRANDS]: ROLES.BRAND_ADMIN,
   [BROADCAST_AUDIENCES.CUSTOMERS]: ROLES.CUSTOMER,
 });
@@ -37,8 +40,8 @@ export const BROADCAST_ROLE_FILTER = Object.freeze({
  */
 export function broadcastAudienceForRole(role) {
   switch (role) {
-    case ROLES.TECHNICIAN:
-      return BROADCAST_AUDIENCES.TECHNICIANS;
+    case ROLES.SERVICE_PROVIDER:
+      return BROADCAST_AUDIENCES.SERVICE_PROVIDERS;
     case ROLES.BRAND_ADMIN:
       return BROADCAST_AUDIENCES.BRANDS;
     case ROLES.CUSTOMER:
@@ -75,7 +78,7 @@ export const ID_PREFIXES = Object.freeze({
   DOCUMENT: 'DOC', // DOC-###
   GUIDE: 'GD', // GD-###
   COURSE: 'CRS', // CRS-###
-  TECHNICIAN: 'TECH', // TECH-###
+  SERVICE_PROVIDER: 'PROV', // PROV-###
   CUSTOMER: 'CUST', // CUST-###
   VERIFICATION: 'VR', // VR-####
   JOB: 'JOB', // JOB-xxx
@@ -99,7 +102,7 @@ export const SERVICE_REQUEST_STATUS = Object.freeze([
   'Cancelled',
 ]);
 
-// Technician job state machine (BACKEND_CONTEXT.md §4.3), mirrors ActiveJob.jsx.
+// Service provider job state machine (BACKEND_CONTEXT.md §4.3), mirrors ActiveJob.jsx.
 // 'awaitingpayment' added post-Phase-15 for the real Razorpay Checkout flow —
 // billing -> completed directly still exists for Cash / already-covered ($0)
 // jobs, which never touch a gateway at all (see job.service.js's collectPayment).
@@ -160,7 +163,7 @@ export const ID_SCHEMES = Object.freeze({
   [ID_PREFIXES.DOCUMENT]: { digits: 3, dateSegment: null, separator: '-' },
   [ID_PREFIXES.GUIDE]: { digits: 3, dateSegment: null, separator: '-' },
   [ID_PREFIXES.COURSE]: { digits: 3, dateSegment: null, separator: '-' },
-  [ID_PREFIXES.TECHNICIAN]: { digits: 3, dateSegment: null, separator: '-' },
+  [ID_PREFIXES.SERVICE_PROVIDER]: { digits: 3, dateSegment: null, separator: '-' },
   [ID_PREFIXES.CUSTOMER]: { digits: 3, dateSegment: null, separator: '-' },
   [ID_PREFIXES.VERIFICATION]: { digits: 4, dateSegment: null, separator: '-' },
   [ID_PREFIXES.JOB]: { digits: 4, dateSegment: null, separator: '-' },
@@ -171,12 +174,12 @@ export const ID_SCHEMES = Object.freeze({
 // mock UI uses. Terminal states (Closed, Cancelled) have no outgoing edges.
 export const SERVICE_REQUEST_TRANSITIONS = Object.freeze({
   New: ['Assigned', 'Cancelled'],
-  // 'New' is how a technician's rejection returns the request to the pool so
+  // 'New' is how a service provider's rejection returns the request to the pool so
   // the engine can offer it to somebody else.
   Assigned: ['Engineer Accepted', 'Customer NA', 'Cancelled', 'New'],
   'Engineer Accepted': ['Visit Scheduled', 'Cancelled'],
   'Visit Scheduled': ['Engineer Reached', 'Reschedule', 'Customer NA', 'Cancelled'],
-  // 'Repair Completed' direct: on a return visit the technician arrives with
+  // 'Repair Completed' direct: on a return visit the service provider arrives with
   // the approved part and finishes the job — the diagnosis was done on the
   // first visit, so requiring it again stranded every rescheduled request at
   // 'Engineer Reached' and payment could never be collected.

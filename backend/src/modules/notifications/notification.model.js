@@ -5,11 +5,11 @@ const notificationSchema = new mongoose.Schema(
   {
     // Either a single recipient, or a role-wide broadcast (super-admin's push composer) — not both.
     recipient: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null, index: true },
-    broadcastRole: { type: String, enum: ['All', 'Technicians', 'Brands', 'Customers'], default: null, index: true },
+    broadcastRole: { type: String, enum: ['All', 'ServiceProviders', 'Brands', 'Customers'], default: null, index: true },
 
     type: {
       type: String,
-      enum: ['assigned', 'created', 'payment', 'completed', 'jobs', 'claims', 'payments', 'service', 'tech', 'dispatch', 'promo'],
+      enum: ['assigned', 'created', 'payment', 'completed', 'jobs', 'claims', 'payments', 'service', 'provider', 'dispatch', 'promo'],
       required: true,
     },
     title: { type: String, required: true },

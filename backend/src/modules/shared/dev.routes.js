@@ -13,11 +13,11 @@ import { getLastOtpForTesting } from '../auth/otpProvider.js';
 import { signForTesting } from '../payments-wallet/paymentGateway.js';
 import { User } from '../auth/user.model.js';
 import { hashPassword } from '../auth/password.js';
-import { Technician } from '../technician/technician.model.js';
+import { ServiceProvider } from '../service-provider/serviceProvider.model.js';
 import { AMCPlan } from '../warranty-amc-exchange/amcPlan.model.js';
 import { AMCSubscription } from '../warranty-amc-exchange/amcSubscription.model.js';
 import { Brand } from '../super-admin/brand.model.js';
-import { Job } from '../technician/job.model.js';
+import { Job } from '../service-provider/job.model.js';
 
 // Non-production only (mounted conditionally in app.js) — exercises the Phase 2
 // shared plumbing (pagination, validation-error shape, file upload, id generation)
@@ -116,10 +116,10 @@ if (isTest) {
   });
 
   // Same reasoning as /_dev/test-user, one level up: booking/service-request specs
-  // need a technician that's exclusively theirs (Active+Available, specific specs),
+  // need a service provider that's exclusively theirs (Active+Available, specific specs),
   // not the shared seeded one — reusing that across parallel workers would race on
-  // auto-assignment and OTP login. Creates both the User and its Technician profile.
-  const testTechnicianSchema = z.object({
+  // auto-assignment and OTP login. Creates both the User and its Service Provider profile.
+  const testServiceProviderSchema = z.object({
     phone: z.string().min(1),
     password: z.string().min(6),
     specs: z.array(z.string()).optional(),
@@ -128,23 +128,23 @@ if (isTest) {
     serviceCityName: z.string().optional(),
     serviceStateName: z.string().optional(),
   });
-  devRouter.post('/_dev/test-technician', validate(testTechnicianSchema), async (req, res, next) => {
+  devRouter.post('/_dev/test-serviceProvider', validate(testServiceProviderSchema), async (req, res, next) => {
     try {
       const { phone, password, specs = ['AC'], availability = 'Available', city, serviceCityName, serviceStateName } = req.body;
 
-      await User.deleteOne({ role: ROLES.TECHNICIAN, phone });
+      await User.deleteOne({ role: ROLES.SERVICE_PROVIDER, phone });
       const user = await User.create({
-        role: ROLES.TECHNICIAN,
+        role: ROLES.SERVICE_PROVIDER,
         phone,
-        name: 'E2E Test Technician',
+        name: 'E2E Test ServiceProvider',
         passwordHash: await hashPassword(password),
         status: 'Active',
       });
 
-      await Technician.deleteOne({ user: user._id });
-      const technician = await Technician.create({
+      await ServiceProvider.deleteOne({ user: user._id });
+      const serviceProvider = await ServiceProvider.create({
         user: user._id,
-        name: 'E2E Test Technician',
+        name: 'E2E Test ServiceProvider',
         phone,
         status: 'Active',
         availability,
@@ -154,7 +154,7 @@ if (isTest) {
         serviceStateName: serviceStateName || undefined,
       });
 
-      ok(res, { userId: user.id, technicianId: technician.id }, {}, 201);
+      ok(res, { userId: user.id, serviceProviderId: serviceProvider.id }, {}, 201);
     } catch (err) {
       next(err);
     }
@@ -174,9 +174,9 @@ if (isTest) {
   });
 
   // AMC subscription purchase is a deferred flow (Phase 5 scope decision — see
-  // DATA_MODEL.md) with no real HTTP surface yet, but Phase 6's technician "AMC
+  // DATA_MODEL.md) with no real HTTP surface yet, but Phase 6's service provider "AMC
   // Visit" job type needs a real subscription to link against and decrement.
-  // Same reasoning as /_dev/test-technician: gives specs something real to set up
+  // Same reasoning as /_dev/test-service provider: gives specs something real to set up
   // and read back without building the deferred purchase flow early.
   const testAmcSubscriptionSchema = z.object({
     customerId: z.string().min(1),
@@ -208,13 +208,13 @@ if (isTest) {
 
   // Non-booking ServiceRequests (warranty/AMC complaints raised directly, not via
   // a Booking) also have no real HTTP surface yet (same deferred-flow reasoning as
-  // above) — this creates one already 'Assigned' to a given technician so E2E specs
+  // above) — this creates one already 'Assigned' to a given service provider so E2E specs
   // can exercise AMC/Brand-Warranty job acceptance without a real complaint-raising flow.
   const testServiceRequestSchema = z.object({
     customerId: z.string().min(1),
-    // Omit to get a request still sitting in 'New' with no technician — what the
+    // Omit to get a request still sitting in 'New' with no service provider — what the
     // assignment console works against.
-    technicianId: z.string().min(1).optional(),
+    serviceProviderId: z.string().min(1).optional(),
     category: z.string().min(1),
     brand: z.string().optional(), // real Brand tenant ObjectId — no production flow sets this on a ServiceRequest yet (Brand-Warranty/AMC/EW purchase flows are deferred), needed for Phase 7 brand-scoping specs
   });
@@ -223,13 +223,13 @@ if (isTest) {
       const { createServiceRequest, transitionStatus } = await import('../service-requests/serviceRequest.service.js');
       let serviceRequest = await createServiceRequest({
         user: req.body.customerId,
-        technician: req.body.technicianId || null,
+        serviceProvider: req.body.serviceProviderId || null,
         category: req.body.category,
         brand: req.body.brand || null,
         description: `${req.body.category} — E2E fixture request`,
         requestMode: 'B2C',
       });
-      if (req.body.technicianId) {
+      if (req.body.serviceProviderId) {
         serviceRequest = await transitionStatus(serviceRequest.id, 'Assigned', { description: 'E2E fixture: pre-assigned' });
       }
       ok(res, { id: serviceRequest.id }, {}, 201);
@@ -249,11 +249,11 @@ if (isTest) {
 
   // Creates a minimal ServiceRequest + Job for E2E live-tracking specs so they
   // don't need to run a full booking + acceptance flow just to get a job ID.
-  const testJobSchema = z.object({ technicianId: z.string().min(1) });
+  const testJobSchema = z.object({ serviceProviderId: z.string().min(1) });
   devRouter.post('/_dev/test-job', validate(testJobSchema), async (req, res, next) => {
     try {
-      const tech = await Technician.findById(req.body.technicianId);
-      if (!tech) throw new ApiError(404, 'Technician not found');
+      const provider = await ServiceProvider.findById(req.body.serviceProviderId);
+      if (!provider) throw new ApiError(404, 'Service Provider not found');
 
       // Seed a stub customer
       const customer = await User.create({
@@ -270,15 +270,15 @@ if (isTest) {
       const { createServiceRequest } = await import('../service-requests/serviceRequest.service.js');
       const sr = await createServiceRequest({
         user: customer._id,
-        technician: tech._id,
-        category: tech.specs?.[0] || 'AC',
+        serviceProvider: provider._id,
+        category: provider.specs?.[0] || 'AC',
         description: 'E2E tracking fixture',
         requestMode: 'B2C',
       });
 
       const job = await Job.create({
         serviceRequest: sr._id,
-        technician: tech._id,
+        serviceProvider: provider._id,
         type: 'NCC Paid Service',
         isD2C: true,
         activeStep: 'ontheway',

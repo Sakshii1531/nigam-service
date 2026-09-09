@@ -12,7 +12,7 @@ export async function listReplacementApprovals(brandId, { status, page, limit, s
     // ticket, who raised it and which customer it affects — not bare refs.
     ReplacementApproval.find(query)
       .populate({ path: 'serviceRequest', select: 'humanId', populate: { path: 'user', select: 'name' } })
-      .populate('technician', 'name')
+      .populate('serviceProvider', 'name')
       .sort(sortObj)
       .skip(skip)
       .limit(lim),
@@ -32,11 +32,11 @@ export async function getReplacementApproval(brandId, id) {
   return findOwnedOr404(brandId, id);
 }
 
-/** No dedicated technician-side "request a replacement" flow exists yet (out of
+/** No dedicated service provider-side "request a replacement" flow exists yet (out of
  * Phase 6's scope), so this doubles as the entry point for logging one, not just
  * a decision endpoint. */
-export async function createReplacementApproval(brandId, { serviceRequest, product, model, reason, techNotes, technician }) {
-  return ReplacementApproval.create({ brand: brandId, serviceRequest, product, model, reason, techNotes, technician: technician || null });
+export async function createReplacementApproval(brandId, { serviceRequest, product, model, reason, serviceProviderNotes, serviceProvider }) {
+  return ReplacementApproval.create({ brand: brandId, serviceRequest, product, model, reason, serviceProviderNotes, serviceProvider: serviceProvider || null });
 }
 
 export async function updateReplacementApprovalStatus(brandId, id, status) {

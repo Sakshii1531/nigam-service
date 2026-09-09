@@ -37,25 +37,25 @@ const EVENT_TEMPLATES = {
     smsBody: `Your ${p.category} service booking is confirmed. Track via Nigam Care app.`,
     whatsappBody: `✅ *Booking Confirmed!*\n\nYour *${p.category}* service has been booked successfully.\n\nOpen the Nigam Care app to track your booking.`,
   }),
-  'technician.assigned': (p) => ({
+  'serviceProvider.assigned': (p) => ({
     recipient: p.user,
     type: 'assigned',
-    title: 'Technician Assigned',
-    message: `${p.technicianName || 'A technician'} has been assigned to your service request.`,
+    title: 'ServiceProvider Assigned',
+    message: `${p.serviceProviderName || 'A serviceProvider'} has been assigned to your service request.`,
     cta: p.serviceRequestId ? { label: 'View Details', route: `/service-requests/${p.serviceRequestId}` } : undefined,
-    smsBody: `${p.technicianName || 'A technician'} has been assigned to your service request. Track live on the Nigam Care app.`,
-    whatsappBody: `🔧 *Technician Assigned!*\n\n*${p.technicianName || 'A technician'}* is assigned to your request.\n\nOpen the Nigam Care app to track details.`,
+    smsBody: `${p.serviceProviderName || 'A serviceProvider'} has been assigned to your service request. Track live on the Nigam Care app.`,
+    whatsappBody: `🔧 *Service Provider Assigned!*\n\n*${p.serviceProviderName || 'A serviceProvider'}* is assigned to your request.\n\nOpen the Nigam Care app to track details.`,
   }),
-  'technician.ontheway': (p) => ({
+  'serviceProvider.ontheway': (p) => ({
     recipient: p.user,
     type: 'assigned',
-    title: 'Technician is On The Way! 🚗',
-    message: `${p.technicianName || 'Your technician'} has started the trip and is heading to your address.`,
+    title: 'ServiceProvider is On The Way! 🚗',
+    message: `${p.serviceProviderName || 'Your serviceProvider'} has started the trip and is heading to your address.`,
     cta: p.bookingId ? { label: 'Track Live', route: `/bookings/${p.bookingId}` } : undefined,
-    smsBody: `${p.technicianName || 'Your technician'} is on the way to your location for service. Track live on the Nigam Care app.`,
-    whatsappBody: `🚗 *Technician is On The Way!*\n\n*${p.technicianName || 'Your technician'}* has started the trip and is heading to your address.\n\nOpen the Nigam Care app to track live.`,
+    smsBody: `${p.serviceProviderName || 'Your serviceProvider'} is on the way to your location for service. Track live on the Nigam Care app.`,
+    whatsappBody: `🚗 *Service Provider is On The Way!*\n\n*${p.serviceProviderName || 'Your serviceProvider'}* has started the trip and is heading to your address.\n\nOpen the Nigam Care app to track live.`,
   }),
-  'technician.parts_pending': (p) => ({
+  'serviceProvider.parts_pending': (p) => ({
     recipient: p.user,
     type: 'assigned',
     title: 'Spare Part Pending ⏳',
@@ -68,10 +68,10 @@ const EVENT_TEMPLATES = {
     recipient: p.user,
     type: 'assigned',
     title: 'Service Revisit Rescheduled 📅',
-    message: `Your ${p.category || 'service'} revisit has been scheduled for ${p.scheduledDate || 'the scheduled date'} (${p.timeSlot || '10:00 AM - 01:00 PM'}). Spare part has been delivered to your technician.`,
+    message: `Your ${p.category || 'service'} revisit has been scheduled for ${p.scheduledDate || 'the scheduled date'} (${p.timeSlot || '10:00 AM - 01:00 PM'}). Spare part has been delivered to your serviceProvider.`,
     cta: p.bookingId ? { label: 'View Booking', route: `/bookings` } : undefined,
     smsBody: `Your ${p.category || 'service'} revisit is scheduled for ${p.scheduledDate || 'upcoming date'} (${p.timeSlot || '10:00 AM - 01:00 PM'}). Track live on Nigam Care app.`,
-    whatsappBody: `📅 *Service Rescheduled!*\n\nYour *${p.category || 'service'}* revisit is confirmed for *${p.scheduledDate || 'the scheduled date'}* (*${p.timeSlot || '10:00 AM - 01:00 PM'}*).\n\nThe spare part is delivered and ${p.technicianName || 'your technician'} will visit to complete the repair.`,
+    whatsappBody: `📅 *Service Rescheduled!*\n\nYour *${p.category || 'service'}* revisit is confirmed for *${p.scheduledDate || 'the scheduled date'}* (*${p.timeSlot || '10:00 AM - 01:00 PM'}*).\n\nThe spare part is delivered and ${p.serviceProviderName || 'your serviceProvider'} will visit to complete the repair.`,
   }),
   'payment.success': (p) => ({
     recipient: p.user,
@@ -392,7 +392,7 @@ export async function emit(event, payload) {
 }
 
 // ── Admin ad-hoc dispatch ─────────────────────────────────────────────────────
-// The super-admin console composes one-off messages (technician approval, a
+// The super-admin console composes one-off messages (service provider approval, a
 // campaign blast) that map to no domain event, so they carry their own copy
 // instead of going through EVENT_TEMPLATES. Delivery reuses the same plumbing
 // as emit() — DB write, Socket.IO, then FCM via deliverExternal.
@@ -407,7 +407,7 @@ export async function sendAdHocPush({
   broadcastRole,
   title,
   body,
-  type = 'tech',
+  type = 'provider',
   priority = 'Medium',
   cta,
   channels,
@@ -557,7 +557,7 @@ export async function getNotification(user, id) {
   if (!notification) throw new ApiError(404, 'Notification not found');
 
   const isOwn = notification.recipient && String(notification.recipient) === user.id;
-  // Not merely "is a broadcast": a broadcast aimed at Technicians is not a
+  // Not merely "is a broadcast": a broadcast aimed at ServiceProviders is not a
   // customer's to read. Before role targeting meant anything this check was
   // Boolean(broadcastRole), which let any user open any broadcast by id.
   const isMyBroadcast =

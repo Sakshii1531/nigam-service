@@ -10,11 +10,11 @@ bookingRouter.use(requireAuth, requireRole(ROLES.CUSTOMER));
 
 bookingRouter.post('/', validate(createBookingSchema), async (req, res, next) => {
   try {
-    const { booking, serviceRequest, technician, razorpay } = await bookingService.createBooking(req.user.id, req.body);
+    const { booking, serviceRequest, serviceProvider, razorpay } = await bookingService.createBooking(req.user.id, req.body);
     created(res, {
       booking,
       serviceRequest,
-      technician: technician ? { id: technician.id, name: technician.name, rating: technician.rating } : null,
+      serviceProvider: serviceProvider ? { id: serviceProvider.id, name: serviceProvider.name, rating: serviceProvider.rating } : null,
       razorpay,
     });
   } catch (err) {

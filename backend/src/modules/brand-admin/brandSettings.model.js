@@ -15,7 +15,7 @@ const brandSettingsSchema = new mongoose.Schema(
     website: String,
 
     // Service configuration.
-    autoAssignTechnician: { type: Boolean, default: true },
+    autoAssignServiceProvider: { type: Boolean, default: true },
     requireCompletionPhoto: { type: Boolean, default: true },
 
     // Notification channels for this brand's own staff.

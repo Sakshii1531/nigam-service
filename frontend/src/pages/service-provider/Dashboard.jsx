@@ -4,11 +4,11 @@ import {
   Bell, Briefcase, ClipboardList, Calendar, Wrench, User, MapPin, ChevronRight, ChevronLeft, Menu,
   Clock, Shield, Star, GraduationCap, MessageSquare, Megaphone, Scan, CheckCircle, RotateCw, X, LogOut, Sparkles, CreditCard, ShieldCheck, Award, Settings, HelpCircle, ArrowLeft, Zap, ArrowRight, PackageCheck
 } from 'lucide-react';
-import { useTech } from '../../context/TechContext';
+import { useTech } from '../../context/ServiceProviderContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { useAuth } from '../../context/AuthContext';
-import TechBottomNav from '../../components/TechBottomNav';
-import techAvatar from '../../assets/tech_avatar.png';
+import ServiceProviderBottomNav from '../../components/ServiceProviderBottomNav';
+import serviceProviderAvatar from '../../assets/service_provider_avatar.png';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -37,7 +37,7 @@ const Dashboard = () => {
     if (!availabilityKnown) return;
     const res = await setAvailability(isOnline ? 'Offline' : 'Available');
     if (!res.ok) {
-      // Most often "your account is Pending" — the technician needs to know why
+      // Most often "your account is Pending" — the service provider needs to know why
       // nothing happened rather than watching the pill silently snap back.
       setDutyMessage(res.error || 'Could not change your status.');
     } else if (!isOnline && res.assignedCount > 0) {
@@ -112,8 +112,8 @@ const Dashboard = () => {
       playDispatchChime();
     };
 
-    window.addEventListener('tech:incoming_job', handleIncomingEvent);
-    return () => window.removeEventListener('tech:incoming_job', handleIncomingEvent);
+    window.addEventListener('service-provider:incoming_job', handleIncomingEvent);
+    return () => window.removeEventListener('service-provider:incoming_job', handleIncomingEvent);
   }, [declinedInstantIds, acceptedInstantIds]);
 
   // 2. Auto-detect any newly assigned or waiting available job from `jobs`
@@ -149,7 +149,7 @@ const Dashboard = () => {
   /**
    * Reject for real. A local-only version of this shadowed the context's
    * dismissJob, so both Decline buttons quietly did nothing server-side: the
-   * request stayed assigned to the technician who turned it down.
+   * request stayed assigned to the service provider who turned it down.
    */
   const rejectJob = async (jobId) => {
     suppressInstantAlert(jobId);
@@ -159,7 +159,7 @@ const Dashboard = () => {
         ? res?.error || 'Could not reject that job.'
         : res.reassignedTo
           ? `Rejected — passed to ${res.reassignedTo}.`
-          : 'Rejected — back in the queue for another technician.',
+          : 'Rejected — back in the queue for another serviceProvider.',
     );
     return res;
   };
@@ -171,9 +171,9 @@ const Dashboard = () => {
   };
 
   // Countdown timer for the instant job alert. Running out is a rejection: an
-  // ASAP customer cannot wait on a technician who never answered, so the job
+  // ASAP customer cannot wait on a service provider who never answered, so the job
   // goes back to the pool for somebody else. The timer used to just sit at
-  // "0s" forever with the request still pinned to that technician.
+  // "0s" forever with the request still pinned to that service provider.
   const autoRejectedRef = React.useRef(null);
   React.useEffect(() => {
     if (!instantAlertJob) return undefined;
@@ -189,7 +189,7 @@ const Dashboard = () => {
             setDutyMessage(
               res.reassignedTo
                 ? `Offer expired — passed to ${res.reassignedTo}.`
-                : 'Offer expired — back in the queue for another technician.',
+                : 'Offer expired — back in the queue for another serviceProvider.',
             );
           }
         });
@@ -201,7 +201,7 @@ const Dashboard = () => {
     return () => clearTimeout(timer);
   }, [instantAlertJob, countdown]);
 
-  // Was counting TechContext's local list, which never fetched — so this badge
+  // Was counting ServiceProviderContext's local list, which never fetched — so this badge
   // sat at 0 no matter what the platform had actually sent.
   const { unreadCount: unreadNotificationsCount } = useNotifications();
 
@@ -219,7 +219,7 @@ const Dashboard = () => {
   };
 
   // Offers only. This counted the whole list — accepted work included — so the
-  // "Available Jobs" tile read 25 while the technician actually had 5 open
+  // "Available Jobs" tile read 25 while the service provider actually had 5 open
   // offers, and it disagreed with the "Active Jobs" tile sitting next to it.
   const availableJobsCount = jobs.filter((j) => j.isAvailableRequest && isJobSpecActive(j)).length;
 
@@ -333,7 +333,7 @@ const Dashboard = () => {
   );
 
   return (
-    <div className="tech-app-container min-h-screen bg-[#F5F8FC] flex flex-col pb-20 lg:pb-8 relative font-sans">
+    <div className="service-provider-app-container min-h-screen bg-[#F5F8FC] flex flex-col pb-20 lg:pb-8 relative font-sans">
 
       {/* Top Banner / Header Section */}
       {showAllJobs ? (
@@ -350,7 +350,7 @@ const Dashboard = () => {
           
           <div className="relative">
             <button 
-              onClick={() => navigate('/technician/notifications')}
+              onClick={() => navigate('/service-provider/notifications')}
               className="p-2 hover:bg-slate-100 rounded-full transition-colors text-[#052355] relative cursor-pointer"
             >
               <Bell className="h-5 w-5 stroke-[2]" />
@@ -378,7 +378,7 @@ const Dashboard = () => {
             <div className="flex items-center gap-3">
               {/* Notification icon */}
               <button 
-                onClick={() => navigate('/technician/notifications')}
+                onClick={() => navigate('/service-provider/notifications')}
                 className="p-2 hover:bg-white/10 rounded-full transition-all relative"
               >
                 <Bell className="h-5.5 w-5.5 text-white" />
@@ -389,11 +389,11 @@ const Dashboard = () => {
 
               {/* User Avatar with Green dot status indicator */}
               <div 
-                onClick={() => navigate('/technician/profile')}
+                onClick={() => navigate('/service-provider/profile')}
                 className="relative w-8.5 h-8.5 rounded-full border-2 border-white/20 overflow-hidden cursor-pointer hover:border-white/50 transition-all shadow-md"
               >
                 <img 
-                  src={techAvatar} 
+                  src={serviceProviderAvatar} 
                   alt="Alex Rodriguez Avatar" 
                   className="w-full h-full object-cover" 
                 />
@@ -407,11 +407,11 @@ const Dashboard = () => {
             {/* Greeting Column */}
             <div>
               <h2 className="text-lg font-bold text-white flex items-center gap-1.5">
-                Good Morning, {user?.name?.split(' ')[0] || 'Technician'} 👋
+                Good Morning, {user?.name?.split(' ')[0] || 'Service Provider'} 👋
               </h2>
               <p className="text-slate-300 text-[10px] mt-0.5 font-medium">Proud to be a part of NCC Service Network</p>
 
-              {/* Duty toggle. Jobs are only auto-assigned to technicians who are
+              {/* Duty toggle. Jobs are only auto-assigned to serviceProviders who are
                   online, so this is the switch that puts you in the running. */}
               <button
                 onClick={handleToggleDuty}
@@ -439,7 +439,7 @@ const Dashboard = () => {
 
             {/* Partner Score Column */}
             <button 
-              onClick={() => navigate('/technician/partner-level')}
+              onClick={() => navigate('/service-provider/partner-level')}
               className="text-right flex flex-col items-end cursor-pointer group focus:outline-none border-0 bg-transparent p-0"
             >
               <span className="text-[8px] font-bold text-slate-300 uppercase tracking-widest group-hover:text-[#FFD400] transition-colors">PARTNER SCORE</span>
@@ -498,7 +498,7 @@ const Dashboard = () => {
                 </div>
                 <span className="text-[9.5px] font-bold text-slate-500 leading-tight mt-1">Active Jobs</span>
                 <button 
-                  onClick={() => navigate('/technician/active-job')}
+                  onClick={() => navigate('/service-provider/active-job')}
                   className="text-[7.5px] font-bold text-[#1565C0] hover:underline mt-1 flex items-center gap-0.5"
                 >
                   View All <ChevronRight className="w-2 h-2" />
@@ -532,7 +532,7 @@ const Dashboard = () => {
                 </div>
                 <span className="text-[9.5px] font-bold text-slate-500 leading-tight mt-1">Completed Today</span>
                 <button 
-                  onClick={() => navigate('/technician/earnings')}
+                  onClick={() => navigate('/service-provider/earnings')}
                   className="text-[7.5px] font-bold text-[#1565C0] hover:underline mt-1 flex items-center gap-0.5"
                 >
                   View All <ChevronRight className="w-2 h-2" />
@@ -602,7 +602,7 @@ const Dashboard = () => {
                         key={job.id}
                         onClick={() => {
                           selectJobForDetails(job.id);
-                          navigate('/technician/active-job');
+                          navigate('/service-provider/active-job');
                         }}
                         className={`group bg-white rounded-[22px] p-4.5 shadow-[0_4px_20px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgba(13,71,161,0.08)] border border-slate-200/90 border-l-[5px] ${borderAccent} flex flex-col justify-between gap-3.5 transition-all duration-200 cursor-pointer hover:border-slate-300 hover:-translate-y-0.5`}
                       >
@@ -784,7 +784,7 @@ const Dashboard = () => {
                         key={job.id}
                         onClick={() => {
                           selectJobForDetails(job.id);
-                          navigate('/technician/active-job');
+                          navigate('/service-provider/active-job');
                         }}
                         className={`bg-white rounded-[20px] p-3.5 cursor-pointer hover:shadow-md transition-all shadow-[0_3px_15px_rgba(0,0,0,0.03)] flex flex-col gap-2.5 border border-slate-200 border-l-[4px] ${borderColor}`}
                       >
@@ -854,7 +854,7 @@ const Dashboard = () => {
               
               {/* NCC Academy Link */}
               <div 
-                onClick={() => navigate('/technician/academy')}
+                onClick={() => navigate('/service-provider/academy')}
                 className="bg-white rounded-2xl p-2 md:p-3.5 border border-slate-200 shadow-xs flex items-center justify-between cursor-pointer hover:shadow-sm transition-all"
               >
                 <div className="flex items-center gap-1 md:gap-2.5 min-w-0 flex-1">
@@ -868,7 +868,7 @@ const Dashboard = () => {
 
               {/* Need Help? Link */}
               <div 
-                onClick={() => navigate('/technician/technical-support')}
+                onClick={() => navigate('/service-provider/technical-support')}
                 className="bg-white rounded-2xl p-2 md:p-3.5 border border-slate-200 shadow-xs flex items-center justify-between cursor-pointer hover:shadow-sm transition-all"
               >
                 <div className="flex items-center gap-1 md:gap-2.5 min-w-0 flex-1">
@@ -882,7 +882,7 @@ const Dashboard = () => {
 
               {/* Announcements Link */}
               <div 
-                onClick={() => navigate('/technician/announcements')}
+                onClick={() => navigate('/service-provider/announcements')}
                 className="bg-white rounded-2xl p-2 md:p-3.5 border border-slate-200 shadow-xs flex items-center justify-between cursor-pointer hover:shadow-sm transition-all"
               >
                 <div className="flex items-center gap-1 md:gap-2.5 min-w-0 flex-1">
@@ -966,7 +966,7 @@ const Dashboard = () => {
                           setExpandedJobId(prev => prev === job.id ? null : job.id);
                         } else {
                           selectJobForDetails(job.id);
-                          navigate('/technician/active-job');
+                          navigate('/service-provider/active-job');
                         }
                       }}
                       className={`bg-white rounded-3xl p-4 transition-all duration-300 flex flex-col gap-3 cursor-pointer border-l-[6px] ${borderLeftColor} ${
@@ -1042,7 +1042,7 @@ const Dashboard = () => {
                               onClick={async () => {
                                 setAcceptedInstantIds((prev) => [...prev, job.id, job.serviceRequestId].filter(Boolean));
                                 await acceptJob(job.id);
-                                navigate('/technician/active-job');
+                                navigate('/service-provider/active-job');
                               }}
                               className="flex-1 bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-bold py-2.5 rounded-xl text-xs transition-all shadow-xs cursor-pointer"
                             >
@@ -1050,7 +1050,7 @@ const Dashboard = () => {
                             </button>
                             <button
                               onClick={() => rejectJob(job.id)}
-                              title="Reject this request — it goes back to the queue for another technician"
+                              title="Reject this request — it goes back to the queue for another serviceProvider"
                               className="flex-1 bg-white hover:bg-slate-50 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition-all border border-slate-300 cursor-pointer"
                             >
                               Decline
@@ -1062,7 +1062,7 @@ const Dashboard = () => {
                           <button 
                             onClick={() => {
                               selectJobForDetails(job.id);
-                              navigate('/technician/active-job');
+                              navigate('/service-provider/active-job');
                             }}
                             className="flex-1 bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-bold py-2.5 rounded-xl text-xs transition-all shadow-xs cursor-pointer"
                           >
@@ -1087,7 +1087,7 @@ const Dashboard = () => {
 
 
       {/* Bottom Navigation */}
-      <TechBottomNav activeTab="jobs" />
+      <ServiceProviderBottomNav activeTab="jobs" />
 
       {/* Logout Confirmation Modal Overlay */}
       {showLogoutConfirm && (
@@ -1116,7 +1116,7 @@ const Dashboard = () => {
                   // navigating alone left the tokens in place, so the route
                   // guard saw an authenticated user and sent them straight back.
                   await logout();
-                  navigate('/technician/login', { replace: true });
+                  navigate('/service-provider/login', { replace: true });
                 }}
                 className="flex-1 bg-red-600 hover:bg-red-700 text-white text-[10.5px] font-black py-2.5 rounded-xl transition-colors cursor-pointer shadow-sm"
               >
@@ -1215,7 +1215,7 @@ const Dashboard = () => {
                     setAcceptedInstantIds((prev) => [...prev, jobId]);
                     setInstantAlertJob(null);
                     await acceptJob(jobId);
-                    navigate('/technician/active-job');
+                    navigate('/service-provider/active-job');
                   }}
                   className="flex-[2] py-3.5 px-4 bg-[#FFD600] hover:bg-yellow-400 active:scale-95 text-[#0D47A1] font-black text-xs rounded-2xl transition-all cursor-pointer shadow-lg shadow-yellow-400/20 flex items-center justify-center gap-1.5"
                 >

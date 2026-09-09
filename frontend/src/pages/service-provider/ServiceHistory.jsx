@@ -7,9 +7,9 @@ import {
   Tag, ExternalLink, Check, Briefcase, Zap, Flame, Wind, Droplets, Cpu,
   CreditCard, Package, Receipt
 } from 'lucide-react';
-import TechBottomNav from '../../components/TechBottomNav';
+import ServiceProviderBottomNav from '../../components/ServiceProviderBottomNav';
 import { apiRequest } from '../../lib/apiClient';
-import { useTech } from '../../context/TechContext';
+import { useTech } from '../../context/ServiceProviderContext';
 
 function formatAddress(addr) {
   if (!addr) return '—';
@@ -38,12 +38,12 @@ const ServiceHistory = () => {
   const [activeFilter, setActiveFilter] = useState('all');
   const [selectedJob, setSelectedJob] = useState(null);
 
-  // Fetch technician service history
+  // Fetch service provider service history
   const fetchHistory = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const res = await apiRequest(`/tech/jobs/history?status=${activeFilter}&search=${encodeURIComponent(searchQuery)}`, { auth: true });
+      const res = await apiRequest(`/service-provider/jobs/history?status=${activeFilter}&search=${encodeURIComponent(searchQuery)}`, { auth: true });
       setHistory(res?.items || []);
     } catch (err) {
       console.warn('[service-history] Fetch error:', err.message);
@@ -87,7 +87,7 @@ const ServiceHistory = () => {
 
   // Calculated Stats
   const totalCompleted = history.filter(j => j.activeStep === 'completed' || j.repairStatus === 'completed').length;
-  const totalEarned = history.reduce((sum, j) => sum + (j.billingEstimate?.technicianEarnings || j.billingEstimate?.totalAmount || 0), 0);
+  const totalEarned = history.reduce((sum, j) => sum + (j.billingEstimate?.serviceProviderEarnings || j.billingEstimate?.totalAmount || 0), 0);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-24 lg:pb-8 font-sans relative">
@@ -268,7 +268,7 @@ const ServiceHistory = () => {
               const serviceTitle = sr?.title || sr?.serviceType || sr?.category || 'Appliance Repair & Service';
               const brandName = sr?.brand || 'Nigam Care Verified';
               const completedDate = job.updatedAt ? new Date(job.updatedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Recently';
-              const earnings = job.billingEstimate?.technicianEarnings ?? job.billingEstimate?.totalAmount ?? 0;
+              const earnings = job.billingEstimate?.serviceProviderEarnings ?? job.billingEstimate?.totalAmount ?? 0;
               const isWarranty = job.type === 'Brand Warranty' || job.type === 'Under Warranty' || job.type === 'NCC Extended Warranty';
               const isAmc = job.type === 'AMC Service' || job.type === 'AMC Visit';
               const jobIdShort = String(sr?.humanId || job.humanId || job._id || job.id).slice(-8).toUpperCase();
@@ -489,9 +489,9 @@ const ServiceHistory = () => {
                   </span>
                 </div>
                 <div className="flex justify-between items-center text-xs">
-                  <span className="text-slate-600 font-medium">Technician Share</span>
+                  <span className="text-slate-600 font-medium">Service Provider Share</span>
                   <span className="text-emerald-800 font-black text-sm">
-                    ₹{(selectedJob.billingEstimate?.technicianEarnings ?? selectedJob.billingEstimate?.totalAmount ?? 0).toLocaleString('en-IN')}
+                    ₹{(selectedJob.billingEstimate?.serviceProviderEarnings ?? selectedJob.billingEstimate?.totalAmount ?? 0).toLocaleString('en-IN')}
                   </span>
                 </div>
               </div>
@@ -504,7 +504,7 @@ const ServiceHistory = () => {
                 onClick={() => {
                   const id = selectedJob._id || selectedJob.id;
                   setSelectedJob(null);
-                  navigate(`/technician/earning-detail/${id}`);
+                  navigate(`/service-provider/earning-detail/${id}`);
                 }}
                 className="flex-1 py-3 bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-bold rounded-2xl text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
               >
@@ -524,7 +524,7 @@ const ServiceHistory = () => {
       )}
 
       {/* Bottom Navigation */}
-      <TechBottomNav activeTab="history" />
+      <ServiceProviderBottomNav activeTab="history" />
 
     </div>
   );

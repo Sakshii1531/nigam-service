@@ -26,7 +26,7 @@ const Academy = () => {
   useEffect(() => {
     Promise.all([
       apiRequest('/cms/videos'),
-      apiRequest('/tech/academy/blogs', { auth: true }),
+      apiRequest('/service-provider/academy/blogs', { auth: true }),
     ])
       .then(([videoRes, blogRes]) => {
         setVideos(videoRes.data || []);

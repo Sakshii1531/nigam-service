@@ -24,20 +24,20 @@ async function createCustomer(request) {
   const token = await loginAndVerify(request, { role: 'customer', identifier: phone, password: 'password123' });
   return { id, phone, token };
 }
-async function createTechnician(request) {
+async function createServiceProvider(request) {
   const phone = uniquePhone();
-  const res = await request.post('/api/v1/_dev/test-technician', { data: { phone, password: 'password123', specs: ['AC'] } });
-  const { technicianId } = (await res.json()).data;
-  return { phone, technicianId };
+  const res = await request.post('/api/v1/_dev/test-serviceProvider', { data: { phone, password: 'password123', specs: ['AC'] } });
+  const { serviceProviderId } = (await res.json()).data;
+  return { phone, serviceProviderId };
 }
 
 test.describe('reviews', () => {
-  test('a customer reviews a completed service request, publicly visible on the technician\'s profile', async ({ request }) => {
+  test('a customer reviews a completed service request, publicly visible on the serviceProvider\'s profile', async ({ request }) => {
     const customer = await createCustomer(request);
-    const tech = await createTechnician(request);
+    const provider = await createServiceProvider(request);
 
     const srRes = await request.post('/api/v1/_dev/test-service-request', {
-      data: { customerId: customer.id, technicianId: tech.technicianId, category: 'AC' },
+      data: { customerId: customer.id, serviceProviderId: provider.serviceProviderId, category: 'AC' },
     });
     const { id: serviceRequestId } = (await srRes.json()).data;
 
@@ -47,9 +47,9 @@ test.describe('reviews', () => {
     });
     expect(reviewRes.status()).toBe(201);
     const review = (await reviewRes.json()).data;
-    expect(review.technician).toBe(tech.technicianId);
+    expect(review.serviceProvider).toBe(provider.serviceProviderId);
 
-    const publicRes = await request.get(`/api/v1/reviews/technicians/${tech.technicianId}`);
+    const publicRes = await request.get(`/api/v1/reviews/service-providers/${provider.serviceProviderId}`);
     expect(publicRes.status()).toBe(200);
     const list = (await publicRes.json()).data;
     expect(list.some((r) => r.id === review.id)).toBe(true);
@@ -65,10 +65,10 @@ test.describe('reviews', () => {
   test('rejects reviewing a service request that belongs to a different customer', async ({ request }) => {
     const owner = await createCustomer(request);
     const intruder = await createCustomer(request);
-    const tech = await createTechnician(request);
+    const provider = await createServiceProvider(request);
 
     const srRes = await request.post('/api/v1/_dev/test-service-request', {
-      data: { customerId: owner.id, technicianId: tech.technicianId, category: 'AC' },
+      data: { customerId: owner.id, serviceProviderId: provider.serviceProviderId, category: 'AC' },
     });
     const { id: serviceRequestId } = (await srRes.json()).data;
 

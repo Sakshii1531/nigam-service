@@ -24,14 +24,14 @@ async function createCustomer(request) {
   return { phone, token };
 }
 
-async function createTechnician(request, { specs, availability = 'Available' }) {
+async function createServiceProvider(request, { specs, availability = 'Available' }) {
   const phone = uniquePhone();
-  const createRes = await request.post('/api/v1/_dev/test-technician', {
+  const createRes = await request.post('/api/v1/_dev/test-serviceProvider', {
     data: { phone, password: 'password123', specs, availability },
   });
-  const { technicianId } = (await createRes.json()).data;
-  const token = await loginAndVerify(request, { role: 'technician', identifier: phone, password: 'password123' });
-  return { phone, technicianId, token };
+  const { serviceProviderId } = (await createRes.json()).data;
+  const token = await loginAndVerify(request, { role: 'service_provider', identifier: phone, password: 'password123' });
+  return { phone, serviceProviderId, token };
 }
 
 async function setupIsolatedFixture(request, { price = 299 } = {}) {
@@ -50,10 +50,10 @@ async function setupIsolatedFixture(request, { price = 299 } = {}) {
     data: { slug: 'repair', name: 'Repair', price },
   });
 
-  const tech = await createTechnician(request, { specs: [categoryKey] });
+  const provider = await createServiceProvider(request, { specs: [categoryKey] });
   const customer = await createCustomer(request);
 
-  return { categoryKey, tech, customer };
+  return { categoryKey, provider, customer };
 }
 
 test.describe('Smart Warranty Detection E2E', () => {
@@ -83,8 +83,8 @@ test.describe('Smart Warranty Detection E2E', () => {
     expect(body.data.serviceRequest.warranty).toBe('In Warranty');
   });
 
-  test('auto-infers Job.type as "Brand Warranty" when accepted by technician without explicit flags', async ({ request }) => {
-    const { categoryKey, tech, customer } = await setupIsolatedFixture(request);
+  test('auto-infers Job.type as "Brand Warranty" when accepted by serviceProvider without explicit flags', async ({ request }) => {
+    const { categoryKey, provider, customer } = await setupIsolatedFixture(request);
     const recentDate = new Date().toISOString();
 
     // 1. Customer creates an in-warranty booking
@@ -108,9 +108,9 @@ test.describe('Smart Warranty Detection E2E', () => {
     const body = await res.json();
     const serviceRequestId = body.data.serviceRequest.id;
 
-    // 2. Technician accepts the job without supplying an explicit `type` parameter
-    const acceptRes = await request.post(`/api/v1/tech/jobs/accept/${serviceRequestId}`, {
-      headers: { Authorization: `Bearer ${tech.token}` },
+    // 2. Service Provider accepts the job without supplying an explicit `type` parameter
+    const acceptRes = await request.post(`/api/v1/service-provider/jobs/accept/${serviceRequestId}`, {
+      headers: { Authorization: `Bearer ${provider.token}` },
       data: {}, // NO explicit type passed
     });
 

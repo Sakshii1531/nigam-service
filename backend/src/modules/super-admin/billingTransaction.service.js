@@ -6,7 +6,7 @@ import { logAudit } from '../shared/auditLog.js';
 
 // Platform-side money movements — what the business charged, paid out, shared
 // with a brand, or refunded. The counterparty is a User of any role (a customer
-// paying a service fee, a technician receiving a payout, a brand admin taking a
+// paying a service fee, a service provider receiving a payout, a brand admin taking a
 // share), which is why `user` is a plain User ref and not role-scoped.
 
 // Money leaving the platform vs money coming in. Used for the console's totals.

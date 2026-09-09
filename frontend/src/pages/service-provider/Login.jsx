@@ -5,7 +5,7 @@ import logo from '../../assets/nigam-care.png';
 import { useAuth } from '../../context/AuthContext';
 import { ApiError } from '../../lib/apiClient';
 
-const TechLogin = () => {
+const ServiceProviderLogin = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
   const [usePhone, setUsePhone] = useState(true);
@@ -22,8 +22,8 @@ const TechLogin = () => {
     setError('');
     setSubmitting(true);
     try {
-      const { destination } = await login({ role: 'technician', identifier, password });
-      navigate('/technician/verify-otp', { state: { destination, role: 'technician', identifier } });
+      const { destination } = await login({ role: 'service_provider', identifier, password });
+      navigate('/service-provider/verify-otp', { state: { destination, role: 'service_provider', identifier } });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.');
     } finally {
@@ -48,7 +48,7 @@ const TechLogin = () => {
           >
             <ArrowLeft className="h-5 w-5 text-[#0D47A1]" />
           </button>
-          <span className="text-xs font-semibold text-[#0D47A1] ml-2 uppercase tracking-wider">Technician Portal</span>
+          <span className="text-xs font-semibold text-[#0D47A1] ml-2 uppercase tracking-wider">Service Provider Portal</span>
         </div>
 
         {/* Logo/Brand */}
@@ -72,7 +72,7 @@ const TechLogin = () => {
           
           {/* Input Field (Phone or ID) */}
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Technician ID / Phone</label>
+            <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Service Provider ID / Phone</label>
             <div className="relative">
               <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
               <input
@@ -110,7 +110,7 @@ const TechLogin = () => {
           {/* Forgot Password */}
           <button
             type="button"
-            onClick={() => navigate('/technician/forgot-password')}
+            onClick={() => navigate('/service-provider/forgot-password')}
             className="text-xs font-semibold text-[#0D47A1] self-end hover:text-blue-800 transition-colors"
           >
             Forgot Password?
@@ -131,7 +131,7 @@ const TechLogin = () => {
           Want to become a partner?{' '}
           <button 
             type="button"
-            onClick={() => navigate('/technician/apply')}
+            onClick={() => navigate('/service-provider/apply')}
             className="font-semibold text-[#0D47A1] hover:text-blue-800 transition-colors"
           >
             Apply Now
@@ -143,4 +143,4 @@ const TechLogin = () => {
   );
 };
 
-export default TechLogin;
+export default ServiceProviderLogin;

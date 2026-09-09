@@ -99,7 +99,7 @@ export async function detectWarrantyForAppliance({
     extendedWarrantyValidTill: extendedWarrantyOrder?.validTill,
   });
 
-  // 6. Map to technician job type
+  // 6. Map to service provider job type
   let jobType = 'NCC Paid Service';
   if (warrantyStatus === 'Extended Warranty') jobType = 'NCC Extended Warranty';
   else if (warrantyStatus === 'AMC') jobType = 'AMC Visit';

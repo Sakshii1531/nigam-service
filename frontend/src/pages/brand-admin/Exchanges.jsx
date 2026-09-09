@@ -184,7 +184,7 @@ const Exchanges = () => {
                 <div>
                   <h3 className="text-xs uppercase text-[#64748B] font-semibold mb-2">Verification Inspection Report</h3>
                   <div className="bg-[#F8FAFC] p-4 rounded-xl space-y-2 text-xs text-[#64748B]">
-                    <p className="font-medium text-[#1E293B] mb-1">Technician Inspection Log (By Rahul Kumar):</p>
+                    <p className="font-medium text-[#1E293B] mb-1">Service Provider Inspection Log (By Rahul Kumar):</p>
                     <p>• Compressor starting up normally. Minor rust on condenser coil.</p>
                     <p>• Interior shelving intact. Door seal gasket requires replacement.</p>
                     <p className="font-semibold text-green-600 mt-2">✓ Verified: Final exchange valuation matches initial estimate.</p>

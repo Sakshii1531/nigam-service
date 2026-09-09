@@ -12,8 +12,8 @@ import { ArrowLeft, ShieldCheck, Cpu } from 'lucide-react';
  * in view without a session.
  *
  * Props:
- *  - variant: 'mobile' (user/technician) | 'admin' (brand/super-admin)
- *  - portalLabel: eyebrow label, e.g. "Technician Portal"
+ *  - variant: 'mobile' (user/service provider) | 'admin' (brand/super-admin)
+ *  - portalLabel: eyebrow label, e.g. "Service Provider Portal"
  *  - destination: masked phone/email string shown to the user
  *  - backTo: path for the back button / "Change" link
  *  - title, subtitle: optional copy overrides
@@ -221,7 +221,7 @@ const OtpVerification = ({
     );
   }
 
-  // ---------- MOBILE VARIANT (user / technician) ----------
+  // ---------- MOBILE VARIANT (user / service provider) ----------
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-4 relative overflow-hidden">
       <div className="absolute top-[-100px] left-[-100px] w-[300px] h-[300px] bg-[#0D47A1] opacity-10 rounded-full blur-3xl" />

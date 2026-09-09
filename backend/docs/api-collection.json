@@ -66,7 +66,7 @@
       "value": ""
     },
     {
-      "key": "technicianClaimId",
+      "key": "serviceProviderClaimId",
       "value": ""
     },
     {
@@ -509,7 +509,7 @@
           }
         },
         {
-          "name": "PATCH /service-requests/:id/status (assigned technician or admin)",
+          "name": "PATCH /service-requests/:id/status (assigned serviceProvider or admin)",
           "request": {
             "method": "PATCH",
             "header": [
@@ -969,11 +969,11 @@
       ]
     },
     {
-      "name": "Technician",
-      "description": "All routes require role=technician (log in via the Auth folder with identifier=9000000001, the seeded technician). See backend/src/modules/technician/ and DATA_MODEL.md's Phase 6 addendum.",
+      "name": "ServiceProvider",
+      "description": "All routes require role=service_provider (log in via the Auth folder with identifier=9000000001, the seeded serviceProvider). See backend/src/modules/serviceProvider/ and DATA_MODEL.md's Phase 6 addendum.",
       "item": [
         {
-          "name": "GET /tech/profile/profile",
+          "name": "GET /service-provider/profile/profile",
           "request": {
             "method": "GET",
             "header": [
@@ -982,11 +982,11 @@
                 "value": "Bearer {{accessToken}}"
               }
             ],
-            "url": "{{baseUrl}}/tech/profile/profile"
+            "url": "{{baseUrl}}/service-provider/profile/profile"
           }
         },
         {
-          "name": "PUT /tech/profile/profile",
+          "name": "PUT /service-provider/profile/profile",
           "request": {
             "method": "PUT",
             "header": [
@@ -999,7 +999,7 @@
                 "value": "Bearer {{accessToken}}"
               }
             ],
-            "url": "{{baseUrl}}/tech/profile/profile",
+            "url": "{{baseUrl}}/service-provider/profile/profile",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"specs\": [\"AC\", \"Refrigerator\"]\n}"
@@ -1007,7 +1007,7 @@
           }
         },
         {
-          "name": "POST /tech/profile/payout-methods",
+          "name": "POST /service-provider/profile/payout-methods",
           "request": {
             "method": "POST",
             "header": [
@@ -1020,7 +1020,7 @@
                 "value": "Bearer {{accessToken}}"
               }
             ],
-            "url": "{{baseUrl}}/tech/profile/payout-methods",
+            "url": "{{baseUrl}}/service-provider/profile/payout-methods",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"type\": \"upi\",\n  \"upiId\": \"rahul@upi\",\n  \"isPrimary\": true\n}"
@@ -1028,7 +1028,7 @@
           }
         },
         {
-          "name": "GET /tech/jobs/available",
+          "name": "GET /service-provider/jobs/available",
           "request": {
             "method": "GET",
             "header": [
@@ -1037,11 +1037,11 @@
                 "value": "Bearer {{accessToken}}"
               }
             ],
-            "url": "{{baseUrl}}/tech/jobs/available"
+            "url": "{{baseUrl}}/service-provider/jobs/available"
           }
         },
         {
-          "name": "GET /tech/jobs/active",
+          "name": "GET /service-provider/jobs/active",
           "request": {
             "method": "GET",
             "header": [
@@ -1050,11 +1050,11 @@
                 "value": "Bearer {{accessToken}}"
               }
             ],
-            "url": "{{baseUrl}}/tech/jobs/active"
+            "url": "{{baseUrl}}/service-provider/jobs/active"
           }
         },
         {
-          "name": "POST /tech/jobs/accept/:serviceRequestId",
+          "name": "POST /service-provider/jobs/accept/:serviceRequestId",
           "request": {
             "method": "POST",
             "header": [
@@ -1067,7 +1067,7 @@
                 "value": "Bearer {{accessToken}}"
               }
             ],
-            "url": "{{baseUrl}}/tech/jobs/accept/{{serviceRequestId}}",
+            "url": "{{baseUrl}}/service-provider/jobs/accept/{{serviceRequestId}}",
             "body": {
               "mode": "raw",
               "raw": "{}"
@@ -1087,7 +1087,7 @@
           ]
         },
         {
-          "name": "GET /tech/jobs/:id",
+          "name": "GET /service-provider/jobs/:id",
           "request": {
             "method": "GET",
             "header": [
@@ -1096,11 +1096,11 @@
                 "value": "Bearer {{accessToken}}"
               }
             ],
-            "url": "{{baseUrl}}/tech/jobs/{{jobId}}"
+            "url": "{{baseUrl}}/service-provider/jobs/{{jobId}}"
           }
         },
         {
-          "name": "POST /tech/jobs/:id/start-travel",
+          "name": "POST /service-provider/jobs/:id/start-travel",
           "request": {
             "method": "POST",
             "header": [
@@ -1109,11 +1109,11 @@
                 "value": "Bearer {{accessToken}}"
               }
             ],
-            "url": "{{baseUrl}}/tech/jobs/{{jobId}}/start-travel"
+            "url": "{{baseUrl}}/service-provider/jobs/{{jobId}}/start-travel"
           }
         },
         {
-          "name": "POST /tech/jobs/:id/arrive",
+          "name": "POST /service-provider/jobs/:id/arrive",
           "request": {
             "method": "POST",
             "header": [
@@ -1122,11 +1122,11 @@
                 "value": "Bearer {{accessToken}}"
               }
             ],
-            "url": "{{baseUrl}}/tech/jobs/{{jobId}}/arrive"
+            "url": "{{baseUrl}}/service-provider/jobs/{{jobId}}/arrive"
           }
         },
         {
-          "name": "POST /tech/jobs/:id/diagnosis",
+          "name": "POST /service-provider/jobs/:id/diagnosis",
           "request": {
             "method": "POST",
             "header": [
@@ -1139,7 +1139,7 @@
                 "value": "Bearer {{accessToken}}"
               }
             ],
-            "url": "{{baseUrl}}/tech/jobs/{{jobId}}/diagnosis",
+            "url": "{{baseUrl}}/service-provider/jobs/{{jobId}}/diagnosis",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"notes\": \"Gas leak found\"\n}"
@@ -1147,7 +1147,7 @@
           }
         },
         {
-          "name": "POST /tech/jobs/:id/spare-parts",
+          "name": "POST /service-provider/jobs/:id/spare-parts",
           "request": {
             "method": "POST",
             "header": [
@@ -1160,7 +1160,7 @@
                 "value": "Bearer {{accessToken}}"
               }
             ],
-            "url": "{{baseUrl}}/tech/jobs/{{jobId}}/spare-parts",
+            "url": "{{baseUrl}}/service-provider/jobs/{{jobId}}/spare-parts",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"parts\": [{ \"name\": \"Gas Refill Kit\", \"price\": 500, \"checked\": true }],\n  \"additionalServices\": []\n}"
@@ -1168,7 +1168,7 @@
           }
         },
         {
-          "name": "POST /tech/jobs/:id/repair-complete",
+          "name": "POST /service-provider/jobs/:id/repair-complete",
           "request": {
             "method": "POST",
             "header": [
@@ -1177,11 +1177,11 @@
                 "value": "Bearer {{accessToken}}"
               }
             ],
-            "url": "{{baseUrl}}/tech/jobs/{{jobId}}/repair-complete"
+            "url": "{{baseUrl}}/service-provider/jobs/{{jobId}}/repair-complete"
           }
         },
         {
-          "name": "POST /tech/jobs/:id/billing",
+          "name": "POST /service-provider/jobs/:id/billing",
           "request": {
             "method": "POST",
             "header": [
@@ -1190,11 +1190,11 @@
                 "value": "Bearer {{accessToken}}"
               }
             ],
-            "url": "{{baseUrl}}/tech/jobs/{{jobId}}/billing"
+            "url": "{{baseUrl}}/service-provider/jobs/{{jobId}}/billing"
           }
         },
         {
-          "name": "POST /tech/jobs/:id/collect-payment",
+          "name": "POST /service-provider/jobs/:id/collect-payment",
           "request": {
             "method": "POST",
             "header": [
@@ -1207,7 +1207,7 @@
                 "value": "Bearer {{accessToken}}"
               }
             ],
-            "url": "{{baseUrl}}/tech/jobs/{{jobId}}/collect-payment",
+            "url": "{{baseUrl}}/service-provider/jobs/{{jobId}}/collect-payment",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"paymentMethod\": \"Cash\"\n}"
@@ -1215,7 +1215,7 @@
           }
         },
         {
-          "name": "POST /tech/jobs/:id/verify-payment",
+          "name": "POST /service-provider/jobs/:id/verify-payment",
           "request": {
             "method": "POST",
             "header": [
@@ -1228,7 +1228,7 @@
                 "value": "Bearer {{accessToken}}"
               }
             ],
-            "url": "{{baseUrl}}/tech/jobs/{{jobId}}/verify-payment",
+            "url": "{{baseUrl}}/service-provider/jobs/{{jobId}}/verify-payment",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"razorpayPaymentId\": \"pay_xxx\",\n  \"razorpaySignature\": \"xxx\"\n}"
@@ -1236,7 +1236,7 @@
           }
         },
         {
-          "name": "POST /tech/claims",
+          "name": "POST /service-provider/claims",
           "request": {
             "method": "POST",
             "header": [
@@ -1249,7 +1249,7 @@
                 "value": "Bearer {{accessToken}}"
               }
             ],
-            "url": "{{baseUrl}}/tech/claims",
+            "url": "{{baseUrl}}/service-provider/claims",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"brand\": \"LG Partner Warranty\",\n  \"claimType\": \"Brand\",\n  \"item\": \"Fan Blade\",\n  \"amount\": 250,\n  \"reason\": \"Damaged in transit\"\n}"
@@ -1261,7 +1261,7 @@
               "script": {
                 "exec": [
                   "if (pm.response.code === 201) {",
-                  "  pm.collectionVariables.set('technicianClaimId', pm.response.json().data.id);",
+                  "  pm.collectionVariables.set('serviceProviderClaimId', pm.response.json().data.id);",
                   "}"
                 ]
               }
@@ -1269,7 +1269,7 @@
           ]
         },
         {
-          "name": "GET /tech/claims",
+          "name": "GET /service-provider/claims",
           "request": {
             "method": "GET",
             "header": [
@@ -1278,11 +1278,11 @@
                 "value": "Bearer {{accessToken}}"
               }
             ],
-            "url": "{{baseUrl}}/tech/claims"
+            "url": "{{baseUrl}}/service-provider/claims"
           }
         },
         {
-          "name": "GET /tech/claims/:id",
+          "name": "GET /service-provider/claims/:id",
           "request": {
             "method": "GET",
             "header": [
@@ -1291,11 +1291,11 @@
                 "value": "Bearer {{accessToken}}"
               }
             ],
-            "url": "{{baseUrl}}/tech/claims/{{technicianClaimId}}"
+            "url": "{{baseUrl}}/service-provider/claims/{{serviceProviderClaimId}}"
           }
         },
         {
-          "name": "GET /tech/inventory",
+          "name": "GET /service-provider/inventory",
           "request": {
             "method": "GET",
             "header": [
@@ -1304,11 +1304,11 @@
                 "value": "Bearer {{accessToken}}"
               }
             ],
-            "url": "{{baseUrl}}/tech/inventory"
+            "url": "{{baseUrl}}/service-provider/inventory"
           }
         },
         {
-          "name": "POST /tech/inventory/part-orders",
+          "name": "POST /service-provider/inventory/part-orders",
           "request": {
             "method": "POST",
             "header": [
@@ -1321,7 +1321,7 @@
                 "value": "Bearer {{accessToken}}"
               }
             ],
-            "url": "{{baseUrl}}/tech/inventory/part-orders",
+            "url": "{{baseUrl}}/service-provider/inventory/part-orders",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"partName\": \"Fan Motor\",\n  \"qty\": 1,\n  \"price\": 350,\n  \"orderSource\": \"NCC Warehouse\"\n}"
@@ -1329,7 +1329,7 @@
           }
         },
         {
-          "name": "GET /tech/inventory/part-orders",
+          "name": "GET /service-provider/inventory/part-orders",
           "request": {
             "method": "GET",
             "header": [
@@ -1338,11 +1338,11 @@
                 "value": "Bearer {{accessToken}}"
               }
             ],
-            "url": "{{baseUrl}}/tech/inventory/part-orders"
+            "url": "{{baseUrl}}/service-provider/inventory/part-orders"
           }
         },
         {
-          "name": "GET /tech/earnings/summary",
+          "name": "GET /service-provider/earnings/summary",
           "request": {
             "method": "GET",
             "header": [
@@ -1351,11 +1351,11 @@
                 "value": "Bearer {{accessToken}}"
               }
             ],
-            "url": "{{baseUrl}}/tech/earnings/summary"
+            "url": "{{baseUrl}}/service-provider/earnings/summary"
           }
         },
         {
-          "name": "POST /tech/earnings/payouts",
+          "name": "POST /service-provider/earnings/payouts",
           "request": {
             "method": "POST",
             "header": [
@@ -1368,7 +1368,7 @@
                 "value": "Bearer {{accessToken}}"
               }
             ],
-            "url": "{{baseUrl}}/tech/earnings/payouts",
+            "url": "{{baseUrl}}/service-provider/earnings/payouts",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"amount\": 200,\n  \"payoutType\": \"Quick\"\n}"
@@ -1376,7 +1376,7 @@
           }
         },
         {
-          "name": "GET /tech/earnings/payouts",
+          "name": "GET /service-provider/earnings/payouts",
           "request": {
             "method": "GET",
             "header": [
@@ -1385,11 +1385,11 @@
                 "value": "Bearer {{accessToken}}"
               }
             ],
-            "url": "{{baseUrl}}/tech/earnings/payouts"
+            "url": "{{baseUrl}}/service-provider/earnings/payouts"
           }
         },
         {
-          "name": "GET /tech/academy/courses",
+          "name": "GET /service-provider/academy/courses",
           "request": {
             "method": "GET",
             "header": [
@@ -1398,11 +1398,11 @@
                 "value": "Bearer {{accessToken}}"
               }
             ],
-            "url": "{{baseUrl}}/tech/academy/courses"
+            "url": "{{baseUrl}}/service-provider/academy/courses"
           }
         },
         {
-          "name": "GET /tech/academy/announcements",
+          "name": "GET /service-provider/academy/announcements",
           "request": {
             "method": "GET",
             "header": [
@@ -1411,7 +1411,7 @@
                 "value": "Bearer {{accessToken}}"
               }
             ],
-            "url": "{{baseUrl}}/tech/academy/announcements"
+            "url": "{{baseUrl}}/service-provider/academy/announcements"
           }
         }
       ]
@@ -1450,7 +1450,7 @@
             "url": "{{baseUrl}}/brand/invoices",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"serviceRequest\": \"{{serviceRequestId}}\",\n  \"customer\": \"\",\n  \"technician\": \"\",\n  \"product\": \"AC\",\n  \"serviceCharge\": 499,\n  \"partCharge\": 0,\n  \"gst\": 89.82\n}"
+              "raw": "{\n  \"serviceRequest\": \"{{serviceRequestId}}\",\n  \"customer\": \"\",\n  \"serviceProvider\": \"\",\n  \"product\": \"AC\",\n  \"serviceCharge\": 499,\n  \"partCharge\": 0,\n  \"gst\": 89.82\n}"
             }
           },
           "event": [
@@ -1598,7 +1598,7 @@
             "url": "{{baseUrl}}/brand/returns",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"technician\": \"\",\n  \"partName\": \"Compressor\"\n}"
+              "raw": "{\n  \"serviceProvider\": \"\",\n  \"partName\": \"Compressor\"\n}"
             }
           }
         },
@@ -2381,7 +2381,7 @@
             "url": "{{baseUrl}}/super-admin/tracking",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"job\": \"{{jobId}}\",\n  \"technician\": \"\",\n  \"status\": \"On the way\",\n  \"eta\": \"15 min\"\n}"
+              "raw": "{\n  \"job\": \"{{jobId}}\",\n  \"serviceProvider\": \"\",\n  \"status\": \"On the way\",\n  \"eta\": \"15 min\"\n}"
             }
           }
         },
@@ -2554,7 +2554,7 @@
                 "value": "Bearer {{accessToken}}"
               }
             ],
-            "url": "{{baseUrl}}/super-admin/users?role=technician"
+            "url": "{{baseUrl}}/super-admin/users?role=service_provider"
           }
         },
         {
@@ -2676,7 +2676,7 @@
     },
     {
       "name": "CMS",
-      "description": "GET routes are public (no auth) \u2014 consumed by the customer/technician apps. Write routes require role=super_admin. See backend/src/modules/super-admin/cms.routes.js.",
+      "description": "GET routes are public (no auth) \u2014 consumed by the customer/serviceProvider apps. Write routes require role=super_admin. See backend/src/modules/super-admin/cms.routes.js.",
       "item": [
         {
           "name": "GET /cms/banners",
@@ -2788,7 +2788,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/cms/app-settings/technician"
+            "url": "{{baseUrl}}/cms/app-settings/serviceProvider"
           }
         },
         {
@@ -2805,7 +2805,7 @@
                 "value": "Bearer {{accessToken}}"
               }
             ],
-            "url": "{{baseUrl}}/cms/app-settings/technician",
+            "url": "{{baseUrl}}/cms/app-settings/serviceProvider",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"key\": \"autoAssign\",\n  \"value\": true\n}"
@@ -2816,7 +2816,7 @@
     },
     {
       "name": "Chat",
-      "description": "Phase 9. REST is read-only (list conversations, read message history) \u2014 sending happens over Socket.IO, not REST. No public 'create conversation' endpoint: one is auto-created when a technician accepts a job (see backend/src/modules/technician/job.service.js's acceptJob()). See backend/src/sockets/chat.gateway.js for the real-time 'join-conversation'/'send-message' events (auth via socket.handshake.auth.token, same JWT as the Authorization header) \u2014 not representable in this REST collection, covered by backend/tests/sockets.test.js instead.",
+      "description": "Phase 9. REST is read-only (list conversations, read message history) \u2014 sending happens over Socket.IO, not REST. No public 'create conversation' endpoint: one is auto-created when a serviceProvider accepts a job (see backend/src/modules/serviceProvider/job.service.js's acceptJob()). See backend/src/sockets/chat.gateway.js for the real-time 'join-conversation'/'send-message' events (auth via socket.handshake.auth.token, same JWT as the Authorization header) \u2014 not representable in this REST collection, covered by backend/tests/sockets.test.js instead.",
       "item": [
         {
           "name": "GET /chat/conversations",
@@ -3015,11 +3015,11 @@
           }
         },
         {
-          "name": "GET /reviews/technicians/:technicianId",
+          "name": "GET /reviews/serviceProviders/:serviceProviderId",
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/reviews/technicians/{{technicianId}}"
+            "url": "{{baseUrl}}/reviews/serviceProviders/{{serviceProviderId}}"
           }
         },
         {

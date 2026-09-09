@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Bell, Briefcase, ClipboardList, Calendar, Wrench, User, Save } from 'lucide-react';
-import TechBottomNav from '../../components/TechBottomNav';
+import ServiceProviderBottomNav from '../../components/ServiceProviderBottomNav';
 import { apiRequest } from '../../lib/apiClient';
 
 const PersonalInfo = () => {
@@ -12,7 +12,7 @@ const PersonalInfo = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    apiRequest('/tech/profile/profile', { auth: true })
+    apiRequest('/service-provider/profile/profile', { auth: true })
       .then((res) => setForm({
         name: res?.name || '',
         email: res?.email || '',
@@ -25,7 +25,7 @@ const PersonalInfo = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await apiRequest('/tech/profile/profile', { method: 'PUT', auth: true, body: form });
+      await apiRequest('/service-provider/profile/profile', { method: 'PUT', auth: true, body: form });
       setError('');
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
@@ -56,7 +56,7 @@ const PersonalInfo = () => {
           <h1 className="text-lg font-semibold text-slate-900">Personal Info</h1>
         </div>
         <button 
-          onClick={() => navigate('/technician/notifications')}
+          onClick={() => navigate('/service-provider/notifications')}
           className="p-2 hover:bg-slate-50 rounded-full transition-colors relative"
         >
           <Bell className="h-5 w-5 text-slate-700" />
@@ -153,7 +153,7 @@ const PersonalInfo = () => {
       </div>
 
       {/* Bottom Navigation */}
-      <TechBottomNav activeTab="profile" />
+      <ServiceProviderBottomNav activeTab="profile" />
 
     </div>
   );

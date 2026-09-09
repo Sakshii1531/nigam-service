@@ -10,8 +10,8 @@ const faqs = [
   },
   {
     id: 2,
-    question: 'Are the technicians verified?',
-    answer: 'Yes, all technicians on our platform undergo a thorough background check and skill assessment before they are allowed to serve customers.'
+    question: 'Are the serviceProviders verified?',
+    answer: 'Yes, all serviceProviders on our platform undergo a thorough background check and skill assessment before they are allowed to serve customers.'
   },
   {
     id: 3,
@@ -25,8 +25,8 @@ const faqs = [
   },
   {
     id: 5,
-    question: 'Is my phone number shared with the technician?',
-    answer: 'No, we use a number masking system. Both you and the technician can call each other through a secure relay number without revealing your personal phone numbers.'
+    question: 'Is my phone number shared with the serviceProvider?',
+    answer: 'No, we use a number masking system. Both you and the serviceProvider can call each other through a secure relay number without revealing your personal phone numbers.'
   }
 ];
 

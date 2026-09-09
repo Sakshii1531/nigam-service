@@ -6,7 +6,7 @@ import { randomUUID } from 'node:crypto';
 //   GET  /api/v1/super-admin/tracking/:jobId
 //   PUT  /api/v1/super-admin/tracking
 //
-// The real-time socket path (technician emitting update-location, super-admin
+// The real-time socket path (service provider emitting update-location, super-admin
 // receiving tracking:update) is covered in backend/tests/sockets.test.js using
 // an in-process Socket.IO client, which is the right tool for that surface.
 
@@ -29,28 +29,28 @@ async function createSuperAdmin(request) {
   return { email, token };
 }
 
-async function createTechnician(request, specs = ['AC']) {
+async function createServiceProvider(request, specs = ['AC']) {
   // Derive a guaranteed-unique 10-digit phone from a UUID so parallel workers
   // never generate the same number and clobber each other's fixture.
   const digits = randomUUID().replace(/-/g, '').replace(/\D/g, '').slice(0, 9).padEnd(9, '0');
   const phone = `9${digits}`;
-  const res = await request.post('/api/v1/_dev/test-technician', {
+  const res = await request.post('/api/v1/_dev/test-serviceProvider', {
     data: { phone, password: 'password123', specs },
   });
   const body = await res.json();
-  if (!body.data?.technicianId) throw new Error(`/_dev/test-technician failed: ${JSON.stringify(body)}`);
-  const { technicianId, userId } = body.data;
-  const token = await loginAndVerify(request, { role: 'technician', identifier: phone, password: 'password123' });
-  return { phone, technicianId, userId, token };
+  if (!body.data?.serviceProviderId) throw new Error(`/_dev/test-serviceProvider failed: ${JSON.stringify(body)}`);
+  const { serviceProviderId, userId } = body.data;
+  const token = await loginAndVerify(request, { role: 'service_provider', identifier: phone, password: 'password123' });
+  return { phone, serviceProviderId, userId, token };
 }
 
-async function createServiceRequest(request, { customerToken, technicianId } = {}) {
+async function createServiceRequest(request, { customerToken, serviceProviderId } = {}) {
   const customerPhone = `9${String(Math.floor(Math.random() * 1_000_000_000)).padStart(9, '0')}`;
   await request.post('/api/v1/_dev/test-user', { data: { role: 'customer', phone: customerPhone, password: 'password123' } });
   const custToken = await loginAndVerify(request, { role: 'customer', identifier: customerPhone, password: 'password123' });
 
   const srRes = await request.post('/api/v1/_dev/test-service-request', {
-    data: { technicianId, status: 'Assigned' },
+    data: { serviceProviderId, status: 'Assigned' },
     headers: { Authorization: `Bearer ${custToken}` },
   });
   const sr = (await srRes.json()).data;
@@ -71,19 +71,19 @@ test.describe('Live Tracking HTTP endpoints — super-admin only', () => {
 
   test('PUT /tracking creates or updates a location record, GET /tracking/:jobId retrieves it with populated fields', async ({ request }) => {
     const { token: saToken } = await createSuperAdmin(request);
-    const tech = await createTechnician(request, ['AC']);
+    const provider = await createServiceProvider(request, ['AC']);
     const saAuth = { headers: { Authorization: `Bearer ${saToken}` } };
 
     // Seed a job via dev route so we have a real Job._id
     const jobRes = await request.post('/api/v1/_dev/test-job', {
-      data: { technicianId: tech.technicianId },
+      data: { serviceProviderId: provider.serviceProviderId },
       ...saAuth,
     });
     const { jobId } = (await jobRes.json()).data;
 
     const payload = {
       job: jobId,
-      technician: tech.technicianId,
+      serviceProvider: provider.serviceProviderId,
       status: 'On the way',
       eta: '15 min',
       location: 'Connaught Place, Delhi',
@@ -110,18 +110,18 @@ test.describe('Live Tracking HTTP endpoints — super-admin only', () => {
 
   test('PUT /tracking upserts — updating the same jobId changes only the fields provided', async ({ request }) => {
     const { token: saToken } = await createSuperAdmin(request);
-    const tech = await createTechnician(request, ['AC']);
+    const provider = await createServiceProvider(request, ['AC']);
     const saAuth = { headers: { Authorization: `Bearer ${saToken}` } };
 
     const jobRes = await request.post('/api/v1/_dev/test-job', {
-      data: { technicianId: tech.technicianId },
+      data: { serviceProviderId: provider.serviceProviderId },
       ...saAuth,
     });
     const { jobId } = (await jobRes.json()).data;
 
     const base = {
       job: jobId,
-      technician: tech.technicianId,
+      serviceProvider: provider.serviceProviderId,
       status: 'On the way',
       eta: '20 min',
       location: 'Sector 18, Noida',
@@ -153,7 +153,7 @@ test.describe('Live Tracking HTTP endpoints — super-admin only', () => {
     expect(getRes.status()).toBe(401);
 
     const putRes = await request.put('/api/v1/super-admin/tracking', {
-      data: { job: '507f1f77bcf86cd799439011', technician: '507f1f77bcf86cd799439012', status: 'On the way' },
+      data: { job: '507f1f77bcf86cd799439011', serviceProvider: '507f1f77bcf86cd799439012', status: 'On the way' },
     });
     expect(putRes.status()).toBe(401);
   });
@@ -173,22 +173,22 @@ test.describe('Live Tracking HTTP endpoints — super-admin only', () => {
 
   test('GET /tracking returns active jobs and excludes Completed ones', async ({ request }) => {
     const { token: saToken } = await createSuperAdmin(request);
-    const techA = await createTechnician(request, ['AC']);
-    const techB = await createTechnician(request, ['Fridge']);
+    const serviceProviderA = await createServiceProvider(request, ['AC']);
+    const serviceProviderB = await createServiceProvider(request, ['Fridge']);
     const saAuth = { headers: { Authorization: `Bearer ${saToken}` } };
 
-    const jobResA = await request.post('/api/v1/_dev/test-job', { data: { technicianId: techA.technicianId }, ...saAuth });
-    const jobResB = await request.post('/api/v1/_dev/test-job', { data: { technicianId: techB.technicianId }, ...saAuth });
+    const jobResA = await request.post('/api/v1/_dev/test-job', { data: { serviceProviderId: serviceProviderA.serviceProviderId }, ...saAuth });
+    const jobResB = await request.post('/api/v1/_dev/test-job', { data: { serviceProviderId: serviceProviderB.serviceProviderId }, ...saAuth });
     const { jobId: jobIdA } = (await jobResA.json()).data;
     const { jobId: jobIdB } = (await jobResB.json()).data;
 
     await request.put('/api/v1/super-admin/tracking', {
       ...saAuth,
-      data: { job: jobIdA, technician: techA.technicianId, status: 'On the way', coords: { lat: 28.6, lng: 77.2 } },
+      data: { job: jobIdA, serviceProvider: serviceProviderA.serviceProviderId, status: 'On the way', coords: { lat: 28.6, lng: 77.2 } },
     });
     await request.put('/api/v1/super-admin/tracking', {
       ...saAuth,
-      data: { job: jobIdB, technician: techB.technicianId, status: 'Completed', coords: { lat: 19.0, lng: 72.8 } },
+      data: { job: jobIdB, serviceProvider: serviceProviderB.serviceProviderId, status: 'Completed', coords: { lat: 19.0, lng: 72.8 } },
     });
 
     const listRes = await request.get('/api/v1/super-admin/tracking', saAuth);

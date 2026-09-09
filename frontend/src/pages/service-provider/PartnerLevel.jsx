@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Star, Award, CheckCircle } from 'lucide-react';
-import { useTech } from '../../context/TechContext';
+import { useTech } from '../../context/ServiceProviderContext';
 import { useAuth } from '../../context/AuthContext';
 import { apiRequest } from '../../lib/apiClient';
-import techAvatar from '../../assets/tech_avatar.png';
+import serviceProviderAvatar from '../../assets/service_provider_avatar.png';
 
 const PartnerLevel = () => {
   const navigate = useNavigate();
@@ -13,14 +13,14 @@ const PartnerLevel = () => {
   const [profile, setProfile] = useState(null);
 
   useEffect(() => {
-    apiRequest('/tech/profile/profile', { auth: true })
+    apiRequest('/service-provider/profile/profile', { auth: true })
       .then((res) => setProfile(res))
       .catch((err) => console.warn('Could not load profile in PartnerLevel:', err.message));
   }, []);
 
   const totalCompleted = earningsTally?.completedTotal ?? profile?.totalJobsCompleted ?? 0;
   const rating = profile?.rating || 4.9;
-  const name = profile?.name || user?.name || 'Technician';
+  const name = profile?.name || user?.name || 'Service Provider';
   const roleTitle = profile?.skills?.length ? `${profile.skills[0].name} Specialist` : 'Service Specialist';
 
   const badgeLevel = totalCompleted >= 150 ? '🥇 Senior SP' : totalCompleted >= 50 ? '🥈 Specialised SP' : '🥉 Trainee SP';
@@ -67,7 +67,7 @@ const PartnerLevel = () => {
         <div className="bg-gradient-to-br from-[#052355] to-[#0A2C74] text-white rounded-3xl p-5 shadow-md flex flex-col gap-4">
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white/25 shadow-sm">
-              <img src={techAvatar} alt={`${name} Avatar`} className="w-full h-full object-cover" />
+              <img src={serviceProviderAvatar} alt={`${name} Avatar`} className="w-full h-full object-cover" />
             </div>
             <div>
               <h2 className="text-base font-bold text-white leading-tight">{name}</h2>

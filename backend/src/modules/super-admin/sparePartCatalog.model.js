@@ -3,7 +3,7 @@ import { applyStandardPlugins } from '../shared/plugins.js';
 import { ID_PREFIXES } from '../../config/constants.js';
 
 // Platform-wide spare-part pricing catalog (cost + markup model), distinct from a
-// given technician's own TechInventoryItem stock.
+// given service provider's own ServiceProviderInventoryItem stock.
 const sparePartCatalogSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },

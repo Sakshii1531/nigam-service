@@ -12,7 +12,7 @@ export async function listActiveTracking() {
       },
     })
     .populate({
-      path: 'technician',
+      path: 'serviceProvider',
       select: 'name phone user',
       populate: { path: 'user', select: 'name phone' },
     });
@@ -28,7 +28,7 @@ export async function getTrackingForJob(jobId) {
       },
     })
     .populate({
-      path: 'technician',
+      path: 'serviceProvider',
       select: 'name phone user',
       populate: { path: 'user', select: 'name phone' },
     });
@@ -39,10 +39,10 @@ export async function getTrackingForJob(jobId) {
 /** Upserted on each location ping — a real Socket.IO handler lands in Phase 9;
  * this HTTP endpoint is the same write path a polling fallback or manual
  * super-admin correction would use. */
-export async function upsertTracking({ job, technician, status, eta, location, coords }) {
+export async function upsertTracking({ job, serviceProvider, status, eta, location, coords }) {
   const doc = await LiveTracking.findOneAndUpdate(
     { job },
-    { job, technician, status, eta, location, coords },
+    { job, serviceProvider, status, eta, location, coords },
     { upsert: true, new: true, setDefaultsOnInsert: true },
   );
   return doc.populate([
@@ -54,7 +54,7 @@ export async function upsertTracking({ job, technician, status, eta, location, c
       },
     },
     {
-      path: 'technician',
+      path: 'serviceProvider',
       populate: { path: 'user', select: 'name' },
     },
   ]);

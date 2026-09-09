@@ -37,12 +37,12 @@ async function createSuperAdmin(request) {
 }
 
 
-async function createTechnician(request) {
+async function createServiceProvider(request) {
   const phone = `9${randomUUID().replace(/\D/g, '').slice(0, 9).padEnd(9, '0')}`;
-  await request.post('/api/v1/_dev/test-technician', {
+  await request.post('/api/v1/_dev/test-serviceProvider', {
     data: { phone, password: 'password123', specs: ['AC'], availability: 'Available' },
   });
-  const token = await loginAndVerify(request, { role: 'technician', identifier: phone, password: 'password123' });
+  const token = await loginAndVerify(request, { role: 'service_provider', identifier: phone, password: 'password123' });
   return { phone, token };
 }
 
@@ -223,22 +223,22 @@ test.describe('FCM device token registration', () => {
 // and GET /notifications/:id let any user open any broadcast by id.
 // ─────────────────────────────────────────────────────────────────────────────
 test.describe('Super-admin broadcast targeting', () => {
-  test('a Technicians broadcast reaches technicians and not customers', async ({ request }) => {
+  test('a ServiceProviders broadcast reaches serviceProviders and not customers', async ({ request }) => {
     const admin = await createSuperAdmin(request);
-    const tech = await createTechnician(request);
+    const provider = await createServiceProvider(request);
     const customer = await createCustomer(request);
 
     const title = `Payout window ${randomUUID().slice(0, 8)}`;
     const sent = await request.post('/api/v1/notifications/push', {
       headers: { Authorization: `Bearer ${admin.token}` },
-      data: { broadcastRole: 'Technicians', title, body: 'Moved to Wednesdays', type: 'promo' },
+      data: { broadcastRole: 'ServiceProviders', title, body: 'Moved to Wednesdays', type: 'promo' },
     });
     expect(sent.status()).toBe(201);
 
-    const techFeed = await request.get('/api/v1/notifications', {
-      headers: { Authorization: `Bearer ${tech.token}` },
+    const serviceProviderFeed = await request.get('/api/v1/notifications', {
+      headers: { Authorization: `Bearer ${provider.token}` },
     });
-    expect((await techFeed.json()).data.map((n) => n.title)).toContain(title);
+    expect((await serviceProviderFeed.json()).data.map((n) => n.title)).toContain(title);
 
     const custFeed = await request.get('/api/v1/notifications', {
       headers: { Authorization: `Bearer ${customer.token}` },
@@ -248,7 +248,7 @@ test.describe('Super-admin broadcast targeting', () => {
 
   test('an All broadcast reaches every role', async ({ request }) => {
     const admin = await createSuperAdmin(request);
-    const tech = await createTechnician(request);
+    const provider = await createServiceProvider(request);
     const customer = await createCustomer(request);
 
     const title = `Maintenance ${randomUUID().slice(0, 8)}`;
@@ -257,19 +257,19 @@ test.describe('Super-admin broadcast targeting', () => {
       data: { broadcastRole: 'All', title, body: '2 AM tonight', type: 'promo' },
     });
 
-    for (const token of [tech.token, customer.token]) {
+    for (const token of [provider.token, customer.token]) {
       const feed = await request.get('/api/v1/notifications', { headers: { Authorization: `Bearer ${token}` } });
       expect((await feed.json()).data.map((n) => n.title)).toContain(title);
     }
   });
 
-  test('a customer cannot open a technicians-only broadcast by id', async ({ request }) => {
+  test('a customer cannot open a serviceProviders-only broadcast by id', async ({ request }) => {
     const admin = await createSuperAdmin(request);
     const customer = await createCustomer(request);
 
     const sent = await request.post('/api/v1/notifications/push', {
       headers: { Authorization: `Bearer ${admin.token}` },
-      data: { broadcastRole: 'Technicians', title: `Tech only ${randomUUID().slice(0, 8)}`, body: 'Body', type: 'promo' },
+      data: { broadcastRole: 'ServiceProviders', title: `Tech only ${randomUUID().slice(0, 8)}`, body: 'Body', type: 'promo' },
     });
     const id = (await sent.json()).data.id;
 
@@ -294,20 +294,20 @@ test.describe('Super-admin broadcast targeting', () => {
 // Per-user broadcast read state, over real HTTP.
 //
 // A broadcast has many readers; the document's single `read` flag cannot say
-// "read by this technician, unread for that one". Read state lives in a
-// per-user receipt, so one technician clearing a broadcast must not clear it
+// "read by this service provider, unread for that one". Read state lives in a
+// per-user receipt, so one service provider clearing a broadcast must not clear it
 // for the rest of the role.
 // ─────────────────────────────────────────────────────────────────────────────
 test.describe('Broadcast read state is per user', () => {
-  test('one technician reading a broadcast leaves it unread for another', async ({ request }) => {
+  test('one serviceProvider reading a broadcast leaves it unread for another', async ({ request }) => {
     const admin = await createSuperAdmin(request);
-    const alice = await createTechnician(request);
-    const bob = await createTechnician(request);
+    const alice = await createServiceProvider(request);
+    const bob = await createServiceProvider(request);
 
     const title = `Shift change ${randomUUID().slice(0, 8)}`;
     const sent = await request.post('/api/v1/notifications/push', {
       headers: { Authorization: `Bearer ${admin.token}` },
-      data: { broadcastRole: 'Technicians', title, body: 'Body', type: 'promo' },
+      data: { broadcastRole: 'ServiceProviders', title, body: 'Body', type: 'promo' },
     });
     const id = (await sent.json()).data.id;
 
@@ -329,13 +329,13 @@ test.describe('Broadcast read state is per user', () => {
 
   test('read-all clears broadcasts for the caller only', async ({ request }) => {
     const admin = await createSuperAdmin(request);
-    const alice = await createTechnician(request);
-    const bob = await createTechnician(request);
+    const alice = await createServiceProvider(request);
+    const bob = await createServiceProvider(request);
 
     const title = `Payout notice ${randomUUID().slice(0, 8)}`;
     await request.post('/api/v1/notifications/push', {
       headers: { Authorization: `Bearer ${admin.token}` },
-      data: { broadcastRole: 'Technicians', title, body: 'Body', type: 'promo' },
+      data: { broadcastRole: 'ServiceProviders', title, body: 'Body', type: 'promo' },
     });
 
     await request.patch('/api/v1/notifications/read-all', {
@@ -356,13 +356,13 @@ test.describe('Broadcast read state is per user', () => {
     expect((await bobUnread.json()).data.map((n) => n.title)).toContain(title);
   });
 
-  test('a customer cannot mark a technicians-only broadcast read', async ({ request }) => {
+  test('a customer cannot mark a serviceProviders-only broadcast read', async ({ request }) => {
     const admin = await createSuperAdmin(request);
     const customer = await createCustomer(request);
 
     const sent = await request.post('/api/v1/notifications/push', {
       headers: { Authorization: `Bearer ${admin.token}` },
-      data: { broadcastRole: 'Technicians', title: `Tech only ${randomUUID().slice(0, 8)}`, body: 'Body', type: 'promo' },
+      data: { broadcastRole: 'ServiceProviders', title: `Tech only ${randomUUID().slice(0, 8)}`, body: 'Body', type: 'promo' },
     });
     const id = (await sent.json()).data.id;
 
@@ -381,17 +381,17 @@ test.describe('Broadcast read state is per user', () => {
 test.describe('Broadcast channel selection', () => {
   test('an in-app-only broadcast is still recorded and still reaches the inbox', async ({ request }) => {
     const admin = await createSuperAdmin(request);
-    const tech = await createTechnician(request);
+    const provider = await createServiceProvider(request);
 
     const title = `Quiet notice ${randomUUID().slice(0, 8)}`;
     const res = await request.post('/api/v1/notifications/push', {
       headers: { Authorization: `Bearer ${admin.token}` },
-      data: { broadcastRole: 'Technicians', title, body: 'Body', type: 'promo', channels: ['inapp'] },
+      data: { broadcastRole: 'ServiceProviders', title, body: 'Body', type: 'promo', channels: ['inapp'] },
     });
     expect(res.status()).toBe(201);
 
     const feed = await request.get('/api/v1/notifications', {
-      headers: { Authorization: `Bearer ${tech.token}` },
+      headers: { Authorization: `Bearer ${provider.token}` },
     });
     expect((await feed.json()).data.map((n) => n.title)).toContain(title);
   });
@@ -425,20 +425,20 @@ test.describe('Push reach stats', () => {
     const admin = await createSuperAdmin(request);
     const auth = { headers: { Authorization: `Bearer ${admin.token}` } };
 
-    const tech = await createTechnician(request);
+    const provider = await createServiceProvider(request);
     await request.post('/api/v1/notifications/device-token', {
-      headers: { Authorization: `Bearer ${tech.token}` },
-      data: { token: `reach-tech-${randomUUID()}` },
+      headers: { Authorization: `Bearer ${provider.token}` },
+      data: { token: `reach-service-provider-${randomUUID()}` },
     });
 
-    const techStats = await request.get('/api/v1/notifications/push-stats?broadcastRole=Technicians', auth);
-    expect(techStats.status()).toBe(200);
-    const t = (await techStats.json()).data;
-    expect(t.broadcastRole).toBe('Technicians');
+    const serviceProviderStats = await request.get('/api/v1/notifications/push-stats?broadcastRole=ServiceProviders', auth);
+    expect(serviceProviderStats.status()).toBe(200);
+    const t = (await serviceProviderStats.json()).data;
+    expect(t.broadcastRole).toBe('ServiceProviders');
     expect(t.deviceHolders).toBeGreaterThanOrEqual(1);
     expect(t.audience).toBeGreaterThanOrEqual(t.deviceHolders);
 
-    // A Brands broadcast must not inherit the technician's device.
+    // A Brands broadcast must not inherit the service provider's device.
     const brandStats = await request.get('/api/v1/notifications/push-stats?broadcastRole=Brands', auth);
     const b = (await brandStats.json()).data;
     expect(b.broadcastRole).toBe('Brands');

@@ -13,7 +13,7 @@ import { io } from 'socket.io-client';
 import { apiRequest, getStoredTokens } from '../../lib/apiClient';
 
 // Replies go over Socket.IO (chat.gateway.js), the same transport the customer
-// and technician apps use. REST lists the queue and loads history.
+// and service provider apps use. REST lists the queue and loads history.
 const SOCKET_URL = import.meta.env.VITE_API_BASE_URL
   ? import.meta.env.VITE_API_BASE_URL.replace('/api/v1', '')
   : 'http://localhost:4000';

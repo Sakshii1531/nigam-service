@@ -38,7 +38,7 @@ const EarningDetailPage = () => {
   // Built from the job itself — the breakdown, the customer and the timeline all
   // come off the Job record rather than a lookup table in this file.
   useEffect(() => {
-    apiRequest(`/tech/jobs/${id}`, { auth: true })
+    apiRequest(`/service-provider/jobs/${id}`, { auth: true })
       .then((res) => {
         const job = res;
         if (!job) return;
@@ -57,8 +57,8 @@ const EarningDetailPage = () => {
           address: formatAddress(sr.booking?.address || sr.zone),
           description: sr.description || '—',
           baseAmount: bill.serviceCharge || 0,
-          platformFee: Math.max((bill.serviceCharge || 0) - (bill.technicianEarnings || 0), 0),
-          netAmount: bill.technicianEarnings || 0,
+          platformFee: Math.max((bill.serviceCharge || 0) - (bill.serviceProviderEarnings || 0), 0),
+          netAmount: bill.serviceProviderEarnings || 0,
           creditedTo: 'Earnings balance',
           payoutNote: quick
             ? 'Credited to your balance on job completion'
@@ -293,7 +293,7 @@ const EarningDetailPage = () => {
 
         {/* Help CTA */}
         <button
-          onClick={() => navigate('/technician/technical-support')}
+          onClick={() => navigate('/service-provider/technical-support')}
           className="w-full bg-white rounded-2xl border border-slate-200 shadow-sm px-4 py-3.5 flex items-center justify-between hover:bg-slate-50 transition-colors"
         >
           <div className="text-left">

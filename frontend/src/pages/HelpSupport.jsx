@@ -70,13 +70,13 @@ const HelpSupport = () => {
   const faqs = [
     {
       id: 1,
-      question: 'How do I track my assigned technician?',
-      answer: 'Go to "Bookings" tab in your account. You can view technician contact details, live status, and expected arrival time once assigned.',
+      question: 'How do I track my assigned serviceProvider?',
+      answer: 'Go to "Bookings" tab in your account. You can view serviceProvider contact details, live status, and expected arrival time once assigned.',
     },
     {
       id: 2,
       question: 'What is covered under the 30-Day Service Warranty?',
-      answer: 'All repair work done by Nigam Care technicians comes with a free 30-day warranty. If the same issue reoccurs within 30 days, we repair it free of cost.',
+      answer: 'All repair work done by Nigam Care serviceProviders comes with a free 30-day warranty. If the same issue reoccurs within 30 days, we repair it free of cost.',
     },
     {
       id: 3,
@@ -140,7 +140,7 @@ const HelpSupport = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search for booking, technician, warranty, refund..."
+              placeholder="Search for booking, serviceProvider, warranty, refund..."
               className="w-full pl-12 pr-4 py-3.5 bg-white text-slate-900 placeholder-slate-400 rounded-2xl text-xs md:text-sm font-semibold shadow-md focus:outline-none focus:ring-2 focus:ring-amber-400"
             />
           </div>
@@ -234,7 +234,7 @@ const HelpSupport = () => {
             </div>
             <div className="flex flex-col">
               <span className="text-sm font-black text-slate-900">30-Min Rapid Slot</span>
-              <span className="text-xs text-slate-500 font-medium">Technicians arrive on time</span>
+              <span className="text-xs text-slate-500 font-medium">ServiceProviders arrive on time</span>
             </div>
           </div>
 

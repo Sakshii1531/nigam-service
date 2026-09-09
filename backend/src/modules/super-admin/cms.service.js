@@ -4,11 +4,11 @@ import { Video } from './video.model.js';
 import { Advertisement } from './advertisement.model.js';
 import { CMSPage } from './cmsPage.model.js';
 import { AppSetting } from './appSetting.model.js';
-import { Announcement } from '../technician/announcement.model.js';
-import { TechnicianSkill } from '../technician/technicianSkill.model.js';
+import { Announcement } from '../service-provider/announcement.model.js';
+import { ServiceProviderSkill } from '../service-provider/serviceProviderSkill.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 
-// All six content types below are read by the customer/technician apps (public
+// All six content types below are read by the customer/service provider apps (public
 // GET, no auth) and written only by super-admin (see cms.routes.js) — this is
 // what CustomerAppCustomization.jsx is actually a merchandising builder for.
 //
@@ -115,8 +115,8 @@ const DEFAULT_FAQS = [
     category: 'Bookings',
   },
   {
-    question: 'How can I track my assigned technician?',
-    answer: 'You can view your active service booking under "My Bookings" and track live technician assignment and status.',
+    question: 'How can I track my assigned serviceProvider?',
+    answer: 'You can view your active service booking under "My Bookings" and track live serviceProvider assignment and status.',
     category: 'Bookings',
   },
   {
@@ -144,7 +144,7 @@ const DEFAULT_PRIVACY_SECTIONS = [
   },
   {
     heading: '2. How We Use Your Data',
-    text: 'Your personal data is strictly utilized for service dispatch, booking updates via SMS/WhatsApp, technician verification, warranty tracking, and customer support resolution.',
+    text: 'Your personal data is strictly utilized for service dispatch, booking updates via SMS/WhatsApp, serviceProvider verification, warranty tracking, and customer support resolution.',
     order: 1,
   },
   {
@@ -153,8 +153,8 @@ const DEFAULT_PRIVACY_SECTIONS = [
     order: 2,
   },
   {
-    heading: '4. Sharing Information with Service Technicians',
-    text: 'Your contact name and service address are shared exclusively with the assigned background-verified technician solely for the duration of the scheduled job slot.',
+    heading: '4. Sharing Information with Service Providers',
+    text: 'Your contact name and service address are shared exclusively with the assigned background-verified serviceProvider solely for the duration of the scheduled job slot.',
     order: 3,
   },
   {
@@ -171,41 +171,41 @@ const DEFAULT_PRIVACY_SECTIONS = [
 
 const DEFAULT_TERMS_SECTIONS = [
   {
-    heading: '1. Service Booking & Technician Dispatch',
-    text: 'Nigam Care Center (NCC) acts as a verified home service platform connecting clients with certified technicians for AC repair, appliance servicing, electrical, plumbing, and cleaning tasks. By placing a booking, you agree to provide accurate location details and ensure adult supervision during doorstep appointments.',
+    heading: '1. Service Booking & Service Provider Dispatch',
+    text: 'Nigam Care Center (NCC) acts as a verified home service platform connecting clients with certified serviceProviders for AC repair, appliance servicing, electrical, plumbing, and cleaning tasks. By placing a booking, you agree to provide accurate location details and ensure adult supervision during doorstep appointments.',
     order: 0,
   },
   {
     heading: '2. Upfront Pricing & Payment Terms',
-    text: 'All visiting charges, diagnostic costs, and spare part prices are displayed upfront prior to job confirmation. Payments can be processed securely online via UPI, Credit/Debit Cards, NetBanking, or directly in cash to the technician upon satisfactory job completion.',
+    text: 'All visiting charges, diagnostic costs, and spare part prices are displayed upfront prior to job confirmation. Payments can be processed securely online via UPI, Credit/Debit Cards, NetBanking, or directly in cash to the serviceProvider upon satisfactory job completion.',
     order: 1,
   },
   {
     heading: '3. 30-Day Service Warranty Policy',
-    text: 'All repair services completed by NCC technicians include a complimentary 30-day service warranty. If the exact same issue reoccurs within 30 days of service, our team will dispatch a senior technician to rectify the problem free of any additional labor or visiting charge.',
+    text: 'All repair services completed by NCC serviceProviders include a complimentary 30-day service warranty. If the exact same issue reoccurs within 30 days of service, our team will dispatch a senior serviceProvider to rectify the problem free of any additional labor or visiting charge.',
     order: 2,
   },
   {
     heading: '4. Cancellation & Refund Policy',
-    text: 'Bookings may be cancelled or rescheduled free of penalty up to 2 hours prior to the scheduled slot. If cancelled after technician dispatch, a nominal visiting charge may apply. Approved refunds are processed to the original payment source within 5 to 7 business days.',
+    text: 'Bookings may be cancelled or rescheduled free of penalty up to 2 hours prior to the scheduled slot. If cancelled after serviceProvider dispatch, a nominal visiting charge may apply. Approved refunds are processed to the original payment source within 5 to 7 business days.',
     order: 3,
   },
   {
     heading: '5. Genuine Parts Guarantee',
-    text: 'Spare parts supplied by NCC technicians are 100% original OEM parts. Replacement components carry manufacturer warranty as specified on the billing invoice.',
+    text: 'Spare parts supplied by NCC serviceProviders are 100% original OEM parts. Replacement components carry manufacturer warranty as specified on the billing invoice.',
     order: 4,
   },
   {
     heading: '6. Limitation of Liability',
-    text: 'NCC carries comprehensive liability coverage for technician property damage during active job execution. For support or dispute resolution, contact support@nccservice.in or call 1800-123-6222.',
+    text: 'NCC carries comprehensive liability coverage for serviceProvider property damage during active job execution. For support or dispute resolution, contact support@nccservice.in or call 1800-123-6222.',
     order: 5,
   },
 ];
 
 const DEFAULT_ABOUT_SECTIONS = [
   {
-    heading: 'Certified & Verified Technicians',
-    text: 'Every technician undergoes rigorous background verification, technical testing, and safety protocols before taking any job.',
+    heading: 'Certified & Verified ServiceProviders',
+    text: 'Every serviceProvider undergoes rigorous background verification, technical testing, and safety protocols before taking any job.',
     order: 0,
   },
   {
@@ -227,7 +227,7 @@ const DEFAULT_ABOUT_SECTIONS = [
 
 const DEFAULT_ABOUT_STATS = [
   { label: 'Happy Customers', value: '50,000+' },
-  { label: 'Certified Technicians', value: '100+' },
+  { label: 'Certified ServiceProviders', value: '100+' },
   { label: 'Satisfaction Rating', value: '4.8 ★' },
   { label: 'Response Time', value: '30 Mins' },
 ];
@@ -264,7 +264,7 @@ export async function getCmsPage(slug) {
       page = await CMSPage.create({
         slug: slug,
         title: 'Empowering Smart Home Care & Appliance Solutions',
-        subtitle: "Nigam Care Center (NCC) is India's leading home service network. We connect households with top-rated, background-verified technicians for AC repair, appliance servicing, electrical work, plumbing, and genuine spare parts delivery.",
+        subtitle: "Nigam Care Center (NCC) is India's leading home service network. We connect households with top-rated, background-verified serviceProviders for AC repair, appliance servicing, electrical work, plumbing, and genuine spare parts delivery.",
         body: 'About Nigam Care Center',
         version: 'v2.4.0',
         contactEmail: 'support@nccservice.in',
@@ -314,9 +314,9 @@ export async function setAppSetting(app, key, value) {
   return AppSetting.findOneAndUpdate({ app, key }, { app, key, value }, { upsert: true, new: true, setDefaultsOnInsert: true });
 }
 
-// ── Technician app content ────────────────────────────────────────────────────
+// ── Service Provider app content ────────────────────────────────────────────────────
 // Announcements and the skill catalogue are authored here and read by the
-// technician app (/tech/academy/announcements and the profile's spec picker).
+// service provider app (/service-provider/academy/announcements and the profile's spec picker).
 
 export async function listAnnouncements() {
   return Announcement.find().sort({ createdAt: -1 });
@@ -335,20 +335,20 @@ export async function deleteAnnouncement(id) {
 }
 
 export async function listSkills() {
-  return TechnicianSkill.find().sort({ group: 1, name: 1 });
+  return ServiceProviderSkill.find().sort({ group: 1, name: 1 });
 }
 export async function createSkill(data) {
   // `code` is uniquely indexed — surface a clash as a 409 rather than a 500.
-  const existing = await TechnicianSkill.findOne({ code: data.code });
+  const existing = await ServiceProviderSkill.findOne({ code: data.code });
   if (existing) throw new ApiError(409, `A skill with code "${data.code}" already exists`);
-  return TechnicianSkill.create(data);
+  return ServiceProviderSkill.create(data);
 }
 export async function updateSkill(id, updates) {
-  const doc = await TechnicianSkill.findByIdAndUpdate(id, updates, { new: true });
+  const doc = await ServiceProviderSkill.findByIdAndUpdate(id, updates, { new: true });
   if (!doc) throw new ApiError(404, 'Skill not found');
   return doc;
 }
 export async function deleteSkill(id) {
-  const doc = await TechnicianSkill.findByIdAndDelete(id);
+  const doc = await ServiceProviderSkill.findByIdAndDelete(id);
   if (!doc) throw new ApiError(404, 'Skill not found');
 }

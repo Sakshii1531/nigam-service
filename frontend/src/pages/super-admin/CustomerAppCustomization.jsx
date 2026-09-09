@@ -642,7 +642,7 @@ const DEFAULT_SERVICE_CONFIGS = {
   },
   'AC Repair': {
     tagline: 'Cool Again Today',
-    subtitle: 'Certified AC Technicians\nFor All Brands',
+    subtitle: 'Certified AC ServiceProviders\nFor All Brands',
     subServices: 'Book a consultation, AC Installation, Gas Refilling, Deep Cleaning, AMC Plan'
   }
 };
@@ -701,7 +701,7 @@ const DEFAULT_STORIES = [
       {
         image: storyGeyser3,
         caption: 'Back to warm showers in no time',
-        subCaption: 'Our certified technicians get your geyser fixed fast.',
+        subCaption: 'Our certified serviceProviders get your geyser fixed fast.',
       },
     ],
   },
@@ -723,7 +723,7 @@ const DEFAULT_STORIES = [
       {
         image: storyWinter3,
         caption: 'Trust the experts. Leave the repairs to us.',
-        subCaption: 'Nigam Care technicians — certified, background-checked, on-time.',
+        subCaption: 'Nigam Care serviceProviders — certified, background-checked, on-time.',
       },
     ],
   },
@@ -1089,7 +1089,7 @@ const CustomerAppCustomization = () => {
                 reviews: 28,
                 price: '₹299',
                 time: '1 hrs',
-                bullets: ['Professional execution by certified technician', '30 days service warranty included'],
+                bullets: ['Professional execution by certified serviceProvider', '30 days service warranty included'],
                 icon: '🔧',
                 desc: 'Standard professional service',
                 unit: 'per job'
@@ -1183,7 +1183,7 @@ const CustomerAppCustomization = () => {
       productTypes: '',
       servicesJson: '[\n  { "id": "repair", "name": "Repair", "icon": "🔧", "desc": "Fix breakdowns & issues", "price": 299 },\n  { "id": "installation", "name": "Installation", "icon": "🔩", "desc": "Standard installation", "price": 399 }\n]',
       brands: 'Voltas, LG, Samsung, Whirlpool',
-      categoryNote: 'Prices shown are indicative. The technician will confirm exact charges after inspection.'
+      categoryNote: 'Prices shown are indicative. The serviceProvider will confirm exact charges after inspection.'
     });
     setShowAddModal(true);
   };
@@ -1212,7 +1212,7 @@ const CustomerAppCustomization = () => {
             { id: 'deep_cleaning', name: 'Deep Cleaning',  icon: '✨', desc: 'Foam-jet wash & coil clean',     price: 649 }
           ],
           brands: 'Voltas, LG, Samsung, Daikin, Whirlpool, Lloyd, Panasonic, Blue Star, Hitachi',
-          categoryNote: 'Prices shown are indicative. The technician will confirm exact charges after inspection.'
+          categoryNote: 'Prices shown are indicative. The serviceProvider will confirm exact charges after inspection.'
         };
       } else if (norm.includes('wash') || norm.includes('machine')) {
         config = {
@@ -1234,7 +1234,7 @@ const CustomerAppCustomization = () => {
             { id: 'repair',        name: 'Repair',          icon: '🔧', desc: 'General repairs & part fix',     price: 499 }
           ],
           brands: 'LG, Samsung, Whirlpool, Godrej, Haier, Panasonic, Bosch, Voltas, Hitachi',
-          categoryNote: 'Cooling issues may need gas refilling — exact diagnosis done by the technician on-site.'
+          categoryNote: 'Cooling issues may need gas refilling — exact diagnosis done by the serviceProvider on-site.'
         };
       } else if (norm.includes('tv') || norm.includes('television')) {
         config = {
@@ -1245,7 +1245,7 @@ const CustomerAppCustomization = () => {
             { id: 'display_issue', name: 'Display Issue',           icon: '🖥️', desc: 'Screen lines, colour fix',         price: 599 }
           ],
           brands: 'LG, Samsung, Sony, Panasonic, Mi, OnePlus, TCL, Haier, VU',
-          categoryNote: 'Panel repairs depend on part availability. Technician will confirm before proceeding.'
+          categoryNote: 'Panel repairs depend on part availability. Service Provider will confirm before proceeding.'
         };
       } else if (norm.includes('ro') || norm.includes('purif') || norm.includes('water')) {
         config = {
@@ -1360,7 +1360,7 @@ const CustomerAppCustomization = () => {
         default: parsedServices
       },
       brands: categoryForm.brands.split(',').map(b => b.trim()).filter(Boolean),
-      whyBrandPoints: ['Brand certified expert technicians', 'Correct parts calibration', 'Genuine brand replacement parts'],
+      whyBrandPoints: ['Brand certified expert serviceProviders', 'Correct parts calibration', 'Genuine brand replacement parts'],
       categoryNote: categoryForm.categoryNote
     };
     writeCategoryConfigs(customCatalogs);
@@ -2929,7 +2929,7 @@ const CustomerAppCustomization = () => {
                     type="text" 
                     value={serviceForm.subtitle}
                     onChange={(e) => setServiceForm({ ...serviceForm, subtitle: e.target.value })}
-                    placeholder="e.g. Certified AC Technicians For All Brands"
+                    placeholder="e.g. Certified AC ServiceProviders For All Brands"
                     className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:border-[#0D47A1] transition-all"
                   />
                 </div>

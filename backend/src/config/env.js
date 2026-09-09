@@ -80,7 +80,7 @@ export const env = {
     authToken: process.env.TWILIO_AUTH_TOKEN || '',
     whatsappFrom: process.env.TWILIO_WHATSAPP_FROM || 'whatsapp:+14155238886', // Twilio sandbox default
     // Twilio Voice: a purchased Twilio phone number with Voice capability enabled.
-    // Neither customer nor technician will see the other's real number — both legs
+    // Neither customer nor service provider will see the other's real number — both legs
     // go through this virtual proxy. Leave blank to gracefully degrade (returns 503).
     voiceFrom: process.env.TWILIO_VOICE_NUMBER || '',
     callMaskingEnabled: process.env.CALL_MASKING_ENABLED !== 'false',
@@ -94,7 +94,7 @@ export const env = {
   },
 };
 
-// The technician assistant refuses rather than fabricating when unconfigured —
+// The service provider assistant refuses rather than fabricating when unconfigured —
 // same posture as Cloudinary/Twilio/FCM below.
 export const isAnthropicConfigured = Boolean(env.anthropic.apiKey);
 

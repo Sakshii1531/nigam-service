@@ -45,7 +45,7 @@ const Notifications = () => {
   const tabs = [
     { id: 'all', label: 'All Notifications' },
     { id: 'service', label: 'Service Alerts' },
-    { id: 'tech', label: 'Technician Updates' },
+    { id: 'provider', label: 'ServiceProvider Updates' },
     { id: 'dispatch', label: 'Dispatch Alerts' },
   ];
 
@@ -125,7 +125,7 @@ const Notifications = () => {
   const getIcon = (type) => {
     switch (type) {
       case 'service': return <ClipboardList size={18} />;
-      case 'tech': return <UserCheck size={18} />;
+      case 'provider': return <UserCheck size={18} />;
       case 'dispatch': return <Truck size={18} />;
       default: return <Bell size={18} />;
     }

@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import { applyStandardPlugins } from '../shared/plugins.js';
 import { Counter } from '../shared/counter.model.js';
 
-// Referenced first (no deps) since Technician/Brand/ServicePartner all point at it.
+// Referenced first (no deps) since Service Provider/Brand/ASM all point at it.
 const citySchema = new mongoose.Schema(
   {
     // `sparse` matches humanIdPlugin's convention (see shared/plugins.js): a

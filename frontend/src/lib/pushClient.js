@@ -163,7 +163,7 @@ export async function syncPushToken() {
  *
  * Without this the token stays on the account and the next person to use the
  * device keeps receiving the previous user's notifications — on a shared
- * technician handset that is a real disclosure, not a tidiness issue.
+ * service provider handset that is a real disclosure, not a tidiness issue.
  *
  * Deletes the FCM token itself as well as the server record, so a stale
  * registration cannot linger in the browser.

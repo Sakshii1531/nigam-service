@@ -1,5 +1,6 @@
 import { User } from './user.model.js';
-import { Technician } from '../technician/technician.model.js';
+import { ServiceProvider } from '../service-provider/serviceProvider.model.js';
+import { ASM } from '../super-admin/asm.model.js';
 import { Otp } from './otp.model.js';
 import { RefreshToken } from './refreshToken.model.js';
 import { hashPassword, verifyPassword } from './password.js';
@@ -20,19 +21,26 @@ async function findUserByIdentifier(role, identifier) {
     $or: [{ phone: trimmed }, { email: trimmed }, { humanId: trimmed }],
   }).select('+passwordHash');
 
-  if (!user && (role === ROLES.TECHNICIAN || role === 'technician')) {
-    const tech = await Technician.findOne({
+  if (!user && (role === ROLES.SERVICE_PROVIDER || role === 'service_provider')) {
+    const provider = await ServiceProvider.findOne({
       $or: [{ humanId: trimmed }, { phone: trimmed }, { email: trimmed }],
     });
-    if (tech && tech.user) {
-      user = await User.findById(tech.user).select('+passwordHash');
+    if (provider && provider.user) {
+      user = await User.findById(provider.user).select('+passwordHash');
     }
   }
 
-  if (user && (user.role === ROLES.TECHNICIAN || role === 'technician')) {
-    const tech = await Technician.findOne({ user: user._id });
-    if (tech) {
-      const expectedUserStatus = tech.status === 'Active' ? 'Active' : tech.status === 'Pending' ? 'Pending' : 'Suspended';
+  if (!user && role === ROLES.ASM) {
+    const asm = await ASM.findOne({ $or: [{ phone: trimmed }, { email: trimmed }] });
+    if (asm && asm.user) {
+      user = await User.findById(asm.user).select('+passwordHash');
+    }
+  }
+
+  if (user && (user.role === ROLES.SERVICE_PROVIDER || role === 'service_provider')) {
+    const provider = await ServiceProvider.findOne({ user: user._id });
+    if (provider) {
+      const expectedUserStatus = provider.status === 'Active' ? 'Active' : provider.status === 'Pending' ? 'Pending' : 'Suspended';
       if (user.status !== expectedUserStatus) {
         user.status = expectedUserStatus;
         await User.findByIdAndUpdate(user._id, { status: expectedUserStatus });

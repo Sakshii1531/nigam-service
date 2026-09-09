@@ -842,7 +842,7 @@ const Buy = () => {
                 {[
                   'Manufacturing Defects',
                   'Repair & Replacement',
-                  'Expert Technician Support',
+                  'Expert Service Provider Support',
                   'Hassle Free Claims'
                 ].map((benefit, i) => (
                   <div key={i} className="flex items-center gap-2">
@@ -923,7 +923,7 @@ const Buy = () => {
                 'Manufacturing Defects',
                 'Repair & Replacement',
                 'Genuine Spare Parts',
-                'Expert Technician Support',
+                'Expert Service Provider Support',
                 'Hassle Free Claims',
               ].map((benefit, i) => (
                 <div key={i} className="flex items-center gap-2.5">
@@ -1716,7 +1716,7 @@ const Buy = () => {
                   },
                   {
                     title: "Brand Authorized",
-                    desc: "Only certified technicians and genuine original brand parts are used.",
+                    desc: "Only certified serviceProviders and genuine original brand parts are used.",
                     icon: <CheckCircle2 className="h-4.5 w-4.5 text-green-600" />
                   },
                   {
@@ -2405,7 +2405,7 @@ const Buy = () => {
 
             <div>
               <h2 className="text-xl font-black text-brand-navy leading-tight">Claim Ticket Raised!</h2>
-              <p className="text-xs text-text-secondary font-semibold mt-1">Our technician team has been notified.</p>
+              <p className="text-xs text-text-secondary font-semibold mt-1">Our serviceProvider team has been notified.</p>
             </div>
 
             {/* Claim details card */}
@@ -2448,14 +2448,14 @@ const Buy = () => {
                     time: "Just Now"
                   },
                   {
-                    title: "Technician Assignment",
+                    title: "Service Provider Assignment",
                     desc: "An NCC certified service expert will be assigned to your ticket",
                     status: "Pending",
                     time: "Within 2 Hours"
                   },
                   {
                     title: "Inspection Scheduled",
-                    desc: `Technician visit scheduled at your address on ${claimDate}`,
+                    desc: `Service Provider visit scheduled at your address on ${claimDate}`,
                     status: "Pending",
                     time: claimTime
                   }

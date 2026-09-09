@@ -12,7 +12,7 @@ import { syncOnLogin as syncCartOnLogin, clearLocalOnLogout as clearLocalCart } 
 
 // Multi-Portal AuthContext:
 // Manages distinct session states for customer, super_admin, brand_admin,
-// and technician portals. Allows simultaneous logins across 4 browser tabs
+// and service provider portals. Allows simultaneous logins across 4 browser tabs
 // without session collision or cross-portal routing lockouts.
 
 const AuthContext = createContext(null);
@@ -58,7 +58,8 @@ export const AuthProvider = ({ children }) => {
     customer: loadStoredUser('customer'),
     super_admin: loadStoredUser('super_admin'),
     brand_admin: loadStoredUser('brand_admin'),
-    technician: loadStoredUser('technician')
+    service_provider: loadStoredUser('service_provider'),
+    asm: loadStoredUser('asm'),
   }));
 
   // Active user matches the portal of the current tab/route

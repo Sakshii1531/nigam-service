@@ -83,7 +83,7 @@ const Academy = () => {
 
   const stats = [
     // "Certified Techs" and "Completions" are gone — no model records a
-    // technician's progress through a course, so neither figure exists.
+    // service provider's progress through a course, so neither figure exists.
     { title: 'Training Guides', value: String(guides.length), icon: <BookOpen size={20} />, color: 'bg-blue-600' },
     { title: 'Active Courses', value: String(courses.filter(c => c.status === 'Active').length), icon: <GraduationCap size={20} />, color: 'bg-indigo-600' },
     { title: 'Draft Courses', value: String(courses.filter(c => c.status === 'Draft').length), icon: <Users size={20} />, color: 'bg-emerald-600' },
@@ -91,9 +91,9 @@ const Academy = () => {
   ];
 
   // The file is uploaded and the guide is stored, so it really does reach the
-  // technician Academy. This used to push a row into browser state and claim
-  // the manual was "made available on Technician Academy app" — no file was
-  // ever uploaded and no technician saw anything.
+  // service provider Academy. This used to push a row into browser state and claim
+  // the manual was "made available on Service Provider Academy app" — no file was
+  // ever uploaded and no service provider saw anything.
   const handleUploadSubmit = async (e) => {
     e.preventDefault();
     if (!newGuide.title) return;
@@ -124,7 +124,7 @@ const Academy = () => {
       setNewGuide({ title: '', type: 'PDF', product: 'Smart TV' });
       setGuideFile(null);
       setShowUploadModal(false);
-      setSuccessMessage('Training manual uploaded and published to the Technician Academy.');
+      setSuccessMessage('Training manual uploaded and published to the Service Provider Academy.');
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (err) {
       setError(err.message || 'Could not upload the manual.');
@@ -240,7 +240,7 @@ const Academy = () => {
                         <th className="px-6 py-4">Document Type</th>
                         <th className="px-6 py-4">Appliance Group</th>
                         <th className="px-6 py-4">Date Uploaded</th>
-                        <th className="px-6 py-4">Technician Views</th>
+                        <th className="px-6 py-4">Service Provider Views</th>
                         <th className="px-6 py-4">Action</th>
                       </tr>
                     </thead>

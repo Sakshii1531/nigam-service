@@ -33,7 +33,7 @@ async function clearBookingsAndServiceRequests() {
   const Counter = mongoose.model('Counter');
   const EarningsTally = mongoose.model('EarningsTally');
   const Payout = mongoose.model('Payout');
-  const Technician = mongoose.model('Technician');
+  const ServiceProvider = mongoose.model('ServiceProvider');
 
   // Delete bookings, service requests, jobs
   const bookingRes = await Booking.deleteMany({});
@@ -59,14 +59,14 @@ async function clearBookingsAndServiceRequests() {
   const genDocRes = await GeneratedDocument.deleteMany({});
 
   // Earnings accrue from completed jobs, so they have to go with them —
-  // otherwise a 'clean' database still shows a technician yesterday's balance.
+  // otherwise a 'clean' database still shows a service provider yesterday's balance.
   const tallyRes = await EarningsTally.deleteMany({});
   const payoutRes = await Payout.deleteMany({});
 
   // These counters are not just cosmetic: activeJobsCount feeds the assignment
   // engine's workload score, so leaving a stale value behind would skew who
   // gets picked on the very first booking of a fresh test run.
-  const techRes = await Technician.updateMany({}, { $set: { activeJobsCount: 0, completedJobsCount: 0 } });
+  const serviceProviderRes = await ServiceProvider.updateMany({}, { $set: { activeJobsCount: 0, completedJobsCount: 0 } });
 
   // Reset sequential human-ID counters for wiped entities
   const prefixesToReset = [
@@ -107,7 +107,7 @@ async function clearBookingsAndServiceRequests() {
   console.log(`- Generated Documents: ${genDocRes.deletedCount}`);
   console.log(`- Earnings Tallies: ${tallyRes.deletedCount}`);
   console.log(`- Payouts: ${payoutRes.deletedCount}`);
-  console.log(`- Technician counters reset: ${techRes.modifiedCount}`);
+  console.log(`- Service Provider counters reset: ${serviceProviderRes.modifiedCount}`);
   console.log(`- Reset ID Counters: ${counterRes.deletedCount}`);
   console.log('-----------------------\n');
 

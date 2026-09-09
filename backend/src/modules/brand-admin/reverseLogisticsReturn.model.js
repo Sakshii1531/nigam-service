@@ -5,7 +5,7 @@ import { ID_PREFIXES } from '../../config/constants.js';
 const reverseLogisticsReturnSchema = new mongoose.Schema(
   {
     brand: { type: mongoose.Schema.Types.ObjectId, ref: 'Brand', required: true, index: true },
-    technician: { type: mongoose.Schema.Types.ObjectId, ref: 'Technician', required: true },
+    serviceProvider: { type: mongoose.Schema.Types.ObjectId, ref: 'ServiceProvider', required: true },
     partName: { type: String, required: true },
     sku: String,
     serviceRequest: { type: mongoose.Schema.Types.ObjectId, ref: 'ServiceRequest', default: null },

@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, FileText, Shield, ShieldCheck } from 'lucide-react';
-import { useTech } from '../../context/TechContext';
+import { useTech } from '../../context/ServiceProviderContext';
 
 const WhatsAppIcon = () => (
   <svg className="h-4 w-4 fill-green-600" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -25,7 +25,7 @@ const BillingEstimate = () => {
   const isExtendedWarranty = activeJob?.type === 'NCC Extended Warranty' || activeJob?.type === 'NCC EXTENDED WARRANTY';
   const isPaid = !isAMC && !isBrandWarranty && !isExtendedWarranty;
 
-  // The line items are whatever the technician actually recorded on this job at
+  // The line items are whatever the service provider actually recorded on this job at
   // the spare-parts step; only checked items are billable.
   const billing = activeJob?.billingEstimate || {};
   const billedParts = (activeJob?.spareParts || []).filter((i) => i.checked);
@@ -55,7 +55,7 @@ const BillingEstimate = () => {
       selectJobForDetails('8842');
       setActiveStep('completed');
     }
-    navigate('/technician/active-job');
+    navigate('/service-provider/active-job');
   };
 
   // ── AMC: Service Report PDF ───────────────────────────────────────────────
@@ -240,9 +240,9 @@ const BillingEstimate = () => {
               </div>
             </div>
 
-            {/* Technician Earnings */}
+            {/* ServiceProvider Earnings */}
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm px-3.5 py-3.5 text-left flex justify-between items-center">
-              <span className="text-xs font-normal text-slate-800">Technician Earnings (Extras)</span>
+              <span className="text-xs font-normal text-slate-800">Service Provider Earnings (Extras)</span>
               <span className="text-base font-medium text-[#052355]">₹{Math.round(extrasTotal * 0.3)}</span>
             </div>
 
@@ -318,16 +318,16 @@ const BillingEstimate = () => {
                 </div>
                 {isExtendedWarranty && (
                   <div className="flex justify-between items-center py-0.5">
-                    <span className="text-xs font-normal text-slate-500">NCC Claim Payout (to Technician)</span>
+                    <span className="text-xs font-normal text-slate-500">NCC Claim Payout (to ServiceProvider)</span>
                     <span className="text-base font-medium text-[#7C4DFF]">₹{activeJob?.estEarnings || 0}</span>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Technician Earnings */}
+            {/* ServiceProvider Earnings */}
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm px-3.5 py-3.5 text-left flex justify-between items-center">
-              <span className="text-xs font-normal text-slate-800">Technician Earnings</span>
+              <span className="text-xs font-normal text-slate-800">Service Provider Earnings</span>
               <span className="text-base font-medium text-[#052355]">₹{Math.round(extrasTotal * 0.3)}</span>
             </div>
 
@@ -386,7 +386,7 @@ const BillingEstimate = () => {
             </div>
 
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm px-3.5 py-3.5 text-left flex justify-between items-center">
-              <span className="text-xs font-normal text-slate-800">Technician Earnings</span>
+              <span className="text-xs font-normal text-slate-800">Service Provider Earnings</span>
               <span className="text-base font-medium text-[#052355]">₹{activeJob?.estEarnings || 850}</span>
             </div>
 

@@ -558,8 +558,8 @@ const Users = () => {
                                     {req.complaintType}
                                   </div>
                                   <div>
-                                    <span className="text-[10px] text-slate-400 block font-normal">TECHNICIAN</span>
-                                    {req.technician?.name || 'Not Assigned'}
+                                    <span className="text-[10px] text-slate-400 block font-normal">SERVICE_PROVIDER</span>
+                                    {req.serviceProvider?.name || 'Not Assigned'}
                                   </div>
                                 </div>
 

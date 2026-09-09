@@ -26,8 +26,8 @@ function shapeClaim(c) {
   return {
     id: c.id,
     ref: c.humanId || c.id,
-    // raisedBy is polymorphic — a technician for FOC parts, a customer otherwise.
-    technician: c.raisedByModel === 'Technician' ? (c.raisedBy?.name || 'Technician') : 'Customer-raised',
+    // raisedBy is polymorphic — a service provider for FOC parts, a customer otherwise.
+    serviceProvider: c.raisedByModel === 'ServiceProvider' ? (c.raisedBy?.name || 'Service Provider') : 'Customer-raised',
     item: c.item || '—',
     claimType: c.claimType || 'D2C',
     amount: currency.format(c.amount || 0),
@@ -115,7 +115,7 @@ const WarrantyClaims = () => {
   };
 
   const filteredClaims = claims.filter(c => {
-    const matchesSearch = c.technician.toLowerCase().includes(claimsSearchQuery.toLowerCase()) || 
+    const matchesSearch = c.serviceProvider.toLowerCase().includes(claimsSearchQuery.toLowerCase()) || 
                           c.id.toLowerCase().includes(claimsSearchQuery.toLowerCase()) ||
                           c.item.toLowerCase().includes(claimsSearchQuery.toLowerCase());
     const matchesType = selectedClaimType === 'All Claim Types' || c.claimType === selectedClaimType;
@@ -172,8 +172,8 @@ const WarrantyClaims = () => {
                       <span className="font-bold text-[#1E293B]">{selectedClaim.amount}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-[#64748B]">Technician:</span>
-                      <span className="font-medium text-blue-650">{selectedClaim.technician}</span>
+                      <span className="text-[#64748B]">ServiceProvider:</span>
+                      <span className="font-medium text-blue-650">{selectedClaim.serviceProvider}</span>
                     </div>
                   </div>
                 </div>
@@ -286,7 +286,7 @@ const WarrantyClaims = () => {
                       value={claimsSearchQuery}
                       onChange={(e) => setClaimsSearchQuery(e.target.value)}
                       className="w-full pl-10 pr-4 py-2 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] focus:border-[#0D47A1] outline-none transition-all text-sm bg-[#F8FAFC]"
-                      placeholder="Search Claim ID, Technician..."
+                      placeholder="Search Claim ID, ServiceProvider..."
                     />
                   </div>
 
@@ -320,7 +320,7 @@ const WarrantyClaims = () => {
                     <thead className="bg-[#F8FAFC] text-[#64748B] text-xs uppercase">
                       <tr>
                         <th className="px-6 py-4">Claim ID</th>
-                        <th className="px-6 py-4">Technician</th>
+                        <th className="px-6 py-4">Service Provider</th>
                         <th className="px-6 py-4">Spare Part / Item</th>
                         <th className="px-6 py-4">Claim Type</th>
                         <th className="px-6 py-4">Claim Value</th>
@@ -337,7 +337,7 @@ const WarrantyClaims = () => {
                           onClick={() => handleRowClick(claim)}
                         >
                           <td className="px-6 py-4 font-medium text-[#0D47A1]">{claim.ref}</td>
-                          <td className="px-6 py-4 text-[#1E293B]">{claim.technician}</td>
+                          <td className="px-6 py-4 text-[#1E293B]">{claim.serviceProvider}</td>
                           <td className="px-6 py-4 text-[#1E293B]">{claim.item}</td>
                           <td className="px-6 py-4 text-[#64748B]">
                             <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${

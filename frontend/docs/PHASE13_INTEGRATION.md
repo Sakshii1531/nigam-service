@@ -21,7 +21,7 @@ reason are recorded here rather than left implicit.
   only when it was reached with real `role`/`identifier` state from `Login.jsx`)
   it calls the real backend and shows the real error message on an incorrect
   code, instead of the original "any 6 digits work" demo behavior. When not
-  provided — every other portal's login (technician, brand-admin,
+  provided — every other portal's login (serviceProvider, brand-admin,
   super-admin) — the component is completely unchanged.
 
 **Verified for real**, not just read/reasoned about: started the actual
@@ -67,7 +67,7 @@ full but not touched. Reasons, concretely:
    exists anywhere — booking "creation" is really just `BookingSuccess.jsx`
    reading whatever query params got passed to it, including a
    client-generated fake booking ID. The real `POST /bookings` is a single
-   atomic call that prices, auto-assigns a technician, and returns the real
+   atomic call that prices, auto-assigns a serviceProvider, and returns the real
    booking + service request together — there is no real two-step
    "pay-then-create" split to preserve, so this needs a real design decision
    (call `POST /bookings` before or instead of the mock payment step?) rather

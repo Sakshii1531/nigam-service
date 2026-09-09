@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Briefcase, ClipboardList, History, Calendar, User } from 'lucide-react';
 
-const TechBottomNav = ({ activeTab }) => {
+const ServiceProviderBottomNav = ({ activeTab }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -14,46 +14,46 @@ const TechBottomNav = ({ activeTab }) => {
       id: 'jobs',
       label: 'Jobs',
       icon: Briefcase,
-      path: '/technician/dashboard',
+      path: '/service-provider/dashboard',
       isActive: activeTab 
         ? activeTab === 'jobs' 
-        : (currentPath === '/technician/dashboard' || currentPath === '/technician/active-job'),
+        : (currentPath === '/service-provider/dashboard' || currentPath === '/service-provider/active-job'),
     },
     {
       id: 'requests',
       label: 'Requests',
       icon: ClipboardList,
-      path: '/technician/raise-part-request?tab=claims',
+      path: '/service-provider/raise-part-request?tab=claims',
       isActive: activeTab 
         ? activeTab === 'requests' 
-        : (currentPath.includes('/technician/raise-part-request') && currentSearch.includes('tab=claims')),
+        : (currentPath.includes('/service-provider/raise-part-request') && currentSearch.includes('tab=claims')),
     },
     {
       id: 'history',
       label: 'History',
       icon: History,
-      path: '/technician/history',
+      path: '/service-provider/history',
       isActive: activeTab 
         ? activeTab === 'history' 
-        : (currentPath === '/technician/history' || currentPath === '/technician/service-history' || currentPath.startsWith('/technician/earning-detail')),
+        : (currentPath === '/service-provider/history' || currentPath === '/service-provider/service-history' || currentPath.startsWith('/service-provider/earning-detail')),
     },
     {
       id: 'schedule',
       label: 'Schedule',
       icon: Calendar,
-      path: '/technician/schedule',
+      path: '/service-provider/schedule',
       isActive: activeTab 
         ? activeTab === 'schedule' 
-        : currentPath === '/technician/schedule',
+        : currentPath === '/service-provider/schedule',
     },
     {
       id: 'profile',
       label: 'Profile',
       icon: User,
-      path: '/technician/profile',
+      path: '/service-provider/profile',
       isActive: activeTab 
         ? activeTab === 'profile' 
-        : (currentPath === '/technician/profile' || currentPath.startsWith('/technician/personal-info')),
+        : (currentPath === '/service-provider/profile' || currentPath.startsWith('/service-provider/personal-info')),
     },
   ];
 
@@ -94,4 +94,4 @@ const TechBottomNav = ({ activeTab }) => {
   );
 };
 
-export default TechBottomNav;
+export default ServiceProviderBottomNav;

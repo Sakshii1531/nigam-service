@@ -34,9 +34,9 @@ export const createServiceRequestSchema = z.object({
   zone: z.string().optional(),
 });
 
-// Manual assignment from the super-admin console. `technician` is optional so a
+// Manual assignment from the super-admin console. `service provider` is optional so a
 // blank body means "let the weighted engine pick" — the same engine the auto
 // path uses, rather than a second ranking implementation on the client.
 export const assignSchema = z.object({
-  technician: z.string().min(1).optional(),
+  serviceProvider: z.string().min(1).optional(),
 });

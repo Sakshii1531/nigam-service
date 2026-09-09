@@ -21,7 +21,7 @@ function shape(o) {
   return {
     id: o.id,
     ref: o.humanId || o.id,
-    technician: o.technician?.name || 'Technician',
+    serviceProvider: o.serviceProvider?.name || 'Service Provider',
     // The appliance comes from the service request the job was raised for.
     product: o.job?.serviceRequest?.category || '—',
     ticket: o.job?.serviceRequest?.humanId || '—',
@@ -109,7 +109,7 @@ const PartRequests = () => {
 
   const handleApproveClick = (req, newStatus) => {
     if (newStatus === 'Approved' || newStatus === 'Dispatched') {
-      setRevisitTarget({ id: req.id, newStatus, partName: req.part, technician: req.technician });
+      setRevisitTarget({ id: req.id, newStatus, partName: req.part, serviceProvider: req.serviceProvider });
       setShowRevisitModal(true);
     } else {
       updateStatus(req.id, newStatus);
@@ -135,7 +135,7 @@ const PartRequests = () => {
   const filteredRequests = requests.filter(req => {
     const matchesSearch = req.ref.toLowerCase().includes(searchQuery.toLowerCase()) ||
       req.part.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      req.technician.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      req.serviceProvider.toLowerCase().includes(searchQuery.toLowerCase()) ||
       req.product.toLowerCase().includes(searchQuery.toLowerCase());
       
     const matchesStatus = selectedStatus === 'All Status' || req.status === selectedStatus;
@@ -245,7 +245,7 @@ const PartRequests = () => {
                 <thead className="bg-[#F8FAFC] text-[#64748B] text-xs uppercase">
                   <tr>
                     <th className="px-6 py-4">Request ID</th>
-                    <th className="px-6 py-4">Technician</th>
+                    <th className="px-6 py-4">Service Provider</th>
                     <th className="px-6 py-4">Product & Part</th>
                     <th className="px-6 py-4">Warranty</th>
                     <th className="px-6 py-4">Est. Cost</th>
@@ -270,7 +270,7 @@ const PartRequests = () => {
                       onClick={() => handleRowClick(req)}
                     >
                       <td className="px-6 py-4 font-medium text-[#0D47A1]">{req.ref}</td>
-                      <td className="px-6 py-4 text-[#1E293B]">{req.technician}</td>
+                      <td className="px-6 py-4 text-[#1E293B]">{req.serviceProvider}</td>
                       <td className="px-6 py-4">
                         <div>
                           <p className="text-[#1E293B] font-medium">{req.part}</p>
@@ -395,7 +395,7 @@ const PartRequests = () => {
                     rows={2} 
                     value={revisitNotes} 
                     onChange={(e) => setRevisitNotes(e.target.value)}
-                    placeholder="E.g. Part handed over to technician for delivery..."
+                    placeholder="E.g. Part handed over to serviceProvider for delivery..."
                     className="w-full border border-[#E2E8F0] rounded-xl px-3 py-2 text-sm text-[#1E293B] focus:ring-2 focus:ring-[#0D47A1] outline-none"
                   />
                 </div>
@@ -439,8 +439,8 @@ const PartRequests = () => {
               <div className="p-6 space-y-4">
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <p className="text-[#64748B]">Technician</p>
-                    <p className="font-medium text-[#1E293B]">{selectedRequest.technician}</p>
+                    <p className="text-[#64748B]">Service Provider</p>
+                    <p className="font-medium text-[#1E293B]">{selectedRequest.serviceProvider}</p>
                   </div>
                   <div>
                     <p className="text-[#64748B]">Product</p>

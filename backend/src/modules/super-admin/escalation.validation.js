@@ -8,7 +8,7 @@ export const createEscalationSchema = z.object({
   city: z.string().optional(),
   reason: z.string().optional(),
   description: z.string().optional(),
-  raisedBy: z.enum(['Customer', 'Technician', 'System Auto', 'QA Team']).optional(),
+  raisedBy: z.enum(['Customer', 'ServiceProvider', 'System Auto', 'QA Team']).optional(),
   priority: z.enum(PRIORITIES).optional(),
 });
 

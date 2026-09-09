@@ -19,7 +19,7 @@ const Reports = () => {
   const [timeframe, setTimeframe] = useState('Last 30 Days');
   const [successMessage, setSuccessMessage] = useState('');
   const [activeReportBar, setActiveReportBar] = useState(null);
-  const [report, setReport] = useState({ requestsByCategory: [], topTechnicians: [], sentiment: null, monthly: [], monthlyChangePercent: null });
+  const [report, setReport] = useState({ requestsByCategory: [], topServiceProviders: [], sentiment: null, monthly: [], monthlyChangePercent: null });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -74,7 +74,7 @@ const Reports = () => {
     }
     const rows = [
       ...report.requestsByCategory.map((r) => ['Requests by category', r.category || r._id || '—', r.count]),
-      ...report.topTechnicians.map((t) => ['Technician', t.name || '—', t.completed ?? t.total ?? 0]),
+      ...report.topServiceProviders.map((t) => ['Service Provider', t.name || '—', t.completed ?? t.total ?? 0]),
     ];
     const written = exportCsv('brand-report', ['Section', 'Label', 'Value'], rows);
     showToast(written ? 'Report exported as CSV.' : 'There is no report data to export yet.');
@@ -207,17 +207,17 @@ const Reports = () => {
               </div>
             </div>
 
-            {/* Technician Productivity */}
+            {/* ServiceProvider Productivity */}
             <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0]">
-              <h2 className="text-lg font-bold text-[#1E293B] mb-6">Technician Productivity</h2>
+              <h2 className="text-lg font-bold text-[#1E293B] mb-6">Service Provider Productivity</h2>
               
               <div className="space-y-4">
-                {report.topTechnicians.length === 0 && (
+                {report.topServiceProviders.length === 0 && (
                   <p className="text-xs font-semibold text-[#64748B]">
-                    {loading ? 'Loading…' : error || 'No technician activity for this brand yet.'}
+                    {loading ? 'Loading…' : error || 'No serviceProvider activity for this brand yet.'}
                   </p>
                 )}
-                {report.topTechnicians.map((t, index) => (
+                {report.topServiceProviders.map((t, index) => (
                   <div 
                     key={index} 
                     className="flex items-center gap-4 cursor-pointer group p-1.5 rounded-lg hover:bg-slate-50 transition-all duration-200"
