@@ -55,7 +55,10 @@ export async function listServiceProviderReviews(serviceProviderId, { page, limi
   const query = { serviceProvider: serviceProviderId };
   const { skip, limit: lim, page: pg, sort: sortObj } = parsePagination({ page, limit, sort });
   const [items, total] = await Promise.all([
-    Review.find(query).sort(sortObj).skip(skip).limit(lim),
+    // Populated so a real reviewer name can be shown (super-admin's provider
+    // detail page and any future consumer) — was a bare user id before,
+    // which nothing actually rendered.
+    Review.find(query).populate('user', 'name').sort(sortObj).skip(skip).limit(lim),
     Review.countDocuments(query),
   ]);
   return { items, meta: paginationMeta({ page: pg, limit: lim, total }) };

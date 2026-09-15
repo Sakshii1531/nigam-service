@@ -3,13 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import { 
-  Users, 
-  UserCheck, 
-  Building, 
+  Users,
+  UserCheck,
   ClipboardList,
-  Clock, 
-  FileCheck, 
-  IndianRupee, 
+  Clock,
+  IndianRupee,
   XCircle,
   TrendingUp,
   TrendingDown,
@@ -69,9 +67,6 @@ const Dashboard = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [activeTabRevenue, setActiveTabRevenue] = useState('7days');
   const [activeTabRequest, setActiveTabRequest] = useState('7days');
-  const [activeTabCity, setActiveTabCity] = useState('7days');
-  const [activeTabASM, setActiveTabASM] = useState('7days');
-  const [activeTabPartner, setActiveTabPartner] = useState('7days');
 
   // Chart interactivity states
   const [activeRevenueIndex, setActiveRevenueIndex] = useState(null);
@@ -165,6 +160,27 @@ const Dashboard = () => {
     return () => { cancelled = true; };
   }, []);
 
+  // Recent Escalations and Live Activity — real rows (Escalation docs, audit
+  // log entries), replacing what used to be two hardcoded fake lists.
+  const [recentEscalations, setRecentEscalations] = useState([]);
+  const [recentActivity, setRecentActivity] = useState([]);
+  const [activityLoading, setActivityLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([
+      apiRequest('/super-admin/escalations?limit=4&sort=-createdAt', { auth: true }).catch(() => []),
+      apiRequest('/super-admin/audit-logs?limit=5', { auth: true }).catch(() => []),
+    ])
+      .then(([esc, logs]) => {
+        if (cancelled) return;
+        setRecentEscalations(Array.isArray(esc) ? esc : []);
+        setRecentActivity(Array.isArray(logs) ? logs : []);
+      })
+      .finally(() => { if (!cancelled) setActivityLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
   const doughnutSegments = buildSegments([
     { label: 'Open', count: metrics?.requests?.open || 0, stroke: '#0D47A1', routeVal: 'open' },
     { label: 'Completed', count: metrics?.requests?.completed || 0, stroke: '#10B981', routeVal: 'completed' },
@@ -190,20 +206,31 @@ const Dashboard = () => {
   // stores a prior-period snapshot, so no comparison can be computed. The same
   // goes for "Today's Revenue", "Active Cities", "Active Service Partners" and
   // "Customer Satisfaction" — each needed a figure this API does not produce.
+  const pendingServiceProviders = metrics?.pendingServiceProviders || 0;
   const stats = [
+    // First and amber-flagged whenever non-zero — matches the same "needs
+    // attention" treatment Service Providers/Zone Dashboard give this same
+    // count, so it's visible from the landing page too, not just once you've
+    // already navigated into the list.
+    {
+      title: 'Pending Service Providers',
+      value: number.format(pendingServiceProviders),
+      icon: <AlertTriangle size={16} />,
+      iconColor: pendingServiceProviders > 0 ? 'text-amber-600 bg-amber-50' : 'text-slate-400 bg-slate-50',
+      path: '/super-admin/service-providers?status=Pending',
+      flagged: pendingServiceProviders > 0,
+    },
+    { title: 'Open Escalations', value: number.format(metrics?.openEscalations || 0), icon: <AlertTriangle size={16} />, iconColor: metrics?.openEscalations > 0 ? 'text-red-600 bg-red-50' : 'text-slate-400 bg-slate-50', path: '/super-admin/escalation-desk', flagged: metrics?.openEscalations > 0 },
     { title: 'Total Revenue', value: currency.format(metrics?.revenue?.gross || 0), icon: <IndianRupee size={16} />, iconColor: 'text-[#0D47A1] bg-[#E8F0FE]', path: '/super-admin/revenue' },
-    { title: 'Platform Net Share', value: currency.format(metrics?.revenue?.net || 0), icon: <IndianRupee size={16} />, iconColor: 'text-green-600 bg-green-50', path: '/super-admin/revenue' },
     { title: 'Active Requests', value: number.format(metrics?.activeRequests || 0), icon: <ClipboardList size={16} />, iconColor: 'text-red-500 bg-red-50', path: '/super-admin/requests' },
     { title: 'AMC Customers', value: number.format(metrics?.amcCustomers || 0), icon: <Users size={16} />, iconColor: 'text-purple-600 bg-purple-50', path: '/super-admin/amc' },
     { title: 'NCC Shield Customers', value: number.format(metrics?.extendedWarrantyCustomers || 0), icon: <Shield size={16} />, iconColor: 'text-orange-600 bg-orange-50', path: '/super-admin/warranty' },
-    { title: 'Product Orders', value: number.format(metrics?.productOrders || 0), icon: <Briefcase size={16} />, iconColor: 'text-pink-600 bg-pink-50', path: '/super-admin/orders' },
-    { title: 'Open Escalations', value: number.format(metrics?.openEscalations || 0), icon: <AlertTriangle size={16} />, iconColor: 'text-red-600 bg-red-50', path: '/super-admin/escalation-desk' },
-    { title: 'Total Requests', value: number.format(metrics?.requests?.total || 0), icon: <BarChart3 size={16} />, iconColor: 'text-blue-500 bg-blue-50', path: '/super-admin/requests' },
   ];
 
-  // Quick Action List
+  // Quick Action List — "Add Service Partner" used to live here too, but
+  // ServicePartner was removed from the app entirely; it pointed at a route
+  // that no longer exists.
   const quickActions = [
-    { label: 'Add Service Partner', icon: <Building size={18} />, color: 'text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-100', path: '/super-admin/service-partners' },
     { label: 'Add ASM', icon: <Users size={18} />, color: 'text-green-600 bg-green-50 hover:bg-green-100 border border-green-100', path: '/super-admin/asm' },
     { label: 'Add Service Provider', icon: <UserCheck size={18} />, color: 'text-purple-600 bg-purple-50 hover:bg-purple-100 border border-purple-100', path: '/super-admin/service-providers?add=true' },
     { label: 'Create AMC Plan', icon: <FileText size={18} />, color: 'text-orange-600 bg-orange-50 hover:bg-orange-100 border border-orange-100', path: '/super-admin/amc' },
@@ -221,21 +248,28 @@ const Dashboard = () => {
       {/* Main Content Area */}
       <div className="flex-1 ml-64 min-h-screen flex flex-col">
         {/* Topbar */}
-        <Topbar 
-          title="Executive Dashboard" 
+        {/* showFilters used to be on here — a location/date "filter" that
+            never actually filtered anything on this page, just changed its
+            own label and showed a toast. Decorative, not real. */}
+        <Topbar
+          title="Executive Dashboard"
           subtitle="Welcome back! Here's what's happening with NCC today."
-          showFilters={true}
         />
 
         {/* Dashboard Body */}
         <div className="p-6 space-y-6 flex-1 max-w-[1600px] mx-auto w-full">
 
-          {/* 10 KPI Stats Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          {/* KPI Stats Grid — trimmed to what's actually actionable at a
+              glance; Platform Net Share/Product Orders/Total Requests lived
+              here too but only duplicated what Revenue and the charts below
+              already show. */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {stats.map((stat, idx) => (
-              <div 
-                key={idx} 
-                className="bg-white p-4 rounded-xl border border-[#E2E8F0] flex flex-col justify-between hover:shadow-md transition-all duration-200 cursor-pointer"
+              <div
+                key={idx}
+                className={`bg-white p-4 rounded-xl border flex flex-col justify-between hover:shadow-md transition-all duration-200 cursor-pointer ${
+                  stat.flagged ? 'border-amber-300 ring-1 ring-amber-200' : 'border-[#E2E8F0]'
+                }`}
                 onClick={() => navigate(stat.path)}
               >
                 <div className="flex justify-between items-start">
@@ -440,7 +474,7 @@ const Dashboard = () => {
                   </svg>
                   <div className="absolute flex flex-col items-center leading-none text-center">
                     <span className="text-sm font-extrabold text-[#1E293B] transition-all">
-                      {activeDoughnutIndex !== null ? doughnutSegments[activeDoughnutIndex].value : '5.3K'}
+                      {activeDoughnutIndex !== null ? doughnutSegments[activeDoughnutIndex].value : number.format(metrics?.requests?.total || 0)}
                     </span>
                     <span className="text-[8px] text-[#64748B] font-bold uppercase mt-0.5 tracking-tight transition-all">
                       {activeDoughnutIndex !== null ? doughnutSegments[activeDoughnutIndex].label : 'Requests'}
@@ -552,136 +586,13 @@ const Dashboard = () => {
 
           </div>
 
-          {/* Third Row: Lists / Ranking & ServiceProvider Status */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            
-            {/* Top Cities by Requests */}
-            <div className="bg-white p-5 rounded-2xl border border-[#E2E8F0] flex flex-col justify-between">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-extrabold text-xs text-[#1E293B] tracking-wider uppercase">Top Cities by Requests</h3>
-                <select 
-                  value={activeTabCity} 
-                  onChange={(e) => setActiveTabCity(e.target.value)}
-                  className="text-[10px] text-[#64748B] border border-[#E2E8F0] rounded-md px-1.5 py-0.5 outline-none bg-white font-semibold cursor-pointer"
-                >
-                  <option value="7days">Last 7 Days</option>
-                  <option value="30days">Last 30 Days</option>
-                </select>
-              </div>
-
-              <div className="space-y-3.5 flex-1">
-                {[
-                  { city: 'Lucknow', count: 842, max: 1000 },
-                  { city: 'Kanpur', count: 512, max: 1000 },
-                  { city: 'Gorakhpur', count: 413, max: 1000 },
-                  { city: 'Varanasi', count: 308, max: 1000 },
-                  { city: 'Delhi', count: 268, max: 1000 },
-                ].map((item, i) => (
-                  <div key={i} className="space-y-1">
-                    <div className="flex justify-between text-xs font-semibold">
-                      <span className="text-slate-800 flex items-center gap-1.5">
-                        <span className="w-4 h-4 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-500">{i+1}</span>
-                        {item.city}
-                      </span>
-                      <span className="text-[#0D47A1] font-bold">{item.count}</span>
-                    </div>
-                    <div className="w-full bg-[#F1F5F9] h-2 rounded-full overflow-hidden">
-                      <div className="bg-[#0D47A1] h-full rounded-full" style={{ width: `${(item.count / item.max) * 100}%` }}></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <button 
-                onClick={() => navigate('/super-admin/cities')}
-                className="mt-4 w-full text-center text-xs font-bold text-[#0D47A1] hover:underline flex items-center gap-1 justify-center pt-3 border-t border-slate-100"
-              >
-                View All Cities →
-              </button>
-            </div>
-
-            {/* Top Performing ASMs */}
-            <div className="bg-white p-5 rounded-2xl border border-[#E2E8F0] flex flex-col justify-between">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-extrabold text-xs text-[#1E293B] tracking-wider uppercase">Top Performing ASMs</h3>
-                <select 
-                  value={activeTabASM} 
-                  onChange={(e) => setActiveTabASM(e.target.value)}
-                  className="text-[10px] text-[#64748B] border border-[#E2E8F0] rounded-md px-1.5 py-0.5 outline-none bg-white font-semibold cursor-pointer"
-                >
-                  <option value="7days">Last 7 Days</option>
-                  <option value="30days">Last 30 Days</option>
-                </select>
-              </div>
-
-              <div className="space-y-3 flex-1">
-                {[
-                  { name: 'Rajesh Kumar', city: 'Lucknow', rating: '98%' },
-                  { name: 'Amit Singh', city: 'Kanpur', rating: '95%' },
-                  { name: 'Suresh Yadav', city: 'Gorakhpur', rating: '94%' },
-                  { name: 'Pooja Verma', city: 'Varanasi', rating: '92%' },
-                  { name: 'Vikram Singh', city: 'Patna', rating: '90%' }
-                ].map((asm, i) => (
-                  <div key={i} className="flex items-center justify-between text-xs font-semibold py-0.5">
-                    <div className="flex items-center gap-2">
-                      <span className="w-4 h-4 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-500">{i+1}</span>
-                      <div>
-                        <p className="text-slate-800 font-bold">{asm.name}</p>
-                        <p className="text-[10px] text-slate-400 font-medium">{asm.city}</p>
-                      </div>
-                    </div>
-                    <span className="text-green-600 font-bold">{asm.rating}</span>
-                  </div>
-                ))}
-              </div>
-
-              <button 
-                onClick={() => navigate('/super-admin/asm')}
-                className="mt-4 w-full text-center text-xs font-bold text-[#0D47A1] hover:underline flex items-center gap-1 justify-center pt-3 border-t border-slate-100"
-              >
-                View All ASMs →
-              </button>
-            </div>
-
-            {/* Top Service Partners */}
-            <div className="bg-white p-5 rounded-2xl border border-[#E2E8F0] flex flex-col justify-between">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-extrabold text-xs text-[#1E293B] tracking-wider uppercase">Top Service Partners</h3>
-                <select 
-                  value={activeTabPartner} 
-                  onChange={(e) => setActiveTabPartner(e.target.value)}
-                  className="text-[10px] text-[#64748B] border border-[#E2E8F0] rounded-md px-1.5 py-0.5 outline-none bg-white font-semibold cursor-pointer"
-                >
-                  <option value="7days">Last 7 Days</option>
-                  <option value="30days">Last 30 Days</option>
-                </select>
-              </div>
-
-              <div className="space-y-3 flex-1">
-                {[
-                  { name: 'Care Tech Solutions', score: '98%' },
-                  { name: 'Perfect Services', score: '96%' },
-                  { name: 'Quick Fix India', score: '94%' },
-                  { name: 'Reliable Care', score: '92%' },
-                  { name: 'Tech Seva Point', score: '90%' }
-                ].map((partner, i) => (
-                  <div key={i} className="flex items-center justify-between text-xs font-semibold py-1">
-                    <div className="flex items-center gap-2">
-                      <span className="w-4 h-4 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-500">{i+1}</span>
-                      <span className="text-slate-800 font-bold">{partner.name}</span>
-                    </div>
-                    <span className="text-green-600 font-bold">{partner.score}</span>
-                  </div>
-                ))}
-              </div>
-
-              <button 
-                onClick={() => navigate('/super-admin/service-partners')}
-                className="mt-4 w-full text-center text-xs font-bold text-[#0D47A1] hover:underline flex items-center gap-1 justify-center pt-3 border-t border-slate-100"
-              >
-                View All Partners →
-              </button>
-            </div>
+          {/* Third Row: real-data-only now — the three "leaderboard" cards
+              that used to live here (Top Cities by Requests, Top Performing
+              ASMs, Top Service Partners) were 100% hardcoded fake rows with
+              no backing endpoint, and "Top Service Partners" linked to a
+              route that no longer exists (ServicePartner was removed from
+              the app entirely). Cut rather than faked-until-real. */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
             {/* Live ServiceProvider Status (Circular Ring Chart) */}
             <div className="bg-white p-5 rounded-2xl border border-[#E2E8F0] flex flex-col justify-between">
@@ -717,10 +628,12 @@ const Dashboard = () => {
                   </svg>
                   <div className="absolute flex flex-col items-center leading-none text-center">
                     <span className="text-base font-extrabold text-[#1E293B] transition-all">
-                      {activeTechSegment !== null ? serviceProviderSegments[activeTechSegment].value : '1,284'}
+                      {activeTechSegment !== null
+                        ? serviceProviderSegments[activeTechSegment].value
+                        : number.format((metrics?.serviceProviders?.Available || 0) + (metrics?.serviceProviders?.Busy || 0) + (metrics?.serviceProviders?.Offline || 0))}
                     </span>
                     <span className="text-[8px] text-slate-400 font-bold uppercase mt-1 transition-all">
-                      {activeTechSegment !== null ? serviceProviderSegments[activeTechSegment].label : 'Total Techs'}
+                      {activeTechSegment !== null ? serviceProviderSegments[activeTechSegment].label : 'Total Providers'}
                     </span>
                   </div>
                 </div>
@@ -753,49 +666,12 @@ const Dashboard = () => {
               </div>
             </div>
 
-          </div>
-
-          {/* Fourth Row: Live Activity, Recent Escalations & Upcoming Renewals */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            {/* Live Activity Feed */}
-            <div className="bg-white p-5 rounded-2xl border border-[#E2E8F0] flex flex-col justify-between h-[360px]">
-              <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
-                <h3 className="font-extrabold text-sm text-[#1E293B]">Live Activity Feed</h3>
-                <button 
-                  onClick={() => navigate('/super-admin/logs')}
-                  className="text-xs font-bold text-[#0D47A1] hover:underline"
-                >
-                  View All
-                </button>
-              </div>
-
-              <div className="space-y-4 flex-1 overflow-y-auto pr-1">
-                {[
-                  { text: 'New service request #SR-125853 received from Amit Sharma', city: 'Lucknow', time: '2 mins ago', color: 'bg-blue-50 text-[#0D47A1]' },
-                  { text: 'Service Provider Rahul Kumar started job #SR-125589', city: 'Kanpur', time: '5 mins ago', color: 'bg-green-50 text-green-600' },
-                  { text: 'AMC plan sold: Gold Plan to Neha Gupta', city: 'Kanpur', time: '10 mins ago', color: 'bg-yellow-50 text-yellow-600' },
-                  { text: 'NCC Shield claim #CLM-8893 approved for LG Refrigerator', city: 'Delhi', time: '15 mins ago', color: 'bg-purple-50 text-purple-600' },
-                  { text: 'Spare part request #SPR-4458 approved and dispatched', city: 'Varanasi', time: '20 mins ago', color: 'bg-emerald-50 text-emerald-600' },
-                ].map((act, idx) => (
-                  <div key={idx} className="flex gap-3 text-xs leading-normal">
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${act.color} font-black`}>
-                      •
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-slate-800 font-semibold">{act.text} <span className="text-[10px] text-slate-400 font-medium">({act.city})</span></p>
-                      <span className="text-[10px] text-slate-400 font-medium block mt-0.5">{act.time}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Recent Escalations */}
+            {/* Recent Escalations — real Escalation docs, replacing a
+                hardcoded #ESC-5554-style fake list. */}
             <div className="bg-white p-5 rounded-2xl border border-[#E2E8F0] flex flex-col justify-between h-[360px]">
               <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
                 <h3 className="font-extrabold text-sm text-[#1E293B]">Recent Escalations</h3>
-                <button 
+                <button
                   onClick={() => navigate('/super-admin/complaints')}
                   className="text-xs font-bold text-[#0D47A1] hover:underline"
                 >
@@ -803,63 +679,68 @@ const Dashboard = () => {
                 </button>
               </div>
 
-              <div className="space-y-3.5 flex-1 overflow-y-auto pr-1">
-                {[
-                  { id: '#ESC-5554', desc: 'AC not cooling - Delay in service', city: 'Lucknow', time: '25 mins ago' },
-                  { id: '#ESC-5553', desc: 'Service Provider behavior complaint', city: 'Kanpur', time: '35 mins ago' },
-                  { id: '#ESC-5552', desc: 'Warranty claim rejected by brand', city: 'Delhi', time: '1 hr ago' },
-                  { id: '#ESC-5551', desc: 'Spare part not available', city: 'Gorakhpur', time: '1 hr ago' },
-                ].map((esc, idx) => (
-                  <div key={idx} className="flex items-start justify-between bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-xs">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-red-600"></span>
-                        <span className="font-bold text-[#1E293B]">{esc.id}</span>
-                        <span className="text-[10px] text-slate-400 font-semibold">{esc.time}</span>
+              {activityLoading ? (
+                <p className="text-xs text-slate-400 font-semibold py-2">Loading...</p>
+              ) : recentEscalations.length === 0 ? (
+                <p className="text-xs text-slate-400 font-semibold py-2">No escalations — everything's on track.</p>
+              ) : (
+                <div className="space-y-3.5 flex-1 overflow-y-auto pr-1">
+                  {recentEscalations.map((esc) => (
+                    <div key={esc.id} className="flex items-start justify-between bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-xs">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-600"></span>
+                          <span className="font-bold text-[#1E293B]">{esc.humanId}</span>
+                          <span className="text-[10px] text-slate-400 font-semibold">{esc.daysOpen === 0 ? 'Today' : `${esc.daysOpen}d open`}</span>
+                        </div>
+                        <p className="text-slate-600 font-semibold pl-3.5 leading-tight">{esc.reason || esc.description || 'Escalation'}</p>
+                        <p className="text-[10px] text-slate-400 font-bold pl-3.5">{esc.city?.name || 'Unassigned zone'}</p>
                       </div>
-                      <p className="text-slate-600 font-semibold pl-3.5 leading-tight">{esc.desc}</p>
-                      <p className="text-[10px] text-slate-400 font-bold pl-3.5">{esc.city}</p>
+                      <span className="bg-red-50 text-red-600 text-[10px] font-black px-2 py-0.5 rounded-md border border-red-100 uppercase flex-shrink-0">
+                        {esc.priority}
+                      </span>
                     </div>
-                    <span className="bg-red-50 text-red-600 text-[10px] font-black px-2 py-0.5 rounded-md border border-red-100 uppercase">
-                      High
-                    </span>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {/* Upcoming Renewals */}
+            {/* Live Activity Feed — real audit log entries (super-admin's
+                Audit Logs page), replacing a hardcoded fake feed. */}
             <div className="bg-white p-5 rounded-2xl border border-[#E2E8F0] flex flex-col justify-between h-[360px]">
               <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
-                <h3 className="font-extrabold text-sm text-[#1E293B]">Upcoming Renewals</h3>
-                <button 
-                  onClick={() => showToast('Opening renewals board...')}
+                <h3 className="font-extrabold text-sm text-[#1E293B]">Live Activity Feed</h3>
+                <button
+                  onClick={() => navigate('/super-admin/logs')}
                   className="text-xs font-bold text-[#0D47A1] hover:underline"
                 >
                   View All
                 </button>
               </div>
 
-              <div className="space-y-3.5 flex-1">
-                {[
-                  { title: 'AMC Renewals', desc: 'Due in next 7 days', count: 265, icon: <FileCheck size={18} className="text-amber-500" />, iconBg: 'bg-amber-50 border-amber-100' },
-                  { title: 'NCC Shield Renewals', desc: 'Due in next 7 days', count: 189, icon: <Shield size={18} className="text-indigo-500" />, iconBg: 'bg-indigo-50 border-indigo-100' },
-                  { title: 'Expiring Today', desc: 'Renewals due today', count: 24, icon: <AlertTriangle size={18} className="text-red-500" />, iconBg: 'bg-red-50 border-red-100' }
-                ].map((ren, idx) => (
-                  <div key={idx} className="flex items-center justify-between border border-slate-100 p-3.5 rounded-xl hover:bg-slate-50 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center border ${ren.iconBg}`}>
-                        {ren.icon}
+              {activityLoading ? (
+                <p className="text-xs text-slate-400 font-semibold py-2">Loading...</p>
+              ) : recentActivity.length === 0 ? (
+                <p className="text-xs text-slate-400 font-semibold py-2">No recent activity logged yet.</p>
+              ) : (
+                <div className="space-y-4 flex-1 overflow-y-auto pr-1">
+                  {recentActivity.map((act) => (
+                    <div key={act.id} className="flex gap-3 text-xs leading-normal">
+                      <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 bg-blue-50 text-[#0D47A1] font-black">
+                        •
                       </div>
-                      <div>
-                        <p className="text-xs font-bold text-slate-800">{ren.title}</p>
-                        <p className="text-[10px] text-slate-400 font-semibold">{ren.desc}</p>
+                      <div className="flex-1">
+                        <p className="text-slate-800 font-semibold">
+                          {act.action} {act.user?.name && <span className="text-[10px] text-slate-400 font-medium">({act.user.name})</span>}
+                        </p>
+                        <span className="text-[10px] text-slate-400 font-medium block mt-0.5">
+                          {act.createdAt ? new Date(act.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}
+                        </span>
                       </div>
                     </div>
-                    <span className="text-lg font-black text-slate-800">{ren.count}</span>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
 
           </div>
@@ -867,7 +748,7 @@ const Dashboard = () => {
           {/* Quick Actions Panel */}
           <div className="bg-white p-5 rounded-2xl border border-[#E2E8F0]">
             <h3 className="font-extrabold text-sm text-[#1E293B] mb-4">Quick Actions</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
               {quickActions.map((action, idx) => (
                 <button
                   key={idx}

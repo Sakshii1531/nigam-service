@@ -22,6 +22,18 @@ const LoyaltyProgram = () => {
   // 1. REWARDS STATE
   const [coinRate, setCoinRate] = useState(1); // 1 coin = ₹1 spent
   const [milestones, setMilestones] = useState([]);
+  // "Coins Redeemed Value" stat card below — was being fetched under the
+  // wrong tab (referrals) so it silently never populated on the rewards tab
+  // that actually renders it. Real data either way (analytics.service.js's
+  // getCoinRedemption, summing WalletLedger's 'redeemed' rows).
+  const [coinRedemption, setCoinRedemption] = useState(null);
+  const loadCoinRedemption = React.useCallback(async () => {
+    try {
+      setCoinRedemption(await apiRequest('/super-admin/analytics/coin-redemption', { auth: true }));
+    } catch (err) {
+      console.warn('[loyalty] Could not load coin redemption:', err.message);
+    }
+  }, []);
 
   const loadMilestones = React.useCallback(async () => {
     try {
@@ -202,14 +214,14 @@ const LoyaltyProgram = () => {
   };
 
   // 4. REFERRALS STATE
-  const [referralBonus, setReferralBonus] = useState(100); // 100 coins
-  const [refereeDiscount, setRefereeDiscount] = useState(10); // 10%
-  const [referralStats] = useState({
-    totalShared: 1450,
-    successfulConversions: 840,
-    totalCoinsPaid: 84000
+  const [referralBonus, setReferralBonus] = useState(100); // ₹ credited to the referrer — platformSettings.referralBonusAmount
+  const [refereeDiscount, setRefereeDiscount] = useState(10); // % off the referee's first booking — platformSettings.refereeDiscountPercent
+  const [savingReferralConfig, setSavingReferralConfig] = useState(false);
+  const [referralStats, setReferralStats] = useState({
+    totalReferrers: 0,
+    successfulConversions: 0,
+    totalCoinsPaid: 0,
   });
-  const [coinRedemption, setCoinRedemption] = useState(null);
   const [referralCampaigns, setReferralCampaigns] = useState([]);
 
   const loadReferralCampaigns = React.useCallback(async () => {
@@ -220,12 +232,50 @@ const LoyaltyProgram = () => {
       showToast(err.message || 'Could not load referral campaigns.');
     }
   }, []);
+
+  const loadReferralStats = React.useCallback(async () => {
+    try {
+      const res = await apiRequest('/super-admin/loyalty/referral-stats', { auth: true });
+      if (res) setReferralStats(res);
+    } catch (err) {
+      showToast(err.message || 'Could not load referral stats.');
+    }
+  }, []);
+
+  // The multiplier fields default to the model's own defaults (100 / 10)
+  // above so the form isn't blank while this loads, then pick up whatever
+  // super-admin actually last saved.
+  const loadReferralSettings = React.useCallback(async () => {
+    try {
+      const res = await apiRequest('/super-admin/settings', { auth: true });
+      if (res?.referralBonusAmount !== undefined) setReferralBonus(res.referralBonusAmount);
+      if (res?.refereeDiscountPercent !== undefined) setRefereeDiscount(res.refereeDiscountPercent);
+    } catch (err) {
+      showToast(err.message || 'Could not load referral settings.');
+    }
+  }, []);
+
   const [newCampaign, setNewCampaign] = useState({ name: '', bonus: '', discount: '' });
   const [showAddCampaignModal, setShowAddCampaignModal] = useState(false);
 
-  const handleSaveReferralConfig = (e) => {
+  const handleSaveReferralConfig = async (e) => {
     e.preventDefault();
-    showToast('Referral program settings updated.');
+    setSavingReferralConfig(true);
+    try {
+      await apiRequest('/super-admin/settings', {
+        method: 'PUT',
+        auth: true,
+        body: {
+          referralBonusAmount: Number(referralBonus),
+          refereeDiscountPercent: Number(refereeDiscount),
+        },
+      });
+      showToast('Referral program settings updated.');
+    } catch (err) {
+      showToast(err.message || 'Could not save referral settings.');
+    } finally {
+      setSavingReferralConfig(false);
+    }
   };
 
   const handleCreateCampaign = async (e) => {
@@ -303,15 +353,17 @@ const LoyaltyProgram = () => {
   useEffect(() => {
     if (activeTab === 'coupons') fetchAllCoupons();
     else if (activeTab === 'spinwheel') fetchSpinWheelConfig();
-    else if (activeTab === 'rewards') loadMilestones();
+    else if (activeTab === 'rewards') {
+      loadMilestones();
+      loadCoinRedemption();
+    }
     else if (activeTab === 'membership') loadPlans();
     else if (activeTab === 'referrals') {
       loadReferralCampaigns();
-      apiRequest('/super-admin/analytics/coin-redemption', { auth: true })
-        .then((res) => setCoinRedemption(res))
-        .catch((err) => console.warn('[loyalty] Could not load coin redemption:', err.message));
+      loadReferralStats();
+      loadReferralSettings();
     }
-  }, [activeTab, loadMilestones, loadPlans, loadReferralCampaigns]);
+  }, [activeTab, loadMilestones, loadCoinRedemption, loadPlans, loadReferralCampaigns, loadReferralStats, loadReferralSettings]);
 
   const handleAddCoupon = async (e) => {
     e.preventDefault();
@@ -1026,8 +1078,8 @@ const LoyaltyProgram = () => {
                 {/* Stats Overview */}
                 <div className="grid grid-cols-3 gap-4">
                   <div className="border border-slate-150 p-4.5 rounded-xl bg-slate-50/50 text-left">
-                    <span className="text-[10px] text-slate-400 font-bold uppercase block">Referral Links Shared</span>
-                    <span className="text-lg font-black text-slate-800 block mt-1">{referralStats.totalShared} Times</span>
+                    <span className="text-[10px] text-slate-400 font-bold uppercase block">Total Referrers</span>
+                    <span className="text-lg font-black text-slate-800 block mt-1">{referralStats.totalReferrers} Customers</span>
                   </div>
                   <div className="border border-slate-150 p-4.5 rounded-xl bg-slate-50/50 text-left">
                     <span className="text-[10px] text-slate-400 font-bold uppercase block">Completed Referrals</span>
@@ -1072,11 +1124,12 @@ const LoyaltyProgram = () => {
                     </div>
                   </div>
 
-                  <button 
+                  <button
                     type="submit"
-                    className="bg-[#0D47A1] hover:bg-blue-800 text-white font-bold py-2.5 px-5 rounded-xl text-xs self-start cursor-pointer shadow-md"
+                    disabled={savingReferralConfig}
+                    className="bg-[#0D47A1] hover:bg-blue-800 text-white font-bold py-2.5 px-5 rounded-xl text-xs self-start cursor-pointer shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    Save Configuration
+                    {savingReferralConfig ? 'Saving…' : 'Save Configuration'}
                   </button>
                 </form>
 

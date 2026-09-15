@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import { 
@@ -8,15 +9,25 @@ import {
   Mail, 
   Phone, 
   Star, 
-  MapPin, 
-  Edit, 
+  MapPin,
+  Edit,
   Trash2,
   CheckCircle2,
   TrendingUp,
   ShieldCheck,
+  Eye,
   X
 } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
+
+// Mirrors the Permission keys seed.js upserts under the 'techs' domain —
+// asm.service.js's syncAsmRole resolves whichever of these are checked into
+// a dedicated per-ASM Role, so a view-only ASM and a full-management ASM are
+// just different checkbox states, not different code paths.
+const PERMISSION_OPTIONS = [
+  { key: 'techs:view', label: 'View Service Providers', description: "See this zone's service providers and their submitted KYC documents." },
+  { key: 'techs:manage', label: 'Manage Service Providers', description: 'Also approve, suspend, and reactivate service providers.' },
+];
 
 function shape(asm) {
   return {
@@ -27,10 +38,13 @@ function shape(asm) {
     phone: asm.phone || '—',
     city: asm.city?.name || 'Unassigned',
     rating: asm.rating ?? 0,
+    permissions: asm.permissions || [],
   };
 }
 
 const ASM = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCity, setSelectedCity] = useState('All Cities');
   const [asms, setAsms] = useState([]);
@@ -39,6 +53,10 @@ const ASM = () => {
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  // Deep-linked here from a service provider's row/profile (?asm=<id>) — see
+  // the effect below, which opens straight into editing that one ASM and
+  // leaves the row lit for a moment so the landing isn't disorienting.
+  const [highlightedAsmId, setHighlightedAsmId] = useState(null);
 
   // Modal State for Create
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -47,6 +65,7 @@ const ASM = () => {
   const [newAsmPhone, setNewAsmPhone] = useState('');
   const [newAsmCity, setNewAsmCity] = useState('');
   const [newAsmPassword, setNewAsmPassword] = useState('');
+  const [newAsmPermissions, setNewAsmPermissions] = useState(['techs:view']);
 
   // Modal State for Edit
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -56,6 +75,11 @@ const ASM = () => {
   const [editAsmPhone, setEditAsmPhone] = useState('');
   const [editAsmCity, setEditAsmCity] = useState('');
   const [editAsmPassword, setEditAsmPassword] = useState('');
+  const [editAsmPermissions, setEditAsmPermissions] = useState(['techs:view']);
+
+  const togglePermission = (setter) => (key) => {
+    setter((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
+  };
 
   const showToast = (msg) => {
     setSuccessMessage(msg);
@@ -104,7 +128,7 @@ const ASM = () => {
       return;
     }
     if (newAsmPassword.length < 6) {
-      setError('Set a password of at least 6 characters — this is what the ASM signs in with.');
+      setError('Set a temporary password of at least 6 characters — the ASM replaces it themselves on first login.');
       return;
     }
     setSaving(true);
@@ -112,7 +136,7 @@ const ASM = () => {
       const created = await apiRequest('/super-admin/asms', {
         method: 'POST',
         auth: true,
-        body: { name: newAsmName, email: newAsmEmail, phone: newAsmPhone, city: newAsmCity, password: newAsmPassword },
+        body: { name: newAsmName, email: newAsmEmail, phone: newAsmPhone, city: newAsmCity, password: newAsmPassword, permissions: newAsmPermissions },
       });
       const cityObj = cities.find(c => c.id === newAsmCity);
       setAsms(prev => [...prev, shape({ ...created, city: cityObj })]);
@@ -122,6 +146,7 @@ const ASM = () => {
       setNewAsmPhone('');
       setNewAsmCity(cities[0]?.id || '');
       setNewAsmPassword('');
+      setNewAsmPermissions(['techs:view']);
       setIsModalOpen(false);
       setError('');
       showToast('New Area Service Manager added successfully!');
@@ -140,13 +165,35 @@ const ASM = () => {
     const matchedCity = cities.find(c => c.name === asm.city || c.id === asm.rawCityId);
     setEditAsmCity(matchedCity?.id || cities[0]?.id || '');
     setEditAsmPassword('');
+    setEditAsmPermissions(asm.permissions?.length ? asm.permissions : ['techs:view']);
     setIsEditModalOpen(true);
   };
+
+  // Deep link from Service Provider Management (?asm=<id> on the row's ASM
+  // Manager link, or the detail page). Waits on `asms` so it fires once the
+  // list has actually loaded, opens straight into editing that one ASM, and
+  // strips the param afterward so a refresh/back-nav doesn't reopen it.
+  useEffect(() => {
+    if (!asms.length) return;
+    const params = new URLSearchParams(location.search);
+    const targetId = params.get('asm');
+    if (!targetId) return;
+
+    const target = asms.find((a) => a.id === targetId);
+    navigate(location.pathname, { replace: true });
+    if (!target) {
+      setError('That ASM no longer exists — they may have been reassigned or removed.');
+      return;
+    }
+    openEditModal(target);
+    setHighlightedAsmId(targetId);
+    setTimeout(() => setHighlightedAsmId(null), 2500);
+  }, [asms]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleEditAsm = async (e) => {
     e.preventDefault();
     if (editAsmPassword && editAsmPassword.length < 6) {
-      setError('New password must be at least 6 characters.');
+      setError('New temporary password must be at least 6 characters.');
       return;
     }
     setSaving(true);
@@ -159,8 +206,11 @@ const ASM = () => {
           email: editAsmEmail,
           phone: editAsmPhone,
           city: editAsmCity,
+          permissions: editAsmPermissions,
           // Only sent when the super-admin actually typed a new one — leaves
-          // the ASM's existing password untouched otherwise.
+          // the ASM's existing password untouched otherwise. Also resets to
+          // temporary (asm.service.js's updateAsm sets mustChangePassword
+          // again), so the ASM sets their own again on next login.
           ...(editAsmPassword ? { password: editAsmPassword } : {}),
         },
       });
@@ -307,7 +357,13 @@ const ASM = () => {
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs font-medium">
                   {filteredAsms.map((asm) => (
-                    <tr key={asm.id} className="hover:bg-slate-50/80 transition-colors group">
+                    <tr
+                      key={asm.id}
+                      id={`asm-row-${asm.id}`}
+                      className={`hover:bg-slate-50/80 transition-colors group ${
+                        highlightedAsmId === asm.id ? 'bg-blue-50 ring-2 ring-inset ring-[#0D47A1]/30' : ''
+                      }`}
+                    >
                       {/* Name & Avatar */}
                       <td className="py-4 px-6">
                         <div className="flex items-center gap-3">
@@ -354,6 +410,13 @@ const ASM = () => {
                       {/* Actions */}
                       <td className="py-4 px-6 text-right">
                         <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => navigate(`/super-admin/asm/${asm.id}`)}
+                            className="p-2 text-slate-500 hover:text-[#0D47A1] hover:bg-blue-50 rounded-xl transition-all cursor-pointer border border-transparent hover:border-blue-100"
+                            title="View ASM Details"
+                          >
+                            <Eye size={15} />
+                          </button>
                           <button
                             onClick={() => openEditModal(asm)}
                             className="p-2 text-slate-500 hover:text-[#0D47A1] hover:bg-blue-50 rounded-xl transition-all cursor-pointer border border-transparent hover:border-blue-100"
@@ -468,7 +531,7 @@ const ASM = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Login Password *</label>
+                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">One-Time Password *</label>
                 <input
                   type="password"
                   required
@@ -478,13 +541,37 @@ const ASM = () => {
                   value={newAsmPassword}
                   onChange={(e) => setNewAsmPassword(e.target.value)}
                 />
-                <p className="text-[10px] text-slate-400 mt-1">This is what the ASM signs in with at the ASM Portal — share it with them directly.</p>
+                <p className="text-[10px] text-slate-400 mt-1">Share this with the ASM directly. It only gets them in the door — first login forces them to set their own password, and only they'll know it after that.</p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Permissions</label>
+                <p className="text-[10px] text-slate-400 mb-2">What this ASM can do within their zone. Viewing documents is always included; managing (approve/suspend/reactivate) is optional.</p>
+                <div className="space-y-2">
+                  {PERMISSION_OPTIONS.map((perm) => (
+                    <label
+                      key={perm.key}
+                      className="flex items-start gap-2.5 p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        className="mt-0.5 accent-[#0D47A1]"
+                        checked={newAsmPermissions.includes(perm.key)}
+                        onChange={() => togglePermission(setNewAsmPermissions)(perm.key)}
+                      />
+                      <span>
+                        <span className="block text-xs font-bold text-slate-800">{perm.label}</span>
+                        <span className="block text-[10px] text-slate-500 mt-0.5">{perm.description}</span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
               </div>
 
               <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
-                <button 
-                  type="button" 
-                  onClick={() => setIsModalOpen(false)} 
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
                   className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer border border-slate-200"
                 >
                   Cancel
@@ -571,7 +658,7 @@ const ASM = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Reset Password (optional)</label>
+                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Issue New One-Time Password (optional)</label>
                 <input
                   type="password"
                   minLength={6}
@@ -580,6 +667,31 @@ const ASM = () => {
                   value={editAsmPassword}
                   onChange={(e) => setEditAsmPassword(e.target.value)}
                 />
+                <p className="text-[10px] text-slate-400 mt-1">Setting this resets their login — they'll need this one-time password to sign in and will be asked to set their own again.</p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Permissions</label>
+                <p className="text-[10px] text-slate-400 mb-2">What this ASM can do within their zone. Viewing documents is always included; managing (approve/suspend/reactivate) is optional.</p>
+                <div className="space-y-2">
+                  {PERMISSION_OPTIONS.map((perm) => (
+                    <label
+                      key={perm.key}
+                      className="flex items-start gap-2.5 p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        className="mt-0.5 accent-[#0D47A1]"
+                        checked={editAsmPermissions.includes(perm.key)}
+                        onChange={() => togglePermission(setEditAsmPermissions)(perm.key)}
+                      />
+                      <span>
+                        <span className="block text-xs font-bold text-slate-800">{perm.label}</span>
+                        <span className="block text-[10px] text-slate-500 mt-0.5">{perm.description}</span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
               </div>
 
               <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">

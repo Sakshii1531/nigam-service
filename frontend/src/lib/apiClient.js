@@ -20,10 +20,12 @@ const BASE_URL = getBaseUrl();
  * Enables simultaneous multi-role sessions across separate browser tabs.
  */
 export function getCurrentPortal(pathname = typeof window !== 'undefined' ? window.location.pathname : '') {
+  // ASM has no separate portal — it's role-scoped access inside the
+  // super-admin panel (Sidebar.jsx's role-aware nav, App.jsx's route guard),
+  // so it shares that same '/super-admin' -> 'super_admin' mapping.
   if (pathname.startsWith('/super-admin')) return 'super_admin';
   if (pathname.startsWith('/brand-admin')) return 'brand_admin';
   if (pathname.startsWith('/service-provider')) return 'service_provider';
-  if (pathname.startsWith('/asm')) return 'asm';
   return 'customer';
 }
 

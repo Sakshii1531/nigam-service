@@ -1,16 +1,60 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Gift, Copy, Check, Share2, Coins, Sparkles, Trophy, Users, ArrowRight } from 'lucide-react';
+import { ArrowLeft, Gift, Copy, Check, Share2, Coins, Sparkles, Trophy, Users, ArrowRight, Clock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { apiRequest } from '../lib/apiClient';
 
 const ReferEarn = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [copied, setCopied] = useState(false);
   const [showEarnedToast, setShowEarnedToast] = useState(false);
-  
+
+  // Live-configured reward copy (super-admin's Loyalty > Referrals tab) — this
+  // used to be a hardcoded "100 Coins" / "10% OFF" in the JSX below, which
+  // silently went stale the moment an admin changed the real amount.
+  const [rewardConfig, setRewardConfig] = useState({ referralBonusAmount: 100, refereeDiscountPercent: 10 });
+
+  // Who I've actually referred, and what it's earned me so far.
+  const [referrals, setReferrals] = useState([]);
+  const [referralSummary, setReferralSummary] = useState({ total: 0, totalCoinsEarned: 0 });
+  const [loadingReferrals, setLoadingReferrals] = useState(true);
+  const [referralsError, setReferralsError] = useState('');
+
   const referralCode = user?.referralCode || (user?.name ? `${user.name.split(' ')[0].toUpperCase()}100` : 'NCCGOLD100');
   const userCoins = user?.walletCoins || 0;
+
+  useEffect(() => {
+    apiRequest('/super-admin/settings/public')
+      .then((res) => {
+        if (res?.referralBonusAmount !== undefined) {
+          setRewardConfig({ referralBonusAmount: res.referralBonusAmount, refereeDiscountPercent: res.refereeDiscountPercent });
+        }
+      })
+      .catch(() => {}); // Non-fatal — the fallback defaults above still read sensibly.
+  }, []);
+
+  const loadReferrals = useCallback(async () => {
+    try {
+      setLoadingReferrals(true);
+      const res = await apiRequest('/auth/referrals?limit=50', { auth: true, envelope: true });
+      setReferrals(Array.isArray(res?.data) ? res.data : []);
+      setReferralSummary({ total: res?.meta?.total || 0, totalCoinsEarned: res?.meta?.totalCoinsEarned || 0 });
+      setReferralsError('');
+    } catch (err) {
+      setReferralsError(err.message || 'Could not load your referrals.');
+    } finally {
+      setLoadingReferrals(false);
+    }
+  }, []);
+
+  useEffect(() => { loadReferrals(); }, [loadReferrals]);
+
+  const formatDate = (iso) => iso
+    ? new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+    : '—';
+
+  const getInitials = (name) => (name || 'A').split(' ').map((p) => p[0]).join('').toUpperCase().slice(0, 2);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(referralCode);
@@ -26,7 +70,7 @@ const ReferEarn = () => {
     if (navigator.share) {
       navigator.share({
         title: 'Nigam Care Services - Refer & Earn',
-        text: `Use my referral code ${referralCode} to get 10% OFF on your first home appliance service booking!`,
+        text: `Use my referral code ${referralCode} to get ${rewardConfig.refereeDiscountPercent}% OFF on your first home appliance service booking!`,
         url: window.location.origin
       }).catch(console.error);
     } else {
@@ -93,7 +137,7 @@ const ReferEarn = () => {
 
         {/* Info detail */}
         <p className="text-[11px] text-slate-500 font-semibold leading-relaxed px-2 text-center">
-          Share the love with your friends. Get <span className="text-[#0D47A1] font-black">100 Coins reward</span> in your wallet when they book their first service, and they get <span className="text-emerald-600 font-black">10% OFF</span>!
+          Share the love with your friends. Get <span className="text-[#0D47A1] font-black">{rewardConfig.referralBonusAmount} Coins reward</span> in your wallet when they book their first service, and they get <span className="text-emerald-600 font-black">{rewardConfig.refereeDiscountPercent}% OFF</span>!
         </p>
 
         {/* Code Box */}
@@ -162,7 +206,7 @@ const ReferEarn = () => {
               <div className="flex-1 min-w-0">
                 <h4 className="text-xs font-black text-slate-800">Get Rewarded</h4>
                 <p className="text-[10.5px] text-slate-500 font-semibold leading-relaxed mt-0.5">
-                  You get 100 Coins credited to your Nigam Super Rewards wallet and your friend receives 10% off their booking!
+                  You get {rewardConfig.referralBonusAmount} Coins credited to your Nigam Super Rewards wallet and your friend receives {rewardConfig.refereeDiscountPercent}% off their booking!
                 </p>
               </div>
             </div>
@@ -175,8 +219,70 @@ const ReferEarn = () => {
           className="w-full bg-[#0D47A1] hover:bg-blue-800 text-white text-xs font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md mt-2"
         >
           <Share2 className="h-4.5 w-4.5" />
-          <span>Share & Earn 100 Coins</span>
+          <span>Share & Earn {rewardConfig.referralBonusAmount} Coins</span>
         </button>
+
+        {/* Your Referrals — who's actually signed up with your code, and what
+            it earned you. */}
+        <div className="flex flex-col gap-3 mt-2">
+          <div className="flex items-center justify-between px-1">
+            <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">
+              Your Referrals
+            </h3>
+            {referralSummary.total > 0 && (
+              <span className="text-[10.5px] font-bold text-slate-400">
+                {referralSummary.total} friend{referralSummary.total === 1 ? '' : 's'} · {referralSummary.totalCoinsEarned.toLocaleString('en-IN')} Coins earned
+              </span>
+            )}
+          </div>
+
+          {loadingReferrals ? (
+            <div className="bg-white border border-slate-150 rounded-3xl p-8 flex items-center justify-center gap-2 text-slate-400 text-xs font-bold">
+              <div className="w-4 h-4 border-2 border-[#0D47A1] border-t-transparent rounded-full animate-spin" />
+              Loading your referrals...
+            </div>
+          ) : referralsError ? (
+            <div className="bg-red-50 border border-red-100 rounded-3xl p-5 text-red-600 text-xs font-semibold text-center">
+              {referralsError}
+            </div>
+          ) : referrals.length === 0 ? (
+            <div className="bg-white border border-dashed border-slate-200 rounded-3xl p-8 flex flex-col items-center text-center gap-2">
+              <Users className="h-8 w-8 text-slate-300" />
+              <p className="text-xs font-black text-slate-600">No referrals yet</p>
+              <p className="text-[10.5px] text-slate-400 font-semibold leading-relaxed max-w-[220px]">
+                Share your code above — friends who sign up with it will show up here.
+              </p>
+            </div>
+          ) : (
+            <div className="bg-white border border-slate-150 rounded-3xl shadow-2xs divide-y divide-slate-50 overflow-hidden">
+              {referrals.map((r) => (
+                <div key={r.id} className="flex items-center gap-3 p-4">
+                  <div className="w-10 h-10 rounded-2xl bg-blue-50 text-[#0D47A1] flex items-center justify-center font-black text-xs flex-shrink-0">
+                    {getInitials(r.referredName)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-black text-slate-800 truncate">{r.referredName}</p>
+                    <p className="text-[10px] text-slate-400 font-semibold flex items-center gap-1 mt-0.5">
+                      <Clock className="h-3 w-3" /> Joined {formatDate(r.joinedAt)}
+                    </p>
+                  </div>
+                  <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                    <span className="text-xs font-black text-[#0D47A1] flex items-center gap-1">
+                      <Coins className="h-3.5 w-3.5 text-[#FFD54F]" /> +{r.bonusAmount}
+                    </span>
+                    <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wide ${
+                      r.status === 'Credited'
+                        ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                        : 'bg-amber-50 text-amber-600 border border-amber-100'
+                    }`}>
+                      {r.status}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

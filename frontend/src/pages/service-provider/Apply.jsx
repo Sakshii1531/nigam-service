@@ -188,6 +188,13 @@ const ServiceProviderApply = () => {
   const [aadharBack, setAadharBack] = useState(null);
   const [aadharBackPreview, setAadharBackPreview] = useState('');
   const [uploading, setUploading] = useState(false);
+  // Guards the actual registration request — distinct from `uploading`
+  // (client-side image processing above). Without this, nothing stopped a
+  // double-click/impatient re-click while the request (which includes the
+  // Aadhar file upload to Cloudinary, so it can take a few seconds) was
+  // still in flight — the second request would race the first's duplicate-
+  // phone check and hit a raw E11000 from Mongo instead of a friendly error.
+  const [submitting, setSubmitting] = useState(false);
 
   // Client-side WebP Image Converter helper
   const convertImageToWebP = (file) => {
@@ -259,10 +266,12 @@ const ServiceProviderApply = () => {
     e.preventDefault();
     setError('');
 
+    if (submitting) return; // Already in flight — ignore a repeat click.
     if (!validateForm()) {
       return;
     }
 
+    setSubmitting(true);
     try {
       const formData = new FormData();
       formData.append('name', form.name.trim());
@@ -277,6 +286,7 @@ const ServiceProviderApply = () => {
       await apiRequest('/service-provider/register', { method: 'POST', body: formData });
     } catch (err) {
       setError(err.message || 'Could not submit your application. Please try again.');
+      setSubmitting(false);
       return;
     }
 
@@ -285,6 +295,9 @@ const ServiceProviderApply = () => {
       setSubmitted(false);
       navigate('/service-provider/login');
     }, 2000);
+    // Deliberately not resetting `submitting` on success — the button stays
+    // disabled through the "✓ Registration Request Sent!" state and the
+    // navigate() away, so there's no window to click Submit again.
   };
 
   return (
@@ -663,14 +676,20 @@ const ServiceProviderApply = () => {
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={uploading}
-            className={`w-full font-bold py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5 mt-2 active:scale-95 shadow-md ${
+            disabled={uploading || submitting}
+            className={`w-full font-bold py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5 mt-2 active:scale-95 shadow-md disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:translate-y-0 ${
               submitted
                 ? 'bg-green-500 text-white'
                 : 'bg-[#FFD600] text-[#0D47A1] hover:bg-yellow-400 shadow-yellow-400/10'
             }`}
           >
-            {submitted ? '✓ Registration Request Sent!' : uploading ? 'Processing Image...' : 'Submit Verification Request'}
+            {submitted
+              ? '✓ Registration Request Sent!'
+              : uploading
+              ? 'Processing Image...'
+              : submitting
+              ? 'Submitting...'
+              : 'Submit Verification Request'}
           </button>
         </form>
 

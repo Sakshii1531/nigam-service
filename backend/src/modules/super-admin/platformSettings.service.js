@@ -1,4 +1,5 @@
 import { PlatformSettings } from './platformSettings.model.js';
+import { ReferralCampaign } from '../rewards-loyalty/referralCampaign.model.js';
 import { logAudit } from '../shared/auditLog.js';
 
 export async function getSettings() {
@@ -9,11 +10,18 @@ export async function getSettings() {
 
 export async function getPublicSettings() {
   const settings = await getSettings();
+  // Same "an Active campaign overrides the default" rule signupVerify's
+  // reward credit follows (auth.service.js) — the copy the customer app
+  // shows before signing up must match what they'd actually get, not just
+  // the platform-wide fallback.
+  const activeCampaign = await ReferralCampaign.findOne({ status: 'Active' }).sort({ createdAt: -1 });
   return {
     platformName: settings.platformName,
     logoUrl: settings.logoUrl || null,
     maintenanceMode: !!settings.maintenanceMode,
     supportEmail: settings.supportEmail || null,
+    referralBonusAmount: activeCampaign ? activeCampaign.bonus : settings.referralBonusAmount,
+    refereeDiscountPercent: activeCampaign ? activeCampaign.discount : settings.refereeDiscountPercent,
   };
 }
 
@@ -30,6 +38,7 @@ const EDITABLE_FIELDS = [
   'defaultGstPercent',
   'coinConversionRate',
   'referralBonusAmount',
+  'refereeDiscountPercent',
 ];
 
 export async function updateSettings(updates, actingUserId) {

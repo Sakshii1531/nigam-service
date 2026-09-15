@@ -44,6 +44,23 @@ export function requirePermission(key) {
   };
 }
 
+/**
+ * Like requirePermission, but only actually enforced for an ASM caller.
+ * super_admin already reached this route through requireRole(SUPER_ADMIN,
+ * ASM) and keeps full, unscoped access — the whole point of an ASM's
+ * per-instance permission checkboxes (asm.service.js's createAsm/updateAsm)
+ * is to narrow THEM, not to also require super-admin's own role to carry
+ * these specific keys.
+ */
+export function requireAsmPermission(key) {
+  return (req, res, next) => {
+    if (!req.user) return next(new ApiError(401, 'Not authenticated'));
+    if (req.user.role !== 'asm') return next();
+    if (!req.user.permissions.includes(key)) return next(new ApiError(403, `Missing permission: ${key}`));
+    next();
+  };
+}
+
 /** Guards brand-admin routes: must be a brand_admin with an actual brand attached.
  * Route handlers still scope their own queries by req.user.brand — this only
  * rejects requests that shouldn't reach a brand-scoped route at all. */

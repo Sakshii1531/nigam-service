@@ -5,6 +5,16 @@ import tailwindcss from '@tailwindcss/vite'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  // Pinned rather than left to vite's default-port auto-increment — several
+  // other projects' dev servers on this machine also default to 5173/5174,
+  // so without a fixed port this one silently drifts to whichever is free
+  // (5175, 5176, ...) depending on start order. strictPort turns a collision
+  // into a loud "port already in use" error instead of a silent port change
+  // that leaves an old browser tab pointed at a different app.
+  server: {
+    port: 5175,
+    strictPort: true,
+  },
   build: {
     chunkSizeWarningLimit: 1000,
     rolldownOptions: {

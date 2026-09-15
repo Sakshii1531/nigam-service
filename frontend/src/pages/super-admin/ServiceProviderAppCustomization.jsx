@@ -245,7 +245,7 @@ const ServiceProviderAppCustomization = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F4F7FE] flex">
+    <div className="min-h-screen bg-[#F8FAFC] flex">
       {/* Sidebar */}
       <Sidebar />
 
@@ -254,8 +254,10 @@ const ServiceProviderAppCustomization = () => {
         {/* Topbar */}
         <Topbar title="Service Provider App Customization" />
 
-        {/* Inner Content */}
-        <div className="p-6 flex-1 flex flex-col gap-6 max-w-5xl">
+        {/* Inner Content — full width like every other admin list page
+            (Orders & Dispatch, ASM Management, etc.); this used to be capped
+            at max-w-5xl, which is what left most of the screen empty. */}
+        <div className="p-6 flex-1 flex flex-col gap-6">
           {/* Toast message */}
           {toastMessage && (
             <div className="fixed top-20 right-8 bg-[#0D47A1] text-white font-bold py-3 px-6 rounded-xl shadow-2xl z-50 animate-bounce flex items-center gap-2 text-xs">
@@ -301,34 +303,42 @@ const ServiceProviderAppCustomization = () => {
                   </button>
                 </div>
 
-                <div className="grid grid-cols-2 gap-5 mt-2">
-                  {banners.map((banner) => (
-                    <div key={banner.id} className="border border-slate-150 rounded-2xl p-4.5 bg-white shadow-2xs hover:shadow-xs transition-all text-left flex gap-4 relative group">
-                      <img 
-                        src={banner.image} 
-                        alt="banner" 
-                        className="w-20 h-20 rounded-xl object-cover border border-slate-100 flex-shrink-0 bg-slate-50"
-                      />
-                      <div className="flex flex-col justify-between flex-1 min-w-0 pr-6">
-                        <div>
-                          <h4 className="text-xs font-black text-slate-800 truncate uppercase">{banner.title}</h4>
-                          <p className="text-[11px] text-slate-500 font-semibold leading-relaxed mt-1">{banner.desc}</p>
+                {banners.length === 0 && !loading ? (
+                  <div className="text-center py-16 border border-dashed border-slate-200 rounded-2xl">
+                    <Image size={40} className="mx-auto mb-2 text-slate-300" />
+                    <p className="text-sm font-bold text-slate-600">No Banners Yet</p>
+                    <p className="text-xs text-slate-400 mt-1">Add one to show a promo or notice in the service provider app.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 mt-2">
+                    {banners.map((banner) => (
+                      <div key={banner.id} className="border border-slate-150 rounded-2xl p-4.5 bg-white shadow-2xs hover:shadow-xs transition-all text-left flex gap-4 relative group">
+                        <img
+                          src={banner.image}
+                          alt="banner"
+                          className="w-20 h-20 rounded-xl object-cover border border-slate-100 flex-shrink-0 bg-slate-50"
+                        />
+                        <div className="flex flex-col justify-between flex-1 min-w-0 pr-6">
+                          <div>
+                            <h4 className="text-xs font-black text-slate-800 truncate uppercase">{banner.title}</h4>
+                            <p className="text-[11px] text-slate-500 font-semibold leading-relaxed mt-1">{banner.desc}</p>
+                          </div>
+                          <div>
+                            <span className="bg-green-50 text-green-600 px-2 py-0.5 rounded-full text-[9px] border border-green-200 font-bold">{banner.status}</span>
+                          </div>
                         </div>
-                        <div>
-                          <span className="bg-green-50 text-green-600 px-2 py-0.5 rounded-full text-[9px] border border-green-200 font-bold">{banner.status}</span>
-                        </div>
-                      </div>
 
-                      <button 
-                        onClick={() => handleDeleteBanner(banner.id)}
-                        className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
-                        title="Remove Banner"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                        <button
+                          onClick={() => handleDeleteBanner(banner.id)}
+                          className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+                          title="Remove Banner"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {/* Create Banner Modal */}
                 {showAddBannerModal && (
@@ -430,7 +440,7 @@ const ServiceProviderAppCustomization = () => {
                           <td className="p-3 text-slate-500">{v.duration}</td>
                           <td className="p-3"><span className="bg-green-50 text-green-600 px-2 py-0.5 rounded-full text-[10px] border border-green-200">Active</span></td>
                           <td className="p-3 text-center">
-                            <button 
+                            <button
                               onClick={() => handleDeleteVideo(v.id)}
                               className="text-red-500 hover:text-red-700 p-1.5 rounded-lg hover:bg-red-50 transition-colors cursor-pointer"
                             >
@@ -441,6 +451,13 @@ const ServiceProviderAppCustomization = () => {
                       ))}
                     </tbody>
                   </table>
+                  {videos.length === 0 && !loading && (
+                    <div className="text-center py-16">
+                      <Video size={40} className="mx-auto mb-2 text-slate-300" />
+                      <p className="text-sm font-bold text-slate-600">No Training Videos Yet</p>
+                      <p className="text-xs text-slate-400 mt-1">Add one to guide service providers through common repairs.</p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Create Video Modal */}
@@ -537,28 +554,36 @@ const ServiceProviderAppCustomization = () => {
                   </button>
                 </div>
 
-                <div className="flex flex-col gap-3.5 mt-2">
-                  {announcements.map((announce) => (
-                    <div key={announce.id} className="border border-slate-150 rounded-2xl p-4.5 bg-[#FAFBFF] shadow-3xs text-left relative group">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="w-5.5 h-5.5 rounded-md bg-rose-50 text-rose-500 flex items-center justify-center">
-                          <Bell className="h-3.5 w-3.5 fill-current" />
+                {announcements.length === 0 && !loading ? (
+                  <div className="text-center py-16 border border-dashed border-slate-200 rounded-2xl">
+                    <Bell size={40} className="mx-auto mb-2 text-slate-300" />
+                    <p className="text-sm font-bold text-slate-600">No Alerts Broadcast Yet</p>
+                    <p className="text-xs text-slate-400 mt-1">Create one to reach every online service provider instantly.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5 mt-2">
+                    {announcements.map((announce) => (
+                      <div key={announce.id} className="border border-slate-150 rounded-2xl p-4.5 bg-[#FAFBFF] shadow-3xs text-left relative group">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="w-5.5 h-5.5 rounded-md bg-rose-50 text-rose-500 flex items-center justify-center">
+                            <Bell className="h-3.5 w-3.5 fill-current" />
+                          </div>
+                          <span className="text-[10px] text-slate-400 font-bold">{announce.date}</span>
+                          <span className="text-[10px] font-extrabold text-[#0D47A1] bg-blue-50 px-2 py-0.5 rounded border border-blue-100">{announce.scope}</span>
                         </div>
-                        <span className="text-[10px] text-slate-400 font-bold">{announce.date}</span>
-                        <span className="text-[10px] font-extrabold text-[#0D47A1] bg-blue-50 px-2 py-0.5 rounded border border-blue-100">{announce.scope}</span>
-                      </div>
-                      <p className="text-xs font-semibold text-slate-700 leading-relaxed pr-6">{announce.msg}</p>
+                        <p className="text-xs font-semibold text-slate-700 leading-relaxed pr-6">{announce.msg}</p>
 
-                      <button 
-                        onClick={() => handleDeleteAnnounce(announce.id)}
-                        className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
-                        title="Delete Alert"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                        <button
+                          onClick={() => handleDeleteAnnounce(announce.id)}
+                          className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+                          title="Delete Alert"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {/* Create Alert Modal */}
                 {showAddAnnounceModal && (
@@ -658,7 +683,7 @@ const ServiceProviderAppCustomization = () => {
                           <td className="p-3 font-mono text-[#0D47A1]">{s.code}</td>
                           <td className="p-3 text-slate-500">{s.group}</td>
                           <td className="p-3 text-center">
-                            <button 
+                            <button
                               onClick={() => handleDeleteSkill(s.id)}
                               className="text-red-500 hover:text-red-700 p-1.5 rounded-lg hover:bg-red-50 transition-colors cursor-pointer"
                             >
@@ -669,6 +694,13 @@ const ServiceProviderAppCustomization = () => {
                       ))}
                     </tbody>
                   </table>
+                  {skills.length === 0 && !loading && (
+                    <div className="text-center py-16">
+                      <Award size={40} className="mx-auto mb-2 text-slate-300" />
+                      <p className="text-sm font-bold text-slate-600">No Skill Tags Yet</p>
+                      <p className="text-xs text-slate-400 mt-1">Add certification tags to drive dynamic job allocation.</p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Create Skill Modal */}
@@ -751,7 +783,11 @@ const ServiceProviderAppCustomization = () => {
 
             {/* SUBSECTION 5: SETTINGS */}
             {activeTab === 'settings' && (
-              <form onSubmit={handleSaveSettings} className="flex flex-col gap-6 text-left">
+              // Capped at max-w-4xl (unlike the list-oriented tabs above,
+              // which should use the full width now freed up) — a toggle row
+              // or number input stretched across an ultra-wide screen just
+              // looks broken, not "using the space well".
+              <form onSubmit={handleSaveSettings} className="flex flex-col gap-6 text-left max-w-4xl">
                 <div>
                   <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">Service Provider Client Configuration</h3>
                   <p className="text-xs text-slate-400 font-semibold mt-1">Configure global application parameters and driver behavior settings.</p>

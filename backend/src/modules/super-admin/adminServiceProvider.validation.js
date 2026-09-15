@@ -4,6 +4,9 @@ export const listServiceProvidersQuerySchema = z.object({
   status: z.enum(['Active', 'Inactive', 'Pending']).optional(),
   availability: z.enum(['Available', 'Busy', 'Offline']).optional(),
   city: z.string().optional(),
+  // Filters to whichever zone this ASM owns — resolved to a city server-side
+  // (adminServiceProvider.service.js), since the relationship is derived, not stored.
+  asm: z.string().optional(),
   // Free-text match across name / phone / email — what the console's search box sends.
   search: z.string().optional(),
   // Matches a single entry of the service provider's `specs` array.

@@ -56,12 +56,20 @@ serviceProviderRegistrationRouter.post(
 
       let cityDoc = null;
       if (city) {
+        // Escaped and whitespace-normalized — an unescaped regex metachar in
+        // a typed city name (e.g. a stray ".") could otherwise match the
+        // wrong City doc instead of just failing to match. A genuine
+        // mismatch (typo, or a city not yet added here) still leaves this
+        // null; adminServiceProvider.service.js's cityMatch/findOr404 fall
+        // back to serviceCityName (saved verbatim below either way) so the
+        // applicant isn't invisible to their zone's ASM because of it.
+        const escaped = city.trim().replace(/\s+/g, ' ').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         cityDoc = await City.findOne({
-          name: new RegExp(`^${city.trim()}$`, 'i'),
-          ...(state ? { state: new RegExp(`^${state.trim()}$`, 'i') } : {}),
+          name: new RegExp(`^${escaped}$`, 'i'),
+          ...(state ? { state: new RegExp(`^${state.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } : {}),
         });
         if (!cityDoc) {
-          cityDoc = await City.findOne({ name: new RegExp(`^${city.trim()}$`, 'i') });
+          cityDoc = await City.findOne({ name: new RegExp(`^${escaped}$`, 'i') });
         }
       }
 
@@ -70,14 +78,27 @@ serviceProviderRegistrationRouter.post(
         req.files?.aadharBack?.[0] ? storeUploadedFile(req.files.aadharBack[0]) : null,
       ]);
 
-      const user = await User.create({
-        role: ROLES.SERVICE_PROVIDER,
-        name,
-        phone,
-        email,
-        passwordHash: await hashPassword(password),
-        status: 'Pending',
-      });
+      let user;
+      try {
+        user = await User.create({
+          role: ROLES.SERVICE_PROVIDER,
+          name,
+          phone,
+          email,
+          passwordHash: await hashPassword(password),
+          status: 'Pending',
+        });
+      } catch (err) {
+        // The findOne check above is TOCTOU-racy against itself — the file
+        // uploads just above it (Cloudinary, a few real seconds) sit between
+        // the check and this insert, wide enough for an impatient double-
+        // click to fire two requests that both pass the check before either
+        // writes. Without this, the loser hits a raw Mongo E11000 instead of
+        // the same friendly message the check above already gives the more
+        // common case.
+        if (err?.code === 11000) throw new ApiError(409, 'An application already exists for this phone number');
+        throw err;
+      }
 
       const serviceProvider = await ServiceProvider.create({
         user: user._id,

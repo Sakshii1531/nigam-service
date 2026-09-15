@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Mail, Lock, ArrowRight, Shield, Cpu, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Shield, Cpu, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 const Login = () => {
   const navigate = useNavigate();
+  const { state } = useLocation();
   const { login: authLogin } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
@@ -24,25 +25,46 @@ const Login = () => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
-    
+
+    // This one login screen serves two roles that share the panel:
+    // super_admin and asm (role-scoped access, not a separate portal — see
+    // App.jsx's guard and Sidebar.jsx's role-aware nav). The account's role
+    // is looked up server-side by identifier, so this tries super_admin
+    // first and falls back to asm on the same "Invalid credentials" — never
+    // revealing which one an identifier actually belongs to.
+    let res;
+    let matchedRole;
     try {
-      const res = await authLogin({
-        role: 'super_admin',
-        identifier: formData.email,
-        password: formData.password
-      });
-      navigate('/super-admin/verify-otp', {
-        state: { 
-          destination: res.destination || formData.email,
-          identifier: formData.email,
-          role: 'super_admin'
-        },
-      });
+      res = await authLogin({ role: 'super_admin', identifier: formData.email, password: formData.password });
+      matchedRole = 'super_admin';
     } catch (err) {
-      setError(err.message || 'Invalid credentials.');
-    } finally {
-      setIsLoading(false);
+      // Only retry as an ASM when the super_admin attempt found no matching
+      // account (401) — a 403 ("Account is Suspended") means the identifier
+      // *did* match a super_admin account, so retrying under a different
+      // role would just mask that real error behind a generic one.
+      if (err.status !== 401) {
+        setError(err.message || 'Invalid credentials.');
+        setIsLoading(false);
+        return;
+      }
+      try {
+        res = await authLogin({ role: 'asm', identifier: formData.email, password: formData.password });
+        matchedRole = 'asm';
+      } catch (err2) {
+        setError(err2.message || 'Invalid credentials.');
+        setIsLoading(false);
+        return;
+      }
     }
+
+    navigate('/super-admin/verify-otp', {
+      state: {
+        destination: res.destination || formData.email,
+        identifier: formData.email,
+        role: matchedRole
+      },
+    });
+    setIsLoading(false);
   };
 
   return (
@@ -70,6 +92,12 @@ const Login = () => {
             <h2 className="text-xl font-semibold text-gray-800">Welcome Back</h2>
             <p className="text-gray-500 text-sm mt-1">Enter your credentials to access the master panel</p>
           </div>
+
+          {state?.passwordChanged && (
+            <div className="mb-4 p-3 bg-emerald-50 border border-emerald-100 rounded-lg text-emerald-700 text-xs text-center flex items-center justify-center gap-1.5">
+              <CheckCircle2 size={14} /> Password updated — sign in with your new password.
+            </div>
+          )}
 
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-lg text-red-600 text-xs text-center">

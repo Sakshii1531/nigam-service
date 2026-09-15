@@ -9,7 +9,8 @@ import { useAdminSidebar } from '../../context/AdminSidebarContext';
 const Topbar = ({ title, subtitle, showFilters = false }) => {
   const { unreadCount } = useNotifications();
   const { toggleSidebar } = useAdminSidebar();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
+  const isAsm = user?.role === 'asm';
   const navigate = useNavigate();
   const [isLocationOpen, setIsLocationOpen] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState('All India');
@@ -153,7 +154,7 @@ const Topbar = ({ title, subtitle, showFilters = false }) => {
             onClick={() => { setIsUserOpen(!isUserOpen); setIsLocationOpen(false); setIsDateOpen(false); }}
             className="w-8.5 h-8.5 bg-[#0D47A1] text-white rounded-full flex items-center justify-center font-bold text-xs select-none relative"
           >
-            SA
+            {user?.name ? user.name.split(' ').map((p) => p[0]).join('').toUpperCase().slice(0, 2) : 'SA'}
             <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white"></span>
           </div>
 
@@ -164,12 +165,12 @@ const Topbar = ({ title, subtitle, showFilters = false }) => {
                 <button
                   onClick={() => {
                     setIsUserOpen(false);
-                    navigate('/super-admin/settings');
+                    navigate(isAsm ? '/super-admin/profile' : '/super-admin/settings');
                   }}
                   className="w-full text-left px-4 py-2 text-xs text-[#1E293B] hover:bg-[#F8FAFC] flex items-center gap-2 transition-colors font-semibold"
                 >
-                  <Settings size={14} className="text-[#64748B]" />
-                  <span>System Settings</span>
+                  {isAsm ? <User size={14} className="text-[#64748B]" /> : <Settings size={14} className="text-[#64748B]" />}
+                  <span>{isAsm ? 'My Profile' : 'System Settings'}</span>
                 </button>
                 <button
                   onClick={() => {

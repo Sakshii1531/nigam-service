@@ -1,14 +1,21 @@
+import mongoose from 'mongoose';
 import { User } from './user.model.js';
 import { ServiceProvider } from '../service-provider/serviceProvider.model.js';
 import { ASM } from '../super-admin/asm.model.js';
 import { Otp } from './otp.model.js';
 import { RefreshToken } from './refreshToken.model.js';
+import { Referral } from '../rewards-loyalty/referral.model.js';
+import { ReferralCampaign } from '../rewards-loyalty/referralCampaign.model.js';
 import { hashPassword, verifyPassword } from './password.js';
 import { generateOtpCode, sendOtp, maskIdentifier } from './otpProvider.js';
 import { signAccessToken, signRefreshToken, verifyRefreshToken, hashToken, tokenExpiryDate } from './tokens.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { env } from '../../config/env.js';
 import { ROLES } from '../../config/constants.js';
+import { creditCoins } from '../payments-wallet/wallet.service.js';
+import { getSettings } from '../super-admin/platformSettings.service.js';
+import { parsePagination, paginationMeta } from '../../utils/pagination.js';
+import { emit as emitNotification } from '../notifications/notification.service.js';
 
 const OTP_TTL_MINUTES = 10;
 const MAX_OTP_ATTEMPTS = 5;
@@ -106,7 +113,14 @@ async function issueSession(user) {
     expiresAt: tokenExpiryDate(refreshToken),
   });
 
-  return { accessToken, refreshToken, user: sanitizeUser(user) };
+  // Merged onto `user` (matching GET /auth/me's shape) rather than returned
+  // as a sibling field — every existing `data.user` storage path in
+  // AuthContext.jsx (verifyOtp, signupVerify, the background /auth/me
+  // refresh) then captures it automatically, no separate plumbing needed.
+  // The token also carries it, but undecoded and not something the frontend
+  // parses — see asm/Dashboard.jsx's view-only gating for why a plain field
+  // is worth the duplication.
+  return { accessToken, refreshToken, user: { ...sanitizeUser(user), permissions } };
 }
 
 function sanitizeUser(user) {
@@ -147,6 +161,56 @@ export async function verifyLoginOtp({ role, identifier, code }) {
   const user = await findUserByIdentifier(role, identifier);
   if (!user) throw new ApiError(404, 'No account found for this identifier');
   return issueSession(user);
+}
+
+/**
+ * Backs the signup screen's "Verify" button next to the referral code field
+ * — a pure lookup (no account exists yet to authenticate as), so this is
+ * deliberately public. Never throws on an unknown/malformed code; "not
+ * found" is a valid, expected answer here, not an error.
+ */
+export async function checkReferralCode(code) {
+  const trimmed = (code || '').trim().toUpperCase();
+  if (!trimmed) return { valid: false };
+  const referrer = await User.findOne({ role: 'customer', referralCode: trimmed }).select('name');
+  return referrer ? { valid: true, referrerName: referrer.name } : { valid: false };
+}
+
+/**
+ * Backs the customer app's ReferEarn.jsx "who I've referred" tracker — every
+ * Referral row this account is the referrer on, newest first, plus the
+ * running total actually credited (a Pending row can exist without ever
+ * reaching Credited — see signupVerify's best-effort try/catch — so this
+ * only sums what's real, not bonusAmount across every row regardless of status).
+ */
+export async function listMyReferrals(userId, { page, limit } = {}) {
+  const { skip, limit: lim, page: pg, sort } = parsePagination({ page, limit, sort: '-createdAt' });
+  const [items, total, creditedAgg] = await Promise.all([
+    Referral.find({ referrer: userId })
+      .populate('referredUser', 'name createdAt')
+      .sort(sort)
+      .skip(skip)
+      .limit(lim),
+    Referral.countDocuments({ referrer: userId }),
+    // $match is a raw BSON comparison, unlike find()'s auto-casting — userId
+    // arrives as a string (req.user.id, off the JWT) and must be cast
+    // explicitly or this silently matches nothing.
+    Referral.aggregate([
+      { $match: { referrer: new mongoose.Types.ObjectId(userId), status: 'Credited' } },
+      { $group: { _id: null, total: { $sum: '$bonusAmount' } } },
+    ]),
+  ]);
+
+  return {
+    items: items.map((r) => ({
+      id: r.id,
+      referredName: r.referredUser?.name || 'A friend',
+      joinedAt: r.referredUser?.createdAt || r.createdAt,
+      bonusAmount: r.bonusAmount,
+      status: r.status,
+    })),
+    meta: { ...paginationMeta({ page: pg, limit: lim, total }), totalCoinsEarned: creditedAgg[0]?.total || 0 },
+  };
 }
 
 export async function signupCheck({ phone, email }) {
@@ -193,7 +257,7 @@ export async function signupVerify({ name, phone, email, password, address, stat
   // 3. Process referral if any
   let referredById = null;
   if (referralCode) {
-    const referrer = await User.findOne({ role: 'customer', referralCode: referralCode.trim().toUpperCase() });
+    const referrer = await User.findOne({ role: 'customer', referralCode: referralCode.trim().toUpperCase() }).select('_id');
     if (referrer) {
       referredById = referrer._id;
     }
@@ -249,6 +313,42 @@ export async function signupVerify({ name, phone, email, password, address, stat
     walletCoins: referredById ? 100 : 0,
     status: 'Active',
   });
+
+  // 5. Reward the referrer — the ₹100 welcome bonus above is the *referee's*
+  // side of this; the referrer gets their own credit, a Referral record (the
+  // history platformUser.service.js's user-detail page reads), and a push +
+  // in-app notification telling them their code got used. Best-effort: a
+  // failure here must not fail the signup that already succeeded — the new
+  // account exists either way.
+  if (referredById) {
+    try {
+      // An Active promotional campaign (loyaltyConfig.service.js's
+      // referral-campaigns CRUD) overrides the platform-wide default — "the
+      // customer app's refer-and-earn screen reads the Active one" is this
+      // lookup. Most-recently-created wins if more than one is Active.
+      const activeCampaign = await ReferralCampaign.findOne({ status: 'Active' }).sort({ createdAt: -1 });
+      const referralBonusAmount = activeCampaign ? activeCampaign.bonus : (await getSettings()).referralBonusAmount;
+      await creditCoins(referredById, referralBonusAmount, {
+        reason: 'referral',
+        // One credit per referred signup, ever — a retried/duplicate call
+        // can't double-pay the same referral.
+        claimKey: `referral:${newUser._id}`,
+      });
+      await Referral.create({
+        referrer: referredById,
+        referredUser: newUser._id,
+        bonusAmount: referralBonusAmount,
+        status: 'Credited',
+      });
+      await emitNotification('referral.code_used', {
+        referrerId: referredById,
+        refereeName: name,
+        bonusAmount: referralBonusAmount,
+      });
+    } catch (err) {
+      console.error('[auth] referral reward failed for', String(referredById), ':', err.message);
+    }
+  }
 
   return issueSession(newUser);
 }
@@ -560,6 +660,10 @@ export async function changePassword(userId, { currentPassword, newPassword }) {
   if (currentPassword === newPassword) throw new ApiError(400, 'New password must be different from the current one');
 
   user.passwordHash = await hashPassword(newPassword);
+  // Confirming the temporary credential (as currentPassword, just checked
+  // above) and replacing it is exactly what clears a forced first-change —
+  // there's no separate "confirm" step beyond successfully doing this.
+  if (user.mustChangePassword) user.mustChangePassword = false;
   await user.save();
 
   await RefreshToken.updateMany({ user: user._id, revoked: false }, { revoked: true });

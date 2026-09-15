@@ -52,6 +52,16 @@ authRouter.post('/signup/check', validate(signupCheckSchema), async (req, res, n
   }
 });
 
+// Public — the "Verify" button next to the referral code field on signup,
+// before any account (or auth token) exists yet.
+authRouter.get('/referral-code/:code', async (req, res, next) => {
+  try {
+    ok(res, await authService.checkReferralCode(req.params.code));
+  } catch (err) {
+    next(err);
+  }
+});
+
 authRouter.post('/signup/verify', validate(signupVerifySchema), async (req, res, next) => {
   try {
     ok(res, await authService.signupVerify(req.body));
@@ -128,7 +138,19 @@ authRouter.get('/me', requireAuth, async (req, res, next) => {
     const userObj = user.toJSON();
     delete userObj.passwordHash;
     userObj.referralsCount = referralsCount;
-    ok(res, userObj);
+    // req.user.permissions comes straight from the access token (requireAuth
+    // decodes it), so this stays free — no extra resolvePermissions() query.
+    ok(res, { ...userObj, permissions: req.user.permissions });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ReferEarn.jsx's "who I've referred" tracker.
+authRouter.get('/referrals', requireAuth, async (req, res, next) => {
+  try {
+    const { items, meta } = await authService.listMyReferrals(req.user.id, req.query);
+    ok(res, items, meta);
   } catch (err) {
     next(err);
   }

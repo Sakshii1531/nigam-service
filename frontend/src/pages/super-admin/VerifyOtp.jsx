@@ -13,12 +13,25 @@ const VerifyOtp = () => {
   const hasRealSession = Boolean(state?.role && state?.identifier);
 
   const handleVerify = async (code) => {
-    await authVerifyOtp({
+    const user = await authVerifyOtp({
       role: state.role,
       identifier: state.identifier,
       code
     });
-    navigate('/super-admin/dashboard');
+    // A temporary credential (super-admin-issued, asm.service.js's
+    // createAsm) must be replaced before anything else is reachable — the
+    // App.jsx route guard enforces this too, so a direct URL visit can't
+    // skip it. super_admin accounts are never provisioned this way today,
+    // but the check is generic rather than asm-specific.
+    if (user?.mustChangePassword) {
+      navigate('/super-admin/change-password');
+    } else if (user?.role === 'asm') {
+      // An ASM's role-scoped home — the platform-wide analytics dashboard
+      // isn't meaningful (or appropriate) for a single-zone account.
+      navigate('/super-admin/zone-dashboard');
+    } else {
+      navigate('/super-admin/dashboard');
+    }
   };
 
   const handleResend = async () => {

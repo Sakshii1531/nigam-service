@@ -24,16 +24,21 @@ async function clearBookingsAndServiceRequests() {
   const Conversation = mongoose.model('Conversation');
   const Message = mongoose.model('Message');
   const Notification = mongoose.model('Notification');
+  const NotificationReceipt = mongoose.model('NotificationReceipt');
+  const CallLog = mongoose.model('CallLog');
   const PartOrder = mongoose.model('PartOrder');
   const ReplacementApproval = mongoose.model('ReplacementApproval');
   const ReverseLogisticsReturn = mongoose.model('ReverseLogisticsReturn');
   const AMCVisit = mongoose.model('AMCVisit');
+  const Claim = mongoose.model('Claim');
   const ExchangeRequest = mongoose.model('ExchangeRequest');
   const GeneratedDocument = mongoose.model('GeneratedDocument');
   const Counter = mongoose.model('Counter');
   const EarningsTally = mongoose.model('EarningsTally');
   const Payout = mongoose.model('Payout');
+  const WalletLedger = mongoose.model('WalletLedger');
   const ServiceProvider = mongoose.model('ServiceProvider');
+  const User = mongoose.model('User');
 
   // Delete bookings, service requests, jobs
   const bookingRes = await Booking.deleteMany({});
@@ -51,22 +56,36 @@ async function clearBookingsAndServiceRequests() {
   const convRes = await Conversation.deleteMany({});
   const msgRes = await Message.deleteMany({});
   const notifRes = await Notification.deleteMany({});
+  const notifReceiptRes = await NotificationReceipt.deleteMany({});
+  const callLogRes = await CallLog.deleteMany({});
   const partOrderRes = await PartOrder.deleteMany({});
   const replAppRes = await ReplacementApproval.deleteMany({});
   const revLogRes = await ReverseLogisticsReturn.deleteMany({});
   const amcVisitRes = await AMCVisit.deleteMany({});
+  const claimRes = await Claim.deleteMany({});
   const exReqRes = await ExchangeRequest.deleteMany({});
   const genDocRes = await GeneratedDocument.deleteMany({});
 
-  // Earnings accrue from completed jobs, so they have to go with them —
-  // otherwise a 'clean' database still shows a service provider yesterday's balance.
+  // Earnings and wallet history accrue from completed jobs and bookings
   const tallyRes = await EarningsTally.deleteMany({});
   const payoutRes = await Payout.deleteMany({});
+  const walletRes = await WalletLedger.deleteMany({});
+  await User.updateMany({ walletCoins: { $gt: 0 } }, { $set: { walletCoins: 0 } });
 
-  // These counters are not just cosmetic: activeJobsCount feeds the assignment
-  // engine's workload score, so leaving a stale value behind would skew who
-  // gets picked on the very first booking of a fresh test run.
-  const serviceProviderRes = await ServiceProvider.updateMany({}, { $set: { activeJobsCount: 0, completedJobsCount: 0 } });
+  // Reset service provider job counters and free up any busy technicians
+  const serviceProviderRes = await ServiceProvider.updateMany(
+    {},
+    {
+      $set: {
+        activeJobsCount: 0,
+        completedJobsCount: 0,
+      },
+    }
+  );
+  const busyProvidersRes = await ServiceProvider.updateMany(
+    { availability: 'Busy' },
+    { $set: { availability: 'Available' } }
+  );
 
   // Reset sequential human-ID counters for wiped entities
   const prefixesToReset = [
@@ -74,6 +93,8 @@ async function clearBookingsAndServiceRequests() {
     ID_PREFIXES.SERVICE_REQUEST, // SR
     ID_PREFIXES.JOB, // JOB
     ID_PREFIXES.INVOICE, // INV
+    ID_PREFIXES.CLAIM, // NC
+    ID_PREFIXES.AMC_RECORD, // AMC
     ID_PREFIXES.EXCHANGE, // EX
     ID_PREFIXES.REPLACEMENT, // RPL
     ID_PREFIXES.RETURN, // RET
@@ -99,15 +120,20 @@ async function clearBookingsAndServiceRequests() {
   console.log(`- Conversations: ${convRes.deletedCount}`);
   console.log(`- Messages: ${msgRes.deletedCount}`);
   console.log(`- Notifications: ${notifRes.deletedCount}`);
+  console.log(`- Notification Receipts: ${notifReceiptRes.deletedCount}`);
+  console.log(`- Call Logs: ${callLogRes.deletedCount}`);
   console.log(`- Part Orders: ${partOrderRes.deletedCount}`);
   console.log(`- Replacement Approvals: ${replAppRes.deletedCount}`);
   console.log(`- Reverse Logistics Returns: ${revLogRes.deletedCount}`);
   console.log(`- AMC Visits: ${amcVisitRes.deletedCount}`);
+  console.log(`- Claims: ${claimRes.deletedCount}`);
   console.log(`- Exchange Requests: ${exReqRes.deletedCount}`);
   console.log(`- Generated Documents: ${genDocRes.deletedCount}`);
   console.log(`- Earnings Tallies: ${tallyRes.deletedCount}`);
   console.log(`- Payouts: ${payoutRes.deletedCount}`);
+  console.log(`- Wallet Ledgers: ${walletRes.deletedCount}`);
   console.log(`- Service Provider counters reset: ${serviceProviderRes.modifiedCount}`);
+  console.log(`- Service Provider availability reset (Busy -> Available): ${busyProvidersRes.modifiedCount}`);
   console.log(`- Reset ID Counters: ${counterRes.deletedCount}`);
   console.log('-----------------------\n');
 

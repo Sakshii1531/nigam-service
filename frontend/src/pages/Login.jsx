@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Phone, Mail, Lock, ShieldCheck, User, Gift, Eye, EyeOff, Navigation, MapPin, Loader2, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Phone, Mail, Lock, ShieldCheck, User, Gift, Eye, EyeOff, Navigation, MapPin, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useAppLogo } from '../context/LogoContext';
-import { ApiError } from '../lib/apiClient';
+import { ApiError, apiRequest } from '../lib/apiClient';
 import SearchableSelect from '../components/common/SearchableSelect';
 import { STATE_CITIES, INDIAN_STATES, normalizeStateName } from '../utils/indiaGeoData';
 
@@ -48,6 +48,29 @@ const Login = ({ initialSignup = false }) => {
     longitude: location.state?.signupData?.longitude || null,
     referralCode: location.state?.signupData?.referralCode || ''
   });
+
+  // Referral code "Verify" button state — null means not checked yet (or the
+  // code changed since the last check, see the handler below), otherwise
+  // { valid: true, referrerName } or { valid: false }.
+  const [referralCheck, setReferralCheck] = useState(null);
+  const [checkingReferral, setCheckingReferral] = useState(false);
+
+  const handleVerifyReferralCode = async () => {
+    const code = signupForm.referralCode.trim();
+    if (!code) return;
+    setCheckingReferral(true);
+    try {
+      const res = await apiRequest(`/auth/referral-code/${encodeURIComponent(code)}`);
+      setReferralCheck(res);
+    } catch {
+      // A network/server hiccup here shouldn't look like "this code is
+      // invalid" — leave referralCheck alone so the field just quietly
+      // hasn't been verified, same as before the click.
+      setReferralCheck(null);
+    } finally {
+      setCheckingReferral(false);
+    }
+  };
 
   // Validation field errors state
   const [fieldErrors, setFieldErrors] = useState({
@@ -699,16 +722,41 @@ const Login = ({ initialSignup = false }) => {
             {/* Referral Code (Optional) */}
             <div className="flex flex-col gap-1 text-left">
               <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">Referral Code (Optional)</label>
-              <div className="relative">
-                <Gift className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <input
-                  type="text"
-                  value={signupForm.referralCode}
-                  onChange={(e) => setSignupForm({ ...signupForm, referralCode: e.target.value })}
-                  placeholder="Enter Referral Code"
-                  className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] outline-none transition-all text-sm"
-                />
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <Gift className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <input
+                    type="text"
+                    value={signupForm.referralCode}
+                    onChange={(e) => {
+                      setSignupForm({ ...signupForm, referralCode: e.target.value });
+                      // Any edit invalidates whatever was last verified — a
+                      // stale "Referred by X" must not survive a code change.
+                      setReferralCheck(null);
+                    }}
+                    placeholder="Enter Referral Code"
+                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] outline-none transition-all text-sm"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleVerifyReferralCode}
+                  disabled={!signupForm.referralCode.trim() || checkingReferral}
+                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 whitespace-nowrap"
+                >
+                  {checkingReferral ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Verify'}
+                </button>
               </div>
+              {referralCheck?.valid && (
+                <span className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1 mt-0.5">
+                  <CheckCircle2 className="h-3.5 w-3.5" /> Referred by {referralCheck.referrerName}
+                </span>
+              )}
+              {referralCheck?.valid === false && (
+                <span className="text-[11px] font-semibold text-rose-500 flex items-center gap-1 mt-0.5">
+                  <XCircle className="h-3.5 w-3.5" /> Invalid referral code
+                </span>
+              )}
             </div>
 
             {/* Action Button */}

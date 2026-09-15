@@ -112,7 +112,11 @@ const COUPON = { code: 'WELCOME150', discount: 150, description: '₹150 off you
 
 const PERMISSIONS = [
   { key: 'users:manage', description: 'Manage platform users', domain: 'users' },
-  { key: 'techs:manage', description: 'Manage serviceProviders', domain: 'techs' },
+  // Two granular levels rather than one — an ASM's per-instance permission
+  // checkboxes (asm.service.js's createAsm) let super-admin hand out
+  // view-only zone oversight without also granting approve/suspend power.
+  { key: 'techs:view', description: 'View service providers and their submitted documents', domain: 'techs' },
+  { key: 'techs:manage', description: 'Manage service providers (approve/suspend/reactivate)', domain: 'techs' },
   { key: 'brands:manage', description: 'Manage brands', domain: 'brands' },
   { key: 'billing:manage', description: 'Manage platform billing/finance', domain: 'billing' },
   { key: 'settings:manage', description: 'Manage platform settings', domain: 'settings' },

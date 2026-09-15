@@ -12,6 +12,11 @@ const userSchema = new mongoose.Schema(
     phone: { type: String, index: true, sparse: true },
     email: { type: String, index: true, sparse: true, lowercase: true, trim: true },
     passwordHash: { type: String, required: true, select: false },
+    // Set when an account is provisioned with a temporary credential (currently
+    // just ASM — asm.service.js's createAsm) that the holder must replace before
+    // continuing past login. Generic on User rather than ASM-specific: any
+    // future admin-provisioned role can reuse the same forced-change flow.
+    mustChangePassword: { type: Boolean, default: false },
     avatarUrl: String,
     addresses: [addressSchema],
     paymentMethods: [paymentMethodSchema],

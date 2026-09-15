@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useAdminSidebar } from '../../context/AdminSidebarContext';
+import { apiRequest } from '../../lib/apiClient';
 import { 
   LayoutDashboard, 
   Users, 
@@ -42,14 +43,17 @@ import {
   Award,
   RefreshCw,
   Search,
-  Star
+  Star,
+  User,
+  KeyRound
 } from 'lucide-react';
 import logo from '../../assets/nigam-care.png';
 
 const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
+  const isAsm = user?.role === 'asm';
   const { isSidebarOpen } = useAdminSidebar();
   const scrollContainerRef = useRef(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -62,6 +66,29 @@ const Sidebar = () => {
   
   // Track Profile Menu open/close
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+
+  // "Needs attention" badges — keyed by badgeKey on a menu item (see
+  // asmMenuSections/fullMenuSections above). One shared count works for both
+  // super_admin and asm: the endpoint is already zone-scoped server-side for
+  // an asm caller (adminServiceProvider.routes.js's scopeCityForCaller), so
+  // this reads correctly for either role with no branching here. Polled
+  // rather than event-driven — nothing currently pushes a "counts changed"
+  // signal, and this list rarely needs sub-minute freshness.
+  const [badgeCounts, setBadgeCounts] = useState({});
+  useEffect(() => {
+    let cancelled = false;
+    const loadBadgeCounts = async () => {
+      try {
+        const res = await apiRequest('/super-admin/service-providers?status=Pending&limit=1', { auth: true, envelope: true });
+        if (!cancelled) setBadgeCounts((prev) => ({ ...prev, pendingServiceProviders: res?.meta?.total || 0 }));
+      } catch {
+        // Non-fatal — the sidebar just shows no badge rather than a stale/wrong one.
+      }
+    };
+    loadBadgeCounts();
+    const interval = setInterval(loadBadgeCounts, 60000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, []);
 
   useEffect(() => {
     const container = scrollContainerRef.current;
@@ -92,7 +119,66 @@ const Sidebar = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
 
-  const menuSections = [
+  // An ASM's role-scoped access to this panel (not a separate portal — see
+  // App.jsx's route guard) shows only what they can actually do, all scoped
+  // server-side to their own zone (city). Everything else below this array
+  // is the full super-admin nav and never renders for an ASM.
+  const asmMenuSections = [
+    {
+      type: 'link',
+      label: 'Dashboard',
+      path: '/super-admin/zone-dashboard',
+      icon: <LayoutDashboard size={18} />
+    },
+    {
+      type: 'header',
+      label: 'MY ZONE'
+    },
+    {
+      type: 'link',
+      label: 'Service Providers',
+      path: '/super-admin/service-providers',
+      icon: <UserCheck size={18} />,
+      badgeKey: 'pendingServiceProviders',
+    },
+    {
+      type: 'link',
+      label: 'Pending Approvals',
+      path: '/super-admin/service-providers?status=Pending',
+      icon: <Clock size={18} />,
+      badgeKey: 'pendingServiceProviders',
+    },
+    {
+      type: 'link',
+      label: 'Bookings',
+      path: '/super-admin/requests',
+      icon: <ClipboardList size={18} />
+    },
+    {
+      type: 'link',
+      label: 'Live Tracking',
+      path: '/super-admin/tracking',
+      icon: <MapPin size={18} />
+    },
+    {
+      type: 'link',
+      label: 'Job Assignment',
+      path: '/super-admin/assignment',
+      icon: <UserPlus size={18} />
+    },
+    {
+      type: 'header',
+      label: 'ACCOUNT'
+    },
+    {
+      type: 'link',
+      label: 'My Profile',
+      path: '/super-admin/profile',
+      icon: <User size={18} />
+    },
+  ];
+
+  const fullMenuSections = [
     {
       type: 'link',
       label: 'Dashboard',
@@ -249,7 +335,8 @@ const Sidebar = () => {
       type: 'link',
       label: 'ServiceProviders',
       path: '/super-admin/service-providers',
-      icon: <UserCheck size={18} />
+      icon: <UserCheck size={18} />,
+      badgeKey: 'pendingServiceProviders',
     },
     {
       type: 'link',
@@ -411,6 +498,8 @@ const Sidebar = () => {
     }
   ];
 
+  const menuSections = isAsm ? asmMenuSections : fullMenuSections;
+
   // Filter sections by search query
   const filteredSections = searchQuery.trim() === '' 
     ? menuSections 
@@ -435,7 +524,7 @@ const Sidebar = () => {
                 <span className="text-base font-extrabold text-[#0D47A1] tracking-tight">NIGAM</span>
                 <span className="text-base font-extrabold text-[#FFB300] tracking-tight ml-1">CARE</span>
               </div>
-              <p className="text-[10px] text-[#64748B] font-bold tracking-wider leading-none mt-0.5">SUPER ADMIN</p>
+              <p className="text-[10px] text-[#64748B] font-bold tracking-wider leading-none mt-0.5">{isAsm ? 'AREA SERVICE MANAGER' : 'SUPER ADMIN'}</p>
             </div>
           </div>
         </div>
@@ -540,9 +629,10 @@ const Sidebar = () => {
           }
 
           // Default link item
-          const isLinkActive = item.path.includes('?') 
-            ? location.pathname + location.search === item.path 
+          const isLinkActive = item.path.includes('?')
+            ? location.pathname + location.search === item.path
             : location.pathname === item.path;
+          const badgeCount = item.badgeKey ? badgeCounts[item.badgeKey] : 0;
           return (
             <NavLink
               key={item.path}
@@ -554,13 +644,21 @@ const Sidebar = () => {
               }}
               className={`
                 flex items-center gap-3 mx-3 px-3 py-2 text-sm font-semibold rounded-lg transition-colors max-w-[232px]
-                ${isLinkActive 
-                  ? 'text-[#0D47A1] bg-[#E8F0FE]' 
+                ${isLinkActive
+                  ? 'text-[#0D47A1] bg-[#E8F0FE]'
                   : 'text-[#5F6368] hover:text-[#1E293B] hover:bg-[#EAEFF9]'}
               `}
             >
               <span className="flex-shrink-0">{item.icon}</span>
-              <span className="truncate">{item.label}</span>
+              <span className="truncate flex-1">{item.label}</span>
+              {badgeCount > 0 && (
+                <span
+                  className="flex-shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-amber-500 text-white text-[10px] font-black flex items-center justify-center animate-pulse"
+                  title={`${badgeCount} needs your attention`}
+                >
+                  {badgeCount > 99 ? '99+' : badgeCount}
+                </span>
+              )}
             </NavLink>
           );
         })
@@ -571,16 +669,16 @@ const Sidebar = () => {
       <div className="relative p-4 border-t border-[#E2E8F0] bg-white">
         {isProfileMenuOpen && (
           <div className="absolute bottom-16 left-4 right-4 bg-white border border-[#E2E8F0] rounded-xl shadow-lg py-1.5 z-30 animate-in fade-in slide-in-from-bottom-2 duration-150">
-            <button 
+            <button
               onClick={() => {
                 setIsProfileMenuOpen(false);
-                navigate('/super-admin/settings');
+                navigate(isAsm ? '/super-admin/profile' : '/super-admin/settings');
               }}
               className="w-full text-left px-4 py-2 text-xs text-[#1E293B] hover:bg-[#F8FAFC] transition-colors font-semibold"
             >
-              System Settings
+              {isAsm ? 'My Profile' : 'System Settings'}
             </button>
-            <button 
+            <button
               onClick={() => {
                 setIsProfileMenuOpen(false);
                 setShowLogoutConfirm(true);
@@ -597,11 +695,11 @@ const Sidebar = () => {
         >
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-8 h-8 bg-[#0D47A1] text-white rounded-full flex items-center justify-center font-bold text-xs select-none flex-shrink-0">
-              SA
+              {user?.name ? user.name.split(' ').map((p) => p[0]).join('').toUpperCase().slice(0, 2) : 'SA'}
             </div>
             <div className="truncate min-w-0 leading-tight">
-              <p className="text-xs font-bold text-[#1E293B] truncate">Super Admin</p>
-              <p className="text-[10px] text-[#64748B] truncate">superadmin@ncc.com</p>
+              <p className="text-xs font-bold text-[#1E293B] truncate">{user?.name || 'Super Admin'}</p>
+              <p className="text-[10px] text-[#64748B] truncate">{user?.email || user?.phone || 'superadmin@ncc.com'}</p>
             </div>
           </div>
           <ChevronDown size={14} className={`text-[#64748B] flex-shrink-0 transition-transform duration-200 ${isProfileMenuOpen ? 'rotate-180' : ''}`} />

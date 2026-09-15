@@ -92,12 +92,17 @@ export async function transitionStatus(id, toStatus, { description, session } = 
 }
 
 
-export async function listServiceRequests({ user, serviceProvider, brand, status, page, limit, sort } = {}) {
+export async function listServiceRequests({ user, serviceProvider, brand, status, zone, page, limit, sort } = {}) {
   const query = {};
   if (user) query.user = user;
   if (serviceProvider) query.serviceProvider = serviceProvider;
   if (brand) query.brand = brand;
   if (status) query.status = status;
+  // zone is free-text (ServiceRequest.zone: String, not a City ref) — an
+  // ASM's own zone name, resolved server-side in the route handler, never
+  // client-supplied. Exact match, case-insensitive, since this is a security
+  // boundary (serviceRequest.routes.js's resolveAsmZone), not a search box.
+  if (zone) query.zone = new RegExp(`^${zone.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
 
   const { skip, limit: lim, page: pg, sort: sortObj } = parsePagination({ page, limit, sort });
   const [items, total] = await Promise.all([

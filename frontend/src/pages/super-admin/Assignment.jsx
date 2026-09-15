@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import { apiRequest } from '../../lib/apiClient';
+import { useAuth } from '../../context/AuthContext';
 import {
   Search, UserPlus, MapPin, Star, Clock, ClipboardList, CheckCircle2,
   Zap, SlidersHorizontal, Save, Sparkles, AlertCircle
@@ -17,6 +18,12 @@ const WEIGHT_META = [
 
 const Assignment = () => {
   const location = useLocation();
+  const { user } = useAuth();
+  // The scoring weights are a platform-wide setting (assignmentWeighting.routes.js
+  // is super_admin-only) — an ASM can still use auto/manual assignment for
+  // their own zone (the underlying request list is already zone-filtered
+  // server-side), just can't retune how the engine scores candidates.
+  const isAsm = user?.role === 'asm';
 
   const [searchQuery, setSearchQuery] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -272,17 +279,22 @@ const Assignment = () => {
                         min="0"
                         max="100"
                         value={weights[key]}
+                        disabled={isAsm}
                         onChange={(e) => setWeights((w) => ({ ...w, [key]: Number(e.target.value) }))}
-                        className="w-full accent-[#0D47A1] cursor-pointer"
+                        className="w-full accent-[#0D47A1] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                     </div>
                   ))}
-                  <button
-                    onClick={saveWeights}
-                    className="mt-2 flex items-center gap-2 px-4 py-2.5 bg-[#0D47A1] text-white text-xs font-bold rounded-xl hover:bg-blue-700 transition-colors"
-                  >
-                    <Save size={15} /> Save Rules
-                  </button>
+                  {isAsm ? (
+                    <p className="text-[11px] text-[#94A3B8] italic">Scoring weights are set platform-wide by super-admin.</p>
+                  ) : (
+                    <button
+                      onClick={saveWeights}
+                      className="mt-2 flex items-center gap-2 px-4 py-2.5 bg-[#0D47A1] text-white text-xs font-bold rounded-xl hover:bg-blue-700 transition-colors"
+                    >
+                      <Save size={15} /> Save Rules
+                    </button>
+                  )}
                 </div>
 
                 {/* Auto-Assignment status box */}

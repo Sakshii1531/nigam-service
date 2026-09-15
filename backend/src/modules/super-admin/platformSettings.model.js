@@ -21,7 +21,12 @@ const platformSettingsSchema = new mongoose.Schema(
     // which are collections of rows); they're single platform-wide numbers, so
     // they live here rather than as a one-row collection of their own.
     coinConversionRate: { type: Number, default: 10 }, // coins per ₹1 — matches wallet.service.js's existing convention
-    referralBonusAmount: { type: Number, default: 100 }, // ₹ credited (as coins) per successful referral
+    referralBonusAmount: { type: Number, default: 100 }, // ₹ credited (as coins) per successful referral, to the referrer
+    // % off the referred (new) customer's first booking. Stored as platform
+    // config alongside referralBonusAmount (LoyaltyProgram.jsx's "Global
+    // Referral Multipliers" edits both together) — not yet wired into
+    // booking/checkout pricing, which is separate, unbuilt work.
+    refereeDiscountPercent: { type: Number, default: 10 },
 
     // Markup applied over a spare part's cost price when no part-specific
     // override is set — the SpareParts console displays and edits this.

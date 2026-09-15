@@ -72,10 +72,6 @@ import ServiceProviderLogin from './pages/service-provider/Login';
 import { ServiceProviderProvider } from './context/ServiceProviderContext';
 import BrandLogin from './pages/brand-admin/Login';
 import BrandDashboard from './pages/brand-admin/Dashboard';
-import AsmLogin from './pages/asm/Login';
-import AsmVerifyOtp from './pages/asm/VerifyOtp';
-import AsmForgotPassword from './pages/asm/ForgotPassword';
-import AsmDashboard from './pages/asm/Dashboard';
 import BrandRequests from './pages/brand-admin/Requests';
 import BrandWarranty from './pages/brand-admin/Warranty';
 import BrandServiceProviders from './pages/brand-admin/ServiceProviders';
@@ -129,6 +125,7 @@ import SuperAdminLogs from './pages/super-admin/Logs';
 import CustomerAppCustomization from './pages/super-admin/CustomerAppCustomization';
 import SuperAdminExchangeOffers from './pages/super-admin/ExchangeOffers';
 import SuperAdminASM from './pages/super-admin/ASM';
+import SuperAdminASMDetail from './pages/super-admin/ASMDetail';
 import SuperAdminAMC from './pages/super-admin/AMC';
 import SuperAdminProducts from './pages/super-admin/Products';
 import SuperAdminWarrantyVerification from './pages/super-admin/WarrantyVerification';
@@ -178,6 +175,9 @@ import BrandVerifyOtp from './pages/brand-admin/VerifyOtp';
 import BrandForgotPassword from './pages/brand-admin/ForgotPassword';
 import SuperAdminVerifyOtp from './pages/super-admin/VerifyOtp';
 import SuperAdminForgotPassword from './pages/super-admin/ForgotPassword';
+import SuperAdminChangePassword from './pages/super-admin/ChangePassword';
+import SuperAdminProfile from './pages/super-admin/Profile';
+import SuperAdminZoneDashboard from './pages/super-admin/ZoneDashboard';
 
 // Desktop top navigation for the customer + service provider panels
 import AppChrome, { isPhonePanelRoute, panelWidthClass } from './components/AppChrome';
@@ -220,14 +220,45 @@ const ScrollToTop = () => {
     const superAdminAuthPages = ['/super-admin/login', '/super-admin/verify-otp', '/super-admin/forgot-password'];
     const brandAdminAuthPages = ['/brand-admin/login', '/brand-admin/verify-otp', '/brand-admin/forgot-password'];
     const serviceProviderAuthPages = ['/service-provider/login', '/service-provider/verify-otp', '/service-provider/forgot-password', '/service-provider/apply'];
-    const asmAuthPages = ['/asm/login', '/asm/verify-otp', '/asm/forgot-password'];
+    // An ASM logs in on this same super-admin panel (role-scoped access, not
+    // a separate portal — see Sidebar.jsx's role-aware nav) and is confined
+    // to this allowlist. This is real access control, not just hidden nav:
+    // typing /super-admin/orders in the address bar must not work even
+    // though the backend would 403 those API calls anyway. (pathname never
+    // includes the query string, so /super-admin/service-providers?status=
+    // Pending is covered by the same entry as the bare path.)
+    const asmAllowedPaths = [
+      '/super-admin/zone-dashboard',
+      '/super-admin/service-providers',
+      '/super-admin/requests',
+      '/super-admin/tracking',
+      '/super-admin/assignment',
+      '/super-admin/profile',
+    ];
     const customerAuthPages = ['/', '/login', '/signup', '/app/login', '/app', '/verify-otp', '/forgot-password', '/reset-password'];
     const publicInfoPages = ['/about-ncc'];
 
-    // 1. SUPER ADMIN PORTAL
+    // 1. SUPER ADMIN PANEL — shared by super_admin (full access) and asm
+    // (role-scoped to their own zone's service providers).
     if (pathname.startsWith('/super-admin')) {
-      if (user && user.role === 'super_admin') {
-        if (superAdminAuthPages.includes(pathname)) {
+      if (user && (user.role === 'super_admin' || user.role === 'asm')) {
+        if (user.role === 'asm') {
+          // A temporary credential (super-admin console) must be replaced
+          // before anything else — enforced here too, not just VerifyOtp's
+          // own redirect, so a direct URL visit or reload can't skip it.
+          if (user.mustChangePassword) {
+            if (pathname !== '/super-admin/change-password') {
+              navigate('/super-admin/change-password', { replace: true });
+              return;
+            }
+          } else if (pathname === '/super-admin/change-password' || superAdminAuthPages.includes(pathname)) {
+            navigate('/super-admin/zone-dashboard', { replace: true });
+            return;
+          } else if (!asmAllowedPaths.includes(pathname)) {
+            navigate('/super-admin/zone-dashboard', { replace: true });
+            return;
+          }
+        } else if (superAdminAuthPages.includes(pathname)) {
           navigate('/super-admin/dashboard', { replace: true });
           return;
         }
@@ -237,7 +268,7 @@ const ScrollToTop = () => {
           return;
         }
       }
-    } 
+    }
     // 2. BRAND ADMIN PORTAL
     else if (pathname.startsWith('/brand-admin')) {
       if (user && user.role === 'brand_admin') {
@@ -266,21 +297,7 @@ const ScrollToTop = () => {
         }
       }
     }
-    // 4. ASM PORTAL
-    else if (pathname.startsWith('/asm')) {
-      if (user && user.role === 'asm') {
-        if (asmAuthPages.includes(pathname)) {
-          navigate('/asm/dashboard', { replace: true });
-          return;
-        }
-      } else {
-        if (!asmAuthPages.includes(pathname)) {
-          navigate('/asm/login', { replace: true });
-          return;
-        }
-      }
-    }
-    // 5. CUSTOMER APP PORTAL (all other routes)
+    // 4. CUSTOMER APP PORTAL (all other routes)
     else {
       if (user && user.role === 'customer') {
         const defaultAddress = user?.addresses?.find(a => a?.isDefault) || user?.addresses?.[0];
@@ -507,10 +524,6 @@ function App() {
         <Route path="/brand-admin/verify-otp" element={<BrandVerifyOtp />} />
         <Route path="/brand-admin/forgot-password" element={<BrandForgotPassword />} />
         <Route path="/brand-admin/dashboard" element={<BrandDashboard />} />
-        <Route path="/asm/login" element={<AsmLogin />} />
-        <Route path="/asm/verify-otp" element={<AsmVerifyOtp />} />
-        <Route path="/asm/forgot-password" element={<AsmForgotPassword />} />
-        <Route path="/asm/dashboard" element={<AsmDashboard />} />
         <Route path="/brand-admin/requests" element={<BrandRegisterComplaint />} />
         <Route path="/brand-admin/warranty" element={<BrandWarranty />} />
         <Route path="/brand-admin/service-providers" element={<BrandServiceProviders />} />
@@ -571,6 +584,9 @@ function App() {
         <Route path="/super-admin/login" element={<SuperAdminLogin />} />
         <Route path="/super-admin/verify-otp" element={<SuperAdminVerifyOtp />} />
         <Route path="/super-admin/forgot-password" element={<SuperAdminForgotPassword />} />
+        <Route path="/super-admin/change-password" element={<SuperAdminChangePassword />} />
+        <Route path="/super-admin/profile" element={<SuperAdminProfile />} />
+        <Route path="/super-admin/zone-dashboard" element={<SuperAdminZoneDashboard />} />
         <Route path="/super-admin/dashboard" element={<SuperAdminDashboard />} />
         <Route path="/super-admin/users" element={<SuperAdminUsers />} />
         <Route path="/super-admin/service-providers" element={<SuperAdminServiceProviders />} />
@@ -594,6 +610,7 @@ function App() {
         <Route path="/super-admin/logs" element={<SuperAdminLogs />} />
         <Route path="/super-admin/exchange-offers" element={<SuperAdminExchangeOffers />} />
         <Route path="/super-admin/asm" element={<SuperAdminASM />} />
+        <Route path="/super-admin/asm/:id" element={<SuperAdminASMDetail />} />
         <Route path="/super-admin/amc" element={<SuperAdminAMC />} />
         <Route path="/super-admin/products" element={<SuperAdminProducts />} />
         <Route path="/super-admin/warranty-verification" element={<SuperAdminWarrantyVerification />} />

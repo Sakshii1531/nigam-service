@@ -103,6 +103,14 @@ loyaltyConfigRouter.put('/spin-wheel', validate(updateSpinWheelSchema), async (r
   }
 });
 
+loyaltyConfigRouter.get('/referral-stats', async (req, res, next) => {
+  try {
+    ok(res, await loyaltyConfigService.getReferralStats());
+  } catch (err) {
+    next(err);
+  }
+});
+
 loyaltyConfigRouter.get('/referral-campaigns', async (req, res, next) => {
   try {
     ok(res, await loyaltyConfigService.listReferralCampaigns());

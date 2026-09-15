@@ -56,20 +56,31 @@ export const AuthProvider = ({ children }) => {
 
   const [usersByPortal, setUsersByPortal] = useState(() => ({
     customer: loadStoredUser('customer'),
+    // Holds either a super_admin or an asm session — ASM has no separate
+    // portal, it's role-scoped access inside this same panel (getCurrentPortal
+    // in apiClient.js maps both to 'super_admin').
     super_admin: loadStoredUser('super_admin'),
     brand_admin: loadStoredUser('brand_admin'),
     service_provider: loadStoredUser('service_provider'),
-    asm: loadStoredUser('asm'),
   }));
 
   // Active user matches the portal of the current tab/route
   const activeUser = usersByPortal[currentPortal] || null;
 
+  /**
+   * Session storage is keyed by *portal* (which UI you're using, derived from
+   * the URL) not by *role* — the two used to always coincide 1:1 (super_admin
+   * only ever logged in on /super-admin, etc.), but an ASM now also logs in
+   * on /super-admin (role-scoped access inside that same panel, not a
+   * separate portal), so role can no longer be used as the storage key: that
+   * would file an ASM's session under a 'asm' bucket nothing on
+   * /super-admin/* ever reads, leaving them looking logged-out.
+   */
   /** Step 1: password check -> server sends an OTP. Returns the masked destination to display. */
   const login = useCallback(async ({ role, identifier, password }) => {
-    const portal = role || getCurrentPortal(location.pathname);
-    const data = await apiRequest('/auth/login', { 
-      method: 'POST', 
+    const portal = getCurrentPortal(location.pathname);
+    const data = await apiRequest('/auth/login', {
+      method: 'POST',
       body: { role, identifier, password },
       portal
     });
@@ -78,8 +89,8 @@ export const AuthProvider = ({ children }) => {
 
   /** Step 2: OTP verify -> real tokens + user, session now active for this role. */
   const verifyOtp = useCallback(async ({ role, identifier, code }) => {
-    const portal = role || getCurrentPortal(location.pathname);
-    const data = await apiRequest('/auth/otp/verify', { 
+    const portal = getCurrentPortal(location.pathname);
+    const data = await apiRequest('/auth/otp/verify', {
       method: 'POST', 
       body: { role, identifier, code },
       portal 
@@ -114,7 +125,7 @@ export const AuthProvider = ({ children }) => {
   }, [location.pathname]);
 
   const resendOtp = useCallback(async ({ role, identifier, purpose }) => {
-    const portal = role || getCurrentPortal(location.pathname);
+    const portal = getCurrentPortal(location.pathname);
     return apiRequest('/auth/otp/send', { 
       method: 'POST', 
       body: { role, identifier, purpose },

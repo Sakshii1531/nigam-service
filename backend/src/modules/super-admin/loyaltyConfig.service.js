@@ -3,12 +3,15 @@ import { Membership } from '../rewards-loyalty/membership.model.js';
 import { SpinWheelConfig } from '../rewards-loyalty/spinWheelConfig.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { ReferralCampaign } from '../rewards-loyalty/referralCampaign.model.js';
+import { Referral } from '../rewards-loyalty/referral.model.js';
 
 // Super-admin authoring layer for loyalty config (BACKEND_CONTEXT.md §6.3) —
 // milestone thresholds, membership tier definitions, spin-wheel segment odds.
 // Distinct from (and much smaller than) the full customer-facing earn/redeem/
-// spin/referral *flows*, which stay deferred per the Phase 5 scope decision —
-// this is admin CRUD over the config rows those flows would eventually read.
+// spin flows, which stay deferred per the Phase 5 scope decision — this is
+// admin CRUD over the config rows those flows would eventually read. The
+// referral flow itself (auth.service.js's signupVerify) is wired, and
+// getReferralStats below reads its real output.
 
 export async function listMilestones() {
   return LoyaltyMilestone.find().sort({ threshold: 1 });
@@ -81,4 +84,28 @@ export async function updateReferralCampaign(id, updates) {
 export async function deleteReferralCampaign(id) {
   const doc = await ReferralCampaign.findByIdAndDelete(id);
   if (!doc) throw new ApiError(404, 'Referral campaign not found');
+}
+
+/**
+ * Real numbers for LoyaltyProgram.jsx's referrals tab stat cards — previously
+ * a hardcoded { totalShared: 1450, successfulConversions: 840, totalCoinsPaid:
+ * 84000 }. "Links shared" has no backing event (nothing on the customer app
+ * currently logs a share-button tap, only successful signups), so rather than
+ * inventing another fake number, this reports something real instead: how
+ * many distinct customers have successfully referred at least one person.
+ */
+export async function getReferralStats() {
+  const [totalReferrers, successfulConversions, coinsAgg] = await Promise.all([
+    Referral.distinct('referrer').then((ids) => ids.length),
+    Referral.countDocuments({ status: 'Credited' }),
+    Referral.aggregate([
+      { $match: { status: 'Credited' } },
+      { $group: { _id: null, total: { $sum: '$bonusAmount' } } },
+    ]),
+  ]);
+  return {
+    totalReferrers,
+    successfulConversions,
+    totalCoinsPaid: coinsAgg[0]?.total || 0,
+  };
 }

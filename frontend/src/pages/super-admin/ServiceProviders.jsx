@@ -3,13 +3,14 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import { apiRequest } from '../../lib/apiClient';
-import { 
-  Users as UsersIcon, 
-  Search, 
-  Filter, 
-  MoreVertical, 
-  Ban, 
-  CheckCircle, 
+import { useAuth } from '../../context/AuthContext';
+import {
+  Users as UsersIcon,
+  Search,
+  Filter,
+  MoreVertical,
+  Ban,
+  CheckCircle,
   XCircle,
   Eye,
   Star,
@@ -24,18 +25,61 @@ import {
   ShieldCheck,
   Briefcase,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  UserCog,
+  Clock,
+  ArrowRight
 } from 'lucide-react';
 
 const ServiceProviders = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAsm = user?.role === 'asm';
+  // Mirrors the backend's requireAsmPermission('techs:manage') gate on the
+  // status-change route (adminServiceProvider.routes.js) — a view-only ASM
+  // would get a 403 from these actions anyway, so hide them instead. A
+  // super-admin viewer always has full access regardless of this flag.
+  const canManage = !isAsm || Boolean(user?.permissions?.includes('techs:manage'));
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSkill, setSelectedSkill] = useState('All Skills');
   const [selectedStatus, setSelectedStatus] = useState('All Status');
+  const [selectedCity, setSelectedCity] = useState('All Cities');
+  const [selectedAvailability, setSelectedAvailability] = useState('All Availability');
+  const [selectedAsm, setSelectedAsm] = useState('All ASMs');
   const [successMessage, setSuccessMessage] = useState('');
   const [selectedTechProfile, setSelectedTechProfile] = useState(null);
+
+  // Real "Recent Service Activity" / "Latest Customer Reviews" for whichever
+  // provider's profile is open — this used to be a hardcoded fallback shown
+  // unconditionally (a brand-new Pending provider with 0 completed jobs was
+  // shown a fake "Completed" job history and a fake 5-star review), so a
+  // provider with genuinely no history now correctly shows an empty state
+  // instead of fabricated data.
+  const [profileActivity, setProfileActivity] = useState([]);
+  const [profileReviews, setProfileReviews] = useState([]);
+  const [profileDetailLoading, setProfileDetailLoading] = useState(false);
+
+  useEffect(() => {
+    if (!selectedTechProfile) return;
+    let cancelled = false;
+    (async () => {
+      setProfileDetailLoading(true);
+      try {
+        const [requestsRes, reviewsRes] = await Promise.all([
+          apiRequest(`/service-requests?serviceProvider=${selectedTechProfile.id}&limit=5&sort=-createdAt`, { auth: true }).catch(() => []),
+          apiRequest(`/reviews/service-providers/${selectedTechProfile.id}?limit=5&sort=-createdAt`).catch(() => []),
+        ]);
+        if (cancelled) return;
+        setProfileActivity(Array.isArray(requestsRes) ? requestsRes : []);
+        setProfileReviews(Array.isArray(reviewsRes) ? reviewsRes : []);
+      } finally {
+        if (!cancelled) setProfileDetailLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedTechProfile?.id]);
 
   const [showModal, setShowModal] = useState(false);
   const [serviceProviderToDelete, setTechToDelete] = useState(null);
@@ -57,15 +101,25 @@ const ServiceProviders = () => {
         // Notifications address the underlying User, not the Service Provider doc.
         userId: item.user || null,
         phone: item.phone || '',
+        email: item.email || '',
         name: item.name || 'Service Provider',
+        specs: item.specs?.length ? item.specs : [],
         skill: item.specs?.length ? item.specs.join(', ') : 'General Repair',
-        city: item.city?.name || '—',
+        // Falls back to the free-text serviceCityName when `city` never
+        // resolved to a real City doc at registration (a typo'd/unlisted
+        // city — see serviceProviderRegistration.routes.js's cityDoc
+        // lookup) — otherwise a provider who genuinely typed their city
+        // shows a bare "—" as if they'd left it blank.
+        city: item.city?.name || item.serviceCityName || '—',
         rating: item.rating || 0,
         trustScore: item.trustScore || 0,
         activeJobs: item.activeJobsCount || 0,
         completedJobs: item.completedJobsCount || 0,
         status: item.status || 'Pending',
         availability: item.availability || 'Offline',
+        // Derived from city, not stored — see adminServiceProvider.service.js's
+        // attachAsm. null means this provider's city has no ASM assigned yet.
+        asm: item.asm || null,
         aadharFrontUrl: item.verification?.aadharFrontUrl || '',
         aadharBackUrl: item.verification?.aadharBackUrl || '',
         appliedDate: item.createdAt
@@ -83,6 +137,23 @@ const ServiceProviders = () => {
   useEffect(() => {
     if (location.search.includes('add=true')) {
       setShowModal(true);
+      navigate(location.pathname, { replace: true });
+      return;
+    }
+    // Deep link from an ASM's detail page ("Service Providers" stat card) —
+    // preset the ASM filter so the list actually shows just their zone.
+    const params = new URLSearchParams(location.search);
+    const asmId = params.get('asm');
+    if (asmId) {
+      setSelectedAsm(asmId);
+      navigate(location.pathname, { replace: true });
+      return;
+    }
+    // Deep link from the Sidebar's "Pending Approvals" entry / the zone
+    // dashboard's stat cards.
+    const status = params.get('status');
+    if (status) {
+      setSelectedStatus(status);
       navigate(location.pathname, { replace: true });
     }
   }, [location, navigate]);
@@ -221,12 +292,28 @@ const ServiceProviders = () => {
     showToast(`Service Provider "${addedTech.name}" onboarded successfully!`);
   };
 
+  // Dropdown options are derived from whatever's actually loaded rather than
+  // hardcoded — the old hardcoded skill list ("AC & Refrigerator" etc.) never
+  // matched real spec values ("AC", "Refrigerator" as separate entries), so
+  // the filter silently matched nothing. City/ASM have the same problem if
+  // hardcoded, so all three are built the same way.
+  const skillOptions = [...new Set(serviceProviders.flatMap(t => t.specs))].sort();
+  const pendingCount = serviceProviders.filter(p => p.status === 'Pending').length;
+  const cityOptions = [...new Set(serviceProviders.map(t => t.city).filter(c => c && c !== '—'))].sort();
+  const asmOptions = [...new Map(
+    serviceProviders.filter(t => t.asm).map(t => [t.asm.id, t.asm])
+  ).values()].sort((a, b) => a.name.localeCompare(b.name));
+
   const filteredTechs = serviceProviders.filter(t => {
     const matchesSearch = t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           (t.ref || '').toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesSkill = selectedSkill === 'All Skills' || t.skill === selectedSkill;
+    const matchesSkill = selectedSkill === 'All Skills' || t.specs.includes(selectedSkill);
     const matchesStatus = selectedStatus === 'All Status' || t.status === selectedStatus;
-    return matchesSearch && matchesSkill && matchesStatus;
+    const matchesCity = selectedCity === 'All Cities' || t.city === selectedCity;
+    const matchesAvailability = selectedAvailability === 'All Availability' || t.availability === selectedAvailability;
+    const matchesAsm = selectedAsm === 'All ASMs'
+      || (selectedAsm === 'Unassigned' ? !t.asm : t.asm?.id === selectedAsm);
+    return matchesSearch && matchesSkill && matchesStatus && matchesCity && matchesAvailability && matchesAsm;
   });
 
   const renderFullPageProfile = () => {
@@ -234,17 +321,7 @@ const ServiceProviders = () => {
     const email = provider.email || '—';
     const phone = provider.phone || '—';
     const joinedDate = provider.appliedDate || '—';
-    
-    // Dynamic or specific activity history
-    const recentActivity = provider.activity || [
-      { id: 1, title: `${provider.skill.split(',')[0] || 'Appliance'} Diagnostic & Repair`, ticket: `#NC-${Math.floor(50000 + Math.random() * 9000)}`, status: 'Completed' },
-      { id: 2, title: `General Maintenance Inspection`, ticket: `#NC-${Math.floor(50000 + Math.random() * 9000)}`, status: 'Completed' },
-    ];
 
-    const reviews = provider.reviews || [
-      { id: 1, author: "Rajesh S.", text: `Excellent work by ${provider.name}. Resolved the ${provider.skill.split(',')[0]} issue quickly.`, rating: 5, date: "Recently" },
-    ];
-    
     return (
       <div className="p-6 space-y-6 flex-1 bg-[#F8FAFC]">
         {/* Back navigation & Header */}
@@ -257,9 +334,9 @@ const ServiceProviders = () => {
           </button>
           
           <div className="flex gap-2">
-            {provider.status === 'Pending' && (
+            {canManage && provider.status === 'Pending' && (
               <>
-                <button 
+                <button
                   onClick={() => {
                     handleStatusChange(provider.id, 'Active');
                     setSelectedTechProfile({ ...provider, status: 'Active' });
@@ -268,7 +345,7 @@ const ServiceProviders = () => {
                 >
                   <CheckCircle size={14} /> Approve Partner
                 </button>
-                <button 
+                <button
                   onClick={() => {
                     handleStatusChange(provider.id, 'Inactive');
                     setSelectedTechProfile({ ...provider, status: 'Inactive' });
@@ -280,8 +357,8 @@ const ServiceProviders = () => {
               </>
             )}
 
-            {provider.status === 'Active' && (
-              <button 
+            {canManage && provider.status === 'Active' && (
+              <button
                 onClick={() => {
                   handleStatusChange(provider.id, 'Inactive');
                   setSelectedTechProfile({ ...provider, status: 'Inactive' });
@@ -292,8 +369,8 @@ const ServiceProviders = () => {
               </button>
             )}
 
-            {provider.status === 'Inactive' && (
-              <button 
+            {canManage && provider.status === 'Inactive' && (
+              <button
                 onClick={() => {
                   handleStatusChange(provider.id, 'Active');
                   setSelectedTechProfile({ ...provider, status: 'Active' });
@@ -304,16 +381,18 @@ const ServiceProviders = () => {
               </button>
             )}
 
-            <button 
-              onClick={() => {
-                setTechToDelete(provider);
-                setShowDeleteConfirm(true);
-              }}
-              className="bg-red-50 text-red-600 border border-red-200 px-3.5 py-2 rounded-lg text-xs font-semibold hover:bg-red-100 transition-colors flex items-center gap-1.5 shadow-xs"
-              title="Delete Service Provider"
-            >
-              <Trash2 size={14} /> Delete
-            </button>
+            {!isAsm && (
+              <button
+                onClick={() => {
+                  setTechToDelete(provider);
+                  setShowDeleteConfirm(true);
+                }}
+                className="bg-red-50 text-red-600 border border-red-200 px-3.5 py-2 rounded-lg text-xs font-semibold hover:bg-red-100 transition-colors flex items-center gap-1.5 shadow-xs"
+                title="Delete Service Provider"
+              >
+                <Trash2 size={14} /> Delete
+              </button>
+            )}
           </div>
         </div>
 
@@ -359,6 +438,24 @@ const ServiceProviders = () => {
           <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-6 text-xs text-slate-600 font-medium">
               <span>📍 Operating City: <strong className="text-slate-900">{provider.city}</strong></span>
+              {/* An ASM viewing their own zone already knows who manages it
+                  — showing it here would just be their own name on every row. */}
+              {!isAsm && (
+                <span>
+                  🧭 ASM Manager:{' '}
+                  {provider.asm ? (
+                    <button
+                      onClick={() => navigate(`/super-admin/asm/${provider.asm.id}`)}
+                      className="font-bold text-[#0D47A1] hover:underline"
+                      title={`Manage ${provider.asm.name}`}
+                    >
+                      {provider.asm.name}
+                    </button>
+                  ) : (
+                    <strong className="text-slate-400 italic font-medium">Unassigned</strong>
+                  )}
+                </span>
+              )}
               <span>⭐ Rating: <strong className="text-slate-900">{provider.rating || '5.0'} / 5.0</strong></span>
               <span>🛠️ Active Jobs: <strong className="text-slate-900">{provider.activeJobs || 0}</strong></span>
             </div>
@@ -392,6 +489,21 @@ const ServiceProviders = () => {
                       <CalendarIcon size={16} className="text-[#64748B] flex-shrink-0" />
                       <span>Applied / Joined: {joinedDate}</span>
                     </div>
+                    {!isAsm && (
+                      <div className="flex items-center gap-3 text-slate-700">
+                        <UserCog size={16} className="text-[#64748B] flex-shrink-0" />
+                        {provider.asm ? (
+                          <button
+                            onClick={() => navigate(`/super-admin/asm/${provider.asm.id}`)}
+                            className="text-[#0D47A1] font-semibold hover:underline"
+                          >
+                            {provider.asm.name} (ASM)
+                          </button>
+                        ) : (
+                          <span className="text-slate-400 italic">No ASM assigned to this zone yet</span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -481,44 +593,70 @@ const ServiceProviders = () => {
                   </div>
                 </div>
 
-                {/* Job History summary list */}
+                {/* Job History summary list — real service requests
+                    assigned to this provider, not a fabricated placeholder. */}
                 <div className="bg-white p-5 rounded-xl border border-[#E2E8F0] shadow-sm">
                   <h3 className="text-sm font-bold text-[#1E293B] mb-4">Recent Service Activity</h3>
-                  <div className="space-y-4">
-                    {recentActivity.map((act, idx) => (
-                      <div key={idx} className="flex justify-between items-start pb-3 border-b border-slate-100 last:border-0 last:pb-0">
-                        <div>
-                          <p className="text-sm font-semibold text-slate-800">{act.title}</p>
-                          <p className="text-xs text-slate-500">{act.ticket} • {provider.city}</p>
-                        </div>
-                        <span className="bg-green-50 text-green-600 text-xs font-semibold px-2.5 py-0.5 rounded-full">
-                          {act.status}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+                  {profileDetailLoading ? (
+                    <p className="text-xs text-slate-400 font-semibold py-2">Loading...</p>
+                  ) : profileActivity.length === 0 ? (
+                    <p className="text-xs text-slate-400 font-semibold py-2">No service activity yet.</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {profileActivity.map((req) => {
+                        const statusStyle = ['Closed'].includes(req.status)
+                          ? 'bg-green-50 text-green-600'
+                          : ['Cancelled'].includes(req.status)
+                          ? 'bg-red-50 text-red-600'
+                          : 'bg-amber-50 text-amber-600';
+                        return (
+                          <div key={req.id} className="flex justify-between items-start pb-3 border-b border-slate-100 last:border-0 last:pb-0">
+                            <div>
+                              <p className="text-sm font-semibold text-slate-800">{req.category || req.description || 'Service Request'}</p>
+                              <p className="text-xs text-slate-500">
+                                {req.humanId} • {req.createdAt ? new Date(req.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+                              </p>
+                            </div>
+                            <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full flex-shrink-0 ${statusStyle}`}>
+                              {req.status}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-                {/* Reviews */}
+                {/* Reviews — real Review docs left by customers on this
+                    provider's jobs, not a fabricated placeholder. */}
                 <div className="bg-white p-5 rounded-xl border border-[#E2E8F0] shadow-sm">
                   <h3 className="text-sm font-bold text-[#1E293B] mb-4">Latest Customer Reviews</h3>
-                  <div className="space-y-4">
-                    {reviews.map(review => (
-                      <div key={review.id} className="space-y-1 pb-3 border-b border-slate-100 last:border-0 last:pb-0">
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="font-semibold text-slate-800">{review.author}</span>
-                          <span className="text-slate-400">{review.date}</span>
-                        </div>
-                        <div className="flex items-center gap-0.5 text-amber-500">
-                          <Star size={12} fill="currentColor" />
-                          <Star size={12} fill="currentColor" />
-                          <Star size={12} fill="currentColor" />
-                          <Star size={12} fill="currentColor" />
-                          <Star size={12} fill="currentColor" />
-                        </div>
-                        <p className="text-xs text-slate-600 italic font-normal">"{review.text}"</p>
-                      </div>
-                    ))}
-                  </div>
+                  {profileDetailLoading ? (
+                    <p className="text-xs text-slate-400 font-semibold py-2">Loading...</p>
+                  ) : profileReviews.length === 0 ? (
+                    <p className="text-xs text-slate-400 font-semibold py-2">No reviews yet — nothing has been left for this provider.</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {profileReviews.map((review) => {
+                        const starCount = review.technicianRating ?? review.rating ?? 0;
+                        return (
+                          <div key={review.id} className="space-y-1 pb-3 border-b border-slate-100 last:border-0 last:pb-0">
+                            <div className="flex justify-between items-center text-xs">
+                              <span className="font-semibold text-slate-800">{review.user?.name || 'A customer'}</span>
+                              <span className="text-slate-400">
+                                {review.createdAt ? new Date(review.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-0.5 text-amber-500">
+                              {Array.from({ length: 5 }).map((_, i) => (
+                                <Star key={i} size={12} fill={i < starCount ? 'currentColor' : 'none'} />
+                              ))}
+                            </div>
+                            {review.comment && <p className="text-xs text-slate-600 italic font-normal">"{review.comment}"</p>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
               </div>
@@ -547,13 +685,71 @@ const ServiceProviders = () => {
           
           {/* Header Actions */}
           <div className="flex justify-between items-center">
-            <h2 className="text-lg font-bold text-[#1E293B]">ServiceProviders</h2>
-            <button 
-              onClick={() => setShowModal(true)}
-              className="bg-[#0D47A1] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-sm"
+            <div>
+              <h2 className="text-lg font-bold text-[#1E293B]">Service Providers</h2>
+              {isAsm && <p className="text-xs text-[#64748B] mt-0.5">Your zone — {serviceProviders[0]?.city || 'unassigned'}</p>}
+            </div>
+            {/* Onboarding new providers directly is a super-admin action —
+                an ASM's role is verifying/managing whoever already registered
+                and landed in their zone, not creating accounts wholesale. */}
+            {!isAsm && (
+              <button
+                onClick={() => setShowModal(true)}
+                className="bg-[#0D47A1] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-sm"
+              >
+                <Plus size={16} /> Add Service Provider
+              </button>
+            )}
+          </div>
+
+          {/* Attention banner — nothing else on this page forces a pending
+              application into view; the stat card below is easy to skim
+              past, so this repeats the same count as an impossible-to-miss
+              alert whenever it's non-zero. */}
+          {pendingCount > 0 && (
+            <button
+              onClick={() => setSelectedStatus('Pending')}
+              className="w-full flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 text-left hover:bg-amber-100/70 transition-colors"
             >
-              <Plus size={16} /> Add Service Provider
+              <span className="w-9 h-9 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle size={18} />
+              </span>
+              <span className="flex-1">
+                <span className="text-sm font-bold text-amber-800">
+                  {pendingCount} service provider{pendingCount === 1 ? '' : 's'} need{pendingCount === 1 ? 's' : ''} your review
+                </span>
+                <span className="block text-xs text-amber-700/80 mt-0.5">
+                  New applications wait here until approved or rejected — click to filter.
+                </span>
+              </span>
+              <ArrowRight size={16} className="text-amber-600 flex-shrink-0" />
             </button>
+          )}
+
+          {/* Stat cards — quick zone/platform overview */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              { label: 'Total', value: serviceProviders.length, icon: UsersIcon, color: 'text-[#0D47A1] bg-blue-50' },
+              { label: 'Pending', value: serviceProviders.filter(p => p.status === 'Pending').length, icon: Clock, color: 'text-amber-600 bg-amber-50' },
+              { label: 'Active', value: serviceProviders.filter(p => p.status === 'Active').length, icon: CheckCircle2, color: 'text-emerald-600 bg-emerald-50' },
+              { label: 'Inactive', value: serviceProviders.filter(p => p.status === 'Inactive').length, icon: XCircle, color: 'text-slate-500 bg-slate-100' },
+            ].map(({ label, value, icon: Icon, color }) => (
+              <button
+                key={label}
+                onClick={() => setSelectedStatus(label === 'Total' ? 'All Status' : label)}
+                className={`bg-white p-4 rounded-2xl border shadow-sm flex items-center justify-between text-left hover:border-[#0D47A1]/40 transition-colors ${
+                  label === 'Pending' && value > 0 ? 'border-amber-300 ring-1 ring-amber-200' : 'border-[#E2E8F0]'
+                }`}
+              >
+                <div>
+                  <p className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider">{label}</p>
+                  <h3 className="text-xl font-black text-[#1E293B] mt-1">{value}</h3>
+                </div>
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${color}`}>
+                  <Icon size={18} />
+                </div>
+              </button>
+            ))}
           </div>
 
           {/* Filters & Search */}
@@ -574,20 +770,16 @@ const ServiceProviders = () => {
               </div>
 
               {/* Filters */}
-              <select 
+              <select
                 value={selectedSkill}
                 onChange={(e) => setSelectedSkill(e.target.value)}
                 className="text-sm text-[#1E293B] border border-[#E2E8F0] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#0D47A1] bg-[#F8FAFC]"
               >
                 <option>All Skills</option>
-                <option>AC & Refrigerator</option>
-                <option>Washing Machine</option>
-                <option>Microwave & TV</option>
-                <option>Chimney & Hob</option>
-                <option>All Appliances</option>
+                {skillOptions.map(skill => <option key={skill}>{skill}</option>)}
               </select>
 
-              <select 
+              <select
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
                 className="text-sm text-[#1E293B] border border-[#E2E8F0] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#0D47A1] bg-[#F8FAFC]"
@@ -597,13 +789,46 @@ const ServiceProviders = () => {
                 <option>Inactive</option>
                 <option>Pending</option>
               </select>
+
+              <select
+                value={selectedCity}
+                onChange={(e) => setSelectedCity(e.target.value)}
+                className="text-sm text-[#1E293B] border border-[#E2E8F0] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#0D47A1] bg-[#F8FAFC]"
+              >
+                <option>All Cities</option>
+                {cityOptions.map(city => <option key={city}>{city}</option>)}
+              </select>
+
+              <select
+                value={selectedAvailability}
+                onChange={(e) => setSelectedAvailability(e.target.value)}
+                className="text-sm text-[#1E293B] border border-[#E2E8F0] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#0D47A1] bg-[#F8FAFC]"
+              >
+                <option>All Availability</option>
+                <option>Available</option>
+                <option>Busy</option>
+                <option>Offline</option>
+              </select>
+
+              <select
+                value={selectedAsm}
+                onChange={(e) => setSelectedAsm(e.target.value)}
+                className="text-sm text-[#1E293B] border border-[#E2E8F0] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#0D47A1] bg-[#F8FAFC]"
+              >
+                <option>All ASMs</option>
+                <option>Unassigned</option>
+                {asmOptions.map(asm => <option key={asm.id} value={asm.id}>{asm.name}</option>)}
+              </select>
             </div>
 
-            <button 
+            <button
               onClick={() => {
                 setSearchQuery('');
                 setSelectedSkill('All Skills');
                 setSelectedStatus('All Status');
+                setSelectedCity('All Cities');
+                setSelectedAvailability('All Availability');
+                setSelectedAsm('All ASMs');
                 showToast('Filters reset successfully');
               }}
               className="bg-white text-[#1E293B] border border-[#E2E8F0] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#F8FAFC] transition-colors"
@@ -621,6 +846,7 @@ const ServiceProviders = () => {
                     <th className="px-6 py-4">Service Provider</th>
                     <th className="px-6 py-4">Skill</th>
                     <th className="px-6 py-4">City</th>
+                    {!isAsm && <th className="px-6 py-4">ASM Manager</th>}
                     <th className="px-6 py-4">Rating</th>
                     <th className="px-6 py-4">Jobs (Active/Comp)</th>
                     <th className="px-6 py-4">Availability</th>
@@ -630,7 +856,14 @@ const ServiceProviders = () => {
                 </thead>
                 <tbody className="divide-y divide-[#E2E8F0]">
                   {filteredTechs.map((provider) => (
-                    <tr key={provider.id} className="hover:bg-[#F8FAFC] transition-colors">
+                    <tr
+                      key={provider.id}
+                      className={`transition-colors ${
+                        provider.status === 'Pending'
+                          ? 'bg-amber-50/60 hover:bg-amber-50 border-l-2 border-l-amber-400'
+                          : 'hover:bg-[#F8FAFC]'
+                      }`}
+                    >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 bg-[#EEF4FF] rounded-full flex items-center justify-center text-[#0D47A1] font-bold">
@@ -648,6 +881,21 @@ const ServiceProviders = () => {
                           <MapPin size={14} /> {provider.city}
                         </div>
                       </td>
+                      {!isAsm && (
+                        <td className="px-6 py-4">
+                          {provider.asm ? (
+                            <button
+                              onClick={() => navigate(`/super-admin/asm/${provider.asm.id}`)}
+                              className="flex items-center gap-1.5 text-[#0D47A1] font-medium hover:underline"
+                              title={`Manage ${provider.asm.name}`}
+                            >
+                              <UserCog size={14} /> {provider.asm.name}
+                            </button>
+                          ) : (
+                            <span className="text-[#94A3B8] text-xs italic">Unassigned</span>
+                          )}
+                        </td>
+                      )}
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-1 text-amber-500 font-medium">
                           <Star size={14} fill="currentColor" /> {provider.rating}
@@ -686,18 +934,18 @@ const ServiceProviders = () => {
                             <Eye size={16} />
                           </button>
                           
-                          {provider.status === 'Pending' && (
+                          {canManage && provider.status === 'Pending' && (
                             <>
-                              <button 
+                              <button
                                 onClick={() => handleStatusChange(provider.id, 'Active')}
-                                className="p-1.5 text-green-600 hover:bg-green-50 rounded" 
+                                className="p-1.5 text-green-600 hover:bg-green-50 rounded"
                                 title="Approve"
                               >
                                 <CheckCircle size={16} />
                               </button>
-                              <button 
+                              <button
                                 onClick={() => handleStatusChange(provider.id, 'Inactive')}
-                                className="p-1.5 text-red-600 hover:bg-red-50 rounded" 
+                                className="p-1.5 text-red-600 hover:bg-red-50 rounded"
                                 title="Reject"
                               >
                                 <XCircle size={16} />
@@ -705,36 +953,41 @@ const ServiceProviders = () => {
                             </>
                           )}
 
-                          {provider.status === 'Active' && (
-                            <button 
+                          {canManage && provider.status === 'Active' && (
+                            <button
                               onClick={() => handleStatusChange(provider.id, 'Inactive')}
-                              className="p-1.5 text-red-600 hover:bg-red-50 rounded" 
+                              className="p-1.5 text-red-600 hover:bg-red-50 rounded"
                               title="Suspend"
                             >
                               <Ban size={16} />
                             </button>
                           )}
 
-                          {provider.status === 'Inactive' && (
-                            <button 
+                          {canManage && provider.status === 'Inactive' && (
+                            <button
                               onClick={() => handleStatusChange(provider.id, 'Active')}
-                              className="p-1.5 text-green-600 hover:bg-green-50 rounded" 
+                              className="p-1.5 text-green-600 hover:bg-green-50 rounded"
                               title="Activate"
                             >
                               <CheckCircle size={16} />
                             </button>
                           )}
 
-                          <button
-                            onClick={() => {
-                              setTechToDelete(provider);
-                              setShowDeleteConfirm(true);
-                            }}
-                            className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
-                            title="Delete Service Provider"
-                          >
-                            <Trash2 size={16} />
-                          </button>
+                          {/* Deleting a provider record outright is super-admin only
+                              (adminServiceProvider.routes.js's DELETE route) — an
+                              ASM manages status, not the account's existence. */}
+                          {!isAsm && (
+                            <button
+                              onClick={() => {
+                                setTechToDelete(provider);
+                                setShowDeleteConfirm(true);
+                              }}
+                              className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                              title="Delete Service Provider"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

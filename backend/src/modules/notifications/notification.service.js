@@ -116,6 +116,18 @@ const EVENT_TEMPLATES = {
     message: p.reason || 'A new Brand Warranty claim has been raised.',
     priority: 'High',
   }),
+  // Fired at the referrer when someone signs up using their code
+  // (auth.service.js's signupVerify) — lets them know their code actually
+  // got used, and that the bonus landed, without having to go check.
+  'referral.code_used': (p) => ({
+    recipient: p.referrerId,
+    type: 'referral',
+    title: 'Your referral code was used! 🎉',
+    message: `${p.refereeName || 'Someone'} just signed up using your referral code — ₹${p.bonusAmount} has been credited to your wallet.`,
+    cta: { label: 'View Rewards', route: '/rewards-play-zone' },
+    smsBody: `${p.refereeName || 'Someone'} signed up using your Nigam Care referral code. ₹${p.bonusAmount} credited to your wallet!`,
+    whatsappBody: `🎉 *Referral Bonus!*\n\n${p.refereeName || 'Someone'} just signed up using your referral code.\n\n₹${p.bonusAmount} has been credited to your Nigam Care wallet!`,
+  }),
 };
 
 // ── Channel delivery helpers ──────────────────────────────────────────────────

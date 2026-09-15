@@ -35,6 +35,7 @@ export async function getDashboard() {
     extendedWarrantyCustomers,
     productOrders,
     openEscalations,
+    pendingServiceProviders,
   ] = await Promise.all([
     ServiceRequest.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
     ServiceProvider.aggregate([{ $group: { _id: '$availability', count: { $sum: 1 } } }]),
@@ -44,6 +45,10 @@ export async function getDashboard() {
     ExtendedWarrantyOrder.countDocuments({ status: 'Active' }),
     Order.countDocuments(),
     Escalation.countDocuments({ scope: 'platform', status: { $ne: RESOLVED_ESCALATION } }),
+    // Same "needs attention" surface as the Open Escalations card below —
+    // an application sitting unreviewed shouldn't require navigating into
+    // Service Providers to discover.
+    ServiceProvider.countDocuments({ status: 'Pending' }),
   ]);
 
   const byStatus = tally(statusRows);
@@ -70,6 +75,7 @@ export async function getDashboard() {
     extendedWarrantyCustomers,
     productOrders,
     openEscalations,
+    pendingServiceProviders,
   };
 }
 
