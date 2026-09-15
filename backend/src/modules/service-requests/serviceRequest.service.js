@@ -9,6 +9,7 @@ import { parsePagination, paginationMeta } from '../../utils/pagination.js';
 
 import { emit as emitNotification } from '../notifications/notification.service.js';
 import { getIO } from '../../sockets/io.js';
+import { isTest } from '../../config/env.js';
 
 /** `session` opts this write into a caller's transaction (see
  * utils/transaction.js) — createBooking uses it so a booking and its service
@@ -161,6 +162,17 @@ export async function suggestServiceProviders(id) {
  * side-effects, and is deliberately not folded in here.
  */
 export function scheduleDispatchTimeout(serviceRequestId, serviceProviderId, timeoutMs = 60000) {
+  // No test exercises this real-time cascade (grep confirms — it's asserted
+  // via declineAssignment directly, not by waiting out the clock), and
+  // letting it schedule anyway is actively harmful under Jest: 60s comfortably
+  // outlives any single test file, so by the time it fires the connection
+  // that test set up is already torn down. The resulting error is caught and
+  // console.warn'd correctly, but Jest attributes that log to a test file
+  // that has already finished and fails the whole run over it — "Cannot log
+  // after tests are done" — even though every individual test passed. This
+  // was intermittent in CI depending on exactly when each 60s timer landed
+  // relative to the rest of the suite.
+  if (isTest) return;
   setTimeout(async () => {
     try {
       const sr = await ServiceRequest.findById(serviceRequestId);
