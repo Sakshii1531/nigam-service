@@ -325,7 +325,7 @@ describe('manual assignment from the super-admin console', () => {
     const sr = await seedUnassignedRequest();
 
     const suggestRes = await request(app)
-      .get(`/api/v1/service-requests/${sr.id}/serviceProvider-suggestions`)
+      .get(`/api/v1/service-requests/${sr.id}/service-provider-suggestions`)
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(200);
     expect(suggestRes.body.data[0]).toMatchObject({ id: serviceProvider.id, name: 'Test Service Provider' });
@@ -401,6 +401,6 @@ describe('manual assignment from the super-admin console', () => {
       .set('Authorization', `Bearer ${custToken}`)
       .send({})
       .expect(403);
-    await request(app).get(`/api/v1/service-requests/${sr.id}/serviceProvider-suggestions`).expect(401);
+    await request(app).get(`/api/v1/service-requests/${sr.id}/service-provider-suggestions`).expect(401);
   });
 });
