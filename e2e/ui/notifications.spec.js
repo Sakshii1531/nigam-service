@@ -72,7 +72,7 @@ test('a signed-in customer can open the notification feed', async ({ page, reque
   await page.goto('/notifications');
   await page.waitForLoadState('networkidle');
 
-  await expect(page.getByText(/notification/i).first()).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText(/notification/i).filter({ visible: true }).first()).toBeVisible({ timeout: 10_000 });
   expect(errors).toEqual([]);
 });
 

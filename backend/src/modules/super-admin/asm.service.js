@@ -71,13 +71,22 @@ async function syncAsmRole(userId, name, permissionKeys = []) {
     existingRole.permissions = permissionDocs.map((p) => p._id);
     await existingRole.save();
   } else {
-    const role = await Role.create({
-      name: roleName,
-      scope: 'platform',
-      permissions: permissionDocs.map((p) => p._id),
-    });
-    user.assignedRoles = [...user.assignedRoles.map((r) => r._id), role._id];
-    await user.save();
+    let role = await Role.findOne({ name: roleName, scope: 'platform', brand: null });
+    if (role) {
+      role.permissions = permissionDocs.map((p) => p._id);
+      await role.save();
+    } else {
+      role = await Role.create({
+        name: roleName,
+        scope: 'platform',
+        permissions: permissionDocs.map((p) => p._id),
+      });
+    }
+    const currentRoleIds = user.assignedRoles.map((r) => r._id ? r._id.toString() : r.toString());
+    if (!currentRoleIds.includes(role._id.toString())) {
+      user.assignedRoles.push(role._id);
+      await user.save();
+    }
   }
 }
 

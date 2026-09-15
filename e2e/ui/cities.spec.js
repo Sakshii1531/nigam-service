@@ -53,6 +53,9 @@ async function signIn(page, session) {
     localStorage.setItem('ncc_access_token', a);
     localStorage.setItem('ncc_refresh_token', r);
     localStorage.setItem('ncc_user', u);
+    localStorage.setItem('ncc_access_token_super_admin', a);
+    localStorage.setItem('ncc_refresh_token_super_admin', r);
+    localStorage.setItem('ncc_user_super_admin', u);
   }, [session.accessToken, session.refreshToken, JSON.stringify(session.user)]);
 }
 

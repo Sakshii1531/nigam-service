@@ -52,10 +52,12 @@ export function getStoredTokens(portal = getCurrentPortal()) {
   }
 
   // Fallback to legacy single key for backwards compatibility
-  if (portal === 'customer') {
+  const legacyAccess = localStorage.getItem('ncc_access_token');
+  const legacyRefresh = localStorage.getItem('ncc_refresh_token');
+  if (legacyAccess || legacyRefresh) {
     return {
-      accessToken: localStorage.getItem('ncc_access_token'),
-      refreshToken: localStorage.getItem('ncc_refresh_token'),
+      accessToken: legacyAccess,
+      refreshToken: legacyRefresh,
     };
   }
 

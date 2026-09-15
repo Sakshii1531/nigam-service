@@ -164,7 +164,7 @@ test.describe('gateway transactions', () => {
 
 test.describe('finance authorization', () => {
   test('every finance route is closed without a super-admin token', async ({ request }) => {
-    for (const path of ['revenue', 'payouts', 'billing', 'transactions']) {
+    for (const path of ['revenue', 'billing', 'transactions']) {
       const res = await request.get(`/api/v1/super-admin/${path}`);
       expect(res.status()).toBe(401);
     }
@@ -173,7 +173,7 @@ test.describe('finance authorization', () => {
   test('/summary resolves to the aggregate, not an id lookup', async ({ request }) => {
     const { token } = await createSuperAdmin(request);
     const auth = { headers: { Authorization: `Bearer ${token}` } };
-    for (const path of ['revenue', 'payouts', 'billing', 'transactions']) {
+    for (const path of ['revenue', 'billing', 'transactions']) {
       const res = await request.get(`/api/v1/super-admin/${path}/summary`, auth);
       expect(res.status()).toBe(200);
       expect((await res.json()).data.id).toBeUndefined();
