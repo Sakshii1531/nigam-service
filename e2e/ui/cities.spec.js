@@ -111,3 +111,66 @@ test('with no operational cities configured, the application offers none rather 
   }
   await expect(page.getByText(/no service cities have been configured/i)).toBeVisible();
 });
+
+function uniquePhone() {
+  return `9${String(Math.floor(Math.random() * 1_000_000_000)).padStart(9, '0')}`;
+}
+
+async function signedInCustomer(request) {
+  const phone = uniquePhone();
+  await request.post(`${API}/_dev/test-user`, { data: { role: 'customer', phone, password: 'password123' } });
+  return verifyOtp(request, 'customer', phone);
+}
+
+test('customer app header location is clickable, opens modal, and routes unserviceable cities to /area-not-serviceable', async ({ page, request }) => {
+  const admin = await superAdminSession(request);
+  const activeCityName = `ActiveCity ${randomUUID().slice(0, 6)}`;
+  await createCity(request, admin.accessToken, { name: activeCityName, state: 'Delhi', district: activeCityName });
+
+  const customer = await signedInCustomer(request);
+  await signIn(page, customer);
+  await page.addInitScript(([city]) => {
+    localStorage.setItem('ncc_customer_city', city);
+    localStorage.setItem('ncc_customer_location', JSON.stringify({
+      city,
+      state: 'Delhi',
+      area: 'Civil Lines',
+      fullAddress: `Civil Lines, ${city}`,
+      isServiceable: true,
+    }));
+  }, [activeCityName]);
+
+  await page.goto('/dashboard');
+  await expect(page.getByRole('button', { name: /Change location/i })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText(activeCityName).first()).toBeVisible();
+
+  // Click location to open modal
+  await page.getByRole('button', { name: /Change location/i }).click();
+  await expect(page.getByRole('heading', { name: /Select Location/i })).toBeVisible();
+  await expect(page.getByText(/Use My Current Location/i)).toBeVisible();
+
+  // Search for an unserviceable city
+  const searchInput = page.getByPlaceholder(/Search city/i);
+  await searchInput.fill('NowhereCity');
+  await expect(page.getByText(/No matching city found/i)).toBeVisible();
+
+  // Click check NowhereCity
+  await page.getByRole('button', { name: /Check "NowhereCity"/i }).click();
+
+  // Redirects to /area-not-serviceable
+  await expect(page).toHaveURL(/.*area-not-serviceable/);
+  await expect(page.getByRole('heading', { name: /We're Not in Your Area Yet!/i })).toBeVisible();
+  await expect(page.getByText(/NowhereCity/).first()).toBeVisible();
+
+  // Change location from AreaNotServiceable
+  await page.getByRole('button', { name: /Change Location \/ Select Another City/i }).click();
+  await expect(page.getByRole('heading', { name: /Select Location/i })).toBeVisible();
+
+  // Select active city chip
+  await page.locator('button', { hasText: activeCityName }).first().click();
+
+  // Navigates back to dashboard
+  await expect(page).toHaveURL(/.*dashboard/);
+  await expect(page.getByText(activeCityName).first()).toBeVisible();
+});
+
