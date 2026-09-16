@@ -23,7 +23,7 @@ const AllCleaningServices = () => {
       {/* Header */}
       <div className="bg-[#E3ECF9] p-6 rounded-b-[30px] shadow-sm flex items-center gap-4">
         <button onClick={() => navigate(-1)} className="p-2 bg-white rounded-full shadow-sm">
-          <ArrowLeft className="h-5 w-5 text-[#0D47A1]" />
+          <ArrowLeft className="h-5 w-5 text-brand-blue" />
         </button>
         <h1 className="text-xl font-bold text-text-primary">Cleaning Essentials</h1>
       </div>
@@ -35,7 +35,7 @@ const AllCleaningServices = () => {
             <div 
               key={service.id}
               onClick={() => navigate('/booking')}
-              className="flex flex-col gap-2 cursor-pointer border border-border-color rounded-2xl p-2 bg-white hover:border-[#0D47A1] transition-all"
+              className="flex flex-col gap-2 cursor-pointer border border-border-color rounded-2xl p-2 bg-white hover:border-brand-blue transition-all"
             >
               <div className="w-full h-32 bg-white rounded-xl flex items-center justify-center overflow-hidden relative">
                 <img src={service.image} alt={service.title} className="w-full h-full object-cover" />
@@ -54,7 +54,7 @@ const AllCleaningServices = () => {
                   </div>
                 ) : null}
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold text-[#0D47A1]">
+                  <span className="text-sm font-bold text-brand-blue">
                     ₹{service.price}
                   </span>
                   <span className="text-xs text-text-secondary line-through">

@@ -111,7 +111,7 @@ const AboutNCC = () => {
       <div className="flex-1 max-w-screen-2xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-10">
         
         {/* Hero Banner */}
-        <div className="bg-gradient-to-br from-[#051F42] via-[#0B4EA2] to-[#0D47A1] rounded-[32px] p-8 md:p-12 text-white relative overflow-hidden shadow-xl text-left">
+        <div className="bg-gradient-to-br from-brand-navy via-[#0B4EA2] to-brand-blue rounded-[32px] p-8 md:p-12 text-white relative overflow-hidden shadow-xl text-left">
           <div className="absolute -right-16 -bottom-16 w-80 h-80 bg-white/10 rounded-full blur-2xl pointer-events-none" />
           <div className="relative z-10 flex flex-col md:flex-row items-center md:items-start justify-between gap-8 text-center md:text-left">
             <div className="flex flex-col items-center md:items-start gap-3 max-w-2xl">
@@ -217,7 +217,7 @@ const AboutNCC = () => {
             onClick={() => navigate('/privacy-policy')}
           >
             <div className="flex items-center gap-4">
-              <div className="p-2.5 bg-blue-50 text-[#0D47A1] rounded-xl">
+              <div className="p-2.5 bg-blue-50 text-brand-blue rounded-xl">
                 <ShieldCheck className="h-5 w-5" />
               </div>
               <div className="flex flex-col">

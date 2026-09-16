@@ -146,7 +146,7 @@ const CmsDocViewer = () => {
       <div className="flex-1 max-w-screen-2xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-6">
         
         {/* Document Banner */}
-        <div className="bg-gradient-to-br from-[#051F42] via-[#0B4EA2] to-[#0D47A1] rounded-[32px] p-6 sm:p-8 md:p-10 text-white relative overflow-hidden shadow-xl flex flex-col gap-3 text-left">
+        <div className="bg-gradient-to-br from-brand-navy via-[#0B4EA2] to-brand-blue rounded-[32px] p-6 sm:p-8 md:p-10 text-white relative overflow-hidden shadow-xl flex flex-col gap-3 text-left">
           <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-3.5 py-1 rounded-full border border-white/20 w-fit">
             {isPrivacy ? <Lock className="h-4 w-4 text-emerald-400" /> : <Scale className="h-4 w-4 text-amber-300" />}
             <span className="text-xs font-bold text-slate-100">Official Document • {docVersion}</span>
@@ -172,7 +172,7 @@ const CmsDocViewer = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={`Search within ${title}...`}
-            className="w-full bg-white border border-slate-200 rounded-2xl pl-10 pr-9 py-2.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0D47A1] shadow-2xs transition-all"
+            className="w-full bg-white border border-slate-200 rounded-2xl pl-10 pr-9 py-2.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-brand-blue shadow-2xs transition-all"
           />
           {searchQuery && (
             <button
@@ -187,7 +187,7 @@ const CmsDocViewer = () => {
         {/* Content Container */}
         {loading ? (
           <div className="flex flex-col items-center justify-center p-16 text-slate-400 gap-2 bg-white rounded-[28px] border border-slate-200/80">
-            <RefreshCw className="h-6 w-6 animate-spin text-[#0D47A1]" />
+            <RefreshCw className="h-6 w-6 animate-spin text-brand-blue" />
             <span className="text-xs font-semibold">Loading official documentation...</span>
           </div>
         ) : (
@@ -206,7 +206,7 @@ const CmsDocViewer = () => {
                 <span>No clauses found matching "{searchQuery}". Try a different keyword.</span>
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="mt-2 text-[#0D47A1] font-bold hover:underline"
+                  className="mt-2 text-brand-blue font-bold hover:underline"
                 >
                   Clear search
                 </button>
@@ -216,17 +216,17 @@ const CmsDocViewer = () => {
             {/* Support Desk Footer */}
             <div className="mt-4 p-5 bg-[#EAF4FF]/70 border border-blue-100 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
               <div className="flex items-center gap-3.5">
-                <div className="w-10 h-10 rounded-xl bg-[#0D47A1] text-white flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-brand-blue text-white flex items-center justify-center shrink-0">
                   <Mail className="h-5 w-5" />
                 </div>
                 <div className="flex flex-col">
                   <span className="text-xs font-extrabold text-slate-900">Have questions about this document?</span>
-                  <span className="text-[11px] text-slate-500 font-medium">Reach our legal team directly at <strong className="text-[#0D47A1]">{contactEmail}</strong></span>
+                  <span className="text-[11px] text-slate-500 font-medium">Reach our legal team directly at <strong className="text-brand-blue">{contactEmail}</strong></span>
                 </div>
               </div>
               <a
                 href={`mailto:${contactEmail}`}
-                className="px-5 py-2.5 bg-[#0D47A1] hover:bg-[#083679] text-white font-bold text-xs rounded-xl transition-colors shrink-0 shadow-2xs"
+                className="px-5 py-2.5 bg-brand-blue hover:bg-[#083679] text-white font-bold text-xs rounded-xl transition-colors shrink-0 shadow-2xs"
               >
                 Contact Legal Desk
               </a>

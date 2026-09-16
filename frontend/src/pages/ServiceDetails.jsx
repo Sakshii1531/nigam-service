@@ -177,17 +177,17 @@ const CatalogCard = ({ item, navigate, serviceName, onViewDetails, quantity = 0,
           {/* Button pinned to bottom of image, overlapping slightly */}
           <div className="absolute -bottom-0 left-1/2 -translate-x-1/2 w-20">
             {quantity > 0 ? (
-              <div className="w-20 flex items-center justify-between border border-[#0D47A1] bg-white rounded-xl text-[12px] font-extrabold overflow-hidden h-8 shadow-sm">
+              <div className="w-20 flex items-center justify-between border border-brand-blue bg-white rounded-xl text-[12px] font-extrabold overflow-hidden h-8 shadow-sm">
                 <button
                   onClick={() => onQuantityChange(quantity - 1)}
-                  className="w-7 h-full flex items-center justify-center text-[#0D47A1] hover:bg-slate-50 active:bg-slate-100 transition-colors"
+                  className="w-7 h-full flex items-center justify-center text-brand-blue hover:bg-slate-50 active:bg-slate-100 transition-colors"
                 >
                   -
                 </button>
-                <span className="text-[#0D47A1] flex-1 text-center select-none">{quantity}</span>
+                <span className="text-brand-blue flex-1 text-center select-none">{quantity}</span>
                 <button
                   onClick={() => onQuantityChange(quantity + 1)}
-                  className="w-7 h-full flex items-center justify-center text-[#0D47A1] hover:bg-slate-50 active:bg-slate-100 transition-colors"
+                  className="w-7 h-full flex items-center justify-center text-brand-blue hover:bg-slate-50 active:bg-slate-100 transition-colors"
                 >
                   +
                 </button>
@@ -195,7 +195,7 @@ const CatalogCard = ({ item, navigate, serviceName, onViewDetails, quantity = 0,
             ) : (
               <button
                 onClick={() => onQuantityChange(1)}
-                className="w-20 py-1.5 rounded-xl text-[11px] font-extrabold border bg-white text-[#0D47A1] border-[#0D47A1] hover:bg-[#EAF4FF] transition-all shadow-sm"
+                className="w-20 py-1.5 rounded-xl text-[11px] font-extrabold border bg-white text-brand-blue border-brand-blue hover:bg-[#EAF4FF] transition-all shadow-sm"
               >
                 Add
               </button>
@@ -216,7 +216,7 @@ const CatalogCard = ({ item, navigate, serviceName, onViewDetails, quantity = 0,
       {/* View details */}
       <button
         onClick={() => onViewDetails(item)}
-        className="flex items-center gap-1 mt-3 text-[#0D47A1] text-[11px] font-bold"
+        className="flex items-center gap-1 mt-3 text-brand-blue text-[11px] font-bold"
       >
         View details <ChevronRight className="h-3.5 w-3.5" />
       </button>
@@ -422,15 +422,15 @@ const ServiceDetails = () => {
               onClick={() => setSelectedSub(sub.name)}
               className={`flex flex-col items-center gap-1.5 p-3 rounded-2xl border transition-all ${
                 selectedSub === sub.name
-                  ? 'border-[#0D47A1] bg-[#EAF4FF] shadow-sm'
-                  : 'border-slate-200 bg-white hover:border-[#0D47A1]/40'
+                  ? 'border-brand-blue bg-[#EAF4FF] shadow-sm'
+                  : 'border-slate-200 bg-white hover:border-brand-blue/40'
               }`}
             >
               <div className="w-14 h-14 flex items-center justify-center">
                 <img src={sub.img} alt={sub.name} className="w-full h-full object-contain" />
               </div>
               <span className={`text-[10px] font-bold text-center leading-tight ${
-                selectedSub === sub.name ? 'text-[#0D47A1]' : 'text-slate-700'
+                selectedSub === sub.name ? 'text-brand-blue' : 'text-slate-700'
               }`}>
                 {sub.name}
               </span>
@@ -466,7 +466,7 @@ const ServiceDetails = () => {
       <div className={`fixed left-1/2 -translate-x-1/2 z-30 transition-all duration-300 ${getCartCount() > 0 ? 'bottom-[86px]' : 'bottom-6'}`}>
         <button
           onClick={() => setShowMenu(!showMenu)}
-          className="flex items-center gap-2 bg-[#0D47A1] text-white font-bold px-6 py-3 rounded-full shadow-xl text-[13px] hover:bg-[#1565C0] transition-colors"
+          className="flex items-center gap-2 bg-brand-blue text-white font-bold px-6 py-3 rounded-full shadow-xl text-[13px] hover:bg-[#1565C0] transition-colors"
         >
           <Menu className="h-4 w-4" />
           Menu
@@ -588,7 +588,7 @@ const ServiceDetails = () => {
                   <button
                     onClick={() => setDetailAdded(!detailAdded)}
                     className={`flex-shrink-0 px-4 py-2 rounded-xl text-[12px] font-extrabold border transition-all ${
-                      detailAdded ? 'bg-[#0D47A1] text-white border-[#0D47A1]' : 'bg-white text-[#0D47A1] border-[#0D47A1]'
+                      detailAdded ? 'bg-brand-blue text-white border-brand-blue' : 'bg-white text-brand-blue border-brand-blue'
                     }`}
                   >
                     {detailAdded ? 'Added ✓' : 'Add'}
@@ -609,7 +609,7 @@ const ServiceDetails = () => {
                       { step: 'Clean-up & support', desc: 'Area is cleaned after work, and you get a 30-day service warranty.' },
                     ]).map((hw, hi) => (
                       <li key={hi} className="flex gap-3">
-                        <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[#EAF4FF] text-[#0D47A1] text-[10px] font-extrabold flex items-center justify-center mt-0.5">{hi + 1}</span>
+                        <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[#EAF4FF] text-brand-blue text-[10px] font-extrabold flex items-center justify-center mt-0.5">{hi + 1}</span>
                         <div>
                           <p className="text-[12px] font-bold text-slate-900">{hw.step}</p>
                           <p className="text-[11px] text-slate-500 mt-0.5 whitespace-pre-line">{hw.desc}</p>
@@ -684,7 +684,7 @@ const ServiceDetails = () => {
                       'Skilled in Electrical Repairs',
                     ].map((q, qi) => (
                       <div key={qi} className="flex items-center gap-2 mb-1.5">
-                        <CheckCircle2 className="h-3.5 w-3.5 text-[#FFD600] flex-shrink-0" />
+                        <CheckCircle2 className="h-3.5 w-3.5 text-brand-yellow flex-shrink-0" />
                         <span className="text-white/90 text-[11px] font-medium">{q}</span>
                       </div>
                     ))}
@@ -778,7 +778,7 @@ const ServiceDetails = () => {
                     <h3 className="text-[13px] font-extrabold text-slate-900">Top recent customer reviews</h3>
                     <button 
                       onClick={() => setShowReviewsModal(true)}
-                      className="text-[#0D47A1] text-[11px] font-extrabold flex items-center gap-0.5 hover:underline"
+                      className="text-brand-blue text-[11px] font-extrabold flex items-center gap-0.5 hover:underline"
                     >
                       See All
                     </button>
@@ -824,7 +824,7 @@ const ServiceDetails = () => {
                           {rev.review}
                           <button
                             onClick={() => setShowReviewsModal(true)}
-                            className="text-[#0D47A1] font-bold ml-1 hover:underline text-[11px]"
+                            className="text-brand-blue font-bold ml-1 hover:underline text-[11px]"
                           >
                             Show More
                           </button>
@@ -936,7 +936,7 @@ const ServiceDetails = () => {
                       {hasShowMore && !isExpanded && (
                         <button
                           onClick={() => setExpandedReviews(prev => ({ ...prev, [ri]: true }))}
-                          className="text-[#0D47A1] font-bold ml-1 hover:underline text-[11px]"
+                          className="text-brand-blue font-bold ml-1 hover:underline text-[11px]"
                         >
                           Show More
                         </button>
@@ -944,7 +944,7 @@ const ServiceDetails = () => {
                       {hasShowMore && isExpanded && (
                         <button
                           onClick={() => setExpandedReviews(prev => ({ ...prev, [ri]: false }))}
-                          className="text-[#0D47A1] font-bold ml-1 hover:underline text-[11px]"
+                          className="text-brand-blue font-bold ml-1 hover:underline text-[11px]"
                         >
                           Show Less
                         </button>

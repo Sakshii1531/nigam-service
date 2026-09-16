@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation, useSearchParams } from 'react-router-dom';
-import { 
+import {
   ArrowLeft, Shield, Award, Check, ChevronRight, ShoppingCart, Star,
-  Home as HomeIcon, Calendar, Wrench, User, Sparkles, Zap, PackageOpen,
-  MapPin, Bell, Search, Wind, Tv, ShieldCheck, FileText, CheckCircle2, 
-  ChevronLeft, Info, HelpCircle, Phone, Mail, Lock, Landmark, Wallet, 
-  Percent, Upload, LayoutGrid
+  Calendar, Wrench, User, Sparkles, Zap, PackageOpen,
+  MapPin, Bell, Search, Wind, Tv, ShieldCheck, FileText, CheckCircle2,
+  ChevronLeft, Info, HelpCircle, Phone, Mail, Lock, Landmark, Wallet,
+  Percent, Upload
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import CustomerBottomNav from '../components/CustomerBottomNav';
 import { apiRequest } from '../lib/apiClient';
 import { payWithRazorpay } from '../lib/razorpayCheckout';
 import { useAuth } from '../context/AuthContext';
@@ -365,7 +366,7 @@ const Buy = () => {
                           <linearGradient id="bevelGrad" x1="0%" y1="0%" x2="100%" y2="0%">
                             <stop offset="0%" stopColor="#1E88E5" />
                             <stop offset="50%" stopColor="#1565C0" />
-                            <stop offset="50%" stopColor="#0D47A1" />
+                            <stop offset="50%" stopColor="#0B4EA2" />
                             <stop offset="100%" stopColor="#0A2D6E" />
                           </linearGradient>
                         </defs>
@@ -420,7 +421,7 @@ const Buy = () => {
                           <linearGradient id="bevelGrad2" x1="0%" y1="0%" x2="100%" y2="0%">
                             <stop offset="0%" stopColor="#1E88E5" />
                             <stop offset="50%" stopColor="#1565C0" />
-                            <stop offset="50%" stopColor="#0D47A1" />
+                            <stop offset="50%" stopColor="#0B4EA2" />
                             <stop offset="100%" stopColor="#0A2D6E" />
                           </linearGradient>
                         </defs>
@@ -2501,53 +2502,7 @@ const Buy = () => {
       </div>
 
       {/* Sticky Bottom Tab Bar — mobile only */}
-      <div className="fixed bottom-0 left-0 right-0 h-16 bg-white/95 backdrop-blur-xl border-t border-slate-200/80 px-3 sm:px-8 flex justify-around items-center z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] lg:hidden">
-        <button 
-          onClick={() => navigate('/dashboard')}
-          className="flex flex-col items-center justify-center py-1 px-2.5 text-slate-500 hover:text-brand-blue transition-colors cursor-pointer"
-        >
-          <HomeIcon className="h-5 w-5" />
-          <span className="text-[10px] font-medium tracking-tight mt-0.5">Home</span>
-        </button>
-
-        <button 
-          onClick={() => navigate('/categories')}
-          className="flex flex-col items-center justify-center py-1 px-2.5 text-slate-500 hover:text-brand-blue transition-colors cursor-pointer"
-        >
-          <LayoutGrid className="h-5 w-5" />
-          <span className="text-[10px] font-medium tracking-tight mt-0.5">Categories</span>
-        </button>
-
-        <button 
-          onClick={() => {
-            setShowSuccess(false);
-            goTo(1);
-          }}
-          className="flex flex-col items-center justify-center relative py-1 px-2.5 text-brand-blue cursor-pointer"
-        >
-          <div className="absolute -top-3 w-8 h-1 bg-brand-blue rounded-b-full shadow-2xs" />
-          <div className="p-1 rounded-xl bg-blue-50/90 text-brand-blue">
-            <ShoppingCart className="h-5 w-5" />
-          </div>
-          <span className="text-[10px] font-bold tracking-tight mt-0.5">Buy</span>
-        </button>
-
-        <button 
-          onClick={() => navigate('/bookings')}
-          className="flex flex-col items-center justify-center py-1 px-2.5 text-slate-500 hover:text-brand-blue transition-colors cursor-pointer"
-        >
-          <Calendar className="h-5 w-5" />
-          <span className="text-[10px] font-medium tracking-tight mt-0.5">Bookings</span>
-        </button>
-
-        <button 
-          onClick={() => navigate('/profile')}
-          className="flex flex-col items-center justify-center py-1 px-2.5 text-slate-500 hover:text-brand-blue transition-colors cursor-pointer"
-        >
-          <User className="h-5 w-5" />
-          <span className="text-[10px] font-medium tracking-tight mt-0.5">Account</span>
-        </button>
-      </div>
+      <CustomerBottomNav onBuyClick={() => { setShowSuccess(false); goTo(1); }} />
 
     </div>
   );

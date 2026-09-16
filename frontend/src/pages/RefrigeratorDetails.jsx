@@ -53,7 +53,7 @@ const RefrigeratorDetails = () => {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl flex flex-col gap-5">
             <div className="flex justify-between items-center">
-              <h2 className="text-lg font-bold text-[#0D47A1]">Warranty Verification</h2>
+              <h2 className="text-lg font-bold text-brand-blue">Warranty Verification</h2>
               <button 
                 onClick={() => setShowWarrantyModal(false)}
                 className="p-1 hover:bg-slate-100 rounded-full transition-colors"
@@ -72,7 +72,7 @@ const RefrigeratorDetails = () => {
                   value={billNo}
                   onChange={(e) => setBillNo(e.target.value)}
                   placeholder="e.g. WAR123"
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-[#0D47A1]"
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue"
                 />
               </div>
               <div>
@@ -80,7 +80,7 @@ const RefrigeratorDetails = () => {
                 <input 
                   type="file" 
                   onChange={(e) => setBillFile(e.target.files[0])}
-                  className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-[#E3ECF9] file:text-[#0D47A1] hover:file:bg-blue-100"
+                  className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-[#E3ECF9] file:text-brand-blue hover:file:bg-blue-100"
                 />
               </div>
             </div>
@@ -95,7 +95,7 @@ const RefrigeratorDetails = () => {
                   setShowWarrantyModal(false);
                   navigate(`/booking?service=Refrigerator Service&price=0&warranty=true`);
                 }}
-                className="flex-1 bg-[#FFD600] text-[#0D47A1] font-bold py-2 rounded-xl hover:bg-yellow-400 transition-colors text-sm"
+                className="flex-1 bg-brand-yellow text-brand-blue font-bold py-2 rounded-xl hover:bg-yellow-400 transition-colors text-sm"
               >
                 Verify & Proceed
               </button>
@@ -119,7 +119,7 @@ const RefrigeratorDetails = () => {
           onClick={() => navigate('/dashboard')}
           className="p-2 bg-white rounded-full shadow-sm hover:bg-slate-50 transition-colors"
         >
-          <ArrowLeft className="h-5 w-5 text-[#0D47A1]" />
+          <ArrowLeft className="h-5 w-5 text-brand-blue" />
         </button>
         <h1 className="text-xl font-bold text-text-primary">Service Details</h1>
       </div>
@@ -146,7 +146,7 @@ const RefrigeratorDetails = () => {
               <span className="text-xs font-semibold text-[#2E7D32] bg-[#E8F5E9] px-2 py-0.5 rounded-full flex items-center gap-1">
                 <Shield className="h-3 w-3" /> 30-day Warranty
               </span>
-              <span className="text-xs font-semibold text-[#0D47A1] bg-[#E3ECF9] px-2 py-0.5 rounded-full flex items-center gap-1">
+              <span className="text-xs font-semibold text-brand-blue bg-[#E3ECF9] px-2 py-0.5 rounded-full flex items-center gap-1">
                 <Award className="h-3 w-3" /> Top Rated
               </span>
             </div>
@@ -161,13 +161,13 @@ const RefrigeratorDetails = () => {
               <div 
                 key={issue}
                 onClick={() => setSelectedIssue(issue)}
-                className={`p-3 border rounded-2xl cursor-pointer transition-all flex flex-col justify-between h-20 ${selectedIssue === issue ? 'border-[#0D47A1] bg-[#E3ECF9]/50 shadow-sm' : 'border-border-color bg-white hover:border-[#0D47A1]'}`}
+                className={`p-3 border rounded-2xl cursor-pointer transition-all flex flex-col justify-between h-20 ${selectedIssue === issue ? 'border-brand-blue bg-[#E3ECF9]/50 shadow-sm' : 'border-border-color bg-white hover:border-brand-blue'}`}
               >
-                <span className={`text-xs font-semibold ${selectedIssue === issue ? 'text-[#0D47A1]' : 'text-text-primary'}`}>
+                <span className={`text-xs font-semibold ${selectedIssue === issue ? 'text-brand-blue' : 'text-text-primary'}`}>
                   {issue}
                 </span>
                 <div className="flex justify-end">
-                  <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${selectedIssue === issue ? 'border-[#0D47A1] bg-[#0D47A1]' : 'border-text-secondary'}`}>
+                  <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${selectedIssue === issue ? 'border-brand-blue bg-brand-blue' : 'border-text-secondary'}`}>
                     {selectedIssue === issue && <Check className="h-3 w-3 text-white" />}
                   </div>
                 </div>
@@ -195,7 +195,7 @@ const RefrigeratorDetails = () => {
         <div className="bg-[#E3ECF9]/50 border border-[#BACBE7] p-4 rounded-2xl flex justify-between items-center">
           <div>
             <span className="text-xs text-text-secondary block">Price</span>
-            <span className="text-lg font-bold text-[#0D47A1]">Starting from ₹499</span>
+            <span className="text-lg font-bold text-brand-blue">Starting from ₹499</span>
           </div>
           <span className="text-xs text-[#2E7D32] font-semibold bg-[#E8F5E9] px-2 py-0.5 rounded-full">
             Save up to 20%
@@ -214,7 +214,7 @@ const RefrigeratorDetails = () => {
         </div>
         <button
           onClick={() => setShowWarrantyModal(true)}
-          className="bg-[#FFD600] text-[#0D47A1] font-bold py-2.5 px-6 rounded-2xl hover:bg-yellow-400 transition-colors shadow-sm text-sm"
+          className="bg-brand-yellow text-brand-blue font-bold py-2.5 px-6 rounded-2xl hover:bg-yellow-400 transition-colors shadow-sm text-sm"
         >
           Book Service
         </button>

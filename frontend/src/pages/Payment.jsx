@@ -50,7 +50,7 @@ const Payment = () => {
             onClick={() => navigate(-1)}
             className="p-1.5 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
           >
-            <ArrowLeft className="h-5 w-5 text-[#0D47A1]" />
+            <ArrowLeft className="h-5 w-5 text-brand-blue" />
           </button>
           <div className="flex flex-col text-left">
             <h1 className="text-sm md:text-base font-black text-slate-900 leading-tight">Payment Summary</h1>
@@ -74,7 +74,7 @@ const Payment = () => {
               </div>
               <div className="text-right">
                 <span className="text-[10px] md:text-xs text-slate-400 font-extrabold block uppercase tracking-wider">{isProductBuy ? 'Seller' : 'ServiceProvider'}</span>
-                <span className="font-black text-[#0D47A1] text-xs md:text-sm mt-0.5 block">{isProductBuy ? 'Nigam Store' : 'Rahul Sharma'}</span>
+                <span className="font-black text-brand-blue text-xs md:text-sm mt-0.5 block">{isProductBuy ? 'Nigam Store' : 'Rahul Sharma'}</span>
               </div>
             </div>
 
@@ -83,7 +83,7 @@ const Payment = () => {
               <div 
                 onClick={() => setRedeemCoins(prev => !prev)}
                 className={`p-4 md:p-5 rounded-2xl md:rounded-3xl border-2 cursor-pointer transition-all flex items-center justify-between shadow-xs ${
-                  redeemCoins ? 'border-[#0D47A1] bg-blue-50/10' : 'border-slate-100 bg-white'
+                  redeemCoins ? 'border-brand-blue bg-blue-50/10' : 'border-slate-100 bg-white'
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -98,7 +98,7 @@ const Payment = () => {
                   </div>
                 </div>
                 <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${
-                  redeemCoins ? 'border-[#0D47A1] bg-[#0D47A1] text-white' : 'border-slate-350 bg-white'
+                  redeemCoins ? 'border-brand-blue bg-brand-blue text-white' : 'border-slate-350 bg-white'
                 }`}>
                   {redeemCoins && <Check className="h-3 w-3 stroke-[3]" />}
                 </div>
@@ -111,8 +111,8 @@ const Payment = () => {
               
               {/* Card */}
               <div 
-                className={`p-4 md:p-5 rounded-2xl md:rounded-3xl border-2 cursor-pointer transition-all flex items-center justify-between shadow-xs hover:border-[#0D47A1] ${
-                  selectedMethod === 'card' ? 'border-[#0D47A1] bg-blue-50/10' : 'border-slate-100 bg-white'
+                className={`p-4 md:p-5 rounded-2xl md:rounded-3xl border-2 cursor-pointer transition-all flex items-center justify-between shadow-xs hover:border-brand-blue ${
+                  selectedMethod === 'card' ? 'border-brand-blue bg-blue-50/10' : 'border-slate-100 bg-white'
                 }`}
                 onClick={() => {
                   setSelectedMethod('card');
@@ -120,7 +120,7 @@ const Payment = () => {
                 }}
               >
                 <div className="flex items-center gap-3.5">
-                  <div className="p-3 bg-blue-50 rounded-2xl text-[#0D47A1]">
+                  <div className="p-3 bg-blue-50 rounded-2xl text-brand-blue">
                     <CreditCard className="h-5 w-5" />
                   </div>
                   <div>
@@ -133,8 +133,8 @@ const Payment = () => {
 
               {/* UPI */}
               <div 
-                className={`p-4 md:p-5 rounded-2xl md:rounded-3xl border-2 cursor-pointer transition-all flex items-center justify-between shadow-xs hover:border-[#0D47A1] ${
-                  selectedMethod === 'upi' ? 'border-[#0D47A1] bg-blue-50/10' : 'border-slate-100 bg-white'
+                className={`p-4 md:p-5 rounded-2xl md:rounded-3xl border-2 cursor-pointer transition-all flex items-center justify-between shadow-xs hover:border-brand-blue ${
+                  selectedMethod === 'upi' ? 'border-brand-blue bg-blue-50/10' : 'border-slate-100 bg-white'
                 }`}
                 onClick={() => {
                   setSelectedMethod('upi');
@@ -155,8 +155,8 @@ const Payment = () => {
 
               {/* Net Banking */}
               <div 
-                className={`p-4 md:p-5 rounded-2xl md:rounded-3xl border-2 cursor-pointer transition-all flex items-center justify-between shadow-xs hover:border-[#0D47A1] ${
-                  selectedMethod === 'netbanking' ? 'border-[#0D47A1] bg-blue-50/10' : 'border-slate-100 bg-white'
+                className={`p-4 md:p-5 rounded-2xl md:rounded-3xl border-2 cursor-pointer transition-all flex items-center justify-between shadow-xs hover:border-brand-blue ${
+                  selectedMethod === 'netbanking' ? 'border-brand-blue bg-blue-50/10' : 'border-slate-100 bg-white'
                 }`}
                 onClick={() => {
                   setSelectedMethod('netbanking');
@@ -200,7 +200,7 @@ const Payment = () => {
               
               <div className="flex justify-between items-center">
                 <span className="font-black text-slate-800 text-xs">Total Amount</span>
-                <span className="font-black text-[#0D47A1] text-sm">
+                <span className="font-black text-brand-blue text-sm">
                   ₹{finalPrice.toLocaleString('en-IN')}
                 </span>
               </div>
@@ -235,7 +235,7 @@ const Payment = () => {
 
                 <div className="flex justify-between items-center text-sm font-black text-slate-900">
                   <span>Total Amount</span>
-                  <span className="text-[#0D47A1]">
+                  <span className="text-brand-blue">
                     ₹{finalPrice.toLocaleString('en-IN')}
                   </span>
                 </div>
@@ -244,7 +244,7 @@ const Payment = () => {
               {/* Action Button */}
               <button
                 onClick={handlePay}
-                className="w-full bg-[#FFD600] text-[#0D47A1] font-black py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-yellow-400 active:scale-[0.99] transition-all shadow-md cursor-pointer text-sm mt-2"
+                className="w-full bg-brand-yellow text-brand-blue font-black py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-yellow-400 active:scale-[0.99] transition-all shadow-md cursor-pointer text-sm mt-2"
               >
                 Proceed with Selected Method (₹{finalPrice.toLocaleString('en-IN')})
               </button>
@@ -263,7 +263,7 @@ const Payment = () => {
       <div className="p-5 bg-white border-t border-slate-100 sticky bottom-0 mt-auto md:hidden">
         <button
           onClick={handlePay}
-          className="w-full bg-[#FFD600] text-[#0D47A1] font-extrabold py-3.5 rounded-2xl flex items-center justify-center gap-2 hover:bg-yellow-400 active:scale-[0.99] transition-all shadow-md cursor-pointer"
+          className="w-full bg-brand-yellow text-brand-blue font-extrabold py-3.5 rounded-2xl flex items-center justify-center gap-2 hover:bg-yellow-400 active:scale-[0.99] transition-all shadow-md cursor-pointer"
         >
           Proceed with Selected Method (₹{finalPrice.toLocaleString('en-IN')})
         </button>

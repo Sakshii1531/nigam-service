@@ -232,7 +232,7 @@ const ExtendWarranty = () => {
           }}
           className="p-2 bg-white rounded-full shadow-sm hover:bg-slate-50 transition-colors"
         >
-          <ArrowLeft className="h-5 w-5 text-[#0D47A1]" />
+          <ArrowLeft className="h-5 w-5 text-brand-blue" />
         </button>
         <h1 className="text-xl font-bold text-text-primary">
           {step === 'success' ? 'Warranty Extended!' : 'Extend Warranty'}
@@ -284,7 +284,7 @@ const ExtendWarranty = () => {
                 onClick={() => setApplianceMode('registered')}
                 className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                   applianceMode === 'registered' 
-                    ? 'bg-[#0D47A1] text-white shadow-md' 
+                    ? 'bg-brand-blue text-white shadow-md' 
                     : 'text-text-secondary hover:text-text-primary'
                 }`}
               >
@@ -294,7 +294,7 @@ const ExtendWarranty = () => {
                 onClick={() => setApplianceMode('new_appliance')}
                 className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                   applianceMode === 'new_appliance' 
-                    ? 'bg-[#0D47A1] text-white shadow-md' 
+                    ? 'bg-brand-blue text-white shadow-md' 
                     : 'text-text-secondary hover:text-text-primary'
                 }`}
               >
@@ -496,7 +496,7 @@ const ExtendWarranty = () => {
                     <button
                       onClick={handleVerifyBrandWarranty}
                       disabled={isVerifying || isUploading}
-                      className="w-full bg-[#0D47A1] hover:bg-blue-900 disabled:opacity-60 text-white font-bold py-3.5 rounded-xl transition-all shadow-md text-sm cursor-pointer mt-2"
+                      className="w-full bg-brand-blue hover:bg-blue-900 disabled:opacity-60 text-white font-bold py-3.5 rounded-xl transition-all shadow-md text-sm cursor-pointer mt-2"
                     >
                       {isVerifying ? 'Verifying…' : 'Verify Active Brand Warranty'}
                     </button>

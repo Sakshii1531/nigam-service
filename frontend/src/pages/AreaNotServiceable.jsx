@@ -127,8 +127,8 @@ const AreaNotServiceable = () => {
     <div className="min-h-screen bg-gradient-to-b from-[#F4F7FC] via-[#EEF4FB] to-[#E3ECF9] flex flex-col items-center justify-between p-4 sm:p-6 relative overflow-hidden text-slate-800">
       
       {/* Background Decorative Blur Orbs */}
-      <div className="absolute top-[-80px] left-[-80px] w-96 h-96 bg-[#0D47A1]/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-[-100px] right-[-100px] w-96 h-96 bg-[#FFD600]/20 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-[-80px] left-[-80px] w-96 h-96 bg-brand-blue/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-[-100px] right-[-100px] w-96 h-96 bg-brand-yellow/20 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] bg-blue-300/10 rounded-full blur-3xl pointer-events-none" />
 
       {/* Top Header */}
@@ -155,22 +155,22 @@ const AreaNotServiceable = () => {
             <motion.div
               animate={{ scale: [1, 2.2], opacity: [0.6, 0] }}
               transition={{ repeat: Infinity, duration: 2.8, ease: 'easeOut' }}
-              className="absolute inset-0 rounded-full bg-[#0D47A1]/20"
+              className="absolute inset-0 rounded-full bg-brand-blue/20"
             />
             <motion.div
               animate={{ scale: [1, 1.7], opacity: [0.8, 0] }}
               transition={{ repeat: Infinity, duration: 2.8, delay: 0.9, ease: 'easeOut' }}
-              className="absolute inset-0 rounded-full bg-[#FFD600]/30"
+              className="absolute inset-0 rounded-full bg-brand-yellow/30"
             />
 
             {/* Glowing Core Disk */}
-            <div className="relative w-20 h-20 rounded-full bg-gradient-to-tr from-[#0D47A1] to-[#1976D2] flex items-center justify-center shadow-lg shadow-blue-500/25 border-4 border-white">
+            <div className="relative w-20 h-20 rounded-full bg-gradient-to-tr from-brand-blue to-[#1976D2] flex items-center justify-center shadow-lg shadow-blue-500/25 border-4 border-white">
               <motion.div
                 animate={{ y: [0, -4, 0] }}
                 transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
                 className="relative flex items-center justify-center"
               >
-                <MapPin className="text-[#FFD600] w-9 h-9 drop-shadow-md" />
+                <MapPin className="text-brand-yellow w-9 h-9 drop-shadow-md" />
                 <motion.div
                   animate={{ scale: [1, 1.25, 1], opacity: [0.7, 1, 0.7] }}
                   transition={{ repeat: Infinity, duration: 1.5 }}
@@ -204,7 +204,7 @@ const AreaNotServiceable = () => {
               <button
                 type="button"
                 onClick={handleNotifyMe}
-                className="w-full bg-gradient-to-r from-[#FFD600] to-[#FFCA00] text-[#0D47A1] font-bold py-3 px-5 rounded-2xl hover:shadow-lg hover:shadow-yellow-400/20 active:scale-98 transition-all flex items-center justify-center gap-2 text-sm"
+                className="w-full bg-gradient-to-r from-brand-yellow to-[#FFCA00] text-brand-blue font-bold py-3 px-5 rounded-2xl hover:shadow-lg hover:shadow-yellow-400/20 active:scale-98 transition-all flex items-center justify-center gap-2 text-sm"
               >
                 <Bell size={16} />
                 <span>Notify Me When You Launch</span>
@@ -226,7 +226,7 @@ const AreaNotServiceable = () => {
               onClick={() => setShowChangeCityModal(true)}
               className="w-full bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-bold py-2.5 px-4 rounded-2xl transition-all shadow-xs flex items-center justify-center gap-2 text-xs"
             >
-              <Compass size={15} className="text-[#0D47A1]" />
+              <Compass size={15} className="text-brand-blue" />
               <span>Change Location / Select Another City</span>
             </button>
 
@@ -234,7 +234,7 @@ const AreaNotServiceable = () => {
             <button
               type="button"
               onClick={() => setShowActiveCitiesModal(true)}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0D47A1] hover:text-blue-800 transition-colors pt-2"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-blue hover:text-blue-800 transition-colors pt-2"
             >
               <Globe2 size={13} />
               <span>See where Nigam Care is available now ({activeCities.length} cities)</span>
@@ -260,7 +260,7 @@ const AreaNotServiceable = () => {
             >
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-xl bg-[#E3ECF9] text-[#0D47A1]">
+                  <div className="p-2 rounded-xl bg-[#E3ECF9] text-brand-blue">
                     <Building2 size={18} />
                   </div>
                   <h3 className="font-bold text-slate-800 text-base">Select Serviceable City</h3>
@@ -286,7 +286,7 @@ const AreaNotServiceable = () => {
                   value={searchCity}
                   onChange={(e) => setSearchCity(e.target.value)}
                   placeholder="Search operational city..."
-                  className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-[#0D47A1] focus:bg-white transition-all"
+                  className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-brand-blue focus:bg-white transition-all"
                 />
               </div>
 
@@ -309,10 +309,10 @@ const AreaNotServiceable = () => {
                       type="button"
                       disabled={updatingCity}
                       onClick={() => handleSelectServiceableCity(city)}
-                      className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-[#E3ECF9]/60 border border-transparent hover:border-[#0D47A1]/20 transition-all text-left group"
+                      className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-[#E3ECF9]/60 border border-transparent hover:border-brand-blue/20 transition-all text-left group"
                     >
                       <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-full bg-blue-50 text-[#0D47A1] flex items-center justify-center font-bold text-xs group-hover:bg-[#0D47A1] group-hover:text-white transition-colors">
+                        <div className="w-8 h-8 rounded-full bg-blue-50 text-brand-blue flex items-center justify-center font-bold text-xs group-hover:bg-brand-blue group-hover:text-white transition-colors">
                           <MapPin size={14} />
                         </div>
                         <div>
@@ -322,7 +322,7 @@ const AreaNotServiceable = () => {
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-1 text-[#0D47A1] text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-1 text-brand-blue text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity">
                         <span>Select</span>
                         <ArrowRight size={13} />
                       </div>
@@ -332,7 +332,7 @@ const AreaNotServiceable = () => {
               </div>
 
               {updatingCity && (
-                <div className="pt-3 flex items-center justify-center gap-2 text-xs font-semibold text-[#0D47A1]">
+                <div className="pt-3 flex items-center justify-center gap-2 text-xs font-semibold text-brand-blue">
                   <RefreshCw size={13} className="animate-spin" />
                   <span>Updating your location...</span>
                 </div>
@@ -400,7 +400,7 @@ const AreaNotServiceable = () => {
                   setShowActiveCitiesModal(false);
                   setShowChangeCityModal(true);
                 }}
-                className="mt-4 w-full bg-[#0D47A1] text-white font-bold py-2.5 rounded-xl text-xs hover:bg-blue-800 transition-colors"
+                className="mt-4 w-full bg-brand-blue text-white font-bold py-2.5 rounded-xl text-xs hover:bg-blue-800 transition-colors"
               >
                 Switch to an Active City
               </button>

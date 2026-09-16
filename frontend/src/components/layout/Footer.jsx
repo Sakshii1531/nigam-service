@@ -11,7 +11,7 @@ const Footer = () => {
   };
 
   return (
-    <footer className="hidden lg:block bg-[#051F42] text-white border-t border-white/10 mt-16 relative z-10">
+    <footer className="hidden lg:block bg-brand-navy text-white border-t border-white/10 mt-16 relative z-10">
       <div className="max-w-screen-2xl mx-auto px-6 md:px-10 lg:px-16 xl:px-20 py-14">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10">
           
@@ -22,23 +22,23 @@ const Footer = () => {
                 N
               </div>
               <span className="text-2xl font-black text-white tracking-tight">
-                Nigam <span className="text-[#FFC107]">Care</span>
+                Nigam <span className="text-brand-yellow">Care</span>
               </span>
             </div>
             <p className="text-sm text-slate-300 leading-relaxed max-w-md">
               India's trusted smart appliance repair & home services platform. Certified serviceProviders, transparent pricing, and instant doorstep support guaranteed.
             </p>
             <div className="flex items-center gap-3 mt-2">
-              <button onClick={() => handleNav('/help-support')} className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors cursor-pointer">
+              <button onClick={() => handleNav('/help-support')} className="w-9 h-9 rounded-full bg-white/10 hover:bg-brand-yellow hover:text-brand-navy flex items-center justify-center text-white transition-all duration-200 hover:-translate-y-0.5 cursor-pointer">
                 <MessageCircle className="h-4 w-4" />
               </button>
-              <button onClick={() => handleNav('/help-support')} className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors cursor-pointer">
+              <button onClick={() => handleNav('/help-support')} className="w-9 h-9 rounded-full bg-white/10 hover:bg-brand-yellow hover:text-brand-navy flex items-center justify-center text-white transition-all duration-200 hover:-translate-y-0.5 cursor-pointer">
                 <Send className="h-4 w-4" />
               </button>
-              <button onClick={() => handleNav('/help-support')} className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors cursor-pointer">
+              <button onClick={() => handleNav('/help-support')} className="w-9 h-9 rounded-full bg-white/10 hover:bg-brand-yellow hover:text-brand-navy flex items-center justify-center text-white transition-all duration-200 hover:-translate-y-0.5 cursor-pointer">
                 <Camera className="h-4 w-4" />
               </button>
-              <button onClick={() => handleNav('/help-support')} className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors cursor-pointer">
+              <button onClick={() => handleNav('/help-support')} className="w-9 h-9 rounded-full bg-white/10 hover:bg-brand-yellow hover:text-brand-navy flex items-center justify-center text-white transition-all duration-200 hover:-translate-y-0.5 cursor-pointer">
                 <Briefcase className="h-4 w-4" />
               </button>
             </div>
@@ -91,13 +91,13 @@ const Footer = () => {
             <ul className="space-y-2.5">
               <li>
                 <button onClick={() => handleNav('/help-support')} className="text-sm text-slate-300 hover:text-white hover:underline transition-colors cursor-pointer flex items-center gap-2 font-medium">
-                  <PhoneCall className="h-3.5 w-3.5 text-[#FFC107]" />
+                  <PhoneCall className="h-3.5 w-3.5 text-brand-yellow" />
                   <span>24x7 Customer Support</span>
                 </button>
               </li>
               <li>
                 <a href="mailto:support@nigamcare.com" className="text-sm text-slate-300 hover:text-white hover:underline transition-colors cursor-pointer flex items-center gap-2 font-medium">
-                  <Mail className="h-3.5 w-3.5 text-[#FFC107]" />
+                  <Mail className="h-3.5 w-3.5 text-brand-yellow" />
                   <span>support@nigamcare.com</span>
                 </a>
               </li>

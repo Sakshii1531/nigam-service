@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft, Check, Star, Zap, Shield, Sparkles, Crown,
-  Home as HomeIcon, LayoutGrid, ShoppingCart, Calendar, User 
+import {
+  ArrowLeft, Check, Star, Zap, Shield, Sparkles, Crown
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import CustomerBottomNav from '../components/CustomerBottomNav';
 import { apiRequest } from '../lib/apiClient';
 import { payWithRazorpay } from '../lib/razorpayCheckout';
 import Footer from '../components/layout/Footer';
@@ -343,50 +343,7 @@ const MembershipPlans = () => {
       <Footer />
 
       {/* Bottom Menu Bar (Custom Mobile Tabs) — hidden on desktop */}
-      <div className="fixed bottom-0 left-0 right-0 h-16 bg-white/95 backdrop-blur-xl border-t border-slate-200/80 px-3 sm:px-8 flex justify-around items-center z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] lg:hidden">
-        <button 
-          onClick={() => navigate('/dashboard')}
-          className="flex flex-col items-center justify-center py-1 px-2.5 text-slate-500 hover:text-[#0D47A1] transition-colors cursor-pointer"
-        >
-          <HomeIcon className="h-5 w-5" />
-          <span className="text-[10px] font-medium tracking-tight mt-0.5">Home</span>
-        </button>
-
-        <button 
-          onClick={() => navigate('/categories')}
-          className="flex flex-col items-center justify-center py-1 px-2.5 text-slate-500 hover:text-[#0D47A1] transition-colors cursor-pointer"
-        >
-          <LayoutGrid className="h-5 w-5" />
-          <span className="text-[10px] font-medium tracking-tight mt-0.5">Categories</span>
-        </button>
-
-        <button 
-          onClick={() => navigate('/buy')}
-          className="flex flex-col items-center justify-center py-1 px-2.5 text-slate-500 hover:text-[#0D47A1] transition-colors cursor-pointer"
-        >
-          <ShoppingCart className="h-5 w-5" />
-          <span className="text-[10px] font-medium tracking-tight mt-0.5">Buy</span>
-        </button>
-
-        <button 
-          onClick={() => navigate('/bookings')}
-          className="flex flex-col items-center justify-center py-1 px-2.5 text-slate-500 hover:text-[#0D47A1] transition-colors cursor-pointer"
-        >
-          <Calendar className="h-5 w-5" />
-          <span className="text-[10px] font-medium tracking-tight mt-0.5">Bookings</span>
-        </button>
-
-        <button 
-          onClick={() => navigate('/profile')}
-          className="flex flex-col items-center justify-center relative py-1 px-2.5 text-[#0D47A1] cursor-pointer"
-        >
-          <div className="absolute -top-3 w-8 h-1 bg-[#0D47A1] rounded-b-full shadow-2xs" />
-          <div className="p-1 rounded-xl bg-blue-50/90 text-[#0D47A1]">
-            <User className="h-5 w-5" />
-          </div>
-          <span className="text-[10px] font-bold tracking-tight mt-0.5">Account</span>
-        </button>
-      </div>
+      <CustomerBottomNav />
     </div>
   );
 };

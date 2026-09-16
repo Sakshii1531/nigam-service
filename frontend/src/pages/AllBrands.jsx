@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Search, Home as HomeIcon, Calendar, LayoutGrid, User, ShoppingCart } from 'lucide-react';
+import { ArrowLeft, Search } from 'lucide-react';
+import CustomerBottomNav from '../components/CustomerBottomNav';
 
 const BRANDS_LIST = [
   {
@@ -167,7 +168,7 @@ const AllBrands = () => {
             onClick={() => navigate(-1)}
             className="p-2 bg-white rounded-full shadow-sm hover:bg-slate-50 transition-colors cursor-pointer"
           >
-            <ArrowLeft className="h-5 w-5 text-[#0D47A1]" />
+            <ArrowLeft className="h-5 w-5 text-brand-blue" />
           </button>
           <h1 className="text-xl font-bold text-text-primary">All Partner Brands</h1>
         </div>
@@ -211,45 +212,7 @@ const AllBrands = () => {
       </div>
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-border-color p-4 flex justify-around items-center z-40 overflow-visible lg:hidden">
-        <button 
-          onClick={() => navigate('/dashboard')}
-          className="flex flex-col items-center text-text-secondary hover:text-brand-blue cursor-pointer transition-colors"
-        >
-          <HomeIcon className="h-6 w-6" />
-          <span className="text-xs font-semibold mt-0.5">Home</span>
-        </button>
-        <button 
-          onClick={() => navigate('/categories')}
-          className="flex flex-col items-center text-text-secondary hover:text-brand-blue cursor-pointer transition-colors"
-        >
-          <LayoutGrid className="h-6 w-6" />
-          <span className="text-xs font-semibold mt-0.5">Categories</span>
-        </button>
-
-        <button 
-          onClick={() => navigate('/buy')}
-          className="flex flex-col items-center text-text-secondary hover:text-brand-blue cursor-pointer transition-colors"
-        >
-          <ShoppingCart className="h-6 w-6" />
-          <span className="text-xs font-semibold mt-0.5">Buy</span>
-        </button>
-
-        <button 
-          onClick={() => navigate('/bookings')}
-          className="flex flex-col items-center text-text-secondary hover:text-brand-blue cursor-pointer transition-colors"
-        >
-          <Calendar className="h-6 w-6" />
-          <span className="text-xs font-semibold mt-0.5">Bookings</span>
-        </button>
-        <button 
-          onClick={() => navigate('/profile')}
-          className="flex flex-col items-center text-text-secondary hover:text-brand-blue cursor-pointer transition-colors"
-        >
-          <User className="h-6 w-6" />
-          <span className="text-xs font-semibold mt-0.5">Account</span>
-        </button>
-      </div>
+      <CustomerBottomNav />
     </div>
   );
 };

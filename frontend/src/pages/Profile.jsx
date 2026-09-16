@@ -7,7 +7,6 @@ import {
   CreditCard, 
   Gift,
   Home as HomeIcon,
-  ShoppingCart,
   Calendar,
   Wrench,
   User,
@@ -17,7 +16,6 @@ import {
   Settings,
   Shield,
   FileText,
-  LayoutGrid,
   Package,
   RefreshCw,
   Ticket,
@@ -28,6 +26,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { apiRequest } from '../lib/apiClient';
+import CustomerBottomNav from '../components/CustomerBottomNav';
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -127,13 +126,13 @@ const Profile = () => {
             className="bg-white border border-slate-200/80 p-3.5 rounded-[22px] flex items-center justify-between gap-3.5 shadow-2xs hover:shadow-md transition-all cursor-pointer group"
           >
             <div className="flex items-center gap-3.5">
-              <div className="w-13 h-13 bg-gradient-to-br from-[#0D47A1] to-blue-700 rounded-full flex items-center justify-center text-white text-lg font-black shadow-md border-2 border-blue-100 shrink-0 uppercase">
+              <div className="w-13 h-13 bg-gradient-to-br from-brand-blue to-blue-700 rounded-full flex items-center justify-center text-white text-lg font-black shadow-md border-2 border-blue-100 shrink-0 uppercase">
                 {user?.name ? user.name[0] : 'U'}
               </div>
               <div className="flex flex-col">
-                <h2 className="text-sm font-black text-slate-900 leading-tight group-hover:text-[#0D47A1] transition-colors">{user?.name || 'Customer User'}</h2>
+                <h2 className="text-sm font-black text-slate-900 leading-tight group-hover:text-brand-blue transition-colors">{user?.name || 'Customer User'}</h2>
                 <span className="text-[11px] text-slate-500 font-semibold mt-0.5">{user?.phone || '—'}</span>
-                <span className="text-[11px] font-bold text-[#0D47A1] hover:underline mt-0.5 inline-flex items-center gap-0.5">
+                <span className="text-[11px] font-bold text-brand-blue hover:underline mt-0.5 inline-flex items-center gap-0.5">
                   Edit Profile
                 </span>
               </div>
@@ -184,7 +183,7 @@ const Profile = () => {
             >
               <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate">My Bookings</span>
               <span className="text-base sm:text-lg font-black text-slate-900 mt-0.5">{bookingsCount}</span>
-              <span className="text-[9px] font-extrabold text-[#0D47A1] group-hover:underline self-start mt-0.5">
+              <span className="text-[9px] font-extrabold text-brand-blue group-hover:underline self-start mt-0.5">
                 View All
               </span>
             </div>
@@ -206,7 +205,7 @@ const Profile = () => {
             >
               <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate">Play & Win</span>
               <span className="text-base sm:text-lg font-black text-slate-900 mt-0.5">Level {Math.max(1, Math.floor(userCoins / 500) + 1)}</span>
-              <span className="text-[9px] font-extrabold text-[#0D47A1] group-hover:underline self-start mt-0.5">
+              <span className="text-[9px] font-extrabold text-brand-blue group-hover:underline self-start mt-0.5">
                 Spin Now
               </span>
             </div>
@@ -227,7 +226,7 @@ const Profile = () => {
                   className="p-3.5 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-50 text-[#0D47A1] rounded-xl shrink-0">
+                    <div className="p-2 bg-blue-50 text-brand-blue rounded-xl shrink-0">
                       <Calendar className="h-4 w-4" />
                     </div>
                     <span className="text-xs sm:text-[13px] font-bold text-slate-800">My Bookings</span>
@@ -269,7 +268,7 @@ const Profile = () => {
                   className="p-3.5 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-50 text-[#0D47A1] rounded-xl shrink-0">
+                    <div className="p-2 bg-blue-50 text-brand-blue rounded-xl shrink-0">
                       <Shield className="h-4 w-4" />
                     </div>
                     <span className="text-xs sm:text-[13px] font-bold text-slate-800">My Protection Plans</span>
@@ -361,7 +360,7 @@ const Profile = () => {
                   className="p-3.5 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-50 text-[#0D47A1] rounded-xl shrink-0">
+                    <div className="p-2 bg-blue-50 text-brand-blue rounded-xl shrink-0">
                       <MapPin className="h-4 w-4" />
                     </div>
                     <span className="text-xs sm:text-[13px] font-bold text-slate-800">Saved Addresses</span>
@@ -482,48 +481,7 @@ const Profile = () => {
         </div>
 
         {/* Bottom Navigation — Mobile only */}
-        <div className="fixed bottom-0 left-0 right-0 h-16 bg-white/95 backdrop-blur-xl border-t border-slate-200/80 px-3 sm:px-8 flex justify-around items-center z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
-          <button 
-            onClick={() => navigate('/dashboard')}
-            className="flex flex-col items-center justify-center py-1 px-2.5 text-slate-500 hover:text-[#0D47A1] transition-colors cursor-pointer"
-          >
-            <HomeIcon className="h-5 w-5" />
-            <span className="text-[10px] font-medium tracking-tight mt-0.5">Home</span>
-          </button>
-          <button 
-            onClick={() => navigate('/categories')}
-            className="flex flex-col items-center justify-center py-1 px-2.5 text-slate-500 hover:text-[#0D47A1] transition-colors cursor-pointer"
-          >
-            <LayoutGrid className="h-5 w-5" />
-            <span className="text-[10px] font-medium tracking-tight mt-0.5">Categories</span>
-          </button>
-
-          <button 
-            onClick={() => navigate('/buy')}
-            className="flex flex-col items-center justify-center py-1 px-2.5 text-slate-500 hover:text-[#0D47A1] transition-colors cursor-pointer"
-          >
-            <ShoppingCart className="h-5 w-5" />
-            <span className="text-[10px] font-medium tracking-tight mt-0.5">Buy</span>
-          </button>
-
-          <button 
-            onClick={() => navigate('/bookings')}
-            className="flex flex-col items-center justify-center py-1 px-2.5 text-slate-500 hover:text-[#0D47A1] transition-colors cursor-pointer"
-          >
-            <Calendar className="h-5 w-5" />
-            <span className="text-[10px] font-medium tracking-tight mt-0.5">Bookings</span>
-          </button>
-          <button 
-            onClick={() => navigate('/profile')}
-            className="flex flex-col items-center justify-center relative py-1 px-2.5 text-[#0D47A1] cursor-pointer"
-          >
-            <div className="absolute -top-3 w-8 h-1 bg-[#0D47A1] rounded-b-full shadow-2xs" />
-            <div className="p-1 rounded-xl bg-blue-50/90 text-[#0D47A1]">
-              <User className="h-5 w-5" />
-            </div>
-            <span className="text-[10px] font-bold tracking-tight mt-0.5">Account</span>
-          </button>
-        </div>
+        <CustomerBottomNav />
       </div>
 
 
@@ -543,8 +501,8 @@ const Profile = () => {
             >
               <ArrowLeft className="h-5 w-5" />
             </button>
-            <div className="w-12 h-12 rounded-2xl bg-[#EAF4FF] text-[#0D47A1] flex items-center justify-center font-black">
-              <User className="h-6 w-6 text-[#0D47A1]" />
+            <div className="w-12 h-12 rounded-2xl bg-[#EAF4FF] text-brand-blue flex items-center justify-center font-black">
+              <User className="h-6 w-6 text-brand-blue" />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -568,7 +526,7 @@ const Profile = () => {
             </button>
             <button
               onClick={() => navigate('/edit-profile')}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#0D47A1] hover:bg-[#083679] text-white text-xs font-bold rounded-2xl shadow-xs transition-all cursor-pointer"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-brand-blue hover:bg-[#083679] text-white text-xs font-bold rounded-2xl shadow-xs transition-all cursor-pointer"
             >
               <Settings className="h-4 w-4" />
               <span>Edit Profile</span>
@@ -583,7 +541,7 @@ const Profile = () => {
           <div className="w-full lg:w-96 flex flex-col gap-6 shrink-0">
             
             {/* User Executive Badge */}
-            <div className="bg-gradient-to-br from-[#0C2340] via-[#0D47A1] to-[#051C38] rounded-3xl p-6 text-white shadow-md relative overflow-hidden border border-slate-800">
+            <div className="bg-gradient-to-br from-[#0C2340] via-brand-blue to-[#051C38] rounded-3xl p-6 text-white shadow-md relative overflow-hidden border border-slate-800">
               <div className="absolute top-0 right-0 w-32 h-32 bg-blue-400/10 rounded-full blur-2xl pointer-events-none" />
               
               <div className="flex items-center gap-4 relative z-10">
@@ -643,7 +601,7 @@ const Profile = () => {
                     <Shield className="h-5 w-5" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-black text-slate-900 group-hover:text-[#0D47A1] transition-colors">Join Membership Plan</h4>
+                    <h4 className="text-sm font-black text-slate-900 group-hover:text-brand-blue transition-colors">Join Membership Plan</h4>
                     <p className="text-xs text-slate-500 mt-0.5">Save up to 20% on all home service bookings</p>
                   </div>
                 </div>
@@ -658,8 +616,8 @@ const Profile = () => {
                 className="bg-white border border-slate-200/80 rounded-2xl p-4 flex flex-col gap-1 shadow-2xs hover:shadow-md transition-all cursor-pointer group"
               >
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Bookings</span>
-                <span className="text-xl font-black text-slate-900 group-hover:text-[#0D47A1] transition-colors">{bookingsCount}</span>
-                <span className="text-[10px] font-bold text-[#0D47A1] mt-1">View All →</span>
+                <span className="text-xl font-black text-slate-900 group-hover:text-brand-blue transition-colors">{bookingsCount}</span>
+                <span className="text-[10px] font-bold text-brand-blue mt-1">View All →</span>
               </div>
 
               <div 
@@ -667,7 +625,7 @@ const Profile = () => {
                 className="bg-white border border-slate-200/80 rounded-2xl p-4 flex flex-col gap-1 shadow-2xs hover:shadow-md transition-all cursor-pointer group"
               >
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Coins</span>
-                <span className="text-xl font-black text-slate-900 group-hover:text-[#0D47A1] transition-colors">{userCoins.toLocaleString('en-IN')}</span>
+                <span className="text-xl font-black text-slate-900 group-hover:text-brand-blue transition-colors">{userCoins.toLocaleString('en-IN')}</span>
                 <span className="text-[10px] font-bold text-slate-400 mt-1">Rewards</span>
               </div>
 
@@ -676,8 +634,8 @@ const Profile = () => {
                 className="bg-white border border-slate-200/80 rounded-2xl p-4 flex flex-col gap-1 shadow-2xs hover:shadow-md transition-all cursor-pointer group"
               >
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Play & Win</span>
-                <span className="text-xl font-black text-slate-900 group-hover:text-[#0D47A1] transition-colors">Level {Math.max(1, Math.floor(userCoins / 500) + 1)}</span>
-                <span className="text-[10px] font-bold text-[#0D47A1] mt-1">Spin Now →</span>
+                <span className="text-xl font-black text-slate-900 group-hover:text-brand-blue transition-colors">Level {Math.max(1, Math.floor(userCoins / 500) + 1)}</span>
+                <span className="text-[10px] font-bold text-brand-blue mt-1">Spin Now →</span>
               </div>
             </div>
 
@@ -704,7 +662,7 @@ const Profile = () => {
             {/* Category 1: My Activity */}
             <div className="bg-white border border-slate-200/80 rounded-3xl p-5 shadow-2xs flex flex-col gap-3">
               <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
-                <div className="w-2 h-4 bg-[#0D47A1] rounded-full" />
+                <div className="w-2 h-4 bg-brand-blue rounded-full" />
                 <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">My Activity</h3>
               </div>
 
@@ -714,11 +672,11 @@ const Profile = () => {
                   className="p-3.5 bg-slate-50 hover:bg-[#EAF4FF]/60 rounded-2xl border border-slate-100 flex items-center justify-between cursor-pointer transition-all group"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-white text-[#0D47A1] rounded-xl shadow-2xs">
+                    <div className="p-2 bg-white text-brand-blue rounded-xl shadow-2xs">
                       <Calendar className="h-5 w-5" />
                     </div>
                     <div>
-                      <h4 className="text-xs font-bold text-slate-800 group-hover:text-[#0D47A1]">My Bookings</h4>
+                      <h4 className="text-xs font-bold text-slate-800 group-hover:text-brand-blue">My Bookings</h4>
                       <p className="text-[11px] text-slate-400 font-medium">{bookingsCount} active/completed requests</p>
                     </div>
                   </div>
@@ -734,7 +692,7 @@ const Profile = () => {
                       <Package className="h-5 w-5" />
                     </div>
                     <div>
-                      <h4 className="text-xs font-bold text-slate-800 group-hover:text-[#0D47A1]">My Orders</h4>
+                      <h4 className="text-xs font-bold text-slate-800 group-hover:text-brand-blue">My Orders</h4>
                       <p className="text-[11px] text-slate-400 font-medium">Track product purchases & parts</p>
                     </div>
                   </div>
@@ -750,7 +708,7 @@ const Profile = () => {
                       <RefreshCw className="h-5 w-5" />
                     </div>
                     <div>
-                      <h4 className="text-xs font-bold text-slate-800 group-hover:text-[#0D47A1]">Exchange Details</h4>
+                      <h4 className="text-xs font-bold text-slate-800 group-hover:text-brand-blue">Exchange Details</h4>
                       <p className="text-[11px] text-slate-400 font-medium">Old appliance trade-in status</p>
                     </div>
                   </div>
@@ -766,7 +724,7 @@ const Profile = () => {
                       <Shield className="h-5 w-5" />
                     </div>
                     <div>
-                      <h4 className="text-xs font-bold text-slate-800 group-hover:text-[#0D47A1]">My Protection Plans</h4>
+                      <h4 className="text-xs font-bold text-slate-800 group-hover:text-brand-blue">My Protection Plans</h4>
                       <p className="text-[11px] text-slate-400 font-medium">Extended warranties & AMC contracts</p>
                     </div>
                   </div>
@@ -792,7 +750,7 @@ const Profile = () => {
                       <Shield className="h-5 w-5" />
                     </div>
                     <div>
-                      <h4 className="text-xs font-bold text-slate-800 group-hover:text-[#0D47A1]">Membership Plan</h4>
+                      <h4 className="text-xs font-bold text-slate-800 group-hover:text-brand-blue">Membership Plan</h4>
                       <p className="text-[11px] text-slate-400 font-medium">{hasMembership ? membershipName : 'No active plan'}</p>
                     </div>
                   </div>
@@ -808,7 +766,7 @@ const Profile = () => {
                       <Gift className="h-5 w-5" />
                     </div>
                     <div>
-                      <h4 className="text-xs font-bold text-slate-800 group-hover:text-[#0D47A1]">Rewards & Play Zone</h4>
+                      <h4 className="text-xs font-bold text-slate-800 group-hover:text-brand-blue">Rewards & Play Zone</h4>
                       <p className="text-[11px] text-slate-400 font-medium">Spin wheel & earn extra coins</p>
                     </div>
                   </div>
@@ -824,7 +782,7 @@ const Profile = () => {
                       <Ticket className="h-5 w-5" />
                     </div>
                     <div>
-                      <h4 className="text-xs font-bold text-slate-800 group-hover:text-[#0D47A1]">My Coupons</h4>
+                      <h4 className="text-xs font-bold text-slate-800 group-hover:text-brand-blue">My Coupons</h4>
                       <p className="text-[11px] text-slate-400 font-medium">Discount vouchers & active offers</p>
                     </div>
                   </div>
@@ -840,7 +798,7 @@ const Profile = () => {
                       <Heart className="h-5 w-5" />
                     </div>
                     <div>
-                      <h4 className="text-xs font-bold text-slate-800 group-hover:text-[#0D47A1]">My Wishlist</h4>
+                      <h4 className="text-xs font-bold text-slate-800 group-hover:text-brand-blue">My Wishlist</h4>
                       <p className="text-[11px] text-slate-400 font-medium">{wishlistCount} saved items</p>
                     </div>
                   </div>
@@ -862,11 +820,11 @@ const Profile = () => {
                   className="p-3.5 bg-slate-50 hover:bg-[#EAF4FF]/60 rounded-2xl border border-slate-100 flex items-center justify-between cursor-pointer transition-all group"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-white text-[#0D47A1] rounded-xl shadow-2xs">
+                    <div className="p-2 bg-white text-brand-blue rounded-xl shadow-2xs">
                       <MapPin className="h-5 w-5" />
                     </div>
                     <div>
-                      <h4 className="text-xs font-bold text-slate-800 group-hover:text-[#0D47A1]">Saved Addresses</h4>
+                      <h4 className="text-xs font-bold text-slate-800 group-hover:text-brand-blue">Saved Addresses</h4>
                       <p className="text-[11px] text-slate-400 font-medium">Manage home & office service locations</p>
                     </div>
                   </div>
@@ -882,7 +840,7 @@ const Profile = () => {
                       <CreditCard className="h-5 w-5" />
                     </div>
                     <div>
-                      <h4 className="text-xs font-bold text-slate-800 group-hover:text-[#0D47A1]">Payment Methods</h4>
+                      <h4 className="text-xs font-bold text-slate-800 group-hover:text-brand-blue">Payment Methods</h4>
                       <p className="text-[11px] text-slate-400 font-medium">UPI, saved cards & wallet settings</p>
                     </div>
                   </div>
@@ -898,7 +856,7 @@ const Profile = () => {
                       <Bell className="h-5 w-5" />
                     </div>
                     <div>
-                      <h4 className="text-xs font-bold text-slate-800 group-hover:text-[#0D47A1]">Notification Settings</h4>
+                      <h4 className="text-xs font-bold text-slate-800 group-hover:text-brand-blue">Notification Settings</h4>
                       <p className="text-[11px] text-slate-400 font-medium">SMS, WhatsApp & push alerts</p>
                     </div>
                   </div>
@@ -924,7 +882,7 @@ const Profile = () => {
                       <Headphones className="h-5 w-5" />
                     </div>
                     <div>
-                      <h4 className="text-xs font-bold text-slate-800 group-hover:text-[#0D47A1]">Help & Support</h4>
+                      <h4 className="text-xs font-bold text-slate-800 group-hover:text-brand-blue">Help & Support</h4>
                       <p className="text-[11px] text-slate-400 font-medium">24/7 customer care & raised tickets</p>
                     </div>
                   </div>
@@ -940,7 +898,7 @@ const Profile = () => {
                       <FileText className="h-5 w-5" />
                     </div>
                     <div>
-                      <h4 className="text-xs font-bold text-slate-800 group-hover:text-[#0D47A1]">About NCC</h4>
+                      <h4 className="text-xs font-bold text-slate-800 group-hover:text-brand-blue">About NCC</h4>
                       <p className="text-[11px] text-slate-400 font-medium">Terms, privacy policy & brand info</p>
                     </div>
                   </div>

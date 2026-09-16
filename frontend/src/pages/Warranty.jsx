@@ -16,7 +16,7 @@ const Warranty = () => {
             onClick={() => navigate('/dashboard')}
             className="p-2 hover:bg-slate-100 rounded-full transition-colors"
           >
-            <ArrowLeft className="h-6 w-6 text-[#0D47A1]" />
+            <ArrowLeft className="h-6 w-6 text-brand-blue" />
           </button>
           <h1 className="text-lg font-bold text-[#0d47a1] ml-4">Warranty Status</h1>
         </div>
@@ -31,8 +31,8 @@ const Warranty = () => {
             transition={{ duration: 0.5, ease: "easeOut" }}
             className="w-full bg-white border border-blue-50 rounded-[24px] p-6 shadow-xl mb-6 relative overflow-hidden bg-gradient-to-br from-[#F0F4FA] to-white"
           >
-            <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#FFD600] opacity-20 rounded-full blur-3xl"></div>
-            <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-[#0D47A1] opacity-5 rounded-full blur-3xl"></div>
+            <div className="absolute -top-10 -right-10 w-32 h-32 bg-brand-yellow opacity-20 rounded-full blur-3xl"></div>
+            <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-brand-blue opacity-5 rounded-full blur-3xl"></div>
             
             <div className="flex flex-col items-center text-center relative z-10">
               <motion.div 
@@ -94,7 +94,7 @@ const Warranty = () => {
                 className="flex items-center gap-4 p-4 bg-[#F8FAFC] rounded-2xl border border-gray-100 hover:border-blue-100 transition-colors"
               >
                 <div className="w-10 h-10 bg-[#E3ECF9] rounded-xl flex items-center justify-center">
-                  <Shield className="h-5 w-5 text-[#0D47A1]" />
+                  <Shield className="h-5 w-5 text-brand-blue" />
                 </div>
                 <div>
                   <span className="text-sm font-bold text-text-primary block">Free Labor</span>
@@ -114,7 +114,7 @@ const Warranty = () => {
                 className="flex items-center gap-4 p-4 bg-[#F8FAFC] rounded-2xl border border-gray-100 hover:border-blue-100 transition-colors"
               >
                 <div className="w-10 h-10 bg-[#E3ECF9] rounded-xl flex items-center justify-center">
-                  <CreditCard className="h-5 w-5 text-[#0D47A1]" />
+                  <CreditCard className="h-5 w-5 text-brand-blue" />
                 </div>
                 <div>
                   <span className="text-sm font-bold text-text-primary block">Part Discount</span>
@@ -133,7 +133,7 @@ const Warranty = () => {
         <div className="p-6 border-t border-border-color">
           <button
             onClick={() => navigate('/payment')}
-            className="w-full bg-[#FFD600] text-[#0D47A1] font-bold py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-yellow-400 transition-colors shadow-md text-sm"
+            className="w-full bg-brand-yellow text-brand-blue font-bold py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-yellow-400 transition-colors shadow-md text-sm"
           >
             Apply Warranty & Continue
           </button>

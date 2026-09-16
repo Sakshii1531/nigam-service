@@ -103,7 +103,7 @@ const ReferEarn = () => {
       <div className="flex-1 p-5 flex flex-col gap-6 max-w-3xl mx-auto w-full text-left">
         
         {/* Banner Card */}
-        <div className="bg-gradient-to-br from-[#0D47A1] via-[#1565C0] to-[#0A2D6C] rounded-[28px] p-6 text-white shadow-md relative overflow-hidden border border-white/5 flex flex-col gap-4">
+        <div className="bg-gradient-to-br from-brand-blue via-[#1565C0] to-[#0A2D6C] rounded-[28px] p-6 text-white shadow-md relative overflow-hidden border border-white/5 flex flex-col gap-4">
           <div className="absolute top-0 right-0 w-32 h-32 bg-blue-400/10 rounded-full blur-2xl"></div>
           <div className="flex justify-between items-start">
             <div className="flex flex-col gap-1">
@@ -137,7 +137,7 @@ const ReferEarn = () => {
 
         {/* Info detail */}
         <p className="text-[11px] text-slate-500 font-semibold leading-relaxed px-2 text-center">
-          Share the love with your friends. Get <span className="text-[#0D47A1] font-black">{rewardConfig.referralBonusAmount} Coins reward</span> in your wallet when they book their first service, and they get <span className="text-emerald-600 font-black">{rewardConfig.refereeDiscountPercent}% OFF</span>!
+          Share the love with your friends. Get <span className="text-brand-blue font-black">{rewardConfig.referralBonusAmount} Coins reward</span> in your wallet when they book their first service, and they get <span className="text-emerald-600 font-black">{rewardConfig.refereeDiscountPercent}% OFF</span>!
         </p>
 
         {/* Code Box */}
@@ -146,12 +146,12 @@ const ReferEarn = () => {
             Your Referral Code
           </span>
           <div className="flex bg-[#F8FAFC] border border-slate-200/50 rounded-2xl p-4 items-center justify-between">
-            <span className="text-sm font-black text-[#0D47A1] font-mono tracking-widest pl-2">
+            <span className="text-sm font-black text-brand-blue font-mono tracking-widest pl-2">
               {referralCode}
             </span>
             <button
               onClick={handleCopy}
-              className="flex items-center gap-1.5 text-xs font-black text-[#0D47A1] hover:underline cursor-pointer border border-[#0D47A1]/20 rounded-xl px-3.5 py-1.5 bg-white shadow-2xs hover:bg-slate-50 transition-colors"
+              className="flex items-center gap-1.5 text-xs font-black text-brand-blue hover:underline cursor-pointer border border-brand-blue/20 rounded-xl px-3.5 py-1.5 bg-white shadow-2xs hover:bg-slate-50 transition-colors"
             >
               {copied ? (
                 <>
@@ -176,7 +176,7 @@ const ReferEarn = () => {
           
           <div className="bg-white border border-slate-150 p-5 rounded-3xl shadow-2xs flex flex-col gap-5">
             <div className="flex items-start gap-3.5">
-              <div className="w-8 h-8 rounded-2xl bg-blue-50 text-[#0D47A1] flex items-center justify-center text-xs font-black flex-shrink-0">
+              <div className="w-8 h-8 rounded-2xl bg-blue-50 text-brand-blue flex items-center justify-center text-xs font-black flex-shrink-0">
                 1
               </div>
               <div className="flex-1 min-w-0">
@@ -216,7 +216,7 @@ const ReferEarn = () => {
         {/* Share Button */}
         <button
           onClick={handleShare}
-          className="w-full bg-[#0D47A1] hover:bg-blue-800 text-white text-xs font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md mt-2"
+          className="w-full bg-brand-blue hover:bg-blue-800 text-white text-xs font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md mt-2"
         >
           <Share2 className="h-4.5 w-4.5" />
           <span>Share & Earn {rewardConfig.referralBonusAmount} Coins</span>
@@ -238,7 +238,7 @@ const ReferEarn = () => {
 
           {loadingReferrals ? (
             <div className="bg-white border border-slate-150 rounded-3xl p-8 flex items-center justify-center gap-2 text-slate-400 text-xs font-bold">
-              <div className="w-4 h-4 border-2 border-[#0D47A1] border-t-transparent rounded-full animate-spin" />
+              <div className="w-4 h-4 border-2 border-brand-blue border-t-transparent rounded-full animate-spin" />
               Loading your referrals...
             </div>
           ) : referralsError ? (
@@ -257,7 +257,7 @@ const ReferEarn = () => {
             <div className="bg-white border border-slate-150 rounded-3xl shadow-2xs divide-y divide-slate-50 overflow-hidden">
               {referrals.map((r) => (
                 <div key={r.id} className="flex items-center gap-3 p-4">
-                  <div className="w-10 h-10 rounded-2xl bg-blue-50 text-[#0D47A1] flex items-center justify-center font-black text-xs flex-shrink-0">
+                  <div className="w-10 h-10 rounded-2xl bg-blue-50 text-brand-blue flex items-center justify-center font-black text-xs flex-shrink-0">
                     {getInitials(r.referredName)}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -267,7 +267,7 @@ const ReferEarn = () => {
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                    <span className="text-xs font-black text-[#0D47A1] flex items-center gap-1">
+                    <span className="text-xs font-black text-brand-blue flex items-center gap-1">
                       <Coins className="h-3.5 w-3.5 text-[#FFD54F]" /> +{r.bonusAmount}
                     </span>
                     <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wide ${

@@ -31,7 +31,7 @@ const CustomerTopNav = ({ activePage = "home" }) => {
   const firstName = user?.name ? user.name.split(" ")[0] : "Account";
 
   return (
-    <nav className="hidden lg:flex fixed top-0 left-0 right-0 z-50 h-20 bg-[#051F42]/95 backdrop-blur-md border-b border-white/10 shadow-[0_4px_20px_rgba(5,31,66,0.25)]">
+    <nav className="hidden lg:flex fixed top-0 left-0 right-0 z-50 h-20 bg-brand-navy/95 backdrop-blur-md border-b border-white/10 shadow-[0_4px_20px_rgba(5,31,66,0.25)]">
       <div className="max-w-screen-2xl mx-auto w-full px-6 md:px-10 lg:px-16 xl:px-20 flex items-center justify-between gap-4">
         
         {/* Brand / Logo */}
@@ -48,11 +48,11 @@ const CustomerTopNav = ({ activePage = "home" }) => {
 
         {/* Quick Access Toggle — Book Service vs Partner Warranty */}
         <div className="flex bg-black/30 p-1.5 rounded-full border border-white/10 shadow-inner items-center flex-shrink-0">
-          <button 
+          <button
             onClick={() => navigate('/dashboard')}
             className={`py-1.5 px-3.5 rounded-full transition-all duration-200 flex items-center gap-2 text-left cursor-pointer ${
-              !isWarranty 
-                ? 'bg-[#FFC107] text-[#051F42] font-black shadow-md scale-[1.02]' 
+              !isWarranty
+                ? 'bg-brand-yellow text-brand-navy font-black shadow-md scale-[1.02]'
                 : 'text-slate-200 hover:text-white'
             }`}
           >
@@ -67,16 +67,16 @@ const CustomerTopNav = ({ activePage = "home" }) => {
             </div>
           </button>
           
-          <button 
+          <button
             onClick={() => navigate('/partner-warranty')}
             className={`py-1.5 px-3.5 rounded-full transition-all duration-200 flex items-center gap-2 text-left cursor-pointer ${
-              isWarranty 
-                ? 'bg-[#FFC107] text-[#051F42] font-black shadow-md scale-[1.02]' 
+              isWarranty
+                ? 'bg-brand-yellow text-brand-navy font-black shadow-md scale-[1.02]'
                 : 'text-slate-200 hover:text-white'
             }`}
           >
             <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${
-              isWarranty ? 'bg-[#051F42] text-white shadow-xs' : 'bg-white/10'
+              isWarranty ? 'bg-brand-navy text-white shadow-xs' : 'bg-white/10'
             }`}>
               <img src={handshakeIcon} alt="Partner Warranty" className="w-4.5 h-4.5 object-contain" />
             </div>
@@ -97,11 +97,11 @@ const CustomerTopNav = ({ activePage = "home" }) => {
                 onClick={() => navigate(path)}
                 className={`flex items-center gap-2 px-3.5 lg:px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
                   isActive
-                    ? "bg-gradient-to-r from-[#FFD400] to-[#FFCA00] text-[#051F42] shadow-[0_2px_10px_rgba(255,212,0,0.3)] scale-[1.02]"
+                    ? "bg-gradient-to-r from-brand-yellow to-brand-yellow/80 text-brand-navy shadow-[0_2px_10px_rgba(255,212,0,0.3)] scale-[1.02]"
                     : "text-slate-200 hover:text-white hover:bg-white/10"
                 }`}
               >
-                <Icon className={`h-4 w-4 ${isActive ? "text-[#051F42]" : "text-slate-300"}`} />
+                <Icon className={`h-4 w-4 ${isActive ? "text-brand-navy" : "text-slate-300"}`} />
                 <span>{label}</span>
               </button>
             );
@@ -117,7 +117,7 @@ const CustomerTopNav = ({ activePage = "home" }) => {
           >
             <Bell className="h-4.5 w-4.5 text-slate-200 group-hover:text-white group-hover:rotate-12 transition-transform" />
             {unreadCount > 0 && (
-              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full ring-2 ring-[#051F42] animate-pulse"></span>
+              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full ring-2 ring-brand-navy animate-pulse"></span>
             )}
           </button>
 
@@ -125,7 +125,7 @@ const CustomerTopNav = ({ activePage = "home" }) => {
             onClick={() => navigate("/profile")}
             className="flex items-center gap-2.5 pl-1.5 pr-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/12 border border-white/10 transition-all cursor-pointer group"
           >
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-[#FFD400] to-[#FFCA00] text-[#051F42] flex items-center justify-center font-black text-xs shadow-xs">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-brand-yellow to-brand-yellow/80 text-brand-navy flex items-center justify-center font-black text-xs shadow-xs">
               {userInitial}
             </div>
             <span className="text-xs font-bold text-slate-200 group-hover:text-white max-w-[100px] truncate">

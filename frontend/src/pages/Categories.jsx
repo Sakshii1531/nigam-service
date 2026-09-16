@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Home as HomeIcon, ShoppingCart, Calendar, User, LayoutGrid, Search, X, Sparkles, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Search, X, Sparkles, ChevronRight } from 'lucide-react';
+import CustomerBottomNav from '../components/CustomerBottomNav';
 
 // Import images for Sidebar
 import handymanSidebar from '../assets/categories/plumber_fixed.png';
@@ -217,7 +218,7 @@ const Categories = () => {
           <h1 className="text-sm font-extrabold text-slate-900 tracking-tight">Categories</h1>
           <span className="text-[10px] font-medium text-slate-400">Explore all home services</span>
         </div>
-        <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-[#0D47A1]">
+        <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-brand-blue">
           <Sparkles className="h-4 w-4" />
         </div>
       </div>
@@ -238,13 +239,13 @@ const Categories = () => {
                 }}
                 className={`relative flex flex-col items-center gap-1 py-2 sm:py-2.5 px-1 sm:px-1.5 mx-1 sm:mx-1.5 rounded-xl sm:rounded-2xl transition-all duration-200 cursor-pointer text-left group ${
                   isActive
-                    ? 'bg-white shadow-xs border border-blue-100/80 font-extrabold text-[#0D47A1]'
+                    ? 'bg-white shadow-xs border border-blue-100/80 font-extrabold text-brand-blue'
                     : 'text-slate-600 hover:bg-white/70 hover:text-slate-900 border border-transparent'
                 }`}
               >
                 {/* Active Bar Indicator */}
                 {isActive && (
-                  <div className="absolute left-0 top-2 bottom-2 w-1 bg-gradient-to-b from-[#0D47A1] to-blue-500 rounded-r-full shadow-2xs" />
+                  <div className="absolute left-0 top-2 bottom-2 w-1 bg-gradient-to-b from-brand-blue to-blue-500 rounded-r-full shadow-2xs" />
                 )}
 
                 <div className={`w-11 h-11 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-xl flex items-center justify-center p-1.5 sm:p-2 transition-all duration-200 ${
@@ -255,7 +256,7 @@ const Categories = () => {
                   <img src={cat.image} alt={cat.name} className="w-full h-full object-contain drop-shadow-2xs" />
                 </div>
                 <span className={`text-[10px] sm:text-xs text-center px-0.5 leading-tight w-full font-bold transition-colors ${
-                  isActive ? 'text-[#0D47A1]' : 'text-slate-600 group-hover:text-slate-900'
+                  isActive ? 'text-brand-blue' : 'text-slate-600 group-hover:text-slate-900'
                 }`}>
                   {cat.shortName}
                 </span>
@@ -268,7 +269,7 @@ const Categories = () => {
         <div className="flex-1 bg-[#F8FAFC] p-3 sm:p-5 lg:p-8 overflow-y-auto custom-scrollbar flex flex-col gap-3.5 sm:gap-6">
           
           {/* Header & Search Bar Banner */}
-          <div className="bg-gradient-to-br from-[#0B3C86] via-[#0D47A1] to-indigo-900 text-white p-3.5 sm:p-5 rounded-2xl border border-blue-800/50 shadow-xs flex flex-col gap-2.5 sm:gap-3 lg:from-white lg:via-[#F4F8FF]/60 lg:to-[#EBF3FE]/40 lg:text-slate-900 lg:border-blue-100/70">
+          <div className="bg-gradient-to-br from-[#0B3C86] via-brand-blue to-indigo-900 text-white p-3.5 sm:p-5 rounded-2xl border border-blue-800/50 shadow-xs flex flex-col gap-2.5 sm:gap-3 lg:from-white lg:via-[#F4F8FF]/60 lg:to-[#EBF3FE]/40 lg:text-slate-900 lg:border-blue-100/70">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <h2 className="text-sm sm:text-xl font-black text-white lg:text-slate-900 tracking-tight">
@@ -276,7 +277,7 @@ const Categories = () => {
                 </h2>
               </div>
               {!searchQuery && (
-                <span className="text-[10px] sm:text-xs font-bold text-blue-900 bg-white lg:text-white lg:bg-[#0D47A1] px-2.5 py-0.5 rounded-full shadow-2xs">
+                <span className="text-[10px] sm:text-xs font-bold text-blue-900 bg-white lg:text-white lg:bg-brand-blue px-2.5 py-0.5 rounded-full shadow-2xs">
                   {activeSections.reduce((acc, sec) => acc + sec.items.length, 0)} services
                 </span>
               )}
@@ -295,7 +296,7 @@ const Categories = () => {
                 placeholder="Search services (e.g. AC, Electrician)..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-8.5 pr-8 py-1.5 sm:py-2 text-xs sm:text-sm bg-white border border-slate-200/90 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0D47A1]/20 focus:border-[#0D47A1] shadow-2xs transition-all"
+                className="w-full pl-8.5 pr-8 py-1.5 sm:py-2 text-xs sm:text-sm bg-white border border-slate-200/90 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue shadow-2xs transition-all"
               />
               {searchQuery && (
                 <button
@@ -317,16 +318,16 @@ const Categories = () => {
                     <div
                       key={idx}
                       onClick={() => navigate(item.route)}
-                      className="group bg-white border border-slate-200/80 rounded-2xl p-2.5 sm:p-3.5 flex flex-col items-center justify-between cursor-pointer transition-all duration-200 shadow-2xs hover:shadow-md hover:border-[#0D47A1]/40 active:scale-[0.97]"
+                      className="group bg-white border border-slate-200/80 rounded-2xl p-2.5 sm:p-3.5 flex flex-col items-center justify-between cursor-pointer transition-all duration-200 shadow-2xs hover:shadow-md hover:border-brand-blue/40 active:scale-[0.97]"
                     >
                       <div className="w-14 h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-b from-slate-50 to-blue-50/30 group-hover:from-blue-50/60 group-hover:to-indigo-50/40 rounded-xl p-2 flex items-center justify-center transition-all duration-200 border border-slate-100/90 shadow-2xs">
                         <img src={item.img} alt={item.name} className="w-full h-full object-contain group-hover:scale-108 transition-transform duration-300 drop-shadow-2xs" />
                       </div>
                       <div className="mt-2 text-center w-full">
-                        <span className="text-[9px] font-extrabold text-[#0D47A1] uppercase tracking-wider block mb-0.5 line-clamp-1">
+                        <span className="text-[9px] font-extrabold text-brand-blue uppercase tracking-wider block mb-0.5 line-clamp-1">
                           {item.categoryName}
                         </span>
-                        <h4 className="text-[11px] sm:text-xs font-bold text-slate-800 group-hover:text-[#0D47A1] line-clamp-2 leading-snug transition-colors">
+                        <h4 className="text-[11px] sm:text-xs font-bold text-slate-800 group-hover:text-brand-blue line-clamp-2 leading-snug transition-colors">
                           {item.name}
                         </h4>
                       </div>
@@ -342,7 +343,7 @@ const Categories = () => {
                   <p className="text-[11px] sm:text-xs text-slate-500 mt-1">Try searching with a different keyword like "AC", "Cleaning", or "Plumber"</p>
                   <button
                     onClick={() => setSearchQuery('')}
-                    className="mt-3.5 px-3.5 py-1.5 bg-[#0D47A1] text-white text-xs font-bold rounded-xl hover:bg-blue-800 transition-colors shadow-xs"
+                    className="mt-3.5 px-3.5 py-1.5 bg-brand-blue text-white text-xs font-bold rounded-xl hover:bg-blue-800 transition-colors shadow-xs"
                   >
                     Clear Search
                   </button>
@@ -357,7 +358,7 @@ const Categories = () => {
                   {/* Section Title Header */}
                   <div className="flex items-center justify-between pb-1 border-b border-slate-200/60">
                     <div className="flex items-center gap-1.5 sm:gap-2">
-                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-[#0D47A1] ring-4 ring-blue-100" />
+                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-brand-blue ring-4 ring-blue-100" />
                       <h3 className="text-[11px] sm:text-sm font-black text-slate-800 uppercase tracking-wider">
                         {section.title}
                       </h3>
@@ -373,7 +374,7 @@ const Categories = () => {
                       <div
                         key={itemIdx}
                         onClick={() => navigate(item.route)}
-                        className="group bg-white border border-slate-200/80 rounded-2xl p-2.5 sm:p-3.5 flex flex-col items-center justify-between cursor-pointer transition-all duration-200 shadow-2xs hover:shadow-md hover:border-[#0D47A1]/40 active:scale-[0.97]"
+                        className="group bg-white border border-slate-200/80 rounded-2xl p-2.5 sm:p-3.5 flex flex-col items-center justify-between cursor-pointer transition-all duration-200 shadow-2xs hover:shadow-md hover:border-brand-blue/40 active:scale-[0.97]"
                       >
                         <div className="w-14 h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-b from-slate-50 to-blue-50/40 group-hover:from-blue-50/60 group-hover:to-indigo-50/40 rounded-xl p-2 flex items-center justify-center transition-all duration-200 border border-slate-100/90 shadow-2xs">
                           <img
@@ -383,7 +384,7 @@ const Categories = () => {
                           />
                         </div>
                         <div className="mt-2 w-full flex items-center justify-between gap-1">
-                          <span className="text-[11px] sm:text-xs font-bold text-slate-800 group-hover:text-[#0D47A1] text-center w-full px-0.5 line-clamp-2 leading-snug transition-colors">
+                          <span className="text-[11px] sm:text-xs font-bold text-slate-800 group-hover:text-brand-blue text-center w-full px-0.5 line-clamp-2 leading-snug transition-colors">
                             {item.name}
                           </span>
                         </div>
@@ -398,50 +399,7 @@ const Categories = () => {
       </div>
 
       {/* Bottom Menu Bar (Custom Mobile Tabs) — hidden on desktop */}
-      <div className="fixed bottom-0 left-0 right-0 h-16 bg-white/95 backdrop-blur-xl border-t border-slate-200/80 px-3 sm:px-8 flex justify-around items-center z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] lg:hidden">
-        <button 
-          onClick={() => navigate('/dashboard')}
-          className="flex flex-col items-center justify-center py-1 px-2.5 text-slate-500 hover:text-[#0D47A1] transition-colors"
-        >
-          <HomeIcon className="h-5 w-5" />
-          <span className="text-[10px] font-medium tracking-tight mt-0.5">Home</span>
-        </button>
-
-        <button 
-          onClick={() => navigate('/categories')}
-          className="flex flex-col items-center justify-center relative py-1 px-2.5 text-[#0D47A1]"
-        >
-          <div className="absolute -top-3 w-8 h-1 bg-[#0D47A1] rounded-b-full shadow-2xs" />
-          <div className="p-1 rounded-xl bg-blue-50/90 text-[#0D47A1]">
-            <LayoutGrid className="h-5 w-5" />
-          </div>
-          <span className="text-[10px] font-bold tracking-tight mt-0.5">Categories</span>
-        </button>
-
-        <button 
-          onClick={() => navigate('/buy')}
-          className="flex flex-col items-center justify-center py-1 px-2.5 text-slate-500 hover:text-[#0D47A1] transition-colors"
-        >
-          <ShoppingCart className="h-5 w-5" />
-          <span className="text-[10px] font-medium tracking-tight mt-0.5">Buy</span>
-        </button>
-
-        <button 
-          onClick={() => navigate('/bookings')}
-          className="flex flex-col items-center justify-center py-1 px-2.5 text-slate-500 hover:text-[#0D47A1] transition-colors"
-        >
-          <Calendar className="h-5 w-5" />
-          <span className="text-[10px] font-medium tracking-tight mt-0.5">Bookings</span>
-        </button>
-
-        <button 
-          onClick={() => navigate('/profile')}
-          className="flex flex-col items-center justify-center py-1 px-2.5 text-slate-500 hover:text-[#0D47A1] transition-colors"
-        >
-          <User className="h-5 w-5" />
-          <span className="text-[10px] font-medium tracking-tight mt-0.5">Account</span>
-        </button>
-      </div>
+      <CustomerBottomNav />
     </div>
   );
 };

@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { 
-  ArrowLeft, Shield, ShoppingCart, CheckCircle, ChevronRight, Check, Search, 
+  ArrowLeft, Shield, ShoppingCart, CheckCircle, ChevronRight, Check, Search,
   Wrench, Percent, CreditCard, Lock, Landmark, Wallet, ShieldCheck, Plus, Minus, Trash2,
-  ChevronLeft, Zap, CheckCircle2, Home as HomeIcon, LayoutGrid, User, Calendar, RefreshCw,
+  ChevronLeft, Zap, CheckCircle2, Home as HomeIcon, User, RefreshCw,
   Heart, Star, ChevronDown, SlidersHorizontal, Truck, Package, X, UploadCloud, Sparkles,
   MapPin, Building, Briefcase, Phone, Edit2
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import CustomerBottomNav from '../components/CustomerBottomNav';
 import { apiRequest } from '../lib/apiClient';
 import { useCart } from '../lib/cartStore';
 import { payWithRazorpay } from '../lib/razorpayCheckout';
@@ -776,7 +777,7 @@ const BuyNew = () => {
                   <div 
                     key={product.id}
                     onClick={() => navigate(`/buy-new/details/${encodeURIComponent(finalCategory)}/${encodeURIComponent(product.name)}`)}
-                    className="bg-white border border-slate-200/90 hover:border-[#0D47A1]/40 rounded-3xl p-4 md:p-5 flex flex-col justify-between min-h-[240px] cursor-pointer shadow-xs hover:shadow-xl transition-all duration-300 relative group overflow-hidden"
+                    className="bg-white border border-slate-200/90 hover:border-brand-blue/40 rounded-3xl p-4 md:p-5 flex flex-col justify-between min-h-[240px] cursor-pointer shadow-xs hover:shadow-xl transition-all duration-300 relative group overflow-hidden"
                   >
                     <div className="flex gap-4 md:gap-5 items-stretch h-full">
                       {/* Left: Image Container with Floating Heart */}
@@ -806,7 +807,7 @@ const BuyNew = () => {
                           {/* Brand & Assured Badges Row */}
                           <div className="flex flex-wrap items-center gap-2 mb-1.5">
                             {product.brand && (
-                              <span className="text-[9px] font-mono font-black text-[#0D47A1] bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                              <span className="text-[9px] font-mono font-black text-brand-blue bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full uppercase tracking-wider">
                                 {product.brand}
                               </span>
                             )}
@@ -821,7 +822,7 @@ const BuyNew = () => {
                           </div>
 
                           {/* Product Title */}
-                          <h4 className="text-sm md:text-base font-black text-slate-900 leading-snug group-hover:text-[#0D47A1] transition-colors line-clamp-2">
+                          <h4 className="text-sm md:text-base font-black text-slate-900 leading-snug group-hover:text-brand-blue transition-colors line-clamp-2">
                             {product.name}
                           </h4>
 
@@ -860,7 +861,7 @@ const BuyNew = () => {
 
                           {/* Shipping & Delivery Footer */}
                           <div className="flex flex-wrap items-center justify-between gap-2 mt-2 pt-2 border-t border-slate-100 text-[10px]">
-                            <span className="text-[#0D47A1] font-black">
+                            <span className="text-brand-blue font-black">
                               ✓ Exchange offer available
                             </span>
                             <span className="text-slate-500 font-semibold">
@@ -883,7 +884,7 @@ const BuyNew = () => {
             <div className="bg-white border border-slate-200/90 rounded-3xl p-10 text-center shadow-xs my-6 space-y-4">
               {productsLoading ? (
                 <div className="flex flex-col items-center gap-3">
-                  <div className="w-8 h-8 border-3 border-[#0D47A1] border-t-transparent rounded-full animate-spin"></div>
+                  <div className="w-8 h-8 border-3 border-brand-blue border-t-transparent rounded-full animate-spin"></div>
                   <p className="text-sm font-bold text-slate-500">Loading Product Details...</p>
                 </div>
               ) : (
@@ -895,7 +896,7 @@ const BuyNew = () => {
                   <p className="text-xs text-slate-500 max-w-xs mx-auto">The requested product could not be loaded or is out of stock.</p>
                   <button 
                     onClick={() => navigate(`/buy-new/products/${encodeURIComponent(finalCategory)}`)} 
-                    className="mt-2 bg-[#0D47A1] text-white text-xs font-bold px-5 py-2.5 rounded-xl cursor-pointer shadow-xs"
+                    className="mt-2 bg-brand-blue text-white text-xs font-bold px-5 py-2.5 rounded-xl cursor-pointer shadow-xs"
                   >
                     Back to Appliance Catalog
                   </button>
@@ -915,7 +916,7 @@ const BuyNew = () => {
               <div className="w-full flex items-center justify-between z-10 mb-2">
                 <div className="flex items-center gap-2">
                   {finalProduct?.brand && (
-                    <span className="text-[10px] font-mono font-black text-[#0D47A1] bg-blue-50 border border-blue-100 px-3 py-1 rounded-full uppercase tracking-wider shadow-2xs">
+                    <span className="text-[10px] font-mono font-black text-brand-blue bg-blue-50 border border-blue-100 px-3 py-1 rounded-full uppercase tracking-wider shadow-2xs">
                       {finalProduct.brand}
                     </span>
                   )}
@@ -1019,7 +1020,7 @@ const BuyNew = () => {
                               onClick={() => setActiveImageIdx(idx)}
                               className={`relative w-16 h-16 sm:w-20 sm:h-20 rounded-2xl p-1.5 bg-white flex items-center justify-center cursor-pointer transition-all shrink-0 ${
                                 isSelected
-                                  ? 'border-2 border-[#0D47A1] ring-4 ring-blue-100 shadow-md scale-105 opacity-100'
+                                  ? 'border-2 border-brand-blue ring-4 ring-blue-100 shadow-md scale-105 opacity-100'
                                   : 'border border-slate-200/80 opacity-60 hover:opacity-100 hover:border-slate-300'
                               }`}
                             >
@@ -1133,7 +1134,7 @@ const BuyNew = () => {
                             replaceCart([{ ...finalProduct, qty: 1, category: finalCategory, exchange: productExchange }]);
                             navigate('/buy-new/address');
                           }}
-                          className="w-full sm:w-1/2 bg-[#0D47A1] hover:bg-blue-800 text-white font-black py-3.5 rounded-2xl transition-all shadow-md text-xs cursor-pointer active:scale-98 flex items-center justify-center gap-2"
+                          className="w-full sm:w-1/2 bg-brand-blue hover:bg-blue-800 text-white font-black py-3.5 rounded-2xl transition-all shadow-md text-xs cursor-pointer active:scale-98 flex items-center justify-center gap-2"
                         >
                           <Zap size={16} fill="currentColor" /> Buy Now
                         </button>
@@ -1148,7 +1149,7 @@ const BuyNew = () => {
             <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
-                  <Truck size={16} className="text-[#0D47A1]" /> Check Delivery & Installation
+                  <Truck size={16} className="text-brand-blue" /> Check Delivery & Installation
                 </h3>
                 <span className="text-[11px] font-bold text-slate-400">Doorstep Delivery</span>
               </div>
@@ -1158,13 +1159,13 @@ const BuyNew = () => {
                   type="text" 
                   maxLength={6}
                   placeholder="Enter 6-digit Pincode (e.g. 110001)"
-                  className="flex-1 bg-slate-50 border border-slate-200 px-4 py-2.5 rounded-xl text-xs font-bold text-slate-800 outline-none focus:bg-white focus:border-[#0D47A1] transition-all font-mono"
+                  className="flex-1 bg-slate-50 border border-slate-200 px-4 py-2.5 rounded-xl text-xs font-bold text-slate-800 outline-none focus:bg-white focus:border-brand-blue transition-all font-mono"
                   value={pincodeInput}
                   onChange={(e) => setPincodeInput(e.target.value.replace(/\D/g, ''))}
                 />
                 <button 
                   type="submit"
-                  className="bg-[#0D47A1] hover:bg-blue-800 text-white text-xs font-bold px-5 py-2.5 rounded-xl transition-all cursor-pointer shrink-0 shadow-xs"
+                  className="bg-brand-blue hover:bg-blue-800 text-white text-xs font-bold px-5 py-2.5 rounded-xl transition-all cursor-pointer shrink-0 shadow-xs"
                 >
                   Check
                 </button>
@@ -1206,7 +1207,7 @@ const BuyNew = () => {
               <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs flex flex-col gap-3.5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-[#0D47A1]">
+                    <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-brand-blue">
                       <RefreshCw size={18} />
                     </div>
                     <div>
@@ -1214,7 +1215,7 @@ const BuyNew = () => {
                       <span className="text-[10px] font-bold text-slate-400">Save big on your appliance upgrade</span>
                     </div>
                   </div>
-                  <span className="text-xs font-black text-[#0D47A1] bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
+                  <span className="text-xs font-black text-brand-blue bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
                     Up to ₹{productExchangeConfig?.maxVal?.toLocaleString()} off
                   </span>
                 </div>
@@ -1223,7 +1224,7 @@ const BuyNew = () => {
                   <div className="flex flex-col gap-2">
                     <button
                       onClick={() => setIsExchangeModalOpen(true)}
-                      className="w-full bg-white border-2 border-[#0D47A1] hover:bg-blue-50/40 text-[#0D47A1] font-black py-3 rounded-2xl transition-all text-xs cursor-pointer text-center"
+                      className="w-full bg-white border-2 border-brand-blue hover:bg-blue-50/40 text-brand-blue font-black py-3 rounded-2xl transition-all text-xs cursor-pointer text-center"
                     >
                       Check Exchange Value for Old Appliance
                     </button>
@@ -1273,7 +1274,7 @@ const BuyNew = () => {
             {/* 7. PRODUCT HIGHLIGHTS & SPECIFICATIONS */}
             <div className="bg-white border border-slate-200/90 rounded-3xl p-5 md:p-6 shadow-xs space-y-4">
               <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 pb-3">
-                <ShieldCheck size={16} className="text-[#0D47A1]" /> Product Highlights & Specifications
+                <ShieldCheck size={16} className="text-brand-blue" /> Product Highlights & Specifications
               </h3>
 
               {/* Basic Appliance Parameters */}
@@ -1339,7 +1340,7 @@ const BuyNew = () => {
                 <button
                   type="button"
                   onClick={() => setIsWriteReviewOpen(true)}
-                  className="bg-[#0D47A1] hover:bg-blue-800 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all cursor-pointer shadow-xs flex items-center gap-1.5"
+                  className="bg-brand-blue hover:bg-blue-800 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all cursor-pointer shadow-xs flex items-center gap-1.5"
                 >
                   <Plus size={14} /> Write a Review
                 </button>
@@ -1402,7 +1403,7 @@ const BuyNew = () => {
                     <div 
                       key={pIdx}
                       onClick={() => setActiveLightboxImg(imgUrl)}
-                      className="w-20 h-20 bg-slate-100 border border-slate-200 rounded-xl flex items-center justify-center p-1 shrink-0 overflow-hidden cursor-pointer hover:border-[#0D47A1] hover:scale-105 transition-all shadow-2xs group relative"
+                      className="w-20 h-20 bg-slate-100 border border-slate-200 rounded-xl flex items-center justify-center p-1 shrink-0 overflow-hidden cursor-pointer hover:border-brand-blue hover:scale-105 transition-all shadow-2xs group relative"
                     >
                       <img src={imgUrl} className="w-full h-full object-cover rounded-lg" alt="Customer Photo" />
                       <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
@@ -1442,7 +1443,7 @@ const BuyNew = () => {
                       {/* Reviewer Header */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2.5">
-                          <div className="w-8 h-8 rounded-full bg-blue-100 text-[#0D47A1] font-black text-xs flex items-center justify-center">
+                          <div className="w-8 h-8 rounded-full bg-blue-100 text-brand-blue font-black text-xs flex items-center justify-center">
                             {(rev.user?.name || 'Customer').charAt(0)}
                           </div>
                           <div>
@@ -1492,7 +1493,7 @@ const BuyNew = () => {
                 <div className="flex items-center justify-between border-b border-slate-100 pb-3 text-left">
                   <div>
                     <h3 className="text-sm md:text-base font-black text-slate-900 tracking-tight flex items-center gap-2">
-                      <Sparkles size={18} className="text-[#0D47A1]" /> Similar & Recommended Products
+                      <Sparkles size={18} className="text-brand-blue" /> Similar & Recommended Products
                     </h3>
                     <p className="text-xs text-slate-500 font-semibold mt-0.5">
                       Explore top-rated appliances matching your interest
@@ -1548,7 +1549,7 @@ const BuyNew = () => {
                         {/* Details below image card */}
                         <div className="space-y-1 px-0.5">
                           {/* Title */}
-                          <h4 className="text-xs font-bold text-slate-900 group-hover:text-[#0D47A1] transition-colors line-clamp-1 leading-snug">
+                          <h4 className="text-xs font-bold text-slate-900 group-hover:text-brand-blue transition-colors line-clamp-1 leading-snug">
                             {p.name}
                           </h4>
 
@@ -1618,7 +1619,7 @@ const BuyNew = () => {
                       replaceCart([{ ...finalProduct, qty: 1, category: finalCategory, exchange: productExchange }]);
                       navigate('/buy-new/address');
                     }}
-                    className="bg-[#0D47A1] hover:bg-blue-800 text-white font-black px-6 py-3 rounded-2xl transition-all shadow-md text-xs cursor-pointer active:scale-98"
+                    className="bg-brand-blue hover:bg-blue-800 text-white font-black px-6 py-3 rounded-2xl transition-all shadow-md text-xs cursor-pointer active:scale-98"
                   >
                     Buy Now
                   </button>
@@ -1792,8 +1793,8 @@ const BuyNew = () => {
                   <span>Cart</span>
                 </div>
                 <div className="flex-1 h-0.5 bg-emerald-200 mx-2"></div>
-                <div className="flex items-center gap-1.5 text-[#0D47A1] font-black text-[11px]">
-                  <div className="w-5 h-5 rounded-full bg-[#0D47A1] text-white flex items-center justify-center font-bold text-[10px] ring-4 ring-blue-100">
+                <div className="flex items-center gap-1.5 text-brand-blue font-black text-[11px]">
+                  <div className="w-5 h-5 rounded-full bg-brand-blue text-white flex items-center justify-center font-bold text-[10px] ring-4 ring-blue-100">
                     2
                   </div>
                   <span>Address</span>
@@ -1814,7 +1815,7 @@ const BuyNew = () => {
                 <h2 className="text-lg font-black text-slate-900 tracking-tight">Select Delivery Address</h2>
                 <p className="text-xs text-slate-500 font-semibold mt-0.5">Where should we deliver your order?</p>
               </div>
-              <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-200/80 px-2.5 py-1 rounded-full text-[10px] font-black text-[#0D47A1]">
+              <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-200/80 px-2.5 py-1 rounded-full text-[10px] font-black text-brand-blue">
                 <Truck size={13} />
                 <span>Free Express Delivery</span>
               </div>
@@ -1851,7 +1852,7 @@ const BuyNew = () => {
                             setShowAddAddressForm(true);
                             setAddressFormError('');
                           }}
-                          className="text-xs font-bold text-[#0D47A1] hover:underline flex items-center gap-1 cursor-pointer"
+                          className="text-xs font-bold text-brand-blue hover:underline flex items-center gap-1 cursor-pointer"
                         >
                           <Plus size={14} /> Add New Address
                         </button>
@@ -1868,7 +1869,7 @@ const BuyNew = () => {
                             onClick={() => handleSelectAddress(addr)}
                             className={`p-4 rounded-2xl border transition-all cursor-pointer relative flex items-start gap-3.5 ${
                               isSelected
-                                ? 'border-[#0D47A1] bg-blue-50/50 shadow-sm ring-2 ring-blue-500/10'
+                                ? 'border-brand-blue bg-blue-50/50 shadow-sm ring-2 ring-blue-500/10'
                                 : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50'
                             }`}
                           >
@@ -1876,7 +1877,7 @@ const BuyNew = () => {
                               <div
                                 className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${
                                   isSelected
-                                    ? 'border-[#0D47A1] bg-[#0D47A1] text-white'
+                                    ? 'border-brand-blue bg-brand-blue text-white'
                                     : 'border-slate-300 bg-white'
                                 }`}
                               >
@@ -1922,7 +1923,7 @@ const BuyNew = () => {
                   <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-4 animate-in fade-in duration-200">
                     <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                       <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-xl bg-blue-50 text-[#0D47A1] flex items-center justify-center">
+                        <div className="w-8 h-8 rounded-xl bg-blue-50 text-brand-blue flex items-center justify-center">
                           <Plus size={16} />
                         </div>
                         <div>
@@ -1960,7 +1961,7 @@ const BuyNew = () => {
                               placeholder="e.g. Rahul Sharma"
                               value={addressForm.name}
                               onChange={(e) => setAddressForm({ ...addressForm, name: e.target.value })}
-                              className="w-full bg-slate-50 border border-slate-200 pl-10 pr-4 py-2.5 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:bg-white focus:border-[#0D47A1] focus:ring-2 focus:ring-blue-500/10"
+                              className="w-full bg-slate-50 border border-slate-200 pl-10 pr-4 py-2.5 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:bg-white focus:border-brand-blue focus:ring-2 focus:ring-blue-500/10"
                             />
                           </div>
                         </div>
@@ -1978,7 +1979,7 @@ const BuyNew = () => {
                               placeholder="e.g. 9876543210"
                               value={addressForm.phone}
                               onChange={(e) => setAddressForm({ ...addressForm, phone: e.target.value.replace(/\D/g, '') })}
-                              className="w-full bg-slate-50 border border-slate-200 pl-10 pr-4 py-2.5 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:bg-white focus:border-[#0D47A1] focus:ring-2 focus:ring-blue-500/10"
+                              className="w-full bg-slate-50 border border-slate-200 pl-10 pr-4 py-2.5 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:bg-white focus:border-brand-blue focus:ring-2 focus:ring-blue-500/10"
                             />
                           </div>
                         </div>
@@ -1996,7 +1997,7 @@ const BuyNew = () => {
                             placeholder="e.g. Flat 302, Green Valley Apartments"
                             value={addressForm.house}
                             onChange={(e) => setAddressForm({ ...addressForm, house: e.target.value })}
-                            className="w-full bg-slate-50 border border-slate-200 pl-10 pr-4 py-2.5 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:bg-white focus:border-[#0D47A1] focus:ring-2 focus:ring-blue-500/10"
+                            className="w-full bg-slate-50 border border-slate-200 pl-10 pr-4 py-2.5 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:bg-white focus:border-brand-blue focus:ring-2 focus:ring-blue-500/10"
                           />
                         </div>
                       </div>
@@ -2012,7 +2013,7 @@ const BuyNew = () => {
                             placeholder="e.g. Near Vijay Nagar Square, AB Road"
                             value={addressForm.landmark}
                             onChange={(e) => setAddressForm({ ...addressForm, landmark: e.target.value })}
-                            className="w-full bg-slate-50 border border-slate-200 pl-10 pr-4 py-2.5 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:bg-white focus:border-[#0D47A1] focus:ring-2 focus:ring-blue-500/10"
+                            className="w-full bg-slate-50 border border-slate-200 pl-10 pr-4 py-2.5 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:bg-white focus:border-brand-blue focus:ring-2 focus:ring-blue-500/10"
                           />
                         </div>
                       </div>
@@ -2028,7 +2029,7 @@ const BuyNew = () => {
                             placeholder="e.g. Indore"
                             value={addressForm.city}
                             onChange={(e) => setAddressForm({ ...addressForm, city: e.target.value })}
-                            className="w-full bg-slate-50 border border-slate-200 px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:bg-white focus:border-[#0D47A1] focus:ring-2 focus:ring-blue-500/10"
+                            className="w-full bg-slate-50 border border-slate-200 px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:bg-white focus:border-brand-blue focus:ring-2 focus:ring-blue-500/10"
                           />
                         </div>
 
@@ -2043,7 +2044,7 @@ const BuyNew = () => {
                             placeholder="e.g. 452010"
                             value={addressForm.pincode}
                             onChange={(e) => setAddressForm({ ...addressForm, pincode: e.target.value.replace(/\D/g, '') })}
-                            className="w-full bg-slate-50 border border-slate-200 px-4 py-2.5 rounded-xl text-xs font-semibold font-mono text-slate-800 outline-none focus:bg-white focus:border-[#0D47A1] focus:ring-2 focus:ring-blue-500/10"
+                            className="w-full bg-slate-50 border border-slate-200 px-4 py-2.5 rounded-xl text-xs font-semibold font-mono text-slate-800 outline-none focus:bg-white focus:border-brand-blue focus:ring-2 focus:ring-blue-500/10"
                           />
                         </div>
                       </div>
@@ -2067,7 +2068,7 @@ const BuyNew = () => {
                                 onClick={() => setAddressForm({ ...addressForm, type: label })}
                                 className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
                                   isSelected
-                                    ? 'bg-[#0D47A1] text-white shadow-xs'
+                                    ? 'bg-brand-blue text-white shadow-xs'
                                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                                 }`}
                               >
@@ -2084,7 +2085,7 @@ const BuyNew = () => {
                           type="checkbox"
                           checked={saveToProfile}
                           onChange={(e) => setSaveToProfile(e.target.checked)}
-                          className="w-4 h-4 text-[#0D47A1] rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
+                          className="w-4 h-4 text-brand-blue rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
                         />
                         <span className="text-xs font-bold text-slate-700">
                           Save this address to my profile for future orders
@@ -2107,7 +2108,7 @@ const BuyNew = () => {
                         <button
                           type="submit"
                           disabled={savingAddress}
-                          className="px-5 py-2.5 text-xs font-bold bg-[#0D47A1] hover:bg-blue-800 text-white rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-2 disabled:opacity-50"
+                          className="px-5 py-2.5 text-xs font-bold bg-brand-blue hover:bg-blue-800 text-white rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-2 disabled:opacity-50"
                         >
                           {savingAddress ? 'Saving Address…' : 'Use This Address'}
                         </button>
@@ -2130,14 +2131,14 @@ const BuyNew = () => {
               </div>
               <div className="flex items-center justify-between text-sm font-black text-slate-900">
                 <span>Total Payable</span>
-                <span className="text-base text-[#0D47A1]">₹{cartTotal.toLocaleString()}</span>
+                <span className="text-base text-brand-blue">₹{cartTotal.toLocaleString()}</span>
               </div>
 
               <button
                 type="button"
                 onClick={handleProceedToPayment}
                 disabled={!selectedAddress}
-                className="w-full bg-[#0D47A1] hover:bg-blue-800 text-white font-black py-4 rounded-2xl transition-all shadow-md text-sm mt-1 cursor-pointer active:scale-98 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="w-full bg-brand-blue hover:bg-blue-800 text-white font-black py-4 rounded-2xl transition-all shadow-md text-sm mt-1 cursor-pointer active:scale-98 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <span>Deliver Here & Continue to Payment</span>
                 <ChevronRight size={17} />
@@ -2176,7 +2177,7 @@ const BuyNew = () => {
             {selectedAddress && (
               <div className="bg-white border border-slate-200/90 rounded-3xl p-4 sm:p-5 shadow-xs flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 rounded-2xl bg-blue-50 text-[#0D47A1] flex items-center justify-center shrink-0 mt-0.5">
+                  <div className="w-9 h-9 rounded-2xl bg-blue-50 text-brand-blue flex items-center justify-center shrink-0 mt-0.5">
                     <MapPin size={18} />
                   </div>
                   <div>
@@ -2201,7 +2202,7 @@ const BuyNew = () => {
                 <button
                   type="button"
                   onClick={() => navigate('/buy-new/address')}
-                  className="text-xs font-black text-[#0D47A1] hover:underline px-2.5 py-1.5 rounded-xl hover:bg-blue-50 transition-colors shrink-0 cursor-pointer"
+                  className="text-xs font-black text-brand-blue hover:underline px-2.5 py-1.5 rounded-xl hover:bg-blue-50 transition-colors shrink-0 cursor-pointer"
                 >
                   Change
                 </button>
@@ -2286,17 +2287,17 @@ const BuyNew = () => {
                 onClick={() => setPaymentMode('Online')}
                 className={`bg-white rounded-3xl p-5 transition-all shadow-xs cursor-pointer border-2 relative overflow-hidden ${
                   paymentMode === 'Online'
-                    ? 'border-[#0D47A1] bg-gradient-to-r from-blue-50/80 via-indigo-50/40 to-white ring-4 ring-blue-100'
+                    ? 'border-brand-blue bg-gradient-to-r from-blue-50/80 via-indigo-50/40 to-white ring-4 ring-blue-100'
                     : 'border-slate-200/90 hover:border-slate-300'
                 }`}
               >
                 {paymentMode === 'Online' && (
-                  <div className="absolute top-0 right-0 bg-[#0D47A1] text-white text-[9px] font-black px-3 py-1 rounded-bl-2xl">SELECTED</div>
+                  <div className="absolute top-0 right-0 bg-brand-blue text-white text-[9px] font-black px-3 py-1 rounded-bl-2xl">SELECTED</div>
                 )}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3.5">
                     <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-xs transition-colors ${
-                      paymentMode === 'Online' ? 'bg-[#0D47A1] text-white' : 'bg-slate-100 text-slate-700'
+                      paymentMode === 'Online' ? 'bg-brand-blue text-white' : 'bg-slate-100 text-slate-700'
                     }`}>
                       <Zap className="h-6 w-6" fill={paymentMode === 'Online' ? 'currentColor' : 'none'} />
                     </div>
@@ -2311,7 +2312,7 @@ const BuyNew = () => {
                     </div>
                   </div>
                   <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
-                    paymentMode === 'Online' ? 'border-[#0D47A1] bg-[#0D47A1] text-white' : 'border-slate-300 bg-white'
+                    paymentMode === 'Online' ? 'border-brand-blue bg-brand-blue text-white' : 'border-slate-300 bg-white'
                   }`}>
                     {paymentMode === 'Online' && <Check size={14} className="stroke-[3]" />}
                   </div>
@@ -2347,7 +2348,7 @@ const BuyNew = () => {
                 </div>
                 <div className="border-t border-slate-100 pt-2 flex justify-between text-sm font-black text-slate-900">
                   <span>Total Amount</span>
-                  <span className="text-[#0D47A1]">₹{cartTotal.toLocaleString()}</span>
+                  <span className="text-brand-blue">₹{cartTotal.toLocaleString()}</span>
                 </div>
               </div>
             </div>
@@ -2361,7 +2362,7 @@ const BuyNew = () => {
                 className={`w-full py-4 rounded-2xl text-white text-sm font-black shadow-lg transition-all cursor-pointer active:scale-98 flex items-center justify-center gap-2 disabled:opacity-50 ${
                   paymentMode === 'COD'
                     ? 'bg-gradient-to-r from-[#FF6B35] to-[#E85D04] hover:from-[#E85D04] hover:to-[#D94E00]'
-                    : 'bg-gradient-to-r from-[#0D47A1] to-[#1565C0] hover:from-[#0B3C88] hover:to-[#0D47A1]'
+                    : 'bg-gradient-to-r from-brand-blue to-[#1565C0] hover:from-[#0B3C88] hover:to-brand-blue'
                 }`}
               >
                 {placingOrder ? (
@@ -2462,45 +2463,7 @@ const BuyNew = () => {
       </div>
 
       {/* Sticky Bottom Tab Bar */}
-      <div className={`fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-border-color p-4 flex justify-around items-center z-40 shadow-lg rounded-t-3xl overflow-visible lg:hidden ${step === 3 || step === 5 || step === 6 ? 'hidden' : ''}`}>
-        <button 
-          onClick={() => navigate('/dashboard')}
-          className="flex flex-col items-center text-text-secondary hover:text-brand-blue transition-colors cursor-pointer"
-        >
-          <HomeIcon className="h-6 w-6" />
-          <span className="text-xs font-semibold mt-0.5">Home</span>
-        </button>
-        <button 
-          onClick={() => navigate('/categories')}
-          className="flex flex-col items-center text-text-secondary hover:text-brand-blue transition-colors cursor-pointer"
-        >
-          <LayoutGrid className="h-6 w-6" />
-          <span className="text-xs font-semibold mt-0.5">Categories</span>
-        </button>
-
-        <button 
-          onClick={() => navigate('/buy')}
-          className="flex flex-col items-center text-brand-blue cursor-pointer transition-colors"
-        >
-          <ShoppingCart className="h-6 w-6" />
-          <span className="text-xs font-semibold mt-0.5">Buy</span>
-        </button>
-
-        <button 
-          onClick={() => navigate('/bookings')}
-          className="flex flex-col items-center text-text-secondary hover:text-brand-blue transition-colors cursor-pointer"
-        >
-          <Calendar className="h-6 w-6" />
-          <span className="text-xs font-semibold mt-0.5">Bookings</span>
-        </button>
-        <button 
-          onClick={() => navigate('/profile')}
-          className="flex flex-col items-center text-text-secondary hover:text-brand-blue transition-colors cursor-pointer"
-        >
-          <User className="h-6 w-6" />
-          <span className="text-xs font-semibold mt-0.5">Account</span>
-        </button>
-      </div>
+      {!(step === 3 || step === 5 || step === 6) && <CustomerBottomNav />}
 
       {/* ── SORT BY BOTTOM SHEET DRAWERS ── */}
       {showSortModal && (
@@ -2762,7 +2725,7 @@ const BuyNew = () => {
                   required
                   rows={3}
                   placeholder="Share your experience with product quality, cooling, and delivery..."
-                  className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-xs font-medium text-slate-800 outline-none focus:bg-white focus:border-[#0D47A1]"
+                  className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-xs font-medium text-slate-800 outline-none focus:bg-white focus:border-brand-blue"
                   value={newCommentVal}
                   onChange={(e) => setNewCommentVal(e.target.value)}
                 />
@@ -2787,7 +2750,7 @@ const BuyNew = () => {
                     </div>
                   ) : (
                     <>
-                      <UploadCloud size={20} className="text-[#0D47A1] mb-1" />
+                      <UploadCloud size={20} className="text-brand-blue mb-1" />
                       <span className="text-xs text-slate-600 font-bold">Click to attach photo</span>
                       <input 
                         type="file" 
@@ -2819,7 +2782,7 @@ const BuyNew = () => {
                 <button 
                   type="submit"
                   disabled={submittingReview}
-                  className="px-5 py-2 text-xs font-bold bg-[#0D47A1] hover:bg-blue-800 text-white rounded-xl shadow-xs cursor-pointer disabled:opacity-50"
+                  className="px-5 py-2 text-xs font-bold bg-brand-blue hover:bg-blue-800 text-white rounded-xl shadow-xs cursor-pointer disabled:opacity-50"
                 >
                   {submittingReview ? 'Submitting...' : 'Submit Review'}
                 </button>

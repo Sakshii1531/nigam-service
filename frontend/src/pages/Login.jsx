@@ -409,8 +409,8 @@ const Login = ({ initialSignup = false }) => {
     <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4 relative overflow-hidden">
       
       {/* Background Decorative Blurs */}
-      <div className="absolute top-[-100px] left-[-100px] w-[300px] h-[300px] bg-[#0D47A1] opacity-10 rounded-full blur-3xl"></div>
-      <div className="absolute bottom-[-100px] right-[-100px] w-[300px] h-[300px] bg-[#FFD600] opacity-20 rounded-full blur-3xl"></div>
+      <div className="absolute top-[-100px] left-[-100px] w-[300px] h-[300px] bg-brand-blue opacity-10 rounded-full blur-3xl"></div>
+      <div className="absolute bottom-[-100px] right-[-100px] w-[300px] h-[300px] bg-brand-yellow opacity-20 rounded-full blur-3xl"></div>
 
       {/* Form card wrapper */}
       <div className="w-full flex items-center justify-center p-4 lg:p-8 min-h-screen">
@@ -447,7 +447,7 @@ const Login = ({ initialSignup = false }) => {
               <button
                 type="button"
                 className={`flex-1 py-1.5 text-xs font-bold rounded-xl transition-all ${
-                  usePhone ? 'bg-white text-[#0D47A1] shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                  usePhone ? 'bg-white text-brand-blue shadow-sm' : 'text-slate-500 hover:text-slate-800'
                 }`}
                 onClick={() => setUsePhone(true)}
               >
@@ -456,7 +456,7 @@ const Login = ({ initialSignup = false }) => {
               <button
                 type="button"
                 className={`flex-1 py-1.5 text-xs font-bold rounded-xl transition-all ${
-                  !usePhone ? 'bg-white text-[#0D47A1] shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                  !usePhone ? 'bg-white text-brand-blue shadow-sm' : 'text-slate-500 hover:text-slate-800'
                 }`}
                 onClick={() => setUsePhone(false)}
               >
@@ -471,7 +471,7 @@ const Login = ({ initialSignup = false }) => {
                   type="tel"
                   name="identifier"
                   placeholder="Enter Phone Number"
-                  className="w-full pl-12 pr-4 py-2.5 bg-white/50 border border-slate-200 rounded-2xl focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] outline-none transition-all text-sm shadow-xs focus:shadow-md"
+                  className="w-full pl-12 pr-4 py-2.5 bg-white/50 border border-slate-200 rounded-2xl focus:border-brand-blue focus:ring-1 focus:ring-brand-blue outline-none transition-all text-sm shadow-xs focus:shadow-md"
                   required
                 />
               </div>
@@ -482,7 +482,7 @@ const Login = ({ initialSignup = false }) => {
                   type="email"
                   name="identifier"
                   placeholder="Enter Email Address"
-                  className="w-full pl-12 pr-4 py-2.5 bg-white/50 border border-slate-200 rounded-2xl focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] outline-none transition-all text-sm shadow-xs focus:shadow-md"
+                  className="w-full pl-12 pr-4 py-2.5 bg-white/50 border border-slate-200 rounded-2xl focus:border-brand-blue focus:ring-1 focus:ring-brand-blue outline-none transition-all text-sm shadow-xs focus:shadow-md"
                   required
                 />
               </div>
@@ -494,7 +494,7 @@ const Login = ({ initialSignup = false }) => {
                 type={showPassword ? "text" : "password"}
                 name="password"
                 placeholder="Enter Password"
-                className="w-full pl-12 pr-11 py-2.5 bg-white/50 border border-slate-200 rounded-2xl focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] outline-none transition-all text-sm shadow-xs focus:shadow-md"
+                className="w-full pl-12 pr-11 py-2.5 bg-white/50 border border-slate-200 rounded-2xl focus:border-brand-blue focus:ring-1 focus:ring-brand-blue outline-none transition-all text-sm shadow-xs focus:shadow-md"
                 required
               />
               <button
@@ -509,7 +509,7 @@ const Login = ({ initialSignup = false }) => {
             <button
               type="button"
               onClick={() => navigate('/forgot-password')}
-              className="text-xs font-semibold text-[#0D47A1] self-end hover:text-blue-800 transition-colors"
+              className="text-xs font-semibold text-brand-blue self-end hover:text-blue-800 transition-colors"
             >
               Forgot Password?
             </button>
@@ -517,7 +517,7 @@ const Login = ({ initialSignup = false }) => {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full bg-gradient-to-r from-[#FFD600] to-[#FFCA00] text-[#0D47A1] font-bold py-3 rounded-2xl hover:shadow-lg hover:shadow-yellow-400/20 transition-all transform hover:-translate-y-0.5 mt-2 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full bg-gradient-to-r from-brand-yellow to-[#FFCA00] text-brand-blue font-bold py-3 rounded-2xl hover:shadow-lg hover:shadow-yellow-400/20 transition-all transform hover:-translate-y-0.5 mt-2 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {submitting ? "Logging in…" : "Login"}
             </button>
@@ -537,7 +537,7 @@ const Login = ({ initialSignup = false }) => {
                     value={signupForm.name}
                     onChange={(e) => setSignupForm({ ...signupForm, name: e.target.value })}
                     placeholder="Enter Full Name"
-                    className={`w-full pl-10 pr-4 py-2.5 bg-white border ${fieldErrors.name ? 'border-rose-400 focus:ring-rose-400' : 'border-slate-200 focus:border-[#0D47A1]'} rounded-xl focus:ring-1 outline-none transition-all text-sm`}
+                    className={`w-full pl-10 pr-4 py-2.5 bg-white border ${fieldErrors.name ? 'border-rose-400 focus:ring-rose-400' : 'border-slate-200 focus:border-brand-blue'} rounded-xl focus:ring-1 outline-none transition-all text-sm`}
                   />
                 </div>
                 {fieldErrors.name && (
@@ -556,7 +556,7 @@ const Login = ({ initialSignup = false }) => {
                     value={signupForm.phone}
                     onChange={(e) => setSignupForm({ ...signupForm, phone: e.target.value.replace(/\D/g, '') })}
                     placeholder="Enter Phone Number"
-                    className={`w-full pl-10 pr-4 py-2.5 bg-white border ${fieldErrors.phone ? 'border-rose-400 focus:ring-rose-400' : 'border-slate-200 focus:border-[#0D47A1]'} rounded-xl focus:ring-1 outline-none transition-all text-sm`}
+                    className={`w-full pl-10 pr-4 py-2.5 bg-white border ${fieldErrors.phone ? 'border-rose-400 focus:ring-rose-400' : 'border-slate-200 focus:border-brand-blue'} rounded-xl focus:ring-1 outline-none transition-all text-sm`}
                   />
                 </div>
                 {fieldErrors.phone && (
@@ -576,7 +576,7 @@ const Login = ({ initialSignup = false }) => {
                   value={signupForm.email}
                   onChange={(e) => setSignupForm({ ...signupForm, email: e.target.value })}
                   placeholder="Enter Email Address"
-                  className={`w-full pl-10 pr-4 py-2.5 bg-white border ${fieldErrors.email ? 'border-rose-400 focus:ring-rose-400' : 'border-slate-200 focus:border-[#0D47A1]'} rounded-xl focus:ring-1 outline-none transition-all text-sm`}
+                  className={`w-full pl-10 pr-4 py-2.5 bg-white border ${fieldErrors.email ? 'border-rose-400 focus:ring-rose-400' : 'border-slate-200 focus:border-brand-blue'} rounded-xl focus:ring-1 outline-none transition-all text-sm`}
                 />
               </div>
               {fieldErrors.email && (
@@ -596,7 +596,7 @@ const Login = ({ initialSignup = false }) => {
                     value={signupForm.password}
                     onChange={(e) => setSignupForm({ ...signupForm, password: e.target.value })}
                     placeholder="Enter Password"
-                    className={`w-full pl-10 pr-10 py-2.5 bg-white border ${fieldErrors.password ? 'border-rose-400 focus:ring-rose-400' : 'border-slate-200 focus:border-[#0D47A1]'} rounded-xl focus:ring-1 outline-none transition-all text-sm`}
+                    className={`w-full pl-10 pr-10 py-2.5 bg-white border ${fieldErrors.password ? 'border-rose-400 focus:ring-rose-400' : 'border-slate-200 focus:border-brand-blue'} rounded-xl focus:ring-1 outline-none transition-all text-sm`}
                   />
                   <button
                     type="button"
@@ -621,7 +621,7 @@ const Login = ({ initialSignup = false }) => {
                     value={signupForm.confirmPassword}
                     onChange={(e) => setSignupForm({ ...signupForm, confirmPassword: e.target.value })}
                     placeholder="Confirm Password"
-                    className={`w-full pl-10 pr-10 py-2.5 bg-white border ${fieldErrors.confirmPassword ? 'border-rose-400 focus:ring-rose-400' : 'border-slate-200 focus:border-[#0D47A1]'} rounded-xl focus:ring-1 outline-none transition-all text-sm`}
+                    className={`w-full pl-10 pr-10 py-2.5 bg-white border ${fieldErrors.confirmPassword ? 'border-rose-400 focus:ring-rose-400' : 'border-slate-200 focus:border-brand-blue'} rounded-xl focus:ring-1 outline-none transition-all text-sm`}
                   />
                   <button
                     type="button"
@@ -641,7 +641,7 @@ const Login = ({ initialSignup = false }) => {
             {/* Location & Address Sector */}
             <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 space-y-3">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[11px] font-extrabold text-[#0D47A1] uppercase tracking-wider flex items-center gap-1.5">
+                <span className="text-[11px] font-extrabold text-brand-blue uppercase tracking-wider flex items-center gap-1.5">
                   <MapPin size={13} /> Location & Address
                 </span>
                 
@@ -651,16 +651,16 @@ const Login = ({ initialSignup = false }) => {
                   onClick={handleDetectLocation}
                   disabled={detectingLocation}
                   title="Detect current location using GPS & Google Maps"
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold text-[#0D47A1] bg-[#E3ECF9] hover:bg-[#D3E3F8] active:scale-95 rounded-lg transition-all shadow-xs disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold text-brand-blue bg-[#E3ECF9] hover:bg-[#D3E3F8] active:scale-95 rounded-lg transition-all shadow-xs disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {detectingLocation ? (
                     <>
-                      <Loader2 size={12} className="animate-spin text-[#0D47A1]" />
+                      <Loader2 size={12} className="animate-spin text-brand-blue" />
                       <span>Detecting...</span>
                     </>
                   ) : (
                     <>
-                      <Navigation size={12} className="text-[#0D47A1]" />
+                      <Navigation size={12} className="text-brand-blue" />
                       <span>Detect Location</span>
                     </>
                   )}
@@ -710,7 +710,7 @@ const Login = ({ initialSignup = false }) => {
                       if (fieldErrors.address) setFieldErrors(prev => ({ ...prev, address: '' }));
                     }}
                     placeholder="e.g. Flat 402, Sunshine Heights, Near City Mall"
-                    className={`w-full p-2.5 bg-white border ${fieldErrors.address ? 'border-rose-400 focus:ring-rose-400' : 'border-slate-200 focus:border-[#0D47A1]'} rounded-xl focus:ring-1 outline-none transition-all text-xs resize-none`}
+                    className={`w-full p-2.5 bg-white border ${fieldErrors.address ? 'border-rose-400 focus:ring-rose-400' : 'border-slate-200 focus:border-brand-blue'} rounded-xl focus:ring-1 outline-none transition-all text-xs resize-none`}
                   />
                 </div>
                 {fieldErrors.address && (
@@ -735,7 +735,7 @@ const Login = ({ initialSignup = false }) => {
                       setReferralCheck(null);
                     }}
                     placeholder="Enter Referral Code"
-                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] outline-none transition-all text-sm"
+                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:border-brand-blue focus:ring-1 focus:ring-brand-blue outline-none transition-all text-sm"
                   />
                 </div>
                 <button
@@ -763,10 +763,10 @@ const Login = ({ initialSignup = false }) => {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full bg-gradient-to-r from-[#FFD600] to-[#FFCA00] text-[#0D47A1] font-bold py-3 rounded-2xl hover:shadow-lg hover:shadow-yellow-400/20 transition-all transform hover:-translate-y-0.5 mt-2 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full bg-gradient-to-r from-brand-yellow to-[#FFCA00] text-brand-blue font-bold py-3 rounded-2xl hover:shadow-lg hover:shadow-yellow-400/20 transition-all transform hover:-translate-y-0.5 mt-2 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {submitting ? (
-                <div className="w-5 h-5 border-2 border-[#0D47A1] border-t-transparent rounded-full animate-spin" />
+                <div className="w-5 h-5 border-2 border-brand-blue border-t-transparent rounded-full animate-spin" />
               ) : (
                 'Sign Up'
               )}
@@ -784,7 +784,7 @@ const Login = ({ initialSignup = false }) => {
               setError('');
               setFieldErrors({});
             }}
-            className="font-bold text-[#0D47A1] hover:text-blue-800 transition-colors"
+            className="font-bold text-brand-blue hover:text-blue-800 transition-colors"
           >
             {isSignup ? "Login" : "Sign Up"}
           </button>

@@ -120,7 +120,7 @@ const BRANDS_DATA = {
         name: 'Cera',
         logo: (
           <svg viewBox="0 0 100 40" className="w-16 h-6">
-            <text x="5" y="28" fontFamily="'Futura', sans-serif" fontWeight="bold" fontSize="22" fill="#0D47A1">CERA</text>
+            <text x="5" y="28" fontFamily="'Futura', sans-serif" fontWeight="bold" fontSize="22" fill="#0B4EA2">CERA</text>
           </svg>
         )
       },
@@ -419,7 +419,7 @@ const BRANDS_DATA = {
         name: 'CP Plus',
         logo: (
           <svg viewBox="0 0 120 40" className="w-20 h-6">
-            <text x="5" y="28" fontFamily="'Arial Black', sans-serif" fontWeight="900" fontSize="22" fill="#0D47A1">CP PLUS</text>
+            <text x="5" y="28" fontFamily="'Arial Black', sans-serif" fontWeight="900" fontSize="22" fill="#0B4EA2">CP PLUS</text>
           </svg>
         )
       },

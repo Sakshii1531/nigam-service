@@ -477,7 +477,7 @@ const PaymentMethods = () => {
               <button 
                 type="submit" 
                 disabled={submitting || !isLuhnValid || cardExpiry.length < 5}
-                className="bg-[#0D47A1] hover:bg-[#09357A] text-white py-3.5 rounded-xl text-xs font-black transition-all cursor-pointer mt-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="bg-brand-blue hover:bg-[#09357A] text-white py-3.5 rounded-xl text-xs font-black transition-all cursor-pointer mt-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {submitting ? (
                   <>
@@ -537,7 +537,7 @@ const PaymentMethods = () => {
               <button 
                 type="submit" 
                 disabled={submitting || !upiAddress.includes('@')}
-                className="bg-[#0D47A1] hover:bg-[#09357A] text-white py-3.5 rounded-xl text-xs font-black transition-all cursor-pointer mt-2 disabled:opacity-50 flex items-center justify-center gap-2"
+                className="bg-brand-blue hover:bg-[#09357A] text-white py-3.5 rounded-xl text-xs font-black transition-all cursor-pointer mt-2 disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {submitting ? (
                   <>

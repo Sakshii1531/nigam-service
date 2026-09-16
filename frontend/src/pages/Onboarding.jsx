@@ -8,21 +8,21 @@ const slides = [
     id: 1,
     title: "Book Services Instantly",
     description: "Get expert help at your doorstep with just a few taps. Reliable and fast.",
-    icon: <Smartphone className="h-16 w-16 text-[#0D47A1]" />,
+    icon: <Smartphone className="h-16 w-16 text-brand-blue" />,
     bg: "bg-[#EEF4FF]"
   },
   {
     id: 2,
     title: "Smart Warranty Detection",
     description: "Upload invoices and automatically detect active warranties to save money.",
-    icon: <ShieldCheck className="h-16 w-16 text-[#0D47A1]" />,
+    icon: <ShieldCheck className="h-16 w-16 text-brand-blue" />,
     bg: "bg-[#F0FDF4]"
   },
   {
     id: 3,
     title: "Secure Masked Chat",
     description: "Chat with your serviceProvider securely — your phone number always stays private and masked.",
-    icon: <PhoneOff className="h-16 w-16 text-[#0D47A1]" />,
+    icon: <PhoneOff className="h-16 w-16 text-brand-blue" />,
     bg: "bg-[#FFFBEB]"
   }
 ];
@@ -54,7 +54,7 @@ const Onboarding = () => {
           </span>
           <button 
             onClick={handleSkip}
-            className="text-sm font-semibold text-[#0D47A1] hover:text-blue-800 transition-colors"
+            className="text-sm font-semibold text-brand-blue hover:text-blue-800 transition-colors"
           >
             Skip
           </button>
@@ -94,7 +94,7 @@ const Onboarding = () => {
               <div 
                 key={index}
                 className={`h-2 rounded-full transition-all duration-300 ${
-                  index === currentSlide ? 'w-6 bg-[#0D47A1]' : 'w-2 bg-slate-300'
+                  index === currentSlide ? 'w-6 bg-brand-blue' : 'w-2 bg-slate-300'
                 }`}
               />
             ))}
@@ -103,7 +103,7 @@ const Onboarding = () => {
           {/* Action Button */}
           <button
             onClick={handleNext}
-            className="w-full bg-[#FFD600] text-[#0D47A1] font-bold py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-yellow-400 transition-colors shadow-md"
+            className="w-full bg-brand-yellow text-brand-blue font-bold py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-yellow-400 transition-colors shadow-md"
           >
             {currentSlide === slides.length - 1 ? "Get Started" : "Next"}
             <ArrowRight className="h-5 w-5" />

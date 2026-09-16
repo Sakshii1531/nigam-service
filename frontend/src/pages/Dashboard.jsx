@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Search, Bell, MapPin, Wrench, Zap, Droplet, Thermometer, Shield, Home as HomeIcon, Calendar, MessageSquare, User, Star, X, Wind, WashingMachine, Refrigerator, Droplets, Sparkles, ShoppingCart, Tv, Flame, MousePointerClick, LayoutGrid, CheckCircle2 } from 'lucide-react';
+import { Search, Bell, MapPin, Wrench, Zap, Droplet, Thermometer, Shield, MessageSquare, Star, X, Wind, WashingMachine, Refrigerator, Droplets, Sparkles, ShoppingCart, Tv, Flame, MousePointerClick, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Footer from '../components/layout/Footer';
+import CustomerBottomNav from '../components/CustomerBottomNav';
 import { useNotifications } from '../context/NotificationContext';
 import { apiRequest } from '../lib/apiClient';
 import acBanner from '../assets/ac_service_banner.png';
@@ -437,7 +438,7 @@ const Dashboard = ({ defaultType }) => {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl flex flex-col gap-5">
             <div className="flex justify-between items-center">
-              <h2 className="text-lg font-bold text-[#0D47A1]">Warranty Verification</h2>
+              <h2 className="text-lg font-bold text-brand-blue">Warranty Verification</h2>
               <button 
                 onClick={() => setShowWarrantyModal(false)}
                 className="p-1 hover:bg-slate-100 rounded-full transition-colors"
@@ -456,7 +457,7 @@ const Dashboard = ({ defaultType }) => {
                   value={billNo}
                   onChange={(e) => setBillNo(e.target.value)}
                   placeholder="e.g. WAR123"
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-[#0D47A1]"
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue"
                 />
               </div>
               <div>
@@ -464,7 +465,7 @@ const Dashboard = ({ defaultType }) => {
                 <input 
                   type="file" 
                   onChange={(e) => setBillFile(e.target.files[0])}
-                  className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-[#E3ECF9] file:text-[#0D47A1] hover:file:bg-blue-100"
+                  className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-[#E3ECF9] file:text-brand-blue hover:file:bg-blue-100"
                 />
               </div>
             </div>
@@ -479,7 +480,7 @@ const Dashboard = ({ defaultType }) => {
                   setShowWarrantyModal(false);
                   navigate(`/booking?service=${encodeURIComponent(selectedServiceForWarranty.title)}&price=0&warranty=true`);
                 }}
-                className="flex-1 bg-[#FFD600] text-[#0D47A1] font-bold py-2 rounded-xl hover:bg-yellow-400 transition-colors text-sm"
+                className="flex-1 bg-brand-yellow text-brand-blue font-bold py-2 rounded-xl hover:bg-yellow-400 transition-colors text-sm"
               >
                 Verify & Proceed
               </button>
@@ -819,16 +820,16 @@ const Dashboard = ({ defaultType }) => {
 
                   {/* CTA Button */}
                   <div className="z-10 mt-auto flex items-center">
-                    <div className="bg-white text-[#0D47A1] text-[11px] font-black py-2 px-4 rounded-full flex items-center gap-2 shadow-[0_2px_8px_rgba(0,0,0,0.05)] border border-slate-100/80 hover:bg-slate-50 transition-colors">
+                    <div className="bg-white text-brand-blue text-[11px] font-black py-2 px-4 rounded-full flex items-center gap-2 shadow-[0_2px_8px_rgba(0,0,0,0.05)] border border-slate-100/80 hover:bg-slate-50 transition-colors">
                       <span>{bc.buttonText || 'Explore on NCC'}</span>
                       {bc.buttonText?.toLowerCase().includes('site') ? (
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 text-[#0D47A1]">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 text-brand-blue">
                           <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
                           <polyline points="15 3 21 3 21 9" />
                           <line x1="10" y1="14" x2="21" y2="3" />
                         </svg>
                       ) : (
-                        <ShoppingCart className="w-3.5 h-3.5 text-[#0D47A1]" />
+                        <ShoppingCart className="w-3.5 h-3.5 text-brand-blue" />
                       )}
                     </div>
                   </div>
@@ -840,11 +841,11 @@ const Dashboard = ({ defaultType }) => {
             <div className="mt-4 md:mt-6 pt-3 text-[9.5px] md:text-xs font-bold text-slate-500 border-t border-transparent md:border-slate-100/80">
               <div className="flex flex-col md:flex-row items-center justify-center gap-3 md:gap-8 w-max mx-auto px-4">
                 <div className="flex items-center gap-2">
-                  <ShoppingCart className="w-3.5 h-3.5 text-[#0D47A1] flex-shrink-0" />
+                  <ShoppingCart className="w-3.5 h-3.5 text-brand-blue flex-shrink-0" />
                   <span>Click on 'Explore on NCC' to buy from our store</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 text-[#0D47A1] flex-shrink-0">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 text-brand-blue flex-shrink-0">
                     <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
                     <polyline points="15 3 21 3 21 9" />
                     <line x1="10" y1="14" x2="21" y2="3" />
@@ -888,7 +889,7 @@ const Dashboard = ({ defaultType }) => {
               >
                 <div className="w-full h-32 md:h-44 lg:h-48 bg-white rounded-xl flex items-center justify-center overflow-hidden relative">
                   <img src={service.image} alt={service.title} className="w-full h-full object-cover" />
-                  <span className={`absolute top-2 right-2 text-xs font-bold px-2.5 py-1 rounded-full ${activeType === 'in-warranty' ? 'bg-[#E8F5E9] text-[#2E7D32]' : 'bg-[#E3F2FD] text-[#0D47A1]'}`}>
+                  <span className={`absolute top-2 right-2 text-xs font-bold px-2.5 py-1 rounded-full ${activeType === 'in-warranty' ? 'bg-[#E8F5E9] text-[#2E7D32]' : 'bg-[#E3F2FD] text-brand-blue'}`}>
                     {service.badge}
                   </span>
                 </div>
@@ -954,7 +955,7 @@ const Dashboard = ({ defaultType }) => {
               >
                 <div className="w-full h-32 md:h-44 lg:h-48 bg-white rounded-xl flex items-center justify-center overflow-hidden relative">
                   <img src={service.image} alt={service.title} className="w-full h-full object-cover" />
-                  <span className={`absolute top-2 right-2 text-xs font-bold px-2.5 py-1 rounded-full ${service.badge === "2 ACs" ? "bg-[#5C0632] text-white" : (activeType === 'in-warranty' ? "bg-[#E8F5E9] text-green-600" : "bg-[#E3F2FD] text-[#0D47A1]")}`}>
+                  <span className={`absolute top-2 right-2 text-xs font-bold px-2.5 py-1 rounded-full ${service.badge === "2 ACs" ? "bg-[#5C0632] text-white" : (activeType === 'in-warranty' ? "bg-[#E8F5E9] text-green-600" : "bg-[#E3F2FD] text-brand-blue")}`}>
                     {service.badge}
                   </span>
                 </div>
@@ -1003,7 +1004,7 @@ const Dashboard = ({ defaultType }) => {
               >
                 <div className="w-full h-32 md:h-44 lg:h-48 bg-slate-50/50 rounded-xl flex items-center justify-center overflow-hidden relative">
                   <img src={item.image} alt={item.title} className="w-full h-full object-contain p-2 mix-blend-multiply" />
-                  <span className="absolute top-2 right-2 text-[10px] md:text-xs font-bold px-2.5 py-1 rounded-full bg-[#E3F2FD] text-[#0D47A1]">
+                  <span className="absolute top-2 right-2 text-[10px] md:text-xs font-bold px-2.5 py-1 rounded-full bg-[#E3F2FD] text-brand-blue">
                     {item.badge}
                   </span>
                 </div>
@@ -1031,48 +1032,7 @@ const Dashboard = ({ defaultType }) => {
       </div>
 
       {/* Bottom Navigation — hidden on desktop */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-border-color p-4 flex justify-around items-center z-40 overflow-visible lg:hidden">
-        <button className="flex flex-col items-center text-brand-blue">
-          <HomeIcon className="h-6 w-6" />
-          <span className="text-xs font-medium">Home</span>
-        </button>
-        <button 
-          onClick={() => navigate('/categories')}
-          className="flex flex-col items-center text-text-secondary hover:text-brand-blue"
-        >
-          <LayoutGrid className="h-6 w-6" />
-          <span className="text-xs font-medium">Categories</span>
-        </button>
-        
-        <button 
-          onClick={() => {
-            if (activeType === 'in-warranty') {
-              navigate('/extend-warranty');
-            } else {
-              navigate('/buy');
-            }
-          }}
-          className="flex flex-col items-center text-text-secondary hover:text-brand-blue"
-        >
-          <ShoppingCart className="h-6 w-6" />
-          <span className="text-xs font-medium">Buy</span>
-        </button>
-
-        <button 
-          onClick={() => navigate('/bookings')}
-          className="flex flex-col items-center text-text-secondary hover:text-brand-blue"
-        >
-          <Calendar className="h-6 w-6" />
-          <span className="text-xs font-medium">Bookings</span>
-        </button>
-        <button 
-          onClick={() => navigate('/profile')}
-          className="flex flex-col items-center text-text-secondary hover:text-brand-blue"
-        >
-          <User className="h-6 w-6" />
-          <span className="text-xs font-medium">Account</span>
-        </button>
-      </div>
+      <CustomerBottomNav buyPath={activeType === 'in-warranty' ? '/extend-warranty' : '/buy'} />
 
       {/* Desktop Footer */}
       <Footer />

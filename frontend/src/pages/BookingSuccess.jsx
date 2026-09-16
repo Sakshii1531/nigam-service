@@ -269,7 +269,7 @@ const BookingSuccess = () => {
   rows.push({ Icon: CalendarDays, iconColor: '#6366F1', label: 'Date', value: date });
   rows.push({ Icon: Clock, iconColor: '#EF4444', label: 'Time Slot', value: timeSlotDisplay });
   rows.push({ Icon: Flame, iconColor: '#F97316', label: 'Total Amount', value: `₹${totalPrice}` });
-  rows.push({ Icon: CheckSquare, iconColor: '#22C55E', label: 'Advance Paid', value: `₹${advanceAmt}`, valueColor: '#0D47A1' });
+  rows.push({ Icon: CheckSquare, iconColor: '#22C55E', label: 'Advance Paid', value: `₹${advanceAmt}`, valueColor: '#0B4EA2' });
 
   return (
     <div className="min-h-screen bg-[#F0F4FF] flex flex-col font-sans">
@@ -283,7 +283,7 @@ const BookingSuccess = () => {
             <span className="absolute -top-3 -left-4 text-yellow-400 text-lg animate-pulse">✦</span>
             <span className="absolute -top-2 right-0 text-blue-300 text-sm animate-pulse delay-75">✦</span>
             <span className="absolute bottom-0 -right-5 text-yellow-300 text-sm animate-pulse delay-150">✦</span>
-            <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-[#0D47A1] flex items-center justify-center shadow-lg shadow-[#0D47A1]/30">
+            <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-brand-blue flex items-center justify-center shadow-lg shadow-brand-blue/30">
               <svg viewBox="0 0 24 24" className="w-10 h-10 md:w-12 md:h-12 text-white" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="20 6 9 17 4 12" />
               </svg>
@@ -389,13 +389,13 @@ const BookingSuccess = () => {
                 </div>
 
                 <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#0D47A1] to-[#1E88E5] flex items-center justify-center flex-shrink-0 text-white text-2xl font-black shadow-lg shadow-blue-500/20 ring-4 ring-blue-50">
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-blue to-[#1E88E5] flex items-center justify-center flex-shrink-0 text-white text-2xl font-black shadow-lg shadow-blue-500/20 ring-4 ring-blue-50">
                     {(serviceProvider.name || 'T').charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="text-base md:text-lg font-black text-slate-900 truncate">{serviceProvider.name || 'Certified Service Provider'}</p>
-                      <span className="text-[10px] bg-blue-50 text-[#0D47A1] font-extrabold px-2 py-0.5 rounded-full border border-blue-200 shrink-0">
+                      <span className="text-[10px] bg-blue-50 text-brand-blue font-extrabold px-2 py-0.5 rounded-full border border-blue-200 shrink-0">
                         Verified Pro
                       </span>
                     </div>
@@ -413,7 +413,7 @@ const BookingSuccess = () => {
                     onClick={handleCallServiceProvider}
                     disabled={callLoading}
                     title="Call Service Provider"
-                    className="h-12 px-4 rounded-2xl bg-[#0D47A1] text-white flex items-center gap-2 flex-shrink-0 active:scale-95 transition-all shadow-md shadow-blue-900/20 hover:bg-[#1565C0] cursor-pointer"
+                    className="h-12 px-4 rounded-2xl bg-brand-blue text-white flex items-center gap-2 flex-shrink-0 active:scale-95 transition-all shadow-md shadow-blue-900/20 hover:bg-[#1565C0] cursor-pointer"
                   >
                     <Phone className="w-4 h-4" />
                     <span className="hidden sm:inline text-xs font-bold">Call</span>
@@ -425,7 +425,7 @@ const BookingSuccess = () => {
                     <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
                     This serviceProvider is booked for your service and on the way to your doorstep.
                   </span>
-                  <span className="text-[#0D47A1] font-black shrink-0">
+                  <span className="text-brand-blue font-black shrink-0">
                     {instantStatus === 'EN_ROUTE' ? '🚗 Driving to Location' : '⚡ On the way'}
                   </span>
                 </div>
@@ -441,7 +441,7 @@ const BookingSuccess = () => {
                     {/* Animated Radar Beacon */}
                     <div className="relative flex items-center justify-center w-12 h-12 rounded-2xl bg-blue-50 border border-blue-200/60 flex-shrink-0">
                       <span className="absolute w-full h-full rounded-2xl bg-blue-400/20 animate-ping" />
-                      <Radio className="w-6 h-6 text-[#0D47A1] animate-pulse" />
+                      <Radio className="w-6 h-6 text-brand-blue animate-pulse" />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
@@ -475,7 +475,7 @@ const BookingSuccess = () => {
                     </div>
 
                     <div className="flex items-center gap-2.5 text-blue-900">
-                      <div className="w-6 h-6 rounded-full bg-blue-100 text-[#0D47A1] flex items-center justify-center font-bold text-xs flex-shrink-0 animate-spin">
+                      <div className="w-6 h-6 rounded-full bg-blue-100 text-brand-blue flex items-center justify-center font-bold text-xs flex-shrink-0 animate-spin">
                         ⟳
                       </div>
                       <div>
@@ -513,7 +513,7 @@ const BookingSuccess = () => {
             <div className="flex flex-col gap-3 md:hidden mt-2">
               <button
                 onClick={() => navigate('/my-bookings')}
-                className="w-full bg-[#0D47A1] text-white font-extrabold py-4 rounded-2xl text-[15px] shadow-md shadow-[#0D47A1]/25 hover:bg-[#1565C0] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                className="w-full bg-brand-blue text-white font-extrabold py-4 rounded-2xl text-[15px] shadow-md shadow-brand-blue/25 hover:bg-[#1565C0] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
               >
                 View My Bookings
                 <ArrowRight className="w-5 h-5" />
@@ -557,7 +557,7 @@ const BookingSuccess = () => {
 
               <button
                 onClick={() => navigate('/my-bookings')}
-                className="w-full bg-[#0D47A1] text-white font-black py-4 rounded-2xl text-sm shadow-md shadow-[#0D47A1]/20 hover:bg-[#1565C0] active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full bg-brand-blue text-white font-black py-4 rounded-2xl text-sm shadow-md shadow-brand-blue/20 hover:bg-[#1565C0] active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 View My Bookings
                 <ArrowRight className="w-4 h-4" />

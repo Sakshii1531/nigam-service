@@ -64,7 +64,7 @@ const Faqs = () => {
             placeholder="Search FAQs, topics, or keywords..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-white border border-slate-200 rounded-2xl pl-10 pr-4 py-3 text-xs font-bold text-slate-800 outline-none focus:border-[#0D47A1] shadow-xs transition-all"
+            className="w-full bg-white border border-slate-200 rounded-2xl pl-10 pr-4 py-3 text-xs font-bold text-slate-800 outline-none focus:border-brand-blue shadow-xs transition-all"
           />
         </div>
 
@@ -76,7 +76,7 @@ const Faqs = () => {
               onClick={() => setActiveCategory(cat)}
               className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer border ${
                 activeCategory === cat
-                  ? 'bg-[#0D47A1] text-white border-[#0D47A1] shadow-xs'
+                  ? 'bg-brand-blue text-white border-brand-blue shadow-xs'
                   : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
               }`}
             >
@@ -88,7 +88,7 @@ const Faqs = () => {
         {/* FAQ Items Feed */}
         {loading ? (
           <div className="flex flex-col items-center justify-center p-16 text-slate-400 gap-2">
-            <RefreshCw className="h-6 w-6 animate-spin text-[#0D47A1]" />
+            <RefreshCw className="h-6 w-6 animate-spin text-brand-blue" />
             <span className="text-xs font-semibold">Loading FAQs...</span>
           </div>
         ) : filteredFaqs.length === 0 ? (
@@ -104,7 +104,7 @@ const Faqs = () => {
                 <div
                   key={idx}
                   className={`bg-white border rounded-2xl overflow-hidden transition-all shadow-2xs ${
-                    isOpen ? 'border-[#0D47A1]' : 'border-slate-100'
+                    isOpen ? 'border-brand-blue' : 'border-slate-100'
                   }`}
                 >
                   <button
@@ -112,7 +112,7 @@ const Faqs = () => {
                     className="w-full p-4 flex items-center justify-between text-left gap-3 cursor-pointer bg-white"
                   >
                     <div className="flex items-start gap-3">
-                      <span className="bg-blue-50 text-[#0D47A1] text-[9px] font-black px-2 py-0.5 rounded-md uppercase mt-0.5 flex-shrink-0">
+                      <span className="bg-blue-50 text-brand-blue text-[9px] font-black px-2 py-0.5 rounded-md uppercase mt-0.5 flex-shrink-0">
                         {item.category || 'General'}
                       </span>
                       <h3 className="text-xs font-black text-slate-900 leading-snug">
@@ -120,7 +120,7 @@ const Faqs = () => {
                       </h3>
                     </div>
                     <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform duration-200 flex-shrink-0 ${
-                      isOpen ? 'rotate-180 text-[#0D47A1]' : ''
+                      isOpen ? 'rotate-180 text-brand-blue' : ''
                     }`} />
                   </button>
 

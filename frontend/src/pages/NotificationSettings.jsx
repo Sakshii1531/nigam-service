@@ -164,7 +164,7 @@ const NotificationSettings = () => {
 
         {loading ? (
           <div className="flex flex-col items-center justify-center p-12 text-slate-400 gap-2">
-            <RefreshCw className="h-6 w-6 animate-spin text-[#0D47A1]" />
+            <RefreshCw className="h-6 w-6 animate-spin text-brand-blue" />
             <span className="text-xs font-semibold">Loading notification preferences...</span>
           </div>
         ) : (
@@ -209,7 +209,7 @@ const NotificationSettings = () => {
               {/* Booking & Service updates */}
               <div className="p-4 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-50 text-[#0D47A1] rounded-xl">
+                  <div className="p-2 bg-blue-50 text-brand-blue rounded-xl">
                     <ShieldAlert className="h-4.5 w-4.5" />
                   </div>
                   <div>
@@ -304,7 +304,7 @@ const NotificationSettings = () => {
             <button 
               onClick={handleSaveChanges}
               disabled={saving}
-              className="w-full mt-4 bg-[#0D47A1] text-white font-extrabold py-3.5 rounded-2xl flex items-center justify-center gap-2 hover:bg-blue-800 active:scale-[0.99] transition-all shadow-md cursor-pointer text-xs disabled:opacity-50"
+              className="w-full mt-4 bg-brand-blue text-white font-extrabold py-3.5 rounded-2xl flex items-center justify-center gap-2 hover:bg-blue-800 active:scale-[0.99] transition-all shadow-md cursor-pointer text-xs disabled:opacity-50"
             >
               {saving ? (
                 <>

@@ -136,9 +136,9 @@ const NetBankingPayment = () => {
             onClick={() => navigate(-1)}
             className="p-2 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
           >
-            <ArrowLeft className="h-5 w-5 text-[#0D47A1]" />
+            <ArrowLeft className="h-5 w-5 text-brand-blue" />
           </button>
-          <h1 className="text-base font-extrabold text-[#0D47A1] ml-3">Net Banking</h1>
+          <h1 className="text-base font-extrabold text-brand-blue ml-3">Net Banking</h1>
         </div>
 
         {/* Content */}
@@ -157,11 +157,11 @@ const NetBankingPayment = () => {
               <div 
                 key={b.id}
                 onClick={() => setSelectedBank(b.name)}
-                className={`p-3 rounded-xl border-2 text-center cursor-pointer transition-all hover:border-[#0D47A1] flex flex-col justify-center items-center gap-1 shadow-sm ${
-                  selectedBank === b.name ? 'border-[#0D47A1] bg-blue-50/20' : 'border-slate-100 bg-slate-50/50'
+                className={`p-3 rounded-xl border-2 text-center cursor-pointer transition-all hover:border-brand-blue flex flex-col justify-center items-center gap-1 shadow-sm ${
+                  selectedBank === b.name ? 'border-brand-blue bg-blue-50/20' : 'border-slate-100 bg-slate-50/50'
                 }`}
               >
-                <span className="font-extrabold text-xs text-[#0D47A1]">{b.code}</span>
+                <span className="font-extrabold text-xs text-brand-blue">{b.code}</span>
                 <span className="text-[9px] font-bold text-text-secondary tracking-tight block max-w-[120px] truncate">{b.name}</span>
               </div>
             ))}
@@ -175,7 +175,7 @@ const NetBankingPayment = () => {
             <select 
               value={selectedBank}
               onChange={(e) => setSelectedBank(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 px-3 py-2.5 rounded-xl text-xs font-bold text-text-primary focus:border-[#0D47A1] focus:bg-white outline-none transition-all cursor-pointer"
+              className="w-full bg-slate-50 border border-slate-200 px-3 py-2.5 rounded-xl text-xs font-bold text-text-primary focus:border-brand-blue focus:bg-white outline-none transition-all cursor-pointer"
             >
               <option value="">-- Choose Your Retail Bank --</option>
               <option value="State Bank of India">State Bank of India</option>
@@ -191,8 +191,8 @@ const NetBankingPayment = () => {
 
           {/* Secure Trust Badge */}
           <div className="bg-blue-50/40 border border-blue-50 p-2.5 rounded-xl flex items-center gap-2 mt-1 w-full text-left">
-            <ShieldCheck className="h-4 w-4 text-[#0D47A1] flex-shrink-0" />
-            <span className="text-[9px] font-bold text-[#0D47A1] leading-relaxed">
+            <ShieldCheck className="h-4 w-4 text-brand-blue flex-shrink-0" />
+            <span className="text-[9px] font-bold text-brand-blue leading-relaxed">
               Redirects securely to official retail corporate site via SSL encrypted tunnel.
             </span>
           </div>
@@ -204,10 +204,10 @@ const NetBankingPayment = () => {
           <button
             onClick={handlePay}
             disabled={loading || !selectedBank}
-            className={`w-full text-[#0D47A1] font-extrabold py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer ${
+            className={`w-full text-brand-blue font-extrabold py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer ${
               !selectedBank
                 ? 'bg-slate-100 border border-slate-200 text-text-secondary cursor-not-allowed shadow-none'
-                : 'bg-[#FFD600] hover:bg-yellow-400 active:scale-[0.99]'
+                : 'bg-brand-yellow hover:bg-yellow-400 active:scale-[0.99]'
             }`}
           >
             {loading ? 'Processing Payment...' : `Proceed to Bank Login ₹${finalPrice.toLocaleString('en-IN')}`}

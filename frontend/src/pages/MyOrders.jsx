@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft, Package, Truck, CheckCircle, Clock, 
-  Home as HomeIcon, LayoutGrid, ShoppingCart, Calendar, User 
+import {
+  ArrowLeft, Package, Truck, CheckCircle, Clock
 } from 'lucide-react';
 import { apiRequest } from '../lib/apiClient';
+import CustomerBottomNav from '../components/CustomerBottomNav';
 
 const statusStyles = {
   Placed: 'text-amber-700 bg-amber-50 border-amber-200/90',
@@ -90,7 +90,7 @@ const MyOrders = () => {
             onClick={() => setActiveTab(tab)}
             className={`flex-1 min-w-[72px] py-2.5 text-[11px] font-extrabold transition-all cursor-pointer border-b-2 whitespace-nowrap text-center ${
               activeTab === tab
-                ? 'text-[#0D47A1] border-[#0D47A1]'
+                ? 'text-brand-blue border-brand-blue'
                 : 'text-slate-400 border-transparent hover:text-slate-600'
             }`}
           >
@@ -169,10 +169,10 @@ const MyOrders = () => {
               {order.status === 'Shipped' && order.trackingNumber && (
                 <div className="bg-blue-50/70 border border-blue-200/80 rounded-xl p-2.5 flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2 text-blue-900 font-semibold">
-                    <Truck className="h-3.5 w-3.5 text-[#0D47A1]" />
+                    <Truck className="h-3.5 w-3.5 text-brand-blue" />
                     <span>Courier: <strong className="font-extrabold">{order.courierPartner || 'Express'}</strong></span>
                   </div>
-                  <span className="font-mono font-bold text-[#0D47A1] bg-white px-2 py-0.5 rounded-md border border-blue-100 text-[11px]">
+                  <span className="font-mono font-bold text-brand-blue bg-white px-2 py-0.5 rounded-md border border-blue-100 text-[11px]">
                     ID: {order.trackingNumber}
                   </span>
                 </div>
@@ -183,7 +183,7 @@ const MyOrders = () => {
                 <span className="text-[10px] text-slate-400 font-semibold flex items-center gap-1">
                   <Clock className="h-3 w-3" /> {order.date}
                 </span>
-                <span className="text-sm font-black text-[#0D47A1]">{order.price}</span>
+                <span className="text-sm font-black text-brand-blue">{order.price}</span>
               </div>
             </div>
           ))
@@ -191,50 +191,7 @@ const MyOrders = () => {
       </div>
 
       {/* Bottom Menu Bar (Custom Mobile Tabs) — hidden on desktop */}
-      <div className="fixed bottom-0 left-0 right-0 h-16 bg-white/95 backdrop-blur-xl border-t border-slate-200/80 px-3 sm:px-8 flex justify-around items-center z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] lg:hidden">
-        <button 
-          onClick={() => navigate('/dashboard')}
-          className="flex flex-col items-center justify-center py-1 px-2.5 text-slate-500 hover:text-[#0D47A1] transition-colors cursor-pointer"
-        >
-          <HomeIcon className="h-5 w-5" />
-          <span className="text-[10px] font-medium tracking-tight mt-0.5">Home</span>
-        </button>
-
-        <button 
-          onClick={() => navigate('/categories')}
-          className="flex flex-col items-center justify-center py-1 px-2.5 text-slate-500 hover:text-[#0D47A1] transition-colors cursor-pointer"
-        >
-          <LayoutGrid className="h-5 w-5" />
-          <span className="text-[10px] font-medium tracking-tight mt-0.5">Categories</span>
-        </button>
-
-        <button 
-          onClick={() => navigate('/buy')}
-          className="flex flex-col items-center justify-center py-1 px-2.5 text-slate-500 hover:text-[#0D47A1] transition-colors cursor-pointer"
-        >
-          <ShoppingCart className="h-5 w-5" />
-          <span className="text-[10px] font-medium tracking-tight mt-0.5">Buy</span>
-        </button>
-
-        <button 
-          onClick={() => navigate('/bookings')}
-          className="flex flex-col items-center justify-center py-1 px-2.5 text-slate-500 hover:text-[#0D47A1] transition-colors cursor-pointer"
-        >
-          <Calendar className="h-5 w-5" />
-          <span className="text-[10px] font-medium tracking-tight mt-0.5">Bookings</span>
-        </button>
-
-        <button 
-          onClick={() => navigate('/profile')}
-          className="flex flex-col items-center justify-center relative py-1 px-2.5 text-[#0D47A1] cursor-pointer"
-        >
-          <div className="absolute -top-3 w-8 h-1 bg-[#0D47A1] rounded-b-full shadow-2xs" />
-          <div className="p-1 rounded-xl bg-blue-50/90 text-[#0D47A1]">
-            <User className="h-5 w-5" />
-          </div>
-          <span className="text-[10px] font-bold tracking-tight mt-0.5">Account</span>
-        </button>
-      </div>
+      <CustomerBottomNav />
     </div>
   );
 };

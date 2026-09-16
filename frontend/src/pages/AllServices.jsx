@@ -1,7 +1,8 @@
 import React from 'react';
-import { ArrowLeft, Star, Home as HomeIcon, Calendar, LayoutGrid, User, ShoppingCart } from 'lucide-react';
+import { ArrowLeft, Star } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Footer from '../components/layout/Footer';
+import CustomerBottomNav from '../components/CustomerBottomNav';
 
 import mostBookedAc1 from '../assets/most_booked_ac_1.png';
 import mostBookedAc2 from '../assets/most_booked_ac_2.png';
@@ -60,7 +61,7 @@ const AllServices = () => {
       {/* Top Header */}
       <div className="bg-[#E3ECF9] p-6 lg:py-8 rounded-b-[30px] shadow-sm flex items-center gap-4">
         <button onClick={() => navigate(-1)} className="p-2.5 bg-white rounded-full shadow-sm hover:shadow-md transition-all active:scale-95 cursor-pointer">
-          <ArrowLeft className="h-5 w-5 text-[#0D47A1]" />
+          <ArrowLeft className="h-5 w-5 text-brand-blue" />
         </button>
         <h1 className="text-xl lg:text-3xl font-black text-text-primary">All Services & Repairs</h1>
       </div>
@@ -76,7 +77,7 @@ const AllServices = () => {
             >
               <div className="w-full h-32 md:h-44 lg:h-48 bg-white rounded-xl flex items-center justify-center overflow-hidden relative">
                 <img src={service.image} alt={service.title} className="w-full h-full object-cover" />
-                <span className="absolute top-2 right-2 text-xs font-bold px-2.5 py-1 rounded-full bg-[#E3F2FD] text-[#0D47A1]">
+                <span className="absolute top-2 right-2 text-xs font-bold px-2.5 py-1 rounded-full bg-[#E3F2FD] text-brand-blue">
                   {service.badge}
                 </span>
               </div>
@@ -100,45 +101,7 @@ const AllServices = () => {
       </div>
 
       {/* Bottom Navigation — mobile only */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-border-color p-4 flex justify-around items-center z-10 overflow-visible lg:hidden">
-        <button 
-          onClick={() => navigate('/dashboard')}
-          className="flex flex-col items-center text-text-secondary hover:text-[#0D47A1]"
-        >
-          <HomeIcon className="h-6 w-6" />
-          <span className="text-xs font-medium">Home</span>
-        </button>
-        <button 
-          onClick={() => navigate('/categories')}
-          className="flex flex-col items-center text-text-secondary hover:text-[#0D47A1]"
-        >
-          <LayoutGrid className="h-6 w-6" />
-          <span className="text-xs font-medium">Categories</span>
-        </button>
-
-        <button 
-          onClick={() => navigate('/buy')}
-          className="flex flex-col items-center text-text-secondary hover:text-[#0D47A1]"
-        >
-          <ShoppingCart className="h-6 w-6" />
-          <span className="text-xs font-medium">Buy</span>
-        </button>
-
-        <button 
-          onClick={() => navigate('/bookings')}
-          className="flex flex-col items-center text-text-secondary hover:text-[#0D47A1]"
-        >
-          <Calendar className="h-6 w-6" />
-          <span className="text-xs font-medium">Bookings</span>
-        </button>
-        <button 
-          onClick={() => navigate('/profile')}
-          className="flex flex-col items-center text-text-secondary hover:text-[#0D47A1]"
-        >
-          <User className="h-6 w-6" />
-          <span className="text-xs font-medium">Account</span>
-        </button>
-      </div>
+      <CustomerBottomNav />
 
       {/* Desktop Footer */}
       <Footer />

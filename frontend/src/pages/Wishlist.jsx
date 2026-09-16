@@ -31,9 +31,9 @@ const Wishlist = () => {
             onClick={() => navigate(-1)}
             className="p-2 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
           >
-            <ArrowLeft className="h-5 w-5 text-[#0D47A1]" />
+            <ArrowLeft className="h-5 w-5 text-brand-blue" />
           </button>
-          <h1 className="text-base font-extrabold text-[#0D47A1] ml-3">My Wishlist</h1>
+          <h1 className="text-base font-extrabold text-brand-blue ml-3">My Wishlist</h1>
         </div>
 
         {/* Content */}
@@ -47,13 +47,13 @@ const Wishlist = () => {
               customer whether their wishlist was empty or still loading. */}
           {!loadError && wishlistItems.length === 0 && (
             <div className="flex-1 flex flex-col items-center justify-center text-center py-16 gap-2">
-              <p className="text-sm font-bold text-[#0D47A1]">Your wishlist is empty</p>
+              <p className="text-sm font-bold text-brand-blue">Your wishlist is empty</p>
               <p className="text-xs text-slate-500 max-w-[240px]">
                 Tap the heart on any product to save it here for later.
               </p>
               <button
                 onClick={() => navigate('/buy')}
-                className="mt-3 bg-[#0D47A1] hover:bg-[#0A3F91] text-white text-xs font-bold px-5 py-2.5 rounded-full transition-colors"
+                className="mt-3 bg-brand-blue hover:bg-[#0A3F91] text-white text-xs font-bold px-5 py-2.5 rounded-full transition-colors"
               >
                 Browse Products
               </button>
@@ -63,7 +63,7 @@ const Wishlist = () => {
           {wishlistItems.map((item) => (
             <div 
               key={item.id}
-              className="bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-sm flex flex-col hover:border-[#0D47A1] transition-all group relative"
+              className="bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-sm flex flex-col hover:border-brand-blue transition-all group relative"
             >
               {/* Image & Favorite Toggle badge */}
               <div className="h-40 bg-slate-50 relative overflow-hidden">
@@ -95,7 +95,7 @@ const Wishlist = () => {
                   <div>
                     <span className="text-[10px] text-text-secondary block">Price</span>
                     <div className="flex items-baseline gap-1.5 mt-0.5">
-                      <span className="font-black text-sm text-[#0D47A1]">₹{item.price.toLocaleString('en-IN')}</span>
+                      <span className="font-black text-sm text-brand-blue">₹{item.price.toLocaleString('en-IN')}</span>
                       {item.originalPrice > item.price && (
                         <span className="text-[10px] text-text-secondary line-through">₹{item.originalPrice.toLocaleString('en-IN')}</span>
                       )}
@@ -112,7 +112,7 @@ const Wishlist = () => {
                         isApplianceBuy: true
                       }
                     })}
-                    className="bg-[#FFD600] text-[#0D47A1] font-extrabold px-3 py-2 rounded-xl text-[10px] flex items-center gap-1 hover:bg-yellow-400 active:scale-95 transition-all shadow-sm cursor-pointer"
+                    className="bg-brand-yellow text-brand-blue font-extrabold px-3 py-2 rounded-xl text-[10px] flex items-center gap-1 hover:bg-yellow-400 active:scale-95 transition-all shadow-sm cursor-pointer"
                   >
                     <ShoppingCart className="h-3.5 w-3.5" /> Buy Now
                   </button>

@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiRequest } from '../lib/apiClient';
-import { 
-  ArrowLeft, Search, Check, ChevronRight, ShoppingCart, Star, 
-  Home as HomeIcon, Calendar, LayoutGrid, User, Sparkles, Filter, 
+import {
+  ArrowLeft, Search, Check, ChevronRight, Star,
+  Sparkles, Filter,
   Tag, ShieldCheck, CheckCircle2, FileText, ShoppingBag, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
+import CustomerBottomNav from '../components/CustomerBottomNav';
 
 const BuyProduct = () => {
   const navigate = useNavigate();
@@ -105,7 +106,7 @@ const BuyProduct = () => {
             onClick={() => navigate(-1)}
             className="p-2 bg-white rounded-full shadow-sm hover:bg-slate-50 transition-colors"
           >
-            <ArrowLeft className="h-5 w-5 text-[#0D47A1]" />
+            <ArrowLeft className="h-5 w-5 text-brand-blue" />
           </button>
           <div className="flex-1">
             <span className="text-[10px] bg-brand-yellow text-black font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">
@@ -228,7 +229,7 @@ const BuyProduct = () => {
                     setSelectedProductForCheckout(prod);
                     setCheckoutStep('details');
                   }}
-                  className="bg-[#0D47A1] hover:bg-blue-900 text-white font-bold text-[11px] px-3.5 py-2 rounded-lg flex items-center gap-0.5 transition-all shadow-sm cursor-pointer"
+                  className="bg-brand-blue hover:bg-blue-900 text-white font-bold text-[11px] px-3.5 py-2 rounded-lg flex items-center gap-0.5 transition-all shadow-sm cursor-pointer"
                 >
                   Buy Now <ChevronRight className="h-3 w-3" />
                 </button>
@@ -396,45 +397,7 @@ const BuyProduct = () => {
       </AnimatePresence>
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-border-color p-4 flex justify-around items-center z-40 overflow-visible lg:hidden">
-        <button 
-          onClick={() => navigate('/dashboard')}
-          className="flex flex-col items-center text-text-secondary hover:text-brand-blue"
-        >
-          <HomeIcon className="h-6 w-6" />
-          <span className="text-xs font-medium">Home</span>
-        </button>
-        <button 
-          onClick={() => navigate('/categories')}
-          className="flex flex-col items-center text-text-secondary hover:text-brand-blue"
-        >
-          <LayoutGrid className="h-6 w-6" />
-          <span className="text-xs font-medium">Categories</span>
-        </button>
-
-        <button 
-          className="flex flex-col items-center text-brand-blue"
-        >
-          <ShoppingCart className="h-6 w-6" />
-          <span className="text-xs font-medium">Buy</span>
-        </button>
-
-        <button 
-          onClick={() => navigate('/bookings')}
-          className="flex flex-col items-center text-text-secondary hover:text-brand-blue"
-        >
-          <Calendar className="h-6 w-6" />
-          <span className="text-xs font-medium">Bookings</span>
-        </button>
-        <button 
-          onClick={() => navigate('/profile')}
-          className="flex flex-col items-center text-text-secondary hover:text-brand-blue"
-        >
-          <User className="h-6 w-6" />
-          <span className="text-xs font-medium">Account</span>
-        </button>
-      </div>
-
+      <CustomerBottomNav />
     </div>
   );
 };

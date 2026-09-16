@@ -48,16 +48,16 @@ const FinanceDetails = () => {
             onClick={() => navigate(-1)}
             className="p-2 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
           >
-            <ArrowLeft className="h-5 w-5 text-[#0D47A1]" />
+            <ArrowLeft className="h-5 w-5 text-brand-blue" />
           </button>
-          <h1 className="text-base font-extrabold text-[#0D47A1] ml-3">{getTitle()}</h1>
+          <h1 className="text-base font-extrabold text-brand-blue ml-3">{getTitle()}</h1>
         </div>
 
         {/* Content */}
         <div className="flex-1 p-5 flex flex-col gap-5 overflow-y-auto pb-10">
           
           {/* Main Visual Banner */}
-          <div className="bg-gradient-to-br from-[#072C63] via-[#0A3D80] to-[#0D47A1] rounded-2xl p-5 text-white shadow-lg relative overflow-hidden flex flex-col gap-2">
+          <div className="bg-gradient-to-br from-[#072C63] via-[#0A3D80] to-brand-blue rounded-2xl p-5 text-white shadow-lg relative overflow-hidden flex flex-col gap-2">
             <div className="absolute -top-10 -right-10 w-28 h-28 bg-[#FFD400]/10 rounded-full blur-2xl"></div>
             
             <span className="text-[8px] bg-[#FFD400] text-black font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wider self-start">
@@ -87,7 +87,7 @@ const FinanceDetails = () => {
                   <div>
                     <div className="flex justify-between items-center text-xs font-bold text-text-secondary mb-1">
                       <span>Selected Amount</span>
-                      <span className="text-[#0D47A1]">₹{sliderVal.toLocaleString('en-IN')}</span>
+                      <span className="text-brand-blue">₹{sliderVal.toLocaleString('en-IN')}</span>
                     </div>
                     <input 
                       type="range"
@@ -96,7 +96,7 @@ const FinanceDetails = () => {
                       step={5000}
                       value={sliderVal}
                       onChange={(e) => setSliderVal(Number(e.target.value))}
-                      className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#0D47A1]"
+                      className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-brand-blue"
                     />
                   </div>
 
@@ -109,7 +109,7 @@ const FinanceDetails = () => {
                             key={t}
                             onClick={() => setTerm(t)}
                             className={`py-2 rounded-xl text-xs font-bold border-2 transition-all cursor-pointer ${
-                              term === t ? 'border-[#0D47A1] bg-blue-50/20 text-[#0D47A1]' : 'border-slate-200 bg-white text-text-secondary'
+                              term === t ? 'border-brand-blue bg-blue-50/20 text-brand-blue' : 'border-slate-200 bg-white text-text-secondary'
                             }`}
                           >
                             {t} Months
@@ -121,7 +121,7 @@ const FinanceDetails = () => {
                             key={t}
                             onClick={() => setTerm(t)}
                             className={`py-2 rounded-xl text-xs font-bold border-2 transition-all cursor-pointer ${
-                              term === t ? 'border-[#0D47A1] bg-blue-50/20 text-[#0D47A1]' : 'border-slate-200 bg-white text-text-secondary'
+                              term === t ? 'border-brand-blue bg-blue-50/20 text-brand-blue' : 'border-slate-200 bg-white text-text-secondary'
                             }`}
                           >
                             {t} Months
@@ -173,7 +173,7 @@ const FinanceDetails = () => {
                       placeholder="ABCDE1234F"
                       required
                       maxLength={10}
-                      className="w-full bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl text-xs font-bold text-text-primary focus:border-[#0D47A1] focus:bg-white outline-none transition-all"
+                      className="w-full bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl text-xs font-bold text-text-primary focus:border-brand-blue focus:bg-white outline-none transition-all"
                     />
                   </div>
                   <div>
@@ -182,21 +182,21 @@ const FinanceDetails = () => {
                       type="number"
                       placeholder="e.g. 45000"
                       required
-                      className="w-full bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl text-xs font-bold text-text-primary focus:border-[#0D47A1] focus:bg-white outline-none transition-all"
+                      className="w-full bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl text-xs font-bold text-text-primary focus:border-brand-blue focus:bg-white outline-none transition-all"
                     />
                   </div>
                 </div>
 
                 <div className="bg-blue-50/40 border border-blue-50 p-2.5 rounded-xl flex items-center gap-2 mt-1">
-                  <ShieldCheck className="h-4.5 w-4.5 text-[#0D47A1] flex-shrink-0" />
-                  <span className="text-[9px] font-bold text-[#0D47A1] leading-normal">
+                  <ShieldCheck className="h-4.5 w-4.5 text-brand-blue flex-shrink-0" />
+                  <span className="text-[9px] font-bold text-brand-blue leading-normal">
                     By submitting, you authorize Nigam Finance to pull credit records via CIBIL securely.
                   </span>
                 </div>
 
                 <button 
                   type="submit"
-                  className="w-full bg-[#FFD600] text-[#0D47A1] font-extrabold py-3.5 rounded-2xl flex items-center justify-center gap-1.5 hover:bg-yellow-400 active:scale-[0.99] transition-all shadow-md mt-2 cursor-pointer text-xs"
+                  className="w-full bg-brand-yellow text-brand-blue font-extrabold py-3.5 rounded-2xl flex items-center justify-center gap-1.5 hover:bg-yellow-400 active:scale-[0.99] transition-all shadow-md mt-2 cursor-pointer text-xs"
                 >
                   <Sparkles className="h-4 w-4" /> Check Approval Status
                 </button>
@@ -218,7 +218,7 @@ const FinanceDetails = () => {
               <div className="bg-[#F8FAFC] border border-[#BACBE7]/80 rounded-2xl p-4 w-full text-left flex flex-col gap-2 mt-2">
                 <div className="flex justify-between items-center text-xs">
                   <span className="text-text-secondary">Approved Limit:</span>
-                  <span className="font-extrabold text-[#0D47A1]">
+                  <span className="font-extrabold text-brand-blue">
                     {isPersonalLoan ? '₹8,50,000' : isEMI ? '₹1,20,000' : isCreditCard ? '₹1,50,000' : '₹45,000'}
                   </span>
                 </div>
@@ -236,7 +236,7 @@ const FinanceDetails = () => {
 
               <button 
                 onClick={() => navigate('/profile')}
-                className="w-full bg-[#0D47A1] text-white font-extrabold py-3.5 rounded-2xl hover:bg-blue-900 active:scale-[0.99] transition-all shadow-md mt-4 cursor-pointer text-xs"
+                className="w-full bg-brand-blue text-white font-extrabold py-3.5 rounded-2xl hover:bg-blue-900 active:scale-[0.99] transition-all shadow-md mt-4 cursor-pointer text-xs"
               >
                 Return to Account Details
               </button>

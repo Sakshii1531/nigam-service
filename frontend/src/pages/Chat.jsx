@@ -118,10 +118,10 @@ const Chat = () => {
       {/* Header */}
       <div className="p-4 flex items-center border-b border-border-color">
         <button onClick={() => navigate(-1)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
-          <ArrowLeft className="h-6 w-6 text-[#0D47A1]" />
+          <ArrowLeft className="h-6 w-6 text-brand-blue" />
         </button>
         <div className="flex items-center gap-3 ml-2 flex-1">
-          <div className="w-10 h-10 bg-[#0D47A1] rounded-full flex items-center justify-center text-white font-bold">N</div>
+          <div className="w-10 h-10 bg-brand-blue rounded-full flex items-center justify-center text-white font-bold">N</div>
           <div>
             <h1 className="text-sm font-bold text-text-primary">Nigam Care Support</h1>
             <span className="text-xs font-semibold text-green-500">
@@ -151,7 +151,7 @@ const Chat = () => {
             </div>
           ) : (
             <div key={msg.id} className="flex flex-col items-end gap-1">
-              <div className="bg-[#0D47A1] text-white p-3.5 rounded-t-2xl rounded-l-2xl max-w-[80%] shadow-sm text-sm">
+              <div className="bg-brand-blue text-white p-3.5 rounded-t-2xl rounded-l-2xl max-w-[80%] shadow-sm text-sm">
                 {msg.attachment && (
                   <div className="flex items-center gap-2 mb-1.5 bg-white/15 rounded-lg px-2 py-1.5">
                     <ImageIcon className="h-4 w-4 shrink-0" />
@@ -163,7 +163,7 @@ const Chat = () => {
               <span className="flex items-center gap-1 text-xs text-text-secondary mr-1">
                 {msg.time}
                 {msg.status === 'read' ? (
-                  <CheckCheck className="h-3.5 w-3.5 text-[#0D47A1]" />
+                  <CheckCheck className="h-3.5 w-3.5 text-brand-blue" />
                 ) : (
                   <Check className="h-3.5 w-3.5 text-text-secondary" />
                 )}
@@ -193,7 +193,7 @@ const Chat = () => {
       {attachment && !sessionEnded && (
         <div className="px-4 pt-2 bg-white">
           <div className="inline-flex items-center gap-2 bg-slate-100 rounded-xl px-3 py-2">
-            <ImageIcon className="h-4 w-4 text-[#0D47A1]" />
+            <ImageIcon className="h-4 w-4 text-brand-blue" />
             <span className="text-xs text-text-primary">{attachment.name}</span>
             <button onClick={() => setAttachment(null)} className="text-text-secondary hover:text-red-500">
               <X className="h-4 w-4" />
@@ -212,19 +212,19 @@ const Chat = () => {
         </div>
       ) : (
         <form onSubmit={handleSend} className="p-4 border-t border-border-color bg-white flex items-center gap-3">
-          <label className="p-3 text-text-secondary hover:text-[#0D47A1] transition-colors cursor-pointer">
+          <label className="p-3 text-text-secondary hover:text-brand-blue transition-colors cursor-pointer">
             <Paperclip className={`h-5 w-5 ${uploading ? 'opacity-40' : ''}`} />
             <input type="file" accept="image/*,application/pdf" onChange={handleAttach} className="hidden" disabled={uploading} />
           </label>
           <input
             type="text"
             placeholder="Type a message..."
-            className="flex-1 py-3 px-4 bg-slate-50 border border-border-color rounded-2xl focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] outline-none transition-all text-sm"
+            className="flex-1 py-3 px-4 bg-slate-50 border border-border-color rounded-2xl focus:border-brand-blue focus:ring-1 focus:ring-brand-blue outline-none transition-all text-sm"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
           />
-          <button type="submit" className="p-3 bg-[#FFD600] rounded-full hover:bg-yellow-400 transition-colors shadow-sm">
-            <Send className="h-5 w-5 text-[#0D47A1]" />
+          <button type="submit" className="p-3 bg-brand-yellow rounded-full hover:bg-yellow-400 transition-colors shadow-sm">
+            <Send className="h-5 w-5 text-brand-blue" />
           </button>
         </form>
       )}

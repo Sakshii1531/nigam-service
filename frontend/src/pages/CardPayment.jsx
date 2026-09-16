@@ -137,7 +137,7 @@ const CardPayment = () => {
             onClick={() => navigate(-1)}
             className="p-1.5 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
           >
-            <ArrowLeft className="h-5 w-5 text-[#0D47A1]" />
+            <ArrowLeft className="h-5 w-5 text-brand-blue" />
           </button>
           <div className="flex flex-col text-left">
             <h1 className="text-sm md:text-base font-black text-slate-900 leading-tight">Credit &amp; Debit Card Payment</h1>
@@ -161,10 +161,10 @@ const CardPayment = () => {
             <div className="w-full md:col-span-7 lg:col-span-8 p-5 md:p-0 flex flex-col gap-6 text-left">
               
               {/* Card Visual representation */}
-              <div className="bg-gradient-to-br from-[#051F42] via-[#0A3D80] to-[#0D47A1] rounded-2xl md:rounded-3xl p-6 text-white shadow-xl relative overflow-hidden flex flex-col justify-between h-48 md:h-56">
+              <div className="bg-gradient-to-br from-brand-navy via-[#0A3D80] to-brand-blue rounded-2xl md:rounded-3xl p-6 text-white shadow-xl relative overflow-hidden flex flex-col justify-between h-48 md:h-56">
                 <div className="absolute -top-10 -right-10 w-40 h-40 bg-[#FFD400]/10 rounded-full blur-2xl pointer-events-none"></div>
                 <div className="flex justify-between items-start">
-                  <span className="text-[9px] md:text-xs bg-[#FFD400] text-[#051F42] font-black px-2.5 py-1 rounded-full uppercase tracking-wider shadow-xs">
+                  <span className="text-[9px] md:text-xs bg-[#FFD400] text-brand-navy font-black px-2.5 py-1 rounded-full uppercase tracking-wider shadow-xs">
                     Secure Card Pay
                   </span>
                   <span className="text-xs md:text-sm italic font-extrabold text-[#FFD400] tracking-widest">NIGAM SHIELD</span>
@@ -182,7 +182,7 @@ const CardPayment = () => {
 
               {/* Information Notice */}
               <div className="bg-blue-50/70 border border-blue-100 rounded-2xl md:rounded-3xl p-5 flex items-start gap-3.5">
-                <div className="w-9 h-9 rounded-2xl bg-white text-[#0D47A1] flex items-center justify-center font-black text-sm flex-shrink-0 shadow-xs">
+                <div className="w-9 h-9 rounded-2xl bg-white text-brand-blue flex items-center justify-center font-black text-sm flex-shrink-0 shadow-xs">
                   ℹ️
                 </div>
                 <div className="flex flex-col">
@@ -213,7 +213,7 @@ const CardPayment = () => {
                   <div className="h-px bg-slate-100 my-1" />
                   <div className="flex justify-between items-center text-sm font-black text-slate-900">
                     <span>Total Amount</span>
-                    <span className="text-[#0D47A1]">₹{finalPrice.toLocaleString('en-IN')}</span>
+                    <span className="text-brand-blue">₹{finalPrice.toLocaleString('en-IN')}</span>
                   </div>
                 </div>
 
@@ -221,10 +221,10 @@ const CardPayment = () => {
                 <button
                   onClick={handlePay}
                   disabled={loading}
-                  className={`w-full text-[#0D47A1] font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer text-sm mt-2 ${
+                  className={`w-full text-brand-blue font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer text-sm mt-2 ${
                     loading
                       ? 'bg-slate-100 border border-slate-200 text-slate-400 cursor-not-allowed shadow-none'
-                      : 'bg-[#FFD600] hover:bg-yellow-400 active:scale-[0.99]'
+                      : 'bg-brand-yellow hover:bg-yellow-400 active:scale-[0.99]'
                   }`}
                 >
                   {loading ? 'Opening secure checkout…' : `Pay ₹${finalPrice.toLocaleString('en-IN')} Securely`}

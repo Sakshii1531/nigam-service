@@ -21,7 +21,7 @@ const Coupons = () => {
             const discountLabel = hasPct ? `${c.discount}% OFF` : `₹${c.discount.toLocaleString('en-IN')} OFF`;
             
             // Map color dynamically
-            let color = 'from-[#64B5F6] to-[#0D47A1]';
+            let color = 'from-[#64B5F6] to-brand-blue';
             let textColor = 'text-blue-800 bg-blue-50 border-blue-200';
             if (c.code.includes('GOLD') || c.discount >= 1000) {
               color = 'from-[#FFD54F] to-[#FF8F00]';
@@ -151,7 +151,7 @@ const Coupons = () => {
                     className={`px-3 py-2 rounded-xl text-[10px] font-black transition-all cursor-pointer flex items-center gap-1.5 flex-shrink-0 ${
                       copiedCode === c.code 
                         ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
-                        : 'bg-slate-50 hover:bg-blue-50 text-[#0D47A1] border border-slate-200/50'
+                        : 'bg-slate-50 hover:bg-blue-50 text-brand-blue border border-slate-200/50'
                     }`}
                   >
                     {copiedCode === c.code ? (

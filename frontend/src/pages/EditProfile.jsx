@@ -78,7 +78,7 @@ const EditProfile = () => {
           onClick={() => navigate(-1)}
           className="p-2 bg-white rounded-full shadow-sm hover:bg-slate-50 transition-colors"
         >
-          <ArrowLeft className="h-5 w-5 text-[#0D47A1]" />
+          <ArrowLeft className="h-5 w-5 text-brand-blue" />
         </button>
         <h1 className="text-xl font-bold text-text-primary">Edit Profile</h1>
       </div>
@@ -93,16 +93,16 @@ const EditProfile = () => {
               className="w-20 h-20 rounded-full object-cover shadow-md border-2 border-white"
             />
           ) : (
-            <div className="w-20 h-20 bg-[#0D47A1] rounded-full flex items-center justify-center text-white font-bold text-3xl shadow-md">
+            <div className="w-20 h-20 bg-brand-blue rounded-full flex items-center justify-center text-white font-bold text-3xl shadow-md">
               {form.name.charAt(0).toUpperCase()}
             </div>
           )}
           <button
             type="button"
             onClick={() => fileInputRef.current.click()}
-            className="absolute bottom-0 right-0 w-7 h-7 bg-[#FFD600] rounded-full flex items-center justify-center shadow border-2 border-white"
+            className="absolute bottom-0 right-0 w-7 h-7 bg-brand-yellow rounded-full flex items-center justify-center shadow border-2 border-white"
           >
-            <Camera className="h-3.5 w-3.5 text-[#0D47A1]" />
+            <Camera className="h-3.5 w-3.5 text-brand-blue" />
           </button>
           <input
             ref={fileInputRef}
@@ -129,7 +129,7 @@ const EditProfile = () => {
               value={form.name}
               onChange={handleChange}
               placeholder="Enter your full name"
-              className="w-full pl-12 pr-4 py-3 bg-white border border-border-color rounded-2xl text-sm focus:outline-none focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] transition-all shadow-sm"
+              className="w-full pl-12 pr-4 py-3 bg-white border border-border-color rounded-2xl text-sm focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-all shadow-sm"
               required
             />
           </div>
@@ -146,7 +146,7 @@ const EditProfile = () => {
               value={form.phone}
               onChange={handleChange}
               placeholder="Enter phone number"
-              className="w-full pl-12 pr-4 py-3 bg-white border border-border-color rounded-2xl text-sm focus:outline-none focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] transition-all shadow-sm"
+              className="w-full pl-12 pr-4 py-3 bg-white border border-border-color rounded-2xl text-sm focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-all shadow-sm"
               required
             />
           </div>
@@ -163,7 +163,7 @@ const EditProfile = () => {
               value={form.email}
               onChange={handleChange}
               placeholder="Enter email address"
-              className="w-full pl-12 pr-4 py-3 bg-white border border-border-color rounded-2xl text-sm focus:outline-none focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] transition-all shadow-sm"
+              className="w-full pl-12 pr-4 py-3 bg-white border border-border-color rounded-2xl text-sm focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-all shadow-sm"
             />
           </div>
         </div>
@@ -179,7 +179,7 @@ const EditProfile = () => {
               value={form.address}
               onChange={handleChange}
               placeholder="Enter your address"
-              className="w-full pl-12 pr-4 py-3 bg-white border border-border-color rounded-2xl text-sm focus:outline-none focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] transition-all shadow-sm"
+              className="w-full pl-12 pr-4 py-3 bg-white border border-border-color rounded-2xl text-sm focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-all shadow-sm"
             />
           </div>
         </div>
@@ -197,7 +197,7 @@ const EditProfile = () => {
           className={`w-full font-bold py-4 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-md mt-2 text-sm disabled:opacity-60 ${
             saved
               ? 'bg-green-500 text-white'
-              : 'bg-[#FFD600] text-[#0D47A1] hover:bg-yellow-400'
+              : 'bg-brand-yellow text-brand-blue hover:bg-yellow-400'
           }`}
         >
           {saved ? '✓ Saved! Redirecting...' : saving ? 'Saving…' : 'Save Changes'}

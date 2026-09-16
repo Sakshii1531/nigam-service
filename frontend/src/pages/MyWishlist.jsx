@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  ChevronLeft, Trash2, Heart, Star, ShoppingCart, 
-  Home as HomeIcon, LayoutGrid, Calendar, User 
+import {
+  ChevronLeft, Trash2, Heart, Star
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import CustomerBottomNav from '../components/CustomerBottomNav';
 
 // Import assets to resolve correctly
 import fridgeImg from '../assets/appliance_fridge.png';
@@ -80,7 +80,7 @@ const MyWishlist = () => {
             </div>
             <button 
               onClick={() => navigate('/buy-new')}
-              className="bg-[#0D47A1] hover:bg-blue-800 text-white font-extrabold px-6 py-2.5 rounded-xl text-xs mt-3 shadow-md transition-colors cursor-pointer"
+              className="bg-brand-blue hover:bg-blue-800 text-white font-extrabold px-6 py-2.5 rounded-xl text-xs mt-3 shadow-md transition-colors cursor-pointer"
             >
               Shop New Products
             </button>
@@ -167,43 +167,7 @@ const MyWishlist = () => {
       </div>
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-100 p-4 flex justify-around items-center z-40 shadow-lg rounded-t-3xl lg:hidden">
-        <button 
-          onClick={() => navigate('/dashboard')}
-          className="flex flex-col items-center text-slate-400 hover:text-[#0B4EA2] cursor-pointer transition-colors"
-        >
-          <HomeIcon className="h-6 w-6" />
-          <span className="text-xs font-semibold mt-0.5">Home</span>
-        </button>
-        <button 
-          onClick={() => navigate('/categories')}
-          className="flex flex-col items-center text-slate-400 hover:text-[#0B4EA2] cursor-pointer transition-colors"
-        >
-          <LayoutGrid className="h-6 w-6" />
-          <span className="text-xs font-semibold mt-0.5">Categories</span>
-        </button>
-        <button 
-          onClick={() => navigate('/buy')}
-          className="flex flex-col items-center text-slate-400 hover:text-[#0B4EA2] cursor-pointer transition-colors"
-        >
-          <ShoppingCart className="h-6 w-6" />
-          <span className="text-xs font-semibold mt-0.5">Buy</span>
-        </button>
-        <button 
-          onClick={() => navigate('/bookings')}
-          className="flex flex-col items-center text-slate-400 hover:text-[#0B4EA2] cursor-pointer transition-colors"
-        >
-          <Calendar className="h-6 w-6" />
-          <span className="text-xs font-semibold mt-0.5">Bookings</span>
-        </button>
-        <button 
-          onClick={() => navigate('/profile')}
-          className="flex flex-col items-center text-[#0B4EA2] cursor-pointer transition-colors"
-        >
-          <User className="h-6 w-6" />
-          <span className="text-xs font-semibold mt-0.5">Account</span>
-        </button>
-      </div>
+      <CustomerBottomNav />
     </div>
   );
 };

@@ -113,7 +113,7 @@ const ProductDetails = () => {
         </p>
         <button
           onClick={() => navigate('/buy')}
-          className="mt-1 bg-[#0D47A1] hover:bg-[#0A3F91] text-white text-xs font-bold px-5 py-2.5 rounded-full transition-colors"
+          className="mt-1 bg-brand-blue hover:bg-[#0A3F91] text-white text-xs font-bold px-5 py-2.5 rounded-full transition-colors"
         >
           Browse Products
         </button>
@@ -145,9 +145,9 @@ const ProductDetails = () => {
             onClick={() => navigate(-1)}
             className="p-2 bg-white rounded-full shadow-sm hover:bg-slate-50 transition-colors cursor-pointer"
           >
-            <ArrowLeft className="h-4.5 w-4.5 text-[#0D47A1]" />
+            <ArrowLeft className="h-4.5 w-4.5 text-brand-blue" />
           </button>
-          <span className="font-extrabold text-sm text-[#0D47A1]">Product Details</span>
+          <span className="font-extrabold text-sm text-brand-blue">Product Details</span>
         </div>
         
         {/* Shopping Cart Trigger Icon */}
@@ -155,7 +155,7 @@ const ProductDetails = () => {
           onClick={() => setShowCartDrawer(true)}
           className="p-2.5 bg-white rounded-full shadow-sm hover:bg-slate-50 relative transition-all cursor-pointer"
         >
-          <ShoppingCart className="h-4.5 w-4.5 text-[#0D47A1]" />
+          <ShoppingCart className="h-4.5 w-4.5 text-brand-blue" />
           {cartCount > 0 && (
             <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[8px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-white shadow animate-bounce">
               {cartCount}
@@ -259,7 +259,7 @@ const ProductDetails = () => {
           <div className="absolute -top-12 -right-12 w-28 h-28 bg-white/10 rounded-full blur-xl"></div>
           <div className="flex flex-col gap-0.5">
             <div className="flex items-center gap-1.5">
-              <span className="bg-[#FFD600] text-[#0D47A1] text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
+              <span className="bg-brand-yellow text-brand-blue text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
                 Warranty Active
               </span>
             </div>
@@ -321,15 +321,15 @@ const ProductDetails = () => {
         {/* Add to Cart button */}
         <button 
           onClick={handleAddToCart}
-          className="flex-1 bg-slate-100 hover:bg-[#E3ECF9] text-[#0D47A1] font-extrabold py-3.5 rounded-xl border border-[#0D47A1]/10 flex items-center justify-center gap-1.5 transition-all text-xs cursor-pointer shadow-sm active:scale-[0.98]"
+          className="flex-1 bg-slate-100 hover:bg-[#E3ECF9] text-brand-blue font-extrabold py-3.5 rounded-xl border border-brand-blue/10 flex items-center justify-center gap-1.5 transition-all text-xs cursor-pointer shadow-sm active:scale-[0.98]"
         >
-          <ShoppingBag className="h-4.5 w-4.5 text-[#0D47A1]" /> Add to Cart
+          <ShoppingBag className="h-4.5 w-4.5 text-brand-blue" /> Add to Cart
         </button>
 
         {/* Buy Now button */}
         <button 
           onClick={() => setShowCheckoutModal(true)}
-          className="flex-1 bg-[#FFD600] hover:bg-yellow-400 text-[#0D47A1] font-extrabold py-3.5 rounded-xl flex items-center justify-center gap-1.5 transition-all text-xs cursor-pointer shadow-sm active:scale-[0.98]"
+          className="flex-1 bg-brand-yellow hover:bg-yellow-400 text-brand-blue font-extrabold py-3.5 rounded-xl flex items-center justify-center gap-1.5 transition-all text-xs cursor-pointer shadow-sm active:scale-[0.98]"
         >
           <CreditCard className="h-4.5 w-4.5" /> Buy Now
         </button>
@@ -354,8 +354,8 @@ const ProductDetails = () => {
               {/* Drawer Header */}
               <div className="bg-[#E3ECF9] p-5 flex items-center justify-between border-b border-border-color">
                 <div className="flex items-center gap-2">
-                  <ShoppingBag className="h-5 w-5 text-[#0D47A1]" />
-                  <h3 className="font-extrabold text-sm text-[#0D47A1]">Your Shopping Cart</h3>
+                  <ShoppingBag className="h-5 w-5 text-brand-blue" />
+                  <h3 className="font-extrabold text-sm text-brand-blue">Your Shopping Cart</h3>
                 </div>
                 <button 
                   onClick={() => setShowCartDrawer(false)}
@@ -390,7 +390,7 @@ const ProductDetails = () => {
                         </span>
                         
                         <div className="flex items-baseline gap-2 mt-1.5">
-                          <span className="text-xs font-bold text-[#0D47A1]">₹{item.price.toLocaleString('en-IN')}</span>
+                          <span className="text-xs font-bold text-brand-blue">₹{item.price.toLocaleString('en-IN')}</span>
                           <span className="text-[10px] text-text-secondary">Qty: {item.qty}</span>
                         </div>
                       </div>
@@ -431,7 +431,7 @@ const ProductDetails = () => {
                         setShowCartDrawer(false);
                         setShowCheckoutModal(true);
                       }}
-                      className="flex-1 bg-[#0D47A1] hover:bg-blue-900 text-white font-extrabold py-3 rounded-xl text-xs transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
+                      className="flex-1 bg-brand-blue hover:bg-blue-900 text-white font-extrabold py-3 rounded-xl text-xs transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
                     >
                       Checkout Order <ChevronRight className="h-4 w-4" />
                     </button>
@@ -524,7 +524,7 @@ const ProductDetails = () => {
 
                   <button 
                     onClick={handleCheckoutSubmit}
-                    className="w-full bg-brand-yellow text-[#0D47A1] font-extrabold py-3.5 rounded-xl transition-all shadow-md text-sm mt-2 flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98]"
+                    className="w-full bg-brand-yellow text-brand-blue font-extrabold py-3.5 rounded-xl transition-all shadow-md text-sm mt-2 flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98]"
                   >
                     Confirm Order & Pay ₹{product.price.toLocaleString('en-IN')}
                   </button>

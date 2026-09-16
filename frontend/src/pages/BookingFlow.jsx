@@ -40,7 +40,7 @@ const StepBar = ({ currentStep, total = 4 }) => (
             key={idx}
             className={`text-[10px] font-black transition-all ${
               isCurrent
-                ? 'text-[#0D47A1] scale-105'
+                ? 'text-brand-blue scale-105'
                 : active
                 ? 'text-slate-700'
                 : 'text-slate-300'
@@ -61,7 +61,7 @@ const StepBar = ({ currentStep, total = 4 }) => (
             className={`h-2 flex-1 rounded-full transition-all duration-300 ${
               active
                 ? isCurrent
-                  ? 'bg-[#0D47A1] shadow-xs ring-2 ring-[#0D47A1]/20'
+                  ? 'bg-brand-blue shadow-xs ring-2 ring-brand-blue/20'
                   : 'bg-[#1565C0]'
                 : 'bg-slate-200'
             }`}
@@ -96,12 +96,12 @@ const OptionCard = ({ icon, name, desc, selected, onClick }) => (
     onClick={onClick}
     className={`relative flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all duration-200 active:scale-[0.98] text-center w-full cursor-pointer ${
       selected
-        ? 'border-[#0D47A1] bg-gradient-to-b from-blue-50/80 to-blue-100/30 shadow-md shadow-[#0D47A1]/10 ring-1 ring-[#0D47A1]'
+        ? 'border-brand-blue bg-gradient-to-b from-blue-50/80 to-blue-100/30 shadow-md shadow-brand-blue/10 ring-1 ring-brand-blue'
         : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50 shadow-2xs'
     }`}
   >
     {selected && (
-      <div className="absolute top-2.5 right-2.5 w-5 h-5 rounded-full bg-[#0D47A1] flex items-center justify-center shadow-xs">
+      <div className="absolute top-2.5 right-2.5 w-5 h-5 rounded-full bg-brand-blue flex items-center justify-center shadow-xs">
         <Check className="w-3 h-3 text-white stroke-[3]" />
       </div>
     )}
@@ -116,11 +116,11 @@ const OptionCard = ({ icon, name, desc, selected, onClick }) => (
       )}
     </div>
 
-    <span className={`text-[13px] font-black leading-tight ${selected ? 'text-[#0D47A1]' : 'text-slate-900'}`}>
+    <span className={`text-[13px] font-black leading-tight ${selected ? 'text-brand-blue' : 'text-slate-900'}`}>
       {name}
     </span>
     {desc && (
-      <span className={`text-[10px] font-medium leading-tight ${selected ? 'text-[#0D47A1]/80' : 'text-slate-400'}`}>
+      <span className={`text-[10px] font-medium leading-tight ${selected ? 'text-brand-blue/80' : 'text-slate-400'}`}>
         {desc}
       </span>
     )}
@@ -163,7 +163,7 @@ const BottomBar = ({ icon, label, sublabel, price, btnLabel, btnDisabled, onBtn,
         className={`w-full font-black py-3.5 rounded-2xl text-[14px] transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 ${
           btnDisabled
             ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-            : 'bg-[#0D47A1] text-white hover:bg-[#1565C0] shadow-md shadow-[#0D47A1]/25'
+            : 'bg-brand-blue text-white hover:bg-[#1565C0] shadow-md shadow-brand-blue/25'
         }`}
       >
         {btnLabel}
@@ -245,7 +245,7 @@ const BookingFlow = () => {
   if (!overridesLoaded) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white gap-3">
-        <div className="w-10 h-10 border-4 border-blue-200 border-t-[#0D47A1] rounded-full animate-spin" />
+        <div className="w-10 h-10 border-4 border-blue-200 border-t-brand-blue rounded-full animate-spin" />
         <p className="text-xs font-bold text-slate-500">Loading service details…</p>
       </div>
     );
@@ -512,7 +512,7 @@ const BookingFlow = () => {
         </div>
         
         <div className="w-9 h-9 flex items-center justify-center">
-          <span className="text-[10px] font-black text-[#0D47A1] bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
+          <span className="text-[10px] font-black text-brand-blue bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
             {step}/4
           </span>
         </div>
@@ -528,7 +528,7 @@ const BookingFlow = () => {
             {/* Step Title Header Banner */}
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-[10px] font-black uppercase tracking-widest text-[#0D47A1] bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100/80">
+                <span className="text-[10px] font-black uppercase tracking-widest text-brand-blue bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100/80">
                   {catKey} Service
                 </span>
               </div>
@@ -572,7 +572,7 @@ const BookingFlow = () => {
                     Select number of appliances needing service
                   </p>
                 </div>
-                <span className="text-xs font-black text-[#0D47A1] bg-blue-50 px-2.5 py-1 rounded-xl border border-blue-100">
+                <span className="text-xs font-black text-brand-blue bg-blue-50 px-2.5 py-1 rounded-xl border border-blue-100">
                   {quantity} {quantity === 1 ? 'Unit' : 'Units'}
                 </span>
               </div>
@@ -583,7 +583,7 @@ const BookingFlow = () => {
                   <button
                     type="button"
                     onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                    className="w-9 h-9 rounded-xl bg-white border border-slate-200 shadow-2xs flex items-center justify-center text-[#0D47A1] text-lg font-black hover:bg-blue-50 active:scale-95 transition-all cursor-pointer"
+                    className="w-9 h-9 rounded-xl bg-white border border-slate-200 shadow-2xs flex items-center justify-center text-brand-blue text-lg font-black hover:bg-blue-50 active:scale-95 transition-all cursor-pointer"
                   >
                     –
                   </button>
@@ -593,7 +593,7 @@ const BookingFlow = () => {
                   <button
                     type="button"
                     onClick={() => setQuantity(q => Math.min(12, q + 1))}
-                    className="w-9 h-9 rounded-xl bg-[#0D47A1] text-white shadow-2xs flex items-center justify-center text-lg font-black hover:bg-[#1565C0] active:scale-95 transition-all cursor-pointer"
+                    className="w-9 h-9 rounded-xl bg-brand-blue text-white shadow-2xs flex items-center justify-center text-lg font-black hover:bg-[#1565C0] active:scale-95 transition-all cursor-pointer"
                   >
                     +
                   </button>
@@ -609,7 +609,7 @@ const BookingFlow = () => {
             {/* Info guarantee card */}
             <div className="bg-gradient-to-r from-blue-50/90 to-indigo-50/50 border border-blue-100 rounded-2xl p-4 flex items-center gap-3.5 shadow-2xs">
               <div className="w-10 h-10 rounded-2xl bg-white border border-blue-100 flex items-center justify-center flex-shrink-0 shadow-2xs">
-                <ShieldCheck className="w-6 h-6 text-[#0D47A1]" />
+                <ShieldCheck className="w-6 h-6 text-brand-blue" />
               </div>
               <div>
                 <p className="text-[12px] font-black text-slate-900">{catKey} Service Guarantee</p>
@@ -636,7 +636,7 @@ const BookingFlow = () => {
                   onClick={() => setService(svc.id)}
                   className={`relative flex items-center gap-3.5 p-4 rounded-2xl border-2 transition-all duration-200 active:scale-[0.99] text-left w-full cursor-pointer ${
                     isSelected
-                      ? 'border-[#0D47A1] bg-gradient-to-r from-blue-50/90 to-indigo-50/30 shadow-md shadow-[#0D47A1]/10 ring-1 ring-[#0D47A1]'
+                      ? 'border-brand-blue bg-gradient-to-r from-blue-50/90 to-indigo-50/30 shadow-md shadow-brand-blue/10 ring-1 ring-brand-blue'
                       : 'border-slate-200 bg-white hover:border-slate-300 shadow-2xs'
                   }`}
                 >
@@ -653,11 +653,11 @@ const BookingFlow = () => {
 
                   {/* Name + desc */}
                   <div className="flex-1 min-w-0">
-                    <p className={`text-[13px] font-black leading-tight ${isSelected ? 'text-[#0D47A1]' : 'text-slate-900'}`}>
+                    <p className={`text-[13px] font-black leading-tight ${isSelected ? 'text-brand-blue' : 'text-slate-900'}`}>
                       {svc.name}
                     </p>
                     {svc.desc && (
-                      <p className={`text-[10px] font-medium mt-1 leading-snug ${isSelected ? 'text-[#0D47A1]/80' : 'text-slate-500'}`}>
+                      <p className={`text-[10px] font-medium mt-1 leading-snug ${isSelected ? 'text-brand-blue/80' : 'text-slate-500'}`}>
                         {svc.desc}
                       </p>
                     )}
@@ -665,7 +665,7 @@ const BookingFlow = () => {
 
                   {/* Price */}
                   <div className="flex flex-col items-end flex-shrink-0 pl-1">
-                    <span className={`text-[15px] font-black ${isSelected ? 'text-[#0D47A1]' : 'text-slate-900'}`}>
+                    <span className={`text-[15px] font-black ${isSelected ? 'text-brand-blue' : 'text-slate-900'}`}>
                       ₹{svc.price}
                     </span>
                     <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">{svc.unit || 'per unit'}</span>
@@ -673,7 +673,7 @@ const BookingFlow = () => {
 
                   {/* Radio */}
                   <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all ${
-                    isSelected ? 'border-[#0D47A1] bg-[#0D47A1]' : 'border-slate-300 bg-white'
+                    isSelected ? 'border-brand-blue bg-brand-blue' : 'border-slate-300 bg-white'
                   }`}>
                     {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-white" />}
                   </div>
@@ -709,7 +709,7 @@ const BookingFlow = () => {
                   value={brand}
                   onChange={(e) => setBrand(e.target.value)}
                   className={`w-full appearance-none px-4 py-3 pr-10 bg-slate-50 border rounded-xl text-[13px] font-bold outline-none transition-all cursor-pointer ${
-                    brand ? 'text-slate-900 border-[#0D47A1] bg-blue-50/20' : 'text-slate-400 border-amber-300 bg-amber-50/30'
+                    brand ? 'text-slate-900 border-brand-blue bg-blue-50/20' : 'text-slate-400 border-amber-300 bg-amber-50/30'
                   }`}
                 >
                   <option value="" disabled>Choose Appliance Brand</option>
@@ -742,7 +742,7 @@ const BookingFlow = () => {
                   className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center hover:bg-blue-100 transition-all cursor-pointer shadow-2xs"
                   title="Open calendar"
                 >
-                  <CalendarDays className="w-4 h-4 text-[#0D47A1]" />
+                  <CalendarDays className="w-4 h-4 text-brand-blue" />
                 </button>
                 <input
                   ref={dateInputRef}
@@ -774,7 +774,7 @@ const BookingFlow = () => {
                       }}
                       className={`flex flex-col items-center justify-center min-w-[64px] h-[80px] rounded-2xl border-2 transition-all flex-shrink-0 cursor-pointer ${
                         isActive
-                          ? 'border-[#0D47A1] bg-[#0D47A1] text-white shadow-md scale-105'
+                          ? 'border-brand-blue bg-brand-blue text-white shadow-md scale-105'
                           : 'border-slate-200 bg-slate-50 hover:bg-white text-slate-800'
                       }`}
                     >
@@ -817,7 +817,7 @@ const BookingFlow = () => {
                             ? 'border-amber-500 bg-gradient-to-r from-amber-50 to-orange-50 shadow-md ring-1 ring-amber-400'
                             : 'border-amber-300 bg-amber-50/40 hover:border-amber-400 hover:bg-amber-50'
                           : isSelected
-                          ? 'border-[#0D47A1] bg-blue-50/30 shadow-xs'
+                          ? 'border-brand-blue bg-blue-50/30 shadow-xs'
                           : 'border-slate-200 bg-white hover:border-slate-300'
                       }`}
                     >
@@ -837,7 +837,7 @@ const BookingFlow = () => {
                       </div>
                       {/* Radio circle */}
                       <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all ${
-                        isSelected ? (isInstant ? 'border-amber-600 bg-amber-600' : 'border-[#0D47A1] bg-[#0D47A1]') : 'border-slate-300'
+                        isSelected ? (isInstant ? 'border-amber-600 bg-amber-600' : 'border-brand-blue bg-brand-blue') : 'border-slate-300'
                       }`}>
                         {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-white" />}
                       </div>
@@ -856,7 +856,7 @@ const BookingFlow = () => {
                     ₹199 initial visiting fee to inspect your appliance.
                   </p>
                 </div>
-                <div className="text-[20px] font-black text-[#0D47A1] ml-3">
+                <div className="text-[20px] font-black text-brand-blue ml-3">
                   ₹199
                 </div>
               </div>
@@ -879,7 +879,7 @@ const BookingFlow = () => {
                 <p className="text-[13px] font-black text-slate-900">
                   Service Address *
                 </p>
-                <span className="text-[10px] text-[#0D47A1] font-bold uppercase tracking-wider bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
+                <span className="text-[10px] text-brand-blue font-bold uppercase tracking-wider bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
                   Step 4 of 4
                 </span>
               </div>
@@ -892,7 +892,7 @@ const BookingFlow = () => {
                     value={address.house}
                     onChange={(e) => setAddress(p => ({ ...p, house: e.target.value }))}
                     placeholder="House / Flat / Building No. *"
-                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[12px] font-bold text-slate-900 placeholder-slate-400 focus:bg-white focus:border-[#0D47A1] outline-none transition-all"
+                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[12px] font-bold text-slate-900 placeholder-slate-400 focus:bg-white focus:border-brand-blue outline-none transition-all"
                   />
                 </div>
                 {/* Area / Landmark */}
@@ -903,7 +903,7 @@ const BookingFlow = () => {
                     value={address.area}
                     onChange={(e) => setAddress(p => ({ ...p, area: e.target.value }))}
                     placeholder="Area / Landmark / Street *"
-                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[12px] font-bold text-slate-900 placeholder-slate-400 focus:bg-white focus:border-[#0D47A1] outline-none transition-all"
+                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[12px] font-bold text-slate-900 placeholder-slate-400 focus:bg-white focus:border-brand-blue outline-none transition-all"
                   />
                 </div>
                 <div className="flex gap-3">
@@ -914,7 +914,7 @@ const BookingFlow = () => {
                       value={address.city}
                       onChange={(e) => setAddress(p => ({ ...p, city: e.target.value }))}
                       placeholder="City *"
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[12px] font-bold text-slate-900 placeholder-slate-400 focus:bg-white focus:border-[#0D47A1] outline-none transition-all"
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[12px] font-bold text-slate-900 placeholder-slate-400 focus:bg-white focus:border-brand-blue outline-none transition-all"
                     />
                   </div>
                   {/* Pincode */}
@@ -925,7 +925,7 @@ const BookingFlow = () => {
                       onChange={(e) => setAddress(p => ({ ...p, pincode: e.target.value.replace(/\D/g, '').slice(0, 6) }))}
                       placeholder="Pincode *"
                       maxLength={6}
-                      className={`w-full px-4 py-3 bg-slate-50 border rounded-xl text-[12px] font-bold text-slate-900 placeholder-slate-400 focus:bg-white focus:border-[#0D47A1] outline-none transition-all ${
+                      className={`w-full px-4 py-3 bg-slate-50 border rounded-xl text-[12px] font-bold text-slate-900 placeholder-slate-400 focus:bg-white focus:border-brand-blue outline-none transition-all ${
                         address.pincode && address.pincode.length < 6 ? 'border-rose-400 bg-rose-50/20' : 'border-slate-200'
                       }`}
                     />
@@ -954,7 +954,7 @@ const BookingFlow = () => {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="Full Name *"
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[12px] font-bold text-slate-900 placeholder-slate-400 focus:bg-white focus:border-[#0D47A1] outline-none transition-all"
+                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[12px] font-bold text-slate-900 placeholder-slate-400 focus:bg-white focus:border-brand-blue outline-none transition-all"
                 />
               </div>
               {/* Mobile */}
@@ -967,7 +967,7 @@ const BookingFlow = () => {
                     onChange={(e) => setMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
                     placeholder="10-digit Mobile Number *"
                     maxLength={10}
-                    className={`w-full pl-10 pr-4 py-3 bg-slate-50 border rounded-xl text-[12px] font-bold text-slate-900 placeholder-slate-400 focus:bg-white focus:border-[#0D47A1] outline-none transition-all ${
+                    className={`w-full pl-10 pr-4 py-3 bg-slate-50 border rounded-xl text-[12px] font-bold text-slate-900 placeholder-slate-400 focus:bg-white focus:border-brand-blue outline-none transition-all ${
                       mobile && mobile.length < 10 ? 'border-rose-400 bg-rose-50/20' : 'border-slate-200'
                     }`}
                   />
@@ -991,29 +991,29 @@ const BookingFlow = () => {
                   onClick={() => setPaymentMode('advance')}
                   className={`flex items-center gap-4 p-3.5 rounded-2xl border-2 transition-all text-left cursor-pointer ${
                     paymentMode === 'advance'
-                      ? 'border-[#0D47A1] bg-blue-50/40 shadow-xs'
+                      ? 'border-brand-blue bg-blue-50/40 shadow-xs'
                       : 'border-slate-200 bg-white hover:border-slate-300'
                   }`}
                 >
                   <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all ${
-                    paymentMode === 'advance' ? 'border-[#0D47A1] bg-[#0D47A1]' : 'border-slate-300 bg-white'
+                    paymentMode === 'advance' ? 'border-brand-blue bg-brand-blue' : 'border-slate-300 bg-white'
                   }`}>
                     {paymentMode === 'advance' && <div className="w-2.5 h-2.5 rounded-full bg-white" />}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
-                      <span className={`text-[13px] font-black ${paymentMode === 'advance' ? 'text-[#0D47A1]' : 'text-slate-900'}`}>
+                      <span className={`text-[13px] font-black ${paymentMode === 'advance' ? 'text-brand-blue' : 'text-slate-900'}`}>
                         Pay Advance
                       </span>
-                      <span className="text-[9px] bg-[#0D47A1] text-white font-black px-2 py-0.5 rounded-full uppercase tracking-wide">
+                      <span className="text-[9px] bg-brand-blue text-white font-black px-2 py-0.5 rounded-full uppercase tracking-wide">
                         RECOMMENDED
                       </span>
                     </div>
-                    <p className={`text-[10px] font-medium ${paymentMode === 'advance' ? 'text-[#0D47A1]/80' : 'text-slate-500'}`}>
+                    <p className={`text-[10px] font-medium ${paymentMode === 'advance' ? 'text-brand-blue/80' : 'text-slate-500'}`}>
                       ₹{advanceAmt} advance · Pay balance after service
                     </p>
                   </div>
-                  <span className={`text-[16px] font-black flex-shrink-0 ${paymentMode === 'advance' ? 'text-[#0D47A1]' : 'text-slate-900'}`}>
+                  <span className={`text-[16px] font-black flex-shrink-0 ${paymentMode === 'advance' ? 'text-brand-blue' : 'text-slate-900'}`}>
                     ₹{advanceAmt}
                   </span>
                 </button>
@@ -1024,20 +1024,20 @@ const BookingFlow = () => {
                   onClick={() => setPaymentMode('after')}
                   className={`flex items-center gap-4 p-3.5 rounded-2xl border-2 transition-all text-left cursor-pointer ${
                     paymentMode === 'after'
-                      ? 'border-[#0D47A1] bg-blue-50/40 shadow-xs'
+                      ? 'border-brand-blue bg-blue-50/40 shadow-xs'
                       : 'border-slate-200 bg-white hover:border-slate-300'
                   }`}
                 >
                   <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all ${
-                    paymentMode === 'after' ? 'border-[#0D47A1] bg-[#0D47A1]' : 'border-slate-300 bg-white'
+                    paymentMode === 'after' ? 'border-brand-blue bg-brand-blue' : 'border-slate-300 bg-white'
                   }`}>
                     {paymentMode === 'after' && <div className="w-2.5 h-2.5 rounded-full bg-white" />}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className={`text-[13px] font-black ${paymentMode === 'after' ? 'text-[#0D47A1]' : 'text-slate-900'}`}>
+                    <p className={`text-[13px] font-black ${paymentMode === 'after' ? 'text-brand-blue' : 'text-slate-900'}`}>
                       Pay After Service
                     </p>
-                    <p className={`text-[10px] font-medium mt-0.5 ${paymentMode === 'after' ? 'text-[#0D47A1]/80' : 'text-slate-500'}`}>
+                    <p className={`text-[10px] font-medium mt-0.5 ${paymentMode === 'after' ? 'text-brand-blue/80' : 'text-slate-500'}`}>
                       Pay full amount (₹{totalPrice}) after service completion
                     </p>
                   </div>
@@ -1054,7 +1054,7 @@ const BookingFlow = () => {
               >
                 <span className="text-[13px] font-black text-slate-900">Total Payable</span>
                 <div className="flex items-center gap-2">
-                  <span className="text-[16px] font-black text-[#0D47A1]">
+                  <span className="text-[16px] font-black text-brand-blue">
                     ₹{paymentMode === 'advance' ? advanceAmt : totalPrice}
                   </span>
                   <span className="text-[10px] text-slate-400 font-bold">
@@ -1071,8 +1071,8 @@ const BookingFlow = () => {
                   {paymentMode === 'advance' && (
                     <>
                       <div className="flex justify-between text-[11px]">
-                        <span className="text-[#0D47A1] font-black">Advance (Adjusted)</span>
-                        <span className="font-black text-[#0D47A1]">₹{advanceAmt}</span>
+                        <span className="text-brand-blue font-black">Advance (Adjusted)</span>
+                        <span className="font-black text-brand-blue">₹{advanceAmt}</span>
                       </div>
                       <div className="flex justify-between text-[11px]">
                         <span className="text-slate-500 font-semibold">Balance after service</span>
@@ -1111,7 +1111,7 @@ const BookingFlow = () => {
                     <span className="text-xs font-semibold text-slate-400 truncate mt-0.5">{getBarSublabel()}</span>
                   </div>
                 </div>
-                <span className="text-xs font-black text-[#0D47A1] bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100 flex-shrink-0 self-start">
+                <span className="text-xs font-black text-brand-blue bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100 flex-shrink-0 self-start">
                   Step {step}/4
                 </span>
               </div>
@@ -1132,7 +1132,7 @@ const BookingFlow = () => {
                   <span>₹{totalPrice}</span>
                 </div>
                 {step === 4 && paymentMode === 'advance' && (
-                  <div className="flex justify-between text-sm font-black text-[#0D47A1] bg-blue-50 p-3 rounded-2xl border border-blue-100">
+                  <div className="flex justify-between text-sm font-black text-brand-blue bg-blue-50 p-3 rounded-2xl border border-blue-100">
                     <span>Advance Payable Now</span>
                     <span>₹{advanceAmt}</span>
                   </div>
@@ -1147,7 +1147,7 @@ const BookingFlow = () => {
                 className={`w-full font-black py-4 rounded-2xl text-sm transition-all cursor-pointer flex items-center justify-center gap-2 ${
                   getBarBtnDisabled()
                     ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                    : 'bg-[#0D47A1] text-white hover:bg-[#1565C0] shadow-md shadow-[#0D47A1]/20 active:scale-[0.98]'
+                    : 'bg-brand-blue text-white hover:bg-[#1565C0] shadow-md shadow-brand-blue/20 active:scale-[0.98]'
                 }`}
               >
                 <span>{getBarBtnLabel()}</span>
@@ -1184,7 +1184,7 @@ const BookingFlow = () => {
           <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3 flex items-center justify-between shadow-2xs">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-slate-600">
-                <CalendarDays className="w-5 h-5 text-[#0D47A1]" />
+                <CalendarDays className="w-5 h-5 text-brand-blue" />
               </div>
               <div className="text-left">
                 <p className="text-[13px] font-black text-slate-900 leading-tight">
@@ -1209,7 +1209,7 @@ const BookingFlow = () => {
             className={`w-full font-black py-3.5 rounded-2xl text-[14px] transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 ${
               !step3Valid
                 ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                : 'bg-[#0D47A1] text-white hover:bg-[#1565C0] shadow-md shadow-[#0D47A1]/25'
+                : 'bg-brand-blue text-white hover:bg-[#1565C0] shadow-md shadow-brand-blue/25'
             }`}
           >
             {!brand ? 'Choose Brand to Continue' : (!selectedDate || !timeGroup ? 'Select Date & Time Slot' : 'Continue — Address & Payment')}

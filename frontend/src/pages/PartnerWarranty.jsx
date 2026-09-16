@@ -1,7 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ChevronRight, Laptop, ShieldCheck, Flame, Wind, Droplet, Home as HomeIcon, ShoppingCart, Calendar, Wrench, User, LayoutGrid } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Laptop, ShieldCheck, Flame, Wind, Droplet, Wrench } from 'lucide-react';
 import { motion } from 'framer-motion';
+import CustomerBottomNav from '../components/CustomerBottomNav';
 
 // Import existing assets for high-fidelity rendering
 import handshakeIcon from '../assets/HANDSHAKE.png';
@@ -302,45 +303,7 @@ const PartnerWarranty = () => {
       </div>
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-border-color p-4 flex justify-around items-center z-40 overflow-visible lg:hidden">
-        <button 
-          onClick={() => navigate('/dashboard')}
-          className="flex flex-col items-center text-brand-blue"
-        >
-          <HomeIcon className="h-6 w-6" />
-          <span className="text-xs font-medium">Home</span>
-        </button>
-        <button 
-          onClick={() => navigate('/categories')}
-          className="flex flex-col items-center text-text-secondary hover:text-brand-blue"
-        >
-          <LayoutGrid className="h-6 w-6" />
-          <span className="text-xs font-medium">Categories</span>
-        </button>
-
-        <button 
-          onClick={() => navigate('/buy')}
-          className="flex flex-col items-center text-text-secondary hover:text-brand-blue"
-        >
-          <ShoppingCart className="h-6 w-6" />
-          <span className="text-xs font-medium">Buy</span>
-        </button>
-
-        <button 
-          onClick={() => navigate('/bookings')}
-          className="flex flex-col items-center text-text-secondary hover:text-brand-blue"
-        >
-          <Calendar className="h-6 w-6" />
-          <span className="text-xs font-medium">Bookings</span>
-        </button>
-        <button 
-          onClick={() => navigate('/profile')}
-          className="flex flex-col items-center text-text-secondary hover:text-brand-blue"
-        >
-          <User className="h-6 w-6" />
-          <span className="text-xs font-medium">Account</span>
-        </button>
-      </div>
+      <CustomerBottomNav />
 
     </div>
   );

@@ -49,7 +49,7 @@ const NotificationDetail = () => {
     return (
       <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-6">
         <p className="text-sm font-semibold text-slate-500 text-center">{loadError || 'Loading…'}</p>
-        <button onClick={() => navigate('/notifications')} className="mt-4 text-xs font-bold text-[#0D47A1] hover:underline">
+        <button onClick={() => navigate('/notifications')} className="mt-4 text-xs font-bold text-brand-blue hover:underline">
           Back to all notifications
         </button>
       </div>
@@ -78,7 +78,7 @@ const NotificationDetail = () => {
         {n.cta && (
           <button
             onClick={() => navigate(n.cta.route)}
-            className="w-full mt-5 bg-[#0D47A1] text-white font-semibold py-3.5 rounded-2xl flex items-center justify-center gap-2 hover:bg-blue-800 active:scale-[0.99] transition-all shadow-md"
+            className="w-full mt-5 bg-brand-blue text-white font-semibold py-3.5 rounded-2xl flex items-center justify-center gap-2 hover:bg-blue-800 active:scale-[0.99] transition-all shadow-md"
           >
             {n.cta.label} <ChevronRight className="h-4.5 w-4.5" />
           </button>

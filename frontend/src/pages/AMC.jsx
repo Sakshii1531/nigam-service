@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation, useSearchParams } from 'react-router-dom';
 import {
-  ArrowLeft, Shield, Check, ChevronRight, ShoppingCart,
+  ArrowLeft, Shield, Check, ChevronRight,
   Calendar, Wrench, Sparkles, Zap, PackageOpen,
   MapPin, Bell, Search, ShieldCheck, FileText, CheckCircle2,
-  Lock, Landmark, Wallet, Percent, Home as HomeIcon, LayoutGrid, User
+  Lock, Landmark, Wallet, Percent
 } from 'lucide-react';
+import CustomerBottomNav from '../components/CustomerBottomNav';
 import { motion } from 'framer-motion';
 import { apiRequest } from '../lib/apiClient';
 import { payWithRazorpay } from '../lib/razorpayCheckout';
@@ -209,7 +210,7 @@ const AMC = () => {
                           <linearGradient id="bevelGrad" x1="0%" y1="0%" x2="100%" y2="0%">
                             <stop offset="0%" stopColor="#1E88E5" />
                             <stop offset="50%" stopColor="#1565C0" />
-                            <stop offset="50%" stopColor="#0D47A1" />
+                            <stop offset="50%" stopColor="#0B4EA2" />
                             <stop offset="100%" stopColor="#0A2D6E" />
                           </linearGradient>
                         </defs>
@@ -264,7 +265,7 @@ const AMC = () => {
                           <linearGradient id="bevelGrad2" x1="0%" y1="0%" x2="100%" y2="0%">
                             <stop offset="0%" stopColor="#1E88E5" />
                             <stop offset="50%" stopColor="#1565C0" />
-                            <stop offset="50%" stopColor="#0D47A1" />
+                            <stop offset="50%" stopColor="#0B4EA2" />
                             <stop offset="100%" stopColor="#0A2D6E" />
                           </linearGradient>
                         </defs>
@@ -919,45 +920,7 @@ const AMC = () => {
       </div>
 
       {/* Sticky Bottom Tab Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-border-color p-4 flex justify-around items-center z-40 shadow-lg rounded-t-3xl overflow-visible lg:hidden">
-        <button 
-          onClick={() => navigate('/dashboard')}
-          className="flex flex-col items-center text-text-secondary hover:text-brand-blue transition-colors cursor-pointer"
-        >
-          <HomeIcon className="h-6 w-6" />
-          <span className="text-xs font-semibold mt-0.5">Home</span>
-        </button>
-        <button 
-          onClick={() => navigate('/categories')}
-          className="flex flex-col items-center text-text-secondary hover:text-brand-blue transition-colors cursor-pointer"
-        >
-          <LayoutGrid className="h-6 w-6" />
-          <span className="text-xs font-semibold mt-0.5">Categories</span>
-        </button>
-
-        <button 
-          onClick={() => navigate('/buy')}
-          className="flex flex-col items-center text-brand-blue cursor-pointer transition-colors"
-        >
-          <ShoppingCart className="h-6 w-6" />
-          <span className="text-xs font-semibold mt-0.5">Buy</span>
-        </button>
-
-        <button 
-          onClick={() => navigate('/bookings')}
-          className="flex flex-col items-center text-text-secondary hover:text-brand-blue transition-colors cursor-pointer"
-        >
-          <Calendar className="h-6 w-6" />
-          <span className="text-xs font-semibold mt-0.5">Bookings</span>
-        </button>
-        <button 
-          onClick={() => navigate('/profile')}
-          className="flex flex-col items-center text-text-secondary hover:text-brand-blue transition-colors cursor-pointer"
-        >
-          <User className="h-6 w-6" />
-          <span className="text-xs font-semibold mt-0.5">Account</span>
-        </button>
-      </div>
+      <CustomerBottomNav />
 
     </div>
   );

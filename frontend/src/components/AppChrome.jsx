@@ -96,6 +96,15 @@ function matchTab(pathname, table, fallback) {
 }
 
 /**
+ * Same prefix table the desktop CustomerTopNav uses, exposed so the mobile
+ * CustomerBottomNav (rendered inline per-page, not by AppChrome) highlights
+ * the same tab instead of drifting out of sync with the desktop nav.
+ */
+export function getCustomerActiveTab(pathname) {
+  return matchTab(pathname, CUSTOMER_TABS, "home");
+}
+
+/**
  * True for routes that belong to the customer or service provider phone app — the two
  * panels whose pages are authored at phone width and therefore need centring
  * rather than stretching once the viewport gets wide.

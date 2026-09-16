@@ -28,9 +28,9 @@ const SavedAddresses = () => {
   });
 
   const getIcon = (type) => {
-    if (type === 'Work') return <Briefcase className="h-5 w-5 text-[#0D47A1]" />;
-    if (type === 'Other') return <MapPin className="h-5 w-5 text-[#0D47A1]" />;
-    return <Home className="h-5 w-5 text-[#0D47A1]" />;
+    if (type === 'Work') return <Briefcase className="h-5 w-5 text-brand-blue" />;
+    if (type === 'Other') return <MapPin className="h-5 w-5 text-brand-blue" />;
+    return <Home className="h-5 w-5 text-brand-blue" />;
   };
 
   const showToast = (msg) => {
@@ -205,7 +205,7 @@ const SavedAddresses = () => {
           onClick={() => navigate(-1)}
           className="p-2 bg-white rounded-full shadow-sm hover:bg-slate-50 transition-colors cursor-pointer"
         >
-          <ArrowLeft className="h-5 w-5 text-[#0D47A1]" />
+          <ArrowLeft className="h-5 w-5 text-brand-blue" />
         </button>
         <h1 className="text-xl font-bold text-text-primary">Saved Addresses</h1>
       </div>
@@ -214,12 +214,12 @@ const SavedAddresses = () => {
       <div className="flex-1 p-6 flex flex-col lg:grid lg:grid-cols-2 gap-4 max-w-screen-2xl mx-auto w-full">
         {loading ? (
           <div className="flex flex-col items-center justify-center p-12 text-slate-400 gap-2">
-            <RefreshCw className="h-6 w-6 animate-spin text-[#0D47A1]" />
+            <RefreshCw className="h-6 w-6 animate-spin text-brand-blue" />
             <span className="text-xs font-semibold">Loading saved addresses...</span>
           </div>
         ) : addresses.length === 0 ? (
           <div className="bg-white rounded-2xl p-8 text-center flex flex-col items-center gap-3 border border-border-color shadow-sm">
-            <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-[#0D47A1]">
+            <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-brand-blue">
               <MapPin className="h-6 w-6" />
             </div>
             <h3 className="text-sm font-bold text-text-primary">No Saved Addresses</h3>
@@ -236,7 +236,7 @@ const SavedAddresses = () => {
               <div
                 key={addrId}
                 className={`bg-white rounded-2xl p-4 shadow-sm border transition-all flex flex-col gap-3 relative ${
-                  isDefault ? 'border-[#0D47A1] bg-blue-50/20' : 'border-border-color'
+                  isDefault ? 'border-brand-blue bg-blue-50/20' : 'border-border-color'
                 }`}
               >
                 <div className="flex items-start gap-4">
@@ -245,11 +245,11 @@ const SavedAddresses = () => {
                   </div>
                   <div className="flex-1 text-left">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-[#0D47A1] uppercase tracking-wide">
+                      <span className="text-xs font-bold text-brand-blue uppercase tracking-wide">
                         {item.type || 'Home'}
                       </span>
                       {isDefault && (
-                        <span className="bg-blue-100 text-[#0D47A1] text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <span className="bg-blue-100 text-brand-blue text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
                           <Check className="h-2.5 w-2.5" /> Default
                         </span>
                       )}
@@ -281,7 +281,7 @@ const SavedAddresses = () => {
                   {!isDefault ? (
                     <button
                       onClick={() => handleSetDefault(addrId)}
-                      className="text-[11px] font-bold text-[#0D47A1] hover:underline flex items-center gap-1 cursor-pointer"
+                      className="text-[11px] font-bold text-brand-blue hover:underline flex items-center gap-1 cursor-pointer"
                     >
                       <Star className="h-3.5 w-3.5" /> Set as Default
                     </button>
@@ -294,7 +294,7 @@ const SavedAddresses = () => {
                   <div className="flex items-center gap-3">
                     <button
                       onClick={() => handleOpenEdit(item)}
-                      className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 hover:text-[#0D47A1] transition-colors cursor-pointer"
+                      className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 hover:text-brand-blue transition-colors cursor-pointer"
                       title="Edit Address"
                     >
                       <Pencil className="h-4 w-4" />
@@ -316,7 +316,7 @@ const SavedAddresses = () => {
         {/* Add Address Button */}
         <button
           onClick={handleOpenAdd}
-          className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-[#0D47A1]/30 rounded-2xl p-4 text-[#0D47A1] font-semibold text-sm hover:bg-blue-50 transition-colors cursor-pointer"
+          className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-brand-blue/30 rounded-2xl p-4 text-brand-blue font-semibold text-sm hover:bg-blue-50 transition-colors cursor-pointer"
         >
           <Plus className="h-5 w-5" />
           Add New Address
@@ -359,8 +359,8 @@ const SavedAddresses = () => {
                   onClick={() => setForm({ ...form, type: t })}
                   className={`flex-1 py-2.5 rounded-xl text-xs font-bold border transition-colors cursor-pointer ${
                     form.type === t
-                      ? 'bg-[#0D47A1] text-white border-[#0D47A1] shadow-xs'
-                      : 'bg-white text-text-secondary border-border-color hover:border-[#0D47A1]'
+                      ? 'bg-brand-blue text-white border-brand-blue shadow-xs'
+                      : 'bg-white text-text-secondary border-border-color hover:border-brand-blue'
                   }`}
                 >
                   {t}
@@ -379,7 +379,7 @@ const SavedAddresses = () => {
                 placeholder="e.g. House No. 42, Civil Lines, Delhi"
                 value={form.address}
                 onChange={(e) => setForm({ ...form, address: e.target.value })}
-                className="w-full px-4 py-3 rounded-xl border border-border-color text-sm focus:outline-none focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] transition-all"
+                className="w-full px-4 py-3 rounded-xl border border-border-color text-sm focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-all"
               />
             </div>
 
@@ -393,7 +393,7 @@ const SavedAddresses = () => {
                 placeholder="e.g. Near Metro Station, Block A"
                 value={form.detail}
                 onChange={(e) => setForm({ ...form, detail: e.target.value })}
-                className="w-full px-4 py-3 rounded-xl border border-border-color text-sm focus:outline-none focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] transition-all"
+                className="w-full px-4 py-3 rounded-xl border border-border-color text-sm focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-all"
               />
             </div>
 
@@ -406,7 +406,7 @@ const SavedAddresses = () => {
                   placeholder="e.g. Delhi"
                   value={form.city}
                   onChange={(e) => setForm({ ...form, city: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-xl border border-border-color text-sm focus:outline-none focus:border-[#0D47A1]"
+                  className="w-full px-4 py-2.5 rounded-xl border border-border-color text-sm focus:outline-none focus:border-brand-blue"
                 />
               </div>
 
@@ -417,7 +417,7 @@ const SavedAddresses = () => {
                   placeholder="e.g. 110054"
                   value={form.pincode}
                   onChange={(e) => setForm({ ...form, pincode: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-xl border border-border-color text-sm focus:outline-none focus:border-[#0D47A1]"
+                  className="w-full px-4 py-2.5 rounded-xl border border-border-color text-sm focus:outline-none focus:border-brand-blue"
                 />
               </div>
             </div>
@@ -428,7 +428,7 @@ const SavedAddresses = () => {
                 type="checkbox"
                 checked={form.isDefault}
                 onChange={(e) => setForm({ ...form, isDefault: e.target.checked })}
-                className="w-4 h-4 rounded text-[#0D47A1] focus:ring-[#0D47A1]"
+                className="w-4 h-4 rounded text-brand-blue focus:ring-brand-blue"
               />
               <span>Set as default delivery address</span>
             </label>
@@ -437,7 +437,7 @@ const SavedAddresses = () => {
             <button
               type="submit"
               disabled={!form.address.trim() || submitting}
-              className="w-full bg-[#0D47A1] text-white font-bold py-3.5 rounded-2xl text-sm hover:bg-blue-900 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2 mt-2"
+              className="w-full bg-brand-blue text-white font-bold py-3.5 rounded-2xl text-sm hover:bg-blue-900 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2 mt-2"
             >
               {submitting ? (
                 <>

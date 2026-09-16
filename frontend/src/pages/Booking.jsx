@@ -292,7 +292,7 @@ const Booking = () => {
               </div>
               <button 
                 onClick={() => setShowOffersDrawer(true)}
-                className="text-[#0D47A1] text-[11px] font-extrabold flex items-center hover:underline"
+                className="text-brand-blue text-[11px] font-extrabold flex items-center hover:underline"
               >
                 View all
               </button>
@@ -410,7 +410,7 @@ const Booking = () => {
           {/* Privacy legal notice */}
           <div className="text-center px-4 mt-2">
             <p className="text-[9px] text-slate-400 font-semibold leading-relaxed">
-              By proceeding, I agree to Razorpay's <span className="text-[#0D47A1] cursor-pointer hover:underline">Privacy Notice</span> • <span className="text-[#0D47A1] cursor-pointer hover:underline">Edit Preferences</span>
+              By proceeding, I agree to Razorpay's <span className="text-brand-blue cursor-pointer hover:underline">Privacy Notice</span> • <span className="text-brand-blue cursor-pointer hover:underline">Edit Preferences</span>
             </p>
           </div>
 
@@ -453,7 +453,7 @@ const Booking = () => {
                 {/* Offer 1 */}
                 <div className="p-3.5 border border-blue-100 bg-blue-50/50 rounded-2xl flex flex-col gap-1.5">
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-extrabold text-[#0D47A1] bg-blue-100 px-2 py-0.5 rounded-md uppercase">
+                    <span className="text-[11px] font-extrabold text-brand-blue bg-blue-100 px-2 py-0.5 rounded-md uppercase">
                       NeuCard Exclusive
                     </span>
                     <span className="text-[10px] font-bold text-slate-400">Code: NEU150</span>
@@ -489,7 +489,7 @@ const Booking = () => {
 
               <button
                 onClick={() => setShowOffersDrawer(false)}
-                className="w-full bg-[#0D47A1] text-white py-3 rounded-2xl text-[13px] font-bold mt-1"
+                className="w-full bg-brand-blue text-white py-3 rounded-2xl text-[13px] font-bold mt-1"
               >
                 Close Offers
               </button>
@@ -536,7 +536,7 @@ const Booking = () => {
             {/* Selected Service Card */}
             <div className="bg-white rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-sm border border-slate-100 flex items-center justify-between text-left">
               <div className="flex-1 min-w-0 pr-4">
-                <span className="text-[10px] font-black uppercase text-[#0D47A1] bg-blue-50 px-2.5 py-1 rounded-full w-fit block mb-1">
+                <span className="text-[10px] font-black uppercase text-brand-blue bg-blue-50 px-2.5 py-1 rounded-full w-fit block mb-1">
                   {preSelectedService} Service
                 </span>
                 <span className="text-[14px] md:text-base font-black text-slate-900 leading-snug block">
@@ -544,17 +544,17 @@ const Booking = () => {
                 </span>
               </div>
               <div className="flex items-center gap-4 flex-shrink-0">
-                <div className="w-20 md:w-28 flex items-center justify-between border border-[#0D47A1] bg-white rounded-xl md:rounded-2xl text-[12px] md:text-sm font-extrabold overflow-hidden h-8 md:h-10">
+                <div className="w-20 md:w-28 flex items-center justify-between border border-brand-blue bg-white rounded-xl md:rounded-2xl text-[12px] md:text-sm font-extrabold overflow-hidden h-8 md:h-10">
                   <button
                     onClick={() => setQty(Math.max(1, qty - 1))}
-                    className="w-7 md:w-9 h-full flex items-center justify-center text-[#0D47A1] hover:bg-slate-50 active:bg-slate-100 transition-colors"
+                    className="w-7 md:w-9 h-full flex items-center justify-center text-brand-blue hover:bg-slate-50 active:bg-slate-100 transition-colors"
                   >
                     -
                   </button>
-                  <span className="text-[#0D47A1] flex-1 text-center select-none">{qty}</span>
+                  <span className="text-brand-blue flex-1 text-center select-none">{qty}</span>
                   <button
                     onClick={() => setQty(qty + 1)}
-                    className="w-7 md:w-9 h-full flex items-center justify-center text-[#0D47A1] hover:bg-slate-50 active:bg-slate-100 transition-colors"
+                    className="w-7 md:w-9 h-full flex items-center justify-center text-brand-blue hover:bg-slate-50 active:bg-slate-100 transition-colors"
                   >
                     +
                   </button>
@@ -567,7 +567,7 @@ const Booking = () => {
 
             {/* Service Guarantee Card */}
             <div className="bg-gradient-to-r from-blue-50/60 to-indigo-50/60 rounded-2xl md:rounded-3xl p-4 md:p-5 border border-blue-100 flex items-center gap-3 text-left">
-              <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-[#0D47A1] shadow-xs flex-shrink-0">
+              <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-brand-blue shadow-xs flex-shrink-0">
                 <Check className="h-4 w-4 stroke-[3]" />
               </div>
               <div className="flex flex-col">
@@ -752,7 +752,7 @@ const Booking = () => {
               <h2 className="text-[14px] font-extrabold text-slate-900">Confirm Your Address</h2>
               <button 
                 onClick={() => navigate('/saved-addresses')}
-                className="text-[#0D47A1] text-[12px] font-extrabold hover:underline"
+                className="text-brand-blue text-[12px] font-extrabold hover:underline"
               >
                 Change
               </button>
@@ -784,14 +784,14 @@ const Booking = () => {
                           key={id}
                           onClick={() => applyAddressData(addr)}
                           className={`p-3 rounded-2xl border text-left cursor-pointer transition-all ${
-                            isSelected ? 'bg-[#EAF4FF] border-[#0D47A1] shadow-sm' : 'bg-[#F8F9FA] border-slate-100 hover:border-slate-200'
+                            isSelected ? 'bg-[#EAF4FF] border-brand-blue shadow-sm' : 'bg-[#F8F9FA] border-slate-100 hover:border-slate-200'
                           }`}
                         >
                           <div className="flex items-center justify-between">
                             <span className="text-[11px] font-black text-slate-800 uppercase">
                               {addr.type || 'Home'} {addr.isDefault ? '• Default' : ''}
                             </span>
-                            {isSelected && <Check className="w-4 h-4 text-[#0D47A1]" />}
+                            {isSelected && <Check className="w-4 h-4 text-brand-blue" />}
                           </div>
                           <p className="text-[10px] text-slate-500 font-semibold leading-normal mt-0.5 truncate">
                             {fullStr}
@@ -863,7 +863,7 @@ const Booking = () => {
                       onClick={() => setSaveAs(tag)}
                       className={`px-5 py-2 rounded-xl text-[11px] font-extrabold border transition-all ${
                         saveAs === tag
-                          ? 'bg-[#EAF4FF] text-[#0D47A1] border-[#0D47A1]'
+                          ? 'bg-[#EAF4FF] text-brand-blue border-brand-blue'
                           : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
                       }`}
                     >
@@ -966,13 +966,13 @@ const Booking = () => {
                         }`}
                       >
                         {isCustom ? (
-                          <span className={`text-[10px] font-bold text-center leading-tight ${isActive ? 'text-[#0D47A1]' : 'text-slate-600'}`}>
+                          <span className={`text-[10px] font-bold text-center leading-tight ${isActive ? 'text-brand-blue' : 'text-slate-600'}`}>
                             Select<br/>custom
                           </span>
                         ) : (
                           <>
                             <span className="text-[9px] text-slate-400 font-bold uppercase">{parts[0]}</span>
-                            <span className={`text-[14px] font-black ${isActive ? 'text-[#0D47A1]' : 'text-slate-800'} mt-0.5`}>
+                            <span className={`text-[14px] font-black ${isActive ? 'text-brand-blue' : 'text-slate-800'} mt-0.5`}>
                               {parts[1]}
                             </span>
                           </>
@@ -1016,7 +1016,7 @@ const Booking = () => {
                               ? 'border-amber-500 bg-amber-500 text-white shadow-md col-span-3'
                               : 'border-amber-400 bg-amber-50 text-amber-900 col-span-3 hover:bg-amber-100'
                             : isActive
-                            ? 'border-[#2F80ED] bg-[#EAF4FF] text-[#0D47A1] shadow-sm'
+                            ? 'border-[#2F80ED] bg-[#EAF4FF] text-brand-blue shadow-sm'
                             : 'border-slate-150 bg-white text-slate-700 hover:border-slate-300'
                         }`}
                       >

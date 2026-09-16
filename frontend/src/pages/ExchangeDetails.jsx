@@ -70,7 +70,7 @@ const ExchangeDetails = () => {
             onClick={() => setActiveTab(tab)}
             className={`flex-1 py-3 text-[11px] font-black transition-all cursor-pointer border-b-2 ${
               activeTab === tab
-                ? 'text-[#0D47A1] border-[#0D47A1]'
+                ? 'text-brand-blue border-brand-blue'
                 : 'text-slate-400 border-transparent hover:text-slate-600'
             }`}
           >
@@ -136,7 +136,7 @@ const ExchangeDetails = () => {
 
               <div className="flex justify-between items-center border-t border-slate-50 pt-2.5 mt-0.5">
                 <span className="text-[10px] text-slate-400 font-semibold">{exc.date}</span>
-                <span className="text-xs font-black text-[#0D47A1] hover:underline">Track Exchange</span>
+                <span className="text-xs font-black text-brand-blue hover:underline">Track Exchange</span>
               </div>
             </div>
           ))
