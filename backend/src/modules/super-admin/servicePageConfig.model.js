@@ -39,7 +39,7 @@ const servicePageConfigSchema = new mongoose.Schema(
     tagline: String,
     subtitle: String,
     bannerImg: String,
-    productTypes: [String],
+    productTypes: [mongoose.Schema.Types.Mixed],
     // Comma-separated chip labels, matching what the console's textarea edits.
     subServices: String,
     catalog: [catalogSectionSchema],

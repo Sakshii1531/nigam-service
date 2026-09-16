@@ -24,7 +24,16 @@ export const upsertServicePageConfigSchema = z.object({
   subtitle: z.string().optional(),
   bannerImg: z.string().optional(),
   subServices: z.union([z.string(), z.array(z.string())]).optional(),
-  productTypes: z.array(z.string()).optional(),
+  productTypes: z.array(
+    z.union([
+      z.string(),
+      z.object({
+        name: z.string(),
+        desc: z.string().optional(),
+        icon: z.string().optional(),
+      })
+    ])
+  ).optional(),
   catalog: z.array(catalogSectionSchema).optional(),
 });
 

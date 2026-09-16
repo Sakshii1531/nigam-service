@@ -552,6 +552,8 @@ async function hydrateServicePages() {
         tagline: row.tagline || '',
         subtitle: row.subtitle || '',
         subServices: row.subServices || '',
+        bannerImg: row.bannerImg || '',
+        productTypes: Array.isArray(row.productTypes) ? row.productTypes : [],
       };
       if (row.catalog?.length) servicePageCache.catalogs[row.serviceKey] = row.catalog;
     }
@@ -1484,7 +1486,10 @@ const CustomerAppCustomization = () => {
       bannerImg: config.bannerImg || ''
     });
 
-    const rawTypes = config.productTypes || [];
+    const rawTypes = (config.productTypes || []).map(t => {
+      if (typeof t === 'string') return { name: t, desc: '' };
+      return { name: t?.name || '', desc: t?.desc || '' };
+    });
     setServiceTypes(rawTypes);
 
     const pkgs = [];
@@ -1586,7 +1591,12 @@ const CustomerAppCustomization = () => {
         subtitle: serviceForm.subtitle,
         bannerImg: serviceForm.bannerImg,
         subServices: Array.from(new Set(servicePackages.map(p => p.section.trim()).filter(Boolean))).join(', '),
-        productTypes: serviceTypes.map(t => t.trim()).filter(Boolean)
+        productTypes: serviceTypes
+          .map(t => ({
+            name: (typeof t === 'string' ? t : (t?.name || '')).trim(),
+            desc: (typeof t === 'object' && t?.desc ? t.desc : '').trim()
+          }))
+          .filter(t => t.name.length > 0)
       };
       await writeServiceConfigs(configs);
 
@@ -2871,35 +2881,43 @@ const CustomerAppCustomization = () => {
       {/* Edit/Add Service Modal Overlay */}
       {showServiceModal && (
         <div className="fixed inset-0 bg-[#052355]/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-2xl border border-slate-100 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh]">
+          <div className="bg-white rounded-2xl w-full max-w-2xl md:max-w-3xl p-6 shadow-2xl border border-slate-100 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh]">
             <div className="flex justify-between items-center flex-shrink-0">
               <h3 className="text-base font-bold text-[#1E293B]">{isEditingService ? 'Edit Service & Details Page' : 'Add New Service & Details Page'}</h3>
               <button onClick={() => setShowServiceModal(false)} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
             </div>
             
-            <form onSubmit={handleSaveService} className="space-y-4 overflow-y-auto pr-1 flex-1 max-h-[75vh] no-scrollbar">
-              <div className="bg-slate-50 p-3 rounded-xl border border-slate-150 space-y-3">
-                <span className="text-[10px] font-bold text-[#0D47A1] uppercase tracking-wider block">1. Dashboard Listing Details</span>
+            <form 
+              onSubmit={handleSaveService} 
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && e.target.tagName === 'INPUT' && e.target.type !== 'submit') {
+                  e.preventDefault();
+                }
+              }}
+              className="space-y-4 overflow-y-auto pr-1 flex-1 max-h-[75vh] no-scrollbar"
+            >
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-3">
+                <span className="text-xs font-bold text-[#0D47A1] uppercase tracking-wider block">1. Dashboard Listing Details</span>
                 <div>
-                  <label className="text-xs font-semibold text-[#64748B] mb-1 block">Service Name *</label>
+                  <label className="text-xs font-bold text-slate-700 mb-1 block">Service Name *</label>
                   <input 
                     type="text" 
                     value={serviceForm.name}
                     onChange={(e) => setServiceForm({ ...serviceForm, name: e.target.value })}
                     placeholder="e.g. Chimney Cleaning"
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:border-[#0D47A1] transition-all"
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 font-medium placeholder:text-slate-400 outline-none focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1]/20 transition-all shadow-2xs"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-[#64748B] mb-1 block">Dashboard Grid Image *</label>
-                  <div className="flex items-center gap-3 bg-white border border-dashed border-slate-200 rounded-lg p-2">
+                  <label className="text-xs font-bold text-slate-700 mb-1 block">Dashboard Grid Image *</label>
+                  <div className="flex items-center gap-3 bg-white border border-dashed border-slate-300 rounded-lg p-2">
                     <input 
                       type="file" 
                       accept="image/*"
                       onChange={handleServiceFileChange}
-                      className="w-full text-xs text-slate-500 file:mr-3 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-blue-50 file:text-[#0D47A1] hover:file:bg-blue-100 cursor-pointer"
+                      className="w-full text-xs text-slate-600 file:mr-3 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-blue-50 file:text-[#0D47A1] hover:file:bg-blue-100 cursor-pointer"
                       required={!isEditingService}
                     />
                     {serviceForm.img && (
@@ -2910,69 +2928,105 @@ const CustomerAppCustomization = () => {
               </div>
 
               <div className="bg-blue-50/50 p-3 rounded-xl border border-blue-100 space-y-3">
-                <span className="text-[10px] font-bold text-[#0D47A1] uppercase tracking-wider block">2. Details Page Hero Header</span>
+                <span className="text-xs font-bold text-[#0D47A1] uppercase tracking-wider block">2. Details Page Hero Header</span>
                 
                 <div>
-                  <label className="text-xs font-semibold text-[#64748B] mb-1 block">Hero Tagline</label>
+                  <label className="text-xs font-bold text-slate-700 mb-1 block">Hero Tagline</label>
                   <input 
                     type="text" 
                     value={serviceForm.tagline}
                     onChange={(e) => setServiceForm({ ...serviceForm, tagline: e.target.value })}
                     placeholder="e.g. Cool Again Today"
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:border-[#0D47A1] transition-all"
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 font-medium placeholder:text-slate-400 outline-none focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1]/20 transition-all shadow-2xs"
                   />
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-[#64748B] mb-1 block">Hero Subtitle</label>
+                  <label className="text-xs font-bold text-slate-700 mb-1 block">Hero Subtitle</label>
                   <input 
                     type="text" 
                     value={serviceForm.subtitle}
                     onChange={(e) => setServiceForm({ ...serviceForm, subtitle: e.target.value })}
                     placeholder="e.g. Certified AC ServiceProviders For All Brands"
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:border-[#0D47A1] transition-all"
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 font-medium placeholder:text-slate-400 outline-none focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1]/20 transition-all shadow-2xs"
                   />
                 </div>
 
               </div>
 
-              <div className="bg-slate-50 p-3 rounded-xl border border-slate-150 space-y-3">
+              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-[10px] font-bold text-[#0D47A1] uppercase tracking-wider">3. Device Types / Options (Optional)</span>
+                  <span className="text-xs font-bold text-[#0D47A1] uppercase tracking-wider">3. Device Types / Options (Optional)</span>
                   <button
                     type="button"
-                    onClick={() => setServiceTypes([...serviceTypes, ''])}
-                    className="bg-white border border-slate-200 text-[#0D47A1] px-2.5 py-1 rounded-md text-[10px] font-extrabold shadow-2xs hover:bg-slate-50 transition-all"
+                    onClick={() => setServiceTypes([...serviceTypes, { name: '', desc: '' }])}
+                    className="bg-white border border-slate-300 text-[#0D47A1] px-2.5 py-1 rounded-md text-[11px] font-extrabold shadow-2xs hover:bg-slate-50 transition-all cursor-pointer"
                   >
                     + Add Type
                   </button>
                 </div>
-                <span className="text-[9px] text-slate-400 font-medium block">Add options if this device has selection types (e.g. Split AC, Window AC). Otherwise leave empty.</span>
+                <span className="text-xs text-slate-600 font-medium block">Add options if this device has selection types (e.g. Semi-Automatic, Full - Automatic). You can also add short descriptions.</span>
                 
                 {serviceTypes.length > 0 ? (
-                  <div className="space-y-2 max-h-40 overflow-y-auto">
-                    {serviceTypes.map((type, idx) => (
-                      <div key={idx} className="flex gap-2 items-center">
-                        <input
-                          type="text"
-                          value={type}
-                          onChange={(e) => setServiceTypes(serviceTypes.map((t, tIdx) => tIdx === idx ? e.target.value : t))}
-                          placeholder="e.g. Split AC"
-                          className="flex-1 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:border-[#0D47A1] transition-all"
-                          required
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setServiceTypes(serviceTypes.filter((_, tIdx) => tIdx !== idx))}
-                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
-                    ))}
+                  <div className="space-y-2.5 max-h-52 overflow-y-auto pr-1">
+                    {serviceTypes.map((typeItem, idx) => {
+                      const typeName = typeof typeItem === 'string' ? typeItem : (typeItem?.name || '');
+                      const typeDesc = typeof typeItem === 'object' ? (typeItem?.desc || '') : '';
+                      return (
+                        <div key={idx} className="flex flex-col sm:flex-row gap-2 items-start sm:items-center bg-white p-2.5 rounded-xl border border-slate-200/90 shadow-2xs">
+                          <div className="flex-1 w-full">
+                            <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block mb-0.5">Type Name *</label>
+                            <input
+                              type="text"
+                              value={typeName}
+                              onChange={(e) => setServiceTypes(serviceTypes.map((t, tIdx) => {
+                                if (tIdx !== idx) return t;
+                                return typeof t === 'string' ? { name: e.target.value, desc: '' } : { ...t, name: e.target.value };
+                              }))}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                }
+                              }}
+                              placeholder="e.g. Semi-Automatic"
+                              className="w-full px-2.5 py-1.5 bg-slate-50/50 border border-slate-300 rounded-lg text-xs text-slate-900 font-semibold placeholder:text-slate-400 placeholder:font-normal outline-none focus:border-[#0D47A1] focus:bg-white focus:ring-1 focus:ring-[#0D47A1]/20 transition-all shadow-2xs"
+                              required
+                            />
+                          </div>
+                          <div className="flex-1 w-full">
+                            <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block mb-0.5">Description (Optional)</label>
+                            <input
+                              type="text"
+                              value={typeDesc}
+                              onChange={(e) => setServiceTypes(serviceTypes.map((t, tIdx) => {
+                                if (tIdx !== idx) return t;
+                                return typeof t === 'string' ? { name: t, desc: e.target.value } : { ...t, desc: e.target.value };
+                              }))}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                }
+                              }}
+                              placeholder="e.g. Manual water fill"
+                              className="w-full px-2.5 py-1.5 bg-slate-50/50 border border-slate-300 rounded-lg text-xs text-slate-900 font-medium placeholder:text-slate-400 outline-none focus:border-[#0D47A1] focus:bg-white focus:ring-1 focus:ring-[#0D47A1]/20 transition-all shadow-2xs"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setServiceTypes(serviceTypes.filter((_, tIdx) => tIdx !== idx))}
+                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer self-end sm:self-center mt-1 sm:mt-4"
+                            title="Remove Type"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
-                  <div className="text-[10px] text-slate-400 italic bg-white border border-slate-100 rounded-lg p-2 text-center">
+                  <div className="text-xs text-slate-500 italic bg-white border border-slate-200 rounded-lg p-2.5 text-center">
                     No custom types defined (field is optional).
                   </div>
                 )}
@@ -2980,16 +3034,16 @@ const CustomerAppCustomization = () => {
 
               <div className="bg-blue-50/50 p-3 rounded-xl border border-blue-100 space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-[10px] font-bold text-[#0D47A1] uppercase tracking-wider font-sans">4. Services & Packages List *</span>
+                  <span className="text-xs font-bold text-[#0D47A1] uppercase tracking-wider font-sans">4. Services & Packages List *</span>
                   <button
                     type="button"
                     onClick={() => setServicePackages([...servicePackages, { id: Date.now() + Math.random(), section: 'General Repair', name: '', price: '', bullets: '' }])}
-                    className="bg-white border border-blue-200 text-[#0D47A1] px-2.5 py-1 rounded-md text-[10px] font-extrabold shadow-2xs hover:bg-slate-50 transition-all"
+                    className="bg-white border border-blue-200 text-[#0D47A1] px-2.5 py-1 rounded-md text-[11px] font-extrabold shadow-2xs hover:bg-slate-50 transition-all cursor-pointer"
                   >
                     + Add Package
                   </button>
                 </div>
-                <span className="text-[9px] text-slate-400 font-medium block">Add pricing packages. Bullets should be comma-separated.</span>
+                <span className="text-xs text-slate-600 font-medium block">Add pricing packages. Bullets should be comma-separated.</span>
                 
                 {servicePackages.length > 0 ? (
                   <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
@@ -2998,31 +3052,32 @@ const CustomerAppCustomization = () => {
                         <button
                           type="button"
                           onClick={() => setServicePackages(servicePackages.filter(p => p.id !== pkg.id))}
-                          className="absolute top-2 right-2 p-1 text-slate-400 hover:text-red-600 rounded-lg transition-colors"
+                          className="absolute top-2 right-2 p-1.5 text-slate-400 hover:text-red-600 rounded-lg transition-colors cursor-pointer"
+                          title="Remove Package"
                         >
-                          <Trash2 size={13} />
+                          <Trash2 size={14} />
                         </button>
                         
                         <div className="grid grid-cols-2 gap-2">
                           <div>
-                            <label className="text-[9px] font-bold text-slate-400 block mb-0.5">Section Name *</label>
+                            <label className="text-xs font-bold text-slate-700 block mb-1">Section Name *</label>
                             <input
                               type="text"
                               value={pkg.section}
                               onChange={(e) => setServicePackages(servicePackages.map(p => p.id === pkg.id ? { ...p, section: e.target.value } : p))}
                               placeholder="e.g. Installation Services"
-                              className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-md text-xs outline-none focus:border-[#0D47A1] transition-all"
+                              className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-md text-xs text-slate-900 font-medium placeholder:text-slate-400 outline-none focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1]/20 transition-all shadow-2xs"
                               required
                             />
                           </div>
                           <div>
-                            <label className="text-[9px] font-bold text-slate-400 block mb-0.5">Package/Service Name *</label>
+                            <label className="text-xs font-bold text-slate-700 block mb-1">Package/Service Name *</label>
                             <input
                               type="text"
                               value={pkg.name}
                               onChange={(e) => setServicePackages(servicePackages.map(p => p.id === pkg.id ? { ...p, name: e.target.value } : p))}
                               placeholder="e.g. Split AC Installation"
-                              className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-md text-xs outline-none focus:border-[#0D47A1] transition-all"
+                              className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-md text-xs text-slate-900 font-medium placeholder:text-slate-400 outline-none focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1]/20 transition-all shadow-2xs"
                               required
                             />
                           </div>
@@ -3030,7 +3085,7 @@ const CustomerAppCustomization = () => {
                         
                         <div className="grid grid-cols-3 gap-2">
                           <div>
-                            <label className="text-[9px] font-bold text-slate-400 block mb-0.5">Price (₹) *</label>
+                            <label className="text-xs font-bold text-slate-700 block mb-1">Price (₹) *</label>
                             <input
                               type="text"
                               value={pkg.price === 0 || pkg.price === '0' ? '' : (pkg.price ?? '')}
@@ -3040,29 +3095,29 @@ const CustomerAppCustomization = () => {
                                 setServicePackages(servicePackages.map(p => p.id === pkg.id ? { ...p, price: val === '0' ? '' : val } : p));
                               }}
                               placeholder="e.g. 299"
-                              className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-md text-xs outline-none focus:border-[#0D47A1] transition-all"
+                              className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-md text-xs text-slate-900 font-medium placeholder:text-slate-400 outline-none focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1]/20 transition-all shadow-2xs"
                               required
                             />
                           </div>
                           <div>
-                            <label className="text-[9px] font-bold text-slate-400 block mb-0.5">Price Unit *</label>
+                            <label className="text-xs font-bold text-slate-700 block mb-1">Price Unit *</label>
                             <input
                               type="text"
                               value={pkg.unit || 'per unit'}
                               onChange={(e) => setServicePackages(servicePackages.map(p => p.id === pkg.id ? { ...p, unit: e.target.value } : p))}
                               placeholder="e.g. per AC, per visit"
-                              className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-md text-xs outline-none focus:border-[#0D47A1] transition-all"
+                              className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-md text-xs text-slate-900 font-medium placeholder:text-slate-400 outline-none focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1]/20 transition-all shadow-2xs"
                               required
                             />
                           </div>
                           <div>
-                            <label className="text-[9px] font-bold text-slate-400 block mb-0.5">Upload Icon Image *</label>
-                            <div className="flex items-center gap-1.5 bg-slate-50 border border-dashed border-slate-200 rounded-md p-1">
+                            <label className="text-xs font-bold text-slate-700 block mb-1">Upload Icon Image *</label>
+                            <div className="flex items-center gap-1.5 bg-white border border-dashed border-slate-300 rounded-md p-1">
                               <input 
                                 type="file" 
                                 accept="image/*"
                                 onChange={(e) => handlePackageIconChange(pkg.id, e)}
-                                className="w-full text-[10px] text-slate-500 file:mr-2 file:py-0.5 file:px-1.5 file:rounded file:border-0 file:text-[9px] file:font-semibold file:bg-blue-50 file:text-[#0D47A1] hover:file:bg-blue-100 cursor-pointer"
+                                className="w-full text-[10px] text-slate-600 file:mr-2 file:py-0.5 file:px-1.5 file:rounded file:border-0 file:text-[9px] file:font-semibold file:bg-blue-50 file:text-[#0D47A1] hover:file:bg-blue-100 cursor-pointer"
                               />
                               {pkg.icon && (
                                 <div className="w-6 h-6 flex-shrink-0 bg-white border border-slate-200 rounded-md flex items-center justify-center overflow-hidden">
@@ -3079,23 +3134,23 @@ const CustomerAppCustomization = () => {
 
                         <div className="grid grid-cols-3 gap-2">
                           <div className="col-span-1">
-                            <label className="text-[9px] font-bold text-slate-400 block mb-0.5">Short Description</label>
+                            <label className="text-xs font-bold text-slate-700 block mb-1">Short Description</label>
                             <input
                               type="text"
                               value={pkg.desc || ''}
                               onChange={(e) => setServicePackages(servicePackages.map(p => p.id === pkg.id ? { ...p, desc: e.target.value } : p))}
                               placeholder="e.g. New AC fitting & setup"
-                              className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-md text-xs outline-none focus:border-[#0D47A1] transition-all"
+                              className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-md text-xs text-slate-900 font-medium placeholder:text-slate-400 outline-none focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1]/20 transition-all shadow-2xs"
                             />
                           </div>
                           <div className="col-span-2">
-                            <label className="text-[9px] font-bold text-slate-400 block mb-0.5">Description Bullets (Comma-separated)</label>
+                            <label className="text-xs font-bold text-slate-700 block mb-1">Description Bullets (Comma-separated)</label>
                             <input
                               type="text"
                               value={pkg.bullets}
                               onChange={(e) => setServicePackages(servicePackages.map(p => p.id === pkg.id ? { ...p, bullets: e.target.value } : p))}
                               placeholder="e.g. 30 days warranty, gas leak check"
-                              className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-md text-xs outline-none focus:border-[#0D47A1] transition-all"
+                              className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-md text-xs text-slate-900 font-medium placeholder:text-slate-400 outline-none focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1]/20 transition-all shadow-2xs"
                             />
                           </div>
                         </div>
@@ -3103,7 +3158,7 @@ const CustomerAppCustomization = () => {
                     ))}
                   </div>
                 ) : (
-                  <div className="text-[10px] text-red-500 italic bg-red-50 border border-red-100 rounded-lg p-3 text-center font-semibold">
+                  <div className="text-xs text-red-500 italic bg-red-50 border border-red-200 rounded-lg p-3 text-center font-semibold">
                     Please add at least one service package.
                   </div>
                 )}

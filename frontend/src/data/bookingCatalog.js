@@ -34,8 +34,18 @@ import { apiRequest } from '../lib/apiClient';
 // the overrides are fetched once into these caches and preloadCatalogOverrides()
 // is awaited before the first read. An empty cache simply means "no override",
 // which falls through to the bundled defaults below.
-let servicePageOverrides = {};
-let categoryOverrides = {};
+const getInitialOverrides = (storageKey) => {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = sessionStorage.getItem(storageKey);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+};
+
+let servicePageOverrides = getInitialOverrides('ncc_service_pages_cache');
+let categoryOverrides = getInitialOverrides('ncc_category_configs_cache');
 
 export async function preloadCatalogOverrides() {
   try {
@@ -45,6 +55,12 @@ export async function preloadCatalogOverrides() {
     ]);
     servicePageOverrides = Object.fromEntries((servicePages || []).map(c => [c.serviceKey, c]));
     categoryOverrides = Object.fromEntries((categories || []).map(c => [c.categoryName, c]));
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem('ncc_service_pages_cache', JSON.stringify(servicePageOverrides));
+        sessionStorage.setItem('ncc_category_configs_cache', JSON.stringify(categoryOverrides));
+      } catch {}
+    }
   } catch (err) {
     console.warn('[catalog] Could not load admin overrides, using defaults:', err.message);
   }
@@ -344,43 +360,104 @@ export const BOOKING_CATALOG = {
  */
 export const getCatalogEntry = (category) => {
   if (!category) return null;
-  const decoded = decodeURIComponent(category);
+  const decoded = decodeURIComponent(category).trim();
   const decodedNorm = decoded.toLowerCase();
+  const cleanDecoded = decodedNorm.replace(/[-_]/g, ' ').replace(/\s+/g, ' ').trim();
+  const baseDecoded = cleanDecoded.replace(/\b(repair|services|service|checkup|installation|complete)\b/gi, '').replace(/\s+/g, ' ').trim();
 
   // 1. Look up in Services Customization data (from Services tab)
   const serviceConfigs = servicePageOverrides;
+  const keys = Object.keys(serviceConfigs);
 
   let matchedServiceKey = null;
   // 1a. Try exact match first
-  const exactKey = Object.keys(serviceConfigs).find(key => key.toLowerCase() === decodedNorm);
-  if (exactKey) {
-    matchedServiceKey = exactKey;
-  } else {
-    // 1b. Fallback to whole-word match if no exact match exists
-    const cleanWordKey = Object.keys(serviceConfigs).find(key => {
-      const keyNorm = key.toLowerCase();
-      const escaped = decodedNorm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const regex = new RegExp(`(?:^|\\s)${escaped}(?:$|\\s)`, 'i');
-      return regex.test(keyNorm);
+  matchedServiceKey = keys.find(k => k.toLowerCase() === decodedNorm);
+
+  // 1b. Normalized spacing & hyphens
+  if (!matchedServiceKey) {
+    matchedServiceKey = keys.find(k => k.toLowerCase().replace(/[-_]/g, ' ').replace(/\s+/g, ' ').trim() === cleanDecoded);
+  }
+
+  // 1c. Base name without suffixes (e.g. "Washing Machine Repair" -> "Washing Machine")
+  if (!matchedServiceKey && baseDecoded) {
+    matchedServiceKey = keys.find(k => {
+      const kClean = k.toLowerCase().replace(/[-_]/g, ' ').replace(/\s+/g, ' ').trim();
+      const kBase = kClean.replace(/\b(repair|services|service|checkup|installation|complete)\b/gi, '').replace(/\s+/g, ' ').trim();
+      return kBase === baseDecoded || kClean === baseDecoded;
     });
-    if (cleanWordKey) {
-      matchedServiceKey = cleanWordKey;
-    }
+  }
+
+  // 1d. Substring word inclusion (bidirectional)
+  if (!matchedServiceKey) {
+    matchedServiceKey = keys.find(k => {
+      const kClean = k.toLowerCase().replace(/[-_]/g, ' ').replace(/\s+/g, ' ').trim();
+      return cleanDecoded.includes(kClean) || (baseDecoded && kClean.includes(baseDecoded));
+    });
   }
 
   if (matchedServiceKey) {
     const config = serviceConfigs[matchedServiceKey] || {};
     const catalog = config.catalog || [];
-    // Product types and brands are a property of the category, not the service
-    // page, so they come from the category config when one exists.
     const categoryConfig = categoryOverrides[matchedServiceKey] || categoryOverrides[decoded] || {};
+    const staticDefault = BOOKING_CATALOG[decoded] || BOOKING_CATALOG[Object.keys(BOOKING_CATALOG).find(k => k.toLowerCase() === decodedNorm || k.toLowerCase().replace(/[-_]/g, ' ').trim() === cleanDecoded)] || {};
 
-    const productTypes = (categoryConfig.productTypes || []).map(t => ({
-      id: t.toLowerCase().replace(/ /g, '_'),
-      name: t,
-      icon: '⚡',
-      desc: ''
-    }));
+    // Product types priority:
+    // 1. Service Page Config (from Services Tab)
+    // 2. Category Config (from Categories Tab)
+    // 3. Static Bundled Defaults (only if no custom types configured)
+    const rawProductTypes = (config.productTypes && config.productTypes.length > 0)
+      ? config.productTypes
+      : (categoryConfig.productTypes && (Array.isArray(categoryConfig.productTypes) ? categoryConfig.productTypes.length > 0 : String(categoryConfig.productTypes).trim().length > 0))
+      ? categoryConfig.productTypes
+      : null;
+
+    let productTypes;
+    if (rawProductTypes) {
+      const list = typeof rawProductTypes === 'string'
+        ? rawProductTypes.split(',').map(s => s.trim()).filter(Boolean)
+        : (Array.isArray(rawProductTypes) ? rawProductTypes : []);
+
+      productTypes = list.map(item => {
+        const nameStr = typeof item === 'string' ? item : (item.name || String(item));
+        const nameClean = nameStr.toLowerCase().replace(/[-_]/g, ' ').trim();
+        const staticItem = (staticDefault.productTypes || []).find(st => {
+          const stClean = (st.name || '').toLowerCase().replace(/[-_]/g, ' ').trim();
+          return stClean === nameClean || stClean.includes(nameClean) || nameClean.includes(stClean);
+        });
+
+        // Determine sensible default icons if static item doesn't specify
+        let defaultIcon = '⚡';
+        let defaultDesc = '';
+        if (nameClean.includes('semi')) {
+          defaultIcon = '⚙️';
+          defaultDesc = 'Manual / twin-tub operation';
+        } else if (nameClean.includes('full') || nameClean.includes('front')) {
+          defaultIcon = '🔄';
+          defaultDesc = 'Fully automatic cycle';
+        } else if (nameClean.includes('top')) {
+          defaultIcon = '⬆️';
+          defaultDesc = 'Top load drum';
+        } else if (nameClean.includes('split')) {
+          defaultIcon = '❄️';
+          defaultDesc = 'Split wall-mounted unit';
+        } else if (nameClean.includes('window')) {
+          defaultIcon = '🪟';
+          defaultDesc = 'Single window unit';
+        }
+
+        const hasCustomDesc = typeof item === 'object' && item !== null && item.desc !== undefined;
+        const customDesc = hasCustomDesc ? (item.desc || '') : null;
+
+        return {
+          id: staticItem?.id || (typeof item === 'object' && item.id ? item.id : nameStr.toLowerCase().replace(/[^a-z0-9]+/g, '_')),
+          name: nameStr,
+          icon: (typeof item === 'object' && item.icon) ? item.icon : (staticItem?.icon || defaultIcon),
+          desc: customDesc !== null ? customDesc : (staticItem?.desc || defaultDesc)
+        };
+      });
+    } else {
+      productTypes = staticDefault.productTypes || [];
+    }
 
     const servicesList = [];
     catalog.forEach(group => {
@@ -398,7 +475,11 @@ export const getCatalogEntry = (category) => {
       }
     });
 
-    const staticDefault = BOOKING_CATALOG[decoded] || BOOKING_CATALOG[Object.keys(BOOKING_CATALOG).find(k => k.toLowerCase() === decodedNorm)] || {};
+    const resolvedServices = servicesList.length > 0 ? servicesList : (
+      Array.isArray(categoryConfig.services) ? categoryConfig.services : (
+        staticDefault.services?.default || (Array.isArray(staticDefault.services) ? staticDefault.services : [])
+      )
+    );
 
     const resolved = {
       icon: staticDefault.icon || null,
@@ -406,7 +487,7 @@ export const getCatalogEntry = (category) => {
       lightBg: staticDefault.lightBg || '#EAF4FF',
       productTypes,
       services: {
-        default: servicesList
+        default: resolvedServices
       },
       brands: categoryConfig.brands?.length ? categoryConfig.brands : (staticDefault.brands || ['LG', 'Samsung', 'Whirlpool', 'Panasonic']),
       whyBrandPoints: categoryConfig.whyBrandPoints?.length
@@ -423,36 +504,50 @@ export const getCatalogEntry = (category) => {
 
   // 2. Otherwise, fall back to Category Customization (categoryOverrides) merged over Static defaults (BOOKING_CATALOG)
   const staticKey = Object.keys(BOOKING_CATALOG).find(
-    (k) => k.toLowerCase() === decodedNorm
+    (k) => k.toLowerCase() === decodedNorm || k.toLowerCase().replace(/[-_]/g, ' ').trim() === cleanDecoded
   );
   const staticDefault = staticKey ? BOOKING_CATALOG[staticKey] : {};
 
   const overrideKey = Object.keys(categoryOverrides).find(
-    (k) => k.toLowerCase() === decodedNorm
+    (k) => k.toLowerCase() === decodedNorm || k.toLowerCase().replace(/[-_]/g, ' ').trim() === cleanDecoded
   );
   const categoryConfig = overrideKey ? categoryOverrides[overrideKey] : null;
 
-  if (!staticKey && !overrideKey) {
+  const fallbackServiceKey = Object.keys(serviceConfigs).find(
+    (k) => k.toLowerCase() === decodedNorm || k.toLowerCase().replace(/[-_]/g, ' ').trim() === cleanDecoded
+  );
+  const serviceConfig = fallbackServiceKey ? serviceConfigs[fallbackServiceKey] : null;
+
+  if (!staticKey && !overrideKey && !serviceConfig) {
     return null;
   }
 
-  // Parse productTypes from override or static
+  // Parse productTypes from service override, category override, or static
+  const dynTypes = (serviceConfig && serviceConfig.productTypes && serviceConfig.productTypes.length > 0)
+    ? serviceConfig.productTypes
+    : (categoryConfig && categoryConfig.productTypes && (Array.isArray(categoryConfig.productTypes) ? categoryConfig.productTypes.length > 0 : String(categoryConfig.productTypes).trim().length > 0))
+    ? categoryConfig.productTypes
+    : null;
+
   let productTypes;
-  if (categoryConfig && categoryConfig.productTypes) {
-    const rawTypes = typeof categoryConfig.productTypes === 'string'
-      ? categoryConfig.productTypes.split(',').map(s => s.trim()).filter(Boolean)
-      : (Array.isArray(categoryConfig.productTypes) ? categoryConfig.productTypes : []);
+  if (dynTypes) {
+    const rawTypes = typeof dynTypes === 'string'
+      ? dynTypes.split(',').map(s => s.trim()).filter(Boolean)
+      : (Array.isArray(dynTypes) ? dynTypes : []);
 
     productTypes = rawTypes.map(item => {
       const nameStr = typeof item === 'string' ? item : (item.name || String(item));
+      const hasCustomDesc = typeof item === 'object' && item !== null && item.desc !== undefined;
+      const customDesc = hasCustomDesc ? (item.desc || '') : null;
+      const nameClean = nameStr.toLowerCase().replace(/[-_]/g, ' ').trim();
       const staticItem = (staticDefault.productTypes || []).find(
-        st => st.name?.toLowerCase() === nameStr.toLowerCase()
+        st => (st.name || '').toLowerCase().replace(/[-_]/g, ' ').trim() === nameClean
       );
       return {
-        id: staticItem?.id || (typeof item === 'object' && item.id ? item.id : nameStr.toLowerCase().replace(/\s+/g, '_')),
+        id: staticItem?.id || (typeof item === 'object' && item.id ? item.id : nameStr.toLowerCase().replace(/[^a-z0-9]+/g, '_')),
         name: nameStr,
         icon: (typeof item === 'object' && item.icon) ? item.icon : (staticItem?.icon || '⚡'),
-        desc: (typeof item === 'object' && item.desc) ? item.desc : (staticItem?.desc || '')
+        desc: customDesc !== null ? customDesc : (staticItem?.desc || '')
       };
     });
   } else {

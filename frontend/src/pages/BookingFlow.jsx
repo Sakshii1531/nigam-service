@@ -523,7 +523,7 @@ const BookingFlow = () => {
         <div className="flex flex-col md:grid md:grid-cols-12 md:gap-8 items-start">
           
           {/* Left Column: Step Content */}
-          <div className="w-full md:col-span-7 lg:col-span-8 flex flex-col gap-6">
+          <div className="w-full md:col-span-7 lg:col-span-8 flex flex-col gap-3">
             
             {/* Step Title Header Banner */}
             <div>
@@ -538,7 +538,7 @@ const BookingFlow = () => {
 
         {/* ══ STEP 1: SELECT TYPE & QUANTITY ══════════════════════════════════ */}
         {step === 1 && (
-          <div className="px-4 pt-4 flex flex-col gap-5">
+          <div className="flex flex-col gap-4">
 
             {/* Product type options */}
             {data.productTypes && data.productTypes.length > 0 && (
@@ -623,7 +623,7 @@ const BookingFlow = () => {
 
         {/* ══ STEP 2: CHOOSE SERVICE ═══════════════════════════════════════════ */}
         {step === 2 && (
-          <div className="px-4 pt-4 flex flex-col gap-3">
+          <div className="flex flex-col gap-3">
             <p className="text-[11px] font-black text-slate-400 uppercase tracking-wider px-1 mb-0.5">
               Available Service Packages *
             </p>
@@ -696,7 +696,7 @@ const BookingFlow = () => {
 
         {/* ══ STEP 3: SCHEDULE VISIT (BRAND, DATE, TIME) ══════════════════════ */}
         {step === 3 && (
-          <div className="px-4 pt-4 flex flex-col gap-5">
+          <div className="flex flex-col gap-4">
 
             {/* Brand dropdown */}
             <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs">
@@ -871,7 +871,7 @@ const BookingFlow = () => {
 
         {/* ══ STEP 4: ADDRESS & PAYMENT ══════════════════════════════════════ */}
         {step === 4 && (
-          <div className="px-4 pt-4 flex flex-col gap-4">
+          <div className="flex flex-col gap-4">
 
             {/* Address Details */}
             <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs">
