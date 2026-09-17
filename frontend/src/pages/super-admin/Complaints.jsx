@@ -1,15 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import { 
   Search, 
-  Filter, 
   AlertTriangle, 
   Eye, 
   CheckCircle, 
   UserPlus,
-  ArrowUpRight,
-  X,
   CheckCircle2,
   Clock,
   ArrowLeft
@@ -24,7 +21,7 @@ const Complaints = () => {
   const [selectedComplaint, setSelectedComplaint] = useState(null);
   const [showDrawer, setShowDrawer] = useState(false);
   const [complaints, setComplaints] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
 
   // Field names are the Escalation schema's — `raisedBy` is a role label
@@ -85,8 +82,6 @@ const Complaints = () => {
   const handleStatusChange = (id, newStatus) =>
     applyUpdate(id, 'status', { status: newStatus }, `Escalation status updated to ${newStatus}`, { status: newStatus });
 
-  const handleEscalate = (id) =>
-    applyUpdate(id, 'priority', { priority: 'High' }, 'Escalation raised to HIGH priority.', { priority: 'High' });
 
   const handleRowClick = (cmp) => {
     setSelectedComplaint(cmp);

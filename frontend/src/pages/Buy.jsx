@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   useNavigate,
   useParams,
@@ -12,13 +12,11 @@ import {
   Check,
   ChevronRight,
   ShoppingCart,
-  Star,
   Calendar,
   Wrench,
   User,
   Sparkles,
   Zap,
-  PackageOpen,
   MapPin,
   Bell,
   Search,
@@ -27,8 +25,6 @@ import {
   ShieldCheck,
   FileText,
   CheckCircle2,
-  ChevronLeft,
-  Info,
   HelpCircle,
   Phone,
   Mail,
@@ -39,7 +35,7 @@ import {
   Upload,
   ChevronDown,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import CustomerBottomNav from "../components/CustomerBottomNav";
 import { apiRequest } from "../lib/apiClient";
 import { payWithRazorpay } from "../lib/razorpayCheckout";
@@ -53,14 +49,6 @@ import splitAcImg from "../assets/categories/split_ac.png";
 import waterPurifierImg from "../assets/categories/water_purifier.png";
 import tvImg from "../assets/categories/television.png";
 import kitchenApplianceImg from "../assets/categories/kitchen_appliance.png";
-import warrantyBanner2 from "../assets/warranty_banner_2.png";
-import star3d from "../assets/star_3d.png";
-import ac3d from "../assets/icon_3d_ac.png";
-import wm3d from "../assets/icon_3d_wm.png";
-import fridge3d from "../assets/icon_3d_fridge.png";
-import tv3d from "../assets/icon_3d_tv.png";
-import geyser3d from "../assets/icon_3d_geyser.png";
-import ro3d from "../assets/icon_3d_ro.png";
 
 // Import realistic spare parts assets
 import roPreFilterImg from "../assets/ro_pre_filter_candle.png";
@@ -141,7 +129,7 @@ const Buy = () => {
   // customer who didn't notice and overwrite it would have their extended
   // warranty registered under a stranger's contact details.
   const { user } = useAuth();
-  const [showSuccess, setShowSuccess] = useState(false);
+  const [, setShowSuccess] = useState(false);
   const [fullName, setFullName] = useState(user?.name || "");
   const [mobileNumber, setMobileNumber] = useState(user?.phone || "");
   const [email, setEmail] = useState(user?.email || "");
@@ -153,7 +141,6 @@ const Buy = () => {
   const [paymentMode, setPaymentMode] = useState("UPI");
   const [activeWarrantyTab, setActiveWarrantyTab] = useState("Active");
   const [selectedWarranty, setSelectedWarranty] = useState(null);
-  const [cameFromMore, setCameFromMore] = useState(false);
 
   // Protection Plans & Claims States
   const [activePlanSection, setActivePlanSection] = useState(
@@ -234,18 +221,6 @@ const Buy = () => {
     return "Enter model number";
   };
 
-  // Product-specific invoice filename
-  const getInvoiceLabel = (appliance) => {
-    const n = appliance?.toLowerCase() || "";
-    if (n.includes("television") || n.includes("tv")) return "invoice_tv.pdf";
-    if (n.includes("refrigerator") || n.includes("fridge"))
-      return "invoice_fridge.pdf";
-    if (n.includes("washing") || n.includes("machine"))
-      return "invoice_washing_machine.pdf";
-    if (n.includes("ac") || n.includes("conditioner")) return "invoice_ac.pdf";
-    if (n.includes("purifier")) return "invoice_water_purifier.pdf";
-    return "invoice.pdf";
-  };
 
   // Dynamic pricing tiers by product category
   // The purchasable extension packs, from the admin-managed catalogue. This
@@ -253,7 +228,7 @@ const Buy = () => {
   // could not be changed without a redeploy — and the "Pay" button below simply
   // navigated to a success page, creating no policy and taking no money.
   const [ewPlans, setEwPlans] = useState([]);
-  const [plansError, setPlansError] = useState("");
+  const [, setPlansError] = useState("");
 
   useEffect(() => {
     apiRequest("/warranty-amc/extended-warranty/plans")

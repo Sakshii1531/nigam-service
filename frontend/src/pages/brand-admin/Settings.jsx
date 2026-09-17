@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
 import { 
@@ -7,19 +7,11 @@ import {
   Bell, 
   Shield, 
   Save,
-  Check,
   CheckCircle2
 } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
 import { usePushPermission, pushBlockedMessage } from '../../hooks/usePushPermission';
 
-// Which settings fields each tab owns, so saving one tab never writes another
-// tab's unsaved values.
-const TAB_FIELDS = {
-  profile: ['supportEmail', 'supportPhone', 'website'],
-  service: ['autoAssignServiceProvider', 'requireCompletionPhoto'],
-  notifications: ['emailNotifications', 'smsAlerts'],
-};
 
 const Settings = () => {
   const [activeTab, setActiveTab] = useState('profile');
@@ -43,7 +35,7 @@ const Settings = () => {
 
   // Security password fields
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [saving] = useState(false);
   const [error, setError] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');

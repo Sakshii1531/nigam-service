@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import { useRef } from 'react';
 import { ClipboardList, ShieldCheck, UserCheck, PhoneForwarded, CheckCircle2 } from 'lucide-react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 

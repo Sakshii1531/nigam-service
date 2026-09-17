@@ -1,533 +1,574 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft, Search, Filter, Calendar, CheckCircle2, Clock, 
-  MapPin, Star, User, Phone, Wrench, Shield, ChevronRight, 
-  FileText, Sparkles, RefreshCw, X, AlertCircle, TrendingUp,
-  Tag, ExternalLink, Check, Briefcase, Zap, Flame, Wind, Droplets, Cpu,
-  CreditCard, Package, Receipt
+import {
+  ArrowLeft, Search, X, RefreshCw, AlertCircle, ChevronRight, Star, MapPin, Phone,
+  Wrench, Wind, Droplets, Flame, Tv, Refrigerator, WashingMachine, Receipt, ClipboardList,
+  Package, History as HistoryIcon, Wallet,
 } from 'lucide-react';
 import ServiceProviderBottomNav from '../../components/ServiceProviderBottomNav';
 import { apiRequest } from '../../lib/apiClient';
 import { useTech } from '../../context/ServiceProviderContext';
+import { useServiceProviderSummary } from '../../hooks/useServiceProviderSummary';
+
+const PAGE_SIZE = 20;
+
+// Each chip maps onto the history endpoint's `status` / `type` query params.
+const FILTERS = [
+  { id: 'all', label: 'All', status: 'all', type: 'all' },
+  { id: 'completed', label: 'Completed', status: 'completed', type: 'all' },
+  { id: 'in_progress', label: 'In progress', status: 'in_progress', type: 'all' },
+  { id: 'paid', label: 'Paid', status: 'all', type: 'paid' },
+  { id: 'warranty', label: 'Warranty', status: 'all', type: 'warranty' },
+  { id: 'amc', label: 'AMC', status: 'all', type: 'amc' },
+];
+
+const TYPE_LABEL = {
+  'NCC Paid Service': 'Paid',
+  'Brand Warranty': 'Warranty',
+  'NCC Extended Warranty': 'Ext. Warranty',
+  'AMC Visit': 'AMC',
+};
+
+const inr = (n) => `₹${Math.round(Number(n) || 0).toLocaleString('en-IN')}`;
 
 function formatAddress(addr) {
-  if (!addr) return '—';
+  if (!addr) return '';
   if (typeof addr === 'string') return addr;
-  if (typeof addr === 'object') {
-    const parts = [
-      addr.house,
-      addr.area,
-      addr.landmark,
-      addr.city,
-      addr.pincode,
-    ].filter(Boolean);
-    return parts.length ? parts.join(', ') : '—';
+  return [addr.house, addr.area, addr.landmark, addr.city, addr.pincode].filter(Boolean).join(', ');
+}
+
+function formatDate(value, opts = { day: 'numeric', month: 'short', year: 'numeric' }) {
+  if (!value) return '';
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-IN', opts);
+}
+
+/** Everything the list and the detail sheet need, read from the real job shape. */
+function describeJob(job) {
+  const sr = job.serviceRequest || {};
+  const booking = sr.booking || {};
+  const category = sr.category || booking.category || '';
+  const step = job.activeStep;
+  const repairStatus = job.revisit?.repairStatus;
+
+  let status = { label: 'In progress', tone: 'bg-amber-50 text-amber-700 ring-amber-200' };
+  if (step === 'completed') status = { label: 'Completed', tone: 'bg-emerald-50 text-emerald-700 ring-emerald-200' };
+  else if (repairStatus === 'cancelled') status = { label: 'Cancelled', tone: 'bg-rose-50 text-rose-700 ring-rose-200' };
+  else if (repairStatus === 'unable') status = { label: 'Unable to fix', tone: 'bg-rose-50 text-rose-700 ring-rose-200' };
+  else if (step?.startsWith('revisit') || step === 'spareapproval' || step === 'spare_part_required') {
+    status = { label: 'Revisit pending', tone: 'bg-blue-50 text-[#0D47A1] ring-blue-200' };
   }
-  return String(addr);
+
+  const isCompleted = step === 'completed';
+  const earned = job.billingEstimate?.serviceProviderEarnings;
+
+  return {
+    id: job.id || job._id,
+    ticket: sr.humanId || job.humanId || '',
+    title: booking.service?.name || (category ? `${category} Service` : 'Service job'),
+    category,
+    brand: sr.brand?.name || booking.brand || '',
+    model: sr.model || '',
+    serialNo: sr.serialNo || '',
+    complaint: sr.description || '',
+    customer: booking.fullName || sr.user?.name || 'Customer',
+    phone: booking.mobile || sr.user?.phone || '',
+    address: formatAddress(booking.address) || sr.zone || '',
+    type: job.type,
+    typeLabel: TYPE_LABEL[job.type] || job.type,
+    isCompleted,
+    status,
+    date: isCompleted ? job.updatedAt : booking.scheduledDate || job.createdAt,
+    amount: isCompleted && earned > 0 ? earned : job.estEarnings || 0,
+    amountLabel: isCompleted && earned > 0 ? 'Earned' : 'Est. earning',
+  };
+}
+
+function CategoryIcon({ category, className = 'h-5 w-5' }) {
+  const text = (category || '').toLowerCase();
+  if (/\bac\b|air ?condition|cooler/.test(text)) return <Wind className={className} />;
+  if (/fridge|refrigerator/.test(text)) return <Refrigerator className={className} />;
+  if (/washing/.test(text)) return <WashingMachine className={className} />;
+  if (/\bro\b|purifier|water/.test(text)) return <Droplets className={className} />;
+  if (/geyser|heater|chimney|gas/.test(text)) return <Flame className={className} />;
+  if (/\btv\b|led|television/.test(text)) return <Tv className={className} />;
+  return <Wrench className={className} />;
 }
 
 const ServiceHistory = () => {
   const navigate = useNavigate();
-  const { earningsTally } = useTech();
+  const { selectJobForDetails } = useTech();
+  const { summary, loading: summaryLoading, refresh: refreshSummary } = useServiceProviderSummary();
 
-  const [history, setHistory] = useState([]);
+  const [items, setItems] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState('all');
-  const [selectedJob, setSelectedJob] = useState(null);
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
+  const [filterId, setFilterId] = useState('all');
+  const [selected, setSelected] = useState(null);
 
-  // Fetch service provider service history
-  const fetchHistory = useCallback(async () => {
+  // Debounced so typing doesn't fire a request per keystroke.
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(searchInput.trim()), 350);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
+  const fetchPage = useCallback(async (pageNum) => {
+    const filter = FILTERS.find((f) => f.id === filterId) || FILTERS[0];
+    const params = new URLSearchParams({
+      status: filter.status,
+      type: filter.type,
+      search,
+      page: String(pageNum),
+      limit: String(PAGE_SIZE),
+    });
+    return apiRequest(`/service-provider/jobs/history?${params}`, { auth: true });
+  }, [filterId, search]);
+
+  const loadFirstPage = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const res = await apiRequest(`/service-provider/jobs/history?status=${activeFilter}&search=${encodeURIComponent(searchQuery)}`, { auth: true });
-      setHistory(res?.items || []);
+      const res = await fetchPage(1);
+      setItems(res?.items || []);
+      setTotal(res?.total || 0);
+      setPage(1);
     } catch (err) {
-      console.warn('[service-history] Fetch error:', err.message);
-      setError(err.message || 'Could not load service history.');
+      setError(err.message || 'Could not load your service history.');
     } finally {
       setLoading(false);
     }
-  }, [activeFilter, searchQuery]);
+  }, [fetchPage]);
 
   useEffect(() => {
-    fetchHistory();
-  }, [fetchHistory]);
+    loadFirstPage();
+  }, [loadFirstPage]);
 
-  // Icon Helper for Appliance/Service Types
-  const getCategoryIcon = (category = '', title = '') => {
-    const text = (category + ' ' + title).toLowerCase();
-    if (text.includes('ac') || text.includes('air') || text.includes('cooling')) {
-      return <Wind className="h-5 w-5 text-cyan-600" />;
+  const loadMore = async () => {
+    setLoadingMore(true);
+    try {
+      const res = await fetchPage(page + 1);
+      setItems((prev) => [...prev, ...(res?.items || [])]);
+      setTotal(res?.total || 0);
+      setPage((p) => p + 1);
+    } catch (err) {
+      setError(err.message || 'Could not load more records.');
+    } finally {
+      setLoadingMore(false);
     }
-    if (text.includes('ro') || text.includes('water') || text.includes('purifier') || text.includes('plumb')) {
-      return <Droplets className="h-5 w-5 text-blue-600" />;
-    }
-    if (text.includes('geyser') || text.includes('heater') || text.includes('gas')) {
-      return <Flame className="h-5 w-5 text-amber-600" />;
-    }
-    if (text.includes('pcb') || text.includes('tv') || text.includes('electric') || text.includes('circuit')) {
-      return <Cpu className="h-5 w-5 text-indigo-600" />;
-    }
-    return <Wrench className="h-5 w-5 text-[#0D47A1]" />;
   };
 
-  // Filter Pills Definition
-  const filterPills = [
-    { id: 'all', label: 'All Services' },
-    { id: 'completed', label: 'Completed' },
-    { id: 'in_progress', label: 'In Progress' },
-    { id: 'quick', label: 'QuickPayout (D2C)' },
-    { id: 'warranty', label: 'Warranty (FOC)' },
-    { id: 'amc', label: 'AMC Service' },
-  ];
+  const refreshAll = () => {
+    loadFirstPage();
+    refreshSummary();
+  };
 
-  // Calculated Stats
-  const totalCompleted = history.filter(j => j.activeStep === 'completed' || j.repairStatus === 'completed').length;
-  const totalEarned = history.reduce((sum, j) => sum + (j.billingEstimate?.serviceProviderEarnings || j.billingEstimate?.totalAmount || 0), 0);
+  // Group by month so a long history is scannable.
+  const groups = useMemo(() => {
+    const map = new Map();
+    for (const job of items) {
+      const info = describeJob(job);
+      const key = formatDate(info.date, { month: 'long', year: 'numeric' }) || 'Undated';
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push({ job, info });
+    }
+    return [...map.entries()];
+  }, [items]);
+
+  const selectedInfo = selected ? describeJob(selected) : null;
+  const hasFilters = Boolean(search) || filterId !== 'all';
+
+  const openJob = (job) => {
+    setSelected(null);
+    selectJobForDetails(job.id || job._id);
+    navigate('/service-provider/active-job');
+  };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-24 lg:pb-8 font-sans relative">
+    <div className="min-h-screen bg-[#F4F7FC] flex flex-col pb-28 lg:pb-10 font-sans">
 
-      {/* Mobile Top Header */}
-      <div className="bg-white border-b border-slate-100 p-4 flex items-center justify-between sticky top-0 z-10 lg:hidden">
-        <div className="flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="p-1 hover:bg-slate-50 rounded-full text-slate-700">
-            <ArrowLeft className="h-6 w-6" />
-          </button>
-          <h1 className="text-lg font-black text-[#052355]">Service History</h1>
-        </div>
-        <button 
-          onClick={() => fetchHistory()} 
-          className="p-2 hover:bg-slate-50 rounded-full text-slate-500 active:rotate-180 transition-transform"
-          title="Refresh"
-        >
-          <RefreshCw className="h-4.5 w-4.5" />
-        </button>
-      </div>
-
-      {/* Desktop Page Top Header Bar */}
-      <div className="hidden lg:block max-w-screen-xl mx-auto w-full px-6 xl:px-8 pt-6 pb-2">
-        <div className="flex items-center justify-between bg-white rounded-3xl p-5 border border-slate-200/80 shadow-2xs">
-          <div className="flex items-center gap-3.5">
+      {/* Header */}
+      <header className="sticky top-0 lg:static z-20 bg-white/95 backdrop-blur border-b border-slate-200/70">
+        <div className="max-w-screen-lg mx-auto w-full px-4 lg:px-6 h-14 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0">
             <button
               onClick={() => navigate(-1)}
-              className="p-2 bg-slate-100 hover:bg-slate-200 rounded-2xl text-[#052355] transition-colors cursor-pointer"
-              title="Back"
+              aria-label="Back"
+              className="p-2 -ml-2 rounded-full text-slate-700 hover:bg-slate-100 cursor-pointer"
             >
-              <ArrowLeft className="h-5 w-5 stroke-[2.5]" />
+              <ArrowLeft className="h-5 w-5" />
             </button>
-            <div>
-              <h1 className="text-xl font-black text-[#052355] tracking-tight">Service & Job History</h1>
-              <p className="text-xs text-slate-500 font-medium mt-0.5">Complete record of fulfilled jobs, customer verification and earned payouts</p>
-            </div>
+            <h1 className="text-base font-bold text-[#052355] truncate">Service History</h1>
           </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => fetchHistory()}
-              className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 text-xs font-bold rounded-2xl transition-all cursor-pointer shadow-2xs"
-            >
-              <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
-              <span>Refresh History</span>
-            </button>
-          </div>
+          <button
+            onClick={refreshAll}
+            aria-label="Refresh"
+            className="p-2 -mr-2 rounded-full text-slate-500 hover:bg-slate-100 cursor-pointer"
+          >
+            <RefreshCw className={`h-[18px] w-[18px] ${loading ? 'animate-spin' : ''}`} />
+          </button>
         </div>
-      </div>
+      </header>
 
-      {/* Main Content Area */}
-      <div className="flex-1 p-3.5 lg:px-6 xl:px-8 flex flex-col gap-4 max-w-screen-xl mx-auto w-full">
+      <main className="max-w-screen-lg mx-auto w-full px-4 lg:px-6 pt-4 flex flex-col gap-4">
 
-        {/* Top KPI Metrics Overview */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-2xs flex items-center gap-3.5">
-            <div className="p-3 bg-blue-50 border border-blue-100 rounded-2xl text-[#0D47A1] flex-shrink-0">
-              <CheckCircle2 className="h-5 w-5" />
-            </div>
+        {/* Summary */}
+        <section className="rounded-3xl bg-gradient-to-br from-[#052355] to-[#0D47A1] text-white p-5 shadow-md">
+          <div className="flex items-start justify-between gap-3">
             <div>
-              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Total Services</span>
-              <p className="text-xl font-black text-[#052355] mt-0.5">{earningsTally?.completedTotal || totalCompleted || history.length}</p>
-              <span className="text-[9.5px] text-slate-400 font-medium">All-time jobs</span>
+              <p className="text-xs font-medium text-blue-200 flex items-center gap-1.5">
+                <Wallet className="h-3.5 w-3.5" /> Lifetime earnings
+              </p>
+              <p className="text-3xl font-bold mt-1 tabular-nums">
+                {summaryLoading && !summary ? '—' : inr(summary?.lifetimeEarnings)}
+              </p>
+              <p className="text-xs text-blue-200 mt-1">From completed jobs</p>
             </div>
+            {summary?.completionRate != null && (
+              <div className="text-right">
+                <p className="text-2xl font-bold tabular-nums">{summary.completionRate}%</p>
+                <p className="text-[11px] text-blue-200">Completion rate</p>
+              </div>
+            )}
           </div>
 
-          <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-2xs flex items-center gap-3.5">
-            <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-2xl text-emerald-600 flex-shrink-0">
-              <TrendingUp className="h-5 w-5" />
-            </div>
-            <div>
-              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Jobs Revenue</span>
-              <p className="text-xl font-black text-[#052355] mt-0.5">₹{(earningsTally?.total || totalEarned).toLocaleString('en-IN')}</p>
-              <span className="text-[9.5px] text-emerald-700 font-medium">Credited to ledger</span>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-2xs flex items-center gap-3.5">
-            <div className="p-3 bg-amber-50 border border-amber-100 rounded-2xl text-amber-600 flex-shrink-0">
-              <Star className="h-5 w-5 fill-amber-400" />
-            </div>
-            <div>
-              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Customer Rating</span>
-              <p className="text-xl font-black text-[#052355] mt-0.5">4.9 ★</p>
-              <span className="text-[9.5px] text-amber-800 font-bold bg-amber-50 px-1.5 py-0.5 rounded-sm">Verified Elite</span>
+          <div className="grid grid-cols-3 mt-5 rounded-2xl bg-white/10 divide-x divide-white/10">
+            <SummaryStat label="Completed" value={summary?.completedJobs} loading={summaryLoading && !summary} />
+            <SummaryStat label="In progress" value={summary?.inProgressJobs} loading={summaryLoading && !summary} />
+            <div className="px-2 py-3 text-center">
+              <p className="text-lg font-bold flex items-center justify-center gap-1 tabular-nums">
+                {summaryLoading && !summary ? '—' : summary?.rating != null ? (
+                  <>
+                    {summary.rating.toFixed(1)}
+                    <Star className="h-3.5 w-3.5 fill-[#FFD400] text-[#FFD400]" />
+                  </>
+                ) : '—'}
+              </p>
+              <p className="text-[11px] text-blue-200 leading-tight">
+                {summary?.reviewCount ? `${summary.reviewCount} review${summary.reviewCount === 1 ? '' : 's'}` : 'No ratings yet'}
+              </p>
             </div>
           </div>
+        </section>
 
-          <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-2xs flex items-center gap-3.5">
-            <div className="p-3 bg-purple-50 border border-purple-100 rounded-2xl text-purple-600 flex-shrink-0">
-              <Shield className="h-5 w-5" />
-            </div>
-            <div>
-              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Success Rate</span>
-              <p className="text-xl font-black text-[#052355] mt-0.5">99.2%</p>
-              <span className="text-[9.5px] text-slate-400 font-medium">First-visit resolved</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Search Bar & Filter Options Card */}
-        <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-2xs flex flex-col gap-4">
-          <div className="relative w-full">
-            <Search className="absolute left-4 top-3.5 h-4.5 w-4.5 text-slate-400" />
+        {/* Search + filters */}
+        <section className="flex flex-col gap-3">
+          <label className="relative block">
+            <span className="sr-only">Search service history</span>
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
             <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by Job ID, customer name, brand or service..."
-              className="w-full pl-11 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0D47A1] focus:bg-white transition-all shadow-2xs"
+              type="search"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Search ticket, customer, brand…"
+              className="w-full h-11 pl-10 pr-10 rounded-2xl bg-white border border-slate-200 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0D47A1]/20 focus:border-[#0D47A1]"
             />
-            {searchQuery && (
+            {searchInput && (
               <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3.5 top-3 p-0.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                onClick={() => setSearchInput('')}
+                aria-label="Clear search"
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
               >
                 <X className="h-4 w-4" />
               </button>
             )}
-          </div>
+          </label>
 
-          {/* Filter Pills */}
-          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-            {filterPills.map((pill) => (
+          <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 lg:mx-0 lg:px-0">
+            {FILTERS.map((f) => (
               <button
-                key={pill.id}
-                onClick={() => setActiveFilter(pill.id)}
-                className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
-                  activeFilter === pill.id
-                    ? 'bg-[#0D47A1] text-white shadow-xs'
-                    : 'bg-slate-100/80 text-slate-600 hover:bg-slate-200/70'
+                key={f.id}
+                onClick={() => setFilterId(f.id)}
+                className={`h-9 px-4 rounded-full text-sm font-semibold whitespace-nowrap transition-colors cursor-pointer ${
+                  filterId === f.id
+                    ? 'bg-[#052355] text-white'
+                    : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
                 }`}
               >
-                {pill.label}
+                {f.label}
               </button>
             ))}
           </div>
-        </div>
+        </section>
 
-        {/* History Records Container */}
+        {/* Records */}
         {loading ? (
-          <div className="bg-white rounded-3xl p-12 border border-slate-200/80 shadow-2xs flex flex-col items-center justify-center text-slate-400 gap-2">
-            <RefreshCw className="h-6 w-6 animate-spin text-[#0D47A1]" />
-            <span className="text-xs font-semibold">Loading service history records...</span>
+          <div className="flex flex-col gap-2.5" aria-busy="true">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="h-[84px] rounded-2xl bg-white border border-slate-100 animate-pulse" />
+            ))}
           </div>
-        ) : error ? (
-          <div className="bg-rose-50 border border-rose-200 rounded-3xl p-6 flex flex-col items-center justify-center text-center gap-2 text-rose-600">
-            <AlertCircle className="h-7 w-7" />
-            <span className="text-xs font-bold">{error}</span>
-            <button 
-              onClick={() => fetchHistory()}
-              className="mt-2 px-4 py-2 bg-rose-600 text-white rounded-xl text-xs font-bold cursor-pointer"
+        ) : error && items.length === 0 ? (
+          <div className="rounded-3xl bg-white border border-rose-100 p-8 flex flex-col items-center text-center gap-3">
+            <AlertCircle className="h-8 w-8 text-rose-500" />
+            <p className="text-sm font-semibold text-slate-800">{error}</p>
+            <button
+              onClick={loadFirstPage}
+              className="h-10 px-5 rounded-xl bg-[#052355] text-white text-sm font-semibold cursor-pointer"
             >
-              Try Again
+              Try again
             </button>
           </div>
-        ) : history.length === 0 ? (
-          <div className="bg-white rounded-3xl p-12 border border-slate-200/80 shadow-2xs flex flex-col items-center justify-center text-center gap-3">
-            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center text-slate-400">
-              <Briefcase className="h-8 w-8 stroke-[1.5]" />
+        ) : items.length === 0 ? (
+          <div className="rounded-3xl bg-white border border-slate-100 px-6 py-12 flex flex-col items-center text-center gap-3">
+            <div className="w-14 h-14 rounded-2xl bg-blue-50 text-[#0D47A1] flex items-center justify-center">
+              {hasFilters ? <Search className="h-6 w-6" /> : <HistoryIcon className="h-6 w-6" />}
             </div>
             <div>
-              <h4 className="text-sm font-black text-[#052355]">No Service Records Found</h4>
-              <p className="text-xs text-slate-400 mt-1 max-w-sm">
-                {searchQuery 
-                  ? `No service history matching "${searchQuery}". Try clearing search keywords.`
-                  : 'Completed jobs and resolved service tickets will be permanently logged here.'}
+              <p className="text-base font-bold text-[#052355]">
+                {hasFilters ? 'No matching jobs' : 'No jobs yet'}
+              </p>
+              <p className="text-sm text-slate-500 mt-1 max-w-xs">
+                {hasFilters
+                  ? 'Try a different search or filter.'
+                  : 'Jobs you accept will show up here, along with what you earned from each.'}
               </p>
             </div>
+            {hasFilters ? (
+              <button
+                onClick={() => { setSearchInput(''); setFilterId('all'); }}
+                className="h-10 px-5 rounded-xl bg-slate-100 text-slate-700 text-sm font-semibold cursor-pointer"
+              >
+                Clear filters
+              </button>
+            ) : (
+              <button
+                onClick={() => navigate('/service-provider/dashboard')}
+                className="h-10 px-5 rounded-xl bg-[#052355] text-white text-sm font-semibold cursor-pointer"
+              >
+                Find jobs
+              </button>
+            )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {history.map((job) => {
-              const sr = job.serviceRequest || {};
-              const customerName = sr?.user?.name || sr?.contactName || 'Customer';
-              const customerPhone = sr?.user?.phone || sr?.contactPhone || '';
-              const customerAddress = formatAddress(sr?.booking?.address || sr?.address || sr?.zone);
-              const serviceTitle = sr?.title || sr?.serviceType || sr?.category || 'Appliance Repair & Service';
-              const brandName = sr?.brand || 'Nigam Care Verified';
-              const completedDate = job.updatedAt ? new Date(job.updatedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Recently';
-              const earnings = job.billingEstimate?.serviceProviderEarnings ?? job.billingEstimate?.totalAmount ?? 0;
-              const isWarranty = job.type === 'Brand Warranty' || job.type === 'Under Warranty' || job.type === 'NCC Extended Warranty';
-              const isAmc = job.type === 'AMC Service' || job.type === 'AMC Visit';
-              const jobIdShort = String(sr?.humanId || job.humanId || job._id || job.id).slice(-8).toUpperCase();
-              const isCompleted = job.activeStep === 'completed' || job.repairStatus === 'completed';
-
-              return (
-                <div
-                  key={job._id || job.id}
-                  onClick={() => setSelectedJob(job)}
-                  className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-2xs flex flex-col justify-between gap-4 hover:border-[#0D47A1]/40 hover:shadow-xs transition-all text-left group cursor-pointer"
-                >
-                  {/* Top Bar: Category badge & Job ID */}
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-11 h-11 rounded-2xl bg-blue-50/80 border border-blue-100 flex items-center justify-center flex-shrink-0 shadow-2xs group-hover:scale-105 transition-transform">
-                        {getCategoryIcon(sr?.category, serviceTitle)}
+          <div className="flex flex-col gap-5">
+            <p className="text-xs text-slate-500 -mb-2">
+              Showing {items.length} of {total} job{total === 1 ? '' : 's'}
+            </p>
+            {groups.map(([month, rows]) => (
+              <section key={month} className="flex flex-col gap-2">
+                <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500 px-1">{month}</h2>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
+                  {rows.map(({ job, info }) => (
+                    <button
+                      key={info.id}
+                      onClick={() => setSelected(job)}
+                      className="w-full text-left rounded-2xl bg-white border border-slate-200/70 p-3.5 flex items-center gap-3 hover:border-[#0D47A1]/40 hover:shadow-sm transition-all cursor-pointer"
+                    >
+                      <div className="w-11 h-11 rounded-xl bg-blue-50 text-[#0D47A1] flex items-center justify-center shrink-0">
+                        <CategoryIcon category={info.category} />
                       </div>
-                      <div>
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">
-                          #{jobIdShort} • {brandName}
-                        </span>
-                        <h3 className="text-sm font-black text-[#052355] line-clamp-1 leading-snug group-hover:text-[#0D47A1] transition-colors">
-                          {serviceTitle}
-                        </h3>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-semibold text-[#052355] truncate">{info.title}</p>
+                        </div>
+                        <p className="text-xs text-slate-500 truncate mt-0.5">
+                          {[info.customer, formatDate(info.date, { day: 'numeric', month: 'short' })].filter(Boolean).join(' · ')}
+                        </p>
+                        <div className="flex items-center gap-1.5 mt-1.5">
+                          <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ring-1 ring-inset ${info.status.tone}`}>
+                            {info.status.label}
+                          </span>
+                          <span className="text-[11px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                            {info.typeLabel}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-
-                    <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                      <span className={`text-[9.5px] font-black px-2.5 py-0.5 rounded-full border uppercase tracking-wider ${
-                        isWarranty 
-                          ? 'bg-blue-50 text-[#0D47A1] border-blue-200' 
-                          : isAmc 
-                            ? 'bg-purple-50 text-purple-700 border-purple-200' 
-                            : 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                      }`}>
-                        {job.type || 'D2C Service'}
-                      </span>
-                      <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md ${
-                        isCompleted ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'
-                      }`}>
-                        {isCompleted ? 'Completed' : 'In Progress'}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Customer & Location Snippet */}
-                  <div className="bg-slate-50/70 border border-slate-150 rounded-2xl p-3.5 flex flex-col gap-2 text-xs">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-slate-700 font-bold min-w-0">
-                        <User className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
-                        <span className="truncate">{customerName}</span>
+                      <div className="text-right shrink-0">
+                        <p className="text-sm font-bold text-[#052355] tabular-nums">{inr(info.amount)}</p>
+                        <p className="text-[11px] text-slate-400">{info.amountLabel}</p>
                       </div>
-                      {customerPhone && (
-                        <span className="text-[11px] text-slate-400 font-medium flex items-center gap-1">
-                          <Phone className="h-3 w-3" /> ••••{customerPhone.slice(-4)}
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-2 text-slate-500 text-[11px] font-medium truncate">
-                      <MapPin className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
-                      <span className="truncate">{customerAddress}</span>
-                    </div>
-                  </div>
-
-                  {/* Bottom Footer: Date, Earnings & View CTA */}
-                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-medium">
-                      <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                      <span>{completedDate}</span>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <div className="text-right">
-                        <span className="text-xs font-black text-[#052355]">₹{earnings.toLocaleString('en-IN')}</span>
-                        <span className="text-[9px] text-emerald-600 font-bold block">
-                          {isCompleted ? 'Credited' : 'Estimated'}
-                        </span>
-                      </div>
-
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedJob(job);
-                        }}
-                        className="p-2 bg-slate-100 hover:bg-[#0D47A1] hover:text-white rounded-xl text-slate-500 transition-colors cursor-pointer"
-                        title="View Job Details"
-                      >
-                        <ChevronRight className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
+                      <ChevronRight className="h-4 w-4 text-slate-300 shrink-0" />
+                    </button>
+                  ))}
                 </div>
-              );
-            })}
+              </section>
+            ))}
+
+            {items.length < total && (
+              <button
+                onClick={loadMore}
+                disabled={loadingMore}
+                className="h-11 rounded-2xl bg-white border border-slate-200 text-sm font-semibold text-[#052355] hover:bg-slate-50 disabled:opacity-60 cursor-pointer"
+              >
+                {loadingMore ? 'Loading…' : 'Load more'}
+              </button>
+            )}
           </div>
         )}
+      </main>
 
-      </div>
-
-      {/* Comprehensive Service Job Details Modal */}
-      {selectedJob && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl w-full max-w-lg p-6 shadow-2xl border border-slate-100 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
-            
-            {/* Modal Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div>
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                  Service Summary • #{String(selectedJob.serviceRequest?.humanId || selectedJob.humanId || selectedJob._id || selectedJob.id).slice(-8).toUpperCase()}
-                </span>
-                <h3 className="text-base font-black text-[#052355]">
-                  {selectedJob.serviceRequest?.title || selectedJob.serviceRequest?.serviceType || selectedJob.serviceRequest?.category || 'Service Record'}
-                </h3>
+      {/* Job detail sheet */}
+      {selected && selectedInfo && (
+        <div
+          className="fixed inset-0 z-50 bg-slate-900/50 flex items-end sm:items-center justify-center sm:p-4"
+          onClick={() => setSelected(null)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Job details"
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl max-h-[88vh] flex flex-col shadow-2xl"
+          >
+            <div className="p-5 pb-4 border-b border-slate-100 flex items-start gap-3">
+              <div className="w-11 h-11 rounded-xl bg-blue-50 text-[#0D47A1] flex items-center justify-center shrink-0">
+                <CategoryIcon category={selectedInfo.category} />
               </div>
-              <button 
-                onClick={() => setSelectedJob(null)} 
-                className="p-1.5 hover:bg-slate-100 rounded-full text-slate-400 cursor-pointer"
+              <div className="min-w-0 flex-1">
+                <p className="text-xs text-slate-500">
+                  {[selectedInfo.ticket, selectedInfo.typeLabel].filter(Boolean).join(' · ')}
+                </p>
+                <h3 className="text-base font-bold text-[#052355] leading-snug">{selectedInfo.title}</h3>
+                <span className={`inline-block mt-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-full ring-1 ring-inset ${selectedInfo.status.tone}`}>
+                  {selectedInfo.status.label}
+                </span>
+              </div>
+              <button
+                onClick={() => setSelected(null)}
+                aria-label="Close"
+                className="p-1.5 rounded-full text-slate-400 hover:bg-slate-100 cursor-pointer"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            {/* Modal Body */}
-            <div className="space-y-3.5 text-xs">
-              
-              {/* Status & Category Overview Card */}
-              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/60 space-y-2.5">
-                <div className="flex justify-between items-center text-slate-500">
-                  <span>Job Status</span>
-                  <span className={`font-bold px-2.5 py-0.5 rounded-full border ${
-                    selectedJob.activeStep === 'completed' 
-                      ? 'text-emerald-700 bg-emerald-50 border-emerald-200' 
-                      : 'text-blue-700 bg-blue-50 border-blue-200'
-                  }`}>
-                    {selectedJob.activeStep === 'completed' ? 'Completed & Settled' : (selectedJob.activeStep || 'In Progress')}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center text-slate-500">
-                  <span>Service Type</span>
-                  <span className="font-bold text-slate-800">{selectedJob.type || 'NCC Paid Service'}</span>
-                </div>
-                <div className="flex justify-between items-center text-slate-500">
-                  <span>Appliance / Brand</span>
-                  <span className="font-bold text-slate-800">
-                    {selectedJob.serviceRequest?.brand || 'Nigam Care Verified'} {selectedJob.serviceRequest?.model ? `(${selectedJob.serviceRequest.model})` : ''}
-                  </span>
-                </div>
-                {selectedJob.serviceRequest?.serialNo && (
-                  <div className="flex justify-between items-center text-slate-500">
-                    <span>Serial Number</span>
-                    <span className="font-bold text-slate-800">{selectedJob.serviceRequest.serialNo}</span>
-                  </div>
+            <div className="p-5 overflow-y-auto flex flex-col gap-4 text-sm">
+              <DetailSection title="Customer">
+                <p className="font-semibold text-slate-800">{selectedInfo.customer}</p>
+                {selectedInfo.address && (
+                  <p className="text-slate-500 flex items-start gap-1.5 mt-1">
+                    <MapPin className="h-4 w-4 shrink-0 mt-0.5 text-slate-400" />
+                    <span>{selectedInfo.address}</span>
+                  </p>
                 )}
-              </div>
+                {/* Only while the job is live — no reason to keep dialling a closed job's customer. */}
+                {!selectedInfo.isCompleted && selectedInfo.phone && (
+                  <a
+                    href={`tel:${selectedInfo.phone}`}
+                    className="inline-flex items-center gap-1.5 mt-2 h-9 px-3 rounded-xl bg-emerald-50 text-emerald-700 text-sm font-semibold"
+                  >
+                    <Phone className="h-4 w-4" /> Call customer
+                  </a>
+                )}
+              </DetailSection>
 
-              {/* Customer Contact & Address Card */}
-              <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs space-y-2.5">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Customer Details</p>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-slate-800 font-bold">
-                    <User className="h-4 w-4 text-[#0D47A1]" />
-                    <span>{selectedJob.serviceRequest?.user?.name || selectedJob.serviceRequest?.contactName || 'Customer'}</span>
-                  </div>
-                  {selectedJob.serviceRequest?.user?.phone && (
-                    <a
-                      href={`tel:${selectedJob.serviceRequest.user.phone}`}
-                      className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg text-[11px] font-bold hover:bg-emerald-100 transition-colors"
-                    >
-                      <Phone className="h-3 w-3" />
-                      <span>{selectedJob.serviceRequest.user.phone}</span>
-                    </a>
-                  )}
-                </div>
-                <div className="flex items-start gap-2 text-slate-600 text-[11px] pt-1 border-t border-slate-100">
-                  <MapPin className="h-4 w-4 text-orange-500 flex-shrink-0 mt-0.5" />
-                  <span>{formatAddress(selectedJob.serviceRequest?.booking?.address || selectedJob.serviceRequest?.address || selectedJob.serviceRequest?.zone)}</span>
-                </div>
-              </div>
+              <DetailSection title="Appliance">
+                <DetailRow label="Category" value={selectedInfo.category} />
+                <DetailRow label="Brand" value={selectedInfo.brand} />
+                <DetailRow label="Model" value={selectedInfo.model} />
+                <DetailRow label="Serial no." value={selectedInfo.serialNo} />
+                <DetailRow label={selectedInfo.isCompleted ? 'Completed on' : 'Scheduled'} value={formatDate(selectedInfo.date)} />
+              </DetailSection>
 
-              {/* Complaint Description */}
-              {selectedJob.serviceRequest?.description && (
-                <div className="bg-amber-50/70 border border-amber-200/80 p-3.5 rounded-2xl">
-                  <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider block mb-1">Reported Complaint</span>
-                  <p className="text-slate-700 text-xs font-medium leading-relaxed">{selectedJob.serviceRequest.description}</p>
-                </div>
+              {selectedInfo.complaint && (
+                <DetailSection title="Reported problem">
+                  <p className="text-slate-700 leading-relaxed">{selectedInfo.complaint}</p>
+                </DetailSection>
               )}
 
-              {/* Diagnosis notes if present */}
-              {selectedJob.diagnosisNotes && (
-                <div className="bg-blue-50/70 border border-blue-200/80 p-3.5 rounded-2xl">
-                  <span className="text-[10px] font-bold text-blue-800 uppercase tracking-wider block mb-1">Diagnosis & Work Done</span>
-                  <p className="text-slate-700 text-xs font-medium leading-relaxed">{selectedJob.diagnosisNotes}</p>
-                </div>
+              {selected.diagnosis?.notes && (
+                <DetailSection title="Work done">
+                  <p className="text-slate-700 leading-relaxed">{selected.diagnosis.notes}</p>
+                </DetailSection>
               )}
 
-              {/* Spare Parts Summary */}
-              {selectedJob.sparePartsUsed && selectedJob.sparePartsUsed.length > 0 && (
-                <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-2xl space-y-1.5">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Spare Parts Replaced</span>
-                  <div className="space-y-1">
-                    {selectedJob.sparePartsUsed.map((part, idx) => (
-                      <div key={idx} className="flex justify-between items-center text-xs">
-                        <span className="text-slate-700 font-semibold">{part.name || part.partName || `Part #${idx + 1}`} (x{part.qty || 1})</span>
-                        <span className="text-slate-900 font-bold">₹{part.price || part.amount || 0}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+              {selected.spareParts?.length > 0 && (
+                <DetailSection title="Spare parts" icon={<Package className="h-3.5 w-3.5" />}>
+                  {selected.spareParts.map((part, idx) => (
+                    <DetailRow key={idx} label={part.name || `Part ${idx + 1}`} value={inr(part.price)} />
+                  ))}
+                </DetailSection>
               )}
 
-              {/* Payout & Billing Breakdown */}
-              <div className="bg-emerald-50/80 border border-emerald-200 p-4 rounded-2xl space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-600 font-medium text-xs">Total Service Charge</span>
-                  <span className="text-slate-900 font-bold text-xs">
-                    ₹{(selectedJob.billingEstimate?.serviceCharge ?? selectedJob.billingEstimate?.totalAmount ?? 0).toLocaleString('en-IN')}
-                  </span>
+              <DetailSection title="Billing">
+                {selected.billingEstimate?.total > 0 ? (
+                  <>
+                    <DetailRow label="Service charge" value={inr(selected.billingEstimate.serviceCharge)} />
+                    {selected.billingEstimate.sparePartsTotal > 0 && (
+                      <DetailRow label="Spare parts" value={inr(selected.billingEstimate.sparePartsTotal)} />
+                    )}
+                    {selected.billingEstimate.additionalServicesTotal > 0 && (
+                      <DetailRow label="Additional services" value={inr(selected.billingEstimate.additionalServicesTotal)} />
+                    )}
+                    <DetailRow label="Bill total" value={inr(selected.billingEstimate.total)} />
+                  </>
+                ) : (
+                  <p className="text-slate-500">
+                    {selectedInfo.isCompleted ? 'No customer bill — covered job.' : 'Bill not generated yet.'}
+                  </p>
+                )}
+                <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between">
+                  <span className="font-semibold text-slate-700">{selectedInfo.isCompleted ? 'Your earning' : 'Estimated earning'}</span>
+                  <span className="text-base font-bold text-emerald-700 tabular-nums">{inr(selectedInfo.amount)}</span>
                 </div>
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-slate-600 font-medium">Service Provider Share</span>
-                  <span className="text-emerald-800 font-black text-sm">
-                    ₹{(selectedJob.billingEstimate?.serviceProviderEarnings ?? selectedJob.billingEstimate?.totalAmount ?? 0).toLocaleString('en-IN')}
-                  </span>
-                </div>
-              </div>
-
+              </DetailSection>
             </div>
 
-            {/* Modal Actions */}
-            <div className="flex gap-2 pt-2">
+            <div className="p-4 border-t border-slate-100 flex gap-2 pb-[max(1rem,env(safe-area-inset-bottom))]">
+              {selectedInfo.isCompleted ? (
+                <button
+                  onClick={() => { setSelected(null); navigate(`/service-provider/earning-detail/${selectedInfo.id}`); }}
+                  className="flex-1 h-11 rounded-xl bg-[#052355] text-white text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Receipt className="h-4 w-4" /> View earning slip
+                </button>
+              ) : (
+                <button
+                  onClick={() => openJob(selected)}
+                  className="flex-1 h-11 rounded-xl bg-[#052355] text-white text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <ClipboardList className="h-4 w-4" /> Open job
+                </button>
+              )}
               <button
-                onClick={() => {
-                  const id = selectedJob._id || selectedJob.id;
-                  setSelectedJob(null);
-                  navigate(`/service-provider/earning-detail/${id}`);
-                }}
-                className="flex-1 py-3 bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-bold rounded-2xl text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
-              >
-                <Receipt className="h-4 w-4" />
-                <span>View Earning Slip</span>
-              </button>
-              <button
-                onClick={() => setSelectedJob(null)}
-                className="px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl text-xs transition-all cursor-pointer"
+                onClick={() => setSelected(null)}
+                className="h-11 px-5 rounded-xl bg-slate-100 text-slate-700 text-sm font-semibold cursor-pointer"
               >
                 Close
               </button>
             </div>
-
           </div>
         </div>
       )}
 
-      {/* Bottom Navigation */}
       <ServiceProviderBottomNav activeTab="history" />
-
     </div>
   );
 };
+
+function SummaryStat({ label, value, loading }) {
+  return (
+    <div className="px-2 py-3 text-center">
+      <p className="text-lg font-bold tabular-nums">{loading ? '—' : (value ?? 0)}</p>
+      <p className="text-[11px] text-blue-200 leading-tight">{label}</p>
+    </div>
+  );
+}
+
+function DetailSection({ title, icon, children }) {
+  return (
+    <section>
+      <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1.5 flex items-center gap-1.5">
+        {icon}{title}
+      </h4>
+      <div className="rounded-2xl bg-slate-50 p-3.5">{children}</div>
+    </section>
+  );
+}
+
+function DetailRow({ label, value }) {
+  if (!value) return null;
+  return (
+    <div className="flex items-center justify-between gap-3 py-1">
+      <span className="text-slate-500">{label}</span>
+      <span className="font-semibold text-slate-800 text-right">{value}</span>
+    </div>
+  );
+}
 
 export default ServiceHistory;

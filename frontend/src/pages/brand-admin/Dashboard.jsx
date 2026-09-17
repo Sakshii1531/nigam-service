@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
 import {
   ClipboardList, CheckCircle2, Clock, AlertTriangle, IndianRupee,
-  Package, ArrowUpRight, ArrowDownRight, Eye, Plus, Upload,
-  Search, Truck, ShieldCheck, FileText, RefreshCcw, BarChart2,
-  PhoneCall, X
+  Package, ArrowUpRight, Plus, Upload,
+  Search, Truck, ShieldCheck, FileText, BarChart2,
+  PhoneCall
 } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
 
@@ -14,7 +14,7 @@ const currency = new Intl.NumberFormat('en-IN', { style: 'currency', currency: '
 const number = new Intl.NumberFormat('en-IN');
 
 /* ── KPI Card ── */
-const KPICard = ({ title, value, icon, iconBg, trend, trendUp, link, onLink }) => (
+const KPICard = ({ title, value, icon, iconBg, onLink }) => (
   <div className="bg-white p-4 rounded-2xl border border-[#E2E8F0] hover:shadow-lg transition-all duration-200 cursor-pointer" onClick={onLink}>
     <div className="flex items-start justify-between mb-3">
       <div className={`w-10 h-10 ${iconBg} rounded-xl flex items-center justify-center text-white flex-shrink-0`}>
@@ -29,19 +29,6 @@ const KPICard = ({ title, value, icon, iconBg, trend, trendUp, link, onLink }) =
   </div>
 );
 
-/* ── Quick Stat Card ── */
-const QuickStat = ({ label, value, color, onView }) => (
-  <div className="bg-white border border-[#E2E8F0] rounded-xl p-3 flex items-center justify-between hover:shadow-md transition-all">
-    <div className="flex items-center gap-3">
-      <div className={`w-9 h-9 ${color} rounded-xl flex items-center justify-center`} />
-      <div>
-        <p className="text-lg font-black text-[#1E293B]">{value}</p>
-        <p className="text-[10px] font-semibold text-[#64748B] leading-tight">{label}</p>
-      </div>
-    </div>
-    <button onClick={onView} className="text-[10px] font-semibold text-[#0D47A1] hover:underline">View</button>
-  </div>
-);
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -74,8 +61,8 @@ const Dashboard = () => {
 
   /* ── KPI data ── */
   const [metrics, setMetrics] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [, setLoading] = useState(true);
+  const [, setError] = useState('');
 
   const [recent, setRecent] = useState([]);
 

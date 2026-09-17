@@ -1,6 +1,4 @@
-import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { CheckCircle } from 'lucide-react';
 
 const TicketSuccess = () => {
   const navigate = useNavigate();

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Award, Play, BookOpen, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Award, Play, BookOpen } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
 
 const CATEGORY_TONE = [

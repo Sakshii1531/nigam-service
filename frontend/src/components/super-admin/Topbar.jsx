@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Search, Bell, Menu, MapPin, Calendar, ChevronDown, User, LogOut, Settings, Check } from 'lucide-react';
+import { Bell, Menu, MapPin, Calendar, ChevronDown, User, LogOut, Settings, Check } from 'lucide-react';
 import { useNotifications } from '../../context/NotificationContext';
 import { useAdminSidebar } from '../../context/AdminSidebarContext';
 

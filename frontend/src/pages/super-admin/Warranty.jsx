@@ -1,22 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import { 
   Search, 
-  Filter, 
-  MoreVertical, 
   Eye, 
   CheckCircle, 
   XCircle,
   FileCheck,
   Download,
-  ExternalLink,
-  X,
   CheckCircle2,
-  Calendar,
-  Building,
   User,
-  CreditCard,
   ArrowLeft
 } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
@@ -30,7 +23,7 @@ const Warranty = () => {
   const [selectedClaim, setSelectedClaim] = useState(null);
   const [showDrawer, setShowDrawer] = useState(false);
   const [claims, setClaims] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
 
   useEffect(() => {

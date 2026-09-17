@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import { apiRequest } from '../../lib/apiClient';
 import {
   Lock,
   Plus,
-  Check,
   X,
   Shield,
   UserCheck,
@@ -13,8 +12,7 @@ import {
   Headphones,
   CreditCard,
   CheckCircle2,
-  LockKeyhole,
-  Info
+  LockKeyhole
 } from 'lucide-react';
 
 // The matrix below is the five domains this screen exposes. Each maps to the

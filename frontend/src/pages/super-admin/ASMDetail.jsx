@@ -8,7 +8,6 @@ import {
   Mail,
   Phone,
   MapPin,
-  Star,
   ShieldCheck,
   Edit,
   Trash2,
@@ -51,7 +50,7 @@ const ASMDetail = () => {
   const [logsLoading, setLogsLoading] = useState(true);
   const [jumpValue, setJumpValue] = useState('');
 
-  const [successMessage, setSuccessMessage] = useState('');
+  const [successMessage] = useState('');
 
   const loadAsm = useCallback(async () => {
     try {
@@ -92,10 +91,6 @@ const ASMDetail = () => {
     return () => { cancelled = true; };
   }, [asm?.user, logPage]);
 
-  const showToast = (msg) => {
-    setSuccessMessage(msg);
-    setTimeout(() => setSuccessMessage(''), 3000);
-  };
 
   const handleDelete = async () => {
     if (!asm) return;

@@ -1,4 +1,3 @@
-import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import OtpVerification from '../../components/auth/OtpVerification';
 import { useAuth } from '../../context/AuthContext';
@@ -19,6 +18,7 @@ const VerifyOtp = () => {
       onSubmit={
         hasRealSession
           ? async (code) => {
+              sessionStorage.removeItem('ncc_sp_duty_prompted');
               await verifyOtp({ role: state.role, identifier: state.identifier, code });
               navigate('/service-provider/dashboard');
             }

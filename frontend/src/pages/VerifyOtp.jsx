@@ -1,4 +1,3 @@
-import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import OtpVerification from '../components/auth/OtpVerification';
 import { useAuth } from '../context/AuthContext';

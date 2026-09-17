@@ -1,18 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import { apiRequest } from '../../lib/apiClient';
 import { 
   Search, 
-  Filter, 
   CreditCard, 
   Eye, 
   Download,
   IndianRupee,
   CheckCircle2,
-  XCircle,
-  Clock,
-  X,
   FileCheck,
   ArrowLeft
 } from 'lucide-react';

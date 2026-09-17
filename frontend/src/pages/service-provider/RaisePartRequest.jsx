@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
-  Bell, Briefcase, ClipboardList, Calendar, Wrench, User, Search, PlusCircle, 
-  MapPin, Check, Plus, AlertTriangle, ShieldCheck, ChevronRight, ChevronLeft, X,
-  Package, ShoppingCart, Layers, Cpu, Wind, Droplets, Zap, Shield, Flame, Trash2, ArrowRight
+  Bell, ClipboardList, Wrench, Search, PlusCircle, 
+  Check, Plus, ShieldCheck, ChevronLeft, X,
+  Package, ShoppingCart, Layers, Cpu, Wind, Droplets, Shield, Flame, Trash2, ArrowRight
 } from 'lucide-react';
 import ServiceProviderBottomNav from '../../components/ServiceProviderBottomNav';
 import { useTech } from '../../context/ServiceProviderContext';
@@ -40,7 +40,6 @@ const RaisePartRequest = () => {
   const [newClaim, setNewClaim] = useState({ brand: 'LG Partner Warranty', item: '', amount: '' });
   const [addedPartCard, setAddedPartCard] = useState(null);
   const [placedSource, setPlacedSource] = useState(null);
-  const [raisedClaimCard, setRaisedClaimCard] = useState(null);
 
   // Sync tab with URL
   useEffect(() => {

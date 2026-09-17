@@ -1,12 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import { apiRequest } from '../../lib/apiClient';
 import { 
-  Building, 
   Search, 
-  Filter, 
   CheckCircle2, 
   XCircle,
   Eye,
@@ -58,7 +56,7 @@ const Brands = () => {
   const [newBrand, setNewBrand] = useState({ name: '', category: 'Home Appliances', activeCases: '0', spareStock: '0', status: 'Active', revenue: '₹0' });
 
   const [brands, setBrands] = useState([]);
-  const [loadError, setLoadError] = useState('');
+  const [, setLoadError] = useState('');
 
   useEffect(() => {
     async function fetchBrands() {

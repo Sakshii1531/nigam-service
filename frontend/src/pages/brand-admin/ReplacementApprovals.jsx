@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
-import { RefreshCcw, Clock, CheckCircle2, X, Search, Download, Eye, MessageSquare } from 'lucide-react';
+import { RefreshCcw, Clock, CheckCircle2, X, Search, Download } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
 
 const statusColors = {
@@ -33,7 +33,7 @@ function shape(approval) {
 const ReplacementApprovals = () => {
   const [data, setData] = useState([]);
   const [searchQ, setSearchQ] = useState('');
-  const [selectedItem, setSelectedItem] = useState(null);
+  const [, setSelectedItem] = useState(null);
   const [successMsg, setSuccessMsg] = useState('');
   const [filterStatus, setFilterStatus] = useState('All');
   const [loading, setLoading] = useState(true);

@@ -1,15 +1,11 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
-  HelpCircle,
   Ticket,
   Phone,
   MessageCircle,
   Mail,
-  MessageSquare,
-  MapPin,
-  ChevronRight,
   Search,
   ChevronDown,
   Clock,

@@ -1,4 +1,3 @@
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, CheckCircle2 } from 'lucide-react';
 import partnerImg from '../assets/working/Gemini_Generated_Image_ahi7orahi7orahi7-removebg-preview (1).png';

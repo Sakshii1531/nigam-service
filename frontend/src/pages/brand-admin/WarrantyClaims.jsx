@@ -1,19 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
 import { 
   Search, 
-  Filter, 
   FileCheck, 
   Clock, 
   CheckCircle2, 
-  TrendingUp, 
   X,
   Eye,
   IndianRupee,
-  ShieldCheck,
   AlertTriangle,
-  RotateCcw,
   Check,
   ArrowLeft
 } from 'lucide-react';
@@ -58,7 +54,7 @@ const WarrantyClaims = () => {
   const [activeTab, setActiveTab] = useState('claims'); // 'claims' or 'extended'
   const [showDrawer, setShowDrawer] = useState(false);
   const [selectedClaim, setSelectedClaim] = useState(null);
-  const [successMessage, setSuccessMessage] = useState('');
+  const [successMessage] = useState('');
 
   const [claimsSearchQuery, setClaimsSearchQuery] = useState('');
   const [selectedClaimType, setSelectedClaimType] = useState('All Claim Types');
@@ -69,8 +65,8 @@ const WarrantyClaims = () => {
   const [claims, setClaims] = useState([]);
 
   const [extendedWarrantyReg, setExtendedWarrantyReg] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [, setLoading] = useState(true);
+  const [, setError] = useState('');
 
   useEffect(() => {
     let cancelled = false;

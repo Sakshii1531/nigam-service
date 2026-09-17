@@ -21,3 +21,18 @@ export const updateServiceProviderStatusSchema = z.object({
 });
 
 export const idParamSchema = z.object({ id: z.string().min(1) });
+
+export const changeServiceProviderCitySchema = z.object({
+  cityId: z.string().regex(/^[a-f\d]{24}$/i, 'Invalid city id'),
+  reason: z.string().trim().max(500).optional(),
+});
+
+export const listCityChangeRequestsQuerySchema = z.object({
+  status: z.enum(['Pending', 'Approved', 'Rejected', 'Cancelled']).optional(),
+  page: z.coerce.number().int().positive().optional(),
+  limit: z.coerce.number().int().positive().optional(),
+});
+
+export const reviewCityChangeSchema = z.object({
+  note: z.string().trim().max(500).optional(),
+});

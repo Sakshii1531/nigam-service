@@ -7,7 +7,7 @@ const addressSchema = z.object({
   city: z.string().optional(),
   pincode: z.string().optional(),
   name: z.string().optional(),
-});
+}).passthrough();
 
 const timeSlotSchema = z.object({ date: z.string(), time: z.string() });
 
@@ -15,10 +15,17 @@ export const createBookingSchema = z.object({
   category: z.string().min(1),
   productType: z.string().optional(),
   serviceSlug: z.string().min(1),
+  serviceName: z.string().optional(),
+  service: z.string().optional(),
+  // No price / totalPrice: the server prices the booking itself
+  // (booking.service.js resolveBookedService) — unknown keys are stripped.
+  advanceAmount: z.coerce.number().optional(),
   brand: z.string().optional(),
   quantity: z.coerce.number().int().positive().optional(),
   scheduledDate: z.coerce.date().optional(),
-  timeSlot: timeSlotSchema.optional(),
+  timeSlot: z.union([timeSlotSchema, z.string()]).optional(),
+  timeGroup: z.string().optional(),
+  isInstant: z.boolean().optional(),
   address: addressSchema.optional(),
   fullName: z.string().optional(),
   mobile: z.string().optional(),
@@ -43,4 +50,10 @@ export const idParamSchema = z.object({ id: z.string().min(1) });
 export const verifyBookingPaymentSchema = z.object({
   razorpayPaymentId: z.string().min(1),
   razorpaySignature: z.string().min(1),
+});
+
+export const rescheduleBookingSchema = z.object({
+  scheduledDate: z.coerce.date().optional(),
+  timeSlot: z.union([timeSlotSchema, z.string()]).optional(),
+  reason: z.string().optional(),
 });

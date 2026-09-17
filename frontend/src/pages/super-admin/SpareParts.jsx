@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
-import { Search, Plus, Filter, Wrench, Settings, ArrowUpRight } from 'lucide-react';
+import { Search, Plus, Wrench, Settings, ArrowUpRight } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
 
 const SpareParts = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [parts, setParts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   // The default markup is a platform setting, not a display constant.
   const [defaultMarkup, setDefaultMarkup] = useState(null);

@@ -1,14 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
 import { 
   Search, 
-  Filter, 
   GraduationCap, 
   BookOpen, 
   Video, 
   FileText, 
-  Plus, 
   Trash2, 
   X,
   UploadCloud,
@@ -51,8 +49,8 @@ const Academy = () => {
   const [guides, setGuides] = useState([]);
 
   const [courses, setCourses] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [, setLoading] = useState(true);
+  const [, setError] = useState('');
   const [guideFile, setGuideFile] = useState(null);
   const [uploading, setUploading] = useState(false);
 

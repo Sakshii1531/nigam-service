@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Star, Quote } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const testimonials = [

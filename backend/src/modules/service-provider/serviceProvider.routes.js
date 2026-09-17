@@ -5,7 +5,10 @@ import { attachServiceProvider } from '../../middleware/serviceProvider.js';
 import { ok } from '../../utils/respond.js';
 import { ROLES } from '../../config/constants.js';
 import * as serviceProviderService from './serviceProvider.service.js';
+import * as cityChangeService from './cityChange.service.js';
 import {
+  requestCityChangeSchema,
+  cityChangeRequestIdParamSchema,
   updateProfileSchema,
   addPayoutMethodSchema,
   methodIdParamSchema,
@@ -54,3 +57,34 @@ serviceProviderRouter.delete('/payout-methods/:methodId', validate(methodIdParam
     next(err);
   }
 });
+
+// Service city changes go through review — the city decides which jobs a
+// provider is offered and which ASM oversees them, so it isn't a field on
+// the self-service PUT /profile above.
+serviceProviderRouter.get('/city-change-requests', async (req, res, next) => {
+  try {
+    ok(res, await cityChangeService.listOwnRequests(req.serviceProvider.id));
+  } catch (err) {
+    next(err);
+  }
+});
+
+serviceProviderRouter.post('/city-change-requests', validate(requestCityChangeSchema), async (req, res, next) => {
+  try {
+    ok(res, await cityChangeService.requestCityChange(req.serviceProvider.id, req.user.id, req.body), {}, 201);
+  } catch (err) {
+    next(err);
+  }
+});
+
+serviceProviderRouter.post(
+  '/city-change-requests/:requestId/cancel',
+  validate(cityChangeRequestIdParamSchema, 'params'),
+  async (req, res, next) => {
+    try {
+      ok(res, await cityChangeService.cancelOwnRequest(req.serviceProvider.id, req.params.requestId));
+    } catch (err) {
+      next(err);
+    }
+  },
+);

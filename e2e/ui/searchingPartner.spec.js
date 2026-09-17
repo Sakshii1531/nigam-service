@@ -98,3 +98,90 @@ test('clicking Search Now on booking confirmation screen redirects immediately w
   await expect(page.getByRole('heading', { name: /Searching for Service Partner/i }).first()).toBeVisible();
   await expect(page.getByText('Deep Cleaning Service')).toBeVisible();
 });
+
+test('closing the search-ended pop-up keeps it closed — through polling and a reload — and polling stops', async ({ page, request }) => {
+  const customer = await signedInCustomer(request);
+  await signIn(page, customer);
+
+  let lookups = 0;
+  await page.route('**/api/v1/service-requests/sr_e2e_dismiss', (route) => {
+    lookups += 1;
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        data: {
+          id: 'sr_e2e_dismiss',
+          status: 'Cancelled',
+          booking: { id: 'bk_e2e_dismiss', status: 'Cancelled', instantStatus: 'CANCELLED', searchEndReason: 'NO_PROVIDERS_NEARBY', address: { city: 'Indore' } },
+        },
+      }),
+    });
+  });
+
+  await page.goto('/searching-partner?serviceRequestId=sr_e2e_dismiss&service=Repair&category=AC&city=Indore');
+  const dialog = page.getByRole('alertdialog');
+  await expect(dialog).toBeVisible({ timeout: 10_000 });
+  await dialog.getByRole('button', { name: 'Close' }).click();
+  await expect(dialog).toBeHidden();
+
+  // The page used to poll every 3s and re-open the pop-up each time.
+  await page.waitForTimeout(7_000);
+  await expect(dialog).toBeHidden();
+  // A cancelled booking can't change, so it stops asking the server.
+  expect(lookups).toBeLessThanOrEqual(2);
+
+  await page.reload();
+  await expect(page.getByRole('heading', { name: /No service provider near you/i })).toBeVisible({ timeout: 10_000 });
+  await page.waitForTimeout(4_000);
+  await expect(page.getByRole('alertdialog')).toBeHidden();
+});
+
+// The server stops searching after 15 minutes and cancels the booking with a
+// reason (booking.service.js expireStaleSearches). Waiting 15 real minutes in a
+// browser test isn't practical, so these serve the page an already-expired
+// booking and check the customer sees the right pop-up.
+for (const scenario of [
+  {
+    reason: 'PROVIDERS_NOT_ACCEPTING',
+    title: /Service providers are busy/i,
+    message: /not accepting service requests right now\. Please retry after a few minutes/i,
+  },
+  {
+    reason: 'NO_PROVIDERS_NEARBY',
+    title: /No service provider near you/i,
+    message: /no service provider near you right now\. Kindly retry after some time/i,
+  },
+]) {
+  test(`shows the search-ended pop-up when the search timed out (${scenario.reason})`, async ({ page, request }) => {
+    const customer = await signedInCustomer(request);
+    await signIn(page, customer);
+
+    const booking = {
+      id: 'bk_e2e_search_ended',
+      humanId: 'NCC-000000-0001',
+      category: 'AC',
+      status: 'Cancelled',
+      instantStatus: 'CANCELLED',
+      isAccepted: false,
+      searchEndReason: scenario.reason,
+      cancellationReason: 'Search timed out',
+      address: { city: 'Indore' },
+    };
+    const envelope = (data) => ({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, data }) });
+    await page.route('**/api/v1/service-requests/sr_e2e_search_ended', (route) =>
+      route.fulfill(envelope({ id: 'sr_e2e_search_ended', humanId: 'SR-0001', status: 'Cancelled', booking })),
+    );
+
+    await page.goto('/searching-partner?serviceRequestId=sr_e2e_search_ended&service=Repair&category=AC&city=Indore');
+
+    const dialog = page.getByRole('alertdialog');
+    await expect(dialog).toBeVisible({ timeout: 10_000 });
+    await expect(dialog.getByRole('heading', { name: scenario.title })).toBeVisible();
+    await expect(dialog.getByText(scenario.message)).toBeVisible();
+
+    // Try again takes the customer back to booking the same category.
+    await dialog.getByRole('button', { name: /Try again/i }).click();
+    await expect(page).toHaveURL(/\/book\/AC/);
+  });
+}

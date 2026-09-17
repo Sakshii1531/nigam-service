@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import {
-  Sparkles, Plus, Trash2, Edit2, Check, Save, Wrench, RefreshCw,
-  Info, Users, Image, Video, Bell, Settings, Award, FileText
+  Plus, Trash2, Check, RefreshCw,
+  Image, Video, Bell, Award
 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { apiRequest } from '../../lib/apiClient';
@@ -38,7 +38,7 @@ const toAnnouncement = (d) => ({
 const toSkill = (d) => ({ id: d.id, name: d.name, code: d.code, group: d.group || 'General' });
 
 const ServiceProviderAppCustomization = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'banners';
 
   // Toast State

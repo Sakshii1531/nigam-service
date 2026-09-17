@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation, useSearchParams } from 'react-router-dom';
 import {
-  ArrowLeft, Shield, Check, ChevronRight,
-  Wrench, Sparkles, Zap, PackageOpen,
-  MapPin, Bell, Search, ShieldCheck, FileText, CheckCircle2,
+  ChevronRight,
+  Sparkles, Zap, PackageOpen,
+  ShieldCheck, CheckCircle2,
   Lock, Landmark, Wallet, Percent, ChevronLeft
 } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -96,7 +96,7 @@ const Exchange = () => {
   
   const [selectedBrand, setSelectedBrand] = useState(brandParam || currentBrands[0] || '');
   const [purchaseError, setPurchaseError] = useState('');
-  const [createdRequest, setCreatedRequest] = useState(null);
+  const [createdRequest] = useState(null);
   const [selectedModel, setSelectedModel] = useState(modelParam || currentModels[0] || '');
   const [selectedCondition, setSelectedCondition] = useState(conditionParam || 'Good');
   

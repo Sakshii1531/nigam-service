@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Gift, Copy, Check, Share2, Coins, Sparkles, Trophy, Users, ArrowRight, Clock } from 'lucide-react';
+import { ArrowLeft, Gift, Copy, Check, Share2, Coins, Sparkles, Users, Clock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { apiRequest } from '../lib/apiClient';
 

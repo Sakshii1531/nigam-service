@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import { 
-  RefreshCw, Check, AlertCircle, Plus, Edit, Trash2, 
-  Eye, Settings, HelpCircle, Save, X, ToggleLeft, ArrowUp, ArrowDown, Sparkles
+  RefreshCw, Check, Plus, Edit, Trash2, 
+  Settings, HelpCircle, Save, X, ArrowUp, ArrowDown, Sparkles
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -47,8 +47,8 @@ const ExchangeOffers = () => {
     bonusAmount: 1000
   });
 
-  const [exchangeRequests, setExchangeRequests] = useState([]);
-  const [requestsLoading, setRequestsLoading] = useState(true);
+  const [, setExchangeRequests] = useState([]);
+  const [, setRequestsLoading] = useState(true);
 
   // Load all configurations + real exchange requests
   useEffect(() => {
@@ -140,20 +140,6 @@ const ExchangeOffers = () => {
     }
   };
 
-  const handleToggleCategory = (cat) => {
-    const current = configForm.supportedCategories || [];
-    if (current.includes(cat)) {
-      setConfigForm({
-        ...configForm,
-        supportedCategories: current.filter(c => c !== cat)
-      });
-    } else {
-      setConfigForm({
-        ...configForm,
-        supportedCategories: [...current, cat]
-      });
-    }
-  };
 
   // ── QUESTION SET ACTIONS ──
   const handleSaveQuestionSet = async (e) => {

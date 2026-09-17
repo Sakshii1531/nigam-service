@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
-import { Users, Plus, Shield, Eye, Edit2, CheckCircle2, X, Search, Building2, UserPlus, Trash2 } from 'lucide-react';
+import { Plus, Eye, CheckCircle2, X, Search, Trash2 } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
 
 // Values must match the API's department enum exactly; the labels are only for display.

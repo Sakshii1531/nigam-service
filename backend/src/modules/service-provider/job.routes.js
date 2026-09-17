@@ -38,6 +38,14 @@ jobRouter.get('/active', async (req, res, next) => {
   }
 });
 
+jobRouter.get('/summary', async (req, res, next) => {
+  try {
+    ok(res, await jobService.getJobSummary(req.serviceProvider.id));
+  } catch (err) {
+    next(err);
+  }
+});
+
 jobRouter.get('/history', async (req, res, next) => {
   try {
     ok(res, await jobService.listJobHistory(req.serviceProvider.id, req.query));
@@ -185,6 +193,14 @@ jobRouter.post(
 jobRouter.get('/:id/amc-history', validate(jobIdParamSchema, 'params'), async (req, res, next) => {
   try {
     ok(res, await jobService.getJobAmcHistory(req.serviceProvider.id, req.params.id));
+  } catch (err) {
+    next(err);
+  }
+});
+
+jobRouter.post('/:id/respond-reschedule', validate(jobIdParamSchema, 'params'), async (req, res, next) => {
+  try {
+    ok(res, await jobService.respondToReschedule(req.serviceProvider.id, req.params.id, req.body));
   } catch (err) {
     next(err);
   }

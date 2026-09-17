@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
-import { FileText, Download, Printer, CheckCircle2, Search, Clock } from 'lucide-react';
+import { FileText, Download, Printer, CheckCircle2, Search } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
 
 // `name` must match the API's document-type enum exactly — it is sent as-is.

@@ -454,3 +454,19 @@ describe('PATCH /auth/me — self-service profile update', () => {
     await request(app).patch('/api/v1/auth/me').send({ name: 'Nope' }).expect(401);
   });
 });
+
+describe('service provider login identifier', () => {
+  it('accepts a 10-digit phone number or an email, and refuses anything else', async () => {
+    const user = await createUser({ role: ROLES.SERVICE_PROVIDER, phone: '9876501234', email: 'partner@example.com', password: 'password123' });
+    await User.updateOne({ _id: user._id }, { humanId: 'PROV-001' });
+
+    await request(app).post('/api/v1/auth/login').send({ role: ROLES.SERVICE_PROVIDER, identifier: '9876501234', password: 'password123' }).expect(200);
+    await request(app).post('/api/v1/auth/login').send({ role: ROLES.SERVICE_PROVIDER, identifier: 'partner@example.com', password: 'password123' }).expect(200);
+
+    for (const identifier of ['PROV-001', '987650123', '98765012345', '+919876501234', 'partner@example']) {
+      const res = await request(app).post('/api/v1/auth/login').send({ role: ROLES.SERVICE_PROVIDER, identifier, password: 'password123' });
+      expect(res.status).toBe(400);
+      expect(res.body.error.message).toBe('Enter your email or 10-digit phone number');
+    }
+  });
+});

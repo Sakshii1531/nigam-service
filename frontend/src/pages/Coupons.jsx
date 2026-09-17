@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Ticket, Check, Copy, Percent } from 'lucide-react';
 import { apiRequest } from '../lib/apiClient';

@@ -1,7 +1,5 @@
-import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
-import { motion } from 'framer-motion';
 
 // High-fidelity custom inline SVG icons for common issues
 const ICONS = {

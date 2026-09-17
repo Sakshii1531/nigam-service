@@ -1,7 +1,21 @@
+import mongoose from 'mongoose';
 import { Booking } from './booking.model.js';
+import { ServiceRequest } from '../service-requests/serviceRequest.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { findServiceItem } from '../catalog/catalog.service.js';
-import { findAvailableServiceProvider } from '../shared/assignmentEngine.js';
+import { Category } from '../catalog/category.model.js';
+import { ServiceCatalogItem } from '../catalog/serviceCatalogItem.model.js';
+import { ServicePageConfig } from '../super-admin/servicePageConfig.model.js';
+import { estimateServiceProviderEarnings } from '../shared/serviceProviderEarnings.js';
+
+// How long a booking keeps looking for a service provider before giving up.
+export const SEARCH_WINDOW_MS = 15 * 60 * 1000;
+
+export const SEARCH_END_MESSAGES = Object.freeze({
+  PROVIDERS_NOT_ACCEPTING: 'Sorry, our service providers are not accepting service requests right now. Please retry after a few minutes.',
+  NO_PROVIDERS_NEARBY: 'There is no service provider near you right now. Kindly retry after some time.',
+});
+import { findAvailableServiceProvider, rankServiceProviders } from '../shared/assignmentEngine.js';
 import { createServiceRequest, transitionStatus, emitWarrantyClaimNotification, scheduleDispatchTimeout } from '../service-requests/serviceRequest.service.js';
 import { emit as emitNotification } from '../notifications/notification.service.js';
 import { parsePagination, paginationMeta } from '../../utils/pagination.js';
@@ -21,29 +35,60 @@ import { env } from '../../config/env.js';
 import { getIO } from '../../sockets/io.js';
 import { INSTANT_ROOM } from '../../sockets/instantBooking.gateway.js';
 
-export async function createBooking(userId, data) {
-  let serviceItem = null;
-  try {
-    serviceItem = await findServiceItem(data.category, data.serviceSlug);
-  } catch (_err) {
-    serviceItem = null;
+const escapeRegex = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/**
+ * The price of the service being booked, looked up server-side. Bookings used
+ * to take `price` / `totalPrice` straight from the request — and the customer
+ * booking page reads those from its own URL — so anyone could book a ₹399
+ * repair for ₹1.
+ *
+ * Named services the app lists come from two admin-managed places: catalog
+ * items (matched by slug, then by name) and the CMS service pages' priced
+ * catalogs (matched by item name). A name found in neither is refused rather
+ * than priced at a guess.
+ */
+async function resolveBookedService({ category: categoryKey, serviceSlug, serviceName }) {
+  const name = (serviceName || '').trim();
+
+  if (!name) {
+    // Catalog booking by slug — findServiceItem throws a 404 for unknown slugs.
+    const item = await findServiceItem(categoryKey, serviceSlug);
+    return { name: item.name, slug: item.slug, price: item.price || 0, desc: item.desc, unit: item.unit };
   }
 
-  // findServiceItem throws for a slug that isn't in the catalog, which used to
-  // surface as a 404. The swallow above exists so the app can book work it
-  // describes itself (a custom job carries its own name/price), but that must
-  // not extend to a slug the client believed was a catalog service: without
-  // this guard a typo'd slug quietly books "Home Service" at the 299 default,
-  // and the unguarded serviceItem.name reads below turned it into a 500.
-  if (!serviceItem && !(data.serviceName || data.service)) {
-    throw new ApiError(404, `No service "${data.serviceSlug}" in category "${data.category}"`);
+  const category = await Category.findOne({ key: { $regex: new RegExp(`^${escapeRegex(categoryKey)}$`, 'i') } });
+  if (category) {
+    // By name first — the app derives its slug from the display name, so a
+    // derived slug can collide with a different catalog item's slug.
+    const item =
+      (await ServiceCatalogItem.findOne({ category: category._id, name: { $regex: new RegExp(`^${escapeRegex(name)}$`, 'i') }, isActive: true })) ||
+      (serviceSlug && (await ServiceCatalogItem.findOne({ category: category._id, slug: serviceSlug, isActive: true })));
+    if (item) return { name: item.name, slug: item.slug, price: item.price || 0, desc: item.desc, unit: item.unit };
   }
+
+  const page = await ServicePageConfig.findOne({ 'catalog.items.name': name });
+  const pageItem = page?.catalog.flatMap((section) => section.items).find((it) => it.name === name);
+  const pagePrice = Number(String(pageItem?.price ?? '').replace(/[^0-9.]/g, ''));
+  if (pageItem && Number.isFinite(pagePrice) && String(pageItem.price).match(/[0-9]/)) {
+    return { name: pageItem.name, slug: serviceSlug || 'service', price: pagePrice };
+  }
+
+  throw new ApiError(400, `"${name}" is not a bookable service right now — please choose it again from the services list`);
+}
+
+export async function createBooking(userId, data) {
+  const resolved = await resolveBookedService({
+    category: data.category,
+    serviceSlug: data.serviceSlug,
+    serviceName: data.serviceName || data.service,
+  });
 
   const quantity = data.quantity || 1;
-  const itemPrice = data.price != null ? Number(data.price) : (serviceItem?.price || 299);
-  const basePrice = (data.totalPrice != null && Number(data.totalPrice) > 0) ? Number(data.totalPrice) : (itemPrice * quantity);
-  const serviceName = data.serviceName || data.service || serviceItem?.name || 'Home Service';
-  const serviceSlug = data.serviceSlug || serviceItem?.slug || 'service';
+  const itemPrice = resolved.price;
+  const basePrice = itemPrice * quantity;
+  const serviceName = resolved.name;
+  const serviceSlug = resolved.slug;
 
   const isInstant = Boolean(data.isInstant || data.timeGroup === 'ASAP' || data.timeSlot?.time === 'ASAP' || data.timeSlot?.time?.includes('ASAP'));
 
@@ -103,8 +148,8 @@ export async function createBooking(userId, data) {
         slug: serviceSlug,
         name: serviceName,
         price: itemPrice,
-        desc: serviceItem?.desc || serviceName,
-        unit: serviceItem?.unit || 'service'
+        desc: resolved.desc || serviceName,
+        unit: resolved.unit || 'service'
       },
       brand: data.brand,
       quantity,
@@ -114,7 +159,11 @@ export async function createBooking(userId, data) {
       fullName: data.fullName,
       mobile: data.mobile,
       paymentMode: data.paymentMode || 'after',
-      advanceAmount: data.advanceAmount != null ? Number(data.advanceAmount) : (data.paymentMode === 'advance' ? Math.round(totalPrice * (advancePercent / 100)) : 0),
+      // A client-chosen advance is allowed (the booking page offers a flat
+      // ₹49), but only within the server-priced total.
+      advanceAmount: data.advanceAmount != null
+        ? Math.min(Math.max(0, Number(data.advanceAmount) || 0), totalPrice)
+        : (data.paymentMode === 'advance' ? Math.round(totalPrice * (advancePercent / 100)) : 0),
       totalPrice,
       serviceProvider: serviceProvider ? serviceProvider._id : null,
       isAccepted: false,
@@ -122,6 +171,7 @@ export async function createBooking(userId, data) {
       isInstant,
       instantStatus: initialInstantStatus,
       instantRequestedAt: isInstant ? new Date() : null,
+      searchExpiresAt: new Date(Date.now() + SEARCH_WINDOW_MS),
     }], session ? { session } : {});
 
     let serviceRequest = await createServiceRequest({
@@ -173,6 +223,7 @@ export async function createBooking(userId, data) {
   // Broadcast real-time dispatch event via Socket.IO for instant pop-up on service provider apps
   const io = getIO();
   if (io) {
+    const estEarnings = await estimateServiceProviderEarnings(serviceRequest, booking).catch(() => 0);
     const jobPayload = {
       bookingId: booking.id,
       serviceRequestId: serviceRequest.id,
@@ -186,7 +237,7 @@ export async function createBooking(userId, data) {
       customerName: data.fullName,
       mobile: data.mobile,
       totalPrice: booking.totalPrice,
-      estEarnings: Math.round((booking.totalPrice || 500) * 0.3) || 180,
+      estEarnings,
       isInstant,
       scheduledTime: booking.timeSlot?.time || (isInstant ? 'ASAP' : 'Scheduled'),
       scheduledDateLabel: booking.timeSlot?.date || 'Today',
@@ -270,15 +321,48 @@ export async function verifyBookingPayment(userId, bookingId, { razorpayPaymentI
 }
 
 async function findOwnedOr404(userId, id) {
-  const booking = await Booking.findById(id)
-    .populate('serviceProvider', 'name phone rating avatar photo')
-    .populate({
-      path: 'serviceRequest',
-      select: 'humanId status timeline tracking warranty brand category description job',
-      populate: { path: 'brand', select: 'name logo' },
-    });
+  let booking = null;
+  if (mongoose.Types.ObjectId.isValid(id)) {
+    booking = await Booking.findById(id)
+      .populate('serviceProvider', 'name phone rating avatar photo')
+      .populate({
+        path: 'serviceRequest',
+        select: 'humanId status timeline tracking warranty brand category description job',
+        populate: { path: 'brand', select: 'name logo' },
+      });
+    if (!booking) {
+      booking = await Booking.findOne({ serviceRequest: id })
+        .populate('serviceProvider', 'name phone rating avatar photo')
+        .populate({
+          path: 'serviceRequest',
+          select: 'humanId status timeline tracking warranty brand category description job',
+          populate: { path: 'brand', select: 'name logo' },
+        });
+    }
+  }
+  if (!booking) {
+    booking = await Booking.findOne({ humanId: id })
+      .populate('serviceProvider', 'name phone rating avatar photo')
+      .populate({
+        path: 'serviceRequest',
+        select: 'humanId status timeline tracking warranty brand category description job',
+        populate: { path: 'brand', select: 'name logo' },
+      });
+    if (!booking) {
+      const sr = await ServiceRequest.findOne({ humanId: id }).select('_id');
+      if (sr) {
+        booking = await Booking.findOne({ serviceRequest: sr._id })
+          .populate('serviceProvider', 'name phone rating avatar photo')
+          .populate({
+            path: 'serviceRequest',
+            select: 'humanId status timeline tracking warranty brand category description job',
+            populate: { path: 'brand', select: 'name logo' },
+          });
+      }
+    }
+  }
   if (!booking) throw new ApiError(404, 'Booking not found');
-  if (String(booking.user) !== userId) throw new ApiError(403, 'Not authorized to view this booking');
+  if (String(booking.user) !== String(userId)) throw new ApiError(403, 'Not authorized to view this booking');
   return booking;
 }
 
@@ -316,17 +400,210 @@ export async function listBookings(userId, { status, page, limit, sort } = {}) {
   return { items, meta: paginationMeta({ page: pg, limit: lim, total }) };
 }
 
-export async function cancelBooking(userId, id) {
+export async function cancelBooking(userId, id, reason) {
   const booking = await findOwnedOr404(userId, id);
   if (booking.status === 'Completed') throw new ApiError(400, 'Cannot cancel a completed booking');
+  if (booking.status === 'Cancelled') return booking;
 
+  return closeBooking(booking, {
+    reason: reason || 'Cancelled by customer',
+    timelineDescription: reason ? `Cancelled by customer: ${reason}` : 'Cancelled by customer',
+  });
+}
+
+/** Cancels the booking and its service request, and tells everyone watching. */
+async function closeBooking(booking, { reason, timelineDescription, searchEndReason = null }) {
   booking.status = 'Cancelled';
+  if (booking.isInstant) {
+    booking.instantStatus = 'CANCELLED';
+  }
+  booking.cancellationReason = reason;
+  booking.cancelledAt = new Date();
+  if (searchEndReason) booking.searchEndReason = searchEndReason;
   await booking.save();
 
   if (booking.serviceRequest) {
-    await transitionStatus(booking.serviceRequest, 'Cancelled', { description: 'Cancelled by customer' }).catch(() => {
-      // Already in a terminal state (e.g. was already Cancelled/Closed) — booking cancellation itself still succeeds.
-    });
+    try {
+      const srId = typeof booking.serviceRequest === 'object' ? booking.serviceRequest._id : booking.serviceRequest;
+      const sr = await ServiceRequest.findById(srId);
+      if (sr && sr.status !== 'Cancelled' && sr.status !== 'Closed' && sr.status !== 'Completed') {
+        sr.status = 'Cancelled';
+        if (sr.isInstant) sr.instantStatus = 'CANCELLED';
+        sr.timeline.push({
+          stepLabel: 'Cancelled',
+          done: true,
+          timestamp: new Date(),
+          description: timelineDescription,
+        });
+        await sr.save();
+      }
+    } catch (e) {
+      console.error('[booking.cancel] error transitioning service request:', e.message);
+    }
+  }
+
+  // Real-time socket broadcast
+  try {
+    const io = getIO();
+    const payload = {
+      bookingId: booking._id,
+      serviceRequestId: booking.serviceRequest?._id || booking.serviceRequest,
+      status: 'Cancelled',
+      instantStatus: 'CANCELLED',
+      reason: booking.cancellationReason,
+      searchEndReason: booking.searchEndReason || null,
+    };
+    io.to(`user:${booking.user}`).emit('booking:cancelled', payload);
+    io.to(`user:${booking.user}`).emit('instant:status_update', payload);
+    io.to(INSTANT_ROOM).emit('instant:status_update', payload);
+    if (booking.serviceProvider) {
+      const spId = typeof booking.serviceProvider === 'object' ? booking.serviceProvider._id : booking.serviceProvider;
+      io.to(`service-provider:${spId}`).emit('job:cancelled', payload);
+    }
+  } catch (_e) {
+    // ignore socket errors
+  }
+
+  return booking;
+}
+
+/**
+ * Stops searching for a service provider once a booking has gone
+ * SEARCH_WINDOW_MS without anyone accepting it. Before this, an unaccepted
+ * booking was re-offered and re-assigned indefinitely — the customer watched a
+ * spinner forever and the server kept dispatching it on every sweep.
+ *
+ * The reason recorded decides what the customer is told: providers exist in
+ * their area (or were offered the job) but none accepted, versus nobody serves
+ * their area at all. Runs on an interval from server.js.
+ */
+export async function expireStaleSearches(now = new Date()) {
+  const stale = await Booking.find({
+    searchExpiresAt: { $ne: null, $lte: now },
+    isAccepted: { $ne: true },
+    status: { $nin: ['Cancelled', 'Completed'] },
+  });
+
+  let expired = 0;
+  for (const booking of stale) {
+    try {
+      const sr = booking.serviceRequest ? await ServiceRequest.findById(booking.serviceRequest) : null;
+      // Accepted through the service request (a Job exists) — not searching.
+      if (sr?.isAccepted || ['Engineer Accepted', 'Visit Scheduled', 'Engineer Reached', 'Diagnosis Done', 'Repair Completed', 'Customer Confirmation', 'Closed'].includes(sr?.status)) {
+        booking.searchExpiresAt = null;
+        await booking.save();
+        continue;
+      }
+
+      const wasOffered = Boolean(
+        sr && (sr.declinedBy?.length || sr.serviceProvider || sr.timeline?.some((step) => step.stepLabel === 'Assigned')),
+      );
+      let providersNearby = false;
+      if (!wasOffered) {
+        const nearby = await rankServiceProviders({
+          category: booking.category,
+          city: booking.address?.city,
+          state: booking.address?.state,
+          includeUnavailable: true,
+        });
+        providersNearby = nearby.length > 0;
+      }
+      const searchEndReason = wasOffered || providersNearby ? 'PROVIDERS_NOT_ACCEPTING' : 'NO_PROVIDERS_NEARBY';
+      const message = SEARCH_END_MESSAGES[searchEndReason];
+
+      await closeBooking(booking, {
+        reason: message,
+        timelineDescription: `Search timed out after ${SEARCH_WINDOW_MS / 60000} minutes — ${searchEndReason === 'NO_PROVIDERS_NEARBY' ? 'no service provider serves this area' : 'no service provider accepted'}`,
+        searchEndReason,
+      });
+      await emitNotification('booking.search_expired', { user: booking.user, reason: searchEndReason, message });
+      expired += 1;
+    } catch (err) {
+      console.warn('[search-expiry]', booking.id, err.message);
+    }
+  }
+  return { checked: stale.length, expired };
+}
+
+export async function rescheduleBooking(userId, id, { scheduledDate, timeSlot, reason } = {}) {
+  const booking = await findOwnedOr404(userId, id);
+  if (booking.status === 'Completed') throw new ApiError(400, 'Cannot reschedule a completed booking');
+  if (booking.status === 'Cancelled') throw new ApiError(400, 'Cannot reschedule a cancelled booking');
+
+  const newDate = scheduledDate ? new Date(scheduledDate) : booking.scheduledDate;
+  const newSlot = timeSlot || booking.timeSlot;
+
+  booking.status = 'Rescheduled';
+  if (booking.isInstant) {
+    booking.instantStatus = 'RESCHEDULED';
+  }
+  booking.scheduledDate = newDate;
+  booking.timeSlot = newSlot;
+  booking.rescheduledAt = new Date();
+  booking.rescheduleReason = reason || 'Rescheduled by customer';
+  booking.rescheduleCount = (booking.rescheduleCount || 0) + 1;
+
+  if (booking.serviceProvider) {
+    booking.providerRescheduleStatus = 'PENDING';
+  }
+  // Still unaccepted: give the new time its own search window.
+  if (!booking.isAccepted) {
+    booking.searchExpiresAt = new Date(Date.now() + SEARCH_WINDOW_MS);
+  }
+
+  await booking.save();
+
+  if (booking.serviceRequest) {
+    try {
+      const srId = typeof booking.serviceRequest === 'object' ? booking.serviceRequest._id : booking.serviceRequest;
+      const sr = await ServiceRequest.findById(srId);
+      if (sr) {
+        sr.status = 'Visit Scheduled';
+        if (sr.isInstant) sr.instantStatus = 'RESCHEDULED';
+        sr.timeline.push({
+          stepLabel: 'Rescheduled',
+          done: true,
+          timestamp: new Date(),
+          description: reason ? `Rescheduled by customer: ${reason}` : 'Rescheduled by customer',
+        });
+        await sr.save();
+      }
+    } catch (e) {
+      console.error('[booking.reschedule] error updating service request:', e.message);
+    }
+  }
+
+  // Real-time socket broadcast
+  try {
+    const io = getIO();
+    const dateStr = newDate ? new Date(newDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Scheduled date';
+    const slotStr = typeof newSlot === 'object' ? (newSlot?.time || newSlot?.date) : newSlot;
+
+    const payload = {
+      bookingId: booking._id,
+      humanId: booking.humanId,
+      serviceRequestId: booking.serviceRequest?._id || booking.serviceRequest,
+      status: 'Rescheduled',
+      instantStatus: 'RESCHEDULED',
+      scheduledDate: newDate,
+      timeSlot: newSlot,
+      reason: booking.rescheduleReason,
+      serviceName: booking.service?.name,
+      customerName: booking.fullName,
+      scheduledDateLabel: dateStr,
+      scheduledTime: slotStr,
+    };
+
+    io.to(`user:${booking.user}`).emit('booking:rescheduled', payload);
+    io.to(`user:${booking.user}`).emit('instant:status_update', payload);
+    io.to(INSTANT_ROOM).emit('instant:status_update', payload);
+
+    if (booking.serviceProvider) {
+      const spId = typeof booking.serviceProvider === 'object' ? booking.serviceProvider._id : booking.serviceProvider;
+      io.to(`service-provider:${spId}`).emit('job:rescheduled', payload);
+    }
+  } catch (_e) {
+    // ignore socket errors
   }
 
   return booking;

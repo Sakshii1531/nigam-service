@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
-import { Search, CreditCard, ArrowDownRight, ArrowUpRight, Clock } from 'lucide-react';
+import { Search, CreditCard, Clock } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
 
 const currency = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });

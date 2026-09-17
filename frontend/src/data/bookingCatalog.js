@@ -59,7 +59,9 @@ export async function preloadCatalogOverrides() {
       try {
         sessionStorage.setItem('ncc_service_pages_cache', JSON.stringify(servicePageOverrides));
         sessionStorage.setItem('ncc_category_configs_cache', JSON.stringify(categoryOverrides));
-      } catch {}
+      } catch {
+        // Storage can be full or disabled (private mode); the cache is optional.
+      }
     }
   } catch (err) {
     console.warn('[catalog] Could not load admin overrides, using defaults:', err.message);
@@ -369,9 +371,8 @@ export const getCatalogEntry = (category) => {
   const serviceConfigs = servicePageOverrides;
   const keys = Object.keys(serviceConfigs);
 
-  let matchedServiceKey = null;
   // 1a. Try exact match first
-  matchedServiceKey = keys.find(k => k.toLowerCase() === decodedNorm);
+  let matchedServiceKey = keys.find(k => k.toLowerCase() === decodedNorm);
 
   // 1b. Normalized spacing & hyphens
   if (!matchedServiceKey) {

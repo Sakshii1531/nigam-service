@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
-  ArrowLeft, ShoppingCart, Star, ShieldCheck, Check, 
-  Trash2, CreditCard, ShoppingBag, Truck, Info, ChevronRight, X
+  ArrowLeft, ShoppingCart, Star, Check, 
+  Trash2, CreditCard, ShoppingBag, ChevronRight, X
 } from 'lucide-react';
 import { apiRequest } from '../lib/apiClient';
 import { useCart } from '../lib/cartStore';

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, HelpCircle, Phone, MessageSquare, ChevronRight, Send } from 'lucide-react';
 import { io } from 'socket.io-client';
@@ -14,7 +14,7 @@ const TechnicalSupport = () => {
   const [supportChatInput, setSupportChatInput] = useState('');
   const [supportChatMessages, setSupportChatMessages] = useState([]);
   const [conversationId, setConversationId] = useState(null);
-  const [chatError, setChatError] = useState('');
+  const [, setChatError] = useState('');
   const socketRef = useRef(null);
 
   // A real support conversation with the platform desk, over the same chat

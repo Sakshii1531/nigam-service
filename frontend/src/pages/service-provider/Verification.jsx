@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Bell, Briefcase, ClipboardList, Calendar, Wrench, User, Shield, Check } from 'lucide-react';
+import { ArrowLeft, Bell, Shield, Check } from 'lucide-react';
 import ServiceProviderBottomNav from '../../components/ServiceProviderBottomNav';
 import { apiRequest } from '../../lib/apiClient';
 
@@ -19,10 +19,18 @@ const Verification = () => {
     apiRequest('/service-provider/profile/profile', { auth: true })
       .then((res) => {
         const v = res?.verification || {};
+        // Admin approval is the KYC review. Partners approved before approval
+        // started recording per-document statuses still carry the 'Pending'
+        // defaults, so an active account's pending documents read as verified.
+        const approved = res?.status === 'Active';
+        const statusOf = (value) => {
+          const status = value || 'Pending';
+          return approved && status === 'Pending' ? 'Verified' : status;
+        };
         setDocuments([
-          { label: 'Aadhar Card', status: v.aadharStatus || 'Pending' },
-          { label: 'PAN Card', status: v.panStatus || 'Pending' },
-          { label: 'Criminal Background Check', status: v.backgroundCheckStatus || 'Pending' },
+          { label: 'Aadhaar Card', status: statusOf(v.aadharStatus) },
+          { label: 'PAN Card', status: statusOf(v.panStatus) },
+          { label: 'Criminal Background Check', status: statusOf(v.backgroundCheckStatus) },
         ]);
       })
       .catch((err) => setError(err.message || 'Could not load your verification status.'));
@@ -47,7 +55,6 @@ const Verification = () => {
           className="p-2 hover:bg-slate-50 rounded-full transition-colors relative"
         >
           <Bell className="h-5 w-5 text-slate-700" />
-          <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
         </button>
       </div>
 
@@ -75,6 +82,7 @@ const Verification = () => {
 
         {/* Status Header — reflects the serviceProvider's real verification record,
             which used to read "Verified Partner" for everyone. */}
+        {documents.length > 0 && (
         <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm flex flex-col items-center gap-2">
           <div className={`w-16 h-16 rounded-full flex items-center justify-center ${allVerified ? 'bg-green-50' : 'bg-amber-50'}`}>
             <Shield className={`h-8 w-8 ${allVerified ? 'text-green-500' : 'text-amber-500'}`} />
@@ -88,6 +96,7 @@ const Verification = () => {
               : 'Some documents are still being reviewed. You will be notified once they clear.'}
           </p>
         </div>
+        )}
 
         {error && (
           <div className="bg-rose-50 border border-rose-200 rounded-xl px-3 py-2 text-[11px] font-semibold text-rose-600">

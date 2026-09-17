@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft,
@@ -8,7 +8,6 @@ import {
   Gift,
   Home as HomeIcon,
   Calendar,
-  Wrench,
   User,
   LogOut,
   MapPin,

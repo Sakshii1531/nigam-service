@@ -1,4 +1,3 @@
-import React from 'react';
 import { ArrowLeft, Star } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import cleaningBathroom1 from '../assets/cleaning_bathroom_1.png';

@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -34,6 +34,7 @@ import BookingSuccess from "./pages/BookingSuccess";
 import SearchingPartner from "./pages/SearchingPartner";
 import RefrigeratorDetails from "./pages/RefrigeratorDetails";
 import Bookings from "./pages/Bookings";
+import BookingDetails from "./pages/BookingDetails";
 import Profile from "./pages/Profile";
 import ServiceDetails from "./pages/ServiceDetails";
 import HelpSupport from "./pages/HelpSupport";
@@ -115,6 +116,7 @@ import SuperAdminLogin from "./pages/super-admin/Login";
 import SuperAdminDashboard from "./pages/super-admin/Dashboard";
 import SuperAdminUsers from "./pages/super-admin/Users";
 import SuperAdminServiceProviders from "./pages/super-admin/ServiceProviders";
+import SuperAdminCityChangeRequests from "./pages/super-admin/CityChangeRequests";
 import SuperAdminBrands from "./pages/super-admin/Brands";
 import SuperAdminRequests from "./pages/super-admin/Requests";
 import SuperAdminWarranty from "./pages/super-admin/Warranty";
@@ -168,7 +170,6 @@ import Inventory from "./pages/service-provider/Inventory";
 import BillingEstimate from "./pages/service-provider/BillingEstimate";
 import SkillsCertifications from "./pages/service-provider/SkillsCertifications";
 import ServiceProviderSettings from "./pages/service-provider/ServiceProviderSettings";
-import PartnerLevel from "./pages/service-provider/PartnerLevel";
 import Academy from "./pages/service-provider/Academy";
 import TechnicalSupport from "./pages/service-provider/TechnicalSupport";
 import Announcements from "./pages/service-provider/Announcements";
@@ -258,6 +259,7 @@ const ScrollToTop = () => {
     const asmAllowedPaths = [
       "/super-admin/zone-dashboard",
       "/super-admin/service-providers",
+      "/super-admin/city-change-requests",
       "/super-admin/requests",
       "/super-admin/tracking",
       "/super-admin/assignment",
@@ -748,6 +750,14 @@ function App() {
                             element={<BookingFlow />}
                           />
                           <Route path="/bookings" element={<Bookings />} />
+                          <Route
+                            path="/bookings/:id"
+                            element={<BookingDetails />}
+                          />
+                          <Route
+                            path="/my-bookings/:id"
+                            element={<BookingDetails />}
+                          />
                           <Route path="/profile" element={<Profile />} />
                           <Route
                             path="/booking-success"
@@ -1051,10 +1061,6 @@ function App() {
                             element={<ServiceProviderSettings />}
                           />
                           <Route
-                            path="/service-provider/partner-level"
-                            element={<PartnerLevel />}
-                          />
-                          <Route
                             path="/service-provider/academy"
                             element={<Academy />}
                           />
@@ -1121,6 +1127,10 @@ function App() {
                           <Route
                             path="/super-admin/service-providers"
                             element={<SuperAdminServiceProviders />}
+                          />
+                          <Route
+                            path="/super-admin/city-change-requests"
+                            element={<SuperAdminCityChangeRequests />}
                           />
                           <Route
                             path="/super-admin/brands"

@@ -1,4 +1,3 @@
-import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 
@@ -17,7 +16,6 @@ const TrackTicket = () => {
   const { ticketId } = location.state || { ticketId: 'NCCW-2024-000123' };
 
   // Active step = last done step
-  const activeIndex = STEPS.reduce((acc, s, i) => s.done ? i : acc, 0);
 
   return (
     <div className="min-h-screen bg-blue-50/50 flex flex-col pb-8">

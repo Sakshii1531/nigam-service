@@ -47,6 +47,25 @@ const bookingSchema = new mongoose.Schema(
       default: null,
     },
     instantRequestedAt: Date,
+    cancellationReason: { type: String, default: null },
+    // When the hunt for a service provider gives up (booking.service.js
+    // expireStaleSearches). Pushed out again on reschedule; cleared on accept.
+    searchExpiresAt: { type: Date, default: null, index: true },
+    // Why an expired search ended, so the customer app can say the right thing.
+    searchEndReason: {
+      type: String,
+      enum: ['NO_PROVIDERS_NEARBY', 'PROVIDERS_NOT_ACCEPTING', null],
+      default: null,
+    },
+    cancelledAt: { type: Date, default: null },
+    rescheduledAt: { type: Date, default: null },
+    rescheduleReason: { type: String, default: null },
+    rescheduleCount: { type: Number, default: 0 },
+    providerRescheduleStatus: {
+      type: String,
+      enum: ['NONE', 'PENDING', 'ACCEPTED', 'REJECTED'],
+      default: 'NONE',
+    },
   },
   { timestamps: true },
 );

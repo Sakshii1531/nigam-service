@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ChevronLeft, Trash2, Heart, Star
 } from 'lucide-react';
-import { motion } from 'framer-motion';
 import CustomerBottomNav from '../components/CustomerBottomNav';
 
 // Import assets to resolve correctly
@@ -20,7 +19,7 @@ const MyWishlist = () => {
   const navigate = useNavigate();
   // The wishlist lives on the account, so it's the same on every device.
   const [wishlist, setWishlist] = useState([]);
-  const [wishlistError, setWishlistError] = useState('');
+  const [, setWishlistError] = useState('');
 
   useEffect(() => {
     apiRequest('/wishlist', { auth: true })

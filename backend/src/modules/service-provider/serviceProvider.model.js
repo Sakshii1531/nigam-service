@@ -32,6 +32,7 @@ const serviceProviderSchema = new mongoose.Schema(
     name: { type: String, required: true },
     phone: String,
     email: String,
+    avatarUrl: String,
     // Home address as entered on the service provider's Personal Info screen.
     address: String,
     city: { type: mongoose.Schema.Types.ObjectId, ref: 'City', default: null, index: true },

@@ -1,6 +1,4 @@
-import React from 'react';
-import { Smartphone, Download, Apple } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Download, Apple } from 'lucide-react';
 import appVideo from '../../assets/video.mp4';
 
 const MobileApp = () => {

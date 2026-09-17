@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Search, X, Sparkles, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Search, X, Sparkles } from 'lucide-react';
 import CustomerBottomNav from '../components/CustomerBottomNav';
 
 // Import images for Sidebar
@@ -182,7 +182,7 @@ const Categories = () => {
     const query = searchQuery.toLowerCase().trim();
     const resultsMap = new Map();
 
-    Object.entries(CATEGORY_DATA).forEach(([catId, sections]) => {
+    Object.entries(CATEGORY_DATA).forEach(([, sections]) => {
       sections.forEach((section) => {
         section.items.forEach((item) => {
           if (item.name.toLowerCase().includes(query) || section.title.toLowerCase().includes(query)) {

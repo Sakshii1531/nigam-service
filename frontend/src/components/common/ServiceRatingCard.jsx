@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Star, Check, AlertCircle, Loader2, Sparkles, User, ShieldCheck } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
 
@@ -27,7 +27,7 @@ const ServiceRatingCard = ({ service, onRatingSubmitted }) => {
   const [checkingStatus, setCheckingStatus] = useState(true);
   const [existingRating, setExistingRating] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
-  const [successToast, setSuccessToast] = useState(false);
+  const [, setSuccessToast] = useState(false);
 
   // Check if this service has already been rated by this customer
   useEffect(() => {

@@ -1,4 +1,3 @@
-import React from 'react';
 import { BarChart3, Users, ClipboardCheck, TrendingUp } from 'lucide-react';
 import { motion } from 'framer-motion';
 

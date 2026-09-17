@@ -14,3 +14,5 @@ CLAUDE.md
 # projects each have their own in backend/, frontend/, e2e/) — root-anchored
 # so it doesn't accidentally ignore those legitimate lockfiles too.
 /package-lock.json
+test-results/
+

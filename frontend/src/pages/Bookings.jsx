@@ -1,16 +1,15 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  ArrowLeft, Calendar, Clock, Wrench, User,
-  Search, CheckCircle2, AlertTriangle, X, ChevronRight, Phone,
-  MapPin, CreditCard, FileText, RefreshCw, Star, ShieldCheck, Truck,
-  RotateCcw, Sparkles, HelpCircle, Package, Check, Copy
+  ArrowLeft, Calendar, Clock, Wrench, Search, CheckCircle2, AlertTriangle, X, ChevronRight, RefreshCw, ShieldCheck, Sparkles, Check, Copy, RotateCcw
 } from 'lucide-react';
 import CustomerBottomNav from '../components/CustomerBottomNav';
 import { apiRequest, getStoredTokens } from '../lib/apiClient';
 import { io } from 'socket.io-client';
+import CancelBookingModal from '../components/booking/CancelBookingModal';
+import RescheduleBookingModal from '../components/booking/RescheduleBookingModal';
 
-// 3D icon assets
+// 3D Category icons
 import iconAc from '../assets/icon_3d_ac.png';
 import iconGeyser from '../assets/icon_3d_geyser.png';
 import iconRo from '../assets/icon_3d_ro.png';
@@ -22,7 +21,6 @@ import iconWm from '../assets/icon_3d_wm.png';
 import electricianImg from '../assets/categories/electrician_fixed.png';
 import plumberImg from '../assets/categories/plumber_fixed.png';
 import cleaningImg from '../assets/categories/cleaning.png';
-import ServiceRatingCard from '../components/common/ServiceRatingCard';
 
 const SOCKET_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000').replace(/\/api\/v1\/?$/, '');
 
@@ -40,15 +38,15 @@ const STATUS_BADGES = {
 };
 
 const CATEGORY_COLORS = {
-  AC: 'bg-sky-100 text-sky-800 border-sky-200',
-  Refrigerator: 'bg-cyan-100 text-cyan-800 border-cyan-200',
-  'Washing Machine': 'bg-indigo-100 text-indigo-800 border-indigo-200',
-  RO: 'bg-blue-100 text-blue-800 border-blue-200',
-  TV: 'bg-purple-100 text-purple-800 border-purple-200',
-  Chimney: 'bg-amber-100 text-amber-800 border-amber-200',
-  Geyser: 'bg-orange-100 text-orange-800 border-orange-200',
-  Electrician: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-  Plumber: 'bg-teal-100 text-teal-800 border-teal-200',
+  AC: 'bg-sky-50 text-sky-700 border-sky-200',
+  Refrigerator: 'bg-cyan-50 text-cyan-700 border-cyan-200',
+  'Washing Machine': 'bg-indigo-50 text-indigo-700 border-indigo-200',
+  RO: 'bg-blue-50 text-blue-700 border-blue-200',
+  TV: 'bg-purple-50 text-purple-700 border-purple-200',
+  Chimney: 'bg-amber-50 text-amber-700 border-amber-200',
+  Geyser: 'bg-orange-50 text-orange-700 border-orange-200',
+  Electrician: 'bg-yellow-50 text-yellow-800 border-yellow-200',
+  Plumber: 'bg-teal-50 text-teal-700 border-teal-200',
 };
 
 const getCategoryIcon = (category, serviceName) => {
@@ -80,11 +78,25 @@ const Bookings = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
-  const [selectedBooking, setSelectedBooking] = useState(null);
-  const [cancellingId, setCancellingId] = useState(null);
+
+  // Cancel & Reschedule Modals
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [bookingToCancel, setBookingToCancel] = useState(null);
+  const [cancellingId, setCancellingId] = useState(null);
+
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
+  const [bookingToReschedule, setBookingToReschedule] = useState(null);
+  const [reschedulingId, setReschedulingId] = useState(null);
+
   const [toastMessage, setToastMessage] = useState('');
-  const [copiedOtp, setCopiedOtp] = useState(false);
+  const [copiedId, setCopiedId] = useState(null);
+
+  // If navigated with bookingId state, redirect to dedicated details page
+  useEffect(() => {
+    if (location.state?.bookingId) {
+      navigate(`/bookings/${location.state.bookingId}`, { replace: true });
+    }
+  }, [location.state, navigate]);
 
   const loadBookings = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -122,29 +134,37 @@ const Bookings = () => {
     socket.on('instant:status_update', () => loadBookings(true));
     socket.on('tracking:update', () => loadBookings(true));
     socket.on('service_request:updated', () => loadBookings(true));
+    socket.on('booking:cancelled', () => loadBookings(true));
+    socket.on('booking:rescheduled', () => loadBookings(true));
 
     return () => {
       socket.disconnect();
     };
   }, [loadBookings]);
 
-  useEffect(() => {
-    if (location.state?.bookingId && bookings.length > 0) {
-      const match = bookings.find(b => (b.id === location.state.bookingId || b.humanId === location.state.bookingId));
-      if (match) setSelectedBooking(match);
-    }
-  }, [location.state, bookings]);
+  const handleCopyId = (e, id) => {
+    e.stopPropagation();
+    if (!id) return;
+    navigator.clipboard.writeText(id);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
 
-  const handleCancelBooking = async () => {
-    if (!selectedBooking) return;
-    setCancellingId(selectedBooking.id);
+  const handleCancelBooking = async (reason) => {
+    if (!bookingToCancel) return;
+    const targetId = bookingToCancel.id || bookingToCancel.humanId;
+    setCancellingId(targetId);
     try {
-      await apiRequest(`/bookings/${selectedBooking.id}/cancel`, { method: 'POST', auth: true });
+      await apiRequest(`/bookings/${targetId}/cancel`, {
+        method: 'POST',
+        body: { reason },
+        auth: true,
+      });
       setShowCancelModal(false);
+      setBookingToCancel(null);
       setToastMessage('Booking has been cancelled successfully.');
       setTimeout(() => setToastMessage(''), 4000);
-      await loadBookings();
-      setSelectedBooking(prev => prev ? { ...prev, status: 'Cancelled' } : null);
+      await loadBookings(true);
     } catch (err) {
       setError(err.message || 'Could not cancel booking.');
     } finally {
@@ -152,16 +172,31 @@ const Bookings = () => {
     }
   };
 
-  const handleCopyOtp = (otpCode) => {
-    if (!otpCode) return;
-    navigator.clipboard.writeText(otpCode);
-    setCopiedOtp(true);
-    setTimeout(() => setCopiedOtp(false), 2500);
+  const handleRescheduleBooking = async ({ scheduledDate, timeSlot, reason }) => {
+    if (!bookingToReschedule) return;
+    const targetId = bookingToReschedule.id || bookingToReschedule.humanId;
+    setReschedulingId(targetId);
+    try {
+      await apiRequest(`/bookings/${targetId}/reschedule`, {
+        method: 'POST',
+        body: { scheduledDate, timeSlot, reason },
+        auth: true,
+      });
+      setShowRescheduleModal(false);
+      setBookingToReschedule(null);
+      setToastMessage('Booking rescheduled successfully.');
+      setTimeout(() => setToastMessage(''), 4000);
+      await loadBookings(true);
+    } catch (err) {
+      setError(err.message || 'Could not reschedule booking.');
+    } finally {
+      setReschedulingId(null);
+    }
   };
 
   const filteredBookings = bookings.filter((b) => {
     const status = b.status || 'Upcoming';
-    if (activeTab === 'Upcoming' && (status !== 'Upcoming' && status !== 'Ongoing')) return false;
+    if (activeTab === 'Upcoming' && (status !== 'Upcoming' && status !== 'Ongoing' && status !== 'Rescheduled' && status !== 'Parts Pending' && status !== 'Revisit Scheduled')) return false;
     if (activeTab === 'Completed' && status !== 'Completed') return false;
     if (activeTab === 'Cancelled' && status !== 'Cancelled') return false;
 
@@ -176,164 +211,80 @@ const Bookings = () => {
     return true;
   });
 
-  const getTimelineSteps = (booking) => {
-    const sr = booking.serviceRequest;
-    const tl = sr?.timeline || [];
-
-    const hasTl = (label) => tl.some((t) => t.stepLabel?.toLowerCase().includes(label.toLowerCase()) || t.description?.toLowerCase().includes(label.toLowerCase()));
-    const getTlItem = (label) => tl.find((t) => t.stepLabel?.toLowerCase().includes(label.toLowerCase()) || t.description?.toLowerCase().includes(label.toLowerCase()));
-
-    const isSpareReq = hasTl('Spare Required') || hasTl('Spare Ordered') || sr?.status === 'Spare Required' || sr?.status === 'Spare Ordered' || booking.instantStatus === 'PARTS_PENDING' || booking.status === 'Parts Pending';
-    const isSpareApproved = hasTl('Spare Approved');
-    const isSpareDispatched = hasTl('Spare Dispatched');
-    const isSpareReceived = hasTl('Spare Received') || sr?.status === 'Spare Received' || booking.instantStatus === 'RESCHEDULED' || booking.status === 'Rescheduled' || booking.status === 'Revisit Scheduled';
-    const isCompleted = booking.status === 'Completed' || sr?.status === 'Repair Completed' || sr?.status === 'Closed';
-    const isCancelled = booking.status === 'Cancelled' || sr?.status === 'Cancelled';
-
-    const steps = [
-      {
-        id: 'confirmed',
-        title: 'Booking Placed',
-        desc: 'Booking received & scheduled',
-        time: booking.createdAt ? new Date(booking.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Confirmed',
-        completed: true,
-        current: false,
-      },
-      {
-        id: 'assigned',
-        title: 'Service Provider Assigned',
-        desc: booking.serviceProvider?.name ? `${booking.serviceProvider.name} (Verified Partner)` : 'Assigning nearest verified engineer',
-        time: booking.serviceProvider ? 'Assigned' : '',
-        completed: Boolean(booking.serviceProvider),
-        current: false,
-      },
-    ];
-
-    if (isSpareReq || isSpareReceived) {
-      const spareItem = getTlItem('Spare Required') || getTlItem('Spare Ordered');
-      steps.push({
-        id: 'spare_pending',
-        title: 'Spare Part Ordered',
-        desc: spareItem?.description || 'Spare parts requested from warehouse for appliance repair',
-        time: spareItem?.timestamp ? new Date(spareItem.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : 'Ordered',
-        completed: true,
-        current: !isSpareApproved && !isSpareDispatched && !isSpareReceived && !isCompleted,
-      });
-
-      if (isSpareApproved || isSpareDispatched || isSpareReceived) {
-        steps.push({
-          id: 'spare_dispatched',
-          title: isSpareDispatched ? 'Spare Part Dispatched' : 'Spare Part Approved',
-          desc: isSpareDispatched ? 'Part dispatched to serviceProvider via logistics' : 'Approved by warehouse admin',
-          time: 'Processed',
-          completed: true,
-          current: !isSpareReceived && !isCompleted,
-        });
-      }
-
-      if (isSpareReceived) {
-        const revisitDateStr = booking.scheduledDate 
-          ? new Date(booking.scheduledDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) 
-          : 'Scheduled';
-        const timeSlotStr = typeof booking.timeSlot === 'object' ? (booking.timeSlot?.time || '10:00 AM - 01:00 PM') : (booking.timeSlot || '10:00 AM - 01:00 PM');
-        steps.push({
-          id: 'revisit_scheduled',
-          title: 'Revisit Scheduled',
-          desc: `Spare delivered to serviceProvider. Revisit confirmed for ${revisitDateStr} (${timeSlotStr}) to complete repair.`,
-          time: 'Scheduled',
-          completed: true,
-          current: !isCompleted,
-        });
-      }
-    } else {
-      steps.push({
-        id: 'in_progress',
-        title: 'Service In Progress',
-        desc: sr?.status === 'Work in Progress' || sr?.status === 'Inspection' || sr?.status === 'Engineer Reached' ? 'Service Provider inspecting appliance' : 'Inspection & repair',
-        time: '',
-        completed: isCompleted,
-        current: booking.status === 'Ongoing' && !isCompleted && !isCancelled,
-      });
-    }
-
-    steps.push({
-      id: 'completed',
-      title: isCancelled ? 'Booking Cancelled' : 'Service Completed',
-      desc: isCancelled ? 'Cancelled by customer' : 'Inspection complete & warranty active',
-      time: booking.updatedAt && (isCompleted || isCancelled) ? new Date(booking.updatedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '',
-      completed: isCompleted || isCancelled,
-      current: isCompleted,
-      isCancelled,
-    });
-
-    return steps;
-  };
-
   return (
-    <div className="min-h-screen bg-slate-50/70 flex flex-col pb-24 lg:pb-12 font-sans">
+    <div className="min-h-screen bg-[#F4F7FB] flex flex-col pb-24 lg:pb-12 font-sans text-slate-800">
       
-      {/* Top App Header — Mobile only */}
-      <div className="bg-white/95 backdrop-blur-md border-b border-slate-100 px-3.5 py-2.5 sticky top-0 z-30 shadow-2xs lg:hidden flex flex-col gap-2.5">
+      {/* ── Top Header: Mobile ── */}
+      <header className="bg-white border-b border-slate-200/80 px-4 py-3 sticky top-0 z-30 shadow-2xs lg:hidden flex flex-col gap-3">
         <div className="flex items-center justify-between">
-          <button 
-            onClick={() => navigate(-1)}
-            className="w-8 h-8 rounded-full bg-slate-100/90 active:scale-95 flex items-center justify-center text-slate-700 transition-all cursor-pointer"
-            aria-label="Go Back"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </button>
-          
-          <div className="text-center">
-            <h1 className="text-sm font-extrabold text-slate-900 tracking-tight">My Bookings</h1>
-            <p className="text-[10px] text-slate-400 font-semibold">{bookings.length} total {bookings.length === 1 ? 'service' : 'services'}</p>
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => navigate(-1)}
+              className="w-9 h-9 rounded-xl bg-slate-100/90 active:scale-95 flex items-center justify-center text-slate-700 transition-all cursor-pointer"
+              aria-label="Go Back"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+            <div>
+              <h1 className="text-base font-extrabold text-slate-900 leading-tight">My Bookings</h1>
+              <p className="text-[11px] text-slate-500 font-medium">
+                {bookings.length} {bookings.length === 1 ? 'service booked' : 'services booked'}
+              </p>
+            </div>
           </div>
 
-          <button 
-            onClick={() => loadBookings(true)}
-            disabled={refreshing}
-            className="w-8 h-8 rounded-full bg-slate-100/90 hover:bg-slate-200/80 active:scale-95 flex items-center justify-center transition-all cursor-pointer text-slate-700 disabled:opacity-50"
-            title="Refresh Bookings"
-          >
-            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin text-brand-blue' : ''}`} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => loadBookings(true)}
+              disabled={refreshing}
+              className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 flex items-center justify-center transition-all cursor-pointer text-slate-700 disabled:opacity-50"
+              title="Refresh Bookings"
+            >
+              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin text-brand-blue' : ''}`} />
+            </button>
+          </div>
         </div>
 
         {/* Mobile Search Bar */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <input 
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search booking ID, appliance, or brand..."
-            className="w-full bg-slate-50 border border-slate-200/90 rounded-xl pl-8.5 pr-8 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20 focus:bg-white transition-all shadow-2xs"
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-8 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/15 focus:bg-white transition-all shadow-2xs"
           />
           {searchQuery && (
             <button 
               onClick={() => setSearchQuery('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-600"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600"
             >
               <X className="h-3.5 w-3.5" />
             </button>
           )}
         </div>
 
-        {/* Mobile Filter Tabs — Edge-to-edge horizontal scroll with no scrollbar */}
-        <div className="flex gap-2 overflow-x-auto no-scrollbar pt-0.5 pb-1 -mx-3.5 px-3.5">
+        {/* Mobile Filter Tabs */}
+        <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 pb-0.5">
           {TABS.map((tab) => {
             const count = tab === 'All' 
               ? bookings.length 
-              : bookings.filter(b => tab === 'Upcoming' ? (b.status === 'Upcoming' || b.status === 'Ongoing') : b.status === tab).length;
+              : bookings.filter(b => {
+                  const s = b.status || 'Upcoming';
+                  if (tab === 'Upcoming') return s === 'Upcoming' || s === 'Ongoing' || s === 'Rescheduled' || s === 'Parts Pending' || s === 'Revisit Scheduled';
+                  return s === tab;
+                }).length;
             const isSelected = activeTab === tab;
 
             return (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer flex-shrink-0 ${
+                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer flex-shrink-0 ${
                   isSelected
-                    ? 'bg-brand-blue text-white shadow-2xs'
-                    : 'bg-slate-100/90 text-slate-600 hover:bg-slate-200/80 border border-slate-200/50'
+                    ? 'bg-brand-blue text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200/80 border border-slate-200/60'
                 }`}
               >
                 <span>{tab}</span>
@@ -344,12 +295,12 @@ const Bookings = () => {
             );
           })}
         </div>
-      </div>
+      </header>
 
-      {/* Desktop Header & Controls Bar */}
-      <div className="hidden lg:flex flex-col gap-5 max-w-screen-2xl mx-auto w-full px-8 pt-6 pb-2">
-        <div className="flex items-center justify-between bg-white p-6 rounded-3xl border border-slate-200/70 shadow-xs">
-          <div className="flex items-center gap-3.5">
+      {/* ── Desktop Header & Controls Bar ── */}
+      <div className="hidden lg:flex flex-col gap-5 max-w-6xl mx-auto w-full px-6 pt-6 pb-2">
+        <div className="flex items-center justify-between bg-white p-6 rounded-3xl border border-slate-200/80 shadow-2xs">
+          <div className="flex items-center gap-4">
             <button 
               onClick={() => navigate(-1)}
               className="p-2.5 bg-slate-100 hover:bg-slate-200 rounded-2xl text-slate-700 transition-colors cursor-pointer flex-shrink-0"
@@ -366,7 +317,7 @@ const Bookings = () => {
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-1">
-                Track live service progress, view assigned serviceProviders, and manage your appliance repairs
+                View order status, reschedule appointment slots, or track your assigned service expert
               </p>
             </div>
           </div>
@@ -391,13 +342,17 @@ const Bookings = () => {
         </div>
 
         {/* Filter & Search Toolbar */}
-        <div className="flex items-center justify-between gap-4 bg-white p-3.5 rounded-2xl border border-slate-200/70 shadow-2xs">
+        <div className="flex items-center justify-between gap-4 bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-2xs">
           {/* Tabs */}
           <div className="flex items-center gap-2">
             {TABS.map((tab) => {
               const count = tab === 'All' 
                 ? bookings.length 
-                : bookings.filter(b => tab === 'Upcoming' ? (b.status === 'Upcoming' || b.status === 'Ongoing') : b.status === tab).length;
+                : bookings.filter(b => {
+                    const s = b.status || 'Upcoming';
+                    if (tab === 'Upcoming') return s === 'Upcoming' || s === 'Ongoing' || s === 'Rescheduled' || s === 'Parts Pending' || s === 'Revisit Scheduled';
+                    return s === tab;
+                  }).length;
               const isSelected = activeTab === tab;
 
               return (
@@ -426,8 +381,8 @@ const Bookings = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by ID, service, appliance, or brand..."
-              className="w-full bg-slate-50 border border-slate-200/80 rounded-xl pl-9 pr-9 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-brand-blue focus:bg-white transition-all"
+              placeholder="Search booking ID, appliance, or brand..."
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-9 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-brand-blue focus:bg-white transition-all"
             />
             {searchQuery && (
               <button 
@@ -441,9 +396,9 @@ const Bookings = () => {
         </div>
       </div>
 
-      {/* Toast Alert */}
+      {/* ── Toast Alerts ── */}
       {toastMessage && (
-        <div className="max-w-screen-2xl mx-auto w-full px-4 sm:px-6 lg:px-8 mt-3">
+        <div className="max-w-6xl mx-auto w-full px-4 sm:px-6 mt-3 animate-fade-in">
           <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-2 shadow-xs">
             <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
             <span>{toastMessage}</span>
@@ -451,9 +406,9 @@ const Bookings = () => {
         </div>
       )}
 
-      {/* Error Alert */}
+      {/* ── Error Alert ── */}
       {error && (
-        <div className="max-w-screen-2xl mx-auto w-full px-4 sm:px-6 lg:px-8 mt-3">
+        <div className="max-w-6xl mx-auto w-full px-4 sm:px-6 mt-3 animate-fade-in">
           <div className="bg-rose-50 border border-rose-200 text-rose-700 px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-2 shadow-xs">
             <AlertTriangle className="h-4 w-4 text-rose-500 shrink-0" />
             <span>{error}</span>
@@ -461,137 +416,164 @@ const Bookings = () => {
         </div>
       )}
 
-      {/* Bookings Grid */}
-      <div className="flex-1 max-w-screen-2xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+      {/* ── Bookings Cards Grid ── */}
+      <main className="flex-1 max-w-6xl mx-auto w-full px-4 sm:px-6 py-4 sm:py-6">
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 sm:gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {[1, 2, 3, 4, 5, 6].map((n) => (
-              <div key={n} className="bg-white rounded-3xl p-5 border border-slate-200/60 shadow-2xs animate-pulse flex flex-col gap-4">
+              <div key={n} className="bg-white rounded-3xl p-5 border border-slate-200/70 shadow-2xs animate-pulse flex flex-col gap-4">
                 <div className="flex justify-between items-center">
-                  <div className="h-5 bg-slate-200 rounded-md w-28"></div>
-                  <div className="h-6 bg-slate-200 rounded-full w-24"></div>
+                  <div className="h-5 bg-slate-200 rounded-md w-28" />
+                  <div className="h-6 bg-slate-200 rounded-full w-24" />
                 </div>
                 <div className="flex gap-3 items-center">
-                  <div className="w-14 h-14 bg-slate-200 rounded-2xl"></div>
+                  <div className="w-14 h-14 bg-slate-200 rounded-2xl" />
                   <div className="flex-1 flex flex-col gap-2">
-                    <div className="h-4 bg-slate-200 rounded-md w-3/4"></div>
-                    <div className="h-3 bg-slate-200 rounded-md w-1/2"></div>
+                    <div className="h-4 bg-slate-200 rounded-md w-3/4" />
+                    <div className="h-3 bg-slate-200 rounded-md w-1/2" />
                   </div>
                 </div>
-                <div className="h-10 bg-slate-100 rounded-2xl"></div>
-                <div className="h-10 bg-slate-100 rounded-2xl"></div>
+                <div className="h-10 bg-slate-100 rounded-2xl" />
+                <div className="h-10 bg-slate-100 rounded-2xl" />
               </div>
             ))}
           </div>
         ) : filteredBookings.length === 0 ? (
-          <div className="bg-white rounded-3xl p-12 text-center border border-slate-200/60 shadow-2xs flex flex-col items-center justify-center my-8 max-w-lg mx-auto">
-            <div className="w-16 h-16 bg-[#EAF4FF] text-brand-blue rounded-2xl flex items-center justify-center mb-4 shadow-2xs">
+          <div className="bg-white rounded-3xl p-10 sm:p-12 text-center border border-slate-200/80 shadow-2xs flex flex-col items-center justify-center my-6 max-w-md mx-auto">
+            <div className="w-16 h-16 bg-[#EAF4FF] text-brand-blue rounded-3xl flex items-center justify-center mb-4 shadow-2xs">
               <Wrench className="h-8 w-8 text-brand-blue" />
             </div>
-            <h3 className="text-base font-extrabold text-slate-900">No {activeTab !== 'All' ? activeTab : ''} Bookings Found</h3>
-            <p className="text-xs text-slate-500 mt-1 max-w-sm leading-relaxed">
+            <h3 className="text-base font-extrabold text-slate-900">
+              No {activeTab !== 'All' ? activeTab : ''} Bookings Found
+            </h3>
+            <p className="text-xs text-slate-500 mt-1 max-w-xs leading-relaxed">
               {searchQuery 
                 ? `No bookings matched "${searchQuery}". Try searching with a different keyword.` 
-                : 'You have no service bookings placed under this section.'}
+                : 'You have no service bookings in this tab right now.'}
             </p>
             <button 
               onClick={() => navigate('/services')}
-              className="mt-5 bg-brand-blue hover:bg-[#083679] text-white text-xs font-bold px-6 py-3 rounded-2xl shadow-sm transition-all cursor-pointer flex items-center gap-2"
+              className="mt-6 bg-brand-blue hover:bg-[#083679] text-white text-xs font-bold px-6 py-3 rounded-2xl shadow-xs transition-all cursor-pointer flex items-center gap-2"
             >
               <Sparkles className="h-4 w-4" />
               <span>Book a Service Now</span>
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 sm:gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {filteredBookings.map((b) => {
+              const orderId = b.humanId || b.id;
               const isPartsPending = b.instantStatus === 'PARTS_PENDING' || b.partPending || b.serviceRequest?.status === 'Spare Ordered' || b.serviceRequest?.status === 'Spare Required' || b.status === 'Parts Pending';
-              const isRescheduled = b.instantStatus === 'RESCHEDULED' || b.serviceRequest?.status === 'Spare Received' || b.status === 'Rescheduled' || b.status === 'Revisit Scheduled';
-              const status = isPartsPending ? 'Parts Pending' : isRescheduled ? 'Revisit Scheduled' : (b.status || 'Upcoming');
+              const isRescheduled = b.instantStatus === 'RESCHEDULED' || b.serviceRequest?.status === 'Spare Received' || b.status === 'Rescheduled' || b.status === 'Revisit Scheduled' || (b.rescheduleCount > 0);
+              const status = isPartsPending ? 'Parts Pending' : isRescheduled ? 'Rescheduled' : (b.status || 'Upcoming');
               const badge = STATUS_BADGES[status] || STATUS_BADGES.Upcoming;
               const categoryBadge = CATEGORY_COLORS[b.category] || 'bg-slate-100 text-slate-700 border-slate-200';
+              
               const scheduledDateStr = b.scheduledDate 
                 ? new Date(b.scheduledDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) 
                 : 'Scheduled';
-              const timeStr = typeof b.timeSlot === 'object' ? (b.timeSlot?.time || '10:00 AM - 01:00 PM') : (b.timeSlot || '10:00 AM - 01:00 PM');
+              const timeStr = typeof b.timeSlot === 'object' ? (b.timeSlot?.time || '10:00 AM – 01:00 PM') : (b.timeSlot || '10:00 AM – 01:00 PM');
               const price = b.totalPrice != null ? `₹${b.totalPrice}` : '₹499';
+              const canRescheduleOrCancel = b.status !== 'Completed' && b.status !== 'Cancelled';
 
               return (
                 <div
-                  key={b.id}
-                  onClick={() => setSelectedBooking(b)}
-                  className="group bg-white rounded-3xl p-5 border border-slate-200/70 shadow-2xs hover:shadow-lg hover:border-brand-blue/40 hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col justify-between gap-4 relative overflow-hidden text-left"
+                  key={b.id || orderId}
+                  onClick={() => navigate(`/bookings/${orderId}`)}
+                  className="group bg-white rounded-3xl p-5 border border-slate-200/80 shadow-2xs hover:shadow-md hover:border-brand-blue/40 transition-all duration-250 cursor-pointer flex flex-col justify-between gap-4 text-left relative overflow-hidden"
                 >
-                  {/* Top Accent Bar */}
+                  {/* Subtle top indicator on hover */}
                   <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-brand-blue to-blue-400 opacity-0 group-hover:opacity-100 transition-opacity" />
 
-                  {/* Header Row: ID + Status Badge */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-black text-slate-800 font-mono tracking-tight bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200/60">
-                        {b.humanId || `#BK-${b.id?.slice(-6)}`}
+                  {/* Top Header: Order ID + Status */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-black text-slate-800 font-mono bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200/70">
+                        {orderId}
                       </span>
-                      <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-md uppercase tracking-wider border ${categoryBadge}`}>
-                        {b.category}
-                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => handleCopyId(e, orderId)}
+                        className="p-1 rounded-md text-slate-400 hover:text-brand-blue hover:bg-blue-50 transition-colors"
+                        title="Copy Order ID"
+                      >
+                        {copiedId === orderId ? (
+                          <Check className="h-3.5 w-3.5 text-emerald-600" />
+                        ) : (
+                          <Copy className="h-3.5 w-3.5" />
+                        )}
+                      </button>
                     </div>
-                    
-                    <span className={`text-[11px] font-bold px-3 py-1 rounded-full border flex items-center gap-1.5 ${badge.bg} ${badge.text} ${badge.border}`}>
+
+                    <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border flex items-center gap-1.5 ${badge.bg} ${badge.text} ${badge.border}`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
                       {status}
                     </span>
                   </div>
 
-                  {/* Appliance Icon & Service Title */}
+                  {/* Appliance Icon & Service Info */}
                   <div className="flex items-start gap-3.5">
-                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-slate-50 group-hover:bg-[#EAF4FF]/60 p-2 flex items-center justify-center shrink-0 border border-slate-100 transition-colors">
+                    <div className="w-14 h-14 rounded-2xl bg-slate-50 group-hover:bg-[#EAF4FF]/70 p-2 flex items-center justify-center shrink-0 border border-slate-100 transition-colors">
                       <img 
                         src={getCategoryIcon(b.category, b.service?.name)} 
-                        alt={b.category} 
-                        className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300" 
+                        alt={b.category || 'Service'} 
+                        className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-250" 
                       />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-sm sm:text-base font-extrabold text-slate-900 group-hover:text-brand-blue transition-colors leading-tight truncate">
-                        {b.service?.name || `${b.category} Service`}
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wider border ${categoryBadge}`}>
+                          {b.category || 'Service'}
+                        </span>
+                        {b.brand && (
+                          <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200/60">
+                            {b.brand}
+                          </span>
+                        )}
+                      </div>
+                      <h3 className="text-sm font-extrabold text-slate-900 group-hover:text-brand-blue transition-colors leading-snug truncate">
+                        {b.service?.name || `${b.category || 'Home'} Service`}
                       </h3>
-                      {b.brand ? (
-                        <p className="text-xs text-slate-500 font-semibold mt-1 flex items-center gap-1.5">
-                          <span className="text-slate-400">Brand:</span>
-                          <span className="text-slate-800 bg-slate-100 px-2 py-0.5 rounded-md font-bold text-[11px] border border-slate-200/60">{b.brand}</span>
-                        </p>
-                      ) : (
-                        <p className="text-xs text-slate-400 font-medium mt-1">Verified Home Service</p>
-                      )}
+                      <p className="text-[11px] text-slate-400 font-medium truncate mt-0.5">
+                        {b.productType ? `${b.productType} • Doorstep Service` : 'Professional Doorstep Service'}
+                      </p>
                     </div>
                   </div>
 
-                  {/* Date & Time Ribbon */}
-                  <div className="bg-slate-50/90 rounded-2xl p-3 flex items-center justify-between border border-slate-200/60 text-xs">
-                    <div className="flex items-center gap-2 text-slate-700 font-bold text-xs">
-                      <Calendar className="h-4 w-4 text-brand-blue" />
+                  {/* Reschedule Badge Notice if applicable */}
+                  {b.rescheduleCount > 0 && (
+                    <div className="bg-purple-50 border border-purple-200/70 text-purple-800 px-3 py-1.5 rounded-xl text-[11px] font-bold flex items-center gap-1.5">
+                      <RotateCcw className="h-3.5 w-3.5 text-purple-600 shrink-0" />
+                      <span>Rescheduled ({b.rescheduleCount}x) • Slot updated</span>
+                    </div>
+                  )}
+
+                  {/* Date & Time Slot Ribbon */}
+                  <div className="bg-slate-50/90 rounded-2xl p-2.5 flex items-center justify-between border border-slate-200/60 text-xs">
+                    <div className="flex items-center gap-1.5 text-slate-700 font-bold">
+                      <Calendar className="h-4 w-4 text-brand-blue shrink-0" />
                       <span>{scheduledDateStr}</span>
                     </div>
-                    <div className="flex items-center gap-1.5 text-slate-600 font-semibold text-xs">
-                      <Clock className="h-4 w-4 text-brand-blue" />
+                    <div className="flex items-center gap-1 text-slate-600 font-semibold text-[11px]">
+                      <Clock className="h-3.5 w-3.5 text-brand-blue shrink-0" />
                       <span>{timeStr}</span>
                     </div>
                   </div>
 
-                  {/* ServiceProvider details if assigned */}
+                  {/* Service Provider Snippet (if assigned) */}
                   {b.serviceProvider ? (
-                    <div className="flex items-center justify-between bg-[#EAF4FF]/50 p-2.5 rounded-2xl border border-blue-100/70">
+                    <div className="flex items-center justify-between bg-[#EAF4FF]/50 p-2.5 rounded-2xl border border-blue-100">
                       <div className="flex items-center gap-2.5">
                         <div className="w-8 h-8 rounded-xl bg-brand-blue text-white flex items-center justify-center text-xs font-black shadow-2xs">
                           {b.serviceProvider.name?.charAt(0) || 'T'}
                         </div>
                         <div>
                           <p className="text-xs font-bold text-slate-900 leading-tight">{b.serviceProvider.name}</p>
-                          <p className="text-[10px] text-slate-500 font-semibold">Service Engineer</p>
+                          <p className="text-[10px] text-slate-500 font-semibold">Verified Service Expert</p>
                         </div>
                       </div>
 
-                      {b.status !== 'Completed' && b.status !== 'Cancelled' && (
+                      {canRescheduleOrCancel && (
                         <div className="bg-white px-2.5 py-1 rounded-xl border border-blue-200/80 flex items-center gap-1 text-[11px] font-bold text-brand-blue">
                           <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
                           <span>OTP: <strong className="font-mono text-slate-900">{b.completionOtp || b.serviceRequest?.completionOtp || '8745'}</strong></span>
@@ -600,370 +582,88 @@ const Bookings = () => {
                     </div>
                   ) : null}
 
-                  {/* Card Footer: Price & View Details */}
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-100 mt-1">
-                    <div>
-                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Total Amount</span>
-                      <span className="text-base font-black text-slate-900">{price}</span>
+                  {/* Card Footer: Price & Action Buttons */}
+                  <div className="pt-2 border-t border-slate-100 flex flex-col gap-2.5 mt-auto">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Estimated Total</span>
+                        <span className="text-base font-black text-slate-900">{price}</span>
+                      </div>
+
+                      <button 
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/bookings/${orderId}`);
+                        }}
+                        className="inline-flex items-center gap-1 text-xs font-bold text-brand-blue bg-[#EAF4FF] hover:bg-brand-blue hover:text-white px-3 py-1.5 rounded-xl transition-all cursor-pointer shadow-2xs"
+                      >
+                        <span>Details</span>
+                        <ChevronRight className="h-3.5 w-3.5" />
+                      </button>
                     </div>
 
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedBooking(b);
-                      }}
-                      className="inline-flex items-center gap-1.5 text-xs font-bold text-brand-blue bg-[#EAF4FF] hover:bg-brand-blue hover:text-white px-4 py-2 rounded-xl transition-all duration-200 shadow-2xs cursor-pointer"
-                    >
-                      <span>View Details</span>
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
+                    {/* Reschedule and Cancel buttons for active bookings */}
+                    {canRescheduleOrCancel && (
+                      <div className="grid grid-cols-2 gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setBookingToReschedule(b);
+                            setShowRescheduleModal(true);
+                          }}
+                          className="w-full py-2 px-3 text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200/80 rounded-xl transition-colors cursor-pointer text-center"
+                        >
+                          Reschedule
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setBookingToCancel(b);
+                            setShowCancelModal(true);
+                          }}
+                          className="w-full py-2 px-3 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition-colors cursor-pointer text-center"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
             })}
           </div>
         )}
-      </div>
+      </main>
 
-      {/* Booking Details Modal / Sheet */}
-      {selectedBooking && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-end sm:items-center justify-center z-50 p-0 sm:p-4 animate-fade-in">
-          <div 
-            className="bg-white w-full max-w-lg rounded-t-[32px] sm:rounded-[32px] max-h-[90vh] flex flex-col shadow-2xl overflow-hidden text-left border border-slate-100"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal Header */}
-            <div className="bg-brand-navy text-white p-5 flex items-center justify-between relative shrink-0">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-bold text-blue-200 uppercase tracking-wider">Booking Details</span>
-                  {(() => {
-                    const sr = selectedBooking.serviceRequest;
-                    const tl = sr?.timeline || [];
-                    const hasTl = (lbl) => tl.some((t) => t.stepLabel?.toLowerCase().includes(lbl.toLowerCase()) || t.description?.toLowerCase().includes(lbl.toLowerCase()));
-                    const isPartsPending = selectedBooking.instantStatus === 'PARTS_PENDING' || selectedBooking.partPending || hasTl('Spare Required') || hasTl('Spare Ordered') || sr?.status === 'Spare Ordered' || sr?.status === 'Spare Required' || selectedBooking.status === 'Parts Pending';
-                    const isRescheduled = selectedBooking.instantStatus === 'RESCHEDULED' || hasTl('Spare Received') || sr?.status === 'Spare Received' || selectedBooking.status === 'Rescheduled' || selectedBooking.status === 'Revisit Scheduled';
-                    const modalStatus = selectedBooking.status === 'Completed' ? 'Completed' :
-                                       selectedBooking.status === 'Cancelled' ? 'Cancelled' :
-                                       isRescheduled ? 'Revisit Scheduled' :
-                                       isPartsPending ? 'Parts Pending' :
-                                       (selectedBooking.status || 'Upcoming');
-                    const badgeClasses = 
-                      modalStatus === 'Completed' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30' :
-                      modalStatus === 'Cancelled' ? 'bg-rose-500/20 text-rose-300 border border-rose-400/30' :
-                      modalStatus === 'Parts Pending' ? 'bg-amber-500/25 text-amber-200 border border-amber-400/40' :
-                      modalStatus === 'Revisit Scheduled' ? 'bg-purple-500/25 text-purple-200 border border-purple-400/40' :
-                      'bg-blue-400/20 text-blue-200 border border-blue-300/30';
-                    return (
-                      <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full ${badgeClasses}`}>
-                        {modalStatus}
-                      </span>
-                    );
-                  })()}
-                </div>
-                <h2 className="text-base font-extrabold text-white leading-tight font-mono">
-                  {selectedBooking.humanId || selectedBooking.id}
-                </h2>
-              </div>
+      {/* ── Reschedule Booking Modal ── */}
+      <RescheduleBookingModal
+        isOpen={showRescheduleModal}
+        onClose={() => {
+          setShowRescheduleModal(false);
+          setBookingToReschedule(null);
+        }}
+        onConfirm={handleRescheduleBooking}
+        booking={bookingToReschedule}
+        isLoading={Boolean(reschedulingId)}
+      />
 
-              <button 
-                onClick={() => setSelectedBooking(null)}
-                className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors cursor-pointer"
-                aria-label="Close"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+      {/* ── Cancel Booking Modal ── */}
+      <CancelBookingModal
+        isOpen={showCancelModal}
+        onClose={() => {
+          setShowCancelModal(false);
+          setBookingToCancel(null);
+        }}
+        onConfirm={handleCancelBooking}
+        booking={bookingToCancel}
+        isLoading={Boolean(cancellingId)}
+      />
 
-            {/* Modal Content */}
-            <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-4 bg-[#F8FAFC]">
-              
-              {/* Service Verification OTP Card */}
-              {selectedBooking.status !== 'Completed' && selectedBooking.status !== 'Cancelled' && (
-                <div className="bg-gradient-to-r from-brand-navy to-brand-blue rounded-2xl p-4 text-white shadow-sm flex items-center justify-between gap-3">
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-[10px] uppercase font-bold text-blue-200 tracking-wider flex items-center gap-1.5">
-                      <ShieldCheck className="h-4 w-4 text-emerald-400" /> Service Verification OTP
-                    </span>
-                    <p className="text-[11px] text-blue-100 font-medium">Share with engineer upon service completion</p>
-                  </div>
-                  <button
-                    onClick={() => handleCopyOtp(selectedBooking.completionOtp || selectedBooking.serviceRequest?.completionOtp || '8745')}
-                    className="bg-white text-brand-navy px-3.5 py-2 rounded-xl font-black text-lg tracking-widest shadow-xs hover:bg-blue-50 transition-colors flex items-center gap-1.5 cursor-pointer font-mono"
-                    title="Click to Copy"
-                  >
-                    <span>{selectedBooking.completionOtp || selectedBooking.serviceRequest?.completionOtp || '8745'}</span>
-                    {copiedOtp ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-3.5 w-3.5 text-slate-400" />}
-                  </button>
-                </div>
-              )}
-
-              {/* Service Card */}
-              <div className="bg-white rounded-2xl p-4 border border-slate-200/70 shadow-2xs flex flex-col gap-2">
-                <div className="flex justify-between items-start gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-slate-50 p-2 border border-slate-100 flex items-center justify-center shrink-0">
-                      <img src={getCategoryIcon(selectedBooking.category, selectedBooking.service?.name)} alt="" className="w-full h-full object-contain" />
-                    </div>
-                    <div>
-                      <span className="text-[10px] font-extrabold text-brand-blue uppercase tracking-wider block">
-                        {selectedBooking.category}
-                      </span>
-                      <h3 className="text-sm font-extrabold text-slate-900 mt-0.5">
-                        {selectedBooking.service?.name || `${selectedBooking.category} Repair`}
-                      </h3>
-                    </div>
-                  </div>
-                  <span className="text-sm font-black text-slate-900">
-                    ₹{selectedBooking.totalPrice ?? selectedBooking.service?.price ?? 499}
-                  </span>
-                </div>
-
-                {selectedBooking.brand && (
-                  <p className="text-xs text-slate-600 font-semibold mt-1">
-                    Brand: <span className="text-slate-900 font-bold">{selectedBooking.brand}</span>
-                    {selectedBooking.productType ? ` • ${selectedBooking.productType}` : ''}
-                  </p>
-                )}
-
-                {selectedBooking.service?.desc && (
-                  <p className="text-[11px] text-slate-500 leading-relaxed mt-1 bg-slate-50 p-3 rounded-xl border border-slate-100">
-                    {selectedBooking.service.desc}
-                  </p>
-                )}
-              </div>
-
-              {/* Appointment Schedule & Address */}
-              <div className="bg-white rounded-2xl p-4 border border-slate-200/70 shadow-2xs flex flex-col gap-3">
-                <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                  <Calendar className="h-4 w-4 text-brand-blue" /> Appointment & Location
-                </h4>
-
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-                    <span className="text-[10px] font-bold text-slate-400 block uppercase">Date</span>
-                    <span className="font-bold text-slate-900">
-                      {selectedBooking.scheduledDate ? new Date(selectedBooking.scheduledDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Scheduled'}
-                    </span>
-                  </div>
-
-                  <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-                    <span className="text-[10px] font-bold text-slate-400 block uppercase">Time Slot</span>
-                    <span className="font-bold text-slate-900">
-                      {typeof selectedBooking.timeSlot === 'object' ? (selectedBooking.timeSlot?.time || '10:00 AM - 01:00 PM') : (selectedBooking.timeSlot || '10:00 AM - 01:00 PM')}
-                    </span>
-                  </div>
-                </div>
-
-                {selectedBooking.address && (
-                  <div className="flex gap-2.5 items-start bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs">
-                    <MapPin className="h-4 w-4 text-brand-blue shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-bold text-slate-800">
-                        {selectedBooking.fullName || 'Customer Address'} {selectedBooking.mobile ? `(${selectedBooking.mobile})` : ''}
-                      </p>
-                      <p className="text-[11px] text-slate-500 font-normal mt-0.5 leading-snug">
-                        {typeof selectedBooking.address === 'object' 
-                          ? `${selectedBooking.address.street || selectedBooking.address.addressLine1 || ''} ${selectedBooking.address.city || ''} ${selectedBooking.address.pincode || ''}`
-                          : selectedBooking.address}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* ServiceProvider Info Card */}
-              {selectedBooking.serviceProvider ? (
-                <div className="bg-white rounded-2xl p-4 border border-slate-200/70 shadow-2xs flex flex-col gap-2.5">
-                  <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                    <User className="h-4 w-4 text-brand-blue" /> Assigned Expert
-                  </h4>
-
-                  <div className="flex items-center justify-between bg-[#EAF4FF]/50 p-3 rounded-xl border border-blue-100">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-brand-blue text-white flex items-center justify-center text-sm font-black shadow-xs">
-                        {selectedBooking.serviceProvider.name?.charAt(0) || 'T'}
-                      </div>
-                      <div>
-                        <h5 className="text-xs font-bold text-slate-900">{selectedBooking.serviceProvider.name}</h5>
-                        <p className="text-[10px] text-slate-500 font-semibold">Nigam Verified Service Partner</p>
-                        {selectedBooking.serviceProvider.rating && (
-                          <div className="flex items-center gap-1 text-[10px] text-amber-700 font-bold mt-0.5">
-                            <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                            <span>{selectedBooking.serviceProvider.rating} Rating</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {selectedBooking.serviceProvider.phone && (
-                      <button 
-                        onClick={() => window.location.href = `tel:${selectedBooking.serviceProvider.phone}`}
-                        className="p-2.5 bg-brand-blue text-white rounded-xl shadow-xs hover:bg-[#083679] transition-all cursor-pointer flex items-center gap-1.5 text-xs font-bold"
-                        title="Call Service Provider"
-                      >
-                        <Phone className="h-3.5 w-3.5" />
-                        <span>Call</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="bg-white rounded-2xl p-4 border border-slate-200/70 shadow-2xs flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 border border-amber-200/60">
-                    <ShieldCheck className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h5 className="text-xs font-bold text-slate-900">Assigning Service Provider</h5>
-                    <p className="text-[10px] text-slate-500 font-normal">A verified engineer in your area will be allocated before your appointment time.</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Progress Timeline */}
-              <div className="bg-white rounded-2xl p-4 border border-slate-200/70 shadow-2xs flex flex-col gap-3">
-                <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                  <Truck className="h-4 w-4 text-brand-blue" /> Live Progress Timeline
-                </h4>
-
-                <div className="flex flex-col pl-2 mt-1">
-                  {getTimelineSteps(selectedBooking).map((step, idx, arr) => {
-                    const isLast = idx === arr.length - 1;
-                    return (
-                      <div key={step.id} className="flex gap-3 relative">
-                        <div className="flex flex-col items-center">
-                          <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-white ${
-                            step.isCancelled 
-                              ? 'bg-rose-500' 
-                              : step.completed 
-                                ? 'bg-emerald-500' 
-                                : step.current 
-                                  ? 'bg-brand-blue ring-4 ring-blue-100' 
-                                  : 'bg-slate-200'
-                          }`}>
-                            {step.completed && !step.isCancelled && <Check className="h-3 w-3 stroke-[3]" />}
-                            {step.isCancelled && <X className="h-3 w-3 stroke-[3]" />}
-                          </div>
-                          {!isLast && (
-                            <div className={`w-0.5 flex-1 my-1 ${step.completed ? 'bg-emerald-400' : 'bg-slate-200'}`} style={{ minHeight: 28 }} />
-                          )}
-                        </div>
-
-                        <div className="pb-4 flex flex-col gap-0.5 flex-1">
-                          <div className="flex justify-between items-center">
-                            <span className={`text-xs font-bold ${step.completed || step.current ? 'text-slate-900' : 'text-slate-400'}`}>
-                              {step.title}
-                            </span>
-                            {step.time && <span className="text-[10px] text-slate-400 font-semibold">{step.time}</span>}
-                          </div>
-                          <p className="text-[11px] text-slate-500 font-normal leading-tight">{step.desc}</p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Service Rating Card — ONLY when service is Completed */}
-              {(selectedBooking.status === 'Completed' || 
-                selectedBooking.instantStatus === 'COMPLETED' || 
-                selectedBooking.serviceRequest?.status === 'Repair Completed' || 
-                selectedBooking.serviceRequest?.status === 'Closed' || 
-                selectedBooking.serviceRequest?.status === 'Customer Confirmation') && (
-                <ServiceRatingCard 
-                  service={selectedBooking} 
-                  onRatingSubmitted={() => {
-                    setToastMessage('Thank you for rating your service!');
-                  }}
-                />
-              )}
-
-              {/* Payment Summary */}
-              <div className="bg-white rounded-2xl p-4 border border-slate-200/70 shadow-2xs flex flex-col gap-2.5">
-                <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                  <CreditCard className="h-4 w-4 text-brand-blue" /> Payment Summary
-                </h4>
-
-                <div className="flex flex-col gap-2 text-xs divide-y divide-slate-100">
-                  <div className="flex justify-between items-center pt-1">
-                    <span className="text-slate-500 font-medium">Service Charge</span>
-                    <span className="font-bold text-slate-800">₹{selectedBooking.totalPrice ?? 499}</span>
-                  </div>
-                  <div className="flex justify-between items-center pt-2">
-                    <span className="text-slate-500 font-medium">Payment Mode</span>
-                    <span className="font-bold text-brand-blue uppercase text-[11px]">
-                      {selectedBooking.paymentMode === 'advance' ? 'Advance Paid Online' : 'Pay After Service'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center pt-2 text-sm">
-                    <span className="font-black text-slate-900">Total Amount</span>
-                    <span className="font-black text-slate-900">₹{selectedBooking.totalPrice ?? 499}</span>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-
-            {/* Modal Bottom Actions */}
-            <div className="p-4 bg-white border-t border-slate-200/80 flex gap-3 shrink-0">
-              {selectedBooking.status === 'Upcoming' && (
-                <button
-                  onClick={() => setShowCancelModal(true)}
-                  className="flex-1 py-3 px-4 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold rounded-2xl border border-rose-200 transition-colors cursor-pointer"
-                >
-                  Cancel Booking
-                </button>
-              )}
-
-              <button
-                onClick={() => {
-                  setSelectedBooking(null);
-                  navigate('/services');
-                }}
-                className="flex-1 py-3 px-4 bg-brand-blue hover:bg-[#083679] text-white text-xs font-bold rounded-2xl shadow-xs transition-all cursor-pointer text-center"
-              >
-                Book Another Service
-              </button>
-            </div>
-
-          </div>
-        </div>
-      )}
-
-      {/* Cancel Confirmation Modal */}
-      {showCancelModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-6 z-[60] animate-fade-in">
-          <div className="bg-white rounded-[28px] p-6 max-w-xs w-full flex flex-col items-center text-center gap-4 shadow-2xl border border-slate-100">
-            <div className="w-12 h-12 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center">
-              <AlertTriangle className="h-6 w-6" />
-            </div>
-            <div>
-              <h4 className="text-sm font-black text-slate-900">Cancel This Booking?</h4>
-              <p className="text-xs text-slate-500 font-normal mt-1 leading-relaxed">
-                Are you sure you want to cancel booking {selectedBooking?.humanId || selectedBooking?.id}?
-              </p>
-            </div>
-            <div className="flex gap-2.5 w-full mt-1">
-              <button
-                onClick={() => setShowCancelModal(false)}
-                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold py-3 rounded-xl transition-colors cursor-pointer"
-              >
-                Keep Booking
-              </button>
-              <button
-                disabled={Boolean(cancellingId)}
-                onClick={handleCancelBooking}
-                className="flex-1 bg-rose-600 hover:bg-rose-700 disabled:opacity-60 text-white text-xs font-bold py-3 rounded-xl transition-colors cursor-pointer shadow-xs"
-              >
-                {cancellingId ? 'Cancelling…' : 'Yes, Cancel'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Bottom Navigation — Mobile only */}
-      {/* Bottom Menu Bar (Custom Mobile Tabs) — hidden on desktop */}
+      {/* ── Customer Bottom Navigation Bar ── */}
       <CustomerBottomNav />
 
     </div>

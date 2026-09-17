@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { Job } from './job.model.js';
 import { ServiceProvider } from './serviceProvider.model.js';
 import { EarningsTally } from './earningsTally.model.js';
@@ -5,6 +6,8 @@ import { PartOrder } from './partOrder.model.js';
 import { ServiceRequest } from '../service-requests/serviceRequest.model.js';
 import { transitionStatus } from '../service-requests/serviceRequest.service.js';
 import { Booking } from '../booking/booking.model.js';
+import { findAvailableServiceProvider } from '../shared/assignmentEngine.js';
+import { INSTANT_ROOM } from '../../sockets/instantBooking.gateway.js';
 import { AMCSubscription } from '../warranty-amc-exchange/amcSubscription.model.js';
 import { AMCVisit } from '../warranty-amc-exchange/amcVisit.model.js';
 import { ExtendedWarrantyOrder } from '../warranty-amc-exchange/extendedWarrantyOrder.model.js';
@@ -18,29 +21,8 @@ import { getIO } from '../../sockets/io.js';
 import { env } from '../../config/env.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { JOB_STEP_TRANSITIONS, SERVICE_REQUEST_TRANSITIONS } from '../../config/constants.js';
-import { RateCard } from '../brand-admin/rateCard.model.js';
-import { PlatformSettings } from '../super-admin/platformSettings.model.js';
-
-// Default only — the live share is PlatformSettings.serviceProviderCommissionPercent.
-const DEFAULT_TECH_EARNINGS_SHARE = 0.3; // 30% of the D2C subtotal
-
-async function serviceProviderShare() {
-  const settings = await PlatformSettings.findOne();
-  const percent = settings?.serviceProviderCommissionPercent;
-  return percent != null ? percent / 100 : DEFAULT_TECH_EARNINGS_SHARE;
-}
-
-// Covered work (Brand Warranty / AMC / EW) is priced from the brand's RateCard
-// for that appliance category. This used to be a flat 150 because no RateCard
-// existed; it does now, so the flat value is only the fallback for a brand that
-// has not configured a card for the category.
-const DEFAULT_COVERED_VISIT_EARNINGS = 150;
-
-async function coveredVisitEarnings(serviceRequest) {
-  if (!serviceRequest?.brand || !serviceRequest?.category) return DEFAULT_COVERED_VISIT_EARNINGS;
-  const card = await RateCard.findOne({ brand: serviceRequest.brand, category: serviceRequest.category });
-  return card?.laborRate ?? DEFAULT_COVERED_VISIT_EARNINGS;
-}
+import { serviceProviderShare, coveredVisitEarnings } from '../shared/serviceProviderEarnings.js';
+import { Review } from '../reviews/review.model.js';
 
 function ensureTransition(job, toStep) {
   const allowed = JOB_STEP_TRANSITIONS[job.activeStep] || [];
@@ -126,7 +108,9 @@ export async function listAvailableJobs(serviceProviderId) {
   const srs = await ServiceRequest.find({
     $or: [
       { serviceProvider: serviceProviderId, status: 'Assigned' },
-      { serviceProvider: null, status: { $in: ['New', 'Assigned', 'Pending'] } },
+      // Not ones this provider already turned down — a decline returns the
+      // request to 'New', which otherwise put it straight back in their feed.
+      { serviceProvider: null, status: { $in: ['New', 'Assigned', 'Pending'] }, declinedBy: { $ne: serviceProviderId } },
     ],
     _id: { $nin: acceptedServiceRequestIds },
   })
@@ -135,7 +119,7 @@ export async function listAvailableJobs(serviceProviderId) {
     .populate(EW_POPULATE)
     .sort({ createdAt: -1 });
 
-  return srs.filter((sr) => {
+  const visible = srs.filter((sr) => {
     // If specifically assigned to this service provider
     if (sr.serviceProvider && String(sr.serviceProvider) === String(serviceProviderId)) {
       if (serviceProviderCity) {
@@ -152,6 +136,86 @@ export async function listAvailableJobs(serviceProviderId) {
     const jobCity = (sr.zone || sr.booking?.address?.city || '').toLowerCase().trim();
     return jobCity && (jobCity === serviceProviderCity || jobCity.includes(serviceProviderCity) || serviceProviderCity.includes(jobCity));
   });
+
+  // The app used to estimate this itself as a flat 30% of the booking (or a
+  // made-up 150 when there was no booking), which drifted from the configured
+  // commission and ignored brand rate cards. Same rules as acceptJob uses.
+  const share = await serviceProviderShare();
+  return Promise.all(
+    visible.map(async (sr) => {
+      const paid = sr.booking && sr.booking.totalPrice > 0;
+      const estEarnings = paid
+        ? Math.round(sr.booking.totalPrice * share)
+        : await coveredVisitEarnings(sr);
+      return { ...sr.toJSON(), estEarnings };
+    }),
+  );
+}
+
+/**
+ * Headline figures for the service provider's History and Dashboard screens.
+ * Those screens used to show a fixed "4.9 ★", "99.2% success rate" and
+ * "Elite Partner" for everyone; every number here comes from real jobs and
+ * customer reviews, and is null when there is nothing to base it on yet.
+ */
+export async function getJobSummary(serviceProviderId) {
+  const providerObjectId = new mongoose.Types.ObjectId(String(serviceProviderId));
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+
+  const [jobStats, ratingStats] = await Promise.all([
+    Job.aggregate([
+      { $match: { serviceProvider: providerObjectId } },
+      {
+        $group: {
+          _id: null,
+          totalJobs: { $sum: 1 },
+          completedJobs: { $sum: { $cond: [{ $eq: ['$activeStep', 'completed'] }, 1, 0] } },
+          inProgressJobs: {
+            $sum: { $cond: [{ $in: ['$activeStep', ['completed', 'idle']] }, 0, 1] },
+          },
+          completedToday: {
+            $sum: {
+              $cond: [
+                { $and: [{ $eq: ['$activeStep', 'completed'] }, { $gte: ['$updatedAt', startOfToday] }] },
+                1,
+                0,
+              ],
+            },
+          },
+          lifetimeEarnings: {
+            $sum: {
+              $cond: [
+                { $eq: ['$activeStep', 'completed'] },
+                { $ifNull: ['$billingEstimate.serviceProviderEarnings', 0] },
+                0,
+              ],
+            },
+          },
+        },
+      },
+    ]),
+    Review.aggregate([
+      { $match: { serviceProvider: providerObjectId, serviceProviderRating: { $gte: 1 } } },
+      { $group: { _id: null, average: { $avg: '$serviceProviderRating' }, count: { $sum: 1 } } },
+    ]),
+  ]);
+
+  const jobs = jobStats[0] || {};
+  const ratings = ratingStats[0];
+  const totalJobs = jobs.totalJobs || 0;
+  const completedJobs = jobs.completedJobs || 0;
+
+  return {
+    totalJobs,
+    completedJobs,
+    inProgressJobs: jobs.inProgressJobs || 0,
+    completedToday: jobs.completedToday || 0,
+    lifetimeEarnings: jobs.lifetimeEarnings || 0,
+    completionRate: totalJobs ? Math.round((completedJobs / totalJobs) * 100) : null,
+    rating: ratings ? Number(ratings.average.toFixed(1)) : null,
+    reviewCount: ratings?.count || 0,
+  };
 }
 
 export async function listActiveJobs(serviceProviderId) {
@@ -160,70 +224,86 @@ export async function listActiveJobs(serviceProviderId) {
     .sort({ createdAt: -1 });
 }
 
+const HISTORY_TYPE_FILTERS = {
+  paid: ['NCC Paid Service'],
+  quick: ['NCC Paid Service'],
+  warranty: ['Brand Warranty', 'NCC Extended Warranty'],
+  foc: ['Brand Warranty', 'NCC Extended Warranty'],
+  amc: ['AMC Visit'],
+};
+
 export async function listJobHistory(serviceProviderId, { status = 'all', type = 'all', search = '', page = 1, limit = 50 } = {}) {
   const query = { serviceProvider: serviceProviderId };
 
   if (status === 'completed') {
     query.activeStep = 'completed';
   } else if (status === 'cancelled') {
-    query.repairStatus = 'cancelled';
+    query['revisit.repairStatus'] = 'cancelled';
   } else if (status === 'in_progress') {
     query.activeStep = { $nin: ['completed', 'idle'] };
-  } else if (status === 'quick' || type === 'quick') {
-    query.type = 'NCC Paid Service';
-  } else if (status === 'warranty' || status === 'foc' || type === 'warranty' || type === 'foc') {
-    query.type = { $in: ['Brand Warranty', 'Under Warranty', 'NCC Extended Warranty'] };
-  } else if (status === 'amc' || type === 'amc') {
-    query.type = { $in: ['AMC Service', 'AMC Visit'] };
   }
 
-  if (type === 'quick') {
-    query.type = 'NCC Paid Service';
-  } else if (type === 'warranty' || type === 'foc') {
-    query.type = { $in: ['Brand Warranty', 'Under Warranty', 'NCC Extended Warranty'] };
-  } else if (type === 'amc') {
-    query.type = { $in: ['AMC Service', 'AMC Visit'] };
-  }
+  // `status` doubles as the type filter for older clients that only send one pill.
+  const typeFilter = HISTORY_TYPE_FILTERS[type] || HISTORY_TYPE_FILTERS[status];
+  if (typeFilter) query.type = { $in: typeFilter };
 
-  const skip = (Math.max(1, Number(page)) - 1) * Number(limit);
+  const pageNum = Math.max(1, Number(page) || 1);
+  const lim = Math.min(100, Math.max(1, Number(limit) || 50));
+  const term = String(search || '').trim().toLowerCase();
 
-  const [items, total] = await Promise.all([
+  const find = () =>
     Job.find(query)
       .populate({
         path: 'serviceRequest',
         populate: [
-          { path: 'user' },
+          { path: 'user', select: 'name phone' },
           { path: 'booking' },
+          { path: 'brand', select: 'name' },
           { path: 'amcSubscription', populate: { path: 'plan', select: 'name' } },
           { path: 'extendedWarrantyOrder' },
         ],
       })
-      .sort({ updatedAt: -1, createdAt: -1 })
-      .skip(skip)
-      .limit(Number(limit)),
-    Job.countDocuments(query)
-  ]);
+      .sort({ updatedAt: -1, createdAt: -1 });
 
-  let filtered = items;
-  if (search && search.trim()) {
-    const s = search.trim().toLowerCase();
-    filtered = items.filter(j => {
-      const sr = j.serviceRequest;
-      const srTitle = (sr?.title || sr?.serviceType || '').toLowerCase();
-      const srCategory = (sr?.category || '').toLowerCase();
-      const srBrand = (sr?.brand || '').toLowerCase();
-      const custName = (sr?.user?.name || sr?.contactName || '').toLowerCase();
-      const jobId = String(j._id || j.id || '').toLowerCase();
-      const ticketId = (sr?.ticketId || '').toLowerCase();
-      return srTitle.includes(s) || srCategory.includes(s) || srBrand.includes(s) || custName.includes(s) || jobId.includes(s) || ticketId.includes(s);
-    });
+  if (!term) {
+    const [items, total] = await Promise.all([
+      find().skip((pageNum - 1) * lim).limit(lim),
+      Job.countDocuments(query),
+    ]);
+    return { items, total, page: pageNum, limit: lim };
   }
 
+  // Search spans populated fields (customer, brand, ticket number), so it has to
+  // run before paginating — filtering one page afterwards used to drop matches
+  // on later pages and report the unfiltered total.
+  const all = await find();
+  const matches = all.filter((j) => {
+    const sr = j.serviceRequest || {};
+    const haystack = [
+      j.humanId,
+      String(j._id),
+      sr.humanId,
+      sr.brandTicketNo,
+      sr.category,
+      sr.description,
+      sr.model,
+      sr.brand?.name,
+      sr.booking?.brand,
+      sr.booking?.service?.name,
+      sr.booking?.fullName,
+      sr.user?.name,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+    return haystack.includes(term);
+  });
+
   return {
-    items: filtered,
-    total,
-    page: Number(page),
-    limit: Number(limit),
+    items: matches.slice((pageNum - 1) * lim, pageNum * lim),
+    total: matches.length,
+    page: pageNum,
+    limit: lim,
   };
 }
 
@@ -242,8 +322,32 @@ export async function getJob(serviceProviderId, id) {
  * instead of being service provider (or test) supplied.
  */
 export async function acceptJob(serviceProviderId, serviceRequestId, { type, amcSubscriptionId, extendedWarrantyOrderId } = {}) {
-  const serviceRequest = await ServiceRequest.findById(serviceRequestId);
+  let serviceRequest = await ServiceRequest.findById(serviceRequestId);
   if (!serviceRequest) throw new ApiError(404, 'Service request not found');
+
+  // Open offers — requests nobody is assigned to — are broadcast to every
+  // service provider in the city and listed in their feed, but accepting one
+  // used to fail with 403 because only an assigned request could be accepted.
+  // First to accept claims it; the conditional update keeps two providers
+  // from both winning the same job.
+  if (!serviceRequest.serviceProvider && serviceRequest.status === 'New') {
+    if (serviceRequest.declinedBy?.some((id) => String(id) === String(serviceProviderId))) {
+      throw new ApiError(403, 'You already declined this request');
+    }
+    const offers = await listAvailableJobs(serviceProviderId);
+    if (!offers.some((sr) => String(sr.id || sr._id) === String(serviceRequest._id))) {
+      throw new ApiError(403, 'This request is outside your service area');
+    }
+    const claimed = await ServiceRequest.findOneAndUpdate(
+      { _id: serviceRequest._id, serviceProvider: null, status: 'New' },
+      { serviceProvider: serviceProviderId, assignedAt: new Date() },
+      { new: true },
+    );
+    if (!claimed) throw new ApiError(409, 'Another service provider has already taken this job');
+    await transitionStatus(serviceRequest._id, 'Assigned', { description: 'Claimed from open offers' });
+    serviceRequest = await ServiceRequest.findById(serviceRequest._id);
+  }
+
   if (String(serviceRequest.serviceProvider) !== serviceProviderId) throw new ApiError(403, 'This request is not assigned to you');
 
   const existing = await Job.findOne({ serviceRequest: serviceRequestId });
@@ -330,6 +434,7 @@ export async function acceptJob(serviceProviderId, serviceRequestId, { type, amc
 
   if (booking) {
     booking.isAccepted = true;
+    booking.searchExpiresAt = null; // found someone — stop the search clock
     booking.status = 'Ongoing';
     booking.serviceProvider = serviceProviderId;
     if (booking.isInstant) booking.instantStatus = 'EN_ROUTE';
@@ -358,7 +463,7 @@ export async function acceptJob(serviceProviderId, serviceRequestId, { type, amc
       io.to(`user:${serviceRequest.user}`).emit('instant:status_update', acceptPayload);
       io.to(`user:${serviceRequest.user}`).emit('service_request:updated', acceptPayload);
     }
-  } catch (err) {
+  } catch {
     // Socket emit optional
   }
 
@@ -839,4 +944,179 @@ export async function getJobAmcHistory(serviceProviderId, jobId) {
       notes: v.notes || null,
     })),
   };
+}
+
+export async function respondToReschedule(serviceProviderId, jobIdOrBookingId, { action, reason } = {}) {
+  let job = null;
+  if (mongoose.Types.ObjectId.isValid(jobIdOrBookingId)) {
+    job = await Job.findOne({
+      _id: jobIdOrBookingId,
+      serviceProvider: serviceProviderId,
+    }).populate({ path: 'serviceRequest', populate: { path: 'user booking' } });
+  }
+
+  let booking = null;
+  let serviceRequest = null;
+
+  if (job) {
+    serviceRequest = job.serviceRequest;
+    booking = job.serviceRequest?.booking;
+  } else {
+    // Try finding booking directly
+    const query = mongoose.Types.ObjectId.isValid(jobIdOrBookingId)
+      ? { _id: jobIdOrBookingId, serviceProvider: serviceProviderId }
+      : { humanId: jobIdOrBookingId, serviceProvider: serviceProviderId };
+
+    booking = await Booking.findOne(query);
+    if (booking && booking.serviceRequest) {
+      serviceRequest = await ServiceRequest.findById(booking.serviceRequest);
+      job = await Job.findOne({ serviceRequest: serviceRequest?._id, serviceProvider: serviceProviderId });
+    }
+  }
+
+  if (!booking && !job) {
+    throw new ApiError(404, 'Job or booking not found for this service provider');
+  }
+
+  if (action === 'accept') {
+    if (booking) {
+      booking.providerRescheduleStatus = 'ACCEPTED';
+      booking.status = 'Upcoming';
+      if (booking.isInstant) booking.instantStatus = 'ASSIGNED';
+      await booking.save();
+    }
+    if (serviceRequest) {
+      serviceRequest.status = 'Visit Scheduled';
+      serviceRequest.timeline.push({
+        stepLabel: 'Reschedule Confirmed',
+        done: true,
+        timestamp: new Date(),
+        description: 'Service partner confirmed arrival for the rescheduled appointment.',
+      });
+      await serviceRequest.save();
+    }
+    if (job) {
+      job.activeStep = 'assigned';
+      await job.save();
+    }
+
+    // Socket to customer
+    try {
+      const io = getIO();
+      const payload = {
+        bookingId: booking?._id,
+        serviceRequestId: serviceRequest?._id,
+        status: 'Upcoming',
+        providerRescheduleStatus: 'ACCEPTED',
+        message: 'Your service partner has accepted the rescheduled appointment.',
+      };
+      if (booking?.user) io.to(`user:${booking.user}`).emit('booking:reschedule_accepted', payload);
+      if (booking?.user) io.to(`user:${booking.user}`).emit('instant:status_update', payload);
+    } catch (err) {
+      // The reschedule is already saved; a failed live update only delays the customer's screen.
+      console.warn('[respondToReschedule] socket notify failed:', err.message);
+    }
+
+    return { ok: true, action: 'accepted', booking };
+  } else {
+    // action === 'reject' (or decline)
+    const oldSpId = serviceProviderId;
+
+    if (booking) {
+      booking.serviceProvider = null;
+      booking.isAccepted = false;
+      booking.providerRescheduleStatus = 'REJECTED';
+      booking.status = 'Upcoming';
+      if (booking.isInstant) booking.instantStatus = 'SEARCHING';
+      await booking.save();
+    }
+
+    if (serviceRequest) {
+      serviceRequest.serviceProvider = null;
+      serviceRequest.isAccepted = false;
+      serviceRequest.status = 'New';
+      if (serviceRequest.isInstant) serviceRequest.instantStatus = 'SEARCHING';
+      serviceRequest.timeline.push({
+        stepLabel: 'Partner Unavailable for Reschedule',
+        done: false,
+        timestamp: new Date(),
+        description: reason ? `Previous partner declined rescheduled time: ${reason}` : 'Previous partner unavailable for rescheduled time. Finding next specialist.',
+      });
+      await serviceRequest.save();
+    }
+
+    if (job) {
+      job.activeStep = 'declined';
+      job.declinedReason = reason || 'Unavailable at rescheduled time';
+      await job.save();
+    }
+
+    // Find next available service provider in the territory
+    let nextProvider = null;
+    try {
+      if (booking) {
+        nextProvider = await findAvailableServiceProvider({
+          category: booking.category,
+          city: booking.address?.city,
+          state: booking.address?.state,
+        });
+
+        if (nextProvider && String(nextProvider._id) !== String(oldSpId)) {
+          booking.serviceProvider = nextProvider._id;
+          booking.instantStatus = 'ASSIGNED';
+          await booking.save();
+
+          if (serviceRequest) {
+            serviceRequest.serviceProvider = nextProvider._id;
+            serviceRequest.status = 'Assigned';
+            // Starts the new provider's 60s response window (see sweepExpiredAssignments).
+            serviceRequest.assignedAt = new Date();
+            serviceRequest.timeline.push({
+              stepLabel: 'Assigned',
+              done: true,
+              timestamp: new Date(),
+              description: `Reassigned to ${nextProvider.name} for the rescheduled appointment`,
+            });
+            await serviceRequest.save();
+          }
+        }
+      }
+    } catch (e) {
+      console.error('[respondToReschedule] error finding next provider:', e.message);
+    }
+
+    // Socket broadcasts
+    try {
+      const io = getIO();
+      const payload = {
+        bookingId: booking?._id,
+        serviceRequestId: serviceRequest?._id,
+        status: 'Upcoming',
+        instantStatus: nextProvider ? 'ASSIGNED' : 'SEARCHING',
+        serviceProvider: nextProvider ? { id: nextProvider.id, name: nextProvider.name, phone: nextProvider.phone } : null,
+        message: nextProvider
+          ? `Reassigned to new partner ${nextProvider.name}`
+          : 'Searching for nearest available service partner for your rescheduled appointment...',
+      };
+      if (booking?.user) io.to(`user:${booking.user}`).emit('booking:reschedule_rejected', payload);
+      if (booking?.user) io.to(`user:${booking.user}`).emit('instant:status_update', payload);
+      io.to(INSTANT_ROOM).emit('instant:status_update', payload);
+
+      if (nextProvider) {
+        io.to(`service-provider:${nextProvider._id}`).emit('job:assigned', {
+          bookingId: booking?._id,
+          serviceRequestId: serviceRequest?._id,
+          category: booking?.category,
+          serviceName: booking?.service?.name,
+          scheduledDate: booking?.scheduledDate,
+          timeSlot: booking?.timeSlot,
+        });
+      }
+    } catch (err) {
+      // The decline is already saved; a failed live update only delays the other screens.
+      console.warn('[respondToReschedule] socket notify failed:', err.message);
+    }
+
+    return { ok: true, action: 'rejected', reallocated: Boolean(nextProvider), nextProvider };
+  }
 }

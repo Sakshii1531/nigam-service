@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
-import { Search, Package, Plus, Edit2, Trash2, X, UploadCloud, Tag, Percent, Layers, ShieldCheck, DollarSign, Check, PlusCircle } from 'lucide-react';
+import { Search, Package, Plus, Edit2, Trash2, X, UploadCloud, Percent, Layers, ShieldCheck, DollarSign, Check, PlusCircle } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
 
 const PRESET_SPECS = {

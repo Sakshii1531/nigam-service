@@ -1,4 +1,3 @@
-import React from 'react';
 import { Shield, Plus } from 'lucide-react';
 
 const BrandWarrantyOverview = ({ job, additionalServices, setAdditionalServices, setShowAddServicesModal, getProductImage, spareParts, setSpareParts, setShowAddPartsModal }) => {

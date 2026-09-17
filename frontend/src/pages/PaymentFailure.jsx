@@ -1,6 +1,4 @@
-import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { ArrowLeft, XCircle, RefreshCw, AlertTriangle, HelpCircle } from 'lucide-react';
 
 const PaymentFailure = () => {

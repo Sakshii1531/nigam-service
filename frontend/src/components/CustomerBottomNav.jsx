@@ -1,4 +1,3 @@
-import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Home, LayoutGrid, ShoppingCart, Calendar, User } from "lucide-react";
 import { getCustomerActiveTab } from "./AppChrome";
@@ -49,7 +48,7 @@ const CustomerBottomNav = ({ buyPath, onBuyClick, activePage }) => {
             }`}
           >
             {isActive && (
-              <div className="absolute -top-3 w-8 h-1 bg-brand-blue rounded-b-full shadow-2xs" />
+              <div className="absolute top-0 w-8 h-1 bg-brand-blue rounded-b-full shadow-2xs" />
             )}
             <div className={isActive ? "p-1 rounded-xl bg-blue-50/90 text-brand-blue" : ""}>
               <Icon className="h-5 w-5" />

@@ -1,4 +1,9 @@
 import { defineConfig } from '@playwright/test';
+import { loadBackendEnv, useE2eDatabase, DEFAULT_UI_DB } from './testDatabase.js';
+
+loadBackendEnv();
+// Never backend/.env's MONGODB_URI — see testDatabase.js.
+const E2E_DB = useE2eDatabase(DEFAULT_UI_DB);
 
 // Browser-level smoke suite, separate from the api/ gate in playwright.config.js
 // so the fast API run stays the per-phase checkpoint. Run with `npm run test:ui`.
@@ -12,6 +17,8 @@ const API_ORIGIN = `http://localhost:${API_PORT}`;
 
 export default defineConfig({
   testDir: './ui',
+  globalSetup: './global-setup-ui.js',
+  globalTeardown: './global-teardown.js',
   reporter: [['list']],
   timeout: 45_000,
   fullyParallel: false,
@@ -19,16 +26,28 @@ export default defineConfig({
   webServer: [
     {
       command: 'node ../backend/src/server.js',
+      command: 'node src/server.js',
+      cwd: '../backend',
       url: `${API_ORIGIN}/api/v1/health`,
       reuseExistingServer: !process.env.CI,
       timeout: 30_000,
       env: {
         NODE_ENV: 'test',
         PORT: String(API_PORT),
-        MONGODB_URI: process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/nigam_care_e2e_ui',
+        MONGODB_URI: E2E_DB,
         JWT_ACCESS_SECRET: 'ui-access-secret',
         JWT_REFRESH_SECRET: 'ui-refresh-secret',
         OTP_PROVIDER: 'test',
+      // Keep a developer's real .env credentials out of the test server — the
+      // suite must not upload to their Cloudinary or send real push/WhatsApp.
+      CLOUDINARY_CLOUD_NAME: '',
+      CLOUDINARY_API_KEY: '',
+      CLOUDINARY_API_SECRET: '',
+      FCM_SERVICE_ACCOUNT_JSON: '',
+      TWILIO_ACCOUNT_SID: '',
+      TWILIO_AUTH_TOKEN: '',
+      TWILIO_WHATSAPP_FROM: '',
+      TWILIO_VOICE_NUMBER: '',
         CORS_ORIGINS: `http://localhost:${UI_PORT}`,
       },
     },

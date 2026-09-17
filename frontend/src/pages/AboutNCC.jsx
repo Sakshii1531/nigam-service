@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  ArrowLeft, ChevronRight, FileText, Info, ShieldCheck, Heart, Award, Users, Clock, ThumbsUp, Wrench, CheckCircle2, Headphones, RefreshCw 
+  ArrowLeft, ChevronRight, FileText, Info, ShieldCheck, Heart, Award, Users, Clock, ThumbsUp, Wrench, CheckCircle2, Headphones 
 } from 'lucide-react';
 import defaultLogo from '../assets/nigam-care.png';
 import Footer from '../components/layout/Footer';
@@ -46,7 +46,7 @@ const bgColors = ['bg-blue-600', 'bg-emerald-600', 'bg-amber-600', 'bg-indigo-60
 
 const AboutNCC = () => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [heroTitle, setHeroTitle] = useState('Empowering Smart Home Care & Appliance Solutions');
   const [heroSubtitle, setHeroSubtitle] = useState("Nigam Care Center (NCC) is India's leading home service network. We connect households with top-rated, background-verified serviceProviders for AC repair, appliance servicing, electrical work, plumbing, and genuine spare parts delivery.");
   const [appVersion, setAppVersion] = useState('v2.4.0');

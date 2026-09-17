@@ -1,23 +1,19 @@
-import React, { useState, useEffect, useRef } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import {
   ArrowLeft,
   Check,
   ChevronDown,
-  ChevronUp,
   MapPin,
   User,
   Phone,
   CalendarDays,
   Sun,
   Moon,
-  Info,
   ShieldCheck,
   ArrowRight,
   Zap,
-  Sparkles,
   CheckCircle2,
-  Clock,
   Home,
   Briefcase,
 } from "lucide-react";
@@ -30,18 +26,7 @@ import {
   preloadCatalogOverrides,
 } from "../data/bookingCatalog";
 
-import electricianBanner from "../assets/electrician_banner.png";
-import plumbingBanner from "../assets/plumbing_banner.png";
-import acBanner from "../assets/ac_service_banner.png";
-import heroService from "../assets/hero_service.png";
 
-const getDefaultBanner = (categoryKey) => {
-  const norm = (categoryKey || "").toLowerCase();
-  if (norm.includes("ac")) return acBanner;
-  if (norm.includes("elect")) return electricianBanner;
-  if (norm.includes("plumb")) return plumbingBanner;
-  return heroService;
-};
 
 const getCatalog = (category) => getCatalogEntry(category);
 
@@ -213,6 +198,7 @@ const BottomBar = ({
 // ─── Main Component ───────────────────────────────────────────────────────────
 const BookingFlow = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { category } = useParams();
 
   const [overridesLoaded, setOverridesLoaded] = useState(false);
@@ -226,38 +212,95 @@ const BookingFlow = () => {
     if (overridesLoaded && !catalog) navigate("/dashboard", { replace: true });
   }, [overridesLoaded, catalog, navigate]);
 
+  const resumeBooking =
+    location.state?.resumeBooking ||
+    location.state?.bookingMeta ||
+    (() => {
+      try {
+        const raw = sessionStorage.getItem("ncc_last_booking_flow");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (
+            parsed.category === category ||
+            parsed.bookingMeta?.category === category
+          ) {
+            return parsed.bookingMeta;
+          }
+        }
+      } catch (_err) {
+        // ignore session storage read errors
+      }
+      return null;
+    })();
+
   // ── State ──────────────────────────────────────────────────────────────────
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(
+    () => location.state?.step || (resumeBooking ? 4 : 1),
+  );
   const [submitting, setSubmitting] = useState(false);
 
   // Step 1
-  const [productType, setProductType] = useState("");
-  const [quantity, setQuantity] = useState(1);
+  const [productType, setProductType] = useState(
+    () => resumeBooking?.productType || "",
+  );
+  const [quantity, setQuantity] = useState(
+    () => resumeBooking?.quantity || 1,
+  );
 
   // Step 2
-  const [service, setService] = useState("");
+  const [service, setService] = useState(
+    () => resumeBooking?.serviceSlug || resumeBooking?.service || "",
+  );
 
   // Step 3
-  const [brand, setBrand] = useState("");
-  const [model, setModel] = useState("");
-  const [installLocation, setInstallLocation] = useState("Ground Floor");
+  const [brand, setBrand] = useState(() => resumeBooking?.brand || "");
 
   // Step 4
-  const [selectedDate, setSelectedDate] = useState("");
-  const [timeGroup, setTimeGroup] = useState("");
+  const [selectedDate, setSelectedDate] = useState(
+    () => resumeBooking?.date || "",
+  );
+  const [timeGroup, setTimeGroup] = useState(
+    () => resumeBooking?.timeGroup || "",
+  );
 
   // Step 5
-  const [fullName, setFullName] = useState("");
-  const [mobile, setMobile] = useState("");
-  const [address, setAddress] = useState({
-    house: "",
-    area: "",
-    city: "",
-    pincode: "",
-  });
+  const [fullName, setFullName] = useState(
+    () => resumeBooking?.fullName || "",
+  );
+  const [mobile, setMobile] = useState(() => resumeBooking?.mobile || "");
+  const [address, setAddress] = useState(
+    () =>
+      resumeBooking?.address || {
+        house: "",
+        area: "",
+        city: "",
+        pincode: "",
+      },
+  );
   const [selectedAddrId, setSelectedAddrId] = useState(null);
-  const [paymentMode, setPaymentMode] = useState("advance");
+  const [paymentMode, setPaymentMode] = useState(
+    () => resumeBooking?.paymentMode || "advance",
+  );
   const [priceExpanded, setPriceExpanded] = useState(false);
+
+  // Sync state if location.state changes during navigation
+  useEffect(() => {
+    const resume = location.state?.resumeBooking || location.state?.bookingMeta;
+    if (resume) {
+      if (location.state?.step) setStep(location.state.step);
+      if (resume.productType) setProductType(resume.productType);
+      if (resume.quantity) setQuantity(resume.quantity);
+      if (resume.serviceSlug || resume.service)
+        setService(resume.serviceSlug || resume.service);
+      if (resume.brand) setBrand(resume.brand);
+      if (resume.date) setSelectedDate(resume.date);
+      if (resume.timeGroup) setTimeGroup(resume.timeGroup);
+      if (resume.fullName) setFullName(resume.fullName);
+      if (resume.mobile) setMobile(resume.mobile);
+      if (resume.address) setAddress(resume.address);
+      if (resume.paymentMode) setPaymentMode(resume.paymentMode);
+    }
+  }, [location.state]);
 
   const { user } = useAuth();
   const { currentLocation } = useLocationContext();
@@ -349,7 +392,7 @@ const BookingFlow = () => {
 
   // ── Computed values ────────────────────────────────────────────────────────
   const selectedServiceData = data.services.default.find(
-    (s) => s.id === service,
+    (s) => s.id === service || s.name === service,
   );
   const unitPrice = selectedServiceData?.price || 0;
   const totalPrice = selectedServiceData ? unitPrice * quantity : 0;
@@ -545,6 +588,11 @@ const BookingFlow = () => {
           paymentMode: "after",
           isInstant: isInstant ? "true" : "false",
         });
+        try {
+          sessionStorage.removeItem("ncc_last_booking_flow");
+        } catch (_err) {
+          // ignore session storage removal errors
+        }
         navigate(`/booking-success?${params.toString()}`);
       } catch (err) {
         console.error("Failed to create booking:", err);
@@ -557,27 +605,36 @@ const BookingFlow = () => {
     } else {
       const isInstant = timeGroup === "ASAP";
       await ensureCustomerAuth();
+      const bookingMeta = {
+        service: svcName,
+        serviceSlug: service,
+        category: catKey,
+        productType: productType,
+        brand: brand,
+        quantity: quantity,
+        date: selectedDate,
+        timeGroup: timeGroup,
+        isInstant: isInstant,
+        totalPrice: totalPrice,
+        advanceAmt: advanceAmt,
+        paymentMode: paymentMode,
+        address: address,
+        fullName: fullName,
+        mobile: mobile,
+      };
+      try {
+        sessionStorage.setItem(
+          "ncc_last_booking_flow",
+          JSON.stringify({ category: catKey, bookingMeta }),
+        );
+      } catch (_err) {
+        // ignore session storage write errors
+      }
       navigate("/payment", {
         state: {
           productName: svcName,
           price: paymentMode === "advance" ? advanceAmt : totalPrice,
-          bookingMeta: {
-            service: svcName,
-            serviceSlug: service,
-            category: catKey,
-            productType: productType,
-            brand: brand,
-            quantity: quantity,
-            date: selectedDate,
-            timeGroup: timeGroup,
-            isInstant: isInstant,
-            totalPrice: totalPrice,
-            advanceAmt: advanceAmt,
-            paymentMode: paymentMode,
-            address: address,
-            fullName: fullName,
-            mobile: mobile,
-          },
+          bookingMeta,
         },
       });
     }
@@ -618,8 +675,6 @@ const BookingFlow = () => {
   };
   const { title, subtitle } = stepConfig[step] || {};
 
-  // ── Bottom bar config per step ─────────────────────────────────────────────
-  const getBarIcon = () => selectedServiceData?.icon || data.icon || "🔧";
   const getBarLabel = () => {
     if (!selectedServiceData) return catKey;
     return `${selectedServiceData.name}`;
@@ -1077,27 +1132,6 @@ const BookingFlow = () => {
                         </button>
                       );
                     })}
-                  </div>
-                </div>
-
-                {/* Visiting Charge Box */}
-                <div className="bg-blue-50/60 border border-blue-100 rounded-2xl p-4 flex flex-col gap-2.5 shadow-2xs">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <span className="text-[13px] font-black text-slate-900 block">
-                        Visiting & Diagnosis Charge
-                      </span>
-                      <p className="text-[10px] text-slate-500 font-semibold mt-0.5">
-                        ₹199 initial visiting fee to inspect your appliance.
-                      </p>
-                    </div>
-                    <div className="text-[20px] font-black text-brand-blue ml-3">
-                      ₹199
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 pt-2 border-t border-blue-100/80 text-[11px] text-emerald-700 font-bold">
-                    <ShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                    <span>Adjusted 100% in your final repair bill.</span>
                   </div>
                 </div>
               </div>
@@ -1606,10 +1640,10 @@ const BookingFlow = () => {
             </div>
             <div className="flex flex-col items-end">
               <span className="text-[16px] font-black text-slate-900 leading-none">
-                ₹{advanceAmt}
+                ₹{totalPrice}
               </span>
               <span className="text-[9px] text-slate-400 font-bold mt-1 uppercase tracking-wider">
-                Visiting Charge
+                Total Estimate
               </span>
             </div>
           </div>

@@ -2,14 +2,14 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import { 
-  Sparkles, Gift, Ticket, Award, Coins, Settings, Plus, Trash2, Edit2, 
-  Check, Save, Percent, RefreshCw, Star, Info, TrendingUp, Users, ArrowRight
+  Plus, Trash2, Edit2, 
+  Check, Save, RefreshCw, Star, Info
 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { apiRequest } from '../../lib/apiClient';
 
 const LoyaltyProgram = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'rewards';
 
   // Toast State

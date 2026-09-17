@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
@@ -48,7 +48,7 @@ function loadGoogleMaps() {
       script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&callback=${callbackName}&loading=async`;
       script.async = true;
       script.defer = true;
-      script.onerror = (e) => {
+      script.onerror = () => {
         googleMapsLoadPromise = null;
         reject(new Error('Failed to load Google Maps'));
       };
@@ -169,7 +169,7 @@ const Tracking = () => {
           { featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] },
         ],
       });
-    } catch (err) {
+    } catch {
       setMapError('Failed to load Google Maps. Check your API key and network.');
     }
   }, []);

@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
-import { IndianRupee, Clock, CheckCircle2, Download, Search, Filter } from 'lucide-react';
+import { CheckCircle2, Download, Search } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
 
 const currency = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });

@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  ChevronLeft, Search, Filter, Briefcase, ClipboardList, Wrench, Calendar, User, Check, X, ShieldAlert
+  ChevronLeft, Search, Filter, Wrench, Check, ShieldAlert
 } from 'lucide-react';
 import ServiceProviderBottomNav from '../../components/ServiceProviderBottomNav';
 import { useTech } from '../../context/ServiceProviderContext';

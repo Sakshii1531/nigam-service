@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   MapPin, 
@@ -9,10 +9,8 @@ import {
   Building2, 
   Home, 
   Briefcase, 
-  Clock, 
   AlertCircle,
   Loader2,
-  Sparkles,
   ChevronRight
 } from 'lucide-react';
 import { useLocationContext, POPULAR_CITIES } from '../../context/LocationContext';
@@ -41,10 +39,6 @@ export const LocationModal = () => {
     }
   }, [isModalOpen]);
 
-  // Serviceable city names
-  const serviceableNames = useMemo(() => {
-    return activeCities.map(c => (c.name || '').toLowerCase().trim());
-  }, [activeCities]);
 
   // Combined searchable cities list
   const allCitiesList = useMemo(() => {

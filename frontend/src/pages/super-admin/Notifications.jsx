@@ -7,15 +7,12 @@ import {
   Users, 
   UserCheck, 
   Building,
-  CheckCircle2,
   Trash2,
   Smartphone,
   Sparkles,
   Search,
   MessageSquare,
-  Radio,
-  Clock,
-  ShieldAlert
+  Radio
 } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
 
@@ -29,7 +26,7 @@ const Notifications = () => {
   const [searchQuery, setSearchQuery] = useState('');
   
   const [logs, setLogs] = useState([]);
-  const [loadError, setLoadError] = useState('');
+  const [, setLoadError] = useState('');
   const [pushStats, setPushStats] = useState(null);
 
   // Every role-wide notification the platform has broadcast, newest first.

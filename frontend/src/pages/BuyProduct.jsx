@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiRequest } from '../lib/apiClient';
 import {
-  ArrowLeft, Search, Check, ChevronRight, Star,
-  Sparkles, Filter,
-  Tag, ShieldCheck, CheckCircle2, FileText, ShoppingBag, X
+  ArrowLeft, Search, ChevronRight, Star,
+  Sparkles, ShieldCheck, CheckCircle2, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
@@ -45,8 +44,8 @@ const BuyProduct = () => {
   // handed off to posted a product id no Product document has, and the order
   // would 404. Ratings and review counts were invented per row too.
   const [products, setProducts] = useState([]);
-  const [loadError, setLoadError] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [, setLoadError] = useState('');
+  const [, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;

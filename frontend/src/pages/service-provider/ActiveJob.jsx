@@ -1,12 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiRequest } from '../../lib/apiClient';
 import { 
-  ArrowLeft, Bell, Briefcase, ClipboardList, Calendar, User, Wrench, 
-  MapPin, Phone, MessageSquare, Shield, Share2, MoreVertical, CheckCircle, 
-  Clock, Plus, Info, Upload, Check, Video, Mic, FileText, Send, Sparkles,
-  ChevronRight, AlertTriangle, AlertCircle, Package, CreditCard, Wallet, Banknote, QrCode,
-  RotateCw, RefreshCw, Navigation
+  ArrowLeft, Bell, Briefcase, Calendar, MapPin, Phone, MessageSquare, Share2, MoreVertical, Clock, Plus, Info, Check, Video, Mic, FileText, ChevronRight, AlertTriangle, AlertCircle, Package, CreditCard, Wallet, Banknote, QrCode,
+  RotateCw, Navigation
 } from 'lucide-react';
 import { useTech } from '../../context/ServiceProviderContext';
 import ServiceProviderBottomNav from '../../components/ServiceProviderBottomNav';
@@ -14,9 +11,6 @@ import splitAcImg from '../../assets/categories/split_ac.png';
 import wasingImg from '../../assets/categories/wasing.png';
 import fridgeImg from '../../assets/appliance_fridge.png';
 import capacitorImg from '../../assets/capacitor_part.png';
-import gasRefillImg from '../../assets/gas_refill_part.png';
-import fanMotorImg from '../../assets/fan_motor_part.png';
-import compressorImg from '../../assets/compressor_part.png';
 import manifoldGaugeImg from '../../assets/manifold_gauge_tool.png';
 import screwdriverImg from '../../assets/screwdriver_tool.png';
 import allenKeyImg from '../../assets/allen_key_tool.png';
@@ -171,7 +165,6 @@ const ActiveJob = () => {
     setSelectedParts,
     proofs,
     setProofs,
-    addChatMessage,
     chatMessages,
     inventory,
     selectJobForDetails,
@@ -439,13 +432,6 @@ const ActiveJob = () => {
     setHasSignedRevisit(false);
   };
 
-  // Checkboxes for diagnosis verification (Screen 6)
-  const [actionsChecked, setActionsChecked] = useState({
-    checkCapacitor: true,
-    checkGasPressure: true,
-    verifyFanMotor: false
-  });
-
   // Recommended Parts cart matching Screen 7
   // Parts offered here come from the service provider's own stock. They were three
   // hardcoded items whose prices went straight onto the customer's invoice.
@@ -469,7 +455,6 @@ const ActiveJob = () => {
 
   // AI Chat Drawer State (Screen 16)
   const [chatOpen, setChatOpen] = useState(false);
-  const [chatInput, setChatInput] = useState('');
   const chatEndRef = useRef(null);
 
   const isWarrantyOrAMC = activeJob && (
@@ -750,11 +735,6 @@ const ActiveJob = () => {
     );
   };
 
-  const handleSendChatMessage = () => {
-    if (!chatInput.trim()) return;
-    addChatMessage(chatInput, 'user');
-    setChatInput('');
-  };
 
   return (
     <div className={`min-h-screen flex flex-col relative font-sans ${

@@ -1,4 +1,3 @@
-import React from 'react';
 import { MessageCircle, Send, Camera, Briefcase, PhoneCall, Mail } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 

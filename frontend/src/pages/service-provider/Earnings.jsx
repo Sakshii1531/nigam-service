@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
-  Bell, ArrowLeft, Shield, Calendar, TrendingUp, ChevronDown, Check, Clock, 
-  Briefcase, ClipboardList, User, Wrench, Zap, FileText, Building2, ChevronRight,
-  AlertCircle, RefreshCw, Download, ArrowUpRight
+  Bell, ArrowLeft, Shield, TrendingUp, ChevronDown, Check, Clock, 
+  Zap, FileText, Building2, ChevronRight,
+  AlertCircle, RefreshCw, ArrowUpRight
 } from 'lucide-react';
 import ServiceProviderBottomNav from '../../components/ServiceProviderBottomNav';
 import { useTech } from '../../context/ServiceProviderContext';
@@ -97,9 +97,6 @@ const EarningsPage = () => {
       status: (p.status || 'Pending').toUpperCase(),
     }));
 
-  const weekEarned = (stats?.daily || []).slice(-7).reduce((sum, d) => sum + (d.amount || 0), 0);
-  const weeklyTarget = stats?.weeklyTargetAmount || 0;
-  const targetPercent = weeklyTarget > 0 ? Math.min(Math.round((weekEarned / weeklyTarget) * 100), 100) : null;
 
   const handleWithdraw = async () => {
     if (withdrawableBalance <= 0) return;

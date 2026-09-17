@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
 import { 
@@ -49,7 +49,6 @@ const Warranty = () => {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [match, setMatch] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -77,7 +76,7 @@ const Warranty = () => {
   // Real lookup against the brand's registered appliances. The previous version
   // matched on the literal strings "123"/"456" and returned invented customers.
   const [lookup, setLookup] = useState(null);
-  const [searching, setSearching] = useState(false);
+  const [, setSearching] = useState(false);
 
   const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—');
 

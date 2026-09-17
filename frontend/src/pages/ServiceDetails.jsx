@@ -1,13 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Search, Star, Tag, CreditCard, ChevronRight, Menu, X, CheckCircle2 } from 'lucide-react';
 
 // Assets
-import acImg from '../assets/most_booked_ac_1.png';
-import washingImg from '../assets/most_booked_wm.png';
-import cleaningImg from '../assets/most_booked_cleaning.png';
-import saloonImg from '../assets/most_booked_salon.png';
-import fridgeImg from '../assets/appliance_fridge.png';
 import electricianBanner from '../assets/electrician_banner.png';
 import plumbingBanner from '../assets/plumbing_banner.png';
 import acBanner from '../assets/ac_service_banner.png';
@@ -20,8 +15,6 @@ import cleaningIconImg from '../assets/categories/cleaning.png';
 import tvImg from '../assets/categories/television.png';
 import roImg from '../assets/categories/water_purifier.png';
 import serviceProviderImg1 from '../assets/working/Gemini_Generated_Image_h5cyvch5cyvch5cy-removebg-preview.png';
-import serviceProviderImg2 from '../assets/working/Gemini_Generated_Image_kutaj9kutaj9kuta-removebg-preview.png';
-import serviceProviderImg3 from '../assets/working/Gemini_Generated_Image_p3wn1kp3wn1kp3wn-removebg-preview.png';
 import { apiRequest } from '../lib/apiClient';
 
 // ─── Service config ───────────────────────────────────────────────────────────
@@ -148,7 +141,7 @@ const SERVICE_CATALOG = [
 ];
 
 // ─── Catalog Card sub-component (uses quantity state from parent) ─────────────
-const CatalogCard = ({ item, navigate, serviceName, onViewDetails, quantity = 0, onQuantityChange }) => {
+const CatalogCard = ({ item, onViewDetails, quantity = 0, onQuantityChange }) => {
   return (
     <div className="py-4 border-b border-slate-100">
       {/* Top row */}

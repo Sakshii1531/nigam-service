@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -15,10 +15,7 @@ import {
   ChevronDown,
   X,
 } from "lucide-react";
-import { BOOKING_CATALOG } from "../../data/bookingCatalog";
 import { apiRequest } from "../../lib/apiClient";
-import { SearchableSelect } from "../../components/common/SearchableSelect";
-import { STATE_CITIES } from "../../utils/indiaGeoData";
 
 const ServiceProviderApply = () => {
   const navigate = useNavigate();

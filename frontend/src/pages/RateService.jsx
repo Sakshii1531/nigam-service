@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Star, Camera, X } from 'lucide-react';
 import { apiRequest } from '../lib/apiClient';
@@ -20,8 +20,8 @@ const RateService = () => {
   const [tip, setTip] = useState(0);
   const [comment, setComment] = useState('');
   const [submitted, setSubmitted] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [, setSubmitting] = useState(false);
+  const [, setError] = useState('');
 
   const handleRate = (category, star) => setRatings((prev) => ({ ...prev, [category]: star }));
   const toggleTag = (t) => setTags((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));

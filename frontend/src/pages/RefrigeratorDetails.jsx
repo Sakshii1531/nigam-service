@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Star, Check, Shield, Award, Clock, X } from 'lucide-react';
+import { ArrowLeft, Star, Check, Shield, Award, X } from 'lucide-react';
 import applianceFridge from '../assets/appliance_fridge.png';
 import { apiRequest } from '../lib/apiClient';
 
@@ -25,7 +25,6 @@ const RefrigeratorDetails = () => {
 
   const [selectedIssue, setSelectedIssue] = useState('');
   const [showWarrantyModal, setShowWarrantyModal] = useState(false);
-  const [isUnderWarranty, setIsUnderWarranty] = useState(null);
   const [billNo, setBillNo] = useState('');
   const [billFile, setBillFile] = useState(null);
 

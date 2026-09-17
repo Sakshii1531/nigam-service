@@ -4,8 +4,8 @@ import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
 import {
   Search, User, Package, AlertCircle, CheckCircle2,
-  Phone, Mail, MapPin, ChevronRight, Edit2, Upload,
-  ShieldCheck, ShieldOff, ArrowRight, X, FileText, Plus, Copy
+  Phone, Edit2, Upload,
+  ShieldCheck, ShieldOff, ArrowRight, X, FileText, Copy
 } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
 
@@ -42,42 +42,12 @@ function shapeCustomer(c) {
 
 const complaintTypes = ['Breakdown', 'No Power / Dead', 'Noise Issue', 'Performance Degradation', 'Physical Damage', 'Intermittent Fault'];
 
-// This screen's labels are friendlier than the API's enums; map rather than
-// send the display text, which the schema would reject.
-const COMPLAINT_TYPE_MAP = {
-  'Breakdown': 'Breakdown',
-  'No Power / Dead': 'No Power',
-  'Noise Issue': 'Noise',
-  'Performance Degradation': 'Performance',
-  'Physical Damage': 'Physical Damage',
-  'Intermittent Fault': 'Intermittent',
-};
 
-const PRIORITY_MAP = { Low: 'Low', Normal: 'Medium', High: 'High', Critical: 'Critical' };
 const issueCategories = {
   'LED & Luminaires': ['Flickering', 'Not Turning On', 'Driver Failure', 'Dim Output', 'Remote Not Working'],
   'Fans & Appliances': ['Not Running', 'Noise / Vibration', 'Speed Not Working', 'Capacitor Issue', 'Blade Damage'],
 };
 
-// ── Lifecycle Steps ──
-const lifecycleSteps = [
-  { label: 'New', icon: '📋', color: 'bg-blue-100 text-blue-700 border-blue-200' },
-  { label: 'Assigned', icon: '👤', color: 'bg-indigo-100 text-indigo-700 border-indigo-200' },
-  { label: 'Engineer Accepted', icon: '✅', color: 'bg-teal-100 text-teal-700 border-teal-200' },
-  { label: 'Visit Scheduled', icon: '📅', color: 'bg-cyan-100 text-cyan-700 border-cyan-200' },
-  { label: 'Engineer Reached', icon: '📍', color: 'bg-violet-100 text-violet-700 border-violet-200' },
-  { label: 'Diagnosis Done', icon: '🔍', color: 'bg-amber-100 text-amber-700 border-amber-200' },
-];
-const spareSteps = [
-  { label: 'Spare Required', icon: '⚙️', color: 'bg-orange-100 text-orange-700 border-orange-200' },
-  { label: 'Spare Ordered', icon: '🛒', color: 'bg-orange-100 text-orange-700 border-orange-200' },
-  { label: 'Spare Received', icon: '📦', color: 'bg-orange-100 text-orange-700 border-orange-200' },
-];
-const closingSteps = [
-  { label: 'Repair Completed', icon: '🔧', color: 'bg-green-100 text-green-700 border-green-200' },
-  { label: 'Customer Confirmation', icon: '✋', color: 'bg-green-100 text-green-700 border-green-200' },
-  { label: 'Closed', icon: '✅', color: 'bg-green-200 text-green-800 border-green-300' },
-];
 
 const STEPS = [
   { id: 1, label: 'Search Customer', icon: Search },
@@ -105,13 +75,11 @@ const RegisterComplaint = () => {
     attachment: null,
   });
   const [successModal, setSuccessModal] = useState(false);
-  const [ticketId, setTicketId] = useState('');
-  const [editStep, setEditStep] = useState(null);
+  const [, setTicketId] = useState('');
   const [complaintIds, setComplaintIds] = useState({ brandNo: '', nccId: '' });
   const [copiedId, setCopiedId] = useState(null);
   const [customers, setCustomers] = useState([]);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [, setError] = useState('');
 
   useEffect(() => {
     let cancelled = false;

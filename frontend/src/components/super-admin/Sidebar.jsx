@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -10,7 +10,6 @@ import {
   UserCheck, 
   Building, 
   ClipboardList, 
-  FileCheck, 
   UserPlus, 
   MapPin, 
   Package, 
@@ -18,8 +17,6 @@ import {
   AlertTriangle,
   Headphones, 
   Bell, 
-  BarChart3, 
-  Map, 
   Lock, 
   Settings, 
   Clock,
@@ -33,19 +30,16 @@ import {
   FileText,
   LayoutGrid,
   Wrench,
-  Sparkles,
   DollarSign,
   Image,
   LogOut,
-  Gift,
   Coins,
   Ticket,
   Award,
   RefreshCw,
   Search,
   Star,
-  User,
-  KeyRound
+  User
 } from 'lucide-react';
 import logo from '../../assets/nigam-care.png';
 
@@ -79,8 +73,18 @@ const Sidebar = () => {
     let cancelled = false;
     const loadBadgeCounts = async () => {
       try {
-        const res = await apiRequest('/super-admin/service-providers?status=Pending&limit=1', { auth: true, envelope: true });
-        if (!cancelled) setBadgeCounts((prev) => ({ ...prev, pendingServiceProviders: res?.meta?.total || 0 }));
+        const [providers, cityChanges] = await Promise.all([
+          apiRequest('/super-admin/service-providers?status=Pending&limit=1', { auth: true, envelope: true }),
+          // Zone-scoped server-side for an ASM, like the provider list above.
+          apiRequest('/super-admin/city-change-requests?status=Pending&limit=1', { auth: true, envelope: true }).catch(() => null),
+        ]);
+        if (!cancelled) {
+          setBadgeCounts((prev) => ({
+            ...prev,
+            pendingServiceProviders: providers?.meta?.total || 0,
+            pendingCityChanges: cityChanges?.meta?.total || 0,
+          }));
+        }
       } catch {
         // Non-fatal — the sidebar just shows no badge rather than a stale/wrong one.
       }
@@ -147,6 +151,13 @@ const Sidebar = () => {
       path: '/super-admin/service-providers?status=Pending',
       icon: <Clock size={18} />,
       badgeKey: 'pendingServiceProviders',
+    },
+    {
+      type: 'link',
+      label: 'City Change Requests',
+      path: '/super-admin/city-change-requests',
+      icon: <MapPin size={18} />,
+      badgeKey: 'pendingCityChanges',
     },
     {
       type: 'link',
@@ -337,6 +348,13 @@ const Sidebar = () => {
       path: '/super-admin/service-providers',
       icon: <UserCheck size={18} />,
       badgeKey: 'pendingServiceProviders',
+    },
+    {
+      type: 'link',
+      label: 'City Change Requests',
+      path: '/super-admin/city-change-requests',
+      icon: <MapPin size={18} />,
+      badgeKey: 'pendingCityChanges',
     },
     {
       type: 'link',

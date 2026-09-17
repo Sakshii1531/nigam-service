@@ -1,50 +1,52 @@
-import React, { useState, useEffect } from 'react';
-import Sidebar from '../../components/brand-admin/Sidebar';
-import Topbar from '../../components/brand-admin/Topbar';
-import { 
-  Users, 
-  UserCheck, 
-  UserX, 
-  Briefcase, 
-  Star, 
-  Search, 
-  Filter, 
+import { useState, useEffect } from "react";
+import Sidebar from "../../components/brand-admin/Sidebar";
+import Topbar from "../../components/brand-admin/Topbar";
+import Pagination from "../../components/common/Pagination";
+import {
+  Users,
+  UserCheck,
+  UserX,
+  Briefcase,
+  Star,
+  Search,
   MoreVertical,
   Edit,
   Power,
   MapPin,
   X,
-  CheckCircle2
-} from 'lucide-react';
-import { apiRequest } from '../../lib/apiClient';
+  CheckCircle2,
+} from "lucide-react";
+import { apiRequest } from "../../lib/apiClient";
 
 function shape(t) {
   return {
     id: t.id,
     name: t.name,
-    phone: t.phone || '—',
-    skill: t.skill || 'General Repair',
-    city: t.city || '—',
+    phone: t.phone || "—",
+    skill: t.skill || "General Repair",
+    city: t.city || "—",
     rating: t.rating ?? 0,
     // Scoped to this brand by the API — not the service provider's platform-wide totals.
     activeJobs: t.activeJobs ?? 0,
     completedJobs: t.completedJobs ?? 0,
-    status: t.status || 'Active',
-    availability: t.availability || 'Offline',
+    status: t.status || "Active",
+    availability: t.availability || "Offline",
   };
 }
 
 const ServiceProviders = () => {
   const [serviceProviders, setServiceProviders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
     async function loadServiceProviders() {
       try {
         // ServiceProviders who have actually worked this brand's requests.
-        const data = await apiRequest('/brand/service-providers', { auth: true });
+        const data = await apiRequest("/brand/service-providers", {
+          auth: true,
+        });
         if (!cancelled) setServiceProviders((data || []).map(shape));
       } catch (err) {
         if (!cancelled) setError(err.message);
@@ -53,32 +55,62 @@ const ServiceProviders = () => {
       }
     }
     loadServiceProviders();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const [showModal, setShowModal] = useState(false);
   const [editingTech, setEditingTech] = useState(null);
   const [openMenuTechId, setOpenMenuTechId] = useState(null);
-  const [successMessage, setSuccessMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState("");
   const [newTech, setNewTech] = useState({
-    name: '',
-    skill: 'AC & Refrigerator',
-    city: 'Delhi',
+    name: "",
+    skill: "AC & Refrigerator",
+    city: "Delhi",
     rating: 5.0,
-    availability: 'Available'
+    availability: "Available",
   });
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedSkill, setSelectedSkill] = useState('All Skills');
-  const [selectedCity, setSelectedCity] = useState('All Cities');
-  const [selectedAvailability, setSelectedAvailability] = useState('All Availabilities');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedSkill, setSelectedSkill] = useState("All Skills");
+  const [selectedCity, setSelectedCity] = useState("All Cities");
+  const [selectedAvailability, setSelectedAvailability] =
+    useState("All Availabilities");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
-  const countAvail = (a) => serviceProviders.filter(t => t.availability === a).length;
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedSkill, selectedCity, selectedAvailability]);
+
+  const countAvail = (a) =>
+    serviceProviders.filter((t) => t.availability === a).length;
   const stats = [
-    { title: 'Total ServiceProviders', value: String(serviceProviders.length), icon: <Users size={20} />, color: 'bg-blue-600' },
-    { title: 'Active (On Duty)', value: String(countAvail('Available')), icon: <UserCheck size={20} />, color: 'bg-green-600' },
-    { title: 'Busy (In Job)', value: String(countAvail('Busy')), icon: <Briefcase size={20} />, color: 'bg-yellow-600' },
-    { title: 'Offline', value: String(countAvail('Offline')), icon: <UserX size={20} />, color: 'bg-gray-500' },
+    {
+      title: "Total ServiceProviders",
+      value: String(serviceProviders.length),
+      icon: <Users size={20} />,
+      color: "bg-blue-600",
+    },
+    {
+      title: "Active (On Duty)",
+      value: String(countAvail("Available")),
+      icon: <UserCheck size={20} />,
+      color: "bg-green-600",
+    },
+    {
+      title: "Busy (In Job)",
+      value: String(countAvail("Busy")),
+      icon: <Briefcase size={20} />,
+      color: "bg-yellow-600",
+    },
+    {
+      title: "Offline",
+      value: String(countAvail("Offline")),
+      icon: <UserX size={20} />,
+      color: "bg-gray-500",
+    },
   ];
 
   // ServiceProviders belong to the platform, not to a brand — a brand admin sees who
@@ -86,7 +118,7 @@ const ServiceProviders = () => {
   // actions live on super-admin's own service provider directory
   // (PATCH /super-admin/service providers/:id/status).
   const READ_ONLY_NOTICE =
-    'Service Provider accounts are managed by the platform — this view is read-only.';
+    "Service Provider accounts are managed by the platform — this view is read-only.";
 
   const handleSuspend = () => {
     setError(READ_ONLY_NOTICE);
@@ -99,19 +131,30 @@ const ServiceProviders = () => {
     setError(READ_ONLY_NOTICE);
   };
 
-  const filteredServiceProviders = serviceProviders.filter(provider => {
-    const matchesSearch = provider.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          provider.id.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesSkill = selectedSkill === 'All Skills' || provider.skill === selectedSkill;
-    const matchesCity = selectedCity === 'All Cities' || provider.city === selectedCity;
-    
+  const filteredServiceProviders = serviceProviders.filter((provider) => {
+    const matchesSearch =
+      provider.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      provider.id.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSkill =
+      selectedSkill === "All Skills" || provider.skill === selectedSkill;
+    const matchesCity =
+      selectedCity === "All Cities" || provider.city === selectedCity;
+
     let matchesAvailability = true;
-    if (selectedAvailability !== 'All Availabilities' && selectedAvailability !== 'Availability') {
+    if (
+      selectedAvailability !== "All Availabilities" &&
+      selectedAvailability !== "Availability"
+    ) {
       matchesAvailability = provider.availability === selectedAvailability;
     }
-    
+
     return matchesSearch && matchesSkill && matchesCity && matchesAvailability;
   });
+
+  const paginatedServiceProviders = filteredServiceProviders.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage,
+  );
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex">
@@ -125,17 +168,23 @@ const ServiceProviders = () => {
 
         {/* Body */}
         <div className="p-6 space-y-6 flex-1">
-          
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {stats.map((stat, index) => (
-              <div key={index} className="bg-white p-6 rounded-2xl border border-[#E2E8F0] flex items-center gap-4">
-                <div className={`w-12 h-12 ${stat.color} rounded-xl flex items-center justify-center text-white flex-shrink-0`}>
+              <div
+                key={index}
+                className="bg-white p-6 rounded-2xl border border-[#E2E8F0] flex items-center gap-4">
+                <div
+                  className={`w-12 h-12 ${stat.color} rounded-xl flex items-center justify-center text-white flex-shrink-0`}>
                   {stat.icon}
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-[#64748B]">{stat.title}</p>
-                  <p className="text-2xl font-bold text-[#1E293B]">{stat.value}</p>
+                  <p className="text-xs font-medium text-[#64748B]">
+                    {stat.title}
+                  </p>
+                  <p className="text-2xl font-bold text-[#1E293B]">
+                    {stat.value}
+                  </p>
                 </div>
               </div>
             ))}
@@ -159,11 +208,10 @@ const ServiceProviders = () => {
               </div>
 
               {/* Filters */}
-              <select 
+              <select
                 value={selectedSkill}
                 onChange={(e) => setSelectedSkill(e.target.value)}
-                className="text-sm text-[#1E293B] border border-[#E2E8F0] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#0D47A1] bg-[#F8FAFC]"
-              >
+                className="text-sm text-[#1E293B] border border-[#E2E8F0] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#0D47A1] bg-[#F8FAFC]">
                 <option>All Skills</option>
                 <option>AC & Refrigerator</option>
                 <option>Washing Machine</option>
@@ -171,11 +219,10 @@ const ServiceProviders = () => {
                 <option>All Appliances</option>
               </select>
 
-              <select 
+              <select
                 value={selectedCity}
                 onChange={(e) => setSelectedCity(e.target.value)}
-                className="text-sm text-[#1E293B] border border-[#E2E8F0] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#0D47A1] bg-[#F8FAFC]"
-              >
+                className="text-sm text-[#1E293B] border border-[#E2E8F0] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#0D47A1] bg-[#F8FAFC]">
                 <option>All Cities</option>
                 <option>Delhi</option>
                 <option>Mumbai</option>
@@ -183,11 +230,10 @@ const ServiceProviders = () => {
                 <option>Pune</option>
               </select>
 
-              <select 
+              <select
                 value={selectedAvailability}
                 onChange={(e) => setSelectedAvailability(e.target.value)}
-                className="text-sm text-[#1E293B] border border-[#E2E8F0] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#0D47A1] bg-[#F8FAFC]"
-              >
+                className="text-sm text-[#1E293B] border border-[#E2E8F0] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#0D47A1] bg-[#F8FAFC]">
                 <option value="All Availabilities">Availability</option>
                 <option>Available</option>
                 <option>Busy</option>
@@ -195,20 +241,19 @@ const ServiceProviders = () => {
               </select>
             </div>
 
-            <button 
+            <button
               onClick={() => {
                 setEditingTech(null);
                 setNewTech({
-                  name: '',
-                  skill: 'AC & Refrigerator',
-                  city: 'Delhi',
+                  name: "",
+                  skill: "AC & Refrigerator",
+                  city: "Delhi",
                   rating: 5.0,
-                  availability: 'Available'
+                  availability: "Available",
                 });
                 setShowModal(true);
               }}
-              className="bg-[#0D47A1] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
-            >
+              className="bg-[#0D47A1] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2">
               <Users size={16} /> Add Service Provider
             </button>
           </div>
@@ -230,28 +275,60 @@ const ServiceProviders = () => {
                 </thead>
                 <tbody className="divide-y divide-[#E2E8F0]">
                   {loading && (
-                    <tr><td colSpan={9} className="px-6 py-10 text-center text-[#64748B] font-semibold">Loading serviceProviders…</td></tr>
+                    <tr>
+                      <td
+                        colSpan={9}
+                        className="px-6 py-10 text-center text-[#64748B] font-semibold">
+                        Loading serviceProviders…
+                      </td>
+                    </tr>
                   )}
                   {!loading && error && (
-                    <tr><td colSpan={9} className="px-6 py-10 text-center text-red-600 font-semibold">{error}</td></tr>
+                    <tr>
+                      <td
+                        colSpan={9}
+                        className="px-6 py-10 text-center text-red-600 font-semibold">
+                        {error}
+                      </td>
+                    </tr>
                   )}
-                  {!loading && !error && filteredServiceProviders.length === 0 && (
-                    <tr><td colSpan={9} className="px-6 py-10 text-center text-[#64748B] font-semibold">No serviceProviders have worked this brand's requests yet.</td></tr>
-                  )}
-                  {filteredServiceProviders.map((provider) => (
-                    <tr key={provider.id} className="hover:bg-[#F8FAFC] transition-colors">
+                  {!loading &&
+                    !error &&
+                    filteredServiceProviders.length === 0 && (
+                      <tr>
+                        <td
+                          colSpan={9}
+                          className="px-6 py-10 text-center text-[#64748B] font-semibold">
+                          No serviceProviders have worked this brand's requests
+                          yet.
+                        </td>
+                      </tr>
+                    )}
+                  {paginatedServiceProviders.map((provider) => (
+                    <tr
+                      key={provider.id}
+                      className="hover:bg-[#F8FAFC] transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 bg-[#EEF4FF] rounded-full flex items-center justify-center text-[#0D47A1] font-bold">
-                            {provider.name.split(' ').map(n => n[0]).join('')}
+                            {provider.name
+                              .split(" ")
+                              .map((n) => n[0])
+                              .join("")}
                           </div>
                           <div>
-                            <p className="text-[#1E293B] font-medium">{provider.name}</p>
-                            <p className="text-[#64748B] text-xs">{provider.id}</p>
+                            <p className="text-[#1E293B] font-medium">
+                              {provider.name}
+                            </p>
+                            <p className="text-[#64748B] text-xs">
+                              {provider.id}
+                            </p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-[#1E293B]">{provider.skill}</td>
+                      <td className="px-6 py-4 text-[#1E293B]">
+                        {provider.skill}
+                      </td>
                       <td className="px-6 py-4 text-[#64748B]">
                         <div className="flex items-center gap-1">
                           <MapPin size={14} />
@@ -266,22 +343,29 @@ const ServiceProviders = () => {
                       </td>
                       <td className="px-6 py-4">
                         <div>
-                          <p className="text-[#1E293B] font-medium">{provider.activeJobs} Active</p>
-                          <p className="text-[#64748B] text-xs">{provider.completedJobs} Completed</p>
+                          <p className="text-[#1E293B] font-medium">
+                            {provider.activeJobs} Active
+                          </p>
+                          <p className="text-[#64748B] text-xs">
+                            {provider.completedJobs} Completed
+                          </p>
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
-                          provider.availability === 'Available' ? 'bg-green-50 text-green-600' :
-                          provider.availability === 'Busy' ? 'bg-yellow-50 text-yellow-600' :
-                          'bg-gray-50 text-gray-600'
-                        }`}>
+                        <span
+                          className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                            provider.availability === "Available"
+                              ? "bg-green-50 text-green-600"
+                              : provider.availability === "Busy"
+                                ? "bg-yellow-50 text-yellow-600"
+                                : "bg-gray-50 text-gray-600"
+                          }`}>
                           {provider.availability}
                         </span>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex gap-2">
-                          <button 
+                          <button
                             onClick={() => {
                               setEditingTech(provider);
                               setNewTech({
@@ -289,37 +373,42 @@ const ServiceProviders = () => {
                                 skill: provider.skill,
                                 city: provider.city,
                                 rating: provider.rating,
-                                availability: provider.availability
+                                availability: provider.availability,
                               });
                               setShowModal(true);
                             }}
-                            className="p-2 text-[#64748B] hover:text-[#0D47A1] hover:bg-[#EEF4FF] rounded-lg transition-colors" 
-                            title="Edit Profile"
-                          >
+                            className="p-2 text-[#64748B] hover:text-[#0D47A1] hover:bg-[#EEF4FF] rounded-lg transition-colors"
+                            title="Edit Profile">
                             <Edit size={16} />
                           </button>
-                          <button 
+                          <button
                             onClick={() => handleSuspend(provider.id)}
-                            className="p-2 text-[#64748B] hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" 
-                            title={provider.availability === 'Offline' ? 'Activate' : 'Suspend'}
-                          >
+                            className="p-2 text-[#64748B] hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title={
+                              provider.availability === "Offline"
+                                ? "Activate"
+                                : "Suspend"
+                            }>
                             <Power size={16} />
                           </button>
                           <div className="relative">
-                            <button 
+                            <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setOpenMenuTechId(openMenuTechId === provider.id ? null : provider.id);
+                                setOpenMenuTechId(
+                                  openMenuTechId === provider.id
+                                    ? null
+                                    : provider.id,
+                                );
                               }}
-                              className="p-2 text-[#64748B] hover:text-[#1E293B] hover:bg-[#F8FAFC] rounded-lg transition-colors"
-                            >
+                              className="p-2 text-[#64748B] hover:text-[#1E293B] hover:bg-[#F8FAFC] rounded-lg transition-colors">
                               <MoreVertical size={16} />
                             </button>
-                            
+
                             {openMenuTechId === provider.id && (
                               <>
-                                <div 
-                                  className="fixed inset-0 z-10" 
+                                <div
+                                  className="fixed inset-0 z-10"
                                   onClick={() => setOpenMenuTechId(null)}
                                 />
                                 <div className="absolute right-0 mt-1 w-44 bg-white border border-[#E2E8F0] rounded-xl shadow-lg py-1.5 z-20 animate-in fade-in slide-in-from-top-2 duration-100 text-left">
@@ -332,13 +421,15 @@ const ServiceProviders = () => {
                                         skill: provider.skill,
                                         city: provider.city,
                                         rating: provider.rating,
-                                        availability: provider.availability
+                                        availability: provider.availability,
                                       });
                                       setShowModal(true);
                                     }}
-                                    className="w-full text-left px-3 py-2 text-xs text-[#1E293B] hover:bg-[#F8FAFC] flex items-center gap-2"
-                                  >
-                                    <Edit size={14} className="text-[#64748B]" />
+                                    className="w-full text-left px-3 py-2 text-xs text-[#1E293B] hover:bg-[#F8FAFC] flex items-center gap-2">
+                                    <Edit
+                                      size={14}
+                                      className="text-[#64748B]"
+                                    />
                                     <span>Edit Profile</span>
                                   </button>
                                   <button
@@ -346,30 +437,45 @@ const ServiceProviders = () => {
                                       setOpenMenuTechId(null);
                                       handleSuspend(provider.id);
                                     }}
-                                    className="w-full text-left px-3 py-2 text-xs text-[#1E293B] hover:bg-[#F8FAFC] flex items-center gap-2"
-                                  >
-                                    <Power size={14} className="text-[#64748B]" />
-                                    <span>{provider.availability === 'Offline' ? 'Activate' : 'Suspend'}</span>
+                                    className="w-full text-left px-3 py-2 text-xs text-[#1E293B] hover:bg-[#F8FAFC] flex items-center gap-2">
+                                    <Power
+                                      size={14}
+                                      className="text-[#64748B]"
+                                    />
+                                    <span>
+                                      {provider.availability === "Offline"
+                                        ? "Activate"
+                                        : "Suspend"}
+                                    </span>
                                   </button>
                                   <button
                                     onClick={() => {
                                       setOpenMenuTechId(null);
-                                      setSuccessMessage(`Viewing history of ${provider.name}...`);
-                                      setTimeout(() => setSuccessMessage(''), 3000);
+                                      setSuccessMessage(
+                                        `Viewing history of ${provider.name}...`,
+                                      );
+                                      setTimeout(
+                                        () => setSuccessMessage(""),
+                                        3000,
+                                      );
                                     }}
-                                    className="w-full text-left px-3 py-2 text-xs text-[#1E293B] hover:bg-[#F8FAFC] flex items-center gap-2"
-                                  >
-                                    <Briefcase size={14} className="text-[#64748B]" />
+                                    className="w-full text-left px-3 py-2 text-xs text-[#1E293B] hover:bg-[#F8FAFC] flex items-center gap-2">
+                                    <Briefcase
+                                      size={14}
+                                      className="text-[#64748B]"
+                                    />
                                     <span>View Job History</span>
                                   </button>
                                   <button
                                     onClick={() => {
                                       setOpenMenuTechId(null);
                                       setError(READ_ONLY_NOTICE);
-                                      setTimeout(() => setSuccessMessage(''), 3000);
+                                      setTimeout(
+                                        () => setSuccessMessage(""),
+                                        3000,
+                                      );
                                     }}
-                                    className="w-full text-left px-3 py-2 text-xs text-red-600 hover:bg-red-50 flex items-center gap-2 border-t border-[#F1F5F9]"
-                                  >
+                                    className="w-full text-left px-3 py-2 text-xs text-red-600 hover:bg-red-50 flex items-center gap-2 border-t border-[#F1F5F9]">
                                     <X size={14} className="text-red-500" />
                                     <span>Delete Partner</span>
                                   </button>
@@ -384,8 +490,17 @@ const ServiceProviders = () => {
                 </tbody>
               </table>
             </div>
-          </div>
 
+            {/* Pagination */}
+            {!loading && !error && filteredServiceProviders.length > 0 && (
+              <Pagination
+                currentPage={currentPage}
+                totalItems={filteredServiceProviders.length}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setCurrentPage}
+              />
+            )}
+          </div>
         </div>
       </div>
 
@@ -396,41 +511,51 @@ const ServiceProviders = () => {
             <div className="p-6 border-b border-[#E2E8F0] flex justify-between items-center bg-[#F8FAFC]">
               <div>
                 <h3 className="text-lg font-bold text-[#1E293B]">
-                  {editingTech ? 'Edit Service Provider Profile' : 'Add New Service Provider'}
+                  {editingTech
+                    ? "Edit Service Provider Profile"
+                    : "Add New Service Provider"}
                 </h3>
                 <p className="text-xs text-[#64748B]">
-                  {editingTech ? 'Modify service partner details' : 'Register a new service partner to the platform'}
+                  {editingTech
+                    ? "Modify service partner details"
+                    : "Register a new service partner to the platform"}
                 </p>
               </div>
-              <button 
+              <button
                 onClick={() => setShowModal(false)}
-                className="text-[#64748B] hover:text-[#1E293B] p-2 hover:bg-[#EEF2F6] rounded-full transition-colors"
-              >
+                className="text-[#64748B] hover:text-[#1E293B] p-2 hover:bg-[#EEF2F6] rounded-full transition-colors">
                 <X size={20} />
               </button>
             </div>
-            
+
             <form onSubmit={handleFormSubmit} className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-[#64748B] uppercase mb-1">Full Name</label>
+                <label className="block text-xs font-semibold text-[#64748B] uppercase mb-1">
+                  Full Name
+                </label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. Rajesh Kumar"
                   value={newTech.name}
-                  onChange={(e) => setNewTech({ ...newTech, name: e.target.value })}
+                  onChange={(e) =>
+                    setNewTech({ ...newTech, name: e.target.value })
+                  }
                   className="w-full px-3.5 py-2 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] focus:border-[#0D47A1] outline-none transition-all text-sm bg-[#F8FAFC]"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-[#64748B] uppercase mb-1">Skill Specialization</label>
+                  <label className="block text-xs font-semibold text-[#64748B] uppercase mb-1">
+                    Skill Specialization
+                  </label>
                   <select
                     value={newTech.skill}
-                    onChange={(e) => setNewTech({ ...newTech, skill: e.target.value })}
-                    className="w-full px-3.5 py-2 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none bg-[#F8FAFC] text-sm"
-                  >
+                    onChange={(e) =>
+                      setNewTech({ ...newTech, skill: e.target.value })
+                    }
+                    className="w-full px-3.5 py-2 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none bg-[#F8FAFC] text-sm">
                     <option>AC & Refrigerator</option>
                     <option>Washing Machine</option>
                     <option>Microwave & TV</option>
@@ -438,12 +563,15 @@ const ServiceProviders = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-[#64748B] uppercase mb-1">City</label>
+                  <label className="block text-xs font-semibold text-[#64748B] uppercase mb-1">
+                    City
+                  </label>
                   <select
                     value={newTech.city}
-                    onChange={(e) => setNewTech({ ...newTech, city: e.target.value })}
-                    className="w-full px-3.5 py-2 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none bg-[#F8FAFC] text-sm"
-                  >
+                    onChange={(e) =>
+                      setNewTech({ ...newTech, city: e.target.value })
+                    }
+                    className="w-full px-3.5 py-2 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none bg-[#F8FAFC] text-sm">
                     <option>Delhi</option>
                     <option>Mumbai</option>
                     <option>Bangalore</option>
@@ -454,19 +582,24 @@ const ServiceProviders = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-[#64748B] uppercase mb-1">Availability Status</label>
+                  <label className="block text-xs font-semibold text-[#64748B] uppercase mb-1">
+                    Availability Status
+                  </label>
                   <select
                     value={newTech.availability}
-                    onChange={(e) => setNewTech({ ...newTech, availability: e.target.value })}
-                    className="w-full px-3.5 py-2 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none bg-[#F8FAFC] text-sm"
-                  >
+                    onChange={(e) =>
+                      setNewTech({ ...newTech, availability: e.target.value })
+                    }
+                    className="w-full px-3.5 py-2 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none bg-[#F8FAFC] text-sm">
                     <option>Available</option>
                     <option>Busy</option>
                     <option>Offline</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-[#64748B] uppercase mb-1">Rating Initial</label>
+                  <label className="block text-xs font-semibold text-[#64748B] uppercase mb-1">
+                    Rating Initial
+                  </label>
                   <input
                     type="number"
                     step="0.1"
@@ -474,7 +607,12 @@ const ServiceProviders = () => {
                     max="5.0"
                     required
                     value={newTech.rating}
-                    onChange={(e) => setNewTech({ ...newTech, rating: parseFloat(e.target.value) })}
+                    onChange={(e) =>
+                      setNewTech({
+                        ...newTech,
+                        rating: parseFloat(e.target.value),
+                      })
+                    }
                     className="w-full px-3.5 py-2 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] focus:border-[#0D47A1] outline-none transition-all text-sm bg-[#F8FAFC]"
                   />
                 </div>
@@ -484,15 +622,13 @@ const ServiceProviders = () => {
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="flex-1 bg-white text-[#1E293B] border border-[#E2E8F0] py-2 rounded-lg text-sm font-medium hover:bg-[#F8FAFC] transition-colors"
-                >
+                  className="flex-1 bg-white text-[#1E293B] border border-[#E2E8F0] py-2 rounded-lg text-sm font-medium hover:bg-[#F8FAFC] transition-colors">
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-[#0D47A1] text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-                >
-                  {editingTech ? 'Update Details' : 'Save Service Provider'}
+                  className="flex-1 bg-[#0D47A1] text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
+                  {editingTech ? "Update Details" : "Save Service Provider"}
                 </button>
               </div>
             </form>

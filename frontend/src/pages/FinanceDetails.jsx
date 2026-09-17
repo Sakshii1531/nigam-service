@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, ShieldCheck, Check, Sparkles, Building, Landmark } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, Check, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const FinanceDetails = () => {

@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   X, Search, Check, ChevronRight, ArrowLeft, Info, 
-  AlertCircle, HelpCircle, CheckCircle2, ChevronDown, RefreshCw 
+  AlertCircle, ChevronDown, RefreshCw 
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { initializeQuestionSets, initializeCampaigns } from '../../data/exchangeMockData';
 import { apiRequest } from '../../lib/apiClient';
 

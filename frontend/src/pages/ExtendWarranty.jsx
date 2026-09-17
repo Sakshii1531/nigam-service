@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  ArrowLeft, Award, CreditCard, Lock, CheckCircle, ChevronRight, Check, Shield, Upload, Search, FileText
+  ArrowLeft, Award, Lock, CheckCircle, Check, Shield, Upload, Search, FileText
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { apiRequest } from '../lib/apiClient';

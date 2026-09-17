@@ -1,32 +1,40 @@
-import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
-import { io } from 'socket.io-client';
-import { useAuth } from './AuthContext';
-import { apiRequest, getStoredTokens } from '../lib/apiClient';
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+  useRef,
+} from "react";
+import { io } from "socket.io-client";
+import { useAuth } from "./AuthContext";
+import { apiRequest, getStoredTokens } from "../lib/apiClient";
 
 const SOCKET_URL = import.meta.env.VITE_API_BASE_URL
-  ? import.meta.env.VITE_API_BASE_URL.replace('/api/v1', '')
-  : 'http://localhost:4000';
+  ? import.meta.env.VITE_API_BASE_URL.replace("/api/v1", "")
+  : "http://localhost:4000";
 
 const ServiceProviderContext = createContext(null);
 
 export const useTech = () => {
   const ctx = useContext(ServiceProviderContext);
-  return ctx || {
-    jobs: [],
-    jobsLoading: false,
-    availability: null,
-    availabilityBusy: false,
-    activeSpecs: [],
-    inventory: [],
-    claims: [],
-    earningsTally: { today: 0, completedToday: 0 },
-    notifications: [],
-    acceptJob: async () => {},
-    dismissJob: async () => {},
-    selectJobForDetails: () => {},
-    toggleSpec: () => {},
-    setAvailability: async () => ({ ok: true }),
-  };
+  return (
+    ctx || {
+      jobs: [],
+      jobsLoading: false,
+      availability: null,
+      availabilityBusy: false,
+      inventory: [],
+      claims: [],
+      earningsTally: { today: 0, completedToday: 0 },
+      notifications: [],
+      acceptJob: async () => {},
+      dismissJob: async () => {},
+      respondToReschedule: async () => ({ ok: true }),
+      selectJobForDetails: () => {},
+      setAvailability: async () => ({ ok: true }),
+    }
+  );
 };
 
 export const ServiceProviderProvider = ({ children }) => {
@@ -46,10 +54,6 @@ export const ServiceProviderProvider = ({ children }) => {
   // showing that stale value if the hydrating request failed.
   const [availability, setAvailabilityState] = useState(null);
   const [availabilityBusy, setAvailabilityBusy] = useState(false);
-  const [activeSpecs, setActiveSpecs] = useState(['AC', 'Refrigerator', 'Washing Machine']);
-  const toggleSpec = useCallback((spec) => {
-    setActiveSpecs(prev => prev.includes(spec) ? prev.filter(s => s !== spec) : [...prev, spec]);
-  }, []);
   const [inventory, setInventory] = useState([]);
   const [claims, setClaims] = useState([]);
   const [notifications, setNotifications] = useState([]);
@@ -65,17 +69,21 @@ export const ServiceProviderProvider = ({ children }) => {
   });
 
   // Fetch real jobs, inventory, claims, and earnings from backend when logged in as service provider
+  // Only the first load shows placeholders. The 4s poll below re-runs this
+  // constantly and /jobs/available takes ~3s, so flipping back to "loading" on
+  // every poll left the dashboard showing dashes and skeletons almost always.
+  const jobsLoadedOnceRef = useRef(false);
   const fetchRealJobs = useCallback(async () => {
-    if (!user || user.role !== 'service_provider') return;
-    setJobsLoading(true);
+    if (!user || user.role !== "service_provider") return;
+    if (!jobsLoadedOnceRef.current) setJobsLoading(true);
     try {
       // 1. Fetch jobs. In parallel, not one after the other: /jobs/available is
       // the slow one (~3s — it populates user, booking, AMC plan and EW order),
       // and running /jobs/active behind it pushed the job list past ten seconds
       // on a remote database, long enough that the dashboard looked empty.
       const [availableRes, activeRes] = await Promise.all([
-        apiRequest('/service-provider/jobs/available', { auth: true }),
-        apiRequest('/service-provider/jobs/active', { auth: true }),
+        apiRequest("/service-provider/jobs/available", { auth: true }),
+        apiRequest("/service-provider/jobs/active", { auth: true }),
       ]);
       // apiRequest already returns the envelope's `data` (apiClient.js's
       // rawRequest ends in `return json.data`), so reaching for `.data` again
@@ -86,27 +94,44 @@ export const ServiceProviderProvider = ({ children }) => {
 
       const mappedAvailable = availableSRs.map((sr) => ({
         id: sr.id || sr._id,
-        type: sr.booking?.totalPrice === 0 ? (sr.extendedWarrantyOrder ? 'NCC Extended Warranty' : sr.amcSubscription ? 'AMC Visit' : 'Brand Warranty') : 'NCC Paid Service',
-        category: `${sr.category || 'Service'} Repair`,
-        product: sr.description || `${sr.category || 'Appliance'} Service`,
-        brand: sr.booking?.brand || sr.category || 'Brand',
-        model: sr.model || 'Universal Model',
+        type:
+          sr.booking?.totalPrice === 0
+            ? sr.extendedWarrantyOrder
+              ? "NCC Extended Warranty"
+              : sr.amcSubscription
+                ? "AMC Visit"
+                : "Brand Warranty"
+            : "NCC Paid Service",
+        category: `${sr.category || "Service"} Repair`,
+        product: sr.description || `${sr.category || "Appliance"} Service`,
+        brand: sr.booking?.brand || sr.category || "Brand",
+        model: sr.model || "Universal Model",
         // No fake fallbacks: a fabricated serial confuses warranty/diagnostic
         // lookups, a fabricated distance misleads which job a service provider picks
         // to accept, and a fabricated phone number is actively dangerous — it
         // used to be dialled/WhatsApped as if it were the real customer.
         serialNo: sr.serialNo || null,
-        complaint: sr.description || 'Service booking request',
-        estEarnings: sr.booking ? Math.round(sr.booking.totalPrice * 0.3) : 150,
-        price: sr.booking ? sr.booking.totalPrice : 299,
+        complaint: sr.description || "Service booking request",
+        // Computed server-side from the live commission / brand rate card.
+        estEarnings: sr.estEarnings ?? 0,
+        price: sr.booking?.totalPrice ?? 0,
         distance: null,
-        customerName: sr.booking?.fullName || sr.user?.name || 'Customer',
+        customerName: sr.booking?.fullName || sr.user?.name || "Customer",
         phone: sr.booking?.mobile || sr.user?.phone || null,
-        address: sr.booking?.address ? `${sr.booking.address.house || ''}, ${sr.booking.address.landmark || ''}, ${sr.booking.address.city || ''} ${sr.booking.address.pincode || ''}` : 'Customer Address',
+        address: sr.booking?.address
+          ? `${sr.booking.address.house || ""}, ${sr.booking.address.landmark || ""}, ${sr.booking.address.city || ""} ${sr.booking.address.pincode || ""}`
+          : "Customer Address",
         isD2C: sr.booking ? sr.booking.totalPrice > 0 : true,
-        isPriority: sr.priority === 'High' || sr.priority === 'Critical',
+        isPriority: sr.priority === "High" || sr.priority === "Critical",
         isRecommended: true,
         isAvailableRequest: true,
+        // Assigned to this provider by the dispatch engine (they have 60s to
+        // answer) vs an open offer broadcast to everyone in the city.
+        assignedToMe: Boolean(sr.serviceProvider),
+        bookingId: sr.booking?.id || sr.booking?._id || null,
+        assignedAt: sr.assignedAt || null,
+        isInstant: Boolean(sr.isInstant),
+        priority: sr.priority || null,
         serviceRequestId: sr.id || sr._id,
         // Real scheduled slot — the dashboard card used to show a fixed
         // "Today, 02:00 PM" under every job regardless of when it was booked.
@@ -125,19 +150,20 @@ export const ServiceProviderProvider = ({ children }) => {
         const sr = job.serviceRequest;
         return {
           id: job.id || job._id,
-          type: job.type || 'NCC Paid Service',
-          category: `${sr?.category || 'Service'} Repair`,
-          product: sr?.description || 'Service Job',
-          brand: sr?.booking?.brand || 'Brand',
-          model: sr?.model || 'Universal Model',
+          type: job.type || "NCC Paid Service",
+          category: `${sr?.category || "Service"} Repair`,
+          product: sr?.description || "Service Job",
+          brand: sr?.booking?.brand || "Brand",
+          model: sr?.model || "Universal Model",
           serialNo: sr?.serialNo || null,
-          complaint: sr?.description || 'Service Job',
-          estEarnings: job.estEarnings || 200,
-          invoiceUrl: sr?.attachments?.[0] || sr?.appliance?.invoiceFileUrl || null,
+          complaint: sr?.description || "Service Job",
+          estEarnings: job.estEarnings || 0,
+          invoiceUrl:
+            sr?.attachments?.[0] || sr?.appliance?.invoiceFileUrl || null,
           invoiceAvailable: Boolean(sr?.invoiceAvailable),
-          price: job.price || 500,
+          price: job.price || sr?.booking?.totalPrice || 0,
           distance: null,
-          customerName: sr?.booking?.fullName || sr?.user?.name || 'Customer',
+          customerName: sr?.booking?.fullName || sr?.user?.name || "Customer",
           phone: sr?.booking?.mobile || sr?.user?.phone || null,
           // The real coverage behind an AMC/EW job — see job.service.js's
           // listActiveJobs/listAvailableJobs populate. These cards used to be
@@ -149,24 +175,55 @@ export const ServiceProviderProvider = ({ children }) => {
           // that snapshot is the source once a job exists; sr.amcSubscription
           // (populated on the pre-accept list) is only a fallback for the brief
           // window before a Job document exists.
-          amcPlanName: job.amc?.planName || sr?.amcSubscription?.plan?.name || null,
-          amcVisitsRemaining: job.amc?.visitsRemaining ?? sr?.amcSubscription?.visitsRemaining ?? null,
-          amcVisitsTotal: job.amc?.visitsTotal ?? sr?.amcSubscription?.visitsTotal ?? null,
-          amcPlanExpiry: job.amc?.planExpiry || sr?.amcSubscription?.expiryDate || null,
-          ewValidTill: job.ew?.validTill || sr?.extendedWarrantyOrder?.validTill || null,
-          ewClaimsRemaining: job.ew?.claimsRemaining ?? sr?.extendedWarrantyOrder?.claimsRemaining ?? null,
-          ewClaimsTotal: job.ew?.claimsTotal ?? sr?.extendedWarrantyOrder?.claimsTotal ?? null,
-          address: sr?.booking?.address ? `${sr.booking.address.house || ''}, ${sr.booking.address.landmark || ''}, ${sr.booking.address.city || ''} ${sr.booking.address.pincode || ''}` : 'Customer Address',
+          amcPlanName:
+            job.amc?.planName || sr?.amcSubscription?.plan?.name || null,
+          amcVisitsRemaining:
+            job.amc?.visitsRemaining ??
+            sr?.amcSubscription?.visitsRemaining ??
+            null,
+          amcVisitsTotal:
+            job.amc?.visitsTotal ?? sr?.amcSubscription?.visitsTotal ?? null,
+          amcPlanExpiry:
+            job.amc?.planExpiry || sr?.amcSubscription?.expiryDate || null,
+          ewValidTill:
+            job.ew?.validTill || sr?.extendedWarrantyOrder?.validTill || null,
+          ewClaimsRemaining:
+            job.ew?.claimsRemaining ??
+            sr?.extendedWarrantyOrder?.claimsRemaining ??
+            null,
+          ewClaimsTotal:
+            job.ew?.claimsTotal ??
+            sr?.extendedWarrantyOrder?.claimsTotal ??
+            null,
+          address: sr?.booking?.address
+            ? `${sr.booking.address.house || ""}, ${sr.booking.address.landmark || ""}, ${sr.booking.address.city || ""} ${sr.booking.address.pincode || ""}`
+            : "Customer Address",
           isD2C: job.isD2C ?? true,
           isPriority: job.isPriority ?? false,
           isRecommended: job.isRecommended ?? true,
           isAvailableRequest: false,
           serviceRequestId: sr?.id || sr?._id,
-          activeStep: job.activeStep && job.activeStep !== 'details' ? job.activeStep : 'assigned',
-          isRevisit: Boolean(job.revisit?.scheduledDate || job.activeStep?.startsWith('revisit') || job.activeStep === 'spareapproval'),
+          activeStep:
+            job.activeStep && job.activeStep !== "details"
+              ? job.activeStep
+              : "assigned",
+          isRevisit: Boolean(
+            job.revisit?.scheduledDate ||
+            job.activeStep?.startsWith("revisit") ||
+            job.activeStep === "spareapproval",
+          ),
           revisitScheduledDate: job.revisit?.scheduledDate || null,
           revisitTimeSlot: job.revisit?.timeSlot || null,
           revisitNotes: job.revisit?.notes || null,
+          providerRescheduleStatus:
+            sr?.booking?.providerRescheduleStatus ||
+            job.providerRescheduleStatus ||
+            null,
+          rescheduledAt: sr?.booking?.rescheduledAt || null,
+          rescheduleReason: sr?.booking?.rescheduleReason || null,
+          scheduledDate: sr?.booking?.scheduledDate || null,
+          timeSlot: sr?.booking?.timeSlot || null,
+          booking: sr?.booking || null,
         };
       });
 
@@ -174,48 +231,64 @@ export const ServiceProviderProvider = ({ children }) => {
       setJobs(combinedJobs);
       // Jobs are on screen now; the inventory/claims/earnings calls below are
       // secondary and must not keep the job cards in a loading state.
+      jobsLoadedOnceRef.current = true;
       setJobsLoading(false);
 
       // 2. Fetch real inventory
       try {
-        const invRes = await apiRequest('/service-provider/inventory', { auth: true });
+        const invRes = await apiRequest("/service-provider/inventory", {
+          auth: true,
+        });
         if (Array.isArray(invRes)) {
-          setInventory(invRes.map(item => {
-            // serviceProviderInventoryItem stores the count as `qty`. This read only tried
-            // `stock`/`quantity`, so every item came back as 0 — the whole
-            // inventory showed "Out of Stock" and the job flow's parts picker,
-            // which lists only items with qty > 0, was permanently empty.
-            const qty = item.qty ?? item.stock ?? item.quantity ?? 0;
-            return {
-              id: item._id || item.id,
-              name: item.name || item.partName || 'Spare Part',
-              sku: item.sku || item.partCode || 'SKU-000',
-              qty,
-              status: qty === 0 ? 'Out of Stock' : qty <= 2 ? 'Low Stock' : 'In Stock',
-              price: item.price || item.retailPrice || 0
-            };
-          }));
+          setInventory(
+            invRes.map((item) => {
+              // serviceProviderInventoryItem stores the count as `qty`. This read only tried
+              // `stock`/`quantity`, so every item came back as 0 — the whole
+              // inventory showed "Out of Stock" and the job flow's parts picker,
+              // which lists only items with qty > 0, was permanently empty.
+              const qty = item.qty ?? item.stock ?? item.quantity ?? 0;
+              return {
+                id: item._id || item.id,
+                name: item.name || item.partName || "Spare Part",
+                sku: item.sku || item.partCode || "SKU-000",
+                qty,
+                status:
+                  qty === 0
+                    ? "Out of Stock"
+                    : qty <= 2
+                      ? "Low Stock"
+                      : "In Stock",
+                price: item.price || item.retailPrice || 0,
+              };
+            }),
+          );
         }
       } catch (e) {
-        console.warn('Service Provider inventory fetch warning:', e.message);
+        console.warn("Service Provider inventory fetch warning:", e.message);
       }
 
       // 3. Fetch real claims
       try {
-        const claimsRes = await apiRequest('/service-provider/claims', { auth: true });
+        const claimsRes = await apiRequest("/service-provider/claims", {
+          auth: true,
+        });
         if (Array.isArray(claimsRes)) {
-          setClaims(claimsRes.map(c => ({
-            id: c._id || c.id,
-            brand: c.brand || 'Partner Warranty',
-            claimId: c.humanId || c.id,
-            item: c.partName || c.item || 'Part Claim',
-            status: c.status || 'Pending Approval',
-            amount: c.amount || 0,
-            date: c.createdAt ? new Date(c.createdAt).toLocaleDateString() : 'Today'
-          })));
+          setClaims(
+            claimsRes.map((c) => ({
+              id: c._id || c.id,
+              brand: c.brand || "Partner Warranty",
+              claimId: c.humanId || c.id,
+              item: c.partName || c.item || "Part Claim",
+              status: c.status || "Pending Approval",
+              amount: c.amount || 0,
+              date: c.createdAt
+                ? new Date(c.createdAt).toLocaleDateString()
+                : "Today",
+            })),
+          );
         }
       } catch (e) {
-        console.warn('Service Provider claims fetch warning:', e.message);
+        console.warn("Service Provider claims fetch warning:", e.message);
       }
 
       // 4. Fetch real earnings summary
@@ -224,7 +297,10 @@ export const ServiceProviderProvider = ({ children }) => {
         // and the Quick/Invoice split. The field names here are the API's own —
         // this previously read `totalEarnings`/`todayEarnings`, which the API has
         // never returned, so the tally was permanently zero.
-        const earnRes = await apiRequest('/service-provider/earnings/breakdown', { auth: true });
+        const earnRes = await apiRequest(
+          "/service-provider/earnings/breakdown",
+          { auth: true },
+        );
         if (earnRes) {
           const d = earnRes;
           setEarningsTally({
@@ -235,15 +311,23 @@ export const ServiceProviderProvider = ({ children }) => {
             available: d.available || 0,
             paidOut: d.paidOut || 0,
             lifetimeEarned: d.lifetimeEarned || 0,
-            split: d.split || { quick: { amount: 0, jobs: 0 }, invoice: { amount: 0, jobs: 0 } },
+            split: d.split || {
+              quick: { amount: 0, jobs: 0 },
+              invoice: { amount: 0, jobs: 0 },
+            },
           });
         }
       } catch (e) {
-        console.warn('ServiceProvider earnings summary fetch warning:', e.message);
+        console.warn(
+          "ServiceProvider earnings summary fetch warning:",
+          e.message,
+        );
       }
-
     } catch (err) {
-      console.error('Failed to fetch real jobs for serviceProvider:', err.message);
+      console.error(
+        "Failed to fetch real jobs for serviceProvider:",
+        err.message,
+      );
     } finally {
       setJobsLoading(false);
     }
@@ -267,37 +351,80 @@ export const ServiceProviderProvider = ({ children }) => {
    */
   const socketRef = useRef(null);
   useEffect(() => {
-    if (!user || user.role !== 'service_provider' || availability !== 'Available') return undefined;
+    if (
+      !user ||
+      user.role !== "service_provider" ||
+      availability !== "Available"
+    )
+      return undefined;
 
-    const { accessToken } = getStoredTokens('service_provider');
+    const { accessToken } = getStoredTokens("service_provider");
     if (!accessToken) return undefined;
 
-    const socket = io(SOCKET_URL, { 
-      auth: { token: accessToken }, 
-      transports: ['websocket', 'polling'] 
+    const socket = io(SOCKET_URL, {
+      auth: { token: accessToken },
+      transports: ["websocket", "polling"],
     });
     socketRef.current = socket;
 
-    socket.on('connect', () => {
-      socket.emit('join-instant-feed', {});
+    socket.on("connect", () => {
+      socket.emit("join-instant-feed", {});
     });
 
     const handleIncomingJobDispatch = (payload) => {
       fetchRealJobs();
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('service-provider:incoming_job', { detail: payload }));
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("service-provider:incoming_job", { detail: payload }),
+        );
       }
     };
 
-    socket.on('instant:new_request', handleIncomingJobDispatch);
-    socket.on('job:assigned', handleIncomingJobDispatch);
-    socket.on('job:new_available', handleIncomingJobDispatch);
-    socket.on('instant:status_update', () => { fetchRealJobs(); });
-    socket.on('connect_error', (err) => console.warn('[provider] instant feed disconnected:', err.message));
+    const handleJobRescheduled = (payload) => {
+      fetchRealJobs();
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("service-provider:job_rescheduled", {
+            detail: payload,
+          }),
+        );
+      }
+    };
 
-    return () => { 
-      socket.disconnect(); 
-      socketRef.current = null; 
+    const handleJobCancelled = (payload) => {
+      fetchRealJobs();
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("service-provider:job_cancelled", {
+            detail: payload,
+          }),
+        );
+      }
+    };
+
+    socket.on("instant:new_request", handleIncomingJobDispatch);
+    socket.on("job:assigned", handleIncomingJobDispatch);
+    socket.on("job:new_available", handleIncomingJobDispatch);
+    socket.on("job:rescheduled", handleJobRescheduled);
+    socket.on("job:cancelled", handleJobCancelled);
+    socket.on("booking:cancelled", handleJobCancelled);
+    socket.on("instant:status_update", () => {
+      fetchRealJobs();
+    });
+    // An admin/ASM approved (or made) a service city change: re-join the feed
+    // so the server moves this socket into the new city's broadcast room, and
+    // reload jobs — offers from the old city no longer apply.
+    socket.on("serviceProvider:city_changed", () => {
+      socket.emit("join-instant-feed", {});
+      fetchRealJobs();
+    });
+    socket.on("connect_error", (err) =>
+      console.warn("[provider] instant feed disconnected:", err.message),
+    );
+
+    return () => {
+      socket.disconnect();
+      socketRef.current = null;
     };
   }, [user, availability, fetchRealJobs]);
 
@@ -305,7 +432,12 @@ export const ServiceProviderProvider = ({ children }) => {
   // When service provider is Online / Available, refresh jobs every 4 seconds
   // so newly booked customer requests appear instantly without needing page refresh
   useEffect(() => {
-    if (!user || user.role !== 'service_provider' || availability !== 'Available') return undefined;
+    if (
+      !user ||
+      user.role !== "service_provider" ||
+      availability !== "Available"
+    )
+      return undefined;
 
     const pollInterval = setInterval(() => {
       fetchRealJobs();
@@ -319,16 +451,31 @@ export const ServiceProviderProvider = ({ children }) => {
    * `instant:accept_job` handler expects (it assigns the booking and the
    * service request together, and tells the customer over the same channel).
    */
-  const acceptInstantJob = useCallback(async ({ bookingId, serviceRequestId }) => {
-    const socket = socketRef.current;
-    if (!socket) return { ok: false, error: 'Not connected to the instant feed.' };
-    return new Promise((resolve) => {
-      socket.emit('instant:accept_job', { bookingId, serviceRequestId }, async (ack) => {
-        if (ack?.ok) await fetchRealJobs();
-        resolve(ack?.ok ? { ok: true } : { ok: false, error: ack?.error || 'Could not accept the job.' });
+  const acceptInstantJob = useCallback(
+    async ({ bookingId, serviceRequestId }) => {
+      const socket = socketRef.current;
+      if (!socket)
+        return { ok: false, error: "Not connected to the instant feed." };
+      return new Promise((resolve) => {
+        socket.emit(
+          "instant:accept_job",
+          { bookingId, serviceRequestId },
+          async (ack) => {
+            if (ack?.ok) await fetchRealJobs();
+            resolve(
+              ack?.ok
+                ? { ok: true }
+                : {
+                    ok: false,
+                    error: ack?.error || "Could not accept the job.",
+                  },
+            );
+          },
+        );
       });
-    });
-  }, [fetchRealJobs]);
+    },
+    [fetchRealJobs],
+  );
 
   /**
    * Read the service provider's online state back from the server.
@@ -341,12 +488,14 @@ export const ServiceProviderProvider = ({ children }) => {
    * calls succeeding.
    */
   const fetchAvailability = useCallback(async () => {
-    if (!user || user.role !== 'service_provider') return;
+    if (!user || user.role !== "service_provider") return;
     try {
-      const res = await apiRequest('/service-provider/profile/profile', { auth: true });
+      const res = await apiRequest("/service-provider/profile/profile", {
+        auth: true,
+      });
       if (res?.availability) setAvailabilityState(res.availability);
     } catch (err) {
-      console.warn('ServiceProvider availability fetch warning:', err.message);
+      console.warn("ServiceProvider availability fetch warning:", err.message);
     }
   }, [user]);
 
@@ -359,44 +508,50 @@ export const ServiceProviderProvider = ({ children }) => {
    * requests booked while nobody was available get assigned on the spot — so
    * the refetch below is what makes them show up in the feed immediately.
    */
-  const setAvailability = useCallback(async (next) => {
-    setAvailabilityBusy(true);
-    try {
-      // serviceProviderRouter is mounted at /service-provider/profile (app.js), so its own
-      // '/availability' route lives under that prefix — same shape as the
-      // sibling '/service-provider/profile/payout-methods' calls.
-      const res = await apiRequest('/service-provider/profile/availability', {
-        method: 'PATCH',
-        auth: true,
-        body: { availability: next },
-      });
-      setAvailabilityState(res?.serviceProvider?.availability || next);
-      await fetchRealJobs();
-      return { ok: true, assignedCount: res?.autoAssigned?.assignedCount || 0 };
-    } catch (err) {
-      console.error('Failed to change availability:', err.message);
-      return { ok: false, error: err.message };
-    } finally {
-      setAvailabilityBusy(false);
-    }
-  }, [fetchRealJobs]);
+  const setAvailability = useCallback(
+    async (next) => {
+      setAvailabilityBusy(true);
+      try {
+        // serviceProviderRouter is mounted at /service-provider/profile (app.js), so its own
+        // '/availability' route lives under that prefix — same shape as the
+        // sibling '/service-provider/profile/payout-methods' calls.
+        const res = await apiRequest("/service-provider/profile/availability", {
+          method: "PATCH",
+          auth: true,
+          body: { availability: next },
+        });
+        setAvailabilityState(res?.serviceProvider?.availability || next);
+        await fetchRealJobs();
+        return {
+          ok: true,
+          assignedCount: res?.autoAssigned?.assignedCount || 0,
+        };
+      } catch (err) {
+        console.error("Failed to change availability:", err.message);
+        return { ok: false, error: err.message };
+      } finally {
+        setAvailabilityBusy(false);
+      }
+    },
+    [fetchRealJobs],
+  );
 
   // Active Job flow states
-  // step values: 
-  // 'idle' (no accepted job), 
-  // 'details' (Screen 3 - view before accept), 
-  // 'assigned' (Screen 4: step 1), 
+  // step values:
+  // 'idle' (no accepted job),
+  // 'details' (Screen 3 - view before accept),
+  // 'assigned' (Screen 4: step 1),
   // 'ontheway' (Screen 4: step 2),
-  // 'inspection' (Screen 4: step 3 - details Screen 5, diagnosis Screen 6, parts Screen 7), 
-  // 'spareapproval' (Screen 4: step 4), 
-  // 'repaircomplete' (Screen 4: step 5), 
+  // 'inspection' (Screen 4: step 3 - details Screen 5, diagnosis Screen 6, parts Screen 7),
+  // 'spareapproval' (Screen 4: step 4),
+  // 'repaircomplete' (Screen 4: step 5),
   // 'billing' (Screen 12),
   // 'completed' (Success screen after Collect Payment)
   // Which job the service provider currently has open. Persisted because it was
   // in-memory only: accepting a job and then reloading (or navigating away and
   // back) left this null, and the Active Job screen announced "No Active Job In
   // Progress" to a service provider who had work underway — with no way back into it.
-  const ACTIVE_JOB_KEY = 'ncc_service_provider_active_job';
+  const ACTIVE_JOB_KEY = "ncc_service_provider_active_job";
   const [activeJobId, setActiveJobIdState] = useState(() => {
     try {
       return localStorage.getItem(ACTIVE_JOB_KEY) || null;
@@ -413,31 +568,35 @@ export const ServiceProviderProvider = ({ children }) => {
       // Private mode / blocked storage — the id still works for this session.
     }
   }, []);
-  const [activeStep, setActiveStep] = useState('idle');
+  const [activeStep, setActiveStep] = useState("idle");
   const [selectedParts, setSelectedParts] = useState([]);
   // Notes typed during inspection, submitted with the diagnosis when the
   // service provider completes that step.
-  const [diagnosisNotes, setDiagnosisNotes] = useState(''); // Parts selected during diagnosis
-  
+  const [diagnosisNotes, setDiagnosisNotes] = useState(""); // Parts selected during diagnosis
+
   // Signature, photos uploads state
   const [proofs, setProofs] = useState({
     photos: 2, // starts with 2/4 photos uploaded
     videos: 0,
     voiceNote: false,
     signature: null,
-    geoLocation: true // starts with geo location captured
+    geoLocation: true, // starts with geo location captured
   });
 
   // Cart for ordering parts (Screen 10)
   const [partsCart, setPartsCart] = useState([]);
-  
+
   // AI assistant messages
   // Greets by the signed-in service provider's name, not a hardcoded "Alex".
   const [chatMessages, setChatMessages] = useState([
-    { id: 1, sender: 'ai', text: 'Hello! I am your AI assistant. How can I help with this job?' }
+    {
+      id: 1,
+      sender: "ai",
+      text: "Hello! I am your AI assistant. How can I help with this job?",
+    },
   ]);
 
-  const activeJob = jobs.find(j => j.id === activeJobId) || null;
+  const activeJob = jobs.find((j) => j.id === activeJobId) || null;
 
   /**
    * Re-open a restored job at the step the server says it is on.
@@ -450,87 +609,126 @@ export const ServiceProviderProvider = ({ children }) => {
   useEffect(() => {
     if (!activeJob) return;
     if (activeJob.isAvailableRequest) {
-      if (activeStep === 'idle') setActiveStep('details');
+      if (activeStep === "idle") setActiveStep("details");
       return;
     }
-    const realStep = activeJob.activeStep && activeJob.activeStep !== 'details' ? activeJob.activeStep : 'assigned';
-    if (activeStep === 'idle' || activeStep === 'details') {
+    const realStep =
+      activeJob.activeStep && activeJob.activeStep !== "details"
+        ? activeJob.activeStep
+        : "assigned";
+    if (activeStep === "idle" || activeStep === "details") {
       setActiveStep(realStep);
     }
   }, [activeJob, activeStep]);
 
   /** Jobs the service provider has accepted and not finished — what the Active Job
    *  screen offers when nothing is open, instead of claiming there are none. */
-  const resumableJobs = jobs.filter((j) => !j.isAvailableRequest && j.activeStep !== 'completed' && j.status !== 'Completed' && j.status !== 'Customer Confirmation' && j.status !== 'Closed');
+  const resumableJobs = jobs.filter(
+    (j) =>
+      !j.isAvailableRequest &&
+      j.activeStep !== "completed" &&
+      j.status !== "Completed" &&
+      j.status !== "Customer Confirmation" &&
+      j.status !== "Closed",
+  );
 
-  const selectJobForDetails = useCallback((id) => {
-    const job = jobs.find((j) => j.id === id || j.serviceRequestId === id);
-    const targetId = job ? job.id : id;
-    setActiveJobId(targetId);
-    if (job && !job.isAvailableRequest) {
-      if (job.activeStep === 'completed' || job.status === 'Completed' || job.status === 'Customer Confirmation' || job.status === 'Closed') {
-        setActiveStep('completed');
-      } else {
-        setActiveStep(job.activeStep && job.activeStep !== 'details' ? job.activeStep : 'assigned');
-      }
-    } else {
-      setActiveStep('details');
-    }
-  }, [jobs]);
-
-  const acceptJob = useCallback(async (id) => {
-    const jobObj = jobs.find(j => j.id === id || j.serviceRequestId === id);
-    if (jobObj?.isAvailableRequest) {
-      try {
-        const result = await apiRequest(`/service-provider/jobs/accept/${jobObj.serviceRequestId}`, {
-          method: 'POST',
-          body: { type: jobObj.type },
-          auth: true,
-        });
-        const newJobId = result.id || result._id;
-        setJobs(prevJobs => prevJobs.map(j => {
-          if (j.id === id || j.serviceRequestId === jobObj.serviceRequestId) {
-            return {
-              ...j,
-              id: newJobId,
-              isAvailableRequest: false,
-              activeStep: 'assigned',
-            };
-          }
-          return j;
-        }));
-        setActiveJobId(newJobId);
-        setActiveStep('assigned');
-        await fetchRealJobs();
-      } catch (err) {
-        if (err.message && err.message.includes('already exists')) {
-          await fetchRealJobs();
-          const existing = jobs.find(j => j.serviceRequestId === jobObj.serviceRequestId);
-          if (existing) {
-            setActiveJobId(existing.id);
-            setActiveStep(existing.activeStep || 'assigned');
-          }
-          return;
+  const selectJobForDetails = useCallback(
+    (id) => {
+      const job = jobs.find((j) => j.id === id || j.serviceRequestId === id);
+      const targetId = job ? job.id : id;
+      setActiveJobId(targetId);
+      if (job && !job.isAvailableRequest) {
+        if (
+          job.activeStep === "completed" ||
+          job.status === "Completed" ||
+          job.status === "Customer Confirmation" ||
+          job.status === "Closed"
+        ) {
+          setActiveStep("completed");
+        } else {
+          setActiveStep(
+            job.activeStep && job.activeStep !== "details"
+              ? job.activeStep
+              : "assigned",
+          );
         }
-        console.error('Failed to accept job on backend:', err);
-        alert(`Failed to accept job: ${err.message}`);
+      } else {
+        setActiveStep("details");
       }
-    } else {
-      setActiveJobId(id);
-      setActiveStep('assigned');
-      setNotifications(prev => [
-        {
-          id: Date.now(),
-          type: 'Jobs',
-          title: 'Job Accepted',
-          message: `You accepted job #${id} for ${jobs.find(j => j.id === id || j.serviceRequestId === id)?.customerName || 'Customer'}.`,
-          time: 'Just now',
-          read: false
-        },
-        ...prev
-      ]);
-    }
-  }, [jobs, fetchRealJobs]);
+    },
+    [jobs],
+  );
+
+  const acceptJob = useCallback(
+    async (id, { silent = false } = {}) => {
+      const jobObj = jobs.find((j) => j.id === id || j.serviceRequestId === id);
+      if (jobObj?.isAvailableRequest) {
+        try {
+          const result = await apiRequest(
+            `/service-provider/jobs/accept/${jobObj.serviceRequestId}`,
+            {
+              method: "POST",
+              body: { type: jobObj.type },
+              auth: true,
+            },
+          );
+          const newJobId = result.id || result._id;
+          setJobs((prevJobs) =>
+            prevJobs.map((j) => {
+              if (
+                j.id === id ||
+                j.serviceRequestId === jobObj.serviceRequestId
+              ) {
+                return {
+                  ...j,
+                  id: newJobId,
+                  isAvailableRequest: false,
+                  activeStep: "assigned",
+                };
+              }
+              return j;
+            }),
+          );
+          setActiveJobId(newJobId);
+          setActiveStep("assigned");
+          await fetchRealJobs();
+        } catch (err) {
+          if (err.message && err.message.includes("already exists")) {
+            await fetchRealJobs();
+            const existing = jobs.find(
+              (j) => j.serviceRequestId === jobObj.serviceRequestId,
+            );
+            if (existing) {
+              setActiveJobId(existing.id);
+              setActiveStep(existing.activeStep || "assigned");
+            }
+            return { ok: true };
+          }
+          console.error("Failed to accept job on backend:", err);
+          if (!silent) alert(`Failed to accept job: ${err.message}`);
+          await fetchRealJobs();
+          return { ok: false, error: err.message || "Could not accept this job." };
+        }
+        return { ok: true };
+      } else {
+        setActiveJobId(id);
+        setActiveStep("assigned");
+        setNotifications((prev) => [
+          {
+            id: Date.now(),
+            type: "Jobs",
+            title: "Job Accepted",
+            message: `You accepted job #${id} for ${jobs.find((j) => j.id === id || j.serviceRequestId === id)?.customerName || "Customer"}.`,
+            time: "Just now",
+            read: false,
+          },
+          ...prev,
+        ]);
+        return { ok: true };
+      }
+    },
+    [jobs, fetchRealJobs],
+  );
 
   /**
    * Each service provider-visible step is advanced by exactly one backend call. This
@@ -545,21 +743,21 @@ export const ServiceProviderProvider = ({ children }) => {
    * booking never completing.
    */
   const STEP_ADVANCE = {
-    assigned: { path: 'start-travel' },
-    ontheway: { path: 'arrive' },
-    inspection: { path: 'spare-parts', needsParts: true },
+    assigned: { path: "start-travel" },
+    ontheway: { path: "arrive" },
+    inspection: { path: "spare-parts", needsParts: true },
     // Parts are in hand, so the repair finishes now. 'start-travel' here asked
     // the server to move spareapproval -> ontheway, which is not a legal step
     // (spareapproval allows revisit_scheduled or repaircomplete) and failed
     // with a 400 — stranding every job at the parts-approval screen. Going out
     // again for an ordered part is the revisit branch, entered by the brand or
     // NCC approving the part order, not by this button.
-    spareapproval: { path: 'repair-complete' },
-    revisit_scheduled: { path: 'start-travel' },
-    revisit_ontheway: { path: 'arrive' },
-    revisit_arrived: { path: 'repair-complete' },
-    revisit_complete: { path: 'billing' },
-    repaircomplete: { path: 'billing' },
+    spareapproval: { path: "repair-complete" },
+    revisit_scheduled: { path: "start-travel" },
+    revisit_ontheway: { path: "arrive" },
+    revisit_arrived: { path: "repair-complete" },
+    revisit_complete: { path: "billing" },
+    repaircomplete: { path: "billing" },
   };
 
   const [stepBusy, setStepBusy] = useState(false);
@@ -567,87 +765,104 @@ export const ServiceProviderProvider = ({ children }) => {
 
   // `fromStep` lets a caller advance from a step it just read off the server,
   // rather than from React state that may not have flushed yet.
-  const advanceStep = useCallback(async (fromStep) => {
-    const current = typeof fromStep === 'string' ? fromStep : activeStep;
-    const move = STEP_ADVANCE[current];
-    if (!move) return { ok: false, error: `Nothing follows "${current}".` };
-    if (!activeJobId) return { ok: false, error: 'No active job to update.' };
+  const advanceStep = useCallback(
+    async (fromStep) => {
+      const current = typeof fromStep === "string" ? fromStep : activeStep;
+      const move = STEP_ADVANCE[current];
+      if (!move) return { ok: false, error: `Nothing follows "${current}".` };
+      if (!activeJobId) return { ok: false, error: "No active job to update." };
 
-    setStepBusy(true);
-    setStepError(null);
-    try {
-      const body = move.needsParts
-        ? {
-            // Only ticked parts are billed (job.service.js filters on `checked`),
-            // and the schema wants a plain line item — the inventory rows carry
-            // extra display fields.
-            parts: selectedParts.map((p) => ({
-              name: p.name,
-              price: Number(p.price) || 0,
-              checked: true,
-              ...(p.sku ? { sku: p.sku } : {}),
-              source: 'manual',
-            })),
-            additionalServices: [],
-          }
-        : undefined;
+      setStepBusy(true);
+      setStepError(null);
+      try {
+        const body = move.needsParts
+          ? {
+              // Only ticked parts are billed (job.service.js filters on `checked`),
+              // and the schema wants a plain line item — the inventory rows carry
+              // extra display fields.
+              parts: selectedParts.map((p) => ({
+                name: p.name,
+                price: Number(p.price) || 0,
+                checked: true,
+                ...(p.sku ? { sku: p.sku } : {}),
+                source: "manual",
+              })),
+              additionalServices: [],
+            }
+          : undefined;
 
-      // Finishing the inspection is the diagnosis being submitted. The server
-      // moves the request Engineer Reached -> Diagnosis Done on that call, and
-      // the spare-parts call below then needs it there — sending parts straight
-      // from Engineer Reached is rejected as an illegal status transition.
-      if (move.needsParts) {
-        await apiRequest(`/service-provider/jobs/${activeJobId}/diagnosis`, {
-          method: 'POST',
-          auth: true,
-          body: { notes: diagnosisNotes || undefined },
-        });
+        // Finishing the inspection is the diagnosis being submitted. The server
+        // moves the request Engineer Reached -> Diagnosis Done on that call, and
+        // the spare-parts call below then needs it there — sending parts straight
+        // from Engineer Reached is rejected as an illegal status transition.
+        if (move.needsParts) {
+          await apiRequest(`/service-provider/jobs/${activeJobId}/diagnosis`, {
+            method: "POST",
+            auth: true,
+            body: { notes: diagnosisNotes || undefined },
+          });
+        }
+
+        const job = await apiRequest(
+          `/service-provider/jobs/${activeJobId}/${move.path}`,
+          { method: "POST", auth: true, body },
+        );
+        // Trust the server's step over a locally-guessed one.
+        setActiveStep(job?.activeStep || current);
+        await fetchRealJobs();
+        return { ok: true };
+      } catch (err) {
+        // Leave the UI on the current step — silently moving on after a failed
+        // write is how the local-only version drifted from the server.
+        setStepError(err.message || "Could not update this job.");
+        return { ok: false, error: err.message };
+      } finally {
+        setStepBusy(false);
       }
-
-      const job = await apiRequest(`/service-provider/jobs/${activeJobId}/${move.path}`, { method: 'POST', auth: true, body });
-      // Trust the server's step over a locally-guessed one.
-      setActiveStep(job?.activeStep || current);
-      await fetchRealJobs();
-      return { ok: true };
-    } catch (err) {
-      // Leave the UI on the current step — silently moving on after a failed
-      // write is how the local-only version drifted from the server.
-      setStepError(err.message || 'Could not update this job.');
-      return { ok: false, error: err.message };
-    } finally {
-      setStepBusy(false);
-    }
-  }, [activeStep, activeJobId, selectedParts, diagnosisNotes, fetchRealJobs]);
+    },
+    [activeStep, activeJobId, selectedParts, diagnosisNotes, fetchRealJobs],
+  );
 
   const resetActiveJob = useCallback(() => {
     setActiveJobId(null);
-    setActiveStep('idle');
+    setActiveStep("idle");
     setSelectedParts([]);
     setProofs({
       photos: 2,
       videos: 0,
       voiceNote: false,
       signature: null,
-      geoLocation: true
+      geoLocation: true,
     });
   }, []);
 
   // Decrement AMC visits remaining after job completion
   const decrementAmcVisit = useCallback((jobId) => {
-    setJobs(prev => prev.map(j =>
-      j.id === jobId && j.type === 'AMC Visit'
-        ? { ...j, amcVisitsRemaining: Math.max(0, (j.amcVisitsRemaining || 1) - 1), amcVisitNumber: (j.amcVisitNumber || 1) + 1 }
-        : j
-    ));
+    setJobs((prev) =>
+      prev.map((j) =>
+        j.id === jobId && j.type === "AMC Visit"
+          ? {
+              ...j,
+              amcVisitsRemaining: Math.max(0, (j.amcVisitsRemaining || 1) - 1),
+              amcVisitNumber: (j.amcVisitNumber || 1) + 1,
+            }
+          : j,
+      ),
+    );
   }, []);
 
   // Decrement EW claims remaining after job completion
   const decrementEwClaim = useCallback((jobId) => {
-    setJobs(prev => prev.map(j =>
-      j.id === jobId && j.type === 'NCC Extended Warranty'
-        ? { ...j, ewClaimsRemaining: Math.max(0, (j.ewClaimsRemaining || 1) - 1) }
-        : j
-    ));
+    setJobs((prev) =>
+      prev.map((j) =>
+        j.id === jobId && j.type === "NCC Extended Warranty"
+          ? {
+              ...j,
+              ewClaimsRemaining: Math.max(0, (j.ewClaimsRemaining || 1) - 1),
+            }
+          : j,
+      ),
+    );
   }, []);
 
   /**
@@ -660,48 +875,64 @@ export const ServiceProviderProvider = ({ children }) => {
    * Bounded, and stops at the first refusal so an illegal jump surfaces as an
    * error instead of looping.
    */
-  const advanceStepsTo = useCallback(async (target) => {
-    for (let i = 0; i < 6; i += 1) {
-      const job = await apiRequest(`/service-provider/jobs/${activeJobId}`, { auth: true }).catch(() => null);
-      const current = job?.activeStep;
-      if (!current) return { ok: false, error: 'Could not read the job.' };
-      if (current === target) { setActiveStep(current); return { ok: true }; }
-      const res = await advanceStep(current);
-      if (!res.ok) return res;
-    }
-    return { ok: false, error: `Could not reach "${target}".` };
-  }, [activeJobId, advanceStep]);
-
-  const requestSparePart = useCallback(async (jobId, partPayload) => {
-    const targetJobId = jobId || activeJobId;
-    if (!targetJobId) return { ok: false, error: 'No active job specified.' };
-
-    setStepBusy(true);
-    setStepError(null);
-    try {
-      const res = await apiRequest(`/service-provider/jobs/${targetJobId}/request-part`, {
-        method: 'POST',
-        auth: true,
-        body: partPayload,
-      });
-      if (res?.job) {
-        setActiveStep(res.job.activeStep || 'completed_pending');
+  const advanceStepsTo = useCallback(
+    async (target) => {
+      for (let i = 0; i < 6; i += 1) {
+        const job = await apiRequest(`/service-provider/jobs/${activeJobId}`, {
+          auth: true,
+        }).catch(() => null);
+        const current = job?.activeStep;
+        if (!current) return { ok: false, error: "Could not read the job." };
+        if (current === target) {
+          setActiveStep(current);
+          return { ok: true };
+        }
+        const res = await advanceStep(current);
+        if (!res.ok) return res;
       }
-      await fetchRealJobs();
-      return { ok: true, data: res };
-    } catch (err) {
-      setStepError(err.message || 'Could not submit spare part request.');
-      return { ok: false, error: err.message };
-    } finally {
-      setStepBusy(false);
-    }
-  }, [activeJobId, fetchRealJobs]);
+      return { ok: false, error: `Could not reach "${target}".` };
+    },
+    [activeJobId, advanceStep],
+  );
+
+  const requestSparePart = useCallback(
+    async (jobId, partPayload) => {
+      const targetJobId = jobId || activeJobId;
+      if (!targetJobId) return { ok: false, error: "No active job specified." };
+
+      setStepBusy(true);
+      setStepError(null);
+      try {
+        const res = await apiRequest(
+          `/service-provider/jobs/${targetJobId}/request-part`,
+          {
+            method: "POST",
+            auth: true,
+            body: partPayload,
+          },
+        );
+        if (res?.job) {
+          setActiveStep(res.job.activeStep || "completed_pending");
+        }
+        await fetchRealJobs();
+        return { ok: true, data: res };
+      } catch (err) {
+        setStepError(err.message || "Could not submit spare part request.");
+        return { ok: false, error: err.message };
+      } finally {
+        setStepBusy(false);
+      }
+    },
+    [activeJobId, fetchRealJobs],
+  );
 
   /** Single place that maps the earnings payload onto the tally — the same
    *  block was previously copied into four callers, each free to drift. */
   const refreshEarnings = useCallback(async (merge = false) => {
     try {
-      const d = await apiRequest('/service-provider/earnings/breakdown', { auth: true });
+      const d = await apiRequest("/service-provider/earnings/breakdown", {
+        auth: true,
+      });
       if (!d) return;
       const next = {
         today: d.today || 0,
@@ -711,11 +942,14 @@ export const ServiceProviderProvider = ({ children }) => {
         available: d.available || 0,
         paidOut: d.paidOut || 0,
         lifetimeEarned: d.lifetimeEarned || 0,
-        split: d.split || { quick: { amount: 0, jobs: 0 }, invoice: { amount: 0, jobs: 0 } },
+        split: d.split || {
+          quick: { amount: 0, jobs: 0 },
+          invoice: { amount: 0, jobs: 0 },
+        },
       };
       setEarningsTally((prev) => (merge ? { ...prev, ...next } : next));
     } catch (err) {
-      console.warn('[provider] Could not refresh earnings:', err.message);
+      console.warn("[provider] Could not refresh earnings:", err.message);
     }
   }, []);
 
@@ -732,28 +966,37 @@ export const ServiceProviderProvider = ({ children }) => {
    * comes back as 'awaitingpayment' with a razorpay order, which the caller has
    * to take to Checkout and then verify — so that case is reported, not faked.
    */
-  const collectPayment = useCallback(async (paymentMethod = 'Cash', extraData = {}) => {
-    if (!activeJobId) return { ok: false, error: 'No active job to close.' };
-    setStepBusy(true);
-    setStepError(null);
-    try {
-      const payload = typeof paymentMethod === 'object' ? paymentMethod : { paymentMethod, ...extraData };
-      const res = await apiRequest(`/service-provider/jobs/${activeJobId}/collect-payment`, {
-        method: 'POST',
-        auth: true,
-        body: payload,
-      });
-      const step = res?.job?.activeStep || 'completed';
-      setActiveStep(step);
-      await Promise.all([fetchRealJobs(), refreshEarnings()]);
-      return { ok: true, step, razorpay: res?.razorpay || null };
-    } catch (err) {
-      setStepError(err.message || 'Could not collect payment.');
-      return { ok: false, error: err.message };
-    } finally {
-      setStepBusy(false);
-    }
-  }, [activeJobId, fetchRealJobs, refreshEarnings]);
+  const collectPayment = useCallback(
+    async (paymentMethod = "Cash", extraData = {}) => {
+      if (!activeJobId) return { ok: false, error: "No active job to close." };
+      setStepBusy(true);
+      setStepError(null);
+      try {
+        const payload =
+          typeof paymentMethod === "object"
+            ? paymentMethod
+            : { paymentMethod, ...extraData };
+        const res = await apiRequest(
+          `/service-provider/jobs/${activeJobId}/collect-payment`,
+          {
+            method: "POST",
+            auth: true,
+            body: payload,
+          },
+        );
+        const step = res?.job?.activeStep || "completed";
+        setActiveStep(step);
+        await Promise.all([fetchRealJobs(), refreshEarnings()]);
+        return { ok: true, step, razorpay: res?.razorpay || null };
+      } catch (err) {
+        setStepError(err.message || "Could not collect payment.");
+        return { ok: false, error: err.message };
+      } finally {
+        setStepBusy(false);
+      }
+    },
+    [activeJobId, fetchRealJobs, refreshEarnings],
+  );
 
   // Credits the visit fee for a job the service provider travelled to but could not
   // complete. The server owns the amount (PlatformSettings.visitFeeAmount) and
@@ -764,13 +1007,16 @@ export const ServiceProviderProvider = ({ children }) => {
     let credited = null;
     if (jobId) {
       try {
-        const res = await apiRequest(`/service-provider/earnings/visit-fee/${jobId}`, { method: 'POST', auth: true });
+        const res = await apiRequest(
+          `/service-provider/earnings/visit-fee/${jobId}`,
+          { method: "POST", auth: true },
+        );
         credited = res;
       } catch (err) {
-        console.warn('[provider] Could not credit visit fee:', err.message);
+        console.warn("[provider] Could not credit visit fee:", err.message);
       }
     }
-    await apiRequest('/service-provider/earnings/breakdown', { auth: true })
+    await apiRequest("/service-provider/earnings/breakdown", { auth: true })
       .then((d) => {
         if (!d) return;
         setEarningsTally((prev) => ({
@@ -785,22 +1031,26 @@ export const ServiceProviderProvider = ({ children }) => {
           split: d.split || prev.split,
         }));
       })
-      .catch((err) => console.warn('[provider] Could not refresh earnings:', err.message));
+      .catch((err) =>
+        console.warn("[provider] Could not refresh earnings:", err.message),
+      );
     return credited;
   }, []);
 
   const addPartToCart = useCallback((part) => {
-    setPartsCart(prev => {
-      const existing = prev.find(item => item.id === part.id);
+    setPartsCart((prev) => {
+      const existing = prev.find((item) => item.id === part.id);
       if (existing) {
-        return prev.map(item => item.id === part.id ? { ...item, qty: item.qty + 1 } : item);
+        return prev.map((item) =>
+          item.id === part.id ? { ...item, qty: item.qty + 1 } : item,
+        );
       }
       return [...prev, { ...part, qty: 1 }];
     });
   }, []);
 
   const removePartFromCart = useCallback((id) => {
-    setPartsCart(prev => prev.filter(item => item.id !== id));
+    setPartsCart((prev) => prev.filter((item) => item.id !== id));
   }, []);
 
   const clearCart = useCallback(() => {
@@ -810,64 +1060,81 @@ export const ServiceProviderProvider = ({ children }) => {
   // Places real part orders. This only pushed rows into browser state with an
   // invented "NC#####" reference, so nothing was ordered and the number the
   // service provider quoted matched no record.
-  const placePartsOrder = useCallback(async (sourceName) => {
-    if (!partsCart.length) return { ok: false, error: 'Your parts cart is empty.' };
+  const placePartsOrder = useCallback(
+    async (sourceName) => {
+      if (!partsCart.length)
+        return { ok: false, error: "Your parts cart is empty." };
 
-    const orderSource = sourceName === 'Partner Brand' || sourceName === 'Nearby Store' ? sourceName : 'NCC Warehouse';
+      const orderSource =
+        sourceName === "Partner Brand" || sourceName === "Nearby Store"
+          ? sourceName
+          : "NCC Warehouse";
 
-    try {
-      const placed = await Promise.all(partsCart.map((item) => apiRequest('/service-provider/inventory/part-orders', {
-        method: 'POST',
-        auth: true,
-        body: {
-          // The job is what ties the order to a customer's request, and through
-          // it to the brand that has to approve it. Omitting it left every part
-          // request belonging to nobody: the brand console filters them out, and
-          // the approval that reschedules the held job could never fire.
-          job: activeJobId || undefined,
-          partName: item.name,
-          sku: item.sku || undefined,
-          qty: item.qty || 1,
-          price: item.price,
-          orderSource,
-        },
-      })));
+      try {
+        const placed = await Promise.all(
+          partsCart.map((item) =>
+            apiRequest("/service-provider/inventory/part-orders", {
+              method: "POST",
+              auth: true,
+              body: {
+                // The job is what ties the order to a customer's request, and through
+                // it to the brand that has to approve it. Omitting it left every part
+                // request belonging to nobody: the brand console filters them out, and
+                // the approval that reschedules the held job could never fire.
+                job: activeJobId || undefined,
+                partName: item.name,
+                sku: item.sku || undefined,
+                qty: item.qty || 1,
+                price: item.price,
+                orderSource,
+              },
+            }),
+          ),
+        );
 
-      setPartsCart([]);
-      return { ok: true, orders: placed };
-    } catch (err) {
-      return { ok: false, error: err.message || 'Could not place the parts order.' };
-    }
-  }, [partsCart, activeJobId]);
+        setPartsCart([]);
+        return { ok: true, orders: placed };
+      } catch (err) {
+        return {
+          ok: false,
+          error: err.message || "Could not place the parts order.",
+        };
+      }
+    },
+    [partsCart, activeJobId],
+  );
 
   // Raises the claim server-side so the brand can actually see and decide it.
   const raiseClaim = useCallback(async (claimData) => {
     try {
-      const res = await apiRequest('/service-provider/claims', {
-        method: 'POST',
+      const res = await apiRequest("/service-provider/claims", {
+        method: "POST",
         auth: true,
         body: {
           serviceRequest: claimData.serviceRequest || undefined,
-          brand: claimData.brand || 'D2C Claim',
-          claimType: claimData.claimType || 'D2C',
-          item: claimData.item || 'Spare part',
+          brand: claimData.brand || "D2C Claim",
+          claimType: claimData.claimType || "D2C",
+          item: claimData.item || "Spare part",
           amount: Number(claimData.amount) || 0,
           reason: claimData.reason || undefined,
         },
       });
       const c = res;
-      setClaims((prev) => [{
-        id: c.id,
-        brand: c.brand,
-        claimId: c.humanId || c.id,
-        item: c.item,
-        status: c.status,
-        amount: c.amount,
-        date: new Date(c.createdAt).toLocaleDateString(),
-      }, ...prev]);
+      setClaims((prev) => [
+        {
+          id: c.id,
+          brand: c.brand,
+          claimId: c.humanId || c.id,
+          item: c.item,
+          status: c.status,
+          amount: c.amount,
+          date: new Date(c.createdAt).toLocaleDateString(),
+        },
+        ...prev,
+      ]);
       return { ok: true, claim: c };
     } catch (err) {
-      return { ok: false, error: err.message || 'Could not raise the claim.' };
+      return { ok: false, error: err.message || "Could not raise the claim." };
     }
   }, []);
 
@@ -880,30 +1147,76 @@ export const ServiceProviderProvider = ({ children }) => {
    * and was never offered to anyone else. The server now releases it and
    * immediately looks for the next best service provider.
    */
-  const dismissJob = useCallback(async (jobId) => {
-    const job = jobs.find((j) => j.id === jobId || j.serviceRequestId === jobId);
-    const serviceRequestId = job?.serviceRequestId || (job?.isAvailableRequest ? job.id : jobId);
-    if (!serviceRequestId) {
-      return { ok: false, error: 'Service request ID not found' };
-    }
+  const dismissJob = useCallback(
+    async (jobId) => {
+      const job = jobs.find(
+        (j) => j.id === jobId || j.serviceRequestId === jobId,
+      );
+      const serviceRequestId =
+        job?.serviceRequestId || (job?.isAvailableRequest ? job.id : jobId);
+      if (!serviceRequestId) {
+        return { ok: false, error: "Service request ID not found" };
+      }
 
-    setJobs((prev) => prev.filter((j) => j.id !== jobId && j.serviceRequestId !== serviceRequestId));
-    try {
-      const res = await apiRequest(`/service-provider/jobs/reject/${serviceRequestId}`, { method: 'POST', auth: true });
-      await fetchRealJobs();
-      return { ok: true, reassignedTo: res?.reassignedTo || null };
-    } catch (err) {
-      await fetchRealJobs();
-      return { ok: false, error: err.message || 'Could not reject this job.' };
-    }
-  }, [jobs, fetchRealJobs]);
+      setJobs((prev) =>
+        prev.filter(
+          (j) => j.id !== jobId && j.serviceRequestId !== serviceRequestId,
+        ),
+      );
+      try {
+        const res = await apiRequest(
+          `/service-provider/jobs/reject/${serviceRequestId}`,
+          { method: "POST", auth: true },
+        );
+        await fetchRealJobs();
+        return { ok: true, reassignedTo: res?.reassignedTo || null };
+      } catch (err) {
+        await fetchRealJobs();
+        return {
+          ok: false,
+          error: err.message || "Could not reject this job.",
+        };
+      }
+    },
+    [jobs, fetchRealJobs],
+  );
+
+  const respondToReschedule = useCallback(
+    async (jobIdOrBookingId, { action, reason } = {}) => {
+      try {
+        const res = await apiRequest(
+          `/service-provider/jobs/${jobIdOrBookingId}/respond-reschedule`,
+          {
+            method: "POST",
+            body: { action, reason },
+            auth: true,
+          },
+        );
+        await fetchRealJobs();
+        return { ok: true, data: res };
+      } catch (err) {
+        await fetchRealJobs();
+        return {
+          ok: false,
+          error: err.message || "Could not respond to reschedule.",
+        };
+      }
+    },
+    [fetchRealJobs],
+  );
 
   const markAllNotificationsRead = useCallback(async () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
     try {
-      await apiRequest('/notifications/read-all', { method: 'PATCH', auth: true });
+      await apiRequest("/notifications/read-all", {
+        method: "PATCH",
+        auth: true,
+      });
     } catch (err) {
-      console.warn('[provider] Could not mark notifications read:', err.message);
+      console.warn(
+        "[provider] Could not mark notifications read:",
+        err.message,
+      );
     }
   }, []);
 
@@ -911,88 +1224,101 @@ export const ServiceProviderProvider = ({ children }) => {
   // endpoint the AIAssistant screen uses. It used to be a keyword matcher that
   // stated a specific SKU as "in stock at NCC Warehouse Gurugram" and a "72%
   // probability" of capacitor failure — figures nothing produced.
-  const addChatMessage = useCallback(async (text, sender = 'user') => {
+  const addChatMessage = useCallback(async (text, sender = "user") => {
     const entry = { id: Date.now(), sender, text };
     setChatMessages((prev) => [...prev, entry]);
-    if (sender !== 'user') return;
+    if (sender !== "user") return;
 
     let history = [];
-    setChatMessages((prev) => { history = prev; return prev; });
+    setChatMessages((prev) => {
+      history = prev;
+      return prev;
+    });
 
     try {
-      const res = await apiRequest('/service-provider/assistant', {
-        method: 'POST',
+      const res = await apiRequest("/service-provider/assistant", {
+        method: "POST",
         auth: true,
         body: {
           messages: [...history, entry]
             .filter((m) => m.text)
-            .map((m) => ({ role: m.sender === 'user' ? 'user' : 'assistant', content: m.text })),
+            .map((m) => ({
+              role: m.sender === "user" ? "user" : "assistant",
+              content: m.text,
+            })),
         },
       });
-      setChatMessages((prev) => [...prev, { id: Date.now() + 1, sender: 'ai', text: res.reply }]);
+      setChatMessages((prev) => [
+        ...prev,
+        { id: Date.now() + 1, sender: "ai", text: res.reply },
+      ]);
     } catch (err) {
-      setChatMessages((prev) => [...prev, {
-        id: Date.now() + 1,
-        sender: 'ai',
-        text: err.status === 503
-          ? "The assistant isn't available on this deployment. For stock check Inventory, and for anything else contact Technical Support."
-          : err.message || 'Could not reach the assistant.',
-      }]);
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now() + 1,
+          sender: "ai",
+          text:
+            err.status === 503
+              ? "The assistant isn't available on this deployment. For stock check Inventory, and for anything else contact Technical Support."
+              : err.message || "Could not reach the assistant.",
+        },
+      ]);
     }
   }, []);
 
   return (
-    <ServiceProviderContext.Provider value={{
-      jobs,
-      activeJobId,
-      setActiveJobId,
-      activeStep,
-      activeJob,
-      selectedParts,
-      setSelectedParts,
-      diagnosisNotes,
-      setDiagnosisNotes,
-      proofs,
-      setProofs,
-      inventory,
-      setInventory,
-      claims,
-      notifications,
-      earningsTally,
-      partsCart,
-      chatMessages,
-      resumableJobs,
-      selectJobForDetails,
-      acceptJob,
-      advanceStep,
-      setActiveStep,
-      resetActiveJob,
-      collectPayment,
-      advanceStepsTo,
-      requestSparePart,
-      stepBusy,
-      stepError,
-      setStepError,
-      refreshEarnings,
-      creditTravelFee,
-      decrementAmcVisit,
-      decrementEwClaim,
-      addPartToCart,
-      removePartFromCart,
-      clearCart,
-      placePartsOrder,
-      raiseClaim,
-      markAllNotificationsRead,
-    dismissJob,
-      addChatMessage,
-      activeSpecs,
-      toggleSpec,
-      availability,
-      availabilityBusy,
-      setAvailability,
-      jobsLoading,
-      acceptInstantJob
-    }}>
+    <ServiceProviderContext.Provider
+      value={{
+        jobs,
+        activeJobId,
+        setActiveJobId,
+        activeStep,
+        activeJob,
+        selectedParts,
+        setSelectedParts,
+        diagnosisNotes,
+        setDiagnosisNotes,
+        proofs,
+        setProofs,
+        inventory,
+        setInventory,
+        claims,
+        notifications,
+        earningsTally,
+        partsCart,
+        chatMessages,
+        resumableJobs,
+        selectJobForDetails,
+        acceptJob,
+        advanceStep,
+        setActiveStep,
+        resetActiveJob,
+        collectPayment,
+        advanceStepsTo,
+        requestSparePart,
+        stepBusy,
+        stepError,
+        setStepError,
+        refreshEarnings,
+        creditTravelFee,
+        decrementAmcVisit,
+        decrementEwClaim,
+        addPartToCart,
+        removePartFromCart,
+        clearCart,
+        placePartsOrder,
+        raiseClaim,
+        markAllNotificationsRead,
+        dismissJob,
+        respondToReschedule,
+        addChatMessage,
+        availability,
+        availabilityBusy,
+        setAvailability,
+        jobsLoading,
+        acceptInstantJob,
+      }}>
       {children}
     </ServiceProviderContext.Provider>
   );

@@ -1,4 +1,3 @@
-import React from 'react';
 import { ShieldCheck, Plus } from 'lucide-react';
 
 const ExtendedWarrantyOverview = ({ job, additionalServices, setAdditionalServices, setShowAddServicesModal, getProductImage, spareParts, setSpareParts, setShowAddPartsModal }) => {

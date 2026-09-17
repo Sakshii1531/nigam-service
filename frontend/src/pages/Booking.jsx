@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, X, MapPin, User, Edit3, Star, Calendar as CalendarIcon, Clock, CreditCard, ChevronDown, ChevronUp, ChevronRight, Check } from 'lucide-react';
+import { ArrowLeft, X, MapPin, User, Edit3, CreditCard, ChevronDown, ChevronUp, ChevronRight, Check } from 'lucide-react';
 import { apiRequest, getStoredTokens, storeTokens } from '../lib/apiClient';
 import { useAuth } from '../context/AuthContext';
 
@@ -109,6 +109,7 @@ const Booking = () => {
   const [upiExpanded, setUpiExpanded] = useState(true);
   const [showOffersDrawer, setShowOffersDrawer] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [bookingError, setBookingError] = useState(null);
 
   // Receipt calculations
   const price = initialPrice;
@@ -177,6 +178,7 @@ const Booking = () => {
   const handlePaymentSuccess = async (paymentMethod = 'UPI') => {
     if (submitting) return;
     setSubmitting(true);
+    setBookingError(null);
     try {
       await ensureCustomerAuth();
       const explicitCategory = searchParams.get('category');
@@ -189,8 +191,7 @@ const Booking = () => {
           category: catKey,
           serviceSlug: preSelectedService.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'service',
           serviceName: preSelectedService,
-          price: price,
-          totalPrice: total,
+          // Price is looked up server-side; only the advance is a client choice.
           advanceAmount: advance,
           quantity: qty,
           scheduledDate: new Date().toISOString(),
@@ -213,14 +214,17 @@ const Booking = () => {
       });
 
       const srId = result.serviceRequest?.id || result.serviceRequest?._id || result.booking?.id || '';
+      // Show what was actually booked — the server's price, not this page's URL.
+      const bookedTotal = result.booking?.totalPrice ?? total;
+      const bookedAdvance = result.booking?.advanceAmount ?? advance;
 
       const params = new URLSearchParams({
         type: 'service',
         serviceRequestId: srId,
         service: preSelectedService,
         category: catKey,
-        totalPrice: String(total),
-        advanceAmt: String(advance),
+        totalPrice: String(bookedTotal),
+        advanceAmt: String(bookedAdvance),
         quantity: String(qty),
         date: selectedDate,
         timeGroup: selectedTimeSlot,
@@ -230,18 +234,10 @@ const Booking = () => {
       });
       navigate(`/booking-success?${params.toString()}`);
     } catch (err) {
+      // This used to navigate to the success screen anyway, so a booking the
+      // server refused looked confirmed to the customer.
       console.error('Failed to register booking:', err);
-      const params = new URLSearchParams({
-        service: preSelectedService,
-        totalPrice: String(total),
-        advanceAmt: String(advance),
-        quantity: String(qty),
-        date: selectedDate,
-        timeGroup: selectedTimeSlot,
-        customerName: name || 'Customer',
-        paymentMode: 'advance'
-      });
-      navigate(`/booking-success?${params.toString()}`);
+      setBookingError(err.message || 'Could not place your booking. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -415,6 +411,13 @@ const Booking = () => {
           </div>
 
         </div>
+
+        {bookingError && (
+          <div role="alert" className="fixed bottom-24 left-4 right-4 z-30 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-[min(100%,46rem)] bg-rose-50 border border-rose-200 text-rose-700 text-sm font-semibold rounded-xl px-4 py-3 flex items-start justify-between gap-3">
+            <span>{bookingError}</span>
+            <button onClick={() => setBookingError(null)} aria-label="Dismiss" className="text-rose-500 font-bold">×</button>
+          </div>
+        )}
 
         {/* Sticky bottom gateway summary bar */}
         <div className="fixed bottom-0 left-0 right-0 px-5 py-4 bg-white border-t border-slate-100 flex items-center justify-between shadow-[0_-4px_12px_rgba(0,0,0,0.06)] z-20 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-[min(100%,48rem)] md:rounded-t-2xl">

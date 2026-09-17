@@ -5,19 +5,14 @@ import Topbar from '../../components/super-admin/Topbar';
 import { apiRequest } from '../../lib/apiClient';
 import { 
   Search, 
-  Filter, 
-  MoreVertical, 
   Eye, 
   UserPlus, 
   Clock, 
   CheckCircle, 
-  XCircle,
   AlertTriangle,
   ClipboardList,
   CheckCircle2,
-  X,
   ArrowLeft,
-  Zap,
 } from 'lucide-react';
 
 const STATUS_BUCKET = {
@@ -106,27 +101,6 @@ const Requests = () => {
     }, 3000);
   };
 
-  // Transitions are validated server-side against SERVICE_REQUEST_TRANSITIONS —
-  // an illegal move comes back 400 and is surfaced rather than applied locally.
-  const handleStatusChange = async (id, newStatus) => {
-    try {
-      const res = await apiRequest(`/service-requests/${id}/status`, {
-        method: 'PATCH',
-        auth: true,
-        body: { status: newStatus },
-      });
-      const status = res?.status || newStatus;
-      setRequests(prev => prev.map(r => (
-        r.id === id ? { ...r, status, bucket: STATUS_BUCKET[status] || status } : r
-      )));
-      if (selectedRequest && selectedRequest.id === id) {
-        setSelectedRequest({ ...selectedRequest, status, bucket: STATUS_BUCKET[status] || status });
-      }
-      showToast(`Request updated to ${status}`);
-    } catch (err) {
-      showToast(err.message || 'Could not update status.');
-    }
-  };
 
   const priorityOrder = { High: 3, Medium: 2, Low: 1 };
 

@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { 
-  ArrowLeft, Shield, ShoppingCart, CheckCircle, ChevronRight, Check, Search,
-  Wrench, Percent, CreditCard, Lock, Landmark, Wallet, ShieldCheck, Plus, Minus, Trash2,
+  ArrowLeft, ShoppingCart, ChevronRight, Check, Search,
+  Wrench, Percent, Lock, ShieldCheck, Plus, Minus, Trash2,
   ChevronLeft, Zap, CheckCircle2, Home as HomeIcon, User, RefreshCw,
   Heart, Star, ChevronDown, SlidersHorizontal, Truck, Package, X, UploadCloud, Sparkles,
-  MapPin, Building, Briefcase, Phone, Edit2
+  MapPin, Building, Briefcase, Phone
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import CustomerBottomNav from '../components/CustomerBottomNav';
@@ -282,11 +282,6 @@ const BuyNew = () => {
     return list;
   }, [categoryProducts, sortOption, activeFilter, selectedBrands]);
 
-  // Helper actions for Cart
-  const addToCart = (product) => {
-    addCartItem(product, { category: finalCategory });
-    navigate('/buy-new/cart');
-  };
 
   // Never drops the line: a decrement at qty 1 is a no-op here, same as before —
   // removal is its own explicit action.
@@ -300,7 +295,6 @@ const BuyNew = () => {
   };
 
   const [paymentMode, setPaymentMode] = useState('COD'); // 'COD' | 'Online'
-  const [selectedProductImg, setSelectedProductImg] = useState(null);
   const [activeImageIdx, setActiveImageIdx] = useState(0);
 
   // Exchange states
@@ -346,7 +340,6 @@ const BuyNew = () => {
     (sum, item) => sum + (item.exchange && item.exchange.status !== 'Inspection Approved' ? item.exchange.totalSavings * item.qty : 0),
     0,
   );
-  const totalExchangeSavings = approvedExchangeSavings;
   const cartSubtotal = cartSubtotalBeforeExchange - approvedExchangeSavings;
   const deliveryCharges = 0;
   const cartTotal = cartSubtotal + deliveryCharges;
@@ -425,7 +418,9 @@ const BuyNew = () => {
         setSelectedAddressId(def._id || def.id);
         try {
           sessionStorage.setItem('ncc_selected_checkout_address', JSON.stringify(def));
-        } catch (e) {}
+        } catch {
+          // Storage can be disabled (private mode); remembering the address is optional.
+        }
       } else {
         // No saved addresses found, automatically reveal the add address form
         setShowAddAddressForm(true);
@@ -457,7 +452,9 @@ const BuyNew = () => {
     setSelectedAddressId(addr._id || addr.id);
     try {
       sessionStorage.setItem('ncc_selected_checkout_address', JSON.stringify(addr));
-    } catch (e) {}
+    } catch {
+      // Storage can be disabled (private mode); remembering the address is optional.
+    }
     setShowAddAddressForm(false);
     setAddressFormError('');
   };
@@ -767,7 +764,6 @@ const BuyNew = () => {
             <div className="flex flex-col gap-3">
               {sortedAndFilteredProducts.map((product) => {
                 const isWishlisted = wishlist.some(p => p.id === product.id);
-                const rating = product.rating ? product.rating.toFixed(1) : null;
                 const originalPrice = product.originalPrice || null;
                 const discount = originalPrice && originalPrice > product.price
                   ? Math.round(((originalPrice - product.price) / originalPrice) * 100)

@@ -1,4 +1,3 @@
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, FileText, Shield, ShieldCheck } from 'lucide-react';
 import { useTech } from '../../context/ServiceProviderContext';

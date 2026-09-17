@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import { 
@@ -18,9 +18,7 @@ import {
   CreditCard,
   Send,
   ShoppingBag,
-  Clock,
-  ChevronRight,
-  ShieldCheck
+  Clock
 } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
 
@@ -32,7 +30,7 @@ const Orders = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showDrawer, setShowDrawer] = useState(false);
   const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
 
   // Dispatch Modal State

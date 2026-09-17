@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   ArrowRight,
@@ -33,7 +33,6 @@ const BookingSuccess = () => {
   const [bookingId, setBookingId] = useState("");
   const [isAccepted, setIsAccepted] = useState(false);
   const [serviceProvider, setServiceProvider] = useState(null);
-  const [city, setCity] = useState(p.get("city") || "");
   const [charged, setCharged] = useState(null);
   const [countdown, setCountdown] = useState(5);
 
@@ -85,7 +84,6 @@ const BookingSuccess = () => {
   const timeGroupParam = p.get("timeGroup") || "09:00 AM";
   const totalPriceParam = p.get("totalPrice") || "299";
   const advanceAmtParam = p.get("advanceAmt") || "49";
-  const paymentMode = p.get("paymentMode") || "after";
 
   const isInstant =
     p.get("isInstant") === "true" ||
@@ -95,115 +93,117 @@ const BookingSuccess = () => {
     isInstant ? "SEARCHING" : null,
   );
 
-  const loadBookingData = useCallback(async () => {
-    if (!serviceRequestId) return;
-    try {
-      const res = await apiRequest(`/service-requests/${serviceRequestId}`, {
-        auth: true,
-      });
-      if (res?.humanId || res?.id) {
-        setBookingId(res?.humanId || res?.id);
-      }
-      if (res?.address?.city && !city) {
-        setCity(res.address.city);
-      }
-
-      const isReqAccepted = Boolean(
-        res?.isAccepted ||
-        [
-          "Engineer Accepted",
-          "Visit Scheduled",
-          "Engineer Reached",
-          "Diagnosis Done",
-          "Spare Approval Pending",
-          "Work In Progress",
-          "Repair Completed",
-          "Completed",
-        ].includes(res?.status) ||
-        ["EN_ROUTE", "IN_PROGRESS", "COMPLETED"].includes(res?.instantStatus),
-      );
-
-      let foundAccepted = isReqAccepted;
-      let matchedTech =
-        isReqAccepted && res?.serviceProvider ? res.serviceProvider : null;
-
-      if (res?.instantStatus) {
-        setInstantStatus(res.instantStatus);
-      }
-
-      if (res?.booking) {
-        const bk =
-          typeof res.booking === "object"
-            ? res.booking
-            : await apiRequest(`/bookings/${res.booking}`, {
-                auth: true,
-              }).catch(() => null);
-        if (bk) {
-          if (bk.address?.city && !city) {
-            setCity(bk.address.city);
-          }
-          const bkAccepted = Boolean(
-            bk.isAccepted ||
-            [
-              "Engineer Accepted",
-              "Visit Scheduled",
-              "Engineer Reached",
-              "Diagnosis Done",
-              "Spare Approval Pending",
-              "Work In Progress",
-              "Repair Completed",
-              "Completed",
-            ].includes(bk.status) ||
-            ["EN_ROUTE", "IN_PROGRESS", "COMPLETED"].includes(bk.instantStatus),
-          );
-          if (bkAccepted) {
-            foundAccepted = true;
-          }
-          if (
-            bk.serviceProvider &&
-            (foundAccepted || bkAccepted) &&
-            !matchedTech
-          ) {
-            matchedTech = bk.serviceProvider;
-          }
-          if (bk.instantStatus && !res?.instantStatus) {
-            setInstantStatus(bk.instantStatus);
-          }
-          setCharged({
-            total: bk.totalPrice ?? null,
-            advance: bk.advanceAmount ?? null,
-            service: bk.service?.name || null,
-            category: bk.category || null,
-            productType: bk.productType || null,
-            brand: bk.brand || null,
-            quantity: bk.quantity != null ? String(bk.quantity) : null,
-            date: bk.timeSlot?.date || null,
-            timeSlot: bk.timeSlot?.time || null,
-          });
-        }
-      }
-
-      setIsAccepted(foundAccepted);
-      if (foundAccepted && matchedTech) {
-        setServiceProvider(
-          typeof matchedTech === "object"
-            ? matchedTech
-            : { name: "Assigned Service Provider" },
-        );
-      } else if (!foundAccepted) {
-        setServiceProvider(null);
-      }
-    } catch (err) {
-      console.error("[booking] Could not load booking reference:", err.message);
-    }
-  }, [serviceRequestId, city]);
+  // Latest booking loader, shared with the socket handlers. Defined inside the
+  // polling effect (not a useCallback) so React Compiler can optimise this
+  // component; other callers go through the ref.
+  const loadBookingDataRef = useRef(async () => {});
+  const loadBookingData = () => loadBookingDataRef.current();
 
   // Initial load + interval polling every 3 seconds to catch live status changes
   useEffect(() => {
-    loadBookingData();
-    const interval = setInterval(loadBookingData, 3000);
+    const load = async () => {
+      if (!serviceRequestId) return;
+      try {
+        const res = await apiRequest(`/service-requests/${serviceRequestId}`, {
+          auth: true,
+        });
+        if (res?.humanId || res?.id) {
+          setBookingId(res?.humanId || res?.id);
+        }
+
+        const isReqAccepted = Boolean(
+          res?.isAccepted ||
+          [
+            "Engineer Accepted",
+            "Visit Scheduled",
+            "Engineer Reached",
+            "Diagnosis Done",
+            "Spare Approval Pending",
+            "Work In Progress",
+            "Repair Completed",
+            "Completed",
+          ].includes(res?.status) ||
+          ["EN_ROUTE", "IN_PROGRESS", "COMPLETED"].includes(res?.instantStatus),
+        );
+
+        let foundAccepted = isReqAccepted;
+        let matchedTech =
+          isReqAccepted && res?.serviceProvider ? res.serviceProvider : null;
+
+        if (res?.instantStatus) {
+          setInstantStatus(res.instantStatus);
+        }
+
+        if (res?.booking) {
+          const bk =
+            typeof res.booking === "object"
+              ? res.booking
+              : await apiRequest(`/bookings/${res.booking}`, {
+                  auth: true,
+                }).catch(() => null);
+          if (bk) {
+            const bkAccepted = Boolean(
+              bk.isAccepted ||
+              [
+                "Engineer Accepted",
+                "Visit Scheduled",
+                "Engineer Reached",
+                "Diagnosis Done",
+                "Spare Approval Pending",
+                "Work In Progress",
+                "Repair Completed",
+                "Completed",
+              ].includes(bk.status) ||
+              ["EN_ROUTE", "IN_PROGRESS", "COMPLETED"].includes(bk.instantStatus),
+            );
+            if (bkAccepted) {
+              foundAccepted = true;
+            }
+            if (
+              bk.serviceProvider &&
+              (foundAccepted || bkAccepted) &&
+              !matchedTech
+            ) {
+              matchedTech = bk.serviceProvider;
+            }
+            if (bk.instantStatus && !res?.instantStatus) {
+              setInstantStatus(bk.instantStatus);
+            }
+            setCharged({
+              total: bk.totalPrice ?? null,
+              advance: bk.advanceAmount ?? null,
+              service: bk.service?.name || null,
+              category: bk.category || null,
+              productType: bk.productType || null,
+              brand: bk.brand || null,
+              quantity: bk.quantity != null ? String(bk.quantity) : null,
+              date: bk.timeSlot?.date || null,
+              timeSlot: bk.timeSlot?.time || null,
+            });
+          }
+        }
+
+        setIsAccepted(foundAccepted);
+        if (foundAccepted && matchedTech) {
+          setServiceProvider(
+            typeof matchedTech === "object"
+              ? matchedTech
+              : { name: "Assigned Service Provider" },
+          );
+        } else if (!foundAccepted) {
+          setServiceProvider(null);
+        }
+      } catch (err) {
+        console.error("[booking] Could not load booking reference:", err.message);
+      }
+    };
+
+    loadBookingDataRef.current = load;
+    load();
+    const interval = setInterval(load, 3000);
     return () => clearInterval(interval);
-  }, [loadBookingData]);
+  }, [serviceRequestId]);
+
 
   // Real-time socket updates for instant dispatch, acceptance and tracking
   useEffect(() => {
@@ -307,7 +307,7 @@ const BookingSuccess = () => {
     return () => {
       socket.disconnect();
     };
-  }, [serviceRequestId, bookingId, loadBookingData]);
+  }, [serviceRequestId, bookingId]);
 
   const service = serviceParam || charged?.service || "Home Service";
   const category = categoryParam || charged?.category || "";

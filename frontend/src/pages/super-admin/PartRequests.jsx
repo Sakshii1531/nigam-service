@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import { 
@@ -13,10 +13,7 @@ import {
   Phone, 
   Building, 
   Wrench, 
-  Tag, 
-  Calendar, 
-  FileText,
-  DollarSign
+  FileText
 } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
 

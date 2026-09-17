@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
 import {
@@ -6,13 +6,7 @@ import {
   Send,
   Smile,
   Paperclip,
-  MessageSquare,
   User,
-  Wrench,
-  ChevronRight,
-  Info,
-  Calendar,
-  CheckCircle,
   CheckCircle2
 } from 'lucide-react';
 import { io } from 'socket.io-client';

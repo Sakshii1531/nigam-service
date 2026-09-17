@@ -4,7 +4,7 @@ import { requireAuth, requireRole } from '../../middleware/auth.js';
 import { ok, created } from '../../utils/respond.js';
 import { ROLES } from '../../config/constants.js';
 import * as bookingService from './booking.service.js';
-import { createBookingSchema, listBookingsQuerySchema, idParamSchema, verifyBookingPaymentSchema } from './booking.validation.js';
+import { createBookingSchema, listBookingsQuerySchema, idParamSchema, verifyBookingPaymentSchema, rescheduleBookingSchema } from './booking.validation.js';
 export const bookingRouter = Router();
 bookingRouter.use(requireAuth, requireRole(ROLES.CUSTOMER));
 
@@ -41,11 +41,24 @@ bookingRouter.get('/:id', validate(idParamSchema, 'params'), async (req, res, ne
 
 bookingRouter.post('/:id/cancel', validate(idParamSchema, 'params'), async (req, res, next) => {
   try {
-    ok(res, await bookingService.cancelBooking(req.user.id, req.params.id));
+    ok(res, await bookingService.cancelBooking(req.user.id, req.params.id, req.body?.reason));
   } catch (err) {
     next(err);
   }
 });
+
+bookingRouter.post(
+  '/:id/reschedule',
+  validate(idParamSchema, 'params'),
+  validate(rescheduleBookingSchema),
+  async (req, res, next) => {
+    try {
+      ok(res, await bookingService.rescheduleBooking(req.user.id, req.params.id, req.body));
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 // Confirms the advance a customer paid through Razorpay Checkout. Same
 // server-side order-id lookup as the order and job verify endpoints.

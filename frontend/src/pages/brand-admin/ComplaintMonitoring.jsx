@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
-import { BarChart2, Clock, Zap, PhoneCall, RefreshCcw, AlertTriangle, CheckCircle2, X, Search, Filter } from 'lucide-react';
+import { BarChart2, Clock, Zap, PhoneCall, RefreshCcw, AlertTriangle, CheckCircle2, Search } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
 
 // SLA is reported as time left against slaDueAt; once that passes the row is
@@ -62,7 +62,6 @@ const priorityColors = {
 const ComplaintMonitoring = () => {
   const [searchQ, setSearchQ] = useState('');
   const [filterStatus, setFilterStatus] = useState('All');
-  const [selectedComplaint, setSelectedComplaint] = useState(null);
   const [successMsg, setSuccessMsg] = useState('');
 
   const [complaints, setComplaints] = useState([]);

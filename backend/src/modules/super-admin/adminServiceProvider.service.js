@@ -147,6 +147,18 @@ export async function updateServiceProviderStatus(id, status, scopedCity, acting
   const previousStatus = serviceProvider.status;
   serviceProvider.status = status;
   if (status !== 'Active') serviceProvider.availability = 'Offline';
+  // Approving is the console's KYC review — the reviewer opens the uploaded
+  // Aadhaar before approving — but it never touched the per-document statuses,
+  // so an approved partner's Verification screen said "Pending" forever.
+  // Rejected documents are left alone; only still-pending ones clear.
+  if (status === 'Active') {
+    const verification = serviceProvider.verification || {};
+    for (const key of ['aadharStatus', 'panStatus', 'backgroundCheckStatus']) {
+      if (!verification[key] || verification[key] === 'Pending') {
+        serviceProvider.set(`verification.${key}`, 'Verified');
+      }
+    }
+  }
   await serviceProvider.save();
 
   if (serviceProvider.user) {

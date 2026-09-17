@@ -6,6 +6,7 @@ export const updateProfileSchema = z.object({
   email: z.string().optional(),
   address: z.string().optional(),
   specs: z.array(z.string()).optional(),
+  avatarUrl: z.string().optional(),
 });
 
 export const addPayoutMethodSchema = z.object({
@@ -23,3 +24,12 @@ export const methodIdParamSchema = z.object({ methodId: z.string().min(1) });
 export const setAvailabilitySchema = z.object({
   availability: z.enum(['Available', 'Busy', 'Offline']),
 });
+
+const objectId = z.string().regex(/^[a-f\d]{24}$/i, 'Invalid id');
+
+export const requestCityChangeSchema = z.object({
+  cityId: objectId,
+  reason: z.string().trim().max(500).optional(),
+});
+
+export const cityChangeRequestIdParamSchema = z.object({ requestId: objectId });

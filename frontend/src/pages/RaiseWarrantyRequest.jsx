@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { ArrowLeft, FileText, CreditCard, Camera, Plus } from 'lucide-react';
+import { ArrowLeft, FileText, CreditCard, Camera } from 'lucide-react';
 
 const RaiseWarrantyRequest = () => {
   const navigate = useNavigate();
@@ -13,10 +13,6 @@ const RaiseWarrantyRequest = () => {
   const [purchaseDate, setPurchaseDate] = useState('');
   const [description, setDescription] = useState('');
 
-  const formatTitle = (str) => {
-    if (!str) return '';
-    return str.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-  };
 
   const handleRaiseTicket = () => {
     const ticketId = 'NCCW-2024-' + String(Math.floor(Math.random() * 900) + 100).padStart(6, '0');

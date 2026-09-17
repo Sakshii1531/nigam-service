@@ -1,4 +1,4 @@
-import React, {
+import {
   createContext,
   useContext,
   useState,
@@ -8,7 +8,6 @@ import React, {
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import { getActiveCities, isCityServiceable } from "../utils/serviceableCities";
-import { apiRequest } from "../lib/apiClient";
 
 const LocationContext = createContext(null);
 

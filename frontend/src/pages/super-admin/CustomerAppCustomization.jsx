@@ -1,16 +1,11 @@
 import { apiRequest } from '../../lib/apiClient';
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
-import { Plus, Trash2, Edit2, RotateCcw, Image, Sparkles, LayoutGrid, Check, Package } from 'lucide-react';
+import { Plus, Trash2, Edit2, RotateCcw, Image, Sparkles, LayoutGrid, Package } from 'lucide-react';
 
 // Default static banners imported in Dashboard.jsx
-import acBanner from '../../assets/ac_service_banner.png';
-import electricianBanner from '../../assets/electrician_banner.png';
-import plumbingBanner from '../../assets/plumbing_banner.png';
-import warrantyBanner1 from '../../assets/warranty_banner_1.png';
-import warrantyBanner2 from '../../assets/warranty_banner_2.png';
 
 // Brand images
 import splitAcImg from '../../assets/categories/split_ac.png';
@@ -22,18 +17,6 @@ import mostBookedCleaning from '../../assets/most_booked_cleaning.png';
 import mostBookedSalon from '../../assets/most_booked_salon.png';
 
 // Stories assets
-import storyGeyser from '../../assets/story_geyser.png';
-import storyWinter from '../../assets/story_winter.png';
-import storyElectrician from '../../assets/story_electrician.png';
-import storySalon from '../../assets/story_salon.png';
-import storyGeyser2 from '../../assets/story_geyser_2.png';
-import storyGeyser3 from '../../assets/story_geyser_3.png';
-import storyWinter2 from '../../assets/story_winter_2.png';
-import storyWinter3 from '../../assets/story_winter_3.png';
-import storyElectrician2 from '../../assets/story_electrician_2.png';
-import storyElectrician3 from '../../assets/story_electrician_3.png';
-import storySalon2 from '../../assets/story_salon_2.png';
-import storySalon3 from '../../assets/story_salon_3.png';
 
 // Default static service images
 import acImgDefault from '../../assets/categories/ac.png';
@@ -610,16 +593,7 @@ function shapeBanner(b) {
   return { id: b.id, image: b.imageUrl, title: b.title || '', sortOrder: b.sortOrder ?? 0 };
 }
 
-const DEFAULT_NON_WARRANTY = [
-  { id: 1, image: acBanner, title: 'AC Service Banner' },
-  { id: 2, image: electricianBanner, title: 'Electrician Banner' },
-  { id: 3, image: plumbingBanner, title: 'Plumbing Banner' }
-];
 
-const DEFAULT_WARRANTY = [
-  { id: 1, image: warrantyBanner1, title: 'Warranty Banner 1' },
-  { id: 2, image: warrantyBanner2, title: 'Warranty Banner 2' }
-];
 
 const DEFAULT_SERVICES = [
   { id: 1, name: 'AC Repair', img: acImgDefault },
@@ -684,96 +658,6 @@ const DEFAULT_CATALOG_TEMPLATE = [
   }
 ];
 
-const DEFAULT_STORIES = [
-  {
-    id: 1,
-    title: 'Cold showers in winter? Hard pass',
-    image: storyGeyser,
-    slides: [
-      {
-        image: storyGeyser,
-        caption: 'Cold showers in winter? Hard pass',
-        subCaption: 'Your geyser deserves a check-up before winter hits.',
-      },
-      {
-        image: storyGeyser2,
-        caption: 'Leaking? Tripping? No hot water?',
-        subCaption: 'From thermostat failure to heating coil burnout — we\'ve seen it all.',
-      },
-      {
-        image: storyGeyser3,
-        caption: 'Back to warm showers in no time',
-        subCaption: 'Our certified serviceProviders get your geyser fixed fast.',
-      },
-    ],
-  },
-  {
-    id: 2,
-    title: 'Winter Home Repairs & Maintenance',
-    image: storyWinter,
-    slides: [
-      {
-        image: storyWinter,
-        caption: 'Winter Home Repairs & Maintenance',
-        subCaption: 'Keep your home warm and worry-free this season.',
-      },
-      {
-        image: storyWinter2,
-        caption: 'Cracks? Leaks? Chipping walls?',
-        subCaption: 'Winter can be tough on your home. Spot the damage early.',
-      },
-      {
-        image: storyWinter3,
-        caption: 'Trust the experts. Leave the repairs to us.',
-        subCaption: 'Nigam Care serviceProviders — certified, background-checked, on-time.',
-      },
-    ],
-  },
-  {
-    id: 3,
-    title: 'Quick Electrical Fixes',
-    image: storyElectrician,
-    slides: [
-      {
-        image: storyElectrician,
-        caption: 'Quick Electrical Fixes',
-        subCaption: 'Faulty switch? Tripping MCB? Fan not working? We fix it.',
-      },
-      {
-        image: storyElectrician2,
-        caption: 'Safe. Certified. Insured.',
-        subCaption: 'All our electricians carry ISI-certified tools and follow safety protocols.',
-      },
-      {
-        image: storyElectrician3,
-        caption: 'Light up your home again',
-        subCaption: 'Hundreds of families trust Nigam Care every month for electrical work.',
-      },
-    ],
-  },
-  {
-    id: 4,
-    title: 'Salon-like pampering at home',
-    image: storySalon,
-    slides: [
-      {
-        image: storySalon,
-        caption: 'Salon-like pampering at home',
-        subCaption: 'Professional beauty experts come right to your doorstep.',
-      },
-      {
-        image: storySalon2,
-        caption: 'Nails. Skin. Hair. All at home.',
-        subCaption: 'Relax while our experts bring the salon experience to you.',
-      },
-      {
-        image: storySalon3,
-        caption: 'Glowing skin. Happy you.',
-        subCaption: 'Book a home salon session and feel the difference today.',
-      },
-    ],
-  },
-];
 
 const DEFAULT_MOST_BOOKED = [
   { id: 1, title: "Foam-jet AC service", image: mostBookedAc1, rating: 4.76, price: 649, badge: "Instant" },
@@ -1348,7 +1232,7 @@ const CustomerAppCustomization = () => {
     const customCatalogs = savedCatalogs ? JSON.parse(savedCatalogs) : {};
 
     const typesArray = categoryForm.productTypes.trim()
-      ? categoryForm.productTypes.split(',').map((p, idx) => ({
+      ? categoryForm.productTypes.split(',').map((p) => ({
           id: p.trim().toLowerCase().replace(/ /g, '_'),
           name: p.trim(),
           icon: '⚡',
@@ -1423,26 +1307,6 @@ const CustomerAppCustomization = () => {
     }
   };
 
-  const handleServiceBannerFileChange = async (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      try {
-        const formData = new FormData();
-        formData.append('file', file);
-        const res = await apiRequest('/uploads', {
-          method: 'POST',
-          auth: true,
-          body: formData,
-        });
-        const url = res.url || res.data?.url || '';
-        if (url) {
-          setServiceForm(prev => ({ ...prev, bannerImg: url }));
-        }
-      } catch (err) {
-        showToast(`Banner upload failed: ${err.message}`);
-      }
-    }
-  };
 
   const handleOpenAddService = () => {
     setIsEditingService(false);

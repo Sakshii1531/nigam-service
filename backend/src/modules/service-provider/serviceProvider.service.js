@@ -1,4 +1,5 @@
 import { ServiceProvider } from './serviceProvider.model.js';
+import { User } from '../auth/user.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { autoAssignPendingRequests } from '../service-requests/serviceRequest.service.js';
 
@@ -46,7 +47,7 @@ export async function getProfile(serviceProviderId) {
   return serviceProvider;
 }
 
-const EDITABLE_FIELDS = ['name', 'phone', 'email', 'address', 'specs'];
+const EDITABLE_FIELDS = ['name', 'phone', 'email', 'address', 'specs', 'avatarUrl'];
 
 export async function updateProfile(serviceProviderId, data) {
   const updates = {};
@@ -55,6 +56,18 @@ export async function updateProfile(serviceProviderId, data) {
   }
   const serviceProvider = await ServiceProvider.findByIdAndUpdate(serviceProviderId, updates, { new: true });
   if (!serviceProvider) throw new ApiError(404, 'Service Provider not found');
+
+  if (serviceProvider.user) {
+    const userUpdates = {};
+    if (updates.name !== undefined) userUpdates.name = updates.name;
+    if (updates.phone !== undefined) userUpdates.phone = updates.phone;
+    if (updates.email !== undefined) userUpdates.email = updates.email;
+    if (updates.avatarUrl !== undefined) userUpdates.avatarUrl = updates.avatarUrl;
+    if (Object.keys(userUpdates).length > 0) {
+      await User.findByIdAndUpdate(serviceProvider.user, userUpdates);
+    }
+  }
+
   return serviceProvider;
 }
 

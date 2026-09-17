@@ -1,9 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  ArrowLeft, Bell, Globe, Moon, Shield, Volume2, 
-  HelpCircle, ChevronRight, Lock, Trash2, Smartphone, Check,
-  Briefcase, ClipboardList, Calendar, Wrench, User, Eye, EyeOff
+  ArrowLeft, Bell, ChevronRight, Lock, Eye, EyeOff
 } from 'lucide-react';
 import ServiceProviderBottomNav from '../../components/ServiceProviderBottomNav';
 import { apiRequest } from '../../lib/apiClient';

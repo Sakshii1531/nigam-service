@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, Bell, Briefcase, ClipboardList, Calendar, Wrench, User,
-  CreditCard, Plus, X, Building2, CheckCircle, ChevronRight
+  ArrowLeft, Bell, CreditCard, Plus, X, Building2, CheckCircle, ChevronRight
 } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
 import ServiceProviderBottomNav from '../../components/ServiceProviderBottomNav';

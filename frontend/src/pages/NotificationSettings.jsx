@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Bell, Mail, MessageSquare, ShieldAlert, Sparkles, RefreshCw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';

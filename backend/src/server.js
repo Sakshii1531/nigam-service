@@ -4,6 +4,8 @@ import { connectDB, ensureIndexes } from './config/db.js';
 import { registerAllModels } from './config/registerModels.js';
 import { env } from './config/env.js';
 import { initSockets } from './sockets/index.js';
+import { sweepExpiredAssignments } from './modules/service-requests/serviceRequest.service.js';
+import { expireStaleSearches } from './modules/booking/booking.service.js';
 
 async function main() {
   const modelCount = await registerAllModels();
@@ -31,8 +33,32 @@ async function main() {
     console.log(`[server] listening on :${env.port} (${env.nodeEnv}), Socket.IO attached`);
   });
 
+  // Backstop for the per-assignment 60s dispatch timers, which don't survive a
+  // restart, plus the 15-minute search cut-off. Runs once at boot (anything
+  // that expired while we were down) and then every 15s.
+  let sweeping = false;
+  const runDispatchSweep = async () => {
+    if (sweeping) return;
+    sweeping = true;
+    try {
+      // Give up on searches past their window first, so the assignment sweep
+      // doesn't pass those bookings on to yet another provider.
+      const { expired } = await expireStaleSearches();
+      if (expired) console.log(`[search-expiry] stopped searching for ${expired} booking(s) after 15 minutes`);
+      const { passedOn } = await sweepExpiredAssignments();
+      if (passedOn) console.log(`[dispatch-sweep] passed on ${passedOn} unanswered assignment(s)`);
+    } catch (err) {
+      console.warn('[dispatch-sweep] failed:', err.message);
+    } finally {
+      sweeping = false;
+    }
+  };
+  runDispatchSweep();
+  const sweepTimer = setInterval(runDispatchSweep, 15000);
+
   const shutdown = (signal) => {
     console.log(`[server] ${signal} received, shutting down`);
+    clearInterval(sweepTimer);
     server.close(() => process.exit(0));
   };
   process.on('SIGINT', () => shutdown('SIGINT'));

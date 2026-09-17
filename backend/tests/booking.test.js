@@ -11,6 +11,9 @@ import { ProductType } from '../src/modules/catalog/productType.model.js';
 import { ServiceCatalogItem } from '../src/modules/catalog/serviceCatalogItem.model.js';
 import { Booking } from '../src/modules/booking/booking.model.js';
 import { ServiceRequest } from '../src/modules/service-requests/serviceRequest.model.js';
+import { ServicePageConfig } from '../src/modules/super-admin/servicePageConfig.model.js';
+import { sweepExpiredAssignments } from '../src/modules/service-requests/serviceRequest.service.js';
+import { expireStaleSearches, SEARCH_END_MESSAGES } from '../src/modules/booking/booking.service.js';
 import { hashPassword } from '../src/modules/auth/password.js';
 import { ROLES } from '../src/config/constants.js';
 import { testDbUri } from './helpers/testDb.js';
@@ -75,6 +78,7 @@ beforeEach(async () => {
     ServiceCatalogItem.deleteMany({}),
     Booking.deleteMany({}),
     ServiceRequest.deleteMany({}),
+    ServicePageConfig.deleteMany({}),
   ]);
 });
 
@@ -114,6 +118,68 @@ describe('POST /bookings — full booking -> service-request -> auto-assign flow
       .expect(201);
 
     expect(res.body.data.booking.totalPrice).toBe(299);
+  });
+
+  it('prices a named service from the CMS service page, ignoring the client total and capping the advance', async () => {
+    await seedCatalog();
+    await ServicePageConfig.create({
+      serviceKey: 'AC repair',
+      catalog: [{ section: 'Repairs', items: [{ name: 'AC repair Standard Work', price: '₹349' }] }],
+    });
+    const token = await seedCustomer();
+
+    const res = await request(app)
+      .post('/api/v1/bookings')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        category: 'AC',
+        serviceSlug: 'ac_repair_standard_work',
+        serviceName: 'AC repair Standard Work',
+        quantity: 2,
+        price: 1,
+        totalPrice: 2,
+        advanceAmount: 5000,
+        paymentMode: 'advance',
+      })
+      .expect(201);
+
+    expect(res.body.data.booking.totalPrice).toBe(698);
+    expect(res.body.data.booking.service.name).toBe('AC repair Standard Work');
+    expect(res.body.data.booking.advanceAmount).toBe(698); // clamped to the total
+  });
+
+  it('refuses a named service that has no price anywhere instead of booking it at the client\'s figure', async () => {
+    await seedCatalog();
+    const token = await seedCustomer();
+    await request(app)
+      .post('/api/v1/bookings')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ category: 'AC', serviceSlug: 'made_up', serviceName: 'Made Up Service', price: 1, totalPrice: 1 })
+      .expect(400);
+    expect(await Booking.countDocuments()).toBe(0);
+  });
+
+  it('sweeps an unanswered assignment older than the response window back into the pool', async () => {
+    await seedCatalog();
+    const { serviceProvider } = await seedServiceProvider();
+    const token = await seedCustomer();
+    const res = await request(app)
+      .post('/api/v1/bookings')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ category: 'AC', serviceSlug: 'repair' })
+      .expect(201);
+    const srId = res.body.data.serviceRequest.id;
+
+    // Fresh assignment: untouched.
+    expect((await sweepExpiredAssignments()).passedOn).toBe(0);
+
+    await ServiceRequest.updateOne({ _id: srId }, { assignedAt: new Date(Date.now() - 2 * 60 * 1000) });
+    const result = await sweepExpiredAssignments();
+    expect(result.passedOn).toBe(1);
+
+    const sr = await ServiceRequest.findById(srId);
+    expect(sr.declinedBy.map(String)).toContain(String(serviceProvider._id));
+    expect(String(sr.serviceProvider || '')).not.toBe(String(serviceProvider._id));
   });
 
   it('creates the booking with no serviceProvider assigned (and ServiceRequest stays "New") when none are available', async () => {
@@ -402,5 +468,98 @@ describe('manual assignment from the super-admin console', () => {
       .send({})
       .expect(403);
     await request(app).get(`/api/v1/service-requests/${sr.id}/service-provider-suggestions`).expect(401);
+  });
+});
+
+describe('15-minute search cut-off', () => {
+  const past = () => new Date(Date.now() - 1000);
+
+  async function bookIn(city, token) {
+    const res = await request(app)
+      .post('/api/v1/bookings')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ category: 'AC', serviceSlug: 'repair', address: { house: '1', city, pincode: '400001' } })
+      .expect(201);
+    return res.body.data;
+  }
+
+  it('starts every booking with a 15-minute search window', async () => {
+    await seedCatalog();
+    const token = await seedCustomer();
+    const { booking } = await bookIn('Mumbai', token);
+    const minutes = (new Date(booking.searchExpiresAt).getTime() - Date.now()) / 60000;
+    expect(minutes).toBeGreaterThan(14.5);
+    expect(minutes).toBeLessThanOrEqual(15);
+    expect((await expireStaleSearches()).expired).toBe(0);
+  });
+
+  it('cancels with NO_PROVIDERS_NEARBY when nobody serves the customer\'s area', async () => {
+    await seedCatalog();
+    const token = await seedCustomer();
+    const { booking, serviceRequest } = await bookIn('Mumbai', token);
+    await Booking.updateOne({ _id: booking.id }, { searchExpiresAt: past() });
+
+    expect((await expireStaleSearches()).expired).toBe(1);
+
+    const saved = await Booking.findById(booking.id);
+    expect(saved.status).toBe('Cancelled');
+    expect(saved.searchEndReason).toBe('NO_PROVIDERS_NEARBY');
+    expect(saved.cancellationReason).toBe(SEARCH_END_MESSAGES.NO_PROVIDERS_NEARBY);
+    expect((await ServiceRequest.findById(serviceRequest.id)).status).toBe('Cancelled');
+
+    // The customer app reads the reason from the booking.
+    const res = await request(app).get(`/api/v1/bookings/${booking.id}`).set('Authorization', `Bearer ${token}`).expect(200);
+    expect(res.body.data.searchEndReason).toBe('NO_PROVIDERS_NEARBY');
+  });
+
+  it('cancels with PROVIDERS_NOT_ACCEPTING when providers are in the area but none accepted', async () => {
+    await seedCatalog();
+    const { serviceProvider } = await seedServiceProvider({ availability: 'Offline' });
+    await ServiceProvider.updateOne({ _id: serviceProvider._id }, { serviceCityName: 'Mumbai' });
+    const token = await seedCustomer();
+    const { booking } = await bookIn('Mumbai', token);
+    await Booking.updateOne({ _id: booking.id }, { searchExpiresAt: past() });
+
+    await expireStaleSearches();
+    const saved = await Booking.findById(booking.id);
+    expect(saved.status).toBe('Cancelled');
+    expect(saved.searchEndReason).toBe('PROVIDERS_NOT_ACCEPTING');
+  });
+
+  it('treats a job that was offered to someone (and declined) as providers not accepting', async () => {
+    await seedCatalog();
+    const { serviceProvider, token: spToken } = await seedServiceProvider();
+    const token = await seedCustomer();
+    const { booking, serviceRequest } = await request(app)
+      .post('/api/v1/bookings')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ category: 'AC', serviceSlug: 'repair' })
+      .expect(201)
+      .then((r) => r.body.data);
+    await request(app).post(`/api/v1/service-provider/jobs/reject/${serviceRequest.id}`).set('Authorization', `Bearer ${spToken}`).expect(200);
+    await ServiceProvider.deleteOne({ _id: serviceProvider._id }); // nobody left nearby
+    await Booking.updateOne({ _id: booking.id }, { searchExpiresAt: past() });
+
+    await expireStaleSearches();
+    expect((await Booking.findById(booking.id)).searchEndReason).toBe('PROVIDERS_NOT_ACCEPTING');
+  });
+
+  it('leaves accepted bookings alone', async () => {
+    await seedCatalog();
+    const { token: spToken } = await seedServiceProvider();
+    const token = await seedCustomer();
+    const { booking, serviceRequest } = await request(app)
+      .post('/api/v1/bookings')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ category: 'AC', serviceSlug: 'repair' })
+      .expect(201)
+      .then((r) => r.body.data);
+    await request(app).post(`/api/v1/service-provider/jobs/accept/${serviceRequest.id}`).set('Authorization', `Bearer ${spToken}`).send({}).expect(200);
+
+    const accepted = await Booking.findById(booking.id);
+    expect(accepted.searchExpiresAt).toBeNull();
+    await Booking.updateOne({ _id: booking.id }, { searchExpiresAt: past() }); // even if a stale clock lingered
+    expect((await expireStaleSearches()).expired).toBe(0);
+    expect((await Booking.findById(booking.id)).status).not.toBe('Cancelled');
   });
 });

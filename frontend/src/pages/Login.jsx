@@ -1,17 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Phone, Mail, Lock, ShieldCheck, User, Gift, Eye, EyeOff, Navigation, MapPin, Loader2, CheckCircle2, XCircle } from 'lucide-react';
+import { Phone, Mail, Lock, User, Gift, Eye, EyeOff, Navigation, MapPin, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useAppLogo } from '../context/LogoContext';
-import { ApiError, apiRequest } from '../lib/apiClient';
+import { apiRequest } from '../lib/apiClient';
 import SearchableSelect from '../components/common/SearchableSelect';
-import { STATE_CITIES, INDIAN_STATES, normalizeStateName } from '../utils/indiaGeoData';
+import { STATE_CITIES } from '../utils/indiaGeoData';
 
 const Login = ({ initialSignup = false }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { login, signupCheck } = useAuth();
-  const { logoUrl, rawLogoUrl } = useAppLogo();
+  const { logoUrl } = useAppLogo();
 
   const isSignupRoute = location.pathname === '/signup' || initialSignup;
   const [isSignup, setIsSignup] = useState(location.state?.isSignup || isSignupRoute || false);
@@ -225,7 +225,7 @@ const Login = ({ initialSignup = false }) => {
             region: data.region
           };
         }
-      } catch (e1) {
+      } catch {
         // try secondary provider
       }
 
@@ -241,7 +241,7 @@ const Login = ({ initialSignup = false }) => {
               region: data.regionName
             };
           }
-        } catch (e2) {
+        } catch {
           // both failed
         }
       }

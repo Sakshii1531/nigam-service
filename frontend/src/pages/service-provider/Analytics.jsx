@@ -1,12 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { 
-  Menu, MoreVertical, ChevronDown, TrendingUp, Briefcase, 
-  ClipboardList, Wrench, Calendar, User, ShieldCheck, HelpCircle, LogOut, CreditCard, X,
-  ArrowLeft
+  ChevronDown, TrendingUp, LogOut, ArrowLeft
 } from 'lucide-react';
-import serviceProviderAvatar from '../../assets/service_provider_avatar.png';
 import ServiceProviderBottomNav from '../../components/ServiceProviderBottomNav';
 import { apiRequest } from '../../lib/apiClient';
 

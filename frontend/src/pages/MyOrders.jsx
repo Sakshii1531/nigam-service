@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, Package, Truck, CheckCircle, Clock
+  ArrowLeft, Package, Truck, Clock
 } from 'lucide-react';
 import { apiRequest } from '../lib/apiClient';
 import CustomerBottomNav from '../components/CustomerBottomNav';

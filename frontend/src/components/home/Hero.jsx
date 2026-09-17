@@ -1,4 +1,3 @@
-import React from 'react';
 import { Search, Star, Shield, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
 import heroImg from '../../assets/home.png';

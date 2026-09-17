@@ -1,7 +1,5 @@
-import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
-import { motion } from 'framer-motion';
 
 // Import local premium cutout assets for high-fidelity rendering
 import acImg from '../assets/categories/split_ac.png';

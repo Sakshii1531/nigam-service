@@ -4,6 +4,7 @@ export default {
   transform: {},
   testMatch: ['**/tests/**/*.test.js'],
   clearMocks: true,
+  setupFiles: ['<rootDir>/tests/helpers/isolateExternalServices.js'],
   // Default (5000ms) is tight for beforeAll hooks that open a fresh Mongoose
   // connection + await every model's index build — under --runInBand with the
   // suite now at 20+ files, connection setup has intermittently exceeded that

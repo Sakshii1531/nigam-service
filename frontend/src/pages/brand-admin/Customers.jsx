@@ -1,39 +1,45 @@
-import React, { useState, useEffect } from 'react';
-import Sidebar from '../../components/brand-admin/Sidebar';
-import Topbar from '../../components/brand-admin/Topbar';
-import { apiRequest } from '../../lib/apiClient';
-import { 
-  Search, 
-  Filter, 
+import { useState, useEffect } from "react";
+import Sidebar from "../../components/brand-admin/Sidebar";
+import Topbar from "../../components/brand-admin/Topbar";
+import Pagination from "../../components/common/Pagination";
+import { apiRequest } from "../../lib/apiClient";
+import {
+  Search,
+  Filter,
   MoreVertical,
   Eye,
   Mail,
   Phone,
   MapPin,
-  X,
   CheckCircle2,
   Send,
   ShieldCheck,
   ClipboardList,
-  ArrowLeft
-} from 'lucide-react';
+  ArrowLeft,
+} from "lucide-react";
 
-const dateFormatter = new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+const dateFormatter = new Intl.DateTimeFormat("en-IN", {
+  day: "2-digit",
+  month: "short",
+  year: "numeric",
+});
 
 function shape(c) {
   return {
     id: c.id,
     name: c.name,
-    email: c.email || '—',
-    phone: c.phone || '—',
+    email: c.email || "—",
+    phone: c.phone || "—",
     // The API derives customers from service requests, which carry no city of
     // their own — the customer's address lives on their saved addresses.
-    city: '—',
+    city: "—",
     productCount: c.productCount ?? 0,
     complaints: c.complaints ?? 0,
     openComplaints: c.openComplaints ?? 0,
-    warrantyStatus: c.warrantyStatus || 'Out of Warranty',
-    lastService: c.lastRequestAt ? dateFormatter.format(new Date(c.lastRequestAt)) : '—',
+    warrantyStatus: c.warrantyStatus || "Out of Warranty",
+    lastService: c.lastRequestAt
+      ? dateFormatter.format(new Date(c.lastRequestAt))
+      : "—",
     // Appliance categories this customer has raised requests for. Individual
     // complaint text isn't part of the aggregate, so the drawer shows the open
     // count rather than inventing a list of descriptions.
@@ -45,14 +51,20 @@ function shape(c) {
 const Customers = () => {
   const [showDrawer, setShowDrawer] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCity, setSelectedCity] = useState('All Cities');
-  const [selectedWarranty, setSelectedWarranty] = useState('Warranty Status');
-  const [successMessage, setSuccessMessage] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCity, setSelectedCity] = useState("All Cities");
+  const [selectedWarranty, setSelectedWarranty] = useState("Warranty Status");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  const [successMessage, setSuccessMessage] = useState("");
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedCity, selectedWarranty]);
 
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -60,7 +72,7 @@ const Customers = () => {
       try {
         // Derived server-side: everyone who has raised a service request with
         // this brand, with per-customer counts.
-        const data = await apiRequest('/brand/customers', { auth: true });
+        const data = await apiRequest("/brand/customers", { auth: true });
         if (!cancelled) setCustomers((data || []).map(shape));
       } catch (err) {
         if (!cancelled) setError(err.message);
@@ -69,13 +81,15 @@ const Customers = () => {
       }
     }
     loadCustomers();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const showToast = (message) => {
     setSuccessMessage(message);
     setTimeout(() => {
-      setSuccessMessage('');
+      setSuccessMessage("");
     }, 3000);
   };
 
@@ -90,27 +104,40 @@ const Customers = () => {
     const body = window.prompt(`Message to send to ${customer.name}:`);
     if (!body?.trim()) return;
 
-    setError('');
+    setError("");
     try {
-      await apiRequest('/brand/actions/notify-customer', {
-        method: 'POST',
+      await apiRequest("/brand/actions/notify-customer", {
+        method: "POST",
         auth: true,
-        body: { userId: customer.id, title: 'A message from your service brand', body: body.trim() },
+        body: {
+          userId: customer.id,
+          title: "A message from your service brand",
+          body: body.trim(),
+        },
       });
       showToast(`Notification sent to ${customer.name}.`);
     } catch (err) {
-      setError(err.message || 'Could not send the notification.');
+      setError(err.message || "Could not send the notification.");
     }
   };
 
-  const filteredCustomers = customers.filter(cust => {
-    const matchesSearch = cust.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          cust.phone.includes(searchQuery) ||
-                          cust.email.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCity = selectedCity === 'All Cities' || cust.city === selectedCity;
-    const matchesWarranty = selectedWarranty === 'Warranty Status' || cust.warrantyStatus === selectedWarranty;
+  const filteredCustomers = customers.filter((cust) => {
+    const matchesSearch =
+      cust.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      cust.phone.includes(searchQuery) ||
+      cust.email.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCity =
+      selectedCity === "All Cities" || cust.city === selectedCity;
+    const matchesWarranty =
+      selectedWarranty === "Warranty Status" ||
+      cust.warrantyStatus === selectedWarranty;
     return matchesSearch && matchesCity && matchesWarranty;
   });
+
+  const paginatedCustomers = filteredCustomers.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage,
+  );
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex">
@@ -126,10 +153,9 @@ const Customers = () => {
         {showDrawer && selectedCustomer ? (
           <div className="p-6 space-y-6 flex-1 bg-[#F8FAFC] text-left">
             <div className="flex items-center justify-between">
-              <button 
+              <button
                 onClick={() => setShowDrawer(false)}
-                className="flex items-center gap-2 text-sm font-semibold text-[#0D47A1] hover:text-blue-800 transition-colors"
-              >
+                className="flex items-center gap-2 text-sm font-semibold text-[#0D47A1] hover:text-blue-800 transition-colors">
                 <ArrowLeft size={16} /> Back to Customers
               </button>
             </div>
@@ -138,25 +164,38 @@ const Customers = () => {
               {/* Header */}
               <div className="p-6 border-b border-[#E2E8F0] flex justify-between items-center bg-[#F8FAFC]">
                 <div>
-                  <h3 className="text-lg font-bold text-[#1E293B]">Customer Profile</h3>
-                  <p className="text-xs text-[#64748B]">Verify details, history and active status</p>
+                  <h3 className="text-lg font-bold text-[#1E293B]">
+                    Customer Profile
+                  </h3>
+                  <p className="text-xs text-[#64748B]">
+                    Verify details, history and active status
+                  </p>
                 </div>
               </div>
 
               {/* Body */}
               <div className="p-6 space-y-6 flex-1">
-                
                 {/* Basic Info */}
                 <div className="flex items-center gap-4 border-b border-[#E2E8F0] pb-6">
                   <div className="w-16 h-16 bg-[#EEF4FF] rounded-full flex items-center justify-center text-[#0D47A1] font-bold text-2xl">
-                    {selectedCustomer.name.split(' ').map(n => n[0]).join('')}
+                    {selectedCustomer.name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")}
                   </div>
                   <div>
-                    <h4 className="text-lg font-bold text-[#1E293B]">{selectedCustomer.name}</h4>
-                    <p className="text-sm font-medium text-[#0D47A1]">{selectedCustomer.id}</p>
-                    <span className={`inline-block mt-1 text-xs font-semibold px-2 py-0.5 rounded-full ${
-                      selectedCustomer.warrantyStatus === 'Under Warranty' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-orange-50 text-orange-700 border border-orange-200'
-                    }`}>
+                    <h4 className="text-lg font-bold text-[#1E293B]">
+                      {selectedCustomer.name}
+                    </h4>
+                    <p className="text-sm font-medium text-[#0D47A1]">
+                      {selectedCustomer.id}
+                    </p>
+                    <span
+                      className={`inline-block mt-1 text-xs font-semibold px-2 py-0.5 rounded-full ${
+                        selectedCustomer.warrantyStatus === "Under Warranty"
+                          ? "bg-green-50 text-green-700 border border-green-200"
+                          : "bg-orange-50 text-orange-700 border border-orange-200"
+                      }`}>
                       {selectedCustomer.warrantyStatus}
                     </span>
                   </div>
@@ -164,27 +203,43 @@ const Customers = () => {
 
                 {/* Contact Details */}
                 <div className="space-y-3">
-                  <h5 className="text-xs font-bold uppercase tracking-wider text-[#64748B]">Contact Info</h5>
+                  <h5 className="text-xs font-bold uppercase tracking-wider text-[#64748B]">
+                    Contact Info
+                  </h5>
                   <div className="bg-[#F8FAFC] p-4 rounded-xl border border-[#E2E8F0] space-y-2 text-sm text-[#1E293B]">
-                    <p className="flex items-center gap-2"><Mail size={16} className="text-[#64748B]" /> {selectedCustomer.email}</p>
-                    <p className="flex items-center gap-2"><Phone size={16} className="text-[#64748B]" /> {selectedCustomer.phone}</p>
-                    <p className="flex items-center gap-2"><MapPin size={16} className="text-[#64748B]" /> {selectedCustomer.city}</p>
+                    <p className="flex items-center gap-2">
+                      <Mail size={16} className="text-[#64748B]" />{" "}
+                      {selectedCustomer.email}
+                    </p>
+                    <p className="flex items-center gap-2">
+                      <Phone size={16} className="text-[#64748B]" />{" "}
+                      {selectedCustomer.phone}
+                    </p>
+                    <p className="flex items-center gap-2">
+                      <MapPin size={16} className="text-[#64748B]" />{" "}
+                      {selectedCustomer.city}
+                    </p>
                   </div>
                 </div>
 
                 {/* Products Registered */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <h5 className="text-xs font-bold uppercase tracking-wider text-[#64748B]">Registered Products</h5>
+                    <h5 className="text-xs font-bold uppercase tracking-wider text-[#64748B]">
+                      Registered Products
+                    </h5>
                     <span className="text-xs font-bold text-[#0D47A1] bg-blue-50 px-2 py-0.5 rounded-full flex items-center gap-1">
-                      <ShieldCheck size={12} /> {selectedCustomer.products.length} Products
+                      <ShieldCheck size={12} />{" "}
+                      {selectedCustomer.products.length} Products
                     </span>
                   </div>
                   <div className="divide-y divide-[#E2E8F0] border border-[#E2E8F0] rounded-xl overflow-hidden bg-white text-sm">
                     {selectedCustomer.products.map((prod, idx) => (
                       <div key={idx} className="p-3 hover:bg-[#F8FAFC]">
                         <p className="font-medium text-[#1E293B]">{prod}</p>
-                        <p className="text-xs text-[#64748B]">Warranty Active</p>
+                        <p className="text-xs text-[#64748B]">
+                          Warranty Active
+                        </p>
                       </div>
                     ))}
                   </div>
@@ -193,9 +248,12 @@ const Customers = () => {
                 {/* Active Complaints */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <h5 className="text-xs font-bold uppercase tracking-wider text-[#64748B]">Complaints & Tickets</h5>
+                    <h5 className="text-xs font-bold uppercase tracking-wider text-[#64748B]">
+                      Complaints & Tickets
+                    </h5>
                     <span className="text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-full flex items-center gap-1">
-                      <ClipboardList size={12} /> {selectedCustomer.openComplaints} Active
+                      <ClipboardList size={12} />{" "}
+                      {selectedCustomer.openComplaints} Active
                     </span>
                   </div>
                   {selectedCustomer.openComplaints > 0 ? (
@@ -204,9 +262,12 @@ const Customers = () => {
                           aggregate — the Complaints screen lists them in full. */}
                       <div className="p-3 bg-red-50/20">
                         <p className="font-medium text-red-700">
-                          {selectedCustomer.openComplaints} open of {selectedCustomer.complaints} total
+                          {selectedCustomer.openComplaints} open of{" "}
+                          {selectedCustomer.complaints} total
                         </p>
-                        <p className="text-xs text-red-500">See the Complaints screen for details</p>
+                        <p className="text-xs text-red-500">
+                          See the Complaints screen for details
+                        </p>
                       </div>
                     </div>
                   ) : (
@@ -219,171 +280,208 @@ const Customers = () => {
 
               {/* Footer */}
               <div className="p-4 border-t border-[#E2E8F0] bg-[#F8FAFC] flex gap-3">
-                <button 
-                  onClick={() => { handleSendNotification(selectedCustomer); setShowDrawer(false); }}
-                  className="bg-[#0D47A1] text-white px-6 py-2.5 rounded-xl text-xs font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-1"
-                >
+                <button
+                  onClick={() => {
+                    handleSendNotification(selectedCustomer);
+                    setShowDrawer(false);
+                  }}
+                  className="bg-[#0D47A1] text-white px-6 py-2.5 rounded-xl text-xs font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-1">
                   <Send size={14} /> Send Message
                 </button>
-                <button 
+                <button
                   onClick={() => setShowDrawer(false)}
-                  className="bg-white text-[#64748B] border border-[#E2E8F0] px-6 py-2.5 rounded-xl text-xs font-semibold hover:bg-[#F8FAFC] transition-colors"
-                >
+                  className="bg-white text-[#64748B] border border-[#E2E8F0] px-6 py-2.5 rounded-xl text-xs font-semibold hover:bg-[#F8FAFC] transition-colors">
                   Close
                 </button>
               </div>
-
             </div>
           </div>
         ) : (
           <div className="p-6 space-y-6 flex-1">
-          
-          {/* Filters & Search */}
-          <div className="bg-white p-4 rounded-2xl border border-[#E2E8F0] flex flex-wrap gap-4 items-center justify-between">
-            <div className="flex flex-wrap gap-3 items-center flex-1">
-              {/* Search */}
-              <div className="relative w-64">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#64748B]">
-                  <Search size={16} />
+            {/* Filters & Search */}
+            <div className="bg-white p-4 rounded-2xl border border-[#E2E8F0] flex flex-wrap gap-4 items-center justify-between">
+              <div className="flex flex-wrap gap-3 items-center flex-1">
+                {/* Search */}
+                <div className="relative w-64">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#64748B]">
+                    <Search size={16} />
+                  </div>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] focus:border-[#0D47A1] outline-none transition-all text-sm bg-[#F8FAFC]"
+                    placeholder="Search Customer Name or ID..."
+                  />
                 </div>
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] focus:border-[#0D47A1] outline-none transition-all text-sm bg-[#F8FAFC]"
-                  placeholder="Search Customer Name or ID..."
-                />
+
+                {/* Filters */}
+                <select
+                  value={selectedCity}
+                  onChange={(e) => setSelectedCity(e.target.value)}
+                  className="text-sm text-[#1E293B] border border-[#E2E8F0] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#0D47A1] bg-[#F8FAFC]">
+                  <option>All Cities</option>
+                  <option>Delhi</option>
+                  <option>Mumbai</option>
+                  <option>Bangalore</option>
+                  <option>Pune</option>
+                </select>
+
+                <select
+                  value={selectedWarranty}
+                  onChange={(e) => setSelectedWarranty(e.target.value)}
+                  className="text-sm text-[#1E293B] border border-[#E2E8F0] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#0D47A1] bg-[#F8FAFC]">
+                  <option>Warranty Status</option>
+                  <option>Under Warranty</option>
+                  <option>Out of Warranty</option>
+                </select>
               </div>
 
-              {/* Filters */}
-              <select 
-                value={selectedCity}
-                onChange={(e) => setSelectedCity(e.target.value)}
-                className="text-sm text-[#1E293B] border border-[#E2E8F0] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#0D47A1] bg-[#F8FAFC]"
-              >
-                <option>All Cities</option>
-                <option>Delhi</option>
-                <option>Mumbai</option>
-                <option>Bangalore</option>
-                <option>Pune</option>
-              </select>
-
-              <select 
-                value={selectedWarranty}
-                onChange={(e) => setSelectedWarranty(e.target.value)}
-                className="text-sm text-[#1E293B] border border-[#E2E8F0] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#0D47A1] bg-[#F8FAFC]"
-              >
-                <option>Warranty Status</option>
-                <option>Under Warranty</option>
-                <option>Out of Warranty</option>
-              </select>
+              <button
+                onClick={() => {
+                  setSearchQuery("");
+                  setSelectedCity("All Cities");
+                  setSelectedWarranty("Warranty Status");
+                  showToast("Filters reset successfully");
+                }}
+                className="bg-white text-[#1E293B] border border-[#E2E8F0] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#F8FAFC] transition-colors flex items-center gap-2">
+                <Filter size={16} /> Reset Filters
+              </button>
             </div>
 
-            <button 
-              onClick={() => {
-                setSearchQuery('');
-                setSelectedCity('All Cities');
-                setSelectedWarranty('Warranty Status');
-                showToast('Filters reset successfully');
-              }}
-              className="bg-white text-[#1E293B] border border-[#E2E8F0] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#F8FAFC] transition-colors flex items-center gap-2"
-            >
-              <Filter size={16} /> Reset Filters
-            </button>
-          </div>
-
-          {/* Customers Table */}
-          <div className="bg-white rounded-2xl border border-[#E2E8F0] overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left">
-                <thead className="bg-[#F8FAFC] text-[#64748B] text-xs uppercase">
-                  <tr>
-                    <th className="px-6 py-4">Customer</th>
-                    <th className="px-6 py-4">Contact</th>
-                    <th className="px-6 py-4 flex-shrink-0">Products</th>
-                    <th className="px-6 py-4">Complaints</th>
-                    <th className="px-6 py-4">Warranty</th>
-                    <th className="px-6 py-4">Last Service</th>
-                    <th className="px-6 py-4 text-center">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#E2E8F0]">
-                  {loading && (
-                    <tr><td colSpan={8} className="px-6 py-10 text-center text-[#64748B] font-semibold">Loading customers…</td></tr>
-                  )}
-                  {!loading && error && (
-                    <tr><td colSpan={8} className="px-6 py-10 text-center text-red-600 font-semibold">{error}</td></tr>
-                  )}
-                  {filteredCustomers.map((cust) => (
-                    <tr 
-                      key={cust.id} 
-                      className="hover:bg-[#F8FAFC] transition-colors cursor-pointer"
-                      onClick={() => handleRowClick(cust)}
-                    >
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-[#EEF4FF] rounded-full flex items-center justify-center text-[#0D47A1] font-bold">
-                            {cust.name.split(' ').map(n => n[0]).join('')}
-                          </div>
-                          <div>
-                            <p className="text-[#1E293B] font-medium">{cust.name}</p>
-                            <p className="text-[#64748B] text-xs">{cust.id}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-xs text-[#64748B] space-y-1">
-                          <p className="flex items-center gap-1"><Mail size={12} /> {cust.email}</p>
-                          <p className="flex items-center gap-1"><Phone size={12} /> {cust.phone}</p>
-                          <p className="flex items-center gap-1"><MapPin size={12} /> {cust.city}</p>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 font-medium text-[#1E293B]">{cust.productCount}</td>
-                      <td className="px-6 py-4 font-medium text-[#1E293B]">{cust.complaints}</td>
-                      <td className="px-6 py-4">
-                        <span className={`text-xs font-medium ${cust.warrantyStatus === 'Under Warranty' ? 'text-green-600' : 'text-orange-600'}`}>
-                          {cust.warrantyStatus}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-[#64748B]">{cust.lastService}</td>
-                      <td className="px-6 py-4 text-center" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex gap-2 justify-center">
-                          <button 
-                            onClick={() => handleRowClick(cust)}
-                            className="p-1.5 text-[#64748B] hover:text-[#0D47A1] rounded" 
-                            title="View Profile"
-                          >
-                            <Eye size={16} />
-                          </button>
-                          <button 
-                            onClick={() => handleSendNotification(cust.name)}
-                            className="p-1.5 text-[#64748B] hover:text-green-600 rounded"
-                            title="Send Notification"
-                          >
-                            <Send size={16} />
-                          </button>
-                          <button 
-                            onClick={() => handleRowClick(cust)}
-                            className="p-1.5 text-[#64748B] hover:text-[#1E293B] rounded"
-                          >
-                            <MoreVertical size={16} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {filteredCustomers.length === 0 && (
+            {/* Customers Table */}
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                  <thead className="bg-[#F8FAFC] text-[#64748B] text-xs uppercase">
                     <tr>
-                      <td colSpan="7" className="px-6 py-10 text-center text-sm text-[#64748B]">
-                        No customers found matching search or filter criteria.
-                      </td>
+                      <th className="px-6 py-4">Customer</th>
+                      <th className="px-6 py-4">Contact</th>
+                      <th className="px-6 py-4 flex-shrink-0">Products</th>
+                      <th className="px-6 py-4">Complaints</th>
+                      <th className="px-6 py-4">Warranty</th>
+                      <th className="px-6 py-4">Last Service</th>
+                      <th className="px-6 py-4 text-center">Actions</th>
                     </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                  </thead>
+                  <tbody className="divide-y divide-[#E2E8F0]">
+                    {loading && (
+                      <tr>
+                        <td
+                          colSpan={8}
+                          className="px-6 py-10 text-center text-[#64748B] font-semibold">
+                          Loading customers…
+                        </td>
+                      </tr>
+                    )}
+                    {!loading && error && (
+                      <tr>
+                        <td
+                          colSpan={8}
+                          className="px-6 py-10 text-center text-red-600 font-semibold">
+                          {error}
+                        </td>
+                      </tr>
+                    )}
+                    {paginatedCustomers.map((cust) => (
+                      <tr
+                        key={cust.id}
+                        className="hover:bg-[#F8FAFC] transition-colors cursor-pointer"
+                        onClick={() => handleRowClick(cust)}>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-[#EEF4FF] rounded-full flex items-center justify-center text-[#0D47A1] font-bold">
+                              {cust.name
+                                .split(" ")
+                                .map((n) => n[0])
+                                .join("")}
+                            </div>
+                            <div>
+                              <p className="text-[#1E293B] font-medium">
+                                {cust.name}
+                              </p>
+                              <p className="text-[#64748B] text-xs">
+                                {cust.id}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-xs text-[#64748B] space-y-1">
+                            <p className="flex items-center gap-1">
+                              <Mail size={12} /> {cust.email}
+                            </p>
+                            <p className="flex items-center gap-1">
+                              <Phone size={12} /> {cust.phone}
+                            </p>
+                            <p className="flex items-center gap-1">
+                              <MapPin size={12} /> {cust.city}
+                            </p>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 font-medium text-[#1E293B]">
+                          {cust.productCount}
+                        </td>
+                        <td className="px-6 py-4 font-medium text-[#1E293B]">
+                          {cust.complaints}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span
+                            className={`text-xs font-medium ${cust.warrantyStatus === "Under Warranty" ? "text-green-600" : "text-orange-600"}`}>
+                            {cust.warrantyStatus}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-[#64748B]">
+                          {cust.lastService}
+                        </td>
+                        <td
+                          className="px-6 py-4 text-center"
+                          onClick={(e) => e.stopPropagation()}>
+                          <div className="flex gap-2 justify-center">
+                            <button
+                              onClick={() => handleRowClick(cust)}
+                              className="p-1.5 text-[#64748B] hover:text-[#0D47A1] rounded"
+                              title="View Profile">
+                              <Eye size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleSendNotification(cust.name)}
+                              className="p-1.5 text-[#64748B] hover:text-green-600 rounded"
+                              title="Send Notification">
+                              <Send size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleRowClick(cust)}
+                              className="p-1.5 text-[#64748B] hover:text-[#1E293B] rounded">
+                              <MoreVertical size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {filteredCustomers.length === 0 && (
+                      <tr>
+                        <td
+                          colSpan="7"
+                          className="px-6 py-10 text-center text-sm text-[#64748B]">
+                          No customers found matching search or filter criteria.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
 
+              {/* Pagination */}
+              {!loading && !error && filteredCustomers.length > 0 && (
+                <Pagination
+                  currentPage={currentPage}
+                  totalItems={filteredCustomers.length}
+                  itemsPerPage={itemsPerPage}
+                  onPageChange={setCurrentPage}
+                />
+              )}
+            </div>
           </div>
         )}
 

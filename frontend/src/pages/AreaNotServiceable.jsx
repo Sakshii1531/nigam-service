@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -30,7 +30,7 @@ const AreaNotServiceable = () => {
 
   const [notified, setNotified] = useState(false);
   const [activeCities, setActiveCities] = useState([]);
-  const [loadingCities, setLoadingCities] = useState(true);
+  const [, setLoadingCities] = useState(true);
   const [showChangeCityModal, setShowChangeCityModal] = useState(false);
   const [showActiveCitiesModal, setShowActiveCitiesModal] = useState(false);
   const [searchCity, setSearchCity] = useState("");

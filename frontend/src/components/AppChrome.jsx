@@ -1,4 +1,4 @@
-import React, { useLayoutEffect } from "react";
+import { useLayoutEffect } from "react";
 import { useLocation } from "react-router-dom";
 import CustomerTopNav from "./CustomerTopNav";
 import ServiceProviderTopNav from "./ServiceProviderTopNav";
@@ -77,8 +77,7 @@ const TECH_TABS = [
   ["/service-provider/announcements", "profile"],
   ["/service-provider/skills", "profile"],
   ["/service-provider/verification", "profile"],
-  ["/service-provider/partner-level", "profile"],
-  ["/service-provider/history", "profile"],
+  ["/service-provider/history", "history"],
 ];
 
 function matchTab(pathname, table, fallback) {
@@ -117,28 +116,9 @@ export function isPhonePanelRoute(pathname) {
   return true;
 }
 
-/**
- * Routes that lay out as a browsable grid — catalogues, dashboards, job lists.
- * These earn the full 1280px; everything else in the two panels is a form, a
- * settings list or a detail view, where a 1280px-wide text input is worse than a
- * phone-width one. Those get a reading-width column instead.
- */
-const WIDE_ROUTES = [
-  "/dashboard", "/categories", "/services", "/all-services",
-  "/cleaning-services", "/appliance-services", "/all-brands",
-  "/buy", "/buy-new", "/buy-product", "/product-details",
-  "/extend-warranty", "/partner-warranty", "/bookings", "/book", "/booking",
-  "/service-details", "/membership-plans", "/rewards-play-zone",
-  "/my-wishlist", "/wishlist", "/my-orders", "/help-support", "/about-ncc", "/terms-and-conditions", "/privacy-policy", "/profile",
-  "/service-provider/dashboard", "/service-provider/active-job", "/service-provider/schedule",
-  "/service-provider/analytics", "/service-provider/academy", "/service-provider/inventory",
-  "/service-provider/raise-part-request", "/service-provider/earnings",
-  "/service-provider/billing-estimate", "/service-provider/apply", "/service-provider/profile",
-  "/service-provider/personal-info",
-];
 
 /** Tailwind max-width class for the panel container on a given route. */
-export function panelWidthClass(pathname) {
+export function panelWidthClass(_pathname) {
   return "max-w-screen-2xl";
 }
 

@@ -1,19 +1,16 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
 import { 
-  Calendar, Briefcase, ClipboardList, Wrench, User, CreditCard, ShieldCheck, 
-  HelpCircle, LogOut, CheckCircle2, ChevronLeft, ChevronRight, Bell, Clock, 
-  MapPin, Phone, ArrowRight, RotateCw, Sparkles
+  Calendar, ChevronLeft, Bell, Clock, 
+  MapPin, ArrowRight
 } from 'lucide-react';
 import ServiceProviderBottomNav from '../../components/ServiceProviderBottomNav';
 import { useTech } from '../../context/ServiceProviderContext';
 import { useNotifications } from '../../context/NotificationContext';
 
 const Schedule = () => {
-  const { user } = useAuth();
   const navigate = useNavigate();
-  const { jobs, selectJobForDetails, acceptJob, earningsTally } = useTech();
+  const { jobs, selectJobForDetails, earningsTally } = useTech();
   const { unreadCount: unreadNotificationsCount } = useNotifications();
 
   const today = new Date();
@@ -206,7 +203,7 @@ const Schedule = () => {
 
           {activeSchedules.length > 0 ? (
             <div className="flex flex-col gap-3 relative w-full mt-1 lg:grid lg:grid-cols-2">
-              {activeSchedules.map((item, idx) => (
+              {activeSchedules.map((item) => (
                 <div 
                   key={item.id}
                   onClick={() => handleJobClick(item.id, item.status)}

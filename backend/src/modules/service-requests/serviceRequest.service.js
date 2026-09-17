@@ -10,6 +10,7 @@ import { parsePagination, paginationMeta } from '../../utils/pagination.js';
 import { emit as emitNotification } from '../notifications/notification.service.js';
 import { getIO } from '../../sockets/io.js';
 import { isTest } from '../../config/env.js';
+import { estimateServiceProviderEarnings } from '../shared/serviceProviderEarnings.js';
 
 /** `session` opts this write into a caller's transaction (see
  * utils/transaction.js) — createBooking uses it so a booking and its service
@@ -155,6 +156,39 @@ export async function suggestServiceProviders(id) {
   }));
 }
 
+export const DISPATCH_RESPONSE_WINDOW_MS = 60000;
+
+/**
+ * Passes on every assignment its provider hasn't answered within the response
+ * window. scheduleDispatchTimeout's in-memory timer is lost whenever the server
+ * restarts (every deploy, every nodemon reload), which left those requests
+ * pinned to a provider who never saw them. This sweep runs on an interval from
+ * server.js and catches anything the timers missed.
+ */
+export async function sweepExpiredAssignments(now = new Date()) {
+  const cutoff = new Date(now.getTime() - DISPATCH_RESPONSE_WINDOW_MS);
+  const expired = await ServiceRequest.find({
+    status: 'Assigned',
+    isAccepted: { $ne: true },
+    serviceProvider: { $ne: null },
+    assignedAt: { $lt: cutoff },
+  }).select('_id serviceProvider');
+
+  let passedOn = 0;
+  for (const sr of expired) {
+    try {
+      await declineAssignment(String(sr._id), String(sr.serviceProvider));
+      passedOn += 1;
+    } catch (err) {
+      // 409 once a Job exists (accepted in the meantime) — nothing to pass on.
+      if (err.statusCode !== 409 && err.status !== 409) {
+        console.warn('[dispatch-sweep]', String(sr._id), err.message);
+      }
+    }
+  }
+  return { checked: expired.length, passedOn };
+}
+
 /**
  * Assign a service provider (named, or the engine's top pick) and move the request to
  * 'Assigned'. Only requests that have not been picked up yet are assignable —
@@ -246,13 +280,14 @@ export async function assignServiceProvider(id, serviceProviderId) {
   // Socket notification dispatched strictly to the targeted service provider
   try {
     const io = getIO();
+    const estEarnings = await estimateServiceProviderEarnings(serviceRequest, booking).catch(() => 0);
     const jobPayload = {
       bookingId: booking?.id || String(serviceRequest.booking),
       serviceRequestId: String(serviceRequest._id),
       category: serviceRequest.category,
       service: serviceRequest.description || 'Appliance Service',
-      totalPrice: booking?.totalPrice || 299,
-      estEarnings: Math.round((booking?.totalPrice || 299) * 0.3) || 150,
+      totalPrice: booking?.totalPrice ?? 0,
+      estEarnings,
       isInstant: serviceRequest.isInstant,
       scheduledTime: booking?.timeSlot?.time || (serviceRequest.isInstant ? 'ASAP' : 'Scheduled'),
       scheduledDateLabel: booking?.timeSlot?.date || 'Today',
@@ -297,6 +332,13 @@ export async function declineAssignment(id, serviceProviderId) {
   // If already at terminal states (Completed / Closed / Cancelled), cannot reject
   if (serviceRequest.status === 'Closed' || serviceRequest.status === 'Cancelled' || serviceRequest.status === 'Completed') {
     throw new ApiError(409, `Cannot reject a request in terminal status "${serviceRequest.status}"`);
+  }
+
+  // An open offer (broadcast to the city, assigned to nobody) has no assignee
+  // to release — declining it just takes it out of this provider's feed.
+  if (!serviceRequest.serviceProvider && serviceRequest.status === 'New' && serviceProviderId) {
+    await ServiceRequest.updateOne({ _id: serviceRequest._id }, { $addToSet: { declinedBy: serviceProviderId } });
+    return { declined: true, reassignedTo: null };
   }
 
   // You can only decline your own assignment. There was no check at all, so any

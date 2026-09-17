@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Bell, Briefcase, ClipboardList, Calendar, Wrench, User, MessageCircle, Phone, FileText, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, Bell, MessageCircle, Phone, FileText, ChevronDown, ChevronUp } from 'lucide-react';
 import ServiceProviderBottomNav from '../../components/ServiceProviderBottomNav';
 import { useTech } from '../../context/ServiceProviderContext';
 

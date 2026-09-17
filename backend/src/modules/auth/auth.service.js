@@ -131,7 +131,18 @@ function sanitizeUser(user) {
 
 /** Step 1 of login: verify the password, then send an OTP — the frontend always
  * routes password-verified logins through an OTP screen before granting a session. */
+// Service providers sign in with their 10-digit phone number or their email —
+// not their provider ID. Mirrors the partner login form's validation.
+const PROVIDER_PHONE = /^\d{10}$/;
+const PROVIDER_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
 export async function login({ role, identifier, password }) {
+  if (role === ROLES.SERVICE_PROVIDER) {
+    const value = String(identifier || '').trim();
+    if (!PROVIDER_PHONE.test(value) && !PROVIDER_EMAIL.test(value)) {
+      throw new ApiError(400, 'Enter your email or 10-digit phone number');
+    }
+  }
   const user = await findUserByIdentifier(role, identifier);
   if (!user || !(await verifyPassword(password, user.passwordHash))) {
     throw new ApiError(401, 'Invalid credentials');

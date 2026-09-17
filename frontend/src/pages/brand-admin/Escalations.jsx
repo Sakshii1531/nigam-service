@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
-import { AlertTriangle, Clock, ArrowUpRight, CheckCircle2, Search, Filter, Download, Eye, X } from 'lucide-react';
+import { AlertTriangle, Clock, CheckCircle2, Search, Download, Eye, X } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
 
 const priorityColors = {

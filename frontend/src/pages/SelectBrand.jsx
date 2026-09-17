@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, ChevronRight, ChevronDown, ChevronUp, Home as HomeIcon, ShoppingCart, Calendar, Wrench, User } from 'lucide-react';
+import { ArrowLeft, ChevronRight, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Category brand mapping with high-fidelity inline SVGs

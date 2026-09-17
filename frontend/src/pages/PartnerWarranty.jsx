@@ -1,6 +1,5 @@
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ChevronRight, Laptop, ShieldCheck, Flame, Wind, Droplet, Wrench } from 'lucide-react';
+import { ArrowLeft, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import CustomerBottomNav from '../components/CustomerBottomNav';
 

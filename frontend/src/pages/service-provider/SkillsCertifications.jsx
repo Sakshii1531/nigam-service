@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Award, CheckCircle, Clock, Briefcase, ClipboardList, Calendar, Wrench, User } from 'lucide-react';
+import { ArrowLeft, Award, CheckCircle, Clock, Wrench } from 'lucide-react';
 import ServiceProviderBottomNav from '../../components/ServiceProviderBottomNav';
 import { apiRequest } from '../../lib/apiClient';
 

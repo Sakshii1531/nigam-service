@@ -5,7 +5,9 @@ import { ok } from '../../utils/respond.js';
 import { ROLES } from '../../config/constants.js';
 import * as adminServiceProviderService from './adminServiceProvider.service.js';
 import { getAsmByUserId } from './asm.service.js';
+import * as cityChangeService from '../service-provider/cityChange.service.js';
 import {
+  changeServiceProviderCitySchema,
   listServiceProvidersQuerySchema,
   updateServiceProviderStatusSchema,
   idParamSchema,
@@ -26,7 +28,7 @@ adminServiceProviderRouter.use(requireAuth, requireRole(ROLES.SUPER_ADMIN, ROLES
  * never resolved at registration (see adminServiceProvider.service.js's
  * cityMatch/findOr404).
  */
-async function scopeCityForCaller(req) {
+export async function scopeCityForCaller(req) {
   if (req.user.role !== ROLES.ASM) return undefined;
   const asm = await getAsmByUserId(req.user.id);
   // getAsmByUserId returns a toJSON()'d plain object (asm.service.js's
@@ -64,6 +66,22 @@ adminServiceProviderRouter.patch(
     try {
       const scopedCity = await scopeCityForCaller(req);
       ok(res, await adminServiceProviderService.updateServiceProviderStatus(req.params.id, req.body.status, scopedCity, req.user.id));
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// Direct change — super-admin only. An ASM goes through the request queue
+// (city-change-requests), since a move can take a provider out of their zone.
+adminServiceProviderRouter.patch(
+  '/:id/city',
+  requireRole(ROLES.SUPER_ADMIN),
+  validate(idParamSchema, 'params'),
+  validate(changeServiceProviderCitySchema),
+  async (req, res, next) => {
+    try {
+      ok(res, await cityChangeService.changeCityDirectly(req.params.id, { ...req.body, adminId: req.user.id }));
     } catch (err) {
       next(err);
     }

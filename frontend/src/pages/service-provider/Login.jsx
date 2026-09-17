@@ -1,28 +1,64 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Phone, Lock, ShieldCheck, Briefcase, Eye, EyeOff } from 'lucide-react';
-import logo from '../../assets/nigam-care.png';
+import { ArrowLeft, Phone, Mail, Lock, Briefcase, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { ApiError } from '../../lib/apiClient';
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+/**
+ * Partners sign in with their email or their 10-digit phone number. What they
+ * type first decides which: a digit means phone (only digits are kept, capped
+ * at 10), a letter means email.
+ */
+function identifierMode(value) {
+  if (!value) return null;
+  if (/^\d/.test(value)) return 'phone';
+  if (/^[a-z]/i.test(value)) return 'email';
+  return 'invalid';
+}
+
+function identifierError(value) {
+  const mode = identifierMode(value);
+  if (!mode) return 'Enter your email or 10-digit phone number.';
+  if (mode === 'invalid') return 'Start with a letter for email, or a digit for your phone number.';
+  if (mode === 'phone' && value.length !== 10) return 'Phone number must be exactly 10 digits.';
+  if (mode === 'email' && !EMAIL_PATTERN.test(value)) return 'Enter a valid email address, like name@example.com.';
+  return '';
+}
 
 const ServiceProviderLogin = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
-  const [usePhone, setUsePhone] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [identifier, setIdentifier] = useState('');
+  const [identifierTouched, setIdentifierTouched] = useState(false);
+
+  const mode = identifierMode(identifier);
+  const fieldError = identifierTouched ? identifierError(identifier) : '';
+
+  const handleIdentifierChange = (e) => {
+    const raw = e.target.value.replace(/^\s+/, '');
+    // Phone mode: digits only, never more than 10.
+    const next = /^\d/.test(raw) ? raw.replace(/\D/g, '').slice(0, 10) : raw.replace(/\s/g, '');
+    setIdentifier(next);
+    if (error) setError('');
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
-    const identifier = (form.get('identifier') || '').toString().trim();
     const password = form.get('password');
+
+    setIdentifierTouched(true);
+    if (identifierError(identifier)) return;
 
     setError('');
     setSubmitting(true);
     try {
-      const { destination } = await login({ role: 'service_provider', identifier, password });
+      const { destination } = await login({ role: 'service_provider', identifier: identifier.trim(), password });
       navigate('/service-provider/verify-otp', { state: { destination, role: 'service_provider', identifier } });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.');
@@ -70,19 +106,43 @@ const ServiceProviderLogin = () => {
         {/* Form */}
         <form onSubmit={handleLogin} className="flex flex-col gap-3">
           
-          {/* Input Field (Phone or ID) */}
+          {/* Email or phone */}
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Service Provider ID / Phone</label>
+            <label htmlFor="sp-login-identifier" className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Email or Phone Number</label>
             <div className="relative">
-              <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+              {mode === 'email' ? (
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" aria-hidden="true" />
+              ) : (
+                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" aria-hidden="true" />
+              )}
               <input
+                id="sp-login-identifier"
                 type="text"
                 name="identifier"
-                placeholder="Enter your ID or Phone"
-                className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] outline-none transition-all text-sm"
-                required
+                value={identifier}
+                onChange={handleIdentifierChange}
+                onBlur={() => identifier && setIdentifierTouched(true)}
+                inputMode={mode === 'phone' ? 'numeric' : mode === 'email' ? 'email' : 'text'}
+                autoComplete={mode === 'phone' ? 'tel-national' : 'username'}
+                autoCapitalize="none"
+                spellCheck={false}
+                maxLength={mode === 'phone' ? 10 : 254}
+                placeholder="Email or 10-digit phone number"
+                aria-invalid={Boolean(fieldError)}
+                aria-describedby="sp-login-identifier-help"
+                className={`w-full pl-12 pr-4 py-3 bg-slate-50 border rounded-2xl focus:ring-1 outline-none transition-all text-sm ${
+                  fieldError ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : 'border-slate-200 focus:border-[#0D47A1] focus:ring-[#0D47A1]'
+                }`}
               />
             </div>
+            {fieldError && (
+              <p
+                id="sp-login-identifier-help"
+                className="text-xs text-red-600 font-semibold"
+              >
+                {fieldError}
+              </p>
+            )}
           </div>
 
           {/* Password Field */}

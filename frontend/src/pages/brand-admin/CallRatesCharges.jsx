@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
-import { Phone, Plus, Edit2, CheckCircle2, Trash2, Save, X } from 'lucide-react';
+import { Plus, Edit2, CheckCircle2, Trash2, Save, X } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
 
 const FALLBACK_CATEGORIES = ['Air Conditioner', 'Refrigerator', 'Washing Machine', 'Television', 'Microwave Oven'];

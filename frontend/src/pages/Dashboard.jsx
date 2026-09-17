@@ -1,27 +1,12 @@
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Search,
   Bell,
   MapPin,
   ChevronDown,
-  Wrench,
-  Zap,
-  Droplet,
-  Thermometer,
-  Shield,
-  MessageSquare,
   Star,
   X,
-  Wind,
-  WashingMachine,
-  Refrigerator,
-  Droplets,
-  Sparkles,
   ShoppingCart,
-  Tv,
-  Flame,
-  MousePointerClick,
-  CheckCircle2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Footer from "../components/layout/Footer";
@@ -40,11 +25,6 @@ import mostBookedAc2 from "../assets/most_booked_ac_2.png";
 import mostBookedWm from "../assets/most_booked_wm.png";
 import mostBookedCleaning from "../assets/most_booked_cleaning.png";
 import mostBookedSalon from "../assets/most_booked_salon.png";
-import cleaningBathroom1 from "../assets/cleaning_bathroom_1.png";
-import cleaningBathroom2 from "../assets/cleaning_bathroom_2.png";
-import cleaningSofa from "../assets/cleaning_sofa.png";
-import cleaningCarpet from "../assets/cleaning_carpet.png";
-import cleaningKitchen from "../assets/cleaning_kitchen.png";
 import applianceFridge from "../assets/appliance_fridge.png";
 import acImg from "../assets/categories/ac.png";
 import splitAcImg from "../assets/categories/split_ac.png";
@@ -54,7 +34,6 @@ import plumberImg from "../assets/categories/plumber_fixed.png";
 import cleaningImg from "../assets/categories/cleaning.png";
 import saloonImg from "../assets/categories/saloon.png";
 import spaImg from "../assets/categories/spa.png";
-import logo from "../assets/nigam-care.png";
 import clickIcon from "../assets/CLICK.png";
 import handshakeIcon from "../assets/HANDSHAKE.png";
 
@@ -66,10 +45,6 @@ import roCarbonImg from "../assets/ro_carbon_filter.png";
 import roPostCarbonImg from "../assets/ro_post_carbon.png";
 import Stories from "../components/home/Stories";
 import PlatformReviewCarousel from "../components/home/PlatformReviewCarousel";
-import star3d from "../assets/star_3d.png";
-import ac3d from "../assets/icon_3d_ac.png";
-import wm3d from "../assets/icon_3d_wm.png";
-import fridge3d from "../assets/icon_3d_fridge.png";
 
 const renderDashboardCategoryIcon = (iconKey) => {
   const k = (iconKey || "").toLowerCase();
@@ -596,12 +571,6 @@ const getCategoryIconKey = (cat) => {
   if (detected) return detected;
   return cat.icon || "more";
 };
-import tv3d from "../assets/icon_3d_tv.png";
-import geyser3d from "../assets/icon_3d_geyser.png";
-import ro3d from "../assets/icon_3d_ro.png";
-import oven3d from "../assets/icon_3d_oven.png";
-import chimney3d from "../assets/icon_3d_chimney.png";
-import cooler3d from "../assets/icon_3d_cooler.png";
 
 const Dashboard = ({ defaultType }) => {
   const { unreadCount } = useNotifications();
@@ -900,7 +869,6 @@ const Dashboard = ({ defaultType }) => {
     }
   }, [defaultType, navigate]);
   const [showWarrantyModal, setShowWarrantyModal] = useState(false);
-  const [isUnderWarranty, setIsUnderWarranty] = useState(null);
   const [billNo, setBillNo] = useState("");
   const [billFile, setBillFile] = useState(null);
   const [selectedServiceForWarranty, setSelectedServiceForWarranty] =
@@ -1041,106 +1009,6 @@ const Dashboard = ({ defaultType }) => {
     }),
   );
 
-  const getBrandsForCategory = (cat) => {
-    const norm = cat?.toLowerCase() || "";
-    if (norm.includes("ac")) {
-      return [
-        "Voltas",
-        "LG",
-        "Samsung",
-        "Daikin",
-        "Whirlpool",
-        "Lloyd",
-        "Panasonic",
-        "Blue Star",
-        "Hitachi",
-      ];
-    }
-    if (norm.includes("wm") || norm.includes("washing")) {
-      return [
-        "LG",
-        "Samsung",
-        "Whirlpool",
-        "IFB",
-        "Bosch",
-        "Haier",
-        "Godrej",
-        "Panasonic",
-      ];
-    }
-    if (norm.includes("fridge") || norm.includes("refrigerator")) {
-      return [
-        "LG",
-        "Samsung",
-        "Whirlpool",
-        "Godrej",
-        "Haier",
-        "Panasonic",
-        "Bosch",
-      ];
-    }
-    if (norm.includes("tv") || norm.includes("television")) {
-      return [
-        "LG",
-        "Samsung",
-        "Sony",
-        "Panasonic",
-        "Mi",
-        "OnePlus",
-        "TCL",
-        "Haier",
-        "VU",
-      ];
-    }
-    if (norm.includes("geyser") || norm.includes("heater")) {
-      return [
-        "Havells",
-        "AO Smith",
-        "Racold",
-        "Bajaj",
-        "V-Guard",
-        "Venus",
-        "Kenstar",
-      ];
-    }
-    if (norm.includes("ro") || norm.includes("purifier")) {
-      return [
-        "Kent",
-        "Eureka Forbes",
-        "Aquaguard",
-        "Pureit",
-        "Blue Star",
-        "AO Smith",
-        "Livpure",
-      ];
-    }
-    if (norm.includes("oven") || norm.includes("microwave")) {
-      return [
-        "LG",
-        "Samsung",
-        "IFB",
-        "Morphy Richards",
-        "Bajaj",
-        "Panasonic",
-        "Godrej",
-      ];
-    }
-    if (norm.includes("chimney")) {
-      return ["Faber", "Elica", "Glen", "Hindware", "Kaff", "Sunflame"];
-    }
-    if (norm.includes("cooler")) {
-      return [
-        "Symphony",
-        "Bajaj",
-        "Orient",
-        "Kenstar",
-        "Crompton",
-        "Hindware",
-        "Usha",
-      ];
-    }
-    return ["LG", "Samsung", "Whirlpool", "Panasonic"];
-  };
 
   return (
     <div className="min-h-screen bg-bg-light flex flex-col pb-16 lg:pb-0">

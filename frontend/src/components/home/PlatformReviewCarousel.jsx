@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Star, User, ChevronRight, ChevronLeft, ArrowRight, ArrowLeft } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Star, User, ArrowRight, ArrowLeft } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
 
 const THEME_STYLES = {

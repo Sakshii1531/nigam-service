@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import { apiRequest } from '../../lib/apiClient';
 import { useAppLogo, resolveLogoUrl } from '../../context/LogoContext';
-import defaultLogo from '../../assets/nigam-care.png';
 import {
   Bell,
   Lock,
@@ -35,7 +34,7 @@ const Settings = () => {
   const [saving, setSaving] = useState(false);
 
   // App Logo state
-  const { logoUrl: globalResolvedLogo, updateLogo } = useAppLogo();
+  const { updateLogo } = useAppLogo();
   const [logoInputUrl, setLogoInputUrl] = useState('');
   const [uploadingLogo, setUploadingLogo] = useState(false);
 

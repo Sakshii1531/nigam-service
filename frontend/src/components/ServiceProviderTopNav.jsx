@@ -1,4 +1,3 @@
-import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Briefcase, ClipboardList, History, Calendar, User, Bell, Wrench } from "lucide-react";
 import { useNotifications } from "../context/NotificationContext";

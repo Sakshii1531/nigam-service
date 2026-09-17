@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { MapPin, ShieldCheck, PhoneOff, Zap, CreditCard, Star, Bell, BarChart3 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect } from 'react';
+import { MapPin, ShieldCheck, PhoneOff, Zap, CreditCard, Bell, BarChart3 } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const features = [
   { id: 2, title: 'Google Maps', desc: 'Seamless navigation and location services.', icon: MapPin },
@@ -23,7 +23,6 @@ const Features = () => {
     return () => clearInterval(timer);
   }, []);
 
-  const currentFeature = features[currentIndex];
 
   return (
     <section className="py-20 bg-bg-light overflow-hidden">

@@ -6,32 +6,12 @@ import {
   Users,
   UserCheck,
   ClipboardList,
-  Clock,
   IndianRupee,
-  XCircle,
-  TrendingUp,
-  TrendingDown,
-  Plus,
-  ArrowRight,
-  Search,
   CheckCircle2,
-  Truck,
   Shield,
-  Star,
   AlertTriangle,
-  MapPin,
-  Calendar,
-  MessageSquare,
-  HelpCircle,
-  Briefcase,
-  Play,
   Megaphone,
   BarChart3,
-  LogOut,
-  ArrowUpRight,
-  ShieldAlert,
-  Bell,
-  Wrench,
   FileText,
   Package
 } from 'lucide-react';
@@ -142,7 +122,7 @@ const Dashboard = () => {
   // Top KPI Metrics
   const [metrics, setMetrics] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [, setError] = useState('');
 
   useEffect(() => {
     let cancelled = false;

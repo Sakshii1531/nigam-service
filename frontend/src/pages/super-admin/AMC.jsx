@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
-import { Search, Shield, ShieldAlert, Award, FileText, ClipboardList } from 'lucide-react';
+import { Search, Shield, ShieldAlert, Award, ClipboardList } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
 
 const AMC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPlan, setSelectedPlan] = useState('All Plans');
   const [subscriptions, setSubscriptions] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [summary, setSummary] = useState(null);
 

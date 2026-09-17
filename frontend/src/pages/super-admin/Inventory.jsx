@@ -1,19 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import { 
   Search, 
-  Filter, 
   Package, 
   Plus, 
   AlertTriangle, 
   Eye, 
   Edit,
-  TrendingDown,
   X,
   CheckCircle2,
-  SlidersHorizontal,
-  ChevronRight,
   ArrowLeft
 } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
@@ -34,7 +30,7 @@ const Inventory = () => {
   const [editingPart, setEditingPart] = useState(null);
   const [selectedPart, setSelectedPart] = useState(null);
   const [parts, setParts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
 
   // Presentation shape for a SparePartCatalog document. `status` and
@@ -78,11 +74,6 @@ const Inventory = () => {
     }, 3000);
   };
 
-  const getStatus = (stock, threshold) => {
-    if (stock === 0) return 'Out of Stock';
-    if (stock <= threshold) return 'Low Stock';
-    return 'In Stock';
-  };
 
   // Persists to the catalogue. Both handlers used to mutate local state only, so
   // a part "added" here disappeared on reload and no service provider ever saw it.

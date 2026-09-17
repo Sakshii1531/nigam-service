@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
-import { Search, CheckCircle, XCircle, FileText, Calendar, User } from 'lucide-react';
+import { Search, FileText, Calendar, User } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
 
 const dateFormatter = new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });

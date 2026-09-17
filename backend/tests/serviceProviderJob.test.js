@@ -12,6 +12,7 @@ import { ServiceCatalogItem } from '../src/modules/catalog/serviceCatalogItem.mo
 import { Booking } from '../src/modules/booking/booking.model.js';
 import { ServiceRequest } from '../src/modules/service-requests/serviceRequest.model.js';
 import { Job } from '../src/modules/service-provider/job.model.js';
+import { Review } from '../src/modules/reviews/review.model.js';
 import { EarningsTally } from '../src/modules/service-provider/earningsTally.model.js';
 import { Brand } from '../src/modules/super-admin/brand.model.js';
 import { RateCard } from '../src/modules/brand-admin/rateCard.model.js';
@@ -156,6 +157,84 @@ describe('POST /service-provider/jobs/accept/:serviceRequestId', () => {
     await seedCatalog();
     const { token: custToken } = await seedCustomer();
     await request(app).post('/api/v1/service-provider/jobs/accept/000000000000000000000000').set('Authorization', `Bearer ${custToken}`).send({}).expect(403);
+  });
+});
+
+describe('open offers (booked when nobody was online)', () => {
+  async function bookOpenOffer() {
+    await seedCatalog();
+    const first = await seedServiceProvider({ availability: 'Offline' });
+    const second = await seedServiceProvider({ availability: 'Offline' });
+    await ServiceProvider.updateMany({}, { serviceCityName: 'Pune' });
+    const { token: custToken } = await seedCustomer();
+    const bookingRes = await request(app)
+      .post('/api/v1/bookings')
+      .set('Authorization', `Bearer ${custToken}`)
+      .send({ category: 'AC', serviceSlug: 'repair', address: { house: '12 MG Road', city: 'Pune', pincode: '411001' } })
+      .expect(201);
+    const srId = bookingRes.body.data.serviceRequest.id;
+    const sr = await ServiceRequest.findById(srId);
+    expect(sr.serviceProvider).toBeNull();
+    return { srId, first, second };
+  }
+
+  it('lists the open offer with a server-computed earning, and lets the first provider claim it', async () => {
+    const { srId, first, second } = await bookOpenOffer();
+
+    const feed = await request(app)
+      .get('/api/v1/service-provider/jobs/available')
+      .set('Authorization', `Bearer ${first.token}`)
+      .expect(200);
+    const offer = feed.body.data.find((o) => o.id === srId);
+    expect(offer).toBeTruthy();
+    expect(offer.estEarnings).toBe(300); // 30% default share of the 1000 booking
+
+    const accepted = await request(app)
+      .post(`/api/v1/service-provider/jobs/accept/${srId}`)
+      .set('Authorization', `Bearer ${first.token}`)
+      .send({})
+      .expect(200);
+    expect(accepted.body.data.activeStep).toBe('assigned');
+    const claimed = await ServiceRequest.findById(srId);
+    expect(String(claimed.serviceProvider)).toBe(String(first.serviceProvider._id));
+    expect(claimed.status).toBe('Engineer Accepted');
+
+    await request(app)
+      .post(`/api/v1/service-provider/jobs/accept/${srId}`)
+      .set('Authorization', `Bearer ${second.token}`)
+      .send({})
+      .expect(403); // already claimed by the first provider
+  });
+
+  it('declining an open offer removes it from that provider\'s feed only', async () => {
+    const { srId, first, second } = await bookOpenOffer();
+
+    await request(app)
+      .post(`/api/v1/service-provider/jobs/reject/${srId}`)
+      .set('Authorization', `Bearer ${first.token}`)
+      .expect(200);
+
+    const firstFeed = await request(app).get('/api/v1/service-provider/jobs/available').set('Authorization', `Bearer ${first.token}`).expect(200);
+    expect(firstFeed.body.data.some((o) => o.id === srId)).toBe(false);
+    const secondFeed = await request(app).get('/api/v1/service-provider/jobs/available').set('Authorization', `Bearer ${second.token}`).expect(200);
+    expect(secondFeed.body.data.some((o) => o.id === srId)).toBe(true);
+
+    await request(app)
+      .post(`/api/v1/service-provider/jobs/accept/${srId}`)
+      .set('Authorization', `Bearer ${first.token}`)
+      .send({})
+      .expect(403);
+  });
+
+  it('refuses to let a provider outside the city claim the offer', async () => {
+    const { srId } = await bookOpenOffer();
+    const outsider = await seedServiceProvider({ availability: 'Offline' });
+    await ServiceProvider.updateOne({ _id: outsider.serviceProvider._id }, { serviceCityName: 'Delhi' });
+    await request(app)
+      .post(`/api/v1/service-provider/jobs/accept/${srId}`)
+      .set('Authorization', `Bearer ${outsider.token}`)
+      .send({})
+      .expect(403);
   });
 });
 
@@ -637,6 +716,71 @@ describe('recent earnings + analytics', () => {
     // No prior window to compare against, so the deltas are null, not 0.
     expect(data.earningsChangePercent).toBeNull();
     expect(data.previousCompletionRate).toBeNull();
+  });
+
+  it('summarises job counts, lifetime earnings and the customer rating for the history screen', async () => {
+    const { jobId, serviceProviderToken } = await completeJob();
+    const job = await Job.findById(jobId).populate('serviceRequest');
+    await Review.deleteMany({});
+    await Review.create({
+      user: job.serviceRequest.user,
+      serviceRequest: job.serviceRequest._id,
+      serviceProvider: job.serviceProvider,
+      serviceProviderRating: 4,
+      rating: 4,
+    });
+
+    const res = await request(app)
+      .get('/api/v1/service-provider/jobs/summary')
+      .set('Authorization', `Bearer ${serviceProviderToken}`)
+      .expect(200);
+
+    expect(res.body.data).toMatchObject({
+      totalJobs: 1,
+      completedJobs: 1,
+      inProgressJobs: 0,
+      completedToday: 1,
+      completionRate: 100,
+      rating: 4,
+      reviewCount: 1,
+    });
+    expect(res.body.data.lifetimeEarnings).toBe(job.billingEstimate.serviceProviderEarnings);
+    await Review.deleteMany({});
+  });
+
+  it('reports no rating (not a made-up score) for a service provider with no reviews', async () => {
+    const { serviceProviderToken } = await createAcceptedD2CJob();
+    const res = await request(app)
+      .get('/api/v1/service-provider/jobs/summary')
+      .set('Authorization', `Bearer ${serviceProviderToken}`)
+      .expect(200);
+    expect(res.body.data).toMatchObject({
+      totalJobs: 1,
+      completedJobs: 0,
+      inProgressJobs: 1,
+      lifetimeEarnings: 0,
+      rating: null,
+      reviewCount: 0,
+    });
+  });
+
+  it('searches history across pages and reports the filtered total', async () => {
+    const { srId, serviceProviderToken } = await createAcceptedD2CJob();
+    const sr = await ServiceRequest.findById(srId);
+    const auth = { Authorization: `Bearer ${serviceProviderToken}` };
+
+    const hit = await request(app)
+      .get(`/api/v1/service-provider/jobs/history?search=${encodeURIComponent(sr.humanId)}&limit=1`)
+      .set(auth)
+      .expect(200);
+    expect(hit.body.data.total).toBe(1);
+    expect(hit.body.data.items).toHaveLength(1);
+
+    const miss = await request(app)
+      .get('/api/v1/service-provider/jobs/history?search=no-such-ticket')
+      .set(auth)
+      .expect(200);
+    expect(miss.body.data).toMatchObject({ total: 0, items: [] });
   });
 
   it('reports a null completion rate when no job was assigned in the window', async () => {

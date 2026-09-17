@@ -1,18 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
 import { apiRequest } from '../../lib/apiClient';
 import { 
   Search, 
-  Filter, 
   RotateCcw, 
   Truck, 
   CheckCircle2, 
-  X,
   Eye,
-  QrCode,
   AlertTriangle,
-  PackageCheck,
   ArrowLeft
 } from 'lucide-react';
 

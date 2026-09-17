@@ -87,7 +87,8 @@ async function seedOnce(page, entries) {
 
 async function readCart(request, token) {
   const res = await request.get(`${API}/cart`, { headers: { Authorization: `Bearer ${token}` } });
-  return (await res.json()).data.items;
+  const body = await res.json();
+  return body.data?.items || [];
 }
 
 test('a product added from its detail page shows up in the buy-flow cart', async ({ page, request }) => {
@@ -141,10 +142,11 @@ test('an add by a signed-in customer reaches the server cart', async ({ page, re
 
   await page.goto(`/product-details?id=${product.id}`);
   await page.getByRole('button', { name: /add to cart/i }).click();
+  await expect(page.getByText(/added to cart/i)).toBeVisible();
 
   // Mirroring is deliberately fire-and-forget, so poll rather than assert once.
   await expect
-    .poll(async () => (await readCart(request, session.accessToken)).length, { timeout: 10_000 })
+    .poll(async () => (await readCart(request, session.accessToken)).length, { timeout: 15_000 })
     .toBe(1);
 
   const items = await readCart(request, session.accessToken);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   useNavigate,
   useParams,
@@ -7,14 +7,12 @@ import {
 } from "react-router-dom";
 import {
   ArrowLeft,
-  Shield,
   Check,
   ChevronRight,
   Calendar,
   Wrench,
   Sparkles,
   Zap,
-  PackageOpen,
   MapPin,
   Bell,
   Search,

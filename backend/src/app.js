@@ -57,6 +57,7 @@ import { loyaltyConfigRouter } from './modules/super-admin/loyaltyConfig.routes.
 import { platformRoleRouter } from './modules/super-admin/platformRole.routes.js';
 import { platformUserRouter } from './modules/super-admin/platformUser.routes.js';
 import { adminServiceProviderRouter } from './modules/super-admin/adminServiceProvider.routes.js';
+import { cityChangeRequestRouter } from './modules/super-admin/cityChangeRequest.routes.js';
 import { adminPartOrderRouter } from './modules/super-admin/adminPartOrder.routes.js';
 import { warrantyRegistrationRouter } from './modules/super-admin/warrantyRegistration.routes.js';
 import { analyticsRouter } from './modules/super-admin/analytics.routes.js';
@@ -192,6 +193,7 @@ export function createApp() {
   app.use('/api/v1/super-admin/roles', platformRoleRouter);
   app.use('/api/v1/super-admin/users', platformUserRouter);
   app.use('/api/v1/super-admin/service-providers', adminServiceProviderRouter);
+  app.use('/api/v1/super-admin/city-change-requests', cityChangeRequestRouter);
   app.use('/api/v1/super-admin/part-orders', adminPartOrderRouter);
   app.use('/api/v1/super-admin/warranty-registrations', warrantyRegistrationRouter);
   app.use('/api/v1/super-admin/analytics', analyticsRouter);

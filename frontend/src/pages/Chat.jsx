@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Send, Paperclip, Check, CheckCheck, X, ShieldOff, Image as ImageIcon } from 'lucide-react';
 import { io } from 'socket.io-client';

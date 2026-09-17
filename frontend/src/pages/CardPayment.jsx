@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { apiRequest } from '../lib/apiClient';
@@ -69,6 +69,11 @@ const CardPayment = () => {
           advanceAmt: String(meta.advanceAmt || 0),
           paymentMode: meta.paymentMode || 'advance',
         });
+        try {
+          sessionStorage.removeItem("ncc_last_booking_flow");
+        } catch (_err) {
+          // ignore session storage removal errors
+        }
         navigate(`/booking-success?${params.toString()}`);
       } catch (err) {
         console.error('Failed to create booking:', err);

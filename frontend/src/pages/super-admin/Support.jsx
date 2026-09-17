@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import { 
@@ -6,8 +6,7 @@ import {
   MessageSquare, 
   Send,
   CheckCircle2,
-  Clock,
-  X
+  Clock
 } from 'lucide-react';
 import { io } from 'socket.io-client';
 import { apiRequest, getStoredTokens } from '../../lib/apiClient';
@@ -49,8 +48,8 @@ const Support = () => {
 
   const [tickets, setTickets] = useState([]);
   const [selectedTicketId, setSelectedTicketId] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [, setLoading] = useState(true);
+  const [, setError] = useState('');
   const socketRef = useRef(null);
 
   useEffect(() => {

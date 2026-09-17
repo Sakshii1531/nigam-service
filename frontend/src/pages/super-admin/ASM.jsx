@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
@@ -14,7 +14,6 @@ import {
   Trash2,
   CheckCircle2,
   TrendingUp,
-  ShieldCheck,
   Eye,
   X
 } from 'lucide-react';

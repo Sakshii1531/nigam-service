@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
 import { apiRequest } from '../../lib/apiClient';
@@ -13,7 +13,6 @@ import {
   Building2,
   Boxes,
   Settings2,
-  ArrowRight,
   ListChecks
 } from 'lucide-react';
 
@@ -30,8 +29,8 @@ const Catalog = () => {
   // Sub-brands, each with its products folded in. The API keeps the two apart
   // (products hang off /sub-brands/:id/products), so they're joined here.
   const [subBrands, setSubBrands] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [, setLoading] = useState(true);
+  const [, setError] = useState('');
 
   async function loadCatalog() {
     const [services, subs] = await Promise.all([

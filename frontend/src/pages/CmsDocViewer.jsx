@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
-  ArrowLeft, RefreshCw, FileText, ShieldCheck, CheckCircle2, Lock, Scale, Mail, Clock, Search, X, Printer 
+  ArrowLeft, RefreshCw, ShieldCheck, Lock, Scale, Mail, Clock, Search, X, Printer 
 } from 'lucide-react';
 import { apiRequest } from '../lib/apiClient';
 import Footer from '../components/layout/Footer';
@@ -71,7 +71,7 @@ const CmsDocViewer = () => {
 
   const [loading, setLoading] = useState(true);
   const [sections, setSections] = useState([]);
-  const [cmsBody, setCmsBody] = useState('');
+  const [, setCmsBody] = useState('');
   const [docVersion, setDocVersion] = useState('v1.0');
   const [contactEmail, setContactEmail] = useState(isPrivacy ? 'privacy@nccservice.in' : 'support@nccservice.in');
   const [lastUpdatedDate, setLastUpdatedDate] = useState('August 2026');

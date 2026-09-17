@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, RefreshCw, ChevronRight } from 'lucide-react';
+import { ArrowLeft, RefreshCw } from 'lucide-react';
 import { apiRequest } from '../lib/apiClient';
 
 const tabs = ['All', 'Valuation Approved', 'Completed'];

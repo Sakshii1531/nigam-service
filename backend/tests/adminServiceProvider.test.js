@@ -191,6 +191,23 @@ describe('PATCH /super-admin/service-providers/:id/status', () => {
     expect(inDb.status).toBe('Inactive');
   });
 
+  it('marks pending KYC documents verified on approval, leaving rejected ones alone', async () => {
+    const token = await seedSuperAdmin();
+    const { serviceProvider } = await seedServiceProvider({ status: 'Pending' });
+    await ServiceProvider.updateOne({ _id: serviceProvider._id }, { 'verification.panStatus': 'Rejected' });
+
+    await request(app)
+      .patch(`/api/v1/super-admin/service-providers/${serviceProvider._id}/status`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ status: 'Active' })
+      .expect(200);
+
+    const inDb = await ServiceProvider.findById(serviceProvider._id);
+    expect(inDb.verification.aadharStatus).toBe('Verified');
+    expect(inDb.verification.backgroundCheckStatus).toBe('Verified');
+    expect(inDb.verification.panStatus).toBe('Rejected');
+  });
+
   it('404s for an unknown serviceProvider', async () => {
     const token = await seedSuperAdmin();
     await request(app)

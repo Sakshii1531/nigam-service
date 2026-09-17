@@ -1,4 +1,3 @@
-import React from 'react';
 import { Search, MapPin, ShoppingCart, User, ChevronDown } from 'lucide-react';
 import logo from '../../assets/nigam-care.png';
 
