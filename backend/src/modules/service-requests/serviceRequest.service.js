@@ -65,7 +65,11 @@ export async function getServiceRequest(id) {
  */
 export async function getServiceRequestDetail(id) {
   await findOr404(id);
-  return ServiceRequest.findById(id).populate('serviceProvider', 'name rating specs');
+  return ServiceRequest.findById(id)
+    .populate('user', 'name email phone addresses')
+    .populate('serviceProvider', 'name phone rating avatar photo specs')
+    .populate('brand', 'name logo')
+    .populate('booking');
 }
 
 /** Server-side transition validation — the frontend's own status enum is not
@@ -112,9 +116,10 @@ export async function listServiceRequests({ user, serviceProvider, brand, status
     // customer's own history) renders names rather than ids, so resolve the
     // refs here instead of making each caller fan out.
     ServiceRequest.find(query)
-      .populate('user', 'name email phone')
-      .populate('serviceProvider', 'name phone')
-      .populate('brand', 'name')
+      .populate('user', 'name email phone addresses')
+      .populate('serviceProvider', 'name phone rating avatar photo')
+      .populate('brand', 'name logo')
+      .populate('booking')
       .sort(sortObj)
       .skip(skip)
       .limit(lim),
@@ -337,7 +342,10 @@ export async function declineAssignment(id, serviceProviderId) {
   // An open offer (broadcast to the city, assigned to nobody) has no assignee
   // to release — declining it just takes it out of this provider's feed.
   if (!serviceRequest.serviceProvider && serviceRequest.status === 'New' && serviceProviderId) {
-    await ServiceRequest.updateOne({ _id: serviceRequest._id }, { $addToSet: { declinedBy: serviceProviderId } });
+    await ServiceRequest.updateOne(
+      { _id: serviceRequest._id },
+      { $addToSet: { declinedBy: serviceProviderId, declinedOpenOfferBy: serviceProviderId } },
+    );
     return { declined: true, reassignedTo: null };
   }
 
@@ -361,6 +369,10 @@ export async function declineAssignment(id, serviceProviderId) {
   if (serviceProviderId && !serviceRequest.declinedBy.some((t) => String(t) === String(serviceProviderId))) {
     serviceRequest.declinedBy.push(serviceProviderId);
   }
+  if (serviceProviderId && (!serviceRequest.declinedAssignmentBy || !serviceRequest.declinedAssignmentBy.some((t) => String(t) === String(serviceProviderId)))) {
+    serviceRequest.declinedAssignmentBy = serviceRequest.declinedAssignmentBy || [];
+    serviceRequest.declinedAssignmentBy.push(serviceProviderId);
+  }
   serviceRequest.serviceProvider = null;
   serviceRequest.status = 'New';
   if (serviceRequest.isInstant) serviceRequest.instantStatus = 'SEARCHING';
@@ -375,8 +387,9 @@ export async function declineAssignment(id, serviceProviderId) {
   // The customer's screens read the booking, so it has to let go of the
   // service provider too or they keep seeing someone who is not coming.
   let customerUserId = null;
+  let booking = null;
   if (serviceRequest.booking) {
-    const booking = await Booking.findById(serviceRequest.booking);
+    booking = await Booking.findById(serviceRequest.booking);
     if (booking) {
       customerUserId = booking.user ? String(booking.user._id || booking.user) : null;
       booking.serviceProvider = null;
@@ -426,6 +439,35 @@ export async function declineAssignment(id, serviceProviderId) {
     reassignedTo = updated.serviceProvider?.name || null;
   } catch {
     reassignedTo = null;
+  }
+
+  // If no single provider was directly assigned, it is now an open pool job for everyone
+  if (!reassignedTo) {
+    try {
+      const io = getIO();
+      const city = (serviceRequest.zone || booking?.address?.city || '').toLowerCase().trim();
+      const openJobPayload = {
+        bookingId: serviceRequest.booking ? String(serviceRequest.booking) : null,
+        serviceRequestId: String(serviceRequest._id),
+        category: serviceRequest.category,
+        service: serviceRequest.description || 'Appliance Service',
+        totalPrice: booking?.totalPrice ?? 0,
+        isInstant: Boolean(serviceRequest.isInstant),
+        scheduledTime: booking?.timeSlot?.time || (serviceRequest.isInstant ? 'ASAP' : 'Scheduled'),
+        scheduledDateLabel: booking?.timeSlot?.date || 'Today',
+        assignedServiceProviderId: null,
+        assignedServiceProviderUserId: null,
+        instantStatus: serviceRequest.isInstant ? 'SEARCHING' : null,
+        isAvailableRequest: true,
+      };
+      if (city) {
+        io.to(`city:${city}`).emit('job:new_available', openJobPayload);
+      }
+      io.to('instant:serviceProviders').emit('job:new_available', openJobPayload);
+      io.to('serviceProviders').emit('job:new_available', openJobPayload);
+    } catch {
+      // Socket emit optional
+    }
   }
 
   return { declined: true, reassignedTo };

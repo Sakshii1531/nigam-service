@@ -77,6 +77,16 @@ export async function addServiceItem(categoryKey, data) {
 export async function findServiceItem(categoryKey, serviceSlug) {
   const category = await findCategoryOr404(categoryKey);
   let item = await ServiceCatalogItem.findOne({ category: category._id, slug: serviceSlug, isActive: true });
+  if (!item && serviceSlug) {
+    const cleanSlug = serviceSlug.toLowerCase();
+    if (cleanSlug.includes('repair')) {
+      item = await ServiceCatalogItem.findOne({ category: category._id, slug: 'repair', isActive: true });
+    } else if (cleanSlug.includes('install')) {
+      item = await ServiceCatalogItem.findOne({ category: category._id, slug: 'installation', isActive: true });
+    } else if (cleanSlug.includes('gas')) {
+      item = await ServiceCatalogItem.findOne({ category: category._id, slug: 'gas_refilling', isActive: true });
+    }
+  }
   if (!item && process.env.NODE_ENV !== 'test') {
     // Fallback: try to find the first active service under this category
     item = await ServiceCatalogItem.findOne({ category: category._id, isActive: true });

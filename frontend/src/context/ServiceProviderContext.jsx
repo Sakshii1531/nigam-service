@@ -121,6 +121,8 @@ export const ServiceProviderProvider = ({ children }) => {
         address: sr.booking?.address
           ? `${sr.booking.address.house || ""}, ${sr.booking.address.landmark || ""}, ${sr.booking.address.city || ""} ${sr.booking.address.pincode || ""}`
           : "Customer Address",
+        latitude: sr.booking?.address?.latitude ?? sr.customerLocation?.latitude ?? null,
+        longitude: sr.booking?.address?.longitude ?? sr.customerLocation?.longitude ?? null,
         isD2C: sr.booking ? sr.booking.totalPrice > 0 : true,
         isPriority: sr.priority === "High" || sr.priority === "Critical",
         isRecommended: true,
@@ -198,6 +200,8 @@ export const ServiceProviderProvider = ({ children }) => {
           address: sr?.booking?.address
             ? `${sr.booking.address.house || ""}, ${sr.booking.address.landmark || ""}, ${sr.booking.address.city || ""} ${sr.booking.address.pincode || ""}`
             : "Customer Address",
+          latitude: sr?.booking?.address?.latitude ?? sr?.customerLocation?.latitude ?? null,
+          longitude: sr?.booking?.address?.longitude ?? sr?.customerLocation?.longitude ?? null,
           isD2C: job.isD2C ?? true,
           isPriority: job.isPriority ?? false,
           isRecommended: job.isRecommended ?? true,
@@ -402,13 +406,55 @@ export const ServiceProviderProvider = ({ children }) => {
       }
     };
 
+    const handleJobClaimed = (payload) => {
+      const targetSrId = String(payload?.serviceRequestId || payload?.id || "");
+      const targetBookingId = String(payload?.bookingId || "");
+      setJobs((prevJobs) =>
+        prevJobs.filter((j) => {
+          if (j.isAvailableRequest) {
+            if (targetSrId && (String(j.serviceRequestId) === targetSrId || String(j.id) === targetSrId)) {
+              return false;
+            }
+            if (targetBookingId && String(j.bookingId) === targetBookingId) {
+              return false;
+            }
+          }
+          return true;
+        }),
+      );
+      fetchRealJobs();
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("service-provider:job_claimed", { detail: payload }),
+        );
+      }
+    };
+
     socket.on("instant:new_request", handleIncomingJobDispatch);
     socket.on("job:assigned", handleIncomingJobDispatch);
     socket.on("job:new_available", handleIncomingJobDispatch);
+    socket.on("job:claimed", handleJobClaimed);
     socket.on("job:rescheduled", handleJobRescheduled);
     socket.on("job:cancelled", handleJobCancelled);
     socket.on("booking:cancelled", handleJobCancelled);
-    socket.on("instant:status_update", () => {
+    socket.on("instant:status_update", (payload) => {
+      const targetSrId = String(payload?.serviceRequestId || payload?.id || "");
+      const targetBookingId = String(payload?.bookingId || "");
+      if (payload?.status === "Engineer Accepted" || payload?.isAccepted) {
+        setJobs((prevJobs) =>
+          prevJobs.filter((j) => {
+            if (j.isAvailableRequest) {
+              if (targetSrId && (String(j.serviceRequestId) === targetSrId || String(j.id) === targetSrId)) {
+                return false;
+              }
+              if (targetBookingId && String(j.bookingId) === targetBookingId) {
+                return false;
+              }
+            }
+            return true;
+          }),
+        );
+      }
       fetchRealJobs();
     });
     // An admin/ASM approved (or made) a service city change: re-join the feed
@@ -703,6 +749,15 @@ export const ServiceProviderProvider = ({ children }) => {
               setActiveStep(existing.activeStep || "assigned");
             }
             return { ok: true };
+          }
+          if (err.message && (err.message.includes("already taken") || err.message.includes("already been accepted"))) {
+            setJobs((prevJobs) =>
+              prevJobs.filter(
+                (j) => j.id !== id && j.serviceRequestId !== jobObj.serviceRequestId,
+              ),
+            );
+            await fetchRealJobs();
+            return { ok: false, error: "Another service provider has already taken this job." };
           }
           console.error("Failed to accept job on backend:", err);
           if (!silent) alert(`Failed to accept job: ${err.message}`);
@@ -1158,11 +1213,14 @@ export const ServiceProviderProvider = ({ children }) => {
         return { ok: false, error: "Service request ID not found" };
       }
 
-      setJobs((prev) =>
-        prev.filter(
-          (j) => j.id !== jobId && j.serviceRequestId !== serviceRequestId,
-        ),
-      );
+      const wasOpenOffer = job?.isAvailableRequest && !job?.assignedToMe;
+      if (wasOpenOffer) {
+        setJobs((prev) =>
+          prev.filter(
+            (j) => j.id !== jobId && j.serviceRequestId !== serviceRequestId,
+          ),
+        );
+      }
       try {
         const res = await apiRequest(
           `/service-provider/jobs/reject/${serviceRequestId}`,

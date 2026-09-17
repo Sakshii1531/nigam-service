@@ -108,9 +108,8 @@ export async function listAvailableJobs(serviceProviderId) {
   const srs = await ServiceRequest.find({
     $or: [
       { serviceProvider: serviceProviderId, status: 'Assigned' },
-      // Not ones this provider already turned down — a decline returns the
-      // request to 'New', which otherwise put it straight back in their feed.
-      { serviceProvider: null, status: { $in: ['New', 'Assigned', 'Pending'] }, declinedBy: { $ne: serviceProviderId } },
+      // Open offers: broadcast to everyone in the city unless explicitly declined from open feed
+      { serviceProvider: null, status: { $in: ['New', 'Assigned', 'Pending'] }, declinedOpenOfferBy: { $ne: serviceProviderId } },
     ],
     _id: { $nin: acceptedServiceRequestIds },
   })
@@ -331,7 +330,7 @@ export async function acceptJob(serviceProviderId, serviceRequestId, { type, amc
   // First to accept claims it; the conditional update keeps two providers
   // from both winning the same job.
   if (!serviceRequest.serviceProvider && serviceRequest.status === 'New') {
-    if (serviceRequest.declinedBy?.some((id) => String(id) === String(serviceProviderId))) {
+    if (serviceRequest.declinedOpenOfferBy?.some((id) => String(id) === String(serviceProviderId))) {
       throw new ApiError(403, 'You already declined this request');
     }
     const offers = await listAvailableJobs(serviceProviderId);
@@ -462,6 +461,15 @@ export async function acceptJob(serviceProviderId, serviceRequestId, { type, amc
       io.to(`user:${serviceRequest.user}`).emit('booking:accepted', acceptPayload);
       io.to(`user:${serviceRequest.user}`).emit('instant:status_update', acceptPayload);
       io.to(`user:${serviceRequest.user}`).emit('service_request:updated', acceptPayload);
+    }
+    // Broadcast to all service providers that this job was claimed and is no longer available in open offers
+    io.to('instant:serviceProviders').emit('job:claimed', acceptPayload);
+    io.to('serviceProviders').emit('job:claimed', acceptPayload);
+    io.to('instant:serviceProviders').emit('instant:status_update', acceptPayload);
+    const jobCity = (serviceRequest.zone || booking?.address?.city || '').toLowerCase().trim();
+    if (jobCity) {
+      io.to(`city:${jobCity}`).emit('job:claimed', acceptPayload);
+      io.to(`city:${jobCity}`).emit('instant:status_update', acceptPayload);
     }
   } catch {
     // Socket emit optional

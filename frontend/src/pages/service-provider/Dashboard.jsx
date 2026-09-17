@@ -88,9 +88,9 @@ const Dashboard = () => {
   const [alertNow, setAlertNow] = useState(() => Date.now());
   const [alertBusy, setAlertBusy] = useState(null); // 'accept' | 'decline' | null
   const [alertError, setAlertError] = useState(null);
-  // Service requests announced over the socket that haven't landed in `jobs` yet.
   const [dispatchedIds, setDispatchedIds] = useState([]);
-  const [declinedInstantIds, setDeclinedInstantIds] = useState([]);
+  const [suppressedPopupIds, setSuppressedPopupIds] = useState([]);
+  const [declinedOfferIds, setDeclinedOfferIds] = useState([]);
   const [acceptedInstantIds, setAcceptedInstantIds] = useState([]);
   const [rescheduleAlertJob, setRescheduleAlertJob] = useState(null);
   const [cancellationAlert, setCancellationAlert] = useState(null);
@@ -190,8 +190,8 @@ const Dashboard = () => {
   // accepted — so "Accept" failed with "A job already exists".
   React.useEffect(() => {
     if (jobsLoading) return;
-    const answered = (j) => [j.id, j.serviceRequestId].some((id) => declinedInstantIds.includes(id) || acceptedInstantIds.includes(id));
-    const openOffers = jobs.filter((j) => j.isAvailableRequest && !answered(j));
+    const isAnswered = (j) => [j.id, j.serviceRequestId].some((id) => acceptedInstantIds.includes(id) || declinedOfferIds.includes(id));
+    const openOffers = jobs.filter((j) => j.isAvailableRequest && !isAnswered(j));
 
     if (instantAlertJob) {
       if (alertBusy) return;
@@ -203,9 +203,13 @@ const Dashboard = () => {
       return;
     }
 
+    const isAlertSuppressed = (j) => [j.id, j.serviceRequestId].some((id) => suppressedPopupIds.includes(id));
+
+    // The modal popup only opens for direct assignments assigned to this provider or fresh targeted dispatches,
+    // provided the modal hasn't been closed/declined/timed-out already
     const next =
-      openOffers.find((j) => j.assignedToMe) ||
-      openOffers.find((j) => dispatchedIds.includes(String(j.serviceRequestId)) || dispatchedIds.includes(String(j.bookingId)));
+      openOffers.find((j) => j.assignedToMe && !isAlertSuppressed(j)) ||
+      openOffers.find((j) => !isAlertSuppressed(j) && (dispatchedIds.includes(String(j.serviceRequestId)) || dispatchedIds.includes(String(j.bookingId))));
     if (next) {
       setInstantAlertJob(next);
       setAlertOpenedAt(Date.now());
@@ -214,40 +218,39 @@ const Dashboard = () => {
       setDispatchedIds((prev) => prev.filter((id) => id !== String(next.serviceRequestId) && id !== String(next.bookingId)));
       playDispatchChime();
     }
-  }, [jobs, jobsLoading, declinedInstantIds, acceptedInstantIds, instantAlertJob, dispatchedIds, alertBusy]);
+  }, [jobs, jobsLoading, suppressedPopupIds, declinedOfferIds, acceptedInstantIds, instantAlertJob, dispatchedIds, alertBusy]);
 
   /** Stop the alert re-opening for this job before the refetch lands. */
   const suppressInstantAlert = (jobId) => {
-    if (jobId) setDeclinedInstantIds((prev) => (prev.includes(jobId) ? prev : [...prev, jobId]));
+    if (jobId) setSuppressedPopupIds((prev) => (prev.includes(jobId) ? prev : [...prev, jobId]));
     if (instantAlertJob && (instantAlertJob.id === jobId || instantAlertJob.serviceRequestId === jobId)) {
       setInstantAlertJob(null);
     }
   };
 
   /**
-   * Reject for real. A local-only version of this shadowed the context's
-   * dismissJob, so both Decline buttons quietly did nothing server-side: the
-   * request stayed assigned to the service provider who turned it down.
+   * Decline direct popup assignment. Dismissing the popup releases the direct assignment
+   * back to the open pool so it stays visible and open to everyone (first-come, first-served).
    */
-  const rejectJob = async (jobId) => {
-    suppressInstantAlert(jobId);
-    const res = await dismissJob(jobId);
-    setDutyMessage(
-      !res?.ok
-        ? res?.error || 'Could not reject that job.'
-        : res.reassignedTo
-          ? `Declined — passed to ${res.reassignedTo}.`
-          : 'Declined — offered to another service provider.',
-    );
-    return res;
-  };
-
   const declineInstantJob = async () => {
     const job = instantAlertJob;
     if (!job) return;
+    const id = job.serviceRequestId || job.id;
     setAlertBusy('decline');
-    await rejectJob(job.serviceRequestId || job.id);
+    suppressInstantAlert(id);
+    await dismissJob(id);
     setAlertBusy(null);
+    setDutyMessage('Direct offer passed — job is now open to all service providers in offers.');
+  };
+
+  /**
+   * Reject an open offer card explicitly from the dashboard list.
+   */
+  const rejectListedJob = async (jobId) => {
+    if (jobId) setDeclinedOfferIds((prev) => (prev.includes(jobId) ? prev : [...prev, jobId]));
+    const res = await dismissJob(jobId);
+    setDutyMessage('Declined job offer.');
+    return res;
   };
 
   const acceptListedJob = async (job) => {
@@ -257,7 +260,12 @@ const Dashboard = () => {
       navigate('/service-provider/active-job');
     } else {
       setAcceptedInstantIds((prev) => prev.filter((id) => id !== job.id && id !== job.serviceRequestId));
-      setDutyMessage(res?.error || 'Could not accept that job.');
+      const errMsg = res?.error || '';
+      if (errMsg.toLowerCase().includes('already taken') || errMsg.toLowerCase().includes('already been accepted')) {
+        setDutyMessage('Another service provider has already taken this job.');
+      } else {
+        setDutyMessage(errMsg || 'Could not accept that job.');
+      }
     }
     return res;
   };
@@ -299,18 +307,37 @@ const Dashboard = () => {
     return () => clearInterval(tick);
   }, [instantAlertJob]);
 
-  // Running out is a decline: an ASAP customer can't wait on someone who never
-  // answered. The server does the same at 60s; this is the client's half, and
-  // a failure just means the server got there first.
+  // Running out is a decline of the direct assignment: the 60s exclusive window
+  // expires, so the job returns to the open pool for everyone on a first-come, first-served basis.
   const autoRejectedRef = React.useRef(null);
   React.useEffect(() => {
     if (!instantAlertJob || countdown !== 0 || alertBusy) return;
     const id = instantAlertJob.serviceRequestId || instantAlertJob.id;
     if (autoRejectedRef.current === id) return;
     autoRejectedRef.current = id;
-    rejectJob(id).then(() => setDutyMessage('Offer expired — passed to another service provider.'));
+    suppressInstantAlert(id);
+    dismissJob(id).then(() => setDutyMessage('Offer window expired — job is now open to all service providers.'));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [instantAlertJob, countdown, alertBusy]);
+
+  // Listen for job claimed in real-time so that if another provider claims the job,
+  // it immediately closes the popup if open
+  React.useEffect(() => {
+    const handleClaimed = (e) => {
+      const payload = e.detail;
+      const targetId = String(payload?.serviceRequestId || payload?.bookingId || '');
+      if (
+        instantAlertJob &&
+        (String(instantAlertJob.id) === targetId ||
+          String(instantAlertJob.serviceRequestId) === targetId ||
+          String(instantAlertJob.bookingId) === targetId)
+      ) {
+        setInstantAlertJob(null);
+      }
+    };
+    window.addEventListener('service-provider:job_claimed', handleClaimed);
+    return () => window.removeEventListener('service-provider:job_claimed', handleClaimed);
+  }, [instantAlertJob]);
 
   // Was counting ServiceProviderContext's local list, which never fetched — so this badge
   // sat at 0 no matter what the platform had actually sent.
@@ -318,13 +345,11 @@ const Dashboard = () => {
 
   const { summary } = useServiceProviderSummary();
 
-  const isDeclined = (job) => declinedInstantIds.includes(job.id) || declinedInstantIds.includes(job.serviceRequestId);
+  const isDeclinedOffer = (job) => declinedOfferIds.includes(job.id) || declinedOfferIds.includes(job.serviceRequestId);
   const isAcceptedLocally = (job) => acceptedInstantIds.includes(job.id) || acceptedInstantIds.includes(job.serviceRequestId);
 
-  // Open offers the service provider can still accept. There used to be a
-  // client-side "specification" filter here too, driven by toggles that were
-  // never saved anywhere — it silently hid every RO/TV/Chimney job.
-  const offers = jobs.filter((job) => job.isAvailableRequest && !isDeclined(job) && !isAcceptedLocally(job));
+  // Open offers the service provider can still accept.
+  const offers = jobs.filter((job) => job.isAvailableRequest && !isDeclinedOffer(job) && !isAcceptedLocally(job));
   const availableJobsCount = offers.length;
 
   const activeJobs = jobs.filter((j) => (
@@ -865,7 +890,7 @@ const Dashboard = () => {
                         isExpanded ? (
                           <div className="flex gap-2.5" onClick={(e) => e.stopPropagation()}>
                             <button
-                              onClick={() => rejectJob(job.id)}
+                              onClick={() => rejectListedJob(job.id)}
                               title="Reject this request — it goes back to the queue for another service provider"
                               className="flex-1 h-11 bg-white hover:bg-slate-50 text-slate-700 font-semibold rounded-xl text-sm border border-slate-300 cursor-pointer"
                             >

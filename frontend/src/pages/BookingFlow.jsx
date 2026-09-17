@@ -16,10 +16,12 @@ import {
   CheckCircle2,
   Home,
   Briefcase,
+  Navigation,
 } from "lucide-react";
 import { apiRequest, getStoredTokens, storeTokens } from "../lib/apiClient";
 import { useAuth } from "../context/AuthContext";
 import { useLocationContext } from "../context/LocationContext";
+import MapLocationPickerModal from "../components/booking/MapLocationPickerModal";
 
 import {
   getCatalogEntry,
@@ -275,13 +277,28 @@ const BookingFlow = () => {
         area: "",
         city: "",
         pincode: "",
+        latitude: null,
+        longitude: null,
       },
   );
   const [selectedAddrId, setSelectedAddrId] = useState(null);
+  const [showMapPicker, setShowMapPicker] = useState(false);
   const [paymentMode, setPaymentMode] = useState(
     () => resumeBooking?.paymentMode || "advance",
   );
   const [priceExpanded, setPriceExpanded] = useState(false);
+
+  const handleLocationPicked = ({ latitude, longitude, addressDetails, formattedAddress }) => {
+    setAddress((prev) => ({
+      ...prev,
+      latitude,
+      longitude,
+      house: prev.house || addressDetails?.house || "",
+      area: prev.area || addressDetails?.area || "",
+      city: prev.city || addressDetails?.city || currentLocation?.city || "",
+      pincode: prev.pincode || addressDetails?.pincode || "",
+    }));
+  };
 
   // Sync state if location.state changes during navigation
   useEffect(() => {
@@ -523,6 +540,8 @@ const BookingFlow = () => {
               category: catKey,
               productType: productType,
               serviceSlug: service,
+              serviceName: svcName,
+              service: svcName,
               brand: brand,
               quantity: quantity,
               scheduledDate: isInstant
@@ -551,6 +570,8 @@ const BookingFlow = () => {
                 category: catKey,
                 productType: productType,
                 serviceSlug: service,
+                serviceName: svcName,
+                service: svcName,
                 brand: brand,
                 quantity: quantity,
                 scheduledDate: isInstant
@@ -607,6 +628,7 @@ const BookingFlow = () => {
       await ensureCustomerAuth();
       const bookingMeta = {
         service: svcName,
+        serviceName: svcName,
         serviceSlug: service,
         category: catKey,
         productType: productType,
@@ -1183,6 +1205,8 @@ const BookingFlow = () => {
                                     addr.pincode ||
                                     addr.house?.match(/\b\d{6}\b/)?.[0] ||
                                     "",
+                                  latitude: addr.latitude || null,
+                                  longitude: addr.longitude || null,
                                 });
                               }}
                               className={`flex items-center justify-between p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
@@ -1244,6 +1268,53 @@ const BookingFlow = () => {
                   )}
 
                   <div className="flex flex-col gap-3">
+                    {/* ── Interactive Location Pin Card ── */}
+                    <div className="bg-blue-50/70 border border-blue-200/80 rounded-2xl p-3.5 flex flex-col gap-2.5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-xl bg-brand-blue text-white flex items-center justify-center shadow-2xs">
+                            <MapPin className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-black text-slate-900">Pin Location on Map</h4>
+                            <p className="text-[10px] text-slate-500">Allows partner to navigate directly with Google Maps</p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setShowMapPicker(true)}
+                          className="px-3 py-1.5 bg-brand-blue hover:bg-[#083679] text-white text-[11px] font-extrabold rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
+                        >
+                          <Navigation className="w-3 h-3" />
+                          {address.latitude && address.longitude ? "Change Pin" : "Select on Map"}
+                        </button>
+                      </div>
+
+                      {address.latitude && address.longitude ? (
+                        <div className="bg-white px-3 py-2 rounded-xl border border-blue-100 flex items-center justify-between">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0 animate-pulse" />
+                            <span className="text-[11px] font-bold text-slate-700 truncate">
+                              Location Pinned: <span className="font-mono text-brand-blue font-extrabold">{Number(address.latitude).toFixed(5)}, {Number(address.longitude).toFixed(5)}</span>
+                            </span>
+                          </div>
+                          <a
+                            href={`https://www.google.com/maps/search/?api=1&query=${address.latitude},${address.longitude}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-[11px] font-bold text-brand-blue hover:underline flex items-center gap-0.5 shrink-0 ml-2"
+                          >
+                            View Pin ↗
+                          </a>
+                        </div>
+                      ) : (
+                        <div className="text-[11px] text-slate-600 flex items-center gap-1.5">
+                          <span className="text-blue-600">📍</span>
+                          <span>Click <strong>Select on Map</strong> or tap your current location to pin exact door coordinates.</span>
+                        </div>
+                      )}
+                    </div>
+
                     {/* House / Flat */}
                     <div className="relative">
                       <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -1666,6 +1737,19 @@ const BookingFlow = () => {
           </button>
         </div>
       )}
+
+      {/* ── Interactive Map Location Picker Modal ── */}
+      <MapLocationPickerModal
+        isOpen={showMapPicker}
+        onClose={() => setShowMapPicker(false)}
+        onSelectLocation={handleLocationPicked}
+        initialCoordinates={
+          address.latitude && address.longitude
+            ? { lat: Number(address.latitude), lng: Number(address.longitude) }
+            : null
+        }
+        initialCity={address.city || currentLocation?.city || ""}
+      />
     </div>
   );
 };

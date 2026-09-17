@@ -24,6 +24,8 @@ const serviceRequestSchema = new mongoose.Schema(
     // ServiceProviders who rejected this request. Auto-assignment skips them, so a
     // rejected job goes to somebody else instead of bouncing straight back.
     declinedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'ServiceProvider' }],
+    declinedOpenOfferBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'ServiceProvider' }],
+    declinedAssignmentBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'ServiceProvider' }],
     brand: { type: mongoose.Schema.Types.ObjectId, ref: 'Brand', default: null, index: true },
     booking: { type: mongoose.Schema.Types.ObjectId, ref: 'Booking', default: null },
     appliance: { type: mongoose.Schema.Types.ObjectId, ref: 'OwnedAppliance', default: null },
@@ -63,6 +65,9 @@ const serviceRequestSchema = new mongoose.Schema(
       enum: ['SEARCHING', 'ASSIGNED', 'EN_ROUTE', 'IN_PROGRESS', 'PARTS_PENDING', 'RESCHEDULED', 'COMPLETED', 'CANCELLED'],
       default: null,
     },
+    cancellationReason: { type: String, default: null },
+    cancelledAt: { type: Date, default: null },
+    searchEndReason: { type: String, default: null },
   },
   { timestamps: true },
 );

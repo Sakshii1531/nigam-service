@@ -39,6 +39,10 @@ const EDITABLE_FIELDS = [
   'coinConversionRate',
   'referralBonusAmount',
   'refereeDiscountPercent',
+  'serviceProviderCommissionPercent',
+  'bookingAdvancePercent',
+  'visitFeeAmount',
+  'defaultSparePartMarkupPercent',
 ];
 
 export async function updateSettings(updates, actingUserId) {
