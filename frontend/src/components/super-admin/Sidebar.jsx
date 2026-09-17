@@ -387,6 +387,12 @@ const Sidebar = () => {
       icon: <Settings size={18} />
     },
     {
+      type: 'link',
+      label: 'Partner Commission',
+      path: '/super-admin/settings?tab=commission',
+      icon: <Coins size={18} />
+    },
+    {
       type: 'header',
       label: 'REWARDS & OFFERS'
     },

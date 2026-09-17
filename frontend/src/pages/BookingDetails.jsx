@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Calendar, Clock, User, Phone, MapPin,
-  CreditCard, ShieldCheck, CheckCircle2, Copy, Check, Sparkles, RefreshCw, AlertCircle, Star
+  CreditCard, ShieldCheck, CheckCircle2, Copy, Check, Sparkles, RefreshCw, AlertCircle, Star, ExternalLink
 } from 'lucide-react';
 import { apiRequest, getStoredTokens } from '../lib/apiClient';
 import { io } from 'socket.io-client';
@@ -305,7 +305,7 @@ const BookingDetails = () => {
             <div>
               <p className="text-xs font-black text-rose-900">Booking Cancelled</p>
               <p className="text-xs text-rose-700/90 mt-0.5 leading-relaxed">
-                Reason: {booking.cancellationReason || 'Cancelled by customer'}. If any advance amount was paid, it will be refunded within 5-7 working days.
+                Reason: {booking.cancellationReason || (booking.searchEndReason === 'no_providers_found' ? 'No service partners were available in your area within 15 minutes.' : booking.searchEndReason) || 'Cancelled'}. If any advance amount was paid, it will be refunded within 5-7 working days.
               </p>
             </div>
           </div>
@@ -449,11 +449,28 @@ const BookingDetails = () => {
 
         {/* Location & Address Card */}
         <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs flex flex-col gap-2.5">
-          <div className="flex items-center gap-2">
-            <MapPin className="w-4 h-4 text-brand-blue" />
-            <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
-              Service Location
-            </h3>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-brand-blue" />
+              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                Service Location
+              </h3>
+            </div>
+            {((booking.address?.latitude && booking.address?.longitude) || booking.address?.formattedAddress || booking.address?.area) && (
+              <a
+                href={
+                  booking.address?.latitude && booking.address?.longitude
+                    ? `https://www.google.com/maps/search/?api=1&query=${booking.address.latitude},${booking.address.longitude}`
+                    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([booking.address?.house, booking.address?.area, booking.address?.city, booking.address?.pincode].filter(Boolean).join(', '))}`
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 hover:bg-blue-100 text-brand-blue text-[11px] font-bold rounded-xl transition-colors"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                Google Maps
+              </a>
+            )}
           </div>
           <div className="text-xs text-slate-700 leading-relaxed bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
             <p className="font-extrabold text-slate-900">
@@ -469,6 +486,12 @@ const BookingDetails = () => {
                 booking.address?.pincode,
               ].filter(Boolean).join(', ') || 'Address on file'}
             </p>
+            {booking.address?.latitude && booking.address?.longitude && (
+              <div className="mt-2 pt-2 border-t border-slate-200/60 flex items-center gap-1.5 text-[10px] text-slate-500 font-mono">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                <span>GPS: {Number(booking.address.latitude).toFixed(5)}, {Number(booking.address.longitude).toFixed(5)}</span>
+              </div>
+            )}
           </div>
         </div>
 

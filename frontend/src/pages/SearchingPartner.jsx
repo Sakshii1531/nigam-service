@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  ArrowLeft, Phone, Star, ShieldCheck, CheckCircle2, Wrench, AlertCircle, ArrowRight, Compass, Radio, ChevronRight, ChevronLeft, RotateCcw,
-  Lightbulb, AlertTriangle, Users, MapPinOff
+  ArrowLeft, Phone, Star, ShieldCheck, CheckCircle2, Wrench, AlertCircle, ArrowRight, Radio, ChevronRight, ChevronLeft, RotateCcw,
+  Lightbulb, AlertTriangle, Users, MapPinOff, Clock, PlusCircle, Loader2
 } from 'lucide-react';
 import { apiRequest, getStoredTokens } from '../lib/apiClient';
 import { io } from 'socket.io-client';
@@ -149,6 +149,11 @@ const SearchingPartner = () => {
   const [isRescheduling, setIsRescheduling] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
+  // Retry Search / New Booking State
+  const [showRetryModal, setShowRetryModal] = useState(false);
+  const [isRetryingSearch, setIsRetryingSearch] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+
   // Carousel State
   const [tipIndex, setTipIndex] = useState(0);
 
@@ -244,6 +249,9 @@ const SearchingPartner = () => {
         if (res?.status === 'Cancelled' || res?.instantStatus === 'CANCELLED') {
           setIsCancelled(true);
           stopPolling();
+        } else {
+          setIsCancelled(false);
+          setSearchEndReason(null);
         }
 
         const isReqAccepted = Boolean(
@@ -278,6 +286,9 @@ const SearchingPartner = () => {
             if (bk.status === 'Cancelled' || bk.instantStatus === 'CANCELLED') {
               setIsCancelled(true);
               if (bk.searchEndReason) endSearch(bk.searchEndReason);
+            } else {
+              setIsCancelled(false);
+              setSearchEndReason(null);
             }
             // The clock comes from the server, so a reload doesn't restart it at 0:00.
             if (bk.searchExpiresAt) {
@@ -326,7 +337,7 @@ const SearchingPartner = () => {
     interval = setInterval(load, 3000);
     load();
     return stopPolling;
-  }, [serviceRequestId, endSearch]);
+  }, [serviceRequestId, endSearch, retryCount]);
 
 
   // Real-time Socket.IO events
@@ -361,7 +372,7 @@ const SearchingPartner = () => {
 
     socket.on('booking:accepted', handleAccepted);
 
-    socket.on('instant:status_update', (data) => {
+    const handleStatusUpdate = (data) => {
       const match = !data || data.serviceRequestId === serviceRequestId || data.bookingId === serviceRequestId ||
         (bookingId && (data.bookingId === bookingId || data.serviceRequestId === bookingId));
 
@@ -372,14 +383,21 @@ const SearchingPartner = () => {
         } else if (data.instantStatus === 'SEARCHING' || data.isAccepted === false) {
           setIsAccepted(false);
           setServiceProvider(null);
+          setIsCancelled(false);
+          setSearchEndReason(null);
         } else if (data.serviceProvider && (data.isAccepted || ['EN_ROUTE', 'IN_PROGRESS', 'COMPLETED'].includes(data.instantStatus))) {
           setIsAccepted(true);
           setServiceProvider(data.serviceProvider);
+          setIsCancelled(false);
+          setSearchEndReason(null);
         }
         if (data.instantStatus) setInstantStatus(data.instantStatus);
         loadBookingData();
       }
-    });
+    };
+
+    socket.on('instant:status_update', handleStatusUpdate);
+    socket.on('booking:status_update', handleStatusUpdate);
 
     socket.on('service_request:updated', (data) => {
       const match = !data || data.serviceRequestId === serviceRequestId || (bookingId && data.serviceRequestId === bookingId);
@@ -390,9 +408,13 @@ const SearchingPartner = () => {
         } else if (data.status === 'New' || data.isAccepted === false || !data.serviceProvider) {
           setIsAccepted(false);
           setServiceProvider(null);
+          setIsCancelled(false);
+          setSearchEndReason(null);
         } else if (data.isAccepted || ['Engineer Accepted', 'Visit Scheduled', 'Engineer Reached', 'Diagnosis Done', 'Work In Progress', 'Repair Completed', 'Completed'].includes(data.status)) {
           setIsAccepted(true);
           if (data.serviceProvider) setServiceProvider(data.serviceProvider);
+          setIsCancelled(false);
+          setSearchEndReason(null);
         }
         loadBookingData();
       }
@@ -467,6 +489,56 @@ const SearchingPartner = () => {
       alert(err.message || 'Failed to reschedule booking');
     } finally {
       setIsRescheduling(false);
+    }
+  };
+
+  const handleCreateNewBooking = () => {
+    setShowRetryModal(false);
+    setShowSearchEnded(false);
+    const cat = categoryParam || rawBooking?.category || (rawBooking?.service?.category) || 'AC';
+    navigate(`/book/${encodeURIComponent(cat)}`);
+  };
+
+  const handleRetrySearch = async () => {
+    const targetId = rawBooking?._id || rawBooking?.id || rawBooking?.humanId || bookingId || serviceRequestId;
+    if (!targetId) return;
+    setIsRetryingSearch(true);
+    try {
+      const res = await apiRequest(`/bookings/${targetId}/retry-search`, {
+        method: 'POST',
+        auth: true,
+      });
+
+      try {
+        sessionStorage.removeItem(dismissedKey);
+      } catch {
+        // ignore sessionStorage unavailable in private browsing
+      }
+      searchEndedShownRef.current = false;
+
+      setIsCancelled(false);
+      setSearchEndReason(null);
+      setShowSearchEnded(false);
+      setShowRetryModal(false);
+      setElapsedSeconds(0);
+      setInstantStatus('SEARCHING');
+      setIsAccepted(false);
+      setServiceProvider(null);
+
+      // Re-trigger polling
+      setRetryCount((prev) => prev + 1);
+
+      setToastMessage('Search restarted! Searching for available verified partners for the next 15 minutes...');
+      setTimeout(() => setToastMessage(''), 5000);
+
+      if (res?.booking) {
+        setRawBooking(res.booking);
+      }
+    } catch (err) {
+      console.error('[searching-partner] Retry search failed:', err.message);
+      alert(err.message || 'Failed to restart search. Please try again.');
+    } finally {
+      setIsRetryingSearch(false);
     }
   };
 
@@ -555,10 +627,11 @@ const SearchingPartner = () => {
             </p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">
               <button
-                onClick={() => navigate(searchEndReason && categoryParam ? `/book/${encodeURIComponent(categoryParam)}` : '/services')}
-                className="bg-brand-blue text-white font-extrabold py-3 px-6 rounded-2xl text-xs hover:bg-[#083679] transition-colors cursor-pointer shadow-xs"
+                onClick={() => setShowRetryModal(true)}
+                className="bg-brand-blue text-white font-extrabold py-3 px-6 rounded-2xl text-xs hover:bg-[#083679] transition-colors cursor-pointer shadow-xs flex items-center gap-2"
               >
-                {searchEndReason ? 'Try Again' : 'Book Another Service'}
+                <RotateCcw className="w-4 h-4" />
+                Try Again
               </button>
               <button
                 onClick={() => navigate('/my-bookings')}
@@ -607,13 +680,8 @@ const SearchingPartner = () => {
               </div>
             </div>
 
-            {/* Stage Title & Elapsed Clock */}
-            <div className="relative z-10 max-w-lg mt-1">
-              <div className="inline-flex items-center gap-2 bg-blue-50 text-brand-blue text-xs font-black px-3.5 py-1 rounded-full border border-blue-200/80 mb-3">
-                <Compass className="w-3.5 h-3.5 animate-spin" />
-                <span>Stage: {currentStage.stageName} • {formatTime(elapsedSeconds)} / 15:00</span>
-              </div>
-
+            {/* Stage Title & Subtitle */}
+            <div className="relative z-10 max-w-lg mt-3">
               <h2 className="text-xl md:text-2xl font-black text-slate-900 leading-tight">
                 {currentStage.title}
               </h2>
@@ -951,18 +1019,146 @@ const SearchingPartner = () => {
             </p>
             <div className="w-full flex flex-col gap-2.5 mt-6">
               <button
-                onClick={() => navigate(categoryParam ? `/book/${encodeURIComponent(categoryParam)}` : '/services')}
-                className="w-full h-12 rounded-2xl bg-brand-blue hover:bg-[#083679] text-white text-sm font-extrabold flex items-center justify-center gap-2 cursor-pointer"
+                onClick={handleRetrySearch}
+                disabled={isRetryingSearch}
+                className="w-full h-12 rounded-2xl bg-brand-blue hover:bg-[#083679] text-white text-sm font-extrabold flex items-center justify-center gap-2 cursor-pointer shadow-xs disabled:opacity-60 transition-colors"
               >
-                <RotateCcw className="w-4 h-4" /> Try again
+                {isRetryingSearch ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Restarting Search...</span>
+                  </>
+                ) : (
+                  <>
+                    <RotateCcw className="w-4 h-4" />
+                    <span>Search Again (Next 15 Mins)</span>
+                  </>
+                )}
+              </button>
+              <button
+                onClick={handleCreateNewBooking}
+                className="w-full h-12 rounded-2xl bg-blue-50 hover:bg-blue-100 text-brand-blue text-sm font-bold flex items-center justify-center gap-2 cursor-pointer transition-colors"
+              >
+                <PlusCircle className="w-4 h-4" />
+                <span>Create New Booking (Step 1)</span>
               </button>
               <button
                 onClick={closeSearchEnded}
-                className="w-full h-12 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold cursor-pointer"
+                className="w-full h-10 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold cursor-pointer transition-colors"
               >
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Search Again vs Create New Booking Selection Modal ── */}
+      {showRetryModal && (
+        <div className="fixed inset-0 z-[100] bg-slate-950/60 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-4 animate-fade-in">
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] flex flex-col"
+          >
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-blue-50 text-brand-blue flex items-center justify-center border border-blue-100">
+                  <RotateCcw className="w-5 h-5" />
+                </div>
+                <div className="text-left">
+                  <h3 className="text-base font-black text-slate-900">How would you like to proceed?</h3>
+                  <p className="text-xs text-slate-500">Choose an option for your service booking</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowRetryModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-3 my-5">
+              {/* Option 1: Search Again */}
+              <div
+                onClick={!isRetryingSearch ? handleRetrySearch : undefined}
+                className={`p-4 rounded-2xl border-2 transition-all cursor-pointer text-left flex flex-col gap-2 ${
+                  isRetryingSearch
+                    ? 'border-brand-blue bg-blue-50/50 cursor-wait'
+                    : 'border-blue-200 bg-blue-50/40 hover:border-brand-blue hover:bg-blue-50 hover:shadow-xs'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-brand-blue text-white">
+                    <Clock className="w-3 h-3" /> Same Booking
+                  </span>
+                  <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                    Recommended
+                  </span>
+                </div>
+                <h4 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                  <RotateCcw className={`w-4 h-4 text-brand-blue ${isRetryingSearch ? 'animate-spin' : ''}`} />
+                  Search Again (Next 15 Mins)
+                </h4>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Search again for available verified partners for another 15 minutes using your current booking details without re-entering anything.
+                </p>
+                <button
+                  type="button"
+                  disabled={isRetryingSearch}
+                  className="mt-1 w-full h-10 rounded-xl bg-brand-blue hover:bg-[#083679] text-white text-xs font-extrabold flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60 transition-colors"
+                >
+                  {isRetryingSearch ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      Restarting Partner Search...
+                    </>
+                  ) : (
+                    <>
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      Search Again for 15 Mins
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Option 2: Create New Booking */}
+              <div
+                onClick={handleCreateNewBooking}
+                className="p-4 rounded-2xl border-2 border-slate-200 bg-slate-50/60 hover:border-slate-300 hover:bg-white hover:shadow-xs transition-all cursor-pointer text-left flex flex-col gap-2"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-200 text-slate-700">
+                    <PlusCircle className="w-3 h-3" /> New Booking
+                  </span>
+                  <span className="text-[11px] font-semibold text-slate-500">
+                    Step 1
+                  </span>
+                </div>
+                <h4 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                  <PlusCircle className="w-4 h-4 text-slate-700" />
+                  Create Another Booking
+                </h4>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Start fresh from Step 1 to choose different service items, select another time slot, or modify your address details.
+                </p>
+                <button
+                  type="button"
+                  className="mt-1 w-full h-10 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 text-xs font-extrabold flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                >
+                  <PlusCircle className="w-3.5 h-3.5" />
+                  Go to Booking Step 1
+                </button>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowRetryModal(false)}
+              className="w-full py-2.5 text-xs font-bold text-slate-500 hover:text-slate-700 cursor-pointer"
+            >
+              Cancel
+            </button>
           </div>
         </div>
       )}

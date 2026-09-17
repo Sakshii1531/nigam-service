@@ -30,6 +30,8 @@ const NetBankingPayment = () => {
             category: meta.category,
             productType: meta.productType,
             serviceSlug: meta.serviceSlug,
+            serviceName: meta.serviceName || meta.service || meta.serviceSlug,
+            service: meta.service || meta.serviceName || meta.serviceSlug,
             brand: meta.brand,
             quantity: meta.quantity || 1,
             scheduledDate: new Date().toISOString(),

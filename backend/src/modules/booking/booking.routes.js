@@ -60,6 +60,18 @@ bookingRouter.post(
   },
 );
 
+bookingRouter.post(
+  '/:id/retry-search',
+  validate(idParamSchema, 'params'),
+  async (req, res, next) => {
+    try {
+      ok(res, await bookingService.retrySearchBooking(req.user.id, req.params.id));
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
 // Confirms the advance a customer paid through Razorpay Checkout. Same
 // server-side order-id lookup as the order and job verify endpoints.
 bookingRouter.post(

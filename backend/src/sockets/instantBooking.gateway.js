@@ -134,6 +134,8 @@ export function registerInstantBookingGateway(io) {
         io.to(`user:${booking.user}`).emit('instant:status_update', assignedPayload);
         io.to(`user:${booking.user}`).emit('booking:accepted', assignedPayload);
         io.to(INSTANT_ROOM).emit('instant:status_update', assignedPayload);
+        io.to(INSTANT_ROOM).emit('job:claimed', assignedPayload);
+        io.to('serviceProviders').emit('job:claimed', assignedPayload);
 
         ack?.({ ok: true, booking, serviceProvider });
       } catch (err) {

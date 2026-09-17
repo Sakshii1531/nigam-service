@@ -6,6 +6,7 @@ import { findServiceItem } from '../catalog/catalog.service.js';
 import { Category } from '../catalog/category.model.js';
 import { ServiceCatalogItem } from '../catalog/serviceCatalogItem.model.js';
 import { ServicePageConfig } from '../super-admin/servicePageConfig.model.js';
+import { CategoryBookingConfig } from '../super-admin/categoryBookingConfig.model.js';
 import { estimateServiceProviderEarnings } from '../shared/serviceProviderEarnings.js';
 
 // How long a booking keeps looking for a service provider before giving up.
@@ -50,31 +51,83 @@ const escapeRegex = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
  */
 async function resolveBookedService({ category: categoryKey, serviceSlug, serviceName }) {
   const name = (serviceName || '').trim();
-
-  if (!name) {
-    // Catalog booking by slug — findServiceItem throws a 404 for unknown slugs.
-    const item = await findServiceItem(categoryKey, serviceSlug);
-    return { name: item.name, slug: item.slug, price: item.price || 0, desc: item.desc, unit: item.unit };
-  }
+  const slug = (serviceSlug || '').trim();
+  const normSlug = slug.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
 
   const category = await Category.findOne({ key: { $regex: new RegExp(`^${escapeRegex(categoryKey)}$`, 'i') } });
-  if (category) {
-    // By name first — the app derives its slug from the display name, so a
-    // derived slug can collide with a different catalog item's slug.
-    const item =
-      (await ServiceCatalogItem.findOne({ category: category._id, name: { $regex: new RegExp(`^${escapeRegex(name)}$`, 'i') }, isActive: true })) ||
-      (serviceSlug && (await ServiceCatalogItem.findOne({ category: category._id, slug: serviceSlug, isActive: true })));
+
+  // 1. By name in database catalog
+  if (name && category) {
+    const item = await ServiceCatalogItem.findOne({
+      category: category._id,
+      name: { $regex: new RegExp(`^${escapeRegex(name)}$`, 'i') },
+      isActive: true,
+    });
     if (item) return { name: item.name, slug: item.slug, price: item.price || 0, desc: item.desc, unit: item.unit };
   }
 
-  const page = await ServicePageConfig.findOne({ 'catalog.items.name': name });
-  const pageItem = page?.catalog.flatMap((section) => section.items).find((it) => it.name === name);
-  const pagePrice = Number(String(pageItem?.price ?? '').replace(/[^0-9.]/g, ''));
-  if (pageItem && Number.isFinite(pagePrice) && String(pageItem.price).match(/[0-9]/)) {
-    return { name: pageItem.name, slug: serviceSlug || 'service', price: pagePrice };
+  // 2. By slug in database catalog (if name is missing or didn't match)
+  if (slug && category) {
+    const item = await ServiceCatalogItem.findOne({ category: category._id, slug, isActive: true });
+    if (item) return { name: item.name, slug: item.slug, price: item.price || 0, desc: item.desc, unit: item.unit };
   }
 
-  throw new ApiError(400, `"${name}" is not a bookable service right now — please choose it again from the services list`);
+  // 3. Match from CMS ServicePageConfig (by name or by slug)
+  const servicePages = await ServicePageConfig.find({
+    $or: [
+      ...(name ? [{ 'catalog.items.name': { $regex: new RegExp(`^${escapeRegex(name)}$`, 'i') } }] : []),
+      { serviceKey: { $regex: new RegExp(`^${escapeRegex(categoryKey)}$`, 'i') } },
+      ...(name ? [{ serviceKey: { $regex: new RegExp(`^${escapeRegex(name)}$`, 'i') } }] : []),
+    ],
+  });
+  for (const page of servicePages) {
+    const pageItem = page?.catalog?.flatMap((section) => section.items || []).find((it) => {
+      const itName = (it.name || '').trim();
+      if (name && itName.toLowerCase() === name.toLowerCase()) return true;
+      if (normSlug && itName.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') === normSlug) return true;
+      return false;
+    });
+    if (pageItem) {
+      const pagePrice = Number(String(pageItem.price ?? '').replace(/[^0-9.]/g, ''));
+      if (Number.isFinite(pagePrice) && String(pageItem.price).match(/[0-9]/)) {
+        return {
+          name: pageItem.name,
+          slug: slug || pageItem.name.toLowerCase().replace(/[^a-z0-9]+/g, '_'),
+          price: pagePrice,
+          desc: pageItem.desc,
+          unit: pageItem.unit,
+        };
+      }
+    }
+  }
+
+  // 4. Match from CMS CategoryBookingConfig
+  const catConfig = await CategoryBookingConfig.findOne({
+    categoryName: { $regex: new RegExp(`^${escapeRegex(categoryKey)}$`, 'i') },
+  });
+  if (catConfig?.services) {
+    const rawServices = typeof catConfig.services === 'object' ? Object.values(catConfig.services) : [];
+    const allItems = rawServices.flatMap((group) => (Array.isArray(group) ? group : (group?.default || [])));
+    const matched = allItems.find((it) => {
+      const itName = (it.name || '').trim();
+      const itId = (it.id || '').trim().toLowerCase();
+      if (name && itName.toLowerCase() === name.toLowerCase()) return true;
+      if (slug && (itId === slug.toLowerCase() || itName.toLowerCase().replace(/[^a-z0-9]+/g, '_') === normSlug)) return true;
+      return false;
+    });
+    if (matched) {
+      const price = Number(String(matched.price ?? '').replace(/[^0-9.]/g, '')) || matched.price || 0;
+      return { name: matched.name, slug: slug || matched.id || 'service', price, desc: matched.desc, unit: matched.unit };
+    }
+  }
+
+  // 5. Fallback for catalog booking by slug if no explicit name was provided
+  if (!name && slug) {
+    const item = await findServiceItem(categoryKey, slug);
+    return { name: item.name, slug: item.slug, price: item.price || 0, desc: item.desc, unit: item.unit };
+  }
+
+  throw new ApiError(400, `"${name || slug}" is not a bookable service right now — please choose it again from the services list`);
 }
 
 export async function createBooking(userId, data) {
@@ -174,6 +227,11 @@ export async function createBooking(userId, data) {
       searchExpiresAt: new Date(Date.now() + SEARCH_WINDOW_MS),
     }], session ? { session } : {});
 
+    const cleanServiceName = serviceName.replace(new RegExp(`^${escapeRegex(data.category)}\\s*[-—:]*\\s*`, 'i'), '');
+    const displayServiceTitle = serviceName.toLowerCase().startsWith(data.category.toLowerCase())
+      ? serviceName
+      : `${data.category} — ${cleanServiceName || serviceName}`;
+
     let serviceRequest = await createServiceRequest({
       user: userId,
       serviceProvider: serviceProvider ? serviceProvider._id : null,
@@ -182,7 +240,7 @@ export async function createBooking(userId, data) {
       customerLocation: (customerLat != null && customerLng != null) ? { latitude: customerLat, longitude: customerLng } : undefined,
       booking: booking._id,
       category: data.category,
-      description: `${data.category} — ${serviceName}`,
+      description: displayServiceTitle,
       requestMode: 'B2C',
       zone: data.address?.city || undefined,
       warranty: warrantyStatus === 'Out of Warranty' ? 'Out of Warranty' : 'In Warranty',
@@ -224,12 +282,17 @@ export async function createBooking(userId, data) {
   const io = getIO();
   if (io) {
     const estEarnings = await estimateServiceProviderEarnings(serviceRequest, booking).catch(() => 0);
+    const cleanServiceName = serviceName.replace(new RegExp(`^${escapeRegex(data.category)}\\s*[-—:]*\\s*`, 'i'), '');
+    const displayServiceTitle = serviceName.toLowerCase().startsWith(data.category.toLowerCase())
+      ? serviceName
+      : `${data.category} — ${cleanServiceName || serviceName}`;
+
     const jobPayload = {
       bookingId: booking.id,
       serviceRequestId: serviceRequest.id,
       category: data.category,
       serviceName,
-      product: serviceName,
+      product: displayServiceTitle,
       address: data.address ? `${data.address.house || ''}, ${data.address.landmark || ''}, ${data.address.city || ''}`.trim().replace(/^,\s*/, '') : 'Customer Address',
       city: customerCity,
       state: customerState,
@@ -429,6 +492,9 @@ async function closeBooking(booking, { reason, timelineDescription, searchEndRea
       if (sr && sr.status !== 'Cancelled' && sr.status !== 'Closed' && sr.status !== 'Completed') {
         sr.status = 'Cancelled';
         if (sr.isInstant) sr.instantStatus = 'CANCELLED';
+        sr.cancellationReason = reason;
+        sr.cancelledAt = new Date();
+        if (searchEndReason) sr.searchEndReason = searchEndReason;
         sr.timeline.push({
           stepLabel: 'Cancelled',
           done: true,
@@ -607,4 +673,132 @@ export async function rescheduleBooking(userId, id, { scheduledDate, timeSlot, r
   }
 
   return booking;
+}
+
+/**
+ * Allows the customer to restart the 15-minute partner search for an expired
+ * or cancelled booking without having to enter all booking details again.
+ */
+export async function retrySearchBooking(userId, id) {
+  const booking = await findOwnedOr404(userId, id);
+  if (booking.status === 'Completed') throw new ApiError(400, 'Cannot retry a completed booking');
+  if (booking.isAccepted) throw new ApiError(400, 'This booking has already been accepted by a partner');
+
+  // Reactivate the booking for a fresh 15-minute search window
+  booking.status = booking.isInstant ? 'Ongoing' : 'Upcoming';
+  booking.instantStatus = 'SEARCHING';
+  booking.isAccepted = false;
+  booking.serviceProvider = null;
+  booking.searchEndReason = null;
+  booking.cancellationReason = null;
+  booking.searchExpiresAt = new Date(Date.now() + SEARCH_WINDOW_MS);
+  booking.instantRequestedAt = new Date();
+  await booking.save();
+
+  let serviceRequest = null;
+  if (booking.serviceRequest) {
+    try {
+      const srId = typeof booking.serviceRequest === 'object' ? booking.serviceRequest._id : booking.serviceRequest;
+      serviceRequest = await ServiceRequest.findById(srId);
+      if (serviceRequest) {
+        serviceRequest.status = 'New';
+        serviceRequest.isAccepted = false;
+        serviceRequest.serviceProvider = null;
+        serviceRequest.instantStatus = 'SEARCHING';
+        serviceRequest.declinedBy = [];
+        serviceRequest.declinedOpenOfferBy = [];
+        serviceRequest.declinedAssignmentBy = [];
+        serviceRequest.timeline.push({
+          stepLabel: 'Search Restarted',
+          done: true,
+          timestamp: new Date(),
+          description: 'Customer restarted partner search for 15 minutes',
+        });
+        await serviceRequest.save();
+      }
+    } catch (e) {
+      console.error('[booking.retrySearch] error updating service request:', e.message);
+    }
+  }
+
+  // Attempt to find and assign an available partner immediately
+  const customerCity = booking.address?.city || '';
+  const customerState = booking.address?.state || '';
+  const customerLat = booking.address?.latitude;
+  const customerLng = booking.address?.longitude;
+
+  const serviceProvider = await findAvailableServiceProvider({
+    category: booking.category,
+    city: customerCity,
+    state: customerState,
+    latitude: customerLat,
+    longitude: customerLng,
+  });
+
+  if (serviceProvider && serviceRequest) {
+    serviceRequest.serviceProvider = serviceProvider._id;
+    serviceRequest.assignedAt = new Date();
+    await serviceRequest.save();
+    await transitionStatus(serviceRequest.id, 'Assigned', {
+      description: booking.isInstant ? `Instant auto-assigned to ${serviceProvider.name}` : `Auto-assigned to ${serviceProvider.name}`,
+    });
+    booking.serviceProvider = serviceProvider._id;
+    booking.instantStatus = 'ASSIGNED';
+    await booking.save();
+
+    await emitNotification('serviceProvider.assigned', {
+      user: userId,
+      serviceProviderName: serviceProvider.name,
+      serviceRequestId: serviceRequest.id,
+    });
+  }
+
+  // Real-time socket broadcast
+  try {
+    const io = getIO();
+    if (io) {
+      const estEarnings = serviceRequest
+        ? await estimateServiceProviderEarnings(serviceRequest, booking).catch(() => 0)
+        : 0;
+
+      const jobPayload = {
+        bookingId: booking._id,
+        humanId: booking.humanId,
+        serviceRequestId: serviceRequest?._id || serviceRequest?.id,
+        category: booking.category,
+        serviceName: booking.service?.name,
+        product: serviceRequest?.description || booking.service?.name,
+        address: booking.address ? `${booking.address.house || ''}, ${booking.address.landmark || ''}, ${booking.address.city || ''}`.trim().replace(/^,\s*/, '') : 'Customer Address',
+        city: customerCity,
+        state: customerState,
+        fullName: booking.fullName,
+        customerName: booking.fullName,
+        mobile: booking.mobile,
+        totalPrice: booking.totalPrice,
+        estEarnings,
+        isInstant: Boolean(booking.isInstant),
+        scheduledTime: booking.timeSlot?.time || (booking.isInstant ? 'ASAP' : 'Scheduled'),
+        scheduledDateLabel: booking.timeSlot?.date || 'Today',
+        assignedServiceProviderId: serviceProvider ? String(serviceProvider._id) : null,
+        assignedServiceProviderUserId: serviceProvider ? String(serviceProvider.user) : null,
+        instantStatus: booking.instantStatus,
+        isAvailableRequest: !serviceProvider,
+        searchExpiresAt: booking.searchExpiresAt,
+      };
+
+      io.to(`user:${booking.user}`).emit('booking:status_update', jobPayload);
+      io.to(`user:${booking.user}`).emit('instant:status_update', jobPayload);
+      io.to(INSTANT_ROOM).emit('instant:status_update', jobPayload);
+
+      if (serviceProvider) {
+        io.to(`service-provider:${serviceProvider.id || serviceProvider._id}`).emit('instant:job_offered', jobPayload);
+      } else {
+        io.to(INSTANT_ROOM).emit('instant:job_offered', jobPayload);
+      }
+    }
+  } catch (_e) {
+    // ignore socket errors
+  }
+
+  return { booking, serviceRequest, serviceProvider };
 }

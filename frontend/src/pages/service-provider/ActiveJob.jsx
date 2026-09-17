@@ -1167,9 +1167,32 @@ const ActiveJob = () => {
                 <div className="h-[1px] bg-slate-100 w-full"></div>
 
                 {/* Service Address */}
-                <div className="flex flex-col gap-1">
-                  <span className="text-[10px] font-normal text-slate-600 uppercase tracking-wider block">Service Address</span>
-                  <p className="text-sm font-normal text-[#052355] mt-1 leading-relaxed">{activeJob.address}</p>
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-normal text-slate-600 uppercase tracking-wider block">Service Address</span>
+                    {(activeJob.address || (activeJob.latitude && activeJob.longitude)) && (
+                      <a
+                        href={
+                          activeJob.latitude && activeJob.longitude
+                            ? `https://www.google.com/maps/dir/?api=1&destination=${activeJob.latitude},${activeJob.longitude}`
+                            : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(activeJob.address)}`
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:text-blue-800"
+                      >
+                        <Navigation className="w-3 h-3" />
+                        <span>Open in Maps</span>
+                      </a>
+                    )}
+                  </div>
+                  <p className="text-sm font-normal text-[#052355] mt-0.5 leading-relaxed">{activeJob.address}</p>
+                  {activeJob.latitude && activeJob.longitude && (
+                    <div className="flex items-center gap-1 text-[10px] text-slate-500 font-mono mt-0.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block"></span>
+                      <span>GPS: {Number(activeJob.latitude).toFixed(5)}, {Number(activeJob.longitude).toFixed(5)}</span>
+                    </div>
+                  )}
 
                   {/* No live location feed exists yet to compute this — it used
                       to be a flat "2.3 km away" for every job. */}
@@ -1305,15 +1328,25 @@ const ActiveJob = () => {
                     This used to be a static panel captioned "Simulated
                     Navigation Route" that navigated nowhere. */}
                 <a
-                  href={activeJob?.address ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(activeJob.address)}` : undefined}
+                  href={
+                    activeJob?.latitude && activeJob?.longitude
+                      ? `https://www.google.com/maps/dir/?api=1&destination=${activeJob.latitude},${activeJob.longitude}`
+                      : activeJob?.address
+                      ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(activeJob.address)}`
+                      : undefined
+                  }
                   target="_blank"
                   rel="noreferrer"
-                  className={`h-44 bg-slate-100 rounded-2xl overflow-hidden border border-slate-200 flex items-center justify-center relative ${activeJob?.address ? 'cursor-pointer hover:border-blue-400' : 'pointer-events-none'}`}
+                  className={`h-44 bg-slate-100 rounded-2xl overflow-hidden border border-slate-200 flex items-center justify-center relative ${activeJob?.address || (activeJob?.latitude && activeJob?.longitude) ? 'cursor-pointer hover:border-blue-400' : 'pointer-events-none'}`}
                 >
                   <div className="absolute inset-0 bg-blue-50/20 flex flex-col items-center justify-center text-center p-4">
                     <MapPin className="h-10 w-10 text-red-500 animate-bounce mb-2" />
-                    <span className="text-xs font-normal text-[#052355]">
-                      {activeJob?.address ? 'Open navigation' : 'No address on this job'}
+                    <span className="text-xs font-bold text-[#052355]">
+                      {activeJob?.latitude && activeJob?.longitude
+                        ? 'Open Google Maps Navigation (GPS Pinned)'
+                        : activeJob?.address
+                        ? 'Open navigation'
+                        : 'No address on this job'}
                     </span>
                     <span className="text-[10px] text-slate-600 mt-0.5 px-4">
                       {activeJob?.address || `On the way to ${activeJob?.customerName || 'the customer'}`}
@@ -2940,9 +2973,32 @@ const ActiveJob = () => {
                         <span className="text-slate-500">Customer:</span>
                         <span className="font-bold text-[#052355]">{activeJob?.customerName}</span>
                       </div>
-                      <div className="flex justify-between">
+                      <div className="flex justify-between items-start">
                         <span className="text-slate-500">Address:</span>
-                        <span className="font-semibold text-slate-700 text-right max-w-[200px] truncate">{activeJob?.address}</span>
+                        <div className="text-right max-w-[220px]">
+                          <span className="font-semibold text-slate-700 block text-xs">{activeJob?.address}</span>
+                          {(activeJob?.latitude && activeJob?.longitude) ? (
+                            <a
+                              href={`https://www.google.com/maps/dir/?api=1&destination=${activeJob.latitude},${activeJob.longitude}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-[11px] text-blue-600 hover:underline font-bold inline-flex items-center gap-1 mt-0.5"
+                            >
+                              <Navigation className="w-3 h-3" />
+                              Open Maps (GPS)
+                            </a>
+                          ) : activeJob?.address ? (
+                            <a
+                              href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(activeJob.address)}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-[11px] text-blue-600 hover:underline font-bold inline-flex items-center gap-1 mt-0.5"
+                            >
+                              <Navigation className="w-3 h-3" />
+                              Open Maps
+                            </a>
+                          ) : null}
+                        </div>
                       </div>
                     </div>
                   </div>
