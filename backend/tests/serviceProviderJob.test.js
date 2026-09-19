@@ -279,7 +279,8 @@ describe('D2C job — full lifecycle to payment', () => {
     expect(billingEstimate.sparePartsTotal).toBe(500);
     expect(billingEstimate.additionalServicesTotal).toBe(100);
     const expectedSubtotal = 1000 + 500 + 100;
-    expect(billingEstimate.serviceProviderEarnings).toBe(Math.round(expectedSubtotal * 0.3));
+    const serviceLaborSubtotal = 1000 + 100; // Technician earns only on labor charges, excluding parts
+    expect(billingEstimate.serviceProviderEarnings).toBe(Math.round(serviceLaborSubtotal * 0.3));
     const expectedTotal = Math.round(expectedSubtotal * 1.18 * 100) / 100;
     expect(billingEstimate.total).toBeCloseTo(expectedTotal, 2);
 

@@ -1,22 +1,55 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import {
-  ArrowLeft, Zap, FileText, CheckCircle, Clock, AlertCircle, ShieldCheck,
-  Calendar, Briefcase, User, MapPin, CreditCard, Building2, Copy, ChevronRight
-} from 'lucide-react';
-import { apiRequest } from '../../lib/apiClient';
+  ArrowLeft,
+  Zap,
+  FileText,
+  CheckCircle,
+  Clock,
+  AlertCircle,
+  ShieldCheck,
+  Calendar,
+  Briefcase,
+  User,
+  MapPin,
+  CreditCard,
+  Building2,
+  Copy,
+  ChevronRight,
+} from "lucide-react";
+import { apiRequest } from "../../lib/apiClient";
 
 const statusConfig = {
-  'Credited':          { color: 'text-green-600',  bg: 'bg-green-50',  border: 'border-green-200', icon: <CheckCircle className="h-4 w-4 text-green-600" /> },
-  'Approved':          { color: 'text-green-600',  bg: 'bg-green-50',  border: 'border-green-200', icon: <CheckCircle className="h-4 w-4 text-green-600" /> },
-  'Approval Pending':  { color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-200', icon: <Clock className="h-4 w-4 text-orange-500" /> },
-  'Verification':      { color: 'text-blue-600',   bg: 'bg-blue-50',   border: 'border-blue-200',  icon: <ShieldCheck className="h-4 w-4 text-blue-500" /> },
+  Credited: {
+    color: "text-green-600",
+    bg: "bg-green-50",
+    border: "border-green-200",
+    icon: <CheckCircle className="h-4 w-4 text-green-600" />,
+  },
+  Approved: {
+    color: "text-green-600",
+    bg: "bg-green-50",
+    border: "border-green-200",
+    icon: <CheckCircle className="h-4 w-4 text-green-600" />,
+  },
+  "Approval Pending": {
+    color: "text-orange-600",
+    bg: "bg-orange-50",
+    border: "border-orange-200",
+    icon: <Clock className="h-4 w-4 text-orange-500" />,
+  },
+  Verification: {
+    color: "text-blue-600",
+    bg: "bg-blue-50",
+    border: "border-blue-200",
+    icon: <ShieldCheck className="h-4 w-4 text-blue-500" />,
+  },
 };
 
 function formatAddress(addr) {
-  if (!addr) return '—';
-  if (typeof addr === 'string') return addr;
-  if (typeof addr === 'object') {
+  if (!addr) return "—";
+  if (typeof addr === "string") return addr;
+  if (typeof addr === "object") {
     const parts = [
       addr.house,
       addr.area,
@@ -24,7 +57,7 @@ function formatAddress(addr) {
       addr.city,
       addr.pincode,
     ].filter(Boolean);
-    return parts.length ? parts.join(', ') : '—';
+    return parts.length ? parts.join(", ") : "—";
   }
   return String(addr);
 }
@@ -44,29 +77,55 @@ const EarningDetailPage = () => {
         if (!job) return;
         const bill = job.billingEstimate || {};
         const sr = job.serviceRequest || {};
-        const quick = job.type === 'NCC Paid Service';
+        const quick = job.type === "NCC Paid Service";
         setEarning({
-          title: sr.category ? `${sr.category} — ${job.type}` : (job.type || 'Service'),
-          tag: quick ? 'QuickPayout' : 'InvoicePayout',
-          status: job.activeStep === 'completed' ? 'Credited' : 'Pending',
+          title: sr.category
+            ? `${sr.category} — ${job.type}`
+            : job.type || "Service",
+          tag: quick ? "QuickPayout" : "InvoicePayout",
+          status: job.activeStep === "completed" ? "Credited" : "Pending",
           date: job.updatedAt
-            ? new Date(job.updatedAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-            : '—',
+            ? new Date(job.updatedAt).toLocaleString("en-IN", {
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              })
+            : "—",
           jobId: sr.humanId || job.humanId || job.id,
-          customer: sr.user?.name || sr.customerName || '—',
+          customer: sr.user?.name || sr.customerName || "—",
           address: formatAddress(sr.booking?.address || sr.zone),
-          description: sr.description || '—',
-          baseAmount: (bill.serviceCharge || 0) + (bill.additionalServicesTotal || 0),
-          platformFee: Math.max(((bill.serviceCharge || 0) + (bill.additionalServicesTotal || 0)) - (bill.serviceProviderEarnings || 0), 0),
+          description: sr.description || "—",
+          baseAmount: bill.serviceCharge || 0,
+          platformFee: Math.max(
+            (bill.serviceCharge || 0) - (bill.serviceProviderEarnings || 0),
+            0,
+          ),
+          baseAmount:
+            (bill.serviceCharge || 0) + (bill.additionalServicesTotal || 0),
+          platformFee: Math.max(
+            (bill.serviceCharge || 0) +
+              (bill.additionalServicesTotal || 0) -
+              (bill.serviceProviderEarnings || 0),
+            0,
+          ),
           netAmount: bill.serviceProviderEarnings || 0,
-          creditedTo: 'Earnings balance',
+          creditedTo: "Earnings balance",
           payoutNote: quick
-            ? 'Credited to your balance on job completion'
-            : 'Settles on the brand invoice cycle',
+            ? "Credited to your balance on job completion"
+            : "Settles on the brand invoice cycle",
           transactionId: job.humanId || job.id,
           timeline: (job.serviceRequest?.timeline || []).map((t) => ({
             label: t.stepLabel,
-            time: t.timestamp ? new Date(t.timestamp).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '',
+            time: t.timestamp
+              ? new Date(t.timestamp).toLocaleString("en-IN", {
+                  day: "numeric",
+                  month: "short",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
+              : "",
             done: Boolean(t.done),
           })),
         });
@@ -89,25 +148,33 @@ const EarningDetailPage = () => {
         <div className="text-center p-6">
           <AlertCircle className="h-12 w-12 text-slate-400 mx-auto mb-3" />
           <p className="text-sm text-slate-600">Earning record not found.</p>
-          <button onClick={() => navigate(-1)} className="mt-4 text-xs text-[#0D47A1] font-semibold underline">Go Back</button>
+          <button
+            onClick={() => navigate(-1)}
+            className="mt-4 text-xs text-[#0D47A1] font-semibold underline">
+            Go Back
+          </button>
         </div>
       </div>
     );
   }
 
-  const sc = statusConfig[earning.status] || statusConfig['Credited'];
-  const isQuick = earning.tag === 'QuickPayout';
+  const sc = statusConfig[earning.status] || statusConfig["Credited"];
+  const isQuick = earning.tag === "QuickPayout";
 
   return (
     <div className="min-h-screen bg-[#F4F6FA] flex flex-col pb-8 font-sans">
-
       {/* Mobile Top Header */}
       <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center gap-3 sticky top-0 z-10 lg:hidden">
-        <button onClick={() => navigate(-1)} className="p-1 hover:bg-slate-50 rounded-full">
+        <button
+          onClick={() => navigate(-1)}
+          className="p-1 hover:bg-slate-50 rounded-full">
           <ArrowLeft className="h-5 w-5 text-slate-700" />
         </button>
-        <h1 className="text-sm font-semibold text-[#052355] flex-1">Earning Detail</h1>
-        <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full border text-[10px] font-semibold ${sc.bg} ${sc.border} ${sc.color}`}>
+        <h1 className="text-sm font-semibold text-[#052355] flex-1">
+          Earning Detail
+        </h1>
+        <div
+          className={`flex items-center gap-1 px-2.5 py-1 rounded-full border text-[10px] font-semibold ${sc.bg} ${sc.border} ${sc.color}`}>
           {sc.icon}
           {earning.status}
         </div>
@@ -120,17 +187,21 @@ const EarningDetailPage = () => {
             <button
               onClick={() => navigate(-1)}
               className="p-2 bg-slate-100 hover:bg-slate-200 rounded-2xl text-[#052355] transition-colors cursor-pointer"
-              title="Back"
-            >
+              title="Back">
               <ArrowLeft className="h-5 w-5 stroke-[2.5]" />
             </button>
             <div>
-              <h1 className="text-xl font-black text-[#052355] tracking-tight">Earning Settlement Detail</h1>
-              <p className="text-xs text-slate-500 font-medium mt-0.5">Transaction reference, payout split and job earnings breakdown</p>
+              <h1 className="text-xl font-black text-[#052355] tracking-tight">
+                Earning Settlement Detail
+              </h1>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">
+                Transaction reference, payout split and job earnings breakdown
+              </p>
             </div>
           </div>
 
-          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-bold ${sc.bg} ${sc.border} ${sc.color}`}>
+          <div
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-bold ${sc.bg} ${sc.border} ${sc.color}`}>
             {sc.icon}
             <span>{earning.status}</span>
           </div>
@@ -138,19 +209,26 @@ const EarningDetailPage = () => {
       </div>
 
       <div className="flex-1 flex flex-col gap-3 p-3.5 lg:px-6 xl:px-8 max-w-screen-xl mx-auto w-full">
-
         {/* Amount Card */}
-        <div className={`rounded-2xl p-4 ${isQuick ? 'bg-[#0A2D6E]' : 'bg-[#0A2D6E]'} shadow-lg`}>
+        <div
+          className={`rounded-2xl p-4 ${isQuick ? "bg-[#0A2D6E]" : "bg-[#0A2D6E]"} shadow-lg`}>
           <div className="flex items-center gap-2 mb-3">
-            <div className={`p-1.5 rounded-lg ${isQuick ? 'bg-amber-400/20' : 'bg-white/10'}`}>
-              {isQuick
-                ? <Zap className="h-4 w-4 text-amber-400 fill-amber-300" />
-                : <FileText className="h-4 w-4 text-blue-200" />
-              }
+            <div
+              className={`p-1.5 rounded-lg ${isQuick ? "bg-amber-400/20" : "bg-white/10"}`}>
+              {isQuick ? (
+                <Zap className="h-4 w-4 text-amber-400 fill-amber-300" />
+              ) : (
+                <FileText className="h-4 w-4 text-blue-200" />
+              )}
             </div>
             <div>
-              <p className={`text-[10px] font-semibold ${isQuick ? 'text-amber-300' : 'text-blue-300'}`}>{earning.tag}</p>
-              <p className="text-[9px] text-blue-300/70">{earning.payoutNote}</p>
+              <p
+                className={`text-[10px] font-semibold ${isQuick ? "text-amber-300" : "text-blue-300"}`}>
+                {earning.tag}
+              </p>
+              <p className="text-[9px] text-blue-300/70">
+                {earning.payoutNote}
+              </p>
             </div>
           </div>
           <p className="text-3xl font-bold text-white">₹{earning.netAmount}</p>
@@ -158,11 +236,14 @@ const EarningDetailPage = () => {
           <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-between">
             <span className="text-[10px] text-blue-300">Transaction ID</span>
             <div className="flex items-center gap-1.5">
-              <span className="text-[10px] font-semibold text-white">{earning.transactionId}</span>
+              <span className="text-[10px] font-semibold text-white">
+                {earning.transactionId}
+              </span>
               <button
-                onClick={() => navigator.clipboard?.writeText(earning.transactionId)}
-                className="p-1 bg-white/10 rounded-md hover:bg-white/20 transition-colors"
-              >
+                onClick={() =>
+                  navigator.clipboard?.writeText(earning.transactionId)
+                }
+                className="p-1 bg-white/10 rounded-md hover:bg-white/20 transition-colors">
                 <Copy className="h-3 w-3 text-blue-200" />
               </button>
             </div>
@@ -181,7 +262,9 @@ const EarningDetailPage = () => {
               </div>
               <div className="flex-1">
                 <p className="text-[10px] text-slate-400">Job ID</p>
-                <p className="text-xs font-semibold text-[#052355]">{earning.jobId}</p>
+                <p className="text-xs font-semibold text-[#052355]">
+                  {earning.jobId}
+                </p>
               </div>
             </div>
             <div className="flex items-start gap-3">
@@ -190,8 +273,12 @@ const EarningDetailPage = () => {
               </div>
               <div className="flex-1">
                 <p className="text-[10px] text-slate-400">Service</p>
-                <p className="text-xs font-semibold text-[#052355]">{earning.title}</p>
-                <p className="text-[10px] text-slate-500 mt-0.5">{earning.description}</p>
+                <p className="text-xs font-semibold text-[#052355]">
+                  {earning.title}
+                </p>
+                <p className="text-[10px] text-slate-500 mt-0.5">
+                  {earning.description}
+                </p>
               </div>
             </div>
             <div className="flex items-start gap-3">
@@ -200,7 +287,9 @@ const EarningDetailPage = () => {
               </div>
               <div className="flex-1">
                 <p className="text-[10px] text-slate-400">Customer</p>
-                <p className="text-xs font-semibold text-[#052355]">{earning.customer}</p>
+                <p className="text-xs font-semibold text-[#052355]">
+                  {earning.customer}
+                </p>
               </div>
             </div>
             <div className="flex items-start gap-3">
@@ -209,7 +298,9 @@ const EarningDetailPage = () => {
               </div>
               <div className="flex-1">
                 <p className="text-[10px] text-slate-400">Location</p>
-                <p className="text-xs font-semibold text-[#052355]">{earning.address}</p>
+                <p className="text-xs font-semibold text-[#052355]">
+                  {earning.address}
+                </p>
               </div>
             </div>
             <div className="flex items-start gap-3">
@@ -218,7 +309,9 @@ const EarningDetailPage = () => {
               </div>
               <div className="flex-1">
                 <p className="text-[10px] text-slate-400">Date & Time</p>
-                <p className="text-xs font-semibold text-[#052355]">{earning.date}</p>
+                <p className="text-xs font-semibold text-[#052355]">
+                  {earning.date}
+                </p>
               </div>
             </div>
           </div>
@@ -227,34 +320,48 @@ const EarningDetailPage = () => {
         {/* Payout Breakdown */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="px-4 pt-3.5 pb-2 border-b border-slate-100">
-            <p className="text-xs font-semibold text-[#052355]">Payout Breakdown</p>
+            <p className="text-xs font-semibold text-[#052355]">
+              Payout Breakdown
+            </p>
           </div>
           <div className="px-4 py-3 flex flex-col gap-2.5">
             <div className="flex justify-between items-center">
               <span className="text-[11px] text-slate-500">Service Amount</span>
-              <span className="text-[11px] font-semibold text-[#052355]">₹{earning.baseAmount}</span>
+              <span className="text-[11px] font-semibold text-[#052355]">
+                ₹{earning.baseAmount}
+              </span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-[11px] text-slate-500">Platform Fee</span>
-              <span className={`text-[11px] font-semibold ${earning.platformFee === 0 ? 'text-green-600' : 'text-red-500'}`}>
-                {earning.platformFee === 0 ? '₹0 (Free)' : `-₹${earning.platformFee}`}
+              <span
+                className={`text-[11px] font-semibold ${earning.platformFee === 0 ? "text-green-600" : "text-red-500"}`}>
+                {earning.platformFee === 0
+                  ? "₹0 (Free)"
+                  : `-₹${earning.platformFee}`}
               </span>
             </div>
             <div className="h-px bg-slate-100 my-0.5" />
             <div className="flex justify-between items-center">
-              <span className="text-xs font-bold text-[#052355]">Net Payout</span>
-              <span className="text-sm font-bold text-[#0D47A1]">₹{earning.netAmount}</span>
+              <span className="text-xs font-bold text-[#052355]">
+                Net Payout
+              </span>
+              <span className="text-sm font-bold text-[#0D47A1]">
+                ₹{earning.netAmount}
+              </span>
             </div>
             <div className="flex items-center gap-2 mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5">
               <div className="p-1 bg-white border border-slate-200 rounded-lg">
-                {earning.creditedTo.includes('Wallet')
-                  ? <CreditCard className="h-3.5 w-3.5 text-[#0D47A1]" />
-                  : <Building2 className="h-3.5 w-3.5 text-[#0D47A1]" />
-                }
+                {earning.creditedTo.includes("Wallet") ? (
+                  <CreditCard className="h-3.5 w-3.5 text-[#0D47A1]" />
+                ) : (
+                  <Building2 className="h-3.5 w-3.5 text-[#0D47A1]" />
+                )}
               </div>
               <div>
                 <p className="text-[9px] text-slate-400">Credited To</p>
-                <p className="text-[11px] font-semibold text-[#052355]">{earning.creditedTo}</p>
+                <p className="text-[11px] font-semibold text-[#052355]">
+                  {earning.creditedTo}
+                </p>
               </div>
             </div>
           </div>
@@ -263,28 +370,41 @@ const EarningDetailPage = () => {
         {/* Timeline */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="px-4 pt-3.5 pb-2 border-b border-slate-100">
-            <p className="text-xs font-semibold text-[#052355]">Status Timeline</p>
+            <p className="text-xs font-semibold text-[#052355]">
+              Status Timeline
+            </p>
           </div>
           <div className="px-4 py-3">
             {earning.timeline.map((step, idx) => (
               <div key={idx} className="flex gap-3 relative">
                 {/* Vertical line */}
                 {idx < earning.timeline.length - 1 && (
-                  <div className={`absolute left-[14px] top-6 w-0.5 h-full -translate-x-1/2 ${step.done ? 'bg-[#0D47A1]' : 'bg-slate-200'}`} />
+                  <div
+                    className={`absolute left-[14px] top-6 w-0.5 h-full -translate-x-1/2 ${step.done ? "bg-[#0D47A1]" : "bg-slate-200"}`}
+                  />
                 )}
-                <div className={`w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center z-10 border-2 ${
-                  step.done
-                    ? 'bg-[#0D47A1] border-[#0D47A1]'
-                    : 'bg-white border-slate-300'
-                }`}>
-                  {step.done
-                    ? <CheckCircle className="h-3.5 w-3.5 text-white fill-white" />
-                    : <div className="w-2 h-2 rounded-full bg-slate-300" />
-                  }
+                <div
+                  className={`w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center z-10 border-2 ${
+                    step.done
+                      ? "bg-[#0D47A1] border-[#0D47A1]"
+                      : "bg-white border-slate-300"
+                  }`}>
+                  {step.done ? (
+                    <CheckCircle className="h-3.5 w-3.5 text-white fill-white" />
+                  ) : (
+                    <div className="w-2 h-2 rounded-full bg-slate-300" />
+                  )}
                 </div>
-                <div className={`pb-5 flex-1 ${idx === earning.timeline.length - 1 ? 'pb-0' : ''}`}>
-                  <p className={`text-[11px] font-semibold ${step.done ? 'text-[#052355]' : 'text-slate-400'}`}>{step.label}</p>
-                  <p className={`text-[10px] mt-0.5 ${step.done ? 'text-slate-500' : 'text-slate-400'}`}>{step.time}</p>
+                <div
+                  className={`pb-5 flex-1 ${idx === earning.timeline.length - 1 ? "pb-0" : ""}`}>
+                  <p
+                    className={`text-[11px] font-semibold ${step.done ? "text-[#052355]" : "text-slate-400"}`}>
+                    {step.label}
+                  </p>
+                  <p
+                    className={`text-[10px] mt-0.5 ${step.done ? "text-slate-500" : "text-slate-400"}`}>
+                    {step.time}
+                  </p>
                 </div>
               </div>
             ))}
@@ -293,16 +413,18 @@ const EarningDetailPage = () => {
 
         {/* Help CTA */}
         <button
-          onClick={() => navigate('/service-provider/technical-support')}
-          className="w-full bg-white rounded-2xl border border-slate-200 shadow-sm px-4 py-3.5 flex items-center justify-between hover:bg-slate-50 transition-colors"
-        >
+          onClick={() => navigate("/service-provider/technical-support")}
+          className="w-full bg-white rounded-2xl border border-slate-200 shadow-sm px-4 py-3.5 flex items-center justify-between hover:bg-slate-50 transition-colors">
           <div className="text-left">
-            <p className="text-xs font-semibold text-[#052355]">Need help with this payout?</p>
-            <p className="text-[10px] text-slate-400 mt-0.5">Contact NCC support team</p>
+            <p className="text-xs font-semibold text-[#052355]">
+              Need help with this payout?
+            </p>
+            <p className="text-[10px] text-slate-400 mt-0.5">
+              Contact NCC support team
+            </p>
           </div>
           <ChevronRight className="h-4 w-4 text-slate-400" />
         </button>
-
       </div>
     </div>
   );

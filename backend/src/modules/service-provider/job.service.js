@@ -306,6 +306,7 @@ export async function listActiveJobs(serviceProviderId) {
   const jobs = await Job.find({ serviceProvider: serviceProviderId, activeStep: { $ne: 'completed' } })
     .populate({ path: 'serviceRequest', populate: { path: 'user booking appliance' } })
     .sort({ createdAt: -1 });
+
   await Promise.all(
     jobs.map(async (j) => {
       if (j.serviceRequest) {
