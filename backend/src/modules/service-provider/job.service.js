@@ -306,7 +306,6 @@ export async function listActiveJobs(serviceProviderId) {
   const jobs = await Job.find({ serviceProvider: serviceProviderId, activeStep: { $ne: 'completed' } })
     .populate({ path: 'serviceRequest', populate: { path: 'user booking appliance' } })
     .sort({ createdAt: -1 });
-
   await Promise.all(
     jobs.map(async (j) => {
       if (j.serviceRequest) {
@@ -1026,7 +1025,9 @@ export async function generateBilling(serviceProviderId, jobId) {
 
   const charges = computeCharges({ laborRate: serviceCharge, partsCost: sparePartsTotal, additionalCharges: additionalServicesTotal });
   const billingShare = await serviceProviderShare();
-  const serviceProviderEarnings = job.isD2C ? Math.round(charges.subtotal * billingShare) : job.estEarnings;
+  // Service provider only earns commission on service labor, never on spare parts (100% retained for super-admin/platform)
+  const serviceLaborSubtotal = serviceCharge + additionalServicesTotal;
+  const serviceProviderEarnings = job.isD2C ? Math.round(serviceLaborSubtotal * billingShare) : job.estEarnings;
 
   job.billingEstimate = {
     serviceCharge,
@@ -1195,7 +1196,9 @@ export async function collectPayment(serviceProviderId, jobId, { paymentMethod =
     const additionalServicesTotal = (job.additionalServices || []).filter((s) => s.checked).reduce((sum, s) => sum + (s.price || 0), 0);
     const charges = computeCharges({ laborRate: serviceCharge, partsCost: sparePartsTotal, additionalCharges: additionalServicesTotal });
     const billingShare = await serviceProviderShare();
-    const serviceProviderEarnings = job.isD2C ? Math.round(charges.subtotal * billingShare) : (job.estEarnings || 250);
+    // Service provider only earns commission on service labor, never on spare parts (100% retained for super-admin/platform)
+    const serviceLaborSubtotal = serviceCharge + additionalServicesTotal;
+    const serviceProviderEarnings = job.isD2C ? Math.round(serviceLaborSubtotal * billingShare) : (job.estEarnings || 250);
     job.billingEstimate = {
       serviceCharge,
       sparePartsTotal,
