@@ -5779,13 +5779,34 @@ const ActiveJob = () => {
                         {/* Enter OTP Section Header */}
                         <div className="flex items-center justify-between mt-1">
                           <div>
-                             <h2 className="text-base font-extrabold text-[#052355]">
-                               Enter OTP
-                             </h2>
-                             <p className="text-xs text-slate-500 font-medium mt-0.5">
-                               Please enter the 4-digit OTP shown in the customer&apos;s app
-                             </p>
-                           </div>
+                            <h2 className="text-base font-extrabold text-[#052355]">
+                              Enter OTP
+                            </h2>
+                            <p className="text-xs text-slate-500 font-medium mt-0.5">
+                              Please enter the 4-digit OTP shared by customer
+                              Please enter the 4-digit OTP shown in the
+                              customer&apos;s app
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const customerOtp =
+                                activeJob?.completionOtp ||
+                                activeJob?.booking?.completionOtp ||
+                                activeJob?.serviceRequest?.completionOtp ||
+                                activeJob?.serviceRequest?.booking
+                                  ?.completionOtp ||
+                                "";
+                              if (customerOtp) {
+                                setRevisitOtp(
+                                  customerOtp.split("").slice(0, 4),
+                                );
+                              }
+                            }}
+                            className="text-[11px] font-bold text-[#0D47A1] bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-xl transition-colors cursor-pointer border border-blue-200/50">
+                            Auto-fill
+                          </button>
                         </div>
 
                         {/* OTP 4 digit inputs */}
@@ -5862,6 +5883,25 @@ const ActiveJob = () => {
                         <button
                           onClick={async () => {
                             const enteredOtp = revisitOtp.join("");
+                            const customerOtp =
+                              activeJob?.completionOtp ||
+                              activeJob?.booking?.completionOtp ||
+                              activeJob?.serviceRequest?.completionOtp ||
+                              activeJob?.serviceRequest?.booking
+                                ?.completionOtp ||
+                              "";
+                            const otpStr = enteredOtp || customerOtp;
+                            const res = await collectPayment(
+                              revisitPaymentMethod === "razorpay"
+                                ? "Online"
+                                : "Cash",
+                              {
+                                otp: otpStr,
+                                signatureUrl: hasSignedRevisit
+                                  ? "signed"
+                                  : null,
+                              },
+                            );
                             if (enteredOtp.length < 4) {
                               alert(
                                 "Please enter the complete 4-digit OTP shown in the customer's app.",
