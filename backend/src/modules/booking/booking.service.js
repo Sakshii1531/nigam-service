@@ -2,12 +2,14 @@ import mongoose from 'mongoose';
 import { Booking } from './booking.model.js';
 import { ServiceRequest } from '../service-requests/serviceRequest.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
-import { findServiceItem } from '../catalog/catalog.service.js';
+import { findServiceItem, findProductTypeAddon } from '../catalog/catalog.service.js';
 import { Category } from '../catalog/category.model.js';
 import { ServiceCatalogItem } from '../catalog/serviceCatalogItem.model.js';
 import { ServicePageConfig } from '../super-admin/servicePageConfig.model.js';
 import { CategoryBookingConfig } from '../super-admin/categoryBookingConfig.model.js';
 import { estimateServiceProviderEarnings } from '../shared/serviceProviderEarnings.js';
+import { Job } from '../service-provider/job.model.js';
+import { PartOrder } from '../service-provider/partOrder.model.js';
 
 // How long a booking keeps looking for a service provider before giving up.
 export const SEARCH_WINDOW_MS = 15 * 60 * 1000;
@@ -138,7 +140,12 @@ export async function createBooking(userId, data) {
   });
 
   const quantity = data.quantity || 1;
-  const itemPrice = resolved.price;
+  // A product type (e.g. "Split AC" vs "Window AC") can cost more to service
+  // than the category's base price — the addon is set per type, on the real
+  // catalog, and applies on top of whichever service was booked. Resolved
+  // server-side; a client-supplied addon is never trusted.
+  const productTypeAddon = await findProductTypeAddon(data.category, data.productType);
+  const itemPrice = resolved.price + productTypeAddon;
   const basePrice = itemPrice * quantity;
   const serviceName = resolved.name;
   const serviceSlug = resolved.slug;
@@ -239,6 +246,7 @@ export async function createBooking(userId, data) {
       assignedAt: serviceProvider ? new Date() : null,
       customerLocation: (customerLat != null && customerLng != null) ? { latitude: customerLat, longitude: customerLng } : undefined,
       booking: booking._id,
+      completionOtp: booking.completionOtp,
       category: data.category,
       description: displayServiceTitle,
       requestMode: 'B2C',
@@ -390,7 +398,7 @@ async function findOwnedOr404(userId, id) {
       .populate('serviceProvider', 'name phone rating avatar photo')
       .populate({
         path: 'serviceRequest',
-        select: 'humanId status timeline tracking warranty brand category description job',
+        select: 'humanId status timeline tracking warranty brand category description job completionOtp',
         populate: { path: 'brand', select: 'name logo' },
       });
     if (!booking) {
@@ -398,7 +406,7 @@ async function findOwnedOr404(userId, id) {
         .populate('serviceProvider', 'name phone rating avatar photo')
         .populate({
           path: 'serviceRequest',
-          select: 'humanId status timeline tracking warranty brand category description job',
+          select: 'humanId status timeline tracking warranty brand category description job completionOtp',
           populate: { path: 'brand', select: 'name logo' },
         });
     }
@@ -408,7 +416,7 @@ async function findOwnedOr404(userId, id) {
       .populate('serviceProvider', 'name phone rating avatar photo')
       .populate({
         path: 'serviceRequest',
-        select: 'humanId status timeline tracking warranty brand category description job',
+        select: 'humanId status timeline tracking warranty brand category description job completionOtp',
         populate: { path: 'brand', select: 'name logo' },
       });
     if (!booking) {
@@ -418,7 +426,7 @@ async function findOwnedOr404(userId, id) {
           .populate('serviceProvider', 'name phone rating avatar photo')
           .populate({
             path: 'serviceRequest',
-            select: 'humanId status timeline tracking warranty brand category description job',
+            select: 'humanId status timeline tracking warranty brand category description job completionOtp',
             populate: { path: 'brand', select: 'name logo' },
           });
       }
@@ -431,6 +439,59 @@ async function findOwnedOr404(userId, id) {
 
 export async function getBooking(userId, id) {
   return findOwnedOr404(userId, id);
+}
+
+/**
+ * The customer's own sign-off on a spare part the technician requested —
+ * gates the super-admin approval queue (adminPartOrderService rejects any
+ * status change until this reads 'Approved'). Before this, a technician
+ * could add a real-money part to the bill with the customer only ever
+ * informed after the fact, never actually asked.
+ */
+export async function respondToPartRequest(userId, bookingId, { approve }) {
+  const booking = await findOwnedOr404(userId, bookingId);
+  if (!booking.partApproval || booking.partApproval.status !== 'Pending') {
+    throw new ApiError(400, 'There is no spare part request awaiting your approval on this booking.');
+  }
+
+  booking.partApproval.status = approve ? 'Approved' : 'Rejected';
+  booking.partApproval.respondedAt = new Date();
+  await booking.save();
+
+  if (booking.serviceRequest) {
+    const job = await Job.findOne({ serviceRequest: booking.serviceRequest });
+    if (job) {
+      await PartOrder.updateMany(
+        { job: job._id, customerApprovalStatus: 'Pending' },
+        { customerApprovalStatus: approve ? 'Approved' : 'Rejected', customerRespondedAt: new Date() },
+      );
+      if (!approve) {
+        // Rejected orders are done — nothing for super-admin to act on. The
+        // job stays parked at completed_pending; the technician sees the
+        // decline next time they check this job (no push channel exists for
+        // service providers in this build).
+        await PartOrder.updateMany(
+          { job: job._id, customerApprovalStatus: 'Rejected', status: 'Pending' },
+          { status: 'Rejected' },
+        );
+        job.revisit = job.revisit || {};
+        job.revisit.notes = 'Customer declined the spare part request.';
+        await job.save();
+      }
+    }
+  }
+
+  try {
+    const io = getIO();
+    io.to(`user:${userId}`).emit('booking:updated', {
+      bookingId: booking.id,
+      partApprovalStatus: booking.partApproval.status,
+    });
+  } catch (_err) {
+    // Non-critical socket emission failure
+  }
+
+  return booking;
 }
 
 export async function listBookings(userId, { status, page, limit, sort } = {}) {

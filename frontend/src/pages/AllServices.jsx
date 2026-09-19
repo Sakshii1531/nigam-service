@@ -1,59 +1,28 @@
-import { ArrowLeft, Star } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { apiRequest } from '../lib/apiClient';
 import Footer from '../components/layout/Footer';
 import CustomerBottomNav from '../components/CustomerBottomNav';
 
-import mostBookedAc1 from '../assets/most_booked_ac_1.png';
-import mostBookedAc2 from '../assets/most_booked_ac_2.png';
-import mostBookedWm from '../assets/most_booked_wm.png';
-import mostBookedCleaning from '../assets/most_booked_cleaning.png';
-import mostBookedSalon from '../assets/most_booked_salon.png';
-import applianceFridge from '../assets/appliance_fridge.png';
-import electricianImg from '../assets/categories/electrician_fixed.png';
-import plumberImg from '../assets/categories/plumber_fixed.png';
-import cleaningImg from '../assets/categories/cleaning.png';
-
+// Category-first browsing: pick a serviceable category here, then the
+// existing /book/:category flow lists the real services under it. This
+// used to be a flat grid of 12 hardcoded, mostly-fake cards ("Women Salon",
+// "Electrician Service", "WM Complete Checkup" — none of them real
+// categories or services), so most taps either mis-guessed a category from
+// the title or fell through to a booking page with a fabricated price.
 const AllServices = () => {
   const navigate = useNavigate();
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const allServiceCards = [
-    { id: 1, title: "Foam-jet AC service", image: mostBookedAc1, price: 649, badge: "Instant", rating: 4.76 },
-    { id: 2, title: "AC repair", image: mostBookedAc2, price: 299, badge: "Instant", rating: 4.74 },
-    { id: 3, title: "Washing Machine", image: mostBookedWm, price: 499, badge: "Instant", rating: 4.85 },
-    { id: 4, title: "Home Cleaning", image: mostBookedCleaning, price: 999, badge: "Trending", rating: 4.9 },
-    { id: 5, title: "Women Salon", image: mostBookedSalon, price: 799, badge: "Best Seller", rating: 4.8 },
-    { id: 6, title: "Refrigerator Repair", image: applianceFridge, price: 899, badge: "Popular", rating: 4.82 },
-    { id: 7, title: "Electrician Service", image: electricianImg, price: 199, badge: "Instant", rating: 4.75 },
-    { id: 8, title: "Plumbing Checkup", image: plumberImg, price: 199, badge: "Instant", rating: 4.8 },
-    { id: 9, title: "Deep Clean AC", image: mostBookedAc1, price: 1198, badge: "2 ACs", rating: 4.84 },
-    { id: 10, title: "WM Complete Checkup", image: mostBookedWm, price: 199, badge: "Instant", rating: 4.7 },
-    { id: 11, title: "Full Home Sanitize", image: cleaningImg, price: 1299, badge: "Premium", rating: 4.92 },
-    { id: 12, title: "Gas Refilling", image: mostBookedAc2, price: 1499, badge: "Best Price", rating: 4.88 }
-  ];
-
-  const handleCardClick = (service) => {
-    const APPLIANCE_ROUTES = {
-      'ac repair': 'AC',
-      'washing machine': 'Washing Machine',
-      'refrigerator': 'Refrigerator',
-      'tv': 'TV',
-      'television': 'TV',
-      'geyser': 'Geyser',
-      'water heater': 'Geyser',
-      'ro water purifier': 'RO Water Purifier',
-      'water purifier': 'RO Water Purifier',
-      'microwave': 'Microwave',
-      'chimney': 'Chimney',
-      'air cooler': 'Air Cooler',
-    };
-    const nameNorm = service.title.toLowerCase();
-    const bookCat = Object.keys(APPLIANCE_ROUTES).find(k => nameNorm.includes(k));
-    if (bookCat) {
-      navigate(`/book/${encodeURIComponent(APPLIANCE_ROUTES[bookCat])}`);
-    } else {
-      navigate(`/booking?service=${encodeURIComponent(service.title)}&price=${service.price}`);
-    }
-  };
+  useEffect(() => {
+    apiRequest('/catalog/categories')
+      .then((res) => setCategories(Array.isArray(res) ? res : []))
+      .catch((err) => setError(err.message || 'Could not load categories.'))
+      .finally(() => setLoading(false));
+  }, []);
 
   return (
     <div className="min-h-screen bg-bg-light flex flex-col pb-20 lg:pb-12">
@@ -62,41 +31,45 @@ const AllServices = () => {
         <button onClick={() => navigate(-1)} className="p-2.5 bg-white rounded-full shadow-sm hover:shadow-md transition-all active:scale-95 cursor-pointer">
           <ArrowLeft className="h-5 w-5 text-brand-blue" />
         </button>
-        <h1 className="text-xl lg:text-3xl font-black text-text-primary">All Services & Repairs</h1>
+        <div>
+          <h1 className="text-xl lg:text-3xl font-black text-text-primary">Service Categories</h1>
+          <p className="text-xs lg:text-sm text-text-secondary mt-0.5">Pick a category to see its services & pricing</p>
+        </div>
       </div>
 
-      {/* Services Grid */}
+      {/* Category Grid */}
       <div className="p-6 md:p-10 lg:px-16 xl:px-20 max-w-screen-2xl mx-auto w-full flex-1 mt-4">
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-4 md:gap-6">
-          {allServiceCards.map((service) => (
-            <div 
-              key={service.id}
-              onClick={() => handleCardClick(service)}
-              className="flex flex-col gap-2.5 cursor-pointer border border-border-color rounded-2xl p-2.5 md:p-4 bg-white hover:border-brand-blue hover:shadow-md transition-all"
-            >
-              <div className="w-full h-32 md:h-44 lg:h-48 bg-white rounded-xl flex items-center justify-center overflow-hidden relative">
-                <img src={service.image} alt={service.title} className="w-full h-full object-cover" />
-                <span className="absolute top-2 right-2 text-xs font-bold px-2.5 py-1 rounded-full bg-[#E3F2FD] text-brand-blue">
-                  {service.badge}
-                </span>
-              </div>
-              <div className="flex flex-col gap-1 mt-1">
-                <span className="text-sm md:text-base font-semibold md:font-bold text-text-primary truncate">
-                  {service.title}
-                </span>
-                {service.rating && (
-                  <div className="flex items-center gap-1">
-                    <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500" />
-                    <span className="text-xs text-text-secondary">{service.rating}</span>
+        {loading ? (
+          <p className="text-sm text-text-secondary text-center py-10">Loading categories…</p>
+        ) : error ? (
+          <p className="text-sm text-rose-600 text-center py-10">{error}</p>
+        ) : categories.length === 0 ? (
+          <p className="text-sm text-text-secondary text-center py-10">No service categories are available right now.</p>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
+            {categories.map((cat) => {
+              const emoji = cat.productTypes?.[0]?.icon || '🛠️';
+              return (
+                <button
+                  key={cat.key}
+                  onClick={() => navigate(`/book/${encodeURIComponent(cat.key)}`)}
+                  className="flex flex-col items-center gap-2.5 cursor-pointer border border-border-color rounded-2xl p-4 md:p-5 bg-white hover:border-brand-blue hover:shadow-md transition-all text-center"
+                >
+                  <div
+                    className="w-14 h-14 md:w-16 md:h-16 rounded-2xl flex items-center justify-center text-2xl md:text-3xl flex-shrink-0"
+                    style={{ backgroundColor: cat.lightBg || '#EAF4FF' }}
+                  >
+                    {emoji}
                   </div>
-                )}
-                <span className="text-sm md:text-base font-bold md:font-extrabold text-[#0B4EA2]">
-                  ₹{service.price}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
+                  <span className="text-sm md:text-base font-semibold text-text-primary">{cat.name}</span>
+                  <span className="text-[11px] text-text-secondary">
+                    {cat.services?.length || 0} service{cat.services?.length === 1 ? '' : 's'}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Bottom Navigation — mobile only */}

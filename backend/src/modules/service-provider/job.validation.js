@@ -13,6 +13,11 @@ export const submitDiagnosisSchema = z.object({
   checklistActions: z.record(z.string(), z.boolean()).optional(),
   notes: z.string().optional(),
   photos: z.object({ product: z.string().optional(), serial: z.string().optional(), issue: z.string().optional() }).optional(),
+  // The technician's own on-site warranty check — e.g. from a physical warranty
+  // card or invoice the customer produces — which can override the system's
+  // computed guess (itself only ever a default when no purchase date/AMC/EW is
+  // on record for this appliance).
+  warrantyCheck: z.enum(['In Warranty', 'Out of Warranty']).optional(),
 });
 
 const lineItemSchema = z.object({ name: z.string().min(1), price: z.number().min(0), checked: z.boolean().optional() });
@@ -36,6 +41,7 @@ export const requestPartSchema = z.object({
   price: z.number().min(0).optional(),
   qty: z.number().int().positive().default(1),
   orderSource: z.enum(['NCC Warehouse', 'Partner Brand', 'Nearby Store']).default('NCC Warehouse'),
+  fulfillmentType: z.enum(['in_stock', 'procurement']).optional(),
   parts: z.array(sparePartSchema).optional(),
   notes: z.string().optional(),
 });

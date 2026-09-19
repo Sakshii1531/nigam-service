@@ -106,6 +106,44 @@ describe('POST /bookings — full booking -> service-request -> auto-assign flow
     expect(serviceRequest.booking).toBe(booking.id);
   });
 
+  it('adds the product type\'s price addon on top of the service price, server-side', async () => {
+    const category = await seedCatalog();
+    await ProductType.findOneAndUpdate({ category: category._id, slug: 'split' }, { priceAddon: 200 });
+    await seedServiceProvider();
+    const token = await seedCustomer();
+
+    const res = await request(app)
+      .post('/api/v1/bookings')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ category: 'AC', serviceSlug: 'installation', productType: 'Split AC', quantity: 1 })
+      .expect(201);
+
+    // Installation is ₹499; Split AC carries a ₹200 addon set on the real catalog.
+    expect(res.body.data.booking.totalPrice).toBe(699);
+  });
+
+  it('does not add an addon for a product type with none set, or an unrecognized one', async () => {
+    await seedCatalog();
+    await seedServiceProvider();
+    const token = await seedCustomer();
+
+    const res = await request(app)
+      .post('/api/v1/bookings')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ category: 'AC', serviceSlug: 'installation', productType: 'Split AC' })
+      .expect(201);
+    expect(res.body.data.booking.totalPrice).toBe(499);
+
+    await Booking.deleteMany({});
+    await ServiceRequest.deleteMany({});
+    const res2 = await request(app)
+      .post('/api/v1/bookings')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ category: 'AC', serviceSlug: 'installation', productType: 'Nonexistent Type' })
+      .expect(201);
+    expect(res2.body.data.booking.totalPrice).toBe(499);
+  });
+
   it('ignores a client-supplied price — total is always derived from the catalog', async () => {
     await seedCatalog();
     await seedServiceProvider();

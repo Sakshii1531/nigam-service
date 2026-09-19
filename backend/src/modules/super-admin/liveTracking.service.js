@@ -1,5 +1,6 @@
 import { LiveTracking } from './liveTracking.model.js';
 import { ServiceProvider } from '../service-provider/serviceProvider.model.js';
+import { Job } from '../service-provider/job.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 
 /**
@@ -10,6 +11,49 @@ import { ApiError } from '../../middleware/errorHandler.js';
  * the extra round-trip doesn't matter.
  */
 export async function listActiveTracking(cityId) {
+  // Ensure all currently active jobs have a LiveTracking document
+  try {
+    const activeJobs = await Job.find({
+      activeStep: { $in: ['assigned', 'ontheway', 'inspection', 'spareapproval', 'repaircomplete', 'billing', 'revisit_scheduled', 'revisit_ontheway', 'revisit_arrived', 'revisit_complete'] },
+    }).populate('serviceProvider').populate('serviceRequest');
+
+    for (const job of activeJobs) {
+      if (!job.serviceProvider) continue;
+      const providerId = job.serviceProvider._id || job.serviceProvider.id || job.serviceProvider;
+      const sr = job.serviceRequest;
+      const sp = job.serviceProvider;
+      const isTraveling = job.activeStep === 'ontheway' || job.activeStep === 'revisit_ontheway';
+      const desiredStatus = isTraveling ? 'On the way' : 'Repairing';
+      const lat = sr?.customerLocation?.latitude ?? sp?.location?.latitude ?? 28.6139;
+      const lng = sr?.customerLocation?.longitude ?? sp?.location?.longitude ?? 77.2090;
+
+      const existing = await LiveTracking.findOne({ job: job._id });
+      if (!existing) {
+        await LiveTracking.create({
+          job: job._id,
+          serviceProvider: providerId,
+          status: desiredStatus,
+          eta: '15 mins',
+          location: sr?.zone || 'Customer Location',
+          coords: { lat, lng },
+        });
+      } else {
+        let dirty = false;
+        if (existing.status !== desiredStatus) {
+          existing.status = desiredStatus;
+          dirty = true;
+        }
+        if (existing.coords?.lat == null || existing.coords?.lng == null) {
+          existing.coords = { lat, lng };
+          dirty = true;
+        }
+        if (dirty) await existing.save();
+      }
+    }
+  } catch (syncErr) {
+    console.warn('[liveTracking] auto-sync active jobs non-fatal error:', syncErr.message);
+  }
+
   const query = { status: { $ne: 'Completed' } };
   if (cityId) {
     const ids = await ServiceProvider.find({ city: cityId }).distinct('_id');

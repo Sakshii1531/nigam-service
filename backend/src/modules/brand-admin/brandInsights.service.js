@@ -491,10 +491,25 @@ export async function updateBrandPartOrderStatus(brandId, partOrderId, payload) 
     }
   }
 
+  // Same two ladders as the super-admin desk: an in-stock part is approved
+  // then handed over directly, a procured one is approved, dispatched, then
+  // delivered. See adminPartOrder.service.js for the fuller explanation.
+  const STATUS_LADDERS = {
+    in_stock: ['Pending', 'Approved', 'Ready to Hand Over', 'Handed Over'],
+    procurement: ['Pending', 'Approved', 'Dispatched', 'Delivered'],
+  };
+  const ladder = STATUS_LADDERS[partOrder.fulfillmentType] || STATUS_LADDERS.procurement;
+  if (status !== 'Rejected' && !ladder.includes(status)) {
+    throw new ApiError(400, `'${status}' is not a valid status for a ${partOrder.fulfillmentType === 'in_stock' ? 'warehouse in-stock' : 'procurement'} part request.`);
+  }
+
   partOrder.status = status;
   await partOrder.save();
 
-  if (partOrder.job && (status === 'Approved' || status === 'Dispatched' || status === 'Delivered')) {
+  const revisitStatuses = partOrder.fulfillmentType === 'in_stock'
+    ? ['Approved', 'Ready to Hand Over', 'Handed Over']
+    : ['Approved', 'Dispatched', 'Delivered'];
+  if (partOrder.job && revisitStatuses.includes(status)) {
     const job = await Job.findById(partOrder.job._id || partOrder.job);
     if (job) {
       job.activeStep = 'revisit_scheduled';

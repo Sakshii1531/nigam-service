@@ -35,33 +35,62 @@ const Schedule = () => {
 
   const [selectedDateObj, setSelectedDateObj] = useState(calendarDays[0]);
 
+  const parseDateToYmd = (rawDate) => {
+    if (!rawDate) return null;
+    if (typeof rawDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(rawDate)) return rawDate;
+    try {
+      const d = new Date(rawDate);
+      if (!isNaN(d.getTime())) {
+        return d.toISOString().split('T')[0];
+      }
+    } catch {
+      return null;
+    }
+    return null;
+  };
+
+  const formatSlotTime = (slot, fallback = '09:00 AM - 12:00 PM') => {
+    if (!slot) return fallback;
+    if (typeof slot === 'string') return slot;
+    if (typeof slot === 'object') {
+      return slot.time || slot.slot || slot.date || fallback;
+    }
+    return fallback;
+  };
+
   const activeSchedules = jobs
     .filter(j => {
       if (!selectedDateObj) return true;
-      const jobDate = j.scheduledDate 
-        ? new Date(j.scheduledDate).toISOString().split('T')[0] 
-        : j.revisit?.scheduledDate 
-          ? new Date(j.revisit.scheduledDate).toISOString().split('T')[0]
-          : null;
+      const jobDate = parseDateToYmd(j.scheduledDate) ||
+        parseDateToYmd(j.revisit?.scheduledDate) ||
+        parseDateToYmd(j.revisitScheduledDate) ||
+        (typeof j.timeSlot === 'object' && j.timeSlot?.date ? parseDateToYmd(j.timeSlot.date) : null);
       if (jobDate) return jobDate === selectedDateObj.dateStr;
       return selectedDateObj.isToday;
     })
-    .map(j => ({
-      id: j.id,
-      time: j.timeSlot || (j.revisit?.timeSlot) || '09:00 AM - 12:00 PM',
-      category: j.category || j.product || 'Service Request',
-      customer: j.customerName || 'Customer',
-      address: j.address || 'Address details in job sheet',
-      phone: j.customerPhone || j.phone,
-      isPriority: j.isPriority || j.priority === 'High',
-      status: j.status === 'Completed' || j.activeStep === 'completed'
-        ? 'Completed' 
-        : j.revisit 
-          ? 'Revisit' 
-          : j.status === 'In Progress' || j.activeStep === 'ontheway' || j.activeStep === 'inspection'
-            ? 'In Progress' 
-            : 'Confirmed'
-    }));
+    .map(j => {
+      const rawSlot = j.timeSlot || j.revisit?.timeSlot || j.scheduledTime || j.revisitTimeSlot;
+      const timeStr = formatSlotTime(rawSlot, '09:00 AM - 12:00 PM');
+
+      return {
+        id: String(j.id || ''),
+        time: String(timeStr),
+        category: typeof j.category === 'object' ? (j.category?.name || 'Service Request') : String(j.category || j.product || 'Service Request'),
+        customer: typeof j.customerName === 'object' ? (j.customerName?.name || 'Customer') : String(j.customerName || 'Customer'),
+        address: typeof j.address === 'object' 
+          ? `${j.address?.house || ''} ${j.address?.landmark || ''} ${j.address?.city || ''}`.trim() || 'Customer Address'
+          : String(j.address || 'Address details in job sheet'),
+        phone: typeof j.customerPhone === 'object' ? (j.customerPhone?.number || '') : String(j.customerPhone || j.phone || ''),
+        isPriority: Boolean(j.isPriority || j.priority === 'High' || j.priority === 'Critical'),
+        status: j.status === 'Completed' || j.activeStep === 'completed'
+          ? 'Completed' 
+          : (j.revisit || j.isRevisit)
+            ? 'Revisit' 
+            : (j.status === 'In Progress' || j.activeStep === 'ontheway' || j.activeStep === 'inspection' || j.activeStep === 'workinprogress')
+              ? 'In Progress' 
+              : 'Confirmed'
+      };
+    });
 
   const handleJobClick = (jobId, status) => {
     selectJobForDetails(jobId);

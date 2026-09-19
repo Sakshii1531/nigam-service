@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { apiRequest } from '../lib/apiClient';
 import { payWithRazorpay } from '../lib/razorpayCheckout';
+import { submitBookingsForMeta, totalPriceFromResults } from '../lib/bookingSubmission';
 
 const CardPayment = () => {
   const navigate = useNavigate();
@@ -24,42 +25,29 @@ const CardPayment = () => {
     if (meta) {
       setLoading(true);
       try {
-        const result = await apiRequest('/bookings', {
-          method: 'POST',
-          body: {
-            category: meta.category,
-            productType: meta.productType,
-            serviceSlug: meta.serviceSlug,
-            serviceName: meta.serviceName || meta.service || meta.serviceSlug,
-            service: meta.service || meta.serviceName || meta.serviceSlug,
-            brand: meta.brand,
-            quantity: meta.quantity || 1,
-            scheduledDate: new Date().toISOString(),
-            timeSlot: { date: meta.date || '', time: meta.timeGroup || '' },
-            address: meta.address,
-            fullName: meta.fullName,
-            mobile: meta.mobile,
-            paymentMode: meta.paymentMode || 'after', // or 'advance'
-            paymentMethod: 'Card',
+        // One booking per appliance type the customer selected in Step 1
+        // (e.g. 1 Window AC + 2 Split AC = 2 bookings) — each collects its
+        // own advance in turn, so a decline partway through never shows a
+        // booking as confirmed that was never actually paid for.
+        const results = await submitBookingsForMeta(meta, {
+          extra: { paymentMethod: 'Card' },
+          onEach: async (result) => {
+            if (result.razorpay) {
+              await payWithRazorpay({
+                razorpay: result.razorpay,
+                verifyPath: `/bookings/${result.booking.id}/verify-payment`,
+                description: meta.service || meta.category,
+                prefill: { name: meta.fullName, contact: meta.mobile },
+              });
+            }
           },
-          auth: true,
         });
-
-        // Collect the advance for real before showing the success screen. A
-        // cancelled or declined payment must not look like a completed booking.
-        if (result.razorpay) {
-          await payWithRazorpay({
-            razorpay: result.razorpay,
-            verifyPath: `/bookings/${result.booking.id}/verify-payment`,
-            description: meta.service || meta.category,
-            prefill: { name: meta.fullName, contact: meta.mobile },
-          });
-        }
+        const primary = results[0];
 
         // Navigate to success page with real serviceRequestId returned from backend
         const params = new URLSearchParams({
           type: 'service',
-          serviceRequestId: result.serviceRequest?.id || result.serviceRequest?._id || '',
+          serviceRequestId: primary.serviceRequest?.id || primary.serviceRequest?._id || '',
           service: meta.service,
           category: meta.category,
           productType: meta.productType,
@@ -67,9 +55,10 @@ const CardPayment = () => {
           quantity: String(meta.quantity || 1),
           date: meta.date || '',
           timeGroup: meta.timeGroup || '',
-          totalPrice: String(meta.totalPrice || 0),
+          totalPrice: String(totalPriceFromResults(results) || meta.totalPrice || 0),
           advanceAmt: String(meta.advanceAmt || 0),
           paymentMode: meta.paymentMode || 'advance',
+          bookingCount: String(results.length),
         });
         try {
           sessionStorage.removeItem("ncc_last_booking_flow");

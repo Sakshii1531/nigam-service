@@ -71,7 +71,7 @@ describe('GET /catalog/categories', () => {
     expect(res.body.data).toHaveLength(1);
     const [ac] = res.body.data;
     expect(ac.key).toBe('AC');
-    expect(ac.productTypes).toEqual([{ id: 'split', name: 'Split AC', icon: undefined, desc: undefined }]);
+    expect(ac.productTypes).toEqual([{ id: 'split', name: 'Split AC', icon: undefined, desc: undefined, priceAddon: 0 }]);
     expect(ac.services).toEqual([{ id: 'repair', name: 'Repair', icon: undefined, desc: undefined, price: 299, unit: 'per unit' }]);
   });
 
@@ -155,5 +155,89 @@ describe('admin-editable catalog writes', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({ key: 'AC', name: 'AC Again' })
       .expect(409);
+  });
+});
+
+describe('editing and removing individual product types / services', () => {
+  it('updates a service item\'s price and name, and the change is visible on the public read', async () => {
+    const category = await seedCategory();
+    const item = await ServiceCatalogItem.findOne({ category: category._id, slug: 'repair' });
+    const token = await loginAsAdmin();
+
+    const res = await request(app)
+      .put(`/api/v1/catalog/categories/AC/services/${item.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Standard Repair', price: 399 })
+      .expect(200);
+    expect(res.body.data.name).toBe('Standard Repair');
+    expect(res.body.data.price).toBe(399);
+
+    const publicRes = await request(app).get('/api/v1/catalog/categories/AC').expect(200);
+    expect(publicRes.body.data.services[0]).toMatchObject({ name: 'Standard Repair', price: 399 });
+  });
+
+  it('deletes a service item, which then disappears from the public read', async () => {
+    const category = await seedCategory();
+    const item = await ServiceCatalogItem.findOne({ category: category._id, slug: 'repair' });
+    const token = await loginAsAdmin();
+
+    await request(app)
+      .delete(`/api/v1/catalog/categories/AC/services/${item.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    const publicRes = await request(app).get('/api/v1/catalog/categories/AC').expect(200);
+    expect(publicRes.body.data.services).toHaveLength(0);
+  });
+
+  it('404s deleting a service item that belongs to a different category', async () => {
+    const category = await seedCategory();
+    const item = await ServiceCatalogItem.findOne({ category: category._id, slug: 'repair' });
+    const token = await loginAsAdmin();
+    await Category.create({ key: 'TV', name: 'TV' });
+
+    await request(app)
+      .delete(`/api/v1/catalog/categories/TV/services/${item.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(404);
+  });
+
+  it('updates and deletes a product type the same way', async () => {
+    const category = await seedCategory();
+    const pt = await ProductType.findOne({ category: category._id, slug: 'split' });
+    const token = await loginAsAdmin();
+
+    await request(app)
+      .put(`/api/v1/catalog/categories/AC/product-types/${pt.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Split AC Unit' })
+      .expect(200);
+
+    await request(app)
+      .delete(`/api/v1/catalog/categories/AC/product-types/${pt.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    const publicRes = await request(app).get('/api/v1/catalog/categories/AC').expect(200);
+    expect(publicRes.body.data.productTypes).toHaveLength(0);
+  });
+});
+
+describe('GET /catalog/categories/:key/admin', () => {
+  it('is admin-only and includes inactive services with their real ids', async () => {
+    const category = await seedCategory();
+    await ServiceCatalogItem.create({ category: category._id, slug: 'hidden', name: 'Hidden Service', price: 199, isActive: false });
+    const token = await loginAsAdmin();
+
+    await request(app).get('/api/v1/catalog/categories/AC/admin').expect(401);
+
+    const res = await request(app)
+      .get('/api/v1/catalog/categories/AC/admin')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+    expect(res.body.data.services).toHaveLength(2);
+    const hidden = res.body.data.services.find((s) => s.slug === 'hidden');
+    expect(hidden.isActive).toBe(false);
+    expect(hidden.id).toBeTruthy();
   });
 });

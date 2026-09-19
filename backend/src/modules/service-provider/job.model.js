@@ -43,6 +43,10 @@ const diagnosisSchema = new mongoose.Schema(
     checklistActions: { type: Map, of: Boolean, default: {} },
     notes: String,
     photos: { product: String, serial: String, issue: String },
+    // The technician's own on-site call — overrides the system-computed
+    // warranty status (OwnedAppliance.warrantyStatus) wherever it's shown,
+    // since a physical warranty card/invoice beats a missing purchase date.
+    warrantyCheck: { type: String, enum: ['In Warranty', 'Out of Warranty', null], default: null },
   },
   { _id: false },
 );

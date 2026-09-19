@@ -32,6 +32,9 @@ function shape(o) {
     // A part order records no free-text reason; the source is what it does carry.
     reason: o.orderSource,
     status: o.status || 'Pending',
+    // A part already in NCC warehouse stock skips straight to hand-over —
+    // no dispatch/delivery leg — while a procured one gets shipped.
+    fulfillmentType: o.fulfillmentType || 'procurement',
     date: o.createdAt ? dateFormatter.format(new Date(o.createdAt)) : '—',
     warranty: o.job?.serviceRequest?.warrantyStatus || 'Warranty',
   };
@@ -98,7 +101,7 @@ const PartRequests = () => {
         setSelectedRequest((prev) => (prev ? { ...prev, status: newStatus } : null));
       }
       showToast(
-        newStatus === 'Approved' || newStatus === 'Dispatched'
+        newStatus === 'Approved' || newStatus === 'Dispatched' || newStatus === 'Handed Over'
           ? `Part request moved to "${newStatus}" & Revisit scheduled!`
           : `Part request moved to "${newStatus}" successfully`
       );
@@ -108,7 +111,7 @@ const PartRequests = () => {
   };
 
   const handleApproveClick = (req, newStatus) => {
-    if (newStatus === 'Approved' || newStatus === 'Dispatched') {
+    if (newStatus === 'Approved' || newStatus === 'Dispatched' || newStatus === 'Ready to Hand Over' || newStatus === 'Handed Over') {
       setRevisitTarget({ id: req.id, newStatus, partName: req.part, serviceProvider: req.serviceProvider });
       setShowRevisitModal(true);
     } else {
@@ -210,6 +213,8 @@ const PartRequests = () => {
                 <option>All Status</option>
                 <option>Pending</option>
                 <option>Approved</option>
+                <option>Ready to Hand Over</option>
+                <option>Handed Over</option>
                 <option>Dispatched</option>
                 <option>Rejected</option>
               </select>
@@ -286,6 +291,8 @@ const PartRequests = () => {
                       <td className="px-6 py-4">
                         <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
                           req.status === 'Approved' ? 'bg-blue-50 text-blue-600' :
+                          req.status === 'Ready to Hand Over' ? 'bg-blue-50 text-blue-600' :
+                          req.status === 'Handed Over' ? 'bg-emerald-50 text-emerald-600' :
                           req.status === 'Dispatched' ? 'bg-teal-50 text-teal-600' :
                           req.status === 'Pending' ? 'bg-yellow-50 text-yellow-600' :
                           'bg-red-50 text-red-600'
@@ -297,26 +304,44 @@ const PartRequests = () => {
                         <div className="flex gap-2">
                           {req.status === 'Pending' && (
                             <>
-                              <button 
+                              <button
                                 onClick={() => handleApproveClick(req, 'Approved')}
-                                className="p-1.5 text-green-600 hover:bg-green-50 rounded flex items-center gap-1 text-xs font-semibold" 
+                                className="p-1.5 text-green-600 hover:bg-green-50 rounded flex items-center gap-1 text-xs font-semibold"
                                 title="Approve & Schedule Revisit"
                               >
                                 <Check size={16} /> Approve
                               </button>
-                              <button 
+                              <button
                                 onClick={() => updateStatus(req.id, 'Rejected')}
-                                className="p-1.5 text-red-600 hover:bg-red-50 rounded" 
+                                className="p-1.5 text-red-600 hover:bg-red-50 rounded"
                                 title="Reject"
                               >
                                 <X size={16} />
                               </button>
                             </>
                           )}
-                          {req.status === 'Approved' && (
-                            <button 
+                          {req.status === 'Approved' && req.fulfillmentType === 'in_stock' && (
+                            <button
+                              onClick={() => handleApproveClick(req, 'Ready to Hand Over')}
+                              className="p-1.5 text-teal-600 hover:bg-teal-50 rounded flex items-center gap-1 text-xs font-medium"
+                              title="Mark Ready & Schedule Revisit"
+                            >
+                              <Truck size={14} /> Mark Ready
+                            </button>
+                          )}
+                          {req.status === 'Ready to Hand Over' && (
+                            <button
+                              onClick={() => handleApproveClick(req, 'Handed Over')}
+                              className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded flex items-center gap-1 text-xs font-medium"
+                              title="Hand Over & Schedule Revisit"
+                            >
+                              <Check size={14} /> Hand Over
+                            </button>
+                          )}
+                          {req.status === 'Approved' && req.fulfillmentType !== 'in_stock' && (
+                            <button
                               onClick={() => handleApproveClick(req, 'Dispatched')}
-                              className="p-1.5 text-teal-600 hover:bg-teal-50 rounded flex items-center gap-1 text-xs font-medium" 
+                              className="p-1.5 text-teal-600 hover:bg-teal-50 rounded flex items-center gap-1 text-xs font-medium"
                               title="Dispatch & Schedule Revisit"
                             >
                               <Truck size={14} /> Dispatch
@@ -474,6 +499,8 @@ const PartRequests = () => {
                   <span className="text-[#64748B]">Current Status:</span>
                   <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
                     selectedRequest.status === 'Approved' ? 'bg-blue-50 text-blue-600' :
+                    selectedRequest.status === 'Ready to Hand Over' ? 'bg-blue-50 text-blue-600' :
+                    selectedRequest.status === 'Handed Over' ? 'bg-emerald-50 text-emerald-600' :
                     selectedRequest.status === 'Dispatched' ? 'bg-teal-50 text-teal-600' :
                     selectedRequest.status === 'Pending' ? 'bg-yellow-50 text-yellow-600' :
                     'bg-red-50 text-red-600'
@@ -486,13 +513,13 @@ const PartRequests = () => {
               <div className="p-6 border-t border-[#E2E8F0] flex gap-3 justify-end">
                 {selectedRequest.status === 'Pending' && (
                   <>
-                    <button 
+                    <button
                       onClick={() => { updateStatus(selectedRequest.id, 'Rejected'); setShowModal(false); }}
                       className="bg-white text-[#1E293B] border border-[#E2E8F0] px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-[#F8FAFC] transition-colors"
                     >
                       Reject
                     </button>
-                    <button 
+                    <button
                       onClick={() => { updateStatus(selectedRequest.id, 'Approved'); setShowModal(false); }}
                       className="bg-[#0D47A1] text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
                     >
@@ -500,9 +527,25 @@ const PartRequests = () => {
                     </button>
                   </>
                 )}
-                {selectedRequest.status === 'Approved' && (
-                  <button 
-                    onClick={() => { updateStatus(selectedRequest.id, 'Dispatched'); setShowModal(false); }}
+                {selectedRequest.status === 'Approved' && selectedRequest.fulfillmentType === 'in_stock' && (
+                  <button
+                    onClick={() => { setShowModal(false); handleApproveClick(selectedRequest, 'Ready to Hand Over'); }}
+                    className="bg-[#0D47A1] text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
+                  >
+                    <Truck size={18} /> Mark Ready to Hand Over
+                  </button>
+                )}
+                {selectedRequest.status === 'Ready to Hand Over' && (
+                  <button
+                    onClick={() => { setShowModal(false); handleApproveClick(selectedRequest, 'Handed Over'); }}
+                    className="bg-[#0D47A1] text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
+                  >
+                    <Check size={18} /> Hand Over Now
+                  </button>
+                )}
+                {selectedRequest.status === 'Approved' && selectedRequest.fulfillmentType !== 'in_stock' && (
+                  <button
+                    onClick={() => { setShowModal(false); handleApproveClick(selectedRequest, 'Dispatched'); }}
                     className="bg-[#0D47A1] text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
                   >
                     <Truck size={18} /> Dispatch Now

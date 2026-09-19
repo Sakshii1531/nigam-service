@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
-import { apiRequest } from '../../lib/apiClient';
+import { apiRequest, resolveMediaUrl } from '../../lib/apiClient';
 import { 
   Search, 
   Eye, 
@@ -27,6 +27,9 @@ import {
   Wrench,
   Sparkles,
   Navigation,
+  Camera,
+  Image as ImageIcon,
+  ZoomIn,
 } from 'lucide-react';
 
 const STATUS_BUCKET = {
@@ -58,6 +61,7 @@ const Requests = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [showDrawer, setShowDrawer] = useState(false);
+  const [previewImage, setPreviewImage] = useState(null);
   const [successCardData, setSuccessCardData] = useState(null);
 
   const [requests, setRequests] = useState([]);
@@ -138,6 +142,14 @@ const Requests = () => {
           scheduledDate: bk?.scheduledDate || null,
           timeSlot: bk?.timeSlot?.time || (item.isInstant ? '⚡ Instant (ASAP)' : '—'),
           timeSlotDate: bk?.timeSlot?.date || 'Today',
+
+          // Job & Diagnosis Details
+          job: item.job || null,
+          diagnosis: item.job?.diagnosis || null,
+          spareParts: item.job?.spareParts || [],
+          additionalServices: item.job?.additionalServices || [],
+          billingEstimate: item.job?.billingEstimate || null,
+          proofs: item.job?.proofs || null,
         };
       }));
       setLoadError('');
@@ -527,6 +539,114 @@ const Requests = () => {
                           </button>
                         )}
                       </div>
+                    </div>
+
+                    {/* Inspection & Diagnosis Findings */}
+                    <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-5 flex flex-col gap-4">
+                      <div className="flex items-center justify-between border-b border-slate-200/80 pb-3">
+                        <div className="flex items-center gap-2">
+                          <Camera className="w-4 h-4 text-brand-blue" />
+                          <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                            Inspection Photos & Diagnosis
+                          </h4>
+                        </div>
+                        {selectedRequest.diagnosis?.checklistActions && (
+                          <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
+                            selectedRequest.diagnosis.checklistActions['confirmed']
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              : selectedRequest.diagnosis.checklistActions['different']
+                              ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                              : 'bg-slate-100 text-slate-700 border border-slate-200'
+                          }`}>
+                            {selectedRequest.diagnosis.checklistActions['confirmed'] ? '✓ Issue Confirmed' :
+                             selectedRequest.diagnosis.checklistActions['different'] ? '⚠ Different Issue Found' :
+                             selectedRequest.diagnosis.checklistActions['none'] ? '✓ No Issue Found' : 'Diagnosed'}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Diagnosis Notes */}
+                      {selectedRequest.diagnosis?.notes ? (
+                        <div className="p-3 bg-white border border-slate-200/70 rounded-xl text-xs">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Technician Diagnosis Notes</span>
+                          <p className="text-slate-800 font-medium leading-relaxed">{selectedRequest.diagnosis.notes}</p>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-slate-400 italic">No diagnosis notes submitted yet.</p>
+                      )}
+
+                      {/* 3-Card Inspection Photos Gallery */}
+                      <div>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase block mb-2">Technician Verification Photos</span>
+                        <div className="grid grid-cols-3 gap-2.5">
+                          {[
+                            { key: 'product', label: 'Product Photo', sub: '(Indoor Unit)', url: selectedRequest.diagnosis?.photos?.product },
+                            { key: 'serial', label: 'Serial Number', sub: 'Photo', url: selectedRequest.diagnosis?.photos?.serial },
+                            { key: 'issue', label: 'Issue Photo', sub: '(Problem Area)', url: selectedRequest.diagnosis?.photos?.issue },
+                          ].map((photo) => (
+                            <div key={photo.key} className="flex flex-col items-center">
+                              <div 
+                                onClick={() => photo.url && setPreviewImage({ url: resolveMediaUrl(photo.url), title: `${photo.label} ${photo.sub}` })}
+                                className={`w-full aspect-square rounded-xl overflow-hidden border border-slate-200 flex items-center justify-center relative group transition-all ${
+                                  photo.url ? 'bg-slate-100 cursor-pointer hover:border-brand-blue shadow-2xs' : 'bg-slate-100/50'
+                                }`}
+                              >
+                                {photo.url ? (
+                                  <>
+                                    <img src={resolveMediaUrl(photo.url)} alt={photo.label} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                      <ZoomIn size={18} className="text-white" />
+                                    </div>
+                                  </>
+                                ) : (
+                                  <div className="text-center p-2">
+                                    <ImageIcon size={18} className="mx-auto text-slate-300 mb-1" />
+                                    <span className="text-[9px] text-slate-400 font-medium leading-tight block">Not uploaded</span>
+                                  </div>
+                                )}
+                              </div>
+                              <span className="text-[10px] font-bold text-slate-800 text-center mt-1.5 leading-tight">{photo.label}</span>
+                              <span className="text-[9px] text-slate-400 text-center leading-tight">{photo.sub}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Customer Attachments (if any) */}
+                      {selectedRequest.attachments && selectedRequest.attachments.length > 0 && (
+                        <div className="pt-2 border-t border-slate-200/60">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase block mb-2">Customer Uploaded Photos / Documents</span>
+                          <div className="flex gap-2 overflow-x-auto pb-1">
+                            {selectedRequest.attachments.map((att, attIdx) => (
+                              <div
+                                key={attIdx}
+                                onClick={() => setPreviewImage({ url: resolveMediaUrl(att), title: `Attachment #${attIdx + 1}` })}
+                                className="w-16 h-16 rounded-xl overflow-hidden border border-slate-200 shrink-0 cursor-pointer relative group bg-slate-100"
+                              >
+                                <img src={resolveMediaUrl(att)} alt={`Attachment ${attIdx}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                  <ZoomIn size={14} className="text-white" />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Spare parts (if any diagnosed) */}
+                      {selectedRequest.spareParts && selectedRequest.spareParts.length > 0 && (
+                        <div className="pt-2 border-t border-slate-200/60">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase block mb-2">Diagnosed Spare Parts</span>
+                          <div className="space-y-1.5">
+                            {selectedRequest.spareParts.map((sp, spIdx) => (
+                              <div key={spIdx} className="flex justify-between items-center text-xs bg-white p-2.5 rounded-lg border border-slate-200/70">
+                                <span className="font-semibold text-slate-800">{sp.name}</span>
+                                <span className="font-bold text-brand-blue">₹{sp.price}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Booking & Financial Summary */}
@@ -932,6 +1052,27 @@ const Requests = () => {
                 className="w-full bg-green-600 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-green-700 transition-colors shadow-sm"
               >
                 Close / Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Lightbox / Enlarged photo preview modal */}
+      {previewImage && (
+        <div 
+          className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 cursor-pointer backdrop-blur-xs"
+          onClick={() => setPreviewImage(null)}
+        >
+          <div className="relative max-w-2xl max-h-[90vh] bg-white rounded-2xl overflow-hidden p-3 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <img src={resolveMediaUrl(previewImage.url)} alt={previewImage.title} className="max-h-[75vh] w-auto mx-auto object-contain rounded-xl" />
+            <div className="p-3 flex justify-between items-center border-t border-slate-100 mt-2">
+              <span className="text-sm font-bold text-slate-800">{previewImage.title}</span>
+              <button 
+                onClick={() => setPreviewImage(null)}
+                className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+              >
+                Close
               </button>
             </div>
           </div>

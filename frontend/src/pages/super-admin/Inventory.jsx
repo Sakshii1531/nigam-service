@@ -26,12 +26,22 @@ const Inventory = () => {
   const [showDetailsDrawer, setShowDetailsDrawer] = useState(false);
 
   // Forms state
-  const [newPart, setNewPart] = useState({ name: '', brand: 'LG', category: 'Refrigerator', stock: '', threshold: '', price: '', supplier: '', leadTimeDays: '', status: 'In Stock' });
+  const [newPart, setNewPart] = useState({ name: '', brand: '', category: '', stock: '', threshold: '', price: '', supplier: '', leadTimeDays: '', status: 'In Stock' });
   const [editingPart, setEditingPart] = useState(null);
   const [selectedPart, setSelectedPart] = useState(null);
   const [parts, setParts] = useState([]);
   const [, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
+  // The real category catalog — the filter/add/edit category pickers used to be
+  // a fixed 4-option list (Refrigerator/TV/Washing Machine/Fan) with no "AC",
+  // so a part for any of the other 5 categories could never be assigned one
+  // that a job would actually match against.
+  const [categories, setCategories] = useState([]);
+  useEffect(() => {
+    apiRequest('/catalog/categories')
+      .then((res) => setCategories(Array.isArray(res) ? res : []))
+      .catch((err) => console.warn('[inventory] Could not load categories:', err.message));
+  }, []);
 
   // Presentation shape for a SparePartCatalog document. `status` and
   // `retailPrice` are schema virtuals — the server owns both.
@@ -100,7 +110,7 @@ const Inventory = () => {
         },
       });
       setParts((prev) => [...prev, toPartRow(res)]);
-      setNewPart({ name: '', brand: 'LG', category: 'Refrigerator', stock: '', threshold: '', price: '', supplier: '', leadTimeDays: '', status: 'In Stock' });
+      setNewPart({ name: '', brand: '', category: '', stock: '', threshold: '', price: '', supplier: '', leadTimeDays: '', status: 'In Stock' });
       setShowAddModal(false);
       showToast(`Spare part "${res.name}" added.`);
     } catch (err) {
@@ -296,29 +306,32 @@ const Inventory = () => {
                 />
               </div>
 
-              {/* Filters */}
-              <select 
+              {/* Filters — brand options come from what's actually in the
+                  catalogue; category options from the real Category list, so
+                  filtering never silently excludes a category the fixed
+                  4-option list used to omit (AC, Geyser, RO Water Purifier,
+                  Chimney, Microwave, Air Cooler all had no way to be filtered,
+                  or even assigned, before this). */}
+              <select
                 value={selectedBrand}
                 onChange={(e) => setSelectedBrand(e.target.value)}
                 className="text-sm text-[#1E293B] border border-[#E2E8F0] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#0D47A1] bg-[#F8FAFC]"
               >
                 <option>All Brands</option>
-                <option>LG</option>
-                <option>Samsung</option>
-                <option>Whirlpool</option>
-                <option>Havells</option>
+                {Array.from(new Set(parts.map((p) => p.brand).filter((b) => b && b !== 'N/A'))).sort().map((b) => (
+                  <option key={b}>{b}</option>
+                ))}
               </select>
 
-              <select 
+              <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
                 className="text-sm text-[#1E293B] border border-[#E2E8F0] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#0D47A1] bg-[#F8FAFC]"
               >
                 <option>All Categories</option>
-                <option>Refrigerator</option>
-                <option>TV</option>
-                <option>Washing Machine</option>
-                <option>Fan</option>
+                {categories.map((c) => (
+                  <option key={c.key} value={c.key}>{c.name}</option>
+                ))}
               </select>
             </div>
           </div>
@@ -437,29 +450,27 @@ const Inventory = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs font-semibold text-[#64748B] mb-1 block">Brand *</label>
-                  <select
+                  <label className="text-xs font-semibold text-[#64748B] mb-1 block">Brand</label>
+                  <input
+                    type="text"
                     className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none text-slate-800 bg-[#F8FAFC]"
+                    placeholder="e.g. LG"
                     value={newPart.brand}
                     onChange={(e) => setNewPart({ ...newPart, brand: e.target.value })}
-                  >
-                    <option>LG</option>
-                    <option>Samsung</option>
-                    <option>Whirlpool</option>
-                    <option>Havells</option>
-                  </select>
+                  />
                 </div>
                 <div>
                   <label className="text-xs font-semibold text-[#64748B] mb-1 block">Category *</label>
                   <select
+                    required
                     className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none text-slate-800 bg-[#F8FAFC]"
                     value={newPart.category}
                     onChange={(e) => setNewPart({ ...newPart, category: e.target.value })}
                   >
-                    <option>Refrigerator</option>
-                    <option>TV</option>
-                    <option>Washing Machine</option>
-                    <option>Fan</option>
+                    <option value="" disabled>Which appliance is this part for?</option>
+                    {categories.map((c) => (
+                      <option key={c.key} value={c.key}>{c.name}</option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -570,6 +581,32 @@ const Inventory = () => {
                   onChange={(e) => setEditingPart({ ...editingPart, name: e.target.value })}
                   required
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-semibold text-[#64748B] mb-1 block">Brand</label>
+                  <input
+                    type="text"
+                    className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none text-slate-800 bg-[#F8FAFC]"
+                    value={editingPart.brand || ''}
+                    onChange={(e) => setEditingPart({ ...editingPart, brand: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-[#64748B] mb-1 block">Category *</label>
+                  <select
+                    required
+                    className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none text-slate-800 bg-[#F8FAFC]"
+                    value={editingPart.category || ''}
+                    onChange={(e) => setEditingPart({ ...editingPart, category: e.target.value })}
+                  >
+                    <option value="" disabled>Which appliance is this part for?</option>
+                    {categories.map((c) => (
+                      <option key={c.key} value={c.key}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

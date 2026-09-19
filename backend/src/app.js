@@ -77,7 +77,7 @@ import { notificationRouter } from './modules/notifications/notification.routes.
 import { reviewRouter } from './modules/reviews/review.routes.js';
 import { callRouter } from './modules/calls/call.routes.js';
 import { devRouter } from './modules/shared/dev.routes.js';
-import { LOCAL_UPLOAD_DIR, isFileStorageConfigured } from './modules/shared/fileUpload.js';
+import { LOCAL_UPLOAD_DIR } from './modules/shared/fileUpload.js';
 
 export function createApp() {
   const app = express();
@@ -133,9 +133,8 @@ export function createApp() {
     );
   }
 
-  // Local-disk upload fallback only ever gets written to when Cloudinary isn't configured
-  // (fileUpload.js) — serving it statically here is a no-op otherwise.
-  if (!isFileStorageConfigured) app.use('/uploads', express.static(LOCAL_UPLOAD_DIR));
+  // Static uploads directory — serves local uploads and fallback files when Cloudinary is unconfigured or offline.
+  app.use('/uploads', express.static(LOCAL_UPLOAD_DIR));
 
   // Seamless fallback for requests sent without /api/v1 prefix (e.g. /auth/login -> /api/v1/auth/login)
   app.use((req, res, next) => {

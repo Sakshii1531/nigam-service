@@ -38,6 +38,17 @@ export function initSockets(httpServer) {
     for (const audience of broadcastAudiencesForRole(socket.user.role)) {
       socket.join(`broadcast:${audience}`);
     }
+
+    // Allow clients to join rooms for live tracking and booking updates
+    socket.on('join:booking', ({ bookingId, humanId } = {}) => {
+      if (bookingId) socket.join(`booking:${bookingId}`);
+      if (humanId) socket.join(`booking:${humanId}`);
+    });
+
+    socket.on('leave:booking', ({ bookingId, humanId } = {}) => {
+      if (bookingId) socket.leave(`booking:${bookingId}`);
+      if (humanId) socket.leave(`booking:${humanId}`);
+    });
   });
 
   registerChatGateway(io);

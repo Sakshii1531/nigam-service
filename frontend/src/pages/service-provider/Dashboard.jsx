@@ -257,7 +257,13 @@ const Dashboard = () => {
     setAcceptedInstantIds((prev) => [...prev, job.id, job.serviceRequestId].filter(Boolean));
     const res = await acceptJob(job.id, { silent: true });
     if (res?.ok) {
-      navigate('/service-provider/active-job');
+      selectJobForDetails(job.id);
+      setDutyMessage('Job accepted! It is now listed under Active Jobs below.');
+      setShowAllJobs(false);
+      setTimeout(() => {
+        const el = document.getElementById('active-jobs-section');
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
+      }, 150);
     } else {
       setAcceptedInstantIds((prev) => prev.filter((id) => id !== job.id && id !== job.serviceRequestId));
       const errMsg = res?.error || '';
@@ -277,10 +283,16 @@ const Dashboard = () => {
     setAlertError(null);
     const res = await acceptJob(job.id, { silent: true });
     if (res?.ok) {
+      selectJobForDetails(job.id);
       setAcceptedInstantIds((prev) => [...prev, job.id, job.serviceRequestId].filter(Boolean));
       setAlertBusy(null);
       setInstantAlertJob(null);
-      navigate('/service-provider/active-job');
+      setDutyMessage('Job accepted! It is now listed under Active Jobs below.');
+      setShowAllJobs(false);
+      setTimeout(() => {
+        const el = document.getElementById('active-jobs-section');
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
+      }, 150);
     } else {
       setAlertBusy(null);
       setAlertError(res?.error || 'Could not accept this job.');
@@ -410,6 +422,36 @@ const Dashboard = () => {
     job.status === 'Spare Received' ||
     Boolean(job.isRevisit)
   ));
+
+  const ongoingActiveJobs = activeJobs.filter(job => !revisitJobs.some(r => r.id === job.id));
+
+  const formatTimeSlotStr = (slot, fallback = '') => {
+    if (!slot) return fallback;
+    if (typeof slot === 'string') return slot;
+    if (typeof slot === 'object') {
+      return slot.time || slot.slot || slot.date || fallback;
+    }
+    return fallback;
+  };
+
+  const getActiveJobStage = (job) => {
+    if (job.activeStep === 'ontheway' || job.activeStep === 'revisit_ontheway') {
+      return { label: 'On the way', tone: 'bg-emerald-50 text-emerald-800 border-emerald-200', action: 'Continue' };
+    }
+    if (job.activeStep === 'arrived' || job.activeStep === 'revisit_arrived') {
+      return { label: 'Arrived at site', tone: 'bg-purple-50 text-purple-800 border-purple-200', action: 'Resume' };
+    }
+    if (job.activeStep === 'inspection' || job.activeStep === 'workinprogress') {
+      return { label: 'In Progress', tone: 'bg-amber-50 text-amber-800 border-amber-200', action: 'Continue' };
+    }
+    if (job.activeStep === 'spare_part_required' || job.activeStep === 'spareapproval') {
+      return { label: 'Spare Part Pending', tone: 'bg-amber-50 text-amber-800 border-amber-200', action: 'View Details' };
+    }
+    if (job.activeStep === 'revisit_scheduled' || job.revisitScheduledDate) {
+      return { label: 'Revisit Scheduled', tone: 'bg-blue-50 text-[#0D47A1] border-blue-200', action: 'Start revisit' };
+    }
+    return { label: 'Assigned · Ready to start', tone: 'bg-blue-50 text-[#0D47A1] border-blue-200', action: 'Start Job' };
+  };
 
   // Header data — all of this used to be fixed: "Good Morning" at any hour,
   // a "5" notification badge, a 4.9 score with five stars and "ELITE PARTNER".
@@ -570,8 +612,40 @@ const Dashboard = () => {
             <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-2 grid grid-cols-2 md:grid-cols-4 gap-1 -mt-10 lg:mt-0 relative z-10">
               {[
                 { label: 'New offers', value: jobsLoading ? '—' : availableJobsCount, icon: Briefcase, tone: 'bg-[#E3F2FD] text-[#1565C0]', onClick: () => openJobsList('Offers') },
-                { label: 'Active jobs', value: jobsLoading ? '—' : activeJobs.length, icon: Wrench, tone: 'bg-[#E8F5E9] text-[#2E7D32]', onClick: () => navigate('/service-provider/active-job') },
-                { label: 'Revisits', value: jobsLoading ? '—' : revisitJobs.length, icon: RotateCw, tone: 'bg-[#FFF3E0] text-[#E65100]', onClick: () => openJobsList('Active') },
+                { 
+                  label: 'Active jobs', 
+                  value: jobsLoading ? '—' : activeJobs.length, 
+                  icon: Wrench, 
+                  tone: 'bg-[#E8F5E9] text-[#2E7D32]', 
+                  onClick: () => {
+                    if (ongoingActiveJobs.length > 0) {
+                      const el = document.getElementById('active-jobs-section');
+                      if (el) el.scrollIntoView({ behavior: 'smooth' });
+                      else openJobsList('Active');
+                    } else if (revisitJobs.length > 0) {
+                      const el = document.getElementById('revisits-section');
+                      if (el) el.scrollIntoView({ behavior: 'smooth' });
+                      else openJobsList('Active');
+                    } else {
+                      openJobsList('Active');
+                    }
+                  } 
+                },
+                { 
+                  label: 'Revisits', 
+                  value: jobsLoading ? '—' : revisitJobs.length, 
+                  icon: RotateCw, 
+                  tone: 'bg-[#FFF3E0] text-[#E65100]', 
+                  onClick: () => {
+                    if (revisitJobs.length > 0) {
+                      const el = document.getElementById('revisits-section');
+                      if (el) el.scrollIntoView({ behavior: 'smooth' });
+                      else openJobsList('Active');
+                    } else {
+                      openJobsList('Active');
+                    }
+                  } 
+                },
                 { label: 'Done today', value: completedToday, icon: CheckCircle, tone: 'bg-[#F3E5F5] text-[#6A1B9A]', onClick: () => navigate('/service-provider/history') },
               ].map((stat) => (
                 <button
@@ -630,9 +704,111 @@ const Dashboard = () => {
               </button>
             )}
 
+            {/* Active Jobs — ongoing accepted and in-progress jobs */}
+            {ongoingActiveJobs.length > 0 && (
+              <section className="flex flex-col gap-2.5" id="active-jobs-section">
+                <div className="flex items-baseline justify-between">
+                  <div>
+                    <h3 className="text-base font-bold text-[#052355] flex items-center gap-2">
+                      <span>Active Jobs</span>
+                      <span className="text-[11px] font-extrabold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+                        {ongoingActiveJobs.length} active
+                      </span>
+                    </h3>
+                    <p className="text-xs text-slate-500">Accepted jobs currently in progress or assigned to you</p>
+                  </div>
+                  {ongoingActiveJobs.length > 3 && (
+                    <button 
+                      onClick={() => openJobsList('Active')}
+                      className="text-sm font-semibold text-[#0D47A1] flex items-center gap-0.5 cursor-pointer hover:underline"
+                    >
+                      View all <ChevronRight className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                  {ongoingActiveJobs.map((job) => {
+                    const kind = JOB_KIND_STYLE[jobKind(job)] || JOB_KIND_STYLE.paid;
+                    const KindIcon = kind.icon;
+                    const stage = getActiveJobStage(job);
+                    const timeDisplay = formatTimeSlotStr(job.scheduledTime) || formatTimeSlotStr(job.timeSlot) || (job.revisitTimeSlot ? formatTimeSlotStr(job.revisitTimeSlot) : null);
+                    const dateDisplay = job.scheduledDateLabel || (job.scheduledDate ? new Date(job.scheduledDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : (job.revisitScheduledDate ? new Date(job.revisitScheduledDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : null));
+
+                    return (
+                      <div
+                        key={job.id}
+                        onClick={() => openJob(job)}
+                        className={`bg-white rounded-2xl p-4 border border-slate-200/80 border-l-4 ${kind.border} shadow-2xs hover:shadow-md transition-all cursor-pointer flex flex-col gap-3 group`}
+                      >
+                        <div className="flex items-start justify-between gap-2 w-full">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${kind.chip}`}>
+                              <KindIcon className="w-3 h-3" /> {kind.label}
+                            </span>
+                            <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${stage.tone}`}>
+                              {stage.label}
+                            </span>
+                            {isPriorityJob(job) && (
+                              <span className="text-[9px] font-black text-red-700 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full uppercase">
+                                Priority
+                              </span>
+                            )}
+                          </div>
+                          {renderBrandLogo(job.brand)}
+                        </div>
+
+                        <div className="flex flex-col gap-1 min-w-0">
+                          <h4 className="text-sm font-bold text-[#052355] truncate group-hover:text-[#0D47A1] transition-colors">
+                            {job.product || job.category}
+                          </h4>
+                          <div className="flex flex-col gap-1 text-xs text-slate-600 mt-1">
+                            <div className="flex items-center gap-1.5 font-medium">
+                              <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                              <span className="text-slate-900 font-bold truncate">{job.customerName}</span>
+                            </div>
+                            {job.address && (
+                              <div className="flex items-start gap-1.5 text-[11px] text-slate-500">
+                                <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+                                <span className="line-clamp-1">{job.address}</span>
+                              </div>
+                            )}
+                            {(dateDisplay || timeDisplay) && (
+                              <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-semibold">
+                                <Clock className="w-3.5 h-3.5 text-[#0D47A1] shrink-0" />
+                                <span>{[dateDisplay, timeDisplay].filter(Boolean).join(' · ')}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-2.5 border-t border-slate-100 mt-auto">
+                          <div>
+                            <p className="text-[10px] text-slate-400 font-medium">You earn</p>
+                            <p className="text-sm font-black text-emerald-700 tabular-nums">{inr(job.estEarnings)}</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openJob(job);
+                            }}
+                            className="px-3 py-1.5 bg-[#0D47A1] hover:bg-[#0A3F91] text-white text-xs font-bold rounded-xl flex items-center gap-1 transition-all shadow-xs group-hover:translate-x-0.5 cursor-pointer"
+                          >
+                            <span>{stage.action}</span>
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+
             {/* Revisits — only when there are some; an empty card here pushed new offers below the fold */}
             {revisitJobs.length > 0 && (
-              <section className="flex flex-col gap-2.5">
+              <section className="flex flex-col gap-2.5" id="revisits-section">
                 <div className="flex items-baseline justify-between">
                   <div>
                     <h3 className="text-base font-bold text-[#052355]">Revisits</h3>
@@ -656,6 +832,8 @@ const Dashboard = () => {
                       ? new Date(job.revisitScheduledDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
                       : null;
 
+                    const revisitSlot = formatTimeSlotStr(job.revisitTimeSlot);
+
                     return (
                       <button
                         key={job.id}
@@ -676,7 +854,7 @@ const Dashboard = () => {
                           {dateDisplay && (
                             <span className="flex items-center gap-1.5">
                               <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                              {dateDisplay}{job.revisitTimeSlot ? ` · ${job.revisitTimeSlot}` : ''}
+                              {dateDisplay}{revisitSlot ? ` · ${revisitSlot}` : ''}
                             </span>
                           )}
                         </div>
@@ -730,12 +908,12 @@ const Dashboard = () => {
                           <div className="min-w-0">
                             <p className="text-sm font-bold text-[#052355] line-clamp-2 leading-snug">{job.product}</p>
                             <p className="text-xs text-slate-500 mt-1 truncate">{job.customerName}</p>
-                            {(job.scheduledDateLabel || job.scheduledTime || job.distance != null) && (
+                            {(job.scheduledDateLabel || job.scheduledTime || job.timeSlot || job.distance != null) && (
                               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 mt-1">
-                                {(job.scheduledDateLabel || job.scheduledTime) && (
+                                {(job.scheduledDateLabel || job.scheduledTime || job.timeSlot) && (
                                   <span className="flex items-center gap-1">
                                     <Clock className="w-3.5 h-3.5 text-slate-400" />
-                                    {[job.scheduledDateLabel, job.scheduledTime].filter(Boolean).join(', ')}
+                                    {[job.scheduledDateLabel, formatTimeSlotStr(job.scheduledTime) || formatTimeSlotStr(job.timeSlot)].filter(Boolean).join(', ')}
                                   </span>
                                 )}
                                 {job.distance != null && (
@@ -869,10 +1047,10 @@ const Dashboard = () => {
                               </>
                             )}
                           </div>
-                          {(job.scheduledDateLabel || job.scheduledTime) && (
+                          {(job.scheduledDateLabel || job.scheduledTime || job.timeSlot) && (
                             <div className="flex items-center gap-1.5 text-slate-500 text-xs mt-1">
                               <Clock className="h-3.5 w-3.5 text-slate-400" />
-                              {[job.scheduledDateLabel, job.scheduledTime].filter(Boolean).join(', ')}
+                              {[job.scheduledDateLabel, formatTimeSlotStr(job.scheduledTime) || formatTimeSlotStr(job.timeSlot)].filter(Boolean).join(', ')}
                             </div>
                           )}
                         </div>

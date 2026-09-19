@@ -94,11 +94,11 @@ const EVENT_TEMPLATES = {
   'serviceProvider.parts_pending': (p) => ({
     recipient: p.user,
     type: 'assigned',
-    title: 'Spare Part Pending ⏳',
-    message: `Your ${p.category || 'service'} requires a spare part (${p.partName || 'Spare Part'}). We have placed the order with the warehouse and will reschedule your visit once delivered.`,
-    cta: p.bookingId ? { label: 'View Booking', route: `/bookings` } : undefined,
-    smsBody: `Your ${p.category || 'service'} requires a spare part (${p.partName || 'Spare Part'}). We will notify you once delivered.`,
-    whatsappBody: `⏳ *Spare Part Requested*\n\nYour *${p.category || 'service'}* requires a spare part (*${p.partName || 'Spare Part'}*).\n\nWe have ordered it from our warehouse. You will receive an update once it is delivered and the revisit is scheduled.`,
+    title: 'Approve Spare Part Request ⏳',
+    message: `Your ${p.category || 'service'} technician has requested a spare part (${p.partName || 'Spare Part'}) worth ₹${p.amount ?? 0}. Please approve this cost to continue — it won't be ordered until you do.`,
+    cta: p.bookingId ? { label: 'Review & Approve', route: `/bookings/${p.bookingId}` } : undefined,
+    smsBody: `Your technician has requested a spare part (${p.partName || 'Spare Part'}) worth ₹${p.amount ?? 0}. Approve it in the Nigam Care app to continue.`,
+    whatsappBody: `⏳ *Spare Part Approval Needed*\n\nYour technician has requested *${p.partName || 'Spare Part'}* worth *₹${p.amount ?? 0}* for your *${p.category || 'service'}*.\n\nOpen the Nigam Care app to approve or decline this cost before it's ordered.`,
   }),
   'service.rescheduled': (p) => ({
     recipient: p.user,

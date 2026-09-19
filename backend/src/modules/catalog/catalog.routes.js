@@ -10,7 +10,11 @@ import {
   updateCategorySchema,
   categoryKeyParamSchema,
   addProductTypeSchema,
+  updateProductTypeSchema,
+  productTypeIdParamSchema,
   addServiceItemSchema,
+  updateServiceItemSchema,
+  serviceItemIdParamSchema,
 } from './catalog.validation.js';
 
 export const catalogRouter = Router();
@@ -45,6 +49,21 @@ catalogRouter.get('/categories/:key', validate(categoryKeyParamSchema, 'params')
     next(err);
   }
 });
+
+// Admin view — every product type/service (including inactive), each with its
+// real id, for the catalog console's edit/delete actions.
+catalogRouter.get(
+  '/categories/:key/admin',
+  requireAdmin,
+  validate(categoryKeyParamSchema, 'params'),
+  async (req, res, next) => {
+    try {
+      ok(res, await catalogService.getCategoryForAdmin(req.params.key));
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 // Admin-editable (Phase 4 exit criterion) — a full CMS with brand-scoped/finer
 // permissions lands in Phase 8; a super_admin role gate is enough for now.
@@ -84,6 +103,34 @@ catalogRouter.post(
   },
 );
 
+catalogRouter.put(
+  '/categories/:key/product-types/:productTypeId',
+  requireAdmin,
+  validate(productTypeIdParamSchema, 'params'),
+  validate(updateProductTypeSchema),
+  async (req, res, next) => {
+    try {
+      ok(res, await catalogService.updateProductType(req.params.key, req.params.productTypeId, req.body));
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+catalogRouter.delete(
+  '/categories/:key/product-types/:productTypeId',
+  requireAdmin,
+  validate(productTypeIdParamSchema, 'params'),
+  async (req, res, next) => {
+    try {
+      await catalogService.deleteProductType(req.params.key, req.params.productTypeId);
+      ok(res, { deleted: true });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
 catalogRouter.post(
   '/categories/:key/services',
   requireAdmin,
@@ -92,6 +139,34 @@ catalogRouter.post(
   async (req, res, next) => {
     try {
       created(res, await catalogService.addServiceItem(req.params.key, req.body));
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+catalogRouter.put(
+  '/categories/:key/services/:serviceItemId',
+  requireAdmin,
+  validate(serviceItemIdParamSchema, 'params'),
+  validate(updateServiceItemSchema),
+  async (req, res, next) => {
+    try {
+      ok(res, await catalogService.updateServiceItem(req.params.key, req.params.serviceItemId, req.body));
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+catalogRouter.delete(
+  '/categories/:key/services/:serviceItemId',
+  requireAdmin,
+  validate(serviceItemIdParamSchema, 'params'),
+  async (req, res, next) => {
+    try {
+      await catalogService.deleteServiceItem(req.params.key, req.params.serviceItemId);
+      ok(res, { deleted: true });
     } catch (err) {
       next(err);
     }

@@ -11,7 +11,7 @@ import { ExtendedWarrantyOrder } from '../warranty-amc-exchange/extendedWarranty
  * a fabricated expiry — the only honest source is the registered purchase date
  * plus the customer's real AMC/EW documents.
  */
-async function withWarranty(appliance) {
+export async function withWarranty(appliance) {
   const [amc, ew] = await Promise.all([
     AMCSubscription.findOne({ user: appliance.user, status: 'Active' }),
     ExtendedWarrantyOrder.findOne({ user: appliance.user, status: 'Active' }).sort({ validTill: -1 }),

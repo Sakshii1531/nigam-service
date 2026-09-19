@@ -20,12 +20,17 @@ import { apiRequest } from '../../lib/apiClient';
 const STATUS_STYLES = {
   Pending: 'bg-amber-50 text-amber-700 border-amber-200',
   Approved: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+  'Ready to Hand Over': 'bg-blue-50 text-blue-700 border-blue-200',
+  'Handed Over': 'bg-emerald-50 text-emerald-700 border-emerald-200',
   Dispatched: 'bg-blue-50 text-blue-700 border-blue-200',
   Delivered: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   Rejected: 'bg-rose-50 text-rose-700 border-rose-200',
 };
 
-const FILTERS = ['All', 'Pending', 'Approved', 'Dispatched', 'Delivered', 'Rejected'];
+// A part already in NCC warehouse stock only needs approving and handing
+// over — no shipping leg — while a procured part genuinely gets dispatched
+// and delivered. Two different ladders, picked by fulfillmentType.
+const FILTERS = ['All', 'Pending', 'Approved', 'Ready to Hand Over', 'Handed Over', 'Dispatched', 'Delivered', 'Rejected'];
 
 const PartRequests = () => {
   const [requests, setRequests] = useState([]);
@@ -78,7 +83,11 @@ const PartRequests = () => {
       await apiRequest(`/super-admin/part-orders/${id}`, { method: 'PATCH', auth: true, body: { status } });
       setToast(
         status === 'Approved'
-          ? 'Approved — request approved and ready for dispatch.'
+          ? 'Approved — request approved.'
+          : status === 'Ready to Hand Over'
+          ? 'Marked ready — part is ready to hand over to the serviceProvider.'
+          : status === 'Handed Over'
+          ? 'Handed over — parts given to serviceProvider & revisit has been rescheduled!'
           : status === 'Dispatched'
           ? 'Dispatched — spare parts are on the way to serviceProvider.'
           : status === 'Delivered'
@@ -201,15 +210,25 @@ const PartRequests = () => {
                           </td>
 
                           <td className="px-5 py-4">
-                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 uppercase">
-                              {r.orderSource || 'NCC Warehouse'}
-                            </span>
+                            <div className="flex flex-col gap-1">
+                              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 uppercase w-fit">
+                                {r.orderSource || 'NCC Warehouse'}
+                              </span>
+                              <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wide">
+                                {r.fulfillmentType === 'in_stock' ? 'In Stock — Hand Over' : 'Procurement — Ship'}
+                              </span>
+                            </div>
                           </td>
 
                           <td className="px-5 py-4">
-                            <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold border ${STATUS_STYLES[r.status] || 'bg-slate-50 text-slate-600 border-slate-200'}`}>
-                              {r.status}
-                            </span>
+                            <div className="flex flex-col gap-1">
+                              <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold border w-fit ${STATUS_STYLES[r.status] || 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+                                {r.status}
+                              </span>
+                              {r.status === 'Pending' && r.customerApprovalStatus === 'Pending' && (
+                                <span className="text-[9px] text-amber-700 font-bold uppercase tracking-wide">Awaiting Customer</span>
+                              )}
+                            </div>
                           </td>
 
                           <td className="px-5 py-4 text-right">
@@ -223,7 +242,23 @@ const PartRequests = () => {
                                 <Eye size={13} /> Details
                               </button>
 
-                              {r.status === 'Pending' ? (
+                              {r.status === 'Pending' && r.customerApprovalStatus === 'Pending' ? (
+                                <>
+                                  <span
+                                    className="text-[10px] text-amber-700 font-bold bg-amber-50 border border-amber-200 px-2 py-1.5 rounded-lg inline-flex items-center gap-1"
+                                    title="The customer hasn't approved this cost yet — nothing to action until they do."
+                                  >
+                                    <Clock size={11} /> Awaiting Customer
+                                  </span>
+                                  <button
+                                    onClick={() => decide(r.id || r._id, 'Rejected')}
+                                    disabled={busyId === (r.id || r._id)}
+                                    className="inline-flex items-center gap-1 bg-white hover:bg-slate-50 disabled:opacity-60 text-rose-600 text-[11px] font-bold px-2.5 py-1.5 rounded-lg border border-slate-200 transition-colors cursor-pointer"
+                                  >
+                                    <X size={13} /> Reject
+                                  </button>
+                                </>
+                              ) : r.status === 'Pending' ? (
                                 <>
                                   <button
                                     onClick={() => decide(r.id || r._id, 'Approved')}
@@ -240,6 +275,26 @@ const PartRequests = () => {
                                     <X size={13} /> Reject
                                   </button>
                                 </>
+                              ) : r.status === 'Approved' && r.fulfillmentType === 'in_stock' ? (
+                                <button
+                                  onClick={() => decide(r.id || r._id, 'Ready to Hand Over')}
+                                  disabled={busyId === (r.id || r._id)}
+                                  className="inline-flex items-center gap-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-[11px] font-bold px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer shadow-xs"
+                                >
+                                  <Package size={13} /> Mark Ready
+                                </button>
+                              ) : r.status === 'Ready to Hand Over' ? (
+                                <button
+                                  onClick={() => decide(r.id || r._id, 'Handed Over')}
+                                  disabled={busyId === (r.id || r._id)}
+                                  className="inline-flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-[11px] font-bold px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer shadow-xs"
+                                >
+                                  <CheckCircle2 size={13} /> Hand Over
+                                </button>
+                              ) : r.status === 'Handed Over' ? (
+                                <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md inline-flex items-center gap-1">
+                                  <CheckCircle2 size={11} /> Revisit Rescheduled
+                                </span>
                               ) : r.status === 'Approved' ? (
                                 <button
                                   onClick={() => decide(r.id || r._id, 'Dispatched')}
@@ -350,6 +405,9 @@ const PartRequests = () => {
                     <Building size={13} className="text-slate-500" />
                     {selectedRequest.orderSource || 'NCC Warehouse'}
                   </span>
+                  <span className="block text-[9px] text-slate-400 font-bold uppercase tracking-wide mt-1">
+                    {selectedRequest.fulfillmentType === 'in_stock' ? 'Already in stock — hand over only' : 'Needs procurement — ship & deliver'}
+                  </span>
                 </div>
 
                 <div className="p-3 bg-white rounded-xl border border-slate-200/80 shadow-2xs">
@@ -357,6 +415,15 @@ const PartRequests = () => {
                   <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-black uppercase mt-0.5 border ${STATUS_STYLES[selectedRequest.status]}`}>
                     {selectedRequest.status}
                   </span>
+                  {selectedRequest.status === 'Pending' && (
+                    <span className={`block text-[10px] font-bold mt-1.5 ${selectedRequest.customerApprovalStatus === 'Approved' ? 'text-emerald-700' : 'text-amber-700'}`}>
+                      {selectedRequest.customerApprovalStatus === 'Approved'
+                        ? '✓ Customer approved this cost'
+                        : selectedRequest.customerApprovalStatus === 'Rejected'
+                          ? '✕ Customer declined this cost'
+                          : '⏳ Awaiting customer approval'}
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -418,8 +485,9 @@ const PartRequests = () => {
                   <>
                     <button
                       onClick={() => decide(selectedRequest.id || selectedRequest._id, 'Approved')}
-                      disabled={busyId === (selectedRequest.id || selectedRequest._id)}
-                      className="px-3.5 py-2 bg-[#0D47A1] hover:bg-blue-800 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-xs"
+                      disabled={busyId === (selectedRequest.id || selectedRequest._id) || selectedRequest.customerApprovalStatus !== 'Approved'}
+                      title={selectedRequest.customerApprovalStatus !== 'Approved' ? "The customer hasn't approved this cost yet" : undefined}
+                      className="px-3.5 py-2 bg-[#0D47A1] hover:bg-blue-800 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Approve Request
                     </button>
@@ -433,7 +501,27 @@ const PartRequests = () => {
                   </>
                 )}
 
-                {selectedRequest.status === 'Approved' && (
+                {selectedRequest.status === 'Approved' && selectedRequest.fulfillmentType === 'in_stock' && (
+                  <button
+                    onClick={() => decide(selectedRequest.id || selectedRequest._id, 'Ready to Hand Over')}
+                    disabled={busyId === (selectedRequest.id || selectedRequest._id)}
+                    className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-xs"
+                  >
+                    Mark Ready to Hand Over
+                  </button>
+                )}
+
+                {selectedRequest.status === 'Ready to Hand Over' && (
+                  <button
+                    onClick={() => decide(selectedRequest.id || selectedRequest._id, 'Handed Over')}
+                    disabled={busyId === (selectedRequest.id || selectedRequest._id)}
+                    className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-xs"
+                  >
+                    Mark Handed Over
+                  </button>
+                )}
+
+                {selectedRequest.status === 'Approved' && selectedRequest.fulfillmentType !== 'in_stock' && (
                   <button
                     onClick={() => decide(selectedRequest.id || selectedRequest._id, 'Dispatched')}
                     disabled={busyId === (selectedRequest.id || selectedRequest._id)}

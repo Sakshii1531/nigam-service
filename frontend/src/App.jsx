@@ -141,7 +141,7 @@ import SuperAdminASMDetail from "./pages/super-admin/ASMDetail";
 import SuperAdminAMC from "./pages/super-admin/AMC";
 import SuperAdminProducts from "./pages/super-admin/Products";
 import SuperAdminWarrantyVerification from "./pages/super-admin/WarrantyVerification";
-import SuperAdminSpareParts from "./pages/super-admin/SpareParts";
+import SuperAdminServiceCatalog from "./pages/super-admin/ServiceCatalog";
 import SuperAdminEscalationDesk from "./pages/super-admin/EscalationDesk";
 import SuperAdminStories from "./pages/super-admin/Stories";
 import SuperAdminVideos from "./pages/super-admin/Videos";
@@ -1229,8 +1229,8 @@ function App() {
                             element={<SuperAdminWarrantyVerification />}
                           />
                           <Route
-                            path="/super-admin/spare-parts"
-                            element={<SuperAdminSpareParts />}
+                            path="/super-admin/service-catalog"
+                            element={<SuperAdminServiceCatalog />}
                           />
                           <Route
                             path="/super-admin/escalation-desk"

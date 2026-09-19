@@ -57,3 +57,7 @@ export const rescheduleBookingSchema = z.object({
   timeSlot: z.union([timeSlotSchema, z.string()]).optional(),
   reason: z.string().optional(),
 });
+
+export const respondPartRequestSchema = z.object({
+  approve: z.boolean(),
+});

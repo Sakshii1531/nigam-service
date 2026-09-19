@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { apiRequest } from '../../lib/apiClient';
+import { apiRequest, resolveMediaUrl } from '../../lib/apiClient';
+import { convertToWebP } from '../../lib/imageUtils';
+import PhotoCaptureModal from '../../components/service-provider/PhotoCaptureModal';
 import { 
   ArrowLeft, Bell, Briefcase, Calendar, MapPin, Phone, MessageSquare, Share2, MoreVertical, Clock, Plus, Info, Check, Video, Mic, FileText, ChevronRight, AlertTriangle, AlertCircle, Package, CreditCard, Wallet, Banknote, QrCode,
-  RotateCw, Navigation
+  RotateCw, Navigation, Search, Camera
 } from 'lucide-react';
 import { useTech } from '../../context/ServiceProviderContext';
 import ServiceProviderBottomNav from '../../components/ServiceProviderBottomNav';
@@ -250,24 +252,151 @@ const ActiveJob = () => {
   const [enteredInspection, setEnteredInspection] = useState(false);
   const [inspectionDiagnosed, setInspectionDiagnosed] = useState(false);
   const [selectedDiagnosis, setSelectedDiagnosis] = useState('confirmed'); // 'confirmed', 'different', 'none'
+  // The technician's own on-site warranty check (from a physical warranty
+  // card/invoice), which overrides the system's computed guess everywhere the
+  // job shows a warranty status. Starts unset — never silently defaults to a
+  // status the technician hasn't actually confirmed.
+  const [warrantyCheck, setWarrantyCheck] = useState(null); // 'In Warranty' | 'Out of Warranty' | null
+  useEffect(() => {
+    setWarrantyCheck(activeJob?.diagnosis?.warrantyCheck || null);
+  }, [activeJob?.id, activeJob?.diagnosis?.warrantyCheck]);
   const [productPhoto, setProductPhoto] = useState('https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=300&q=80');
   const [serialPhoto, setSerialPhoto] = useState('https://images.unsplash.com/photo-1589571894960-20bbe2828d0a?auto=format&fit=crop&w=300&q=80');
   const [issuePhoto, setIssuePhoto] = useState('https://images.unsplash.com/photo-1621905252507-b354bc25edac?auto=format&fit=crop&w=300&q=80');
-  const [additionalServices, setAdditionalServices] = useState([
-    { id: 'deep', name: 'Deep Cleaning', price: 599, checked: false },
-    { id: 'drain', name: 'Drain Pipe Cleaning', price: 199, checked: false },
-    { id: 'foam', name: 'AC Foam Wash', price: 399, checked: false },
-    { id: 'jet', name: 'Jet Pump Service', price: 299, checked: false },
-    { id: 'outdoor', name: 'Outdoor Unit Cleaning', price: 249, checked: false }
-  ]);
+  const [uploadingPhoto, setUploadingPhoto] = useState({ product: false, serial: false, issue: false });
+
+  // Interactive Camera / Gallery photo capture modal state
+  const [captureModalState, setCaptureModalState] = useState({
+    isOpen: false,
+    type: null,
+    title: '',
+    subtitle: '',
+    currentUrl: '',
+  });
+
+  const handleCaptureModalSuccess = async (uploadedUrl) => {
+    const type = captureModalState.type;
+    if (type === 'product') setProductPhoto(uploadedUrl);
+    else if (type === 'serial') setSerialPhoto(uploadedUrl);
+    else if (type === 'issue') setIssuePhoto(uploadedUrl);
+
+    if (activeJob?.id) {
+      try {
+        await apiRequest(`/service-provider/jobs/${activeJob.id}/diagnosis`, {
+          method: 'POST',
+          auth: true,
+          body: {
+            photos: {
+              product: type === 'product' ? uploadedUrl : productPhoto,
+              serial: type === 'serial' ? uploadedUrl : serialPhoto,
+              issue: type === 'issue' ? uploadedUrl : issuePhoto,
+            },
+          },
+        });
+      } catch (err) {
+        console.warn('[ActiveJob] Auto-saving uploaded photo to diagnosis failed:', err.message);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (activeJob?.diagnosis?.photos) {
+      if (activeJob.diagnosis.photos.product) setProductPhoto(activeJob.diagnosis.photos.product);
+      if (activeJob.diagnosis.photos.serial) setSerialPhoto(activeJob.diagnosis.photos.serial);
+      if (activeJob.diagnosis.photos.issue) setIssuePhoto(activeJob.diagnosis.photos.issue);
+    }
+  }, [activeJob?.id, activeJob?.diagnosis?.photos]);
+
+  const handlePhotoUpload = async (e, type) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingPhoto((prev) => ({ ...prev, [type]: true }));
+    try {
+      // 1. Convert to WebP client-side to drastically reduce file size before uploading
+      const webpResult = await convertToWebP(file, { quality: 0.82, maxDimension: 1600 });
+      const localPreview = webpResult.previewUrl;
+      if (type === 'product') setProductPhoto(localPreview);
+      else if (type === 'serial') setSerialPhoto(localPreview);
+      else if (type === 'issue') setIssuePhoto(localPreview);
+
+      // 2. Upload the optimized WebP file
+      const formData = new FormData();
+      formData.append('file', webpResult.file);
+      const res = await apiRequest('/uploads', {
+        method: 'POST',
+        auth: true,
+        body: formData,
+      });
+      const finalUrl = res?.url || localPreview;
+      if (type === 'product') setProductPhoto(finalUrl);
+      else if (type === 'serial') setSerialPhoto(finalUrl);
+      else if (type === 'issue') setIssuePhoto(finalUrl);
+
+      // Auto-save to diagnosis
+      if (activeJob?.id) {
+        apiRequest(`/service-provider/jobs/${activeJob.id}/diagnosis`, {
+          method: 'POST',
+          auth: true,
+          body: {
+            photos: {
+              product: type === 'product' ? finalUrl : productPhoto,
+              serial: type === 'serial' ? finalUrl : serialPhoto,
+              issue: type === 'issue' ? finalUrl : issuePhoto,
+            },
+          },
+        }).catch(() => {});
+      }
+    } catch (err) {
+      console.warn(`[ActiveJob] Failed to upload ${type} photo:`, err.message);
+    } finally {
+      setUploadingPhoto((prev) => ({ ...prev, [type]: false }));
+    }
+  };
+  const [additionalServices, setAdditionalServices] = useState([]);
   const [showAddServicesModal, setShowAddServicesModal] = useState(false);
   const [spareParts, setSpareParts] = useState([]);
   const [partAvailability, setPartAvailability] = useState('not_available');
   const [showAddPartsModal, setShowAddPartsModal] = useState(false);
+  const [partSearchQuery, setPartSearchQuery] = useState('');
   const [showInvoicePreviewModal, setShowInvoicePreviewModal] = useState(false);
   const [showInvoicePdfModal, setShowInvoicePdfModal] = useState(false);
   // AMC: show history drawer before entering inspection tabs
   const [showAmcHistoryDrawer, setShowAmcHistoryDrawer] = useState(false);
+
+  // The appliance's real warranty/install date, this category's real add-on
+  // service & spare-part catalogs, and this appliance's real repair history —
+  // replaces what used to be five separate hardcoded mock sections (warranty
+  // status, "Standard Checks", service history, add-services list, add-parts list).
+  const [jobContext, setJobContext] = useState(null);
+  useEffect(() => {
+    setJobContext(null);
+    if (!activeJob?.id) return;
+    let cancelled = false;
+    apiRequest(`/service-provider/jobs/${activeJob.id}/context`, { auth: true })
+      .then((res) => { if (!cancelled) setJobContext(res); })
+      .catch((err) => console.warn('[ActiveJob] Failed to load job context:', err.message));
+    return () => { cancelled = true; };
+  }, [activeJob?.id]);
+
+  // Seeds the Overview "Selected/Add More Services" card: already-booked
+  // services come from the real job doc, addable ones from this category's
+  // real catalog (jobContext.addonServices) — replaces a fixed five-item list
+  // ("Deep Cleaning", "Drain Pipe Cleaning", ...) that was the same for every
+  // job regardless of category or what the customer actually booked. Keyed on
+  // jobContext rather than activeJob.additionalServices so it doesn't clobber
+  // a technician's in-progress checkbox taps on every 4s job poll.
+  useEffect(() => {
+    const bookedServices = activeJob?.additionalServices || [];
+    const bookedNames = new Set(bookedServices.map((s) => (s.name || '').toLowerCase()));
+    const candidates = (jobContext?.addonServices || [])
+      .filter((s) => !bookedNames.has((s.name || '').toLowerCase()))
+      .map((s) => ({ id: s.id, name: s.name, price: s.price, checked: false }));
+    setAdditionalServices([
+      ...bookedServices.map((s, idx) => ({ id: s.id || `booked-${idx}`, name: s.name, price: s.price, checked: Boolean(s.checked) })),
+      ...candidates,
+    ]);
+  }, [activeJob?.id, jobContext]);
 
   // Synchronize activeStep with the real job step if opened on an active job
   useEffect(() => {
@@ -564,16 +693,6 @@ const ActiveJob = () => {
 
   // Helper function to render Stepper states (Screen 4 style)
   const renderStepper = (isPage = false) => {
-    const steps = [
-      { id: 'assigned', label: 'Assigned', desc: 'Job has been assigned to you', time: '09:20 AM' },
-      { id: 'ontheway', label: 'On The Way', desc: 'You are on the way to customer', time: '09:35 AM' },
-      { id: 'inspection', label: 'Inspection', desc: 'Inspect and confirm the issue', time: '09:50 AM' },
-      { id: 'spareapproval', label: 'Estimate Approval', desc: 'Waiting for customer approval' },
-      { id: 'repaircomplete', label: 'Repair Complete', desc: 'Complete the repair work' },
-      { id: 'billing', label: 'Payment Collected', desc: 'Collect payment from customer' },
-      { id: 'completed', label: 'Job Closed', desc: 'Job completed successfully' }
-    ];
-
     const getStepStatus = (id) => {
       const stepOrder = ['assigned', 'ontheway', 'inspection', 'spareapproval', 'repaircomplete', 'billing', 'completed'];
       const currentIndex = stepOrder.indexOf(activeStep);
@@ -583,6 +702,105 @@ const ActiveJob = () => {
       if (targetIndex === currentIndex) return 'active';
       return 'pending';
     };
+
+    const getStepTime = (stepId, stepStatus) => {
+      if (!activeJob) return null;
+      const jobId = activeJob.id || activeJob._id;
+
+      const formatTimeOnly = (dateVal) => {
+        if (!dateVal) return null;
+        try {
+          const d = new Date(dateVal);
+          if (!isNaN(d.getTime())) {
+            return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+          }
+        } catch {
+          return null;
+        }
+        return null;
+      };
+
+      // 1. Assigned step: accurate time when accepted/assigned
+      if (stepId === 'assigned') {
+        const acceptedTime = formatTimeOnly(activeJob.acceptedAt || activeJob.createdAt || activeJob.assignedAt);
+        if (acceptedTime) return acceptedTime;
+
+        if (Array.isArray(activeJob.timeline)) {
+          const entry = activeJob.timeline.find(t => 
+            t.stepLabel === 'Engineer Accepted' || 
+            t.stepLabel === 'Assigned' || 
+            (t.description && t.description.toLowerCase().includes('assigned'))
+          );
+          if (entry?.timestamp) {
+            const t = formatTimeOnly(entry.timestamp);
+            if (t) return t;
+          }
+        }
+
+        try {
+          const stored = localStorage.getItem(`ncc_job_step_${jobId}_assigned`);
+          if (stored) return stored;
+          const nowStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+          localStorage.setItem(`ncc_job_step_${jobId}_assigned`, nowStr);
+          return nowStr;
+        } catch {
+          return null;
+        }
+      }
+
+      // 2. If the step is pending, never show any time (renders —)
+      if (stepStatus === 'pending') {
+        return null;
+      }
+
+      // 3. For active or completed steps:
+      if (Array.isArray(activeJob.timeline)) {
+        const stepLabelMap = {
+          ontheway: ['Visit Scheduled', 'En Route', 'On The Way'],
+          inspection: ['Engineer Reached', 'Inspection'],
+          spareapproval: ['Diagnosis Done', 'Spare Required', 'Estimate Approval'],
+          repaircomplete: ['Repair Completed', 'Repair Complete'],
+          billing: ['Customer Confirmation', 'Payment Collected'],
+          completed: ['Closed', 'Job Closed', 'Completed']
+        };
+        const labels = stepLabelMap[stepId] || [];
+        const entry = activeJob.timeline.find(t => 
+          labels.includes(t.stepLabel) || 
+          (t.description && t.description.toLowerCase().includes(stepId))
+        );
+        if (entry?.timestamp) {
+          const t = formatTimeOnly(entry.timestamp);
+          if (t) return t;
+        }
+      }
+
+      try {
+        const stored = localStorage.getItem(`ncc_job_step_${jobId}_${stepId}`);
+        if (stored) return stored;
+        if (stepStatus === 'active' || stepStatus === 'completed') {
+          const nowStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+          localStorage.setItem(`ncc_job_step_${jobId}_${stepId}`, nowStr);
+          return nowStr;
+        }
+      } catch {
+        return null;
+      }
+
+      return null;
+    };
+
+    const steps = [
+      { id: 'assigned', label: 'Assigned', desc: 'Job has been assigned to you' },
+      { id: 'ontheway', label: 'On The Way', desc: 'You are on the way to customer' },
+      { id: 'inspection', label: 'Inspection', desc: 'Inspect and confirm the issue' },
+      { id: 'spareapproval', label: 'Estimate Approval', desc: 'Waiting for customer approval' },
+      { id: 'repaircomplete', label: 'Repair Complete', desc: 'Complete the repair work' },
+      { id: 'billing', label: 'Payment Collected', desc: 'Collect payment from customer' },
+      { id: 'completed', label: 'Job Closed', desc: 'Job completed successfully' }
+    ].map(s => ({
+      ...s,
+      time: getStepTime(s.id, getStepStatus(s.id))
+    }));
 
     const stepperContent = (
       <div className={`flex flex-col relative ${isPage ? 'gap-4 px-1 py-2' : 'gap-0 pl-7 mt-2'}`}>
@@ -650,9 +868,9 @@ const ActiveJob = () => {
                     }`}>
                       {step.time}
                     </span>
-                  ) : status === 'pending' ? (
+                  ) : (
                     <span className="text-[10px] font-normal ml-2 text-slate-300">—</span>
-                  ) : null}
+                  )}
                 </div>
               </div>
             );
@@ -710,9 +928,9 @@ const ActiveJob = () => {
                   }`}>
                     {step.time}
                   </span>
-                ) : status === 'pending' ? (
+                ) : (
                   <span className="text-[9px] font-normal ml-2 text-slate-300">—</span>
-                ) : null}
+                )}
               </div>
             </div>
           );
@@ -895,9 +1113,9 @@ const ActiveJob = () => {
             </h1>
           </div>
 
-          <button className="p-1.5 hover:bg-slate-50 rounded-full text-slate-700">
-            <MoreVertical className="h-5 w-5 text-slate-700" />
-          </button>
+          {/* Balances the back button so the title stays centered — this used
+              to be a hamburger button with no onClick, i.e. dead UI. */}
+          <div className="w-9" />
         </div>
       ) : (
         /* Regular White Header for Job Progress Stepper */
@@ -1383,73 +1601,163 @@ const ActiveJob = () => {
                       <div className="grid grid-cols-3 gap-2 mt-2">
                         {/* Box 1: Product Photo */}
                         <div className="flex flex-col items-center">
-                          <label className="w-full aspect-square bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden flex items-center justify-center relative cursor-pointer hover:bg-slate-100 transition-colors shadow-sm">
-                            <input 
-                              type="file" 
-                              accept="image/*" 
-                              className="hidden" 
-                              onChange={(e) => {
-                                if (e.target.files && e.target.files[0]) {
-                                  setProductPhoto(URL.createObjectURL(e.target.files[0]));
-                                }
-                              }}
-                            />
+                          <button
+                            type="button"
+                            onClick={() => setCaptureModalState({
+                              isOpen: true,
+                              type: 'product',
+                              title: 'Product Photo',
+                              subtitle: 'Indoor Unit verification',
+                              currentUrl: productPhoto,
+                            })}
+                            className="w-full aspect-square bg-slate-100 border-2 border-slate-200 hover:border-[#0D47A1] rounded-2xl overflow-hidden flex items-center justify-center relative cursor-pointer group hover:bg-slate-200/60 transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-[#0D47A1]/20"
+                          >
                             <img 
-                              src={productPhoto} 
+                              src={resolveMediaUrl(productPhoto)} 
                               alt="Product" 
-                              className="w-full h-full object-cover" 
+                              onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src = 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=300&q=80';
+                              }}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform" 
                             />
-                          </label>
+                            {uploadingPhoto.product && (
+                              <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center text-white">
+                                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mb-1" />
+                                <span className="text-[8px] font-bold">Uploading...</span>
+                              </div>
+                            )}
+                            <div className="absolute bottom-1.5 right-1.5 bg-black/60 backdrop-blur-xs text-white p-1 rounded-lg shadow group-hover:bg-[#0D47A1] transition-colors">
+                              <Camera size={12} />
+                            </div>
+                          </button>
                           <span className="text-[10px] font-semibold text-[#052355] text-center mt-2 leading-tight">Product Photo</span>
                           <span className="text-[9px] text-slate-500 text-center leading-tight">(Indoor Unit)</span>
                         </div>
 
                         {/* Box 2: Serial Number Photo */}
                         <div className="flex flex-col items-center">
-                          <label className="w-full aspect-square bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden flex items-center justify-center relative cursor-pointer hover:bg-slate-100 transition-colors shadow-sm">
-                            <input 
-                              type="file" 
-                              accept="image/*" 
-                              className="hidden" 
-                              onChange={(e) => {
-                                if (e.target.files && e.target.files[0]) {
-                                  setSerialPhoto(URL.createObjectURL(e.target.files[0]));
-                                }
-                              }}
-                            />
+                          <button
+                            type="button"
+                            onClick={() => setCaptureModalState({
+                              isOpen: true,
+                              type: 'serial',
+                              title: 'Serial Number Photo',
+                              subtitle: 'Appliance label / serial number',
+                              currentUrl: serialPhoto,
+                            })}
+                            className="w-full aspect-square bg-slate-100 border-2 border-slate-200 hover:border-[#0D47A1] rounded-2xl overflow-hidden flex items-center justify-center relative cursor-pointer group hover:bg-slate-200/60 transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-[#0D47A1]/20"
+                          >
                             <img 
-                              src={serialPhoto} 
+                              src={resolveMediaUrl(serialPhoto)} 
                               alt="Serial Number" 
-                              className="w-full h-full object-cover" 
+                              onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src = 'https://images.unsplash.com/photo-1589571894960-20bbe2828d0a?auto=format&fit=crop&w=300&q=80';
+                              }}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform" 
                             />
-                          </label>
+                            {uploadingPhoto.serial && (
+                              <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center text-white">
+                                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mb-1" />
+                                <span className="text-[8px] font-bold">Uploading...</span>
+                              </div>
+                            )}
+                            <div className="absolute bottom-1.5 right-1.5 bg-black/60 backdrop-blur-xs text-white p-1 rounded-lg shadow group-hover:bg-[#0D47A1] transition-colors">
+                              <Camera size={12} />
+                            </div>
+                          </button>
                           <span className="text-[10px] font-semibold text-[#052355] text-center mt-2 leading-tight">Serial Number</span>
                           <span className="text-[9px] text-slate-500 text-center leading-tight">Photo</span>
                         </div>
 
                         {/* Box 3: Issue Photo */}
                         <div className="flex flex-col items-center">
-                          <label className="w-full aspect-square bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden flex items-center justify-center relative cursor-pointer hover:bg-slate-100 transition-colors shadow-sm">
-                            <input 
-                              type="file" 
-                              accept="image/*" 
-                              className="hidden" 
-                              onChange={(e) => {
-                                if (e.target.files && e.target.files[0]) {
-                                  setIssuePhoto(URL.createObjectURL(e.target.files[0]));
-                                }
-                              }}
-                            />
+                          <button
+                            type="button"
+                            onClick={() => setCaptureModalState({
+                              isOpen: true,
+                              type: 'issue',
+                              title: 'Issue Photo',
+                              subtitle: 'Problem area / damaged part',
+                              currentUrl: issuePhoto,
+                            })}
+                            className="w-full aspect-square bg-slate-100 border-2 border-slate-200 hover:border-[#0D47A1] rounded-2xl overflow-hidden flex items-center justify-center relative cursor-pointer group hover:bg-slate-200/60 transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-[#0D47A1]/20"
+                          >
                             <img 
-                              src={issuePhoto} 
+                              src={resolveMediaUrl(issuePhoto)} 
                               alt="Issue" 
-                              className="w-full h-full object-cover" 
+                              onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src = 'https://images.unsplash.com/photo-1621905252507-b354bc25edac?auto=format&fit=crop&w=300&q=80';
+                              }}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform" 
                             />
-                          </label>
+                            {uploadingPhoto.issue && (
+                              <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center text-white">
+                                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mb-1" />
+                                <span className="text-[8px] font-bold">Uploading...</span>
+                              </div>
+                            )}
+                            <div className="absolute bottom-1.5 right-1.5 bg-black/60 backdrop-blur-xs text-white p-1 rounded-lg shadow group-hover:bg-[#0D47A1] transition-colors">
+                              <Camera size={12} />
+                            </div>
+                          </button>
                           <span className="text-[10px] font-semibold text-[#052355] text-center mt-2 leading-tight">Issue Photo</span>
                           <span className="text-[9px] text-slate-500 text-center leading-tight">(Problem Area)</span>
                         </div>
                       </div>
+
+                      {/* Photo Capture & Upload Modal (Camera & Gallery Options + WebP Auto-Conversion) */}
+                      <PhotoCaptureModal
+                        isOpen={captureModalState.isOpen}
+                        onClose={() => setCaptureModalState((prev) => ({ ...prev, isOpen: false }))}
+                        title={captureModalState.title}
+                        subtitle={captureModalState.subtitle}
+                        currentPhotoUrl={captureModalState.currentUrl}
+                        onUploadSuccess={handleCaptureModalSuccess}
+                      />
+                    </div>
+
+                    {/* Section 1.5: Warranty Check — the technician's own on-site
+                        call (from a physical warranty card/invoice), since the
+                        system only ever has a computed guess for jobs with no
+                        registered appliance / purchase date on file. */}
+                    <div className="flex flex-col gap-1.5 mt-3">
+                      <h3 className="text-sm font-semibold text-[#052355]">Warranty Status</h3>
+                      <p className="text-xs text-slate-500 font-normal">Check the product/invoice and confirm</p>
+
+                      <div className="flex gap-2.5 mt-2">
+                        <button
+                          type="button"
+                          onClick={() => setWarrantyCheck('In Warranty')}
+                          className={`flex-1 flex items-center justify-center gap-2 p-3 border rounded-2xl transition-all text-xs font-semibold ${
+                            warrantyCheck === 'In Warranty'
+                              ? 'border-green-500 ring-1 ring-green-500/20 bg-green-50 text-green-700'
+                              : 'border-slate-200 text-slate-600 hover:border-slate-350 bg-white'
+                          }`}
+                        >
+                          <ShieldCheckIcon className="w-4 h-4" />
+                          In Warranty
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setWarrantyCheck('Out of Warranty')}
+                          className={`flex-1 flex items-center justify-center gap-2 p-3 border rounded-2xl transition-all text-xs font-semibold ${
+                            warrantyCheck === 'Out of Warranty'
+                              ? 'border-red-500 ring-1 ring-red-500/20 bg-red-50 text-red-700'
+                              : 'border-slate-200 text-slate-600 hover:border-slate-350 bg-white'
+                          }`}
+                        >
+                          <AlertCircle className="w-4 h-4" />
+                          Out of Warranty
+                        </button>
+                      </div>
+                      {!warrantyCheck && jobContext?.appliance?.warrantyStatus && (
+                        <p className="text-[10px] text-slate-400 font-normal mt-0.5">
+                          System default from the registered appliance: {jobContext.appliance.warrantyStatus}. Confirming here overrides it.
+                        </p>
+                      )}
                     </div>
 
                     {/* Section 2: What did you find? */}
@@ -1534,7 +1842,35 @@ const ActiveJob = () => {
                     {/* Section 3: Continue Button */}
                     <button
                       type="button"
-                      onClick={() => setInspectionDiagnosed(true)}
+                      onClick={async () => {
+                        setInspectionDiagnosed(true);
+                        if (activeJob?.id) {
+                          try {
+                            const diagNotes = notesText.trim() || (
+                              selectedDiagnosis === 'confirmed' ? 'The reported issue is correct'
+                              : selectedDiagnosis === 'different' ? 'Found a different issue'
+                              : 'No issue found with product'
+                            );
+                            await apiRequest(`/service-provider/jobs/${activeJob.id}/diagnosis`, {
+                              method: 'POST',
+                              auth: true,
+                              body: {
+                                notes: diagNotes,
+                                checklistActions: { [selectedDiagnosis]: true },
+                                warrantyCheck: warrantyCheck || undefined,
+                                photos: {
+                                  product: productPhoto,
+                                  serial: serialPhoto,
+                                  issue: issuePhoto,
+                                },
+                              },
+                            });
+                            if (!notesText.trim()) setNotesText(diagNotes);
+                          } catch (err) {
+                            console.warn('[ActiveJob] Auto-saving diagnosis failed non-fatally:', err.message);
+                          }
+                        }
+                      }}
                       className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-medium py-3.5 rounded-xl text-xs transition-all shadow-md mt-6"
                     >
                       Continue
@@ -1704,43 +2040,64 @@ const ActiveJob = () => {
                   const selectedAddons = additionalServices.filter(s => s.checked);
                   const unselectedAddons = additionalServices.filter(s => !s.checked);
 
+                  // jobContext.appliance is the live-recomputed OwnedAppliance record
+                  // (fetched once from /jobs/:id/context); activeJob's own fields are
+                  // the same data pre-populated from the job list so this doesn't flash
+                  // "not recorded" while jobContext is loading.
+                  const appliance = jobContext?.appliance;
+                  const installDateRaw = appliance?.purchaseDate || activeJob.installDate;
+                  const installDateLabel = installDateRaw
+                    ? new Date(installDateRaw).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+                    : 'Not recorded';
+                  // The technician's own on-site check (from Inspection) always wins
+                  // over the system's computed guess — it's the ground truth once a
+                  // human has actually looked at the warranty card/invoice.
+                  const warrantyStatusLabel = activeJob.diagnosis?.warrantyCheck || appliance?.warrantyStatus || activeJob.warrantyStatus || 'Not recorded';
+                  const warrantyStatusStyle = warrantyStatusLabel === 'Not recorded'
+                    ? 'bg-slate-100 text-slate-500'
+                    : warrantyStatusLabel === 'Out of Warranty'
+                      ? 'bg-red-50 text-red-600'
+                      : 'bg-green-50 text-green-600';
+                  const modelLabel = appliance?.model || activeJob.model || 'Not recorded';
+                  const serialLabel = appliance?.serialNumber || activeJob.serialNo || 'Not recorded';
+
                   return (
                     <div className="flex flex-col gap-4">
-                      
+
                       {/* Card 1: Product Details */}
                       <div className="bg-white rounded-3xl p-3.5 border border-slate-200 shadow-sm flex flex-col gap-4">
                         <h4 className="text-sm font-medium text-[#052355] text-left">Product Details</h4>
-                        
+
                         {/* AC Product Row */}
                         <div className="flex gap-4 items-center">
-                          <img 
-                            src={getProductImage(activeJob)} 
-                            alt={activeJob.product} 
+                          <img
+                            src={getProductImage(activeJob)}
+                            alt={activeJob.product}
                             className="w-16 h-16 object-contain rounded-xl border border-slate-200 p-1"
                           />
                           <div className="text-left flex-1">
-                            {/* The product title, model, and serial were a fixed
-                                "Voltas Split AC 1.5 Ton Inverter" / "VLT18GN123348X"
-                                for every job, regardless of the actual appliance. */}
                             <h5 className="text-sm font-medium text-[#052355]">{activeJob.brand} {activeJob.product}</h5>
-                            <p className="text-xs text-slate-600 font-normal mt-0.5">Model: {activeJob.model || 'Not recorded'}</p>
-                            <p className="text-[10px] text-slate-600 font-mono mt-0.5">S/N: {activeJob.serialNo || 'Not recorded'}</p>
+                            <p className="text-xs text-slate-600 font-normal mt-0.5">Model: {modelLabel}</p>
+                            <p className="text-[10px] text-slate-600 font-mono mt-0.5">S/N: {serialLabel}</p>
                           </div>
                         </div>
 
                         {/* Divider */}
                         <div className="h-[1px] bg-slate-100 w-full"></div>
 
-                        {/* Installation & Warranty Rows */}
+                        {/* Installation & Warranty Rows — sourced from the customer's
+                            registered OwnedAppliance record, recomputed live server-side
+                            from their real AMC/Extended Warranty coverage rather than a
+                            fixed "12 Jan 2023 / Out of Warranty" for every job. */}
                         <div className="flex flex-col gap-2.5">
                           <div className="flex justify-between items-center">
                             <span className="text-xs text-slate-600 font-normal">Installation Date</span>
-                            <span className="text-xs text-[#052355] font-medium">{activeJob.installDate || '12 Jan 2023'}</span>
+                            <span className="text-xs text-[#052355] font-medium">{installDateLabel}</span>
                           </div>
                           <div className="flex justify-between items-center">
                             <span className="text-xs text-slate-600 font-normal">Warranty Status</span>
-                            <span className="text-xs font-medium bg-red-50 text-red-600 px-2.5 py-0.5 rounded-lg">
-                              {activeJob.warrantyStatus || 'Out of Warranty'}
+                            <span className={`text-xs font-medium px-2.5 py-0.5 rounded-lg ${warrantyStatusStyle}`}>
+                              {warrantyStatusLabel}
                             </span>
                           </div>
                         </div>
@@ -1950,33 +2307,6 @@ const ActiveJob = () => {
                           <p className="text-sm font-medium text-[#052355]">
                             {activeJob.complaint || "AC not cooling properly"}
                           </p>
-                        </div>
-
-                        {/* Card 3: Standard checks — a fixed reminder list, not a
-                            per-job recommendation. */}
-                        <div className="bg-white rounded-3xl p-3.5 border border-slate-200 shadow-sm flex flex-col gap-3 text-left">
-                          <h4 className="text-sm font-medium text-[#052355]">Standard Checks</h4>
-                          
-                          <div className="flex flex-col gap-3.5 mt-1">
-                            <div className="flex items-center gap-3">
-                              <div className="w-4 h-4 rounded-full border-2 border-[#4CAF50] flex items-center justify-center flex-shrink-0">
-                                <div className="w-1.5 h-1.5 rounded-full bg-[#4CAF50]"></div>
-                              </div>
-                              <span className="text-xs font-medium text-slate-700">Check capacitor</span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <div className="w-4 h-4 rounded-full border-2 border-[#4CAF50] flex items-center justify-center flex-shrink-0">
-                                <div className="w-1.5 h-1.5 rounded-full bg-[#4CAF50]"></div>
-                              </div>
-                              <span className="text-xs font-medium text-slate-700">Check gas pressure</span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <div className="w-4 h-4 rounded-full border-2 border-[#4CAF50] flex items-center justify-center flex-shrink-0">
-                                <div className="w-1.5 h-1.5 rounded-full bg-[#4CAF50]"></div>
-                              </div>
-                              <span className="text-xs font-medium text-slate-700">Verify fan motor operation</span>
-                            </div>
-                          </div>
                         </div>
 
                         {/* Bottom Action Button */}
@@ -2222,28 +2552,61 @@ const ActiveJob = () => {
                   </div>
                 )}
 
-                {/* Tab 2.5 Content: Parts */}
-                {activeTab === 'Parts' && (
-                  <div className="bg-white rounded-3xl p-3.5 border border-slate-200 shadow-sm flex flex-col gap-4 text-left">
-                    <h4 className="text-sm font-medium text-[#052355]">Parts Details</h4>
-                    <div className="flex flex-col gap-3.5">
-                      {partsCartChecked.map(part => (
-                        <div key={part.id} className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl flex justify-between items-center">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-white border border-slate-200 rounded-lg flex items-center justify-center p-1">
-                              <img src={part.image} alt={part.name} className="w-full h-full object-contain" />
-                            </div>
-                            <div className="text-left">
-                              <p className="text-xs font-medium text-[#052355]">{part.name}</p>
-                              <p className="text-[10px] text-slate-500 font-normal mt-0.5">SKU: {part.sku}</p>
-                            </div>
+                {/* Tab 2.5 Content: Parts — this job's own selected/replaced parts,
+                    plus this appliance's real replacement history. Used to show
+                    the technician's raw inventory stock instead of anything
+                    actually tied to this job. */}
+                {activeTab === 'Parts' && (() => {
+                  const nameKey = (n) => (n || '').trim().toLowerCase();
+                  const currentPartsMap = new Map();
+                  [...spareParts.filter(p => p.checked), ...selectedParts, ...(activeJob.spareParts || []).filter(p => p.checked)]
+                    .forEach((p) => { if (p?.name) currentPartsMap.set(nameKey(p.name), p); });
+                  const currentParts = Array.from(currentPartsMap.values());
+
+                  const pastPartsEntries = (jobContext?.history || [])
+                    .flatMap((visit) => (visit.partsReplaced || []).map((part) => ({ ...part, date: visit.date })));
+
+                  return (
+                    <div className="flex flex-col gap-4">
+                      <div className="bg-white rounded-3xl p-3.5 border border-slate-200 shadow-sm flex flex-col gap-4 text-left">
+                        <h4 className="text-sm font-medium text-[#052355]">Parts Used In This Job</h4>
+                        {currentParts.length > 0 ? (
+                          <div className="flex flex-col gap-3.5">
+                            {currentParts.map((part, idx) => (
+                              <div key={part.id || part.sku || idx} className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl flex justify-between items-center">
+                                <div className="text-left">
+                                  <p className="text-xs font-medium text-[#052355]">{part.name}</p>
+                                  {part.sku && <p className="text-[10px] text-slate-500 font-normal mt-0.5">SKU: {part.sku}</p>}
+                                </div>
+                                <span className="text-xs font-semibold text-[#0D47A1]">₹{part.price}</span>
+                              </div>
+                            ))}
                           </div>
-                          <span className="text-xs font-semibold text-[#0D47A1]">₹{part.price}</span>
-                        </div>
-                      ))}
+                        ) : (
+                          <p className="text-xs text-slate-500">No parts selected for this job yet.</p>
+                        )}
+                      </div>
+
+                      <div className="bg-white rounded-3xl p-3.5 border border-slate-200 shadow-sm flex flex-col gap-4 text-left">
+                        <h4 className="text-sm font-medium text-[#052355]">Replacement History</h4>
+                        {pastPartsEntries.length > 0 ? (
+                          <div className="flex flex-col gap-3">
+                            {pastPartsEntries.map((part, idx) => (
+                              <div key={idx} className="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex justify-between items-center">
+                                <span className="text-xs font-normal text-[#052355]">{part.name}</span>
+                                <span className="text-[10px] font-normal text-slate-500">
+                                  {part.date ? new Date(part.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : ''}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-slate-500">No prior parts replacements recorded for this appliance.</p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
 
                 {/* Tab 3 Content: Notes */}
                 {activeTab === 'Notes' && (
@@ -2281,30 +2644,66 @@ const ActiveJob = () => {
                   </div>
                 )}
 
-                {/* Tab 4 Content: History */}
-                {activeTab === 'History' && (
-                  <div className="bg-white rounded-3xl p-3.5 border border-slate-200 shadow-sm flex flex-col gap-4">
-                    <h4 className="text-xs font-medium text-[#0D47A1] uppercase tracking-wide">Appliance Service History</h4>
-                    
-                    <div className="flex flex-col gap-3">
-                      <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex justify-between items-start">
-                        <div>
-                          <p className="text-xs font-normal text-[#052355]">Routine Wet Cleaning</p>
-                          <p className="text-[10px] text-slate-600 font-normal mt-0.5">ServiceProvider: Inderjeet Singh</p>
-                        </div>
-                        <span className="text-[10px] font-normal text-slate-500 bg-slate-200/50 px-2 py-0.5 rounded-md">24 May 2025</span>
-                      </div>
+                {/* Tab 4 Content: History — real past visits on this appliance
+                    (or same customer + category when no appliance is linked),
+                    plus this visit's own notes/parts as they're entered, so a
+                    saved note shows up here immediately rather than only after
+                    the job closes. */}
+                {activeTab === 'History' && (() => {
+                  const currentParts = [...spareParts.filter(p => p.checked), ...selectedParts].map(p => p.name);
+                  const currentServices = additionalServices.filter(s => s.checked).map(s => s.name);
+                  const hasLiveActivity = Boolean(notesText?.trim()) || currentParts.length > 0 || currentServices.length > 0;
+                  const pastVisits = jobContext?.history || [];
 
-                      <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex justify-between items-start">
-                        <div>
-                          <p className="text-xs font-normal text-[#052355]">Power Cord Replacement</p>
-                          <p className="text-[10px] text-slate-600 font-normal mt-0.5">ServiceProvider: Inderjeet Singh</p>
-                        </div>
-                        <span className="text-[10px] font-normal text-slate-500 bg-slate-200/50 px-2 py-0.5 rounded-md">11 Jan 2024</span>
+                  return (
+                    <div className="bg-white rounded-3xl p-3.5 border border-slate-200 shadow-sm flex flex-col gap-4">
+                      <h4 className="text-xs font-medium text-[#0D47A1] uppercase tracking-wide">Appliance Service History</h4>
+
+                      <div className="flex flex-col gap-3">
+                        {hasLiveActivity && (
+                          <div className="p-3 bg-blue-50 border border-blue-100 rounded-2xl flex flex-col gap-1.5 text-left">
+                            <div className="flex justify-between items-start gap-2">
+                              <p className="text-xs font-semibold text-[#052355]">This Visit (In Progress)</p>
+                              <span className="text-[10px] font-normal text-[#0D47A1] bg-white px-2 py-0.5 rounded-md flex-shrink-0">Today</span>
+                            </div>
+                            {notesText?.trim() && <p className="text-[11px] text-slate-600 font-normal">{notesText}</p>}
+                            {(currentParts.length > 0 || currentServices.length > 0) && (
+                              <p className="text-[10px] text-slate-500 font-normal">
+                                {[...currentParts, ...currentServices].join(', ')}
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        {pastVisits.map((visit) => (
+                          <div key={visit.id} className="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex justify-between items-start gap-2 text-left">
+                            <div>
+                              <p className="text-xs font-normal text-[#052355]">{visit.complaint || 'Service Visit'}</p>
+                              {visit.serviceProviderName && (
+                                <p className="text-[10px] text-slate-600 font-normal mt-0.5">ServiceProvider: {visit.serviceProviderName}</p>
+                              )}
+                              {visit.notes && (
+                                <p className="text-[10px] text-slate-500 font-normal mt-0.5">{visit.notes}</p>
+                              )}
+                              {visit.partsReplaced?.length > 0 && (
+                                <p className="text-[10px] text-slate-500 font-normal mt-0.5">
+                                  Parts: {visit.partsReplaced.map(p => p.name).join(', ')}
+                                </p>
+                              )}
+                            </div>
+                            <span className="text-[10px] font-normal text-slate-500 bg-slate-200/50 px-2 py-0.5 rounded-md flex-shrink-0">
+                              {visit.date ? new Date(visit.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : ''}
+                            </span>
+                          </div>
+                        ))}
+
+                        {!hasLiveActivity && pastVisits.length === 0 && (
+                          <p className="text-xs text-slate-500">No service history recorded for this appliance yet.</p>
+                        )}
                       </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
 
                   </>
                 )}
@@ -2518,12 +2917,25 @@ const ActiveJob = () => {
                   </div>
                 </div>
 
-                {/* Notice */}
+                {/* Notice — "NCC Warehouse" used to behave identically to
+                    "In Service Provider Stock" (straight to repair-complete),
+                    as if the technician already had the part in hand. It
+                    doesn't — the part still has to be dispatched from the
+                    warehouse to them, so it needs the same request/notify/
+                    wait flow as "Not Available", just with accurate copy. */}
                 {partAvailability === 'not_available' ? (
                   <div className="bg-amber-50 border border-amber-200/50 rounded-3xl p-4 flex gap-3 text-left">
                     <div className="flex flex-col">
                       <p className="text-[11px] text-amber-800 font-normal leading-relaxed">
                         Customer will be notified. You can revisit within 48 hours after part is available.
+                      </p>
+                    </div>
+                  </div>
+                ) : partAvailability === 'warehouse' ? (
+                  <div className="bg-blue-50 border border-blue-200/50 rounded-3xl p-4 flex gap-3 text-left">
+                    <div className="flex flex-col">
+                      <p className="text-[11px] text-blue-800 font-normal leading-relaxed">
+                        A request will be sent to the NCC warehouse to have this part readied for dispatch. Customer will be notified. Once it's handed over to you, you can resume and complete the repair.
                       </p>
                     </div>
                   </div>
@@ -2538,17 +2950,17 @@ const ActiveJob = () => {
                 )}
 
                 {/* Bottom Action Button */}
-                {partAvailability === 'not_available' ? (
-                  <button 
+                {partAvailability === 'not_available' || partAvailability === 'warehouse' ? (
+                  <button
                     onClick={() => {
                       setActiveStep('customer_update_preview');
                     }}
                     className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-semibold py-4 rounded-2xl text-xs transition-all shadow-md mt-auto mb-1 text-center cursor-pointer"
                   >
-                    Mark as Spare Part Pending
+                    {partAvailability === 'warehouse' ? 'Request Part From Warehouse' : 'Mark as Spare Part Pending'}
                   </button>
                 ) : (
-                  <button 
+                  <button
                     onClick={() => {
                       advanceStepsTo('repaircomplete');
                     }}
@@ -2650,11 +3062,16 @@ const ActiveJob = () => {
                         : (dynamicPartName && dynamicPartName !== 'No part used' ? dynamicPartName : 'Spare Part');
                       const price = partsToRequest.reduce((sum, p) => sum + (p.price || 0), 0) || (dynamicPartPrice || 0);
 
+                      // "warehouse" means the part is already sitting in NCC
+                      // stock — no shipping leg, just approve + hand over.
+                      // "not_available" has to be procured, so it runs the
+                      // full dispatch/delivery ladder instead.
                       const payload = {
                         partName,
                         price,
                         qty: 1,
-                        orderSource: 'NCC Warehouse',
+                        orderSource: partAvailability === 'warehouse' ? 'NCC Warehouse' : 'Partner Brand',
+                        fulfillmentType: partAvailability === 'warehouse' ? 'in_stock' : 'procurement',
                         parts: partsToRequest.length > 0 ? partsToRequest : [{ name: partName, price, qty: 1 }],
                       };
 
@@ -3950,8 +4367,10 @@ const ActiveJob = () => {
                       <button
                         type="button"
                         onClick={() => {
-                          const customerOtp = activeJob?.serviceRequest?.completionOtp || activeJob?.completionOtp || '8745';
-                          setRevisitOtp(customerOtp.split('').slice(0, 4));
+                          const customerOtp = activeJob?.completionOtp || activeJob?.booking?.completionOtp || activeJob?.serviceRequest?.completionOtp || activeJob?.serviceRequest?.booking?.completionOtp || '';
+                          if (customerOtp) {
+                            setRevisitOtp(customerOtp.split('').slice(0, 4));
+                          }
                         }}
                         className="text-[11px] font-bold text-[#0D47A1] bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-xl transition-colors cursor-pointer border border-blue-200/50"
                       >
@@ -4029,7 +4448,9 @@ const ActiveJob = () => {
                     {/* Verify & Close Job Green Button */}
                     <button
                       onClick={async () => { 
-                        const otpStr = revisitOtp.join('') || '8745';
+                        const enteredOtp = revisitOtp.join('');
+                        const customerOtp = activeJob?.completionOtp || activeJob?.booking?.completionOtp || activeJob?.serviceRequest?.completionOtp || activeJob?.serviceRequest?.booking?.completionOtp || '';
+                        const otpStr = enteredOtp || customerOtp;
                         const res = await collectPayment(revisitPaymentMethod === 'razorpay' ? 'Online' : 'Cash', { otp: otpStr, signatureUrl: hasSignedRevisit ? 'signed' : null }); 
                         if (res?.ok) {
                           setActiveJobId(null);
@@ -4278,15 +4699,11 @@ const ActiveJob = () => {
 
       </div>
 
-      {/* Add More Services Overlay Card Modal */}
+      {/* Add More Services Overlay Card Modal — pulled from this job's real
+          category catalog (the same ServiceCatalogItem records the customer
+          booking flow uses), not a fixed AC-only five-item list. */}
       {showAddServicesModal && (() => {
-        const AVAILABLE_ADDONS = [
-          { id: 'foam', name: 'AC Foam Wash', price: 399 },
-          { id: 'coil', name: 'Condenser Coil Cleaning', price: 299 },
-          { id: 'leak', name: 'Gas Leakage Fix', price: 499 },
-          { id: 'capacitor', name: 'Capacitor Replacement', price: 440 },
-          { id: 'wiring', name: 'Wiring Repair', price: 199 }
-        ];
+        const AVAILABLE_ADDONS = jobContext?.addonServices || [];
 
         // Filter out addons that are currently checked/active in the additionalServices list
         const filteredAddons = AVAILABLE_ADDONS.filter(
@@ -4334,6 +4751,8 @@ const ActiveJob = () => {
                       </button>
                     </div>
                   ))
+                ) : AVAILABLE_ADDONS.length === 0 ? (
+                  <p className="text-xs text-slate-500 text-center py-5">No add-on services are configured for this category yet.</p>
                 ) : (
                   <p className="text-xs text-slate-500 text-center py-5">All available services have been added.</p>
                 )}
@@ -4343,43 +4762,64 @@ const ActiveJob = () => {
         );
       })()}
 
-      {/* Add Spare Parts Overlay Card Modal */}
+      {/* Add Spare Parts Overlay Card Modal — pulled from the platform's real
+          SparePartCatalog (filtered to this job's category, retail-priced
+          server-side), not a fixed AC-only five-item list. */}
       {showAddPartsModal && (() => {
-        const AVAILABLE_PARTS = [
-          { id: 'part-1', name: 'Copper Pipe (1/4)', price: 800 },
-          { id: 'part-filter', name: 'Filter Dryer', price: 350 },
-          { id: 'part-capacitor', name: 'Capacitor 45 MFD', price: 450 },
-          { id: 'part-gas', name: 'Refrigerant Gas (R410A)', price: 1200 },
-          { id: 'part-expansion', name: 'Expansion Valve', price: 650 }
-        ];
+        // Already scoped server-side to this job's category (SparePartCatalog
+        // filtered by category in job.service.js's getJobDetailContext) — an
+        // AC job only ever sees AC parts here, a TV job only TV parts.
+        const AVAILABLE_PARTS = jobContext?.spareParts || [];
 
         // Filter out parts that are currently checked/active in the spareParts list
-        const filteredParts = AVAILABLE_PARTS.filter(
+        const notYetAdded = AVAILABLE_PARTS.filter(
           part => !spareParts.some(p => p.name.toLowerCase() === part.name.toLowerCase() && p.checked)
         );
+        const query = partSearchQuery.trim().toLowerCase();
+        const filteredParts = query
+          ? notYetAdded.filter(part =>
+              part.name.toLowerCase().includes(query) ||
+              (part.code || '').toLowerCase().includes(query) ||
+              (part.brand || '').toLowerCase().includes(query)
+            )
+          : notYetAdded;
 
         return (
           <div className="fixed inset-0 bg-[#052355]/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-[2rem] w-full max-w-sm p-5 shadow-2xl flex flex-col gap-4 border border-slate-100">
-              <div className="flex justify-between items-center pb-2.5 border-b border-slate-100">
+            <div className="bg-white rounded-[2rem] w-full max-w-lg p-5 shadow-2xl flex flex-col gap-4 border border-slate-100 max-h-[85vh]">
+              <div className="flex justify-between items-center pb-2.5 border-b border-slate-100 flex-shrink-0">
                 <h3 className="text-base font-semibold text-[#052355]">Add Spare Parts</h3>
-                <button 
-                  onClick={() => setShowAddPartsModal(false)}
+                <button
+                  onClick={() => { setShowAddPartsModal(false); setPartSearchQuery(''); }}
                   className="text-slate-400 hover:text-slate-650 text-xs font-semibold hover:underline"
                 >
                   Cancel
                 </button>
               </div>
 
-              <div className="flex flex-col gap-3.5 max-h-64 overflow-y-auto pr-1">
+              <div className="relative flex-shrink-0">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type="text"
+                  value={partSearchQuery}
+                  onChange={(e) => setPartSearchQuery(e.target.value)}
+                  placeholder="Search parts by name, brand or SKU..."
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-[#052355] outline-none focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1]"
+                />
+              </div>
+
+              <div className="flex flex-col gap-3 overflow-y-auto pr-1 flex-1">
                 {filteredParts.length > 0 ? (
                   filteredParts.map(part => (
                     <div key={part.id} className="flex justify-between items-center p-3.5 bg-slate-50 border border-slate-200/60 rounded-2xl">
                       <div className="text-left">
-                        <p className="text-xs font-semibold text-[#052355]">{part.name}</p>
-                        <p className="text-[10px] text-slate-500 font-normal mt-0.5">₹{part.price}</p>
+                        <p className="text-sm font-semibold text-[#052355]">{part.name}</p>
+                        <p className="text-[11px] text-slate-500 font-normal mt-0.5">
+                          {[part.brand, part.code].filter(Boolean).join(' · ')}
+                        </p>
+                        <p className="text-xs font-semibold text-[#0D47A1] mt-1">₹{part.price}</p>
                       </div>
-                      <button 
+                      <button
                         onClick={() => {
                           setSpareParts(prev => {
                             const existingIndex = prev.findIndex(p => p.name.toLowerCase() === part.name.toLowerCase());
@@ -4388,19 +4828,22 @@ const ActiveJob = () => {
                             }
                             return [
                               ...prev,
-                              { id: part.id, name: part.name, price: part.price, checked: true }
+                              { id: part.id, name: part.name, price: part.price, sku: part.code, checked: true }
                             ];
                           });
-                          setShowAddPartsModal(false);
                         }}
-                        className="bg-[#E3ECF9] hover:bg-[#c2d7f5] text-[#0D47A1] text-xs font-semibold px-3 py-1.5 rounded-xl transition-all shadow-xs"
+                        className="bg-[#E3ECF9] hover:bg-[#c2d7f5] text-[#0D47A1] text-xs font-semibold px-3 py-1.5 rounded-xl transition-all shadow-xs flex-shrink-0"
                       >
                         + Add
                       </button>
                     </div>
                   ))
-                ) : (
+                ) : AVAILABLE_PARTS.length === 0 ? (
+                  <p className="text-xs text-slate-500 text-center py-5">No spare parts are configured for this category yet.</p>
+                ) : notYetAdded.length === 0 ? (
                   <p className="text-xs text-slate-500 text-center py-5">All available spare parts have been added.</p>
+                ) : (
+                  <p className="text-xs text-slate-500 text-center py-5">No parts match "{partSearchQuery}".</p>
                 )}
               </div>
             </div>

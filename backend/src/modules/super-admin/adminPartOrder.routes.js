@@ -6,11 +6,12 @@ import { ok } from '../../utils/respond.js';
 import { ROLES } from '../../config/constants.js';
 import * as adminPartOrderService from './adminPartOrder.service.js';
 
-const PART_ORDER_STATUSES = ['Pending', 'Approved', 'Dispatched', 'Delivered', 'Rejected'];
+const PART_ORDER_STATUSES = ['Pending', 'Approved', 'Ready to Hand Over', 'Handed Over', 'Dispatched', 'Delivered', 'Rejected'];
 
 const listQuerySchema = z.object({
   status: z.enum(PART_ORDER_STATUSES).optional(),
   orderSource: z.enum(['NCC Warehouse', 'Partner Brand', 'Nearby Store']).optional(),
+  fulfillmentType: z.enum(['in_stock', 'procurement']).optional(),
   page: z.coerce.number().int().positive().optional(),
   limit: z.coerce.number().int().positive().optional(),
   sort: z.string().optional(),

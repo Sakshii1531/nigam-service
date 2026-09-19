@@ -16,6 +16,27 @@ function getBaseUrl() {
 const BASE_URL = getBaseUrl();
 
 /**
+ * Resolves a media/image URL.
+ * Full http(s), blob, and data URLs are returned as-is.
+ * Relative URLs like `/uploads/xyz.webp` are prefixed with the backend server origin.
+ */
+export function resolveMediaUrl(url) {
+  if (!url || typeof url !== 'string') return '';
+  const trimmed = url.trim();
+  if (
+    trimmed.startsWith('blob:') ||
+    trimmed.startsWith('data:') ||
+    trimmed.startsWith('http://') ||
+    trimmed.startsWith('https://')
+  ) {
+    return trimmed;
+  }
+  const origin = BASE_URL.replace(/\/api\/v1\/?$/, '');
+  const cleanPath = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+  return `${origin}${cleanPath}`;
+}
+
+/**
  * Determine the active portal context based on route pathname.
  * Enables simultaneous multi-role sessions across separate browser tabs.
  */

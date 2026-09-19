@@ -18,10 +18,11 @@ import { parsePagination, paginationMeta } from '../../utils/pagination.js';
  * written to the database and then seen by nobody. This is the queue that owns
  * them.
  */
-export async function listPartOrders({ status, orderSource, page, limit, sort } = {}) {
+export async function listPartOrders({ status, orderSource, fulfillmentType, page, limit, sort } = {}) {
   const query = {};
   if (status) query.status = status;
   if (orderSource) query.orderSource = orderSource;
+  if (fulfillmentType) query.fulfillmentType = fulfillmentType;
 
   const { skip, limit: lim, page: pg, sort: sortObj } = parsePagination({ page, limit, sort });
   const [items, total] = await Promise.all([
@@ -51,6 +52,28 @@ export async function updatePartOrderStatus(partOrderId, { status, scheduledDate
   const partOrder = await PartOrder.findById(partOrderId);
   if (!partOrder) throw new ApiError(404, 'Part request not found');
 
+  // The customer has to sign off on this cost before it goes any further —
+  // a technician used to be able to have a real-money part approved/dispatched
+  // here with the customer only ever informed after the fact, never asked.
+  // Rejecting is always allowed (that just ends the request either way).
+  if (status !== 'Rejected' && partOrder.customerApprovalStatus !== 'Approved') {
+    throw new ApiError(400, 'The customer has not approved this part request yet — nothing to action until they do.');
+  }
+
+  // A part already in NCC warehouse stock just needs pulling and handing
+  // over — there's no shipping leg, so it never sees 'Dispatched'/'Delivered'.
+  // A part that has to be procured never sees 'Ready to Hand Over'/'Handed
+  // Over' either, since it does genuinely get shipped. Rejected is terminal
+  // either way and always allowed.
+  const STATUS_LADDERS = {
+    in_stock: ['Pending', 'Approved', 'Ready to Hand Over', 'Handed Over'],
+    procurement: ['Pending', 'Approved', 'Dispatched', 'Delivered'],
+  };
+  const ladder = STATUS_LADDERS[partOrder.fulfillmentType] || STATUS_LADDERS.procurement;
+  if (status !== 'Rejected' && !ladder.includes(status)) {
+    throw new ApiError(400, `'${status}' is not a valid status for a ${partOrder.fulfillmentType === 'in_stock' ? 'warehouse in-stock' : 'procurement'} part request.`);
+  }
+
   partOrder.status = status;
   await partOrder.save();
 
@@ -59,16 +82,24 @@ export async function updatePartOrderStatus(partOrderId, { status, scheduledDate
     const sr = job ? await ServiceRequest.findById(job.serviceRequest) : null;
 
     const parsedDate = scheduledDate ? new Date(scheduledDate) : new Date(Date.now() + 86400000);
-    // Approved, Dispatched and Delivered all put the revisit on the calendar —
-    // the same three brandInsights.service.js schedules on. Only 'Delivered'
-    // did here, so a service provider whose part was actioned by the NCC desk rather
-    // than a brand was left sitting at 'spareapproval' with no revisit at all:
-    // exactly the desk-dependent difference the note above says must not happen.
-    const REVISIT_STEP = {
-      Approved: ['Spare Approved', 'Spare part approved by Super Admin — revisit scheduled'],
-      Dispatched: ['Spare Dispatched', 'Spare part dispatched to serviceProvider — revisit scheduled'],
-      Delivered: ['Spare Received', 'Spare part delivered — revisit scheduled'],
-    };
+    // Approved/Dispatched/Delivered (procurement) and Approved/Ready to Hand
+    // Over/Handed Over (in_stock) all put the revisit on the calendar — the
+    // same steps brandInsights.service.js schedules on. Only the terminal
+    // step used to do this here, so a service provider whose part was
+    // actioned by the NCC desk rather than a brand was left sitting at
+    // 'spareapproval' with no revisit at all: exactly the desk-dependent
+    // difference the note above says must not happen.
+    const REVISIT_STEP = partOrder.fulfillmentType === 'in_stock'
+      ? {
+          Approved: ['Spare Approved', 'Spare part approved by Super Admin — revisit scheduled'],
+          'Ready to Hand Over': ['Spare Ready for Handover', 'Spare part ready to hand over — revisit scheduled'],
+          'Handed Over': ['Spare Received', 'Spare part handed over to serviceProvider — revisit scheduled'],
+        }
+      : {
+          Approved: ['Spare Approved', 'Spare part approved by Super Admin — revisit scheduled'],
+          Dispatched: ['Spare Dispatched', 'Spare part dispatched to serviceProvider — revisit scheduled'],
+          Delivered: ['Spare Received', 'Spare part delivered — revisit scheduled'],
+        };
 
     // Normalise timeSlot: job.revisit.timeSlot is a plain String; booking.timeSlot
     // is { date, time }. Build both shapes once so each assignment is correct.
@@ -108,9 +139,12 @@ export async function updatePartOrderStatus(partOrderId, { status, scheduledDate
       }
     }
 
-    // Only the actual delivery re-dates the customer's booking and tells them —
-    // firing that on approve as well would notify them twice for one revisit.
-    if (status === 'Delivered') {
+    // Only the terminal step of each ladder — actual delivery for a procured
+    // part, actual hand-over for one that was already in stock — re-dates the
+    // customer's booking and tells them. Firing that on approve/dispatch as
+    // well would notify them twice for one revisit.
+    const isTerminalHandover = status === 'Delivered' || status === 'Handed Over';
+    if (isTerminalHandover) {
       if (sr) {
 
         let customerUserId = null;

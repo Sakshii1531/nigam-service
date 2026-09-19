@@ -29,7 +29,7 @@ export const listClaimsQuerySchema = z.object({
 });
 
 export const listPartOrdersQuerySchema = z.object({
-  status: z.enum(['Pending', 'Approved', 'Dispatched', 'Delivered', 'Rejected']).optional(),
+  status: z.enum(['Pending', 'Approved', 'Ready to Hand Over', 'Handed Over', 'Dispatched', 'Delivered', 'Rejected']).optional(),
   page: z.coerce.number().int().positive().optional(),
   limit: z.coerce.number().int().positive().optional(),
   sort: z.string().optional(),

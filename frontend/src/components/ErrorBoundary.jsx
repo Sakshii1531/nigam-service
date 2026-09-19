@@ -1,5 +1,36 @@
 import React from 'react';
 
+const getDynamicHomeUrl = () => {
+  try {
+    const pathname = window.location?.pathname || '';
+    if (pathname.startsWith('/service-provider')) {
+      return '/service-provider/dashboard';
+    }
+    if (pathname.startsWith('/super-admin')) {
+      return '/super-admin/dashboard';
+    }
+    if (pathname.startsWith('/brand-admin')) {
+      return '/brand-admin/dashboard';
+    }
+    // For customer app or other routes
+    try {
+      const stored = localStorage.getItem('user') || localStorage.getItem('ncc_auth_user');
+      if (stored) {
+        const u = JSON.parse(stored);
+        if (u?.role === 'service_provider') return '/service-provider/dashboard';
+        if (u?.role === 'super_admin') return '/super-admin/dashboard';
+        if (u?.role === 'brand_admin') return '/brand-admin/dashboard';
+        if (u?.role === 'customer') return '/dashboard';
+      }
+    } catch {
+      // fallback
+    }
+    return '/';
+  } catch {
+    return '/';
+  }
+};
+
 export class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -45,7 +76,7 @@ export class ErrorBoundary extends React.Component {
               <button
                 onClick={() => {
                   this.setState({ hasError: false, error: null, errorInfo: null });
-                  window.location.href = '/';
+                  window.location.href = getDynamicHomeUrl();
                 }}
                 className="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold py-3 rounded-xl transition-all text-xs cursor-pointer"
               >

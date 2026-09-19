@@ -46,19 +46,29 @@ const getInitialOverrides = (storageKey) => {
 
 let servicePageOverrides = getInitialOverrides('ncc_service_pages_cache');
 let categoryOverrides = getInitialOverrides('ncc_category_configs_cache');
+// The platform's real catalog (Category + ServiceCatalogItem, same collections
+// super-admin's catalog module and the service-provider job screen read from).
+// Keyed by the DB Category.key (e.g. "AC"). Booking used to only ever read the
+// two CMS override systems above, so a service added straight to the catalog
+// (rather than through the Services/Categories admin tabs) never reached
+// customers even though it was real, saved data.
+let dbCatalogByKey = getInitialOverrides('ncc_db_catalog_cache');
 
 export async function preloadCatalogOverrides() {
   try {
-    const [servicePages, categories] = await Promise.all([
+    const [servicePages, categories, dbCategories] = await Promise.all([
       apiRequest('/cms/service-pages'),
       apiRequest('/cms/category-configs'),
+      apiRequest('/catalog/categories'),
     ]);
     servicePageOverrides = Object.fromEntries((servicePages || []).map(c => [c.serviceKey, c]));
     categoryOverrides = Object.fromEntries((categories || []).map(c => [c.categoryName, c]));
+    dbCatalogByKey = Object.fromEntries((dbCategories || []).map(c => [c.key, c]));
     if (typeof window !== 'undefined') {
       try {
         sessionStorage.setItem('ncc_service_pages_cache', JSON.stringify(servicePageOverrides));
         sessionStorage.setItem('ncc_category_configs_cache', JSON.stringify(categoryOverrides));
+        sessionStorage.setItem('ncc_db_catalog_cache', JSON.stringify(dbCatalogByKey));
       } catch {
         // Storage can be full or disabled (private mode); the cache is optional.
       }
@@ -66,6 +76,48 @@ export async function preloadCatalogOverrides() {
   } catch (err) {
     console.warn('[catalog] Could not load admin overrides, using defaults:', err.message);
   }
+}
+
+function findDbCategory(decodedNorm, cleanDecoded, baseDecoded) {
+  const dbKeys = Object.keys(dbCatalogByKey);
+  const matchKey = dbKeys.find((k) => k.toLowerCase() === decodedNorm)
+    || dbKeys.find((k) => k.toLowerCase().replace(/[-_]/g, ' ').replace(/\s+/g, ' ').trim() === cleanDecoded)
+    || dbKeys.find((k) => {
+      const kClean = k.toLowerCase().replace(/[-_]/g, ' ').replace(/\s+/g, ' ').trim();
+      return kClean === baseDecoded || cleanDecoded.includes(kClean) || (baseDecoded && kClean.includes(baseDecoded));
+    });
+  return matchKey ? dbCatalogByKey[matchKey] : null;
+}
+
+/** Real ServiceCatalogItem rows for a category, mapped to the same shape as a
+ * BOOKING_CATALOG services entry, so they can replace whichever list (CMS
+ * override or bundled default) is otherwise in effect. */
+function findDbServices(decodedNorm, cleanDecoded, baseDecoded) {
+  const dbCategory = findDbCategory(decodedNorm, cleanDecoded, baseDecoded);
+  return (dbCategory?.services || []).map((s) => ({
+    id: s.id,
+    name: s.name,
+    icon: s.icon || '🔧',
+    desc: s.desc || '',
+    price: typeof s.price === 'number' ? s.price : (parseInt(s.price) || 299),
+    unit: s.unit || 'per unit',
+  }));
+}
+
+/** Real ProductType rows for a category, each carrying the price addon it
+ * charges on top of whichever service the customer books. Used to have no DB
+ * counterpart at all — every category's product types came from a CMS list
+ * that only ever had 2 of e.g. AC's 5 real registered types, so the other 3
+ * (and the addon field itself) simply had nowhere to live. */
+function findDbProductTypes(decodedNorm, cleanDecoded, baseDecoded) {
+  const dbCategory = findDbCategory(decodedNorm, cleanDecoded, baseDecoded);
+  return (dbCategory?.productTypes || []).map((pt) => ({
+    id: pt.id,
+    name: pt.name,
+    icon: pt.icon || '⚡',
+    desc: pt.desc || '',
+    priceAddon: typeof pt.priceAddon === 'number' ? pt.priceAddon : 0,
+  }));
 }
 
 // ─── Booking Catalog ───────────────────────────────────────────────────────────
@@ -366,6 +418,8 @@ export const getCatalogEntry = (category) => {
   const decodedNorm = decoded.toLowerCase();
   const cleanDecoded = decodedNorm.replace(/[-_]/g, ' ').replace(/\s+/g, ' ').trim();
   const baseDecoded = cleanDecoded.replace(/\b(repair|services|service|checkup|installation|complete)\b/gi, '').replace(/\s+/g, ' ').trim();
+  const dbServices = findDbServices(decodedNorm, cleanDecoded, baseDecoded);
+  const dbProductTypes = findDbProductTypes(decodedNorm, cleanDecoded, baseDecoded);
 
   // 1. Look up in Services Customization data (from Services tab)
   const serviceConfigs = servicePageOverrides;
@@ -403,6 +457,7 @@ export const getCatalogEntry = (category) => {
     const staticDefault = BOOKING_CATALOG[decoded] || BOOKING_CATALOG[Object.keys(BOOKING_CATALOG).find(k => k.toLowerCase() === decodedNorm || k.toLowerCase().replace(/[-_]/g, ' ').trim() === cleanDecoded)] || {};
 
     // Product types priority:
+    // 0. Real catalog (Category/ProductType, incl. price addons) — authoritative once populated
     // 1. Service Page Config (from Services Tab)
     // 2. Category Config (from Categories Tab)
     // 3. Static Bundled Defaults (only if no custom types configured)
@@ -413,7 +468,9 @@ export const getCatalogEntry = (category) => {
       : null;
 
     let productTypes;
-    if (rawProductTypes) {
+    if (dbProductTypes.length > 0) {
+      productTypes = dbProductTypes;
+    } else if (rawProductTypes) {
       const list = typeof rawProductTypes === 'string'
         ? rawProductTypes.split(',').map(s => s.trim()).filter(Boolean)
         : (Array.isArray(rawProductTypes) ? rawProductTypes : []);
@@ -476,9 +533,15 @@ export const getCatalogEntry = (category) => {
       }
     });
 
-    const resolvedServices = servicesList.length > 0 ? servicesList : (
-      Array.isArray(categoryConfig.services) ? categoryConfig.services : (
-        staticDefault.services?.default || (Array.isArray(staticDefault.services) ? staticDefault.services : [])
+    // The real catalog (Category/ServiceCatalogItem, managed from the super-admin
+    // catalog console) is authoritative once it has anything for this category —
+    // the CMS-configured / bundled-static lists below only cover a category the
+    // catalog console hasn't been used for yet.
+    const resolvedServices = dbServices.length > 0 ? dbServices : (
+      servicesList.length > 0 ? servicesList : (
+        Array.isArray(categoryConfig.services) ? categoryConfig.services : (
+          staticDefault.services?.default || (Array.isArray(staticDefault.services) ? staticDefault.services : [])
+        )
       )
     );
 
@@ -519,7 +582,7 @@ export const getCatalogEntry = (category) => {
   );
   const serviceConfig = fallbackServiceKey ? serviceConfigs[fallbackServiceKey] : null;
 
-  if (!staticKey && !overrideKey && !serviceConfig) {
+  if (!staticKey && !overrideKey && !serviceConfig && dbServices.length === 0) {
     return null;
   }
 
@@ -531,7 +594,9 @@ export const getCatalogEntry = (category) => {
     : null;
 
   let productTypes;
-  if (dynTypes) {
+  if (dbProductTypes.length > 0) {
+    productTypes = dbProductTypes;
+  } else if (dynTypes) {
     const rawTypes = typeof dynTypes === 'string'
       ? dynTypes.split(',').map(s => s.trim()).filter(Boolean)
       : (Array.isArray(dynTypes) ? dynTypes : []);
@@ -555,9 +620,13 @@ export const getCatalogEntry = (category) => {
     productTypes = staticDefault.productTypes || [];
   }
 
-  // Parse services from override or static
+  // Parse services — the real catalog wins once it has anything for this
+  // category; CMS-configured / bundled-static lists are the fallback for a
+  // category the catalog console hasn't been used for yet.
   let servicesList = [];
-  if (categoryConfig && categoryConfig.services) {
+  if (dbServices.length > 0) {
+    servicesList = dbServices;
+  } else if (categoryConfig && categoryConfig.services) {
     const rawServices = Array.isArray(categoryConfig.services)
       ? categoryConfig.services
       : (categoryConfig.services.default || []);

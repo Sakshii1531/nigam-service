@@ -18,7 +18,7 @@ export const isFileStorageConfigured = isCloudinaryConfigured;
 // with whatever launched the server (e.g. the e2e webServer runs it from e2e/, not
 // backend/), which would otherwise scatter an uploads/ dir wherever it happened to start.
 export const LOCAL_UPLOAD_DIR = fileURLToPath(new URL('../../../uploads/', import.meta.url));
-if (!isFileStorageConfigured) fs.mkdirSync(LOCAL_UPLOAD_DIR, { recursive: true });
+fs.mkdirSync(LOCAL_UPLOAD_DIR, { recursive: true });
 
 if (isFileStorageConfigured) {
   cloudinary.config({

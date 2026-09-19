@@ -128,14 +128,18 @@ const Bookings = () => {
 
     const socket = io(SOCKET_URL, {
       auth: { token: accessToken },
-      transports: ['websocket'],
+      transports: ['websocket', 'polling'],
     });
 
-    socket.on('instant:status_update', () => loadBookings(true));
-    socket.on('tracking:update', () => loadBookings(true));
-    socket.on('service_request:updated', () => loadBookings(true));
-    socket.on('booking:cancelled', () => loadBookings(true));
-    socket.on('booking:rescheduled', () => loadBookings(true));
+    const refresh = () => loadBookings(true);
+    socket.on('booking:completed', refresh);
+    socket.on('booking:updated', refresh);
+    socket.on('instant:status_update', refresh);
+    socket.on('tracking:update', refresh);
+    socket.on('service_request:updated', refresh);
+    socket.on('booking:cancelled', refresh);
+    socket.on('booking:rescheduled', refresh);
+    socket.on('job:completed', refresh);
 
     return () => {
       socket.disconnect();
@@ -191,6 +195,32 @@ const Bookings = () => {
       setError(err.message || 'Could not reschedule booking.');
     } finally {
       setReschedulingId(null);
+    }
+  };
+
+  // Whichever booking currently has a spare-part cost awaiting the
+  // customer's sign-off — surfaced as a blocking popup right here on the
+  // list, not just on that one booking's detail page, since that's where
+  // the notification lands the customer before they've picked a booking.
+  const [respondingPartApproval, setRespondingPartApproval] = useState(false);
+  const pendingPartApprovalBooking = bookings.find((b) => b.partApproval?.status === 'Pending');
+
+  const handleRespondPartRequest = async (approve) => {
+    if (!pendingPartApprovalBooking) return;
+    setRespondingPartApproval(true);
+    try {
+      await apiRequest(`/bookings/${pendingPartApprovalBooking.id || pendingPartApprovalBooking.humanId}/respond-part-request`, {
+        method: 'POST',
+        body: { approve },
+        auth: true,
+      });
+      setToastMessage(approve ? 'Part request approved.' : 'Part request declined.');
+      setTimeout(() => setToastMessage(''), 4000);
+      await loadBookings(true);
+    } catch (err) {
+      setError(err.message || 'Could not record your response.');
+    } finally {
+      setRespondingPartApproval(false);
     }
   };
 
@@ -576,7 +606,7 @@ const Bookings = () => {
                       {canRescheduleOrCancel && (
                         <div className="bg-white px-2.5 py-1 rounded-xl border border-blue-200/80 flex items-center gap-1 text-[11px] font-bold text-brand-blue">
                           <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
-                          <span>OTP: <strong className="font-mono text-slate-900">{b.completionOtp || b.serviceRequest?.completionOtp || '8745'}</strong></span>
+                          <span>OTP: <strong className="font-mono text-slate-900">{b.completionOtp || b.serviceRequest?.completionOtp || ''}</strong></span>
                         </div>
                       )}
                     </div>
@@ -638,6 +668,49 @@ const Bookings = () => {
           </div>
         )}
       </main>
+
+      {/* Spare Part Approval Popup — the customer must sign off on this cost
+          before it's ever sent to the super-admin queue. */}
+      {pendingPartApprovalBooking && (
+        <div className="fixed inset-0 bg-black/50 z-[70] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl flex flex-col gap-4 text-left">
+            <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-base font-black text-slate-900">Spare Part Approval Needed</h3>
+              <p className="text-xs text-slate-600 font-semibold mt-1.5 leading-relaxed">
+                Your service partner has requested{' '}
+                <span className="font-black text-slate-900">
+                  {(pendingPartApprovalBooking.partApproval.partNames || []).join(', ') || 'a spare part'}
+                </span>{' '}
+                worth{' '}
+                <span className="font-black text-brand-blue">₹{pendingPartApprovalBooking.partApproval.amount ?? 0}</span>{' '}
+                for booking #{pendingPartApprovalBooking.humanId || pendingPartApprovalBooking.id}.
+                Did you approve this request? It won't be ordered until you do.
+              </p>
+            </div>
+            <div className="flex gap-3 mt-1">
+              <button
+                type="button"
+                disabled={respondingPartApproval}
+                onClick={() => handleRespondPartRequest(false)}
+                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-2xl text-xs transition-all disabled:opacity-60 cursor-pointer"
+              >
+                Decline
+              </button>
+              <button
+                type="button"
+                disabled={respondingPartApproval}
+                onClick={() => handleRespondPartRequest(true)}
+                className="flex-1 bg-brand-blue hover:bg-[#083679] text-white font-bold py-3 rounded-2xl text-xs transition-all shadow-sm disabled:opacity-60 cursor-pointer"
+              >
+                {respondingPartApproval ? 'Submitting…' : 'Approve'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Reschedule Booking Modal ── */}
       <RescheduleBookingModal

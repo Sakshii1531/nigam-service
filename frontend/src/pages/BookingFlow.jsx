@@ -17,8 +17,10 @@ import {
   Home,
   Briefcase,
   Navigation,
+  X,
 } from "lucide-react";
 import { apiRequest, getStoredTokens, storeTokens } from "../lib/apiClient";
+import { submitBookingsForMeta, totalPriceFromResults } from "../lib/bookingSubmission";
 import { useAuth } from "../context/AuthContext";
 import { useLocationContext } from "../context/LocationContext";
 import MapLocationPickerModal from "../components/booking/MapLocationPickerModal";
@@ -143,10 +145,13 @@ const BottomBar = ({
   sublabel,
   price,
   showPrice = true,
+  breakdown = [],
   btnLabel,
   btnDisabled,
   onBtn,
-}) => (
+}) => {
+  const [showBreakdown, setShowBreakdown] = useState(false);
+  return (
   <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/80 shadow-[0_-8px_20px_rgba(0,0,0,0.08)] z-30 transition-all md:hidden">
     {/* Summary row */}
     <div className="w-full flex items-center justify-between px-5 pt-3 pb-1.5">
@@ -172,13 +177,38 @@ const BottomBar = ({
         </div>
       </div>
       {showPrice && price > 0 && (
-        <div className="flex items-center gap-1.5 flex-shrink-0">
+        <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
           <span className="text-[16px] font-black text-slate-900">
             ₹{price}
           </span>
+          {breakdown.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowBreakdown((v) => !v)}
+              className="text-[9px] font-bold text-brand-blue underline decoration-dotted cursor-pointer"
+            >
+              {showBreakdown ? "Hide breakdown" : "View breakdown"}
+            </button>
+          )}
         </div>
       )}
     </div>
+    {/* Price breakdown — why the total is what it is (base price, product
+        type add-on, quantity, any extra type booked as a separate visit). */}
+    {showBreakdown && breakdown.length > 0 && (
+      <div className="px-5 pb-2 flex flex-col gap-1.5 border-t border-slate-100 pt-2 mx-5">
+        {breakdown.map((row, idx) => (
+          <div key={idx} className="flex justify-between text-[11px]">
+            <span className={row.bold ? "font-black text-slate-900" : "font-semibold text-slate-500"}>
+              {row.label}
+            </span>
+            <span className={row.bold ? "font-black text-slate-900" : "font-bold text-slate-700"}>
+              {row.amount != null ? `₹${row.amount}` : ""}
+            </span>
+          </div>
+        ))}
+      </div>
+    )}
     {/* CTA */}
     <div className="px-5 pb-4 pt-1">
       <button
@@ -195,7 +225,8 @@ const BottomBar = ({
       </button>
     </div>
   </div>
-);
+  );
+};
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 const BookingFlow = () => {
@@ -247,6 +278,14 @@ const BookingFlow = () => {
   );
   const [quantity, setQuantity] = useState(
     () => resumeBooking?.quantity || 1,
+  );
+  // Extra appliance types serviced in the same visit (e.g. 1 Window AC + 2
+  // Split AC) — each becomes its own separate booking on submit, since a
+  // Booking is one appliance type's service call. The primary productType/
+  // quantity above stays the single-select UI everywhere else in this flow
+  // already assumes; this is purely additive.
+  const [additionalTypes, setAdditionalTypes] = useState(
+    () => resumeBooking?.additionalTypes || [],
   );
 
   // Step 2
@@ -307,6 +346,7 @@ const BookingFlow = () => {
       if (location.state?.step) setStep(location.state.step);
       if (resume.productType) setProductType(resume.productType);
       if (resume.quantity) setQuantity(resume.quantity);
+      if (resume.additionalTypes) setAdditionalTypes(resume.additionalTypes);
       if (resume.serviceSlug || resume.service)
         setService(resume.serviceSlug || resume.service);
       if (resume.brand) setBrand(resume.brand);
@@ -411,8 +451,45 @@ const BookingFlow = () => {
   const selectedServiceData = data.services.default.find(
     (s) => s.id === service || s.name === service,
   );
-  const unitPrice = selectedServiceData?.price || 0;
+  // A product type (e.g. Split AC vs Window AC) can carry its own addon on
+  // top of the service price — same amount the server independently adds
+  // when the booking is actually created, so what's shown here always
+  // matches what gets charged.
+  const selectedProductTypeData = (data.productTypes || []).find(
+    (pt) => pt.name === productType,
+  );
+  const productTypeAddon = selectedProductTypeData?.priceAddon || 0;
+  const unitPrice = (selectedServiceData?.price || 0) + productTypeAddon;
   const totalPrice = selectedServiceData ? unitPrice * quantity : 0;
+  // One booking per appliance type — the primary type above, plus whatever
+  // was added under "Need service for a different type too?". Each is priced
+  // independently (its own type addon), matching what the server charges
+  // per booking.
+  const typeEntries = [
+    { name: productType, qty: quantity },
+    ...additionalTypes.filter((t) => t.name && t.qty > 0),
+  ];
+  const additionalTypesTotal = additionalTypes.reduce((sum, t) => {
+    const addon = (data.productTypes || []).find((pt) => pt.name === t.name)?.priceAddon || 0;
+    return sum + ((selectedServiceData?.price || 0) + addon) * (t.qty || 1);
+  }, 0);
+  const combinedTotalPrice = totalPrice + additionalTypesTotal;
+  // Line items behind the total shown on the mobile bottom bar — e.g. "Gas
+  // Refilling ₹799" + "Split AC add-on ₹399" = ₹1198, rather than a bare
+  // total with no way to see why a type-specific surcharge got added.
+  const priceBreakdown = selectedServiceData
+    ? [
+        { label: `${selectedServiceData.name} (base price)`, amount: selectedServiceData.price },
+        ...(productTypeAddon > 0 ? [{ label: `${productType} add-on`, amount: productTypeAddon }] : []),
+        ...(quantity > 1 ? [{ label: `× ${quantity} units`, amount: totalPrice }] : []),
+        ...additionalTypes.map((t) => {
+          const addon = (data.productTypes || []).find((pt) => pt.name === t.name)?.priceAddon || 0;
+          const entryTotal = ((selectedServiceData.price || 0) + addon) * (t.qty || 1);
+          return { label: `${t.name} (${t.qty} unit${t.qty > 1 ? "s" : ""}) — separate booking`, amount: entryTotal };
+        }),
+        { label: "Total", amount: combinedTotalPrice, bold: true },
+      ]
+    : [];
   const advanceAmt = 199;
   const remaining = Math.max(0, totalPrice - advanceAmt);
 
@@ -525,38 +602,35 @@ const BookingFlow = () => {
 
   const handleConfirmBooking = async () => {
     const svcName = selectedServiceData?.name || catKey + " Service";
+    const isInstant = timeGroup === "ASAP";
+    const bookingMeta = {
+      service: svcName,
+      serviceName: svcName,
+      serviceSlug: service,
+      category: catKey,
+      productType: productType,
+      typeEntries: typeEntries,
+      brand: brand,
+      quantity: quantity,
+      date: selectedDate,
+      timeGroup: timeGroup,
+      isInstant: isInstant,
+      totalPrice: combinedTotalPrice,
+      advanceAmt: advanceAmt,
+      paymentMode: paymentMode,
+      address: address,
+      fullName: fullName,
+      mobile: mobile,
+    };
 
     if (paymentMode === "after") {
       setSubmitting(true);
       try {
-        const isInstant = timeGroup === "ASAP";
         await ensureCustomerAuth();
 
-        let result;
+        let results;
         try {
-          result = await apiRequest("/bookings", {
-            method: "POST",
-            body: {
-              category: catKey,
-              productType: productType,
-              serviceSlug: service,
-              serviceName: svcName,
-              service: svcName,
-              brand: brand,
-              quantity: quantity,
-              scheduledDate: isInstant
-                ? new Date().toISOString()
-                : new Date().toISOString(),
-              timeSlot: { date: selectedDate || "", time: timeGroup || "" },
-              address: address,
-              fullName: fullName,
-              mobile: mobile,
-              paymentMode: "after",
-              isInstant,
-              timeGroup,
-            },
-            auth: true,
-          });
+          results = await submitBookingsForMeta(bookingMeta);
         } catch (authErr) {
           if (
             authErr?.status === 401 ||
@@ -564,38 +638,20 @@ const BookingFlow = () => {
             authErr?.message?.includes("Authorization")
           ) {
             await ensureCustomerAuth();
-            result = await apiRequest("/bookings", {
-              method: "POST",
-              body: {
-                category: catKey,
-                productType: productType,
-                serviceSlug: service,
-                serviceName: svcName,
-                service: svcName,
-                brand: brand,
-                quantity: quantity,
-                scheduledDate: isInstant
-                  ? new Date().toISOString()
-                  : new Date().toISOString(),
-                timeSlot: { date: selectedDate || "", time: timeGroup || "" },
-                address: address,
-                fullName: fullName,
-                mobile: mobile,
-                paymentMode: "after",
-                isInstant,
-                timeGroup,
-              },
-              auth: true,
-            });
+            results = await submitBookingsForMeta(bookingMeta);
           } else {
             throw authErr;
           }
         }
 
+        // The success screen's live-search animation follows one
+        // serviceRequestId — the first booking created stands in for the
+        // whole visit when more than one type was booked together.
+        const primary = results[0];
         const params = new URLSearchParams({
           type: "service",
           serviceRequestId:
-            result.serviceRequest?.id || result.serviceRequest?._id || "",
+            primary.serviceRequest?.id || primary.serviceRequest?._id || "",
           service: svcName,
           category: catKey,
           productType: productType,
@@ -603,11 +659,12 @@ const BookingFlow = () => {
           quantity: String(quantity),
           date: selectedDate || "",
           timeGroup: timeGroup || "",
-          totalPrice: String(totalPrice),
+          totalPrice: String(totalPriceFromResults(results)),
           advanceAmt: "0",
           customerName: fullName || "Customer",
           paymentMode: "after",
           isInstant: isInstant ? "true" : "false",
+          bookingCount: String(results.length),
         });
         try {
           sessionStorage.removeItem("ncc_last_booking_flow");
@@ -624,26 +681,7 @@ const BookingFlow = () => {
         setSubmitting(false);
       }
     } else {
-      const isInstant = timeGroup === "ASAP";
       await ensureCustomerAuth();
-      const bookingMeta = {
-        service: svcName,
-        serviceName: svcName,
-        serviceSlug: service,
-        category: catKey,
-        productType: productType,
-        brand: brand,
-        quantity: quantity,
-        date: selectedDate,
-        timeGroup: timeGroup,
-        isInstant: isInstant,
-        totalPrice: totalPrice,
-        advanceAmt: advanceAmt,
-        paymentMode: paymentMode,
-        address: address,
-        fullName: fullName,
-        mobile: mobile,
-      };
       try {
         sessionStorage.setItem(
           "ncc_last_booking_flow",
@@ -705,6 +743,9 @@ const BookingFlow = () => {
     const parts = [];
     if (productType) parts.push(productType);
     if (quantity > 1) parts.push(`${quantity} units`);
+    if (additionalTypes.length > 0) {
+      parts.push(`+${additionalTypes.length} more type${additionalTypes.length === 1 ? "" : "s"}`);
+    }
     return parts.join(" · ") || `${catKey} service`;
   };
   const getBarBtnLabel = () => {
@@ -842,6 +883,86 @@ const BookingFlow = () => {
                     </p>
                   )}
                 </div>
+
+                {/* Servicing a different type too? e.g. 1 Window AC + 2 Split
+                    AC in the same visit — each becomes its own booking. */}
+                {data.productTypes && data.productTypes.length > 1 && (
+                  <div className="bg-white border border-slate-200/80 rounded-2xl p-4.5 shadow-2xs flex flex-col gap-3">
+                    <div>
+                      <p className="text-[13px] font-black text-slate-900">
+                        Need service for a different {catKey} type too?
+                      </p>
+                      <p className="text-[10px] text-slate-400 font-semibold mt-0.5">
+                        Each type you add here becomes its own separate booking, scheduled together with this one.
+                      </p>
+                    </div>
+
+                    {additionalTypes.map((entry, idx) => (
+                      <div key={idx} className="flex items-center gap-2.5">
+                        <select
+                          value={entry.name}
+                          onChange={(e) => {
+                            const next = [...additionalTypes];
+                            next[idx] = { ...next[idx], name: e.target.value };
+                            setAdditionalTypes(next);
+                          }}
+                          className="flex-1 text-xs font-bold text-slate-800 border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:border-brand-blue bg-slate-50"
+                        >
+                          {data.productTypes.map((pt) => (
+                            <option key={pt.id} value={pt.name}>{pt.name}</option>
+                          ))}
+                        </select>
+                        <div className="flex items-center gap-2 bg-slate-50 p-1 rounded-xl border border-slate-200 flex-shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const next = [...additionalTypes];
+                              next[idx] = { ...next[idx], qty: Math.max(1, next[idx].qty - 1) };
+                              setAdditionalTypes(next);
+                            }}
+                            className="w-7 h-7 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-brand-blue text-sm font-black cursor-pointer"
+                          >
+                            –
+                          </button>
+                          <span className="text-xs font-black text-slate-900 w-4 text-center">{entry.qty}</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const next = [...additionalTypes];
+                              next[idx] = { ...next[idx], qty: Math.min(12, next[idx].qty + 1) };
+                              setAdditionalTypes(next);
+                            }}
+                            className="w-7 h-7 rounded-lg bg-brand-blue text-white flex items-center justify-center text-sm font-black cursor-pointer"
+                          >
+                            +
+                          </button>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setAdditionalTypes(additionalTypes.filter((_, i) => i !== idx))}
+                          className="w-8 h-8 flex-shrink-0 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+
+                    {(() => {
+                      const usedNames = new Set([productType, ...additionalTypes.map((t) => t.name)]);
+                      const nextAvailable = data.productTypes.find((pt) => !usedNames.has(pt.name));
+                      if (!nextAvailable) return null;
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => setAdditionalTypes([...additionalTypes, { name: nextAvailable.name, qty: 1 }])}
+                          className="text-xs font-black text-brand-blue hover:underline text-left flex items-center gap-1 cursor-pointer"
+                        >
+                          + Add Another Type
+                        </button>
+                      );
+                    })()}
+                  </div>
+                )}
 
                 {/* Info guarantee card */}
                 <div className="bg-gradient-to-r from-blue-50/90 to-indigo-50/50 border border-blue-100 rounded-2xl p-4 flex items-center gap-3.5 shadow-2xs">
@@ -1611,6 +1732,7 @@ const BookingFlow = () => {
                 <div className="flex flex-col gap-2.5 text-xs font-semibold text-slate-600">
                   <div className="flex justify-between">
                     <span>
+                      {productType ? `${productType} — ` : ""}
                       {selectedServiceData.name} ({quantity} unit
                       {quantity > 1 ? "s" : ""})
                     </span>
@@ -1618,19 +1740,32 @@ const BookingFlow = () => {
                       ₹{totalPrice}
                     </span>
                   </div>
+                  {additionalTypes.map((entry, idx) => {
+                    const addon = (data.productTypes || []).find((pt) => pt.name === entry.name)?.priceAddon || 0;
+                    const entryTotal = ((selectedServiceData?.price || 0) + addon) * (entry.qty || 1);
+                    return (
+                      <div key={idx} className="flex justify-between">
+                        <span>
+                          {entry.name} — {selectedServiceData.name} ({entry.qty} unit
+                          {entry.qty > 1 ? "s" : ""}) · separate booking
+                        </span>
+                        <span className="font-bold text-slate-900">₹{entryTotal}</span>
+                      </div>
+                    );
+                  })}
                   <div className="flex justify-between text-emerald-600 font-bold">
                     <span>Inspection Fee</span>
                     <span>FREE</span>
                   </div>
                   <div className="h-px bg-slate-100 my-1" />
                   <div className="flex justify-between text-sm font-black text-slate-900">
-                    <span>Total Estimate</span>
-                    <span>₹{totalPrice}</span>
+                    <span>Total{additionalTypes.length > 0 ? ` (${additionalTypes.length + 1} bookings)` : " Estimate"}</span>
+                    <span>₹{combinedTotalPrice}</span>
                   </div>
                   {step === 4 && paymentMode === "advance" && (
                     <div className="flex justify-between text-sm font-black text-brand-blue bg-blue-50 p-3 rounded-2xl border border-blue-100">
-                      <span>Advance Payable Now</span>
-                      <span>₹{advanceAmt}</span>
+                      <span>Advance Payable Now{additionalTypes.length > 0 ? ` (×${additionalTypes.length + 1} bookings)` : ""}</span>
+                      <span>₹{advanceAmt}{additionalTypes.length > 0 ? ` each` : ""}</span>
                     </div>
                   )}
                 </div>
@@ -1676,11 +1811,12 @@ const BookingFlow = () => {
           label={getBarLabel()}
           sublabel={getBarSublabel()}
           price={
-            step === 4 && paymentMode === "advance" ? advanceAmt : totalPrice
+            step === 4 && paymentMode === "advance" ? advanceAmt : combinedTotalPrice
           }
           showPrice={
             step >= 2 && Boolean(selectedServiceData && totalPrice > 0)
           }
+          breakdown={step >= 2 && step < 4 ? priceBreakdown : []}
           btnLabel={getBarBtnLabel()}
           btnDisabled={getBarBtnDisabled()}
           onBtn={handleBarBtn}

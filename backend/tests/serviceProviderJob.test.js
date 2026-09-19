@@ -391,6 +391,28 @@ describe('D2C job — full lifecycle to payment', () => {
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`).set('Authorization', `Bearer ${serviceProviderToken}`).send({ notes: 'x' }).expect(400);
   });
 
+  it('records the technician\'s own on-site warranty check on the diagnosis, and a later save without it does not clear it', async () => {
+    const { jobId, serviceProviderToken } = await createAcceptedD2CJob();
+    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/start-travel`).set('Authorization', `Bearer ${serviceProviderToken}`).expect(200);
+    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/arrive`).set('Authorization', `Bearer ${serviceProviderToken}`).expect(200);
+
+    const diagRes = await request(app)
+      .post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`)
+      .set('Authorization', `Bearer ${serviceProviderToken}`)
+      .send({ notes: 'Checked the warranty card on site', warrantyCheck: 'In Warranty' })
+      .expect(200);
+    expect(diagRes.body.data.diagnosis.warrantyCheck).toBe('In Warranty');
+
+    // A follow-up save (e.g. just editing notes) must not silently wipe the
+    // technician's earlier warranty call — same deep-merge guarantee photos already have.
+    const secondRes = await request(app)
+      .post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`)
+      .set('Authorization', `Bearer ${serviceProviderToken}`)
+      .send({ notes: 'Updated notes' })
+      .expect(200);
+    expect(secondRes.body.data.diagnosis.warrantyCheck).toBe('In Warranty');
+  });
+
   it('rejects access to a job owned by a different serviceProvider', async () => {
     const { jobId } = await createAcceptedD2CJob();
     const { token: otherToken } = await seedServiceProvider({ phone: nextPhone() });

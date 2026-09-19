@@ -37,6 +37,17 @@ const bookingSchema = new mongoose.Schema(
       index: true,
     },
     completionOtp: { type: String, default: () => Math.floor(1000 + Math.random() * 9000).toString() },
+    // The customer's own sign-off on a spare part the technician requested,
+    // before it ever reaches the super-admin approval queue — a technician
+    // used to be able to add a part costing real money to the bill with the
+    // customer only informed after the fact, never asked.
+    partApproval: {
+      status: { type: String, enum: ['Pending', 'Approved', 'Rejected', null], default: null },
+      partNames: [String],
+      amount: Number,
+      requestedAt: Date,
+      respondedAt: Date,
+    },
     serviceProvider: { type: mongoose.Schema.Types.ObjectId, ref: 'ServiceProvider', default: null, index: true },
     isAccepted: { type: Boolean, default: false, index: true },
     serviceRequest: { type: mongoose.Schema.Types.ObjectId, ref: 'ServiceRequest', default: null },

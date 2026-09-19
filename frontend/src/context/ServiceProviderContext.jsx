@@ -150,15 +150,28 @@ export const ServiceProviderProvider = ({ children }) => {
 
       const mappedActive = activeJobs.map((job) => {
         const sr = job.serviceRequest;
+        const resolvedOtp = sr?.booking?.completionOtp || sr?.completionOtp || null;
         return {
           id: job.id || job._id,
+          createdAt: job.createdAt || sr?.acceptedAt || sr?.assignedAt || null,
+          acceptedAt: sr?.acceptedAt || job.createdAt || null,
+          assignedAt: job.assignedAt || sr?.assignedAt || job.createdAt || null,
+          updatedAt: job.updatedAt || null,
+          timeline: sr?.timeline || [],
           type: job.type || "NCC Paid Service",
           category: `${sr?.category || "Service"} Repair`,
           product: sr?.description || "Service Job",
           brand: sr?.booking?.brand || "Brand",
           model: sr?.model || "Universal Model",
-          serialNo: sr?.serialNo || null,
+          serialNo: sr?.appliance?.serialNumber || sr?.serialNo || null,
           complaint: sr?.description || "Service Job",
+          // The appliance's real purchase date / warranty status, from the
+          // customer's registered OwnedAppliance record (job.context refetches
+          // warrantyStatus live once the job details screen loads; this is just
+          // the baseline so the screen never falls back to a fabricated date).
+          installDate: sr?.appliance?.purchaseDate || null,
+          warrantyStatus: sr?.appliance?.warrantyStatus || sr?.warranty || null,
+          applianceId: sr?.appliance?.id || sr?.appliance?._id || null,
           estEarnings: job.estEarnings || 0,
           invoiceUrl:
             sr?.attachments?.[0] || sr?.appliance?.invoiceFileUrl || null,
@@ -227,7 +240,14 @@ export const ServiceProviderProvider = ({ children }) => {
           rescheduleReason: sr?.booking?.rescheduleReason || null,
           scheduledDate: sr?.booking?.scheduledDate || null,
           timeSlot: sr?.booking?.timeSlot || null,
-          booking: sr?.booking || null,
+          completionOtp: resolvedOtp,
+          serviceRequest: sr ? { ...sr, completionOtp: resolvedOtp } : null,
+          booking: sr?.booking ? { ...sr.booking, completionOtp: resolvedOtp } : null,
+          diagnosis: job.diagnosis || null,
+          spareParts: job.spareParts || [],
+          additionalServices: job.additionalServices || [],
+          billingEstimate: job.billingEstimate || null,
+          proofs: job.proofs || null,
         };
       });
 
@@ -457,6 +477,21 @@ export const ServiceProviderProvider = ({ children }) => {
       }
       fetchRealJobs();
     });
+    socket.on("job:completed", () => {
+      fetchRealJobs();
+      refreshEarnings();
+    });
+    socket.on("job:updated", () => {
+      fetchRealJobs();
+      refreshEarnings();
+    });
+    socket.on("booking:completed", () => {
+      fetchRealJobs();
+      refreshEarnings();
+    });
+    socket.on("booking:updated", () => {
+      fetchRealJobs();
+    });
     // An admin/ASM approved (or made) a service city change: re-join the feed
     // so the server moves this socket into the new city's broadcast room, and
     // reload jobs — offers from the old city no longer apply.
@@ -644,6 +679,44 @@ export const ServiceProviderProvider = ({ children }) => {
 
   const activeJob = jobs.find((j) => j.id === activeJobId) || null;
 
+  // Live tracking GPS broadcast for active job to Super Admin and ASM live tracking.
+  // Moved below activeJobId/activeStep/activeJob's declarations — it referenced
+  // all three before they were declared, throwing "Cannot access 'activeJobId'
+  // before initialization" on every render and crashing the whole provider tree.
+  useEffect(() => {
+    if (!activeJobId) return undefined;
+    const sendLocationUpdate = () => {
+      const socket = socketRef.current;
+      if (!socket || !socket.connected) return;
+      const isTraveling = activeStep === 'ontheway' || activeStep === 'revisit_ontheway';
+      const status = isTraveling ? 'On the way' : activeStep === 'completed' ? 'Completed' : 'Repairing';
+
+      const doEmit = (coords) => {
+        socket.emit('update-location', {
+          jobId: activeJobId,
+          status,
+          eta: '15 mins',
+          location: activeJob?.serviceRequest?.zone || 'Customer Location',
+          coords,
+        });
+      };
+
+      if (typeof navigator !== 'undefined' && navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => doEmit({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+          () => doEmit({ lat: 28.6139, lng: 77.2090 }),
+          { timeout: 5000 },
+        );
+      } else {
+        doEmit({ lat: 28.6139, lng: 77.2090 });
+      }
+    };
+
+    sendLocationUpdate();
+    const locInterval = setInterval(sendLocationUpdate, 20000);
+    return () => clearInterval(locInterval);
+  }, [activeJobId, activeStep, activeJob?.serviceRequest?.zone]);
+
   /**
    * Re-open a restored job at the step the server says it is on.
    *
@@ -719,6 +792,13 @@ export const ServiceProviderProvider = ({ children }) => {
             },
           );
           const newJobId = result.id || result._id;
+          const acceptedTime = result.createdAt || new Date().toISOString();
+          try {
+            const formatted = new Date(acceptedTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+            localStorage.setItem(`ncc_job_step_${newJobId}_assigned`, formatted);
+          } catch (_err) {
+            // Ignore localStorage errors (e.g. private browsing or storage quota)
+          }
           setJobs((prevJobs) =>
             prevJobs.map((j) => {
               if (
@@ -730,6 +810,9 @@ export const ServiceProviderProvider = ({ children }) => {
                   id: newJobId,
                   isAvailableRequest: false,
                   activeStep: "assigned",
+                  createdAt: acceptedTime,
+                  acceptedAt: acceptedTime,
+                  assignedAt: acceptedTime,
                 };
               }
               return j;
@@ -854,7 +937,10 @@ export const ServiceProviderProvider = ({ children }) => {
           await apiRequest(`/service-provider/jobs/${activeJobId}/diagnosis`, {
             method: "POST",
             auth: true,
-            body: { notes: diagnosisNotes || undefined },
+            body: {
+              notes: diagnosisNotes || undefined,
+              photos: activeJob?.diagnosis?.photos || undefined,
+            },
           });
         }
 
@@ -862,8 +948,15 @@ export const ServiceProviderProvider = ({ children }) => {
           `/service-provider/jobs/${activeJobId}/${move.path}`,
           { method: "POST", auth: true, body },
         );
+        const nextStep = job?.activeStep || current;
+        try {
+          const nowStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+          localStorage.setItem(`ncc_job_step_${activeJobId}_${nextStep}`, nowStr);
+        } catch (_err) {
+          // Ignore localStorage errors (e.g. private browsing or storage quota)
+        }
         // Trust the server's step over a locally-guessed one.
-        setActiveStep(job?.activeStep || current);
+        setActiveStep(nextStep);
         await fetchRealJobs();
         return { ok: true };
       } catch (err) {

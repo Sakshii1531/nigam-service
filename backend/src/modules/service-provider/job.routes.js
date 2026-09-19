@@ -90,6 +90,18 @@ jobRouter.get('/:id', validate(jobIdParamSchema, 'params'), async (req, res, nex
   }
 });
 
+// The appliance's real warranty/install date, this category's real add-on
+// services and spare-part catalog, and this appliance's real repair history —
+// everything the job-details screen's Overview/Parts/History tabs need that
+// used to be hardcoded mock content in the frontend.
+jobRouter.get('/:id/context', validate(jobIdParamSchema, 'params'), async (req, res, next) => {
+  try {
+    ok(res, await jobService.getJobDetailContext(req.serviceProvider.id, req.params.id));
+  } catch (err) {
+    next(err);
+  }
+});
+
 jobRouter.post('/:id/start-travel', validate(jobIdParamSchema, 'params'), async (req, res, next) => {
   try {
     ok(res, await jobService.startTravel(req.serviceProvider.id, req.params.id));

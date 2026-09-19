@@ -16,7 +16,7 @@ import {
   Wifi,
   WifiOff,
 } from 'lucide-react';
-import { getStoredTokens } from '../../lib/apiClient';
+import { getStoredTokens, apiRequest } from '../../lib/apiClient';
 
 const SOCKET_URL = import.meta.env.VITE_API_BASE_URL
   ? import.meta.env.VITE_API_BASE_URL.replace('/api/v1', '')
@@ -219,17 +219,19 @@ const Tracking = () => {
   const fetchActiveJobs = useCallback(async () => {
     try {
       setIsRefreshing(true);
-      const { accessToken } = getStoredTokens();
-      const res = await fetch(`${SOCKET_URL}/api/v1/super-admin/tracking`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      if (!res.ok) throw new Error('Failed to fetch tracking data');
-      const json = await res.json();
-      const items = json.data || [];
+      const res = await apiRequest('/super-admin/tracking', { auth: true });
+      const items = Array.isArray(res) ? res : [];
       setJobs(items);
       // Render existing markers
       items.forEach((t) => createOrUpdateMarker(t));
       removeStaleMarkers(items.map((t) => t.id || t._id));
+      if (items.length > 0 && mapRef.current && mapsApiRef.current) {
+        const first = items.find(t => t.coords?.lat != null && t.coords?.lng != null);
+        if (first) {
+          mapRef.current.panTo(new mapsApiRef.current.LatLng(first.coords.lat, first.coords.lng));
+          mapRef.current.setZoom(10);
+        }
+      }
       showToast('Live locations refreshed!');
     } catch {
       // Non-fatal, we still get live updates via socket

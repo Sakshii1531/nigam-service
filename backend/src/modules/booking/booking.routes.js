@@ -4,7 +4,7 @@ import { requireAuth, requireRole } from '../../middleware/auth.js';
 import { ok, created } from '../../utils/respond.js';
 import { ROLES } from '../../config/constants.js';
 import * as bookingService from './booking.service.js';
-import { createBookingSchema, listBookingsQuerySchema, idParamSchema, verifyBookingPaymentSchema, rescheduleBookingSchema } from './booking.validation.js';
+import { createBookingSchema, listBookingsQuerySchema, idParamSchema, verifyBookingPaymentSchema, rescheduleBookingSchema, respondPartRequestSchema } from './booking.validation.js';
 export const bookingRouter = Router();
 bookingRouter.use(requireAuth, requireRole(ROLES.CUSTOMER));
 
@@ -54,6 +54,19 @@ bookingRouter.post(
   async (req, res, next) => {
     try {
       ok(res, await bookingService.rescheduleBooking(req.user.id, req.params.id, req.body));
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+bookingRouter.post(
+  '/:id/respond-part-request',
+  validate(idParamSchema, 'params'),
+  validate(respondPartRequestSchema),
+  async (req, res, next) => {
+    try {
+      ok(res, await bookingService.respondToPartRequest(req.user.id, req.params.id, req.body));
     } catch (err) {
       next(err);
     }

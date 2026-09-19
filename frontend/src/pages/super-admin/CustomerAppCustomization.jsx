@@ -2751,15 +2751,16 @@ const CustomerAppCustomization = () => {
               <button onClick={() => setShowServiceModal(false)} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
             </div>
             
-            <form 
-              onSubmit={handleSaveService} 
+            <form
+              onSubmit={handleSaveService}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && e.target.tagName === 'INPUT' && e.target.type !== 'submit') {
                   e.preventDefault();
                 }
               }}
-              className="space-y-4 overflow-y-auto pr-1 flex-1 max-h-[75vh] no-scrollbar"
+              className="flex flex-col flex-1 min-h-0 gap-4"
             >
+              <div className="space-y-4 overflow-y-auto pr-1 flex-1 min-h-0 max-h-[75vh] no-scrollbar">
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-3">
                 <span className="text-xs font-bold text-[#0D47A1] uppercase tracking-wider block">1. Dashboard Listing Details</span>
                 <div>
@@ -3027,16 +3028,17 @@ const CustomerAppCustomization = () => {
                   </div>
                 )}
               </div>
+              </div>
 
-              <div className="flex gap-3 pt-2 bg-white sticky bottom-0 z-10">
-                <button 
+              <div className="flex gap-3 pt-3 border-t border-slate-100 flex-shrink-0">
+                <button
                   type="button"
                   onClick={() => setShowServiceModal(false)}
                   className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2.5 rounded-lg text-xs transition-all"
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   type="submit"
                   disabled={servicePackages.length === 0}
                   className="flex-1 bg-[#0D47A1] hover:bg-blue-800 text-white font-semibold py-2.5 rounded-lg text-xs transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
@@ -3056,20 +3058,21 @@ const CustomerAppCustomization = () => {
             <div className="flex justify-between items-center flex-shrink-0">
               <div>
                 <h3 className="text-base font-black text-slate-900">{isEditing ? 'Edit Category' : 'Add New Category'}</h3>
-                <p className="text-xs font-medium text-slate-500 mt-0.5">Configure category icon, brands, and booking service packages.</p>
+                <p className="text-xs font-medium text-slate-500 mt-0.5">Configure category icon, brands, and appliance types.</p>
               </div>
               <button onClick={() => setShowAddModal(false)} className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 font-bold transition-colors">✕</button>
             </div>
-            
-            <form 
-              onSubmit={handleSaveCategory} 
+
+            <form
+              onSubmit={handleSaveCategory}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
                   e.preventDefault();
                 }
               }}
-              className="space-y-4 overflow-y-auto pr-1 flex-1 max-h-[75vh] no-scrollbar text-left"
+              className="flex flex-col flex-1 min-h-0 gap-4"
             >
+              <div className="space-y-4 overflow-y-auto pr-1 flex-1 min-h-0 max-h-[75vh] no-scrollbar text-left">
               {/* 1. Basic Details */}
               <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-3">
                 <span className="text-[10px] font-black text-[#0D47A1] uppercase tracking-wider block">1. Basic Details</span>
@@ -3238,185 +3241,26 @@ const CustomerAppCustomization = () => {
                 </div>
               </div>
 
-              {/* 3. Booking Services Builder */}
+              {/* Booking services/pricing used to be editable right here, but nothing
+                  reads CategoryBookingConfig.services anymore — the customer booking
+                  flow and the service-provider job screen both read the real catalog
+                  (Category/ServiceCatalogItem). Manage services from Service Catalog
+                  in the sidebar instead; editing them here would silently do nothing. */}
               <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100/80 space-y-3">
-                <div className="flex justify-between items-center">
+                <div className="flex items-start justify-between gap-3">
                   <div>
-                    <span className="text-[10px] font-black text-[#0D47A1] uppercase tracking-wider block font-sans">3. Booking Services & Pricing *</span>
-                    <span className="text-[10px] text-slate-500 font-medium mt-0.5 block">Add services customers can book in this category.</span>
+                    <span className="text-[10px] font-black text-[#0D47A1] uppercase tracking-wider block font-sans">Booking Services & Pricing</span>
+                    <span className="text-[10px] text-slate-500 font-medium mt-0.5 block">
+                      Moved — manage this category's bookable services from <strong>Service Catalog</strong> in the sidebar. That's the screen customers and providers actually see.
+                    </span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      let currentList = [];
-                      try { currentList = JSON.parse(categoryForm.servicesJson); } catch(_e) { /* ignore parse error */ }
-                      if (!Array.isArray(currentList)) currentList = [];
-                      currentList.push({
-                        id: `service_${Date.now()}`,
-                        name: '',
-                        price: 299,
-                        icon: '🔧',
-                        desc: ''
-                      });
-                      setCategoryForm({ ...categoryForm, servicesJson: JSON.stringify(currentList, null, 2) });
-                    }}
-                    className="bg-[#0D47A1] hover:bg-blue-800 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer flex items-center gap-1"
+                  <a
+                    href="/super-admin/service-catalog"
+                    className="bg-[#0D47A1] hover:bg-blue-800 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer flex items-center gap-1 flex-shrink-0"
                   >
-                    <Plus size={13} /> Add Service Option
-                  </button>
+                    Open Service Catalog
+                  </a>
                 </div>
-
-                {/* Visual Service Items List */}
-                {(() => {
-                  let parsed = [];
-                  try { parsed = JSON.parse(categoryForm.servicesJson); } catch(_e) { /* ignore parse error */ }
-                  if (!Array.isArray(parsed)) parsed = [];
-
-                  if (parsed.length === 0) {
-                    return (
-                      <div className="bg-white border border-slate-200 rounded-xl p-4 text-center text-xs text-slate-500 font-semibold">
-                        No services added yet. Click "+ Add Service Option" above.
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
-                      {parsed.map((item, idx) => (
-                        <div key={idx} className="bg-white border border-slate-200 rounded-xl p-3 shadow-2xs flex flex-col gap-2 relative">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const updated = parsed.filter((_, i) => i !== idx);
-                              setCategoryForm({ ...categoryForm, servicesJson: JSON.stringify(updated, null, 2) });
-                            }}
-                            className="absolute top-2.5 right-2.5 p-1 text-slate-400 hover:text-rose-600 rounded-lg transition-colors cursor-pointer"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                          
-                          <div className="grid grid-cols-12 gap-2 pr-6">
-                            <div className="col-span-5 sm:col-span-4">
-                              <label className="text-[9px] font-bold text-slate-400 block mb-0.5">Icon / Image</label>
-                              {item.icon && (item.icon.startsWith('data:image/') || item.icon.startsWith('http')) ? (
-                                <div className="flex items-center gap-1.5 h-7">
-                                  <img src={item.icon} alt="Icon" className="w-7 h-7 object-contain border border-slate-200 rounded-md p-0.5 bg-white shadow-2xs flex-shrink-0" />
-                                  <label className="text-[10px] text-[#0D47A1] font-bold hover:underline cursor-pointer">
-                                    Change
-                                    <input
-                                      type="file"
-                                      accept="image/*"
-                                      className="hidden"
-                                      onChange={(e) => {
-                                        const file = e.target.files[0];
-                                        if (file) {
-                                          const reader = new FileReader();
-                                          reader.onloadend = () => {
-                                            parsed[idx].icon = reader.result;
-                                            setCategoryForm({ ...categoryForm, servicesJson: JSON.stringify(parsed, null, 2) });
-                                          };
-                                          reader.readAsDataURL(file);
-                                        }
-                                      }}
-                                    />
-                                  </label>
-                                  <button 
-                                    type="button" 
-                                    onClick={() => {
-                                      parsed[idx].icon = '🔧';
-                                      setCategoryForm({ ...categoryForm, servicesJson: JSON.stringify(parsed, null, 2) });
-                                    }}
-                                    className="text-[10px] text-rose-500 font-extrabold hover:underline"
-                                    title="Reset to default emoji icon"
-                                  >
-                                    Reset
-                                  </button>
-                                </div>
-                              ) : (
-                                <div className="flex items-center gap-1.5 h-7">
-                                  <input 
-                                    type="text"
-                                    value={item.icon || '🔧'}
-                                    onChange={(e) => {
-                                      parsed[idx].icon = e.target.value;
-                                      setCategoryForm({ ...categoryForm, servicesJson: JSON.stringify(parsed, null, 2) });
-                                    }}
-                                    placeholder="🔧"
-                                    className="w-8 px-1 py-1 bg-slate-50 border border-slate-200 rounded-md text-xs font-semibold text-center outline-none focus:border-[#0D47A1]"
-                                  />
-                                  <label className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-md text-[10px] font-bold cursor-pointer transition-colors flex items-center gap-1">
-                                    <Image size={11} />
-                                    Upload
-                                    <input
-                                      type="file"
-                                      accept="image/*"
-                                      className="hidden"
-                                      onChange={(e) => {
-                                        const file = e.target.files[0];
-                                        if (file) {
-                                          const reader = new FileReader();
-                                          reader.onloadend = () => {
-                                            parsed[idx].icon = reader.result;
-                                            setCategoryForm({ ...categoryForm, servicesJson: JSON.stringify(parsed, null, 2) });
-                                          };
-                                          reader.readAsDataURL(file);
-                                        }
-                                      }}
-                                    />
-                                  </label>
-                                </div>
-                              )}
-                            </div>
-                            <div className="col-span-7 sm:col-span-5">
-                              <label className="text-[9px] font-bold text-slate-400 block mb-0.5">Service Name *</label>
-                              <input 
-                                type="text"
-                                value={item.name || ''}
-                                onChange={(e) => {
-                                  parsed[idx].name = e.target.value;
-                                  if (!parsed[idx].id) parsed[idx].id = (e.target.value || '').toLowerCase().replace(/\s+/g, '_');
-                                  setCategoryForm({ ...categoryForm, servicesJson: JSON.stringify(parsed, null, 2) });
-                                }}
-                                placeholder="e.g. Repair & Fix"
-                                className="w-full px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold outline-none focus:border-[#0D47A1]"
-                                required
-                              />
-                            </div>
-                            <div className="col-span-12 sm:col-span-3">
-                              <label className="text-[9px] font-bold text-slate-400 block mb-0.5">Price (₹) *</label>
-                              <input 
-                                type="number"
-                                value={item.price === 0 || item.price === '0' ? '' : (item.price ?? '')}
-                                onFocus={(e) => e.target.select()}
-                                onChange={(e) => {
-                                  const raw = e.target.value;
-                                  parsed[idx].price = raw === '' ? '' : Number(raw);
-                                  setCategoryForm({ ...categoryForm, servicesJson: JSON.stringify(parsed, null, 2) });
-                                }}
-                                placeholder="299"
-                                className="w-full px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-extrabold outline-none focus:border-[#0D47A1]"
-                                required
-                              />
-                            </div>
-                          </div>
-
-                          <div>
-                            <input 
-                              type="text"
-                              value={item.desc || ''}
-                              onChange={(e) => {
-                                parsed[idx].desc = e.target.value;
-                                setCategoryForm({ ...categoryForm, servicesJson: JSON.stringify(parsed, null, 2) });
-                              }}
-                              placeholder="Short description (e.g. Fix breakdowns & issues)"
-                              className="w-full px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-[11px] font-medium text-slate-600 outline-none focus:border-[#0D47A1]"
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })()}
 
                 {/* Advanced Mode Section - Open automatically */}
                 <details open className="mt-2 text-xs">
@@ -3463,16 +3307,17 @@ const CustomerAppCustomization = () => {
                   </div>
                 </details>
               </div>
+              </div>
 
-              <div className="flex gap-3 pt-2 bg-white sticky bottom-0 z-10">
-                <button 
+              <div className="flex gap-3 pt-3 border-t border-slate-100 flex-shrink-0">
+                <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
                   className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition-all cursor-pointer"
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   type="submit"
                   className="flex-1 bg-[#0D47A1] hover:bg-blue-800 text-white font-bold py-2.5 rounded-xl text-xs transition-all shadow-sm cursor-pointer"
                 >
@@ -3493,7 +3338,8 @@ const CustomerAppCustomization = () => {
               <button onClick={() => setShowBrandModal(false)} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
             </div>
             
-            <form onSubmit={handleSaveBrand} className="space-y-4 overflow-y-auto pr-1 flex-1 max-h-[75vh] no-scrollbar">
+            <form onSubmit={handleSaveBrand} className="flex flex-col flex-1 min-h-0 gap-4">
+              <div className="space-y-4 overflow-y-auto pr-1 flex-1 min-h-0 max-h-[75vh] no-scrollbar">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs font-semibold text-[#64748B] mb-1 block">Brand Name *</label>
@@ -3603,16 +3449,17 @@ const CustomerAppCustomization = () => {
                   </div>
                 </div>
               </div>
+              </div>
 
-              <div className="flex gap-3 pt-2 bg-white sticky bottom-0 z-10">
-                <button 
+              <div className="flex gap-3 pt-3 border-t border-slate-100 flex-shrink-0">
+                <button
                   type="button"
                   onClick={() => setShowBrandModal(false)}
                   className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2.5 rounded-lg text-xs transition-all"
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   type="submit"
                   className="flex-1 bg-[#0D47A1] hover:bg-blue-800 text-white font-semibold py-2.5 rounded-lg text-xs transition-all shadow-sm"
                 >
@@ -3633,7 +3480,8 @@ const CustomerAppCustomization = () => {
               <button onClick={() => setShowMostBookedModal(false)} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
             </div>
             
-            <form onSubmit={handleSaveMostBooked} className="space-y-4 overflow-y-auto pr-1 flex-1 max-h-[75vh] no-scrollbar">
+            <form onSubmit={handleSaveMostBooked} className="flex flex-col flex-1 min-h-0 gap-4">
+              <div className="space-y-4 overflow-y-auto pr-1 flex-1 min-h-0 max-h-[75vh] no-scrollbar">
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-150 space-y-3">
                 <span className="text-[10px] font-bold text-[#0D47A1] uppercase tracking-wider block font-sans">1. Card View Customization</span>
                 
@@ -3839,16 +3687,17 @@ const CustomerAppCustomization = () => {
                   </div>
                 )}
               </div>
+              </div>
 
-              <div className="flex gap-3 pt-2 bg-white sticky bottom-0 z-10">
-                <button 
+              <div className="flex gap-3 pt-3 border-t border-slate-100 flex-shrink-0">
+                <button
                   type="button"
                   onClick={() => setShowMostBookedModal(false)}
                   className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2.5 rounded-lg text-xs transition-all"
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   type="submit"
                   disabled={mostBookedPackages.length === 0}
                   className="flex-1 bg-[#0D47A1] hover:bg-blue-800 text-white font-semibold py-2.5 rounded-lg text-xs transition-all shadow-sm disabled:opacity-50"
@@ -3870,7 +3719,8 @@ const CustomerAppCustomization = () => {
               <button onClick={() => setShowApplianceModal(false)} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
             </div>
             
-            <form onSubmit={handleSaveAppliance} className="space-y-4 overflow-y-auto pr-1 flex-1 max-h-[75vh] no-scrollbar">
+            <form onSubmit={handleSaveAppliance} className="flex flex-col flex-1 min-h-0 gap-4">
+              <div className="space-y-4 overflow-y-auto pr-1 flex-1 min-h-0 max-h-[75vh] no-scrollbar">
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-150 space-y-3">
                 <span className="text-[10px] font-bold text-[#0D47A1] uppercase tracking-wider block font-sans">Card Details</span>
                 
@@ -4088,16 +3938,17 @@ const CustomerAppCustomization = () => {
                   </div>
                 )}
               </div>
+              </div>
 
-              <div className="flex gap-3 pt-2 bg-white sticky bottom-0 z-10">
-                <button 
+              <div className="flex gap-3 pt-3 border-t border-slate-100 flex-shrink-0">
+                <button
                   type="button"
                   onClick={() => setShowApplianceModal(false)}
                   className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2.5 rounded-lg text-xs transition-all"
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   type="submit"
                   disabled={appliancePackages.length === 0}
                   className="flex-1 bg-[#0D47A1] hover:bg-blue-800 text-white font-semibold py-2.5 rounded-lg text-xs transition-all shadow-sm disabled:opacity-50"
@@ -4118,7 +3969,8 @@ const CustomerAppCustomization = () => {
               <button onClick={() => setShowStoryModal(false)} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
             </div>
             
-            <form onSubmit={handleSaveStory} className="space-y-4 overflow-y-auto pr-1 flex-1 max-h-[75vh] no-scrollbar">
+            <form onSubmit={handleSaveStory} className="flex flex-col flex-1 min-h-0 gap-4">
+              <div className="space-y-4 overflow-y-auto pr-1 flex-1 min-h-0 max-h-[75vh] no-scrollbar">
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-150 space-y-3">
                 <span className="text-[10px] font-bold text-[#0D47A1] uppercase tracking-wider block font-sans">1. Story Cover Customization</span>
                 
@@ -4233,16 +4085,17 @@ const CustomerAppCustomization = () => {
                   </div>
                 )}
               </div>
+              </div>
 
-              <div className="flex gap-3 pt-2 bg-white sticky bottom-0 z-10">
-                <button 
+              <div className="flex gap-3 pt-3 border-t border-slate-100 flex-shrink-0">
+                <button
                   type="button"
                   onClick={() => setShowStoryModal(false)}
                   className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2.5 rounded-lg text-xs transition-all"
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   type="submit"
                   disabled={storySlides.length === 0}
                   className="flex-1 bg-[#0D47A1] hover:bg-blue-800 text-white font-semibold py-2.5 rounded-lg text-xs transition-all shadow-sm disabled:opacity-50"

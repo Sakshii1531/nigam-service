@@ -93,21 +93,41 @@ const BookingDetails = () => {
 
     const socket = io(SOCKET_URL, {
       auth: { token: accessToken },
-      transports: ['websocket'],
+      transports: ['websocket', 'polling'],
     });
 
-    const handleUpdate = () => loadBooking(true);
+    const handleUpdate = () => {
+      loadBooking(true);
+    };
+
+    socket.on('connect', () => {
+      socket.emit('join:booking', {
+        bookingId: booking?._id || booking?.id,
+        humanId: id,
+      });
+    });
+
+    socket.on('booking:completed', handleUpdate);
+    socket.on('booking:updated', handleUpdate);
+    socket.on('booking:accepted', handleUpdate);
     socket.on('booking:rescheduled', handleUpdate);
     socket.on('booking:cancelled', handleUpdate);
     socket.on('booking:reschedule_accepted', handleUpdate);
     socket.on('booking:reschedule_rejected', handleUpdate);
     socket.on('instant:status_update', handleUpdate);
     socket.on('service_request:updated', handleUpdate);
+    socket.on('job:completed', handleUpdate);
+    socket.on('job:updated', handleUpdate);
+    socket.on('tracking:update', handleUpdate);
 
     return () => {
+      socket.emit('leave:booking', {
+        bookingId: booking?._id || booking?.id,
+        humanId: id,
+      });
       socket.disconnect();
     };
-  }, [loadBooking]);
+  }, [loadBooking, booking?._id, booking?.id, id]);
 
   const handleCopy = (text, type = 'id') => {
     if (!text) return;
@@ -161,6 +181,27 @@ const BookingDetails = () => {
     }
   };
 
+  // The technician's part request never reaches the super-admin queue until
+  // this fires — see backend booking.service.js's respondToPartRequest.
+  const handleRespondPartRequest = async (approve) => {
+    if (!booking) return;
+    setActionLoading(true);
+    try {
+      await apiRequest(`/bookings/${booking.id || booking.humanId}/respond-part-request`, {
+        method: 'POST',
+        body: { approve },
+        auth: true,
+      });
+      setToastMessage(approve ? 'Part request approved.' : 'Part request declined.');
+      setTimeout(() => setToastMessage(''), 4000);
+      await loadBooking(true);
+    } catch (err) {
+      setError(err.message || 'Could not record your response.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F0F4FF] flex flex-col items-center justify-center p-4">
@@ -203,7 +244,7 @@ const BookingDetails = () => {
     ? (booking.timeSlot?.time || booking.timeSlot?.date || '10:00 AM – 01:00 PM')
     : (booking.timeSlot || '10:00 AM – 01:00 PM');
 
-  const otpCode = booking.completionOtp || booking.serviceRequest?.completionOtp || '3184';
+  const otpCode = booking.completionOtp || booking.serviceRequest?.completionOtp || '';
 
   const sr = booking.serviceRequest;
   const tl = sr?.timeline || [];
@@ -606,6 +647,48 @@ const BookingDetails = () => {
           </button>
         </div>
       </main>
+
+      {/* Spare Part Approval Popup — the customer must sign off on this cost
+          before it's ever sent to the super-admin queue. */}
+      {booking.partApproval?.status === 'Pending' && (
+        <div className="fixed inset-0 bg-black/50 z-[70] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl flex flex-col gap-4 text-left">
+            <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
+              <AlertCircle className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-base font-black text-slate-900">Spare Part Approval Needed</h3>
+              <p className="text-xs text-slate-600 font-semibold mt-1.5 leading-relaxed">
+                Your service partner has requested{' '}
+                <span className="font-black text-slate-900">
+                  {(booking.partApproval.partNames || []).join(', ') || 'a spare part'}
+                </span>{' '}
+                worth{' '}
+                <span className="font-black text-brand-blue">₹{booking.partApproval.amount ?? 0}</span>.
+                Did you approve this request? It won't be ordered until you do.
+              </p>
+            </div>
+            <div className="flex gap-3 mt-1">
+              <button
+                type="button"
+                disabled={actionLoading}
+                onClick={() => handleRespondPartRequest(false)}
+                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-2xl text-xs transition-all disabled:opacity-60 cursor-pointer"
+              >
+                Decline
+              </button>
+              <button
+                type="button"
+                disabled={actionLoading}
+                onClick={() => handleRespondPartRequest(true)}
+                className="flex-1 bg-brand-blue hover:bg-[#083679] text-white font-bold py-3 rounded-2xl text-xs transition-all shadow-sm disabled:opacity-60 cursor-pointer"
+              >
+                {actionLoading ? 'Submitting…' : 'Approve'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Cancel Booking Modal */}
       <CancelBookingModal

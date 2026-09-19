@@ -65,11 +65,16 @@ export async function getServiceRequest(id) {
  */
 export async function getServiceRequestDetail(id) {
   await findOr404(id);
-  return ServiceRequest.findById(id)
+  const doc = await ServiceRequest.findById(id)
     .populate('user', 'name email phone addresses')
     .populate('serviceProvider', 'name phone rating avatar photo specs')
     .populate('brand', 'name logo')
     .populate('booking');
+  const job = await Job.findOne({ serviceRequest: doc._id }).lean();
+  if (job) job.id = job._id;
+  const obj = doc.toJSON();
+  obj.job = job || null;
+  return obj;
 }
 
 /** Server-side transition validation — the frontend's own status enum is not
@@ -126,7 +131,20 @@ export async function listServiceRequests({ user, serviceProvider, brand, status
     ServiceRequest.countDocuments(query),
   ]);
 
-  return { items, meta: paginationMeta({ page: pg, limit: lim, total }) };
+  const srIds = items.map((item) => item._id);
+  const jobs = await Job.find({ serviceRequest: { $in: srIds } }).lean();
+  const jobMap = new Map(jobs.map((j) => {
+    j.id = j._id;
+    return [String(j.serviceRequest), j];
+  }));
+
+  const enrichedItems = items.map((item) => {
+    const obj = item.toJSON();
+    obj.job = jobMap.get(String(item._id)) || null;
+    return obj;
+  });
+
+  return { items: enrichedItems, meta: paginationMeta({ page: pg, limit: lim, total }) };
 }
 
 /**

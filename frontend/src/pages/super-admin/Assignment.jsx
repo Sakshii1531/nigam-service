@@ -29,6 +29,7 @@ const Assignment = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [mode, setMode] = useState('manual'); // 'auto' | 'manual'
   const [weights, setWeights] = useState({ proximity: 40, skill: 30, rating: 20, workload: 10 });
+  const [requestFilter, setRequestFilter] = useState('unassigned'); // 'unassigned' | 'active' | 'all'
 
   const [requests, setRequests] = useState([]);
   const [techs, setTechs] = useState([]);
@@ -51,8 +52,8 @@ const Assignment = () => {
     try {
       const res = await apiRequest('/service-requests?limit=200&sort=-createdAt', { auth: true });
       const items = Array.isArray(res) ? res : [];
-      const unassigned = items
-        .filter(item => !item.serviceProvider && !['Closed', 'Cancelled'].includes(item.status))
+      const allActive = items
+        .filter(item => !['Closed', 'Cancelled'].includes(item.status))
         .map(item => ({
           id: item.id,
           ref: item.humanId || item.id,
@@ -64,9 +65,11 @@ const Assignment = () => {
             ? new Date(item.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
             : '—',
           status: item.status,
-          serviceProvider: 'Unassigned',
+          serviceProvider: item.serviceProvider?.name || 'Unassigned',
+          serviceProviderId: item.serviceProvider?.id || item.serviceProvider?._id || null,
+          isAssigned: Boolean(item.serviceProvider),
         }));
-      setRequests(unassigned);
+      setRequests(allActive);
       setLoadError('');
     } catch (err) {
       setLoadError(err.message || 'Could not load service requests.');
@@ -90,30 +93,44 @@ const Assignment = () => {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  // The shortlist is scored server-side by the same engine auto-assign uses, so
-  // the console can't drift from what the platform would actually pick.
+  // If a request is selected, score service providers for that request.
+  // Otherwise, load all active service providers so the operator sees the available team.
   useEffect(() => {
-    if (!selectedRequest) { setTechs([]); return; }
     let cancelled = false;
     (async () => {
       try {
-        const res = await apiRequest(`/service-requests/${selectedRequest.id}/service-provider-suggestions`, { auth: true });
-        if (cancelled) return;
-        const items = Array.isArray(res) ? res : [];
-        setTechs(items.map(t => ({
-          id: t.id,
-          name: t.name,
-          skill: t.specs?.length ? t.specs.join(', ') : 'All Appliances',
-          rating: t.rating || 0,
-          activeJobs: t.activeJobsCount || 0,
-          city: t.city || '—',
-          score: t.score,
-          availability: t.availability || 'Offline',
-        })));
+        if (selectedRequest) {
+          const res = await apiRequest(`/service-requests/${selectedRequest.id}/service-provider-suggestions`, { auth: true });
+          if (cancelled) return;
+          const items = Array.isArray(res) ? res : [];
+          setTechs(items.map(t => ({
+            id: t.id,
+            name: t.name,
+            skill: t.specs?.length ? t.specs.join(', ') : 'All Appliances',
+            rating: t.rating || 0,
+            activeJobs: t.activeJobsCount || 0,
+            city: t.city || '—',
+            score: t.score,
+            availability: t.availability || 'Offline',
+          })));
+        } else {
+          const res = await apiRequest('/super-admin/service-providers?status=Active', { auth: true });
+          if (cancelled) return;
+          const items = Array.isArray(res) ? res : (res?.items || []);
+          setTechs(items.map(t => ({
+            id: t.id || t._id,
+            name: t.name,
+            skill: t.specs?.length ? t.specs.join(', ') : 'All Appliances',
+            rating: t.rating || 5.0,
+            activeJobs: t.activeJobsCount || 0,
+            city: t.serviceCityName || t.city?.name || '—',
+            availability: t.availability || (t.status === 'Active' ? 'Available' : 'Offline'),
+          })));
+        }
       } catch (err) {
         if (!cancelled) {
           setTechs([]);
-          setLoadError(err.message || 'Could not load serviceProvider suggestions.');
+          setLoadError(err.message || 'Could not load service providers.');
         }
       }
     })();
@@ -208,11 +225,21 @@ const Assignment = () => {
     }
   };
 
-  const filteredRequests = requests.filter(
+  const unassignedCount = requests.filter(r => !r.isAssigned).length;
+  const activeAssignedCount = requests.filter(r => r.isAssigned).length;
+
+  const tabFilteredRequests = requests.filter(r => {
+    if (requestFilter === 'unassigned') return !r.isAssigned;
+    if (requestFilter === 'active') return r.isAssigned;
+    return true;
+  });
+
+  const filteredRequests = tabFilteredRequests.filter(
     (r) =>
       r.customer.toLowerCase().includes(searchQuery.toLowerCase()) ||
       r.ref.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.product.toLowerCase().includes(searchQuery.toLowerCase())
+      r.product.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      r.serviceProvider.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -316,11 +343,15 @@ const Assignment = () => {
                       </div>
                       <div className="flex justify-between text-xs font-semibold text-slate-700">
                         <span>Unassigned Requests:</span>
-                        <span className="font-bold text-[#0D47A1]">{requests.length}</span>
+                        <span className="font-bold text-[#0D47A1]">{unassignedCount}</span>
+                      </div>
+                      <div className="flex justify-between text-xs font-semibold text-slate-700">
+                        <span>Active / In Progress:</span>
+                        <span className="font-bold text-blue-600">{activeAssignedCount}</span>
                       </div>
                       <div className="flex justify-between text-xs font-semibold text-slate-700">
                         <span>Available ServiceProviders:</span>
-                        <span className="font-bold text-green-600">{techs.length} Online</span>
+                        <span className="font-bold text-green-600">{techs.filter(t => t.availability === 'Available').length} Online</span>
                       </div>
                     </div>
                   </div>
@@ -329,7 +360,7 @@ const Assignment = () => {
                     onClick={runAutoAssignment}
                     className="w-full mt-4 py-3 bg-[#0D47A1] text-white text-sm font-bold rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
                   >
-                    <Zap size={16} /> Assign All Automatically ({requests.length})
+                    <Zap size={16} /> Assign All Automatically ({unassignedCount})
                   </button>
                 </div>
               </div>
@@ -345,11 +376,41 @@ const Assignment = () => {
 
           {/* ---- Manual assignment (override path) ---- */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Left Column: Unassigned Requests */}
+            {/* Left Column: Requests List with Tabs */}
             <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] flex flex-col h-[calc(100vh-12rem)] shadow-sm">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-bold text-[#1E293B]">Unassigned Requests</h3>
-                <span className="bg-yellow-50 text-yellow-600 px-2.5 py-1 rounded-full text-xs font-medium">{filteredRequests.length} Pending</span>
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="font-bold text-[#1E293B]">Requests & Jobs</h3>
+                <span className="bg-yellow-50 text-yellow-600 px-2.5 py-1 rounded-full text-xs font-medium">
+                  {unassignedCount} Pending
+                </span>
+              </div>
+
+              {/* Tabs */}
+              <div className="flex bg-[#F1F5F9] p-1 rounded-xl mb-3 gap-1">
+                <button
+                  onClick={() => setRequestFilter('unassigned')}
+                  className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                    requestFilter === 'unassigned' ? 'bg-white text-[#0D47A1] shadow-xs' : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  Pending ({unassignedCount})
+                </button>
+                <button
+                  onClick={() => setRequestFilter('active')}
+                  className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                    requestFilter === 'active' ? 'bg-white text-[#0D47A1] shadow-xs' : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  Active / In Progress ({activeAssignedCount})
+                </button>
+                <button
+                  onClick={() => setRequestFilter('all')}
+                  className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                    requestFilter === 'all' ? 'bg-white text-[#0D47A1] shadow-xs' : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  All ({requests.length})
+                </button>
               </div>
 
               <div className="relative mb-4">
@@ -359,7 +420,7 @@ const Assignment = () => {
                 <input
                   type="text"
                   className="w-full pl-10 pr-4 py-2 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] focus:border-[#0D47A1] outline-none transition-all text-sm bg-[#F8FAFC] text-slate-800"
-                  placeholder="Search Request or Customer..."
+                  placeholder="Search Request, Customer, or Tech..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -376,8 +437,19 @@ const Assignment = () => {
                   >
                     <div className="flex justify-between items-start">
                       <div>
-                        <p className="font-bold text-[#1E293B]">{req.ref}</p>
-                        <p className="text-sm text-[#64748B]">{req.customer}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-bold text-[#1E293B]">{req.ref}</p>
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                            !req.isAssigned
+                              ? 'bg-yellow-100 text-yellow-700'
+                              : req.status === 'Completed'
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-blue-100 text-blue-700'
+                          }`}>
+                            {req.status}
+                          </span>
+                        </div>
+                        <p className="text-sm text-[#64748B] mt-0.5">{req.customer}</p>
                       </div>
                       <span className="text-xs text-[#64748B] flex items-center gap-1"><Clock size={12} /> {req.date}</span>
                     </div>
@@ -385,13 +457,19 @@ const Assignment = () => {
                       <span>{req.product} ({req.brand})</span>
                       <span className="flex items-center gap-0.5"><MapPin size={12} /> {req.city}</span>
                     </div>
+                    {req.isAssigned && (
+                      <div className="mt-2 pt-2 border-t border-slate-200/60 flex items-center justify-between text-xs">
+                        <span className="text-slate-500">Tech: <strong className="text-slate-800">{req.serviceProvider}</strong></span>
+                        <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">Assigned</span>
+                      </div>
+                    )}
                   </div>
                 ))}
 
                 {filteredRequests.length === 0 && (
                   <div className="text-center py-12 text-[#64748B]">
                     <ClipboardList size={48} className="mx-auto mb-2 opacity-50" />
-                    <p className="text-sm font-medium">No unassigned requests.</p>
+                    <p className="text-sm font-medium">No requests in this view.</p>
                   </div>
                 )}
               </div>
@@ -400,8 +478,15 @@ const Assignment = () => {
             {/* Right Column: Available ServiceProviders */}
             <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] flex flex-col h-[calc(100vh-12rem)] shadow-sm">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="font-bold text-[#1E293B]">Available ServiceProviders</h3>
-                <span className="bg-green-50 text-green-600 px-2.5 py-1 rounded-full text-xs font-medium">{techs.length} Online</span>
+                <div>
+                  <h3 className="font-bold text-[#1E293B]">Available ServiceProviders</h3>
+                  <p className="text-[11px] text-[#64748B]">
+                    {selectedRequest ? `Matching suggestions for ${selectedRequest.ref}` : 'All Active Technicians'}
+                  </p>
+                </div>
+                <span className="bg-green-50 text-green-600 px-2.5 py-1 rounded-full text-xs font-medium">
+                  {techs.filter(t => t.availability === 'Available').length} Online
+                </span>
               </div>
 
               <div className="space-y-3 flex-1 overflow-y-auto pr-1">

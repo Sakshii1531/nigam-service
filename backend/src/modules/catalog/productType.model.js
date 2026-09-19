@@ -8,6 +8,11 @@ const productTypeSchema = new mongoose.Schema(
     name: { type: String, required: true },
     icon: String,
     desc: String,
+    // Flat surcharge added on top of whichever service's base price the
+    // customer books, for this specific appliance type — e.g. Split AC costs
+    // more to install than Window AC because of the outdoor unit, regardless
+    // of which category service (install/repair/gas refill/...) is booked.
+    priceAddon: { type: Number, default: 0, min: 0 },
   },
   { timestamps: true },
 );

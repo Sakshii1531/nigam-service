@@ -258,6 +258,12 @@ const Sidebar = () => {
     },
     {
       type: 'link',
+      label: 'Service Catalog',
+      path: '/super-admin/service-catalog',
+      icon: <LayoutGrid size={18} />
+    },
+    {
+      type: 'link',
       label: 'Orders & Returns',
       path: '/super-admin/orders',
       icon: <Truck size={18} />
@@ -441,12 +447,6 @@ const Sidebar = () => {
       label: 'Warranty Verification',
       path: '/super-admin/warranty-verification',
       icon: <CheckCircle size={18} />
-    },
-    {
-      type: 'link',
-      label: 'Spare Parts Control',
-      path: '/super-admin/spare-parts',
-      icon: <Wrench size={18} />
     },
     {
       type: 'link',
