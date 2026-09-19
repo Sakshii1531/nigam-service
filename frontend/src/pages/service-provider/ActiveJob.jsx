@@ -599,7 +599,8 @@ const ActiveJob = () => {
   const [travelPayout, setTravelPayout] = useState(null);
   const [revisitPaymentMethod, setRevisitPaymentMethod] = useState("razorpay");
 
-  const [revisitOtp, setRevisitOtp] = useState(["8", "7", "4", "5"]);
+  const [revisitOtp, setRevisitOtp] = useState(["", "", "", ""]);
+  const [billingOtp, setBillingOtp] = useState(["", "", "", ""]);
   const [hasSignedRevisit, setHasSignedRevisit] = useState(false);
   const revisitCanvasRef = useRef(null);
   const [isDrawingRevisit, setIsDrawingRevisit] = useState(false);
@@ -5783,30 +5784,10 @@ const ActiveJob = () => {
                               Enter OTP
                             </h2>
                             <p className="text-xs text-slate-500 font-medium mt-0.5">
-                              Please enter the 4-digit OTP shared by customer
                               Please enter the 4-digit OTP shown in the
                               customer&apos;s app
                             </p>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const customerOtp =
-                                activeJob?.completionOtp ||
-                                activeJob?.booking?.completionOtp ||
-                                activeJob?.serviceRequest?.completionOtp ||
-                                activeJob?.serviceRequest?.booking
-                                  ?.completionOtp ||
-                                "";
-                              if (customerOtp) {
-                                setRevisitOtp(
-                                  customerOtp.split("").slice(0, 4),
-                                );
-                              }
-                            }}
-                            className="text-[11px] font-bold text-[#0D47A1] bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-xl transition-colors cursor-pointer border border-blue-200/50">
-                            Auto-fill
-                          </button>
                         </div>
 
                         {/* OTP 4 digit inputs */}
@@ -5883,25 +5864,6 @@ const ActiveJob = () => {
                         <button
                           onClick={async () => {
                             const enteredOtp = revisitOtp.join("");
-                            const customerOtp =
-                              activeJob?.completionOtp ||
-                              activeJob?.booking?.completionOtp ||
-                              activeJob?.serviceRequest?.completionOtp ||
-                              activeJob?.serviceRequest?.booking
-                                ?.completionOtp ||
-                              "";
-                            const otpStr = enteredOtp || customerOtp;
-                            const res = await collectPayment(
-                              revisitPaymentMethod === "razorpay"
-                                ? "Online"
-                                : "Cash",
-                              {
-                                otp: otpStr,
-                                signatureUrl: hasSignedRevisit
-                                  ? "signed"
-                                  : null,
-                              },
-                            );
                             if (enteredOtp.length < 4) {
                               alert(
                                 "Please enter the complete 4-digit OTP shown in the customer's app.",
@@ -6129,12 +6091,50 @@ const ActiveJob = () => {
                         Send WhatsApp
                       </button>
                     </div>
+                    {/* OTP Verification — required for all job completions */}
+                    <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 mt-2">
+                      <h3 className="text-sm font-bold text-[#052355] mb-1">Enter Completion OTP</h3>
+                      <p className="text-xs text-slate-500 mb-3">Enter the 4-digit OTP shown in the customer&apos;s app to complete the job</p>
+                      <div className="flex gap-3 justify-between max-w-[280px]">
+                        {billingOtp.map((digit, idx) => (
+                          <input
+                            key={idx}
+                            id={`billing-otp-${idx}`}
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            maxLength={1}
+                            value={digit}
+                            onChange={(e) => {
+                              const cleanVal = e.target.value.replace(/\D/g, "").slice(-1);
+                              const newOtp = [...billingOtp];
+                              newOtp[idx] = cleanVal;
+                              setBillingOtp(newOtp);
+                              if (cleanVal && idx < 3) {
+                                document.getElementById(`billing-otp-${idx + 1}`)?.focus();
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Backspace" && !billingOtp[idx] && idx > 0) {
+                                document.getElementById(`billing-otp-${idx - 1}`)?.focus();
+                              }
+                            }}
+                            className="w-14 h-14 border-2 border-slate-200 rounded-2xl text-center text-2xl font-black text-[#052355] bg-white focus:border-[#0D47A1] focus:ring-4 focus:ring-blue-100 outline-none transition-all"
+                          />
+                        ))}
+                      </div>
+                    </div>
 
                     <button
                       onClick={async () => {
+                        const enteredOtp = billingOtp.join("");
+                        if (enteredOtp.length < 4) {
+                          alert("Please enter the complete 4-digit OTP shown in the customer's app.");
+                          return;
+                        }
                         // The AMC/EW decrements below are only correct once the job
                         // actually closed server-side, so they wait on the result.
-                        const res = await collectPayment();
+                        const res = await collectPayment("Cash", { otp: enteredOtp });
                         if (!res?.ok) return;
                         // Decrement AMC visits remaining
                         if (
