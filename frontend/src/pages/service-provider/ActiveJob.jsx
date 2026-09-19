@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiRequest, resolveMediaUrl } from '../../lib/apiClient';
 import { convertToWebP } from '../../lib/imageUtils';
@@ -398,6 +398,37 @@ const ActiveJob = () => {
     ]);
   }, [activeJob?.id, jobContext]);
 
+  // Seeds the spareParts state from activeJob.spareParts, jobContext.requiredParts, and catalog candidates
+  useEffect(() => {
+    const existingParts = (activeJob?.spareParts && activeJob.spareParts.length > 0)
+      ? activeJob.spareParts
+      : (jobContext?.requiredParts || []);
+
+    const existingNames = new Set(existingParts.map((p) => (p.name || '').toLowerCase()));
+    const candidates = (jobContext?.spareParts || [])
+      .filter((p) => !existingNames.has((p.name || '').toLowerCase()))
+      .map((p) => ({
+        id: p.id,
+        name: p.name,
+        sku: p.code || p.sku,
+        price: p.price,
+        stock: p.stock ?? 1,
+        checked: false,
+      }));
+
+    setSpareParts([
+      ...existingParts.map((p, idx) => ({
+        id: p.id || p._id || `part-${idx}`,
+        name: p.name,
+        sku: p.sku || p.code,
+        price: Number(p.price) || 0,
+        stock: p.stock ?? 1,
+        checked: p.checked !== undefined ? Boolean(p.checked) : true,
+      })),
+      ...candidates,
+    ]);
+  }, [activeJob?.id, activeJob?.spareParts, jobContext]);
+
   // Synchronize activeStep with the real job step if opened on an active job
   useEffect(() => {
     if (activeJob) {
@@ -592,9 +623,24 @@ const ActiveJob = () => {
     activeJob.type === 'AMC Visit' || activeJob.type === 'AMC VISIT'
   );
 
-  const selectedSparePart = spareParts.find(p => p.checked) || { name: 'No part used', price: 0 };
-  const dynamicPartName = selectedSparePart.name;
-  const dynamicPartPrice = isWarrantyOrAMC ? 0 : selectedSparePart.price;
+  const requiredSpareParts = useMemo(() => {
+    const checked = spareParts.filter(p => p.checked);
+    if (checked.length > 0) return checked;
+    if (activeJob?.spareParts?.length > 0) {
+      return activeJob.spareParts.filter(p => p.checked !== false);
+    }
+    if (jobContext?.requiredParts?.length > 0) {
+      return jobContext.requiredParts.filter(p => p.checked !== false);
+    }
+    return [];
+  }, [spareParts, activeJob?.spareParts, jobContext?.requiredParts]);
+
+  const selectedSparePart = requiredSpareParts[0] || { name: 'No part used', price: 0 };
+  const dynamicPartName = requiredSpareParts.length > 0
+    ? requiredSpareParts.map(p => p.name).join(', ')
+    : 'No part used';
+  const totalSparePartsCost = requiredSpareParts.reduce((sum, p) => sum + (Number(p.price) || 0), 0);
+  const dynamicPartPrice = isWarrantyOrAMC ? 0 : totalSparePartsCost;
 
   // The server prices the visit; a covered job charges nothing for the base visit.
   const jobServiceCharge = activeJob?.billingEstimate?.serviceCharge ?? activeJob?.price ?? 0;
@@ -2818,21 +2864,38 @@ const ActiveJob = () => {
                 <div className="bg-white rounded-3xl p-4 border border-slate-200/60 shadow-sm flex flex-col gap-3.5 mt-2">
                   <div className="flex items-center gap-2 text-amber-600 bg-amber-50/50 border border-amber-100/50 px-3 py-1.5 rounded-xl w-fit">
                     <AlertTriangle className="h-4 w-4 fill-amber-50" />
-                    <span className="text-[10px] font-semibold uppercase tracking-wider">Required Part</span>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider">
+                      {requiredSpareParts.length > 1 ? `Required Parts (${requiredSpareParts.length})` : 'Required Part'}
+                    </span>
                   </div>
 
-                  <div className="flex gap-4 items-center bg-slate-50 border border-slate-100 rounded-2xl p-3">
-                    <div className="w-16 h-16 bg-white border border-slate-200 rounded-xl flex items-center justify-center p-1 flex-shrink-0">
-                      <img 
-                        src={getProductImage(activeJob)} 
-                        alt={dynamicPartName} 
-                        className="w-full h-full object-contain"
-                      />
-                    </div>
-                    <div className="text-left flex-1">
-                      <h5 className="text-sm font-semibold text-[#052355]">{dynamicPartName}</h5>
-                      <p className="text-xs text-slate-500 font-normal mt-1">Qty: 1</p>
-                    </div>
+                  <div className="flex flex-col gap-2.5">
+                    {requiredSpareParts.length > 0 ? (
+                      requiredSpareParts.map((part, pIdx) => (
+                        <div key={part.id || pIdx} className="flex gap-4 items-center bg-slate-50 border border-slate-100 rounded-2xl p-3">
+                          <div className="w-14 h-14 bg-white border border-slate-200 rounded-xl flex items-center justify-center p-1 flex-shrink-0">
+                            <img 
+                              src={getProductImage(activeJob)} 
+                              alt={part.name} 
+                              className="w-full h-full object-contain"
+                            />
+                          </div>
+                          <div className="text-left flex-1">
+                            <h5 className="text-sm font-semibold text-[#052355]">{part.name}</h5>
+                            <div className="flex justify-between items-center mt-1">
+                              <p className="text-xs text-slate-500 font-normal">Qty: {part.qty || 1}</p>
+                              <span className="text-xs font-bold text-[#052355]">
+                                ₹{isWarrantyOrAMC ? '0 (Covered)' : (Number(part.price) || 0).toLocaleString('en-IN')}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="flex gap-4 items-center bg-slate-50 border border-slate-100 rounded-2xl p-3 text-sm text-slate-500">
+                        No parts selected
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -3007,20 +3070,36 @@ const ActiveJob = () => {
                       </p>
                     </div>
 
-                    {/* Sub-card 1: Compressor & Cost */}
-                    <div className="border border-slate-200/60 rounded-2xl bg-white overflow-hidden shadow-sm">
-                      <div className="p-4 flex items-center gap-4">
-                        <div className="w-14 h-14 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center p-1 flex-shrink-0">
-                          <img src={getProductImage(activeJob)} alt={dynamicPartName} className="w-full h-full object-contain" />
-                        </div>
-                        <div className="flex flex-col text-left">
-                          <span className="text-xs font-semibold text-[#0D47A1]">Required Part</span>
-                          <span className="text-base font-bold text-[#052355] mt-1">{dynamicPartName}</span>
-                        </div>
+                    {/* Sub-card 1: Required Parts & Cost */}
+                    <div className="border border-slate-200/60 rounded-2xl bg-white overflow-hidden shadow-sm flex flex-col">
+                      <div className="p-4 flex flex-col gap-3">
+                        <span className="text-xs font-semibold text-[#0D47A1]">
+                          {requiredSpareParts.length > 1 ? `Required Parts (${requiredSpareParts.length})` : 'Required Part'}
+                        </span>
+                        {requiredSpareParts.length > 0 ? (
+                          <div className="flex flex-col gap-2.5 divide-y divide-slate-100">
+                            {requiredSpareParts.map((part, pIdx) => (
+                              <div key={part.id || pIdx} className={`flex items-center gap-3.5 ${pIdx > 0 ? 'pt-2.5' : ''}`}>
+                                <div className="w-12 h-12 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center p-1 flex-shrink-0">
+                                  <img src={getProductImage(activeJob)} alt={part.name} className="w-full h-full object-contain" />
+                                </div>
+                                <div className="flex-1 flex flex-col text-left">
+                                  <span className="text-sm font-bold text-[#052355]">{part.name}</span>
+                                  {part.sku && <span className="text-[10px] text-slate-400 font-mono">SKU: {part.sku}</span>}
+                                </div>
+                                <span className="text-xs font-bold text-[#052355]">
+                                  ₹{isWarrantyOrAMC ? '0 (Covered)' : (Number(part.price) || 0).toLocaleString('en-IN')}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-sm text-slate-500">No part used</div>
+                        )}
                       </div>
-                      <div className="border-t border-slate-100 px-4 py-3.5 flex justify-between items-center">
-                        <span className="text-xs font-normal text-slate-600">Estimated Cost</span>
-                        <span className="text-xl font-extrabold text-[#052355]">
+                      <div className="border-t border-slate-100 px-4 py-3.5 flex justify-between items-center bg-slate-50/50">
+                        <span className="text-xs font-semibold text-slate-600">Total Estimated Cost</span>
+                        <span className="text-lg font-extrabold text-[#052355]">
                           ₹{dynamicPartPrice === 0 ? '0 (Covered)' : dynamicPartPrice.toLocaleString('en-IN')}
                         </span>
                       </div>
@@ -3197,9 +3276,21 @@ const ActiveJob = () => {
 
                   {/* Details List */}
                   <div className="space-y-4">
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-slate-500 font-normal">Required Part</span>
-                      <span className="text-[#052355] font-semibold">{dynamicPartName}</span>
+                    <div className="flex justify-between items-start text-xs">
+                      <span className="text-slate-500 font-normal">
+                        {requiredSpareParts.length > 1 ? `Required Parts (${requiredSpareParts.length})` : 'Required Part'}
+                      </span>
+                      <div className="flex flex-col items-end max-w-[220px]">
+                        {requiredSpareParts.length > 0 ? (
+                          requiredSpareParts.map((p, idx) => (
+                            <span key={p.id || idx} className="text-[#052355] font-semibold text-right">
+                              {p.name}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-[#052355] font-semibold">No part used</span>
+                        )}
+                      </div>
                     </div>
                     <div className="flex justify-between items-center text-xs">
                       <span className="text-slate-500 font-normal">Estimated Cost</span>
@@ -3515,14 +3606,42 @@ const ActiveJob = () => {
                     </div>
 
                     {/* Part Details */}
-                    <div className="p-4 flex flex-col gap-1 text-left">
-                      <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Required Part</span>
-                      <div className="flex justify-between items-center mt-0.5">
-                        <span className="text-sm font-bold text-[#052355]">{dynamicPartName}</span>
-                        <span className="text-sm font-bold text-[#052355]">
-                          ₹{dynamicPartPrice === 0 ? '0 (Covered)' : dynamicPartPrice.toLocaleString('en-IN')}
+                    <div className="p-4 flex flex-col gap-2.5 text-left">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                          {requiredSpareParts.length > 1 ? `Required Parts (${requiredSpareParts.length})` : 'Required Part'}
                         </span>
+                        {requiredSpareParts.length > 1 && (
+                          <span className="text-xs font-bold text-[#0D47A1]">
+                            Total: ₹{dynamicPartPrice === 0 ? '0 (Covered)' : dynamicPartPrice.toLocaleString('en-IN')}
+                          </span>
+                        )}
                       </div>
+                      {requiredSpareParts.length > 0 ? (
+                        <div className="flex flex-col gap-2 divide-y divide-slate-100">
+                          {requiredSpareParts.map((part, pIdx) => {
+                            const partPrice = isWarrantyOrAMC ? 0 : (Number(part.price) || 0);
+                            return (
+                              <div key={part.id || pIdx} className={`flex justify-between items-start ${pIdx > 0 ? 'pt-2' : ''}`}>
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-bold text-[#052355]">{part.name}</span>
+                                  {part.sku && (
+                                    <span className="text-[10px] text-slate-400 font-mono">SKU: {part.sku}</span>
+                                  )}
+                                </div>
+                                <span className="text-sm font-bold text-[#052355] whitespace-nowrap ml-3">
+                                  ₹{partPrice === 0 ? '0 (Covered)' : partPrice.toLocaleString('en-IN')}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="flex justify-between items-center mt-0.5">
+                          <span className="text-sm font-bold text-[#052355]">No part used</span>
+                          <span className="text-sm font-bold text-[#052355]">₹0</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -3923,12 +4042,24 @@ const ActiveJob = () => {
                           ₹{revisitAdditionalServicesPrice.toLocaleString('en-IN')}
                         </span>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-slate-600">Spare Part ({dynamicPartName})</span>
-                        <span className="text-[#052355] font-semibold text-sm">
-                          ₹{revisitSparePartPrice === 0 ? '0 (Covered)' : revisitSparePartPrice.toLocaleString('en-IN')}
-                        </span>
-                      </div>
+                      {requiredSpareParts.length > 0 ? (
+                        requiredSpareParts.map((part, pIdx) => {
+                          const pPrice = isWarrantyOrAMC ? 0 : (Number(part.price) || 0);
+                          return (
+                            <div key={part.id || pIdx} className="flex justify-between items-center">
+                              <span className="text-slate-600">Spare Part: {part.name}</span>
+                              <span className="text-[#052355] font-semibold text-sm">
+                                ₹{pPrice === 0 ? '0 (Covered)' : pPrice.toLocaleString('en-IN')}
+                              </span>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-600">Spare Part (No part used)</span>
+                          <span className="text-[#052355] font-semibold text-sm">₹0</span>
+                        </div>
+                      )}
                       <div className="flex justify-between items-center">
                         <span className="text-slate-600">Tax (18% GST)</span>
                         <span className="text-[#052355] font-semibold text-sm">

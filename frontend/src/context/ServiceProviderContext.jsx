@@ -248,6 +248,7 @@ export const ServiceProviderProvider = ({ children }) => {
           additionalServices: job.additionalServices || [],
           billingEstimate: job.billingEstimate || null,
           proofs: job.proofs || null,
+          revisit: job.revisit || null,
         };
       });
 

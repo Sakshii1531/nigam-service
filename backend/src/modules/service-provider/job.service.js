@@ -78,6 +78,18 @@ async function findOwnedJob(serviceProviderId, jobId) {
   if (job.serviceRequest?.booking?.completionOtp && !job.serviceRequest.completionOtp) {
     job.serviceRequest.completionOtp = job.serviceRequest.booking.completionOtp;
   }
+  if (!job.spareParts || job.spareParts.length === 0) {
+    const poList = await PartOrder.find({ job: job._id });
+    if (poList.length > 0) {
+      job.spareParts = poList.map((po) => ({
+        name: po.partName,
+        sku: po.sku,
+        price: po.price || 0,
+        checked: true,
+        source: 'manual',
+      }));
+    }
+  }
   return job;
 }
 
@@ -295,13 +307,27 @@ export async function listActiveJobs(serviceProviderId) {
     .populate({ path: 'serviceRequest', populate: { path: 'user booking appliance' } })
     .sort({ createdAt: -1 });
 
-  jobs.forEach((j) => {
-    if (j.serviceRequest) {
-      if (j.serviceRequest.booking?.completionOtp && !j.serviceRequest.completionOtp) {
-        j.serviceRequest.completionOtp = j.serviceRequest.booking.completionOtp;
+  await Promise.all(
+    jobs.map(async (j) => {
+      if (j.serviceRequest) {
+        if (j.serviceRequest.booking?.completionOtp && !j.serviceRequest.completionOtp) {
+          j.serviceRequest.completionOtp = j.serviceRequest.booking.completionOtp;
+        }
       }
-    }
-  });
+      if (!j.spareParts || j.spareParts.length === 0) {
+        const poList = await PartOrder.find({ job: j._id });
+        if (poList.length > 0) {
+          j.spareParts = poList.map((po) => ({
+            name: po.partName,
+            sku: po.sku,
+            price: po.price || 0,
+            checked: true,
+            source: 'manual',
+          }));
+        }
+      }
+    }),
+  );
 
   return jobs;
 }
@@ -477,6 +503,24 @@ export async function getJobDetailContext(serviceProviderId, jobId) {
     servicesPerformed: (j.additionalServices || []).filter((s) => s.checked).map((s) => s.name),
   }));
 
+  const partOrders = await PartOrder.find({ job: job._id }).sort({ createdAt: 1 });
+  const requiredParts = (job.spareParts && job.spareParts.length > 0)
+    ? job.spareParts.map((p) => ({
+        id: p.id || p._id,
+        name: p.name,
+        sku: p.sku || null,
+        price: p.price,
+        checked: p.checked !== false,
+      }))
+    : partOrders.map((po) => ({
+        id: po.id || po._id,
+        name: po.partName,
+        sku: po.sku || null,
+        price: po.price,
+        qty: po.qty || 1,
+        checked: true,
+      }));
+
   return {
     appliance: appliance
       ? {
@@ -493,6 +537,18 @@ export async function getJobDetailContext(serviceProviderId, jobId) {
       : null,
     addonServices,
     spareParts,
+    requiredParts,
+    partOrders: partOrders.map((po) => ({
+      id: po.id || po._id,
+      name: po.partName,
+      sku: po.sku || null,
+      price: po.price,
+      qty: po.qty || 1,
+      status: po.status,
+      customerApprovalStatus: po.customerApprovalStatus,
+      orderSource: po.orderSource,
+      fulfillmentType: po.fulfillmentType,
+    })),
     history,
   };
 }
