@@ -1,5 +1,6 @@
 import { randomUUID, createHmac } from 'node:crypto';
 import Razorpay from 'razorpay';
+import { env, isProd } from '../../config/env.js';
 import { env, isProd, isTest } from '../../config/env.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 
@@ -12,6 +13,7 @@ import { ApiError } from '../../middleware/errorHandler.js';
 // function — order.service.js and job.service.js each split their payment
 // step into initiate (createRazorpayOrder) + confirm (verifyRazorpaySignature)
 // instead of the old single synchronous chargePayment() call.
+export const isRazorpayConfigured = Boolean(env.razorpay.keyId && env.razorpay.keySecret);
 export const isRazorpayConfigured = !isTest && Boolean(env.razorpay.keyId && env.razorpay.keySecret);
 
 let client = null;

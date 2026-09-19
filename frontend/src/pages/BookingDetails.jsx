@@ -638,6 +638,16 @@ const BookingDetails = () => {
             </>
           )}
 
+          {isCompleted && (
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              className="flex-1 py-3.5 px-5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-2xl border border-slate-200 transition-colors cursor-pointer text-center"
+            >
+              Go to Home
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => navigate('/services')}
