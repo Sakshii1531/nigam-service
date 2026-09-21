@@ -199,27 +199,27 @@ const MembershipPlans = () => {
         </div>
       )}
 
-      <div className="max-w-screen-2xl mx-auto w-full px-3.5 sm:px-6 lg:px-8 py-4 sm:py-8 flex flex-col gap-4 sm:gap-8 flex-1">
+      <div className="max-w-screen-2xl mx-auto w-full px-3 min-[360px]:px-4 sm:px-6 lg:px-8 py-3.5 sm:py-8 flex flex-col gap-3.5 sm:gap-8 flex-1">
         
         {/* Banner Section */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-slate-900 to-blue-900 rounded-2xl sm:rounded-[28px] p-4 sm:p-6 md:p-8 shadow-xl text-left border border-white/10">
+        <div className="relative overflow-hidden bg-gradient-to-r from-slate-900 to-blue-900 rounded-2xl sm:rounded-[28px] p-3.5 min-[360px]:p-5 sm:p-6 md:p-8 shadow-xl text-left border border-white/10">
           <div className="absolute top-0 right-0 w-[150px] h-[150px] bg-blue-500/10 rounded-full blur-2xl" />
           <div className="absolute bottom-0 left-0 w-[120px] h-[120px] bg-amber-500/10 rounded-full blur-2xl" />
           
-          <div className="flex items-center gap-2 text-amber-400 font-extrabold text-[10px] md:text-xs uppercase tracking-[3px]">
-            <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+          <div className="flex items-center gap-1.5 sm:gap-2 text-amber-400 font-extrabold text-[9px] sm:text-[10px] md:text-xs uppercase tracking-[2px] sm:tracking-[3px]">
+            <Sparkles className="h-3 w-3 sm:h-4 sm:w-4" />
             <span>Nigam Care Privilege</span>
           </div>
-          <h2 className="text-lg sm:text-xl md:text-3xl font-black text-white mt-1.5 sm:mt-2 leading-tight">
+          <h2 className="text-base min-[360px]:text-lg sm:text-xl md:text-3xl font-black text-white mt-1 sm:mt-2 leading-tight">
             Unlock Seamless Priority Home Care
           </h2>
-          <p className="text-[11px] sm:text-xs md:text-sm text-slate-300 font-medium mt-1.5 leading-relaxed max-w-3xl">
+          <p className="text-[10.5px] min-[360px]:text-xs md:text-sm text-slate-300 font-medium mt-1 sm:mt-1.5 leading-relaxed max-w-3xl">
             Subscribers receive flat discounts, zero visiting charges, faster response times, and premium warranty extensions.
           </p>
         </div>
 
         {/* Plan Cards Grid — 4 columns on desktop, responsive spacing on mobile */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 items-stretch">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 items-stretch">
           {plans.map((plan) => {
             const isCurrent = activePlanName === plan.name;
             const isSelected = selectedPlanId === plan.id;
@@ -228,37 +228,37 @@ const MembershipPlans = () => {
               <div
                 key={plan.id}
                 onClick={() => setSelectedPlanId(plan.id)}
-                className={`rounded-2xl sm:rounded-[24px] border-2 transition-all duration-300 relative overflow-hidden shadow-md bg-gradient-to-b ${plan.bgGradient} ${plan.borderColor} ${plan.glowColor} flex flex-col justify-between ${
-                  isSelected ? 'scale-[1.01] sm:scale-[1.02] shadow-xl ring-2 ring-slate-400' : 'hover:scale-[1.01] opacity-95'
+                className={`rounded-2xl sm:rounded-[24px] border-2 transition-all duration-300 relative overflow-hidden shadow-xs sm:shadow-md bg-gradient-to-b ${plan.bgGradient} ${plan.borderColor} ${plan.glowColor} flex flex-col justify-between ${
+                  isSelected ? 'scale-[1.008] sm:scale-[1.02] shadow-lg ring-2 ring-slate-400' : 'hover:scale-[1.01] opacity-95'
                 }`}
               >
                 {/* Popularity Badge */}
                 {plan.isPopular && (
                   <div
-                    className="absolute top-0 right-4 sm:right-6 text-[9px] font-black px-3 py-1 rounded-b-xl text-white tracking-widest uppercase shadow-sm z-10"
+                    className="absolute top-0 right-3 sm:right-6 text-[8.5px] sm:text-[9px] font-black px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-b-lg sm:rounded-b-xl text-white tracking-wider sm:tracking-widest uppercase shadow-xs z-10"
                     style={{ background: plan.accentColor }}
                   >
                     {plan.badgeText}
                   </div>
                 )}
 
-                <div className="p-4 sm:p-6 flex flex-col gap-4 sm:gap-5 h-full justify-between">
+                <div className="p-3.5 min-[360px]:p-4 sm:p-6 flex flex-col gap-3.5 sm:gap-5 h-full justify-between">
                   {/* Top Header */}
-                  <div className="flex flex-col gap-2.5 sm:gap-3">
+                  <div className="flex flex-col gap-2 sm:gap-3">
                     <div className="flex items-center justify-between">
                       <div
-                        className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center flex-shrink-0 shadow-md ${plan.iconBg}`}
+                        className={`w-9 h-9 min-[360px]:w-10 min-[360px]:h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center flex-shrink-0 shadow-xs sm:shadow-md ${plan.iconBg}`}
                       >
                         <PlanIcon id={plan.id} />
                       </div>
                       <div className="text-right">
                         <div className="flex items-baseline gap-0.5 justify-end">
-                          <span className="text-xl sm:text-2xl font-black text-slate-900">
+                          <span className="text-lg min-[360px]:text-xl sm:text-2xl font-black text-slate-900">
                             {planFor(plan) ? `₹${planFor(plan).price.toLocaleString('en-IN')}` : 'N/A'}
                           </span>
-                          <span className="text-[10px] text-slate-500 font-extrabold uppercase">/Yr</span>
+                          <span className="text-[9px] sm:text-[10px] text-slate-500 font-extrabold uppercase">/Yr</span>
                         </div>
-                        <p className="text-[9px] text-emerald-600 font-extrabold mt-0.5">All-inclusive pricing</p>
+                        <p className="text-[8.5px] sm:text-[9px] text-emerald-600 font-extrabold mt-0.5">All-inclusive pricing</p>
                       </div>
                     </div>
 
@@ -266,7 +266,7 @@ const MembershipPlans = () => {
                       <h3 className="text-xs sm:text-sm font-black tracking-wide" style={{ color: plan.textColor }}>
                         {plan.name}
                       </h3>
-                      <p className="text-[9px] text-slate-400 font-extrabold tracking-widest uppercase mt-0.5">
+                      <p className="text-[8.5px] sm:text-[9px] text-slate-400 font-extrabold tracking-widest uppercase mt-0.5">
                         Annual Protection
                       </p>
                     </div>
@@ -276,13 +276,13 @@ const MembershipPlans = () => {
                   <div className="h-px bg-slate-200/80 w-full my-0.5 sm:my-1" />
 
                   {/* Benefits List */}
-                  <div className="flex flex-col gap-2.5 sm:gap-3 text-left flex-1">
+                  <div className="flex flex-col gap-2 sm:gap-3 text-left flex-1">
                     {plan.benefits.map((benefit, i) => (
-                      <div key={i} className="flex items-start gap-2.5">
-                        <div className="w-4 h-4 sm:w-4.5 sm:h-4.5 rounded-full bg-white flex items-center justify-center flex-shrink-0 shadow-xs border border-slate-200 mt-0.5">
-                          <Check className="h-2.5 w-2.5 sm:h-3 sm:w-3 stroke-[3]" style={{ color: plan.accentColor }} />
+                      <div key={i} className="flex items-start gap-2 sm:gap-2.5">
+                        <div className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5 rounded-full bg-white flex items-center justify-center flex-shrink-0 shadow-2xs border border-slate-200 mt-0.5">
+                          <Check className="h-2 w-2 sm:h-3 sm:w-3 stroke-[3]" style={{ color: plan.accentColor }} />
                         </div>
-                        <span className="text-xs text-slate-700 font-bold leading-snug">{benefit}</span>
+                        <span className="text-[11px] sm:text-xs text-slate-700 font-semibold sm:font-bold leading-snug">{benefit}</span>
                       </div>
                     ))}
                   </div>
@@ -295,7 +295,7 @@ const MembershipPlans = () => {
                       handlePurchase(plan);
                     }}
                     disabled={isCurrent || isFetchingActive || purchasing || !planFor(plan)}
-                    className={`w-full py-3 sm:py-3.5 rounded-xl text-xs font-black transition-all duration-150 cursor-pointer shadow-md flex items-center justify-center gap-1.5 uppercase tracking-wider mt-3 sm:mt-4 ${
+                    className={`w-full py-2.5 sm:py-3.5 rounded-xl text-[11px] sm:text-xs font-black transition-all duration-150 cursor-pointer shadow-xs sm:shadow-md flex items-center justify-center gap-1.5 uppercase tracking-wider mt-2.5 sm:mt-4 ${
                       isCurrent
                         ? 'bg-emerald-500 text-white border-none cursor-default shadow-none'
                         : `${plan.btnBg}`
@@ -303,7 +303,7 @@ const MembershipPlans = () => {
                   >
                     {isCurrent ? (
                       <>
-                        <Check className="h-4 w-4 stroke-[3]" />
+                        <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4 stroke-[3]" />
                         <span>Active Membership</span>
                       </>
                     ) : (
@@ -317,21 +317,21 @@ const MembershipPlans = () => {
         </div>
 
         {/* Features Grid */}
-        <div className="bg-white rounded-2xl sm:rounded-[28px] border border-slate-200/80 shadow-xs p-4 sm:p-6 md:p-8 mt-2 sm:mt-4">
-          <h4 className="text-[10px] sm:text-xs font-black text-slate-400 uppercase tracking-widest text-center mb-4 sm:mb-6">
+        <div className="bg-white rounded-2xl sm:rounded-[28px] border border-slate-200/80 shadow-xs p-3.5 sm:p-6 md:p-8 mt-1 sm:mt-4">
+          <h4 className="text-[9.5px] sm:text-xs font-black text-slate-400 uppercase tracking-widest text-center mb-3 sm:mb-6">
             Membership Privileges & Assurances
           </h4>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 lg:gap-6">
             {[
               { icon: '💰', title: 'Zero Visit Charges', desc: 'Saves ₹200 on every repair trip' },
               { icon: '⚡', title: 'Priority Dispatch', desc: 'Tech arrives within 4 hours' },
               { icon: '🏷️', title: 'Exclusive Discounts', desc: 'Up to 20% off all appliance parts' },
               { icon: '🛠️', title: 'Extended Shield', desc: 'Long-term service warranty' },
             ].map((feature, i) => (
-              <div key={i} className="flex flex-col items-center text-center p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-slate-50 border border-slate-100">
-                <span className="text-2xl sm:text-3xl mb-1.5 sm:mb-2">{feature.icon}</span>
-                <span className="text-[11px] sm:text-xs font-black text-slate-800 leading-tight">{feature.title}</span>
-                <span className="text-[9px] sm:text-[10px] text-slate-500 font-bold mt-1 leading-tight">{feature.desc}</span>
+              <div key={i} className="flex flex-col items-center text-center p-2.5 sm:p-4 rounded-xl sm:rounded-2xl bg-slate-50 border border-slate-100">
+                <span className="text-xl sm:text-2xl md:text-3xl mb-1 sm:mb-2">{feature.icon}</span>
+                <span className="text-[10.5px] sm:text-xs font-black text-slate-800 leading-tight">{feature.title}</span>
+                <span className="text-[8.5px] min-[360px]:text-[9px] sm:text-[10px] text-slate-500 font-semibold sm:font-bold mt-0.5 sm:mt-1 leading-tight">{feature.desc}</span>
               </div>
             ))}
           </div>

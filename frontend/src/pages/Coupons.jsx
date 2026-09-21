@@ -78,36 +78,43 @@ const Coupons = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-10">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-12">
       {/* Header */}
-      <div className="bg-white px-5 py-4 flex items-center justify-center gap-3 sticky top-0 z-50 shadow-sm border-b border-slate-100 relative">
-        <button
-          onClick={() => navigate(-1)}
-          className="absolute left-4 p-1.5 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
-        >
-          <ArrowLeft className="h-5 w-5 text-slate-700" />
-        </button>
-        <h1 className="text-sm font-black text-slate-900 uppercase tracking-wide">My Coupons</h1>
+      <div className="bg-white/95 backdrop-blur-md px-3.5 py-2.5 flex items-center justify-between sticky top-0 z-50 shadow-2xs border-b border-slate-100">
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={() => navigate(-1)}
+            className="w-8 h-8 rounded-full bg-slate-100/90 active:scale-95 flex items-center justify-center text-slate-700 transition-all cursor-pointer"
+            aria-label="Go Back"
+          >
+            <ArrowLeft className="h-4 w-4 text-slate-700" />
+          </button>
+          <div>
+            <h1 className="text-xs sm:text-sm font-black text-slate-900 uppercase tracking-wide">My Coupons</h1>
+            <p className="text-[10px] text-slate-400 font-extrabold leading-tight">Offers & Discounts</p>
+          </div>
+        </div>
+        <div className="w-6 h-6" />
       </div>
 
-      <div className="px-5 py-6 flex flex-col gap-6 max-w-3xl mx-auto w-full">
+      <div className="px-3 min-[360px]:px-4 sm:px-6 py-3.5 sm:py-6 flex flex-col gap-4 sm:gap-6 max-w-3xl mx-auto w-full">
         {/* Coupons List */}
-        <div className="flex flex-col gap-4 text-left">
-          <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider px-1">Available Offers</h3>
+        <div className="flex flex-col gap-3 sm:gap-4 text-left">
+          <h3 className="text-[10px] sm:text-xs font-black text-slate-600 uppercase tracking-wider px-1">Available Offers</h3>
           
           {loading ? (
-            <div className="animate-pulse space-y-4">
+            <div className="animate-pulse space-y-3 sm:space-y-4">
               {[1, 2, 3].map((n) => (
-                <div key={n} className="bg-white border border-slate-200/60 rounded-[24px] p-5 h-36"></div>
+                <div key={n} className="bg-white border border-slate-200/60 rounded-2xl sm:rounded-[24px] p-4 sm:p-5 h-32 sm:h-36"></div>
               ))}
             </div>
           ) : coupons.length === 0 ? (
-            <div className="bg-white border border-slate-150 rounded-2xl p-8 flex flex-col items-center justify-center gap-3 text-center shadow-sm">
-              <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center text-slate-400">
-                <Ticket className="h-6 w-6" />
+            <div className="bg-white border border-slate-200/70 rounded-2xl sm:rounded-[24px] p-6 sm:p-8 flex flex-col items-center justify-center gap-2.5 text-center shadow-xs">
+              <div className="w-11 h-11 rounded-full bg-slate-50 flex items-center justify-center text-slate-400">
+                <Ticket className="h-5 w-5" />
               </div>
               <span className="text-xs font-black text-brand-navy">No Active Coupons Available</span>
-              <span className="text-[10px] text-slate-400 font-semibold max-w-[200px] leading-relaxed">
+              <span className="text-[10px] text-slate-400 font-semibold max-w-[220px] leading-relaxed">
                 There are no active discount coupons at this moment. Check back later!
               </span>
             </div>
@@ -115,25 +122,25 @@ const Coupons = () => {
             coupons.map((c) => (
               <div 
                 key={c.code}
-                className="bg-white border border-slate-200/70 rounded-[24px] p-5 shadow-xs flex flex-col gap-4 relative overflow-hidden transition-all hover:shadow-sm"
+                className="bg-white border border-slate-200/80 rounded-2xl sm:rounded-[24px] p-3.5 min-[360px]:p-4 sm:p-5 shadow-xs flex flex-col gap-3 sm:gap-4 relative overflow-hidden transition-all hover:shadow-sm"
               >
                 {/* Semi-circle Cutouts */}
-                <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-[#F8FAFC] rounded-full border-r border-slate-200 z-10"></div>
-                <div className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-[#F8FAFC] rounded-full border-l border-slate-200 z-10"></div>
+                <div className="absolute -left-2.5 sm:-left-3 top-1/2 -translate-y-1/2 w-5 sm:w-6 h-5 sm:h-6 bg-[#F8FAFC] rounded-full border-r border-slate-200 z-10"></div>
+                <div className="absolute -right-2.5 sm:-right-3 top-1/2 -translate-y-1/2 w-5 sm:w-6 h-5 sm:h-6 bg-[#F8FAFC] rounded-full border-l border-slate-200 z-10"></div>
 
                 {/* Top part: Discount and code */}
-                <div className="flex justify-between items-start">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-11 h-11 bg-gradient-to-tr ${c.color} rounded-2xl flex items-center justify-center text-white shadow-xs`}>
-                      <Percent className="h-5 w-5" />
+                <div className="flex justify-between items-center gap-2">
+                  <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                    <div className={`w-9 h-9 min-[360px]:w-10 min-[360px]:h-10 sm:w-11 sm:h-11 bg-gradient-to-tr ${c.color} rounded-xl sm:rounded-2xl flex items-center justify-center text-white shadow-xs flex-shrink-0`}>
+                      <Percent className="h-4 w-4 sm:h-5 sm:w-5" />
                     </div>
-                    <div>
-                      <span className="text-xs font-black text-slate-800">{c.code}</span>
-                      <p className="text-[10px] text-slate-400 font-semibold mt-0.5">{c.expiry}</p>
+                    <div className="min-w-0">
+                      <span className="text-xs sm:text-sm font-black text-slate-900 font-mono tracking-wide block truncate">{c.code}</span>
+                      <p className="text-[9px] sm:text-[10px] text-slate-400 font-semibold mt-0.5 truncate">{c.expiry}</p>
                     </div>
                   </div>
                   
-                  <span className={`text-[10px] font-black px-2.5 py-1 rounded-full border ${c.textColor}`}>
+                  <span className={`text-[9.5px] min-[360px]:text-[10.5px] sm:text-xs font-black px-2 min-[360px]:px-2.5 py-0.5 sm:py-1 rounded-full border flex-shrink-0 ${c.textColor}`}>
                     {c.discount}
                   </span>
                 </div>
@@ -142,16 +149,16 @@ const Coupons = () => {
                 <div className="border-t border-dashed border-slate-200/80 mx-1"></div>
 
                 {/* Description & Action */}
-                <div className="flex justify-between items-center gap-4">
-                  <p className="text-[11px] text-slate-600 font-semibold leading-relaxed flex-1">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4">
+                  <p className="text-[10.5px] min-[360px]:text-[11px] text-slate-600 font-medium sm:font-semibold leading-relaxed flex-1">
                     {c.desc}
                   </p>
                   <button
                     onClick={() => handleCopy(c.code)}
-                    className={`px-3 py-2 rounded-xl text-[10px] font-black transition-all cursor-pointer flex items-center gap-1.5 flex-shrink-0 ${
+                    className={`w-full sm:w-auto px-3.5 py-2 rounded-xl text-[10px] sm:text-[10.5px] font-black transition-all cursor-pointer flex items-center justify-center gap-1.5 flex-shrink-0 active:scale-95 ${
                       copiedCode === c.code 
-                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
-                        : 'bg-slate-50 hover:bg-blue-50 text-brand-blue border border-slate-200/50'
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-xs' 
+                        : 'bg-slate-50 hover:bg-blue-50 text-brand-blue border border-slate-200/60'
                     }`}
                   >
                     {copiedCode === c.code ? (

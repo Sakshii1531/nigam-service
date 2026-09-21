@@ -712,6 +712,21 @@ const Dashboard = ({ defaultType }) => {
   const regularBanners = fromCms("non-warranty", FALLBACK_REGULAR);
   const warrantyBannersList = fromCms("warranty", FALLBACK_WARRANTY);
 
+  const getServiceFallbackImage = (title = "") => {
+    const t = (title || "").toLowerCase();
+    if (t.includes("washing") || t.includes("wm")) return mostBookedWm;
+    if (t.includes("clean")) return mostBookedCleaning;
+    if (t.includes("fridge") || t.includes("refrigerator")) return applianceFridge;
+    if (t.includes("salon") || t.includes("saloon")) return mostBookedSalon;
+    if (t.includes("spa") || t.includes("massage")) return spaImg;
+    if (t.includes("electric")) return electricianImg;
+    if (t.includes("plumb")) return plumberImg;
+    if (t.includes("gas") || t.includes("refill")) return mostBookedAc1;
+    if (t.includes("repair")) return mostBookedAc2;
+    if (t.includes("ac") || t.includes("air condition")) return splitAcImg;
+    return mostBookedAc1;
+  };
+
   const mostBookedServices = tilesFor(
     "most-booked",
     [
@@ -772,14 +787,18 @@ const Dashboard = ({ defaultType }) => {
         badge: "Instant",
       },
     ],
-    (t) => ({
-      id: t.id,
-      title: t.title,
-      image: t.imageUrl,
-      rating: t.rating,
-      price: t.price,
-      badge: t.badge,
-    }),
+    (t) => {
+      const fallback = getServiceFallbackImage(t.title);
+      return {
+        id: t.id,
+        title: t.title,
+        image: t.imageUrl || fallback,
+        fallbackImage: fallback,
+        rating: t.rating,
+        price: t.price,
+        badge: t.badge,
+      };
+    },
   );
 
   const applianceServices = tilesFor(
@@ -850,15 +869,19 @@ const Dashboard = ({ defaultType }) => {
         path: "/booking",
       },
     ],
-    (t) => ({
-      id: t.id,
-      title: t.title,
-      image: t.imageUrl,
-      rating: t.rating,
-      price: t.price,
-      badge: t.badge,
-      path: t.link || "/booking",
-    }),
+    (t) => {
+      const fallback = getServiceFallbackImage(t.title);
+      return {
+        id: t.id,
+        title: t.title,
+        image: t.imageUrl || fallback,
+        fallbackImage: fallback,
+        rating: t.rating,
+        price: t.price,
+        badge: t.badge,
+        path: t.link || "/booking",
+      };
+    },
   );
 
   useEffect(() => {
@@ -940,7 +963,10 @@ const Dashboard = ({ defaultType }) => {
       { id: 6, name: "Salon for Women", img: saloonImg },
       { id: 7, name: "Spa & Massage", img: spaImg },
     ],
-    (t) => ({ id: t.id, name: t.title, img: t.imageUrl }),
+    (t) => {
+      const fallback = getServiceFallbackImage(t.title);
+      return { id: t.id, name: t.title, img: t.imageUrl || fallback, fallbackImage: fallback };
+    },
   );
 
   const brandCards = tilesFor(
@@ -1368,8 +1394,12 @@ const Dashboard = ({ defaultType }) => {
                   }`}>
                   <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-full md:h-20 lg:h-24 bg-transparent rounded-2xl flex items-center justify-center transition-all overflow-hidden">
                     <img
-                      src={service.img}
+                      src={service.img || service.fallbackImage || acImg}
                       alt={service.name}
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = service.fallbackImage || acImg;
+                      }}
                       className="w-full h-full object-contain mix-blend-multiply p-1.5 sm:p-2"
                     />
                   </div>
@@ -1556,26 +1586,30 @@ const Dashboard = ({ defaultType }) => {
                     }
                   }
                 }}
-                className="flex flex-col gap-2 cursor-pointer flex-shrink-0 w-[138px] min-[360px]:w-[148px] sm:w-44 snap-start md:w-auto md:flex-shrink border border-border-color rounded-2xl p-2 md:p-4 bg-white hover:border-brand-blue hover:shadow-md transition-all">
-                <div className="w-full h-28 min-[360px]:h-32 md:h-44 lg:h-48 bg-white rounded-xl flex items-center justify-center overflow-hidden relative">
+                className="flex flex-col gap-1.5 sm:gap-2 cursor-pointer flex-shrink-0 w-[130px] min-[360px]:w-[145px] sm:w-44 snap-start md:w-auto md:flex-shrink border border-border-color rounded-2xl p-2 min-[360px]:p-2.5 md:p-4 bg-white hover:border-brand-blue hover:shadow-md transition-all">
+                <div className="w-full h-26 min-[360px]:h-30 sm:h-36 md:h-44 lg:h-48 bg-slate-50/60 rounded-xl flex items-center justify-center overflow-hidden relative">
                   <img
-                    src={service.image}
+                    src={service.image || service.fallbackImage || mostBookedAc1}
                     alt={service.title}
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = service.fallbackImage || mostBookedAc1;
+                    }}
                     className="w-full h-full object-cover"
                   />
                   <span
-                    className={`absolute top-2 right-2 text-[10px] md:text-xs font-bold px-2 md:px-2.5 py-0.5 md:py-1 rounded-full ${activeType === "in-warranty" ? "bg-[#E8F5E9] text-[#2E7D32]" : "bg-[#E3F2FD] text-brand-blue"}`}>
+                    className={`absolute top-1.5 right-1.5 min-[360px]:top-2 min-[360px]:right-2 text-[9px] min-[360px]:text-[10px] md:text-xs font-bold px-1.5 min-[360px]:px-2 md:px-2.5 py-0.5 md:py-1 rounded-full ${activeType === "in-warranty" ? "bg-[#E8F5E9] text-[#2E7D32]" : "bg-[#E3F2FD] text-brand-blue"}`}>
                     {service.badge}
                   </span>
                 </div>
-                <div className="flex flex-col gap-1 mt-1">
-                  <span className="text-xs min-[360px]:text-sm md:text-base font-semibold md:font-bold text-text-primary line-clamp-2 leading-snug">
+                <div className="flex flex-col gap-1 mt-0.5 sm:mt-1">
+                  <span className="text-[11.5px] min-[360px]:text-xs sm:text-sm md:text-base font-semibold md:font-bold text-text-primary line-clamp-2 leading-tight min-h-[28px] min-[360px]:min-h-[32px]">
                     {service.title}
                   </span>
                   {service.rating ? (
                     <div className="flex items-center gap-1">
                       <Star className="h-3 w-3 md:h-3.5 md:w-3.5 text-yellow-500 fill-yellow-500" />
-                      <span className="text-[10px] md:text-xs text-text-secondary">
+                      <span className="text-[9.5px] min-[360px]:text-[10px] md:text-xs text-text-secondary">
                         {service.rating}
                       </span>
                     </div>
@@ -1644,26 +1678,30 @@ const Dashboard = ({ defaultType }) => {
                     );
                   }
                 }}
-                className="flex flex-col gap-2 cursor-pointer flex-shrink-0 w-[138px] min-[360px]:w-[148px] sm:w-44 snap-start md:w-auto md:flex-shrink border border-border-color rounded-2xl p-2 md:p-4 bg-white hover:border-brand-blue hover:shadow-md transition-all">
-                <div className="w-full h-28 min-[360px]:h-32 md:h-44 lg:h-48 bg-white rounded-xl flex items-center justify-center overflow-hidden relative">
+                className="flex flex-col gap-1.5 sm:gap-2 cursor-pointer flex-shrink-0 w-[130px] min-[360px]:w-[145px] sm:w-44 snap-start md:w-auto md:flex-shrink border border-border-color rounded-2xl p-2 min-[360px]:p-2.5 md:p-4 bg-white hover:border-brand-blue hover:shadow-md transition-all">
+                <div className="w-full h-26 min-[360px]:h-30 sm:h-36 md:h-44 lg:h-48 bg-slate-50/60 rounded-xl flex items-center justify-center overflow-hidden relative">
                   <img
-                    src={service.image}
+                    src={service.image || service.fallbackImage || mostBookedAc1}
                     alt={service.title}
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = service.fallbackImage || mostBookedAc1;
+                    }}
                     className="w-full h-full object-cover"
                   />
                   <span
-                    className={`absolute top-2 right-2 text-[10px] md:text-xs font-bold px-2 md:px-2.5 py-0.5 md:py-1 rounded-full ${service.badge === "2 ACs" ? "bg-[#5C0632] text-white" : activeType === "in-warranty" ? "bg-[#E8F5E9] text-green-600" : "bg-[#E3F2FD] text-brand-blue"}`}>
+                    className={`absolute top-1.5 right-1.5 min-[360px]:top-2 min-[360px]:right-2 text-[9px] min-[360px]:text-[10px] md:text-xs font-bold px-1.5 min-[360px]:px-2 md:px-2.5 py-0.5 md:py-1 rounded-full ${service.badge === "2 ACs" ? "bg-[#5C0632] text-white" : activeType === "in-warranty" ? "bg-[#E8F5E9] text-green-600" : "bg-[#E3F2FD] text-brand-blue"}`}>
                     {service.badge}
                   </span>
                 </div>
-                <div className="flex flex-col gap-1 mt-1">
-                  <span className="text-xs min-[360px]:text-sm md:text-base font-semibold md:font-bold text-text-primary line-clamp-2 leading-snug">
+                <div className="flex flex-col gap-1 mt-0.5 sm:mt-1">
+                  <span className="text-[11.5px] min-[360px]:text-xs sm:text-sm md:text-base font-semibold md:font-bold text-text-primary line-clamp-2 leading-tight min-h-[28px] min-[360px]:min-h-[32px]">
                     {service.title}
                   </span>
                   {service.rating ? (
                     <div className="flex items-center gap-1">
                       <Star className="h-3 w-3 md:h-3.5 md:w-3.5 text-yellow-500 fill-yellow-500" />
-                      <span className="text-[10px] md:text-xs text-text-secondary">
+                      <span className="text-[9.5px] min-[360px]:text-[10px] md:text-xs text-text-secondary">
                         {service.rating}
                       </span>
                     </div>

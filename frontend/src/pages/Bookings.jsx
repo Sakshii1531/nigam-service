@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  ArrowLeft, Calendar, Clock, Wrench, Search, CheckCircle2, AlertTriangle, X, ChevronRight, RefreshCw, ShieldCheck, Sparkles, Check, Copy, RotateCcw
+  ArrowLeft, Calendar, Clock, Wrench, Search, CheckCircle2, AlertTriangle, X, ChevronRight, RefreshCw, Sparkles, Check, Copy
 } from 'lucide-react';
 import CustomerBottomNav from '../components/CustomerBottomNav';
 import { apiRequest, getStoredTokens } from '../lib/apiClient';
@@ -504,163 +504,94 @@ const Bookings = () => {
                 : 'Scheduled';
               const timeStr = typeof b.timeSlot === 'object' ? (b.timeSlot?.time || '10:00 AM – 01:00 PM') : (b.timeSlot || '10:00 AM – 01:00 PM');
               const price = b.totalPrice != null ? `₹${b.totalPrice}` : '₹499';
-              const canRescheduleOrCancel = b.status !== 'Completed' && b.status !== 'Cancelled';
 
               return (
                 <div
                   key={b.id || orderId}
                   onClick={() => navigate(`/bookings/${orderId}`)}
-                  className="group bg-white rounded-3xl p-5 border border-slate-200/80 shadow-2xs hover:shadow-md hover:border-brand-blue/40 transition-all duration-250 cursor-pointer flex flex-col justify-between gap-4 text-left relative overflow-hidden"
+                  className="group bg-white rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 border border-slate-200/80 shadow-2xs hover:shadow-md hover:border-brand-blue/40 transition-all duration-200 cursor-pointer flex flex-col justify-between gap-3 sm:gap-4 text-left relative overflow-hidden"
                 >
                   {/* Subtle top indicator on hover */}
                   <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-brand-blue to-blue-400 opacity-0 group-hover:opacity-100 transition-opacity" />
 
                   {/* Top Header: Order ID + Status */}
                   <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-black text-slate-800 font-mono bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200/70">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="text-[11px] sm:text-xs font-black text-slate-800 font-mono bg-slate-100 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg border border-slate-200/70 truncate">
                         {orderId}
                       </span>
                       <button
                         type="button"
                         onClick={(e) => handleCopyId(e, orderId)}
-                        className="p-1 rounded-md text-slate-400 hover:text-brand-blue hover:bg-blue-50 transition-colors"
+                        className="p-1 rounded-md text-slate-400 hover:text-brand-blue hover:bg-blue-50 transition-colors shrink-0"
                         title="Copy Order ID"
                       >
                         {copiedId === orderId ? (
-                          <Check className="h-3.5 w-3.5 text-emerald-600" />
+                          <Check className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-emerald-600" />
                         ) : (
-                          <Copy className="h-3.5 w-3.5" />
+                          <Copy className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                         )}
                       </button>
                     </div>
 
-                    <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border flex items-center gap-1.5 ${badge.bg} ${badge.text} ${badge.border}`}>
+                    <span className={`text-[10px] sm:text-[11px] font-bold px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full border flex items-center gap-1 shrink-0 ${badge.bg} ${badge.text} ${badge.border}`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
                       {status}
                     </span>
                   </div>
 
                   {/* Appliance Icon & Service Info */}
-                  <div className="flex items-start gap-3.5">
-                    <div className="w-14 h-14 rounded-2xl bg-slate-50 group-hover:bg-[#EAF4FF]/70 p-2 flex items-center justify-center shrink-0 border border-slate-100 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 sm:w-13 sm:h-13 rounded-xl sm:rounded-2xl bg-slate-50 group-hover:bg-[#EAF4FF]/70 p-1.5 sm:p-2 flex items-center justify-center shrink-0 border border-slate-100 transition-colors">
                       <img 
                         src={getCategoryIcon(b.category, b.service?.name)} 
                         alt={b.category || 'Service'} 
-                        className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-250" 
+                        className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-200" 
                       />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5 mb-0.5">
-                        <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wider border ${categoryBadge}`}>
+                        <span className={`text-[9px] sm:text-[10px] font-extrabold px-1.5 py-0.2 rounded-md uppercase tracking-wider border ${categoryBadge}`}>
                           {b.category || 'Service'}
                         </span>
                         {b.brand && (
-                          <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200/60">
+                          <span className="text-[9px] sm:text-[10px] font-bold text-slate-600 bg-slate-100 px-1.5 py-0.2 rounded-md border border-slate-200/60 truncate">
                             {b.brand}
                           </span>
                         )}
                       </div>
-                      <h3 className="text-sm font-extrabold text-slate-900 group-hover:text-brand-blue transition-colors leading-snug truncate">
+                      <h3 className="text-xs sm:text-sm font-extrabold text-slate-900 group-hover:text-brand-blue transition-colors leading-snug line-clamp-1">
                         {b.service?.name || `${b.category || 'Home'} Service`}
                       </h3>
-                      <p className="text-[11px] text-slate-400 font-medium truncate mt-0.5">
-                        {b.productType ? `${b.productType} • Doorstep Service` : 'Professional Doorstep Service'}
+                      <p className="text-[10px] sm:text-[11px] text-slate-400 font-medium truncate mt-0.5">
+                        {b.productType ? `${b.productType} • Doorstep` : 'Doorstep Service'}
                       </p>
                     </div>
                   </div>
 
-                  {/* Reschedule Badge Notice if applicable */}
-                  {b.rescheduleCount > 0 && (
-                    <div className="bg-purple-50 border border-purple-200/70 text-purple-800 px-3 py-1.5 rounded-xl text-[11px] font-bold flex items-center gap-1.5">
-                      <RotateCcw className="h-3.5 w-3.5 text-purple-600 shrink-0" />
-                      <span>Rescheduled ({b.rescheduleCount}x) • Slot updated</span>
-                    </div>
-                  )}
-
                   {/* Date & Time Slot Ribbon */}
-                  <div className="bg-slate-50/90 rounded-2xl p-2.5 flex items-center justify-between border border-slate-200/60 text-xs">
-                    <div className="flex items-center gap-1.5 text-slate-700 font-bold">
-                      <Calendar className="h-4 w-4 text-brand-blue shrink-0" />
-                      <span>{scheduledDateStr}</span>
+                  <div className="bg-slate-50/90 rounded-xl sm:rounded-2xl p-2 sm:p-2.5 flex items-center justify-between border border-slate-200/60 text-[10.5px] sm:text-xs">
+                    <div className="flex items-center gap-1.5 text-slate-700 font-bold truncate">
+                      <Calendar className="h-3.5 w-3.5 text-brand-blue shrink-0" />
+                      <span className="truncate">{scheduledDateStr}</span>
                     </div>
-                    <div className="flex items-center gap-1 text-slate-600 font-semibold text-[11px]">
-                      <Clock className="h-3.5 w-3.5 text-brand-blue shrink-0" />
+                    <div className="flex items-center gap-1 text-slate-500 font-medium text-[10px] sm:text-[11px] shrink-0 ml-1">
+                      <Clock className="h-3 w-3 text-brand-blue shrink-0" />
                       <span>{timeStr}</span>
                     </div>
                   </div>
 
-                  {/* Service Provider Snippet (if assigned) */}
-                  {b.serviceProvider ? (
-                    <div className="flex items-center justify-between bg-[#EAF4FF]/50 p-2.5 rounded-2xl border border-blue-100">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-xl bg-brand-blue text-white flex items-center justify-center text-xs font-black shadow-2xs">
-                          {b.serviceProvider.name?.charAt(0) || 'T'}
-                        </div>
-                        <div>
-                          <p className="text-xs font-bold text-slate-900 leading-tight">{b.serviceProvider.name}</p>
-                          <p className="text-[10px] text-slate-500 font-semibold">Verified Service Expert</p>
-                        </div>
-                      </div>
-
-                      {canRescheduleOrCancel && (
-                        <div className="bg-white px-2.5 py-1 rounded-xl border border-blue-200/80 flex items-center gap-1 text-[11px] font-bold text-brand-blue">
-                          <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
-                          <span>OTP: <strong className="font-mono text-slate-900">{b.completionOtp || b.serviceRequest?.completionOtp || ''}</strong></span>
-                        </div>
-                      )}
-                    </div>
-                  ) : null}
-
                   {/* Card Footer: Price & Action Buttons */}
-                  <div className="pt-2 border-t border-slate-100 flex flex-col gap-2.5 mt-auto">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Estimated Total</span>
-                        <span className="text-base font-black text-slate-900">{price}</span>
-                      </div>
-
-                      <button 
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/bookings/${orderId}`);
-                        }}
-                        className="inline-flex items-center gap-1 text-xs font-bold text-brand-blue bg-[#EAF4FF] hover:bg-brand-blue hover:text-white px-3 py-1.5 rounded-xl transition-all cursor-pointer shadow-2xs"
-                      >
-                        <span>Details</span>
-                        <ChevronRight className="h-3.5 w-3.5" />
-                      </button>
+                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between mt-auto">
+                    <div>
+                      <span className="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Total</span>
+                      <span className="text-sm sm:text-base font-black text-slate-900">{price}</span>
                     </div>
 
-                    {/* Reschedule and Cancel buttons for active bookings */}
-                    {canRescheduleOrCancel && (
-                      <div className="grid grid-cols-2 gap-2 pt-1">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setBookingToReschedule(b);
-                            setShowRescheduleModal(true);
-                          }}
-                          className="w-full py-2 px-3 text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200/80 rounded-xl transition-colors cursor-pointer text-center"
-                        >
-                          Reschedule
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setBookingToCancel(b);
-                            setShowCancelModal(true);
-                          }}
-                          className="w-full py-2 px-3 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition-colors cursor-pointer text-center"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-1 text-xs font-bold text-brand-blue bg-[#EAF4FF] group-hover:bg-brand-blue group-hover:text-white px-2.5 sm:px-3 py-1.5 rounded-xl transition-all shadow-2xs">
+                      <span>Details</span>
+                      <ChevronRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
+                    </div>
                   </div>
                 </div>
               );
