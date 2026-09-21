@@ -12,6 +12,7 @@ import { bookingRouter } from './modules/booking/booking.routes.js';
 import { serviceRequestRouter } from './modules/service-requests/serviceRequest.routes.js';
 import { applianceRouter } from './modules/service-requests/ownedAppliance.routes.js';
 import { productRouter } from './modules/buy-commerce/product.routes.js';
+import { productCategoryRouter } from './modules/buy-commerce/productCategory.routes.js';
 import { cartRouter } from './modules/buy-commerce/cart.routes.js';
 import { wishlistRouter } from './modules/buy-commerce/wishlist.routes.js';
 import { orderRouter } from './modules/buy-commerce/order.routes.js';
@@ -154,6 +155,7 @@ export function createApp() {
   app.use('/api/v1/service-requests', serviceRequestRouter);
   app.use('/api/v1/appliances', applianceRouter);
   app.use('/api/v1/products', productRouter);
+  app.use('/api/v1/product-categories', productCategoryRouter);
   app.use('/api/v1/cart', cartRouter);
   app.use('/api/v1/wishlist', wishlistRouter);
   app.use('/api/v1/orders', orderRouter);

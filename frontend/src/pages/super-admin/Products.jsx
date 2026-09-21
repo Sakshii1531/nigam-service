@@ -10,6 +10,8 @@ const PRESET_SPECS = {
   'Refrigerator': ['Double Door', 'Single Door', 'Side by Side', '265 Litres', '3 Star Rating', 'Digital Inverter', 'Frost Free Technology'],
   'Washing Machine': ['Fully Automatic', 'Front Load', 'Top Load', '7.0 Kg Capacity', '5 Star Rating', 'Inverter Direct Drive', 'Smart Motion'],
   'Television': ['4K Ultra HD', '55 Inch Display', '43 Inch Display', 'Smart TV (Google OS)', 'Dolby Audio', '120Hz Refresh Rate'],
+  'Geyser': ['15 Litres', '25 Litres', '5 Star Energy Rating', 'Glassline Tank', 'Instant Heating', 'Auto Cut-off'],
+  'Microwave Oven': ['Convection Mode', 'Solo Mode', 'Grill Mode', '28 Litres', 'Auto Cook Menus', 'Ceramic Enamel Cavity'],
   'Others': ['High Efficiency', 'Premium Grade', 'Energy Saver', '1 Year Warranty']
 };
 
@@ -29,6 +31,7 @@ const Products = () => {
   const [products, setProducts] = useState([]);
   const [loadError, setLoadError] = useState('');
   const [availableBrands, setAvailableBrands] = useState([]);
+  const [availableCategories, setAvailableCategories] = useState([]);
 
   const toRow = (item) => ({
     id: item.id,
@@ -62,6 +65,16 @@ const Products = () => {
       .then((res) => {
         const list = Array.isArray(res) ? res.map(b => b.name) : [];
         setAvailableBrands(list);
+      })
+      .catch(() => {});
+
+    // Dynamically fetch product categories from backend
+    apiRequest('/product-categories')
+      .then((res) => {
+        const list = Array.isArray(res) ? res.map(c => c.name) : [];
+        if (list.length > 0) {
+          setAvailableCategories(list);
+        }
       })
       .catch(() => {});
   }, []);
@@ -98,9 +111,11 @@ const Products = () => {
       'Refrigerator': 'REF',
       'Washing Machine': 'WM',
       'Television': 'TV',
+      'Geyser': 'GEY',
+      'Microwave Oven': 'MW',
       'Others': 'GEN',
     };
-    const catPrefix = prefixes[categoryName] || 'PRD';
+    const catPrefix = prefixes[categoryName] || categoryName.slice(0, 3).toUpperCase() || 'PRD';
 
     const clean = nameStr
       .trim()
@@ -471,12 +486,22 @@ const Products = () => {
                         setNewSku(generateSkuFromName(newName, selectedCat));
                       }}
                     >
-                      <option value="Air Conditioner">Air Conditioner</option>
-                      <option value="Water Purifier">Water Purifier</option>
-                      <option value="Refrigerator">Refrigerator</option>
-                      <option value="Washing Machine">Washing Machine</option>
-                      <option value="Television">Television</option>
-                      <option value="Others">Others</option>
+                      {availableCategories.length > 0 ? (
+                        availableCategories.map((catName) => (
+                          <option key={catName} value={catName}>{catName}</option>
+                        ))
+                      ) : (
+                        <>
+                          <option value="Air Conditioner">Air Conditioner</option>
+                          <option value="Water Purifier">Water Purifier</option>
+                          <option value="Refrigerator">Refrigerator</option>
+                          <option value="Washing Machine">Washing Machine</option>
+                          <option value="Television">Television</option>
+                          <option value="Geyser">Geyser</option>
+                          <option value="Microwave Oven">Microwave Oven</option>
+                          <option value="Others">Others</option>
+                        </>
+                      )}
                     </select>
                   </div>
 
@@ -493,13 +518,6 @@ const Products = () => {
                       {availableBrands.map((b) => (
                         <option key={b} value={b}>{b}</option>
                       ))}
-                      <option value="Voltas">Voltas</option>
-                      <option value="Daikin">Daikin</option>
-                      <option value="LG">LG</option>
-                      <option value="Samsung">Samsung</option>
-                      <option value="Whirlpool">Whirlpool</option>
-                      <option value="Kent">Kent</option>
-                      <option value="Aquaguard">Aquaguard</option>
                       <option value="Custom">+ Type Custom Brand</option>
                     </select>
 

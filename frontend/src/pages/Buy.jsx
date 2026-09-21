@@ -115,6 +115,7 @@ const Buy = () => {
 
   // Carousel state for Banners
   const [activeBanner, setActiveBanner] = useState(0);
+  const [dynamicBrands, setDynamicBrands] = useState([]);
 
   useEffect(() => {
     // Auto-slide every 4 seconds
@@ -122,6 +123,17 @@ const Buy = () => {
       setActiveBanner((prev) => (prev + 1) % 3);
     }, 4000);
     return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    apiRequest('/catalog/brands')
+      .then((res) => {
+        if (Array.isArray(res) && res.length > 0) {
+          const colors = ['#1428A0', '#A50034', '#00205B', '#E31837', '#003087', '#0055A5', '#0B4EA2', '#000000'];
+          setDynamicBrands(res.map((b, i) => ({ name: b.name, color: colors[i % colors.length] })));
+        }
+      })
+      .catch(() => {});
   }, []);
 
   // Form states for Step 5 & 6 & 8. These used to default to a fake persona
@@ -795,21 +807,21 @@ const Buy = () => {
               </div>
               <div className="bg-white border border-slate-200/80 rounded-2xl p-2.5 sm:p-3 shadow-2xs">
                 <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto no-scrollbar py-0.5">
-                  {[
+                  {(dynamicBrands.length > 0 ? dynamicBrands : [
                     { name: "SAMSUNG", color: "#1428A0" },
                     { name: "LG", color: "#A50034" },
                     { name: "Whirlpool", color: "#00205B" },
                     { name: "VOLTAS", color: "#E31837" },
                     { name: "PANASONIC", color: "#003087" },
-                  ].map((brand, idx) => (
+                  ]).map((brand, idx) => (
                     <div
-                      key={idx}
+                      key={brand.name || idx}
                       onClick={() => navigate(`/buy-new?brand=${encodeURIComponent(brand.name)}`)}
                       className="shrink-0 px-3.5 sm:px-4 py-2 sm:py-2.5 bg-slate-50 hover:bg-blue-50/50 border border-slate-200/80 hover:border-brand-blue/40 rounded-xl cursor-pointer transition-all shadow-2xs active:scale-95 flex items-center justify-center"
                     >
                       <span
                         className="text-[10px] sm:text-[11px] font-black tracking-wide whitespace-nowrap"
-                        style={{ color: brand.color }}>
+                        style={{ color: brand.color || '#0D47A1' }}>
                         {brand.name}
                       </span>
                     </div>

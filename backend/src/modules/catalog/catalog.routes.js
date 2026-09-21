@@ -35,7 +35,32 @@ catalogRouter.get('/categories', async (req, res, next) => {
 // customer screens stop shipping their own hardcoded brand list.
 catalogRouter.get('/brands', async (req, res, next) => {
   try {
-    const brands = await Brand.find({ status: 'Active' }).select('name category').sort({ name: 1 });
+    let brands = await Brand.find({ status: 'Active' }).select('name category').sort({ name: 1 });
+    if (!brands || brands.length === 0) {
+      const count = await Brand.countDocuments();
+      if (count === 0) {
+        const DEFAULT_BRANDS = [
+          { name: 'Samsung', category: 'Appliances', status: 'Active' },
+          { name: 'LG', category: 'Appliances', status: 'Active' },
+          { name: 'Sony', category: 'Electronics', status: 'Active' },
+          { name: 'Panasonic', category: 'Appliances', status: 'Active' },
+          { name: 'Whirlpool', category: 'Appliances', status: 'Active' },
+          { name: 'Daikin', category: 'Air Conditioner', status: 'Active' },
+          { name: 'Voltas', category: 'Air Conditioner', status: 'Active' },
+          { name: 'Godrej', category: 'Appliances', status: 'Active' },
+          { name: 'Carrier', category: 'Air Conditioner', status: 'Active' },
+          { name: 'Hitachi', category: 'Air Conditioner', status: 'Active' },
+          { name: 'Blue Star', category: 'Air Conditioner', status: 'Active' },
+          { name: 'Haier', category: 'Appliances', status: 'Active' },
+          { name: 'IFB', category: 'Appliances', status: 'Active' },
+          { name: 'Bosch', category: 'Appliances', status: 'Active' },
+          { name: 'Kent', category: 'Water Purifier', status: 'Active' },
+          { name: 'Aquaguard', category: 'Water Purifier', status: 'Active' },
+        ];
+        await Brand.insertMany(DEFAULT_BRANDS);
+        brands = await Brand.find({ status: 'Active' }).select('name category').sort({ name: 1 });
+      }
+    }
     ok(res, brands);
   } catch (err) {
     next(err);

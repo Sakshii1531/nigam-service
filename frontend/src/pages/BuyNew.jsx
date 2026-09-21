@@ -5,7 +5,7 @@ import {
   Wrench, Percent, Lock, ShieldCheck, Plus, Minus, Trash2,
   ChevronLeft, Zap, CheckCircle2, Home as HomeIcon, User, RefreshCw,
   Heart, Star, ChevronDown, SlidersHorizontal, Truck, Package, X, UploadCloud, Sparkles,
-  MapPin, Building, Briefcase, Phone
+  MapPin, Building, Briefcase, Phone, LayoutGrid, List as ListIcon
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import CustomerBottomNav from '../components/CustomerBottomNav';
@@ -35,7 +35,11 @@ const BuyNew = () => {
   // Derive step from pathname
   const pathname = location.pathname;
   let step = 1;
-  if (pathname.includes('/buy-new/products')) step = 2;
+  if (
+    pathname.includes('/buy-new/products') || 
+    pathname.startsWith('/products/') || 
+    pathname.startsWith('/product/')
+  ) step = 2;
   else if (pathname.includes('/buy-new/details')) step = 3;
   else if (pathname.includes('/buy-new/cart')) step = 4;
   else if (pathname.includes('/buy-new/checkout') || pathname.includes('/buy-new/address')) step = 5;
@@ -51,16 +55,46 @@ const BuyNew = () => {
     step = 2;
   }
 
-  // Categories list matching screenshot
-  const categoriesList = [
-    { name: 'Television', img: tvImg },
-    { name: 'Refrigerator', img: fridgeImg },
-    { name: 'Washing Machine', img: washingImg },
-    { name: 'Air Conditioner', img: splitAcImg },
-    { name: 'Water Purifier', img: waterPurifierImg },
-    { name: 'Geyser', img: geyserImg },
-    { name: 'Microwave Oven', img: ovenImg }
-  ];
+  // Dynamic Categories and Brands from API
+  const [dynamicCategories, setDynamicCategories] = useState([]);
+  const [dynamicBrandList, setDynamicBrandList] = useState([]);
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
+
+  useEffect(() => {
+    apiRequest('/product-categories')
+      .then((res) => {
+        if (Array.isArray(res) && res.length > 0) {
+          setDynamicCategories(res);
+        }
+      })
+      .catch(() => {});
+
+    apiRequest('/catalog/brands')
+      .then((res) => {
+        if (Array.isArray(res) && res.length > 0) {
+          setDynamicBrandList(res.map(b => b.name));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Categories list matching dynamic API categories with asset image fallback
+  const categoriesList = dynamicCategories.length > 0
+    ? dynamicCategories.map((c) => ({
+        name: c.name,
+        slug: c.slug,
+        img: getApplianceImg(c.name),
+        icon: c.icon || '📦',
+      }))
+    : [
+        { name: 'Television', img: tvImg },
+        { name: 'Refrigerator', img: fridgeImg },
+        { name: 'Washing Machine', img: washingImg },
+        { name: 'Air Conditioner', img: splitAcImg },
+        { name: 'Water Purifier', img: waterPurifierImg },
+        { name: 'Geyser', img: geyserImg },
+        { name: 'Microwave Oven', img: ovenImg }
+      ];
 
   // Helper to map category names to images
   const getApplianceImg = (category) => {
@@ -707,206 +741,506 @@ const BuyNew = () => {
           </motion.div>
         )}
 
-        {/* ── STEP 2: CHOOSE PRODUCT ── */}
+        {/* ── STEP 2: CHOOSE PRODUCT (FLIPKART-STYLE RESPONSIVE EXPERIENCE) ── */}
         {step === 2 && (
           <motion.div
-            initial={{ opacity: 0, x: 10 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.3 }}
-            className="flex flex-col gap-4 text-left"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25 }}
+            className="flex flex-col gap-3 text-left w-full max-w-screen-2xl mx-auto"
           >
-            {/* Top Horizontal Scrollable Filters */}
-            <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
-              {/* Sort Button */}
-              <button
-                onClick={() => setShowSortModal(true)}
-                className={`flex items-center gap-1 px-3 py-1.5 rounded-full border text-[11px] font-extrabold whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
-                  sortOption !== 'relevance' 
-                    ? 'bg-blue-50 border-brand-blue text-brand-blue' 
-                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                }`}
-              >
-                Sort <ChevronDown size={13} className={sortOption !== 'relevance' ? "text-brand-blue" : "text-slate-500"} />
-              </button>
-
-              {/* Filter Button */}
-              <button
-                onClick={() => {
-                  setTempSelectedBrands([...selectedBrands]);
-                  setShowFilterPage(true);
-                }}
-                className={`flex items-center gap-1 px-3 py-1.5 rounded-full border text-[11px] font-extrabold whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
-                  selectedBrands.length > 0
-                    ? 'bg-blue-50 border-brand-blue text-brand-blue'
-                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                }`}
-              >
-                Filter <SlidersHorizontal size={13} className={selectedBrands.length > 0 ? "text-brand-blue" : "text-slate-500"} />
-              </button>
-
-              {/* Top Sale Discounts Filter */}
-              <button
-                onClick={() => setActiveFilter(activeFilter === 'discount' ? 'all' : 'discount')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[11px] font-extrabold whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
-                  activeFilter === 'discount'
-                    ? 'bg-blue-50 border-brand-blue text-brand-blue'
-                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                }`}
-              >
-                Top Sale Discounts
-              </button>
-
-              {/* In-stock filter — the platform has no per-product delivery
-                  speed, so this reports what the stock count actually says. */}
-              <button
-                onClick={() => setActiveFilter(activeFilter === 'inStock' ? 'all' : 'inStock')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[11px] font-extrabold whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
-                  activeFilter === 'inStock'
-                    ? 'bg-blue-50 border-brand-blue text-brand-blue'
-                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                }`}
-              >
-                In Stock
-              </button>
-
-              {/* Active Brand Pills */}
-              {selectedBrands.map((b) => (
-                <button
-                  key={b}
-                  onClick={() => {
-                    const next = selectedBrands.filter(brand => brand !== b);
-                    setSelectedBrands(next);
-                    setTempSelectedBrands(next);
-                  }}
-                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-blue-50 border border-brand-blue text-brand-blue text-[11px] font-black whitespace-nowrap shrink-0 cursor-pointer"
+            {/* Flipkart Breadcrumbs & Category Bar */}
+            <div className="bg-white border border-slate-200/80 rounded-2xl px-3.5 py-2.5 sm:px-4 sm:py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-2xs">
+              <div className="flex items-center gap-1.5 text-xs text-slate-500 font-bold overflow-hidden">
+                <span 
+                  onClick={() => navigate('/buy-new')} 
+                  className="hover:text-brand-blue cursor-pointer truncate"
                 >
-                  <span>{b}</span>
-                  <X size={12} className="text-brand-blue hover:text-blue-900" />
+                  Buy New
+                </span>
+                <ChevronRight size={13} className="shrink-0 text-slate-400" />
+                <span className="text-slate-900 font-extrabold truncate">
+                  {brandParam ? `${brandParam} Products` : `${finalCategory}s`}
+                </span>
+                <span className="text-[11px] font-semibold text-slate-400 shrink-0 ml-1">
+                  ({sortedAndFilteredProducts.length} items)
+                </span>
+              </div>
+
+              {/* View Mode Toggle (Grid vs List) */}
+              <div className="flex items-center gap-1.5 self-end sm:self-auto">
+                <span className="text-[11px] font-bold text-slate-400 hidden sm:inline">View:</span>
+                <button
+                  onClick={() => setViewMode('grid')}
+                  className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
+                    viewMode === 'grid'
+                      ? 'bg-blue-50 text-brand-blue border-brand-blue shadow-2xs'
+                      : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'
+                  }`}
+                  title="Grid View"
+                >
+                  <LayoutGrid size={15} />
                 </button>
-              ))}
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
+                    viewMode === 'list'
+                      ? 'bg-blue-50 text-brand-blue border-brand-blue shadow-2xs'
+                      : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'
+                  }`}
+                  title="List View"
+                >
+                  <ListIcon size={15} />
+                </button>
+              </div>
             </div>
 
-            {/* Products List (Flipkart Grid Layout) */}
-            {productsLoading && (
-              <p className="text-center text-xs font-semibold text-slate-400 py-8">Loading products…</p>
-            )}
-            {productsError && (
-              <p className="text-center text-xs font-semibold text-rose-500 py-8">{productsError}</p>
-            )}
-            {!productsLoading && !productsError && sortedAndFilteredProducts.length === 0 && (
-              <p className="text-center text-xs font-semibold text-slate-400 py-8">
-                No products found{selectedBrands.length > 0 ? ` for "${selectedBrands.join(', ')}"` : (finalCategory === 'All' ? '' : ` in ${finalCategory}`)}.
-              </p>
-            )}
-            <div className="flex flex-col gap-3">
-              {sortedAndFilteredProducts.map((product) => {
-                const isWishlisted = wishlist.some(p => p.id === product.id);
-                const originalPrice = product.originalPrice || null;
-                const discount = originalPrice && originalPrice > product.price
-                  ? Math.round(((originalPrice - product.price) / originalPrice) * 100)
-                  : null;
+            {/* Layout Body: Desktop Sticky Left Filter Sidebar + Main Products Grid */}
+            <div className="flex items-start gap-4 lg:gap-6 w-full">
+              {/* DESKTOP FILTER SIDEBAR (Flipkart style) */}
+              <aside className="hidden lg:flex flex-col w-64 bg-white border border-slate-200/80 rounded-2xl p-4 sticky top-24 shrink-0 shadow-2xs gap-4 text-left">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <div className="flex items-center gap-1.5">
+                    <SlidersHorizontal size={15} className="text-brand-blue" />
+                    <span className="text-sm font-black text-slate-900 uppercase tracking-wide">Filters</span>
+                  </div>
+                  {(selectedBrands.length > 0 || activeFilter !== 'all' || sortOption !== 'relevance') && (
+                    <button
+                      onClick={() => {
+                        setSelectedBrands([]);
+                        setTempSelectedBrands([]);
+                        setActiveFilter('all');
+                        setSortOption('relevance');
+                      }}
+                      className="text-[11px] font-black text-rose-600 hover:underline cursor-pointer"
+                    >
+                      Clear All
+                    </button>
+                  )}
+                </div>
 
-                return (
-                  <div 
-                    key={product.id}
-                    onClick={() => navigate(`/buy-new/details/${encodeURIComponent(product.category || (finalCategory === 'All' ? 'Product' : finalCategory))}/${encodeURIComponent(product.name)}`)}
-                    className="bg-white border border-slate-200/90 hover:border-brand-blue/40 rounded-3xl p-4 md:p-5 flex flex-col justify-between min-h-[240px] cursor-pointer shadow-xs hover:shadow-xl transition-all duration-300 relative group overflow-hidden"
-                  >
-                    <div className="flex gap-4 md:gap-5 items-stretch h-full">
-                      {/* Left: Image Container with Floating Heart */}
-                      <div className="relative w-28 h-28 md:w-32 md:h-32 bg-gradient-to-br from-slate-50 to-blue-50/30 border border-slate-100 rounded-2xl flex items-center justify-center p-2.5 shrink-0 overflow-hidden shadow-2xs self-start">
-                        <img 
-                          src={product.imageUrl || getApplianceImg(product.category || finalCategory)} 
-                          alt={product.name} 
-                          className="w-full h-full object-contain mix-blend-multiply" 
+                {/* Sort Option In Sidebar */}
+                <div>
+                  <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider mb-2">Sort By</h4>
+                  <div className="flex flex-col gap-1 text-xs font-bold text-slate-600">
+                    {[
+                      { id: 'relevance', label: 'Relevance' },
+                      { id: 'popularity', label: 'Popularity / Rating' },
+                      { id: 'low-to-high', label: 'Price: Low to High' },
+                      { id: 'high-to-low', label: 'Price: High to Low' },
+                      { id: 'newest', label: 'Newest Arrivals' },
+                    ].map((opt) => (
+                      <label 
+                        key={opt.id} 
+                        className="flex items-center gap-2 py-1 px-1.5 rounded-lg hover:bg-slate-50 cursor-pointer"
+                      >
+                        <input
+                          type="radio"
+                          name="desktop_sort"
+                          checked={sortOption === opt.id}
+                          onChange={() => setSortOption(opt.id)}
+                          className="accent-brand-blue"
                         />
+                        <span className={sortOption === opt.id ? 'text-brand-blue font-extrabold' : ''}>{opt.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
 
-                        {/* Floating Wishlist Heart */}
-                        <button
-                          onClick={(e) => toggleWishlist(product, e)}
-                          className="absolute top-2 right-2 w-7 h-7 bg-white/90 backdrop-blur-xs rounded-full flex items-center justify-center shadow-md border border-slate-100 hover:scale-110 active:scale-95 transition-all cursor-pointer z-10"
+                {/* Quick Filters */}
+                <div className="border-t border-slate-100 pt-3">
+                  <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider mb-2">Offers & Stock</h4>
+                  <div className="flex flex-col gap-1 text-xs font-bold text-slate-600">
+                    <label className="flex items-center gap-2 py-1 px-1.5 rounded-lg hover:bg-slate-50 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={activeFilter === 'discount'}
+                        onChange={() => setActiveFilter(activeFilter === 'discount' ? 'all' : 'discount')}
+                        className="accent-brand-blue rounded"
+                      />
+                      <span>Top Sale Discounts</span>
+                    </label>
+                    <label className="flex items-center gap-2 py-1 px-1.5 rounded-lg hover:bg-slate-50 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={activeFilter === 'inStock'}
+                        onChange={() => setActiveFilter(activeFilter === 'inStock' ? 'all' : 'inStock')}
+                        className="accent-brand-blue rounded"
+                      />
+                      <span>In Stock Only</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Brands Checklist */}
+                <div className="border-t border-slate-100 pt-3">
+                  <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider mb-2">Brand</h4>
+                  <div className="max-h-48 overflow-y-auto pr-1 flex flex-col gap-1 text-xs font-bold text-slate-600">
+                    {Array.from(new Set([
+                      ...dynamicBrandList,
+                      'LG', 'Samsung', 'Sony', 'Panasonic', 'Whirlpool', 'Daikin', 'Voltas', 'Godrej', 
+                      'Carrier', 'Hitachi', 'Blue Star', 'Haier', 'IFB', 'Bosch',
+                      ...categoryProducts.map(p => p.brand).filter(Boolean)
+                    ])).map((brand) => {
+                      const isChecked = selectedBrands.includes(brand);
+                      return (
+                        <label 
+                          key={brand}
+                          className="flex items-center gap-2 py-1 px-1.5 rounded-lg hover:bg-slate-50 cursor-pointer"
                         >
-                          <Heart 
-                            size={14} 
-                            fill={isWishlisted ? "#EF4444" : "none"} 
-                            className={isWishlisted ? "text-red-500" : "text-slate-400"} 
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => {
+                              if (isChecked) {
+                                setSelectedBrands(selectedBrands.filter(b => b !== brand));
+                              } else {
+                                setSelectedBrands([...selectedBrands, brand]);
+                              }
+                            }}
+                            className="accent-brand-blue rounded"
                           />
-                        </button>
-                      </div>
+                          <span className={isChecked ? 'text-brand-blue font-extrabold' : ''}>{brand}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              </aside>
 
-                      {/* Right: Product Details */}
-                      <div className="flex-1 flex flex-col text-left justify-between min-w-0 h-full">
-                        <div>
-                          {/* Brand & Assured Badges Row */}
-                          <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                            {product.brand && (
-                              <span className="text-[9px] font-mono font-black text-brand-blue bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full uppercase tracking-wider">
-                                {product.brand}
-                              </span>
-                            )}
-                            <span className="inline-flex items-center gap-1 text-[8px] font-black bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-2 py-0.5 rounded-full shadow-2xs">
+              {/* MAIN PRODUCTS COLUMN */}
+              <div className="flex-1 min-w-0 flex flex-col gap-3 sm:gap-4">
+                {/* Mobile / Tablet Horizontal Scrollable Filters */}
+                <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
+                  {/* Sort Button */}
+                  <button
+                    onClick={() => setShowSortModal(true)}
+                    className={`flex items-center gap-1 px-3 py-1.5 rounded-full border text-[11px] font-extrabold whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
+                      sortOption !== 'relevance' 
+                        ? 'bg-blue-50 border-brand-blue text-brand-blue' 
+                        : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    Sort <ChevronDown size={13} className={sortOption !== 'relevance' ? "text-brand-blue" : "text-slate-500"} />
+                  </button>
+
+                  {/* Filter Button */}
+                  <button
+                    onClick={() => {
+                      setTempSelectedBrands([...selectedBrands]);
+                      setShowFilterPage(true);
+                    }}
+                    className={`flex items-center gap-1 px-3 py-1.5 rounded-full border text-[11px] font-extrabold whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
+                      selectedBrands.length > 0
+                        ? 'bg-blue-50 border-brand-blue text-brand-blue'
+                        : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    Filter <SlidersHorizontal size={13} className={selectedBrands.length > 0 ? "text-brand-blue" : "text-slate-500"} />
+                  </button>
+
+                  {/* Top Sale Discounts Filter */}
+                  <button
+                    onClick={() => setActiveFilter(activeFilter === 'discount' ? 'all' : 'discount')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[11px] font-extrabold whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
+                      activeFilter === 'discount'
+                        ? 'bg-blue-50 border-brand-blue text-brand-blue'
+                        : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    Top Discounts
+                  </button>
+
+                  {/* In-stock filter */}
+                  <button
+                    onClick={() => setActiveFilter(activeFilter === 'inStock' ? 'all' : 'inStock')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[11px] font-extrabold whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
+                      activeFilter === 'inStock'
+                        ? 'bg-blue-50 border-brand-blue text-brand-blue'
+                        : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    In Stock
+                  </button>
+
+                  {/* Active Brand Pills */}
+                  {selectedBrands.map((b) => (
+                    <button
+                      key={b}
+                      onClick={() => {
+                        const next = selectedBrands.filter(brand => brand !== b);
+                        setSelectedBrands(next);
+                        setTempSelectedBrands(next);
+                      }}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-blue-50 border border-brand-blue text-brand-blue text-[11px] font-black whitespace-nowrap shrink-0 cursor-pointer"
+                    >
+                      <span>{b}</span>
+                      <X size={12} className="text-brand-blue hover:text-blue-900" />
+                    </button>
+                  ))}
+                </div>
+
+                {/* Loading Skeleton */}
+                {productsLoading && (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2.5 sm:gap-3.5 md:gap-4">
+                    {[1, 2, 3, 4, 5, 6].map((k) => (
+                      <div key={k} className="bg-white rounded-2xl border border-slate-100 p-3 h-64 animate-pulse flex flex-col justify-between">
+                        <div className="aspect-square bg-slate-100 rounded-xl mb-2" />
+                        <div className="h-3 bg-slate-100 rounded w-3/4 mb-1.5" />
+                        <div className="h-3 bg-slate-100 rounded w-1/2 mb-3" />
+                        <div className="h-5 bg-slate-100 rounded w-1/3" />
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Error Banner */}
+                {productsError && (
+                  <div className="p-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-2xl text-xs font-bold text-center">
+                    {productsError}
+                  </div>
+                )}
+
+                {/* Empty State */}
+                {!productsLoading && !productsError && sortedAndFilteredProducts.length === 0 && (
+                  <div className="bg-white rounded-3xl border border-slate-200/80 p-8 sm:p-12 text-center flex flex-col items-center gap-3 shadow-2xs">
+                    <div className="w-14 h-14 rounded-2xl bg-blue-50 text-brand-blue flex items-center justify-center">
+                      <Package size={28} />
+                    </div>
+                    <h3 className="text-base font-black text-slate-900">
+                      No products found
+                    </h3>
+                    <p className="text-xs text-slate-500 max-w-sm">
+                      {selectedBrands.length > 0
+                        ? `No products match "${selectedBrands.join(', ')}" in ${finalCategory}. Try clearing brand filters.`
+                        : `No products currently available in ${finalCategory}.`}
+                    </p>
+                    {(selectedBrands.length > 0 || activeFilter !== 'all') && (
+                      <button
+                        onClick={() => {
+                          setSelectedBrands([]);
+                          setTempSelectedBrands([]);
+                          setActiveFilter('all');
+                        }}
+                        className="mt-2 px-4 py-2 rounded-xl bg-[#0D47A1] text-white text-xs font-bold hover:bg-blue-800 transition-colors shadow-sm cursor-pointer"
+                      >
+                        Clear All Filters
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* GRID VIEW (Flipkart Style: 2-col mobile, 3-col tablet, 4-col laptop, 5-col 4K) */}
+                {!productsLoading && !productsError && sortedAndFilteredProducts.length > 0 && viewMode === 'grid' && (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2.5 min-[380px]:gap-3 sm:gap-4">
+                    {sortedAndFilteredProducts.map((product) => {
+                      const isWishlisted = wishlist.some(p => p.id === product.id);
+                      const originalPrice = product.originalPrice || null;
+                      const discount = originalPrice && originalPrice > product.price
+                        ? Math.round(((originalPrice - product.price) / originalPrice) * 100)
+                        : null;
+
+                      return (
+                        <div
+                          key={product.id}
+                          onClick={() => navigate(`/buy-new/details/${encodeURIComponent(product.category || (finalCategory === 'All' ? 'Product' : finalCategory))}/${encodeURIComponent(product.name)}`)}
+                          className="bg-white border border-slate-200/90 hover:border-brand-blue/50 rounded-2xl p-2.5 min-[380px]:p-3 sm:p-3.5 flex flex-col justify-between cursor-pointer shadow-2xs hover:shadow-xl transition-all duration-300 relative group overflow-hidden"
+                        >
+                          {/* Top Image Box */}
+                          <div className="relative aspect-square w-full bg-gradient-to-br from-slate-50 to-blue-50/20 rounded-xl overflow-hidden flex items-center justify-center p-2.5 sm:p-3 mb-2 shrink-0">
+                            <img
+                              src={product.imageUrl || getApplianceImg(product.category || finalCategory)}
+                              alt={product.name}
+                              className="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-300"
+                            />
+
+                            {/* Assured Badge */}
+                            <span className="absolute top-1.5 left-1.5 text-[8px] min-[360px]:text-[8.5px] font-black bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-1.5 py-0.5 rounded-full shadow-2xs">
                               ★ Assured
                             </span>
-                            {product.warrantyMonths && (
-                              <span className="inline-flex items-center text-[8px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full">
-                                🛡️ {product.warrantyMonths}M Warranty
-                              </span>
-                            )}
+
+                            {/* Floating Heart */}
+                            <button
+                              onClick={(e) => toggleWishlist(product, e)}
+                              className="absolute top-1.5 right-1.5 w-6 h-6 sm:w-7 sm:h-7 bg-white/90 backdrop-blur-xs rounded-full flex items-center justify-center shadow-xs border border-slate-100 hover:scale-110 active:scale-95 transition-all cursor-pointer z-10"
+                            >
+                              <Heart
+                                size={12}
+                                fill={isWishlisted ? "#EF4444" : "none"}
+                                className={isWishlisted ? "text-red-500" : "text-slate-400"}
+                              />
+                            </button>
                           </div>
 
-                          {/* Product Title */}
-                          <h4 className="text-sm md:text-base font-black text-slate-900 leading-snug group-hover:text-brand-blue transition-colors line-clamp-2">
-                            {product.name}
-                          </h4>
-
-                          {/* Feature Spec Pills (Clean & Uncluttered) */}
-                          {product.specs && product.specs.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-2">
-                              {product.specs.slice(0, 4).map((spec, sIdx) => (
-                                <span 
-                                  key={sIdx} 
-                                  className="bg-slate-100/80 border border-slate-200/70 text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded-md"
-                                >
-                                  {spec}
+                          {/* Details Content */}
+                          <div className="flex-1 flex flex-col justify-between text-left">
+                            <div>
+                              {/* Brand */}
+                              {product.brand && (
+                                <span className="text-[9px] min-[360px]:text-[9.5px] font-black text-slate-400 uppercase tracking-wider block truncate">
+                                  {product.brand}
                                 </span>
-                              ))}
+                              )}
+
+                              {/* Title */}
+                              <h4 className="text-xs sm:text-sm font-black text-slate-900 leading-snug line-clamp-2 min-h-[30px] sm:min-h-[36px] group-hover:text-brand-blue transition-colors mt-0.5">
+                                {product.name}
+                              </h4>
+
+                              {/* Rating badge */}
+                              <div className="flex items-center gap-1 mt-1">
+                                <span className="inline-flex items-center gap-0.5 bg-emerald-600 text-white text-[9px] min-[360px]:text-[9.5px] font-black px-1.5 py-0.5 rounded shadow-2xs">
+                                  <span>{product.rating || '4.3'}</span>
+                                  <Star size={9} fill="white" className="text-white" />
+                                </span>
+                                <span className="text-[9.5px] text-slate-400 font-semibold truncate">
+                                  (128)
+                                </span>
+                              </div>
                             </div>
-                          )}
-                        </div>
 
-                        {/* Pricing Details */}
-                        <div className="pt-1 mt-auto">
-                          <div className="flex flex-wrap items-baseline gap-2">
-                            <span className="text-slate-900 font-black text-base md:text-lg">
-                              ₹{product.price.toLocaleString()}
-                            </span>
-                            {discount !== null && (
-                              <>
-                                <span className="text-slate-400 line-through text-xs font-bold">
-                                  ₹{originalPrice.toLocaleString()}
+                            {/* Price & Offer */}
+                            <div className="mt-2 pt-1.5 border-t border-slate-100">
+                              <div className="flex flex-wrap items-baseline gap-1.5">
+                                <span className="text-xs min-[360px]:text-sm sm:text-base font-black text-slate-900">
+                                  ₹{product.price.toLocaleString()}
                                 </span>
-                                <span className="bg-emerald-100 text-emerald-800 text-[10px] font-black px-2 py-0.5 rounded-lg border border-emerald-200">
-                                  ↓{discount}% OFF
-                                </span>
-                              </>
-                            )}
-                          </div>
+                                {discount !== null && (
+                                  <>
+                                    <span className="text-[9.5px] sm:text-[10.5px] text-slate-400 line-through font-bold">
+                                      ₹{originalPrice.toLocaleString()}
+                                    </span>
+                                    <span className="text-[9.5px] sm:text-[10.5px] font-black text-emerald-600">
+                                      {discount}% off
+                                    </span>
+                                  </>
+                                )}
+                              </div>
 
-                          {/* Shipping & Delivery Footer */}
-                          <div className="flex flex-wrap items-center justify-between gap-2 mt-2 pt-2 border-t border-slate-100 text-[10px]">
-                            <span className="text-brand-blue font-black">
-                              ✓ Exchange offer available
-                            </span>
-                            <span className="text-slate-500 font-semibold">
-                              Delivery by <strong className="text-slate-800">Tomorrow</strong> &nbsp;|&nbsp; <strong className="text-emerald-600">Free Shipping</strong>
-                            </span>
+                              <p className="text-[9px] min-[360px]:text-[9.5px] text-brand-blue font-extrabold truncate mt-0.5">
+                                ✓ Exchange available
+                              </p>
+                              <p className="text-[8.5px] min-[360px]:text-[9px] text-slate-400 font-medium truncate">
+                                Free delivery tomorrow
+                              </p>
+
+                              {/* Quick Details Button */}
+                              <button
+                                type="button"
+                                className="w-full mt-2 py-1.5 rounded-xl text-[10.5px] sm:text-xs font-black bg-blue-50 text-brand-blue hover:bg-brand-blue hover:text-white border border-blue-100/80 transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-97"
+                              >
+                                View Details
+                              </button>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </div>
+                      );
+                    })}
                   </div>
-                );
-              })}
+                )}
+
+                {/* LIST VIEW (Flipkart Style horizontal cards) */}
+                {!productsLoading && !productsError && sortedAndFilteredProducts.length > 0 && viewMode === 'list' && (
+                  <div className="flex flex-col gap-3">
+                    {sortedAndFilteredProducts.map((product) => {
+                      const isWishlisted = wishlist.some(p => p.id === product.id);
+                      const originalPrice = product.originalPrice || null;
+                      const discount = originalPrice && originalPrice > product.price
+                        ? Math.round(((originalPrice - product.price) / originalPrice) * 100)
+                        : null;
+
+                      return (
+                        <div
+                          key={product.id}
+                          onClick={() => navigate(`/buy-new/details/${encodeURIComponent(product.category || (finalCategory === 'All' ? 'Product' : finalCategory))}/${encodeURIComponent(product.name)}`)}
+                          className="bg-white border border-slate-200/90 hover:border-brand-blue/40 rounded-2xl sm:rounded-3xl p-3 sm:p-4 md:p-5 flex flex-col justify-between cursor-pointer shadow-2xs hover:shadow-xl transition-all duration-300 relative group overflow-hidden text-left"
+                        >
+                          <div className="flex gap-3 sm:gap-4 md:gap-5 items-stretch h-full">
+                            {/* Left Image */}
+                            <div className="relative w-24 h-24 min-[360px]:w-28 min-[360px]:h-28 md:w-36 md:h-36 bg-gradient-to-br from-slate-50 to-blue-50/30 border border-slate-100 rounded-xl sm:rounded-2xl flex items-center justify-center p-2 shrink-0 overflow-hidden shadow-2xs self-start">
+                              <img
+                                src={product.imageUrl || getApplianceImg(product.category || finalCategory)}
+                                alt={product.name}
+                                className="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-300"
+                              />
+                              <button
+                                onClick={(e) => toggleWishlist(product, e)}
+                                className="absolute top-1.5 right-1.5 w-6 h-6 bg-white/90 backdrop-blur-xs rounded-full flex items-center justify-center shadow-xs border border-slate-100 hover:scale-110 active:scale-95 transition-all cursor-pointer z-10"
+                              >
+                                <Heart
+                                  size={12}
+                                  fill={isWishlisted ? "#EF4444" : "none"}
+                                  className={isWishlisted ? "text-red-500" : "text-slate-400"}
+                                />
+                              </button>
+                            </div>
+
+                            {/* Right Info */}
+                            <div className="flex-1 flex flex-col text-left justify-between min-w-0 h-full">
+                              <div>
+                                <div className="flex flex-wrap items-center gap-1.5 mb-1">
+                                  {product.brand && (
+                                    <span className="text-[9px] font-mono font-black text-brand-blue bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                      {product.brand}
+                                    </span>
+                                  )}
+                                  <span className="inline-flex items-center gap-1 text-[8px] font-black bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-2 py-0.5 rounded-full shadow-2xs">
+                                    ★ Assured
+                                  </span>
+                                  {product.warrantyMonths && (
+                                    <span className="inline-flex items-center text-[8px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full">
+                                      🛡️ {product.warrantyMonths}M Warranty
+                                    </span>
+                                  )}
+                                </div>
+
+                                <h4 className="text-xs sm:text-sm md:text-base font-black text-slate-900 leading-snug group-hover:text-brand-blue transition-colors line-clamp-2">
+                                  {product.name}
+                                </h4>
+
+                                {product.specs && product.specs.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mt-1.5">
+                                    {product.specs.slice(0, 3).map((spec, sIdx) => (
+                                      <span
+                                        key={sIdx}
+                                        className="bg-slate-100 text-slate-700 text-[9.5px] font-bold px-1.5 py-0.5 rounded-md"
+                                      >
+                                        {spec}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="pt-2 mt-auto border-t border-slate-100/80">
+                                <div className="flex flex-wrap items-baseline gap-1.5">
+                                  <span className="text-sm sm:text-base md:text-lg font-black text-slate-900">
+                                    ₹{product.price.toLocaleString()}
+                                  </span>
+                                  {discount !== null && (
+                                    <>
+                                      <span className="text-[10px] sm:text-xs text-slate-400 line-through font-bold">
+                                        ₹{originalPrice.toLocaleString()}
+                                      </span>
+                                      <span className="bg-emerald-100 text-emerald-800 text-[9px] font-black px-1.5 py-0.5 rounded border border-emerald-200">
+                                        ↓{discount}% OFF
+                                      </span>
+                                    </>
+                                  )}
+                                </div>
+                                <div className="flex flex-wrap items-center justify-between gap-1 mt-1 text-[9.5px] sm:text-[10px]">
+                                  <span className="text-brand-blue font-bold">✓ Exchange available</span>
+                                  <span className="text-slate-400 font-medium">Free Delivery by Tomorrow</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           </motion.div>
         )}
@@ -2626,6 +2960,7 @@ const BuyNew = () => {
               {/* Brands Checklist */}
               <div className="flex flex-col gap-3.5">
                 {Array.from(new Set([
+                  ...dynamicBrandList,
                   'LG', 'Samsung', 'Sony', 'Panasonic', 'Whirlpool', 'Daikin', 'Voltas', 'Godrej', 
                   'Carrier', 'Hitachi', 'Blue Star', 'Haier', 'IFB', 'Bosch', 'TCL', 'XIAOMI', 
                   'MOTOROLA', 'Thomson', 'TOSHIBA', 'iFFALCON',

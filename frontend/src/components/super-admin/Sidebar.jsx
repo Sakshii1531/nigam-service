@@ -39,7 +39,8 @@ import {
   RefreshCw,
   Search,
   Star,
-  User
+  User,
+  Layers
 } from 'lucide-react';
 import logo from '../../assets/nigam-care.png';
 
@@ -255,6 +256,12 @@ const Sidebar = () => {
       label: 'NCC Products',
       path: '/super-admin/products',
       icon: <Package size={18} />
+    },
+    {
+      type: 'link',
+      label: 'Product Categories',
+      path: '/super-admin/product-categories',
+      icon: <Layers size={18} />
     },
     {
       type: 'link',

@@ -140,6 +140,7 @@ import SuperAdminASM from "./pages/super-admin/ASM";
 import SuperAdminASMDetail from "./pages/super-admin/ASMDetail";
 import SuperAdminAMC from "./pages/super-admin/AMC";
 import SuperAdminProducts from "./pages/super-admin/Products";
+import SuperAdminProductCategories from "./pages/super-admin/ProductCategories";
 import SuperAdminWarrantyVerification from "./pages/super-admin/WarrantyVerification";
 import SuperAdminServiceCatalog from "./pages/super-admin/ServiceCatalog";
 import SuperAdminEscalationDesk from "./pages/super-admin/EscalationDesk";
@@ -702,6 +703,14 @@ function App() {
                             element={<BuyNew />}
                           />
                           <Route
+                            path="/products/:category"
+                            element={<BuyNew />}
+                          />
+                          <Route
+                            path="/product/:category"
+                            element={<BuyNew />}
+                          />
+                          <Route
                             path="/buy-new/details/:category/:productName"
                             element={<BuyNew />}
                           />
@@ -1223,6 +1232,10 @@ function App() {
                           <Route
                             path="/super-admin/products"
                             element={<SuperAdminProducts />}
+                          />
+                          <Route
+                            path="/super-admin/product-categories"
+                            element={<SuperAdminProductCategories />}
                           />
                           <Route
                             path="/super-admin/warranty-verification"
