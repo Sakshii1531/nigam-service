@@ -56,7 +56,7 @@ import geyserImg from "../assets/icon_3d_geyser.png";
 import ovenImg from "../assets/icon_3d_oven.png";
 
 // Helper to map category names to images
-const getApplianceImg = (category) => {
+function getApplianceImg(category) {
   const n = category?.toLowerCase() || "";
   if (n.includes("television") || n.includes("tv")) return tvImg;
   if (n.includes("refrigerator") || n.includes("fridge")) return fridgeImg;
@@ -67,7 +67,7 @@ const getApplianceImg = (category) => {
   if (n.includes("geyser")) return geyserImg;
   if (n.includes("microwave") || n.includes("oven")) return ovenImg;
   return tvImg;
-};
+}
 
 const BuyNew = () => {
   const navigate = useNavigate();

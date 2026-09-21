@@ -27,7 +27,7 @@ export async function createBrand(data, actingUserId) {
   return brand;
 }
 
-const EDITABLE_FIELDS = ['name', 'category', 'status', 'slaResolutionTimeHours', 'slaAdherencePercent', 'csat', 'contractTerms'];
+const EDITABLE_FIELDS = ['name', 'category', 'status', 'warrantyMonths', 'supportEmail', 'supportPhone', 'slaResolutionTimeHours', 'slaAdherencePercent', 'csat', 'contractTerms'];
 
 export async function updateBrand(id, updates, actingUserId) {
   const brand = await findOr404(id);
