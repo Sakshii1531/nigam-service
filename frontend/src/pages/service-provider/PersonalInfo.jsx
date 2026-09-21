@@ -158,19 +158,19 @@ function ServiceCityCard() {
 
   return (
     <div className="bg-white/95 backdrop-blur-md border border-slate-200/80 rounded-3xl p-3.5 sm:p-6 shadow-[0_10px_30px_rgba(15,23,42,0.06)] flex flex-col gap-3.5 sm:gap-4">
-      <div className="flex flex-col min-[380px]:flex-row min-[380px]:items-center justify-between gap-3">
-        <div className="flex items-start gap-3 min-w-0 flex-1">
-          <div className="w-10 h-10 min-[360px]:w-11 min-[360px]:h-11 rounded-2xl bg-blue-50 text-[#0D47A1] border border-blue-100 flex items-center justify-center shrink-0 shadow-2xs">
+      <div className="flex items-start justify-between gap-2.5 sm:gap-3">
+        <div className="flex items-start gap-3.5">
+          <div className="w-11 h-11 rounded-2xl bg-blue-50 text-[#0D47A1] border border-blue-100 flex items-center justify-center shrink-0 shadow-2xs">
             <Building2 className="h-5 w-5" />
           </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 flex-wrap">
+          <div>
+            <div className="flex items-center gap-2">
               <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Service Territory</span>
               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
                 Assigned Area
               </span>
             </div>
-            <p className="text-base sm:text-lg font-black text-slate-900 mt-0.5 truncate">
+            <p className="text-base sm:text-lg font-black text-slate-900 mt-0.5">
               {current ? cityLabel(current) : 'Loading territory…'}
             </p>
             <p className="text-xs text-slate-500 font-medium mt-0.5">
@@ -183,7 +183,7 @@ function ServiceCityCard() {
           <button
             type="button"
             onClick={openForm}
-            className="w-full min-[380px]:w-auto shrink-0 text-xs font-bold text-[#0D47A1] px-3.5 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200/60 transition-all cursor-pointer shadow-2xs active:scale-95 text-center justify-center"
+            className="shrink-0 text-xs font-bold text-[#0D47A1] px-3.5 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200/60 transition-all cursor-pointer shadow-2xs active:scale-95"
           >
             Request change
           </button>
@@ -521,7 +521,7 @@ const PersonalInfo = () => {
       )}
 
       {/* ── Mobile Top Sticky App Bar ── */}
-      <div className="sticky top-0 z-40 px-3 sm:px-4 pt-3 sm:pt-4 pb-3 lg:hidden bg-[#06214D] border-b border-white/10 transition-all shadow-md">
+      <div className="sticky top-0 z-30 px-3 sm:px-4 pt-3 sm:pt-4 pb-3 lg:hidden backdrop-blur-md bg-[#06214D]/80 border-b border-white/10 transition-all shadow-sm">
         <div className="flex items-center justify-between">
           <button
             type="button"
@@ -747,7 +747,7 @@ const PersonalInfo = () => {
                 <Phone className="h-3.5 w-3.5 text-[#0D47A1]" /> Mobile Phone Number
               </label>
               <div className="flex items-center rounded-2xl bg-slate-50 border border-slate-200 overflow-hidden focus-within:border-[#0D47A1] focus-within:ring-4 focus-within:ring-blue-500/10 transition-all">
-                <span className="px-3 min-[360px]:px-4 text-xs font-bold text-slate-500 border-r border-slate-200 bg-slate-100/70 py-3.5 shrink-0">
+                <span className="px-4 text-xs font-bold text-slate-500 border-r border-slate-200 bg-slate-100/70 py-3.5">
                   +91
                 </span>
                 <input
@@ -755,7 +755,7 @@ const PersonalInfo = () => {
                   value={form.phone}
                   onChange={(e) => setForm({ ...form, phone: e.target.value })}
                   placeholder="10-digit mobile number"
-                  className="flex-1 min-w-0 h-12 px-3 min-[360px]:px-4 text-sm font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-none bg-transparent"
+                  className="flex-1 h-12 px-4 text-sm font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-none bg-transparent"
                 />
               </div>
             </div>
