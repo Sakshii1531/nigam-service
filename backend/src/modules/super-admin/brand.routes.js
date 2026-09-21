@@ -56,3 +56,11 @@ brandRouter.get('/:id/service-revenue', validate(idParamSchema, 'params'), async
     next(err);
   }
 });
+
+brandRouter.delete('/:id', validate(idParamSchema, 'params'), async (req, res, next) => {
+  try {
+    ok(res, await brandService.deleteBrand(req.params.id, req.user.id));
+  } catch (err) {
+    next(err);
+  }
+});

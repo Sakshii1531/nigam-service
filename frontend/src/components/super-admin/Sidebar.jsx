@@ -259,7 +259,7 @@ const Sidebar = () => {
     },
     {
       type: 'link',
-      label: 'Product Categories',
+      label: 'Categories & Brands',
       path: '/super-admin/product-categories',
       icon: <Layers size={18} />
     },

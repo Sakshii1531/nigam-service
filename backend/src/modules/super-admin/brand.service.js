@@ -141,3 +141,10 @@ export async function getBrandServiceRevenue(id) {
     averageTicket: r.count ? Math.round(r.revenue / r.count) : 0,
   }));
 }
+
+export async function deleteBrand(id, actingUserId) {
+  const brand = await findOr404(id);
+  await Brand.findByIdAndDelete(id);
+  await logAudit({ user: actingUserId, action: `Deleted brand "${brand.name}"`, type: 'System' });
+  return { deleted: true };
+}
