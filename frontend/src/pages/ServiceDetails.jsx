@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Search, Star, Tag, CreditCard, ChevronRight, Menu, X, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Search, Star, ChevronRight, Menu, X, CheckCircle2 } from 'lucide-react';
 
 // Assets
 import electricianBanner from '../assets/electrician_banner.png';
@@ -18,7 +18,20 @@ import serviceProviderImg1 from '../assets/working/Gemini_Generated_Image_h5cyvc
 import { apiRequest } from '../lib/apiClient';
 
 // ─── Service config ───────────────────────────────────────────────────────────
+// ─── Service config ───────────────────────────────────────────────────────────
 const SERVICE_CONFIG = {
+  'Carpenter': {
+    tagline: 'Precision Woodwork',
+    subtitle: 'Experienced Carpenters for\nRepairs, Assembly & Mounting',
+    bannerImg: heroService,
+    subServices: [
+      { name: 'Book a consultation', img: heroService },
+      { name: 'Furniture Assembly', img: heroService },
+      { name: 'Door & Lock Repair', img: heroService },
+      { name: 'Drill & Hang', img: heroService },
+      { name: 'Custom Woodwork', img: heroService },
+    ],
+  },
   'Electrician': {
     tagline: 'Power Back On',
     subtitle: 'Certified Electricians for\nSafe & Reliable Repairs',
@@ -70,9 +83,156 @@ const DEFAULT_CONFIG = {
   ],
 };
 
+const CARPENTER_CATALOG = [
+  {
+    section: 'Book a consultation',
+    items: [
+      {
+        name: 'Carpentry Consultation & Inspection',
+        price: '₹149',
+        time: '1 hrs',
+        bullets: [
+          'Expert carpenter inspection for custom furniture, woodwork repair, or mounting.',
+          'Consultation fee adjusted against final service invoice.',
+        ],
+        img: heroService,
+      },
+    ],
+  },
+  {
+    section: 'Furniture Assembly & Repair',
+    items: [
+      {
+        name: 'Bed & Wardrobe Assembly / Repair',
+        price: '₹449',
+        time: '1-2 hrs',
+        bullets: [
+          'Assembly and dismantle of king, queen, or single beds and wardrobes.',
+          'Hinge adjustment, door alignment, and tight fitting.',
+        ],
+        img: heroService,
+      },
+      {
+        name: 'Table & Chair Repair',
+        price: '₹249',
+        time: '1 hrs',
+        bullets: [
+          'Fix loose wooden legs, wobbly dining chairs, and squeaky joints.',
+          'High-strength adhesive and industrial screws included.',
+        ],
+        img: heroService,
+      },
+    ],
+  },
+  {
+    section: 'Door, Window & Lock Repair',
+    items: [
+      {
+        name: 'Door Lock Installation & Repair',
+        price: '₹299',
+        time: '1 hrs',
+        bullets: [
+          'Installation of mortise lock, handle set, cylindrical lock, or latch fix.',
+          'Ensures smooth latching and deadbolt alignment.',
+        ],
+        img: heroService,
+      },
+      {
+        name: 'Window & Mesh Fitting',
+        price: '₹199',
+        time: '45 mins',
+        bullets: [
+          'Fix sliding window channels, wooden shutters, and mosquito mesh.',
+          'Smooth gliding guaranteed.',
+        ],
+        img: heroService,
+      },
+    ],
+  },
+  {
+    section: 'Drill & Wall Hanging',
+    items: [
+      {
+        name: 'Wall Hangings & Mirror Mounting',
+        price: '₹149',
+        time: '30 mins',
+        bullets: [
+          'Drill and hang wall art, mirrors, clocks, bathroom accessories, and shelves.',
+          'Clean, precise drilling with zero wall chipping.',
+        ],
+        img: heroService,
+      },
+    ],
+  },
+];
 
-// ─── Service Catalog (detailed cards shown on scroll) ────────────────────────
-const SERVICE_CATALOG = [
+const PLUMBER_CATALOG = [
+  {
+    section: 'Book a consultation',
+    items: [
+      {
+        name: 'Plumber Inspection & Diagnosis',
+        price: '₹149',
+        time: '1 hrs',
+        bullets: [
+          'Complete diagnosis for concealed leakage, low water pressure, and pipe issues.',
+          'Inspection charge waived off on repair.',
+        ],
+        img: plumberImg,
+      },
+    ],
+  },
+  {
+    section: 'Taps & Showers',
+    items: [
+      {
+        name: 'Tap & Mixer Repair / Replacement',
+        price: '₹199',
+        time: '45 mins',
+        bullets: [
+          'Fix continuous dripping, spindle replacement, and angle valve installation.',
+          'Compatible with Jaguar, Kohler, Hindware, and all major brands.',
+        ],
+        img: plumberImg,
+      },
+      {
+        name: 'Shower & Diverter Servicing',
+        price: '₹299',
+        time: '1 hrs',
+        bullets: [
+          'Unclog shower nozzles, fix diverter cartridge, and clean hard water deposits.',
+        ],
+        img: plumberImg,
+      },
+    ],
+  },
+  {
+    section: 'Pipes & Drainage',
+    items: [
+      {
+        name: 'Drainage Blockage Clearing',
+        price: '₹299',
+        time: '1 hrs',
+        bullets: [
+          'Unclog kitchen sink, bathroom floor trap, and balcony drainage.',
+          'High-pressure rotary snake tool used for deep clearance.',
+        ],
+        img: plumberImg,
+      },
+      {
+        name: 'Pipeline Leakage Repair',
+        price: '₹349',
+        time: '1-2 hrs',
+        bullets: [
+          'Repair damaged CPVC/UPVC pipes and solvent joint sealing.',
+        ],
+        img: plumberImg,
+      },
+    ],
+  },
+];
+
+const ELECTRICIAN_CATALOG = [
   {
     section: 'Book a consultation',
     items: [
@@ -81,8 +241,8 @@ const SERVICE_CATALOG = [
         price: '₹149',
         time: '1 hrs',
         bullets: [
-          'Not sure where to start?',
-          'Book a consultation to discuss your needs, get a detailed quote, source materials, and enjoy seamless execution.',
+          'Not sure where to start? Book a consultation to diagnose tripping or wiring.',
+          'Consultation fee adjusted against final service invoice.',
         ],
         img: serviceProviderImg1,
       },
@@ -93,21 +253,21 @@ const SERVICE_CATALOG = [
     items: [
       {
         name: 'Socket & Switchboard Repair/Installation',
-        price: '₹299',
-        time: '1 hrs',
+        price: '₹199',
+        time: '45 mins',
         bullets: [
-          'Switchboard installation, socket repair & replacement.',
-          'Consultation fee will be adjusted in the final service cost.',
+          'Switchboard installation, modular socket repair & replacement.',
+          'Safe, spark-free testing with genuine parts.',
         ],
         img: tvImg,
       },
       {
         name: 'Fan Installation & Repair',
-        price: '₹299',
+        price: '₹249',
         time: '1 hrs',
         bullets: [
           'Ceiling fan, exhaust fan, and wall fan installation.',
-          'Fan repair including speed regulation and blade fixes.',
+          'Fan repair including capacitor replacement and blade alignment.',
         ],
         img: acIconImg,
       },
@@ -132,9 +292,139 @@ const SERVICE_CATALOG = [
         time: '1 hrs',
         bullets: [
           'MCB replacement and distribution box servicing.',
-          'All brands supported with genuine parts.',
+          'All ratings (6A to 63A) supported with genuine ISI parts.',
         ],
         img: plumberImg,
+      },
+    ],
+  },
+];
+
+const AC_CATALOG = [
+  {
+    section: 'AC Service & Cleaning',
+    items: [
+      {
+        name: 'Foam Jet AC Deep Service',
+        price: '₹599',
+        time: '1 hrs',
+        bullets: [
+          'High-pressure foam-jet washing of cooling coils, blower fan, and outdoor unit.',
+          'Eliminates foul smell and boosts cooling efficiency by 2x.',
+        ],
+        img: acIconImg,
+      },
+      {
+        name: 'Anti-Bacterial AC Cleaning',
+        price: '₹449',
+        time: '45 mins',
+        bullets: [
+          'Antimicrobial spray on indoor filters, drain tray, and evaporator coils.',
+        ],
+        img: acIconImg,
+      },
+    ],
+  },
+  {
+    section: 'Repair & Gas Refill',
+    items: [
+      {
+        name: 'AC Gas Leak Check & Refill',
+        price: '₹1,899',
+        time: '1-2 hrs',
+        bullets: [
+          'Nitrogen pressure leak detection, copper brazing fix, and complete gas recharge.',
+          'Includes 60-day cooling warranty.',
+        ],
+        img: acIconImg,
+      },
+      {
+        name: 'AC Diagnosis & Checkup',
+        price: '₹249',
+        time: '45 mins',
+        bullets: [
+          'Comprehensive inspection of PCB, compressor capacitor, thermostat, and motor.',
+        ],
+        img: acIconImg,
+      },
+    ],
+  },
+];
+
+const CLEANING_CATALOG = [
+  {
+    section: 'Deep Cleaning',
+    items: [
+      {
+        name: 'Complete Full Home Deep Cleaning',
+        price: '₹2,499',
+        time: '4-5 hrs',
+        bullets: [
+          'Deep scrubbing and sanitization of bedrooms, living room, balconies, and windows.',
+          'Hospital-grade eco-friendly chemicals used.',
+        ],
+        img: cleaningIconImg,
+      },
+      {
+        name: 'Bathroom Deep Cleaning',
+        price: '₹449',
+        time: '1 hrs',
+        bullets: [
+          'Tile stain removal, hard water descaling, mirror shine, and toilet bowl sanitization.',
+        ],
+        img: cleaningIconImg,
+      },
+      {
+        name: 'Kitchen Deep Cleaning',
+        price: '₹899',
+        time: '2 hrs',
+        bullets: [
+          'Oil and grease removal from slab, tiles, stove, and chimney exteriors.',
+        ],
+        img: cleaningIconImg,
+      },
+    ],
+  },
+];
+
+const getDynamicCatalog = (name) => [
+  {
+    section: 'Book a consultation',
+    items: [
+      {
+        name: `${name} Consultation & Checkup`,
+        price: '₹149',
+        time: '1 hrs',
+        bullets: [
+          `Expert inspection and diagnosis for ${name} by certified technicians.`,
+          'Consultation charge is adjusted against your final service invoice.',
+        ],
+        img: heroService,
+      },
+    ],
+  },
+  {
+    section: 'Standard Service & Repair',
+    items: [
+      {
+        name: `Standard ${name} Service`,
+        price: '₹299',
+        time: '1 hrs',
+        bullets: [
+          `Comprehensive repair, servicing, and inspection for ${name}.`,
+          'Includes genuine replacement parts and workmanship warranty.',
+        ],
+        img: heroService,
+      },
+      {
+        name: `Advanced ${name} Installation & Tune-up`,
+        price: '₹499',
+        time: '1-2 hrs',
+        bullets: [
+          `Complete setup, alignment, and multi-point safety testing for ${name}.`,
+          'Guaranteed zero hassle service with sanitized tools.',
+        ],
+        img: heroService,
       },
     ],
   },
@@ -143,44 +433,44 @@ const SERVICE_CATALOG = [
 // ─── Catalog Card sub-component (uses quantity state from parent) ─────────────
 const CatalogCard = ({ item, onViewDetails, quantity = 0, onQuantityChange }) => {
   return (
-    <div className="py-4 border-b border-slate-100">
+    <div className="py-3.5 sm:py-4 border-b border-slate-100">
       {/* Top row */}
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-2.5 sm:gap-3">
         {/* Left info */}
         <div className="flex-1 min-w-0">
-          <p className="text-[13px] font-extrabold text-slate-900 leading-snug">{item.name}</p>
+          <p className="text-xs min-[360px]:text-[13px] font-extrabold text-slate-900 leading-snug">{item.name}</p>
           {item.rating ? (
-            <div className="flex items-center gap-1 mt-1">
+            <div className="flex items-center gap-1 mt-0.5 sm:mt-1">
               <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-              <span className="text-[11px] font-bold text-slate-800">{item.rating}</span>
-              {item.reviews ? <span className="text-[10px] text-slate-400">({item.reviews} reviews)</span> : null}
+              <span className="text-[10px] min-[360px]:text-[11px] font-bold text-slate-800">{item.rating}</span>
+              {item.reviews ? <span className="text-[9px] text-slate-400">({item.reviews} reviews)</span> : null}
             </div>
           ) : null}
-          <div className="flex items-center gap-2 mt-1">
-            <span className="text-[12px] font-extrabold text-slate-900">{item.price}</span>
+          <div className="flex items-center gap-1.5 min-[360px]:gap-2 mt-1">
+            <span className="text-[11px] min-[360px]:text-[12px] font-extrabold text-slate-900">{item.price}</span>
             <span className="text-slate-300 text-xs">•</span>
-            <span className="text-[11px] text-slate-500">{item.time}</span>
+            <span className="text-[10px] min-[360px]:text-[11px] text-slate-500">{item.time}</span>
           </div>
         </div>
         {/* Right image + Add / Numbering Selector */}
-        <div className="flex-shrink-0 relative pb-4">
-          <div className="w-20 h-16 rounded-xl overflow-hidden bg-slate-50 border border-slate-100">
+        <div className="flex-shrink-0 relative pb-3.5 sm:pb-4">
+          <div className="w-16 h-14 min-[360px]:w-20 min-[360px]:h-16 rounded-xl overflow-hidden bg-slate-50 border border-slate-100">
             <img src={item.img} alt={item.name} className="w-full h-full object-contain p-1" />
           </div>
           {/* Button pinned to bottom of image, overlapping slightly */}
-          <div className="absolute -bottom-0 left-1/2 -translate-x-1/2 w-20">
+          <div className="absolute -bottom-0 left-1/2 -translate-x-1/2 w-16 min-[360px]:w-20">
             {quantity > 0 ? (
-              <div className="w-20 flex items-center justify-between border border-brand-blue bg-white rounded-xl text-[12px] font-extrabold overflow-hidden h-8 shadow-sm">
+              <div className="w-16 min-[360px]:w-20 flex items-center justify-between border border-brand-blue bg-white rounded-xl text-[11px] min-[360px]:text-[12px] font-extrabold overflow-hidden h-7 min-[360px]:h-8 shadow-xs">
                 <button
                   onClick={() => onQuantityChange(quantity - 1)}
-                  className="w-7 h-full flex items-center justify-center text-brand-blue hover:bg-slate-50 active:bg-slate-100 transition-colors"
+                  className="w-5 min-[360px]:w-7 h-full flex items-center justify-center text-brand-blue hover:bg-slate-50 active:bg-slate-100 transition-colors cursor-pointer"
                 >
                   -
                 </button>
                 <span className="text-brand-blue flex-1 text-center select-none">{quantity}</span>
                 <button
                   onClick={() => onQuantityChange(quantity + 1)}
-                  className="w-7 h-full flex items-center justify-center text-brand-blue hover:bg-slate-50 active:bg-slate-100 transition-colors"
+                  className="w-5 min-[360px]:w-7 h-full flex items-center justify-center text-brand-blue hover:bg-slate-50 active:bg-slate-100 transition-colors cursor-pointer"
                 >
                   +
                 </button>
@@ -188,7 +478,7 @@ const CatalogCard = ({ item, onViewDetails, quantity = 0, onQuantityChange }) =>
             ) : (
               <button
                 onClick={() => onQuantityChange(1)}
-                className="w-20 py-1.5 rounded-xl text-[11px] font-extrabold border bg-white text-brand-blue border-brand-blue hover:bg-[#EAF4FF] transition-all shadow-sm"
+                className="w-16 min-[360px]:w-20 py-1 min-[360px]:py-1.5 rounded-xl text-[10.5px] min-[360px]:text-[11px] font-extrabold border bg-white text-brand-blue border-brand-blue hover:bg-[#EAF4FF] transition-all shadow-xs cursor-pointer active:scale-95"
               >
                 Add
               </button>
@@ -198,20 +488,20 @@ const CatalogCard = ({ item, onViewDetails, quantity = 0, onQuantityChange }) =>
 
       </div>
       {/* Bullets */}
-      <ul className="mt-3 flex flex-col gap-1">
+      <ul className="mt-2.5 sm:mt-3 flex flex-col gap-1">
         {item.bullets.map((b, bi) => (
           <li key={bi} className="flex items-start gap-1.5">
             <span className="text-slate-400 mt-0.5 flex-shrink-0">•</span>
-            <span className="text-[11px] text-slate-600 leading-snug">{b}</span>
+            <span className="text-[10px] min-[360px]:text-[11px] text-slate-600 leading-snug">{b}</span>
           </li>
         ))}
       </ul>
       {/* View details */}
       <button
         onClick={() => onViewDetails(item)}
-        className="flex items-center gap-1 mt-3 text-brand-blue text-[11px] font-bold"
+        className="flex items-center gap-1 mt-2.5 sm:mt-3 text-brand-blue text-[10.5px] min-[360px]:text-[11px] font-bold cursor-pointer hover:underline"
       >
-        View details <ChevronRight className="h-3.5 w-3.5" />
+        View details <ChevronRight className="h-3 w-3 min-[360px]:h-3.5 min-[360px]:w-3.5" />
       </button>
     </div>
   );
@@ -227,15 +517,17 @@ const getSubServiceIcon = (name) => {
   if (norm.includes('plumb') || norm.includes('pipe') || norm.includes('leak')) return plumberImg;
   if (norm.includes('tv') || norm.includes('smart') || norm.includes('screen')) return tvImg;
   if (norm.includes('water') || norm.includes('ro') || norm.includes('purif')) return roImg;
-  return electricianImg; // default fallback
+  return heroService; // default fallback
 };
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 const ServiceDetails = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const params = new URLSearchParams(location.search);
-  const serviceName = params.get('service') || 'Electrician';
+
+  // Parse query params for service name
+  const query = new URLSearchParams(location.search);
+  const serviceName = query.get('service') || 'Electrician';
 
   // Hero copy and catalog both come from this service's CMS page config; the
   // bundled constants remain the fallback when nothing is published for it.
@@ -295,8 +587,17 @@ const ServiceDetails = () => {
   const [expandedReviews, setExpandedReviews] = useState({});
   const [cart, setCart] = useState({});
 
-  // Load catalog dynamically
-  const currentCatalog = pageConfig?.catalog?.length ? pageConfig.catalog : SERVICE_CATALOG;
+  // Load catalog dynamically based on service name
+  const currentCatalog = useMemo(() => {
+    if (pageConfig?.catalog?.length) return pageConfig.catalog;
+    const n = (serviceName || '').toLowerCase();
+    if (n.includes('carpenter')) return CARPENTER_CATALOG;
+    if (n.includes('plumb')) return PLUMBER_CATALOG;
+    if (n.includes('ac') || n.includes('air condition')) return AC_CATALOG;
+    if (n.includes('clean')) return CLEANING_CATALOG;
+    if (n.includes('electr')) return ELECTRICIAN_CATALOG;
+    return getDynamicCatalog(serviceName || 'Service');
+  }, [pageConfig, serviceName]);
 
   const allCatalogItems = currentCatalog.flatMap(group => group.items);
 
@@ -343,17 +644,17 @@ const ServiceDetails = () => {
 
 
       {/* ── Top Bar — mobile only ── */}
-      <div className="bg-white px-4 pt-5 pb-3 flex items-center justify-between sticky top-0 lg:top-16 z-20">
+      <div className="bg-white/95 backdrop-blur-md px-3.5 sm:px-4 py-2.5 sm:py-3 flex items-center justify-between sticky top-0 lg:top-16 z-30 border-b border-slate-100 shadow-2xs">
         <button
           onClick={() => navigate(-1)}
-          className="p-1.5 hover:bg-slate-100 rounded-full transition-colors"
+          className="p-1.5 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
         >
           <ArrowLeft className="h-5 w-5 text-slate-700" />
         </button>
-        <h1 className="text-[15px] font-extrabold text-slate-900">
+        <h1 className="text-sm sm:text-[15px] font-extrabold text-slate-900 truncate px-2">
           {serviceName}
         </h1>
-        <button className="p-1.5 hover:bg-slate-100 rounded-full transition-colors">
+        <button className="p-1.5 hover:bg-slate-100 rounded-full transition-colors cursor-pointer">
           <Search className="h-5 w-5 text-slate-700" />
         </button>
       </div>
@@ -361,26 +662,8 @@ const ServiceDetails = () => {
       {/* Container wrapper for desktop */}
       <div className="max-w-screen-2xl mx-auto w-full flex-1 flex flex-col pb-24">
 
-      {/* ── Offer Banners ── */}
-      <div className="flex gap-2 px-4 pt-3 pb-2 overflow-x-auto no-scrollbar">
-        <div className="flex-shrink-0 flex items-center gap-2 bg-[#E8F5E9] border border-[#A5D6A7] rounded-xl px-3 py-2 min-w-[160px]">
-          <Tag className="h-4 w-4 text-[#2E7D32] flex-shrink-0" />
-          <div>
-            <p className="text-[10px] font-extrabold text-[#1B5E20] leading-tight">Flat 15% OFF upto ₹200</p>
-            <p className="text-[9px] text-[#388E3C] leading-tight">HDFC Credit Card</p>
-          </div>
-        </div>
-        <div className="flex-shrink-0 flex items-center gap-2 bg-[#FFF8E1] border border-[#FFE082] rounded-xl px-3 py-2 min-w-[155px]">
-          <CreditCard className="h-4 w-4 text-[#F57F17] flex-shrink-0" />
-          <div>
-            <p className="text-[10px] font-extrabold text-[#E65100] leading-tight">Get cashback</p>
-            <p className="text-[9px] text-[#F57F17] leading-tight">First order via UPI</p>
-          </div>
-        </div>
-      </div>
-
       {/* ── Hero Banner ── */}
-      <div className="mx-4 md:mx-6 rounded-2xl overflow-hidden relative h-44 md:h-56 lg:h-64 bg-slate-800 shadow-md">
+      <div className="mx-3 min-[360px]:mx-4 md:mx-6 mt-2.5 sm:mt-3 rounded-2xl overflow-hidden relative h-36 min-[360px]:h-40 sm:h-48 md:h-56 lg:h-64 bg-slate-800 shadow-md">
         <img
           src={config.bannerImg}
           alt={serviceName}
@@ -406,23 +689,23 @@ const ServiceDetails = () => {
       </div>
 
       {/* ── What service do you need? ── */}
-      <div className="px-4 pt-4">
-        <h3 className="text-[13px] font-extrabold text-slate-900 mb-3">What service do you need?</h3>
-        <div className="grid grid-cols-3 gap-3">
+      <div className="px-3 min-[360px]:px-4 pt-3.5 sm:pt-4">
+        <h3 className="text-xs min-[360px]:text-[13px] font-extrabold text-slate-900 mb-2.5 sm:mb-3">What service do you need?</h3>
+        <div className="grid grid-cols-3 gap-2 min-[360px]:gap-3">
           {config.subServices.map((sub) => (
             <button
               key={sub.name}
               onClick={() => setSelectedSub(sub.name)}
-              className={`flex flex-col items-center gap-1.5 p-3 rounded-2xl border transition-all ${
+              className={`flex flex-col items-center gap-1 min-[360px]:gap-1.5 p-2 min-[360px]:p-2.5 sm:p-3 rounded-2xl border transition-all cursor-pointer active:scale-95 ${
                 selectedSub === sub.name
-                  ? 'border-brand-blue bg-[#EAF4FF] shadow-sm'
+                  ? 'border-brand-blue bg-[#EAF4FF] shadow-xs'
                   : 'border-slate-200 bg-white hover:border-brand-blue/40'
               }`}
             >
-              <div className="w-14 h-14 flex items-center justify-center">
+              <div className="w-11 h-11 min-[360px]:w-14 min-[360px]:h-14 flex items-center justify-center">
                 <img src={sub.img} alt={sub.name} className="w-full h-full object-contain" />
               </div>
-              <span className={`text-[10px] font-bold text-center leading-tight ${
+              <span className={`text-[9px] min-[360px]:text-[10px] font-bold text-center leading-tight line-clamp-2 ${
                 selectedSub === sub.name ? 'text-brand-blue' : 'text-slate-700'
               }`}>
                 {sub.name}
@@ -432,9 +715,8 @@ const ServiceDetails = () => {
         </div>
       </div>
 
-
       {/* ── Detailed Service Catalog ── */}
-      <div className="px-4 pb-32 flex flex-col gap-6 pt-8">
+      <div className="px-3 min-[360px]:px-4 pb-32 flex flex-col gap-4 sm:gap-6 pt-5 sm:pt-8">
         {currentCatalog.map((group, gi) => (
           <div key={gi} id={group.section}>
             <h3 className="text-[14px] font-extrabold text-slate-900 mb-3">{group.section}</h3>

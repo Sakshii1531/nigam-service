@@ -781,17 +781,20 @@ const Buy = () => {
             </div>
 
             {/* Buy Brand New */}
-            <div className="flex flex-col gap-2.5 sm:gap-3">
-              <div className="flex justify-between items-center">
+            <div className="flex flex-col gap-2 sm:gap-2.5">
+              <div className="flex justify-between items-center px-0.5">
                 <h3 className="text-xs sm:text-sm font-black text-brand-navy">
                   Buy Brand New
                 </h3>
-                <button className="text-xs font-bold text-brand-blue hover:underline cursor-pointer">
+                <button 
+                  onClick={() => navigate('/buy-new')}
+                  className="text-xs font-bold text-brand-blue hover:underline cursor-pointer"
+                >
                   View All
                 </button>
               </div>
-              <div className="bg-white border border-slate-200/80 rounded-2xl p-2.5 sm:p-3 md:p-4 shadow-2xs">
-                <div className="flex items-center gap-1.5 sm:gap-2 md:gap-4 overflow-x-auto no-scrollbar">
+              <div className="bg-white border border-slate-200/80 rounded-2xl p-2.5 sm:p-3 shadow-2xs">
+                <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto no-scrollbar py-0.5">
                   {[
                     { name: "SAMSUNG", color: "#1428A0" },
                     { name: "LG", color: "#A50034" },
@@ -801,9 +804,11 @@ const Buy = () => {
                   ].map((brand, idx) => (
                     <div
                       key={idx}
-                      className="flex-1 min-w-[62px] sm:min-w-0 flex items-center justify-center py-2 md:py-4 px-1.5 bg-slate-50 border border-slate-200/80 rounded-xl hover:bg-blue-50/30 hover:border-brand-blue/30 cursor-pointer transition-all shadow-2xs">
+                      onClick={() => navigate(`/buy-new?brand=${encodeURIComponent(brand.name)}`)}
+                      className="shrink-0 px-3.5 sm:px-4 py-2 sm:py-2.5 bg-slate-50 hover:bg-blue-50/50 border border-slate-200/80 hover:border-brand-blue/40 rounded-xl cursor-pointer transition-all shadow-2xs active:scale-95 flex items-center justify-center"
+                    >
                       <span
-                        className="text-[8.5px] sm:text-[10px] md:text-[11px] font-black tracking-tight text-center leading-tight truncate w-full"
+                        className="text-[10px] sm:text-[11px] font-black tracking-wide whitespace-nowrap"
                         style={{ color: brand.color }}>
                         {brand.name}
                       </span>

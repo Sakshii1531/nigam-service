@@ -45,6 +45,11 @@ const BuyNew = () => {
   // Retrieve parameters from URL
   const categoryParam = params.category ? decodeURIComponent(params.category) : null;
   const productNameParam = params.productName ? decodeURIComponent(params.productName) : null;
+  const searchParams = new URLSearchParams(location.search);
+  const brandParam = searchParams.get('brand');
+  if (brandParam && (pathname === '/buy-new' || pathname === '/buy-new/')) {
+    step = 2;
+  }
 
   // Categories list matching screenshot
   const categoriesList = [
@@ -82,7 +87,7 @@ const BuyNew = () => {
   } = useCart();
 
   // Derived list of products for category step
-  const finalCategory = categoryParam || 'Water Purifier';
+  const finalCategory = categoryParam || (brandParam ? 'All' : 'Water Purifier');
 
   // The catalogue is maintained in the admin console and served from /products —
   // it used to be a hardcoded object here, which meant the storefront never
@@ -94,7 +99,10 @@ const BuyNew = () => {
   useEffect(() => {
     let cancelled = false;
     setProductsLoading(true);
-    apiRequest(`/products?category=${encodeURIComponent(finalCategory)}&limit=100`)
+    const endpoint = finalCategory === 'All'
+      ? '/products?limit=100'
+      : `/products?category=${encodeURIComponent(finalCategory)}&limit=100`;
+    apiRequest(endpoint)
       .then((res) => {
         if (cancelled) return;
         setCategoryProducts(res || []);
@@ -119,12 +127,19 @@ const BuyNew = () => {
   const [showSortModal, setShowSortModal] = useState(false);
   const [showFilterPage, setShowFilterPage] = useState(false);
   const [sortOption, setSortOption] = useState('relevance'); // 'relevance' | 'popularity' | 'low-to-high' | 'high-to-low' | 'newest'
-  const [selectedBrands, setSelectedBrands] = useState([]);
-  const [tempSelectedBrands, setTempSelectedBrands] = useState([]);
+  const [selectedBrands, setSelectedBrands] = useState(() => (brandParam ? [brandParam] : []));
+  const [tempSelectedBrands, setTempSelectedBrands] = useState(() => (brandParam ? [brandParam] : []));
   const [searchBrandQuery, setSearchBrandQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('all'); // 'all' | 'discount' | 'inStock'
   const [pincodeInput, setPincodeInput] = useState('');
   const [pincodeStatus, setPincodeStatus] = useState(null);
+
+  useEffect(() => {
+    if (brandParam) {
+      setSelectedBrands([brandParam]);
+      setTempSelectedBrands([brandParam]);
+    }
+  }, [brandParam]);
 
   const handleCheckPincode = (e) => {
     e.preventDefault();
@@ -255,7 +270,10 @@ const BuyNew = () => {
     // Apply Brand filter
     if (selectedBrands.length > 0) {
       list = list.filter(product => 
-        selectedBrands.some(brand => product.name.toLowerCase().includes(brand.toLowerCase()))
+        selectedBrands.some(brand => 
+          (product.name && product.name.toLowerCase().includes(brand.toLowerCase())) ||
+          (product.brand && product.brand.toLowerCase().includes(brand.toLowerCase()))
+        )
       );
     }
 
@@ -601,9 +619,12 @@ const BuyNew = () => {
           <button 
             onClick={() => {
               if (step === 1) navigate('/buy');
-              else if (step === 2) navigate('/buy-new');
+              else if (step === 2) {
+                if (brandParam) navigate('/buy');
+                else navigate('/buy-new');
+              }
               else if (step === 3) navigate(`/buy-new/products/${encodeURIComponent(finalCategory)}`);
-              else if (step === 4) navigate(`/buy-new/details/${encodeURIComponent(finalCategory)}/${encodeURIComponent(finalProduct.name)}`);
+              else if (step === 4) navigate(`/buy-new/details/${encodeURIComponent(finalCategory)}/${encodeURIComponent(finalProduct?.name || '')}`);
               else if (step === 5) navigate('/buy-new/cart');
               else if (step === 6) navigate('/buy-new/address');
               else if (step === 7) navigate('/buy');
@@ -615,7 +636,7 @@ const BuyNew = () => {
           <div>
             <h1 className="text-sm font-extrabold text-white uppercase tracking-wider">
               {step === 1 && 'Buy New'}
-              {step === 2 && `${finalCategory}s`}
+              {step === 2 && (brandParam ? `${brandParam} Products` : `${finalCategory}s`)}
               {step === 3 && 'Product Details'}
               {step === 4 && 'My Cart'}
               {step === 5 && 'Delivery Address'}
@@ -747,6 +768,22 @@ const BuyNew = () => {
               >
                 In Stock
               </button>
+
+              {/* Active Brand Pills */}
+              {selectedBrands.map((b) => (
+                <button
+                  key={b}
+                  onClick={() => {
+                    const next = selectedBrands.filter(brand => brand !== b);
+                    setSelectedBrands(next);
+                    setTempSelectedBrands(next);
+                  }}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-blue-50 border border-brand-blue text-brand-blue text-[11px] font-black whitespace-nowrap shrink-0 cursor-pointer"
+                >
+                  <span>{b}</span>
+                  <X size={12} className="text-brand-blue hover:text-blue-900" />
+                </button>
+              ))}
             </div>
 
             {/* Products List (Flipkart Grid Layout) */}
@@ -758,7 +795,7 @@ const BuyNew = () => {
             )}
             {!productsLoading && !productsError && sortedAndFilteredProducts.length === 0 && (
               <p className="text-center text-xs font-semibold text-slate-400 py-8">
-                No products available in {finalCategory} yet.
+                No products found{selectedBrands.length > 0 ? ` for "${selectedBrands.join(', ')}"` : (finalCategory === 'All' ? '' : ` in ${finalCategory}`)}.
               </p>
             )}
             <div className="flex flex-col gap-3">
@@ -772,14 +809,14 @@ const BuyNew = () => {
                 return (
                   <div 
                     key={product.id}
-                    onClick={() => navigate(`/buy-new/details/${encodeURIComponent(finalCategory)}/${encodeURIComponent(product.name)}`)}
+                    onClick={() => navigate(`/buy-new/details/${encodeURIComponent(product.category || (finalCategory === 'All' ? 'Product' : finalCategory))}/${encodeURIComponent(product.name)}`)}
                     className="bg-white border border-slate-200/90 hover:border-brand-blue/40 rounded-3xl p-4 md:p-5 flex flex-col justify-between min-h-[240px] cursor-pointer shadow-xs hover:shadow-xl transition-all duration-300 relative group overflow-hidden"
                   >
                     <div className="flex gap-4 md:gap-5 items-stretch h-full">
                       {/* Left: Image Container with Floating Heart */}
                       <div className="relative w-28 h-28 md:w-32 md:h-32 bg-gradient-to-br from-slate-50 to-blue-50/30 border border-slate-100 rounded-2xl flex items-center justify-center p-2.5 shrink-0 overflow-hidden shadow-2xs self-start">
                         <img 
-                          src={product.imageUrl || getApplianceImg(finalCategory)} 
+                          src={product.imageUrl || getApplianceImg(product.category || finalCategory)} 
                           alt={product.name} 
                           className="w-full h-full object-contain mix-blend-multiply" 
                         />
@@ -2588,10 +2625,13 @@ const BuyNew = () => {
 
               {/* Brands Checklist */}
               <div className="flex flex-col gap-3.5">
-                {[
-                  'SONY', 'Samsung', 'LG', 'TCL', 'XIAOMI', 
-                  'MOTOROLA', 'Thomson', 'realme ServiceProviderLife', 'TOSHIBA', 'iFFALCON'
-                ]
+                {Array.from(new Set([
+                  'LG', 'Samsung', 'Sony', 'Panasonic', 'Whirlpool', 'Daikin', 'Voltas', 'Godrej', 
+                  'Carrier', 'Hitachi', 'Blue Star', 'Haier', 'IFB', 'Bosch', 'TCL', 'XIAOMI', 
+                  'MOTOROLA', 'Thomson', 'TOSHIBA', 'iFFALCON',
+                  ...tempSelectedBrands,
+                  ...categoryProducts.map(p => p.brand).filter(Boolean)
+                ]))
                   .filter(brand => brand.toLowerCase().includes(searchBrandQuery.toLowerCase()))
                   .map((brand) => {
                     const isChecked = tempSelectedBrands.includes(brand);
@@ -2631,7 +2671,10 @@ const BuyNew = () => {
             <span className="text-xs text-slate-500 font-extrabold">
               {tempSelectedBrands.length > 0 ? (
                 `${categoryProducts.filter(product => 
-                  tempSelectedBrands.some(brand => product.name.toLowerCase().includes(brand.toLowerCase()))
+                  tempSelectedBrands.some(brand => 
+                    (product.name && product.name.toLowerCase().includes(brand.toLowerCase())) ||
+                    (product.brand && product.brand.toLowerCase().includes(brand.toLowerCase()))
+                  )
                 ).length} products found`
               ) : (
                 `${categoryProducts.length} products found`
