@@ -239,7 +239,7 @@ const RaisePartRequest = () => {
       ) : (
         <>
           {/* Header Section — mobile only */}
-          <div className="bg-gradient-to-b from-[#052355] to-[#0A337A] text-white pt-5 pb-7 px-4 shadow-md rounded-b-[2.2rem] sticky top-0 z-20 lg:hidden">
+          <div className="bg-gradient-to-b from-[#052355] to-[#0A337A] text-white pt-4 sm:pt-5 pb-6 sm:pb-7 px-3 sm:px-4 shadow-md rounded-b-[2rem] sm:rounded-b-[2.2rem] sticky top-0 z-20 lg:hidden">
             <div className="flex items-center justify-between">
               <button 
                 type="button"
@@ -264,18 +264,18 @@ const RaisePartRequest = () => {
             </div>
 
             {/* Quick KPI Overview */}
-            <div className="grid grid-cols-3 gap-2 mt-4 pt-1">
-              <div className="bg-white/10 backdrop-blur-xs rounded-2xl p-2.5 text-center border border-white/15">
-                <span className="text-[10px] font-bold text-white/70 uppercase tracking-wider block">Total SKUs</span>
-                <span className="text-base font-black text-white">{inventory.length}</span>
+            <div className="grid grid-cols-3 gap-1.5 sm:gap-2 mt-3.5 sm:mt-4 pt-1">
+              <div className="bg-white/10 backdrop-blur-xs rounded-2xl p-2 sm:p-2.5 text-center border border-white/15">
+                <span className="text-[9px] sm:text-[10px] font-bold text-white/70 uppercase tracking-wider block">Total SKUs</span>
+                <span className="text-sm sm:text-base font-black text-white">{inventory.length}</span>
               </div>
-              <div className="bg-white/10 backdrop-blur-xs rounded-2xl p-2.5 text-center border border-white/15">
-                <span className="text-[10px] font-bold text-white/70 uppercase tracking-wider block">In Stock</span>
-                <span className="text-base font-black text-emerald-300">{inStockCount + lowStockCount}</span>
+              <div className="bg-white/10 backdrop-blur-xs rounded-2xl p-2 sm:p-2.5 text-center border border-white/15">
+                <span className="text-[9px] sm:text-[10px] font-bold text-white/70 uppercase tracking-wider block">In Stock</span>
+                <span className="text-sm sm:text-base font-black text-emerald-300">{inStockCount + lowStockCount}</span>
               </div>
-              <div className="bg-white/10 backdrop-blur-xs rounded-2xl p-2.5 text-center border border-white/15">
-                <span className="text-[10px] font-bold text-white/70 uppercase tracking-wider block">In Cart</span>
-                <span className="text-base font-black text-amber-300">{partsCart.length}</span>
+              <div className="bg-white/10 backdrop-blur-xs rounded-2xl p-2 sm:p-2.5 text-center border border-white/15">
+                <span className="text-[9px] sm:text-[10px] font-bold text-white/70 uppercase tracking-wider block">In Cart</span>
+                <span className="text-sm sm:text-base font-black text-amber-300">{partsCart.length}</span>
               </div>
             </div>
           </div>
@@ -313,11 +313,11 @@ const RaisePartRequest = () => {
           </div>
 
           {/* Segmented Tab Navigation */}
-          <div className="px-3.5 md:px-6 -mt-3.5 lg:mt-2 max-w-screen-xl mx-auto w-full relative z-30">
-            <div className="bg-white p-1.5 rounded-2xl shadow-sm border border-slate-200/80 flex items-center justify-between gap-1.5">
+          <div className="px-2.5 sm:px-4 md:px-6 -mt-3.5 lg:mt-2 max-w-screen-xl mx-auto w-full relative z-30">
+            <div className="bg-white p-1 sm:p-1.5 rounded-2xl shadow-sm border border-slate-200/80 flex items-center justify-between gap-1 sm:gap-1.5">
               <button
                 onClick={() => setActiveTab('inventory')}
-                className={`flex-1 py-2.5 px-1.5 sm:px-3 rounded-xl text-[11px] sm:text-xs font-extrabold transition-all flex items-center justify-center gap-1 sm:gap-1.5 min-w-0 ${
+                className={`flex-1 py-2 sm:py-2.5 px-1 sm:px-3 rounded-xl text-[11px] sm:text-xs font-extrabold transition-all flex items-center justify-center gap-1 sm:gap-1.5 min-w-0 ${
                   activeTab === 'inventory' 
                     ? 'bg-[#052355] text-white shadow-xs' 
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
@@ -328,7 +328,7 @@ const RaisePartRequest = () => {
               </button>
               <button
                 onClick={() => setActiveTab('order')}
-                className={`flex-1 py-2.5 px-1.5 sm:px-3 rounded-xl text-[11px] sm:text-xs font-extrabold transition-all flex items-center justify-center gap-1 sm:gap-1.5 relative min-w-0 ${
+                className={`flex-1 py-2 sm:py-2.5 px-1 sm:px-3 rounded-xl text-[11px] sm:text-xs font-extrabold transition-all flex items-center justify-center gap-1 sm:gap-1.5 relative min-w-0 ${
                   activeTab === 'order' 
                     ? 'bg-[#052355] text-white shadow-xs' 
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
@@ -346,7 +346,7 @@ const RaisePartRequest = () => {
               </button>
               <button
                 onClick={() => setActiveTab('claims')}
-                className={`flex-1 py-2.5 px-1.5 sm:px-3 rounded-xl text-[11px] sm:text-xs font-extrabold transition-all flex items-center justify-center gap-1 sm:gap-1.5 relative min-w-0 ${
+                className={`flex-1 py-2 sm:py-2.5 px-1 sm:px-3 rounded-xl text-[11px] sm:text-xs font-extrabold transition-all flex items-center justify-center gap-1 sm:gap-1.5 relative min-w-0 ${
                   activeTab === 'claims' 
                     ? 'bg-[#052355] text-white shadow-xs' 
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
@@ -366,7 +366,7 @@ const RaisePartRequest = () => {
           </div>
 
           {/* Main Content Area */}
-          <div className="flex-1 px-3.5 pt-3.5 flex flex-col gap-3.5 max-w-screen-xl mx-auto w-full">
+          <div className="flex-1 px-2.5 sm:px-4 pt-2.5 sm:pt-3.5 flex flex-col gap-3 sm:gap-3.5 max-w-screen-xl mx-auto w-full">
             
             {/* VIEW 1: INVENTORY */}
             {activeTab === 'inventory' && (
@@ -516,18 +516,18 @@ const RaisePartRequest = () => {
 
             {/* VIEW 2: ORDER SPARE PARTS */}
             {activeTab === 'order' && (
-              <div className="flex flex-col gap-3.5">
+              <div className="flex flex-col gap-3 sm:gap-3.5">
                 
                 {/* Supply Source Selection */}
-                <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-2xs flex flex-col gap-3">
+                <div className="bg-white rounded-3xl p-3 sm:p-5 border border-slate-200/80 shadow-2xs flex flex-col gap-2.5 sm:gap-3">
                   <div>
                     <span className="text-[10px] font-black tracking-wider text-slate-400 uppercase">Select Source</span>
-                    <h3 className="text-sm font-extrabold text-[#052355] mt-0.5">Supply Fulfilment Channel</h3>
+                    <h3 className="text-xs sm:text-sm font-extrabold text-[#052355] mt-0.5">Supply Fulfilment Channel</h3>
                   </div>
                   
-                  <div className="flex flex-col gap-2.5">
+                  <div className="flex flex-col gap-2 sm:gap-2.5">
                     {/* Source 1 */}
-                    <label className={`p-3.5 rounded-2xl border-2 flex items-start gap-3 cursor-pointer transition-all ${
+                    <label className={`p-2.5 sm:p-3.5 rounded-2xl border-2 flex items-start gap-2.5 sm:gap-3 cursor-pointer transition-all ${
                       orderSource === 'warehouse' ? 'border-[#0D47A1] bg-blue-50/20 shadow-2xs' : 'border-slate-200/80 bg-white hover:border-slate-300'
                     }`}>
                       <input 
@@ -535,19 +535,19 @@ const RaisePartRequest = () => {
                         name="source" 
                         checked={orderSource === 'warehouse'} 
                         onChange={() => setOrderSource('warehouse')}
-                        className="mt-1 accent-[#0D47A1] h-4 w-4"
+                        className="mt-1 accent-[#0D47A1] h-4 w-4 shrink-0"
                       />
-                      <div className="flex-1">
-                        <div className="flex justify-between items-center">
-                          <h4 className="text-xs font-bold text-[#052355]">NCC Central Warehouse</h4>
-                          <span className="text-[9px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-md">24-48 hrs</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-center gap-1">
+                          <h4 className="text-xs font-bold text-[#052355] truncate">NCC Central Warehouse</h4>
+                          <span className="text-[9px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-md shrink-0">24-48 hrs</span>
                         </div>
-                        <p className="text-[10px] text-slate-500 font-medium mt-0.5">Gurugram, Haryana • Standard dispatched stock</p>
+                        <p className="text-[10px] text-slate-500 font-medium mt-0.5 break-words line-clamp-2">Gurugram, Haryana • Standard dispatched stock</p>
                       </div>
                     </label>
 
                     {/* Source 2 */}
-                    <label className={`p-3.5 rounded-2xl border-2 flex items-start gap-3 cursor-pointer transition-all ${
+                    <label className={`p-2.5 sm:p-3.5 rounded-2xl border-2 flex items-start gap-2.5 sm:gap-3 cursor-pointer transition-all ${
                       orderSource === 'brand' ? 'border-[#0D47A1] bg-blue-50/20 shadow-2xs' : 'border-slate-200/80 bg-white hover:border-slate-300'
                     }`}>
                       <input 
@@ -555,19 +555,19 @@ const RaisePartRequest = () => {
                         name="source" 
                         checked={orderSource === 'brand'} 
                         onChange={() => setOrderSource('brand')}
-                        className="mt-1 accent-[#0D47A1] h-4 w-4"
+                        className="mt-1 accent-[#0D47A1] h-4 w-4 shrink-0"
                       />
-                      <div className="flex-1">
-                        <div className="flex justify-between items-center">
-                          <h4 className="text-xs font-bold text-[#052355]">Partner Brand Official Hub</h4>
-                          <span className="text-[9px] font-bold text-blue-800 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded-md">Same Day</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-center gap-1">
+                          <h4 className="text-xs font-bold text-[#052355] truncate">Partner Brand Official Hub</h4>
+                          <span className="text-[9px] font-bold text-blue-800 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded-md shrink-0">Same Day</span>
                         </div>
-                        <p className="text-[10px] text-slate-500 font-medium mt-0.5">Direct OEM Authorized Spare Inventory</p>
+                        <p className="text-[10px] text-slate-500 font-medium mt-0.5 break-words line-clamp-2">Direct OEM Authorized Spare Inventory</p>
                       </div>
                     </label>
 
                     {/* Source 3 */}
-                    <label className={`p-3.5 rounded-2xl border-2 flex items-start gap-3 cursor-pointer transition-all ${
+                    <label className={`p-2.5 sm:p-3.5 rounded-2xl border-2 flex items-start gap-2.5 sm:gap-3 cursor-pointer transition-all ${
                       orderSource === 'store' ? 'border-[#0D47A1] bg-blue-50/20 shadow-2xs' : 'border-slate-200/80 bg-white hover:border-slate-300'
                     }`}>
                       <input 
@@ -575,25 +575,25 @@ const RaisePartRequest = () => {
                         name="source" 
                         checked={orderSource === 'store'} 
                         onChange={() => setOrderSource('store')}
-                        className="mt-1 accent-[#0D47A1] h-4 w-4"
+                        className="mt-1 accent-[#0D47A1] h-4 w-4 shrink-0"
                       />
-                      <div className="flex-1">
-                        <div className="flex justify-between items-center">
-                          <h4 className="text-xs font-bold text-[#052355]">Nearby Local Vendor Store</h4>
-                          <span className="text-[9px] font-bold text-purple-800 bg-purple-50 border border-purple-200 px-1.5 py-0.5 rounded-md">&lt; 10 km</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-center gap-1">
+                          <h4 className="text-xs font-bold text-[#052355] truncate">Nearby Local Vendor Store</h4>
+                          <span className="text-[9px] font-bold text-purple-800 bg-purple-50 border border-purple-200 px-1.5 py-0.5 rounded-md shrink-0">&lt; 10 km</span>
                         </div>
-                        <p className="text-[10px] text-slate-500 font-medium mt-0.5">Immediate pickup from verified distributors</p>
+                        <p className="text-[10px] text-slate-500 font-medium mt-0.5 break-words line-clamp-2">Immediate pickup from verified distributors</p>
                       </div>
                     </label>
                   </div>
                 </div>
 
                 {/* Cart Summary */}
-                <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-2xs flex flex-col gap-3.5">
+                <div className="bg-white rounded-3xl p-3 sm:p-5 border border-slate-200/80 shadow-2xs flex flex-col gap-3 sm:gap-3.5">
                   <div className="flex justify-between items-center">
                     <div>
                       <span className="text-[10px] font-black tracking-wider text-slate-400 uppercase">Cart Items</span>
-                      <h3 className="text-sm font-extrabold text-[#052355] mt-0.5">Order Items Summary</h3>
+                      <h3 className="text-xs sm:text-sm font-extrabold text-[#052355] mt-0.5">Order Items Summary</h3>
                     </div>
                     {partsCart.length > 0 && (
                       <span className="text-[10px] font-bold bg-blue-50 text-[#0D47A1] border border-blue-200 px-2 py-0.5 rounded-full">

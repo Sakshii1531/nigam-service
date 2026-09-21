@@ -193,7 +193,7 @@ const ServiceHistory = () => {
 
       {/* Header */}
       <header className="sticky top-0 lg:static z-20 bg-white/95 backdrop-blur border-b border-slate-200/70">
-        <div className="max-w-screen-lg mx-auto w-full px-4 lg:px-6 h-14 flex items-center justify-between gap-3">
+        <div className="max-w-screen-lg mx-auto w-full px-3 sm:px-4 lg:px-6 h-14 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0">
             <button
               onClick={() => navigate(-1)}
@@ -214,10 +214,10 @@ const ServiceHistory = () => {
         </div>
       </header>
 
-      <main className="max-w-screen-lg mx-auto w-full px-4 lg:px-6 pt-4 flex flex-col gap-4">
+      <main className="max-w-screen-lg mx-auto w-full px-2.5 sm:px-4 lg:px-6 pt-2.5 sm:pt-4 flex flex-col gap-3.5 sm:gap-4">
 
         {/* Summary */}
-        <section className="rounded-3xl bg-gradient-to-br from-[#052355] to-[#0D47A1] text-white p-5 shadow-md">
+        <section className="rounded-3xl bg-gradient-to-br from-[#052355] to-[#0D47A1] text-white p-3.5 sm:p-5 shadow-md">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-xs font-medium text-blue-200 flex items-center gap-1.5">
@@ -278,7 +278,7 @@ const ServiceHistory = () => {
             )}
           </label>
 
-          <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 lg:mx-0 lg:px-0">
+          <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-2.5 px-2.5 sm:-mx-4 sm:px-4 lg:mx-0 lg:px-0">
             {FILTERS.map((f) => (
               <button
                 key={f.id}
@@ -364,9 +364,9 @@ const ServiceHistory = () => {
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <p className="text-sm font-semibold text-[#052355] truncate">{info.title}</p>
+                          <p className="text-sm font-semibold text-[#052355] break-words line-clamp-2">{info.title}</p>
                         </div>
-                        <p className="text-xs text-slate-500 truncate mt-0.5">
+                        <p className="text-xs text-slate-500 break-words mt-0.5 line-clamp-1">
                           {[info.customer, formatDate(info.date, { day: 'numeric', month: 'short' })].filter(Boolean).join(' · ')}
                         </p>
                         <div className="flex items-center gap-1.5 mt-1.5">

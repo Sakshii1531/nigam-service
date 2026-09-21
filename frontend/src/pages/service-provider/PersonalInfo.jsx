@@ -157,8 +157,8 @@ function ServiceCityCard() {
   const options = cities.filter((c) => c.id !== current?.id);
 
   return (
-    <div className="bg-white/95 backdrop-blur-md border border-slate-200/80 rounded-3xl p-5 sm:p-6 shadow-[0_10px_30px_rgba(15,23,42,0.06)] flex flex-col gap-4">
-      <div className="flex items-start justify-between gap-3">
+    <div className="bg-white/95 backdrop-blur-md border border-slate-200/80 rounded-3xl p-3.5 sm:p-6 shadow-[0_10px_30px_rgba(15,23,42,0.06)] flex flex-col gap-3.5 sm:gap-4">
+      <div className="flex items-start justify-between gap-2.5 sm:gap-3">
         <div className="flex items-start gap-3.5">
           <div className="w-11 h-11 rounded-2xl bg-blue-50 text-[#0D47A1] border border-blue-100 flex items-center justify-center shrink-0 shadow-2xs">
             <Building2 className="h-5 w-5" />
@@ -521,26 +521,26 @@ const PersonalInfo = () => {
       )}
 
       {/* ── Mobile Top Sticky App Bar ── */}
-      <div className="sticky top-0 z-30 px-4 pt-4 pb-3 lg:hidden backdrop-blur-md bg-[#06214D]/80 border-b border-white/10 transition-all shadow-sm">
+      <div className="sticky top-0 z-30 px-3 sm:px-4 pt-3 sm:pt-4 pb-3 lg:hidden backdrop-blur-md bg-[#06214D]/80 border-b border-white/10 transition-all shadow-sm">
         <div className="flex items-center justify-between">
           <button
             type="button"
             onClick={() => navigate(-1)}
-            className="w-10 h-10 rounded-2xl bg-white/10 hover:bg-white/20 active:scale-95 border border-white/15 flex items-center justify-center text-white transition-all cursor-pointer shadow-2xs"
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-white/10 hover:bg-white/20 active:scale-95 border border-white/15 flex items-center justify-center text-white transition-all cursor-pointer shadow-2xs"
             title="Go Back"
             aria-label="Go Back"
           >
             <ChevronLeft className="h-5 w-5 stroke-[2.5]" />
           </button>
 
-          <div className="text-center flex-1 px-3">
+          <div className="text-center flex-1 px-2 sm:px-3">
             <h1 className="text-sm font-black text-white tracking-wide">Edit Profile</h1>
             <p className="text-[10px] text-blue-200/90 font-medium">Personal Information & Avatar</p>
           </div>
 
           <button
             onClick={() => navigate('/service-provider/notifications')}
-            className="w-10 h-10 rounded-2xl bg-white/10 hover:bg-white/20 active:scale-95 border border-white/15 flex items-center justify-center text-white transition-all relative cursor-pointer shadow-2xs"
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-white/10 hover:bg-white/20 active:scale-95 border border-white/15 flex items-center justify-center text-white transition-all relative cursor-pointer shadow-2xs"
             aria-label="Notifications"
           >
             <Bell className="h-4.5 w-4.5" />
@@ -593,10 +593,10 @@ const PersonalInfo = () => {
       </div>
 
       {/* ── Main Content Container ── */}
-      <div className="flex-1 px-4 lg:px-6 xl:px-8 pt-3 lg:pt-0 max-w-4xl mx-auto w-full relative z-10 flex flex-col gap-4 sm:gap-5">
+      <div className="flex-1 px-2.5 sm:px-4 lg:px-6 xl:px-8 pt-2.5 sm:pt-3 lg:pt-0 max-w-4xl mx-auto w-full relative z-10 flex flex-col gap-3.5 sm:gap-5">
         
         {/* 1. HERO AVATAR UPLOAD CARD */}
-        <div className="bg-white/95 backdrop-blur-md rounded-3xl p-5 sm:p-6 border border-slate-200/80 shadow-[0_10px_30px_rgba(15,23,42,0.06)] flex flex-col sm:flex-row items-center sm:items-center gap-5 relative overflow-hidden">
+        <div className="bg-white/95 backdrop-blur-md rounded-3xl p-3.5 sm:p-6 border border-slate-200/80 shadow-[0_10px_30px_rgba(15,23,42,0.06)] flex flex-col sm:flex-row items-center sm:items-center gap-4 sm:gap-5 relative overflow-hidden">
           <div className="absolute -top-12 -right-12 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />
 
           {/* Interactive Profile Photo */}
@@ -702,9 +702,9 @@ const PersonalInfo = () => {
         {/* 2. PERSONAL DETAILS FORM CARD */}
         <form
           onSubmit={handleSave}
-          className="bg-white/95 backdrop-blur-md rounded-3xl p-5 sm:p-6 border border-slate-200/80 shadow-[0_10px_30px_rgba(15,23,42,0.06)] flex flex-col gap-5"
+          className="bg-white/95 backdrop-blur-md rounded-3xl p-3.5 sm:p-6 border border-slate-200/80 shadow-[0_10px_30px_rgba(15,23,42,0.06)] flex flex-col gap-4 sm:gap-5"
         >
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3.5">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <div>
               <h2 className="text-base font-black text-slate-900 tracking-tight">Personal Details</h2>
               <p className="text-xs text-slate-500 font-medium">Update contact info and communications address</p>

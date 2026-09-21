@@ -128,19 +128,19 @@ const ProfilePage = () => {
       </div>
 
       {/* ── Mobile Top Sticky App Bar ── */}
-      <div className="sticky top-0 z-30 px-4 pt-4 pb-3 lg:hidden backdrop-blur-md bg-[#06214D]/80 border-b border-white/10 transition-all shadow-sm">
+      <div className="sticky top-0 z-30 px-3.5 sm:px-4 pt-3.5 sm:pt-4 pb-3 lg:hidden backdrop-blur-md bg-[#06214D]/80 border-b border-white/10 transition-all shadow-sm">
         <div className="flex items-center justify-between">
           <button 
             type="button"
             onClick={() => navigate('/service-provider/dashboard')} 
-            className="w-10 h-10 rounded-2xl bg-white/10 hover:bg-white/20 active:scale-95 border border-white/15 flex items-center justify-center text-white transition-all cursor-pointer shadow-2xs"
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-white/10 hover:bg-white/20 active:scale-95 border border-white/15 flex items-center justify-center text-white transition-all cursor-pointer shadow-2xs"
             title="Back to Dashboard"
             aria-label="Back to Dashboard"
           >
             <ChevronLeft className="h-5 w-5 stroke-[2.5]" />
           </button>
 
-          <div className="text-center flex-1 px-3">
+          <div className="text-center flex-1 px-2 sm:px-3">
             <h1 className="text-sm font-black text-white tracking-wide">Partner Profile</h1>
             <p className="text-[10px] text-blue-200/90 font-medium">NCC Verified Network</p>
           </div>
@@ -148,7 +148,7 @@ const ProfilePage = () => {
           <div className="flex items-center gap-2">
             <button 
               onClick={() => navigate('/service-provider/notifications')}
-              className="w-10 h-10 rounded-2xl bg-white/10 hover:bg-white/20 active:scale-95 border border-white/15 flex items-center justify-center text-white transition-all relative cursor-pointer shadow-2xs"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-white/10 hover:bg-white/20 active:scale-95 border border-white/15 flex items-center justify-center text-white transition-all relative cursor-pointer shadow-2xs"
               aria-label="Notifications"
             >
               <Bell className="h-4.5 w-4.5" />
@@ -207,26 +207,26 @@ const ProfilePage = () => {
       </div>
 
       {/* ── Main Content Container ── */}
-      <div className="flex-1 px-4 lg:px-6 xl:px-8 pt-3 lg:pt-0 max-w-screen-xl mx-auto w-full relative z-10 flex flex-col lg:grid lg:grid-cols-12 lg:gap-6 gap-4">
+      <div className="flex-1 px-2.5 sm:px-4 lg:px-6 xl:px-8 pt-2.5 sm:pt-3 lg:pt-0 max-w-screen-xl mx-auto w-full relative z-10 flex flex-col lg:grid lg:grid-cols-12 lg:gap-6 gap-3.5 sm:gap-4">
 
         {/* ═════════════════════════════════════════════════════════════════════ */}
         {/* LEFT COLUMN (Desktop col-span-5): Identity & Financial Hub        */}
         {/* ═════════════════════════════════════════════════════════════════════ */}
-        <div className="lg:col-span-5 xl:col-span-5 flex flex-col gap-4">
+        <div className="lg:col-span-5 xl:col-span-5 flex flex-col gap-3 sm:gap-4">
 
           {/* 1. HERO IDENTITY CARD */}
-          <div className="bg-white/95 backdrop-blur-md rounded-3xl p-5 border border-slate-200/80 shadow-[0_10px_30px_rgba(15,23,42,0.06)] flex flex-col gap-4 relative overflow-hidden group">
+          <div className="bg-white/95 backdrop-blur-md rounded-3xl p-3.5 sm:p-5 border border-slate-200/80 shadow-[0_10px_30px_rgba(15,23,42,0.06)] flex flex-col gap-3 sm:gap-4 relative overflow-hidden group">
             {/* Top decorative gradient glow */}
             <div className="absolute -top-16 -right-16 w-36 h-36 bg-gradient-to-br from-blue-400/20 to-indigo-400/0 rounded-full blur-2xl pointer-events-none" />
 
-            <div className="flex items-start gap-4">
+            <div className="flex items-start gap-3 sm:gap-4">
               {/* Avatar with Status Ring */}
               <div 
                 onClick={() => navigate('/service-provider/personal-info')}
                 className="relative cursor-pointer flex-shrink-0"
                 title="Edit Personal Information"
               >
-                <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-2xl overflow-hidden ring-4 ring-blue-50 border-2 border-[#0D47A1]/20 shadow-md transition-transform group-hover:scale-[1.02]">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden ring-4 ring-blue-50 border-2 border-[#0D47A1]/20 shadow-md transition-transform group-hover:scale-[1.02]">
                   <img 
                     src={avatarDisplay} 
                     alt={serviceProviderName} 
@@ -245,19 +245,19 @@ const ProfilePage = () => {
               {/* Name & Title */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-1">
-                  <h2 className="text-lg sm:text-xl font-black text-slate-900 truncate leading-tight tracking-tight">
+                  <h2 className="text-base sm:text-xl font-black text-slate-900 break-words line-clamp-1 leading-tight tracking-tight">
                     {serviceProviderName}
                   </h2>
                   <button 
                     onClick={() => navigate('/service-provider/personal-info')} 
-                    className="w-8 h-8 rounded-xl bg-slate-50 hover:bg-blue-50 text-slate-400 hover:text-brand-blue border border-slate-200/80 transition-all flex items-center justify-center cursor-pointer flex-shrink-0 active:scale-90"
+                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-slate-50 hover:bg-blue-50 text-slate-400 hover:text-brand-blue border border-slate-200/80 transition-all flex items-center justify-center cursor-pointer flex-shrink-0 active:scale-90"
                     title="Edit Profile"
                   >
                     <Pencil className="h-3.5 w-3.5" />
                   </button>
                 </div>
 
-                <p className="text-xs text-slate-500 font-semibold mt-1 truncate">
+                <p className="text-xs text-slate-500 font-semibold mt-1 break-words line-clamp-2 leading-relaxed">
                   {serviceProviderSpecs}
                 </p>
 
@@ -298,32 +298,32 @@ const ProfilePage = () => {
           </div>
 
           {/* 2. WALLET BALANCE & WITHDRAWAL CARD */}
-          <div className="bg-gradient-to-br from-[#06214D] via-[#092B65] to-[#0D47A1] text-white rounded-3xl p-5 sm:p-6 shadow-[0_12px_35px_rgba(9,43,101,0.22)] border border-blue-900/40 flex flex-col gap-4 relative overflow-hidden">
+          <div className="bg-gradient-to-br from-[#06214D] via-[#092B65] to-[#0D47A1] text-white rounded-3xl p-3.5 sm:p-5 shadow-[0_12px_35px_rgba(9,43,101,0.22)] border border-blue-900/40 flex flex-col gap-3.5 sm:gap-4 relative overflow-hidden">
             {/* Atmospheric light reflections */}
             <div className="absolute top-0 right-0 w-72 h-72 bg-white/5 rounded-full blur-3xl pointer-events-none" />
             <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
 
-            <div className="flex justify-between items-center relative z-10">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-white/10 backdrop-blur-md border border-white/15 flex items-center justify-center">
+            <div className="flex justify-between items-center relative z-10 gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-white/10 backdrop-blur-md border border-white/15 flex items-center justify-center shrink-0">
                   <Wallet className="w-4 h-4 text-emerald-300" />
                 </div>
-                <span className="text-xs font-black text-blue-100 uppercase tracking-wider">
+                <span className="text-[11px] sm:text-xs font-black text-blue-100 uppercase tracking-wider truncate">
                   Wallet Balance
                 </span>
               </div>
 
-              <div className="inline-flex items-center gap-1.5 bg-emerald-500/20 border border-emerald-400/30 px-3 py-1 rounded-full backdrop-blur-sm">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="text-[10px] font-black text-emerald-200 tracking-wide uppercase">Ready to Withdraw</span>
+              <div className="inline-flex items-center gap-1.5 bg-emerald-500/20 border border-emerald-400/30 px-2.5 py-1 rounded-full backdrop-blur-sm shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-[9px] sm:text-[10px] font-black text-emerald-200 tracking-wide uppercase">Ready to Withdraw</span>
               </div>
             </div>
 
-            <div className="flex items-baseline justify-between relative z-10 flex-wrap gap-2 pt-1">
+            <div className="flex items-baseline justify-between relative z-10 flex-wrap gap-2 pt-0.5">
               <div>
-                <p className="text-xs text-blue-200/80 font-medium mb-1">Available for payout</p>
+                <p className="text-[11px] sm:text-xs text-blue-200/80 font-medium mb-0.5">Available for payout</p>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-3xl sm:text-4xl font-black text-white tracking-tight leading-none">
+                  <span className="text-2xl sm:text-4xl font-black text-white tracking-tight leading-none">
                     ₹{earningsTally.available.toLocaleString('en-IN')}
                   </span>
                 </div>
@@ -331,7 +331,7 @@ const ProfilePage = () => {
 
               <button
                 onClick={() => navigate('/service-provider/earnings')}
-                className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-400 to-[#FFD400] text-[#06214D] hover:brightness-105 active:scale-95 text-xs font-black px-4 py-2.5 rounded-2xl transition-all shadow-md shadow-amber-400/20 cursor-pointer"
+                className="inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-400 to-[#FFD400] text-[#06214D] hover:brightness-105 active:scale-95 text-xs font-black px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-2xl transition-all shadow-md shadow-amber-400/20 cursor-pointer"
               >
                 <span>Withdraw</span>
                 <ArrowRight className="h-3.5 w-3.5 stroke-[2.5]" />
@@ -441,7 +441,7 @@ const ProfilePage = () => {
         <div className="lg:col-span-7 xl:col-span-7 flex flex-col gap-4">
 
           {/* SECTION 1: OPERATIONS & SUPPORT */}
-          <div className="bg-white/95 backdrop-blur-md rounded-3xl p-5 border border-slate-200/80 shadow-[0_6px_20px_rgba(15,23,42,0.04)] flex flex-col gap-3">
+          <div className="bg-white/95 backdrop-blur-md rounded-3xl p-3.5 sm:p-5 border border-slate-200/80 shadow-[0_6px_20px_rgba(15,23,42,0.04)] flex flex-col gap-3">
             <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
               <Sparkles className="w-4 h-4 text-brand-blue" />
               <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
@@ -483,7 +483,7 @@ const ProfilePage = () => {
           </div>
 
           {/* SECTION 2: CREDENTIALS & SKILLS */}
-          <div className="bg-white/95 backdrop-blur-md rounded-3xl p-5 border border-slate-200/80 shadow-[0_6px_20px_rgba(15,23,42,0.04)] flex flex-col gap-3">
+          <div className="bg-white/95 backdrop-blur-md rounded-3xl p-3.5 sm:p-5 border border-slate-200/80 shadow-[0_6px_20px_rgba(15,23,42,0.04)] flex flex-col gap-3">
             <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
               <Award className="w-4 h-4 text-purple-600" />
               <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
@@ -525,7 +525,7 @@ const ProfilePage = () => {
           </div>
 
           {/* SECTION 3: APP PREFERENCES & SECURITY */}
-          <div className="bg-white/95 backdrop-blur-md rounded-3xl p-5 border border-slate-200/80 shadow-[0_6px_20px_rgba(15,23,42,0.04)] flex flex-col gap-3">
+          <div className="bg-white/95 backdrop-blur-md rounded-3xl p-3.5 sm:p-5 border border-slate-200/80 shadow-[0_6px_20px_rgba(15,23,42,0.04)] flex flex-col gap-3">
             <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
               <Settings className="w-4 h-4 text-slate-700" />
               <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">

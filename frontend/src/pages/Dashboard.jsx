@@ -1090,22 +1090,22 @@ const Dashboard = ({ defaultType }) => {
       )}
 
       {/* Header — hidden on desktop where top nav takes over */}
-      <div className="bg-section-bg px-6 md:px-8 pt-3 pb-0 rounded-b-[30px] shadow-sm lg:hidden">
+      <div className="bg-section-bg px-3 sm:px-4 md:px-8 pt-3 pb-0 rounded-b-[24px] sm:rounded-b-[30px] shadow-sm lg:hidden">
         <div className="max-w-screen-md md:max-w-screen-lg mx-auto w-full">
           {/* Quick Access Toggle */}
-          <div className="flex bg-brand-navy p-1 rounded-full border border-brand-blue/10 mb-5 shadow-inner items-center -mx-3">
+          <div className="flex bg-brand-navy p-1 rounded-full border border-brand-blue/10 mb-4 sm:mb-5 shadow-inner items-center">
             <button
               onClick={() => {
                 setActiveType("non-warranty");
                 navigate("/dashboard/non-warranty");
               }}
-              className={`flex-1 py-1.5 px-2.5 rounded-full transition-all duration-300 flex items-center gap-2.5 text-left cursor-pointer ${
+              className={`flex-1 py-1 px-1.5 sm:py-1.5 sm:px-2.5 rounded-full transition-all duration-300 flex items-center gap-1.5 sm:gap-2.5 text-left cursor-pointer min-w-0 ${
                 activeType === "non-warranty"
                   ? "bg-brand-yellow text-[#212121] shadow-md transform scale-[1.01]"
                   : "text-white hover:text-slate-100"
               }`}>
               <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
                   activeType === "non-warranty"
                     ? "bg-white text-black shadow-sm"
                     : "bg-white/10 text-white"
@@ -1113,19 +1113,19 @@ const Dashboard = ({ defaultType }) => {
                 <img
                   src={clickIcon}
                   alt="Book Service"
-                  className={`w-8 h-8 object-contain ${
+                  className={`w-5 h-5 sm:w-8 sm:h-8 object-contain ${
                     activeType === "non-warranty"
                       ? "mix-blend-multiply"
                       : "invert mix-blend-screen"
                   }`}
                 />
               </div>
-              <div className="flex flex-col">
-                <span className="text-[10px] font-black leading-tight">
+              <div className="flex flex-col min-w-0 overflow-hidden">
+                <span className="text-[9.5px] sm:text-[10px] font-black leading-tight truncate">
                   Book Service
                 </span>
                 <span
-                  className={`text-[8px] font-bold mt-0.5 leading-none ${
+                  className={`text-[7.5px] sm:text-[8px] font-bold mt-0.5 leading-none truncate ${
                     activeType === "non-warranty"
                       ? "text-slate-700"
                       : "text-slate-300"
@@ -1139,13 +1139,13 @@ const Dashboard = ({ defaultType }) => {
               onClick={() => {
                 navigate("/partner-warranty");
               }}
-              className={`flex-1 py-1.5 px-2.5 rounded-full transition-all duration-300 flex items-center gap-2.5 text-left cursor-pointer ${
+              className={`flex-1 py-1 px-1.5 sm:py-1.5 sm:px-2.5 rounded-full transition-all duration-300 flex items-center gap-1.5 sm:gap-2.5 text-left cursor-pointer min-w-0 ${
                 activeType === "in-warranty"
                   ? "bg-brand-yellow text-[#212121] shadow-md transform scale-[1.01]"
                   : "text-white hover:text-slate-100"
               }`}>
               <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
                   activeType === "in-warranty"
                     ? "bg-brand-navy text-white shadow-sm"
                     : "bg-white/10 text-white"
@@ -1153,15 +1153,15 @@ const Dashboard = ({ defaultType }) => {
                 <img
                   src={handshakeIcon}
                   alt="Partner Warranty"
-                  className="w-8 h-8 object-contain"
+                  className="w-5 h-5 sm:w-8 sm:h-8 object-contain"
                 />
               </div>
-              <div className="flex flex-col">
-                <span className="text-[10px] font-black leading-tight">
+              <div className="flex flex-col min-w-0 overflow-hidden">
+                <span className="text-[9.5px] sm:text-[10px] font-black leading-tight truncate">
                   Partner Warranty
                 </span>
                 <span
-                  className={`text-[8px] font-bold mt-0.5 leading-none whitespace-nowrap ${
+                  className={`text-[7.5px] sm:text-[8px] font-bold mt-0.5 leading-none truncate ${
                     activeType === "in-warranty"
                       ? "text-slate-700"
                       : "text-slate-300"
@@ -1172,21 +1172,21 @@ const Dashboard = ({ defaultType }) => {
             </button>
           </div>
 
-          <div className="flex justify-between items-center mb-2">
+          <div className="flex justify-between items-center mb-2 gap-2">
             <button
               type="button"
               onClick={openLocationModal}
-              className="flex items-center gap-2 text-left hover:opacity-85 transition-opacity cursor-pointer group focus:outline-none"
+              className="flex items-center gap-1.5 sm:gap-2 text-left hover:opacity-85 transition-opacity cursor-pointer group focus:outline-none min-w-0 flex-1"
               aria-label="Change location">
               <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-brand-blue shrink-0 group-hover:bg-blue-100 transition-colors">
-                <MapPin className="h-4.5 w-4.5 text-brand-blue" />
+                <MapPin className="h-4.5 w-4.5 text-brand-blue shrink-0" />
               </div>
-              <div>
+              <div className="min-w-0 flex-1">
                 <span className="text-[10px] text-text-secondary font-medium block leading-tight">
                   Deliver &amp; Service to
                 </span>
-                <div className="flex items-center gap-1">
-                  <span className="text-sm font-bold text-text-primary group-hover:text-brand-blue transition-colors truncate max-w-[170px] sm:max-w-[220px]">
+                <div className="flex items-center gap-1 min-w-0">
+                  <span className="text-xs sm:text-sm font-bold text-text-primary group-hover:text-brand-blue transition-colors truncate block">
                     {currentLocation?.area
                       ? `${currentLocation.area}, ${currentLocation.city}`
                       : currentLocation?.city || "Select Location"}
@@ -1195,20 +1195,20 @@ const Dashboard = ({ defaultType }) => {
                 </div>
               </div>
             </button>
-            <div className="flex gap-3">
+            <div className="flex gap-2 sm:gap-3 shrink-0">
               <button
                 onClick={() => navigate("/notifications")}
-                className="w-9 h-9 bg-slate-100 rounded-full relative flex items-center justify-center">
-                <Bell className="h-5 w-5 text-text-primary" />
+                className="w-8 h-8 sm:w-9 sm:h-9 bg-slate-100 rounded-full relative flex items-center justify-center shrink-0">
+                <Bell className="h-4.5 w-4.5 sm:h-5 sm:w-5 text-text-primary" />
                 {/* The dot used to be unconditional — permanently "you have
                   something", which is the same as saying nothing. */}
                 {unreadCount > 0 && (
-                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
+                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
                 )}
               </button>
               <div
                 onClick={() => navigate("/profile")}
-                className="w-9 h-9 bg-brand-blue rounded-full flex items-center justify-center text-white text-sm font-bold cursor-pointer hover:bg-blue-800 transition-colors">
+                className="w-8 h-8 sm:w-9 sm:h-9 bg-brand-blue rounded-full flex items-center justify-center text-white text-xs sm:text-sm font-bold cursor-pointer hover:bg-blue-800 transition-colors shrink-0">
                 {user?.name ? user.name.charAt(0).toUpperCase() : "U"}
               </div>
             </div>
@@ -1283,19 +1283,19 @@ const Dashboard = ({ defaultType }) => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 p-4 md:px-10 md:py-6 lg:px-16 lg:py-8 xl:px-20 flex flex-col gap-6 md:gap-8 max-w-screen-2xl mx-auto w-full">
+      <div className="flex-1 px-3 sm:px-4 py-4 md:px-10 md:py-6 lg:px-16 lg:py-8 xl:px-20 flex flex-col gap-5 md:gap-8 max-w-screen-2xl mx-auto w-full">
         {/* Service Banners — horizontal auto-slide carousel */}
         <div
           ref={bannerRef}
-          className="flex gap-4 overflow-x-auto pb-2 -mx-2 px-2 snap-x snap-mandatory scroll-smooth no-scrollbar md:mx-auto md:px-0 md:pb-0 md:max-w-[1420px] md:w-full relative mt-6 md:mt-10">
+          className="flex gap-3 sm:gap-4 overflow-x-auto pb-2 -mx-1 px-1 sm:-mx-2 sm:px-2 snap-x snap-mandatory scroll-smooth no-scrollbar md:mx-auto md:px-0 md:pb-0 md:max-w-[1420px] md:w-full relative mt-4 sm:mt-6 md:mt-10">
           {(activeType === "non-warranty"
             ? regularBanners
             : warrantyBannersList
           ).map((banner) => (
             <div
               key={banner.id}
-              className="bg-white rounded-2xl shadow-sm border border-border-color overflow-hidden min-w-[300px] md:min-w-full md:w-full flex-shrink-0 snap-center hover:shadow-md transition-shadow">
-              <div className="relative h-36 md:h-auto md:aspect-[3.35/1] w-full">
+              className="bg-white rounded-2xl shadow-sm border border-border-color overflow-hidden min-w-[85vw] max-w-full sm:min-w-[340px] md:min-w-full md:w-full flex-shrink-0 snap-center hover:shadow-md transition-shadow">
+              <div className="relative h-32 sm:h-36 md:h-auto md:aspect-[3.35/1] w-full">
                 <img
                   src={banner.image}
                   alt="Service Banner"
@@ -1307,21 +1307,21 @@ const Dashboard = ({ defaultType }) => {
         </div>
 
         {/* Categories */}
-        <div className="mt-6 md:mt-10">
-          <div className="flex justify-between items-center mb-6 md:mb-8 lg:mb-10 md:relative md:justify-center">
-            <h2 className="text-2xl md:text-3xl lg:text-4xl font-black text-text-primary md:text-center">
+        <div className="mt-4 sm:mt-6 md:mt-10">
+          <div className="flex justify-between items-center mb-4 sm:mb-6 md:mb-8 lg:mb-10 md:relative md:justify-center">
+            <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black text-text-primary md:text-center">
               Our Services
             </h2>
             <button
               onClick={() => navigate("/services")}
-              className="px-4 py-1.5 bg-[#0B4EA2] text-white hover:bg-[#072C63] text-xs font-bold rounded-xl shadow-xs hover:shadow-md transition-all active:scale-95 cursor-pointer md:absolute md:right-0">
+              className="px-3.5 sm:px-4 py-1.5 bg-[#0B4EA2] text-white hover:bg-[#072C63] text-xs font-bold rounded-xl shadow-xs hover:shadow-md transition-all active:scale-95 cursor-pointer md:absolute md:right-0">
               See All
             </button>
           </div>
           <div
             ref={serviceRef}
-            className="flex overflow-x-auto gap-4 pb-4 -mx-2 px-2 snap-x md:snap-none no-scrollbar md:w-full md:mx-0 md:px-0 md:pb-0 relative">
-            <div className="flex gap-4 min-w-full md:gap-8 lg:gap-10 md:w-max">
+            className="flex overflow-x-auto gap-3 sm:gap-4 pb-3 sm:pb-4 -mx-1 px-1 sm:-mx-2 sm:px-2 snap-x md:snap-none no-scrollbar md:w-full md:mx-0 md:px-0 md:pb-0 relative">
+            <div className="flex gap-3 sm:gap-4 min-w-full md:gap-8 lg:gap-10 md:w-max">
               {[...services, ...services].map((service, index) => (
                 <div
                   key={`${service.id}-${index}`}
@@ -1363,17 +1363,17 @@ const Dashboard = ({ defaultType }) => {
                       );
                     }
                   }}
-                  className={`flex flex-col items-center gap-2 cursor-pointer flex-shrink-0 w-24 snap-start md:snap-none md:w-44 md:bg-white md:rounded-2xl md:p-4 md:hover:shadow-md md:transition-all ${
+                  className={`flex flex-col items-center gap-1.5 sm:gap-2 cursor-pointer flex-shrink-0 w-20 sm:w-24 snap-start md:snap-none md:w-44 md:bg-white md:rounded-2xl md:p-4 md:hover:shadow-md md:transition-all ${
                     index >= services.length ? "hidden md:flex" : ""
                   }`}>
-                  <div className="w-24 h-24 md:w-full md:h-20 lg:h-24 bg-transparent rounded-2xl flex items-center justify-center transition-all overflow-hidden">
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-full md:h-20 lg:h-24 bg-transparent rounded-2xl flex items-center justify-center transition-all overflow-hidden">
                     <img
                       src={service.img}
                       alt={service.name}
-                      className="w-full h-full object-contain mix-blend-multiply p-2"
+                      className="w-full h-full object-contain mix-blend-multiply p-1.5 sm:p-2"
                     />
                   </div>
-                  <span className="text-xs font-semibold text-text-primary text-center truncate md:whitespace-normal md:leading-tight w-full">
+                  <span className="text-[11px] sm:text-xs font-semibold text-text-primary text-center line-clamp-2 md:whitespace-normal md:leading-tight w-full">
                     {service.name}
                   </span>
                 </div>
@@ -1384,20 +1384,20 @@ const Dashboard = ({ defaultType }) => {
 
         {/* Warranty Offers / Smart Detection — mobile only */}
         <div className="md:hidden">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-bold text-text-primary">
+          <div className="flex justify-between items-center mb-3">
+            <h2 className="text-base sm:text-lg font-bold text-text-primary">
               {activeType === "in-warranty" ? "Covered Benefits" : ""}
             </h2>
           </div>
-          <div className="flex gap-4 overflow-x-auto pb-2 -mx-2 px-2 snap-x snap-mandatory scroll-smooth no-scrollbar md:mx-auto md:px-0 md:pb-0 md:max-w-[1420px] md:w-full relative">
+          <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-2 -mx-1 px-1 sm:-mx-2 sm:px-2 snap-x snap-mandatory scroll-smooth no-scrollbar md:mx-auto md:px-0 md:pb-0 md:max-w-[1420px] md:w-full relative">
             {[
               { id: 1, image: warrantyBanner1 },
               { id: 2, image: warrantyBanner2 },
             ].map((banner) => (
               <div
                 key={banner.id}
-                className="bg-white rounded-2xl shadow-sm border border-border-color overflow-hidden min-w-[300px] md:min-w-full md:w-full flex-shrink-0 snap-center hover:shadow-md transition-shadow">
-                <div className="relative h-36 md:h-auto md:aspect-[3.8/1] w-full">
+                className="bg-white rounded-2xl shadow-sm border border-border-color overflow-hidden min-w-[85vw] max-w-full sm:min-w-[340px] md:min-w-full md:w-full flex-shrink-0 snap-center hover:shadow-md transition-shadow">
+                <div className="relative h-32 sm:h-36 md:h-auto md:aspect-[3.8/1] w-full">
                   <img
                     src={banner.image}
                     alt="Warranty Banner"
@@ -1411,7 +1411,7 @@ const Dashboard = ({ defaultType }) => {
 
         {/* Brands & Offers */}
         <div className="md:mt-10 lg:mt-14 xl:mt-16">
-          <div className="flex items-center mb-6 md:mb-8 lg:mb-10 md:justify-center">
+          <div className="flex items-center mb-4 sm:mb-6 md:mb-8 lg:mb-10 md:justify-center">
             <h2 className="text-lg font-bold md:text-2xl lg:text-3xl xl:text-4xl md:font-black text-text-primary md:text-center">
               Brands & Offers
             </h2>
@@ -1420,7 +1420,7 @@ const Dashboard = ({ defaultType }) => {
           {/* Master Card Container for Desktop */}
           <div className="md:bg-slate-100 md:rounded-[32px] md:p-6 lg:p-8 md:border md:border-slate-200/80 md:shadow-[0_10px_30px_rgba(0,0,0,0.03)] md:max-w-[1300px] md:mx-auto">
             {/* Brand Cards — scroll on mobile, 2x2 grid inside single card on desktop */}
-            <div className="flex overflow-x-auto gap-4 pt-1.5 pb-4 -mx-2 px-2 snap-x no-scrollbar md:grid md:grid-cols-2 md:gap-6 lg:gap-8 md:overflow-visible md:mx-0 md:px-0 md:pb-0 md:pt-0">
+            <div className="flex overflow-x-auto gap-3 sm:gap-4 pt-1 pb-3 sm:pb-4 -mx-1 px-1 sm:-mx-2 sm:px-2 snap-x no-scrollbar md:grid md:grid-cols-2 md:gap-6 lg:gap-8 md:overflow-visible md:mx-0 md:px-0 md:pb-0 md:pt-0">
               {brandCards.map((bc) => (
                 <div
                   key={bc.id}
@@ -1431,7 +1431,7 @@ const Dashboard = ({ defaultType }) => {
                       navigate(bc.actionUrl);
                     }
                   }}
-                  className={`w-full sm:max-w-[340px] md:max-w-none md:flex-shrink flex-shrink-0 h-[200px] md:h-[220px] rounded-[24px] bg-gradient-to-br ${bc.gradient} p-4 md:p-6 flex flex-col justify-between relative overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.03)] border border-slate-100/50 cursor-pointer snap-start`}>
+                  className={`w-[85vw] sm:w-[320px] md:w-auto md:max-w-none md:flex-shrink flex-shrink-0 h-[200px] md:h-[220px] rounded-[24px] bg-gradient-to-br ${bc.gradient} p-4 md:p-6 flex flex-col justify-between relative overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.03)] border border-slate-100/50 cursor-pointer snap-start`}>
                   <div className="flex flex-col items-start z-10 max-w-[65%]">
                     {bc.badgeText && (
                       <span
@@ -1537,7 +1537,7 @@ const Dashboard = ({ defaultType }) => {
               See All
             </button>
           </div>
-          <div className="flex gap-4 overflow-x-auto pb-4 -mx-2 px-2 snap-x no-scrollbar md:grid md:grid-cols-4 xl:grid-cols-4 md:gap-5 md:overflow-visible md:mx-0 md:px-0 md:pb-0">
+          <div className="flex gap-2.5 sm:gap-4 overflow-x-auto pb-3 sm:pb-4 -mx-1 px-1 sm:-mx-2 sm:px-2 snap-x no-scrollbar md:grid md:grid-cols-4 xl:grid-cols-4 md:gap-5 md:overflow-visible md:mx-0 md:px-0 md:pb-0">
             {mostBookedServices.slice(0, 8).map((service) => (
               <div
                 key={service.id}
@@ -1556,32 +1556,32 @@ const Dashboard = ({ defaultType }) => {
                     }
                   }
                 }}
-                className="flex flex-col gap-2.5 cursor-pointer flex-shrink-0 w-40 snap-start md:w-auto md:flex-shrink border border-border-color rounded-2xl p-2 md:p-4 bg-white hover:border-brand-blue hover:shadow-md transition-all">
-                <div className="w-full h-32 md:h-44 lg:h-48 bg-white rounded-xl flex items-center justify-center overflow-hidden relative">
+                className="flex flex-col gap-2 cursor-pointer flex-shrink-0 w-[138px] min-[360px]:w-[148px] sm:w-44 snap-start md:w-auto md:flex-shrink border border-border-color rounded-2xl p-2 md:p-4 bg-white hover:border-brand-blue hover:shadow-md transition-all">
+                <div className="w-full h-28 min-[360px]:h-32 md:h-44 lg:h-48 bg-white rounded-xl flex items-center justify-center overflow-hidden relative">
                   <img
                     src={service.image}
                     alt={service.title}
                     className="w-full h-full object-cover"
                   />
                   <span
-                    className={`absolute top-2 right-2 text-xs font-bold px-2.5 py-1 rounded-full ${activeType === "in-warranty" ? "bg-[#E8F5E9] text-[#2E7D32]" : "bg-[#E3F2FD] text-brand-blue"}`}>
+                    className={`absolute top-2 right-2 text-[10px] md:text-xs font-bold px-2 md:px-2.5 py-0.5 md:py-1 rounded-full ${activeType === "in-warranty" ? "bg-[#E8F5E9] text-[#2E7D32]" : "bg-[#E3F2FD] text-brand-blue"}`}>
                     {service.badge}
                   </span>
                 </div>
                 <div className="flex flex-col gap-1 mt-1">
-                  <span className="text-sm md:text-base font-semibold md:font-bold text-text-primary truncate">
+                  <span className="text-xs min-[360px]:text-sm md:text-base font-semibold md:font-bold text-text-primary line-clamp-2 leading-snug">
                     {service.title}
                   </span>
                   {service.rating ? (
                     <div className="flex items-center gap-1">
-                      <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500" />
-                      <span className="text-xs text-text-secondary">
+                      <Star className="h-3 w-3 md:h-3.5 md:w-3.5 text-yellow-500 fill-yellow-500" />
+                      <span className="text-[10px] md:text-xs text-text-secondary">
                         {service.rating}
                       </span>
                     </div>
                   ) : null}
                   <span
-                    className={`text-sm md:text-base font-bold md:font-extrabold ${activeType === "in-warranty" ? "text-green-600" : "text-[#0B4EA2]"}`}>
+                    className={`text-xs min-[360px]:text-sm md:text-base font-bold md:font-extrabold ${activeType === "in-warranty" ? "text-green-600" : "text-[#0B4EA2]"}`}>
                     {activeType === "in-warranty"
                       ? "₹0 (Warranty)"
                       : `₹${service.price}`}
@@ -1604,7 +1604,7 @@ const Dashboard = ({ defaultType }) => {
               See All
             </button>
           </div>
-          <div className="flex gap-4 overflow-x-auto pb-4 -mx-2 px-2 snap-x no-scrollbar md:grid md:grid-cols-4 xl:grid-cols-4 md:gap-5 md:overflow-visible md:mx-0 md:px-0 md:pb-0">
+          <div className="flex gap-2.5 sm:gap-4 overflow-x-auto pb-3 sm:pb-4 -mx-1 px-1 sm:-mx-2 sm:px-2 snap-x no-scrollbar md:grid md:grid-cols-4 xl:grid-cols-4 md:gap-5 md:overflow-visible md:mx-0 md:px-0 md:pb-0">
             {applianceServices.slice(0, 8).map((service) => (
               <div
                 key={service.id}
@@ -1644,32 +1644,32 @@ const Dashboard = ({ defaultType }) => {
                     );
                   }
                 }}
-                className="flex flex-col gap-2.5 cursor-pointer flex-shrink-0 w-40 snap-start md:w-auto md:flex-shrink border border-border-color rounded-2xl p-2 md:p-4 bg-white hover:border-brand-blue hover:shadow-md transition-all">
-                <div className="w-full h-32 md:h-44 lg:h-48 bg-white rounded-xl flex items-center justify-center overflow-hidden relative">
+                className="flex flex-col gap-2 cursor-pointer flex-shrink-0 w-[138px] min-[360px]:w-[148px] sm:w-44 snap-start md:w-auto md:flex-shrink border border-border-color rounded-2xl p-2 md:p-4 bg-white hover:border-brand-blue hover:shadow-md transition-all">
+                <div className="w-full h-28 min-[360px]:h-32 md:h-44 lg:h-48 bg-white rounded-xl flex items-center justify-center overflow-hidden relative">
                   <img
                     src={service.image}
                     alt={service.title}
                     className="w-full h-full object-cover"
                   />
                   <span
-                    className={`absolute top-2 right-2 text-xs font-bold px-2.5 py-1 rounded-full ${service.badge === "2 ACs" ? "bg-[#5C0632] text-white" : activeType === "in-warranty" ? "bg-[#E8F5E9] text-green-600" : "bg-[#E3F2FD] text-brand-blue"}`}>
+                    className={`absolute top-2 right-2 text-[10px] md:text-xs font-bold px-2 md:px-2.5 py-0.5 md:py-1 rounded-full ${service.badge === "2 ACs" ? "bg-[#5C0632] text-white" : activeType === "in-warranty" ? "bg-[#E8F5E9] text-green-600" : "bg-[#E3F2FD] text-brand-blue"}`}>
                     {service.badge}
                   </span>
                 </div>
                 <div className="flex flex-col gap-1 mt-1">
-                  <span className="text-sm md:text-base font-semibold md:font-bold text-text-primary truncate">
+                  <span className="text-xs min-[360px]:text-sm md:text-base font-semibold md:font-bold text-text-primary line-clamp-2 leading-snug">
                     {service.title}
                   </span>
                   {service.rating ? (
                     <div className="flex items-center gap-1">
-                      <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500" />
-                      <span className="text-xs text-text-secondary">
+                      <Star className="h-3 w-3 md:h-3.5 md:w-3.5 text-yellow-500 fill-yellow-500" />
+                      <span className="text-[10px] md:text-xs text-text-secondary">
                         {service.rating}
                       </span>
                     </div>
                   ) : null}
                   <span
-                    className={`text-sm md:text-base font-bold md:font-extrabold ${activeType === "in-warranty" ? "text-green-600" : "text-[#0B4EA2]"}`}>
+                    className={`text-xs min-[360px]:text-sm md:text-base font-bold md:font-extrabold ${activeType === "in-warranty" ? "text-green-600" : "text-[#0B4EA2]"}`}>
                     {activeType === "in-warranty"
                       ? "₹0 (Warranty)"
                       : `₹${service.price}`}
@@ -1692,7 +1692,7 @@ const Dashboard = ({ defaultType }) => {
               See All
             </button>
           </div>
-          <div className="flex gap-4 overflow-x-auto pb-4 -mx-2 px-2 snap-x no-scrollbar md:grid md:grid-cols-5 xl:grid-cols-5 md:gap-5 md:overflow-visible md:mx-0 md:px-0 md:pb-0">
+          <div className="flex gap-2.5 sm:gap-4 overflow-x-auto pb-3 sm:pb-4 -mx-1 px-1 sm:-mx-2 sm:px-2 snap-x no-scrollbar md:grid md:grid-cols-5 xl:grid-cols-5 md:gap-5 md:overflow-visible md:mx-0 md:px-0 md:pb-0">
             {[
               {
                 id: 1,
@@ -1738,25 +1738,25 @@ const Dashboard = ({ defaultType }) => {
               <div
                 key={item.id}
                 onClick={() => navigate("/buy-product")}
-                className="flex flex-col gap-2.5 cursor-pointer flex-shrink-0 w-40 snap-start md:w-auto md:flex-shrink border border-border-color rounded-2xl p-2 md:p-4 bg-white hover:border-brand-blue hover:shadow-md transition-all">
-                <div className="w-full h-32 md:h-44 lg:h-48 bg-slate-50/50 rounded-xl flex items-center justify-center overflow-hidden relative">
+                className="flex flex-col gap-2 cursor-pointer flex-shrink-0 w-[138px] min-[360px]:w-[148px] sm:w-44 snap-start md:w-auto md:flex-shrink border border-border-color rounded-2xl p-2 md:p-4 bg-white hover:border-brand-blue hover:shadow-md transition-all">
+                <div className="w-full h-28 min-[360px]:h-32 md:h-44 lg:h-48 bg-slate-50/50 rounded-xl flex items-center justify-center overflow-hidden relative">
                   <img
                     src={item.image}
                     alt={item.title}
                     className="w-full h-full object-contain p-2 mix-blend-multiply"
                   />
-                  <span className="absolute top-2 right-2 text-[10px] md:text-xs font-bold px-2.5 py-1 rounded-full bg-[#E3F2FD] text-brand-blue">
+                  <span className="absolute top-2 right-2 text-[10px] md:text-xs font-bold px-2 md:px-2.5 py-0.5 md:py-1 rounded-full bg-[#E3F2FD] text-brand-blue">
                     {item.badge}
                   </span>
                 </div>
                 <div className="flex flex-col gap-1 mt-1">
-                  <span className="text-sm md:text-base font-semibold md:font-bold text-text-primary truncate">
+                  <span className="text-xs min-[360px]:text-sm md:text-base font-semibold md:font-bold text-text-primary line-clamp-2 leading-snug">
                     {item.title}
                   </span>
-                  <span className="text-[10px] md:text-xs text-text-secondary truncate">
+                  <span className="text-[10px] md:text-xs text-text-secondary line-clamp-2 leading-snug">
                     {item.desc}
                   </span>
-                  <span className="text-sm md:text-base font-bold md:font-extrabold text-[#0B4EA2]">
+                  <span className="text-xs min-[360px]:text-sm md:text-base font-bold md:font-extrabold text-[#0B4EA2]">
                     ₹{item.price}
                   </span>
                 </div>
