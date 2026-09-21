@@ -73,8 +73,8 @@ fi
 
 log_info "Starting/Reloading PM2 cluster across 4 CPU cores..."
 if pm2 describe nigam-backend > /dev/null 2>&1; then
-    # reload achieves zero-downtime rolling restart across the 4 cluster instances
-    pm2 reload ecosystem.config.cjs --update-env || pm2 restart ecosystem.config.cjs --update-env
+    # If running in fork mode, reload won't switch to cluster, so restart with ecosystem
+    pm2 restart ecosystem.config.cjs --update-env || pm2 reload ecosystem.config.cjs --update-env
 else
     pm2 start ecosystem.config.cjs --update-env
 fi
