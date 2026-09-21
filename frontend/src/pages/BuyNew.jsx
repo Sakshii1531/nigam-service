@@ -148,19 +148,6 @@ const BuyNew = () => {
           { name: "Microwave Oven", img: ovenImg },
         ];
 
-  // Helper to map category names to images
-  const getApplianceImg = (category) => {
-    const n = category?.toLowerCase() || "";
-    if (n.includes("television") || n.includes("tv")) return tvImg;
-    if (n.includes("refrigerator") || n.includes("fridge")) return fridgeImg;
-    if (n.includes("washing") || n.includes("machine")) return washingImg;
-    if (n.includes("ac") || n.includes("conditioner") || n.includes("air"))
-      return splitAcImg;
-    if (n.includes("purifier") || n.includes("water")) return waterPurifierImg;
-    if (n.includes("geyser")) return geyserImg;
-    if (n.includes("microwave") || n.includes("oven")) return ovenImg;
-    return tvImg;
-  };
 
   // Shared with ProductDetails.jsx and mirrored to the server cart once there is
   // a session — see lib/cartStore.js.
