@@ -82,6 +82,9 @@ import { LOCAL_UPLOAD_DIR } from './modules/shared/fileUpload.js';
 export function createApp() {
   const app = express();
 
+  // Trust reverse proxy (Nginx) so req.ip and express-rate-limit read real client IP from X-Forwarded-For
+  app.set('trust proxy', 1);
+
   app.disable('x-powered-by');
   app.use(helmet());
   app.use(
