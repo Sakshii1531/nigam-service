@@ -87,6 +87,12 @@ async function createAcceptedD2CJob() {
   return { jobId: acceptRes.body.data.id, srId, serviceProvider, serviceProviderToken, custToken };
 }
 
+/** Fetches the completion OTP from the booking linked to a ServiceRequest. */
+async function getCompletionOtp(srId) {
+  const sr = await ServiceRequest.findById(srId).populate('booking');
+  return sr?.booking?.completionOtp || sr?.completionOtp || null;
+}
+
 beforeAll(async () => {
   await registerAllModels();
   await mongoose.connect(TEST_DB_URI);
@@ -284,10 +290,11 @@ describe('D2C job — full lifecycle to payment', () => {
     const expectedTotal = Math.round(expectedSubtotal * 1.18 * 100) / 100;
     expect(billingEstimate.total).toBeCloseTo(expectedTotal, 2);
 
+    const completionOtp = await getCompletionOtp(srId);
     const payRes = await request(app)
       .post(`/api/v1/service-provider/jobs/${jobId}/collect-payment`)
       .set('Authorization', `Bearer ${serviceProviderToken}`)
-      .send({ paymentMethod: 'Cash' })
+      .send({ paymentMethod: 'Cash', otp: completionOtp })
       .expect(200);
     expect(payRes.body.data.job.activeStep).toBe('completed');
     expect(payRes.body.data.payment.amount).toBeCloseTo(expectedTotal, 2);
@@ -320,10 +327,11 @@ describe('D2C job — full lifecycle to payment', () => {
     const expectedTotal = billingRes.body.data.billingEstimate.total;
     expect(expectedTotal).toBeGreaterThan(0);
 
+    const completionOtp = await getCompletionOtp(srId);
     const initiateRes = await request(app)
       .post(`/api/v1/service-provider/jobs/${jobId}/collect-payment`)
       .set('Authorization', `Bearer ${serviceProviderToken}`)
-      .send({ paymentMethod: 'Card' })
+      .send({ paymentMethod: 'Card', otp: completionOtp })
       .expect(200);
     expect(initiateRes.body.data.job.activeStep).toBe('awaitingpayment');
     expect(initiateRes.body.data.payment).toBeNull();
@@ -357,7 +365,7 @@ describe('D2C job — full lifecycle to payment', () => {
   });
 
   it('rejects verifying a job payment with an invalid signature, leaving the job at awaitingpayment', async () => {
-    const { jobId, serviceProviderToken } = await createAcceptedD2CJob();
+    const { jobId, srId, serviceProviderToken } = await createAcceptedD2CJob();
 
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/start-travel`).set('Authorization', `Bearer ${serviceProviderToken}`);
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/arrive`).set('Authorization', `Bearer ${serviceProviderToken}`);
@@ -366,10 +374,11 @@ describe('D2C job — full lifecycle to payment', () => {
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/repair-complete`).set('Authorization', `Bearer ${serviceProviderToken}`);
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/billing`).set('Authorization', `Bearer ${serviceProviderToken}`);
 
+    const completionOtp = await getCompletionOtp(srId);
     await request(app)
       .post(`/api/v1/service-provider/jobs/${jobId}/collect-payment`)
       .set('Authorization', `Bearer ${serviceProviderToken}`)
-      .send({ paymentMethod: 'UPI' })
+      .send({ paymentMethod: 'UPI', otp: completionOtp })
       .expect(200);
 
     await request(app)
@@ -454,7 +463,7 @@ describe('AMC-covered job — FOC claims and subscription decrement', () => {
       .send({ type: 'AMC Visit', amcSubscriptionId: subscription.id })
       .expect(200);
 
-    return { jobId: acceptRes.body.data.id, srId: sr.id, serviceProvider, serviceProviderToken, subscription };
+    return { jobId: acceptRes.body.data.id, srId: sr.id, completionOtp: sr.completionOtp, serviceProvider, serviceProviderToken, subscription };
   }
 
   it('links the AMC subscription onto the job and defaults to the flat covered-visit earnings', async () => {
@@ -466,7 +475,7 @@ describe('AMC-covered job — FOC claims and subscription decrement', () => {
   });
 
   it('decrements AMCSubscription.visitsRemaining and creates a Completed AMCVisit on payment collection, crediting the flat visit earnings (and raises a FOC claim per checked spare part along the way, billing the customer nothing for parts)', async () => {
-    const { jobId, serviceProviderToken, serviceProvider, subscription } = await createAcceptedAmcJob();
+    const { jobId, serviceProviderToken, serviceProvider, subscription, completionOtp } = await createAcceptedAmcJob();
 
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/start-travel`).set('Authorization', `Bearer ${serviceProviderToken}`).expect(200);
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/arrive`).set('Authorization', `Bearer ${serviceProviderToken}`).expect(200);
@@ -491,7 +500,7 @@ describe('AMC-covered job — FOC claims and subscription decrement', () => {
     expect(billingRes.body.data.billingEstimate.total).toBe(0);
     expect(billingRes.body.data.billingEstimate.serviceProviderEarnings).toBe(150);
 
-    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/collect-payment`).set('Authorization', `Bearer ${serviceProviderToken}`).send({}).expect(200);
+    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/collect-payment`).set('Authorization', `Bearer ${serviceProviderToken}`).send({ otp: completionOtp }).expect(200);
 
     const updatedSubscription = await AMCSubscription.findById(subscription._id);
     expect(updatedSubscription.visitsRemaining).toBe(3);
@@ -626,7 +635,7 @@ describe('earnings + payouts', () => {
   });
 
   it('debits the earnings tally and settles a Quick payout, crediting the masked primary method', async () => {
-    const { jobId, serviceProviderToken, serviceProvider } = await createAcceptedD2CJob();
+    const { jobId, srId, serviceProviderToken, serviceProvider } = await createAcceptedD2CJob();
 
     await request(app)
       .post('/api/v1/service-provider/profile/payout-methods')
@@ -641,7 +650,8 @@ describe('earnings + payouts', () => {
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/spare-parts`).set('Authorization', `Bearer ${serviceProviderToken}`).send({ parts: [] });
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/repair-complete`).set('Authorization', `Bearer ${serviceProviderToken}`);
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/billing`).set('Authorization', `Bearer ${serviceProviderToken}`);
-    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/collect-payment`).set('Authorization', `Bearer ${serviceProviderToken}`).send({});
+    const payoutOtp = await getCompletionOtp(srId);
+    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/collect-payment`).set('Authorization', `Bearer ${serviceProviderToken}`).send({ otp: payoutOtp });
 
     const tallyBefore = await EarningsTally.findOne({ serviceProvider: serviceProvider._id });
     expect(tallyBefore.total).toBe(300);
@@ -687,7 +697,7 @@ describe('inventory + part orders', () => {
 describe('recent earnings + analytics', () => {
   /** Runs an accepted D2C job all the way to completed so it has real earnings. */
   async function completeJob() {
-    const { jobId, serviceProviderToken } = await createAcceptedD2CJob();
+    const { jobId, srId, serviceProviderToken } = await createAcceptedD2CJob();
     const auth = { Authorization: `Bearer ${serviceProviderToken}` };
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/start-travel`).set(auth).expect(200);
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/arrive`).set(auth).expect(200);
@@ -696,7 +706,8 @@ describe('recent earnings + analytics', () => {
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/spare-parts`).set(auth).send({ parts: [], additionalServices: [] }).expect(200);
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/repair-complete`).set(auth).expect(200);
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/billing`).set(auth).expect(200);
-    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/collect-payment`).set(auth).send({ paymentMethod: 'Cash' }).expect(200);
+    const otp = await getCompletionOtp(srId);
+    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/collect-payment`).set(auth).send({ paymentMethod: 'Cash', otp }).expect(200);
     return { jobId, serviceProviderToken };
   }
 
@@ -829,7 +840,7 @@ describe('recent earnings + analytics', () => {
 
 describe('earnings breakdown', () => {
   it('splits completed work by payout type and reports the withdrawable balance', async () => {
-    const { jobId, serviceProviderToken } = await createAcceptedD2CJob();
+    const { jobId, srId, serviceProviderToken } = await createAcceptedD2CJob();
     const auth = { Authorization: `Bearer ${serviceProviderToken}` };
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/start-travel`).set(auth).expect(200);
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/arrive`).set(auth).expect(200);
@@ -837,7 +848,8 @@ describe('earnings breakdown', () => {
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/spare-parts`).set(auth).send({ parts: [], additionalServices: [] }).expect(200);
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/repair-complete`).set(auth).expect(200);
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/billing`).set(auth).expect(200);
-    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/collect-payment`).set(auth).send({ paymentMethod: 'Cash' }).expect(200);
+    const otp1 = await getCompletionOtp(srId);
+    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/collect-payment`).set(auth).send({ paymentMethod: 'Cash', otp: otp1 }).expect(200);
 
     const res = await request(app).get('/api/v1/service-provider/earnings/breakdown').set(auth).expect(200);
     const d = res.body.data;
@@ -853,7 +865,7 @@ describe('earnings breakdown', () => {
   });
 
   it('adds settled payouts back into lifetimeEarned so withdrawing does not erase history', async () => {
-    const { jobId, serviceProviderToken } = await createAcceptedD2CJob();
+    const { jobId, srId, serviceProviderToken } = await createAcceptedD2CJob();
     const auth = { Authorization: `Bearer ${serviceProviderToken}` };
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/start-travel`).set(auth).expect(200);
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/arrive`).set(auth).expect(200);
@@ -861,7 +873,8 @@ describe('earnings breakdown', () => {
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/spare-parts`).set(auth).send({ parts: [], additionalServices: [] }).expect(200);
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/repair-complete`).set(auth).expect(200);
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/billing`).set(auth).expect(200);
-    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/collect-payment`).set(auth).send({ paymentMethod: 'Cash' }).expect(200);
+    const otp2 = await getCompletionOtp(srId);
+    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/collect-payment`).set(auth).send({ paymentMethod: 'Cash', otp: otp2 }).expect(200);
 
     await request(app).post('/api/v1/service-provider/profile/payout-methods').set(auth).send({ type: 'upi', upiId: 'provider@upi', isPrimary: true }).expect(200);
 

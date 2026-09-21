@@ -97,11 +97,6 @@ const EarningDetailPage = () => {
           customer: sr.user?.name || sr.customerName || "—",
           address: formatAddress(sr.booking?.address || sr.zone),
           description: sr.description || "—",
-          baseAmount: bill.serviceCharge || 0,
-          platformFee: Math.max(
-            (bill.serviceCharge || 0) - (bill.serviceProviderEarnings || 0),
-            0,
-          ),
           baseAmount:
             (bill.serviceCharge || 0) + (bill.additionalServicesTotal || 0),
           platformFee: Math.max(

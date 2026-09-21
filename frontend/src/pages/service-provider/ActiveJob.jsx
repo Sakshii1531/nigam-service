@@ -753,7 +753,7 @@ const ActiveJob = () => {
       return jobContext.requiredParts.filter((p) => p.checked !== false);
     }
     return [];
-  }, [spareParts, activeJob?.spareParts, jobContext?.requiredParts]);
+  }, [spareParts, activeJob, jobContext]);
 
   const selectedSparePart = requiredSpareParts[0] || {
     name: "No part used",

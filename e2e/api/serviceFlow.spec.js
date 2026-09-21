@@ -281,7 +281,7 @@ test.describe('spare part request reaches an approver', () => {
     const { categoryKey, adminToken } = await isolatedCategory(request);
     const provider = await createServiceProvider(request, { specs: [categoryKey] });
     const customer = await createCustomer(request);
-    const { serviceRequest } = await book(request, customer, categoryKey);
+    const { serviceRequest, booking } = await book(request, customer, categoryKey);
     const auth = { headers: { Authorization: `Bearer ${provider.token}` } };
 
     const acceptRes = await request.post(`/api/v1/service-provider/jobs/accept/${serviceRequest.id}`, { ...auth, data: {} });
@@ -293,7 +293,7 @@ test.describe('spare part request reaches an approver', () => {
       ...auth,
       data: { parts: [{ name: 'Compressor', price: 3200, checked: true }], additionalServices: [] },
     });
-    return { jobId, srId: serviceRequest.id, provider, customer, adminToken, auth };
+    return { jobId, srId: serviceRequest.id, bookingId: booking?.id, completionOtp: booking?.completionOtp, provider, customer, adminToken, auth };
   }
 
   test('a request raised against a job reaches the NCC queue', async ({ request }) => {
@@ -317,12 +317,19 @@ test.describe('spare part request reaches an approver', () => {
   });
 
   test('approving it schedules the revisit and advances the request', async ({ request }) => {
-    const { jobId, srId, provider, adminToken } = await jobAwaitingPart(request);
+    const { jobId, srId, bookingId, customer, provider, adminToken } = await jobAwaitingPart(request);
     const poRes = await request.post('/api/v1/service-provider/inventory/part-orders', {
       headers: { Authorization: `Bearer ${provider.token}` },
       data: { job: jobId, partName: 'Compressor', qty: 1, price: 3200, orderSource: 'NCC Warehouse' },
     });
     const partOrder = (await poRes.json()).data;
+
+    // Customer signs off on the part order first
+    const custAppr = await request.post(`/api/v1/bookings/${bookingId}/respond-part-request`, {
+      headers: { Authorization: `Bearer ${customer.token}` },
+      data: { approve: true },
+    });
+    expect(custAppr.status()).toBe(200);
 
     const apprRes = await request.patch(`/api/v1/super-admin/part-orders/${partOrder.id}`, {
       headers: { Authorization: `Bearer ${adminToken}` },
@@ -345,16 +352,25 @@ test.describe('spare part request reaches an approver', () => {
   });
 
   test('the serviceProvider can finish the revisit and get paid for it', async ({ request }) => {
-    const { jobId, srId, provider, customer, adminToken, auth } = await jobAwaitingPart(request);
+    const { jobId, srId, bookingId, provider, customer, adminToken, auth, completionOtp } = await jobAwaitingPart(request);
     const poRes = await request.post('/api/v1/service-provider/inventory/part-orders', {
       ...auth,
       data: { job: jobId, partName: 'Compressor', qty: 1, price: 3200, orderSource: 'NCC Warehouse' },
     });
     const partOrder = (await poRes.json()).data;
-    await request.patch(`/api/v1/super-admin/part-orders/${partOrder.id}`, {
+
+    // Customer signs off on the part order first
+    const custAppr = await request.post(`/api/v1/bookings/${bookingId}/respond-part-request`, {
+      headers: { Authorization: `Bearer ${customer.token}` },
+      data: { approve: true },
+    });
+    expect(custAppr.status()).toBe(200);
+
+    const apprRes = await request.patch(`/api/v1/super-admin/part-orders/${partOrder.id}`, {
       headers: { Authorization: `Bearer ${adminToken}` },
       data: { status: 'Approved' },
     });
+    expect(apprRes.status()).toBe(200);
 
     // The return visit reuses the ordinary endpoints; the server aliases them
     // into the revisit branch.
@@ -369,7 +385,7 @@ test.describe('spare part request reaches an approver', () => {
     expect(billing.status()).toBe(200);
     expect((await billing.json()).data.activeStep).toBe('revisit_billing');
 
-    const pay = await request.post(`/api/v1/service-provider/jobs/${jobId}/collect-payment`, { ...auth, data: { paymentMethod: 'Cash' } });
+    const pay = await request.post(`/api/v1/service-provider/jobs/${jobId}/collect-payment`, { ...auth, data: { paymentMethod: 'Cash', otp: completionOtp } });
     expect(pay.status()).toBe(200);
     expect((await pay.json()).data.job.activeStep).toBe('completed');
 

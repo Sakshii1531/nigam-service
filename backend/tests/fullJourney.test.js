@@ -123,10 +123,13 @@ describe('Phase 10 — the real customer journey end to end: browse -> book -> s
     const billingRes = await request(app).post(`/api/v1/service-provider/jobs/${jobId}/billing`).set('Authorization', `Bearer ${serviceProviderToken}`).expect(200);
     const { total: billedTotal } = billingRes.body.data.billingEstimate;
 
+    // Fetch OTP from DB since booking.completionOtp in API response may be masked
+    const srDoc = await ServiceRequest.findById(serviceRequest.id).populate('booking');
+    const completionOtp = srDoc?.booking?.completionOtp || srDoc?.completionOtp;
     const payRes = await request(app)
       .post(`/api/v1/service-provider/jobs/${jobId}/collect-payment`)
       .set('Authorization', `Bearer ${serviceProviderToken}`)
-      .send({ paymentMethod: 'Cash' })
+      .send({ paymentMethod: 'Cash', otp: completionOtp })
       .expect(200);
     expect(payRes.body.data.job.activeStep).toBe('completed');
     expect(payRes.body.data.payment.amount).toBeCloseTo(billedTotal, 2);

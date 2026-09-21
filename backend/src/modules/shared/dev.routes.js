@@ -232,7 +232,7 @@ if (isTest) {
       if (req.body.serviceProviderId) {
         serviceRequest = await transitionStatus(serviceRequest.id, 'Assigned', { description: 'E2E fixture: pre-assigned' });
       }
-      ok(res, { id: serviceRequest.id }, {}, 201);
+      ok(res, { id: serviceRequest.id, completionOtp: serviceRequest.completionOtp }, {}, 201);
     } catch (err) {
       next(err);
     }

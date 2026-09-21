@@ -32,7 +32,9 @@ export const submitSparePartsSchema = z.object({
 });
 
 export const collectPaymentSchema = z.object({
-  paymentMethod: z.enum(['Card', 'UPI', 'NetBanking', 'Cash', 'Wallet']).optional(),
+  paymentMethod: z.enum(['Card', 'UPI', 'NetBanking', 'Cash', 'Wallet', 'Online']).optional(),
+  otp: z.union([z.string(), z.number()]).optional(),
+  signatureUrl: z.string().nullable().optional(),
 });
 
 export const requestPartSchema = z.object({

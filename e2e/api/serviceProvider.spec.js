@@ -74,19 +74,19 @@ async function acceptedD2cJob(request) {
     headers: { Authorization: `Bearer ${customer.token}` },
     data: { category: categoryKey, serviceSlug: 'repair' },
   });
-  const { serviceRequest } = (await bookingRes.json()).data;
+  const { booking, serviceRequest } = (await bookingRes.json()).data;
 
   const acceptRes = await request.post(`/api/v1/service-provider/jobs/accept/${serviceRequest.id}`, {
     headers: { Authorization: `Bearer ${provider.token}` },
     data: {},
   });
   const job = (await acceptRes.json()).data;
-  return { jobId: job.id, srId: serviceRequest.id, provider, customer };
+  return { jobId: job.id, srId: serviceRequest.id, completionOtp: booking?.completionOtp, provider, customer };
 }
 
 test.describe('serviceProvider job lifecycle — D2C', () => {
   test('walks the full accept -> ... -> collect-payment flow, driving the ServiceRequest and crediting earnings', async ({ request }) => {
-    const { jobId, srId, provider } = await acceptedD2cJob(request);
+    const { jobId, srId, completionOtp, provider } = await acceptedD2cJob(request);
     const auth = { headers: { Authorization: `Bearer ${provider.token}` } };
 
     await request.post(`/api/v1/service-provider/jobs/${jobId}/start-travel`, auth);
@@ -104,7 +104,7 @@ test.describe('serviceProvider job lifecycle — D2C', () => {
     expect(billingEstimate.serviceCharge).toBe(1000);
     expect(billingEstimate.sparePartsTotal).toBe(500);
 
-    const payRes = await request.post(`/api/v1/service-provider/jobs/${jobId}/collect-payment`, { ...auth, data: { paymentMethod: 'Cash' } });
+    const payRes = await request.post(`/api/v1/service-provider/jobs/${jobId}/collect-payment`, { ...auth, data: { paymentMethod: 'Cash', otp: completionOtp } });
     expect(payRes.status()).toBe(200);
     const payBody = (await payRes.json()).data;
     expect(payBody.job.activeStep).toBe('completed');
@@ -120,7 +120,7 @@ test.describe('serviceProvider job lifecycle — D2C', () => {
   });
 
   test('collecting payment with a real gateway method (UPI) awaits Razorpay Checkout confirmation before completing the job', async ({ request }) => {
-    const { jobId, srId, provider } = await acceptedD2cJob(request);
+    const { jobId, srId, completionOtp, provider } = await acceptedD2cJob(request);
     const auth = { headers: { Authorization: `Bearer ${provider.token}` } };
 
     await request.post(`/api/v1/service-provider/jobs/${jobId}/start-travel`, auth);
@@ -130,7 +130,7 @@ test.describe('serviceProvider job lifecycle — D2C', () => {
     await request.post(`/api/v1/service-provider/jobs/${jobId}/repair-complete`, auth);
     await request.post(`/api/v1/service-provider/jobs/${jobId}/billing`, auth);
 
-    const initiateRes = await request.post(`/api/v1/service-provider/jobs/${jobId}/collect-payment`, { ...auth, data: { paymentMethod: 'UPI' } });
+    const initiateRes = await request.post(`/api/v1/service-provider/jobs/${jobId}/collect-payment`, { ...auth, data: { paymentMethod: 'UPI', otp: completionOtp } });
     expect(initiateRes.status()).toBe(200);
     const initiateBody = (await initiateRes.json()).data;
     expect(initiateBody.job.activeStep).toBe('awaitingpayment');
@@ -189,14 +189,14 @@ test.describe('serviceProvider job lifecycle — AMC-covered', () => {
     const srRes = await request.post('/api/v1/_dev/test-service-request', {
       data: { customerId: customer.id, serviceProviderId: provider.serviceProviderId, category: 'Refrigerator' },
     });
-    const { id: srId } = (await srRes.json()).data;
+    const { id: srId, completionOtp } = (await srRes.json()).data;
 
     const acceptRes = await request.post(`/api/v1/service-provider/jobs/accept/${srId}`, {
       headers: { Authorization: `Bearer ${provider.token}` },
       data: { type: 'AMC Visit', amcSubscriptionId },
     });
     const job = (await acceptRes.json()).data;
-    return { jobId: job.id, srId, provider, amcSubscriptionId };
+    return { jobId: job.id, srId, completionOtp, provider, amcSubscriptionId };
   }
 
   test('auto-raises a FOC claim for checked spare parts and bills the customer nothing for them', async ({ request }) => {
@@ -225,7 +225,7 @@ test.describe('serviceProvider job lifecycle — AMC-covered', () => {
   });
 
   test('decrements AMCSubscription.visitsRemaining and marks the visit Completed on payment collection', async ({ request }) => {
-    const { jobId, provider, amcSubscriptionId } = await acceptedAmcJob(request);
+    const { jobId, provider, amcSubscriptionId, completionOtp } = await acceptedAmcJob(request);
     const auth = { headers: { Authorization: `Bearer ${provider.token}` } };
 
     await request.post(`/api/v1/service-provider/jobs/${jobId}/start-travel`, auth);
@@ -238,7 +238,7 @@ test.describe('serviceProvider job lifecycle — AMC-covered', () => {
     const before = await (await request.get(`/api/v1/_dev/amc-subscription/${amcSubscriptionId}`)).json();
     expect(before.data.visitsRemaining).toBe(4);
 
-    const payRes = await request.post(`/api/v1/service-provider/jobs/${jobId}/collect-payment`, { ...auth, data: {} });
+    const payRes = await request.post(`/api/v1/service-provider/jobs/${jobId}/collect-payment`, { ...auth, data: { otp: completionOtp } });
     expect(payRes.status()).toBe(200);
 
     const after = await (await request.get(`/api/v1/_dev/amc-subscription/${amcSubscriptionId}`)).json();
