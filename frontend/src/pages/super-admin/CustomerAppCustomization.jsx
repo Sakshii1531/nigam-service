@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
-import { Plus, Trash2, Edit2, RotateCcw, Image, Sparkles, LayoutGrid, Package } from 'lucide-react';
+import { Plus, Trash2, Edit2, RotateCcw, Image, Sparkles, LayoutGrid } from 'lucide-react';
 
 // Default static banners imported in Dashboard.jsx
 
@@ -18,14 +18,6 @@ import mostBookedSalon from '../../assets/most_booked_salon.png';
 
 // Stories assets
 
-// Default static service images
-import acImgDefault from '../../assets/categories/ac.png';
-import washingImgDefault from '../../assets/categories/wasing.png';
-import electricianImgDefault from '../../assets/categories/electrician_fixed.png';
-import plumberImgDefault from '../../assets/categories/plumber_fixed.png';
-import cleaningImgDefault from '../../assets/categories/cleaning.png';
-import saloonImgDefault from '../../assets/categories/saloon.png';
-import spaImgDefault from '../../assets/categories/spa.png';
 
 const DEFAULT_CATEGORIES = [
   { name: 'For You', icon: 'sparkles', isForYou: true },
@@ -377,7 +369,6 @@ function writeCategoryConfigs(configs) {
 // `placement` of /cms/home-tiles, which the customer app reads directly.
 const TILE_PLACEMENTS = {
   categories: 'category',
-  services: 'dashboard-service',
   mostBooked: 'most-booked',
   applianceServices: 'appliance-service',
   brandCards: 'brand-card',
@@ -391,10 +382,6 @@ const TILE_ADAPTERS = {
   categories: {
     toApi: (t) => ({ title: t.name, icon: t.icon, service: t.service }),
     fromApi: (t) => ({ id: t.id, name: t.title, icon: t.icon, service: t.service }),
-  },
-  services: {
-    toApi: (t) => ({ title: t.name, imageUrl: t.img }),
-    fromApi: (t) => ({ id: t.id, name: t.title, img: t.imageUrl }),
   },
   mostBooked: {
     toApi: (t) => ({ title: t.title, imageUrl: t.image, rating: t.rating, price: t.price, badge: t.badge }),
@@ -595,34 +582,9 @@ function shapeBanner(b) {
 
 
 
-const DEFAULT_SERVICES = [
-  { id: 1, name: 'AC Repair', img: acImgDefault },
-  { id: 2, name: 'Washing Machine', img: washingImgDefault },
-  { id: 3, name: 'Electrician', img: electricianImgDefault },
-  { id: 4, name: 'Plumber', img: plumberImgDefault },
-  { id: 5, name: 'Full Home Cleaning', img: cleaningImgDefault },
-  { id: 6, name: 'Salon for Women', img: saloonImgDefault },
-  { id: 7, name: 'Spa & Massage', img: spaImgDefault }
-];
 
-const DEFAULT_SERVICE_CONFIGS = {
-  'Electrician': {
-    tagline: 'Power Back On',
-    subtitle: 'Certified Electricians for\nSafe & Reliable Repairs',
-    subServices: 'Book a consultation, Installation Services, Repair & Maintenance, UPS Inverter, Water Motor'
-  },
-  'Plumber': {
-    tagline: 'Leak Fixed Fast',
-    subtitle: 'Expert Plumbers at\nYour Doorstep in 60 min',
-    subServices: 'Book a consultation, Pipe Leakage, Tap & Fitting, Drainage, Geyser Install'
-  },
-  'AC Repair': {
-    tagline: 'Cool Again Today',
-    subtitle: 'Certified AC ServiceProviders\nFor All Brands',
-    subServices: 'Book a consultation, AC Installation, Gas Refilling, Deep Cleaning, AMC Plan'
-  }
-};
-
+// Shared by the "Most Booked Services" and "Appliance Repair & Service" tabs
+// below as their starting point for a new item's pricing packages.
 const DEFAULT_CATALOG_TEMPLATE = [
   {
     section: 'Book a consultation',
@@ -684,7 +646,7 @@ const DEFAULT_BRAND_CARDS = [
     subtitle: 'Experience Superior Cooling & Comfort',
     image: splitAcImg,
     buttonText: 'Explore on NCC',
-    actionUrl: '/service-details?service=AC%20Repair&brand=Lloyd',
+    actionUrl: '/book/AC',
     badgeText: '',
     gradient: 'from-[#E3F2FD] via-[#F4F9FF] to-[#D5E6FF]',
     textColor: '#014694'
@@ -708,7 +670,7 @@ const DEFAULT_BRAND_CARDS = [
     subtitle: 'Perfect Comfort. Every Season.',
     image: splitAcImg,
     buttonText: 'Explore on NCC',
-    actionUrl: '/service-details?service=AC%20Repair&brand=Daikin',
+    actionUrl: '/book/AC',
     badgeText: 'Air Specialist',
     gradient: 'from-[#F0F4FF] via-[#F7F9FF] to-[#E1E8FF]',
     textColor: '#00529C'
@@ -748,8 +710,6 @@ const CustomerAppCustomization = () => {
     const tab = params.get('tab');
     if (tab === 'banners') {
       setActiveSubSection('banners');
-    } else if (tab === 'services') {
-      setActiveSubSection('services');
     } else if (tab === 'brands') {
       setActiveSubSection('brands');
     } else if (tab === 'mostbooked') {
@@ -790,20 +750,11 @@ const CustomerAppCustomization = () => {
   const [newBannerTitle, setNewBannerTitle] = useState('');
   const [newBannerFile, setNewBannerFile] = useState('');
 
-  // Services State
-  const [services, setServices] = useState([]);
-  const [showServiceModal, setShowServiceModal] = useState(false);
-  const [isEditingService, setIsEditingService] = useState(false);
-  const [editServiceIndex, setEditServiceIndex] = useState(-1);
-  const [serviceForm, setServiceForm] = useState({
-    name: '',
-    img: '',
-    tagline: '',
-    subtitle: '',
-    bannerImg: ''
-  });
-  const [serviceTypes, setServiceTypes] = useState([]);
-  const [servicePackages, setServicePackages] = useState([]);
+  // Services State — just the "Our Services" dashboard tile list (name +
+  // image). This used to also carry a details-page editor (tagline, device
+  // types, priced service packages) for the customer-facing /service-details
+  // page; that page was removed since /book/<category> is the real, working
+  // booking flow, so the tile list is all that's left to manage here.
 
   // Brands & Offers State
   const [brandCards, setBrandCards] = useState([]);
@@ -881,14 +832,6 @@ const CustomerAppCustomization = () => {
         writeTiles('categories', DEFAULT_CATEGORIES);
       }
 
-      // Load Services
-      const savedServices = readTiles('services');
-      if (savedServices) {
-        setServices(JSON.parse(savedServices));
-      } else {
-        setServices(DEFAULT_SERVICES);
-        writeTiles('services', DEFAULT_SERVICES);
-      }
 
       // Load Brands & Offers
       const savedBrands = readTiles('brandCards');
@@ -1264,227 +1207,6 @@ const CustomerAppCustomization = () => {
     }
   };
 
-  // --- Services Handlers ---
-  const handleServiceFileChange = async (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      try {
-        const formData = new FormData();
-        formData.append('file', file);
-        const res = await apiRequest('/uploads', {
-          method: 'POST',
-          auth: true,
-          body: formData,
-        });
-        const url = res.url || res.data?.url || '';
-        if (url) {
-          setServiceForm(prev => ({ ...prev, img: url }));
-        }
-      } catch (err) {
-        showToast(`Image upload failed: ${err.message}`);
-      }
-    }
-  };
-
-  const handlePackageIconChange = async (pkgId, e) => {
-    const file = e.target.files[0];
-    if (file) {
-      try {
-        const formData = new FormData();
-        formData.append('file', file);
-        const res = await apiRequest('/uploads', {
-          method: 'POST',
-          auth: true,
-          body: formData,
-        });
-        const url = res.url || res.data?.url || '';
-        if (url) {
-          setServicePackages(prev => prev.map(p => p.id === pkgId ? { ...p, icon: url } : p));
-        }
-      } catch (err) {
-        showToast(`Icon upload failed: ${err.message}`);
-      }
-    }
-  };
-
-
-  const handleOpenAddService = () => {
-    setIsEditingService(false);
-    setServiceForm({
-      name: '',
-      img: '',
-      tagline: 'Expert Help at Your Door',
-      subtitle: 'Verified Professionals\nFor Every Home Need',
-      bannerImg: ''
-    });
-    setServiceTypes([]);
-    setServicePackages([
-      { id: Date.now() + 1, section: 'Book a consultation', name: 'Standard Consultancy', price: '149', bullets: 'Inspection and quote estimation, Fee adjusted in final invoice', icon: '🔩', desc: 'Standard inspection & quote', unit: 'per visit' }
-    ]);
-    setShowServiceModal(true);
-  };
-
-  const handleOpenEditService = (index) => {
-    setIsEditingService(true);
-    setEditServiceIndex(index);
-    const srv = services[index];
-    
-    const savedConfigs = readServiceConfigs();
-    const configs = savedConfigs ? JSON.parse(savedConfigs) : {};
-    const config = configs[srv.name] || DEFAULT_SERVICE_CONFIGS[srv.name] || {
-      tagline: 'Expert Help at Your Door',
-      subtitle: 'Verified Professionals\nFor Every Home Need',
-      bannerImg: '',
-      productTypes: []
-    };
-
-    const savedCatalogs = readServiceCatalogs();
-    const catalogs = savedCatalogs ? JSON.parse(savedCatalogs) : {};
-    const catalog = catalogs[srv.name] || DEFAULT_CATALOG_TEMPLATE;
-
-    setServiceForm({
-      name: srv.name,
-      img: srv.img || '',
-      tagline: config.tagline || 'Expert Help at Your Door',
-      subtitle: config.subtitle || 'Verified Professionals\nFor Every Home Need',
-      bannerImg: config.bannerImg || ''
-    });
-
-    const rawTypes = (config.productTypes || []).map(t => {
-      if (typeof t === 'string') return { name: t, desc: '' };
-      return { name: t?.name || '', desc: t?.desc || '' };
-    });
-    setServiceTypes(rawTypes);
-
-    const pkgs = [];
-    catalog.forEach(group => {
-      if (group && group.items) {
-        group.items.forEach(item => {
-          pkgs.push({
-            id: Math.random() + Math.random(),
-            section: group.section || 'General Services',
-            name: item.name || '',
-            price: (item.price || '').replace('₹', ''),
-            bullets: Array.isArray(item.bullets) ? item.bullets.join(', ') : item.bullets || '',
-            icon: item.icon || '🔧',
-            desc: item.desc || '',
-            unit: item.unit || 'per unit'
-          });
-        });
-      }
-    });
-    setServicePackages(pkgs);
-
-    setShowServiceModal(true);
-  };
-
-  const handleDeleteService = async (index) => {
-    const srvName = services[index].name;
-    if (window.confirm(`Are you sure you want to delete "${srvName}"?`)) {
-      const updated = services.filter((_, i) => i !== index);
-      try {
-        const savedTiles = await writeTiles('services', updated);
-        setServices(savedTiles || updated);
-
-        const savedConfigs = readServiceConfigs();
-        if (savedConfigs) {
-          const configs = JSON.parse(savedConfigs);
-          delete configs[srvName];
-          writeServiceConfigs(configs);
-        }
-
-        const savedCatalogs = readServiceCatalogs();
-        if (savedCatalogs) {
-          const catalogs = JSON.parse(savedCatalogs);
-          delete catalogs[srvName];
-          writeServiceCatalogs(catalogs);
-        }
-
-        showToast('Service deleted successfully.');
-      } catch (err) {
-        showToast(`Could not delete service: ${err.message}`);
-      }
-    }
-  };
-
-  const handleSaveService = async (e) => {
-    e.preventDefault();
-    if (!serviceForm.name.trim()) return;
-
-    const sectionsMap = {};
-    servicePackages.forEach(pkg => {
-      const secName = pkg.section.trim() || 'General Services';
-      if (!sectionsMap[secName]) {
-        sectionsMap[secName] = { section: secName, items: [] };
-      }
-      sectionsMap[secName].items.push({
-        name: pkg.name.trim(),
-        rating: 4.5,
-        reviews: 25,
-        price: pkg.price.startsWith('₹') ? pkg.price : `₹${pkg.price}`,
-        bullets: pkg.bullets.split(',').map(b => b.trim()).filter(Boolean),
-        icon: pkg.icon || '🔧',
-        desc: pkg.desc || '',
-        unit: pkg.unit || 'per unit',
-        img: ''
-      });
-    });
-    const parsedCatalog = Object.values(sectionsMap);
-
-    let updated = [...services];
-    const newSrv = {
-      id: isEditingService ? services[editServiceIndex].id : Date.now(),
-      name: serviceForm.name,
-      img: serviceForm.img
-    };
-
-    if (isEditingService) {
-      updated[editServiceIndex] = newSrv;
-    } else {
-      updated.push(newSrv);
-    }
-
-    try {
-      const savedTiles = await writeTiles('services', updated);
-      setServices(savedTiles || updated);
-
-      const savedConfigs = readServiceConfigs();
-      const configs = savedConfigs ? JSON.parse(savedConfigs) : {};
-      configs[serviceForm.name] = {
-        tagline: serviceForm.tagline,
-        subtitle: serviceForm.subtitle,
-        bannerImg: serviceForm.bannerImg,
-        subServices: Array.from(new Set(servicePackages.map(p => p.section.trim()).filter(Boolean))).join(', '),
-        productTypes: serviceTypes
-          .map(t => ({
-            name: (typeof t === 'string' ? t : (t?.name || '')).trim(),
-            desc: (typeof t === 'object' && t?.desc ? t.desc : '').trim()
-          }))
-          .filter(t => t.name.length > 0)
-      };
-      await writeServiceConfigs(configs);
-
-      const savedCatalogs = readServiceCatalogs();
-      const catalogs = savedCatalogs ? JSON.parse(savedCatalogs) : {};
-      catalogs[serviceForm.name] = parsedCatalog;
-      await writeServiceCatalogs(catalogs);
-
-      setShowServiceModal(false);
-      showToast('Service details saved successfully!');
-    } catch (err) {
-      showToast(`Error saving service: ${err.message}`);
-    }
-  };
-
-  const handleResetServices = () => {
-    if (window.confirm('Reset dashboard services and all customized details pages to original defaults?')) {
-      setServices(DEFAULT_SERVICES);
-      writeTiles('services', DEFAULT_SERVICES);
-      writeServiceConfigs({});
-      writeServiceCatalogs({});
-      showToast('Restored original defaults.');
-    }
-  };
 
   // --- Banner Handlers ---
   const handleBannerFileChange = (e) => {
@@ -2647,409 +2369,9 @@ const CustomerAppCustomization = () => {
             </div>
           )}
 
-          {/* ---------------- SUBSECTION 3: SERVICES CUSTOMIZATION ---------------- */}
-          {activeSubSection === 'services' && (
-            <div className="space-y-6 animate-in fade-in duration-300">
-              {/* Services Header Card */}
-              <div className="flex flex-wrap justify-between items-center bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs gap-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-[#0D47A1]">
-                      <Package size={18} />
-                    </div>
-                    <h2 className="text-base font-extrabold text-slate-900 tracking-tight">Dashboard Services Listing</h2>
-                    <span className="bg-blue-50 border border-blue-100 text-[#0D47A1] text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                      {services.length} Active Services
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-500 font-medium pl-10">
-                    Manage the primary service catalog grid displayed under 'Our Services' on the customer app dashboard.
-                  </p>
-                </div>
-
-                <div className="flex gap-2.5 items-center">
-                  <button 
-                    onClick={handleResetServices}
-                    className="bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200/80 px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
-                  >
-                    <RotateCcw size={14} className="text-slate-500" /> Reset Defaults
-                  </button>
-                  <button 
-                    onClick={handleOpenAddService}
-                    className="bg-[#0D47A1] hover:bg-blue-800 text-white px-4 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-98"
-                  >
-                    <Plus size={15} /> Add Service
-                  </button>
-                </div>
-              </div>
-
-              {/* Services Table Container */}
-              <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead>
-                      <tr className="bg-slate-50/80 text-slate-500 font-bold uppercase tracking-wider text-[10.5px] border-b border-slate-200/80">
-                        <th className="px-6 py-3.5 w-16">#</th>
-                        <th className="px-6 py-3.5">Service Name</th>
-                        <th className="px-6 py-3.5">Image Preview</th>
-                        <th className="px-6 py-3.5 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 font-medium">
-                      {services.map((srv, idx) => (
-                        <tr key={srv.id || idx} className="hover:bg-slate-50/80 transition-colors group">
-                          <td className="px-6 py-4 font-extrabold text-slate-400 font-mono text-xs">{idx + 1}</td>
-                          
-                          <td className="px-6 py-4 font-bold text-slate-900 text-sm">
-                            <span className="group-hover:text-[#0D47A1] transition-colors">{srv.name}</span>
-                          </td>
-
-                          <td className="px-6 py-4">
-                            {srv.img ? (
-                              <img src={srv.img} alt={srv.name} className="w-11 h-11 object-contain border border-slate-200/80 rounded-xl p-1 bg-slate-50 shadow-2xs group-hover:scale-105 transition-transform" />
-                            ) : (
-                              <span className="text-slate-400 text-xs italic">No image uploaded</span>
-                            )}
-                          </td>
-
-                          <td className="px-6 py-4 text-right">
-                            <div className="flex gap-2 justify-end items-center">
-                              <button 
-                                onClick={() => handleOpenEditService(idx)}
-                                className="p-2 text-slate-500 hover:text-[#0D47A1] hover:bg-blue-50 rounded-xl transition-all cursor-pointer"
-                                title="Edit Service Details"
-                              >
-                                <Edit2 size={15} />
-                              </button>
-                              <button 
-                                onClick={() => handleDeleteService(idx)}
-                                className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all cursor-pointer"
-                                title="Delete Service"
-                              >
-                                <Trash2 size={15} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
-
         </div>
       </div>
 
-      {/* Edit/Add Service Modal Overlay */}
-      {showServiceModal && (
-        <div className="fixed inset-0 bg-[#052355]/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-2xl md:max-w-3xl p-6 shadow-2xl border border-slate-100 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh]">
-            <div className="flex justify-between items-center shrink-0">
-              <h3 className="text-base font-bold text-[#1E293B]">{isEditingService ? 'Edit Service & Details Page' : 'Add New Service & Details Page'}</h3>
-              <button onClick={() => setShowServiceModal(false)} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
-            </div>
-            
-            <form
-              onSubmit={handleSaveService}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && e.target.tagName === 'INPUT' && e.target.type !== 'submit') {
-                  e.preventDefault();
-                }
-              }}
-              className="flex flex-col flex-1 min-h-0 gap-4"
-            >
-              <div className="space-y-4 overflow-y-auto pr-1 flex-1 min-h-0 max-h-[75vh] no-scrollbar">
-              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-3">
-                <span className="text-xs font-bold text-[#0D47A1] uppercase tracking-wider block">1. Dashboard Listing Details</span>
-                <div>
-                  <label className="text-xs font-bold text-slate-700 mb-1 block">Service Name *</label>
-                  <input 
-                    type="text" 
-                    value={serviceForm.name}
-                    onChange={(e) => setServiceForm({ ...serviceForm, name: e.target.value })}
-                    placeholder="e.g. Chimney Cleaning"
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 font-medium placeholder:text-slate-400 outline-none focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1]/20 transition-all shadow-2xs"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-bold text-slate-700 mb-1 block">Dashboard Grid Image *</label>
-                  <div className="flex items-center gap-3 bg-white border border-dashed border-slate-300 rounded-lg p-2">
-                    <input 
-                      type="file" 
-                      accept="image/*"
-                      onChange={handleServiceFileChange}
-                      className="w-full text-xs text-slate-600 file:mr-3 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-blue-50 file:text-[#0D47A1] hover:file:bg-blue-100 cursor-pointer"
-                      required={!isEditingService}
-                    />
-                    {serviceForm.img && (
-                      <img src={serviceForm.img} alt="Preview" className="w-10 h-10 object-contain border border-slate-200 rounded-md p-0.5 bg-white shrink-0" />
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-blue-50/50 p-3 rounded-xl border border-blue-100 space-y-3">
-                <span className="text-xs font-bold text-[#0D47A1] uppercase tracking-wider block">2. Details Page Hero Header</span>
-                
-                <div>
-                  <label className="text-xs font-bold text-slate-700 mb-1 block">Hero Tagline</label>
-                  <input 
-                    type="text" 
-                    value={serviceForm.tagline}
-                    onChange={(e) => setServiceForm({ ...serviceForm, tagline: e.target.value })}
-                    placeholder="e.g. Cool Again Today"
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 font-medium placeholder:text-slate-400 outline-none focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1]/20 transition-all shadow-2xs"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-bold text-slate-700 mb-1 block">Hero Subtitle</label>
-                  <input 
-                    type="text" 
-                    value={serviceForm.subtitle}
-                    onChange={(e) => setServiceForm({ ...serviceForm, subtitle: e.target.value })}
-                    placeholder="e.g. Certified AC ServiceProviders For All Brands"
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 font-medium placeholder:text-slate-400 outline-none focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1]/20 transition-all shadow-2xs"
-                  />
-                </div>
-
-              </div>
-
-              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs font-bold text-[#0D47A1] uppercase tracking-wider">3. Device Types / Options (Optional)</span>
-                  <button
-                    type="button"
-                    onClick={() => setServiceTypes([...serviceTypes, { name: '', desc: '' }])}
-                    className="bg-white border border-slate-300 text-[#0D47A1] px-2.5 py-1 rounded-md text-[11px] font-extrabold shadow-2xs hover:bg-slate-50 transition-all cursor-pointer"
-                  >
-                    + Add Type
-                  </button>
-                </div>
-                <span className="text-xs text-slate-600 font-medium block">Add options if this device has selection types (e.g. Semi-Automatic, Full - Automatic). You can also add short descriptions.</span>
-                
-                {serviceTypes.length > 0 ? (
-                  <div className="space-y-2.5 max-h-52 overflow-y-auto pr-1">
-                    {serviceTypes.map((typeItem, idx) => {
-                      const typeName = typeof typeItem === 'string' ? typeItem : (typeItem?.name || '');
-                      const typeDesc = typeof typeItem === 'object' ? (typeItem?.desc || '') : '';
-                      return (
-                        <div key={idx} className="flex flex-col sm:flex-row gap-2 items-start sm:items-center bg-white p-2.5 rounded-xl border border-slate-200/90 shadow-2xs">
-                          <div className="flex-1 w-full">
-                            <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block mb-0.5">Type Name *</label>
-                            <input
-                              type="text"
-                              value={typeName}
-                              onChange={(e) => setServiceTypes(serviceTypes.map((t, tIdx) => {
-                                if (tIdx !== idx) return t;
-                                return typeof t === 'string' ? { name: e.target.value, desc: '' } : { ...t, name: e.target.value };
-                              }))}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                }
-                              }}
-                              placeholder="e.g. Semi-Automatic"
-                              className="w-full px-2.5 py-1.5 bg-slate-50/50 border border-slate-300 rounded-lg text-xs text-slate-900 font-semibold placeholder:text-slate-400 placeholder:font-normal outline-none focus:border-[#0D47A1] focus:bg-white focus:ring-1 focus:ring-[#0D47A1]/20 transition-all shadow-2xs"
-                              required
-                            />
-                          </div>
-                          <div className="flex-1 w-full">
-                            <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block mb-0.5">Description (Optional)</label>
-                            <input
-                              type="text"
-                              value={typeDesc}
-                              onChange={(e) => setServiceTypes(serviceTypes.map((t, tIdx) => {
-                                if (tIdx !== idx) return t;
-                                return typeof t === 'string' ? { name: t, desc: e.target.value } : { ...t, desc: e.target.value };
-                              }))}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                }
-                              }}
-                              placeholder="e.g. Manual water fill"
-                              className="w-full px-2.5 py-1.5 bg-slate-50/50 border border-slate-300 rounded-lg text-xs text-slate-900 font-medium placeholder:text-slate-400 outline-none focus:border-[#0D47A1] focus:bg-white focus:ring-1 focus:ring-[#0D47A1]/20 transition-all shadow-2xs"
-                            />
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => setServiceTypes(serviceTypes.filter((_, tIdx) => tIdx !== idx))}
-                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer self-end sm:self-center mt-1 sm:mt-4"
-                            title="Remove Type"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="text-xs text-slate-500 italic bg-white border border-slate-200 rounded-lg p-2.5 text-center">
-                    No custom types defined (field is optional).
-                  </div>
-                )}
-              </div>
-
-              <div className="bg-blue-50/50 p-3 rounded-xl border border-blue-100 space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs font-bold text-[#0D47A1] uppercase tracking-wider font-sans">4. Services & Packages List *</span>
-                  <button
-                    type="button"
-                    onClick={() => setServicePackages([...servicePackages, { id: Date.now() + Math.random(), section: 'General Repair', name: '', price: '', bullets: '' }])}
-                    className="bg-white border border-blue-200 text-[#0D47A1] px-2.5 py-1 rounded-md text-[11px] font-extrabold shadow-2xs hover:bg-slate-50 transition-all cursor-pointer"
-                  >
-                    + Add Package
-                  </button>
-                </div>
-                <span className="text-xs text-slate-600 font-medium block">Add pricing packages. Bullets should be comma-separated.</span>
-                
-                {servicePackages.length > 0 ? (
-                  <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
-                    {servicePackages.map((pkg, idx) => (
-                      <div key={pkg.id || idx} className="bg-white border border-slate-200 rounded-xl p-3 space-y-2.5 relative group shadow-2xs">
-                        <button
-                          type="button"
-                          onClick={() => setServicePackages(servicePackages.filter(p => p.id !== pkg.id))}
-                          className="absolute top-2 right-2 p-1.5 text-slate-400 hover:text-red-600 rounded-lg transition-colors cursor-pointer"
-                          title="Remove Package"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                        
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <label className="text-xs font-bold text-slate-700 block mb-1">Section Name *</label>
-                            <input
-                              type="text"
-                              value={pkg.section}
-                              onChange={(e) => setServicePackages(servicePackages.map(p => p.id === pkg.id ? { ...p, section: e.target.value } : p))}
-                              placeholder="e.g. Installation Services"
-                              className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-md text-xs text-slate-900 font-medium placeholder:text-slate-400 outline-none focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1]/20 transition-all shadow-2xs"
-                              required
-                            />
-                          </div>
-                          <div>
-                            <label className="text-xs font-bold text-slate-700 block mb-1">Package/Service Name *</label>
-                            <input
-                              type="text"
-                              value={pkg.name}
-                              onChange={(e) => setServicePackages(servicePackages.map(p => p.id === pkg.id ? { ...p, name: e.target.value } : p))}
-                              placeholder="e.g. Split AC Installation"
-                              className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-md text-xs text-slate-900 font-medium placeholder:text-slate-400 outline-none focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1]/20 transition-all shadow-2xs"
-                              required
-                            />
-                          </div>
-                        </div>
-                        
-                        <div className="grid grid-cols-3 gap-2">
-                          <div>
-                            <label className="text-xs font-bold text-slate-700 block mb-1">Price (₹) *</label>
-                            <input
-                              type="text"
-                              value={pkg.price === 0 || pkg.price === '0' ? '' : (pkg.price ?? '')}
-                              onFocus={(e) => e.target.select()}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                setServicePackages(servicePackages.map(p => p.id === pkg.id ? { ...p, price: val === '0' ? '' : val } : p));
-                              }}
-                              placeholder="e.g. 299"
-                              className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-md text-xs text-slate-900 font-medium placeholder:text-slate-400 outline-none focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1]/20 transition-all shadow-2xs"
-                              required
-                            />
-                          </div>
-                          <div>
-                            <label className="text-xs font-bold text-slate-700 block mb-1">Price Unit *</label>
-                            <input
-                              type="text"
-                              value={pkg.unit || 'per unit'}
-                              onChange={(e) => setServicePackages(servicePackages.map(p => p.id === pkg.id ? { ...p, unit: e.target.value } : p))}
-                              placeholder="e.g. per AC, per visit"
-                              className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-md text-xs text-slate-900 font-medium placeholder:text-slate-400 outline-none focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1]/20 transition-all shadow-2xs"
-                              required
-                            />
-                          </div>
-                          <div>
-                            <label className="text-xs font-bold text-slate-700 block mb-1">Upload Icon Image *</label>
-                            <div className="flex items-center gap-1.5 bg-white border border-dashed border-slate-300 rounded-md p-1">
-                              <input 
-                                type="file" 
-                                accept="image/*"
-                                onChange={(e) => handlePackageIconChange(pkg.id, e)}
-                                className="w-full text-[10px] text-slate-600 file:mr-2 file:py-0.5 file:px-1.5 file:rounded file:border-0 file:text-[9px] file:font-semibold file:bg-blue-50 file:text-[#0D47A1] hover:file:bg-blue-100 cursor-pointer"
-                              />
-                              {pkg.icon && (
-                                <div className="w-6 h-6 shrink-0 bg-white border border-slate-200 rounded-md flex items-center justify-center overflow-hidden">
-                                  {pkg.icon.startsWith('data:image/') ? (
-                                    <img src={pkg.icon} alt="" className="w-full h-full object-contain" />
-                                  ) : (
-                                    <span className="text-[11px]">{pkg.icon}</span>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-3 gap-2">
-                          <div className="col-span-1">
-                            <label className="text-xs font-bold text-slate-700 block mb-1">Short Description</label>
-                            <input
-                              type="text"
-                              value={pkg.desc || ''}
-                              onChange={(e) => setServicePackages(servicePackages.map(p => p.id === pkg.id ? { ...p, desc: e.target.value } : p))}
-                              placeholder="e.g. New AC fitting & setup"
-                              className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-md text-xs text-slate-900 font-medium placeholder:text-slate-400 outline-none focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1]/20 transition-all shadow-2xs"
-                            />
-                          </div>
-                          <div className="col-span-2">
-                            <label className="text-xs font-bold text-slate-700 block mb-1">Description Bullets (Comma-separated)</label>
-                            <input
-                              type="text"
-                              value={pkg.bullets}
-                              onChange={(e) => setServicePackages(servicePackages.map(p => p.id === pkg.id ? { ...p, bullets: e.target.value } : p))}
-                              placeholder="e.g. 30 days warranty, gas leak check"
-                              className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-md text-xs text-slate-900 font-medium placeholder:text-slate-400 outline-none focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1]/20 transition-all shadow-2xs"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-xs text-red-500 italic bg-red-50 border border-red-200 rounded-lg p-3 text-center font-semibold">
-                    Please add at least one service package.
-                  </div>
-                )}
-              </div>
-              </div>
-
-              <div className="flex gap-3 pt-3 border-t border-slate-100 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setShowServiceModal(false)}
-                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2.5 rounded-lg text-xs transition-all"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={servicePackages.length === 0}
-                  className="flex-1 bg-[#0D47A1] hover:bg-blue-800 text-white font-semibold py-2.5 rounded-lg text-xs transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Save Service Details
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* Edit/Add Category Modal Overlay */}
       {showAddModal && (
@@ -3406,7 +2728,7 @@ const CustomerAppCustomization = () => {
                     type="text" 
                     value={brandForm.actionUrl}
                     onChange={(e) => setBrandForm({ ...brandForm, actionUrl: e.target.value })}
-                    placeholder="e.g. /service-details?service=AC%20Repair"
+                    placeholder="e.g. /book/AC"
                     className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:border-[#0D47A1] transition-all"
                     required
                   />

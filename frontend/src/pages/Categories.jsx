@@ -113,16 +113,13 @@ const Categories = () => {
 
   const activeTabInfo = SIDEBAR_TABS.find((t) => t.id === activeTab);
 
-  // Appliance-repair categories go into the step-based booking flow that
-  // already reads this exact catalog; everything else (a general handyman
-  // service, cleaning, pest control, painting, movers, renovation) goes to
-  // the service detail page.
+  // Every category — appliance repair or general handyman/cleaning/etc —
+  // goes into the same step-based booking flow, which reads this exact
+  // catalog by its key. The old /service-details page was a second,
+  // hardcoded booking surface that only ever worked for 4 hand-picked
+  // services; removed rather than kept as a second thing to keep in sync.
   const handleSelectCategory = (cat) => {
-    if ((cat.groups || []).includes('appliance')) {
-      navigate(`/book/${encodeURIComponent(cat.key)}`);
-    } else {
-      navigate(`/service-details?service=${encodeURIComponent(cat.name)}`);
-    }
+    navigate(`/book/${encodeURIComponent(cat.key)}`);
   };
 
   return (

@@ -36,7 +36,6 @@ import RefrigeratorDetails from "./pages/RefrigeratorDetails";
 import Bookings from "./pages/Bookings";
 import BookingDetails from "./pages/BookingDetails";
 import Profile from "./pages/Profile";
-import ServiceDetails from "./pages/ServiceDetails";
 import HelpSupport from "./pages/HelpSupport";
 import SavedAddresses from "./pages/SavedAddresses";
 import EditProfile from "./pages/EditProfile";
@@ -748,10 +747,6 @@ function App() {
                           <Route
                             path="/refrigerator-details"
                             element={<RefrigeratorDetails />}
-                          />
-                          <Route
-                            path="/service-details"
-                            element={<ServiceDetails />}
                           />
                           <Route path="/booking" element={<Booking />} />
                           <Route

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-const PLACEMENTS = ['category', 'dashboard-service', 'most-booked', 'appliance-service', 'brand-card'];
+const PLACEMENTS = ['category', 'most-booked', 'appliance-service', 'brand-card'];
 
 export const listTilesQuerySchema = z.object({
   placement: z.enum(PLACEMENTS).optional(),

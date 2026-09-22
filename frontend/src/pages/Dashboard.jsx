@@ -36,6 +36,13 @@ import saloonImg from "../assets/categories/saloon.png";
 import spaImg from "../assets/categories/spa.png";
 import clickIcon from "../assets/CLICK.png";
 import handshakeIcon from "../assets/HANDSHAKE.png";
+import tvImg from "../assets/categories/television.png";
+import iconCooler from "../assets/icon_3d_cooler.png";
+import iconGeyser from "../assets/icon_3d_geyser.png";
+import iconChimney from "../assets/icon_3d_chimney.png";
+import iconRo from "../assets/icon_3d_ro.png";
+import iconOven from "../assets/icon_3d_oven.png";
+import iconWrench from "../assets/icon_3d_wrench.png";
 
 // Import realistic spare parts assets
 import roPreFilterImg from "../assets/ro_pre_filter_candle.png";
@@ -572,6 +579,38 @@ const getCategoryIconKey = (cat) => {
   return cat.icon || "more";
 };
 
+const getCategoryIcon = (categoryName = "") => {
+  const n = (categoryName || "").toLowerCase();
+  if (n.includes("washing") || n.includes("wm")) return wasingImg;
+  if (n.includes("cooler")) return iconCooler;
+  if (n.includes("ac") || n.includes("air condition")) return acImg;
+  if (n.includes("fridge") || n.includes("refrigerator")) return applianceFridge;
+  if (n.includes("television") || n.includes("tv")) return tvImg;
+  if (n.includes("geyser") || n.includes("water heater")) return iconGeyser;
+  if (n.includes("purifier") || n.includes("ro")) return iconRo;
+  if (n.includes("chimney")) return iconChimney;
+  if (
+    n.includes("microwave") ||
+    n.includes("oven") ||
+    n.includes("gas stove") ||
+    n.includes("hob")
+  )
+    return iconOven;
+  if (n.includes("electric")) return electricianImg;
+  if (n.includes("plumb") || n.includes("pipeline")) return plumberImg;
+  if (n.includes("clean") || n.includes("pest") || n.includes("bug"))
+    return cleaningImg;
+  if (n.includes("salon") || n.includes("saloon")) return saloonImg;
+  if (n.includes("spa") || n.includes("massage")) return spaImg;
+  if (
+    n.includes("carpenter") ||
+    n.includes("furniture") ||
+    n.includes("renovation")
+  )
+    return iconWrench;
+  return iconWrench;
+};
+
 const Dashboard = ({ defaultType }) => {
   const { unreadCount } = useNotifications();
   const { currentLocation, openLocationModal } = useLocationContext();
@@ -582,6 +621,21 @@ const Dashboard = ({ defaultType }) => {
   const [cmsBanners, setCmsBanners] = useState(null);
   const [cmsTiles, setCmsTiles] = useState(null);
   const [configuredServices, setConfiguredServices] = useState([]);
+  const [serviceCategories, setServiceCategories] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    apiRequest("/catalog/categories")
+      .then((res) => {
+        if (!cancelled && Array.isArray(res)) setServiceCategories(res);
+      })
+      .catch(() => {
+        if (!cancelled) setServiceCategories([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Banners come from the CMS (public read, no auth) so what super-admin
   // publishes actually reaches customers. The bundled images remain the
@@ -621,26 +675,17 @@ const Dashboard = ({ defaultType }) => {
       "category",
       [
         { name: "For You", icon: "sparkles", isForYou: true },
-        { name: "AC", icon: "ac", service: "AC Repair" },
-        {
-          name: "Washing Machine",
-          icon: "washing",
-          service: "Washing Machine",
-        },
+        { name: "AC", icon: "ac" },
+        { name: "Washing Machine", icon: "washing" },
         { name: "Refrigerator", icon: "fridge", isFridge: true },
-        { name: "TV", icon: "tv", service: "Smart TV Service & Repair" },
-        {
-          name: "RO Water Purifier",
-          icon: "ro",
-          service: "Water Purifier RO Service",
-        },
-        { name: "Geyser", icon: "geyser", service: "Geyser Service & Repair" },
+        { name: "TV", icon: "tv" },
+        { name: "RO Water Purifier", icon: "ro" },
+        { name: "Geyser", icon: "geyser" },
         { name: "More", icon: "more", isMore: true },
       ],
       (t) => ({
         name: t.title,
         icon: t.icon || (t.title === "For You" ? "sparkles" : "more"),
-        service: t.service,
         isForYou: t.title === "For You" || t.isForYou,
         isMore: t.title === "More" || t.isMore,
         isFridge: t.title === "Refrigerator" || t.isFridge,
@@ -952,22 +997,27 @@ const Dashboard = ({ defaultType }) => {
     };
   }, []);
 
-  const services = tilesFor(
-    "dashboard-service",
-    [
-      { id: 1, name: "AC Repair", img: acImg },
-      { id: 2, name: "Washing Machine", img: wasingImg },
-      { id: 3, name: "Electrician", img: electricianImg },
-      { id: 4, name: "Plumber", img: plumberImg },
-      { id: 5, name: "Full Home Cleaning", img: cleaningImg },
-      { id: 6, name: "Salon for Women", img: saloonImg },
-      { id: 7, name: "Spa & Massage", img: spaImg },
-    ],
-    (t) => {
-      const fallback = getServiceFallbackImage(t.title);
-      return { id: t.id, name: t.title, img: t.imageUrl || fallback, fallbackImage: fallback };
-    },
-  );
+  const displayServiceCategories =
+    serviceCategories.length > 0
+      ? serviceCategories.map((c) => ({
+          id: c.id || c.key,
+          key: c.key,
+          name: c.name,
+          img: c.bannerImg || getCategoryIcon(c.name),
+          fallbackImage: getCategoryIcon(c.name),
+          serviceCount: c.services?.length || 0,
+        }))
+      : [
+          { id: "AC", key: "AC", name: "AC", img: acImg, fallbackImage: acImg },
+          { id: "Washing Machine", key: "Washing Machine", name: "Washing Machine", img: wasingImg, fallbackImage: wasingImg },
+          { id: "Electrician", key: "Electrician", name: "Electrician", img: electricianImg, fallbackImage: electricianImg },
+          { id: "Plumber", key: "Plumber", name: "Plumber", img: plumberImg, fallbackImage: plumberImg },
+          { id: "Air Cooler", key: "Air Cooler", name: "Air Cooler", img: iconCooler, fallbackImage: iconCooler },
+          { id: "Full House Cleaning", key: "Full House Cleaning", name: "Full House Cleaning", img: cleaningImg, fallbackImage: cleaningImg },
+          { id: "Geyser", key: "Geyser", name: "Geyser", img: iconGeyser, fallbackImage: iconGeyser },
+          { id: "Chimney", key: "Chimney", name: "Chimney", img: iconChimney, fallbackImage: iconChimney },
+          { id: "Carpenter", key: "Carpenter", name: "Carpenter", img: iconWrench, fallbackImage: iconWrench },
+        ];
 
   const brandCards = tilesFor(
     "brand-card",
@@ -979,7 +1029,7 @@ const Dashboard = ({ defaultType }) => {
         subtitle: "Experience Superior Cooling & Comfort",
         image: splitAcImg,
         buttonText: "Explore on NCC",
-        actionUrl: "/service-details?service=AC%20Repair&brand=Lloyd",
+        actionUrl: "/book/AC",
         badgeText: "",
         gradient: "from-[#E3F2FD] via-[#F4F9FF] to-[#D5E6FF]",
         textColor: "#014694",
@@ -1003,7 +1053,7 @@ const Dashboard = ({ defaultType }) => {
         subtitle: "Perfect Comfort. Every Season.",
         image: splitAcImg,
         buttonText: "Explore on NCC",
-        actionUrl: "/service-details?service=AC%20Repair&brand=Daikin",
+        actionUrl: "/book/AC",
         badgeText: "Air Specialist",
         gradient: "from-[#F0F4FF] via-[#F7F9FF] to-[#E1E8FF]",
         textColor: "#00529C",
@@ -1272,10 +1322,6 @@ const Dashboard = ({ defaultType }) => {
                     navigate("/book/RO Water Purifier");
                   } else if (cat.name === "Geyser") {
                     navigate("/book/Geyser");
-                  } else if (cat.service) {
-                    navigate(
-                      `/service-details?service=${encodeURIComponent(cat.service)}`,
-                    );
                   } else {
                     navigate(`/book/${encodeURIComponent(cat.name)}`);
                   }
@@ -1348,66 +1394,45 @@ const Dashboard = ({ defaultType }) => {
             ref={serviceRef}
             className="flex overflow-x-auto gap-3 sm:gap-4 pb-3 sm:pb-4 -mx-1 px-1 sm:-mx-2 sm:px-2 snap-x md:snap-none no-scrollbar md:w-full md:mx-0 md:px-0 md:pb-0 relative">
             <div className="flex gap-3 sm:gap-4 min-w-full md:gap-8 lg:gap-10 md:w-max">
-              {[...services, ...services].map((service, index) => (
-                <div
-                  key={`${service.id}-${index}`}
-                  onClick={() => {
-                    if (activeType === "in-warranty") {
-                      setSelectedServiceForWarranty({
-                        title: service.name,
-                        price: 499,
-                      });
-                      setShowWarrantyModal(true);
-                      return;
-                    }
-                    // Appliance categories → BookingFlow wizard
-                    const APPLIANCE_ROUTES = {
-                      "ac repair": "AC",
-                      "washing machine": "Washing Machine",
-                      refrigerator: "Refrigerator",
-                      tv: "TV",
-                      television: "TV",
-                      geyser: "Geyser",
-                      "water heater": "Geyser",
-                      "ro water purifier": "RO Water Purifier",
-                      "water purifier": "RO Water Purifier",
-                      microwave: "Microwave",
-                      chimney: "Chimney",
-                      "air cooler": "Air Cooler",
-                    };
-                    const nameNorm = service.name.toLowerCase();
-                    const bookCat = Object.keys(APPLIANCE_ROUTES).find((k) =>
-                      nameNorm.includes(k),
-                    );
-                    if (bookCat) {
+              {[...displayServiceCategories, ...displayServiceCategories].map(
+                (cat, index) => (
+                  <div
+                    key={`${cat.id}-${index}`}
+                    onClick={() => {
+                      if (activeType === "in-warranty") {
+                        setSelectedServiceForWarranty({
+                          title: cat.name,
+                          price: 499,
+                        });
+                        setShowWarrantyModal(true);
+                        return;
+                      }
                       navigate(
-                        `/book/${encodeURIComponent(APPLIANCE_ROUTES[bookCat])}`,
+                        `/book/${encodeURIComponent(cat.key || cat.name)}`,
                       );
-                    } else {
-                      navigate(
-                        `/service-details?service=${encodeURIComponent(service.name)}`,
-                      );
-                    }
-                  }}
-                  className={`flex flex-col items-center gap-1.5 sm:gap-2 cursor-pointer shrink-0 w-20 sm:w-24 snap-start md:snap-none md:w-44 md:bg-white md:rounded-2xl md:p-4 md:hover:shadow-md md:transition-all ${
-                    index >= services.length ? "hidden md:flex" : ""
-                  }`}>
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-full md:h-20 lg:h-24 bg-transparent rounded-2xl flex items-center justify-center transition-all overflow-hidden">
-                    <img
-                      src={service.img || service.fallbackImage || acImg}
-                      alt={service.name}
-                      onError={(e) => {
-                        e.currentTarget.onerror = null;
-                        e.currentTarget.src = service.fallbackImage || acImg;
-                      }}
-                      className="w-full h-full object-contain mix-blend-multiply p-1.5 sm:p-2"
-                    />
+                    }}
+                    className={`flex flex-col items-center gap-1.5 sm:gap-2 cursor-pointer shrink-0 w-20 sm:w-24 snap-start md:snap-none md:w-44 md:bg-white md:rounded-2xl md:p-4 md:hover:shadow-md md:transition-all ${
+                      index >= displayServiceCategories.length
+                        ? "hidden md:flex"
+                        : ""
+                    }`}>
+                    <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-full md:h-20 lg:h-24 bg-transparent rounded-2xl flex items-center justify-center transition-all overflow-hidden">
+                      <img
+                        src={cat.img || cat.fallbackImage || acImg}
+                        alt={cat.name}
+                        onError={(e) => {
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src = cat.fallbackImage || acImg;
+                        }}
+                        className="w-full h-full object-contain mix-blend-multiply p-1.5 sm:p-2"
+                      />
+                    </div>
+                    <span className="text-[11px] sm:text-xs font-semibold text-text-primary text-center line-clamp-2 md:whitespace-normal md:leading-tight w-full">
+                      {cat.name}
+                    </span>
                   </div>
-                  <span className="text-[11px] sm:text-xs font-semibold text-text-primary text-center line-clamp-2 md:whitespace-normal md:leading-tight w-full">
-                    {service.name}
-                  </span>
-                </div>
-              ))}
+                ),
+              )}
             </div>
           </div>
         </div>

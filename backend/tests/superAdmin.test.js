@@ -826,18 +826,18 @@ describe('CMS home tiles', () => {
     const auth = { headers: { Authorization: `Bearer ${token}` } };
 
     const created = await request(app).post('/api/v1/cms/home-tiles').set(auth.headers)
-      .send({ placement: 'dashboard-service', title: 'Retired Service' })
+      .send({ placement: 'most-booked', title: 'Retired Service' })
       .expect(201);
 
     await request(app).put(`/api/v1/cms/home-tiles/${created.body.data.id}`).set(auth.headers)
       .send({ isActive: false })
       .expect(200);
 
-    const publicRes = await request(app).get('/api/v1/cms/home-tiles?placement=dashboard-service').expect(200);
+    const publicRes = await request(app).get('/api/v1/cms/home-tiles?placement=most-booked').expect(200);
     expect(publicRes.body.data).toHaveLength(0);
 
     const adminRes = await request(app)
-      .get('/api/v1/cms/home-tiles/admin?placement=dashboard-service')
+      .get('/api/v1/cms/home-tiles/admin?placement=most-booked')
       .set(auth.headers)
       .expect(200);
     expect(adminRes.body.data).toHaveLength(1);

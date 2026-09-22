@@ -305,15 +305,9 @@ const Sidebar = () => {
     },
     {
       type: 'link',
-      label: 'Banner Customization',
+      label: 'Home Page Banners',
       path: '/super-admin/customer-app-customization?tab=banners',
       icon: <Image size={18} />
-    },
-    {
-      type: 'link',
-      label: 'Services Customization',
-      path: '/super-admin/customer-app-customization?tab=services',
-      icon: <Wrench size={18} />
     },
     {
       type: 'link',
@@ -353,11 +347,11 @@ const Sidebar = () => {
     },
     {
       type: 'header',
-      label: 'SERVICE_PROVIDER APP'
+      label: 'SERVICE PROVIDER APP'
     },
     {
       type: 'link',
-      label: 'ServiceProviders',
+      label: 'Service Provider Accounts',
       path: '/super-admin/service-providers',
       icon: <UserCheck size={18} />,
       badgeKey: 'pendingServiceProviders',
@@ -371,31 +365,31 @@ const Sidebar = () => {
     },
     {
       type: 'link',
-      label: 'Banner Customization',
+      label: 'Partner App Banners',
       path: '/super-admin/service-provider-app-customization?tab=banners',
       icon: <Image size={18} />
     },
     {
       type: 'link',
-      label: 'Training & Videos',
+      label: 'Partner Training & Videos',
       path: '/super-admin/service-provider-app-customization?tab=training',
       icon: <Video size={18} />
     },
     {
       type: 'link',
-      label: 'Announcements',
+      label: 'Partner Announcements',
       path: '/super-admin/service-provider-app-customization?tab=announcements',
       icon: <Bell size={18} />
     },
     {
       type: 'link',
-      label: 'Skills & Certs',
+      label: 'Partner Skills & Certs',
       path: '/super-admin/service-provider-app-customization?tab=skills',
       icon: <Award size={18} />
     },
     {
       type: 'link',
-      label: 'App Settings',
+      label: 'Partner App Settings',
       path: '/super-admin/service-provider-app-customization?tab=settings',
       icon: <Settings size={18} />
     },
@@ -531,15 +525,35 @@ const Sidebar = () => {
 
   const menuSections = isAsm ? asmMenuSections : fullMenuSections;
 
-  // Filter sections by search query
-  const filteredSections = searchQuery.trim() === '' 
-    ? menuSections 
-    : menuSections.filter(item => {
-        if (item.type === 'link') {
-          return item.label.toLowerCase().includes(searchQuery.toLowerCase());
+  // Filter sections by search query. Previously this dropped every header,
+  // so a search for e.g. "banner" showed two identically-labeled "Banner
+  // Customization" results with no way to tell the customer-app one from
+  // the service-provider one apart — the section header carrying that
+  // context was filtered out along with every other non-matching header.
+  // Keeping each match's own header (once, right before its first match)
+  // fixes that without changing the no-search view at all.
+  const filteredSections = searchQuery.trim() === ''
+    ? menuSections
+    : (() => {
+        const result = [];
+        let pendingHeader = null;
+        let headerIncluded = false;
+        for (const item of menuSections) {
+          if (item.type === 'header') {
+            pendingHeader = item;
+            headerIncluded = false;
+            continue;
+          }
+          if (item.type === 'link' && item.label.toLowerCase().includes(searchQuery.toLowerCase())) {
+            if (pendingHeader && !headerIncluded) {
+              result.push(pendingHeader);
+              headerIncluded = true;
+            }
+            result.push(item);
+          }
         }
-        return false;
-      });
+        return result;
+      })();
 
   return (
     <div className={`w-64 bg-[#F4F7FE] h-screen border-r border-[#E2E8F0] flex flex-col fixed left-0 top-0 z-30 transition-transform duration-300 ease-in-out ${

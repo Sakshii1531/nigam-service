@@ -94,28 +94,15 @@ const ServiceProviderApply = () => {
       }
 
       try {
-        // The services a service provider can pick are the ones merchandised on the
-        // customer home screen, read from the CMS rather than another browser's
-        // localStorage — which only ever worked on the admin's own machine.
-        let serviceList = [];
-        const tiles = await apiRequest(
-          "/cms/home-tiles?placement=dashboard-service",
-        );
-        serviceList = (tiles || []).map((t) => t.title).filter(Boolean);
-
-        if (serviceList.length === 0) {
-          const categories = await apiRequest("/catalog/categories");
-          serviceList = (categories || []).map((c) => c.name).filter(Boolean);
-        }
-
-        // Deduplicate
-        serviceList = [...new Set(serviceList)];
-
+        const categories = await apiRequest("/catalog/categories");
+        const serviceList = [
+          ...new Set((categories || []).map((c) => c.name).filter(Boolean)),
+        ];
         if (serviceList.length > 0) {
           setAvailableServices(serviceList);
         }
       } catch (err) {
-        console.warn("Error reading admin dashboard services:", err.message);
+        console.warn("Error reading service categories:", err.message);
       }
     }
 
