@@ -18,6 +18,9 @@ import {
   Briefcase,
   Navigation,
   X,
+  CalendarCheck,
+  Crosshair,
+  ExternalLink,
 } from "lucide-react";
 import { apiRequest, getStoredTokens, storeTokens } from "../lib/apiClient";
 import { submitBookingsForMeta, totalPriceFromResults } from "../lib/bookingSubmission";
@@ -406,8 +409,9 @@ const BookingFlow = () => {
     }
   }, [user, currentLocation]);
 
-  // Ref for hidden native date input
+  // Ref for hidden native date input & scrollable date pill container
   const dateInputRef = useRef(null);
+  const dateScrollContainerRef = useRef(null);
 
   // Auto-select today's date when ASAP is selected
   useEffect(() => {
@@ -433,6 +437,13 @@ const BookingFlow = () => {
       );
     }
   }, [timeGroup]);
+
+  // Auto-scroll date pill container to the beginning when selected date changes
+  useEffect(() => {
+    if (selectedDate && dateScrollContainerRef.current) {
+      dateScrollContainerRef.current.scrollTo({ left: 0, behavior: "smooth" });
+    }
+  }, [selectedDate]);
 
   if (!overridesLoaded) {
     return (
@@ -527,6 +538,68 @@ const BookingFlow = () => {
     return dates;
   };
   const upcomingDates = getUpcomingDates();
+
+  // Format selected date into full readable string: "Wednesday, 30 September 2026"
+  const formatSelectedDateDisplay = (dateStr) => {
+    if (!dateStr) return "";
+    const parts = dateStr.trim().split(/\s+/);
+    if (parts.length >= 3) {
+      const dayShort = parts[0];
+      const dayNum = parts[1];
+      const monthShort = parts[2];
+      const dayMap = {
+        Sun: "Sunday",
+        Mon: "Monday",
+        Tue: "Tuesday",
+        Wed: "Wednesday",
+        Thu: "Thursday",
+        Fri: "Friday",
+        Sat: "Saturday",
+      };
+      const monthMap = {
+        Jan: "January",
+        Feb: "February",
+        Mar: "March",
+        Apr: "April",
+        May: "May",
+        Jun: "June",
+        Jul: "July",
+        Aug: "August",
+        Sep: "September",
+        Oct: "October",
+        Nov: "November",
+        Dec: "December",
+      };
+      const fullDay = dayMap[dayShort] || dayShort;
+      const currentYear = new Date().getFullYear();
+      return `${fullDay}, ${dayNum} ${monthShort} ${currentYear}`;
+    }
+    return dateStr;
+  };
+
+  const isSelectedDateToday =
+    upcomingDates.length > 0 && selectedDate === upcomingDates[0]?.full;
+
+  const isCustomDate = Boolean(
+    selectedDate && !upcomingDates.some((d) => d.full === selectedDate),
+  );
+
+  const customDatePill = isCustomDate
+    ? {
+        dayName: selectedDate.split(" ")[0] || "Custom",
+        dayNum: selectedDate.split(" ")[1] || "",
+        month: selectedDate.split(" ")[2] || "",
+        full: selectedDate,
+        isCustom: true,
+      }
+    : null;
+
+  // If a custom date was selected, show it at the front so user immediately sees their pick!
+  const allVisibleDates = customDatePill
+    ? [customDatePill, ...upcomingDates]
+    : upcomingDates;
+
+
 
   const TIME_GROUPS = [
     {
@@ -1156,11 +1229,18 @@ const BookingFlow = () => {
                 <div className="bg-white border border-slate-200/80 rounded-2xl p-3.5 sm:p-4 shadow-2xs">
                   <div className="flex items-center justify-between mb-2.5">
                     <div>
-                      <p className="text-[12px] font-black text-slate-900">
-                        Select Date *
-                      </p>
-                      <p className="text-[10px] text-slate-400 font-semibold">
-                        Choose convenient date for visit
+                      <div className="flex items-center gap-2">
+                        <p className="text-[12px] sm:text-[13px] font-black text-slate-900">
+                          Select Date *
+                        </p>
+                        {selectedDate && (
+                          <span className="px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black bg-blue-100 text-brand-blue border border-blue-200">
+                            {selectedDate}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-slate-400 font-semibold mt-0.5">
+                        Choose convenient date for visit or pick any other date from calendar
                       </p>
                     </div>
                     <button
@@ -1169,9 +1249,10 @@ const BookingFlow = () => {
                         dateInputRef.current?.showPicker?.() ||
                         dateInputRef.current?.click()
                       }
-                      className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center hover:bg-blue-100 transition-all cursor-pointer shadow-2xs shrink-0"
-                      title="Open calendar">
-                      <CalendarDays className="w-4 h-4 text-brand-blue" />
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-blue-50 border border-blue-200/90 hover:bg-blue-100 text-brand-blue font-black text-[11px] transition-all cursor-pointer shadow-2xs shrink-0"
+                      title="Choose another date from calendar">
+                      <CalendarDays className="w-3.5 h-3.5 text-brand-blue shrink-0" />
+                      <span>Choose Date</span>
                     </button>
                     <input
                       ref={dateInputRef}
@@ -1180,7 +1261,8 @@ const BookingFlow = () => {
                       className="sr-only"
                       onChange={(e) => {
                         if (!e.target.value) return;
-                        const d = new Date(e.target.value);
+                        const [y, m, d] = e.target.value.split("-").map(Number);
+                        const dateObj = new Date(y, m - 1, d);
                         const days = [
                           "Sun",
                           "Mon",
@@ -1204,13 +1286,23 @@ const BookingFlow = () => {
                           "Nov",
                           "Dec",
                         ];
-                        const label = `${days[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]}`;
+                        const label = `${days[dateObj.getDay()]} ${dateObj.getDate()} ${months[dateObj.getMonth()]}`;
                         setSelectedDate(label);
+                        if (
+                          timeGroup === "ASAP" &&
+                          label !== upcomingDates[0]?.full
+                        ) {
+                          setTimeGroup("");
+                        }
                       }}
                     />
                   </div>
-                  <div className="flex gap-2 sm:gap-2.5 overflow-x-auto no-scrollbar pb-1 px-0.5 snap-x">
-                    {upcomingDates.map((d) => {
+
+                  {/* Horizontal Scrollable Date Pills */}
+                  <div
+                    ref={dateScrollContainerRef}
+                    className="flex gap-2 sm:gap-2.5 overflow-x-auto no-scrollbar pb-1 pt-1.5 px-0.5 snap-x">
+                    {allVisibleDates.map((d) => {
                       const isActive = selectedDate === d.full;
                       return (
                         <button
@@ -1225,11 +1317,21 @@ const BookingFlow = () => {
                               setTimeGroup("");
                             }
                           }}
-                          className={`flex flex-col items-center justify-center min-w-[58px] sm:min-w-16 h-[68px] sm:h-20 rounded-xl sm:rounded-2xl border-2 transition-all shrink-0 cursor-pointer snap-start ${
+                          className={`flex flex-col items-center justify-center min-w-[58px] sm:min-w-16 h-[70px] sm:h-20 rounded-xl sm:rounded-2xl border-2 transition-all shrink-0 cursor-pointer snap-start relative ${
                             isActive
-                              ? "border-brand-blue bg-brand-blue text-white shadow-md scale-105"
+                              ? "border-brand-blue bg-brand-blue text-white shadow-md scale-105 ring-2 ring-brand-blue/20"
                               : "border-slate-200 bg-slate-50 hover:bg-white text-slate-800"
                           }`}>
+                          {d.isCustom && (
+                            <span
+                              className={`absolute -top-2 text-[8px] font-black uppercase px-1.5 py-0.2 rounded-full border shadow-2xs ${
+                                isActive
+                                  ? "bg-amber-400 text-slate-950 border-amber-300"
+                                  : "bg-blue-100 text-brand-blue border-blue-200"
+                              }`}>
+                              Chosen
+                            </span>
+                          )}
                           <span
                             className={`text-[9px] sm:text-[10px] font-black ${isActive ? "text-white/90" : "text-slate-400"}`}>
                             {d.dayName}
@@ -1246,6 +1348,50 @@ const BookingFlow = () => {
                       );
                     })}
                   </div>
+
+                  {/* Prominent Confirmation Banner for Selected Date */}
+                  {selectedDate ? (
+                    <div className="mt-3 p-3 sm:p-3.5 bg-linear-to-r from-blue-50/90 via-indigo-50/60 to-white border-2 border-brand-blue/30 rounded-2xl flex items-center justify-between gap-2 shadow-2xs">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-brand-blue text-white flex items-center justify-center shrink-0 shadow-2xs">
+                          <CalendarCheck className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-brand-blue leading-none">
+                              Confirmed Visit Date
+                            </span>
+                            {isSelectedDateToday ? (
+                              <span className="px-1.5 py-0.2 rounded-md text-[9px] font-black bg-emerald-100 text-emerald-800">
+                                Today
+                              </span>
+                            ) : isCustomDate ? (
+                              <span className="px-1.5 py-0.2 rounded-md text-[9px] font-black bg-amber-100 text-amber-800">
+                                Calendar Pick
+                              </span>
+                            ) : null}
+                          </div>
+                          <p className="text-[12px] sm:text-[13px] font-black text-slate-900 leading-snug mt-0.5">
+                            {formatSelectedDateDisplay(selectedDate)}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          dateInputRef.current?.showPicker?.() ||
+                          dateInputRef.current?.click()
+                        }
+                        className="px-2 sm:px-2.5 py-1 bg-white hover:bg-blue-50 text-brand-blue border border-blue-200 hover:border-brand-blue rounded-xl text-[11px] font-black shadow-2xs transition-colors shrink-0 cursor-pointer flex items-center gap-1">
+                        <CalendarDays className="w-3 h-3" />
+                        <span>Change</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="mt-2.5 text-[11px] text-slate-400 font-semibold italic">
+                      Please select a date from above or use the Choose Date button for more dates.
+                    </div>
+                  )}
                 </div>
 
                 {/* Time Slot selector */}
@@ -1425,49 +1571,143 @@ const BookingFlow = () => {
                   )}
 
                   <div className="flex flex-col gap-3">
-                    {/* ── Interactive Location Pin Card ── */}
-                    <div className="bg-blue-50/70 border border-blue-200/80 rounded-2xl p-3.5 flex flex-col gap-2.5">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-8 h-8 rounded-xl bg-brand-blue text-white flex items-center justify-center shadow-2xs">
-                            <MapPin className="w-4 h-4" />
+                    {/* ── Interactive Location Pin Card (Redesigned) ── */}
+                    <div
+                      className={`rounded-2xl p-3.5 sm:p-4 border transition-all ${
+                        address.latitude && address.longitude
+                          ? "bg-linear-to-br from-emerald-50/60 via-blue-50/30 to-white border-emerald-200/90 shadow-2xs"
+                          : "bg-linear-to-br from-blue-50/80 via-slate-50/40 to-white border-blue-200/90 shadow-2xs"
+                      }`}>
+                      {/* Top Header Row */}
+                      <div className="flex items-start justify-between gap-2.5 mb-2.5">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div
+                            className={`w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-xs transition-colors ${
+                              address.latitude && address.longitude
+                                ? "bg-emerald-600 text-white"
+                                : "bg-brand-blue text-white"
+                            }`}>
+                            {address.latitude && address.longitude ? (
+                              <CheckCircle2 className="w-5 h-5" />
+                            ) : (
+                              <MapPin className="w-5 h-5" />
+                            )}
                           </div>
-                          <div>
-                            <h4 className="text-xs font-black text-slate-900">Pin Location on Map</h4>
-                            <p className="text-[10px] text-slate-500">Allows partner to navigate directly with Google Maps</p>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <h4 className="text-[13px] sm:text-[14px] font-black text-slate-900 leading-tight">
+                                Pin Doorstep Location
+                              </h4>
+                              {address.latitude && address.longitude ? (
+                                <span className="px-1.5 py-0.2 rounded-full text-[9px] font-black bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                  Pinned
+                                </span>
+                              ) : (
+                                <span className="px-1.5 py-0.2 rounded-full text-[9px] font-black bg-blue-100 text-brand-blue border border-blue-200">
+                                  Recommended
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[10px] sm:text-[11px] text-slate-500 font-medium leading-normal mt-0.5">
+                              {address.latitude && address.longitude
+                                ? "Exact doorstep GPS coordinates saved for delivery partner."
+                                : "Allows partner to navigate directly to your door with Google Maps."}
+                            </p>
                           </div>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => setShowMapPicker(true)}
-                          className="px-3 py-1.5 bg-brand-blue hover:bg-[#083679] text-white text-[11px] font-extrabold rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
-                        >
-                          <Navigation className="w-3 h-3" />
-                          {address.latitude && address.longitude ? "Change Pin" : "Select on Map"}
-                        </button>
                       </div>
 
+                      {/* Pinned Info or Action Buttons */}
                       {address.latitude && address.longitude ? (
-                        <div className="bg-white px-3 py-2 rounded-xl border border-blue-100 flex items-center justify-between">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0 animate-pulse" />
-                            <span className="text-[11px] font-bold text-slate-700 truncate">
-                              Location Pinned: <span className="font-mono text-brand-blue font-extrabold">{Number(address.latitude).toFixed(5)}, {Number(address.longitude).toFixed(5)}</span>
-                            </span>
+                        <div className="flex flex-col gap-2.5 mt-1">
+                          <div className="bg-white/90 border border-emerald-200/90 rounded-xl p-2.5 flex items-center justify-between gap-2 shadow-2xs">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <MapPin className="w-4 h-4 text-emerald-600 shrink-0" />
+                              <div className="min-w-0">
+                                <p className="text-[9px] uppercase tracking-wider font-extrabold text-emerald-700">
+                                  GPS Coordinates
+                                </p>
+                                <p className="text-[10px] sm:text-[11px] font-mono font-black text-slate-800 truncate">
+                                  {Number(address.latitude).toFixed(4)}, {Number(address.longitude).toFixed(4)}
+                                </p>
+                              </div>
+                            </div>
+                            <a
+                              href={`https://www.google.com/maps/search/?api=1&query=${address.latitude},${address.longitude}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-[10px] sm:text-[11px] font-black text-brand-blue hover:text-blue-800 hover:underline flex items-center gap-1 shrink-0 bg-blue-50 px-2 py-1 rounded-lg border border-blue-100 transition-colors">
+                              <span>View Pin</span>
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
                           </div>
-                          <a
-                            href={`https://www.google.com/maps/search/?api=1&query=${address.latitude},${address.longitude}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-[11px] font-bold text-brand-blue hover:underline flex items-center gap-0.5 shrink-0 ml-2"
-                          >
-                            View Pin ↗
-                          </a>
+
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setShowMapPicker(true)}
+                              className="flex-1 py-2 px-3 bg-brand-blue hover:bg-[#083679] text-white text-[11px] sm:text-[12px] font-black rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+                              <Navigation className="w-3.5 h-3.5" />
+                              Change Pin Location
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setAddress((prev) => ({
+                                  ...prev,
+                                  latitude: null,
+                                  longitude: null,
+                                }))
+                              }
+                              className="py-2 px-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-[11px] font-bold transition-colors cursor-pointer"
+                              title="Remove pin">
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </div>
                       ) : (
-                        <div className="text-[11px] text-slate-600 flex items-center gap-1.5">
-                          <span className="text-blue-600">📍</span>
-                          <span>Click <strong>Select on Map</strong> or tap your current location to pin exact door coordinates.</span>
+                        <div className="flex flex-col gap-2 mt-1">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setShowMapPicker(true)}
+                              className="w-full py-2.5 px-3 bg-brand-blue hover:bg-[#083679] text-white text-[11px] sm:text-[12px] font-black rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.99]">
+                              <Navigation className="w-3.5 h-3.5" />
+                              Select on Map
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (navigator?.geolocation) {
+                                  navigator.geolocation.getCurrentPosition(
+                                    (pos) => {
+                                      setAddress((prev) => ({
+                                        ...prev,
+                                        latitude: pos.coords.latitude,
+                                        longitude: pos.coords.longitude,
+                                      }));
+                                    },
+                                    () => {
+                                      setShowMapPicker(true);
+                                    },
+                                    { enableHighAccuracy: true, timeout: 8000 },
+                                  );
+                                } else {
+                                  setShowMapPicker(true);
+                                }
+                              }}
+                              className="w-full py-2.5 px-3 bg-white hover:bg-blue-50/80 text-brand-blue border border-blue-200 hover:border-brand-blue text-[11px] sm:text-[12px] font-black rounded-xl shadow-2xs transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+                              <Crosshair className="w-3.5 h-3.5" />
+                              Current GPS
+                            </button>
+                          </div>
+                          <p className="text-[10px] text-slate-500 flex items-center gap-1">
+                            <span className="text-blue-500">📍</span>
+                            <span>
+                              Tap <strong>Select on Map</strong> or <strong>Current GPS</strong> to pin exact door coordinates.
+                            </span>
+                          </p>
                         </div>
                       )}
                     </div>
