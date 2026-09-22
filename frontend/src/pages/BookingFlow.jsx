@@ -23,7 +23,10 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { apiRequest, getStoredTokens, storeTokens } from "../lib/apiClient";
-import { submitBookingsForMeta, totalPriceFromResults } from "../lib/bookingSubmission";
+import {
+  submitBookingsForMeta,
+  totalPriceFromResults,
+} from "../lib/bookingSubmission";
 import { useAuth } from "../context/AuthContext";
 import { useLocationContext } from "../context/LocationContext";
 import MapLocationPickerModal from "../components/booking/MapLocationPickerModal";
@@ -32,8 +35,6 @@ import {
   getCatalogEntry,
   preloadCatalogOverrides,
 } from "../data/bookingCatalog";
-
-
 
 const getCatalog = (category) => getCatalogEntry(category);
 
@@ -122,7 +123,11 @@ const OptionCard = ({ icon, name, desc, selected, onClick }) => (
         selected ? "bg-white shadow-xs scale-105" : "bg-slate-50"
       }`}>
       {isImageIcon(icon) ? (
-        <img src={icon} alt={name} className="w-6 h-6 sm:w-7 sm:h-7 object-contain" />
+        <img
+          src={icon}
+          alt={name}
+          className="w-6 h-6 sm:w-7 sm:h-7 object-contain"
+        />
       ) : (
         icon || "⚡"
       )}
@@ -188,8 +193,7 @@ const BottomBar = ({
               <button
                 type="button"
                 onClick={() => setShowBreakdown((v) => !v)}
-                className="text-[9px] font-bold text-brand-blue underline decoration-dotted cursor-pointer whitespace-nowrap mt-0.5"
-              >
+                className="text-[9px] font-bold text-brand-blue underline decoration-dotted cursor-pointer whitespace-nowrap mt-0.5">
                 {showBreakdown ? "Hide breakdown" : "View breakdown"}
               </button>
             )}
@@ -202,10 +206,20 @@ const BottomBar = ({
         <div className="px-3.5 sm:px-5 pb-2 flex flex-col gap-1.5 border-t border-slate-100 pt-2 mx-3.5 sm:mx-5">
           {breakdown.map((row, idx) => (
             <div key={idx} className="flex justify-between text-[11px]">
-              <span className={row.bold ? "font-black text-slate-900" : "font-semibold text-slate-500"}>
+              <span
+                className={
+                  row.bold
+                    ? "font-black text-slate-900"
+                    : "font-semibold text-slate-500"
+                }>
                 {row.label}
               </span>
-              <span className={row.bold ? "font-black text-slate-900" : "font-bold text-slate-700"}>
+              <span
+                className={
+                  row.bold
+                    ? "font-black text-slate-900"
+                    : "font-bold text-slate-700"
+                }>
                 {row.amount != null ? `₹${row.amount}` : ""}
               </span>
             </div>
@@ -280,9 +294,7 @@ const BookingFlow = () => {
   const [productType, setProductType] = useState(
     () => resumeBooking?.productType || "",
   );
-  const [quantity, setQuantity] = useState(
-    () => resumeBooking?.quantity || 1,
-  );
+  const [quantity, setQuantity] = useState(() => resumeBooking?.quantity || 1);
   // Extra appliance types serviced in the same visit (e.g. 1 Window AC + 2
   // Split AC) — each becomes its own separate booking on submit, since a
   // Booking is one appliance type's service call. The primary productType/
@@ -309,9 +321,7 @@ const BookingFlow = () => {
   );
 
   // Step 5
-  const [fullName, setFullName] = useState(
-    () => resumeBooking?.fullName || "",
-  );
+  const [fullName, setFullName] = useState(() => resumeBooking?.fullName || "");
   const [mobile, setMobile] = useState(() => resumeBooking?.mobile || "");
   const [address, setAddress] = useState(
     () =>
@@ -331,7 +341,12 @@ const BookingFlow = () => {
   );
   const [priceExpanded, setPriceExpanded] = useState(false);
 
-  const handleLocationPicked = ({ latitude, longitude, addressDetails, formattedAddress }) => {
+  const handleLocationPicked = ({
+    latitude,
+    longitude,
+    addressDetails,
+    formattedAddress,
+  }) => {
     setAddress((prev) => ({
       ...prev,
       latitude,
@@ -379,10 +394,7 @@ const BookingFlow = () => {
         setAddress({
           house: defaultAddr.house || "",
           area:
-            defaultAddr.landmark ||
-            defaultAddr.area ||
-            defaultAddr.city ||
-            "",
+            defaultAddr.landmark || defaultAddr.area || defaultAddr.city || "",
           city: defaultAddr.city || currentLocation?.city || user.city || "",
           pincode:
             defaultAddr.pincode ||
@@ -482,7 +494,9 @@ const BookingFlow = () => {
     ...additionalTypes.filter((t) => t.name && t.qty > 0),
   ];
   const additionalTypesTotal = additionalTypes.reduce((sum, t) => {
-    const addon = (data.productTypes || []).find((pt) => pt.name === t.name)?.priceAddon || 0;
+    const addon =
+      (data.productTypes || []).find((pt) => pt.name === t.name)?.priceAddon ||
+      0;
     return sum + ((selectedServiceData?.price || 0) + addon) * (t.qty || 1);
   }, 0);
   const combinedTotalPrice = totalPrice + additionalTypesTotal;
@@ -491,13 +505,26 @@ const BookingFlow = () => {
   // total with no way to see why a type-specific surcharge got added.
   const priceBreakdown = selectedServiceData
     ? [
-        { label: `${selectedServiceData.name} (base price)`, amount: selectedServiceData.price },
-        ...(productTypeAddon > 0 ? [{ label: `${productType} add-on`, amount: productTypeAddon }] : []),
-        ...(quantity > 1 ? [{ label: `× ${quantity} units`, amount: totalPrice }] : []),
+        {
+          label: `${selectedServiceData.name} (base price)`,
+          amount: selectedServiceData.price,
+        },
+        ...(productTypeAddon > 0
+          ? [{ label: `${productType} add-on`, amount: productTypeAddon }]
+          : []),
+        ...(quantity > 1
+          ? [{ label: `× ${quantity} units`, amount: totalPrice }]
+          : []),
         ...additionalTypes.map((t) => {
-          const addon = (data.productTypes || []).find((pt) => pt.name === t.name)?.priceAddon || 0;
-          const entryTotal = ((selectedServiceData.price || 0) + addon) * (t.qty || 1);
-          return { label: `${t.name} (${t.qty} unit${t.qty > 1 ? "s" : ""}) — separate booking`, amount: entryTotal };
+          const addon =
+            (data.productTypes || []).find((pt) => pt.name === t.name)
+              ?.priceAddon || 0;
+          const entryTotal =
+            ((selectedServiceData.price || 0) + addon) * (t.qty || 1);
+          return {
+            label: `${t.name} (${t.qty} unit${t.qty > 1 ? "s" : ""}) — separate booking`,
+            amount: entryTotal,
+          };
         }),
         { label: "Total", amount: combinedTotalPrice, bold: true },
       ]
@@ -598,8 +625,6 @@ const BookingFlow = () => {
   const allVisibleDates = customDatePill
     ? [customDatePill, ...upcomingDates]
     : upcomingDates;
-
-
 
   const TIME_GROUPS = [
     {
@@ -784,8 +809,9 @@ const BookingFlow = () => {
   const isMobileValid = !!mobile?.trim() && /^\d{10}$/.test(mobile.trim());
   const isPincodeValid =
     !address.pincode?.trim() || /^\d{6}$/.test(address.pincode.trim());
-  const isAddressValid =
-    Boolean(address.house?.trim() && address.city?.trim() && isPincodeValid);
+  const isAddressValid = Boolean(
+    address.house?.trim() && address.city?.trim() && isPincodeValid,
+  );
   const isContactValid = !!fullName?.trim() && isMobileValid;
   const step4Valid = isAddressValid && isContactValid;
 
@@ -821,13 +847,18 @@ const BookingFlow = () => {
     if (productType) parts.push(productType);
     if (quantity > 1) parts.push(`${quantity} units`);
     if (additionalTypes.length > 0) {
-      parts.push(`+${additionalTypes.length} more type${additionalTypes.length === 1 ? "" : "s"}`);
+      parts.push(
+        `+${additionalTypes.length} more type${additionalTypes.length === 1 ? "" : "s"}`,
+      );
     }
     return parts.join(" · ") || `${catKey} service`;
   };
   const getBarBtnLabel = () => {
     if (step === 1) return "Continue — Select Service";
-    if (step === 2) return !step2Valid ? "Select Service Package" : "Continue — Schedule Visit";
+    if (step === 2)
+      return !step2Valid
+        ? "Select Service Package"
+        : "Continue — Schedule Visit";
     if (step === 3)
       return !step3Valid
         ? hasBrands && !brand
@@ -972,7 +1003,8 @@ const BookingFlow = () => {
                         Need service for a different {catKey} type too?
                       </p>
                       <p className="text-[10px] text-slate-400 font-semibold mt-0.5">
-                        Each type you add here becomes its own separate booking, scheduled together with this one.
+                        Each type you add here becomes its own separate booking,
+                        scheduled together with this one.
                       </p>
                     </div>
 
@@ -985,10 +1017,11 @@ const BookingFlow = () => {
                             next[idx] = { ...next[idx], name: e.target.value };
                             setAdditionalTypes(next);
                           }}
-                          className="flex-1 text-xs font-bold text-slate-800 border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:border-brand-blue bg-slate-50"
-                        >
+                          className="flex-1 text-xs font-bold text-slate-800 border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:border-brand-blue bg-slate-50">
                           {data.productTypes.map((pt) => (
-                            <option key={pt.id} value={pt.name}>{pt.name}</option>
+                            <option key={pt.id} value={pt.name}>
+                              {pt.name}
+                            </option>
                           ))}
                         </select>
                         <div className="flex items-center gap-2 bg-slate-50 p-1 rounded-xl border border-slate-200 shrink-0">
@@ -996,46 +1029,64 @@ const BookingFlow = () => {
                             type="button"
                             onClick={() => {
                               const next = [...additionalTypes];
-                              next[idx] = { ...next[idx], qty: Math.max(1, next[idx].qty - 1) };
+                              next[idx] = {
+                                ...next[idx],
+                                qty: Math.max(1, next[idx].qty - 1),
+                              };
                               setAdditionalTypes(next);
                             }}
-                            className="w-7 h-7 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-brand-blue text-sm font-black cursor-pointer"
-                          >
+                            className="w-7 h-7 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-brand-blue text-sm font-black cursor-pointer">
                             –
                           </button>
-                          <span className="text-xs font-black text-slate-900 w-4 text-center">{entry.qty}</span>
+                          <span className="text-xs font-black text-slate-900 w-4 text-center">
+                            {entry.qty}
+                          </span>
                           <button
                             type="button"
                             onClick={() => {
                               const next = [...additionalTypes];
-                              next[idx] = { ...next[idx], qty: Math.min(12, next[idx].qty + 1) };
+                              next[idx] = {
+                                ...next[idx],
+                                qty: Math.min(12, next[idx].qty + 1),
+                              };
                               setAdditionalTypes(next);
                             }}
-                            className="w-7 h-7 rounded-lg bg-brand-blue text-white flex items-center justify-center text-sm font-black cursor-pointer"
-                          >
+                            className="w-7 h-7 rounded-lg bg-brand-blue text-white flex items-center justify-center text-sm font-black cursor-pointer">
                             +
                           </button>
                         </div>
                         <button
                           type="button"
-                          onClick={() => setAdditionalTypes(additionalTypes.filter((_, i) => i !== idx))}
-                          className="w-8 h-8 shrink-0 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                        >
+                          onClick={() =>
+                            setAdditionalTypes(
+                              additionalTypes.filter((_, i) => i !== idx),
+                            )
+                          }
+                          className="w-8 h-8 shrink-0 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer">
                           <X className="w-4 h-4" />
                         </button>
                       </div>
                     ))}
 
                     {(() => {
-                      const usedNames = new Set([productType, ...additionalTypes.map((t) => t.name)]);
-                      const nextAvailable = data.productTypes.find((pt) => !usedNames.has(pt.name));
+                      const usedNames = new Set([
+                        productType,
+                        ...additionalTypes.map((t) => t.name),
+                      ]);
+                      const nextAvailable = data.productTypes.find(
+                        (pt) => !usedNames.has(pt.name),
+                      );
                       if (!nextAvailable) return null;
                       return (
                         <button
                           type="button"
-                          onClick={() => setAdditionalTypes([...additionalTypes, { name: nextAvailable.name, qty: 1 }])}
-                          className="text-xs font-black text-brand-blue hover:underline text-left flex items-center gap-1 cursor-pointer"
-                        >
+                          onClick={() =>
+                            setAdditionalTypes([
+                              ...additionalTypes,
+                              { name: nextAvailable.name, qty: 1 },
+                            ])
+                          }
+                          className="text-xs font-black text-brand-blue hover:underline text-left flex items-center gap-1 cursor-pointer">
                           + Add Another Type
                         </button>
                       );
@@ -1103,7 +1154,9 @@ const BookingFlow = () => {
                           <div className="flex-1 min-w-0 pt-0.5">
                             <h3
                               className={`text-[13px] sm:text-[15px] font-black leading-snug ${
-                                isSelected ? "text-brand-blue" : "text-slate-900"
+                                isSelected
+                                  ? "text-brand-blue"
+                                  : "text-slate-900"
                               }`}>
                               {svc.name}
                             </h3>
@@ -1111,7 +1164,9 @@ const BookingFlow = () => {
                             <div className="flex items-baseline gap-1.5 mt-1 sm:hidden">
                               <span
                                 className={`text-[15px] font-black ${
-                                  isSelected ? "text-brand-blue" : "text-slate-900"
+                                  isSelected
+                                    ? "text-brand-blue"
+                                    : "text-slate-900"
                                 }`}>
                                 ₹{svc.price}
                               </span>
@@ -1128,7 +1183,9 @@ const BookingFlow = () => {
                           <div className="hidden sm:flex flex-col items-end">
                             <span
                               className={`text-[16px] font-black ${
-                                isSelected ? "text-brand-blue" : "text-slate-900"
+                                isSelected
+                                  ? "text-brand-blue"
+                                  : "text-slate-900"
                               }`}>
                               ₹{svc.price}
                             </span>
@@ -1168,7 +1225,9 @@ const BookingFlow = () => {
 
                 {/* Note alert box */}
                 <div className="bg-amber-50/80 border border-amber-200/80 rounded-2xl p-3 sm:p-3.5 flex items-start gap-2.5 mt-1 shadow-2xs">
-                  <span className="text-base sm:text-lg leading-none shrink-0 mt-0.5">💡</span>
+                  <span className="text-base sm:text-lg leading-none shrink-0 mt-0.5">
+                    💡
+                  </span>
                   <div className="min-w-0 flex-1">
                     <p className="text-[11px] font-black text-amber-900">
                       Price Transparency Note
@@ -1219,7 +1278,8 @@ const BookingFlow = () => {
                     </div>
                     {!brand && (
                       <p className="text-[10px] sm:text-[11px] text-amber-600 font-bold mt-2 flex items-center gap-1">
-                        <span>⚠️</span> Please select an appliance brand to proceed
+                        <span>⚠️</span> Please select an appliance brand to
+                        proceed
                       </p>
                     )}
                   </div>
@@ -1240,7 +1300,8 @@ const BookingFlow = () => {
                         )}
                       </div>
                       <p className="text-[10px] text-slate-400 font-semibold mt-0.5">
-                        Choose convenient date for visit or pick any other date from calendar
+                        Choose convenient date for visit or pick any other date
+                        from calendar
                       </p>
                     </div>
                     <button
@@ -1389,7 +1450,8 @@ const BookingFlow = () => {
                     </div>
                   ) : (
                     <div className="mt-2.5 text-[11px] text-slate-400 font-semibold italic">
-                      Please select a date from above or use the Choose Date button for more dates.
+                      Please select a date from above or use the Choose Date
+                      button for more dates.
                     </div>
                   )}
                 </div>
@@ -1629,7 +1691,8 @@ const BookingFlow = () => {
                                   GPS Coordinates
                                 </p>
                                 <p className="text-[10px] sm:text-[11px] font-mono font-black text-slate-800 truncate">
-                                  {Number(address.latitude).toFixed(4)}, {Number(address.longitude).toFixed(4)}
+                                  {Number(address.latitude).toFixed(4)},{" "}
+                                  {Number(address.longitude).toFixed(4)}
                                 </p>
                               </div>
                             </div>
@@ -1705,7 +1768,9 @@ const BookingFlow = () => {
                           <p className="text-[10px] text-slate-500 flex items-center gap-1">
                             <span className="text-blue-500">📍</span>
                             <span>
-                              Tap <strong>Select on Map</strong> or <strong>Current GPS</strong> to pin exact door coordinates.
+                              Tap <strong>Select on Map</strong> or{" "}
+                              <strong>Current GPS</strong> to pin exact door
+                              coordinates.
                             </span>
                           </p>
                         </div>
@@ -2017,15 +2082,23 @@ const BookingFlow = () => {
                     </span>
                   </div>
                   {additionalTypes.map((entry, idx) => {
-                    const addon = (data.productTypes || []).find((pt) => pt.name === entry.name)?.priceAddon || 0;
-                    const entryTotal = ((selectedServiceData?.price || 0) + addon) * (entry.qty || 1);
+                    const addon =
+                      (data.productTypes || []).find(
+                        (pt) => pt.name === entry.name,
+                      )?.priceAddon || 0;
+                    const entryTotal =
+                      ((selectedServiceData?.price || 0) + addon) *
+                      (entry.qty || 1);
                     return (
                       <div key={idx} className="flex justify-between">
                         <span>
-                          {entry.name} — {selectedServiceData.name} ({entry.qty} unit
+                          {entry.name} — {selectedServiceData.name} ({entry.qty}{" "}
+                          unit
                           {entry.qty > 1 ? "s" : ""}) · separate booking
                         </span>
-                        <span className="font-bold text-slate-900">₹{entryTotal}</span>
+                        <span className="font-bold text-slate-900">
+                          ₹{entryTotal}
+                        </span>
                       </div>
                     );
                   })}
@@ -2035,13 +2108,26 @@ const BookingFlow = () => {
                   </div>
                   <div className="h-px bg-slate-100 my-1" />
                   <div className="flex justify-between text-sm font-black text-slate-900">
-                    <span>Total{additionalTypes.length > 0 ? ` (${additionalTypes.length + 1} bookings)` : " Estimate"}</span>
+                    <span>
+                      Total
+                      {additionalTypes.length > 0
+                        ? ` (${additionalTypes.length + 1} bookings)`
+                        : " Estimate"}
+                    </span>
                     <span>₹{combinedTotalPrice}</span>
                   </div>
                   {step === 4 && paymentMode === "advance" && (
                     <div className="flex justify-between text-sm font-black text-brand-blue bg-blue-50 p-3 rounded-2xl border border-blue-100">
-                      <span>Advance Payable Now{additionalTypes.length > 0 ? ` (×${additionalTypes.length + 1} bookings)` : ""}</span>
-                      <span>₹{advanceAmt}{additionalTypes.length > 0 ? ` each` : ""}</span>
+                      <span>
+                        Advance Payable Now
+                        {additionalTypes.length > 0
+                          ? ` (×${additionalTypes.length + 1} bookings)`
+                          : ""}
+                      </span>
+                      <span>
+                        ₹{advanceAmt}
+                        {additionalTypes.length > 0 ? ` each` : ""}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -2087,7 +2173,9 @@ const BookingFlow = () => {
           label={getBarLabel()}
           sublabel={getBarSublabel()}
           price={
-            step === 4 && paymentMode === "advance" ? advanceAmt : combinedTotalPrice
+            step === 4 && paymentMode === "advance"
+              ? advanceAmt
+              : combinedTotalPrice
           }
           showPrice={
             step >= 2 && Boolean(selectedServiceData && totalPrice > 0)
