@@ -492,11 +492,11 @@ const ServiceProviders = () => {
 
         {/* Redesigned Profile Header Card */}
         <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden text-left mb-6">
-          <div className="bg-gradient-to-r from-[#0D47A1] via-[#1565C0] to-[#1E3A8A] p-6 text-white relative">
+          <div className="bg-linear-to-r from-[#0D47A1] via-[#1565C0] to-[#1E3A8A] p-6 text-white relative">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
               {/* Left: Avatar + Details */}
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 flex items-center justify-center text-white font-extrabold text-2xl uppercase flex-shrink-0 shadow-inner">
+                <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 flex items-center justify-center text-white font-extrabold text-2xl uppercase shrink-0 shadow-inner">
                   {provider.name
                     ? provider.name
                         .split(" ")
@@ -606,24 +606,24 @@ const ServiceProviders = () => {
               </h3>
               <div className="space-y-3.5 text-sm">
                 <div className="flex items-center gap-3 text-slate-700">
-                  <Mail size={16} className="text-[#64748B] flex-shrink-0" />
+                  <Mail size={16} className="text-[#64748B] shrink-0" />
                   <span className="truncate">{email}</span>
                 </div>
                 <div className="flex items-center gap-3 text-slate-700">
                   <PhoneIcon
                     size={16}
-                    className="text-[#64748B] flex-shrink-0"
+                    className="text-[#64748B] shrink-0"
                   />
                   <span>{phone}</span>
                 </div>
                 <div className="flex items-center gap-3 text-slate-700">
-                  <MapPin size={16} className="text-[#64748B] flex-shrink-0" />
+                  <MapPin size={16} className="text-[#64748B] shrink-0" />
                   <span>{provider.city}, India</span>
                 </div>
                 <div className="flex items-center gap-3 text-slate-700">
                   <CalendarIcon
                     size={16}
-                    className="text-[#64748B] flex-shrink-0"
+                    className="text-[#64748B] shrink-0"
                   />
                   <span>Applied / Joined: {joinedDate}</span>
                 </div>
@@ -631,7 +631,7 @@ const ServiceProviders = () => {
                   <div className="flex items-center gap-3 text-slate-700">
                     <UserCog
                       size={16}
-                      className="text-[#64748B] flex-shrink-0"
+                      className="text-[#64748B] shrink-0"
                     />
                     {provider.asm ? (
                       <button
@@ -833,7 +833,7 @@ const ServiceProviders = () => {
                           </p>
                         </div>
                         <span
-                          className={`text-xs font-semibold px-2.5 py-0.5 rounded-full flex-shrink-0 ${statusStyle}`}>
+                          className={`text-xs font-semibold px-2.5 py-0.5 rounded-full shrink-0 ${statusStyle}`}>
                           {req.status}
                         </span>
                       </div>
@@ -955,7 +955,7 @@ const ServiceProviders = () => {
               <button
                 onClick={() => setSelectedStatus("Pending")}
                 className="w-full flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 text-left hover:bg-amber-100/70 transition-colors">
-                <span className="w-9 h-9 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center flex-shrink-0">
+                <span className="w-9 h-9 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
                   <AlertTriangle size={18} />
                 </span>
                 <span className="flex-1">
@@ -971,7 +971,7 @@ const ServiceProviders = () => {
                 </span>
                 <ArrowRight
                   size={16}
-                  className="text-amber-600 flex-shrink-0"
+                  className="text-amber-600 shrink-0"
                 />
               </button>
             )}

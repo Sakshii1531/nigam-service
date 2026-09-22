@@ -278,7 +278,7 @@ const Inventory = () => {
           {lowStockCount > 0 && (
             <div className="bg-orange-50 border border-orange-200 p-4 rounded-xl flex items-center justify-between gap-3 shadow-sm">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 flex-shrink-0">
+                <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 shrink-0">
                   <AlertTriangle size={20} />
                 </div>
                 <div>

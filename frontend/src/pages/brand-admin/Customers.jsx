@@ -357,7 +357,7 @@ const Customers = () => {
                     <tr>
                       <th className="px-6 py-4">Customer</th>
                       <th className="px-6 py-4">Contact</th>
-                      <th className="px-6 py-4 flex-shrink-0">Products</th>
+                      <th className="px-6 py-4 shrink-0">Products</th>
                       <th className="px-6 py-4">Complaints</th>
                       <th className="px-6 py-4">Warranty</th>
                       <th className="px-6 py-4">Last Service</th>

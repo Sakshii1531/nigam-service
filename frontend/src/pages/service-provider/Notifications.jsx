@@ -167,7 +167,7 @@ const Notifications = () => {
                 >
                   <div className="flex items-center gap-3.5 flex-1 min-w-0 pr-3">
                     {/* Icon wrapper */}
-                    <div className={`w-11 h-11 rounded-2xl flex-shrink-0 flex items-center justify-center ${getIconBg(n.title)} shadow-xs`}>
+                    <div className={`w-11 h-11 rounded-2xl shrink-0 flex items-center justify-center ${getIconBg(n.title)} shadow-xs`}>
                       {getIcon(n.title)}
                     </div>
 

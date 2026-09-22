@@ -10,6 +10,7 @@ import { useTech } from '../../context/ServiceProviderContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { apiRequest } from '../../lib/apiClient';
+import { goBack } from '../../lib/navigation';
 import ServiceProviderBottomNav from '../../components/ServiceProviderBottomNav';
 import serviceProviderAvatar from '../../assets/service_provider_avatar.png';
 import { useServiceProviderSummary } from '../../hooks/useServiceProviderSummary';
@@ -121,7 +122,7 @@ const ProfilePage = () => {
     <div className="min-h-screen bg-[#F6F8FD] flex flex-col pb-28 lg:pb-14 font-sans relative text-left selection:bg-blue-100 selection:text-blue-900">
 
       {/* ── Ambient Background Lighting (Modern Mesh Gradients) ── */}
-      <div className="absolute top-0 left-0 right-0 h-96 bg-gradient-to-b from-[#06214D] via-[#0A2D69] to-[#F6F8FD] pointer-events-none overflow-hidden z-0">
+      <div className="absolute top-0 left-0 right-0 h-96 bg-linear-to-b from-[#06214D] via-[#0A2D69] to-[#F6F8FD] pointer-events-none overflow-hidden z-0">
         <div className="absolute -top-24 -left-20 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute top-12 -right-24 w-80 h-80 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute top-36 left-1/3 w-64 h-64 bg-amber-400/10 rounded-full blur-2xl pointer-events-none" />
@@ -132,7 +133,7 @@ const ProfilePage = () => {
         <div className="flex items-center justify-between">
           <button 
             type="button"
-            onClick={() => navigate('/service-provider/dashboard')} 
+            onClick={() => goBack(navigate, '/service-provider/dashboard')} 
             className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-white/10 hover:bg-white/20 active:scale-95 border border-white/15 flex items-center justify-center text-white transition-all cursor-pointer shadow-2xs"
             title="Back to Dashboard"
             aria-label="Back to Dashboard"
@@ -165,7 +166,7 @@ const ProfilePage = () => {
         <div className="flex items-center justify-between bg-white/90 backdrop-blur-md rounded-3xl p-4 sm:p-5 border border-white/80 shadow-[0_4px_24px_rgba(10,37,84,0.06)]">
           <div className="flex items-center gap-3.5">
             <button
-              onClick={() => navigate('/service-provider/dashboard')}
+              onClick={() => goBack(navigate, '/service-provider/dashboard')}
               className="w-11 h-11 bg-slate-100 hover:bg-slate-200 rounded-2xl text-[#06214D] transition-all flex items-center justify-center cursor-pointer shadow-2xs"
               title="Back to Dashboard"
             >
@@ -217,13 +218,13 @@ const ProfilePage = () => {
           {/* 1. HERO IDENTITY CARD */}
           <div className="bg-white/95 backdrop-blur-md rounded-3xl p-3.5 sm:p-5 border border-slate-200/80 shadow-[0_10px_30px_rgba(15,23,42,0.06)] flex flex-col gap-3 sm:gap-4 relative overflow-hidden group">
             {/* Top decorative gradient glow */}
-            <div className="absolute -top-16 -right-16 w-36 h-36 bg-gradient-to-br from-blue-400/20 to-indigo-400/0 rounded-full blur-2xl pointer-events-none" />
+            <div className="absolute -top-16 -right-16 w-36 h-36 bg-linear-to-br from-blue-400/20 to-indigo-400/0 rounded-full blur-2xl pointer-events-none" />
 
             <div className="flex items-start gap-3 sm:gap-4">
               {/* Avatar with Status Ring */}
               <div 
                 onClick={() => navigate('/service-provider/personal-info')}
-                className="relative cursor-pointer flex-shrink-0"
+                className="relative cursor-pointer shrink-0"
                 title="Edit Personal Information"
               >
                 <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden ring-4 ring-blue-50 border-2 border-[#0D47A1]/20 shadow-md transition-transform group-hover:scale-[1.02]">
@@ -250,7 +251,7 @@ const ProfilePage = () => {
                   </h2>
                   <button 
                     onClick={() => navigate('/service-provider/personal-info')} 
-                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-slate-50 hover:bg-blue-50 text-slate-400 hover:text-brand-blue border border-slate-200/80 transition-all flex items-center justify-center cursor-pointer flex-shrink-0 active:scale-90"
+                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-slate-50 hover:bg-blue-50 text-slate-400 hover:text-brand-blue border border-slate-200/80 transition-all flex items-center justify-center cursor-pointer shrink-0 active:scale-90"
                     title="Edit Profile"
                   >
                     <Pencil className="h-3.5 w-3.5" />
@@ -298,7 +299,7 @@ const ProfilePage = () => {
           </div>
 
           {/* 2. WALLET BALANCE & WITHDRAWAL CARD */}
-          <div className="bg-gradient-to-br from-[#06214D] via-[#092B65] to-[#0D47A1] text-white rounded-3xl p-3.5 sm:p-5 shadow-[0_12px_35px_rgba(9,43,101,0.22)] border border-blue-900/40 flex flex-col gap-3.5 sm:gap-4 relative overflow-hidden">
+          <div className="bg-linear-to-br from-[#06214D] via-[#092B65] to-[#0D47A1] text-white rounded-3xl p-3.5 sm:p-5 shadow-[0_12px_35px_rgba(9,43,101,0.22)] border border-blue-900/40 flex flex-col gap-3.5 sm:gap-4 relative overflow-hidden">
             {/* Atmospheric light reflections */}
             <div className="absolute top-0 right-0 w-72 h-72 bg-white/5 rounded-full blur-3xl pointer-events-none" />
             <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
@@ -331,7 +332,7 @@ const ProfilePage = () => {
 
               <button
                 onClick={() => navigate('/service-provider/earnings')}
-                className="inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-400 to-[#FFD400] text-[#06214D] hover:brightness-105 active:scale-95 text-xs font-black px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-2xl transition-all shadow-md shadow-amber-400/20 cursor-pointer"
+                className="inline-flex items-center gap-1.5 bg-linear-to-r from-amber-400 to-[#FFD400] text-[#06214D] hover:brightness-105 active:scale-95 text-xs font-black px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-2xl transition-all shadow-md shadow-amber-400/20 cursor-pointer"
               >
                 <span>Withdraw</span>
                 <ArrowRight className="h-3.5 w-3.5 stroke-[2.5]" />
@@ -340,7 +341,7 @@ const ProfilePage = () => {
 
             <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[11px] text-blue-200/80 relative z-10">
               <div className="flex items-center gap-1.5">
-                <Clock className="h-3.5 w-3.5 text-blue-300 flex-shrink-0" />
+                <Clock className="h-3.5 w-3.5 text-blue-300 shrink-0" />
                 <span>Instant automated approval within 24h</span>
               </div>
               <button
@@ -398,7 +399,7 @@ const ProfilePage = () => {
             className="w-full bg-white/95 backdrop-blur-md rounded-2xl p-4 border border-slate-200/80 shadow-2xs hover:border-[#0D47A1]/40 transition-all text-left flex items-center justify-between group cursor-pointer"
           >
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-[#0D47A1] flex-shrink-0 group-hover:scale-105 transition-transform">
+              <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-[#0D47A1] shrink-0 group-hover:scale-105 transition-transform">
                 <Building2 className="h-5 w-5" />
               </div>
               <div className="min-w-0">
@@ -419,7 +420,7 @@ const ProfilePage = () => {
                 </p>
               </div>
             </div>
-            <ChevronRight className="h-4 w-4 text-slate-400 group-hover:translate-x-1 transition-transform flex-shrink-0 ml-2" />
+            <ChevronRight className="h-4 w-4 text-slate-400 group-hover:translate-x-1 transition-transform shrink-0 ml-2" />
           </button>
 
           {/* Logout (Desktop Only in Left Column) */}
@@ -457,7 +458,7 @@ const ProfilePage = () => {
                   className="w-full py-3 px-1 flex items-center justify-between hover:bg-slate-50/80 rounded-2xl transition-all text-left cursor-pointer group"
                 >
                   <div className="flex items-center gap-3.5 min-w-0">
-                    <div className={`w-10 h-10 rounded-2xl border flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105 ${item.accent}`}>
+                    <div className={`w-10 h-10 rounded-2xl border flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 ${item.accent}`}>
                       {item.icon}
                     </div>
                     <div className="min-w-0">
@@ -476,7 +477,7 @@ const ProfilePage = () => {
                       </p>
                     </div>
                   </div>
-                  <ChevronRight className="h-4 w-4 text-slate-400 group-hover:translate-x-1 transition-transform flex-shrink-0 ml-2" />
+                  <ChevronRight className="h-4 w-4 text-slate-400 group-hover:translate-x-1 transition-transform shrink-0 ml-2" />
                 </button>
               ))}
             </div>
@@ -499,7 +500,7 @@ const ProfilePage = () => {
                   className="w-full py-3 px-1 flex items-center justify-between hover:bg-slate-50/80 rounded-2xl transition-all text-left cursor-pointer group"
                 >
                   <div className="flex items-center gap-3.5 min-w-0">
-                    <div className={`w-10 h-10 rounded-2xl border flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105 ${item.accent}`}>
+                    <div className={`w-10 h-10 rounded-2xl border flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 ${item.accent}`}>
                       {item.icon}
                     </div>
                     <div className="min-w-0">
@@ -518,7 +519,7 @@ const ProfilePage = () => {
                       </p>
                     </div>
                   </div>
-                  <ChevronRight className="h-4 w-4 text-slate-400 group-hover:translate-x-1 transition-transform flex-shrink-0 ml-2" />
+                  <ChevronRight className="h-4 w-4 text-slate-400 group-hover:translate-x-1 transition-transform shrink-0 ml-2" />
                 </button>
               ))}
             </div>
@@ -541,7 +542,7 @@ const ProfilePage = () => {
                   className="w-full py-3 px-1 flex items-center justify-between hover:bg-slate-50/80 rounded-2xl transition-all text-left cursor-pointer group"
                 >
                   <div className="flex items-center gap-3.5 min-w-0">
-                    <div className={`w-10 h-10 rounded-2xl border flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105 ${item.accent}`}>
+                    <div className={`w-10 h-10 rounded-2xl border flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 ${item.accent}`}>
                       {item.icon}
                     </div>
                     <div className="min-w-0">
@@ -553,7 +554,7 @@ const ProfilePage = () => {
                       </p>
                     </div>
                   </div>
-                  <ChevronRight className="h-4 w-4 text-slate-400 group-hover:translate-x-1 transition-transform flex-shrink-0 ml-2" />
+                  <ChevronRight className="h-4 w-4 text-slate-400 group-hover:translate-x-1 transition-transform shrink-0 ml-2" />
                 </button>
               ))}
             </div>

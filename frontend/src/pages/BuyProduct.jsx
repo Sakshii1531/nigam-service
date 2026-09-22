@@ -183,7 +183,7 @@ const BuyProduct = () => {
 
               {/* Product Info Block */}
               <div className="flex gap-3 items-center">
-                <div className="w-11 h-11 bg-[#F8F9FA] rounded-xl flex items-center justify-center text-2xl shadow-inner group-hover:scale-105 transition-all flex-shrink-0">
+                <div className="w-11 h-11 bg-[#F8F9FA] rounded-xl flex items-center justify-center text-2xl shadow-inner group-hover:scale-105 transition-all shrink-0">
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-extrabold text-text-primary text-sm leading-tight">{prod.name}</h3>
@@ -202,7 +202,7 @@ const BuyProduct = () => {
               {/* Warranty Card Badge — only when the product records one */}
               {prod.warranty ? (
                 <div className="bg-[#E3F2FD]/50 p-2 rounded-lg border border-blue-50 flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-brand-blue animate-pulse flex-shrink-0"></span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-brand-blue animate-pulse shrink-0"></span>
                   <span className="text-[10px] font-bold text-brand-blue leading-none">{prod.warranty}</span>
                 </div>
               ) : null}
@@ -345,7 +345,7 @@ const BuyProduct = () => {
                   </div>
 
                   {/* Glassmorphic digital receipt */}
-                  <div className="w-full bg-gradient-to-br from-brand-navy via-[#0A3D80] to-brand-blue rounded-3xl p-5 text-white text-left relative overflow-hidden shadow-xl">
+                  <div className="w-full bg-linear-to-br from-brand-navy via-[#0A3D80] to-brand-blue rounded-3xl p-5 text-white text-left relative overflow-hidden shadow-xl">
                     <div className="absolute -top-10 -right-10 w-32 h-32 bg-brand-yellow/10 rounded-full blur-2xl"></div>
                     
                     <div className="flex justify-between items-start mb-4 border-b border-white/10 pb-3">
@@ -369,7 +369,7 @@ const BuyProduct = () => {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-white/60">Delivery Address:</span>
-                        <span className="font-semibold text-right max-w-[200px] truncate">{address}</span>
+                        <span className="font-semibold text-right max-w-50 truncate">{address}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-white/60">Warranty Status:</span>

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ChevronRight, Zap, FileText } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
+import { goBack } from '../../lib/navigation';
 
 
 const RecentEarnings = () => {
@@ -33,7 +34,7 @@ const RecentEarnings = () => {
       {/* Mobile Top Header */}
       <div className="bg-white border-b border-slate-200 px-4 py-3.5 flex items-center gap-3 sticky top-0 z-10 lg:hidden">
         <button
-          onClick={() => navigate('/service-provider/profile')}
+          onClick={() => goBack(navigate, '/service-provider/profile')}
           className="p-1 hover:bg-slate-100 rounded-full transition-colors"
         >
           <ArrowLeft className="h-5 w-5 text-slate-700" />
@@ -46,7 +47,7 @@ const RecentEarnings = () => {
         <div className="flex items-center justify-between bg-white rounded-3xl p-5 border border-slate-200/80 shadow-2xs">
           <div className="flex items-center gap-3.5">
             <button
-              onClick={() => navigate('/service-provider/profile')}
+              onClick={() => goBack(navigate, '/service-provider/profile')}
               className="p-2 bg-slate-100 hover:bg-slate-200 rounded-2xl text-[#052355] transition-colors cursor-pointer"
               title="Back"
             >
@@ -76,7 +77,7 @@ const RecentEarnings = () => {
                 onClick={() => navigate(`/service-provider/earning-detail/${item.id}`)}
                 className="w-full px-4 py-3.5 flex items-center gap-3 hover:bg-slate-50 transition-colors text-left"
               >
-                <div className={`p-2 rounded-lg flex-shrink-0 ${item.icon === 'zap' ? 'bg-amber-50' : 'bg-blue-50'}`}>
+                <div className={`p-2 rounded-lg shrink-0 ${item.icon === 'zap' ? 'bg-amber-50' : 'bg-blue-50'}`}>
                   {item.icon === 'zap'
                     ? <Zap className="h-4.5 w-4.5 text-amber-500 fill-amber-400" />
                     : <FileText className="h-4.5 w-4.5 text-[#0D47A1]" />
@@ -91,10 +92,10 @@ const RecentEarnings = () => {
                     <p className="text-[9px] text-slate-400 font-medium">{item.date}</p>
                   </div>
                 </div>
-                <div className="text-right flex-shrink-0">
+                <div className="text-right shrink-0">
                   <p className="text-xs font-black text-[#052355]">₹{item.amount.toLocaleString('en-IN')}</p>
                 </div>
-                <ChevronRight className="h-4.5 w-4.5 text-slate-300 flex-shrink-0" />
+                <ChevronRight className="h-4.5 w-4.5 text-slate-300 shrink-0" />
               </button>
             ))}
           </div>

@@ -140,7 +140,7 @@ const EarningsPage = () => {
 
                 {withdrawError && (
                   <div className="bg-red-50 border border-red-200 rounded-xl p-3 flex items-center gap-2 text-red-600 text-xs font-semibold">
-                    <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                    <AlertCircle className="h-4 w-4 shrink-0" />
                     <span>{withdrawError}</span>
                   </div>
                 )}
@@ -152,7 +152,7 @@ const EarningsPage = () => {
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-slate-500 font-medium">Destination Account</span>
-                    <span className="font-bold text-[#052355] truncate max-w-[180px]">
+                    <span className="font-bold text-[#052355] truncate max-w-45">
                       {primaryAccount 
                         ? (primaryAccount.type === 'bank' 
                             ? `${primaryAccount.name || 'Bank'} (${primaryAccount.detail ? `•••• ${primaryAccount.detail.slice(-4)}` : 'Linked'})` 
@@ -282,7 +282,7 @@ const EarningsPage = () => {
         <div className="lg:col-span-5 flex flex-col gap-4">
 
           {/* Available Balance Card */}
-          <div className="bg-gradient-to-br from-[#052355] via-[#082E6E] to-[#0D47A1] text-white rounded-3xl p-5 sm:p-6 shadow-md border border-blue-900/40 flex flex-col gap-4 relative overflow-hidden text-left">
+          <div className="bg-linear-to-br from-[#052355] via-[#082E6E] to-[#0D47A1] text-white rounded-3xl p-5 sm:p-6 shadow-md border border-blue-900/40 flex flex-col gap-4 relative overflow-hidden text-left">
             <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-2xl pointer-events-none"></div>
 
             <div className="flex justify-between items-center relative z-10">
@@ -314,7 +314,7 @@ const EarningsPage = () => {
                     setShowWithdrawModal(true);
                   }
                 }}
-                className="w-full bg-gradient-to-r from-[#FFD400] to-[#FFCA00] text-[#051F42] hover:brightness-105 font-black py-3.5 rounded-2xl text-xs transition-all shadow-md cursor-pointer flex items-center justify-center gap-2 active:scale-98"
+                className="w-full bg-linear-to-r from-[#FFD400] to-[#FFCA00] text-[#051F42] hover:brightness-105 font-black py-3.5 rounded-2xl text-xs transition-all shadow-md cursor-pointer flex items-center justify-center gap-2 active:scale-98"
               >
                 <span>Withdraw Funds</span>
                 <ArrowUpRight className="h-4 w-4" />
@@ -337,7 +337,7 @@ const EarningsPage = () => {
           {/* Today's Stats Card */}
           <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-2xs flex items-center justify-between">
             <div className="flex items-center gap-3.5">
-              <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-2xl text-emerald-600 flex-shrink-0">
+              <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-2xl text-emerald-600 shrink-0">
                 <TrendingUp className="h-6 w-6" />
               </div>
               <div>
@@ -477,7 +477,7 @@ const EarningsPage = () => {
                               className={`w-full rounded-t-xl transition-all duration-300 ${
                                 isZero 
                                   ? 'bg-slate-200 h-2' 
-                                  : 'bg-gradient-to-t from-[#0D47A1] to-blue-500 group-hover:brightness-110'
+                                  : 'bg-linear-to-t from-[#0D47A1] to-blue-500 group-hover:brightness-110'
                               }`}
                               style={{ height: `${heightPercent}%` }}
                             ></div>
@@ -528,7 +528,7 @@ const EarningsPage = () => {
                 visiblePayouts.map((p) => (
                   <div key={p.id} className="p-4 flex justify-between items-center hover:bg-slate-50/70 transition-colors">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className={`w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 ${
+                      <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${
                         p.status === 'SETTLED' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200/60' : 'bg-amber-50 text-amber-600 border border-amber-200/60'
                       }`}>
                         {p.status === 'SETTLED' ? (
@@ -543,7 +543,7 @@ const EarningsPage = () => {
                       </div>
                     </div>
 
-                    <div className="text-right flex-shrink-0 ml-2">
+                    <div className="text-right shrink-0 ml-2">
                       <span className="text-xs sm:text-sm font-black text-emerald-700">{p.amount}</span>
                       <div className="mt-0.5">
                         <span className={`text-[9.5px] font-bold px-2 py-0.5 rounded-md ${

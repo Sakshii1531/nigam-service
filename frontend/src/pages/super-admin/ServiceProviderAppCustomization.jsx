@@ -284,7 +284,7 @@ const ServiceProviderAppCustomization = () => {
           )}
 
           {/* Main Content Pane */}
-          <div className="flex-1 bg-white rounded-2xl border border-[#E2E8F0] p-6 shadow-sm min-h-[450px]">
+          <div className="flex-1 bg-white rounded-2xl border border-[#E2E8F0] p-6 shadow-sm min-h-112.5">
             
             {/* SUBSECTION 1: BANNERS */}
             {activeTab === 'banners' && (
@@ -316,7 +316,7 @@ const ServiceProviderAppCustomization = () => {
                         <img
                           src={banner.image}
                           alt="banner"
-                          className="w-20 h-20 rounded-xl object-cover border border-slate-100 flex-shrink-0 bg-slate-50"
+                          className="w-20 h-20 rounded-xl object-cover border border-slate-100 shrink-0 bg-slate-50"
                         />
                         <div className="flex flex-col justify-between flex-1 min-w-0 pr-6">
                           <div>
@@ -806,7 +806,7 @@ const ServiceProviderAppCustomization = () => {
                         onChange={(e) => setSettings({ ...settings, offlineMode: e.target.checked })}
                         className="sr-only peer" 
                       />
-                      <div className="w-9 h-5 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#0D47A1]"></div>
+                      <div className="w-9 h-5 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#0D47A1]"></div>
                     </label>
                   </div>
 
@@ -822,7 +822,7 @@ const ServiceProviderAppCustomization = () => {
                         onChange={(e) => setSettings({ ...settings, autoAssign: e.target.checked })}
                         className="sr-only peer" 
                       />
-                      <div className="w-9 h-5 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#0D47A1]"></div>
+                      <div className="w-9 h-5 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#0D47A1]"></div>
                     </label>
                   </div>
                 </div>

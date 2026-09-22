@@ -311,7 +311,7 @@ const Bookings = () => {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer flex-shrink-0 ${
+                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer shrink-0 ${
                   isSelected
                     ? 'bg-brand-blue text-white shadow-xs'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200/80 border border-slate-200/60'
@@ -333,7 +333,7 @@ const Bookings = () => {
           <div className="flex items-center gap-4">
             <button 
               onClick={() => navigate(-1)}
-              className="p-2.5 bg-slate-100 hover:bg-slate-200 rounded-2xl text-slate-700 transition-colors cursor-pointer flex-shrink-0"
+              className="p-2.5 bg-slate-100 hover:bg-slate-200 rounded-2xl text-slate-700 transition-colors cursor-pointer shrink-0"
               title="Go Back"
               aria-label="Go Back"
             >
@@ -512,7 +512,7 @@ const Bookings = () => {
                   className="group bg-white rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 border border-slate-200/80 shadow-2xs hover:shadow-md hover:border-brand-blue/40 transition-all duration-200 cursor-pointer flex flex-col justify-between gap-3 sm:gap-4 text-left relative overflow-hidden"
                 >
                   {/* Subtle top indicator on hover */}
-                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-brand-blue to-blue-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-linear-to-r from-brand-blue to-blue-400 opacity-0 group-hover:opacity-100 transition-opacity" />
 
                   {/* Top Header: Order ID + Status */}
                   <div className="flex items-center justify-between gap-2">

@@ -304,7 +304,7 @@ export default function PhotoCaptureModal({
                     startCamera();
                   }
                 }}
-                className="w-full group flex items-center gap-4 p-4 rounded-2xl border-2 border-slate-200 hover:border-[#0D47A1] bg-gradient-to-r hover:from-blue-50/50 hover:to-indigo-50/30 transition-all text-left shadow-sm"
+                className="w-full group flex items-center gap-4 p-4 rounded-2xl border-2 border-slate-200 hover:border-[#0D47A1] bg-linear-to-r hover:from-blue-50/50 hover:to-indigo-50/30 transition-all text-left shadow-sm"
               >
                 <div className="w-12 h-12 rounded-2xl bg-[#0D47A1]/10 text-[#0D47A1] flex items-center justify-center group-hover:scale-105 group-hover:bg-[#0D47A1] group-hover:text-white transition-all">
                   <Camera size={24} />
@@ -330,7 +330,7 @@ export default function PhotoCaptureModal({
                     fileInputGalleryRef.current.click();
                   }
                 }}
-                className="w-full group flex items-center gap-4 p-4 rounded-2xl border-2 border-slate-200 hover:border-[#0D47A1] bg-gradient-to-r hover:from-blue-50/50 hover:to-indigo-50/30 transition-all text-left shadow-sm"
+                className="w-full group flex items-center gap-4 p-4 rounded-2xl border-2 border-slate-200 hover:border-[#0D47A1] bg-linear-to-r hover:from-blue-50/50 hover:to-indigo-50/30 transition-all text-left shadow-sm"
               >
                 <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:scale-105 group-hover:bg-[#0D47A1] group-hover:text-white transition-all">
                   <ImageIcon size={24} />
@@ -555,7 +555,7 @@ export default function PhotoCaptureModal({
               <h4 className="text-sm font-bold text-[#052355]">
                 {uploadSuccess ? 'Photo Uploaded!' : 'Uploading to Cloud...'}
               </h4>
-              <p className="text-xs text-slate-500 mt-1 max-w-[220px]">
+              <p className="text-xs text-slate-500 mt-1 max-w-55">
                 {uploadSuccess
                   ? 'Your verified photo has been securely attached to this job.'
                   : 'Saving optimized WebP photo to server / Cloudinary...'}

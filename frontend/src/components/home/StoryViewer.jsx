@@ -85,7 +85,7 @@ const StoryPanel = ({ story, isActive, onFinished, onClose }) => {
 
   return (
     <div
-      className="relative w-full flex-shrink-0 select-none"
+      className="relative w-full shrink-0 select-none"
       style={{ height: '100dvh' }}
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}
@@ -101,7 +101,7 @@ const StoryPanel = ({ story, isActive, onFinished, onClose }) => {
       />
 
       {/* Gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-transparent to-black/65 pointer-events-none" />
+      <div className="absolute inset-0 bg-linear-to-b from-black/45 via-transparent to-black/65 pointer-events-none" />
 
       {/* Progress bars */}
       <div className="absolute top-0 left-0 right-0 flex gap-1 px-3 pt-3 z-10">
@@ -128,7 +128,7 @@ const StoryPanel = ({ story, isActive, onFinished, onClose }) => {
       {/* Header */}
       <div className="absolute top-7 left-0 right-0 flex items-center justify-between px-4 pt-1 z-10">
         <div className="flex items-center gap-2 pointer-events-none">
-          <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-white shadow-md flex-shrink-0">
+          <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-white shadow-md shrink-0">
             <img
               src={story.image}
               alt={story.title}

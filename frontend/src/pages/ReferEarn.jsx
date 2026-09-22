@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Gift, Copy, Check, Share2, Coins, Sparkles, Users, Clock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { apiRequest } from '../lib/apiClient';
+import { goBack } from '../lib/navigation';
 
 const ReferEarn = () => {
   const navigate = useNavigate();
@@ -91,7 +92,7 @@ const ReferEarn = () => {
       {/* Header */}
       <div className="bg-white px-5 py-4 flex items-center justify-center gap-3 sticky top-0 z-50 shadow-sm border-b border-slate-100 relative">
         <button
-          onClick={() => navigate('/profile')}
+          onClick={() => goBack(navigate, '/profile')}
           className="absolute left-4 p-1.5 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
         >
           <ArrowLeft className="h-5 w-5 text-slate-700" />
@@ -103,7 +104,7 @@ const ReferEarn = () => {
       <div className="flex-1 p-5 flex flex-col gap-6 max-w-3xl mx-auto w-full text-left">
         
         {/* Banner Card */}
-        <div className="bg-gradient-to-br from-brand-blue via-[#1565C0] to-[#0A2D6C] rounded-[28px] p-6 text-white shadow-md relative overflow-hidden border border-white/5 flex flex-col gap-4">
+        <div className="bg-linear-to-br from-brand-blue via-[#1565C0] to-[#0A2D6C] rounded-[28px] p-6 text-white shadow-md relative overflow-hidden border border-white/5 flex flex-col gap-4">
           <div className="absolute top-0 right-0 w-32 h-32 bg-blue-400/10 rounded-full blur-2xl"></div>
           <div className="flex justify-between items-start">
             <div className="flex flex-col gap-1">
@@ -114,7 +115,7 @@ const ReferEarn = () => {
                 Invite Friends,<br/>Earn Real Coins!
               </h2>
             </div>
-            <div className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center border border-white/10 flex-shrink-0">
+            <div className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center border border-white/10 shrink-0">
               <Gift className="h-7 w-7 text-amber-300 animate-pulse" />
             </div>
           </div>
@@ -176,7 +177,7 @@ const ReferEarn = () => {
           
           <div className="bg-white border border-slate-150 p-5 rounded-3xl shadow-2xs flex flex-col gap-5">
             <div className="flex items-start gap-3.5">
-              <div className="w-8 h-8 rounded-2xl bg-blue-50 text-brand-blue flex items-center justify-center text-xs font-black flex-shrink-0">
+              <div className="w-8 h-8 rounded-2xl bg-blue-50 text-brand-blue flex items-center justify-center text-xs font-black shrink-0">
                 1
               </div>
               <div className="flex-1 min-w-0">
@@ -188,7 +189,7 @@ const ReferEarn = () => {
             </div>
 
             <div className="flex items-start gap-3.5 border-t border-slate-50 pt-4">
-              <div className="w-8 h-8 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs font-black flex-shrink-0">
+              <div className="w-8 h-8 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs font-black shrink-0">
                 2
               </div>
               <div className="flex-1 min-w-0">
@@ -200,7 +201,7 @@ const ReferEarn = () => {
             </div>
 
             <div className="flex items-start gap-3.5 border-t border-slate-50 pt-4">
-              <div className="w-8 h-8 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-xs font-black flex-shrink-0">
+              <div className="w-8 h-8 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-xs font-black shrink-0">
                 3
               </div>
               <div className="flex-1 min-w-0">
@@ -249,7 +250,7 @@ const ReferEarn = () => {
             <div className="bg-white border border-dashed border-slate-200 rounded-3xl p-8 flex flex-col items-center text-center gap-2">
               <Users className="h-8 w-8 text-slate-300" />
               <p className="text-xs font-black text-slate-600">No referrals yet</p>
-              <p className="text-[10.5px] text-slate-400 font-semibold leading-relaxed max-w-[220px]">
+              <p className="text-[10.5px] text-slate-400 font-semibold leading-relaxed max-w-55">
                 Share your code above — friends who sign up with it will show up here.
               </p>
             </div>
@@ -257,7 +258,7 @@ const ReferEarn = () => {
             <div className="bg-white border border-slate-150 rounded-3xl shadow-2xs divide-y divide-slate-50 overflow-hidden">
               {referrals.map((r) => (
                 <div key={r.id} className="flex items-center gap-3 p-4">
-                  <div className="w-10 h-10 rounded-2xl bg-blue-50 text-brand-blue flex items-center justify-center font-black text-xs flex-shrink-0">
+                  <div className="w-10 h-10 rounded-2xl bg-blue-50 text-brand-blue flex items-center justify-center font-black text-xs shrink-0">
                     {getInitials(r.referredName)}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -266,7 +267,7 @@ const ReferEarn = () => {
                       <Clock className="h-3 w-3" /> Joined {formatDate(r.joinedAt)}
                     </p>
                   </div>
-                  <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                  <div className="flex flex-col items-end gap-1 shrink-0">
                     <span className="text-xs font-black text-brand-blue flex items-center gap-1">
                       <Coins className="h-3.5 w-3.5 text-[#FFD54F]" /> +{r.bonusAmount}
                     </span>

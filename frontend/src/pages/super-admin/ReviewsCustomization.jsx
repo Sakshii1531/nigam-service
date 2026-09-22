@@ -7,10 +7,10 @@ import {
 } from 'lucide-react';
 
 const THEMES = [
-  { key: 'pink',   label: 'Rose Pink',      bg: 'bg-gradient-to-br from-[#FFF5F8] to-[#FCE7F3]', border: 'border-pink-200',   title: 'text-[#BE185D]',   badge: 'bg-pink-100 text-[#BE185D]',   dot: 'bg-pink-400' },
-  { key: 'purple', label: 'Indigo Violet',  bg: 'bg-gradient-to-br from-[#F5F3FF] to-[#EDE9FE]', border: 'border-purple-200', title: 'text-[#6D28D9]',   badge: 'bg-purple-100 text-[#6D28D9]', dot: 'bg-purple-400' },
-  { key: 'teal',   label: 'Mint Emerald',   bg: 'bg-gradient-to-br from-[#F0FDF4] to-[#DCFCE7]', border: 'border-emerald-200',title: 'text-[#047857]',   badge: 'bg-emerald-100 text-[#047857]',dot: 'bg-emerald-400' },
-  { key: 'amber',  label: 'Royal Ice Blue', bg: 'bg-gradient-to-br from-[#EFF6FF] to-[#DBEAFE]', border: 'border-blue-200',  title: 'text-[#0B4EA2]',   badge: 'bg-blue-100 text-[#0B4EA2]',   dot: 'bg-blue-400' },
+  { key: 'pink',   label: 'Rose Pink',      bg: 'bg-linear-to-br from-[#FFF5F8] to-[#FCE7F3]', border: 'border-pink-200',   title: 'text-[#BE185D]',   badge: 'bg-pink-100 text-[#BE185D]',   dot: 'bg-pink-400' },
+  { key: 'purple', label: 'Indigo Violet',  bg: 'bg-linear-to-br from-[#F5F3FF] to-[#EDE9FE]', border: 'border-purple-200', title: 'text-[#6D28D9]',   badge: 'bg-purple-100 text-[#6D28D9]', dot: 'bg-purple-400' },
+  { key: 'teal',   label: 'Mint Emerald',   bg: 'bg-linear-to-br from-[#F0FDF4] to-[#DCFCE7]', border: 'border-emerald-200',title: 'text-[#047857]',   badge: 'bg-emerald-100 text-[#047857]',dot: 'bg-emerald-400' },
+  { key: 'amber',  label: 'Royal Ice Blue', bg: 'bg-linear-to-br from-[#EFF6FF] to-[#DBEAFE]', border: 'border-blue-200',  title: 'text-[#0B4EA2]',   badge: 'bg-blue-100 text-[#0B4EA2]',   dot: 'bg-blue-400' },
 ];
 
 const EMPTY_FORM = { title: '', comment: '', rating: 5, authorName: '', theme: 'pink', isVisible: true };
@@ -31,13 +31,13 @@ function StarRating({ rating }) {
 function CardPreview({ form }) {
   const theme = THEMES.find(t => t.key === form.theme) || THEMES[0];
   return (
-    <div className={`${theme.bg} border ${theme.border} rounded-[20px] p-5 flex flex-col justify-between h-[200px] shadow-sm relative overflow-hidden`}>
+    <div className={`${theme.bg} border ${theme.border} rounded-[20px] p-5 flex flex-col justify-between h-50 shadow-sm relative overflow-hidden`}>
       <div className="flex-1 flex flex-col justify-between">
         <div className="flex items-center justify-between gap-2 mb-2">
           <h4 className={`text-sm font-extrabold ${theme.title} leading-tight truncate`}>
             {form.title || 'Review Title'}
           </h4>
-          <div className="flex items-center gap-1.5 flex-shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0">
             <StarRating rating={form.rating} />
             <span className={`px-1.5 py-0.5 rounded-md text-[11px] font-black ${theme.badge}`}>
               {Number(form.rating).toFixed(1)}
@@ -194,7 +194,7 @@ function ReviewModal({ open, editItem, onClose, onSave }) {
 
             {error && (
               <div className="flex items-center gap-2 text-red-600 text-xs bg-red-50 border border-red-100 rounded-xl px-3 py-2.5">
-                <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
                 {error}
               </div>
             )}
@@ -335,7 +335,7 @@ export default function ReviewsCustomization() {
 
           {/* Info Banner */}
           <div className="flex items-start gap-3 bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3 text-sm text-blue-700">
-            <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0 text-blue-400" />
+            <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0 text-blue-400" />
             <span>
               If <strong>3 or more</strong> visible review cards are configured here, they will replace the default static cards on the Customer Dashboard. Otherwise, static fallback cards are used to fill in.
             </span>
@@ -344,7 +344,7 @@ export default function ReviewsCustomization() {
           {/* Error Banner */}
           {error && (
             <div className="flex items-center gap-2 bg-red-50 border border-red-100 rounded-2xl px-4 py-3 text-sm text-red-600">
-              <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+              <AlertTriangle className="w-4 h-4 shrink-0" />
               {error}
               <button onClick={() => setError('')} className="ml-auto text-red-400 hover:text-red-600 cursor-pointer"><X className="w-4 h-4" /></button>
             </div>
@@ -353,7 +353,7 @@ export default function ReviewsCustomization() {
           {/* Delete Confirm Banner */}
           {deleteId && (
             <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-2xl px-4 py-3 text-sm text-red-700">
-              <AlertTriangle className="w-4 h-4 flex-shrink-0 text-red-500" />
+              <AlertTriangle className="w-4 h-4 shrink-0 text-red-500" />
               <span className="font-semibold">Are you sure you want to delete this review? This action cannot be undone.</span>
               <div className="ml-auto flex gap-2">
                 <button onClick={() => setDeleteId(null)} className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 cursor-pointer">Cancel</button>

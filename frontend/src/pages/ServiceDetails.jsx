@@ -453,7 +453,7 @@ const CatalogCard = ({ item, onViewDetails, quantity = 0, onQuantityChange }) =>
           </div>
         </div>
         {/* Right image + Add / Numbering Selector */}
-        <div className="flex-shrink-0 relative pb-3.5 sm:pb-4">
+        <div className="shrink-0 relative pb-3.5 sm:pb-4">
           <div className="w-16 h-14 min-[360px]:w-20 min-[360px]:h-16 rounded-xl overflow-hidden bg-slate-50 border border-slate-100">
             <img src={item.img} alt={item.name} className="w-full h-full object-contain p-1" />
           </div>
@@ -491,7 +491,7 @@ const CatalogCard = ({ item, onViewDetails, quantity = 0, onQuantityChange }) =>
       <ul className="mt-2.5 sm:mt-3 flex flex-col gap-1">
         {item.bullets.map((b, bi) => (
           <li key={bi} className="flex items-start gap-1.5">
-            <span className="text-slate-400 mt-0.5 flex-shrink-0">•</span>
+            <span className="text-slate-400 mt-0.5 shrink-0">•</span>
             <span className="text-[10px] min-[360px]:text-[11px] text-slate-600 leading-snug">{b}</span>
           </li>
         ))}
@@ -547,6 +547,53 @@ const ServiceDetails = () => {
     return () => { cancelled = true; };
   }, [serviceName]);
 
+  // The real catalog (Category/ServiceCatalogItem, the same admin-managed
+  // collection BookingFlow.jsx already reads via bookingCatalog.js) is
+  // authoritative for pricing once a matching category exists — the CMS
+  // config and the bundled *_CATALOG constants below only cover a service the
+  // catalog console hasn't been used for yet. Fetched once; this page used to
+  // never check the real catalog at all, so every price shown here (even for
+  // services that do have a real, admin-priced catalog entry) was whatever
+  // was hardcoded into this file.
+  const [dbCategories, setDbCategories] = useState([]);
+  useEffect(() => {
+    apiRequest('/catalog/categories')
+      .then((res) => setDbCategories(res || []))
+      .catch((err) => console.warn('[service-details] Could not load catalog:', err.message));
+  }, []);
+
+  const dbCategory = useMemo(() => {
+    if (!serviceName || dbCategories.length === 0) return null;
+    const norm = serviceName.toLowerCase().trim();
+    return (
+      dbCategories.find((c) => c.name.toLowerCase() === norm) ||
+      dbCategories.find((c) => c.key.toLowerCase() === norm) ||
+      dbCategories.find((c) => norm.includes(c.name.toLowerCase()) || c.name.toLowerCase().includes(norm)) ||
+      null
+    );
+  }, [serviceName, dbCategories]);
+
+  // Reshaped into the same { section, items: [{name, price, time, bullets, img}] }
+  // shape the bundled *_CATALOG constants use, so the rest of this page (which
+  // already knows how to render that shape) needs no other changes.
+  const dbCatalog = useMemo(() => {
+    if (!dbCategory?.services?.length) return null;
+    return [
+      {
+        section: dbCategory.section || 'Available Services',
+        items: dbCategory.services
+          .filter((s) => s.isActive !== false)
+          .map((s) => ({
+            name: s.name,
+            price: `₹${s.price.toLocaleString('en-IN')}`,
+            time: s.unit || 'per visit',
+            bullets: s.desc ? [s.desc] : [],
+            img: heroService,
+          })),
+      },
+    ];
+  }, [dbCategory]);
+
   const rawConfig = pageConfig
     ? {
         tagline: pageConfig.tagline,
@@ -589,6 +636,7 @@ const ServiceDetails = () => {
 
   // Load catalog dynamically based on service name
   const currentCatalog = useMemo(() => {
+    if (dbCatalog) return dbCatalog;
     if (pageConfig?.catalog?.length) return pageConfig.catalog;
     const n = (serviceName || '').toLowerCase();
     if (n.includes('carpenter')) return CARPENTER_CATALOG;
@@ -597,7 +645,7 @@ const ServiceDetails = () => {
     if (n.includes('clean')) return CLEANING_CATALOG;
     if (n.includes('electr')) return ELECTRICIAN_CATALOG;
     return getDynamicCatalog(serviceName || 'Service');
-  }, [pageConfig, serviceName]);
+  }, [dbCatalog, pageConfig, serviceName]);
 
   const allCatalogItems = currentCatalog.flatMap(group => group.items);
 
@@ -670,7 +718,7 @@ const ServiceDetails = () => {
           className="w-full h-full object-cover opacity-80"
         />
         {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-transparent" />
+        <div className="absolute inset-0 bg-linear-to-r from-black/70 via-black/30 to-transparent" />
         <div className="absolute inset-0 flex flex-col justify-center px-5">
           <h2 className="text-white text-2xl font-black leading-tight drop-shadow-md">
             {config.tagline}
@@ -738,7 +786,7 @@ const ServiceDetails = () => {
       </div>
 
       {/* ── Floating Menu Button ── */}
-      <div className={`fixed left-1/2 -translate-x-1/2 z-30 transition-all duration-300 ${getCartCount() > 0 ? 'bottom-[86px]' : 'bottom-6'}`}>
+      <div className={`fixed left-1/2 -translate-x-1/2 z-30 transition-all duration-300 ${getCartCount() > 0 ? 'bottom-21.5' : 'bottom-6'}`}>
         <button
           onClick={() => setShowMenu(!showMenu)}
           className="flex items-center gap-2 bg-brand-blue text-white font-bold px-6 py-3 rounded-full shadow-xl text-[13px] hover:bg-[#1565C0] transition-colors"
@@ -772,7 +820,7 @@ const ServiceDetails = () => {
         >
           {/* Wrapper to align card and close button */}
           <div 
-            className="w-full max-w-[320px] flex flex-col items-center"
+            className="w-full max-w-80 flex flex-col items-center"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Card */}
@@ -791,10 +839,10 @@ const ServiceDetails = () => {
                     }}
                     className="flex flex-col items-center text-center focus:outline-none active:opacity-75 transition-opacity"
                   >
-                    <div className="w-[76px] h-[76px] bg-[#F8F9FA] rounded-2xl flex items-center justify-center p-2 border border-slate-100/50 shadow-sm mb-1.5 hover:bg-slate-100 transition-colors">
+                    <div className="w-19 h-19 bg-[#F8F9FA] rounded-2xl flex items-center justify-center p-2 border border-slate-100/50 shadow-sm mb-1.5 hover:bg-slate-100 transition-colors">
                       <img src={sub.img} alt={sub.name} className="w-full h-full object-contain" />
                     </div>
-                    <span className="text-[10px] font-bold text-slate-700 leading-tight max-w-[76px]">
+                    <span className="text-[10px] font-bold text-slate-700 leading-tight max-w-19">
                       {sub.name}
                     </span>
                   </button>
@@ -825,14 +873,14 @@ const ServiceDetails = () => {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Drag handle */}
-            <div className="flex-shrink-0 pt-3 pb-1 flex justify-center">
+            <div className="shrink-0 pt-3 pb-1 flex justify-center">
               <div className="w-10 h-1 bg-slate-200 rounded-full" />
             </div>
 
             {/* Scrollable content */}
             <div className="overflow-y-auto flex-1">
               {/* Hero image */}
-              <div className="relative w-full h-48 bg-slate-100 flex-shrink-0">
+              <div className="relative w-full h-48 bg-slate-100 shrink-0">
                 <img src={detailItem.img} alt={detailItem.name} className="w-full h-full object-cover" />
                 <button
                   onClick={() => setDetailItem(null)}
@@ -862,7 +910,7 @@ const ServiceDetails = () => {
                   </div>
                   <button
                     onClick={() => setDetailAdded(!detailAdded)}
-                    className={`flex-shrink-0 px-4 py-2 rounded-xl text-[12px] font-extrabold border transition-all ${
+                    className={`shrink-0 px-4 py-2 rounded-xl text-[12px] font-extrabold border transition-all ${
                       detailAdded ? 'bg-brand-blue text-white border-brand-blue' : 'bg-white text-brand-blue border-brand-blue'
                     }`}
                   >
@@ -884,7 +932,7 @@ const ServiceDetails = () => {
                       { step: 'Clean-up & support', desc: 'Area is cleaned after work, and you get a 30-day service warranty.' },
                     ]).map((hw, hi) => (
                       <li key={hi} className="flex gap-3">
-                        <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[#EAF4FF] text-brand-blue text-[10px] font-extrabold flex items-center justify-center mt-0.5">{hi + 1}</span>
+                        <span className="shrink-0 w-5 h-5 rounded-full bg-[#EAF4FF] text-brand-blue text-[10px] font-extrabold flex items-center justify-center mt-0.5">{hi + 1}</span>
                         <div>
                           <p className="text-[12px] font-bold text-slate-900">{hw.step}</p>
                           <p className="text-[11px] text-slate-500 mt-0.5 whitespace-pre-line">{hw.desc}</p>
@@ -902,7 +950,7 @@ const ServiceDetails = () => {
                   <ul className="flex flex-col gap-2">
                     {(detailItem.included || detailItem.bullets).map((inc, ii2) => (
                       <li key={ii2} className="flex items-start gap-2">
-                        <CheckCircle2 className="h-3.5 w-3.5 text-[#2E7D32] flex-shrink-0 mt-0.5" />
+                        <CheckCircle2 className="h-3.5 w-3.5 text-[#2E7D32] shrink-0 mt-0.5" />
                         <span className="text-[11px] text-slate-700 leading-snug">{inc}</span>
                       </li>
                     ))}
@@ -922,7 +970,7 @@ const ServiceDetails = () => {
                       'Planning new wiring or extension board setup',
                     ]).map((c, ci) => (
                       <li key={ci} className="flex items-start gap-2">
-                        <span className="text-slate-400 flex-shrink-0 mt-0.5">•</span>
+                        <span className="text-slate-400 shrink-0 mt-0.5">•</span>
                         <span className="text-[11px] text-slate-700 leading-snug">{c}</span>
                       </li>
                     ))}
@@ -939,7 +987,7 @@ const ServiceDetails = () => {
                       '30-90 minutes (based on requirement)',
                     ]).map((t, ti) => (
                       <li key={ti} className="flex items-start gap-2">
-                        <span className="text-slate-400 flex-shrink-0 mt-0.5">•</span>
+                        <span className="text-slate-400 shrink-0 mt-0.5">•</span>
                         <span className="text-[11px] text-slate-700 leading-snug">{t}</span>
                       </li>
                     ))}
@@ -959,12 +1007,12 @@ const ServiceDetails = () => {
                       'Skilled in Electrical Repairs',
                     ].map((q, qi) => (
                       <div key={qi} className="flex items-center gap-2 mb-1.5">
-                        <CheckCircle2 className="h-3.5 w-3.5 text-brand-yellow flex-shrink-0" />
+                        <CheckCircle2 className="h-3.5 w-3.5 text-brand-yellow shrink-0" />
                         <span className="text-white/90 text-[11px] font-medium">{q}</span>
                       </div>
                     ))}
                   </div>
-                  <div className="flex-shrink-0 w-28 h-full flex items-end justify-center overflow-hidden">
+                  <div className="shrink-0 w-28 h-full flex items-end justify-center overflow-hidden">
                     <img
                       src={detailItem.img}
                       alt="service provider"
@@ -993,7 +1041,7 @@ const ServiceDetails = () => {
                         >
                           <span className="text-[12px] font-semibold text-slate-800 leading-snug flex-1">{faq.q}</span>
                           <ChevronRight
-                            className={`h-4 w-4 text-slate-400 flex-shrink-0 transition-transform ${
+                            className={`h-4 w-4 text-slate-400 shrink-0 transition-transform ${
                               openFaq === fi ? 'rotate-90' : ''
                             }`}
                           />
@@ -1030,7 +1078,7 @@ const ServiceDetails = () => {
                         { star: 1, count: 0 },
                       ].map(({ star, count }) => (
                         <div key={star} className="flex items-center gap-2">
-                          <Star className="h-3 w-3 fill-amber-400 text-amber-400 flex-shrink-0" />
+                          <Star className="h-3 w-3 fill-amber-400 text-amber-400 shrink-0" />
                           <span className="text-[10px] text-slate-500 w-3">{star}</span>
                           <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
                             <div
@@ -1126,7 +1174,7 @@ const ServiceDetails = () => {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex-shrink-0 px-5 py-4 flex items-center justify-between border-b border-slate-100 relative">
+            <div className="shrink-0 px-5 py-4 flex items-center justify-between border-b border-slate-100 relative">
               <h2 className="text-[14px] font-extrabold text-slate-900 mx-auto">Top recent customer reviews</h2>
               <button
                 onClick={() => setShowReviewsModal(false)}

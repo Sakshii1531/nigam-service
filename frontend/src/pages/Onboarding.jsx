@@ -45,7 +45,7 @@ const Onboarding = () => {
 
   return (
     <div className="min-h-screen bg-bg-light flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-[30px] shadow-2xl overflow-hidden flex flex-col h-[700px]">
+      <div className="w-full max-w-md bg-white rounded-[30px] shadow-2xl overflow-hidden flex flex-col h-175">
         
         {/* Header */}
         <div className="p-6 flex justify-between items-center">

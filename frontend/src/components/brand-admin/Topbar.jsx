@@ -35,7 +35,7 @@ const Topbar = ({ title, subtitle }) => {
     <div className="h-16 bg-white border-b border-[#E2E8F0] flex items-center justify-between px-6 sticky top-0 z-30 gap-4">
       
       {/* Left: Title */}
-      <div className="flex flex-col justify-center min-w-[160px]">
+      <div className="flex flex-col justify-center min-w-40">
         <h1 className="text-base font-bold text-[#1E293B] font-sans leading-tight">{title}</h1>
         {subtitle && <p className="text-[10px] text-[#64748B] leading-tight">{subtitle}</p>}
       </div>

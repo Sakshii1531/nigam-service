@@ -87,7 +87,7 @@ const TicketDetails = () => {
               return (
                 <div key={step.id} className="flex gap-4">
                   <div className="flex flex-col items-center">
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
                       isDone ? 'bg-green-500' : 'bg-white border-2 border-slate-200'
                     }`}>
                       {isDone && (

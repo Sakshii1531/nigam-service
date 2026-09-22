@@ -165,7 +165,7 @@ const Stories = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: index * 0.08 }}
-                className="flex-shrink-0 w-[138px] min-[360px]:w-[148px] sm:w-44 h-56 sm:h-64 md:w-auto md:h-[450px] lg:h-[500px] md:flex-shrink rounded-2xl overflow-hidden relative shadow-sm border border-border-color cursor-pointer snap-start hover:shadow-md transition-all"
+                className="shrink-0 w-34.5 min-[360px]:w-37 sm:w-44 h-56 sm:h-64 md:w-auto md:h-112.5 lg:h-125 md:flex-shrink rounded-2xl overflow-hidden relative shadow-sm border border-border-color cursor-pointer snap-start hover:shadow-md transition-all"
                 onClick={() => openStory(index)}
               >
                 {/* Story Image */}
@@ -176,7 +176,7 @@ const Stories = () => {
                 />
 
                 {/* Gradient overlay for readability and depth */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent pointer-events-none" />
+                <div className="absolute inset-0 bg-linear-to-t from-black/45 via-transparent to-transparent pointer-events-none" />
 
                 {/* Floating Caption Overlay Box */}
                 <div className="absolute bottom-4 sm:bottom-6 left-2.5 sm:left-4 right-0 bg-white rounded-l-xl rounded-r-none py-2 px-2.5 sm:py-3 sm:pl-3 sm:pr-2 shadow-md">

@@ -22,6 +22,13 @@ const categorySchema = new mongoose.Schema(
     isFridge: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true, index: true },
     sortOrder: { type: Number, default: 0 },
+    // Which sidebar tab(s) on the customer app's Categories browse page this
+    // shows under, e.g. ["handyman", "appliance"] — a category can appear
+    // under more than one tab (an AC repair category belongs to both
+    // "Handyman" and "Appliance"). `section` is the sub-heading grouping
+    // categories within a given tab, e.g. "Maintenance", "Installation".
+    groups: { type: [String], default: [], index: true },
+    section: { type: String, default: '' },
   },
   { timestamps: true },
 );

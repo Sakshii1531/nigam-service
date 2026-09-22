@@ -164,7 +164,7 @@ const Escalations = () => {
 
             <div className="bg-white rounded-2xl border border-[#E2E8F0] p-4">
               <div className="flex gap-3 mb-4 flex-wrap items-center">
-                <div className="relative flex-1 min-w-[200px]">
+                <div className="relative flex-1 min-w-50">
                   <Search size={14} className="absolute left-3 top-2.5 text-[#94A3B8]" />
                   <input
                     placeholder="Search by ID or customer name..."
@@ -211,7 +211,7 @@ const Escalations = () => {
                         <td className="px-3 py-3 text-[#0D47A1] font-semibold text-[11px]">{e.serviceRequest?.humanId || e.id}</td>
                         <td className="px-3 py-3 font-semibold text-[#1E293B]">{e.serviceRequest?.user?.name || 'N/A'}</td>
                         <td className="px-3 py-3 text-[#64748B]">{e.serviceRequest ? `${e.serviceRequest.category || ''} ${e.serviceRequest.model || ''}`.trim() : 'N/A'}</td>
-                        <td className="px-3 py-3 text-[#64748B] max-w-[180px]">{e.reason}</td>
+                        <td className="px-3 py-3 text-[#64748B] max-w-45">{e.reason}</td>
                         <td className="px-3 py-3 text-[#64748B]">{e.raisedBy}</td>
                         <td className="px-3 py-3 text-[#64748B]">{e.createdAt ? new Date(e.createdAt).toLocaleDateString() : 'N/A'}</td>
                         <td className="px-3 py-3">

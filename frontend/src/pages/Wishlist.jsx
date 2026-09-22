@@ -23,10 +23,10 @@ const Wishlist = () => {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-[30px] shadow-2xl overflow-hidden flex flex-col h-[700px] border border-slate-100 relative">
+      <div className="w-full max-w-md bg-white rounded-[30px] shadow-2xl overflow-hidden flex flex-col h-175 border border-slate-100 relative">
         
         {/* Header */}
-        <div className="p-5 flex items-center border-b border-slate-100 flex-shrink-0">
+        <div className="p-5 flex items-center border-b border-slate-100 shrink-0">
           <button 
             onClick={() => navigate(-1)}
             className="p-2 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
@@ -48,7 +48,7 @@ const Wishlist = () => {
           {!loadError && wishlistItems.length === 0 && (
             <div className="flex-1 flex flex-col items-center justify-center text-center py-16 gap-2">
               <p className="text-sm font-bold text-brand-blue">Your wishlist is empty</p>
-              <p className="text-xs text-slate-500 max-w-[240px]">
+              <p className="text-xs text-slate-500 max-w-60">
                 Tap the heart on any product to save it here for later.
               </p>
               <button

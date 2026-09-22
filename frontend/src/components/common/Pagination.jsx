@@ -93,7 +93,7 @@ export default function Pagination({
               key={`page-${p}`}
               type="button"
               onClick={() => onPageChange && onPageChange(p)}
-              className={`min-w-[32px] h-8 px-2.5 flex items-center justify-center rounded-lg text-xs font-bold transition-all ${
+              className={`min-w-8 h-8 px-2.5 flex items-center justify-center rounded-lg text-xs font-bold transition-all ${
                 isActive
                   ? "bg-[#0D47A1] text-white shadow-xs"
                   : "border border-[#E2E8F0] text-slate-700 hover:bg-[#F8FAFC] hover:border-slate-300"

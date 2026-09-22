@@ -206,7 +206,7 @@ const ServiceCatalog = () => {
 
         <div className="p-6 flex-1 flex gap-6">
           {/* Category rail */}
-          <div className="w-64 flex-shrink-0 space-y-3">
+          <div className="w-64 shrink-0 space-y-3">
             <button
               onClick={() => setShowNewCategory(true)}
               className="w-full bg-[#0D47A1] text-white px-3 py-2 rounded-xl text-xs font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
@@ -301,7 +301,7 @@ const ServiceCatalog = () => {
                     </div>
                     <button
                       onClick={openAddProductType}
-                      className="bg-white border border-[#E2E8F0] text-slate-700 px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-slate-50 transition-colors flex items-center gap-1.5 cursor-pointer flex-shrink-0"
+                      className="bg-white border border-[#E2E8F0] text-slate-700 px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-slate-50 transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
                     >
                       <Plus size={13} /> Add Product Type
                     </button>

@@ -73,7 +73,7 @@ const TrackTicket = () => {
               <div key={step.id} className="flex gap-4">
                 {/* Left: icon + vertical line */}
                 <div className="flex flex-col items-center">
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
                     isDone
                       ? 'bg-brand-blue'
                       : 'bg-white border-2 border-slate-200'

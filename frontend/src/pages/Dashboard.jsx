@@ -1131,7 +1131,7 @@ const Dashboard = ({ defaultType }) => {
                   : "text-white hover:text-slate-100"
               }`}>
               <div
-                className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 ${
                   activeType === "non-warranty"
                     ? "bg-white text-black shadow-sm"
                     : "bg-white/10 text-white"
@@ -1171,7 +1171,7 @@ const Dashboard = ({ defaultType }) => {
                   : "text-white hover:text-slate-100"
               }`}>
               <div
-                className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 ${
                   activeType === "in-warranty"
                     ? "bg-brand-navy text-white shadow-sm"
                     : "bg-white/10 text-white"
@@ -1254,7 +1254,7 @@ const Dashboard = ({ defaultType }) => {
             {dashboardCategories.map((cat, index) => (
               <div
                 key={index}
-                className="flex flex-col items-center gap-1 cursor-pointer flex-shrink-0 snap-start group w-[58px]"
+                className="flex flex-col items-center gap-1 cursor-pointer shrink-0 snap-start group w-14.5"
                 onClick={() => {
                   if (cat.isForYou) {
                     navigate("/dashboard");
@@ -1313,14 +1313,14 @@ const Dashboard = ({ defaultType }) => {
         {/* Service Banners — horizontal auto-slide carousel */}
         <div
           ref={bannerRef}
-          className="flex gap-3 sm:gap-4 overflow-x-auto pb-2 -mx-1 px-1 sm:-mx-2 sm:px-2 snap-x snap-mandatory scroll-smooth no-scrollbar md:mx-auto md:px-0 md:pb-0 md:max-w-[1420px] md:w-full relative mt-4 sm:mt-6 md:mt-10">
+          className="flex gap-3 sm:gap-4 overflow-x-auto pb-2 -mx-1 px-1 sm:-mx-2 sm:px-2 snap-x snap-mandatory scroll-smooth no-scrollbar md:mx-auto md:px-0 md:pb-0 md:max-w-355 md:w-full relative mt-4 sm:mt-6 md:mt-10">
           {(activeType === "non-warranty"
             ? regularBanners
             : warrantyBannersList
           ).map((banner) => (
             <div
               key={banner.id}
-              className="bg-white rounded-2xl shadow-sm border border-border-color overflow-hidden min-w-[85vw] max-w-full sm:min-w-[340px] md:min-w-full md:w-full flex-shrink-0 snap-center hover:shadow-md transition-shadow">
+              className="bg-white rounded-2xl shadow-sm border border-border-color overflow-hidden min-w-[85vw] max-w-full sm:min-w-85 md:min-w-full md:w-full shrink-0 snap-center hover:shadow-md transition-shadow">
               <div className="relative h-32 sm:h-36 md:h-auto md:aspect-[3.35/1] w-full">
                 <img
                   src={banner.image}
@@ -1389,7 +1389,7 @@ const Dashboard = ({ defaultType }) => {
                       );
                     }
                   }}
-                  className={`flex flex-col items-center gap-1.5 sm:gap-2 cursor-pointer flex-shrink-0 w-20 sm:w-24 snap-start md:snap-none md:w-44 md:bg-white md:rounded-2xl md:p-4 md:hover:shadow-md md:transition-all ${
+                  className={`flex flex-col items-center gap-1.5 sm:gap-2 cursor-pointer shrink-0 w-20 sm:w-24 snap-start md:snap-none md:w-44 md:bg-white md:rounded-2xl md:p-4 md:hover:shadow-md md:transition-all ${
                     index >= services.length ? "hidden md:flex" : ""
                   }`}>
                   <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-full md:h-20 lg:h-24 bg-transparent rounded-2xl flex items-center justify-center transition-all overflow-hidden">
@@ -1419,14 +1419,14 @@ const Dashboard = ({ defaultType }) => {
               {activeType === "in-warranty" ? "Covered Benefits" : ""}
             </h2>
           </div>
-          <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-2 -mx-1 px-1 sm:-mx-2 sm:px-2 snap-x snap-mandatory scroll-smooth no-scrollbar md:mx-auto md:px-0 md:pb-0 md:max-w-[1420px] md:w-full relative">
+          <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-2 -mx-1 px-1 sm:-mx-2 sm:px-2 snap-x snap-mandatory scroll-smooth no-scrollbar md:mx-auto md:px-0 md:pb-0 md:max-w-355 md:w-full relative">
             {[
               { id: 1, image: warrantyBanner1 },
               { id: 2, image: warrantyBanner2 },
             ].map((banner) => (
               <div
                 key={banner.id}
-                className="bg-white rounded-2xl shadow-sm border border-border-color overflow-hidden min-w-[85vw] max-w-full sm:min-w-[340px] md:min-w-full md:w-full flex-shrink-0 snap-center hover:shadow-md transition-shadow">
+                className="bg-white rounded-2xl shadow-sm border border-border-color overflow-hidden min-w-[85vw] max-w-full sm:min-w-85 md:min-w-full md:w-full shrink-0 snap-center hover:shadow-md transition-shadow">
                 <div className="relative h-32 sm:h-36 md:h-auto md:aspect-[3.8/1] w-full">
                   <img
                     src={banner.image}
@@ -1448,7 +1448,7 @@ const Dashboard = ({ defaultType }) => {
           </div>
 
           {/* Master Card Container for Desktop */}
-          <div className="md:bg-slate-100 md:rounded-[32px] md:p-6 lg:p-8 md:border md:border-slate-200/80 md:shadow-[0_10px_30px_rgba(0,0,0,0.03)] md:max-w-[1300px] md:mx-auto">
+          <div className="md:bg-slate-100 md:rounded-[32px] md:p-6 lg:p-8 md:border md:border-slate-200/80 md:shadow-[0_10px_30px_rgba(0,0,0,0.03)] md:max-w-325 md:mx-auto">
             {/* Brand Cards — scroll on mobile, 2x2 grid inside single card on desktop */}
             <div className="flex overflow-x-auto gap-3 sm:gap-4 pt-1 pb-3 sm:pb-4 -mx-1 px-1 sm:-mx-2 sm:px-2 snap-x no-scrollbar md:grid md:grid-cols-2 md:gap-6 lg:gap-8 md:overflow-visible md:mx-0 md:px-0 md:pb-0 md:pt-0">
               {brandCards.map((bc) => (
@@ -1461,7 +1461,7 @@ const Dashboard = ({ defaultType }) => {
                       navigate(bc.actionUrl);
                     }
                   }}
-                  className={`w-[85vw] sm:w-[320px] md:w-auto md:max-w-none md:flex-shrink flex-shrink-0 h-[200px] md:h-[220px] rounded-[24px] bg-gradient-to-br ${bc.gradient} p-4 md:p-6 flex flex-col justify-between relative overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.03)] border border-slate-100/50 cursor-pointer snap-start`}>
+                  className={`w-[85vw] sm:w-80 md:w-auto md:max-w-none md:flex-shrink shrink-0 h-50 md:h-55 rounded-[24px] bg-linear-to-br ${bc.gradient} p-4 md:p-6 flex flex-col justify-between relative overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.03)] border border-slate-100/50 cursor-pointer snap-start`}>
                   <div className="flex flex-col items-start z-10 max-w-[65%]">
                     {bc.badgeText && (
                       <span
@@ -1496,7 +1496,7 @@ const Dashboard = ({ defaultType }) => {
                     <img
                       src={bc.image}
                       alt={bc.brandName}
-                      className="absolute -right-3 top-8 w-[140px] md:w-[160px] h-[100px] md:h-[115px] object-contain z-0 mix-blend-multiply"
+                      className="absolute -right-3 top-8 w-35 md:w-40 h-25 md:h-28.75 object-contain z-0 mix-blend-multiply"
                     />
                   )}
 
@@ -1530,7 +1530,7 @@ const Dashboard = ({ defaultType }) => {
             <div className="mt-4 md:mt-6 pt-3 text-[9.5px] md:text-xs font-bold text-slate-500 border-t border-transparent md:border-slate-100/80">
               <div className="flex flex-col md:flex-row items-center justify-center gap-3 md:gap-8 w-max mx-auto px-4">
                 <div className="flex items-center gap-2">
-                  <ShoppingCart className="w-3.5 h-3.5 text-brand-blue flex-shrink-0" />
+                  <ShoppingCart className="w-3.5 h-3.5 text-brand-blue shrink-0" />
                   <span>Click on 'Explore on NCC' to buy from our store</span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -1541,7 +1541,7 @@ const Dashboard = ({ defaultType }) => {
                     strokeWidth="2.5"
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    className="w-3.5 h-3.5 text-brand-blue flex-shrink-0">
+                    className="w-3.5 h-3.5 text-brand-blue shrink-0">
                     <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
                     <polyline points="15 3 21 3 21 9" />
                     <line x1="10" y1="14" x2="21" y2="3" />
@@ -1586,7 +1586,7 @@ const Dashboard = ({ defaultType }) => {
                     }
                   }
                 }}
-                className="flex flex-col gap-1.5 sm:gap-2 cursor-pointer flex-shrink-0 w-[130px] min-[360px]:w-[145px] sm:w-44 snap-start md:w-auto md:flex-shrink border border-border-color rounded-2xl p-2 min-[360px]:p-2.5 md:p-4 bg-white hover:border-brand-blue hover:shadow-md transition-all">
+                className="flex flex-col gap-1.5 sm:gap-2 cursor-pointer shrink-0 w-32.5 min-[360px]:w-36.25 sm:w-44 snap-start md:w-auto md:flex-shrink border border-border-color rounded-2xl p-2 min-[360px]:p-2.5 md:p-4 bg-white hover:border-brand-blue hover:shadow-md transition-all">
                 <div className="w-full h-26 min-[360px]:h-30 sm:h-36 md:h-44 lg:h-48 bg-slate-50/60 rounded-xl flex items-center justify-center overflow-hidden relative">
                   <img
                     src={service.image || service.fallbackImage || mostBookedAc1}
@@ -1603,7 +1603,7 @@ const Dashboard = ({ defaultType }) => {
                   </span>
                 </div>
                 <div className="flex flex-col gap-1 mt-0.5 sm:mt-1">
-                  <span className="text-[11.5px] min-[360px]:text-xs sm:text-sm md:text-base font-semibold md:font-bold text-text-primary line-clamp-2 leading-tight min-h-[28px] min-[360px]:min-h-[32px]">
+                  <span className="text-[11.5px] min-[360px]:text-xs sm:text-sm md:text-base font-semibold md:font-bold text-text-primary line-clamp-2 leading-tight min-h-7 min-[360px]:min-h-8">
                     {service.title}
                   </span>
                   {service.rating ? (
@@ -1678,7 +1678,7 @@ const Dashboard = ({ defaultType }) => {
                     );
                   }
                 }}
-                className="flex flex-col gap-1.5 sm:gap-2 cursor-pointer flex-shrink-0 w-[130px] min-[360px]:w-[145px] sm:w-44 snap-start md:w-auto md:flex-shrink border border-border-color rounded-2xl p-2 min-[360px]:p-2.5 md:p-4 bg-white hover:border-brand-blue hover:shadow-md transition-all">
+                className="flex flex-col gap-1.5 sm:gap-2 cursor-pointer shrink-0 w-32.5 min-[360px]:w-36.25 sm:w-44 snap-start md:w-auto md:flex-shrink border border-border-color rounded-2xl p-2 min-[360px]:p-2.5 md:p-4 bg-white hover:border-brand-blue hover:shadow-md transition-all">
                 <div className="w-full h-26 min-[360px]:h-30 sm:h-36 md:h-44 lg:h-48 bg-slate-50/60 rounded-xl flex items-center justify-center overflow-hidden relative">
                   <img
                     src={service.image || service.fallbackImage || mostBookedAc1}
@@ -1695,7 +1695,7 @@ const Dashboard = ({ defaultType }) => {
                   </span>
                 </div>
                 <div className="flex flex-col gap-1 mt-0.5 sm:mt-1">
-                  <span className="text-[11.5px] min-[360px]:text-xs sm:text-sm md:text-base font-semibold md:font-bold text-text-primary line-clamp-2 leading-tight min-h-[28px] min-[360px]:min-h-[32px]">
+                  <span className="text-[11.5px] min-[360px]:text-xs sm:text-sm md:text-base font-semibold md:font-bold text-text-primary line-clamp-2 leading-tight min-h-7 min-[360px]:min-h-8">
                     {service.title}
                   </span>
                   {service.rating ? (
@@ -1776,7 +1776,7 @@ const Dashboard = ({ defaultType }) => {
               <div
                 key={item.id}
                 onClick={() => navigate("/buy-product")}
-                className="flex flex-col gap-2 cursor-pointer flex-shrink-0 w-[138px] min-[360px]:w-[148px] sm:w-44 snap-start md:w-auto md:flex-shrink border border-border-color rounded-2xl p-2 md:p-4 bg-white hover:border-brand-blue hover:shadow-md transition-all">
+                className="flex flex-col gap-2 cursor-pointer shrink-0 w-34.5 min-[360px]:w-37 sm:w-44 snap-start md:w-auto md:flex-shrink border border-border-color rounded-2xl p-2 md:p-4 bg-white hover:border-brand-blue hover:shadow-md transition-all">
                 <div className="w-full h-28 min-[360px]:h-32 md:h-44 lg:h-48 bg-slate-50/50 rounded-xl flex items-center justify-center overflow-hidden relative">
                   <img
                     src={item.image}

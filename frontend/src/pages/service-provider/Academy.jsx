@@ -190,7 +190,7 @@ const Academy = () => {
                     onClick={() => v.url && setActiveVideo(v)}
                     className="bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-xs flex cursor-pointer hover:border-blue-400 transition-colors"
                   >
-                    <div className="w-28 bg-slate-200 relative aspect-video flex-shrink-0 flex items-center justify-center">
+                    <div className="w-28 bg-slate-200 relative aspect-video shrink-0 flex items-center justify-center">
                       <div className="absolute inset-0 bg-[#052355]/10 flex items-center justify-center">
                         <Play className="w-6 h-6 text-[#0D47A1] fill-[#0D47A1]/20" />
                       </div>

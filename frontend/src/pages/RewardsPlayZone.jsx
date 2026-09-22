@@ -7,6 +7,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { apiRequest } from '../lib/apiClient';
+import { goBack } from '../lib/navigation';
 
 // Clean, vibrant segment color palette matching app aesthetics
 const PRESET_COLORS = [
@@ -387,7 +388,7 @@ const RewardsPlayZone = () => {
       {/* Header matching App Style */}
       <div className="bg-white/90 backdrop-blur-md px-5 py-4 flex items-center gap-3 sticky top-0 z-50 shadow-xs border-b border-slate-100">
         <button
-          onClick={() => navigate('/profile')}
+          onClick={() => goBack(navigate, '/profile')}
           className="p-1.5 hover:bg-slate-100 rounded-full transition-colors cursor-pointer text-slate-700"
         >
           <ArrowLeft className="h-5 w-5" />
@@ -416,8 +417,8 @@ const RewardsPlayZone = () => {
       <div className="flex flex-col gap-5 px-4 pt-5 max-w-md mx-auto w-full">
 
         {/* Dashboard Banner: Coins & Level */}
-        <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-[24px] p-5 border border-white/10 shadow-xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-[120px] h-[120px] bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
+        <div className="bg-linear-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-[24px] p-5 border border-white/10 shadow-xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-30 h-30 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
           
           <div className="grid grid-cols-2 gap-4 divide-x divide-white/10">
             {/* Coins */}
@@ -442,7 +443,7 @@ const RewardsPlayZone = () => {
                   <Flame className="h-3.5 w-3.5 text-orange-400" />
                   <span>XP Progress</span>
                 </span>
-                <div className="w-6 h-6 bg-gradient-to-tr from-amber-400 to-orange-500 rounded-full flex items-center justify-center shadow-md">
+                <div className="w-6 h-6 bg-linear-to-tr from-amber-400 to-orange-500 rounded-full flex items-center justify-center shadow-md">
                   <Star className="h-3.5 w-3.5 text-white fill-white" />
                 </div>
               </div>
@@ -457,7 +458,7 @@ const RewardsPlayZone = () => {
                 </div>
                 <div className="w-full bg-white/10 rounded-full h-1.5 overflow-hidden">
                   <div 
-                    className="bg-gradient-to-r from-amber-400 to-orange-500 h-1.5 rounded-full transition-all duration-500" 
+                    className="bg-linear-to-r from-amber-400 to-orange-500 h-1.5 rounded-full transition-all duration-500" 
                     style={{ width: `${progressPercentage}%` }} 
                   />
                 </div>
@@ -487,7 +488,7 @@ const RewardsPlayZone = () => {
             </div>
 
             {/* Wheel Container */}
-            <div className="relative w-[240px] h-[240px] sm:w-[260px] sm:h-[260px] rounded-full p-2 bg-slate-900 shadow-xl border-4 border-slate-800 flex items-center justify-center">
+            <div className="relative w-60 h-60 sm:w-65 sm:h-65 rounded-full p-2 bg-slate-900 shadow-xl border-4 border-slate-800 flex items-center justify-center">
               
               {/* Rotating Wheel */}
               <div 

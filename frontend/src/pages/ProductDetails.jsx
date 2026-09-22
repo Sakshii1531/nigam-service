@@ -108,7 +108,7 @@ const ProductDetails = () => {
     return (
       <div className="min-h-screen bg-bg-light flex flex-col items-center justify-center p-6 text-center gap-3">
         <p className="text-sm font-semibold text-rose-600">{productError}</p>
-        <p className="text-xs text-slate-500 max-w-[260px]">
+        <p className="text-xs text-slate-500 max-w-65">
           Pick a product from the store to see its details, pricing and reviews.
         </p>
         <button
@@ -191,7 +191,7 @@ const ProductDetails = () => {
       <div className="flex-1 p-6 flex flex-col gap-6 overflow-y-auto">
         
         {/* PRODUCT HERO IMAGE BOX */}
-        <div className={`bg-gradient-to-br ${style.colorTheme} border rounded-3xl p-8 flex flex-col items-center justify-center shadow-sm relative overflow-hidden h-52 group`}>
+        <div className={`bg-linear-to-br ${style.colorTheme} border rounded-3xl p-8 flex flex-col items-center justify-center shadow-sm relative overflow-hidden h-52 group`}>
           <div className="absolute -top-10 -left-10 w-28 h-28 bg-white/30 rounded-full blur-2xl group-hover:bg-white/45 transition-all"></div>
           <span className="text-7xl drop-shadow-md select-none transform group-hover:scale-110 transition-transform duration-300">
             {style.icon}
@@ -255,7 +255,7 @@ const ProductDetails = () => {
         </div>
 
         {/* WARRANTY BOX */}
-        <div className="bg-gradient-to-r from-blue-500 to-[#0A3D80] text-white p-4.5 rounded-2xl shadow-sm border border-blue-600/10 flex items-center justify-between relative overflow-hidden">
+        <div className="bg-linear-to-r from-blue-500 to-[#0A3D80] text-white p-4.5 rounded-2xl shadow-sm border border-blue-600/10 flex items-center justify-between relative overflow-hidden">
           <div className="absolute -top-12 -right-12 w-28 h-28 bg-white/10 rounded-full blur-xl"></div>
           <div className="flex flex-col gap-0.5">
             <div className="flex items-center gap-1.5">
@@ -283,7 +283,7 @@ const ProductDetails = () => {
           <div className="bg-white border border-slate-200/60 rounded-2xl p-4.5 flex flex-col gap-3 shadow-sm">
             {product.benefits.map((benefit, i) => (
               <div key={i} className="flex gap-2.5 items-start">
-                <div className="w-[18px] h-[18px] bg-green-50 rounded-full flex items-center justify-center text-green-600 mt-0.5 flex-shrink-0">
+                <div className="w-4.5 h-4.5 bg-green-50 rounded-full flex items-center justify-center text-green-600 mt-0.5 shrink-0">
                   <Check className="h-3 w-3" />
                 </div>
                 <span className="text-xs font-semibold text-text-primary leading-tight">{benefit}</span>
@@ -371,7 +371,7 @@ const ProductDetails = () => {
                   <div className="flex flex-col items-center justify-center py-20 text-center gap-2">
                     <span className="text-5xl">🛒</span>
                     <h4 className="font-extrabold text-xs text-text-primary mt-2">Your cart is empty!</h4>
-                    <p className="text-[10px] text-text-secondary leading-relaxed max-w-[200px]">Add Nigam certified appliances to secure your home comfort.</p>
+                    <p className="text-[10px] text-text-secondary leading-relaxed max-w-50">Add Nigam certified appliances to secure your home comfort.</p>
                   </div>
                 ) : (
                   cartItems.map((item) => (
@@ -379,7 +379,7 @@ const ProductDetails = () => {
                       key={item.id}
                       className="bg-slate-50 border border-slate-200/80 p-3 rounded-xl flex items-center gap-3 relative"
                     >
-                      <span className="text-3xl bg-white p-2 rounded-lg border shadow-inner flex-shrink-0">
+                      <span className="text-3xl bg-white p-2 rounded-lg border shadow-inner shrink-0">
                         {item.icon}
                       </span>
                       
@@ -555,7 +555,7 @@ const ProductDetails = () => {
                   </div>
 
                   {/* Receipt */}
-                  <div className="w-full bg-gradient-to-br from-brand-navy via-[#0A3D80] to-brand-blue rounded-3xl p-5 text-white text-left relative overflow-hidden shadow-xl">
+                  <div className="w-full bg-linear-to-br from-brand-navy via-[#0A3D80] to-brand-blue rounded-3xl p-5 text-white text-left relative overflow-hidden shadow-xl">
                     <div className="absolute -top-10 -right-10 w-32 h-32 bg-brand-yellow/10 rounded-full blur-2xl"></div>
                     
                     <div className="flex justify-between items-start mb-4 border-b border-white/10 pb-3">
@@ -579,7 +579,7 @@ const ProductDetails = () => {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-white/60">Delivery Address:</span>
-                        <span className="font-semibold text-right max-w-[200px] truncate">{address}</span>
+                        <span className="font-semibold text-right max-w-50 truncate">{address}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-white/60">Status:</span>

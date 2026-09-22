@@ -231,7 +231,7 @@ const Exchanges = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {stats.map((card, index) => (
               <div key={index} className="bg-white p-6 rounded-2xl border border-[#E2E8F0] flex items-center gap-4">
-                <div className={`w-12 h-12 ${card.color} rounded-xl flex items-center justify-center text-white flex-shrink-0`}>
+                <div className={`w-12 h-12 ${card.color} rounded-xl flex items-center justify-center text-white shrink-0`}>
                   {card.icon}
                 </div>
                 <div>

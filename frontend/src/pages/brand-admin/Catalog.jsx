@@ -223,7 +223,7 @@ const Catalog = () => {
         <div className="p-6 flex-1 text-left space-y-5">
 
           {/* Page Header */}
-          <div className="bg-gradient-to-r from-[#0D47A1] to-[#1565C0] rounded-2xl p-5 text-white flex items-center justify-between shadow-sm">
+          <div className="bg-linear-to-r from-[#0D47A1] to-[#1565C0] rounded-2xl p-5 text-white flex items-center justify-between shadow-sm">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-white/15 rounded-xl flex items-center justify-center">
                 <Settings2 className="h-6 w-6 text-white" />

@@ -751,7 +751,7 @@ const ExchangeOffers = () => {
                   {editingQuestionSet.questions?.map((q, index) => (
                     <div key={q.id} className="bg-slate-50 border border-slate-200/80 rounded-xl p-3 flex justify-between items-center gap-4 text-xs font-semibold">
                       <div className="flex items-start gap-2.5 text-left">
-                        <span className="bg-slate-200/60 text-slate-600 w-5 h-5 rounded-full text-[9px] flex items-center justify-center flex-shrink-0 mt-0.5">{index + 1}</span>
+                        <span className="bg-slate-200/60 text-slate-600 w-5 h-5 rounded-full text-[9px] flex items-center justify-center shrink-0 mt-0.5">{index + 1}</span>
                         <div>
                           <span className="font-semibold text-slate-800 block">{q.text}</span>
                           <span className="text-[9px] font-bold text-slate-400 block mt-0.5">{q.type} {q.options?.length > 0 ? `(${q.options.join(', ')})` : ''}</span>

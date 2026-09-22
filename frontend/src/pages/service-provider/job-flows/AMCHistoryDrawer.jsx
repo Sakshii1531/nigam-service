@@ -9,12 +9,12 @@ import { apiRequest } from '../../../lib/apiClient';
 
 const statusIcon = (type, status) => {
   if (status === 'completed' && type === 'scheduled') {
-    return <CheckCircle className="h-5 w-5 text-[#00C853] flex-shrink-0 mt-0.5" />;
+    return <CheckCircle className="h-5 w-5 text-[#00C853] shrink-0 mt-0.5" />;
   }
   if (type === 'unscheduled') {
-    return <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />;
+    return <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />;
   }
-  return <Clock className="h-5 w-5 text-[#0D47A1] flex-shrink-0 mt-0.5" />;
+  return <Clock className="h-5 w-5 text-[#0D47A1] shrink-0 mt-0.5" />;
 };
 
 const AMCHistoryDrawer = ({ job, onStartVisit }) => {
@@ -62,12 +62,12 @@ const AMCHistoryDrawer = ({ job, onStartVisit }) => {
       <div className="bg-white w-full max-w-md rounded-t-[2rem] shadow-2xl flex flex-col max-h-[88vh] overflow-hidden">
 
         {/* Drawer Handle */}
-        <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
+        <div className="flex justify-center pt-3 pb-1 shrink-0">
           <div className="w-10 h-1 bg-slate-200 rounded-full" />
         </div>
 
         {/* Header */}
-        <div className="px-5 pt-3 pb-4 border-b border-slate-100 flex-shrink-0">
+        <div className="px-5 pt-3 pb-4 border-b border-slate-100 shrink-0">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-base font-semibold text-[#052355]">Service History</h2>
@@ -103,7 +103,7 @@ const AMCHistoryDrawer = ({ job, onStartVisit }) => {
             <div key={entry.id} className="flex gap-3.5 relative">
               {/* Connector line */}
               {idx < AMC_HISTORY.length && (
-                <div className="absolute left-[9px] top-6 bottom-[-20px] w-[2px] bg-slate-100 z-0" />
+                <div className="absolute left-2.25 top-6 -bottom-5 w-0.5 bg-slate-100 z-0" />
               )}
               {statusIcon(entry.type, entry.status)}
               <div className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl p-3.5 flex flex-col gap-2 text-left">
@@ -122,7 +122,7 @@ const AMCHistoryDrawer = ({ job, onStartVisit }) => {
                   <div className="flex flex-col gap-1.5">
                     {entry.tasks.map((task, i) => (
                       <div key={i} className="flex items-center gap-2">
-                        <CheckCircle className="h-3 w-3 text-green-500 flex-shrink-0" />
+                        <CheckCircle className="h-3 w-3 text-green-500 shrink-0" />
                         <span className="text-[11px] text-slate-700 font-normal">{task}</span>
                       </div>
                     ))}
@@ -130,13 +130,13 @@ const AMCHistoryDrawer = ({ job, onStartVisit }) => {
                 ) : (
                   <div className="flex flex-col gap-1">
                     <div className="flex gap-1.5 items-start">
-                      <AlertTriangle className="h-3 w-3 text-amber-500 mt-0.5 flex-shrink-0" />
+                      <AlertTriangle className="h-3 w-3 text-amber-500 mt-0.5 shrink-0" />
                       <span className="text-[11px] text-slate-600 font-normal">
                         <strong className="text-slate-700">Complaint:</strong> {entry.complaint}
                       </span>
                     </div>
                     <div className="flex gap-1.5 items-start mt-0.5">
-                      <CheckCircle className="h-3 w-3 text-green-500 mt-0.5 flex-shrink-0" />
+                      <CheckCircle className="h-3 w-3 text-green-500 mt-0.5 shrink-0" />
                       <span className="text-[11px] text-slate-600 font-normal">
                         <strong className="text-slate-700">Action:</strong> {entry.action}
                       </span>
@@ -155,7 +155,7 @@ const AMCHistoryDrawer = ({ job, onStartVisit }) => {
 
           {/* TODAY's visit — Current */}
           <div className="flex gap-3.5 relative">
-            <Clock className="h-5 w-5 text-[#0D47A1] flex-shrink-0 mt-0.5 animate-pulse" />
+            <Clock className="h-5 w-5 text-[#0D47A1] shrink-0 mt-0.5 animate-pulse" />
             <div className="flex-1 bg-[#E3ECF9] border-2 border-[#0D47A1]/30 rounded-2xl p-3.5 flex flex-col gap-2 text-left">
               <div className="flex justify-between items-start">
                 <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#0D47A1] text-white">
@@ -165,15 +165,15 @@ const AMCHistoryDrawer = ({ job, onStartVisit }) => {
               </div>
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center gap-2">
-                  <div className="h-3 w-3 rounded-full border-2 border-[#0D47A1] flex-shrink-0" />
+                  <div className="h-3 w-3 rounded-full border-2 border-[#0D47A1] shrink-0" />
                   <span className="text-[11px] text-[#052355] font-semibold">Carbon Filter Check — Due Today</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="h-3 w-3 rounded-full border-2 border-[#0D47A1] flex-shrink-0" />
+                  <div className="h-3 w-3 rounded-full border-2 border-[#0D47A1] shrink-0" />
                   <span className="text-[11px] text-[#052355] font-semibold">TDS Level Check — Due Today</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <AlertTriangle className="h-3 w-3 text-amber-500 flex-shrink-0" />
+                  <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0" />
                   <span className="text-[11px] text-amber-700 font-semibold">Follow-up: Verify water flow (Apr issue)</span>
                 </div>
               </div>
@@ -183,7 +183,7 @@ const AMCHistoryDrawer = ({ job, onStartVisit }) => {
         </div>
 
         {/* CTA Button */}
-        <div className="px-5 pb-6 pt-3 border-t border-slate-100 flex-shrink-0">
+        <div className="px-5 pb-6 pt-3 border-t border-slate-100 shrink-0">
           <button
             onClick={onStartVisit}
             className="w-full bg-[#FFA000] hover:bg-amber-500 text-white font-semibold py-4 rounded-2xl text-sm transition-all shadow-md flex items-center justify-center gap-2"

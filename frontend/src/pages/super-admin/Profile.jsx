@@ -116,7 +116,7 @@ const Profile = () => {
 
               {/* Identity card */}
               <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-6 flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-[#0D47A1] text-white flex items-center justify-center font-extrabold text-lg flex-shrink-0">
+                <div className="w-14 h-14 rounded-2xl bg-[#0D47A1] text-white flex items-center justify-center font-extrabold text-lg shrink-0">
                   {getInitials(user?.name)}
                 </div>
                 <div>
@@ -131,21 +131,21 @@ const Profile = () => {
                 <h3 className="text-sm font-bold text-[#1E293B] mb-4">Contact Information</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                   <div className="flex items-center gap-3 text-slate-700">
-                    <Mail size={16} className="text-[#64748B] flex-shrink-0" />
+                    <Mail size={16} className="text-[#64748B] shrink-0" />
                     <span>{user?.email || asm?.email || '—'}</span>
                   </div>
                   <div className="flex items-center gap-3 text-slate-700">
-                    <Phone size={16} className="text-[#64748B] flex-shrink-0" />
+                    <Phone size={16} className="text-[#64748B] shrink-0" />
                     <span>{user?.phone || asm?.phone || '—'}</span>
                   </div>
                   {isAsm && (
                     <>
                       <div className="flex items-center gap-3 text-slate-700">
-                        <MapPin size={16} className="text-[#64748B] flex-shrink-0" />
+                        <MapPin size={16} className="text-[#64748B] shrink-0" />
                         <span>{asm?.city?.name || 'Unassigned'} Zone</span>
                       </div>
                       <div className="flex items-center gap-3 text-slate-700">
-                        <Star size={16} className="text-amber-500 flex-shrink-0" />
+                        <Star size={16} className="text-amber-500 shrink-0" />
                         <span>{asm?.rating ?? 0} / 5.0 rating</span>
                       </div>
                     </>

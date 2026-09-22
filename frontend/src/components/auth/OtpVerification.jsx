@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, ShieldCheck, Cpu } from 'lucide-react';
+import { goBack } from '../../lib/navigation';
 
 /**
  * Reusable OTP verification screen used by all four panels.
@@ -205,7 +206,7 @@ const OtpVerification = ({
               {resendRow}
               {demoHint}
               <button
-                onClick={onBackClick || (() => navigate(backTo))}
+                onClick={onBackClick || (() => goBack(navigate, backTo))}
                 className="w-full text-center text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors"
               >
                 ← Change email / back to login
@@ -224,13 +225,13 @@ const OtpVerification = ({
   // ---------- MOBILE VARIANT (user / service provider) ----------
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-4 relative overflow-hidden">
-      <div className="absolute top-[-100px] left-[-100px] w-[300px] h-[300px] bg-[#0D47A1] opacity-10 rounded-full blur-3xl" />
-      <div className="absolute bottom-[-100px] right-[-100px] w-[300px] h-[300px] bg-[#FFD600] opacity-20 rounded-full blur-3xl" />
+      <div className="absolute -top-25 -left-25 w-75 h-75 bg-[#0D47A1] opacity-10 rounded-full blur-3xl" />
+      <div className="absolute -bottom-25 -right-25 w-75 h-75 bg-[#FFD600] opacity-20 rounded-full blur-3xl" />
 
       <div className="w-full max-w-md bg-white/80 backdrop-blur-xl rounded-[30px] shadow-[0_20px_50px_rgba(13,71,161,0.05)] border border-white/50 flex flex-col p-6 relative z-10">
         <div className="flex items-center mb-2">
           <button
-            onClick={onBackClick || (() => navigate(backTo))}
+            onClick={onBackClick || (() => goBack(navigate, backTo))}
             className="p-2 hover:bg-white rounded-full transition-all shadow-sm border border-transparent hover:border-slate-100"
           >
             <ArrowLeft className="h-5 w-5 text-[#0D47A1]" />
@@ -257,7 +258,7 @@ const OtpVerification = ({
           <button
             onClick={handleVerify}
             disabled={!filled || verifying}
-            className="w-full bg-gradient-to-r from-[#FFD600] to-[#FFCA00] text-[#0D47A1] font-bold py-3 rounded-2xl hover:shadow-lg hover:shadow-yellow-400/20 transition-all transform hover:-translate-y-0.5 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center"
+            className="w-full bg-linear-to-r from-[#FFD600] to-[#FFCA00] text-[#0D47A1] font-bold py-3 rounded-2xl hover:shadow-lg hover:shadow-yellow-400/20 transition-all transform hover:-translate-y-0.5 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center"
           >
             {verifying ? (
               <div className="w-5 h-5 border-2 border-[#0D47A1] border-t-transparent rounded-full animate-spin" />

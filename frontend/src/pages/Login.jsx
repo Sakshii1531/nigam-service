@@ -406,17 +406,24 @@ const Login = ({ initialSignup = false }) => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4 relative overflow-hidden">
-      
+    <div className="min-h-screen bg-[#F8FAFC] relative overflow-x-hidden">
+
       {/* Background Decorative Blurs */}
-      <div className="absolute top-[-100px] left-[-100px] w-[300px] h-[300px] bg-brand-blue opacity-10 rounded-full blur-3xl"></div>
-      <div className="absolute bottom-[-100px] right-[-100px] w-[300px] h-[300px] bg-brand-yellow opacity-20 rounded-full blur-3xl"></div>
+      <div className="absolute -top-25 -left-25 w-75 h-75 bg-brand-blue opacity-10 rounded-full blur-3xl"></div>
+      <div className="absolute -bottom-25 -right-25 w-75 h-75 bg-brand-yellow opacity-20 rounded-full blur-3xl"></div>
 
-      {/* Form card wrapper */}
-      <div className="w-full flex items-center justify-center p-4 lg:p-8 min-h-screen">
+      {/* Form card wrapper — single layer of responsive gutter padding; the
+          card below adds its own internal padding, so these two never stack
+          the same value on top of each other like the old nested p-4/p-4/p-8
+          did (that's what was crushing the form on small screens). Login's
+          content is short, so it's always vertically centered with no
+          scroll; signup is long enough on mobile to need top alignment +
+          scroll instead, or its top gets clipped by flex centering. */}
+      <div
+        className={`min-h-screen w-full flex ${isSignup ? 'items-start' : 'items-center'} justify-center px-3 sm:px-4 md:px-6 py-6 sm:py-10`}>
 
-      <div className={`w-full ${isSignup ? 'max-w-xl' : 'max-w-md'} bg-white/90 backdrop-blur-xl rounded-[30px] shadow-[0_20px_50px_rgba(13,71,161,0.05)] border border-white/50 overflow-hidden flex flex-col p-8 relative z-10 transition-all duration-300`}>
-        
+      <div className={`w-full ${isSignup ? 'max-w-xl' : 'max-w-md'} bg-white/90 backdrop-blur-xl rounded-2xl sm:rounded-[30px] shadow-[0_20px_50px_rgba(13,71,161,0.05)] border border-white/50 overflow-hidden flex flex-col p-5 sm:p-6 md:p-8 relative z-10 transition-all duration-300`}>
+
         {/* Logo/Brand */}
         <div className="flex flex-col items-center mt-2 mb-4">
           <img src={logoUrl} alt="Nigam Care" className="h-16 w-auto" />
@@ -424,7 +431,7 @@ const Login = ({ initialSignup = false }) => {
 
         {/* Title */}
         <div className="text-center mb-6">
-          <h1 className="text-xl font-bold text-slate-800 mb-1">
+          <h1 className="text-lg sm:text-xl font-bold text-slate-800 mb-1">
             {isSignup ? "Create Customer Account" : "Welcome Back"}
           </h1>
           <p className="text-slate-500 text-xs">
@@ -471,7 +478,7 @@ const Login = ({ initialSignup = false }) => {
                   type="tel"
                   name="identifier"
                   placeholder="Enter Phone Number"
-                  className="w-full pl-12 pr-4 py-2.5 bg-white/50 border border-slate-200 rounded-2xl focus:border-brand-blue focus:ring-1 focus:ring-brand-blue outline-none transition-all text-sm shadow-xs focus:shadow-md"
+                  className="w-full pl-12 pr-4 py-2.5 bg-white/50 border border-slate-200 rounded-2xl focus:border-brand-blue focus:ring-1 focus:ring-brand-blue outline-none transition-all text-[13px] shadow-xs focus:shadow-md"
                   required
                 />
               </div>
@@ -482,7 +489,7 @@ const Login = ({ initialSignup = false }) => {
                   type="email"
                   name="identifier"
                   placeholder="Enter Email Address"
-                  className="w-full pl-12 pr-4 py-2.5 bg-white/50 border border-slate-200 rounded-2xl focus:border-brand-blue focus:ring-1 focus:ring-brand-blue outline-none transition-all text-sm shadow-xs focus:shadow-md"
+                  className="w-full pl-12 pr-4 py-2.5 bg-white/50 border border-slate-200 rounded-2xl focus:border-brand-blue focus:ring-1 focus:ring-brand-blue outline-none transition-all text-[13px] shadow-xs focus:shadow-md"
                   required
                 />
               </div>
@@ -494,7 +501,7 @@ const Login = ({ initialSignup = false }) => {
                 type={showPassword ? "text" : "password"}
                 name="password"
                 placeholder="Enter Password"
-                className="w-full pl-12 pr-11 py-2.5 bg-white/50 border border-slate-200 rounded-2xl focus:border-brand-blue focus:ring-1 focus:ring-brand-blue outline-none transition-all text-sm shadow-xs focus:shadow-md"
+                className="w-full pl-12 pr-11 py-2.5 bg-white/50 border border-slate-200 rounded-2xl focus:border-brand-blue focus:ring-1 focus:ring-brand-blue outline-none transition-all text-[13px] shadow-xs focus:shadow-md"
                 required
               />
               <button
@@ -517,7 +524,7 @@ const Login = ({ initialSignup = false }) => {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full bg-gradient-to-r from-brand-yellow to-[#FFCA00] text-brand-blue font-bold py-3 rounded-2xl hover:shadow-lg hover:shadow-yellow-400/20 transition-all transform hover:-translate-y-0.5 mt-2 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full bg-linear-to-r from-brand-yellow to-[#FFCA00] text-brand-blue font-bold py-3 rounded-2xl hover:shadow-lg hover:shadow-yellow-400/20 transition-all transform hover:-translate-y-0.5 mt-2 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {submitting ? "Logging in…" : "Login"}
             </button>
@@ -537,7 +544,7 @@ const Login = ({ initialSignup = false }) => {
                     value={signupForm.name}
                     onChange={(e) => setSignupForm({ ...signupForm, name: e.target.value })}
                     placeholder="Enter Full Name"
-                    className={`w-full pl-10 pr-4 py-2.5 bg-white border ${fieldErrors.name ? 'border-rose-400 focus:ring-rose-400' : 'border-slate-200 focus:border-brand-blue'} rounded-xl focus:ring-1 outline-none transition-all text-sm`}
+                    className={`w-full pl-10 pr-4 py-2.5 bg-white border ${fieldErrors.name ? 'border-rose-400 focus:ring-rose-400' : 'border-slate-200 focus:border-brand-blue'} rounded-xl focus:ring-1 outline-none transition-all text-[13px]`}
                   />
                 </div>
                 {fieldErrors.name && (
@@ -556,7 +563,7 @@ const Login = ({ initialSignup = false }) => {
                     value={signupForm.phone}
                     onChange={(e) => setSignupForm({ ...signupForm, phone: e.target.value.replace(/\D/g, '') })}
                     placeholder="Enter Phone Number"
-                    className={`w-full pl-10 pr-4 py-2.5 bg-white border ${fieldErrors.phone ? 'border-rose-400 focus:ring-rose-400' : 'border-slate-200 focus:border-brand-blue'} rounded-xl focus:ring-1 outline-none transition-all text-sm`}
+                    className={`w-full pl-10 pr-4 py-2.5 bg-white border ${fieldErrors.phone ? 'border-rose-400 focus:ring-rose-400' : 'border-slate-200 focus:border-brand-blue'} rounded-xl focus:ring-1 outline-none transition-all text-[13px]`}
                   />
                 </div>
                 {fieldErrors.phone && (
@@ -576,7 +583,7 @@ const Login = ({ initialSignup = false }) => {
                   value={signupForm.email}
                   onChange={(e) => setSignupForm({ ...signupForm, email: e.target.value })}
                   placeholder="Enter Email Address"
-                  className={`w-full pl-10 pr-4 py-2.5 bg-white border ${fieldErrors.email ? 'border-rose-400 focus:ring-rose-400' : 'border-slate-200 focus:border-brand-blue'} rounded-xl focus:ring-1 outline-none transition-all text-sm`}
+                  className={`w-full pl-10 pr-4 py-2.5 bg-white border ${fieldErrors.email ? 'border-rose-400 focus:ring-rose-400' : 'border-slate-200 focus:border-brand-blue'} rounded-xl focus:ring-1 outline-none transition-all text-[13px]`}
                 />
               </div>
               {fieldErrors.email && (
@@ -596,7 +603,7 @@ const Login = ({ initialSignup = false }) => {
                     value={signupForm.password}
                     onChange={(e) => setSignupForm({ ...signupForm, password: e.target.value })}
                     placeholder="Enter Password"
-                    className={`w-full pl-10 pr-10 py-2.5 bg-white border ${fieldErrors.password ? 'border-rose-400 focus:ring-rose-400' : 'border-slate-200 focus:border-brand-blue'} rounded-xl focus:ring-1 outline-none transition-all text-sm`}
+                    className={`w-full pl-10 pr-10 py-2.5 bg-white border ${fieldErrors.password ? 'border-rose-400 focus:ring-rose-400' : 'border-slate-200 focus:border-brand-blue'} rounded-xl focus:ring-1 outline-none transition-all text-[13px]`}
                   />
                   <button
                     type="button"
@@ -621,7 +628,7 @@ const Login = ({ initialSignup = false }) => {
                     value={signupForm.confirmPassword}
                     onChange={(e) => setSignupForm({ ...signupForm, confirmPassword: e.target.value })}
                     placeholder="Confirm Password"
-                    className={`w-full pl-10 pr-10 py-2.5 bg-white border ${fieldErrors.confirmPassword ? 'border-rose-400 focus:ring-rose-400' : 'border-slate-200 focus:border-brand-blue'} rounded-xl focus:ring-1 outline-none transition-all text-sm`}
+                    className={`w-full pl-10 pr-10 py-2.5 bg-white border ${fieldErrors.confirmPassword ? 'border-rose-400 focus:ring-rose-400' : 'border-slate-200 focus:border-brand-blue'} rounded-xl focus:ring-1 outline-none transition-all text-[13px]`}
                   />
                   <button
                     type="button"
@@ -735,7 +742,7 @@ const Login = ({ initialSignup = false }) => {
                       setReferralCheck(null);
                     }}
                     placeholder="Enter Referral Code"
-                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:border-brand-blue focus:ring-1 focus:ring-brand-blue outline-none transition-all text-sm"
+                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:border-brand-blue focus:ring-1 focus:ring-brand-blue outline-none transition-all text-[13px]"
                   />
                 </div>
                 <button
@@ -763,7 +770,7 @@ const Login = ({ initialSignup = false }) => {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full bg-gradient-to-r from-brand-yellow to-[#FFCA00] text-brand-blue font-bold py-3 rounded-2xl hover:shadow-lg hover:shadow-yellow-400/20 transition-all transform hover:-translate-y-0.5 mt-2 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full bg-linear-to-r from-brand-yellow to-[#FFCA00] text-brand-blue font-bold py-3 rounded-2xl hover:shadow-lg hover:shadow-yellow-400/20 transition-all transform hover:-translate-y-0.5 mt-2 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {submitting ? (
                 <div className="w-5 h-5 border-2 border-brand-blue border-t-transparent rounded-full animate-spin" />

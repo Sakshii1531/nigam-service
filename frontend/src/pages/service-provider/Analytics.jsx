@@ -156,7 +156,7 @@ const Analytics = () => {
           <div className="flex items-center justify-between gap-5 py-2">
             
             {/* Custom SVG Donut Chart */}
-            <div className="relative w-[110px] h-[110px] flex items-center justify-center flex-shrink-0">
+            <div className="relative w-27.5 h-27.5 flex items-center justify-center shrink-0">
               <svg width="110" height="110" viewBox="0 0 110 110" className="transform -rotate-90">
                 {/* Background circle */}
                 <circle cx="55" cy="55" r="45" fill="transparent" stroke="#F1F5F9" strokeWidth="12" />

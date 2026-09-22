@@ -220,7 +220,7 @@ const Complaints = () => {
           {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] flex items-center gap-4 shadow-sm">
-              <div className="w-12 h-12 bg-red-600 rounded-xl flex items-center justify-center text-white flex-shrink-0">
+              <div className="w-12 h-12 bg-red-600 rounded-xl flex items-center justify-center text-white shrink-0">
                 <AlertTriangle size={20} />
               </div>
               <div>
@@ -229,7 +229,7 @@ const Complaints = () => {
               </div>
             </div>
             <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] flex items-center gap-4 shadow-sm">
-              <div className="w-12 h-12 bg-yellow-500 rounded-xl flex items-center justify-center text-white flex-shrink-0">
+              <div className="w-12 h-12 bg-yellow-500 rounded-xl flex items-center justify-center text-white shrink-0">
                 <Clock size={20} />
               </div>
               <div>
@@ -238,7 +238,7 @@ const Complaints = () => {
               </div>
             </div>
             <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] flex items-center gap-4 shadow-sm">
-              <div className="w-12 h-12 bg-green-600 rounded-xl flex items-center justify-center text-white flex-shrink-0">
+              <div className="w-12 h-12 bg-green-600 rounded-xl flex items-center justify-center text-white shrink-0">
                 <CheckCircle size={20} />
               </div>
               <div>

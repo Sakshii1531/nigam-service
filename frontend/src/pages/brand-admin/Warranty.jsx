@@ -207,7 +207,7 @@ const Warranty = () => {
           {result === 'active' && (
             <div className="bg-white p-6 rounded-2xl border border-green-200 bg-green-50/30 animate-in fade-in slide-in-from-top-4 duration-200">
               <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-green-600 flex-shrink-0">
+                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-green-600 shrink-0">
                   <ShieldCheck size={24} />
                 </div>
                 <div className="flex-1">
@@ -247,7 +247,7 @@ const Warranty = () => {
           {result === 'expired' && (
             <div className="bg-white p-6 rounded-2xl border border-red-200 bg-red-50/30 animate-in fade-in slide-in-from-top-4 duration-200">
               <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center text-red-600 flex-shrink-0">
+                <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center text-red-600 shrink-0">
                   <AlertTriangle size={24} />
                 </div>
                 <div className="flex-1">

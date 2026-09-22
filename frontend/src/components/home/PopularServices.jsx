@@ -38,7 +38,7 @@ const PopularServices = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: index * 0.05 }}
-              className="flex flex-col items-center cursor-pointer group flex-shrink-0 w-60 snap-start"
+              className="flex flex-col items-center cursor-pointer group shrink-0 w-60 snap-start"
             >
               <div className="w-52 h-52 overflow-hidden mb-3 flex items-center justify-center">
                 <img src={service.img} alt={service.name} className="w-full h-full object-contain mix-blend-multiply" />

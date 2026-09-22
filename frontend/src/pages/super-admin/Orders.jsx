@@ -301,7 +301,7 @@ const Orders = () => {
                   {['Placed', 'Confirmed'].includes(selectedOrder.status) && (
                     <button
                       onClick={() => openDispatchModal(selectedOrder)}
-                      className="bg-gradient-to-r from-[#0D47A1] to-[#1565C0] hover:from-[#0B3C88] hover:to-[#0D47A1] text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer flex items-center gap-2"
+                      className="bg-linear-to-r from-[#0D47A1] to-[#1565C0] hover:from-[#0B3C88] hover:to-[#0D47A1] text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer flex items-center gap-2"
                     >
                       <Truck size={16} /> Dispatch Order Now
                     </button>
@@ -340,9 +340,9 @@ const Orders = () => {
                         <div key={item.id || idx} className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs flex flex-wrap sm:flex-nowrap items-center justify-between gap-4">
                           <div className="flex items-center gap-4">
                             {item.image ? (
-                              <img src={item.image} className="w-16 h-16 rounded-xl object-cover border border-slate-200 flex-shrink-0" alt={item.name} />
+                              <img src={item.image} className="w-16 h-16 rounded-xl object-cover border border-slate-200 shrink-0" alt={item.name} />
                             ) : (
-                              <div className="w-16 h-16 bg-slate-100 rounded-xl flex items-center justify-center text-slate-400 border border-slate-200 flex-shrink-0">
+                              <div className="w-16 h-16 bg-slate-100 rounded-xl flex items-center justify-center text-slate-400 border border-slate-200 shrink-0">
                                 <Package size={24} />
                               </div>
                             )}
@@ -425,7 +425,7 @@ const Orders = () => {
 
                       <div className="flex justify-between items-center bg-slate-50 p-2.5 rounded-xl border border-slate-200/60">
                         <span className="text-slate-500 font-semibold flex items-center gap-1.5"><Mail size={13} /> Email</span>
-                        <span className="font-bold text-slate-800 truncate max-w-[140px]">{selectedOrder.requesterEmail}</span>
+                        <span className="font-bold text-slate-800 truncate max-w-35">{selectedOrder.requesterEmail}</span>
                       </div>
 
                       <div className="pt-2">

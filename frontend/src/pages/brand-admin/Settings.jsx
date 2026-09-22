@@ -226,7 +226,7 @@ const Settings = () => {
             {tabs.map((tab) => (
               <button
                 key={tab.id}
-                className={`px-6 py-3 text-sm font-medium transition-all border-b-2 -mb-[2px] flex items-center gap-2 ${
+                className={`px-6 py-3 text-sm font-medium transition-all border-b-2 -mb-0.5 flex items-center gap-2 ${
                   activeTab === tab.id 
                     ? 'border-[#0D47A1] text-[#0D47A1]' 
                     : 'border-transparent text-[#64748B] hover:text-[#1E293B]'
@@ -304,7 +304,7 @@ const Settings = () => {
                         checked={autoAssign} 
                         onChange={() => handleToggle('Auto-assign ServiceProviders', setAutoAssign, autoAssign, 'autoAssignServiceProvider')} 
                       />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0D47A1]"></div>
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0D47A1]"></div>
                     </label>
                   </div>
 
@@ -320,7 +320,7 @@ const Settings = () => {
                         checked={requirePhoto} 
                         onChange={() => handleToggle('Require Photo Proof', setRequirePhoto, requirePhoto, 'requireCompletionPhoto')} 
                       />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0D47A1]"></div>
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0D47A1]"></div>
                     </label>
                   </div>
                 </div>
@@ -349,7 +349,7 @@ const Settings = () => {
                         disabled={requesting}
                         onChange={togglePush}
                       />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0D47A1]"></div>
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0D47A1]"></div>
                     </label>
                   </div>
 
@@ -365,7 +365,7 @@ const Settings = () => {
                         checked={emailNotifs} 
                         onChange={() => handleToggle('Email Notifications', setEmailNotifs, emailNotifs, 'emailNotifications')} 
                       />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0D47A1]"></div>
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0D47A1]"></div>
                     </label>
                   </div>
 
@@ -381,7 +381,7 @@ const Settings = () => {
                         checked={smsAlerts} 
                         onChange={() => handleToggle('SMS Alerts', setSmsAlerts, smsAlerts, 'smsAlerts')} 
                       />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0D47A1]"></div>
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0D47A1]"></div>
                     </label>
                   </div>
                 </div>
@@ -426,7 +426,7 @@ const Settings = () => {
               <button
                 onClick={handleSave}
                 disabled={loading || saving}
-                className="bg-[#0D47A1] text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2 min-w-[120px] justify-center shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                className="bg-[#0D47A1] text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2 min-w-30 justify-center shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <Save size={16} /> {saving ? 'Saving…' : 'Save Changes'}
               </button>

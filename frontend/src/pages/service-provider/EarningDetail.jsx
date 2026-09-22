@@ -252,7 +252,7 @@ const EarningDetailPage = () => {
           </div>
           <div className="px-4 py-3 flex flex-col gap-3">
             <div className="flex items-start gap-3">
-              <div className="p-1.5 bg-blue-50 rounded-lg flex-shrink-0 mt-0.5">
+              <div className="p-1.5 bg-blue-50 rounded-lg shrink-0 mt-0.5">
                 <Briefcase className="h-4 w-4 text-[#0D47A1]" />
               </div>
               <div className="flex-1">
@@ -263,7 +263,7 @@ const EarningDetailPage = () => {
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <div className="p-1.5 bg-blue-50 rounded-lg flex-shrink-0 mt-0.5">
+              <div className="p-1.5 bg-blue-50 rounded-lg shrink-0 mt-0.5">
                 <Briefcase className="h-4 w-4 text-[#0D47A1]" />
               </div>
               <div className="flex-1">
@@ -277,7 +277,7 @@ const EarningDetailPage = () => {
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <div className="p-1.5 bg-green-50 rounded-lg flex-shrink-0 mt-0.5">
+              <div className="p-1.5 bg-green-50 rounded-lg shrink-0 mt-0.5">
                 <User className="h-4 w-4 text-green-600" />
               </div>
               <div className="flex-1">
@@ -288,7 +288,7 @@ const EarningDetailPage = () => {
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <div className="p-1.5 bg-orange-50 rounded-lg flex-shrink-0 mt-0.5">
+              <div className="p-1.5 bg-orange-50 rounded-lg shrink-0 mt-0.5">
                 <MapPin className="h-4 w-4 text-orange-500" />
               </div>
               <div className="flex-1">
@@ -299,7 +299,7 @@ const EarningDetailPage = () => {
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <div className="p-1.5 bg-slate-50 rounded-lg flex-shrink-0 mt-0.5">
+              <div className="p-1.5 bg-slate-50 rounded-lg shrink-0 mt-0.5">
                 <Calendar className="h-4 w-4 text-slate-500" />
               </div>
               <div className="flex-1">
@@ -375,11 +375,11 @@ const EarningDetailPage = () => {
                 {/* Vertical line */}
                 {idx < earning.timeline.length - 1 && (
                   <div
-                    className={`absolute left-[14px] top-6 w-0.5 h-full -translate-x-1/2 ${step.done ? "bg-[#0D47A1]" : "bg-slate-200"}`}
+                    className={`absolute left-3.5 top-6 w-0.5 h-full -translate-x-1/2 ${step.done ? "bg-[#0D47A1]" : "bg-slate-200"}`}
                   />
                 )}
                 <div
-                  className={`w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center z-10 border-2 ${
+                  className={`w-7 h-7 rounded-full shrink-0 flex items-center justify-center z-10 border-2 ${
                     step.done
                       ? "bg-[#0D47A1] border-[#0D47A1]"
                       : "bg-white border-slate-300"

@@ -254,7 +254,7 @@ const Exchange = () => {
                   className="bg-white border border-slate-200/80 rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:border-brand-blue/45 shadow-sm hover:scale-[1.01] transition-all"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 bg-slate-50/50 border border-slate-100 rounded-xl flex items-center justify-center p-1.5 flex-shrink-0">
+                    <div className="w-14 h-14 bg-slate-50/50 border border-slate-100 rounded-xl flex items-center justify-center p-1.5 shrink-0">
                       <img src={item.img} alt={item.name} className="w-full h-full object-contain mix-blend-multiply" />
                     </div>
                     <div>
@@ -262,7 +262,7 @@ const Exchange = () => {
                       <p className="text-[11px] text-text-secondary mt-0.5 font-semibold">Exchange old for new brand discount</p>
                     </div>
                   </div>
-                  <ChevronRight className="h-5 w-5 text-text-secondary flex-shrink-0" />
+                  <ChevronRight className="h-5 w-5 text-text-secondary shrink-0" />
                 </div>
               ))}
             </div>
@@ -288,7 +288,7 @@ const Exchange = () => {
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-bold text-slate-700">Brand *</label>
                 <div className="bg-white border border-slate-200 rounded-2xl p-3.5 flex items-center gap-3 shadow-sm">
-                  <Sparkles className="h-5 w-5 text-slate-400 flex-shrink-0" />
+                  <Sparkles className="h-5 w-5 text-slate-400 shrink-0" />
                   <select
                     value={selectedBrand}
                     onChange={(e) => setSelectedBrand(e.target.value)}
@@ -304,7 +304,7 @@ const Exchange = () => {
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-bold text-slate-700">Model *</label>
                 <div className="bg-white border border-slate-200 rounded-2xl p-3.5 flex items-center gap-3 shadow-sm">
-                  <PackageOpen className="h-5 w-5 text-slate-400 flex-shrink-0" />
+                  <PackageOpen className="h-5 w-5 text-slate-400 shrink-0" />
                   <select
                     value={selectedModel}
                     onChange={(e) => setSelectedModel(e.target.value)}
@@ -341,7 +341,7 @@ const Exchange = () => {
                           <span className="text-xs font-black text-brand-navy block">{cond.label}</span>
                           <span className="text-[10px] text-text-secondary font-semibold block mt-0.5">{cond.sub}</span>
                         </div>
-                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
                           isSelected ? 'border-brand-blue bg-white' : 'border-slate-300'
                         }`}>
                           {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-brand-blue"></div>}
@@ -414,7 +414,7 @@ const Exchange = () => {
                   { step: '3', title: 'Instant discount on new product', desc: 'Exchange discount is applied directly to your purchase invoice.' }
                 ].map((w, idx) => (
                   <div key={idx} className="flex gap-3">
-                    <div className="w-6 h-6 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center text-xs font-bold text-brand-blue flex-shrink-0">
+                    <div className="w-6 h-6 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center text-xs font-bold text-brand-blue shrink-0">
                       {w.step}
                     </div>
                     <div>
@@ -474,7 +474,7 @@ const Exchange = () => {
 
             {/* Exchange product summary card */}
             <div className="bg-white border border-slate-200/80 rounded-2xl p-4 flex items-center gap-4 shadow-sm">
-              <div className="w-14 h-14 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center p-1.5 flex-shrink-0">
+              <div className="w-14 h-14 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center p-1.5 shrink-0">
                 <img src={getApplianceImg(finalCategory)} alt={finalCategory} className="w-full h-full object-contain mix-blend-multiply" />
               </div>
               <div>
@@ -517,7 +517,7 @@ const Exchange = () => {
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-brand-blue flex-shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-brand-blue shrink-0">
                     <Zap className="h-5 w-5" />
                   </div>
                   <div>
@@ -525,7 +525,7 @@ const Exchange = () => {
                     <span className="text-[10px] text-text-secondary font-semibold block mt-0.5">Pay using any UPI app</span>
                   </div>
                 </div>
-                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
                   paymentMode === 'UPI' ? 'border-brand-blue bg-white' : 'border-slate-300'
                 }`}>
                   {paymentMode === 'UPI' && <div className="w-2.5 h-2.5 rounded-full bg-brand-blue"></div>}
@@ -550,7 +550,7 @@ const Exchange = () => {
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center flex-shrink-0">
+                    <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center shrink-0">
                       <Icon className="h-5 w-5 text-slate-400" />
                     </div>
                     <div>
@@ -558,7 +558,7 @@ const Exchange = () => {
                       <span className="text-[10px] text-text-secondary font-semibold block mt-0.5">{sub}</span>
                     </div>
                   </div>
-                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
                     paymentMode === id ? 'border-brand-blue bg-white' : 'border-slate-300'
                   }`}>
                     {paymentMode === id && <div className="w-2.5 h-2.5 rounded-full bg-brand-blue"></div>}
@@ -634,7 +634,7 @@ const Exchange = () => {
             </div>
 
             {/* Success Summary Receipt Card */}
-            <div className="w-full bg-gradient-to-br from-[#072C63] via-[#0B4EA2] to-[#3B82F6] rounded-3xl p-6 text-white shadow-2xl relative overflow-hidden border border-white/10">
+            <div className="w-full bg-linear-to-br from-[#072C63] via-[#0B4EA2] to-[#3B82F6] rounded-3xl p-6 text-white shadow-2xl relative overflow-hidden border border-white/10">
               <div className="absolute -top-8 -right-8 w-24 h-24 bg-white/5 rounded-full blur-xl"></div>
               
               <div className="flex justify-between items-start mb-6">

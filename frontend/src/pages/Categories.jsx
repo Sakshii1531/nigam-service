@@ -1,16 +1,26 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Search, X, Sparkles } from 'lucide-react';
 import CustomerBottomNav from '../components/CustomerBottomNav';
+import { apiRequest } from '../lib/apiClient';
 
-// Import images for Sidebar
+// Sidebar tab artwork — this is pure navigation chrome (which of the 6 fixed
+// tabs is active), not data. Every category, section and service shown under
+// a tab is fetched live from GET /catalog/categories below; this page used to
+// ship its own ~160-line hardcoded catalog (categories, sections, prices)
+// that had drifted from — and duplicated — the real admin-managed catalog.
 import handymanSidebar from '../assets/categories/plumber_fixed.png';
 import applianceSidebar from '../assets/categories/ac.png';
 import cleaningSidebar from '../assets/categories/cleaning.png';
 import paintingSidebar from '../assets/categories/spa.png';
 import moversSidebar from '../assets/categories/security_system.png';
 
-// Import images for Subcategories
+// Tile artwork: a handful of existing image assets reused by keyword match
+// against the real category name, since the catalog doesn't have per-category
+// photography yet. Anything unmatched falls back to a generic tool icon
+// rendered in that category's own seeded accent color, rather than showing a
+// photo for an unrelated service (the old page showed a plumber photo on the
+// "Carpenter" tile, and an electrician photo on "Mosquito Mesh").
 import electricianImg from '../assets/categories/electrician_fixed.png';
 import plumberImg from '../assets/categories/plumber_fixed.png';
 import sofaImg from '../assets/cleaning_sofa.png';
@@ -18,195 +28,107 @@ import tileImg from '../assets/cleaning_bathroom_1.png';
 import tvImg from '../assets/categories/television.png';
 import cleaningKitchen from '../assets/cleaning_kitchen.png';
 import cleaningCarpet from '../assets/cleaning_carpet.png';
-
-// 3D premium icon assets
 import iconAc from '../assets/icon_3d_ac.png';
 import iconGeyser from '../assets/icon_3d_geyser.png';
 import iconRo from '../assets/icon_3d_ro.png';
-import iconTv from '../assets/icon_3d_tv.png';
 import iconChimney from '../assets/icon_3d_chimney.png';
 import iconOven from '../assets/icon_3d_oven.png';
 import iconFridge from '../assets/icon_3d_fridge.png';
 import iconWm from '../assets/icon_3d_wm.png';
+import iconCooler from '../assets/icon_3d_cooler.png';
+import iconWrench from '../assets/icon_3d_wrench.png';
 
-const CATEGORY_DATA = {
-  handyman: [
-    {
-      title: 'Maintenance',
-      items: [
-        { name: 'Electrician', img: electricianImg, route: '/service-details?service=Electrician' },
-        { name: 'Carpenter', img: plumberImg, route: '/service-details?service=Carpenter' },
-        { name: 'Plumber', img: plumberImg, route: '/service-details?service=Plumber' },
-        { name: 'Sofa Repair', img: sofaImg, route: '/service-details?service=Sofa%20Repair' },
-        { name: 'Tile Grouting', img: tileImg, route: '/service-details?service=Tile%20Grouting' }
-      ]
-    },
-    {
-      title: 'Installation',
-      items: [
-        { name: 'Furniture Assembly', img: plumberImg, route: '/service-details?service=Furniture%20Assembly' },
-        { name: 'TV Installation', img: tvImg, route: '/service-details?service=TV%20Installation' },
-        { name: 'Hanger Installation', img: plumberImg, route: '/service-details?service=Hanger%20Installation' },
-        { name: 'Mosquito Mesh', img: electricianImg, route: '/service-details?service=Mosquito%20Mesh' },
-        { name: 'Safety Net', img: electricianImg, route: '/service-details?service=Safety%20Net' }
-      ]
-    },
-    {
-      title: 'AC & Appliance Repair',
-      items: [
-        { name: 'AC Repair & Services', img: iconAc, route: '/book/AC' },
-        { name: 'Geyser Repair & Services', img: iconGeyser, route: '/book/Geyser' },
-        { name: 'Water Purifier & Services', img: iconRo, route: '/book/RO%20Water%20Purifier' },
-        { name: 'TV Repair & Services', img: iconTv, route: '/book/TV' }
-      ]
-    },
-    {
-      title: 'Kitchen and Appliance',
-      items: [
-        { name: 'Chimney Repair & Services', img: iconChimney, route: '/book/Chimney' },
-        { name: 'Gas Stove & Hob Services', img: iconOven, route: '/service-details?service=Gas%20Stove%20%26%20Hob%20Services' },
-        { name: 'Microwave Repair & Services', img: iconOven, route: '/book/Microwave' },
-        { name: 'Refrigerator Repair & Services', img: iconFridge, route: '/book/Refrigerator' },
-        { name: 'Washing Machine Repair', img: iconWm, route: '/book/Washing%20Machine' },
-        { name: 'Gas Pipeline Installation', img: iconOven, route: '/service-details?service=Gas%20Pipeline%20Installation' }
-      ]
-    },
-    {
-      title: 'Cleaning',
-      items: [
-        { name: 'Full house cleaning', img: cleaningSidebar, route: '/service-details?service=Full%20house%20cleaning' },
-        { name: 'Bathroom cleaning', img: tileImg, route: '/service-details?service=Bathroom%20cleaning' },
-        { name: 'Kitchen Cleaning', img: cleaningKitchen, route: '/service-details?service=Kitchen%20Cleaning' }
-      ]
-    }
-  ],
-  appliance: [
-    {
-      title: 'AC & Appliance Repair',
-      items: [
-        { name: 'AC Repair & Services', img: iconAc, route: '/book/AC' },
-        { name: 'Geyser Repair & Services', img: iconGeyser, route: '/book/Geyser' },
-        { name: 'Water Purifier & Services', img: iconRo, route: '/book/RO%20Water%20Purifier' },
-        { name: 'TV Repair & Services', img: iconTv, route: '/book/TV' }
-      ]
-    },
-    {
-      title: 'Kitchen and Appliance',
-      items: [
-        { name: 'Chimney Repair & Services', img: iconChimney, route: '/book/Chimney' },
-        { name: 'Gas Stove & Hob Services', img: iconOven, route: '/service-details?service=Gas%20Stove%20%26%20Hob%20Services' },
-        { name: 'Microwave Repair & Services', img: iconOven, route: '/book/Microwave' },
-        { name: 'Refrigerator Repair & Services', img: iconFridge, route: '/book/Refrigerator' },
-        { name: 'Washing Machine Repair', img: iconWm, route: '/book/Washing%20Machine' },
-        { name: 'Gas Pipeline Installation', img: iconOven, route: '/service-details?service=Gas%20Pipeline%20Installation' }
-      ]
-    }
-  ],
-  cleaning: [
-    {
-      title: 'Cleaning',
-      items: [
-        { name: 'Full house cleaning', img: cleaningSidebar, route: '/service-details?service=Full%20house%20cleaning' },
-        { name: 'Bathroom cleaning', img: tileImg, route: '/service-details?service=Bathroom%20cleaning' },
-        { name: 'Kitchen Cleaning', img: cleaningKitchen, route: '/service-details?service=Kitchen%20Cleaning' },
-        { name: 'Sofa, Carpet & Mattress Cleaning', img: sofaImg, route: '/service-details?service=Sofa%2C%20Carpet%20%26%20Mattress%20Cleaning' },
-        { name: 'Water Tank & Sump Cleaning', img: tileImg, route: '/service-details?service=Water%20Tank%20%26%20Sump%20Cleaning' },
-        { name: 'Marble Polishing', img: cleaningCarpet, route: '/service-details?service=Marble%20Polishing' }
-      ]
-    },
-    {
-      title: 'Pest Control',
-      items: [
-        { name: 'Pest control', img: cleaningSidebar, route: '/service-details?service=Pest%20control' },
-        { name: 'Cockroach Control Treatment', img: cleaningSidebar, route: '/service-details?service=Cockroach%20Control%20Treatment' },
-        { name: 'Bed Bug Control Treatment', img: cleaningSidebar, route: '/service-details?service=Bed%20Bug%20Control%20Treatment' },
-        { name: 'Rodent Control Treatment', img: cleaningSidebar, route: '/service-details?service=Rodent%20Control%20Treatment' },
-        { name: 'Termite Control', img: cleaningSidebar, route: '/service-details?service=Termite%20Control' }
-      ]
-    },
-    {
-      title: 'Painting & Water proofing',
-      items: [
-        { name: 'Wall Painting', img: electricianImg, route: '/service-details?service=Wall%20Painting' },
-        { name: 'Waterproofing', img: plumberImg, route: '/service-details?service=Waterproofing' }
-      ]
-    }
-  ],
-  painting: [
-    {
-      title: 'Painting & Water proofing',
-      items: [
-        { name: 'Wall Painting', img: electricianImg, route: '/service-details?service=Wall%20Painting' },
-        { name: 'Waterproofing', img: plumberImg, route: '/service-details?service=Waterproofing' }
-      ]
-    }
-  ],
-  movers: [
-    {
-      title: 'Movers & Storage',
-      items: [
-        { name: 'Home Shifting', img: moversSidebar, route: '/service-details?service=Home%20Shifting' },
-        { name: 'Office Relocation', img: moversSidebar, route: '/service-details?service=Office%20Relocation' }
-      ]
-    }
-  ],
-  renovation: [
-    {
-      title: 'Renovation',
-      items: [
-        { name: 'Home Renovation', img: moversSidebar, route: '/service-details?service=Home%20Renovation' },
-        { name: 'Kitchen Renovation', img: moversSidebar, route: '/service-details?service=Kitchen%20Renovation' },
-        { name: 'Bathroom Renovation', img: moversSidebar, route: '/service-details?service=Bathroom%20Renovation' }
-      ]
-    }
-  ]
-};
+const SIDEBAR_TABS = [
+  { id: 'handyman', name: 'Handyman Services', shortName: 'Handyman', image: handymanSidebar },
+  { id: 'appliance', name: 'Appliance Repair', shortName: 'Appliance', image: applianceSidebar },
+  { id: 'cleaning', name: 'Cleaning & Pest Control', shortName: 'Cleaning', image: cleaningSidebar },
+  { id: 'painting', name: 'Painting & Waterproofing', shortName: 'Painting', image: paintingSidebar },
+  { id: 'movers', name: 'Movers & Storage', shortName: 'Movers', image: moversSidebar },
+  { id: 'renovation', name: 'Renovation', shortName: 'Renovation', image: handymanSidebar },
+];
+
+const IMAGE_MATCHERS = [
+  [/electrician/i, electricianImg],
+  [/plumber/i, plumberImg],
+  [/sofa/i, sofaImg],
+  [/tile/i, tileImg],
+  [/^tv\b|television/i, tvImg],
+  [/kitchen/i, cleaningKitchen],
+  [/carpet|mattress/i, cleaningCarpet],
+  [/^ac\b|air condition/i, iconAc],
+  [/geyser/i, iconGeyser],
+  [/water purifier|\bro\b/i, iconRo],
+  [/chimney/i, iconChimney],
+  [/gas|microwave|oven/i, iconOven],
+  [/refrigerator|fridge/i, iconFridge],
+  [/washing machine/i, iconWm],
+  [/air cooler/i, iconCooler],
+];
+
+function getCategoryImage(name) {
+  const match = IMAGE_MATCHERS.find(([re]) => re.test(name));
+  return match ? match[1] : null;
+}
 
 const Categories = () => {
   const navigate = useNavigate();
-  const [activeCategory, setActiveCategory] = useState('handyman');
+  const [activeTab, setActiveTab] = useState('handyman');
   const [searchQuery, setSearchQuery] = useState('');
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
-  const sidebarCategories = [
-    { id: 'handyman', name: 'Handyman Services', shortName: 'Handyman', image: handymanSidebar },
-    { id: 'appliance', name: 'Appliance Repair', shortName: 'Appliance', image: applianceSidebar },
-    { id: 'cleaning', name: 'Cleaning & Pest Control', shortName: 'Cleaning', image: cleaningSidebar },
-    { id: 'painting', name: 'Painting & Waterproofing', shortName: 'Painting', image: paintingSidebar },
-    { id: 'movers', name: 'Movers & Storage', shortName: 'Movers', image: moversSidebar },
-    { id: 'renovation', name: 'Renovation', shortName: 'Renovation', image: handymanSidebar }
-  ];
+  useEffect(() => {
+    apiRequest('/catalog/categories')
+      .then((res) => setCategories(res || []))
+      .catch((err) => setLoadError(err.message || 'Could not load categories.'))
+      .finally(() => setLoading(false));
+  }, []);
 
-  // Search filtering logic
+  const activeCategories = useMemo(
+    () => categories.filter((c) => (c.groups || []).includes(activeTab)),
+    [categories, activeTab],
+  );
+
+  // Group the active tab's categories by their `section` field (e.g.
+  // "Maintenance", "Installation"), preserving the order sections first
+  // appear in — the API already sorts categories by sortOrder/name.
+  const activeSections = useMemo(() => {
+    const bySection = new Map();
+    activeCategories.forEach((cat) => {
+      const key = cat.section || 'Services';
+      if (!bySection.has(key)) bySection.set(key, []);
+      bySection.get(key).push(cat);
+    });
+    return Array.from(bySection.entries()).map(([title, items]) => ({ title, items }));
+  }, [activeCategories]);
+
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return null;
     const query = searchQuery.toLowerCase().trim();
-    const resultsMap = new Map();
+    return categories.filter(
+      (c) => c.name.toLowerCase().includes(query) || (c.section || '').toLowerCase().includes(query),
+    );
+  }, [categories, searchQuery]);
 
-    Object.entries(CATEGORY_DATA).forEach(([, sections]) => {
-      sections.forEach((section) => {
-        section.items.forEach((item) => {
-          if (item.name.toLowerCase().includes(query) || section.title.toLowerCase().includes(query)) {
-            if (!resultsMap.has(item.name)) {
-              resultsMap.set(item.name, {
-                ...item,
-                categoryName: section.title
-              });
-            }
-          }
-        });
-      });
-    });
+  const activeTabInfo = SIDEBAR_TABS.find((t) => t.id === activeTab);
 
-    return Array.from(resultsMap.values());
-  }, [searchQuery]);
-
-  const activeCategoryInfo = sidebarCategories.find(c => c.id === activeCategory);
-  const activeSections = CATEGORY_DATA[activeCategory] || [];
+  // Appliance-repair categories go into the step-based booking flow that
+  // already reads this exact catalog; everything else (a general handyman
+  // service, cleaning, pest control, painting, movers, renovation) goes to
+  // the service detail page.
+  const handleSelectCategory = (cat) => {
+    if ((cat.groups || []).includes('appliance')) {
+      navigate(`/book/${encodeURIComponent(cat.key)}`);
+    } else {
+      navigate(`/service-details?service=${encodeURIComponent(cat.name)}`);
+    }
+  };
 
   return (
     <div className="h-screen bg-slate-50 flex flex-col overflow-hidden pb-16 lg:pb-0 relative font-sans">
       {/* Top Header — mobile only */}
-      <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md px-3.5 py-2.5 flex items-center justify-between border-b border-slate-100 flex-shrink-0 lg:hidden shadow-xs">
+      <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md px-3.5 py-2.5 flex items-center justify-between border-b border-slate-100 shrink-0 lg:hidden shadow-xs">
         <button
           onClick={() => navigate(-1)}
           className="w-8 h-8 rounded-full bg-slate-100/90 active:scale-95 flex items-center justify-center text-slate-700 transition-all cursor-pointer"
@@ -225,40 +147,44 @@ const Categories = () => {
 
       {/* Main Split Container */}
       <div className="flex-1 flex overflow-hidden max-w-screen-2xl mx-auto w-full">
-        
-        {/* Left Sidebar — custom no-scrollbar for smooth scrolling */}
-        <div className="w-[82px] sm:w-28 md:w-36 lg:w-44 bg-slate-50/90 border-r border-slate-200/60 flex flex-col py-2 overflow-y-auto no-scrollbar select-none flex-shrink-0 gap-1.5 sm:gap-2">
-          {sidebarCategories.map((cat) => {
-            const isActive = activeCategory === cat.id && !searchQuery.trim();
+
+        {/* Left Sidebar — custom no-scrollbar for smooth scrolling. Icon/text
+            sizes used to be flat across the whole 320–639px phone range
+            (Tailwind's own `sm:` only kicks in at 640px, which no phone in
+            portrait ever reaches), so a small phone and a large one rendered
+            the exact same fixed-size rail; the min-[Npx] tiers below scale it
+            down on narrow phones and back up on wider ones. */}
+        <div className="w-16 min-[380px]:w-18 min-[425px]:w-20.5 sm:w-28 md:w-36 lg:w-44 bg-slate-50/90 border-r border-slate-200/60 flex flex-col py-2 overflow-y-auto no-scrollbar select-none shrink-0 gap-1 min-[380px]:gap-1.5 sm:gap-2">
+          {SIDEBAR_TABS.map((tab) => {
+            const isActive = activeTab === tab.id && !searchQuery.trim();
             return (
               <button
-                key={cat.id}
+                key={tab.id}
                 onClick={() => {
-                  setActiveCategory(cat.id);
+                  setActiveTab(tab.id);
                   setSearchQuery('');
                 }}
-                className={`relative flex flex-col items-center gap-1 py-2 sm:py-2.5 px-1 sm:px-1.5 mx-1 sm:mx-1.5 rounded-xl sm:rounded-2xl transition-all duration-200 cursor-pointer text-left group ${
+                className={`relative flex flex-col items-center gap-0.5 min-[380px]:gap-1 py-1.5 min-[380px]:py-2 sm:py-2.5 px-1 sm:px-1.5 mx-1 sm:mx-1.5 rounded-lg min-[380px]:rounded-xl sm:rounded-2xl transition-all duration-200 cursor-pointer text-left group ${
                   isActive
                     ? 'bg-white shadow-xs border border-blue-100/80 font-extrabold text-brand-blue'
                     : 'text-slate-600 hover:bg-white/70 hover:text-slate-900 border border-transparent'
                 }`}
               >
-                {/* Active Bar Indicator */}
                 {isActive && (
-                  <div className="absolute left-0 top-2 bottom-2 w-1 bg-gradient-to-b from-brand-blue to-blue-500 rounded-r-full shadow-2xs" />
+                  <div className="absolute left-0 top-2 bottom-2 w-1 bg-linear-to-b from-brand-blue to-blue-500 rounded-r-full shadow-2xs" />
                 )}
 
-                <div className={`w-11 h-11 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-xl flex items-center justify-center p-1.5 sm:p-2 transition-all duration-200 ${
-                  isActive 
-                    ? 'bg-gradient-to-br from-[#EAF4FF] to-blue-50/90 scale-105 shadow-2xs border border-blue-200/60' 
+                <div className={`w-9 h-9 min-[380px]:w-10.5 min-[380px]:h-10.5 min-[425px]:w-12 min-[425px]:h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-lg min-[380px]:rounded-xl flex items-center justify-center p-1 min-[380px]:p-1.5 sm:p-2 transition-all duration-200 ${
+                  isActive
+                    ? 'bg-linear-to-br from-[#EAF4FF] to-blue-50/90 scale-105 shadow-2xs border border-blue-200/60'
                     : 'bg-white border border-slate-100 shadow-2xs group-hover:scale-102'
                 }`}>
-                  <img src={cat.image} alt={cat.name} className="w-full h-full object-contain drop-shadow-2xs" />
+                  <img src={tab.image} alt={tab.name} className="w-full h-full object-contain drop-shadow-2xs" />
                 </div>
-                <span className={`text-[10px] sm:text-xs text-center px-0.5 leading-tight w-full font-bold transition-colors ${
+                <span className={`text-[8.5px] min-[380px]:text-[9.5px] min-[425px]:text-[10px] sm:text-xs text-center px-0.5 leading-tight w-full font-bold transition-colors ${
                   isActive ? 'text-brand-blue' : 'text-slate-600 group-hover:text-slate-900'
                 }`}>
-                  {cat.shortName}
+                  {tab.shortName}
                 </span>
               </button>
             );
@@ -266,23 +192,23 @@ const Categories = () => {
         </div>
 
         {/* Right Content Panel — styled single custom scrollbar */}
-        <div className="flex-1 bg-[#F8FAFC] p-3 sm:p-5 lg:p-8 overflow-y-auto custom-scrollbar flex flex-col gap-3.5 sm:gap-6">
-          
+        <div className="flex-1 bg-[#F8FAFC] p-2.5 min-[380px]:p-3 sm:p-5 lg:p-8 overflow-y-auto custom-scrollbar flex flex-col gap-3 min-[380px]:gap-3.5 sm:gap-6">
+
           {/* Header & Search Bar Banner */}
-          <div className="bg-gradient-to-br from-[#0B3C86] via-brand-blue to-indigo-900 text-white p-3.5 sm:p-5 rounded-2xl border border-blue-800/50 shadow-xs flex flex-col gap-2.5 sm:gap-3 lg:from-white lg:via-[#F4F8FF]/60 lg:to-[#EBF3FE]/40 lg:text-slate-900 lg:border-blue-100/70">
+          <div className="bg-linear-to-br from-[#0B3C86] via-brand-blue to-indigo-900 text-white p-3 min-[380px]:p-3.5 sm:p-5 rounded-xl min-[380px]:rounded-2xl border border-blue-800/50 shadow-xs flex flex-col gap-2 min-[380px]:gap-2.5 sm:gap-3 lg:from-white lg:via-[#F4F8FF]/60 lg:to-[#EBF3FE]/40 lg:text-slate-900 lg:border-blue-100/70">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <h2 className="text-sm sm:text-xl font-black text-white lg:text-slate-900 tracking-tight">
-                  {searchQuery ? 'Search Services' : activeCategoryInfo?.name}
+                <h2 className="text-[13px] min-[380px]:text-sm sm:text-xl font-black text-white lg:text-slate-900 tracking-tight">
+                  {searchQuery ? 'Search Services' : activeTabInfo?.name}
                 </h2>
               </div>
               {!searchQuery && (
-                <span className="text-[10px] sm:text-xs font-bold text-blue-900 bg-white lg:text-white lg:bg-brand-blue px-2.5 py-0.5 rounded-full shadow-2xs">
-                  {activeSections.reduce((acc, sec) => acc + sec.items.length, 0)} services
+                <span className="text-[9px] min-[380px]:text-[10px] sm:text-xs font-bold text-blue-900 bg-white lg:text-white lg:bg-brand-blue px-2 min-[380px]:px-2.5 py-0.5 rounded-full shadow-2xs shrink-0">
+                  {activeCategories.length} services
                 </span>
               )}
             </div>
-            <p className="text-[11px] sm:text-xs text-blue-100 lg:text-slate-500 leading-tight">
+            <p className="text-[10px] min-[380px]:text-[11px] sm:text-xs text-blue-100 lg:text-slate-500 leading-tight">
               {searchQuery
                 ? `Showing results matching "${searchQuery}"`
                 : 'Browse verified serviceProviders and instant home services'}
@@ -296,7 +222,7 @@ const Categories = () => {
                 placeholder="Search services (e.g. AC, Electrician)..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-8.5 pr-8 py-1.5 sm:py-2 text-xs sm:text-sm bg-white border border-slate-200/90 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue shadow-2xs transition-all"
+                className="w-full pl-8.5 pr-8 py-1.5 sm:py-2 text-[11px] min-[380px]:text-xs sm:text-sm bg-white border border-slate-200/90 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue shadow-2xs transition-all"
               />
               {searchQuery && (
                 <button
@@ -309,30 +235,46 @@ const Categories = () => {
             </div>
           </div>
 
-          {/* Search Results Mode */}
-          {searchResults ? (
+          {loading ? (
+            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 min-[380px]:gap-2.5 sm:gap-4">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="h-24 min-[380px]:h-28 rounded-xl min-[380px]:rounded-2xl bg-slate-100 animate-pulse" />
+              ))}
+            </div>
+          ) : loadError ? (
+            <div className="bg-white rounded-2xl p-6 sm:p-12 text-center border border-slate-200/60 my-2 sm:my-4">
+              <h3 className="text-xs sm:text-sm font-bold text-slate-800">Could not load categories</h3>
+              <p className="text-[11px] sm:text-xs text-slate-500 mt-1">{loadError}</p>
+            </div>
+          ) : searchResults ? (
             <div>
               {searchResults.length > 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5 sm:gap-4">
-                  {searchResults.map((item, idx) => (
-                    <div
-                      key={idx}
-                      onClick={() => navigate(item.route)}
-                      className="group bg-white border border-slate-200/80 rounded-2xl p-2.5 sm:p-3.5 flex flex-col items-center justify-between cursor-pointer transition-all duration-200 shadow-2xs hover:shadow-md hover:border-brand-blue/40 active:scale-[0.97]"
-                    >
-                      <div className="w-14 h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-b from-slate-50 to-blue-50/30 group-hover:from-blue-50/60 group-hover:to-indigo-50/40 rounded-xl p-2 flex items-center justify-center transition-all duration-200 border border-slate-100/90 shadow-2xs">
-                        <img src={item.img} alt={item.name} className="w-full h-full object-contain group-hover:scale-108 transition-transform duration-300 drop-shadow-2xs" />
+                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 min-[380px]:gap-2.5 sm:gap-4">
+                  {searchResults.map((cat) => {
+                    const img = getCategoryImage(cat.name);
+                    return (
+                      <div
+                        key={cat.id}
+                        onClick={() => handleSelectCategory(cat)}
+                        className="group bg-white border border-slate-200/80 rounded-xl min-[380px]:rounded-2xl p-2 min-[380px]:p-2.5 min-[425px]:p-3 sm:p-3.5 flex flex-col items-center justify-between cursor-pointer transition-all duration-200 shadow-2xs hover:shadow-md hover:border-brand-blue/40 active:scale-[0.97]"
+                      >
+                        <div
+                          className="w-11 h-11 min-[380px]:w-12.5 min-[380px]:h-12.5 min-[425px]:w-14 min-[425px]:h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 rounded-lg min-[380px]:rounded-xl p-1.5 min-[425px]:p-2 flex items-center justify-center transition-all duration-200 border border-slate-100/90 shadow-2xs"
+                          style={{ backgroundColor: cat.lightBg || '#F1F5F9' }}
+                        >
+                          <img src={img || iconWrench} alt={cat.name} className="w-full h-full object-contain group-hover:scale-108 transition-transform duration-300 drop-shadow-2xs" />
+                        </div>
+                        <div className="mt-1.5 min-[380px]:mt-2 text-center w-full">
+                          <span className="text-[7.5px] min-[380px]:text-[8.5px] min-[425px]:text-[9px] font-extrabold text-brand-blue uppercase tracking-wider block mb-0.5 line-clamp-1">
+                            {cat.section || 'Services'}
+                          </span>
+                          <h4 className="text-[9.5px] min-[380px]:text-[10.5px] min-[425px]:text-[11px] sm:text-xs font-bold text-slate-800 group-hover:text-brand-blue line-clamp-2 leading-snug transition-colors">
+                            {cat.name}
+                          </h4>
+                        </div>
                       </div>
-                      <div className="mt-2 text-center w-full">
-                        <span className="text-[9px] font-extrabold text-brand-blue uppercase tracking-wider block mb-0.5 line-clamp-1">
-                          {item.categoryName}
-                        </span>
-                        <h4 className="text-[11px] sm:text-xs font-bold text-slate-800 group-hover:text-brand-blue line-clamp-2 leading-snug transition-colors">
-                          {item.name}
-                        </h4>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="bg-white rounded-2xl p-6 sm:p-12 text-center border border-slate-200/60 my-2 sm:my-4">
@@ -351,48 +293,59 @@ const Categories = () => {
               )}
             </div>
           ) : (
-            /* Normal Subcategory Sections View */
-            <div className="flex flex-col gap-4 sm:gap-5 md:gap-8">
-              {activeSections.map((section, secIdx) => (
-                <div key={secIdx} className="flex flex-col gap-2 sm:gap-2.5">
-                  {/* Section Title Header */}
-                  <div className="flex items-center justify-between pb-1 border-b border-slate-200/60">
-                    <div className="flex items-center gap-1.5 sm:gap-2">
-                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-brand-blue ring-4 ring-blue-100" />
-                      <h3 className="text-[11px] sm:text-sm font-black text-slate-800 uppercase tracking-wider">
-                        {section.title}
-                      </h3>
-                    </div>
-                    <span className="text-[9px] sm:text-[11px] font-bold text-slate-500 bg-slate-100/90 px-2 py-0.5 rounded-full border border-slate-200/50">
-                      {section.items.length} services
-                    </span>
-                  </div>
-
-                  {/* Cards Grid: 2 columns on mobile for spacious touch targets, 4+ on desktop */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5 sm:gap-4">
-                    {section.items.map((item, itemIdx) => (
-                      <div
-                        key={itemIdx}
-                        onClick={() => navigate(item.route)}
-                        className="group bg-white border border-slate-200/80 rounded-2xl p-2.5 sm:p-3.5 flex flex-col items-center justify-between cursor-pointer transition-all duration-200 shadow-2xs hover:shadow-md hover:border-brand-blue/40 active:scale-[0.97]"
-                      >
-                        <div className="w-14 h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-b from-slate-50 to-blue-50/40 group-hover:from-blue-50/60 group-hover:to-indigo-50/40 rounded-xl p-2 flex items-center justify-center transition-all duration-200 border border-slate-100/90 shadow-2xs">
-                          <img
-                            src={item.img}
-                            alt={item.name}
-                            className="w-full h-full object-contain group-hover:scale-108 transition-transform duration-300 drop-shadow-2xs"
-                          />
-                        </div>
-                        <div className="mt-2 w-full flex items-center justify-between gap-1">
-                          <span className="text-[11px] sm:text-xs font-bold text-slate-800 group-hover:text-brand-blue text-center w-full px-0.5 line-clamp-2 leading-snug transition-colors">
-                            {item.name}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+            <div className="flex flex-col gap-3.5 min-[380px]:gap-4 sm:gap-5 md:gap-8">
+              {activeSections.length === 0 ? (
+                <div className="bg-white rounded-2xl p-6 sm:p-12 text-center border border-slate-200/60 my-2 sm:my-4">
+                  <h3 className="text-xs sm:text-sm font-bold text-slate-800">No services in this category yet</h3>
                 </div>
-              ))}
+              ) : (
+                activeSections.map((section) => (
+                  <div key={section.title} className="flex flex-col gap-1.5 min-[380px]:gap-2 sm:gap-2.5">
+                    <div className="flex items-center justify-between pb-1 border-b border-slate-200/60">
+                      <div className="flex items-center gap-1.5 sm:gap-2">
+                        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-brand-blue ring-4 ring-blue-100" />
+                        <h3 className="text-[10px] min-[380px]:text-[11px] sm:text-sm font-black text-slate-800 uppercase tracking-wider">
+                          {section.title}
+                        </h3>
+                      </div>
+                      <span className="text-[8px] min-[380px]:text-[9px] sm:text-[11px] font-bold text-slate-500 bg-slate-100/90 px-2 py-0.5 rounded-full border border-slate-200/50 shrink-0">
+                        {section.items.length} services
+                      </span>
+                    </div>
+
+                    {/* Cards Grid: 2 columns on mobile for spacious touch
+                        targets, 4+ on desktop. Icon/text sizes scale across
+                        the 320–425px phone range, the same fix already
+                        applied to the product-detail assurance grid. */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 min-[380px]:gap-2.5 sm:gap-4">
+                      {section.items.map((cat) => {
+                        const img = getCategoryImage(cat.name);
+                        return (
+                          <div
+                            key={cat.id}
+                            onClick={() => handleSelectCategory(cat)}
+                            className="group bg-white border border-slate-200/80 rounded-xl min-[380px]:rounded-2xl p-2 min-[380px]:p-2.5 min-[425px]:p-3 sm:p-3.5 flex flex-col items-center justify-center gap-1.5 cursor-pointer shadow-2xs hover:border-brand-blue/40 hover:shadow-md transition-all text-center min-h-21.5 min-[380px]:min-h-24 md:min-h-30"
+                          >
+                            <div
+                              className="w-11 h-11 min-[380px]:w-12.5 min-[380px]:h-12.5 min-[425px]:w-14 min-[425px]:h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 rounded-lg min-[380px]:rounded-xl p-1.5 min-[425px]:p-2 flex items-center justify-center overflow-hidden"
+                              style={{ backgroundColor: cat.lightBg || '#F1F5F9' }}
+                            >
+                              <img
+                                src={img || iconWrench}
+                                alt={cat.name}
+                                className="w-full h-full object-contain group-hover:scale-108 transition-transform duration-300 drop-shadow-2xs"
+                              />
+                            </div>
+                            <span className="text-[9.5px] min-[380px]:text-[10.5px] min-[425px]:text-[11px] sm:text-xs font-bold text-slate-800 group-hover:text-brand-blue text-center w-full px-0.5 line-clamp-2 leading-snug transition-colors">
+                              {cat.name}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           )}
         </div>
@@ -405,4 +358,3 @@ const Categories = () => {
 };
 
 export default Categories;
-

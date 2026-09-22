@@ -127,10 +127,10 @@ const UpiPayment = () => {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-[30px] shadow-2xl overflow-hidden flex flex-col h-[700px] border border-slate-100">
+      <div className="w-full max-w-md bg-white rounded-[30px] shadow-2xl overflow-hidden flex flex-col h-175 border border-slate-100">
         
         {/* Header */}
-        <div className="p-5 flex items-center border-b border-border-color flex-shrink-0">
+        <div className="p-5 flex items-center border-b border-border-color shrink-0">
           <button 
             onClick={() => navigate(-1)}
             className="p-2 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
@@ -172,7 +172,7 @@ const UpiPayment = () => {
 
           {/* Secure Trust Badge */}
           <div className="bg-blue-50/40 border border-blue-50 p-2.5 rounded-xl flex items-center gap-2 mt-1 w-full text-left">
-            <ShieldCheck className="h-4 w-4 text-brand-blue flex-shrink-0" />
+            <ShieldCheck className="h-4 w-4 text-brand-blue shrink-0" />
             <span className="text-[9px] font-bold text-brand-blue leading-relaxed">
               Dual-layer authorization protocol is active. Keep your secure banking app open.
             </span>
@@ -181,7 +181,7 @@ const UpiPayment = () => {
         </div>
 
         {/* Footer */}
-        <div className="p-5 border-t border-slate-100 flex flex-col gap-2.5 flex-shrink-0 w-full">
+        <div className="p-5 border-t border-slate-100 flex flex-col gap-2.5 shrink-0 w-full">
           <button
             onClick={handlePay}
             disabled={loading}

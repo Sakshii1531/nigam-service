@@ -60,7 +60,7 @@ const HowItWorks = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
-              className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden z-10 relative h-[200px] flex flex-col justify-between border-l-8 border-[#005c8a]"
+              className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden z-10 relative h-50 flex flex-col justify-between border-l-8 border-[#005c8a]"
             >
               {/* Dark blue shape on the right with centered number */}
               <div className="absolute bottom-0 right-0 w-1/2 h-2/3 bg-[#005c8a] rounded-tl-full z-0 flex items-center justify-center">

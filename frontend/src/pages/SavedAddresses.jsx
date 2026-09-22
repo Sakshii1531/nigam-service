@@ -240,7 +240,7 @@ const SavedAddresses = () => {
                 }`}
               >
                 <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 bg-[#E3ECF9] rounded-xl flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 bg-[#E3ECF9] rounded-xl flex items-center justify-center shrink-0">
                     {getIcon(item.type || 'Home')}
                   </div>
                   <div className="flex-1 text-left">
@@ -269,7 +269,7 @@ const SavedAddresses = () => {
                     )}
                     {item.latitude && item.longitude && (
                       <div className="mt-1 flex items-center gap-1.5 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md w-fit border border-emerald-200">
-                        <MapPin className="h-3 w-3 text-emerald-600 flex-shrink-0" />
+                        <MapPin className="h-3 w-3 text-emerald-600 shrink-0" />
                         <span>Coordinates: {Number(item.latitude).toFixed(4)}, {Number(item.longitude).toFixed(4)}</span>
                       </div>
                     )}

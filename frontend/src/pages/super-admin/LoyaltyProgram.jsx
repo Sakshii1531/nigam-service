@@ -480,7 +480,7 @@ const LoyaltyProgram = () => {
           )}
 
           {/* Tab Content Box */}
-          <div className="flex-1 bg-white rounded-2xl border border-[#E2E8F0] p-6 shadow-sm min-h-[400px]">
+          <div className="flex-1 bg-white rounded-2xl border border-[#E2E8F0] p-6 shadow-sm min-h-100">
             
             {/* SUBSECTION 1: SUPERCOINS & MILESTONES */}
             {activeTab === 'rewards' && (
@@ -676,11 +676,11 @@ const LoyaltyProgram = () => {
                     const style = tierStyles[plan.id] || { bg: 'from-emerald-50/30 to-emerald-100/20', border: 'border-emerald-250', text: 'text-emerald-700', iconBg: 'bg-emerald-100 text-emerald-600' };
 
                     return (
-                      <div key={plan.id} className={`bg-gradient-to-b ${style.bg} border ${style.border} rounded-2xl p-4.5 shadow-sm hover:shadow-md transition-all text-left flex flex-col justify-between relative group`}>
+                      <div key={plan.id} className={`bg-linear-to-b ${style.bg} border ${style.border} rounded-2xl p-4.5 shadow-sm hover:shadow-md transition-all text-left flex flex-col justify-between relative group`}>
                         <div>
                           <div className="flex justify-between items-start">
                             <div className="flex items-center gap-2.5">
-                              <div className={`w-8 h-8 ${style.iconBg} rounded-lg flex items-center justify-center flex-shrink-0 shadow-3xs`}>
+                              <div className={`w-8 h-8 ${style.iconBg} rounded-lg flex items-center justify-center shrink-0 shadow-3xs`}>
                                 <Star className="h-4 w-4 fill-current" />
                               </div>
                               <div>
@@ -735,7 +735,7 @@ const LoyaltyProgram = () => {
                             <div className="flex flex-col gap-1 mt-1">
                               {plan.benefits.map((b, idx) => (
                                 <div key={idx} className="flex items-start gap-1.5 text-[11px] font-semibold text-slate-655">
-                                  <Check className={`h-3 w-3 mt-0.5 flex-shrink-0 ${style.text}`} />
+                                  <Check className={`h-3 w-3 mt-0.5 shrink-0 ${style.text}`} />
                                   <span className="leading-tight">{b}</span>
                                 </div>
                               ))}
@@ -957,7 +957,7 @@ const LoyaltyProgram = () => {
                 </div>
 
                 <div className="bg-slate-50 border border-slate-150 p-4 rounded-xl text-left flex gap-3.5 items-center">
-                  <Info className="h-5 w-5 text-[#0D47A1] flex-shrink-0" />
+                  <Info className="h-5 w-5 text-[#0D47A1] shrink-0" />
                   <p className="text-[11px] text-slate-500 font-semibold leading-relaxed">
                     * Make sure the total winning probabilities of all segments sum up to exactly **100%** to guarantee accurate wheel distribution (Current Total: {wheelSegments.reduce((acc, curr) => acc + curr.prob, 0)}%).
                   </p>

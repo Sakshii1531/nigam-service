@@ -149,7 +149,7 @@ const CardPayment = () => {
       <div className="flex-1 p-4 md:px-8 md:py-8 flex items-center justify-center md:items-start md:block">
         
         {/* Mobile View Wrap Container */}
-        <div className="w-full max-w-md md:max-w-screen-2xl mx-auto bg-white md:bg-transparent rounded-[30px] md:rounded-none shadow-2xl md:shadow-none overflow-hidden flex flex-col h-[700px] md:h-auto border border-slate-100 md:border-0">
+        <div className="w-full max-w-md md:max-w-screen-2xl mx-auto bg-white md:bg-transparent rounded-[30px] md:rounded-none shadow-2xl md:shadow-none overflow-hidden flex flex-col h-175 md:h-auto border border-slate-100 md:border-0">
           
           <div className="flex-1 flex flex-col md:grid md:grid-cols-12 md:gap-8 items-start overflow-y-auto md:overflow-visible">
             
@@ -157,7 +157,7 @@ const CardPayment = () => {
             <div className="w-full md:col-span-7 lg:col-span-8 p-5 md:p-0 flex flex-col gap-6 text-left">
               
               {/* Card Visual representation */}
-              <div className="bg-gradient-to-br from-brand-navy via-[#0A3D80] to-brand-blue rounded-2xl md:rounded-3xl p-6 text-white shadow-xl relative overflow-hidden flex flex-col justify-between h-48 md:h-56">
+              <div className="bg-linear-to-br from-brand-navy via-[#0A3D80] to-brand-blue rounded-2xl md:rounded-3xl p-6 text-white shadow-xl relative overflow-hidden flex flex-col justify-between h-48 md:h-56">
                 <div className="absolute -top-10 -right-10 w-40 h-40 bg-[#FFD400]/10 rounded-full blur-2xl pointer-events-none"></div>
                 <div className="flex justify-between items-start">
                   <span className="text-[9px] md:text-xs bg-[#FFD400] text-brand-navy font-black px-2.5 py-1 rounded-full uppercase tracking-wider shadow-xs">
@@ -178,7 +178,7 @@ const CardPayment = () => {
 
               {/* Information Notice */}
               <div className="bg-blue-50/70 border border-blue-100 rounded-2xl md:rounded-3xl p-5 flex items-start gap-3.5">
-                <div className="w-9 h-9 rounded-2xl bg-white text-brand-blue flex items-center justify-center font-black text-sm flex-shrink-0 shadow-xs">
+                <div className="w-9 h-9 rounded-2xl bg-white text-brand-blue flex items-center justify-center font-black text-sm shrink-0 shadow-xs">
                   ℹ️
                 </div>
                 <div className="flex flex-col">
@@ -200,7 +200,7 @@ const CardPayment = () => {
                 <div className="flex flex-col gap-3 text-xs font-semibold text-slate-600">
                   <div className="flex justify-between items-center">
                     <span>Selected Service</span>
-                    <span className="font-extrabold text-slate-900 truncate max-w-[150px]">{itemName}</span>
+                    <span className="font-extrabold text-slate-900 truncate max-w-37.5">{itemName}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span>Payment Mode</span>

@@ -5,6 +5,7 @@ import {
   Lightbulb, AlertTriangle, Users, MapPinOff, Clock, PlusCircle, Loader2
 } from 'lucide-react';
 import { apiRequest, getStoredTokens } from '../lib/apiClient';
+import { goBack } from '../lib/navigation';
 import { io } from 'socket.io-client';
 import CancelBookingModal from '../components/booking/CancelBookingModal';
 import RescheduleBookingModal from '../components/booking/RescheduleBookingModal';
@@ -564,7 +565,7 @@ const SearchingPartner = () => {
       <header className="bg-white border-b border-slate-200/80 sticky top-0 z-30 px-4 md:px-8 py-3.5 flex items-center justify-between shadow-xs">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => navigate('/my-bookings')}
+            onClick={() => goBack(navigate, '/my-bookings')}
             className="p-2 rounded-xl hover:bg-slate-100 text-slate-600 transition-colors cursor-pointer"
             title="Back to Bookings"
           >
@@ -645,7 +646,7 @@ const SearchingPartner = () => {
           /* ── ACTIVE SEARCH RADAR HERO WITH 10-MIN TIMELINE ── */
           <div className="bg-white rounded-3xl p-6 md:p-8 shadow-xs border border-blue-100 flex flex-col items-center text-center relative overflow-hidden">
             {/* Ambient Background Glow */}
-            <div className="absolute inset-0 bg-gradient-to-b from-blue-50/50 via-white to-transparent pointer-events-none" />
+            <div className="absolute inset-0 bg-linear-to-b from-blue-50/50 via-white to-transparent pointer-events-none" />
 
             {/* Radar Animation */}
             <div className="relative w-52 h-52 md:w-60 md:h-60 flex items-center justify-center my-3">
@@ -675,7 +676,7 @@ const SearchingPartner = () => {
               </div>
 
               {/* Center Core Radar Beacon */}
-              <div className="relative z-10 w-20 h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-tr from-brand-blue to-blue-500 text-white flex flex-col items-center justify-center shadow-xl shadow-brand-blue/30 ring-8 ring-blue-100">
+              <div className="relative z-10 w-20 h-20 md:w-24 md:h-24 rounded-full bg-linear-to-tr from-brand-blue to-blue-500 text-white flex flex-col items-center justify-center shadow-xl shadow-brand-blue/30 ring-8 ring-blue-100">
                 <Radio className="w-8 h-8 md:w-10 md:h-10 animate-pulse" />
               </div>
             </div>
@@ -767,7 +768,7 @@ const SearchingPartner = () => {
 
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-brand-blue to-blue-500 text-white text-2xl font-black flex items-center justify-center shadow-lg shadow-blue-500/20 ring-4 ring-blue-50 shrink-0">
+                <div className="w-16 h-16 rounded-2xl bg-linear-to-tr from-brand-blue to-blue-500 text-white text-2xl font-black flex items-center justify-center shadow-lg shadow-blue-500/20 ring-4 ring-blue-50 shrink-0">
                   {(serviceProvider.name || 'T').charAt(0).toUpperCase()}
                 </div>
                 <div>
@@ -815,7 +816,7 @@ const SearchingPartner = () => {
 
         {/* ── ROTATING APPLIANCE CARE & GK FACTS CAROUSEL ── */}
         {!isAccepted && !isCancelled && (
-          <div className="bg-gradient-to-r from-blue-900 to-indigo-950 text-white rounded-3xl p-5 md:p-6 shadow-sm relative overflow-hidden text-left">
+          <div className="bg-linear-to-r from-blue-900 to-indigo-950 text-white rounded-3xl p-5 md:p-6 shadow-sm relative overflow-hidden text-left">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <span className="text-lg">{APPLIANCE_TIPS[tipIndex].icon}</span>

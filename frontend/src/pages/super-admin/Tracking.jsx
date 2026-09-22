@@ -372,7 +372,7 @@ const Tracking = () => {
 
             {/* Right: Google Map */}
             <div className="lg:col-span-2 bg-white rounded-2xl border border-[#E2E8F0] flex flex-col h-[calc(100vh-13rem)] shadow-sm overflow-hidden">
-              <div className="flex justify-between items-center px-5 py-4 border-b border-[#E2E8F0] flex-shrink-0">
+              <div className="flex justify-between items-center px-5 py-4 border-b border-[#E2E8F0] shrink-0">
                 <h3 className="font-bold text-[#1E293B]">Live Map</h3>
                 <div className="flex gap-3">
                   {Object.entries(STATUS_COLORS).map(([label, colors]) => (
@@ -404,7 +404,7 @@ const Tracking = () => {
                 return (
                   <div className="absolute bottom-8 right-8 bg-white p-4 rounded-xl shadow-xl border border-[#E2E8F0] max-w-xs w-full z-20 animate-in slide-in-from-bottom-2">
                     <div className="flex gap-3 items-start">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white flex-shrink-0 ${colors.bg}`}>
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white shrink-0 ${colors.bg}`}>
                         {selectedJob.status === 'On the way' ? <Truck size={18} /> : <MapPin size={18} />}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -413,7 +413,7 @@ const Tracking = () => {
                             <p className="text-[11px] font-black text-[#1E293B]">Job {jobHumanId}</p>
                             <p className="text-sm font-bold text-[#0D47A1] truncate">{serviceProviderName}</p>
                           </div>
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold flex-shrink-0 ml-2 ${colors.text}`}>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold shrink-0 ml-2 ${colors.text}`}>
                             {selectedJob.status}
                           </span>
                         </div>

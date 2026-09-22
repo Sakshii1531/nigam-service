@@ -1,210 +1,172 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Search } from 'lucide-react';
+import { ArrowLeft, Search, ChevronRight } from 'lucide-react';
 import CustomerBottomNav from '../components/CustomerBottomNav';
+import { apiRequest } from '../lib/apiClient';
+import tvImg from '../assets/categories/television.png';
+import fridgeImg from '../assets/appliance_fridge.png';
+import washingImg from '../assets/categories/wasing.png';
+import splitAcImg from '../assets/categories/split_ac.png';
+import waterPurifierImg from '../assets/categories/water_purifier.png';
+import geyserImg from '../assets/icon_3d_geyser.png';
 
-const BRANDS_LIST = [
-  {
-    id: 'lg',
-    name: 'LG',
-    logo: (
-      <div className="flex items-center justify-center gap-1.5">
-        <svg viewBox="0 0 100 100" className="w-8 h-8 flex-shrink-0">
-          <circle cx="50" cy="50" r="46" fill="#C30F42" />
-          <path d="M 50 22 A 28 28 0 1 0 78 50" fill="none" stroke="#FFFFFF" strokeWidth="6" strokeLinecap="round" />
-          <path d="M 50 36 L 50 64 L 64 64" fill="none" stroke="#FFFFFF" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
-          <circle cx="39" cy="45" r="4.5" fill="#FFFFFF" />
-        </svg>
-        <span className="font-sans font-bold text-base text-slate-800 tracking-wide">LG</span>
-      </div>
-    )
-  },
-  {
-    id: 'samsung',
-    name: 'SAMSUNG',
-    logo: (
-      <svg viewBox="0 0 180 40" className="w-24 h-7 flex-shrink-0">
-        <text x="0" y="28" fontFamily="'Arial Black', 'Helvetica', sans-serif" fontWeight="900" fontSize="22" fill="#0A54A6" letterSpacing="0.5">SAMSUNG</text>
-      </svg>
-    )
-  },
-  {
-    id: 'daikin',
-    name: 'DAIKIN',
-    logo: (
-      <svg viewBox="0 0 120 40" className="w-22 h-7 flex-shrink-0">
-        <text x="5" y="28" fontFamily="'Arial Black', sans-serif" fontWeight="900" fontSize="22" fill="#00A0E9">DAIKIN</text>
-      </svg>
-    )
-  },
-  {
-    id: 'whirlpool',
-    name: 'Whirlpool',
-    logo: (
-      <div className="relative flex items-center h-7 justify-center">
-        <svg viewBox="0 0 150 40" className="w-24 h-7 flex-shrink-0">
-          <ellipse cx="68" cy="20" rx="42" ry="12" fill="none" stroke="#F28E2B" strokeWidth="2.2" transform="rotate(-8, 68, 20)" />
-          <text x="12" y="26" fontFamily="'Georgia', serif" fontWeight="bold" fontSize="17" fill="#111" letterSpacing="0.2">Whirlpool</text>
-        </svg>
-      </div>
-    )
-  },
-  {
-    id: 'voltas',
-    name: 'VOLTAS',
-    logo: (
-      <svg viewBox="0 0 120 40" className="w-22 h-7 flex-shrink-0">
-        <text x="0" y="28" fontFamily="'Arial Black', 'Impact', sans-serif" fontWeight="900" fontSize="21" fill="#005691" fontStyle="italic" letterSpacing="0.5">VOLTAS</text>
-      </svg>
-    )
-  },
-  {
-    id: 'blue-star',
-    name: 'Blue Star',
-    logo: (
-      <svg viewBox="0 0 140 40" className="w-24 h-7 flex-shrink-0">
-        <text x="5" y="28" fontFamily="'Arial Black', sans-serif" fontWeight="900" fontSize="20" fill="#002D62">BLUE STAR</text>
-      </svg>
-    )
-  },
-  {
-    id: 'hitachi',
-    name: 'HITACHI',
-    logo: (
-      <svg viewBox="0 0 120 40" className="w-22 h-7 flex-shrink-0">
-        <text x="5" y="28" fontFamily="'Helvetica', sans-serif" fontWeight="bold" fontSize="22" fill="#D32F2F">HITACHI</text>
-      </svg>
-    )
-  },
-  {
-    id: 'panasonic',
-    name: 'Panasonic',
-    logo: (
-      <svg viewBox="0 0 140 40" className="w-24 h-7 flex-shrink-0">
-        <text x="5" y="28" fontFamily="'Helvetica Neue', sans-serif" fontWeight="bold" fontSize="22" fill="#004098">Panasonic</text>
-      </svg>
-    )
-  },
-  {
-    id: 'haier',
-    name: 'Haier',
-    logo: (
-      <svg viewBox="0 0 120 40" className="w-20 h-7 flex-shrink-0">
-        <text x="0" y="28" fontFamily="'Century Gothic', 'Futura', sans-serif" fontWeight="bold" fontSize="22" fill="#005AAB" letterSpacing="-0.5">Haier</text>
-      </svg>
-    )
-  },
-  {
-    id: 'ifb',
-    name: 'IFB',
-    logo: (
-      <div className="flex items-center gap-1 h-7">
-        <span className="font-sans font-black text-2xl text-black tracking-tighter">IFB</span>
-        <div className="w-3.5 h-1 bg-[#D32F2F] self-end mb-1.5" />
-      </div>
-    )
-  },
-  {
-    id: 'godrej',
-    name: 'Godrej',
-    logo: (
-      <svg viewBox="0 0 120 40" className="w-20 h-7 flex-shrink-0">
-        <text x="5" y="28" fontFamily="'Caveat', cursive, sans-serif" fontWeight="bold" fontSize="24" fill="#E31B23">Godrej</text>
-      </svg>
-    )
-  },
-  {
-    id: 'kent',
-    name: 'KENT',
-    logo: (
-      <svg viewBox="0 0 100 40" className="w-18 h-7 flex-shrink-0">
-        <text x="5" y="28" fontFamily="'Arial Black', sans-serif" fontWeight="900" fontSize="24" fill="#0077C0">KENT</text>
-      </svg>
-    )
-  },
-  {
-    id: 'havells',
-    name: 'HAVELLS',
-    logo: (
-      <svg viewBox="0 0 120 40" className="w-22 h-7 flex-shrink-0">
-        <text x="5" y="28" fontFamily="'Arial Black', sans-serif" fontWeight="900" fontSize="22" fill="#E53935">HAVELLS</text>
-      </svg>
-    )
-  },
-  {
-    id: 'ao-smith',
-    name: 'A.O. Smith',
-    logo: (
-      <svg viewBox="0 0 120 40" className="w-22 h-7 flex-shrink-0">
-        <text x="5" y="28" fontFamily="'Trebuchet MS', sans-serif" fontWeight="bold" fontSize="20" fill="#1A1A1A">A.O.Smith</text>
-      </svg>
-    )
-  },
-  {
-    id: 'v-guard',
-    name: 'V-GUARD',
-    logo: (
-      <svg viewBox="0 0 120 40" className="w-22 h-7 flex-shrink-0">
-        <text x="5" y="28" fontFamily="'Arial Black', sans-serif" fontWeight="900" fontSize="20" fill="#FFB300" fontStyle="italic">V-GUARD</text>
-      </svg>
-    )
-  }
+// Same category set used across BuyNew.jsx / Buy.jsx / AMC.jsx, so a brand
+// picked here lands on the exact same product listing those screens use.
+const CATEGORIES = [
+  { name: 'All', img: null },
+  { name: 'Television', img: tvImg },
+  { name: 'Refrigerator', img: fridgeImg },
+  { name: 'Washing Machine', img: washingImg },
+  { name: 'Air Conditioner', img: splitAcImg },
+  { name: 'Water Purifier', img: waterPurifierImg },
+  { name: 'Geyser', img: geyserImg },
+];
+
+// A handful of accent colors to cycle through so the dynamic brand list
+// doesn't render as one flat, monotone grid — mirrors the palette used for
+// brand chips elsewhere (Buy.jsx, BuyNew.jsx).
+const ACCENT_COLORS = [
+  '#0B4EA2', '#C6004E', '#00A0E9', '#005691', '#E31B23',
+  '#005AAB', '#D32F2F', '#004098', '#0077C0', '#E53935',
 ];
 
 const AllBrands = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeCategory, setActiveCategory] = useState('All');
+  const [brands, setBrands] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
-  const filteredBrands = BRANDS_LIST.filter(brand =>
-    brand.name.toLowerCase().includes(searchQuery.toLowerCase())
+  // Brand data now comes straight from the same catalogue the brand-admin
+  // console manages (GET /catalog/brands) — previously this screen shipped
+  // its own hand-drawn list of 14 logos that could drift from whatever
+  // brands were actually onboarded, and never showed a brand added later.
+  useEffect(() => {
+    apiRequest('/catalog/brands')
+      .then((res) => {
+        if (Array.isArray(res)) {
+          setBrands(res.map((b, i) => ({
+            id: b.id,
+            name: b.name,
+            color: ACCENT_COLORS[i % ACCENT_COLORS.length],
+          })));
+        }
+      })
+      .catch((err) => setLoadError(err.message || 'Could not load brands.'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const filteredBrands = brands.filter((brand) =>
+    brand.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
+
+  // A brand tap used to always open a hardcoded "AC Repair" service page
+  // regardless of which brand or category was picked (service-details
+  // doesn't even read the brand/service query params it was given). Now it
+  // goes to the real product catalogue, scoped to the category if one is
+  // selected, pre-filtered to the chosen brand.
+  const handleSelectBrand = (brand) => {
+    if (activeCategory !== 'All') {
+      navigate(
+        `/buy-new/products/${encodeURIComponent(activeCategory)}?brand=${encodeURIComponent(brand.name)}`,
+      );
+    } else {
+      navigate(`/buy-new?brand=${encodeURIComponent(brand.name)}`);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-24 lg:pb-8">
       {/* Header */}
-      <div className="bg-[#E3ECF9] p-6 rounded-b-[30px] shadow-sm flex flex-col gap-4">
-        <div className="flex items-center gap-4">
-          <button 
+      <div className="bg-[#E3ECF9] p-5 sm:p-6 rounded-b-3xl sm:rounded-b-[30px] shadow-sm flex flex-col gap-3.5 sm:gap-4">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <button
             onClick={() => navigate(-1)}
             className="p-2 bg-white rounded-full shadow-sm hover:bg-slate-50 transition-colors cursor-pointer"
           >
             <ArrowLeft className="h-5 w-5 text-brand-blue" />
           </button>
-          <h1 className="text-xl font-bold text-text-primary">All Partner Brands</h1>
+          <div>
+            <h1 className="text-lg sm:text-xl font-bold text-text-primary">Shop by Brand</h1>
+            <p className="text-[11px] sm:text-xs text-text-secondary font-semibold">
+              Pick a category and brand to browse matching products
+            </p>
+          </div>
         </div>
 
         {/* Search Bar */}
         <div className="relative">
-          <input 
-            type="text" 
-            placeholder="Search brands (Samsung, LG...)" 
+          <input
+            type="text"
+            placeholder="Search brands (Samsung, LG...)"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-white pl-11 pr-4 py-3 rounded-2xl border border-border-color focus:border-brand-blue focus:outline-none text-sm transition-all shadow-inner"
+            className="w-full bg-white pl-11 pr-4 py-2.5 sm:py-3 rounded-2xl border border-border-color focus:border-brand-blue focus:outline-none text-sm transition-all shadow-inner"
           />
-          <Search className="absolute left-4 top-3.5 h-4.5 w-4.5 text-text-secondary" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-text-secondary" />
+        </div>
+
+        {/* Category filter */}
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-0.5">
+          {CATEGORIES.map((cat) => (
+            <button
+              key={cat.name}
+              onClick={() => setActiveCategory(cat.name)}
+              className={`shrink-0 px-3.5 py-1.5 rounded-full text-[11px] font-bold border transition-all cursor-pointer ${
+                activeCategory === cat.name
+                  ? 'bg-brand-blue border-brand-blue text-white shadow-xs'
+                  : 'bg-white border-slate-200 text-slate-600 hover:border-brand-blue/40'
+              }`}
+            >
+              {cat.name}
+            </button>
+          ))}
         </div>
       </div>
 
       {/* Brands Grid */}
-      <div className="flex-1 p-6">
-        {filteredBrands.length === 0 ? (
+      <div className="flex-1 p-5 sm:p-6">
+        {loading ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5 sm:gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="h-20 rounded-2xl bg-slate-100 animate-pulse" />
+            ))}
+          </div>
+        ) : loadError ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <span className="text-4xl mb-2">⚠️</span>
+            <h3 className="font-bold text-text-primary text-sm">Could not load brands</h3>
+            <p className="text-xs text-text-secondary mt-1">{loadError}</p>
+          </div>
+        ) : filteredBrands.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <span className="text-4xl mb-2">🔍</span>
             <h3 className="font-bold text-text-primary text-sm">No brands found</h3>
-            <p className="text-xs text-text-secondary mt-1">Try typing another brand name.</p>
+            <p className="text-xs text-text-secondary mt-1">
+              {brands.length === 0
+                ? 'No brands have been added yet.'
+                : 'Try typing another brand name.'}
+            </p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5 sm:gap-4">
             {filteredBrands.map((brand) => (
               <div
-                key={brand.id}
-                onClick={() => {
-                  navigate(`/service-details?service=${encodeURIComponent('AC Repair')}&brand=${encodeURIComponent(brand.name)}`);
-                }}
-                className="bg-white border border-slate-200/80 hover:border-brand-blue hover:bg-blue-50/10 p-5 rounded-2xl flex flex-col items-center justify-center h-20 cursor-pointer transition-all hover:scale-[1.03] shadow-[0_2px_8px_rgba(0,0,0,0.01)]"
+                key={brand.id || brand.name}
+                onClick={() => handleSelectBrand(brand)}
+                className="group bg-white border border-slate-200/80 hover:border-brand-blue hover:bg-blue-50/10 p-4 rounded-2xl flex items-center gap-3 h-20 cursor-pointer transition-all hover:scale-[1.02] shadow-[0_2px_8px_rgba(0,0,0,0.01)]"
               >
-                {brand.logo}
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-black shrink-0"
+                  style={{ backgroundColor: brand.color }}
+                >
+                  {brand.name.charAt(0).toUpperCase()}
+                </div>
+                <span className="flex-1 min-w-0 text-sm font-bold text-slate-800 leading-tight line-clamp-2">
+                  {brand.name}
+                </span>
+                <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-brand-blue transition-colors shrink-0" />
               </div>
             ))}
           </div>

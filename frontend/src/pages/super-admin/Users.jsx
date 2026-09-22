@@ -298,12 +298,12 @@ const Users = () => {
               </button>
             </div>
 
-            <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden flex flex-col min-h-[500px]">
+            <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden flex flex-col min-h-125">
               {/* Header */}
-              <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-slate-50 via-white to-blue-50/30 flex flex-wrap justify-between items-center gap-4">
+              <div className="p-6 border-b border-slate-100 bg-linear-to-r from-slate-50 via-white to-blue-50/30 flex flex-wrap justify-between items-center gap-4">
                 <div className="flex items-center gap-4">
                   <div className="relative">
-                    <div className="w-14 h-14 bg-gradient-to-tr from-[#0D47A1] to-[#1E88E5] text-white rounded-2xl flex items-center justify-center font-black text-xl shadow-md shadow-[#0D47A1]/20 uppercase">
+                    <div className="w-14 h-14 bg-linear-to-tr from-[#0D47A1] to-[#1E88E5] text-white rounded-2xl flex items-center justify-center font-black text-xl shadow-md shadow-[#0D47A1]/20 uppercase">
                       {selectedUser.name
                         ? selectedUser.name
                             .split(" ")
@@ -415,7 +415,7 @@ const Users = () => {
               </div>
 
               {/* Tab Content */}
-              <div className="p-6 flex-1 overflow-y-auto max-h-[600px]">
+              <div className="p-6 flex-1 overflow-y-auto max-h-150">
                 {loadingDetails ? (
                   <div className="animate-pulse space-y-6">
                     {/* Skeleton Overview */}
@@ -510,7 +510,7 @@ const Users = () => {
                                   className="bg-white text-xs p-3.5 border border-slate-200/80 rounded-xl text-slate-700 font-semibold shadow-2xs flex items-start gap-2.5">
                                   <MapPin
                                     size={15}
-                                    className="text-[#0D47A1] flex-shrink-0 mt-0.5"
+                                    className="text-[#0D47A1] shrink-0 mt-0.5"
                                   />
                                   <span className="leading-relaxed">
                                     {addr}
@@ -954,7 +954,7 @@ const Users = () => {
                     {activeTab === "referrals" && (
                       <div className="space-y-5">
                         {/* Referral Code Display */}
-                        <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl flex items-center justify-between">
+                        <div className="p-4 bg-linear-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl flex items-center justify-between">
                           <div>
                             <span className="text-[10px] font-extrabold text-[#0D47A1] uppercase tracking-wider">
                               Referral Code

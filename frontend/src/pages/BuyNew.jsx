@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import {
   ArrowLeft,
@@ -35,7 +36,7 @@ import {
   LayoutGrid,
   List as ListIcon,
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import CustomerBottomNav from "../components/CustomerBottomNav";
 import { apiRequest } from "../lib/apiClient";
 import { useCart } from "../lib/cartStore";
@@ -148,7 +149,6 @@ const BuyNew = () => {
           { name: "Microwave Oven", img: ovenImg },
         ];
 
-
   // Shared with ProductDetails.jsx and mirrored to the server cart once there is
   // a session — see lib/cartStore.js.
   const {
@@ -216,8 +216,6 @@ const BuyNew = () => {
   );
   const [searchBrandQuery, setSearchBrandQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("all"); // 'all' | 'discount' | 'inStock'
-  const [pincodeInput, setPincodeInput] = useState("");
-  const [pincodeStatus, setPincodeStatus] = useState(null);
 
   useEffect(() => {
     if (brandParam) {
@@ -226,30 +224,13 @@ const BuyNew = () => {
     }
   }, [brandParam]);
 
-  const handleCheckPincode = (e) => {
-    e.preventDefault();
-    if (pincodeInput.trim().length === 6) {
-      setPincodeStatus({
-        valid: true,
-        pincode: pincodeInput.trim(),
-        message:
-          "Free Express Delivery by Tomorrow • Free Doorstep Installation Available",
-      });
-    } else {
-      setPincodeStatus({
-        valid: false,
-        message: "Please enter a valid 6-digit pincode.",
-      });
-    }
-  };
-
   // Dynamic Product Reviews & Customer Photos State
   const [productReviews, setProductReviews] = useState([]);
   const [reviewStats, setReviewStats] = useState({
-    avgRating: 4.8,
-    totalRatings: 128,
-    totalReviews: 42,
-    starsBreakdown: { 5: 78, 4: 16, 3: 4, 2: 1, 1: 1 },
+    avgRating: 0,
+    totalRatings: 0,
+    totalReviews: 0,
+    starsBreakdown: {},
   });
   const [customerPhotos, setCustomerPhotos] = useState([]);
   const [activeLightboxImg, setActiveLightboxImg] = useState(null);
@@ -273,6 +254,8 @@ const BuyNew = () => {
     ) ||
     categoryProducts[0] ||
     null;
+  const isFinalProductInCart =
+    !!finalProduct && cart.some((item) => item.id === finalProduct.id);
 
   // All Products state for Recommendations Backfill
   const [allProducts, setAllProducts] = useState([]);
@@ -420,8 +403,62 @@ const BuyNew = () => {
     removeCartItem(id);
   };
 
+  // Removing an item (or clearing the whole cart) used to happen the instant
+  // the trash icon was tapped — a single mis-tap silently wiped the item with
+  // no way back. Both actions now go through this shared confirm step:
+  // { type: 'remove', item } | { type: 'clear' } | null.
+  const [cartRemovalConfirm, setCartRemovalConfirm] = useState(null);
+
   const [paymentMode, setPaymentMode] = useState("COD"); // 'COD' | 'Online'
   const [activeImageIdx, setActiveImageIdx] = useState(0);
+
+  // "Add to Cart" feedback: a toast + an image that flies from the product
+  // photo to the header cart icon, instead of immediately navigating to
+  // /buy-new/cart (which used to yank the customer off the page they were
+  // just looking at every single time).
+  const productImageRef = useRef(null);
+  const cartIconRef = useRef(null);
+  const [addedToastVisible, setAddedToastVisible] = useState(false);
+  const [flyImg, setFlyImg] = useState(null);
+  const addedToastTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    return () => clearTimeout(addedToastTimeoutRef.current);
+  }, []);
+
+  const triggerAddToCartFeedback = () => {
+    if (productImageRef.current && cartIconRef.current) {
+      const startRect = productImageRef.current.getBoundingClientRect();
+      const endRect = cartIconRef.current.getBoundingClientRect();
+      setFlyImg({
+        src: productImageRef.current.src,
+        startTop: startRect.top,
+        startLeft: startRect.left,
+        startWidth: startRect.width,
+        startHeight: startRect.height,
+        endTop: endRect.top + endRect.height / 2 - 10,
+        endLeft: endRect.left + endRect.width / 2 - 10,
+      });
+    }
+    setAddedToastVisible(true);
+    clearTimeout(addedToastTimeoutRef.current);
+    addedToastTimeoutRef.current = setTimeout(
+      () => setAddedToastVisible(false),
+      2200,
+    );
+  };
+
+  const handleAddToCart = () => {
+    if (!finalProduct) return;
+    const productExchange = isCurrentExchangeApplied ? exchangeApplied : null;
+    addCartItem(finalProduct, {
+      category: finalCategory,
+      ...(productExchange
+        ? { exchange: { ...productExchange, productId: finalProduct.id } }
+        : {}),
+    });
+    triggerAddToCartFeedback();
+  };
 
   // Exchange states
   const [exchangeConfigs, setExchangeConfigs] = useState({});
@@ -776,10 +813,17 @@ const BuyNew = () => {
     }
   };
 
+  // Steps 3, 5 and 6 hide CustomerBottomNav (see the render below) and have
+  // no fixed bottom bar of their own except step 3's, which already carries
+  // its own clearance padding — so the bottom-nav clearance here was pure
+  // dead space stacking underneath those steps' content.
+  const needsBottomNavClearance = !(step === 3 || step === 5 || step === 6);
+
   return (
-    <div className="min-h-screen bg-bg-light flex flex-col pb-24 lg:pb-8 relative">
+    <div
+      className={`min-h-screen bg-bg-light flex flex-col relative ${needsBottomNavClearance ? "pb-24 lg:pb-8" : ""}`}>
       {/* HEADER BAR WITH STYLISH BLUE ACCENTS */}
-      <div className="bg-[#0B4EA2] text-white px-6 py-4 flex items-center justify-between border-b border-blue-900 shadow-md sticky top-0 z-30">
+      <div className="bg-[#0B4EA2] text-white px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between border-b border-blue-900 shadow-md sticky top-0 z-30">
         <div className="flex items-center gap-3">
           <button
             onClick={() => {
@@ -792,9 +836,14 @@ const BuyNew = () => {
                   `/buy-new/products/${encodeURIComponent(finalCategory)}`,
                 );
               else if (step === 4)
-                navigate(
-                  `/buy-new/details/${encodeURIComponent(finalCategory)}/${encodeURIComponent(finalProduct?.name || "")}`,
-                );
+                // The cart can hold items from several categories at once, so
+                // there's no single "product details" page to reconstruct a
+                // URL for here (that used to fall back to a made-up
+                // `/buy-new/details/<default category>/` with no product
+                // name, which 404'd into the "Page Coming Soon" screen).
+                // Going back in history returns to wherever the customer
+                // actually came from.
+                navigate(-1);
               else if (step === 5) navigate("/buy-new/cart");
               else if (step === 6) navigate("/buy-new/address");
               else if (step === 7) navigate("/buy");
@@ -830,19 +879,22 @@ const BuyNew = () => {
             )}
           </div>
         </div>
-        {step < 6 && cart.length > 0 && (
+        {step < 6 && (cart.length > 0 || step === 3) && (
           <div
+            ref={cartIconRef}
             onClick={() => navigate("/buy-new/cart")}
             className="relative p-1 bg-white/10 hover:bg-white/20 rounded-full cursor-pointer flex items-center justify-center">
             <ShoppingCart className="w-5 h-5 text-white" />
-            <span className="absolute -top-1.5 -right-1.5 w-4.5 h-4.5 bg-brand-yellow text-brand-navy rounded-full text-[10px] font-black flex items-center justify-center border border-[#0B4EA2]">
-              {cart.reduce((sum, item) => sum + item.qty, 0)}
-            </span>
+            {cart.length > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 w-4.5 h-4.5 bg-brand-yellow text-brand-navy rounded-full text-[10px] font-black flex items-center justify-center border border-[#0B4EA2]">
+                {cart.reduce((sum, item) => sum + item.qty, 0)}
+              </span>
+            )}
           </div>
         )}
       </div>
 
-      <div className="flex-1 p-6 flex flex-col gap-6 overflow-y-auto">
+      <div className="flex-1 p-3 sm:p-4 md:p-6 flex flex-col gap-6 overflow-y-auto">
         {/* ── STEP 1: SELECT CATEGORY ── */}
         {step === 1 && (
           <motion.div
@@ -872,7 +924,7 @@ const BuyNew = () => {
                   }
                   className="bg-white border border-slate-200/80 rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:border-brand-blue/45 shadow-sm hover:scale-[1.01] transition-all">
                   <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 bg-slate-50/50 border border-slate-100 rounded-xl flex items-center justify-center p-1.5 flex-shrink-0">
+                    <div className="w-14 h-14 bg-slate-50/50 border border-slate-100 rounded-xl flex items-center justify-center p-1.5 shrink-0">
                       <img
                         src={item.img}
                         alt={item.name}
@@ -888,7 +940,7 @@ const BuyNew = () => {
                       </p>
                     </div>
                   </div>
-                  <ChevronRight className="h-5 w-5 text-text-secondary flex-shrink-0" />
+                  <ChevronRight className="h-5 w-5 text-text-secondary shrink-0" />
                 </div>
               ))}
             </div>
@@ -1283,7 +1335,7 @@ const BuyNew = () => {
                             }
                             className="bg-white border border-slate-200/90 hover:border-brand-blue/50 rounded-2xl p-2.5 min-[380px]:p-3 sm:p-3.5 flex flex-col justify-between cursor-pointer shadow-2xs hover:shadow-xl transition-all duration-300 relative group overflow-hidden">
                             {/* Top Image Box */}
-                            <div className="relative aspect-square w-full bg-gradient-to-br from-slate-50 to-blue-50/20 rounded-xl overflow-hidden flex items-center justify-center p-2.5 sm:p-3 mb-2 shrink-0">
+                            <div className="relative aspect-square w-full bg-linear-to-br from-slate-50 to-blue-50/20 rounded-xl overflow-hidden flex items-center justify-center p-2.5 sm:p-3 mb-2 shrink-0">
                               <img
                                 src={
                                   product.imageUrl ||
@@ -1296,7 +1348,7 @@ const BuyNew = () => {
                               />
 
                               {/* Assured Badge */}
-                              <span className="absolute top-1.5 left-1.5 text-[8px] min-[360px]:text-[8.5px] font-black bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-1.5 py-0.5 rounded-full shadow-2xs">
+                              <span className="absolute top-1.5 left-1.5 text-[8px] min-[360px]:text-[8.5px] font-black bg-linear-to-r from-blue-600 to-indigo-600 text-white px-1.5 py-0.5 rounded-full shadow-2xs">
                                 ★ Assured
                               </span>
 
@@ -1327,7 +1379,7 @@ const BuyNew = () => {
                                 )}
 
                                 {/* Title */}
-                                <h4 className="text-xs sm:text-sm font-black text-slate-900 leading-snug line-clamp-2 min-h-[30px] sm:min-h-[36px] group-hover:text-brand-blue transition-colors mt-0.5">
+                                <h4 className="text-xs sm:text-sm font-black text-slate-900 leading-snug line-clamp-2 min-h-7.5 sm:min-h-9 group-hover:text-brand-blue transition-colors mt-0.5">
                                   {product.name}
                                 </h4>
 
@@ -1417,7 +1469,7 @@ const BuyNew = () => {
                             className="bg-white border border-slate-200/90 hover:border-brand-blue/40 rounded-2xl sm:rounded-3xl p-3 sm:p-4 md:p-5 flex flex-col justify-between cursor-pointer shadow-2xs hover:shadow-xl transition-all duration-300 relative group overflow-hidden text-left">
                             <div className="flex gap-3 sm:gap-4 md:gap-5 items-stretch h-full">
                               {/* Left Image */}
-                              <div className="relative w-24 h-24 min-[360px]:w-28 min-[360px]:h-28 md:w-36 md:h-36 bg-gradient-to-br from-slate-50 to-blue-50/30 border border-slate-100 rounded-xl sm:rounded-2xl flex items-center justify-center p-2 shrink-0 overflow-hidden shadow-2xs self-start">
+                              <div className="relative w-24 h-24 min-[360px]:w-28 min-[360px]:h-28 md:w-36 md:h-36 bg-linear-to-br from-slate-50 to-blue-50/30 border border-slate-100 rounded-xl sm:rounded-2xl flex items-center justify-center p-2 shrink-0 overflow-hidden shadow-2xs self-start">
                                 <img
                                   src={
                                     product.imageUrl ||
@@ -1452,7 +1504,7 @@ const BuyNew = () => {
                                         {product.brand}
                                       </span>
                                     )}
-                                    <span className="inline-flex items-center gap-1 text-[8px] font-black bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-2 py-0.5 rounded-full shadow-2xs">
+                                    <span className="inline-flex items-center gap-1 text-[8px] font-black bg-linear-to-r from-blue-600 to-indigo-600 text-white px-2 py-0.5 rounded-full shadow-2xs">
                                       ★ Assured
                                     </span>
                                     {product.warrantyMonths && (
@@ -1559,9 +1611,12 @@ const BuyNew = () => {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3 }}
-              className="flex flex-col gap-6 pb-24 text-left">
-              {/* 1. HERO MEDIA & BRAND HEADER */}
-              <div className="bg-white border border-slate-200/90 rounded-3xl p-6 flex flex-col items-center justify-center shadow-xs relative overflow-hidden group">
+              className="-mx-3 sm:-mx-4 md:-mx-6 -mt-3 sm:-mt-4 md:-mt-6 pb-20 lg:pb-10 text-left bg-white">
+              {/* TOP: GALLERY + BUY BOX — side by side on desktop, stacked on mobile (Flipkart-style), no card box, edge-to-edge */}
+              <div className="max-w-7xl mx-auto flex flex-col divide-y divide-slate-100 lg:grid lg:grid-cols-[minmax(0,440px)_1fr] lg:divide-y-0 lg:divide-x">
+              {/* LEFT COLUMN (sticky on desktop): 1. HERO MEDIA & BRAND HEADER */}
+              <div className="lg:sticky lg:top-16">
+              <div className="p-4 sm:p-6 flex flex-col items-center justify-center relative overflow-hidden group">
                 {/* Top Floating Badges & Action Buttons */}
                 <div className="w-full flex items-center justify-between z-10 mb-2">
                   <div className="flex items-center gap-2">
@@ -1570,7 +1625,7 @@ const BuyNew = () => {
                         {finalProduct.brand}
                       </span>
                     )}
-                    <span className="inline-flex items-center gap-1 text-[9px] font-black bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-2.5 py-1 rounded-full shadow-2xs">
+                    <span className="inline-flex items-center gap-1 text-[9px] font-black bg-linear-to-r from-blue-600 to-indigo-600 text-white px-2.5 py-1 rounded-full shadow-2xs">
                       ★ Assured
                     </span>
                   </div>
@@ -1643,6 +1698,7 @@ const BuyNew = () => {
 
                         {/* Main Larger Product Image with Motion Slide */}
                         <motion.img
+                          ref={productImageRef}
                           key={currentIdx}
                           initial={{ opacity: 0, x: 20 }}
                           animate={{ opacity: 1, x: 0 }}
@@ -1701,30 +1757,49 @@ const BuyNew = () => {
                   );
                 })()}
               </div>
+              </div>
 
+              {/* RIGHT COLUMN: buy box + assurance grid — @container so the
+                  assurance grid below can size itself off this column's own
+                  rendered width instead of the viewport width. Viewport-based
+                  md:grid-cols-4 used to force 4 columns as soon as the
+                  screen crossed 768px, even once the lg: two-column layout
+                  made this column only ~560px wide (e.g. at 1024–1279px
+                  viewports), crushing each tile's text into 3 wrapped lines. */}
+              <div className="flex flex-col divide-y divide-slate-100 @container">
               {/* 2. PRODUCT TITLE & RATINGS SUMMARY */}
-              <div className="bg-white border border-slate-200/90 rounded-3xl p-5 md:p-6 shadow-xs space-y-4">
+              <div className="p-4 sm:p-6 space-y-4">
                 <div className="space-y-2">
                   {/* Top Row: Title & Stock Status Pill */}
                   <div className="flex items-start justify-between gap-3">
                     <h1 className="text-lg md:text-xl font-black text-slate-900 leading-snug">
                       {finalProduct.name}
                     </h1>
-                    <span className="text-[11px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2.5 py-1 rounded-full shrink-0">
-                      ✓ In Stock (Ready to Ship)
-                    </span>
+                    {Number.isFinite(finalProduct.stock) && (
+                      <span
+                        className={`text-[11px] font-black px-2.5 py-1 rounded-full shrink-0 border ${
+                          finalProduct.stock > 0
+                            ? "text-emerald-700 bg-emerald-50 border-emerald-200/80"
+                            : "text-red-700 bg-red-50 border-red-200/80"
+                        }`}>
+                        {finalProduct.stock > 0 ? "✓ In Stock" : "Out of Stock"}
+                      </span>
+                    )}
                   </div>
 
-                  {/* Ratings & Reviews Row */}
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1 bg-green-600 text-white px-2 py-0.5 rounded-md text-xs font-black shadow-2xs">
-                      <span>4.5</span>
-                      <Star size={10} fill="currentColor" />
+                  {/* Ratings & Reviews Row — only shown once real ratings exist */}
+                  {reviewStats.totalRatings > 0 && (
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1 bg-green-600 text-white px-2 py-0.5 rounded-md text-xs font-black shadow-2xs">
+                        <span>{reviewStats.avgRating.toFixed(1)}</span>
+                        <Star size={10} fill="currentColor" />
+                      </div>
+                      <span className="text-xs font-bold text-slate-500">
+                        {reviewStats.totalRatings} Ratings &{" "}
+                        {reviewStats.totalReviews} Customer Reviews
+                      </span>
                     </div>
-                    <span className="text-xs font-bold text-slate-500">
-                      128 Ratings & 42 Customer Reviews
-                    </span>
-                  </div>
+                  )}
                 </div>
 
                 {/* 3. PRICING & DISCOUNT BREAKDOWN */}
@@ -1779,28 +1854,21 @@ const BuyNew = () => {
 
                         {/* Prominent Action Buttons: Add to Cart & Buy Now */}
                         <div className="pt-3 flex flex-col sm:flex-row items-center gap-3">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const productExchange = isCurrentExchangeApplied
-                                ? exchangeApplied
-                                : null;
-                              addCartItem(finalProduct, {
-                                category: finalCategory,
-                                ...(productExchange
-                                  ? {
-                                      exchange: {
-                                        ...productExchange,
-                                        productId: finalProduct.id,
-                                      },
-                                    }
-                                  : {}),
-                              });
-                              navigate("/buy-new/cart");
-                            }}
-                            className="w-full sm:w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-900 font-black py-3.5 rounded-2xl transition-all text-xs cursor-pointer shadow-2xs active:scale-98 flex items-center justify-center gap-2">
-                            <ShoppingCart size={16} /> Add to Cart
-                          </button>
+                          {isFinalProductInCart ? (
+                            <button
+                              type="button"
+                              onClick={() => navigate("/buy-new/cart")}
+                              className="w-full sm:w-1/2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-black py-3.5 rounded-2xl transition-all text-xs cursor-pointer active:scale-98 flex items-center justify-center gap-2">
+                              <CheckCircle2 size={16} /> Go to Cart
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={handleAddToCart}
+                              className="w-full sm:w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-900 font-black py-3.5 rounded-2xl transition-all text-xs cursor-pointer shadow-2xs active:scale-98 flex items-center justify-center gap-2">
+                              <ShoppingCart size={16} /> Add to Cart
+                            </button>
+                          )}
 
                           <button
                             type="button"
@@ -1831,50 +1899,8 @@ const BuyNew = () => {
                 </div>
               </div>
 
-              {/* 4. PINCODE DELIVERY & INSTALLATION CHECKER */}
-              <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
-                    <Truck size={16} className="text-brand-blue" /> Check
-                    Delivery & Installation
-                  </h3>
-                  <span className="text-[11px] font-bold text-slate-400">
-                    Doorstep Delivery
-                  </span>
-                </div>
-
-                <form onSubmit={handleCheckPincode} className="flex gap-2">
-                  <input
-                    type="text"
-                    maxLength={6}
-                    placeholder="Enter 6-digit Pincode (e.g. 110001)"
-                    className="flex-1 bg-slate-50 border border-slate-200 px-4 py-2.5 rounded-xl text-xs font-bold text-slate-800 outline-none focus:bg-white focus:border-brand-blue transition-all font-mono"
-                    value={pincodeInput}
-                    onChange={(e) =>
-                      setPincodeInput(e.target.value.replace(/\D/g, ""))
-                    }
-                  />
-                  <button
-                    type="submit"
-                    className="bg-brand-blue hover:bg-blue-800 text-white text-xs font-bold px-5 py-2.5 rounded-xl transition-all cursor-pointer shrink-0 shadow-xs">
-                    Check
-                  </button>
-                </form>
-
-                {pincodeStatus && (
-                  <div
-                    className={`p-3 rounded-xl text-xs font-bold ${
-                      pincodeStatus.valid
-                        ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
-                        : "bg-red-50 text-red-700 border border-red-200"
-                    }`}>
-                    {pincodeStatus.message}
-                  </div>
-                )}
-              </div>
-
               {/* 5. 4-CARD SERVICE ASSURANCE GRID */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="p-4 sm:p-6 grid grid-cols-2 @3xl:grid-cols-4 gap-2.5 sm:gap-3">
                 {[
                   {
                     title: "Free Doorstep Setting",
@@ -1903,26 +1929,28 @@ const BuyNew = () => {
                 ].map((item, idx) => (
                   <div
                     key={idx}
-                    className="bg-white border border-slate-200/80 rounded-2xl p-3.5 flex items-center gap-3 shadow-2xs">
+                    className="bg-slate-50 border border-slate-200/80 rounded-lg min-[380px]:rounded-xl p-2 min-[380px]:p-2.5 min-[425px]:p-3.5 flex items-center gap-2 min-[380px]:gap-2.5 min-[425px]:gap-3">
                     <div
-                      className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${item.color}`}>
-                      <item.Icon size={18} />
+                      className={`w-7 h-7 min-[380px]:w-8 min-[380px]:h-8 min-[425px]:w-10 min-[425px]:h-10 rounded-lg min-[425px]:rounded-xl flex items-center justify-center shrink-0 border ${item.color}`}>
+                      <item.Icon className="w-3.5 h-3.5 min-[380px]:w-4 min-[380px]:h-4 min-[425px]:w-4.5 min-[425px]:h-4.5" />
                     </div>
-                    <div>
-                      <h4 className="text-xs font-black text-slate-800 leading-tight">
+                    <div className="min-w-0">
+                      <h4 className="text-[9.5px] min-[380px]:text-[10.5px] min-[425px]:text-xs font-black text-slate-800 leading-tight">
                         {item.title}
                       </h4>
-                      <p className="text-[10px] font-semibold text-slate-400 mt-0.5">
+                      <p className="text-[8px] min-[380px]:text-[8.5px] min-[425px]:text-[10px] font-semibold text-slate-400 mt-0.5 leading-tight">
                         {item.desc}
                       </p>
                     </div>
                   </div>
                 ))}
               </div>
+              </div>
+              </div>
 
               {/* 6. OLD APPLIANCE EXCHANGE OFFER SECTION */}
               {isExchangeActiveForProduct && (
-                <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs flex flex-col gap-3.5">
+                <div className="max-w-7xl mx-auto border-t border-slate-100 p-4 sm:p-6 flex flex-col gap-3.5">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-brand-blue">
@@ -1959,7 +1987,7 @@ const BuyNew = () => {
                     <div className="bg-emerald-50/60 border border-emerald-200 rounded-2xl p-4 flex flex-col gap-3">
                       <div className="flex items-start justify-between">
                         <div className="flex gap-2.5">
-                          <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                          <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
                           <div>
                             <span className="text-xs font-black text-emerald-900 block">
                               {exchangeApplied.status === "Inspection Approved"
@@ -1997,7 +2025,7 @@ const BuyNew = () => {
               )}
 
               {/* 7. PRODUCT HIGHLIGHTS & SPECIFICATIONS */}
-              <div className="bg-white border border-slate-200/90 rounded-3xl p-5 md:p-6 shadow-xs space-y-4">
+              <div className="max-w-7xl mx-auto border-t border-slate-100 p-4 sm:p-6 space-y-4">
                 <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 pb-3">
                   <ShieldCheck size={16} className="text-brand-blue" /> Product
                   Highlights & Specifications
@@ -2076,7 +2104,7 @@ const BuyNew = () => {
               </div>
 
               {/* 8. CUSTOMER RATINGS, REVIEWS & UPLOADED PHOTOS */}
-              <div className="bg-white border border-slate-200/90 rounded-3xl p-5 md:p-6 shadow-xs space-y-6">
+              <div className="max-w-7xl mx-auto border-t border-slate-100 p-4 sm:p-6 space-y-6">
                 {/* Header with Write a Review Button */}
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
                   <div>
@@ -2100,185 +2128,160 @@ const BuyNew = () => {
                   </button>
                 </div>
 
-                {/* Ratings Summary & Star Distribution Bars */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-50/70 p-4 md:p-5 rounded-2xl border border-slate-200/70">
-                  {/* Overall Score Box */}
-                  <div className="flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-slate-200/80 pb-4 md:pb-0 md:pr-4 text-center">
-                    <span className="text-4xl font-black text-slate-900 tracking-tight">
-                      {reviewStats.avgRating || 4.8}
-                    </span>
-                    <div className="flex items-center gap-1 text-yellow-500 my-1">
-                      {[1, 2, 3, 4, 5].map((s) => (
-                        <Star key={s} size={16} fill="currentColor" />
+                {/* Ratings Summary & Star Distribution Bars — only once real ratings exist */}
+                {reviewStats.totalRatings > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-50/70 p-4 md:p-5 rounded-2xl border border-slate-200/70">
+                    {/* Overall Score Box */}
+                    <div className="flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-slate-200/80 pb-4 md:pb-0 md:pr-4 text-center">
+                      <span className="text-4xl font-black text-slate-900 tracking-tight">
+                        {reviewStats.avgRating.toFixed(1)}
+                      </span>
+                      <div className="flex items-center gap-1 text-yellow-500 my-1">
+                        {[1, 2, 3, 4, 5].map((s) => (
+                          <Star key={s} size={16} fill="currentColor" />
+                        ))}
+                      </div>
+                      <span className="text-xs font-bold text-slate-600">
+                        Based on {reviewStats.totalRatings} Ratings
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-semibold mt-0.5">
+                        {reviewStats.totalReviews} Verified Buyer Reviews
+                      </span>
+                    </div>
+
+                    {/* Rating Distribution Progress Bars */}
+                    <div className="col-span-2 space-y-1.5 justify-center flex flex-col">
+                      {[5, 4, 3, 2, 1].map((star) => {
+                        const pct = reviewStats.starsBreakdown?.[star] ?? 0;
+                        return (
+                          <div
+                            key={star}
+                            className="flex items-center gap-3 text-xs">
+                            <span className="font-bold text-slate-600 w-10 shrink-0">
+                              {star} ★
+                            </span>
+                            <div className="flex-1 h-2.5 bg-slate-200/80 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                            <span className="font-mono font-bold text-slate-500 w-10 text-right shrink-0">
+                              {pct}%
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-6 text-xs font-semibold text-slate-400 bg-slate-50/70 rounded-2xl border border-slate-200/70">
+                    No ratings yet — be the first to rate this product.
+                  </div>
+                )}
+
+                {/* Customer Uploaded Photos Gallery — only real, submitted photos */}
+                {customerPhotos.length > 0 && (
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center justify-between">
+                      <span>
+                        Customer Uploaded Photos ({customerPhotos.length})
+                      </span>
+                      <span className="text-[10px] font-bold text-slate-400">
+                        Click photo to zoom
+                      </span>
+                    </h4>
+
+                    <div className="flex gap-3 overflow-x-auto pb-2 custom-scrollbar scroll-smooth">
+                      {customerPhotos.map((imgUrl, pIdx) => (
+                        <div
+                          key={pIdx}
+                          onClick={() => setActiveLightboxImg(imgUrl)}
+                          className="w-20 h-20 bg-slate-100 border border-slate-200 rounded-xl flex items-center justify-center p-1 shrink-0 overflow-hidden cursor-pointer hover:border-brand-blue hover:scale-105 transition-all shadow-2xs group relative">
+                          <img
+                            src={imgUrl}
+                            className="w-full h-full object-cover rounded-lg"
+                            alt="Customer Photo"
+                          />
+                          <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                            <Search size={14} />
+                          </div>
+                        </div>
                       ))}
                     </div>
-                    <span className="text-xs font-bold text-slate-600">
-                      Based on {reviewStats.totalRatings || 128} Ratings
-                    </span>
-                    <span className="text-[10px] text-slate-400 font-semibold mt-0.5">
-                      {reviewStats.totalReviews || productReviews.length}{" "}
-                      Verified Buyer Reviews
-                    </span>
                   </div>
+                )}
 
-                  {/* Rating Distribution Progress Bars */}
-                  <div className="col-span-2 space-y-1.5 justify-center flex flex-col">
-                    {[5, 4, 3, 2, 1].map((star) => {
-                      const pct =
-                        reviewStats.starsBreakdown?.[star] ??
-                        (star === 5 ? 78 : star === 4 ? 16 : 4);
-                      return (
-                        <div
-                          key={star}
-                          className="flex items-center gap-3 text-xs">
-                          <span className="font-bold text-slate-600 w-10 shrink-0">
-                            {star} ★
-                          </span>
-                          <div className="flex-1 h-2.5 bg-slate-200/80 rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-emerald-500 rounded-full transition-all duration-500"
-                              style={{ width: `${pct}%` }}
-                            />
-                          </div>
-                          <span className="font-mono font-bold text-slate-500 w-10 text-right shrink-0">
-                            {pct}%
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Customer Uploaded Photos Gallery */}
-                <div className="space-y-3">
-                  <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center justify-between">
-                    <span>
-                      Customer Uploaded Photos (
-                      {customerPhotos.length > 0
-                        ? customerPhotos.length
-                        : "Real User Photos"}
-                      )
-                    </span>
-                    <span className="text-[10px] font-bold text-slate-400">
-                      Click photo to zoom
-                    </span>
-                  </h4>
-
-                  <div className="flex gap-3 overflow-x-auto pb-2 custom-scrollbar scroll-smooth">
-                    {(customerPhotos.length > 0
-                      ? customerPhotos
-                      : [
-                          finalProduct.imageUrl ||
-                            getApplianceImg(finalCategory),
-                          splitAcImg,
-                          fridgeImg,
-                          waterPurifierImg,
-                        ]
-                    ).map((imgUrl, pIdx) => (
-                      <div
-                        key={pIdx}
-                        onClick={() => setActiveLightboxImg(imgUrl)}
-                        className="w-20 h-20 bg-slate-100 border border-slate-200 rounded-xl flex items-center justify-center p-1 shrink-0 overflow-hidden cursor-pointer hover:border-brand-blue hover:scale-105 transition-all shadow-2xs group relative">
-                        <img
-                          src={imgUrl}
-                          className="w-full h-full object-cover rounded-lg"
-                          alt="Customer Photo"
-                        />
-                        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
-                          <Search size={14} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Verified Buyer Reviews List */}
+                {/* Verified Buyer Reviews List — only real, submitted reviews */}
                 <div className="space-y-4 pt-2 border-t border-slate-100">
                   <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">
                     Verified Customer Reviews
                   </h4>
 
-                  <div className="space-y-3">
-                    {(productReviews.length > 0
-                      ? productReviews
-                      : [
-                          {
-                            id: "demo-1",
-                            user: { name: "Rajesh Sharma" },
-                            rating: 5,
-                            comment:
-                              "Awesome cooling performance! Delivery was super quick and the certified engineer completed installation within 2 hours of delivery.",
-                            photos: [
-                              finalProduct.imageUrl ||
-                                getApplianceImg(finalCategory),
-                            ],
-                            createdAt: new Date().toISOString(),
-                          },
-                          {
-                            id: "demo-2",
-                            user: { name: "Priya Verma" },
-                            rating: 5,
-                            comment:
-                              "Very quiet operation and low energy consumption. Highly recommended product!",
-                            photos: [],
-                            createdAt: new Date().toISOString(),
-                          },
-                        ]
-                    ).map((rev, rIdx) => (
-                      <div
-                        key={rev.id || rIdx}
-                        className="p-4 bg-slate-50/60 border border-slate-200/70 rounded-2xl space-y-2.5">
-                        {/* Reviewer Header */}
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-full bg-blue-100 text-brand-blue font-black text-xs flex items-center justify-center">
-                              {(rev.user?.name || "Customer").charAt(0)}
+                  {productReviews.length > 0 ? (
+                    <div className="space-y-3">
+                      {productReviews.map((rev, rIdx) => (
+                        <div
+                          key={rev.id || rIdx}
+                          className="p-4 bg-slate-50/60 border border-slate-200/70 rounded-2xl space-y-2.5">
+                          {/* Reviewer Header */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-8 h-8 rounded-full bg-blue-100 text-brand-blue font-black text-xs flex items-center justify-center">
+                                {(rev.user?.name || "Customer").charAt(0)}
+                              </div>
+                              <div>
+                                <span className="text-xs font-black text-slate-900 block leading-tight">
+                                  {rev.user?.name || "Verified Customer"}
+                                </span>
+                                <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
+                                  ✓ Verified Buyer
+                                </span>
+                              </div>
                             </div>
-                            <div>
-                              <span className="text-xs font-black text-slate-900 block leading-tight">
-                                {rev.user?.name || "Verified Customer"}
-                              </span>
-                              <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
-                                ✓ Verified Buyer
-                              </span>
+
+                            <div className="flex items-center gap-1 bg-green-600 text-white px-2 py-0.5 rounded text-[10px] font-black">
+                              <span>{rev.rating}</span>
+                              <Star size={9} fill="currentColor" />
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-1 bg-green-600 text-white px-2 py-0.5 rounded text-[10px] font-black">
-                            <span>{rev.rating || 5}</span>
-                            <Star size={9} fill="currentColor" />
-                          </div>
+                          {/* Comment text */}
+                          <p className="text-xs font-medium text-slate-700 leading-relaxed">
+                            {rev.comment}
+                          </p>
+
+                          {/* Attached Customer Photos */}
+                          {Array.isArray(rev.photos) &&
+                            rev.photos.length > 0 && (
+                              <div className="flex gap-2 pt-1">
+                                {rev.photos.map((photo, phIdx) => (
+                                  <img
+                                    key={phIdx}
+                                    src={photo}
+                                    onClick={() =>
+                                      setActiveLightboxImg(photo)
+                                    }
+                                    className="w-14 h-14 rounded-lg object-cover border border-slate-200 cursor-pointer hover:opacity-90"
+                                    alt="Review attachment"
+                                  />
+                                ))}
+                              </div>
+                            )}
                         </div>
-
-                        {/* Comment text */}
-                        <p className="text-xs font-medium text-slate-700 leading-relaxed">
-                          {rev.comment ||
-                            "Great product quality and excellent delivery experience!"}
-                        </p>
-
-                        {/* Attached Customer Photos */}
-                        {Array.isArray(rev.photos) && rev.photos.length > 0 && (
-                          <div className="flex gap-2 pt-1">
-                            {rev.photos.map((photo, phIdx) => (
-                              <img
-                                key={phIdx}
-                                src={photo}
-                                onClick={() => setActiveLightboxImg(photo)}
-                                className="w-14 h-14 rounded-lg object-cover border border-slate-200 cursor-pointer hover:opacity-90"
-                                alt="Review attachment"
-                              />
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 text-xs font-semibold text-slate-400 bg-slate-50/60 rounded-2xl border border-slate-200/70">
+                      No reviews yet. Be the first to share your experience!
+                    </div>
+                  )}
                 </div>
               </div>
 
               {/* 9. SIMILAR & RECOMMENDED PRODUCTS */}
               {similarProducts.length > 0 && (
-                <div className="bg-white border border-slate-200/90 rounded-3xl p-5 md:p-6 shadow-xs space-y-5">
+                <div className="max-w-7xl mx-auto border-t border-slate-100 p-4 sm:p-6 space-y-5">
                   <div className="flex items-center justify-between border-b border-slate-100 pb-3 text-left">
                     <div>
                       <h3 className="text-sm md:text-base font-black text-slate-900 tracking-tight flex items-center gap-2">
@@ -2295,9 +2298,7 @@ const BuyNew = () => {
                   <div className="flex flex-row overflow-x-auto gap-3 md:gap-4 scroll-smooth snap-x [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                     {similarProducts.map((p, idx) => {
                       const originalPriceNum =
-                        Number(p.originalPrice) ||
-                        Number(p.mrp) ||
-                        (p.price ? Math.round(p.price * 1.25) : 0);
+                        Number(p.originalPrice) || Number(p.mrp) || 0;
                       const discountPercent =
                         originalPriceNum > p.price
                           ? Math.round(
@@ -2307,33 +2308,13 @@ const BuyNew = () => {
                             )
                           : 0;
 
-                      // Dynamic delivery date estimate (e.g. 4 Sep, 8 Sep)
-                      const deliverDate = new Date(
-                        Date.now() + (idx + 2) * 86400000,
-                      ).toLocaleDateString("en-IN", {
-                        day: "numeric",
-                        month: "short",
-                      });
-
                       return (
                         <div
                           key={p.id || idx}
                           onClick={() => handleSelectSimilarProduct(p)}
                           className="w-48 sm:w-52 md:w-56 shrink-0 snap-start flex flex-col text-left cursor-pointer group transition-all">
-                          {/* Grey Image Container Card with Badges & Rating */}
+                          {/* Grey Image Container Card with Rating */}
                           <div className="relative w-full h-44 sm:h-48 bg-[#f2f4f7] rounded-2xl p-3 flex items-center justify-center overflow-hidden mb-2.5">
-                            {/* Top-Left Trending Badge */}
-                            {idx % 2 === 1 && (
-                              <span className="absolute top-2 left-2 text-[10px] font-black text-white bg-[#F95F06] px-2 py-0.5 rounded-md shadow-xs">
-                                Trending
-                              </span>
-                            )}
-
-                            {/* Top-Right AD Badge */}
-                            <span className="absolute top-2 right-2 text-[9px] font-extrabold text-slate-500 bg-slate-200/80 px-1.5 py-0.5 rounded uppercase tracking-wider">
-                              AD
-                            </span>
-
                             {/* Product Image */}
                             <img
                               src={
@@ -2344,17 +2325,19 @@ const BuyNew = () => {
                               className="max-h-full max-w-full object-contain"
                             />
 
-                            {/* Bottom-Left Floating Rating Badge */}
-                            <div className="absolute bottom-2 left-2 bg-white/95 backdrop-blur-xs px-2 py-0.5 rounded-lg border border-slate-200/80 shadow-2xs flex items-center gap-1">
-                              <span className="text-xs font-black text-slate-800">
-                                {p.rating || 4.2}
-                              </span>
-                              <Star
-                                size={11}
-                                fill="#059669"
-                                className="text-emerald-600"
-                              />
-                            </div>
+                            {/* Bottom-Left Floating Rating Badge — only for products with a real rating */}
+                            {p.rating > 0 && (
+                              <div className="absolute bottom-2 left-2 bg-white/95 backdrop-blur-xs px-2 py-0.5 rounded-lg border border-slate-200/80 shadow-2xs flex items-center gap-1">
+                                <span className="text-xs font-black text-slate-800">
+                                  {p.rating}
+                                </span>
+                                <Star
+                                  size={11}
+                                  fill="#059669"
+                                  className="text-emerald-600"
+                                />
+                              </div>
+                            )}
                           </div>
 
                           {/* Details below image card */}
@@ -2382,19 +2365,6 @@ const BuyNew = () => {
                                 ₹{p.price.toLocaleString()}
                               </span>
                             </div>
-
-                            {/* Hot Deal Tag */}
-                            <span className="text-[11px] font-extrabold text-emerald-700 block">
-                              Hot Deal
-                            </span>
-
-                            {/* Delivery Date Tag */}
-                            <span className="text-[11px] font-medium text-slate-500 block">
-                              Get it by{" "}
-                              <strong className="font-bold text-slate-700">
-                                {deliverDate}
-                              </strong>
-                            </span>
                           </div>
                         </div>
                       );
@@ -2403,8 +2373,8 @@ const BuyNew = () => {
                 </div>
               )}
 
-              {/* 8. FIXED STICKY BOTTOM ACTION BAR */}
-              <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/90 p-4 z-40 shadow-2xl">
+              {/* 8. FIXED STICKY BOTTOM ACTION BAR — mobile/tablet only; desktop buy box already has the buttons in view */}
+              <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/90 px-4 pt-3 z-40 shadow-2xl pb-[max(0.75rem,env(safe-area-inset-bottom))]">
                 <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
                   <div className="flex flex-col text-left">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
@@ -2416,27 +2386,19 @@ const BuyNew = () => {
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => {
-                        const productExchange = isCurrentExchangeApplied
-                          ? exchangeApplied
-                          : null;
-                        addCartItem(finalProduct, {
-                          category: finalCategory,
-                          ...(productExchange
-                            ? {
-                                exchange: {
-                                  ...productExchange,
-                                  productId: finalProduct.id,
-                                },
-                              }
-                            : {}),
-                        });
-                        navigate("/buy-new/cart");
-                      }}
-                      className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-black px-5 py-3 rounded-2xl transition-all text-xs cursor-pointer active:scale-98">
-                      Add to Cart
-                    </button>
+                    {isFinalProductInCart ? (
+                      <button
+                        onClick={() => navigate("/buy-new/cart")}
+                        className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-black px-5 py-3 rounded-2xl transition-all text-xs cursor-pointer active:scale-98 flex items-center gap-1.5">
+                        <CheckCircle2 size={15} /> Go to Cart
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleAddToCart}
+                        className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-black px-5 py-3 rounded-2xl transition-all text-xs cursor-pointer active:scale-98">
+                        Add to Cart
+                      </button>
+                    )}
                     <button
                       onClick={() => {
                         const productExchange = isCurrentExchangeApplied
@@ -2458,6 +2420,61 @@ const BuyNew = () => {
                   </div>
                 </div>
               </div>
+
+              {/* "Added to cart" toast + the flying product-image animation
+                  — portaled straight to <body> so they render as truly
+                  viewport-fixed regardless of any transformed ancestor
+                  (framer-motion leaves a `transform` style on this step's
+                  own motion.div even at rest, which would otherwise turn
+                  position:fixed here into "fixed to that div" instead of
+                  the viewport). */}
+              {createPortal(
+                <>
+                  <AnimatePresence>
+                    {addedToastVisible && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -12, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -12, scale: 0.95 }}
+                        transition={{ duration: 0.25 }}
+                        className="fixed top-20 left-1/2 -translate-x-1/2 z-[70] bg-slate-900 text-white text-xs font-bold pl-3 pr-4 py-2.5 rounded-full shadow-xl flex items-center gap-2 pointer-events-none">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                        Added to cart
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {flyImg && (
+                    <motion.img
+                      src={flyImg.src}
+                      initial={{
+                        top: flyImg.startTop,
+                        left: flyImg.startLeft,
+                        width: flyImg.startWidth,
+                        height: flyImg.startHeight,
+                        opacity: 1,
+                      }}
+                      animate={{
+                        top: flyImg.endTop,
+                        left: flyImg.endLeft,
+                        width: 20,
+                        height: 20,
+                        opacity: 0.3,
+                      }}
+                      transition={{ duration: 0.65, ease: [0.32, 0, 0.67, 0] }}
+                      onAnimationComplete={() => setFlyImg(null)}
+                      style={{
+                        position: "fixed",
+                        zIndex: 70,
+                        pointerEvents: "none",
+                        objectFit: "contain",
+                      }}
+                      className="rounded-xl shadow-xl bg-white"
+                    />
+                  )}
+                </>,
+                document.body,
+              )}
             </motion.div>
           ))}
 
@@ -2467,7 +2484,7 @@ const BuyNew = () => {
             initial={{ opacity: 0, x: 10 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.3 }}
-            className="flex flex-col gap-5">
+            className="flex flex-col gap-4">
             {cart.length === 0 ? (
               <div className="flex flex-col items-center justify-center text-center py-12 gap-4">
                 <ShoppingCart className="w-16 h-16 text-slate-300" />
@@ -2486,147 +2503,208 @@ const BuyNew = () => {
                 </button>
               </div>
             ) : (
-              <div className="flex flex-col gap-5">
-                {/* Cart Header */}
-                <div className="flex justify-between items-center px-1 -mt-2">
-                  <h2 className="text-base font-black text-brand-navy">
-                    My Cart ({cart.reduce((sum, item) => sum + item.qty, 0)})
-                  </h2>
-                  <button
-                    onClick={clearCart}
-                    className="text-xs font-bold text-red-500 hover:underline flex items-center gap-1 cursor-pointer">
-                    Clear All
-                  </button>
-                </div>
+              <>
+                <div className="flex flex-col gap-4 pb-4">
+                  {/* Cart Header */}
+                  <div className="flex justify-between items-center px-1">
+                    <h2 className="text-sm font-black text-slate-900">
+                      My Cart{" "}
+                      <span className="text-slate-400 font-bold">
+                        (
+                        {cart.reduce((sum, item) => sum + item.qty, 0)} item
+                        {cart.reduce((sum, item) => sum + item.qty, 0) === 1
+                          ? ""
+                          : "s"}
+                        )
+                      </span>
+                    </h2>
+                    <button
+                      onClick={() => setCartRemovalConfirm({ type: "clear" })}
+                      className="text-xs font-bold text-red-500 hover:text-red-600 transition-colors cursor-pointer">
+                      Clear All
+                    </button>
+                  </div>
 
-                {/* Cart list items */}
-                <div className="flex flex-col gap-3.5">
-                  {cart.map((item) => (
-                    <div
-                      key={item.id}
-                      className="bg-white border border-slate-200/80 rounded-2xl p-4 flex justify-between items-center shadow-sm">
-                      <div className="flex items-center gap-3.5 text-left">
-                        <div className="w-14 h-14 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center p-1.5 flex-shrink-0">
-                          <img
-                            src={getApplianceImg(item.category)}
-                            alt={item.name}
-                            className="w-full h-full object-contain mix-blend-multiply"
-                          />
-                        </div>
-                        <div>
-                          <h4 className="text-xs font-black text-brand-navy leading-snug">
-                            {item.name}
-                          </h4>
-                          {item.exchange ? (
-                            <div className="flex flex-col gap-0.5 mt-1">
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-xs font-extrabold text-brand-blue">
-                                  ₹
-                                  {(
-                                    item.price - item.exchange.totalSavings
-                                  ).toLocaleString()}
-                                </span>
-                                <span className="text-[10px] text-slate-400 line-through">
-                                  ₹{item.price.toLocaleString()}
+                  {/* Cart list items — one card, rows divided, each clickable
+                      through to that item's own product page (using the
+                      item's own stored category, not the page's fallback
+                      category — a cart can mix categories). */}
+                  <div className="bg-white border border-slate-200/70 rounded-2xl divide-y divide-slate-100 shadow-2xs overflow-hidden">
+                    {cart.map((item) => {
+                      const goToProduct = () =>
+                        navigate(
+                          `/buy-new/details/${encodeURIComponent(item.category || finalCategory)}/${encodeURIComponent(item.name)}`,
+                        );
+                      return (
+                        <div
+                          key={item.id}
+                          className="p-3.5 sm:p-4 flex gap-3 text-left">
+                          <button
+                            type="button"
+                            onClick={goToProduct}
+                            className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center p-2 shrink-0 cursor-pointer">
+                            <img
+                              src={getApplianceImg(item.category)}
+                              alt={item.name}
+                              className="w-full h-full object-contain mix-blend-multiply"
+                            />
+                          </button>
+
+                          <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+                            <button
+                              type="button"
+                              onClick={goToProduct}
+                              className="text-left cursor-pointer">
+                              <h4 className="text-xs font-black text-slate-900 leading-snug line-clamp-2">
+                                {item.name}
+                              </h4>
+                            </button>
+
+                            {item.exchange ? (
+                              <div className="flex flex-col gap-0.5">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-sm font-black text-brand-blue">
+                                    ₹
+                                    {(
+                                      item.price - item.exchange.totalSavings
+                                    ).toLocaleString()}
+                                  </span>
+                                  <span className="text-[10px] text-slate-400 line-through font-semibold">
+                                    ₹{item.price.toLocaleString()}
+                                  </span>
+                                </div>
+                                <span className="text-[9px] text-emerald-600 font-bold">
+                                  🔄 Exchange Applied (-₹
+                                  {item.exchange.totalSavings.toLocaleString()}
+                                  )
                                 </span>
                               </div>
-                              <span className="text-[9px] text-[#10B981] font-bold">
-                                🔄 Exchange Applied (-₹
-                                {item.exchange.totalSavings.toLocaleString()})
+                            ) : (
+                              <span className="text-sm font-black text-brand-blue">
+                                ₹{item.price.toLocaleString()}
                               </span>
+                            )}
+
+                            <div className="flex items-center justify-between mt-0.5">
+                              {/* Quantity controls */}
+                              <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg p-0.5">
+                                <button
+                                  onClick={() => updateQty(item.id, -1)}
+                                  className="w-7 h-7 flex items-center justify-center hover:bg-slate-200 rounded-md text-slate-500 cursor-pointer transition-colors">
+                                  <Minus className="w-3.5 h-3.5" />
+                                </button>
+                                <span className="text-xs font-black text-slate-800 w-7 text-center">
+                                  {item.qty}
+                                </span>
+                                <button
+                                  onClick={() => updateQty(item.id, 1)}
+                                  className="w-7 h-7 flex items-center justify-center hover:bg-slate-200 rounded-md text-slate-500 cursor-pointer transition-colors">
+                                  <Plus className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+
+                              {/* Remove item */}
+                              <button
+                                onClick={() =>
+                                  setCartRemovalConfirm({
+                                    type: "remove",
+                                    item,
+                                  })
+                                }
+                                className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-lg transition-colors cursor-pointer"
+                                title="Remove item">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
                             </div>
-                          ) : (
-                            <span className="text-xs font-extrabold text-brand-blue block mt-1">
-                              ₹{item.price.toLocaleString()}
-                            </span>
-                          )}
+                          </div>
                         </div>
-                      </div>
-
-                      <div className="flex items-center gap-3.5">
-                        {/* Quantity controls */}
-                        <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl p-1 shadow-xs">
-                          <button
-                            onClick={() => updateQty(item.id, -1)}
-                            className="p-1 hover:bg-slate-200 rounded-lg text-slate-500 cursor-pointer">
-                            <Minus className="w-3.5 h-3.5" />
-                          </button>
-                          <span className="text-xs font-black text-slate-800 px-2.5">
-                            {item.qty}
-                          </span>
-                          <button
-                            onClick={() => updateQty(item.id, 1)}
-                            className="p-1 hover:bg-slate-200 rounded-lg text-slate-500 cursor-pointer">
-                            <Plus className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-
-                        {/* Remove item */}
-                        <button
-                          onClick={() => removeFromCart(item.id)}
-                          className="p-2 hover:bg-red-50 text-red-500 rounded-xl border border-transparent hover:border-red-100 transition-all cursor-pointer">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Price Details */}
-                <div className="bg-white border border-slate-200/80 rounded-2xl p-4.5 flex flex-col gap-3 shadow-sm mt-1 text-left">
-                  <h4 className="text-xs font-black text-brand-navy uppercase tracking-wider mb-0.5">
-                    Price Details
-                  </h4>
-
-                  <div className="flex justify-between items-center text-xs text-text-secondary font-medium">
-                    <span>MRP</span>
-                    <span>₹{cartSubtotalBeforeExchange.toLocaleString()}</span>
+                      );
+                    })}
                   </div>
 
-                  {approvedExchangeSavings > 0 && (
-                    <div className="flex justify-between items-center text-xs text-green-600 font-bold">
-                      <span>Exchange Discount</span>
-                      <span>- ₹{approvedExchangeSavings.toLocaleString()}</span>
-                    </div>
-                  )}
+                  {/* Price Details */}
+                  <div className="bg-white border border-slate-200/70 rounded-2xl p-4 sm:p-4.5 flex flex-col gap-2.5 shadow-2xs text-left">
+                    <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-wider">
+                      Price Details
+                    </h4>
 
-                  {/* A pending trade-in is shown as what it is — an estimate
-                      awaiting inspection — not deducted from today's total. */}
-                  {pendingExchangeSavings > 0 && (
-                    <div className="flex flex-col gap-0.5 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
-                      <div className="flex justify-between items-center text-xs text-amber-800 font-bold">
-                        <span>Trade-in (pending inspection)</span>
-                        <span>
-                          ≈ ₹{pendingExchangeSavings.toLocaleString()}
-                        </span>
-                      </div>
-                      <span className="text-[10px] text-amber-700 leading-snug">
-                        Credited after our serviceProvider inspects your old
-                        device at pickup. Today you pay the full price.
+                    <div className="flex justify-between items-center text-xs text-slate-500 font-semibold">
+                      <span>
+                        MRP (
+                        {cart.reduce((sum, item) => sum + item.qty, 0)} item
+                        {cart.reduce((sum, item) => sum + item.qty, 0) === 1
+                          ? ""
+                          : "s"}
+                        )
+                      </span>
+                      <span>
+                        ₹{cartSubtotalBeforeExchange.toLocaleString()}
                       </span>
                     </div>
-                  )}
 
-                  <div className="flex justify-between items-center text-xs text-text-secondary font-medium border-t border-slate-100 pt-3">
-                    <span>Delivery</span>
-                    <span className="text-green-600 font-bold">Free</span>
+                    {approvedExchangeSavings > 0 && (
+                      <div className="flex justify-between items-center text-xs text-emerald-600 font-bold">
+                        <span>Exchange Discount</span>
+                        <span>
+                          - ₹{approvedExchangeSavings.toLocaleString()}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* A pending trade-in is shown as what it is — an
+                        estimate awaiting inspection — not deducted from
+                        today's total. */}
+                    {pendingExchangeSavings > 0 && (
+                      <div className="flex flex-col gap-0.5 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                        <div className="flex justify-between items-center text-xs text-amber-800 font-bold">
+                          <span>Trade-in (pending inspection)</span>
+                          <span>
+                            ≈ ₹{pendingExchangeSavings.toLocaleString()}
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-amber-700 leading-snug">
+                          Credited after our serviceProvider inspects your old
+                          device at pickup. Today you pay the full price.
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="flex justify-between items-center text-xs text-slate-500 font-semibold border-t border-slate-100 pt-2.5">
+                      <span>Delivery Charges</span>
+                      <span className="text-emerald-600 font-black">
+                        Free
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between items-center text-sm font-black text-slate-900 border-t border-dashed border-slate-200 pt-2.5">
+                      <span>Total Amount</span>
+                      <span className="text-brand-blue text-lg">
+                        ₹{cartTotal.toLocaleString()}
+                      </span>
+                    </div>
                   </div>
+                </div>
 
-                  <div className="flex justify-between items-center text-sm font-black text-brand-navy border-t border-slate-100 pt-3">
-                    <span>Total Amount</span>
-                    <span className="text-brand-blue text-base">
+                {/* Sticky checkout bar — sits above the fixed bottom tab bar
+                    on mobile (h-16, hidden on lg) so the total and action are
+                    always reachable without scrolling through the whole
+                    cart. */}
+                <div className="sticky bottom-16 lg:bottom-0 z-20 -mx-3 sm:-mx-4 md:-mx-6 px-3 sm:px-4 md:px-6 py-3 bg-white/95 backdrop-blur-xl border-t border-slate-200 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wide">
+                      Total Amount
+                    </span>
+                    <span className="text-base font-black text-slate-900">
                       ₹{cartTotal.toLocaleString()}
                     </span>
                   </div>
-
-                  {/* Checkout Button */}
                   <button
                     onClick={() => navigate("/buy-new/address")}
-                    className="w-full bg-[#0B4EA2] hover:bg-blue-800 text-white font-black py-4 rounded-2xl transition-all shadow-md text-sm mt-2 cursor-pointer active:scale-98">
+                    className="flex-1 max-w-60 bg-brand-blue hover:bg-blue-800 text-white font-black py-3.5 rounded-2xl transition-all shadow-md text-xs cursor-pointer active:scale-98">
                     Proceed to Checkout
                   </button>
                 </div>
-              </div>
+              </>
             )}
           </motion.div>
         )}
@@ -3142,7 +3220,7 @@ const BuyNew = () => {
 
             {/* Order Summary Mini Card */}
             {cart.length > 0 && (
-              <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-blue-950 text-white rounded-3xl p-5 shadow-lg space-y-3 relative overflow-hidden">
+              <div className="bg-linear-to-br from-slate-900 via-slate-800 to-blue-950 text-white rounded-3xl p-5 shadow-lg space-y-3 relative overflow-hidden">
                 <div className="flex items-center justify-between border-b border-white/10 pb-3">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400">
@@ -3166,7 +3244,7 @@ const BuyNew = () => {
                     <div
                       key={idx}
                       className="flex justify-between items-center text-xs text-slate-300 font-medium">
-                      <span className="truncate max-w-[200px] font-bold text-white">
+                      <span className="truncate max-w-50 font-bold text-white">
                         {item.name}
                       </span>
                       <span>
@@ -3198,7 +3276,7 @@ const BuyNew = () => {
                 onClick={() => setPaymentMode("COD")}
                 className={`bg-white rounded-3xl p-5 transition-all shadow-xs cursor-pointer border-2 relative overflow-hidden ${
                   paymentMode === "COD"
-                    ? "border-[#FF6B35] bg-gradient-to-r from-orange-50/80 via-amber-50/40 to-white ring-4 ring-orange-100"
+                    ? "border-[#FF6B35] bg-linear-to-r from-orange-50/80 via-amber-50/40 to-white ring-4 ring-orange-100"
                     : "border-slate-200/90 hover:border-slate-300"
                 }`}>
                 {paymentMode === "COD" && (
@@ -3249,7 +3327,7 @@ const BuyNew = () => {
                 onClick={() => setPaymentMode("Online")}
                 className={`bg-white rounded-3xl p-5 transition-all shadow-xs cursor-pointer border-2 relative overflow-hidden ${
                   paymentMode === "Online"
-                    ? "border-brand-blue bg-gradient-to-r from-blue-50/80 via-indigo-50/40 to-white ring-4 ring-blue-100"
+                    ? "border-brand-blue bg-linear-to-r from-blue-50/80 via-indigo-50/40 to-white ring-4 ring-blue-100"
                     : "border-slate-200/90 hover:border-slate-300"
                 }`}>
                 {paymentMode === "Online" && (
@@ -3351,8 +3429,8 @@ const BuyNew = () => {
                 onClick={() => handlePlaceOrder(paymentMode)}
                 className={`w-full py-4 rounded-2xl text-white text-sm font-black shadow-lg transition-all cursor-pointer active:scale-98 flex items-center justify-center gap-2 disabled:opacity-50 ${
                   paymentMode === "COD"
-                    ? "bg-gradient-to-r from-[#FF6B35] to-[#E85D04] hover:from-[#E85D04] hover:to-[#D94E00]"
-                    : "bg-gradient-to-r from-brand-blue to-[#1565C0] hover:from-[#0B3C88] hover:to-brand-blue"
+                    ? "bg-linear-to-r from-[#FF6B35] to-[#E85D04] hover:from-[#E85D04] hover:to-[#D94E00]"
+                    : "bg-linear-to-r from-brand-blue to-[#1565C0] hover:from-[#0B3C88] hover:to-brand-blue"
                 }`}>
                 {placingOrder ? (
                   <>
@@ -3394,7 +3472,7 @@ const BuyNew = () => {
             </div>
 
             {/* Success Details Receipt Card */}
-            <div className="w-full bg-gradient-to-br from-[#072C63] via-[#0B4EA2] to-[#3B82F6] rounded-3xl p-6 text-white shadow-2xl relative overflow-hidden border border-white/10">
+            <div className="w-full bg-linear-to-br from-[#072C63] via-[#0B4EA2] to-[#3B82F6] rounded-3xl p-6 text-white shadow-2xl relative overflow-hidden border border-white/10">
               <div className="absolute -top-8 -right-8 w-24 h-24 bg-white/5 rounded-full blur-xl"></div>
 
               <div className="flex justify-between items-start mb-6">
@@ -3434,7 +3512,7 @@ const BuyNew = () => {
                 {selectedAddress && (
                   <div className="flex justify-between items-start pt-1 border-t border-white/10">
                     <span className="text-white/60">Delivering To:</span>
-                    <span className="font-semibold text-right max-w-[200px] truncate text-white">
+                    <span className="font-semibold text-right max-w-50 truncate text-white">
                       {selectedAddress.name || "Customer"},{" "}
                       {selectedAddress.city} ({selectedAddress.pincode})
                     </span>
@@ -3528,11 +3606,19 @@ const BuyNew = () => {
         </div>
       )}
 
-      {/* ── FULL-SCREEN FILTERS PAGE OVERLAY ── */}
-      {showFilterPage && (
+      {/* ── FULL-SCREEN FILTERS PAGE OVERLAY ──
+          A bare `animate={{ x: 0 }}` with no `transition` picks framer-motion's
+          default spring for a transform property, which is what made this
+          feel bouncy — an explicit tween with an ease-out curve settles once,
+          smoothly. AnimatePresence is what lets `exit` actually play instead
+          of the panel just vanishing the instant showFilterPage flips false. */}
+      <AnimatePresence>
+        {showFilterPage && (
         <motion.div
           initial={{ opacity: 0, x: "100%" }}
           animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: "100%" }}
+          transition={{ duration: 0.32, ease: [0.25, 0.1, 0.25, 1] }}
           className="fixed inset-0 bg-white z-50 flex flex-col h-full text-left">
           {/* Header Bar */}
           <div className="bg-white px-5 py-4 flex items-center justify-between border-b border-slate-100 shrink-0">
@@ -3701,7 +3787,8 @@ const BuyNew = () => {
             </button>
           </div>
         </motion.div>
-      )}
+        )}
+      </AnimatePresence>
 
       {/* Exchange Wizard Modal */}
       <ExchangeModal
@@ -3728,6 +3815,43 @@ const BuyNew = () => {
               className="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl"
               alt="Customer Lightbox Preview"
             />
+          </div>
+        </div>
+      )}
+
+      {/* ── CART REMOVAL CONFIRMATION MODAL ── */}
+      {cartRemovalConfirm && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-xl text-center animate-in zoom-in-95 duration-150">
+            <div className="w-14 h-14 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Trash2 size={24} />
+            </div>
+            <h3 className="text-sm font-black text-slate-900">
+              {cartRemovalConfirm.type === "clear"
+                ? "Clear your entire cart?"
+                : "Remove this item?"}
+            </h3>
+            <p className="text-xs text-slate-500 font-semibold mt-1.5 leading-relaxed">
+              {cartRemovalConfirm.type === "clear"
+                ? "All items will be removed from your cart. This can't be undone."
+                : `"${cartRemovalConfirm.item?.name}" will be removed from your cart.`}
+            </p>
+            <div className="flex items-center gap-3 mt-5">
+              <button
+                onClick={() => setCartRemovalConfirm(null)}
+                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-2xl text-xs transition-all cursor-pointer">
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (cartRemovalConfirm.type === "clear") clearCart();
+                  else removeFromCart(cartRemovalConfirm.item.id);
+                  setCartRemovalConfirm(null);
+                }}
+                className="flex-1 bg-red-500 hover:bg-red-600 text-white font-black py-3 rounded-2xl text-xs transition-all cursor-pointer">
+                {cartRemovalConfirm.type === "clear" ? "Clear All" : "Remove"}
+              </button>
+            </div>
           </div>
         </div>
       )}

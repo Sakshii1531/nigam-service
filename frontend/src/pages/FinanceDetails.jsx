@@ -40,10 +40,10 @@ const FinanceDetails = () => {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-[30px] shadow-2xl overflow-hidden flex flex-col h-[700px] border border-slate-100 relative">
+      <div className="w-full max-w-md bg-white rounded-[30px] shadow-2xl overflow-hidden flex flex-col h-175 border border-slate-100 relative">
         
         {/* Header */}
-        <div className="p-5 flex items-center border-b border-slate-100 flex-shrink-0">
+        <div className="p-5 flex items-center border-b border-slate-100 shrink-0">
           <button 
             onClick={() => navigate(-1)}
             className="p-2 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
@@ -57,7 +57,7 @@ const FinanceDetails = () => {
         <div className="flex-1 p-5 flex flex-col gap-5 overflow-y-auto pb-10">
           
           {/* Main Visual Banner */}
-          <div className="bg-gradient-to-br from-[#072C63] via-[#0A3D80] to-brand-blue rounded-2xl p-5 text-white shadow-lg relative overflow-hidden flex flex-col gap-2">
+          <div className="bg-linear-to-br from-[#072C63] via-[#0A3D80] to-brand-blue rounded-2xl p-5 text-white shadow-lg relative overflow-hidden flex flex-col gap-2">
             <div className="absolute -top-10 -right-10 w-28 h-28 bg-[#FFD400]/10 rounded-full blur-2xl"></div>
             
             <span className="text-[8px] bg-[#FFD400] text-black font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wider self-start">
@@ -188,7 +188,7 @@ const FinanceDetails = () => {
                 </div>
 
                 <div className="bg-blue-50/40 border border-blue-50 p-2.5 rounded-xl flex items-center gap-2 mt-1">
-                  <ShieldCheck className="h-4.5 w-4.5 text-brand-blue flex-shrink-0" />
+                  <ShieldCheck className="h-4.5 w-4.5 text-brand-blue shrink-0" />
                   <span className="text-[9px] font-bold text-brand-blue leading-normal">
                     By submitting, you authorize Nigam Finance to pull credit records via CIBIL securely.
                   </span>
@@ -210,7 +210,7 @@ const FinanceDetails = () => {
               </div>
               <div>
                 <h3 className="font-extrabold text-[#212121] text-base">Congratulations, {user?.name ? user.name.split(' ')[0] : 'Customer'}!</h3>
-                <p className="text-xs text-text-secondary mt-1 max-w-[280px] mx-auto leading-relaxed">
+                <p className="text-xs text-text-secondary mt-1 max-w-70 mx-auto leading-relaxed">
                   Your eligibility is pre-approved by our CIBIL validation system!
                 </p>
               </div>

@@ -309,7 +309,7 @@ const ExtendWarranty = () => {
                     <div
                       key={item.id}
                       onClick={() => setSelectedAppliance(item)}
-                      className={`bg-gradient-to-br p-5 rounded-2xl border cursor-pointer transition-all flex flex-col gap-3 relative ${
+                      className={`bg-linear-to-br p-5 rounded-2xl border cursor-pointer transition-all flex flex-col gap-3 relative ${
                         selectedAppliance?.id === item.id 
                           ? 'border-amber-500 bg-amber-50/10 shadow-sm ring-1 ring-amber-500' 
                           : 'border-slate-200 bg-white hover:border-slate-350'
@@ -430,7 +430,7 @@ const ExtendWarranty = () => {
                     </div>
 
                     <div className="bg-amber-50 border border-amber-200 p-3.5 rounded-xl flex gap-3 text-amber-800">
-                      <Shield className="h-5 w-5 mt-0.5 flex-shrink-0 text-amber-600" />
+                      <Shield className="h-5 w-5 mt-0.5 shrink-0 text-amber-600" />
                       <div className="flex flex-col">
                         <span className="text-xs font-bold">Active Manufacturer Warranty Required</span>
                         <span className="text-[10px] text-amber-700 block mt-0.5 leading-relaxed">
@@ -478,7 +478,7 @@ const ExtendWarranty = () => {
                       <div>
                         <label className="text-xs font-semibold text-text-primary mb-1.5 block">Dealer Invoice (optional)</label>
                         <label className="flex items-center gap-3 p-3 bg-slate-50 border border-dashed border-slate-300 rounded-xl cursor-pointer hover:border-brand-blue">
-                          <Upload className="h-4 w-4 text-slate-500 flex-shrink-0" />
+                          <Upload className="h-4 w-4 text-slate-500 shrink-0" />
                           <span className="text-xs text-text-secondary truncate">
                             {isUploading ? `Uploading… ${uploadProgress}%` : invoiceFile ? invoiceFile.name : 'Attach the purchase invoice'}
                           </span>
@@ -555,7 +555,7 @@ const ExtendWarranty = () => {
                   <div className="border-t border-slate-100 pt-3 flex flex-col gap-2">
                     {(plan.features || []).map((feat, i) => (
                       <div key={i} className="flex gap-2 items-center">
-                        <Check className="h-3.5 w-3.5 text-green-600 flex-shrink-0" />
+                        <Check className="h-3.5 w-3.5 text-green-600 shrink-0" />
                         <span className="text-xs text-text-secondary">{feat}</span>
                       </div>
                     ))}
@@ -606,7 +606,7 @@ const ExtendWarranty = () => {
             </div>
 
             <div className="bg-green-50 border border-green-200 p-3.5 rounded-xl flex gap-3 text-green-700">
-              <Lock className="h-5 w-5 mt-0.5 flex-shrink-0" />
+              <Lock className="h-5 w-5 mt-0.5 shrink-0" />
               <div>
                 <span className="text-xs font-bold block">100% Encrypted Transactions</span>
                 <span className="text-[10px] text-green-600 block mt-0.5">Secure payment verified via PCIDSS banking standards.</span>

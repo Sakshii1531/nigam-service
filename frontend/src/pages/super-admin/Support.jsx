@@ -280,7 +280,7 @@ const Support = () => {
                         className={`flex gap-3 items-start ${chat.sender === 'admin' ? 'justify-end' : ''}`}
                       >
                         {chat.sender !== 'admin' && (
-                          <div className="w-8 h-8 bg-[#EEF4FF] rounded-full flex items-center justify-center text-[#0D47A1] font-bold text-sm flex-shrink-0">
+                          <div className="w-8 h-8 bg-[#EEF4FF] rounded-full flex items-center justify-center text-[#0D47A1] font-bold text-sm shrink-0">
                             {selectedTicket.user.split(' ').map(n => n[0]).join('')}
                           </div>
                         )}
@@ -293,7 +293,7 @@ const Support = () => {
                           <p className={`text-[10px] mt-1 text-right ${chat.sender === 'admin' ? 'text-blue-200' : 'text-[#64748B]'}`}>{chat.time}</p>
                         </div>
                         {chat.sender === 'admin' && (
-                          <div className="w-8 h-8 bg-[#0D47A1] text-white rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0">
+                          <div className="w-8 h-8 bg-[#0D47A1] text-white rounded-full flex items-center justify-center font-bold text-sm shrink-0">
                             SA
                           </div>
                         )}

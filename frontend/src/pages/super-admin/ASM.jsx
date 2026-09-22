@@ -366,7 +366,7 @@ const ASM = () => {
                       {/* Name & Avatar */}
                       <td className="py-4 px-6">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-[#0D47A1] text-white flex items-center justify-center font-bold text-xs shadow-xs flex-shrink-0">
+                          <div className="w-9 h-9 rounded-full bg-[#0D47A1] text-white flex items-center justify-center font-bold text-xs shadow-xs shrink-0">
                             {getInitials(asm.name)}
                           </div>
                           <div>

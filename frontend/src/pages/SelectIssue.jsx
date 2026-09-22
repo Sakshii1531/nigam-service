@@ -1,4 +1,5 @@
 import { useNavigate, useParams } from 'react-router-dom';
+import { goBack } from '../lib/navigation';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
 
 // High-fidelity custom inline SVG icons for common issues
@@ -132,7 +133,7 @@ const SelectIssue = () => {
       {/* Header */}
       <div className="bg-white/90 backdrop-blur-md sticky top-0 px-6 py-4 flex items-center justify-between border-b border-slate-100 shadow-sm z-30 rounded-b-3xl">
         <button 
-          onClick={() => navigate(`/partner-warranty/products/${category}/${brand}`)}
+          onClick={() => goBack(navigate, `/partner-warranty/products/${category}/${brand}`)}
           className="p-2 bg-slate-50 rounded-2xl flex items-center justify-center cursor-pointer border border-slate-100"
         >
           <ArrowLeft className="h-5 w-5 text-slate-700" />
@@ -161,7 +162,7 @@ const SelectIssue = () => {
             >
               <div className="flex items-center gap-4">
                 {/* SVG Icon Wrapper */}
-                <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center shrink-0">
                   {issue.icon}
                 </div>
                 

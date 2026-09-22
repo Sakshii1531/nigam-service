@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Search, ChevronDown, HelpCircle, RefreshCw, MessageCircle } from 'lucide-react';
 import { apiRequest } from '../lib/apiClient';
+import { goBack } from '../lib/navigation';
 
 const Faqs = () => {
   const navigate = useNavigate();
@@ -46,7 +47,7 @@ const Faqs = () => {
       {/* Header */}
       <div className="bg-white px-5 py-4 flex items-center gap-3 sticky top-0 z-50 shadow-sm border-b border-slate-100">
         <button
-          onClick={() => navigate('/help-support', { replace: true })}
+          onClick={() => goBack(navigate, '/help-support')}
           className="p-1.5 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
         >
           <ArrowLeft className="h-5 w-5 text-slate-700" />
@@ -112,14 +113,14 @@ const Faqs = () => {
                     className="w-full p-4 flex items-center justify-between text-left gap-3 cursor-pointer bg-white"
                   >
                     <div className="flex items-start gap-3">
-                      <span className="bg-blue-50 text-brand-blue text-[9px] font-black px-2 py-0.5 rounded-md uppercase mt-0.5 flex-shrink-0">
+                      <span className="bg-blue-50 text-brand-blue text-[9px] font-black px-2 py-0.5 rounded-md uppercase mt-0.5 shrink-0">
                         {item.category || 'General'}
                       </span>
                       <h3 className="text-xs font-black text-slate-900 leading-snug">
                         {item.question}
                       </h3>
                     </div>
-                    <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform duration-200 flex-shrink-0 ${
+                    <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform duration-200 shrink-0 ${
                       isOpen ? 'rotate-180 text-brand-blue' : ''
                     }`} />
                   </button>
@@ -136,7 +137,7 @@ const Faqs = () => {
         )}
 
         {/* Still Need Help Banner */}
-        <div className="bg-gradient-to-r from-blue-900 to-indigo-900 text-white rounded-2xl p-4 flex items-center justify-between shadow-md mt-4">
+        <div className="bg-linear-to-r from-blue-900 to-indigo-900 text-white rounded-2xl p-4 flex items-center justify-between shadow-md mt-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center">
               <MessageCircle className="h-5 w-5 text-amber-400" />

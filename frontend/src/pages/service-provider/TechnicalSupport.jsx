@@ -119,7 +119,7 @@ const TechnicalSupport = () => {
 
       <div className="flex-1 overflow-y-auto p-4 lg:px-6 xl:px-8 flex flex-col gap-5 text-left max-w-screen-xl mx-auto w-full">
         {/* Banner */}
-        <div className="bg-gradient-to-r from-blue-700 to-[#0D47A1] text-white rounded-3xl p-5 shadow-md">
+        <div className="bg-linear-to-r from-blue-700 to-[#0D47A1] text-white rounded-3xl p-5 shadow-md">
           <h3 className="text-sm font-semibold">On-Site Technical Helpline</h3>
           <p className="text-xs text-slate-200 mt-1 leading-relaxed font-normal">
             Facing challenges during repair? Connect with our senior support desk engineers directly by phone call or chat message.

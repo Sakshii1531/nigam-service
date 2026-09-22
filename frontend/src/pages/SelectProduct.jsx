@@ -1,4 +1,5 @@
 import { useNavigate, useParams } from 'react-router-dom';
+import { goBack } from '../lib/navigation';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
 
 // Import local premium cutout assets for high-fidelity rendering
@@ -80,7 +81,7 @@ const SelectProduct = () => {
       {/* Header */}
       <div className="bg-white/90 backdrop-blur-md sticky top-0 px-6 py-4 flex items-center justify-between border-b border-slate-100 shadow-sm z-30 rounded-b-3xl">
         <button 
-          onClick={() => navigate(`/partner-warranty/brands/${category}`)}
+          onClick={() => goBack(navigate, `/partner-warranty/brands/${category}`)}
           className="p-2 bg-slate-50 rounded-2xl flex items-center justify-center cursor-pointer border border-slate-100"
         >
           <ArrowLeft className="h-5 w-5 text-slate-700" />
@@ -109,7 +110,7 @@ const SelectProduct = () => {
             >
               <div className="flex items-center gap-5">
                 {/* Image Wrapper */}
-                <div className="w-14 h-14 bg-white rounded-xl flex items-center justify-center relative overflow-hidden flex-shrink-0 border border-slate-100/50">
+                <div className="w-14 h-14 bg-white rounded-xl flex items-center justify-center relative overflow-hidden shrink-0 border border-slate-100/50">
                   <img 
                     src={product.image} 
                     alt={product.name} 

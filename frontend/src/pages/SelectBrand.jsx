@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { goBack } from '../lib/navigation';
 import { ArrowLeft, ChevronRight, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -13,7 +14,7 @@ const BRANDS_DATA = {
         name: 'LG',
         logo: (
           <div className="flex items-center gap-2 h-7">
-            <svg viewBox="0 0 100 100" className="w-7 h-7 flex-shrink-0">
+            <svg viewBox="0 0 100 100" className="w-7 h-7 shrink-0">
               <circle cx="50" cy="50" r="46" fill="#C30F42" />
               <path d="M 50 22 A 28 28 0 1 0 78 50" fill="none" stroke="#FFFFFF" strokeWidth="6" strokeLinecap="round" />
               <path d="M 50 36 L 50 64 L 64 64" fill="none" stroke="#FFFFFF" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
@@ -27,7 +28,7 @@ const BRANDS_DATA = {
         id: 'samsung',
         name: 'SAMSUNG',
         logo: (
-          <svg viewBox="0 0 180 40" className="w-24 h-7 flex-shrink-0">
+          <svg viewBox="0 0 180 40" className="w-24 h-7 shrink-0">
             <text x="0" y="28" fontFamily="'Arial Black', 'Helvetica', sans-serif" fontWeight="900" fontSize="22" fill="#0A54A6" letterSpacing="0.5">SAMSUNG</text>
           </svg>
         )
@@ -36,7 +37,7 @@ const BRANDS_DATA = {
         id: 'haier',
         name: 'Haier',
         logo: (
-          <svg viewBox="0 0 120 40" className="w-20 h-7 flex-shrink-0">
+          <svg viewBox="0 0 120 40" className="w-20 h-7 shrink-0">
             <text x="0" y="28" fontFamily="'Century Gothic', 'Futura', sans-serif" fontWeight="bold" fontSize="22" fill="#005AAB" letterSpacing="-0.5">Haier</text>
           </svg>
         )
@@ -45,7 +46,7 @@ const BRANDS_DATA = {
         id: 'voltas',
         name: 'VOLTAS',
         logo: (
-          <svg viewBox="0 0 120 40" className="w-22 h-7 flex-shrink-0">
+          <svg viewBox="0 0 120 40" className="w-22 h-7 shrink-0">
             <text x="0" y="28" fontFamily="'Arial Black', 'Impact', sans-serif" fontWeight="900" fontSize="21" fill="#005691" fontStyle="italic" letterSpacing="0.5">VOLTAS</text>
           </svg>
         )
@@ -65,7 +66,7 @@ const BRANDS_DATA = {
         name: 'Whirlpool',
         logo: (
           <div className="relative flex items-center h-7">
-            <svg viewBox="0 0 150 40" className="w-24 h-7 flex-shrink-0">
+            <svg viewBox="0 0 150 40" className="w-24 h-7 shrink-0">
               <ellipse cx="68" cy="20" rx="42" ry="12" fill="none" stroke="#F28E2B" strokeWidth="2.2" transform="rotate(-8, 68, 20)" />
               <text x="12" y="26" fontFamily="'Georgia', serif" fontWeight="bold" fontSize="17" fill="#111" letterSpacing="0.2">Whirlpool</text>
             </svg>
@@ -76,7 +77,7 @@ const BRANDS_DATA = {
         id: 'godrej',
         name: 'Godrej',
         logo: (
-          <svg viewBox="0 0 120 40" className="w-20 h-7 flex-shrink-0">
+          <svg viewBox="0 0 120 40" className="w-20 h-7 shrink-0">
             <text x="5" y="28" fontFamily="'Caveat', cursive, sans-serif" fontWeight="bold" fontSize="24" fill="#E31B23">Godrej</text>
           </svg>
         ),
@@ -86,7 +87,7 @@ const BRANDS_DATA = {
         id: 'panasonic',
         name: 'Panasonic',
         logo: (
-          <svg viewBox="0 0 140 40" className="w-24 h-7 flex-shrink-0">
+          <svg viewBox="0 0 140 40" className="w-24 h-7 shrink-0">
             <text x="5" y="28" fontFamily="'Helvetica Neue', sans-serif" fontWeight="bold" fontSize="22" fill="#004098">Panasonic</text>
           </svg>
         ),
@@ -474,7 +475,7 @@ const SelectBrand = () => {
       {/* Header */}
       <div className="bg-white/90 backdrop-blur-md sticky top-0 px-6 py-4 flex items-center justify-between border-b border-slate-100 shadow-sm z-30 rounded-b-3xl">
         <button 
-          onClick={() => navigate('/partner-warranty')}
+          onClick={() => goBack(navigate, '/partner-warranty')}
           className="p-2 bg-slate-50 hover:bg-slate-100 hover:scale-105 active:scale-95 rounded-2xl transition-all duration-200 flex items-center justify-center cursor-pointer border border-slate-100"
         >
           <ArrowLeft className="h-5 w-5 text-slate-700" />
@@ -501,7 +502,7 @@ const SelectBrand = () => {
               onClick={() => navigate(`/partner-warranty/products/${category}/${brand.id}`)}
               className="flex items-center justify-between px-5 py-4 bg-white border border-slate-200/80 text-left w-full cursor-pointer rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.01)]"
             >
-              <div className="flex items-center justify-start h-8 w-32 flex-shrink-0">
+              <div className="flex items-center justify-start h-8 w-32 shrink-0">
                 {brand.logo}
               </div>
               <ChevronRight className="h-5 w-5 text-text-secondary" />
@@ -525,7 +526,7 @@ const SelectBrand = () => {
                       onClick={() => navigate(`/partner-warranty/products/${category}/${brand.id}`)}
                       className="flex items-center justify-between px-5 py-4 bg-white border border-slate-200/80 text-left w-full cursor-pointer rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.01)]"
                     >
-                      <div className="flex items-center justify-start h-8 w-32 flex-shrink-0">
+                      <div className="flex items-center justify-start h-8 w-32 shrink-0">
                         {brand.logo}
                       </div>
                       <ChevronRight className="h-5 w-5 text-text-secondary" />

@@ -53,7 +53,7 @@ const ServicePartner = () => {
             <div className="flex flex-col gap-2.5 mt-4">
               {benefits.map((b, i) => (
                 <div key={i} className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-[#1565C0] flex-shrink-0 fill-[#E3F2FD]" />
+                  <CheckCircle2 className="h-4 w-4 text-[#1565C0] shrink-0 fill-[#E3F2FD]" />
                   <span className="text-[11px] font-bold text-slate-700">{b}</span>
                 </div>
               ))}
@@ -77,7 +77,7 @@ const ServicePartner = () => {
           </div>
           <button
             onClick={() => alert('Redirecting to Google Play Store...')}
-            className="flex-shrink-0 cursor-pointer"
+            className="shrink-0 cursor-pointer"
           >
             <div className="bg-black rounded-xl px-3 py-2 flex items-center gap-2 shadow-sm">
               {/* Google Play Icon SVG */}

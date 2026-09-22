@@ -151,7 +151,7 @@ const Notifications = () => {
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
-                  className={`px-4 py-3 text-sm font-medium transition-all border-b-2 -mb-[10px] ${
+                  className={`px-4 py-3 text-sm font-medium transition-all border-b-2 -mb-2.5 ${
                     activeTab === tab.id 
                       ? 'border-[#0D47A1] text-[#0D47A1]' 
                       : 'border-transparent text-[#64748B] hover:text-[#1E293B]'
@@ -182,7 +182,7 @@ const Notifications = () => {
                   notif.read ? 'border-[#E2E8F0]' : 'border-blue-100 bg-blue-50/10'
                 }`}
               >
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
                   notif.priority === 'high' ? 'bg-red-50 text-red-600' :
                   notif.priority === 'medium' ? 'bg-blue-50 text-blue-600' :
                   'bg-gray-50 text-gray-600'

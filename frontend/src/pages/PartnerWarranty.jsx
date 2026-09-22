@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { goBack } from '../lib/navigation';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import CustomerBottomNav from '../components/CustomerBottomNav';
@@ -23,7 +24,7 @@ const PartnerWarranty = () => {
       {/* Header */}
       <div className="bg-white px-6 py-4 flex items-center justify-between border-b border-border-color shadow-sm relative">
         <button 
-          onClick={() => navigate('/dashboard')}
+          onClick={() => goBack(navigate, '/dashboard')}
           className="p-2 bg-slate-50 hover:bg-slate-100 rounded-full transition-colors flex items-center justify-center cursor-pointer"
         >
           <ArrowLeft className="h-5 w-5 text-text-primary" />
@@ -47,7 +48,7 @@ const PartnerWarranty = () => {
           {/* Subtle blue accent background effect */}
           <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50/50 rounded-full blur-2xl"></div>
           
-          <div className="w-14 h-14 bg-brand-navy rounded-full flex items-center justify-center flex-shrink-0 shadow-md">
+          <div className="w-14 h-14 bg-brand-navy rounded-full flex items-center justify-center shrink-0 shadow-md">
             <img 
               src={handshakeIcon} 
               alt="Authorized Brand Support" 
@@ -83,7 +84,7 @@ const PartnerWarranty = () => {
               className="bg-white p-4 rounded-2xl border border-blue-200 shadow-sm flex items-center gap-4 cursor-pointer transition-all duration-300"
             >
               {/* Image Container for Refrigerator + Washing Machine */}
-              <div className="w-20 h-20 bg-white rounded-xl flex items-center justify-center relative overflow-hidden flex-shrink-0">
+              <div className="w-20 h-20 bg-white rounded-xl flex items-center justify-center relative overflow-hidden shrink-0">
                 <img 
                   src={fridgeImg} 
                   alt="Refrigerator" 
@@ -107,7 +108,7 @@ const PartnerWarranty = () => {
               </div>
 
               {/* Arrow */}
-              <ChevronRight className="h-5 w-5 text-text-secondary flex-shrink-0" />
+              <ChevronRight className="h-5 w-5 text-text-secondary shrink-0" />
             </motion.div>
 
             {/* Card 2: BathCare */}
@@ -119,7 +120,7 @@ const PartnerWarranty = () => {
               className="bg-white p-4 rounded-2xl border border-blue-200 shadow-sm flex items-center gap-4 cursor-pointer transition-all duration-300"
             >
               {/* Image Container for BathCare/Plumbing */}
-              <div className="w-20 h-20 bg-white rounded-xl flex items-center justify-center relative overflow-hidden flex-shrink-0">
+              <div className="w-20 h-20 bg-white rounded-xl flex items-center justify-center relative overflow-hidden shrink-0">
                 <img 
                   src={plumberImg} 
                   alt="Plumbing Care" 
@@ -138,7 +139,7 @@ const PartnerWarranty = () => {
               </div>
 
               {/* Arrow */}
-              <ChevronRight className="h-5 w-5 text-text-secondary flex-shrink-0" />
+              <ChevronRight className="h-5 w-5 text-text-secondary shrink-0" />
             </motion.div>
 
             {/* Card 3: IT&CPCare */}
@@ -150,7 +151,7 @@ const PartnerWarranty = () => {
               className="bg-white p-4 rounded-2xl border border-blue-200 shadow-sm flex items-center gap-4 cursor-pointer transition-all duration-300"
             >
               {/* Image Container for IT Peripherals */}
-              <div className="w-20 h-20 bg-white rounded-xl flex items-center justify-center relative overflow-hidden flex-shrink-0">
+              <div className="w-20 h-20 bg-white rounded-xl flex items-center justify-center relative overflow-hidden shrink-0">
                 <img 
                   src={laptopPeripheralImg} 
                   alt="Laptop & Peripherals" 
@@ -169,7 +170,7 @@ const PartnerWarranty = () => {
               </div>
 
               {/* Arrow */}
-              <ChevronRight className="h-5 w-5 text-text-secondary flex-shrink-0" />
+              <ChevronRight className="h-5 w-5 text-text-secondary shrink-0" />
             </motion.div>
 
             {/* Card 4: KitchenCare */}
@@ -181,7 +182,7 @@ const PartnerWarranty = () => {
               className="bg-white p-4 rounded-2xl border border-blue-200 shadow-sm flex items-center gap-4 cursor-pointer transition-all duration-300"
             >
               {/* Image Container for KitchenCare */}
-              <div className="w-20 h-20 bg-white rounded-xl flex items-center justify-center relative overflow-hidden flex-shrink-0">
+              <div className="w-20 h-20 bg-white rounded-xl flex items-center justify-center relative overflow-hidden shrink-0">
                 <img 
                   src={kitchenApplianceImg} 
                   alt="Kitchen Appliances" 
@@ -200,7 +201,7 @@ const PartnerWarranty = () => {
               </div>
 
               {/* Arrow */}
-              <ChevronRight className="h-5 w-5 text-text-secondary flex-shrink-0" />
+              <ChevronRight className="h-5 w-5 text-text-secondary shrink-0" />
             </motion.div>
 
             {/* Card 5: AirCare */}
@@ -212,7 +213,7 @@ const PartnerWarranty = () => {
               className="bg-white p-4 rounded-2xl border border-blue-200 shadow-sm flex items-center gap-4 cursor-pointer transition-all duration-300"
             >
               {/* Image Container for AirCare */}
-              <div className="w-20 h-20 bg-white rounded-xl flex items-center justify-center relative overflow-hidden flex-shrink-0">
+              <div className="w-20 h-20 bg-white rounded-xl flex items-center justify-center relative overflow-hidden shrink-0">
                 <img 
                   src={splitAcImg} 
                   alt="Air Conditioner" 
@@ -231,7 +232,7 @@ const PartnerWarranty = () => {
               </div>
 
               {/* Arrow */}
-              <ChevronRight className="h-5 w-5 text-text-secondary flex-shrink-0" />
+              <ChevronRight className="h-5 w-5 text-text-secondary shrink-0" />
             </motion.div>
 
             {/* Card 6: WaterCare */}
@@ -243,7 +244,7 @@ const PartnerWarranty = () => {
               className="bg-white p-4 rounded-2xl border border-blue-200 shadow-sm flex items-center gap-4 cursor-pointer transition-all duration-300"
             >
               {/* Image Container for WaterCare */}
-              <div className="w-20 h-20 bg-white rounded-xl flex items-center justify-center relative overflow-hidden flex-shrink-0">
+              <div className="w-20 h-20 bg-white rounded-xl flex items-center justify-center relative overflow-hidden shrink-0">
                 <img 
                   src={waterPurifierImg} 
                   alt="Water Purifier" 
@@ -262,7 +263,7 @@ const PartnerWarranty = () => {
               </div>
 
               {/* Arrow */}
-              <ChevronRight className="h-5 w-5 text-text-secondary flex-shrink-0" />
+              <ChevronRight className="h-5 w-5 text-text-secondary shrink-0" />
             </motion.div>
 
             {/* Card 7: SecureCare */}
@@ -274,7 +275,7 @@ const PartnerWarranty = () => {
               className="bg-white p-4 rounded-2xl border border-blue-200 shadow-sm flex items-center gap-4 cursor-pointer transition-all duration-300"
             >
               {/* Image Container for SecureCare */}
-              <div className="w-20 h-20 bg-white rounded-xl flex items-center justify-center relative overflow-hidden flex-shrink-0">
+              <div className="w-20 h-20 bg-white rounded-xl flex items-center justify-center relative overflow-hidden shrink-0">
                 <img 
                   src={securitySystemImg} 
                   alt="Smart Security System" 
@@ -293,7 +294,7 @@ const PartnerWarranty = () => {
               </div>
 
               {/* Arrow */}
-              <ChevronRight className="h-5 w-5 text-text-secondary flex-shrink-0" />
+              <ChevronRight className="h-5 w-5 text-text-secondary shrink-0" />
             </motion.div>
 
           </div>

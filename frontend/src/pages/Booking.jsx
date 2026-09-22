@@ -261,7 +261,7 @@ const Booking = () => {
             </h1>
           </div>
           {/* Profile / User Avatar */}
-          <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0 cursor-pointer">
+          <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0 cursor-pointer">
             <User className="w-4 h-4 text-slate-600" />
           </div>
         </div>
@@ -276,7 +276,7 @@ const Booking = () => {
             </span>
             <div className="flex items-center justify-between bg-slate-50 border border-slate-100 rounded-2xl p-4 shadow-sm">
               <div className="flex items-center gap-3">
-                <div className="w-7 h-7 bg-[#EAF4FF] rounded-lg flex items-center justify-center flex-shrink-0">
+                <div className="w-7 h-7 bg-[#EAF4FF] rounded-lg flex items-center justify-center shrink-0">
                   {/* Offers tag */}
                   <svg className="w-4 h-4 text-[#2F80ED]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M7 7h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 00-2 2z" />
@@ -308,7 +308,7 @@ const Booking = () => {
                 className="w-full px-4 py-3.5 flex items-center justify-between border-b border-slate-50 hover:bg-slate-50 transition-colors"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full border border-slate-100 flex items-center justify-center flex-shrink-0 bg-[#F8F9FA]">
+                  <div className="w-8 h-8 rounded-full border border-slate-100 flex items-center justify-center shrink-0 bg-[#F8F9FA]">
                     {/* Google Pay color spheres */}
                     <div className="flex gap-0.5">
                       <div className="w-2 h-2 rounded-full bg-[#EA4335]" />
@@ -327,7 +327,7 @@ const Booking = () => {
                 className="w-full px-4 py-3.5 flex items-center justify-between hover:bg-slate-50 transition-colors"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full border border-slate-100 flex items-center justify-center flex-shrink-0 bg-[#E3F2FD]">
+                  <div className="w-8 h-8 rounded-full border border-slate-100 flex items-center justify-center shrink-0 bg-[#E3F2FD]">
                     <span className="text-[9px] font-black text-[#002E6E] uppercase">Paytm</span>
                   </div>
                   <span className="text-[12px] font-extrabold text-slate-800">UPI - Paytm</span>
@@ -351,7 +351,7 @@ const Booking = () => {
                 className="w-full px-4 py-4 flex items-center justify-between hover:bg-slate-50 transition-colors"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full border border-slate-100 flex items-center justify-center flex-shrink-0 bg-[#E0F2F1]">
+                  <div className="w-8 h-8 rounded-full border border-slate-100 flex items-center justify-center shrink-0 bg-[#E0F2F1]">
                     {/* BHIM / UPI Icon */}
                     <span className="text-[10px] font-black text-[#00796B]">UPI</span>
                   </div>
@@ -546,7 +546,7 @@ const Booking = () => {
                   {preSelectedService}
                 </span>
               </div>
-              <div className="flex items-center gap-4 flex-shrink-0">
+              <div className="flex items-center gap-4 shrink-0">
                 <div className="w-20 md:w-28 flex items-center justify-between border border-brand-blue bg-white rounded-xl md:rounded-2xl text-[12px] md:text-sm font-extrabold overflow-hidden h-8 md:h-10">
                   <button
                     onClick={() => setQty(Math.max(1, qty - 1))}
@@ -569,8 +569,8 @@ const Booking = () => {
             </div>
 
             {/* Service Guarantee Card */}
-            <div className="bg-gradient-to-r from-blue-50/60 to-indigo-50/60 rounded-2xl md:rounded-3xl p-4 md:p-5 border border-blue-100 flex items-center gap-3 text-left">
-              <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-brand-blue shadow-xs flex-shrink-0">
+            <div className="bg-linear-to-r from-blue-50/60 to-indigo-50/60 rounded-2xl md:rounded-3xl p-4 md:p-5 border border-blue-100 flex items-center gap-3 text-left">
+              <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-brand-blue shadow-xs shrink-0">
                 <Check className="h-4 w-4 stroke-[3]" />
               </div>
               <div className="flex flex-col">
@@ -583,7 +583,7 @@ const Booking = () => {
             {checkoutStep >= 1 && (
               <div className="bg-white rounded-2xl md:rounded-3xl p-4 md:p-5 shadow-sm border border-slate-100 flex items-center justify-between text-left">
                 <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center shrink-0 mt-0.5">
                     <svg className="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                     </svg>
@@ -599,7 +599,7 @@ const Booking = () => {
                 </div>
                 <button 
                   onClick={() => setShowAddressDrawer(true)} 
-                  className="p-1.5 hover:bg-slate-100 rounded-full transition-colors flex-shrink-0 ml-2"
+                  className="p-1.5 hover:bg-slate-100 rounded-full transition-colors shrink-0 ml-2"
                 >
                   <svg className="w-4 h-4 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -612,7 +612,7 @@ const Booking = () => {
             {checkoutStep >= 2 && (
               <div className="bg-white rounded-2xl md:rounded-3xl p-4 md:p-5 shadow-sm border border-slate-100 flex items-center justify-between text-left">
                 <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center shrink-0 mt-0.5">
                     <svg className="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
@@ -625,7 +625,7 @@ const Booking = () => {
                 </div>
                 <button 
                   onClick={() => setShowDateTimeDrawer(true)} 
-                  className="p-1.5 hover:bg-slate-100 rounded-full transition-colors flex-shrink-0 ml-2"
+                  className="p-1.5 hover:bg-slate-100 rounded-full transition-colors shrink-0 ml-2"
                 >
                   <svg className="w-4 h-4 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -931,7 +931,7 @@ const Booking = () => {
 
               {/* Advance payment refundability details card */}
               <div className="bg-[#F8F9FA] rounded-2xl p-4 border border-slate-100 flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-[#EAF4FF] flex items-center justify-center flex-shrink-0">
+                <div className="w-8 h-8 rounded-xl bg-[#EAF4FF] flex items-center justify-center shrink-0">
                   <CreditCard className="w-4.5 h-4.5 text-[#2F80ED]" />
                 </div>
                 <div className="flex flex-col">
@@ -962,7 +962,7 @@ const Booking = () => {
                             setSelectedDate(dateText);
                           }
                         }}
-                        className={`flex flex-col items-center justify-center min-w-[64px] h-[64px] rounded-2xl border transition-all ${
+                        className={`flex flex-col items-center justify-center min-w-16 h-16 rounded-2xl border transition-all ${
                           isActive
                             ? 'border-[#2F80ED] bg-[#EAF4FF] shadow-sm'
                             : 'border-slate-200 bg-white hover:border-slate-300'

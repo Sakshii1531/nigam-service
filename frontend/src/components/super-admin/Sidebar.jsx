@@ -614,14 +614,14 @@ const Sidebar = () => {
                 <button
                   type="button"
                   onClick={() => setOpenSections(prev => ({ ...prev, [item.id]: !prev[item.id] }))}
-                  className={`flex items-center justify-between w-full mx-3 py-2 text-sm font-semibold transition-colors cursor-pointer text-left rounded-lg max-w-[232px] px-3 ${
+                  className={`flex items-center justify-between w-full mx-3 py-2 text-sm font-semibold transition-colors cursor-pointer text-left rounded-lg max-w-58 px-3 ${
                     isAnySubActive 
                       ? 'text-[#0D47A1] bg-[#E8F0FE]' 
                       : 'text-[#5F6368] hover:text-[#1E293B] hover:bg-[#EAEFF9]'
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <span className="flex-shrink-0">{item.icon}</span>
+                    <span className="shrink-0">{item.icon}</span>
                     <span>{item.label}</span>
                   </div>
                   {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
@@ -643,7 +643,7 @@ const Sidebar = () => {
                             }
                           }}
                           className={`
-                            pl-3 py-1.5 text-xs font-semibold rounded-md transition-colors block max-w-[180px]
+                            pl-3 py-1.5 text-xs font-semibold rounded-md transition-colors block max-w-45
                             ${isSubActive 
                               ? 'text-[#0D47A1] bg-[#E8F0FE] font-bold' 
                               : 'text-[#64748B] hover:text-[#1E293B] hover:bg-[#EAEFF9]'}
@@ -674,17 +674,17 @@ const Sidebar = () => {
                 }
               }}
               className={`
-                flex items-center gap-3 mx-3 px-3 py-2 text-sm font-semibold rounded-lg transition-colors max-w-[232px]
+                flex items-center gap-3 mx-3 px-3 py-2 text-sm font-semibold rounded-lg transition-colors max-w-58
                 ${isLinkActive
                   ? 'text-[#0D47A1] bg-[#E8F0FE]'
                   : 'text-[#5F6368] hover:text-[#1E293B] hover:bg-[#EAEFF9]'}
               `}
             >
-              <span className="flex-shrink-0">{item.icon}</span>
+              <span className="shrink-0">{item.icon}</span>
               <span className="truncate flex-1">{item.label}</span>
               {badgeCount > 0 && (
                 <span
-                  className="flex-shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-amber-500 text-white text-[10px] font-black flex items-center justify-center animate-pulse"
+                  className="shrink-0 min-w-4.5 h-4.5 px-1 rounded-full bg-amber-500 text-white text-[10px] font-black flex items-center justify-center animate-pulse"
                   title={`${badgeCount} needs your attention`}
                 >
                   {badgeCount > 99 ? '99+' : badgeCount}
@@ -725,7 +725,7 @@ const Sidebar = () => {
           className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-100 cursor-pointer transition-colors"
         >
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 bg-[#0D47A1] text-white rounded-full flex items-center justify-center font-bold text-xs select-none flex-shrink-0">
+            <div className="w-8 h-8 bg-[#0D47A1] text-white rounded-full flex items-center justify-center font-bold text-xs select-none shrink-0">
               {user?.name ? user.name.split(' ').map((p) => p[0]).join('').toUpperCase().slice(0, 2) : 'SA'}
             </div>
             <div className="truncate min-w-0 leading-tight">
@@ -733,7 +733,7 @@ const Sidebar = () => {
               <p className="text-[10px] text-[#64748B] truncate">{user?.email || user?.phone || 'superadmin@ncc.com'}</p>
             </div>
           </div>
-          <ChevronDown size={14} className={`text-[#64748B] flex-shrink-0 transition-transform duration-200 ${isProfileMenuOpen ? 'rotate-180' : ''}`} />
+          <ChevronDown size={14} className={`text-[#64748B] shrink-0 transition-transform duration-200 ${isProfileMenuOpen ? 'rotate-180' : ''}`} />
         </div>
       </div>
 

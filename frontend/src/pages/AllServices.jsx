@@ -56,7 +56,7 @@ const AllServices = () => {
                   className="flex flex-col items-center gap-2.5 cursor-pointer border border-border-color rounded-2xl p-4 md:p-5 bg-white hover:border-brand-blue hover:shadow-md transition-all text-center"
                 >
                   <div
-                    className="w-14 h-14 md:w-16 md:h-16 rounded-2xl flex items-center justify-center text-2xl md:text-3xl flex-shrink-0"
+                    className="w-14 h-14 md:w-16 md:h-16 rounded-2xl flex items-center justify-center text-2xl md:text-3xl shrink-0"
                     style={{ backgroundColor: cat.lightBg || '#EAF4FF' }}
                   >
                     {emoji}

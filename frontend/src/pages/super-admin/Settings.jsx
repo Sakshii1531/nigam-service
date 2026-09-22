@@ -592,7 +592,7 @@ const Settings = () => {
                     const providerEarnings = Math.round(testAmt * (comm / 100));
                     const platformFee = Math.max(0, testAmt - providerEarnings);
                     return (
-                      <div className="bg-gradient-to-br from-[#072C63] to-[#0D47A1] text-white p-5 rounded-2xl shadow-md border border-white/10 space-y-4">
+                      <div className="bg-linear-to-br from-[#072C63] to-[#0D47A1] text-white p-5 rounded-2xl shadow-md border border-white/10 space-y-4">
                         <div className="flex items-center justify-between flex-wrap gap-2">
                           <div className="flex items-center gap-2">
                             <Calculator className="h-4 w-4 text-amber-400" />

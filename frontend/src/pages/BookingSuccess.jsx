@@ -400,7 +400,7 @@ const BookingSuccess = () => {
     <div className="min-h-screen bg-[#F0F4FF] flex flex-col font-sans">
       <div className="flex-1 max-w-screen-2xl mx-auto w-full px-4 md:px-8 py-6 md:py-8 overflow-y-auto">
         {/* ── Hero Section ── */}
-        <div className="bg-gradient-to-b from-[#E8F0FF] to-[#F0F4FF] pt-8 md:pt-12 pb-6 flex flex-col items-center gap-3 px-4 rounded-3xl md:border md:border-blue-100/50 mb-6 shadow-xs">
+        <div className="bg-linear-to-b from-[#E8F0FF] to-[#F0F4FF] pt-8 md:pt-12 pb-6 flex flex-col items-center gap-3 px-4 rounded-3xl md:border md:border-blue-100/50 mb-6 shadow-xs">
           {/* Animated checkmark */}
           <div className="relative">
             {/* Sparkles */}
@@ -438,7 +438,7 @@ const BookingSuccess = () => {
         </div>
 
         {/* ── 5-Second Redirect Notice Banner ── */}
-        <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white rounded-2xl md:rounded-3xl p-4 md:p-5 shadow-md shadow-blue-500/20 mb-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="bg-linear-to-r from-blue-600 via-indigo-600 to-blue-700 text-white rounded-2xl md:rounded-3xl p-4 md:p-5 shadow-md shadow-blue-500/20 mb-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3.5 text-left w-full sm:w-auto">
             <div className="w-11 h-11 rounded-2xl bg-white/20 flex items-center justify-center shrink-0">
               <Radio className="w-6 h-6 text-white animate-pulse" />
@@ -500,7 +500,7 @@ const BookingSuccess = () => {
                       i < rows.length - 1 ? "border-b border-slate-100" : ""
                     }`}>
                     <Icon
-                      className="w-5 h-5 flex-shrink-0"
+                      className="w-5 h-5 shrink-0"
                       style={{ color: iconColor }}
                       strokeWidth={1.8}
                     />
@@ -522,8 +522,8 @@ const BookingSuccess = () => {
               <div
                 className={`text-white rounded-2xl md:rounded-3xl p-5 shadow-md transition-all duration-300 ${
                   isAccepted && serviceProvider
-                    ? "bg-gradient-to-r from-blue-700 to-indigo-700 shadow-blue-500/20"
-                    : "bg-gradient-to-r from-amber-500 to-orange-500 shadow-amber-500/20"
+                    ? "bg-linear-to-r from-blue-700 to-indigo-700 shadow-blue-500/20"
+                    : "bg-linear-to-r from-amber-500 to-orange-500 shadow-amber-500/20"
                 }`}>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-[10px] md:text-xs font-black uppercase tracking-wider bg-white/20 px-3 py-1 rounded-full flex items-center gap-1.5">
@@ -539,7 +539,7 @@ const BookingSuccess = () => {
                   </span>
                 </div>
                 <div className="flex items-center gap-3.5 mt-3">
-                  <div className="w-11 h-11 rounded-2xl bg-white/20 flex items-center justify-center text-2xl font-bold flex-shrink-0">
+                  <div className="w-11 h-11 rounded-2xl bg-white/20 flex items-center justify-center text-2xl font-bold shrink-0">
                     {isAccepted && serviceProvider ? "👨‍🔧" : "⏱️"}
                   </div>
                   <div className="flex-1">
@@ -579,7 +579,7 @@ const BookingSuccess = () => {
                 </div>
 
                 <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-blue to-[#1E88E5] flex items-center justify-center flex-shrink-0 text-white text-2xl font-black shadow-lg shadow-blue-500/20 ring-4 ring-blue-50">
+                  <div className="w-16 h-16 rounded-2xl bg-linear-to-br from-brand-blue to-[#1E88E5] flex items-center justify-center shrink-0 text-white text-2xl font-black shadow-lg shadow-blue-500/20 ring-4 ring-blue-50">
                     {(serviceProvider.name || "T").charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -610,7 +610,7 @@ const BookingSuccess = () => {
                     onClick={handleCallServiceProvider}
                     disabled={callLoading}
                     title="Call Service Provider"
-                    className="h-12 px-4 rounded-2xl bg-brand-blue text-white flex items-center gap-2 flex-shrink-0 active:scale-95 transition-all shadow-md shadow-blue-900/20 hover:bg-[#1565C0] cursor-pointer">
+                    className="h-12 px-4 rounded-2xl bg-brand-blue text-white flex items-center gap-2 shrink-0 active:scale-95 transition-all shadow-md shadow-blue-900/20 hover:bg-[#1565C0] cursor-pointer">
                     <Phone className="w-4 h-4" />
                     <span className="hidden sm:inline text-xs font-bold">
                       Call
@@ -635,10 +635,10 @@ const BookingSuccess = () => {
               /* ── SEARCHING PROMPT CARD ── */
               <div
                 onClick={handleSearchNow}
-                className="bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 rounded-2xl md:rounded-3xl border border-blue-200/80 p-5 md:p-6 text-left relative overflow-hidden transition-all cursor-pointer shadow-xs">
+                className="bg-linear-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 rounded-2xl md:rounded-3xl border border-blue-200/80 p-5 md:p-6 text-left relative overflow-hidden transition-all cursor-pointer shadow-xs">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="flex items-center gap-3.5">
-                    <div className="relative flex items-center justify-center w-12 h-12 rounded-2xl bg-white border border-blue-200 shadow-xs flex-shrink-0">
+                    <div className="relative flex items-center justify-center w-12 h-12 rounded-2xl bg-white border border-blue-200 shadow-xs shrink-0">
                       <span className="absolute w-full h-full rounded-2xl bg-blue-400/20 animate-ping" />
                       <Radio className="w-6 h-6 text-brand-blue animate-pulse" />
                     </div>

@@ -19,6 +19,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { apiRequest, getStoredTokens } from "../lib/apiClient";
+import { goBack } from '../lib/navigation';
 import { io } from "socket.io-client";
 import CancelBookingModal from "../components/booking/CancelBookingModal";
 import RescheduleBookingModal from "../components/booking/RescheduleBookingModal";
@@ -352,7 +353,7 @@ const BookingDetails = () => {
       <header className="bg-white border-b border-slate-200/80 sticky top-0 z-30 px-4 md:px-8 py-3.5 flex items-center justify-between shadow-2xs">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => navigate("/my-bookings")}
+            onClick={() => goBack(navigate, "/my-bookings")}
             className="p-2 rounded-xl hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer"
             title="Back to Bookings">
             <ArrowLeft className="w-5 h-5" />
@@ -410,7 +411,7 @@ const BookingDetails = () => {
       <main className="max-w-3xl mx-auto w-full px-4 py-5 flex flex-col gap-4">
         {/* OTP Banner (Shown for all active bookings) */}
         {!isCancelled && !isCompleted && (
-          <div className="bg-gradient-to-r from-brand-navy to-[#0F3460] rounded-3xl p-4.5 text-white shadow-md flex items-center justify-between gap-3">
+          <div className="bg-linear-to-r from-brand-navy to-[#0F3460] rounded-3xl p-4.5 text-white shadow-md flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="w-11 h-11 rounded-2xl bg-white/10 flex items-center justify-center text-emerald-400 shrink-0">
                 <ShieldCheck className="w-6 h-6" />
@@ -681,7 +682,7 @@ const BookingDetails = () => {
           <div className="flex flex-col gap-4 pl-2 border-l-2 border-blue-200 ml-3">
             {/* Placed */}
             <div className="relative pl-5">
-              <div className="absolute -left-[19px] top-0 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white shadow-xs" />
+              <div className="absolute -left-4.75 top-0 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white shadow-xs" />
               <p className="text-xs font-black text-slate-900">
                 Booking Placed & Confirmed
               </p>
@@ -700,7 +701,7 @@ const BookingDetails = () => {
             {/* Assigned */}
             <div className="relative pl-5">
               <div
-                className={`absolute -left-[19px] top-0 w-3.5 h-3.5 rounded-full border-2 border-white shadow-xs ${isAssigned ? "bg-emerald-500" : "bg-slate-300"}`}
+                className={`absolute -left-4.75 top-0 w-3.5 h-3.5 rounded-full border-2 border-white shadow-xs ${isAssigned ? "bg-emerald-500" : "bg-slate-300"}`}
               />
               <p className="text-xs font-black text-slate-900">
                 {isAssigned
@@ -717,7 +718,7 @@ const BookingDetails = () => {
             {/* Spares if any */}
             {isSpareReq && (
               <div className="relative pl-5">
-                <div className="absolute -left-[19px] top-0 w-3.5 h-3.5 rounded-full bg-amber-500 border-2 border-white shadow-xs" />
+                <div className="absolute -left-4.75 top-0 w-3.5 h-3.5 rounded-full bg-amber-500 border-2 border-white shadow-xs" />
                 <p className="text-xs font-black text-amber-900">
                   Spare Parts In Transit
                 </p>
@@ -731,7 +732,7 @@ const BookingDetails = () => {
             {/* Final status */}
             <div className="relative pl-5">
               <div
-                className={`absolute -left-[19px] top-0 w-3.5 h-3.5 rounded-full border-2 border-white shadow-xs ${isCompleted ? "bg-emerald-500" : isCancelled ? "bg-rose-500" : "bg-slate-300"}`}
+                className={`absolute -left-4.75 top-0 w-3.5 h-3.5 rounded-full border-2 border-white shadow-xs ${isCompleted ? "bg-emerald-500" : isCancelled ? "bg-rose-500" : "bg-slate-300"}`}
               />
               <p className="text-xs font-black text-slate-900">
                 {isCompleted

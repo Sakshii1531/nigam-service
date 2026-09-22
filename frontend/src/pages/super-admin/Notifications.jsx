@@ -341,7 +341,7 @@ const Notifications = () => {
             </div>
 
             {/* Right Column: History Logs */}
-            <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-[#E2E8F0] flex flex-col min-h-[600px] shadow-sm">
+            <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-[#E2E8F0] flex flex-col min-h-150 shadow-sm">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-slate-100">
                 <div>
                   <h3 className="font-black text-sm text-[#1E293B]">Broadcast History Logs ({filteredLogs.length})</h3>

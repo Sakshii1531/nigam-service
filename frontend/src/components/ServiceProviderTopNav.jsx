@@ -28,10 +28,10 @@ const ServiceProviderTopNav = ({ activePage = "jobs" }) => {
         
         {/* Brand */}
         <div
-          className="flex items-center gap-2.5 cursor-pointer group flex-shrink-0"
+          className="flex items-center gap-2.5 cursor-pointer group shrink-0"
           onClick={() => navigate("/service-provider/dashboard")}
         >
-          <div className="w-8.5 h-8.5 bg-gradient-to-tr from-[#FFD400] to-[#FFE566] rounded-xl flex items-center justify-center shadow-md ring-2 ring-white/20 group-hover:scale-105 transition-transform duration-200">
+          <div className="w-8.5 h-8.5 bg-linear-to-tr from-[#FFD400] to-[#FFE566] rounded-xl flex items-center justify-center shadow-md ring-2 ring-white/20 group-hover:scale-105 transition-transform duration-200">
             <Wrench className="h-4.5 w-4.5 text-[#051F42]" />
           </div>
           <div className="flex flex-col">
@@ -50,7 +50,7 @@ const ServiceProviderTopNav = ({ activePage = "jobs" }) => {
                 onClick={() => navigate(path)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
                   isActive
-                    ? "bg-gradient-to-r from-[#FFD400] to-[#FFCA00] text-[#051F42] shadow-[0_2px_10px_rgba(255,212,0,0.3)] scale-[1.02]"
+                    ? "bg-linear-to-r from-[#FFD400] to-[#FFCA00] text-[#051F42] shadow-[0_2px_10px_rgba(255,212,0,0.3)] scale-[1.02]"
                     : "text-slate-200 hover:text-white hover:bg-white/10"
                 }`}
               >
@@ -62,7 +62,7 @@ const ServiceProviderTopNav = ({ activePage = "jobs" }) => {
         </div>
 
         {/* Right Side: Bell + Avatar */}
-        <div className="flex items-center gap-3 flex-shrink-0">
+        <div className="flex items-center gap-3 shrink-0">
           <button
             onClick={() => navigate("/service-provider/notifications")}
             className="relative w-10 h-10 rounded-xl bg-white/5 hover:bg-white/12 border border-white/10 flex items-center justify-center transition-all cursor-pointer group shadow-2xs"
@@ -70,7 +70,7 @@ const ServiceProviderTopNav = ({ activePage = "jobs" }) => {
           >
             <Bell className="h-4.5 w-4.5 text-slate-200 group-hover:text-white group-hover:rotate-12 transition-transform" />
             {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-rose-500 text-white text-[9.5px] font-black rounded-full flex items-center justify-center border-2 border-[#051F42] shadow-xs">
+              <span className="absolute -top-1 -right-1 min-w-4.5 h-4.5 px-1 bg-rose-500 text-white text-[9.5px] font-black rounded-full flex items-center justify-center border-2 border-[#051F42] shadow-xs">
                 {unreadCount > 99 ? '99+' : unreadCount}
               </span>
             )}
@@ -80,10 +80,10 @@ const ServiceProviderTopNav = ({ activePage = "jobs" }) => {
             onClick={() => navigate("/service-provider/profile")}
             className="flex items-center gap-2.5 bg-white/5 hover:bg-white/12 border border-white/10 p-1 pr-3.5 rounded-full cursor-pointer transition-all group"
           >
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#FFD400] to-[#FFE566] text-[#051F42] font-black text-xs flex items-center justify-center shadow-md ring-2 ring-white/20 group-hover:ring-white/40 transition-all">
+            <div className="w-8 h-8 rounded-full bg-linear-to-tr from-[#FFD400] to-[#FFE566] text-[#051F42] font-black text-xs flex items-center justify-center shadow-md ring-2 ring-white/20 group-hover:ring-white/40 transition-all">
               {userInitial}
             </div>
-            <span className="text-xs font-bold text-white max-w-[110px] truncate">
+            <span className="text-xs font-bold text-white max-w-27.5 truncate">
               {firstName}
             </span>
           </div>

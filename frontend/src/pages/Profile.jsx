@@ -125,7 +125,7 @@ const Profile = () => {
             className="bg-white border border-slate-200/80 p-3.5 rounded-[22px] flex items-center justify-between gap-3.5 shadow-2xs hover:shadow-md transition-all cursor-pointer group"
           >
             <div className="flex items-center gap-3.5">
-              <div className="w-13 h-13 bg-gradient-to-br from-brand-blue to-blue-700 rounded-full flex items-center justify-center text-white text-lg font-black shadow-md border-2 border-blue-100 shrink-0 uppercase">
+              <div className="w-13 h-13 bg-linear-to-br from-brand-blue to-blue-700 rounded-full flex items-center justify-center text-white text-lg font-black shadow-md border-2 border-blue-100 shrink-0 uppercase">
                 {user?.name ? user.name[0] : 'U'}
               </div>
               <div className="flex flex-col">
@@ -141,10 +141,10 @@ const Profile = () => {
 
           {/* Plus Gold Membership Card */}
           {hasMembership && (
-            <div className="bg-gradient-to-r from-[#0C1D33] via-[#102747] to-[#0C1D33] rounded-[20px] p-3.5 text-white shadow-xs relative overflow-hidden border border-white/10">
+            <div className="bg-linear-to-r from-[#0C1D33] via-[#102747] to-[#0C1D33] rounded-[20px] p-3.5 text-white shadow-xs relative overflow-hidden border border-white/10">
               <div className="flex justify-between items-start mb-2.5">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8.5 h-8.5 bg-gradient-to-tr from-[#FFD54F] via-[#FF8F00] to-[#FFD54F] rounded-xl flex items-center justify-center shadow-md border border-amber-300 shrink-0">
+                  <div className="w-8.5 h-8.5 bg-linear-to-tr from-[#FFD54F] via-[#FF8F00] to-[#FFD54F] rounded-xl flex items-center justify-center shadow-md border border-amber-300 shrink-0">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M12 17L17 21L15.5 14L21 9.5H14L12 3L10 9.5H3L8.5 14L7 21L12 17Z" fill="white" stroke="#FF8F00" strokeWidth="1.5" strokeLinejoin="round" />
                     </svg>
@@ -453,7 +453,7 @@ const Profile = () => {
           {/* Refer & Earn Banner */}
           <div 
             onClick={() => navigate('/refer-earn')}
-            className="bg-gradient-to-r from-[#FFF8F0] via-[#FFF3E0] to-[#FFE8CC] rounded-[22px] p-4 relative overflow-hidden shadow-2xs flex items-center justify-between mt-1 min-h-[115px] border border-amber-200/70 cursor-pointer hover:shadow-md transition-all"
+            className="bg-linear-to-r from-[#FFF8F0] via-[#FFF3E0] to-[#FFE8CC] rounded-[22px] p-4 relative overflow-hidden shadow-2xs flex items-center justify-between mt-1 min-h-28.75 border border-amber-200/70 cursor-pointer hover:shadow-md transition-all"
           >
             <div className="flex-1 flex flex-col gap-1 pr-20 z-10">
               <h4 className="text-xs font-black text-amber-900">Refer & Earn</h4>
@@ -465,7 +465,7 @@ const Profile = () => {
                 Refer Now
               </button>
             </div>
-            <div className="absolute bottom-2 right-3 h-[85px] w-20 flex items-center justify-center pointer-events-none z-0">
+            <div className="absolute bottom-2 right-3 h-21.25 w-20 flex items-center justify-center pointer-events-none z-0">
               <svg viewBox="0 0 100 100" className="h-16 w-16 text-amber-500 drop-shadow-[0_4px_8px_rgba(245,158,11,0.25)]">
                 <rect x="25" y="40" width="50" height="45" rx="6" fill="#F59E0B" />
                 <rect x="20" y="30" width="60" height="12" rx="4" fill="#FBBF24" />
@@ -494,7 +494,7 @@ const Profile = () => {
           <div className="flex items-center gap-4">
             <button 
               onClick={() => navigate(-1)}
-              className="p-2.5 bg-slate-100 hover:bg-slate-200 rounded-2xl text-slate-700 transition-colors cursor-pointer flex-shrink-0"
+              className="p-2.5 bg-slate-100 hover:bg-slate-200 rounded-2xl text-slate-700 transition-colors cursor-pointer shrink-0"
               title="Go Back"
               aria-label="Go Back"
             >
@@ -540,11 +540,11 @@ const Profile = () => {
           <div className="w-full lg:w-96 flex flex-col gap-6 shrink-0">
             
             {/* User Executive Badge */}
-            <div className="bg-gradient-to-br from-[#0C2340] via-brand-blue to-[#051C38] rounded-3xl p-6 text-white shadow-md relative overflow-hidden border border-slate-800">
+            <div className="bg-linear-to-br from-[#0C2340] via-brand-blue to-[#051C38] rounded-3xl p-6 text-white shadow-md relative overflow-hidden border border-slate-800">
               <div className="absolute top-0 right-0 w-32 h-32 bg-blue-400/10 rounded-full blur-2xl pointer-events-none" />
               
               <div className="flex items-center gap-4 relative z-10">
-                <div className="w-20 h-20 bg-gradient-to-tr from-amber-400 via-yellow-200 to-white rounded-2xl p-0.5 shadow-md">
+                <div className="w-20 h-20 bg-linear-to-tr from-amber-400 via-yellow-200 to-white rounded-2xl p-0.5 shadow-md">
                   <div className="w-full h-full bg-[#051C38] rounded-[14px] flex items-center justify-center text-white text-3xl font-black uppercase">
                     {user?.name ? user.name[0] : 'U'}
                   </div>
@@ -567,10 +567,10 @@ const Profile = () => {
 
             {/* Plus Gold Membership Card */}
             {hasMembership ? (
-              <div className="bg-gradient-to-r from-[#0C1D33] via-[#102747] to-[#0C1D33] rounded-3xl p-5 text-white shadow-md relative overflow-hidden border border-amber-400/30">
+              <div className="bg-linear-to-r from-[#0C1D33] via-[#102747] to-[#0C1D33] rounded-3xl p-5 text-white shadow-md relative overflow-hidden border border-amber-400/30">
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gradient-to-tr from-[#FFD54F] via-[#FF8F00] to-[#FFD54F] rounded-xl flex items-center justify-center shadow-md border border-amber-300">
+                    <div className="w-10 h-10 bg-linear-to-tr from-[#FFD54F] via-[#FF8F00] to-[#FFD54F] rounded-xl flex items-center justify-center shadow-md border border-amber-300">
                       <Award className="h-5 w-5 text-amber-950" />
                     </div>
                     <div>
@@ -641,9 +641,9 @@ const Profile = () => {
             {/* Refer & Earn Desktop Card */}
             <div 
               onClick={() => navigate('/refer-earn')}
-              className="bg-gradient-to-r from-[#FFF8F0] to-[#FFF0E0] rounded-3xl p-5 border border-amber-200/70 shadow-2xs hover:shadow-md transition-all cursor-pointer flex justify-between items-center relative overflow-hidden"
+              className="bg-linear-to-r from-[#FFF8F0] to-[#FFF0E0] rounded-3xl p-5 border border-amber-200/70 shadow-2xs hover:shadow-md transition-all cursor-pointer flex justify-between items-center relative overflow-hidden"
             >
-              <div className="flex flex-col gap-1 z-10 max-w-[200px]">
+              <div className="flex flex-col gap-1 z-10 max-w-50">
                 <span className="text-xs font-black text-amber-900 uppercase tracking-wider">Refer & Earn</span>
                 <p className="text-xs text-amber-800 font-bold leading-snug">Earn 100 coins for every friend who signs up</p>
                 <button className="mt-2 bg-amber-600 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-xs self-start cursor-pointer">

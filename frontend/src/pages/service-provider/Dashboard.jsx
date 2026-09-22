@@ -490,7 +490,7 @@ const Dashboard = () => {
     if (b.includes('sony')) return <span className="font-extrabold text-slate-800 text-xs tracking-wider">SONY</span>;
     if (b.includes('kent')) return <span className="font-bold text-sky-600 text-xs italic">KENT</span>;
     if (b.includes('faber')) return <span className="font-semibold text-rose-600 text-xs tracking-widest">FABER</span>;
-    return <span className="font-semibold text-xs text-slate-600 truncate max-w-[110px]">{brandName}</span>;
+    return <span className="font-semibold text-xs text-slate-600 truncate max-w-27.5">{brandName}</span>;
   };
 
   return (
@@ -520,7 +520,7 @@ const Dashboard = () => {
         </div>
       ) : (
         /* Navy hero — mobile only */
-        <div className="bg-gradient-to-b from-[#052355] to-[#0A2F6E] text-white px-4 pt-4 pb-12 rounded-b-[28px] lg:hidden">
+        <div className="bg-linear-to-b from-[#052355] to-[#0A2F6E] text-white px-4 pt-4 pb-12 rounded-b-[28px] lg:hidden">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-2">
               <div className="h-7 px-1.5 rounded-md bg-[#FFD400] flex items-center justify-center">
@@ -539,7 +539,7 @@ const Dashboard = () => {
               >
                 <Bell className="h-5 w-5 text-white" />
                 {unreadNotificationsCount > 0 && (
-                  <span className="absolute top-0.5 right-0.5 min-w-[18px] h-[18px] px-1 bg-red-500 rounded-full text-[10px] font-bold flex items-center justify-center ring-2 ring-[#052355]">
+                  <span className="absolute top-0.5 right-0.5 min-w-4.5 h-4.5 px-1 bg-red-500 rounded-full text-[10px] font-bold flex items-center justify-center ring-2 ring-[#052355]">
                     {unreadNotificationsCount > 99 ? '99+' : unreadNotificationsCount}
                   </span>
                 )}
@@ -885,7 +885,7 @@ const Dashboard = () => {
               <div className="flex flex-col gap-3 md:grid md:grid-cols-2 xl:grid-cols-3">
                 {jobsLoading ? (
                   [0, 1].map((i) => (
-                    <div key={i} className="h-[108px] rounded-2xl bg-white border border-slate-100 animate-pulse" />
+                    <div key={i} className="h-27 rounded-2xl bg-white border border-slate-100 animate-pulse" />
                   ))
                 ) : nearbyJobs.length > 0 ? (
                   nearbyJobs.map((job) => {
@@ -1170,7 +1170,7 @@ const Dashboard = () => {
             </button>
 
             {/* Graphic Badge */}
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-400/20 via-blue-500/10 to-teal-400/25 border border-emerald-300/40 flex items-center justify-center relative shadow-xs mt-1">
+            <div className="w-16 h-16 rounded-2xl bg-linear-to-br from-emerald-400/20 via-blue-500/10 to-teal-400/25 border border-emerald-300/40 flex items-center justify-center relative shadow-xs mt-1">
               <span className="w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-white absolute -top-1 -right-1 animate-pulse" />
               <Zap className="h-8 w-8 text-emerald-600" />
             </div>
@@ -1198,7 +1198,7 @@ const Dashboard = () => {
                 type="button"
                 onClick={handleConfirmOnline}
                 disabled={availabilityBusy}
-                className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-[0.98] text-white font-black py-3.5 px-4 rounded-2xl transition-all shadow-md shadow-emerald-500/25 flex items-center justify-center gap-2 text-sm cursor-pointer disabled:opacity-50"
+                className="w-full bg-linear-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-[0.98] text-white font-black py-3.5 px-4 rounded-2xl transition-all shadow-md shadow-emerald-500/25 flex items-center justify-center gap-2 text-sm cursor-pointer disabled:opacity-50"
               >
                 <CheckCircle2 className="w-4 h-4" />
                 <span>Go Online (Accept Jobs)</span>
@@ -1240,7 +1240,7 @@ const Dashboard = () => {
               aria-labelledby="dispatch-title"
               className="w-full sm:max-w-md bg-white rounded-t-[28px] sm:rounded-[28px] shadow-2xl overflow-hidden"
             >
-              <div className="bg-gradient-to-br from-[#052355] to-[#0D47A1] text-white px-5 pt-5 pb-6">
+              <div className="bg-linear-to-br from-[#052355] to-[#0D47A1] text-white px-5 pt-5 pb-6">
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <span className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-blue-200">
@@ -1353,7 +1353,7 @@ const Dashboard = () => {
       {rescheduleAlertJob && (
         <div className="fixed inset-0 bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-4 z-[125] animate-fade-in">
           <div className="bg-white border border-purple-100 rounded-[32px] max-w-md w-full flex flex-col shadow-2xl relative overflow-hidden">
-            <div className="bg-gradient-to-r from-purple-700 via-indigo-700 to-purple-900 p-5 text-white flex items-center justify-between">
+            <div className="bg-linear-to-r from-purple-700 via-indigo-700 to-purple-900 p-5 text-white flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center border border-white/20">
                   <RotateCcw className="w-5 h-5 text-purple-200" />
@@ -1445,7 +1445,7 @@ const Dashboard = () => {
       {cancellationAlert && (
         <div className="fixed inset-0 bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-4 z-[125] animate-fade-in">
           <div className="bg-white border border-rose-100 rounded-[32px] max-w-md w-full flex flex-col shadow-2xl relative overflow-hidden">
-            <div className="bg-gradient-to-r from-rose-600 to-red-700 p-5 text-white flex items-center justify-between">
+            <div className="bg-linear-to-r from-rose-600 to-red-700 p-5 text-white flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center border border-white/20">
                   <AlertTriangle className="w-5 h-5 text-white" />

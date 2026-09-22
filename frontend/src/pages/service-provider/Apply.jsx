@@ -16,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { apiRequest } from "../../lib/apiClient";
+import { goBack } from "../../lib/navigation";
 
 const ServiceProviderApply = () => {
   const navigate = useNavigate();
@@ -336,20 +337,27 @@ const ServiceProviderApply = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F4F6F8] flex flex-col items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-[#F8FAFC] relative overflow-x-hidden">
       {/* Background Decorative Blurs */}
-      <div className="absolute top-[-100px] left-[-100px] w-[300px] h-[300px] bg-[#0D47A1] opacity-10 rounded-full blur-3xl"></div>
-      <div className="absolute bottom-[-100px] right-[-100px] w-[300px] h-[300px] bg-[#FFD600] opacity-20 rounded-full blur-3xl"></div>
+      <div className="absolute -top-25 -left-25 w-75 h-75 bg-brand-blue opacity-10 rounded-full blur-3xl"></div>
+      <div className="absolute -bottom-25 -right-25 w-75 h-75 bg-brand-yellow opacity-20 rounded-full blur-3xl"></div>
 
-      <div className="w-full max-w-lg bg-white rounded-[30px] shadow-[0_20px_50px_rgba(5,150,105,0.05)] border border-slate-100 overflow-hidden flex flex-col pt-5 px-6 pb-6 relative z-10 my-6">
+      {/* This form (name/email/phone/password/city/services/Aadhar upload)
+          is taller than most mobile viewports — items-start (not centered)
+          plus overflow-x-hidden (not overflow-hidden) lets the page scroll
+          down to every field instead of clipping whatever doesn't fit,
+          matching the same fix on the customer signup page. */}
+      <div className="min-h-screen w-full flex items-start justify-center px-3 sm:px-4 md:px-6 py-6 sm:py-10">
+
+      <div className="w-full max-w-lg bg-white/90 backdrop-blur-xl rounded-2xl sm:rounded-[30px] shadow-[0_20px_50px_rgba(13,71,161,0.05)] border border-white/50 overflow-hidden flex flex-col p-5 sm:p-6 md:p-8 relative z-10">
         {/* Header */}
         <div className="flex items-center mb-2">
           <button
-            onClick={() => navigate("/service-provider/login")}
+            onClick={() => goBack(navigate, "/service-provider/login")}
             className="p-2 hover:bg-slate-50 rounded-full transition-all border border-transparent hover:border-slate-100">
-            <ArrowLeft className="h-5 w-5 text-[#0D47A1]" />
+            <ArrowLeft className="h-5 w-5 text-brand-blue" />
           </button>
-          <span className="text-xs font-bold text-[#0D47A1] ml-2 uppercase tracking-wider">
+          <span className="text-xs font-bold text-brand-blue ml-2 uppercase tracking-wider">
             Join as Partner
           </span>
         </div>
@@ -357,9 +365,9 @@ const ServiceProviderApply = () => {
         {/* Logo/Brand */}
         <div className="flex flex-col items-center mb-4">
           <div className="w-12 h-12 bg-[#E3ECF9] rounded-2xl flex items-center justify-center mb-1">
-            <Briefcase className="h-6 w-6 text-[#0D47A1]" />
+            <Briefcase className="h-6 w-6 text-brand-blue" />
           </div>
-          <h1 className="text-xl font-bold text-slate-900">
+          <h1 className="text-lg sm:text-xl font-bold text-slate-900">
             Partner Registration
           </h1>
           <p className="text-slate-500 text-xs mt-1 text-center">
@@ -405,7 +413,7 @@ const ServiceProviderApply = () => {
                   }}
                   autoCapitalize="words"
                   placeholder="Enter your name"
-                  className={`w-full pl-11 pr-4 py-2.5 bg-slate-50 border ${fieldErrors.name ? "border-rose-400 focus:border-rose-400 focus:ring-rose-400" : "border-slate-200 focus:border-[#0D47A1] focus:ring-[#0D47A1]"} rounded-2xl focus:ring-1 outline-none transition-all text-xs capitalize`}
+                  className={`w-full pl-11 pr-4 py-2.5 bg-slate-50 border ${fieldErrors.name ? "border-rose-400 focus:border-rose-400 focus:ring-rose-400" : "border-slate-200 focus:border-brand-blue focus:ring-brand-blue"} rounded-2xl focus:ring-1 outline-none transition-all text-xs capitalize`}
                 />
               </div>
               {fieldErrors.name && (
@@ -430,7 +438,7 @@ const ServiceProviderApply = () => {
                   value={form.email}
                   onChange={handleChange}
                   placeholder="name@example.com"
-                  className={`w-full pl-11 pr-4 py-2.5 bg-slate-50 border ${fieldErrors.email ? "border-rose-400 focus:border-rose-400 focus:ring-rose-400" : "border-slate-200 focus:border-[#0D47A1] focus:ring-[#0D47A1]"} rounded-2xl focus:ring-1 outline-none transition-all text-xs`}
+                  className={`w-full pl-11 pr-4 py-2.5 bg-slate-50 border ${fieldErrors.email ? "border-rose-400 focus:border-rose-400 focus:ring-rose-400" : "border-slate-200 focus:border-brand-blue focus:ring-brand-blue"} rounded-2xl focus:ring-1 outline-none transition-all text-xs`}
                 />
               </div>
               {fieldErrors.email && (
@@ -463,7 +471,7 @@ const ServiceProviderApply = () => {
                 }}
                 maxLength={10}
                 placeholder="Enter 10-digit phone number"
-                className={`w-full pl-11 pr-4 py-2.5 bg-slate-50 border ${fieldErrors.phone ? "border-rose-400 focus:border-rose-400 focus:ring-rose-400" : "border-slate-200 focus:border-[#0D47A1] focus:ring-[#0D47A1]"} rounded-2xl focus:ring-1 outline-none transition-all text-xs`}
+                className={`w-full pl-11 pr-4 py-2.5 bg-slate-50 border ${fieldErrors.phone ? "border-rose-400 focus:border-rose-400 focus:ring-rose-400" : "border-slate-200 focus:border-brand-blue focus:ring-brand-blue"} rounded-2xl focus:ring-1 outline-none transition-all text-xs`}
               />
             </div>
             {fieldErrors.phone && (
@@ -490,7 +498,7 @@ const ServiceProviderApply = () => {
                   value={form.password}
                   onChange={handleChange}
                   placeholder="Create password (min 6 chars)"
-                  className={`w-full pl-11 pr-10 py-2.5 bg-slate-50 border ${fieldErrors.password ? "border-rose-400 focus:border-rose-400 focus:ring-rose-400" : "border-slate-200 focus:border-[#0D47A1] focus:ring-[#0D47A1]"} rounded-2xl focus:ring-1 outline-none transition-all text-xs`}
+                  className={`w-full pl-11 pr-10 py-2.5 bg-slate-50 border ${fieldErrors.password ? "border-rose-400 focus:border-rose-400 focus:ring-rose-400" : "border-slate-200 focus:border-brand-blue focus:ring-brand-blue"} rounded-2xl focus:ring-1 outline-none transition-all text-xs`}
                 />
                 <button
                   type="button"
@@ -521,7 +529,7 @@ const ServiceProviderApply = () => {
                   value={form.confirmPassword}
                   onChange={handleChange}
                   placeholder="Re-enter password"
-                  className={`w-full pl-11 pr-10 py-2.5 bg-slate-50 border ${fieldErrors.confirmPassword ? "border-rose-400 focus:border-rose-400 focus:ring-rose-400" : "border-slate-200 focus:border-[#0D47A1] focus:ring-[#0D47A1]"} rounded-2xl focus:ring-1 outline-none transition-all text-xs`}
+                  className={`w-full pl-11 pr-10 py-2.5 bg-slate-50 border ${fieldErrors.confirmPassword ? "border-rose-400 focus:border-rose-400 focus:ring-rose-400" : "border-slate-200 focus:border-brand-blue focus:ring-brand-blue"} rounded-2xl focus:ring-1 outline-none transition-all text-xs`}
                 />
                 <button
                   type="button"
@@ -550,7 +558,7 @@ const ServiceProviderApply = () => {
               <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
                 Services You Provide
               </label>
-              <span className="text-[10px] text-[#0D47A1] font-bold">
+              <span className="text-[10px] text-brand-blue font-bold">
                 {selectedServices.length} Selected
               </span>
             </div>
@@ -558,11 +566,11 @@ const ServiceProviderApply = () => {
             {/* Input Trigger Field */}
             <div
               onClick={() => setIsServicesDropdownOpen(!isServicesDropdownOpen)}
-              className={`w-full min-h-[42px] pl-11 pr-10 py-2 bg-slate-50 border ${
+              className={`w-full min-h-10.5 pl-11 pr-10 py-2 bg-slate-50 border ${
                 fieldErrors.services
                   ? "border-rose-400 focus:ring-rose-400"
                   : isServicesDropdownOpen
-                    ? "border-[#0D47A1] ring-1 ring-[#0D47A1]"
+                    ? "border-brand-blue ring-1 ring-brand-blue"
                     : "border-slate-200 hover:border-slate-300"
               } rounded-2xl cursor-pointer transition-all flex items-center flex-wrap gap-1 relative`}>
               <Briefcase
@@ -578,7 +586,7 @@ const ServiceProviderApply = () => {
                   {selectedServices.map((s) => (
                     <span
                       key={s}
-                      className="inline-flex items-center gap-1 bg-[#0D47A1] text-white text-[11px] font-semibold px-2.5 py-0.5 rounded-lg">
+                      className="inline-flex items-center gap-1 bg-brand-blue text-white text-[11px] font-semibold px-2.5 py-0.5 rounded-lg">
                       {s}
                       <button
                         type="button"
@@ -596,7 +604,7 @@ const ServiceProviderApply = () => {
 
               <ChevronDown
                 className={`absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 transition-transform duration-200 pointer-events-none ${
-                  isServicesDropdownOpen ? "rotate-180 text-[#0D47A1]" : ""
+                  isServicesDropdownOpen ? "rotate-180 text-brand-blue" : ""
                 }`}
               />
             </div>
@@ -612,7 +620,7 @@ const ServiceProviderApply = () => {
                       value={serviceSearch}
                       onChange={(e) => setServiceSearch(e.target.value)}
                       onClick={(e) => e.stopPropagation()}
-                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-[#0D47A1]"
+                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-brand-blue"
                     />
                   </div>
                 )}
@@ -630,14 +638,14 @@ const ServiceProviderApply = () => {
                           onClick={() => toggleService(srv)}
                           className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
                             isSelected
-                              ? "bg-blue-50 text-[#0D47A1]"
+                              ? "bg-blue-50 text-brand-blue"
                               : "text-slate-700 hover:bg-slate-50"
                           }`}>
                           <span className="flex items-center gap-2">
                             <span
                               className={`w-4 h-4 rounded-md flex items-center justify-center border transition-all ${
                                 isSelected
-                                  ? "bg-[#0D47A1] border-[#0D47A1] text-white"
+                                  ? "bg-brand-blue border-brand-blue text-white"
                                   : "border-slate-300 bg-white"
                               }`}>
                               {isSelected && (
@@ -647,7 +655,7 @@ const ServiceProviderApply = () => {
                             {srv}
                           </span>
                           {isSelected && (
-                            <span className="text-[10px] font-bold text-[#0D47A1] uppercase tracking-wider">
+                            <span className="text-[10px] font-bold text-brand-blue uppercase tracking-wider">
                               Selected
                             </span>
                           )}
@@ -699,7 +707,7 @@ const ServiceProviderApply = () => {
                   if (fieldErrors.city)
                     setFieldErrors((prev) => ({ ...prev, city: "" }));
                 }}
-                className={`w-full pl-11 pr-8 py-2.5 bg-slate-50 border ${fieldErrors.city ? "border-rose-400 focus:border-rose-400 focus:ring-rose-400" : "border-slate-200 focus:border-[#0D47A1] focus:ring-[#0D47A1]"} rounded-2xl focus:ring-1 outline-none transition-all text-xs appearance-none font-medium text-slate-800`}
+                className={`w-full pl-11 pr-8 py-2.5 bg-slate-50 border ${fieldErrors.city ? "border-rose-400 focus:border-rose-400 focus:ring-rose-400" : "border-slate-200 focus:border-brand-blue focus:ring-brand-blue"} rounded-2xl focus:ring-1 outline-none transition-all text-xs appearance-none font-medium text-slate-800`}
                 disabled={citiesLoading || availableCities.length === 0}>
                 {citiesLoading && <option value="">Loading cities…</option>}
                 {!citiesLoading && availableCities.length === 0 && (
@@ -728,7 +736,7 @@ const ServiceProviderApply = () => {
           {/* Aadhar Photo Upload */}
           <div
             className={`flex flex-col gap-2 p-3 bg-blue-50/60 border ${fieldErrors.aadharFront || fieldErrors.aadharBack ? "border-rose-300 bg-rose-50/30" : "border-blue-200"} rounded-2xl`}>
-            <label className="text-xs font-bold text-[#0D47A1] uppercase tracking-wide flex items-center gap-1">
+            <label className="text-xs font-bold text-brand-blue uppercase tracking-wide flex items-center gap-1">
               <ShieldCheck size={14} /> Aadhar Card Photos (Required)
             </label>
             <p className="text-[10px] text-slate-500">
@@ -743,7 +751,7 @@ const ServiceProviderApply = () => {
                   Aadhar Front
                 </span>
                 <label
-                  className={`border-2 border-dashed ${fieldErrors.aadharFront ? "border-rose-400 bg-rose-50/50" : "border-blue-300 hover:border-[#0D47A1] bg-white"} rounded-xl p-2 flex flex-col items-center justify-center cursor-pointer transition-all min-h-[65px] relative overflow-hidden`}>
+                  className={`border-2 border-dashed ${fieldErrors.aadharFront ? "border-rose-400 bg-rose-50/50" : "border-blue-300 hover:border-brand-blue bg-white"} rounded-xl p-2 flex flex-col items-center justify-center cursor-pointer transition-all min-h-16.25 relative overflow-hidden`}>
                   {aadharFrontPreview ? (
                     <img
                       src={aadharFrontPreview}
@@ -751,7 +759,7 @@ const ServiceProviderApply = () => {
                       className="w-full h-14 object-cover rounded-lg"
                     />
                   ) : (
-                    <span className="text-[10px] font-bold text-[#0D47A1] text-center">
+                    <span className="text-[10px] font-bold text-brand-blue text-center">
                       📷 Upload Front
                     </span>
                   )}
@@ -775,7 +783,7 @@ const ServiceProviderApply = () => {
                   Aadhar Back
                 </span>
                 <label
-                  className={`border-2 border-dashed ${fieldErrors.aadharBack ? "border-rose-400 bg-rose-50/50" : "border-blue-300 hover:border-[#0D47A1] bg-white"} rounded-xl p-2 flex flex-col items-center justify-center cursor-pointer transition-all min-h-[65px] relative overflow-hidden`}>
+                  className={`border-2 border-dashed ${fieldErrors.aadharBack ? "border-rose-400 bg-rose-50/50" : "border-blue-300 hover:border-brand-blue bg-white"} rounded-xl p-2 flex flex-col items-center justify-center cursor-pointer transition-all min-h-16.25 relative overflow-hidden`}>
                   {aadharBackPreview ? (
                     <img
                       src={aadharBackPreview}
@@ -783,7 +791,7 @@ const ServiceProviderApply = () => {
                       className="w-full h-14 object-cover rounded-lg"
                     />
                   ) : (
-                    <span className="text-[10px] font-bold text-[#0D47A1] text-center">
+                    <span className="text-[10px] font-bold text-brand-blue text-center">
                       📷 Upload Back
                     </span>
                   )}
@@ -810,7 +818,7 @@ const ServiceProviderApply = () => {
             className={`w-full font-bold py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5 mt-2 active:scale-95 shadow-md disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:translate-y-0 ${
               submitted
                 ? "bg-green-500 text-white"
-                : "bg-[#FFD600] text-[#0D47A1] hover:bg-yellow-400 shadow-yellow-400/10"
+                : "bg-linear-to-r from-brand-yellow to-[#FFCA00] text-brand-blue hover:shadow-lg hover:shadow-yellow-400/20"
             }`}>
             {submitted
               ? "✓ Registration Request Sent!"
@@ -821,6 +829,7 @@ const ServiceProviderApply = () => {
                   : "Submit Verification Request"}
           </button>
         </form>
+      </div>
       </div>
     </div>
   );

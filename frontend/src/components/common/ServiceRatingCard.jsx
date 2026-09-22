@@ -125,7 +125,7 @@ const ServiceRatingCard = ({ service, onRatingSubmitted }) => {
   // ─── Submitted View ──────────────────────────────────────────────────────────
   if (existingRating) {
     return (
-      <div className="bg-gradient-to-br from-emerald-50/70 via-white to-blue-50/50 rounded-2xl p-5 border border-emerald-200/80 shadow-2xs flex flex-col gap-4 text-left transition-all">
+      <div className="bg-linear-to-br from-emerald-50/70 via-white to-blue-50/50 rounded-2xl p-5 border border-emerald-200/80 shadow-2xs flex flex-col gap-4 text-left transition-all">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">

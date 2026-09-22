@@ -105,7 +105,7 @@ const OptionCard = ({ icon, name, desc, selected, onClick }) => (
     onClick={onClick}
     className={`relative flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all duration-200 active:scale-[0.98] text-center w-full cursor-pointer ${
       selected
-        ? "border-brand-blue bg-gradient-to-b from-blue-50/80 to-blue-100/30 shadow-md shadow-brand-blue/10 ring-1 ring-brand-blue"
+        ? "border-brand-blue bg-linear-to-b from-blue-50/80 to-blue-100/30 shadow-md shadow-brand-blue/10 ring-1 ring-brand-blue"
         : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50 shadow-2xs"
     }`}>
     {selected && (
@@ -156,7 +156,7 @@ const BottomBar = ({
     {/* Summary row */}
     <div className="w-full flex items-center justify-between px-5 pt-3 pb-1.5">
       <div className="flex items-center gap-2.5 flex-1 min-w-0">
-        <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-base flex-shrink-0">
+        <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-base shrink-0">
           {isImageIcon(icon) ? (
             <img src={icon} alt="" className="w-5 h-5 object-contain" />
           ) : (
@@ -177,7 +177,7 @@ const BottomBar = ({
         </div>
       </div>
       {showPrice && price > 0 && (
-        <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
+        <div className="flex flex-col items-end gap-0.5 shrink-0">
           <span className="text-[16px] font-black text-slate-900">
             ₹{price}
           </span>
@@ -912,7 +912,7 @@ const BookingFlow = () => {
                             <option key={pt.id} value={pt.name}>{pt.name}</option>
                           ))}
                         </select>
-                        <div className="flex items-center gap-2 bg-slate-50 p-1 rounded-xl border border-slate-200 flex-shrink-0">
+                        <div className="flex items-center gap-2 bg-slate-50 p-1 rounded-xl border border-slate-200 shrink-0">
                           <button
                             type="button"
                             onClick={() => {
@@ -940,7 +940,7 @@ const BookingFlow = () => {
                         <button
                           type="button"
                           onClick={() => setAdditionalTypes(additionalTypes.filter((_, i) => i !== idx))}
-                          className="w-8 h-8 flex-shrink-0 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                          className="w-8 h-8 shrink-0 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
                         >
                           <X className="w-4 h-4" />
                         </button>
@@ -965,8 +965,8 @@ const BookingFlow = () => {
                 )}
 
                 {/* Info guarantee card */}
-                <div className="bg-gradient-to-r from-blue-50/90 to-indigo-50/50 border border-blue-100 rounded-2xl p-4 flex items-center gap-3.5 shadow-2xs">
-                  <div className="w-10 h-10 rounded-2xl bg-white border border-blue-100 flex items-center justify-center flex-shrink-0 shadow-2xs">
+                <div className="bg-linear-to-r from-blue-50/90 to-indigo-50/50 border border-blue-100 rounded-2xl p-4 flex items-center gap-3.5 shadow-2xs">
+                  <div className="w-10 h-10 rounded-2xl bg-white border border-blue-100 flex items-center justify-center shrink-0 shadow-2xs">
                     <ShieldCheck className="w-6 h-6 text-brand-blue" />
                   </div>
                   <div>
@@ -997,12 +997,12 @@ const BookingFlow = () => {
                       onClick={() => setService(svc.id)}
                       className={`relative flex items-center gap-3.5 p-4 rounded-2xl border-2 transition-all duration-200 active:scale-[0.99] text-left w-full cursor-pointer ${
                         isSelected
-                          ? "border-brand-blue bg-gradient-to-r from-blue-50/90 to-indigo-50/30 shadow-md shadow-brand-blue/10 ring-1 ring-brand-blue"
+                          ? "border-brand-blue bg-linear-to-r from-blue-50/90 to-indigo-50/30 shadow-md shadow-brand-blue/10 ring-1 ring-brand-blue"
                           : "border-slate-200 bg-white hover:border-slate-300 shadow-2xs"
                       }`}>
                       {/* Icon */}
                       <div
-                        className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 text-xl overflow-hidden border transition-all ${
+                        className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 text-xl overflow-hidden border transition-all ${
                           isSelected
                             ? "bg-white border-blue-200 shadow-xs"
                             : "bg-slate-50 border-slate-100"
@@ -1033,7 +1033,7 @@ const BookingFlow = () => {
                       </div>
 
                       {/* Price */}
-                      <div className="flex flex-col items-end flex-shrink-0 pl-1">
+                      <div className="flex flex-col items-end shrink-0 pl-1">
                         <span
                           className={`text-[15px] font-black ${isSelected ? "text-brand-blue" : "text-slate-900"}`}>
                           ₹{svc.price}
@@ -1045,7 +1045,7 @@ const BookingFlow = () => {
 
                       {/* Radio */}
                       <div
-                        className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all ${
+                        className={`w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center transition-all ${
                           isSelected
                             ? "border-brand-blue bg-brand-blue"
                             : "border-slate-300 bg-white"
@@ -1189,7 +1189,7 @@ const BookingFlow = () => {
                               setTimeGroup("");
                             }
                           }}
-                          className={`flex flex-col items-center justify-center min-w-[64px] h-[80px] rounded-2xl border-2 transition-all flex-shrink-0 cursor-pointer ${
+                          className={`flex flex-col items-center justify-center min-w-16 h-20 rounded-2xl border-2 transition-all shrink-0 cursor-pointer ${
                             isActive
                               ? "border-brand-blue bg-brand-blue text-white shadow-md scale-105"
                               : "border-slate-200 bg-slate-50 hover:bg-white text-slate-800"
@@ -1237,13 +1237,13 @@ const BookingFlow = () => {
                           className={`w-full relative flex items-center gap-3.5 p-3.5 rounded-2xl border-2 transition-all duration-200 text-left cursor-pointer ${
                             isInstant
                               ? isSelected
-                                ? "border-amber-500 bg-gradient-to-r from-amber-50 to-orange-50 shadow-md ring-1 ring-amber-400"
+                                ? "border-amber-500 bg-linear-to-r from-amber-50 to-orange-50 shadow-md ring-1 ring-amber-400"
                                 : "border-amber-300 bg-amber-50/40 hover:border-amber-400 hover:bg-amber-50"
                               : isSelected
                                 ? "border-brand-blue bg-blue-50/30 shadow-xs"
                                 : "border-slate-200 bg-white hover:border-slate-300"
                           }`}>
-                          <div className="flex-shrink-0">{tg.icon}</div>
+                          <div className="shrink-0">{tg.icon}</div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <p className="text-[13px] font-black text-slate-900 leading-none">
@@ -1261,7 +1261,7 @@ const BookingFlow = () => {
                           </div>
                           {/* Radio circle */}
                           <div
-                            className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all ${
+                            className={`w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center transition-all ${
                               isSelected
                                 ? isInstant
                                   ? "border-amber-600 bg-amber-600"
@@ -1569,7 +1569,7 @@ const BookingFlow = () => {
                           : "border-slate-200 bg-white hover:border-slate-300"
                       }`}>
                       <div
-                        className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all ${
+                        className={`w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center transition-all ${
                           paymentMode === "advance"
                             ? "border-brand-blue bg-brand-blue"
                             : "border-slate-300 bg-white"
@@ -1594,7 +1594,7 @@ const BookingFlow = () => {
                         </p>
                       </div>
                       <span
-                        className={`text-[16px] font-black flex-shrink-0 ${paymentMode === "advance" ? "text-brand-blue" : "text-slate-900"}`}>
+                        className={`text-[16px] font-black shrink-0 ${paymentMode === "advance" ? "text-brand-blue" : "text-slate-900"}`}>
                         ₹{advanceAmt}
                       </span>
                     </button>
@@ -1609,7 +1609,7 @@ const BookingFlow = () => {
                           : "border-slate-200 bg-white hover:border-slate-300"
                       }`}>
                       <div
-                        className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all ${
+                        className={`w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center transition-all ${
                           paymentMode === "after"
                             ? "border-brand-blue bg-brand-blue"
                             : "border-slate-300 bg-white"
@@ -1702,7 +1702,7 @@ const BookingFlow = () => {
             <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm flex flex-col gap-4 text-left">
               <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-4">
                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-xl flex-shrink-0">
+                  <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-xl shrink-0">
                     {isImageIcon(selectedServiceData?.icon || data.icon) ? (
                       <img
                         src={selectedServiceData?.icon || data.icon}
@@ -1722,7 +1722,7 @@ const BookingFlow = () => {
                     </span>
                   </div>
                 </div>
-                <span className="text-xs font-black text-brand-blue bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100 flex-shrink-0 self-start">
+                <span className="text-xs font-black text-brand-blue bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100 shrink-0 self-start">
                   Step {step}/4
                 </span>
               </div>

@@ -108,12 +108,12 @@ const MyOrders = () => {
       </div>
 
       {/* Filter Tabs — Edge-to-edge horizontal scroll */}
-      <div className="flex border-b border-slate-100 bg-white sticky top-[45px] z-30 overflow-x-auto no-scrollbar px-2">
+      <div className="flex border-b border-slate-100 bg-white sticky top-11.25 z-30 overflow-x-auto no-scrollbar px-2">
         {tabs.map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`flex-1 min-w-[72px] py-2.5 text-[11px] font-extrabold transition-all cursor-pointer border-b-2 whitespace-nowrap text-center ${
+            className={`flex-1 min-w-18 py-2.5 text-[11px] font-extrabold transition-all cursor-pointer border-b-2 whitespace-nowrap text-center ${
               activeTab === tab
                 ? 'text-brand-blue border-brand-blue'
                 : 'text-slate-400 border-transparent hover:text-slate-600'

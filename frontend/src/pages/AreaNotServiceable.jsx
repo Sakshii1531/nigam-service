@@ -149,11 +149,11 @@ const AreaNotServiceable = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#F4F7FC] via-[#EEF4FB] to-[#E3ECF9] flex flex-col items-center justify-between p-4 sm:p-6 relative overflow-hidden text-slate-800">
+    <div className="min-h-screen bg-linear-to-b from-[#F4F7FC] via-[#EEF4FB] to-[#E3ECF9] flex flex-col items-center justify-between p-4 sm:p-6 relative overflow-hidden text-slate-800">
       {/* Background Decorative Blur Orbs */}
-      <div className="absolute top-[-80px] left-[-80px] w-96 h-96 bg-brand-blue/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-[-100px] right-[-100px] w-96 h-96 bg-brand-yellow/20 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] bg-blue-300/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -top-20 -left-20 w-96 h-96 bg-brand-blue/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-25 -right-25 w-96 h-96 bg-brand-yellow/20 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-137.5 h-137.5 bg-blue-300/10 rounded-full blur-3xl pointer-events-none" />
 
       {/* Top Header */}
       <header className="w-full max-w-2xl flex items-center justify-between py-2 relative z-10">
@@ -203,7 +203,7 @@ const AreaNotServiceable = () => {
             />
 
             {/* Glowing Core Disk */}
-            <div className="relative w-20 h-20 rounded-full bg-gradient-to-tr from-brand-blue to-[#1976D2] flex items-center justify-center shadow-lg shadow-blue-500/25 border-4 border-white">
+            <div className="relative w-20 h-20 rounded-full bg-linear-to-tr from-brand-blue to-[#1976D2] flex items-center justify-center shadow-lg shadow-blue-500/25 border-4 border-white">
               <motion.div
                 animate={{ y: [0, -4, 0] }}
                 transition={{
@@ -248,7 +248,7 @@ const AreaNotServiceable = () => {
               <button
                 type="button"
                 onClick={handleNotifyMe}
-                className="w-full bg-gradient-to-r from-brand-yellow to-[#FFCA00] text-brand-blue font-bold py-3 px-5 rounded-2xl hover:shadow-lg hover:shadow-yellow-400/20 active:scale-98 transition-all flex items-center justify-center gap-2 text-sm">
+                className="w-full bg-linear-to-r from-brand-yellow to-[#FFCA00] text-brand-blue font-bold py-3 px-5 rounded-2xl hover:shadow-lg hover:shadow-yellow-400/20 active:scale-98 transition-all flex items-center justify-center gap-2 text-sm">
                 <Bell size={16} />
                 <span>Notify Me When You Launch</span>
               </button>

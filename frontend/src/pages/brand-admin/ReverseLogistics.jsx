@@ -176,13 +176,13 @@ const ReverseLogistics = () => {
                   <h3 className="text-xs uppercase text-[#64748B] font-semibold mb-2">Logistics Timeline</h3>
                   <div className="border-l-2 border-[#E2E8F0] ml-2 pl-4 space-y-3">
                     <div className="relative">
-                      <div className="absolute -left-[21px] top-1 w-3 h-3 bg-green-600 rounded-full"></div>
+                      <div className="absolute -left-5.25 top-1 w-3 h-3 bg-green-600 rounded-full"></div>
                       <p className="font-semibold text-slate-800">Part replaced at client site</p>
                       <p className="text-xs text-slate-500">{selectedReturn.replaceDate}</p>
                     </div>
                     {selectedReturn.transitStatus !== 'Replaced' && (
                       <div className="relative">
-                        <div className="absolute -left-[21px] top-1 w-3 h-3 bg-green-600 rounded-full"></div>
+                        <div className="absolute -left-5.25 top-1 w-3 h-3 bg-green-600 rounded-full"></div>
                         <p className="font-semibold text-slate-800">Picked up by BlueDart</p>
                         <p className="text-xs text-slate-500">AWB Active</p>
                       </div>
@@ -217,7 +217,7 @@ const ReverseLogistics = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {stats.map((card, index) => (
               <div key={index} className="bg-white p-6 rounded-2xl border border-[#E2E8F0] flex items-center gap-4">
-                <div className={`w-12 h-12 ${card.color} rounded-xl flex items-center justify-center text-white flex-shrink-0`}>
+                <div className={`w-12 h-12 ${card.color} rounded-xl flex items-center justify-center text-white shrink-0`}>
                   {card.icon}
                 </div>
                 <div>

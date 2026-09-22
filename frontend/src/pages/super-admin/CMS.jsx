@@ -241,7 +241,7 @@ const CMS = () => {
 
         <div className="p-6 space-y-6 flex-1 text-left">
           
-          <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden flex flex-col min-h-[650px]">
+          <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden flex flex-col min-h-162.5">
             
             {/* Top Navigation Tabs */}
             <div className="flex bg-slate-50 border-b border-slate-200/80 p-2.5 gap-2 justify-between items-center flex-wrap">
@@ -391,7 +391,7 @@ const CMS = () => {
                               </h4>
                             </div>
 
-                            <div className="flex items-center gap-1 flex-shrink-0">
+                            <div className="flex items-center gap-1 shrink-0">
                               <button
                                 onClick={() => handleOpenEditFaq(idx)}
                                 className="p-1.5 hover:bg-slate-200 text-slate-600 rounded-lg transition-colors cursor-pointer"
@@ -520,7 +520,7 @@ const CMS = () => {
                 /* Live Preview Mode */
                 <div className="bg-[#F8FAFC] border border-slate-200 rounded-3xl p-6 md:p-8 flex flex-col gap-6 max-w-4xl mx-auto shadow-inner text-left">
                   {/* Hero Banner Preview */}
-                  <div className="bg-gradient-to-br from-[#051F42] via-[#0B4EA2] to-[#0D47A1] rounded-2xl p-6 text-white shadow-md flex flex-col gap-2">
+                  <div className="bg-linear-to-br from-[#051F42] via-[#0B4EA2] to-[#0D47A1] rounded-2xl p-6 text-white shadow-md flex flex-col gap-2">
                     <span className="bg-white/10 text-xs font-bold px-3 py-0.5 rounded-full border border-white/20 w-fit">
                       {docVersion} • Live Preview
                     </span>

@@ -504,7 +504,7 @@ const PersonalInfo = () => {
   return (
     <div className="min-h-screen bg-[#F6F8FD] flex flex-col pb-28 lg:pb-14 font-sans relative text-left selection:bg-blue-100 selection:text-blue-900">
       {/* ── Ambient Background Lighting (Matching Profile.jsx) ── */}
-      <div className="absolute top-0 left-0 right-0 h-96 bg-gradient-to-b from-[#06214D] via-[#0A2D69] to-[#F6F8FD] pointer-events-none overflow-hidden z-0">
+      <div className="absolute top-0 left-0 right-0 h-96 bg-linear-to-b from-[#06214D] via-[#0A2D69] to-[#F6F8FD] pointer-events-none overflow-hidden z-0">
         <div className="absolute -top-24 -left-20 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute top-12 -right-24 w-80 h-80 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute top-36 left-1/3 w-64 h-64 bg-amber-400/10 rounded-full blur-2xl pointer-events-none" />
@@ -786,7 +786,7 @@ const PersonalInfo = () => {
             <button
               type="submit"
               disabled={saving || uploadingAvatar}
-              className="w-full sm:w-auto px-8 h-12 bg-gradient-to-r from-[#0D47A1] to-[#0A387E] hover:from-[#0A387E] hover:to-[#08295E] active:scale-[0.99] text-white font-bold text-sm rounded-2xl shadow-lg shadow-blue-900/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              className="w-full sm:w-auto px-8 h-12 bg-linear-to-r from-[#0D47A1] to-[#0A387E] hover:from-[#0A387E] hover:to-[#08295E] active:scale-[0.99] text-white font-bold text-sm rounded-2xl shadow-lg shadow-blue-900/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
               {saving ? (
                 <>

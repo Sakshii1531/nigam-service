@@ -4,28 +4,28 @@ import { apiRequest } from '../../lib/apiClient';
 
 const THEME_STYLES = {
   pink: {
-    bg: 'bg-gradient-to-br from-[#FFF5F8] to-[#FCE7F3]', // Rose Pink Gradient
+    bg: 'bg-linear-to-br from-[#FFF5F8] to-[#FCE7F3]', // Rose Pink Gradient
     border: 'border-[#FBCFE8]',
     title: 'text-[#BE185D]',
     badge: 'bg-[#BE185D] text-white',
     author: 'text-[#BE185D]',
   },
   purple: {
-    bg: 'bg-gradient-to-br from-[#F5F3FF] to-[#EDE9FE]', // Indigo Lavender Gradient
+    bg: 'bg-linear-to-br from-[#F5F3FF] to-[#EDE9FE]', // Indigo Lavender Gradient
     border: 'border-[#DDD6FE]',
     title: 'text-[#6D28D9]',
     badge: 'bg-[#6D28D9] text-white',
     author: 'text-[#6D28D9]',
   },
   teal: {
-    bg: 'bg-gradient-to-br from-[#F0FDF4] to-[#DCFCE7]', // Mint Emerald Gradient
+    bg: 'bg-linear-to-br from-[#F0FDF4] to-[#DCFCE7]', // Mint Emerald Gradient
     border: 'border-[#BBF7D0]',
     title: 'text-[#047857]',
     badge: 'bg-[#047857] text-white',
     author: 'text-[#047857]',
   },
   amber: {
-    bg: 'bg-gradient-to-br from-[#EFF6FF] to-[#DBEAFE]', // Ice Royal Blue Gradient
+    bg: 'bg-linear-to-br from-[#EFF6FF] to-[#DBEAFE]', // Ice Royal Blue Gradient
     border: 'border-[#BFDBFE]',
     title: 'text-[#0B4EA2]',
     badge: 'bg-[#0B4EA2] text-white',
@@ -165,7 +165,7 @@ const PlatformReviewCarousel = () => {
             return (
               <div
                 key={`${item.id}-${idx}`}
-                className={`${theme.bg} border ${theme.border} rounded-[24px] p-6 shadow-xs flex flex-col justify-between h-[215px] transition-all hover:shadow-md duration-300 relative overflow-hidden`}
+                className={`${theme.bg} border ${theme.border} rounded-[24px] p-6 shadow-xs flex flex-col justify-between h-53.75 transition-all hover:shadow-md duration-300 relative overflow-hidden`}
               >
                 <div className="flex-1 flex flex-col justify-between">
                   {/* Top Header Row */}
@@ -174,7 +174,7 @@ const PlatformReviewCarousel = () => {
                       {item.title}
                     </h4>
 
-                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <div className="flex items-center gap-1.5 shrink-0">
                       <div className="flex items-center gap-0.5">
                         {[...Array(5)].map((_, i) => (
                           <Star

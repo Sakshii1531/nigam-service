@@ -35,7 +35,7 @@ const Features = () => {
         </div>
 
         {/* Carousel Wrapper with 3D Perspective */}
-        <div className="relative h-[400px] flex items-center justify-center mt-0" style={{ perspective: "1000px" }}>
+        <div className="relative h-100 flex items-center justify-center mt-0" style={{ perspective: "1000px" }}>
           
           {features.map((feature, index) => {
             let position = index - currentIndex;
@@ -61,7 +61,7 @@ const Features = () => {
                   zIndex: isCenter ? 10 : 0,
                 }}
                 transition={{ duration: 0.5, ease: "easeInOut" }}
-                className="bg-white p-8 rounded-3xl border border-slate-100 shadow-xl shadow-blue-900/5 w-[350px] absolute flex flex-col items-center text-center"
+                className="bg-white p-8 rounded-3xl border border-slate-100 shadow-xl shadow-blue-900/5 w-87.5 absolute flex flex-col items-center text-center"
                 style={{ transformStyle: "preserve-3d" }}
               >
                 <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center text-[#0d47a1] mb-5 border border-blue-100 shadow-sm">

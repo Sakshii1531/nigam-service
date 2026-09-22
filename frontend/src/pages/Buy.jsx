@@ -381,14 +381,14 @@ const Buy = () => {
                 className="flex items-center gap-2 text-left hover:opacity-85 transition-opacity cursor-pointer group focus:outline-none"
                 aria-label="Change location">
                 <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-brand-blue shrink-0 group-hover:bg-blue-100 transition-colors">
-                  <MapPin className="h-4 w-4 text-brand-blue flex-shrink-0" />
+                  <MapPin className="h-4 w-4 text-brand-blue shrink-0" />
                 </div>
                 <div>
                   <span className="text-[10px] text-text-secondary block font-semibold leading-tight">
                     Your Location
                   </span>
                   <div className="flex items-center gap-1">
-                    <span className="text-xs sm:text-sm font-bold text-text-primary group-hover:text-brand-blue transition-colors truncate max-w-[170px] sm:max-w-[220px]">
+                    <span className="text-xs sm:text-sm font-bold text-text-primary group-hover:text-brand-blue transition-colors truncate max-w-42.5 sm:max-w-55">
                       {currentLocation?.area
                         ? `${currentLocation.area}, ${currentLocation.city}`
                         : currentLocation?.city || "Select Location"}
@@ -398,7 +398,9 @@ const Buy = () => {
                 </div>
               </button>
               <div className="flex items-center gap-2.5">
-                <button className="w-8.5 h-8.5 sm:w-9 sm:h-9 bg-white hover:bg-slate-50 rounded-full relative flex items-center justify-center border border-slate-200 shadow-2xs">
+                <button
+                  onClick={() => navigate("/notifications")}
+                  className="w-8.5 h-8.5 sm:w-9 sm:h-9 bg-white hover:bg-slate-50 rounded-full relative flex items-center justify-center border border-slate-200 shadow-2xs cursor-pointer">
                   <Bell className="h-4 w-4 text-text-primary" />
                   <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
                 </button>
@@ -420,167 +422,184 @@ const Buy = () => {
               />
             </div>
 
-            {/* Service Type Cards — NCC Shield, NCC AMC, Buy New */}
-            <div className="flex gap-2.5 sm:gap-3 overflow-x-auto no-scrollbar py-1.5 -mx-3.5 px-3.5 sm:-mx-6 sm:px-6 md:grid md:grid-cols-3 md:gap-5 md:overflow-visible md:mx-0 md:px-1">
-              {[
-                {
-                  name: "NCC Shield\nExtended Warranty",
-                  desc: "Extra protection for\nlonger peace of mind",
-                  icon: (
-                    <div className="relative w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center filter drop-shadow-[0_3px_6px_rgba(13,71,161,0.25)]">
-                      <svg viewBox="0 0 100 100" className="w-full h-full">
-                        <defs>
-                          <linearGradient
-                            id="bevelGrad"
-                            x1="0%"
-                            y1="0%"
-                            x2="100%"
-                            y2="0%">
-                            <stop offset="0%" stopColor="#1E88E5" />
-                            <stop offset="50%" stopColor="#1565C0" />
-                            <stop offset="50%" stopColor="#0B4EA2" />
-                            <stop offset="100%" stopColor="#0A2D6E" />
-                          </linearGradient>
-                        </defs>
-                        {/* Outer Shield Shape */}
-                        <path
-                          d="M50 6 C68 16 82 14 88 18 C88 38 86 52 86 58 C86 78 68 90 50 95 C32 90 14 78 14 58 C14 52 12 38 12 18 C18 14 32 16 50 6 Z"
-                          fill="url(#bevelGrad)"
-                        />
-                        {/* Inner White Outline */}
-                        <path
-                          d="M50 14 C65 22 76 20 81 24 C81 40 79 51 79 56 C79 72 65 82 50 86 C35 82 21 72 21 56 C21 51 19 40 19 24 C24 20 35 22 50 14 Z"
-                          fill="none"
-                          stroke="#ffffff"
-                          strokeWidth="2.5"
-                          strokeOpacity="0.9"
-                        />
-                        <text
-                          x="50"
-                          y="46"
-                          fill="#ffffff"
-                          fontSize="13"
-                          fontWeight="900"
-                          fontFamily="system-ui, -apple-system, sans-serif"
-                          textAnchor="middle">
-                          NCC
-                        </text>
-                        <text
-                          x="50"
-                          y="60"
-                          fill="#ffffff"
-                          fontSize="8.5"
-                          fontWeight="900"
-                          fontFamily="system-ui, -apple-system, sans-serif"
-                          textAnchor="middle"
-                          letterSpacing="0.6">
-                          SHIELD
-                        </text>
-                      </svg>
-                    </div>
-                  ),
-                  onClick: () => setStep(2),
-                },
-                {
-                  name: "NCC AMC\nPlans",
-                  desc: "Regular care for\nreliable performance",
-                  icon: (
-                    <div className="relative w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center filter drop-shadow-[0_3px_6px_rgba(13,71,161,0.25)]">
-                      <svg viewBox="0 0 100 100" className="w-full h-full">
-                        <defs>
-                          <linearGradient
-                            id="bevelGrad2"
-                            x1="0%"
-                            y1="0%"
-                            x2="100%"
-                            y2="0%">
-                            <stop offset="0%" stopColor="#1E88E5" />
-                            <stop offset="50%" stopColor="#1565C0" />
-                            <stop offset="50%" stopColor="#0B4EA2" />
-                            <stop offset="100%" stopColor="#0A2D6E" />
-                          </linearGradient>
-                        </defs>
-                        {/* Outer Shield Shape */}
-                        <path
-                          d="M50 6 C68 16 82 14 88 18 C88 38 86 52 86 58 C86 78 68 90 50 95 C32 90 14 78 14 58 C14 52 12 38 12 18 C18 14 32 16 50 6 Z"
-                          fill="url(#bevelGrad2)"
-                        />
-                        {/* Inner White Outline */}
-                        <path
-                          d="M50 14 C65 22 76 20 81 24 C81 40 79 51 79 56 C79 72 65 82 50 86 C35 82 21 72 21 56 C21 51 19 40 19 24 C24 20 35 22 50 14 Z"
-                          fill="none"
-                          stroke="#ffffff"
-                          strokeWidth="2.5"
-                          strokeOpacity="0.9"
-                        />
-                        <text
-                          x="50"
-                          y="46"
-                          fill="#ffffff"
-                          fontSize="13"
-                          fontWeight="900"
-                          fontFamily="system-ui, -apple-system, sans-serif"
-                          textAnchor="middle">
-                          NCC
-                        </text>
-                        <text
-                          x="50"
-                          y="60"
-                          fill="#ffffff"
-                          fontSize="8.5"
-                          fontWeight="900"
-                          fontFamily="system-ui, -apple-system, sans-serif"
-                          textAnchor="middle"
-                          letterSpacing="0.6">
-                          AMC
-                        </text>
-                      </svg>
-                    </div>
-                  ),
-                  onClick: () => navigate("/buy/amc/select-appliance"),
-                },
-
-                {
-                  name: "Buy\nNew",
-                  desc: "Shop latest\nappliances & more",
-                  icon: (
-                    <div className="w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center text-[#0B4EA2]">
-                      <svg
-                        viewBox="0 0 100 100"
-                        className="w-10 h-10 sm:w-11 sm:h-11 stroke-[#0B4EA2] stroke-[5.5] fill-none">
-                        <circle cx="35" cy="80" r="5" fill="#0B4EA2" />
-                        <circle cx="75" cy="80" r="5" fill="#0B4EA2" />
-                        <path
-                          d="M15 20 H30 L45 60 H80 L90 30 H35"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </div>
-                  ),
-                  onClick: () => navigate("/buy-new"),
-                },
-              ].map((card, idx) => (
-                <div
-                  key={idx}
-                  onClick={card.onClick}
-                  className="flex-shrink-0 w-[130px] sm:w-[145px] md:w-auto md:flex-shrink bg-white border border-slate-200/80 rounded-[20px] sm:rounded-[24px] p-3 sm:p-3.5 md:p-6 flex flex-col items-center text-center justify-between shadow-2xs hover:shadow-md transition-all cursor-pointer min-h-[195px] md:min-h-[240px] group">
-                  <div className="flex flex-col items-center w-full">
-                    <div className="group-hover:scale-105 transition-transform duration-300">
-                      {card.icon}
-                    </div>
-                    <h3 className="text-[11px] sm:text-xs font-black text-[#0A2D6E] leading-snug mt-2.5 mb-1 min-h-[28px] sm:min-h-[30px] flex items-center justify-center whitespace-pre-line">
-                      {card.name}
-                    </h3>
-                    <p className="text-[8.5px] sm:text-[9px] text-slate-500 font-semibold leading-normal line-clamp-2 px-0.5 whitespace-pre-line">
-                      {card.desc}
-                    </p>
-                  </div>
-                  <div className="w-5.5 h-5.5 sm:w-6 sm:h-6 rounded-full bg-white border border-slate-100 flex items-center justify-center shadow-2xs mt-2 group-hover:bg-slate-50 transition-colors">
-                    <ChevronRight className="h-3.5 w-3.5 text-[#0B4EA2] stroke-[3]" />
-                  </div>
+            {/* Service Type Cards — bento layout: NCC Shield is a wide hero
+                banner, with NCC AMC and Buy New as two equal cells beneath
+                it. This is a fixed grid (no horizontal scroll) at every
+                breakpoint, so "Buy New" is always on screen without
+                scrolling instead of being the 3rd card cut off in a
+                horizontal-scroll row on narrow phones. */}
+            <div className="flex flex-col gap-2.5 sm:gap-3">
+              {/* Hero cell: NCC Shield Extended Warranty */}
+              <div
+                onClick={() => setStep(2)}
+                className="bg-white border border-slate-200/80 rounded-[20px] sm:rounded-[22px] p-3.5 sm:p-4 flex items-center gap-3 sm:gap-4 shadow-2xs hover:shadow-md transition-all cursor-pointer group">
+                <div className="shrink-0 relative w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center filter drop-shadow-[0_3px_6px_rgba(13,71,161,0.25)] group-hover:scale-105 transition-transform duration-300">
+                  <svg viewBox="0 0 100 100" className="w-full h-full">
+                    <defs>
+                      <linearGradient
+                        id="bevelGrad"
+                        x1="0%"
+                        y1="0%"
+                        x2="100%"
+                        y2="0%">
+                        <stop offset="0%" stopColor="#1E88E5" />
+                        <stop offset="50%" stopColor="#1565C0" />
+                        <stop offset="50%" stopColor="#0B4EA2" />
+                        <stop offset="100%" stopColor="#0A2D6E" />
+                      </linearGradient>
+                    </defs>
+                    {/* Outer Shield Shape */}
+                    <path
+                      d="M50 6 C68 16 82 14 88 18 C88 38 86 52 86 58 C86 78 68 90 50 95 C32 90 14 78 14 58 C14 52 12 38 12 18 C18 14 32 16 50 6 Z"
+                      fill="url(#bevelGrad)"
+                    />
+                    {/* Inner White Outline */}
+                    <path
+                      d="M50 14 C65 22 76 20 81 24 C81 40 79 51 79 56 C79 72 65 82 50 86 C35 82 21 72 21 56 C21 51 19 40 19 24 C24 20 35 22 50 14 Z"
+                      fill="none"
+                      stroke="#ffffff"
+                      strokeWidth="2.5"
+                      strokeOpacity="0.9"
+                    />
+                    <text
+                      x="50"
+                      y="46"
+                      fill="#ffffff"
+                      fontSize="13"
+                      fontWeight="900"
+                      fontFamily="system-ui, -apple-system, sans-serif"
+                      textAnchor="middle">
+                      NCC
+                    </text>
+                    <text
+                      x="50"
+                      y="60"
+                      fill="#ffffff"
+                      fontSize="8.5"
+                      fontWeight="900"
+                      fontFamily="system-ui, -apple-system, sans-serif"
+                      textAnchor="middle"
+                      letterSpacing="0.6">
+                      SHIELD
+                    </text>
+                  </svg>
                 </div>
-              ))}
+                <div className="flex-1 min-w-0 text-left">
+                  <h3 className="text-xs sm:text-sm font-black text-[#0A2D6E] leading-snug">
+                    NCC Shield Extended Warranty
+                  </h3>
+                  <p className="text-[9px] sm:text-[10px] text-slate-500 font-semibold leading-normal mt-0.5">
+                    Extra protection for longer peace of mind
+                  </p>
+                </div>
+                <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white border border-slate-100 flex items-center justify-center shadow-2xs shrink-0 group-hover:bg-slate-50 transition-colors">
+                  <ChevronRight className="h-3.5 w-3.5 text-[#0B4EA2] stroke-[3]" />
+                </div>
+              </div>
+
+              {/* Two compact cells beneath the hero: NCC AMC Plans | Buy New */}
+              <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+                {[
+                  {
+                    name: "NCC AMC\nPlans",
+                    desc: "Regular care for\nreliable performance",
+                    icon: (
+                      <div className="relative w-11 h-11 sm:w-12 sm:h-12 flex items-center justify-center filter drop-shadow-[0_3px_6px_rgba(13,71,161,0.25)]">
+                        <svg viewBox="0 0 100 100" className="w-full h-full">
+                          <defs>
+                            <linearGradient
+                              id="bevelGrad2"
+                              x1="0%"
+                              y1="0%"
+                              x2="100%"
+                              y2="0%">
+                              <stop offset="0%" stopColor="#1E88E5" />
+                              <stop offset="50%" stopColor="#1565C0" />
+                              <stop offset="50%" stopColor="#0B4EA2" />
+                              <stop offset="100%" stopColor="#0A2D6E" />
+                            </linearGradient>
+                          </defs>
+                          {/* Outer Shield Shape */}
+                          <path
+                            d="M50 6 C68 16 82 14 88 18 C88 38 86 52 86 58 C86 78 68 90 50 95 C32 90 14 78 14 58 C14 52 12 38 12 18 C18 14 32 16 50 6 Z"
+                            fill="url(#bevelGrad2)"
+                          />
+                          {/* Inner White Outline */}
+                          <path
+                            d="M50 14 C65 22 76 20 81 24 C81 40 79 51 79 56 C79 72 65 82 50 86 C35 82 21 72 21 56 C21 51 19 40 19 24 C24 20 35 22 50 14 Z"
+                            fill="none"
+                            stroke="#ffffff"
+                            strokeWidth="2.5"
+                            strokeOpacity="0.9"
+                          />
+                          <text
+                            x="50"
+                            y="46"
+                            fill="#ffffff"
+                            fontSize="13"
+                            fontWeight="900"
+                            fontFamily="system-ui, -apple-system, sans-serif"
+                            textAnchor="middle">
+                            NCC
+                          </text>
+                          <text
+                            x="50"
+                            y="60"
+                            fill="#ffffff"
+                            fontSize="8.5"
+                            fontWeight="900"
+                            fontFamily="system-ui, -apple-system, sans-serif"
+                            textAnchor="middle"
+                            letterSpacing="0.6">
+                            AMC
+                          </text>
+                        </svg>
+                      </div>
+                    ),
+                    onClick: () => navigate("/membership-plans"),
+                  },
+                  {
+                    name: "Buy\nNew",
+                    desc: "Shop latest\nappliances & more",
+                    icon: (
+                      <div className="w-11 h-11 sm:w-12 sm:h-12 flex items-center justify-center text-[#0B4EA2]">
+                        <svg
+                          viewBox="0 0 100 100"
+                          className="w-8 h-8 sm:w-9 sm:h-9 stroke-[#0B4EA2] stroke-[5.5] fill-none">
+                          <circle cx="35" cy="80" r="5" fill="#0B4EA2" />
+                          <circle cx="75" cy="80" r="5" fill="#0B4EA2" />
+                          <path
+                            d="M15 20 H30 L45 60 H80 L90 30 H35"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </div>
+                    ),
+                    onClick: () => navigate("/buy-new"),
+                  },
+                ].map((card, idx) => (
+                  <div
+                    key={idx}
+                    onClick={card.onClick}
+                    className="bg-white border border-slate-200/80 rounded-[20px] sm:rounded-[22px] p-3 sm:p-3.5 flex flex-col items-center text-center justify-between shadow-2xs hover:shadow-md transition-all cursor-pointer min-h-32 sm:min-h-35 group">
+                    <div className="flex flex-col items-center w-full">
+                      <div className="group-hover:scale-105 transition-transform duration-300">
+                        {card.icon}
+                      </div>
+                      <h3 className="text-[11px] sm:text-xs font-black text-[#0A2D6E] leading-snug mt-2 mb-0.5 whitespace-pre-line">
+                        {card.name}
+                      </h3>
+                      <p className="text-[8.5px] sm:text-[9px] text-slate-500 font-semibold leading-normal line-clamp-2 px-0.5 whitespace-pre-line">
+                        {card.desc}
+                      </p>
+                    </div>
+                    <div className="w-5.5 h-5.5 sm:w-6 sm:h-6 rounded-full bg-white border border-slate-100 flex items-center justify-center shadow-2xs mt-2 group-hover:bg-slate-50 transition-colors">
+                      <ChevronRight className="h-3.5 w-3.5 text-[#0B4EA2] stroke-[3]" />
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* Promotional Banners Carousel */}
@@ -589,14 +608,14 @@ const Buy = () => {
                 className="flex transition-transform duration-500 ease-in-out"
                 style={{ transform: `translateX(-${activeBanner * 100}%)` }}>
                 {/* Banner 1: Extended Warranty */}
-                <div className="w-full flex-shrink-0 px-0.5">
+                <div className="w-full shrink-0 px-0.5">
                   <div
                     onClick={() => setStep(2)}
-                    className="bg-gradient-to-br from-[#E8F1FF] to-[#C9DEFF] rounded-2xl p-3.5 sm:p-4 border border-blue-100 shadow-2xs flex items-center gap-3 sm:gap-4 relative overflow-hidden cursor-pointer hover:shadow-md transition-all text-left min-h-[135px] sm:min-h-[142px]">
+                    className="bg-linear-to-br from-[#E8F1FF] to-[#C9DEFF] rounded-2xl p-3.5 sm:p-4 border border-blue-100 shadow-2xs flex items-center gap-3 sm:gap-4 relative overflow-hidden cursor-pointer hover:shadow-md transition-all text-left min-h-33.75 sm:min-h-35.5">
                     <div className="absolute top-0 right-0 w-20 h-20 bg-blue-300/20 rounded-full blur-2xl"></div>
 
                     {/* Left shield illustration */}
-                    <div className="w-[68px] h-[68px] sm:w-[80px] sm:h-[80px] flex-shrink-0 relative flex items-center justify-center rounded-2xl overflow-hidden bg-gradient-to-b from-brand-blue/90 to-[#0B4EA2] shadow-sm">
+                    <div className="w-17 h-17 sm:w-20 sm:h-20 shrink-0 relative flex items-center justify-center rounded-2xl overflow-hidden bg-linear-to-b from-brand-blue/90 to-[#0B4EA2] shadow-sm">
                       <Shield className="h-8 w-8 sm:h-10 sm:w-10 text-white drop-shadow-lg z-10" />
                     </div>
 
@@ -607,15 +626,15 @@ const Buy = () => {
                       </h3>
                       <ul className="flex flex-col gap-0.5 mb-2">
                         <li className="flex items-center gap-1.5 text-[8.5px] sm:text-[9px] font-semibold text-slate-700">
-                          <Check className="h-2.5 w-2.5 text-green-600 flex-shrink-0" />{" "}
+                          <Check className="h-2.5 w-2.5 text-green-600 shrink-0" />{" "}
                           Genuine Parts
                         </li>
                         <li className="flex items-center gap-1.5 text-[8.5px] sm:text-[9px] font-semibold text-slate-700">
-                          <Check className="h-2.5 w-2.5 text-green-600 flex-shrink-0" />{" "}
+                          <Check className="h-2.5 w-2.5 text-green-600 shrink-0" />{" "}
                           Expert Support
                         </li>
                         <li className="flex items-center gap-1.5 text-[8.5px] sm:text-[9px] font-semibold text-slate-700">
-                          <Check className="h-2.5 w-2.5 text-green-600 flex-shrink-0" />{" "}
+                          <Check className="h-2.5 w-2.5 text-green-600 shrink-0" />{" "}
                           Hassle Free Claims
                         </li>
                       </ul>
@@ -632,14 +651,14 @@ const Buy = () => {
                 </div>
 
                 {/* Banner 2: Buy New Products */}
-                <div className="w-full flex-shrink-0 px-0.5">
+                <div className="w-full shrink-0 px-0.5">
                   <div
                     onClick={() => navigate("/buy-new")}
-                    className="bg-gradient-to-br from-[#FFF5E6] to-[#FFE6C9] rounded-2xl p-3.5 sm:p-4 border border-amber-100 shadow-2xs flex items-center gap-3 sm:gap-4 relative overflow-hidden cursor-pointer hover:shadow-md transition-all text-left min-h-[135px] sm:min-h-[142px]">
+                    className="bg-linear-to-br from-[#FFF5E6] to-[#FFE6C9] rounded-2xl p-3.5 sm:p-4 border border-amber-100 shadow-2xs flex items-center gap-3 sm:gap-4 relative overflow-hidden cursor-pointer hover:shadow-md transition-all text-left min-h-33.75 sm:min-h-35.5">
                     <div className="absolute top-0 right-0 w-20 h-20 bg-amber-300/20 rounded-full blur-2xl"></div>
 
                     {/* Left shopping cart illustration */}
-                    <div className="w-[68px] h-[68px] sm:w-[80px] sm:h-[80px] flex-shrink-0 relative flex items-center justify-center rounded-2xl overflow-hidden bg-gradient-to-b from-[#F59E0B] to-[#D97706] shadow-sm">
+                    <div className="w-17 h-17 sm:w-20 sm:h-20 shrink-0 relative flex items-center justify-center rounded-2xl overflow-hidden bg-linear-to-b from-[#F59E0B] to-[#D97706] shadow-sm">
                       <ShoppingCart className="h-8 w-8 sm:h-10 sm:w-10 text-white drop-shadow-lg z-10" />
                     </div>
 
@@ -650,15 +669,15 @@ const Buy = () => {
                       </h3>
                       <ul className="flex flex-col gap-0.5 mb-2">
                         <li className="flex items-center gap-1.5 text-[8.5px] sm:text-[9px] font-semibold text-slate-700">
-                          <Check className="h-2.5 w-2.5 text-green-600 flex-shrink-0" />{" "}
+                          <Check className="h-2.5 w-2.5 text-green-600 shrink-0" />{" "}
                           Free Doorstep Installation
                         </li>
                         <li className="flex items-center gap-1.5 text-[8.5px] sm:text-[9px] font-semibold text-slate-700">
-                          <Check className="h-2.5 w-2.5 text-green-600 flex-shrink-0" />{" "}
+                          <Check className="h-2.5 w-2.5 text-green-600 shrink-0" />{" "}
                           1 Year Brand Warranty
                         </li>
                         <li className="flex items-center gap-1.5 text-[8.5px] sm:text-[9px] font-semibold text-slate-700">
-                          <Check className="h-2.5 w-2.5 text-green-600 flex-shrink-0" />{" "}
+                          <Check className="h-2.5 w-2.5 text-green-600 shrink-0" />{" "}
                           No Cost EMI Options
                         </li>
                       </ul>
@@ -675,14 +694,14 @@ const Buy = () => {
                 </div>
 
                 {/* Banner 3: NCC AMC Plans */}
-                <div className="w-full flex-shrink-0 px-0.5">
+                <div className="w-full shrink-0 px-0.5">
                   <div
-                    onClick={() => navigate("/buy/amc")}
-                    className="bg-gradient-to-br from-[#E6F4EA] to-[#C9EAD2] rounded-2xl p-3.5 sm:p-4 border border-emerald-100 shadow-2xs flex items-center gap-3 sm:gap-4 relative overflow-hidden cursor-pointer hover:shadow-md transition-all text-left min-h-[135px] sm:min-h-[142px]">
+                    onClick={() => navigate("/membership-plans")}
+                    className="bg-linear-to-br from-[#E6F4EA] to-[#C9EAD2] rounded-2xl p-3.5 sm:p-4 border border-emerald-100 shadow-2xs flex items-center gap-3 sm:gap-4 relative overflow-hidden cursor-pointer hover:shadow-md transition-all text-left min-h-33.75 sm:min-h-35.5">
                     <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-300/20 rounded-full blur-2xl"></div>
 
                     {/* Left check-shield illustration */}
-                    <div className="w-[68px] h-[68px] sm:w-[80px] sm:h-[80px] flex-shrink-0 relative flex items-center justify-center rounded-2xl overflow-hidden bg-gradient-to-b from-[#10B981] to-[#059669] shadow-sm">
+                    <div className="w-17 h-17 sm:w-20 sm:h-20 shrink-0 relative flex items-center justify-center rounded-2xl overflow-hidden bg-linear-to-b from-[#10B981] to-[#059669] shadow-sm">
                       <ShieldCheck className="h-8 w-8 sm:h-10 sm:w-10 text-white drop-shadow-lg z-10" />
                     </div>
 
@@ -693,22 +712,22 @@ const Buy = () => {
                       </h3>
                       <ul className="flex flex-col gap-0.5 mb-2">
                         <li className="flex items-center gap-1.5 text-[8.5px] sm:text-[9px] font-semibold text-slate-700">
-                          <Check className="h-2.5 w-2.5 text-green-600 flex-shrink-0" />{" "}
+                          <Check className="h-2.5 w-2.5 text-green-600 shrink-0" />{" "}
                           Regular Preventive Visits
                         </li>
                         <li className="flex items-center gap-1.5 text-[8.5px] sm:text-[9px] font-semibold text-slate-700">
-                          <Check className="h-2.5 w-2.5 text-green-600 flex-shrink-0" />{" "}
+                          <Check className="h-2.5 w-2.5 text-green-600 shrink-0" />{" "}
                           Free Spare Repairs
                         </li>
                         <li className="flex items-center gap-1.5 text-[8.5px] sm:text-[9px] font-semibold text-slate-700">
-                          <Check className="h-2.5 w-2.5 text-green-600 flex-shrink-0" />{" "}
+                          <Check className="h-2.5 w-2.5 text-green-600 shrink-0" />{" "}
                           Zero Labor & Service Charges
                         </li>
                       </ul>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate("/buy/amc");
+                          navigate("/membership-plans");
                         }}
                         className="bg-[#059669] hover:bg-emerald-700 text-white text-[8.5px] sm:text-[9px] font-black px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer">
                         Explore AMC
@@ -744,14 +763,14 @@ const Buy = () => {
                   Shop by Category
                 </h3>
                 <button
-                  onClick={() => setStep(2)}
+                  onClick={() => navigate("/buy-new")}
                   className="text-xs font-bold text-brand-blue hover:underline cursor-pointer">
                   View All
                 </button>
               </div>
               <div className="flex items-center gap-2.5 sm:gap-3 overflow-x-auto no-scrollbar pb-1 md:grid md:grid-cols-5 md:gap-4 md:overflow-visible">
                 {[
-                  { name: "TV", img: tvImg, appliance: "Television" },
+                  { name: "Television", img: tvImg, appliance: "Television" },
                   {
                     name: "Refrigerator",
                     img: fridgeImg,
@@ -762,7 +781,11 @@ const Buy = () => {
                     img: washingImg,
                     appliance: "Washing Machine",
                   },
-                  { name: "AC", img: splitAcImg, appliance: "Air Conditioner" },
+                  {
+                    name: "Air Conditioner",
+                    img: splitAcImg,
+                    appliance: "Air Conditioner",
+                  },
                   {
                     name: "Water Purifier",
                     img: waterPurifierImg,
@@ -772,11 +795,17 @@ const Buy = () => {
                   <div
                     key={idx}
                     onClick={() => {
+                      // This used to route into the Extended Warranty tier
+                      // picker (/buy/select-tier) regardless of what the
+                      // customer actually tapped — a category tile that says
+                      // "Shop by Category" should shop the real product
+                      // catalog for that category, the same route AllBrands
+                      // and BuyNew use.
                       navigate(
-                        `/buy/select-tier/${encodeURIComponent(item.appliance)}`,
+                        `/buy-new/products/${encodeURIComponent(item.appliance)}`,
                       );
                     }}
-                    className="flex-shrink-0 w-[76px] sm:w-24 md:w-auto md:flex-shrink bg-white border border-slate-200/80 rounded-2xl p-2 sm:p-3 md:p-4 flex flex-col items-center justify-center gap-1.5 cursor-pointer shadow-2xs hover:border-brand-blue/40 hover:shadow-md transition-all text-center min-h-[86px] md:min-h-[120px]">
+                    className="shrink-0 w-19 sm:w-24 md:w-auto md:flex-shrink bg-white border border-slate-200/80 rounded-2xl p-2 sm:p-3 md:p-4 flex flex-col items-center justify-center gap-1.5 cursor-pointer shadow-2xs hover:border-brand-blue/40 hover:shadow-md transition-all text-center min-h-21.5 md:min-h-30">
                     <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 flex items-center justify-center overflow-hidden">
                       <img
                         src={item.img}
@@ -902,7 +931,7 @@ const Buy = () => {
                   }}
                   className="bg-white border border-slate-200/80 rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:border-brand-blue/40 shadow-sm hover:scale-[1.01] transition-all">
                   <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 bg-slate-50/50 border border-slate-100 rounded-xl flex items-center justify-center p-1.5 flex-shrink-0">
+                    <div className="w-14 h-14 bg-slate-50/50 border border-slate-100 rounded-xl flex items-center justify-center p-1.5 shrink-0">
                       <img
                         src={item.img}
                         alt={item.name}
@@ -921,7 +950,7 @@ const Buy = () => {
                       </span>
                     </div>
                   </div>
-                  <ChevronRight className="h-5 w-5 text-text-secondary flex-shrink-0" />
+                  <ChevronRight className="h-5 w-5 text-text-secondary shrink-0" />
                 </div>
               ))}
 
@@ -934,7 +963,7 @@ const Buy = () => {
                 <span className="text-xs font-black text-brand-navy pl-2">
                   View More Appliances
                 </span>
-                <ChevronRight className="h-5 w-5 text-text-secondary flex-shrink-0" />
+                <ChevronRight className="h-5 w-5 text-text-secondary shrink-0" />
               </div>
             </div>
           </motion.div>
@@ -987,7 +1016,7 @@ const Buy = () => {
                       </span>
                     </div>
                     <div
-                      className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                      className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
                         isSelected
                           ? "border-brand-blue bg-white"
                           : "border-slate-300"
@@ -1014,7 +1043,7 @@ const Buy = () => {
                   "Hassle Free Claims",
                 ].map((benefit, i) => (
                   <div key={i} className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
+                    <Check className="h-4 w-4 text-green-600 shrink-0" />
                     <span className="text-xs font-semibold text-slate-800">
                       {benefit}
                     </span>
@@ -1054,7 +1083,7 @@ const Buy = () => {
 
             {/* Product Card */}
             <div className="bg-white border border-slate-200/80 rounded-2xl p-4 flex items-center gap-4 shadow-sm">
-              <div className="w-16 h-16 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center p-1.5 flex-shrink-0">
+              <div className="w-16 h-16 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center p-1.5 shrink-0">
                 <img
                   src={
                     selectedAppliance?.toLowerCase().includes("tv") ||
@@ -1137,7 +1166,7 @@ const Buy = () => {
                 "Hassle Free Claims",
               ].map((benefit, i) => (
                 <div key={i} className="flex items-center gap-2.5">
-                  <Check className="h-3.5 w-3.5 text-green-600 flex-shrink-0" />
+                  <Check className="h-3.5 w-3.5 text-green-600 shrink-0" />
                   <span className="text-xs text-slate-700">{benefit}</span>
                 </div>
               ))}
@@ -1176,7 +1205,7 @@ const Buy = () => {
             <div className="flex flex-col gap-3">
               {/* Full Name */}
               <div className="bg-white border border-slate-200 rounded-2xl p-3.5 flex items-center gap-3 shadow-sm">
-                <User className="h-5 w-5 text-slate-400 flex-shrink-0" />
+                <User className="h-5 w-5 text-slate-400 shrink-0" />
                 <div className="flex-1">
                   <label className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider block">
                     Full Name
@@ -1193,7 +1222,7 @@ const Buy = () => {
 
               {/* Mobile Number */}
               <div className="bg-white border border-slate-200 rounded-2xl p-3.5 flex items-center gap-3 shadow-sm">
-                <Phone className="h-5 w-5 text-slate-400 flex-shrink-0" />
+                <Phone className="h-5 w-5 text-slate-400 shrink-0" />
                 <div className="flex-1">
                   <label className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider block">
                     Mobile Number
@@ -1210,7 +1239,7 @@ const Buy = () => {
 
               {/* Email Address */}
               <div className="bg-white border border-slate-200 rounded-2xl p-3.5 flex items-center gap-3 shadow-sm">
-                <Mail className="h-5 w-5 text-slate-400 flex-shrink-0" />
+                <Mail className="h-5 w-5 text-slate-400 shrink-0" />
                 <div className="flex-1">
                   <label className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider block">
                     Email Address
@@ -1227,7 +1256,7 @@ const Buy = () => {
 
               {/* Pincode */}
               <div className="bg-white border border-slate-200 rounded-2xl p-3.5 flex items-center gap-3 shadow-sm">
-                <MapPin className="h-5 w-5 text-slate-400 flex-shrink-0" />
+                <MapPin className="h-5 w-5 text-slate-400 shrink-0" />
                 <div className="flex-1">
                   <label className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider block">
                     Pincode
@@ -1244,7 +1273,7 @@ const Buy = () => {
 
               {/* Select Brand */}
               <div className="bg-white border border-slate-200 rounded-2xl p-3.5 flex items-center gap-3 shadow-sm">
-                <Sparkles className="h-5 w-5 text-slate-400 flex-shrink-0" />
+                <Sparkles className="h-5 w-5 text-slate-400 shrink-0" />
                 <div className="flex-1">
                   <label className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider block">
                     Select Brand
@@ -1265,7 +1294,7 @@ const Buy = () => {
 
               {/* Model Number */}
               <div className="bg-white border border-slate-200 rounded-2xl p-3.5 flex items-center gap-3 shadow-sm">
-                <Tv className="h-5 w-5 text-slate-400 flex-shrink-0" />
+                <Tv className="h-5 w-5 text-slate-400 shrink-0" />
                 <div className="flex-1">
                   <label className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider block">
                     Model Number
@@ -1283,7 +1312,7 @@ const Buy = () => {
 
               {/* Purchase Date */}
               <div className="bg-white border border-slate-200 rounded-2xl p-3.5 flex items-center gap-3 shadow-sm">
-                <Calendar className="h-5 w-5 text-slate-400 flex-shrink-0" />
+                <Calendar className="h-5 w-5 text-slate-400 shrink-0" />
                 <div className="flex-1">
                   <label className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider block">
                     Purchase Date
@@ -1300,7 +1329,7 @@ const Buy = () => {
               {/* Upload Invoice */}
               <div className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between shadow-sm">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100 flex-shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100 shrink-0">
                     <FileText className="h-5 w-5 text-slate-400" />
                   </div>
                   <div>
@@ -1366,7 +1395,7 @@ const Buy = () => {
                     : "border-slate-200"
                 }`}>
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-brand-blue flex-shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-brand-blue shrink-0">
                     <Zap className="h-5 w-5" />
                   </div>
                   <div>
@@ -1379,7 +1408,7 @@ const Buy = () => {
                   </div>
                 </div>
                 <div
-                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
                     paymentMode === "UPI"
                       ? "border-brand-blue bg-white"
                       : "border-slate-300"
@@ -1406,7 +1435,7 @@ const Buy = () => {
                     : "border-slate-200"
                 }`}>
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-500 flex-shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-500 shrink-0">
                     <Lock className="h-5 w-5 text-slate-400" />
                   </div>
                   <div>
@@ -1419,7 +1448,7 @@ const Buy = () => {
                   </div>
                 </div>
                 <div
-                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
                     paymentMode === "Card"
                       ? "border-brand-blue bg-white"
                       : "border-slate-300"
@@ -1439,7 +1468,7 @@ const Buy = () => {
                     : "border-slate-200"
                 }`}>
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-500 flex-shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-500 shrink-0">
                     <Landmark className="h-5 w-5 text-slate-400" />
                   </div>
                   <div>
@@ -1452,7 +1481,7 @@ const Buy = () => {
                   </div>
                 </div>
                 <div
-                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
                     paymentMode === "NetBanking"
                       ? "border-brand-blue bg-white"
                       : "border-slate-300"
@@ -1472,7 +1501,7 @@ const Buy = () => {
                     : "border-slate-200"
                 }`}>
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-500 flex-shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-500 shrink-0">
                     <Wallet className="h-5 w-5 text-slate-400" />
                   </div>
                   <div>
@@ -1485,7 +1514,7 @@ const Buy = () => {
                   </div>
                 </div>
                 <div
-                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
                     paymentMode === "Wallets"
                       ? "border-brand-blue bg-white"
                       : "border-slate-300"
@@ -1505,7 +1534,7 @@ const Buy = () => {
                     : "border-slate-200"
                 }`}>
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-500 flex-shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-500 shrink-0">
                     <Percent className="h-5 w-5 text-slate-400" />
                   </div>
                   <div>
@@ -1518,7 +1547,7 @@ const Buy = () => {
                   </div>
                 </div>
                 <div
-                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
                     paymentMode === "EMI"
                       ? "border-brand-blue bg-white"
                       : "border-slate-300"
@@ -1590,7 +1619,7 @@ const Buy = () => {
             </div>
 
             {/* Glassmorphic Policy Certificate Card */}
-            <div className="w-full bg-gradient-to-br from-brand-navy via-[#0C3F85] to-brand-blue rounded-3xl p-6 text-white shadow-2xl relative overflow-hidden border border-white/10">
+            <div className="w-full bg-linear-to-br from-brand-navy via-[#0C3F85] to-brand-blue rounded-3xl p-6 text-white shadow-2xl relative overflow-hidden border border-white/10">
               <div className="absolute -top-8 -right-8 w-24 h-24 bg-white/5 rounded-full blur-xl"></div>
 
               <div className="flex justify-between items-start mb-6">
@@ -1753,7 +1782,7 @@ const Buy = () => {
                         <span className="text-xs font-black text-brand-navy">
                           No Warranties Found
                         </span>
-                        <span className="text-[10px] text-slate-400 font-semibold max-w-[200px] leading-relaxed">
+                        <span className="text-[10px] text-slate-400 font-semibold max-w-50 leading-relaxed">
                           There are no warranties recorded in this category.
                         </span>
                       </div>
@@ -1802,7 +1831,7 @@ const Buy = () => {
                           <div
                             key={w._id || idx}
                             className="bg-white border border-slate-200 rounded-3xl p-4.5 flex gap-4 shadow-sm relative overflow-hidden text-left">
-                            <div className="w-18 h-18 bg-slate-50 rounded-2xl flex items-center justify-center p-1 border border-slate-100 flex-shrink-0">
+                            <div className="w-18 h-18 bg-slate-50 rounded-2xl flex items-center justify-center p-1 border border-slate-100 shrink-0">
                               <img
                                 src={img}
                                 alt={w.category}
@@ -1888,7 +1917,7 @@ const Buy = () => {
                       <span className="text-xs font-black text-brand-navy">
                         No AMC Subscriptions Found
                       </span>
-                      <span className="text-[10px] text-slate-400 font-semibold max-w-[200px] leading-relaxed">
+                      <span className="text-[10px] text-slate-400 font-semibold max-w-50 leading-relaxed">
                         You don't have any active AMC plans at the moment.
                       </span>
                     </div>
@@ -1937,7 +1966,7 @@ const Buy = () => {
                         <div
                           key={a._id || idx}
                           className="bg-white border border-slate-200 rounded-3xl p-4.5 flex gap-4 shadow-sm relative overflow-hidden text-left">
-                          <div className="w-18 h-18 bg-slate-50 rounded-2xl flex items-center justify-center p-1 border border-slate-100 flex-shrink-0">
+                          <div className="w-18 h-18 bg-slate-50 rounded-2xl flex items-center justify-center p-1 border border-slate-100 shrink-0">
                             <img
                               src={img}
                               alt={a.category}
@@ -2019,9 +2048,9 @@ const Buy = () => {
             transition={{ duration: 0.3 }}
             className="flex flex-col gap-6 pb-8">
             {/* Top Intro Section */}
-            <div className="bg-gradient-to-br from-[#E3F2FD] to-[#BBDEFB] rounded-3xl p-5 border border-blue-100 shadow-sm flex items-center gap-4 relative overflow-hidden">
+            <div className="bg-linear-to-br from-[#E3F2FD] to-[#BBDEFB] rounded-3xl p-5 border border-blue-100 shadow-sm flex items-center gap-4 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-20 h-20 bg-blue-300/20 rounded-full blur-xl"></div>
-              <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center border border-blue-200 shadow-sm flex-shrink-0">
+              <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center border border-blue-200 shadow-sm shrink-0">
                 <ShieldCheck className="h-7 w-7 text-brand-blue animate-pulse" />
               </div>
               <div className="flex-1">
@@ -2073,9 +2102,9 @@ const Buy = () => {
                 ].map((item, idx) => (
                   <div key={idx} className="flex gap-4 relative">
                     {idx !== 3 && (
-                      <div className="absolute left-[22px] top-10 bottom-[-24px] w-0.5 bg-slate-100"></div>
+                      <div className="absolute left-5.5 top-10 -bottom-6 w-0.5 bg-slate-100"></div>
                     )}
-                    <div className="w-11 h-11 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm relative z-10">
+                    <div className="w-11 h-11 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center shrink-0 shadow-sm relative z-10">
                       {item.icon}
                     </div>
                     <div className="flex-1">
@@ -2204,7 +2233,7 @@ const Buy = () => {
             className="flex flex-col gap-6 pb-8">
             {/* Appliance cutout summary card */}
             <div className="bg-white border border-slate-200 rounded-3xl p-5 flex gap-4 shadow-sm relative overflow-hidden">
-              <div className="w-18 h-18 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center p-1.5 flex-shrink-0">
+              <div className="w-18 h-18 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center p-1.5 shrink-0">
                 <img
                   src={selectedWarranty.img}
                   alt={selectedWarranty.title}
@@ -2231,7 +2260,7 @@ const Buy = () => {
             </div>
 
             {/* Policy Specifications Card */}
-            <div className="bg-gradient-to-br from-brand-navy to-brand-blue rounded-3xl p-6 text-white shadow-md flex flex-col gap-4 relative overflow-hidden border border-blue-900/10">
+            <div className="bg-linear-to-br from-brand-navy to-brand-blue rounded-3xl p-6 text-white shadow-md flex flex-col gap-4 relative overflow-hidden border border-blue-900/10">
               <div className="absolute -top-8 -right-8 w-20 h-20 bg-white/5 rounded-full blur-xl"></div>
 
               <div className="flex justify-between items-center border-b border-white/10 pb-3">
@@ -2284,7 +2313,7 @@ const Buy = () => {
               <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm flex flex-col gap-3.5">
                 {selectedWarranty.coverage.map((item, idx) => (
                   <div key={idx} className="flex gap-3 items-start">
-                    <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                    <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0 mt-0.5" />
                     <span className="text-xs text-slate-700 font-semibold leading-relaxed">
                       {item}
                     </span>
@@ -2360,7 +2389,7 @@ const Buy = () => {
                 ].map((item, idx) => (
                   <div
                     key={idx}
-                    className="flex-shrink-0 flex flex-col items-center gap-0.5 cursor-pointer group"
+                    className="shrink-0 flex flex-col items-center gap-0.5 cursor-pointer group"
                     onClick={() => {
                       if (item.isForYou) {
                         navigate("/dashboard");
@@ -2495,7 +2524,7 @@ const Buy = () => {
                         </svg>
                       )}
                     </div>
-                    <span className="text-[10px] font-black text-[#0B4EA2] text-center leading-tight tracking-tighter group-hover:text-brand-blue transition-colors max-w-[80px]">
+                    <span className="text-[10px] font-black text-[#0B4EA2] text-center leading-tight tracking-tighter group-hover:text-brand-blue transition-colors max-w-20">
                       {item.name}
                     </span>
                   </div>
@@ -2538,7 +2567,7 @@ const Buy = () => {
                 ].map((item, idx) => (
                   <div
                     key={idx}
-                    className="flex-shrink-0 bg-slate-50/50 border border-slate-150 rounded-2xl px-4 py-3 flex items-center justify-center min-w-[75px] h-12 shadow-sm hover:border-[#0B4EA2]/30 transition-all cursor-pointer">
+                    className="shrink-0 bg-slate-50/50 border border-slate-150 rounded-2xl px-4 py-3 flex items-center justify-center min-w-18.75 h-12 shadow-sm hover:border-[#0B4EA2]/30 transition-all cursor-pointer">
                     {item.isText ? (
                       <span
                         className={`text-[10px] font-black tracking-wider ${item.color} ${item.italic ? "italic font-black" : ""}`}>
@@ -2559,7 +2588,7 @@ const Buy = () => {
 
                 {/* View All Button */}
                 <button
-                  className="flex-shrink-0 flex items-center gap-1 text-[10px] font-extrabold text-[#0B4EA2] hover:underline cursor-pointer bg-blue-50/50 border border-blue-100 rounded-2xl px-3 py-3 h-12"
+                  className="shrink-0 flex items-center gap-1 text-[10px] font-extrabold text-[#0B4EA2] hover:underline cursor-pointer bg-blue-50/50 border border-blue-100 rounded-2xl px-3 py-3 h-12"
                   onClick={() => navigate("/buy-new")}>
                   View All <ChevronRight className="h-3 w-3" />
                 </button>
@@ -2612,7 +2641,7 @@ const Buy = () => {
                 ].map((item, idx) => (
                   <div
                     key={idx}
-                    className="flex-shrink-0 w-[110px] bg-white border border-slate-200/80 rounded-2xl p-3 flex flex-col gap-2 shadow-sm hover:border-[#0B4EA2]/30 transition-all cursor-pointer snap-start"
+                    className="shrink-0 w-27.5 bg-white border border-slate-200/80 rounded-2xl p-3 flex flex-col gap-2 shadow-sm hover:border-[#0B4EA2]/30 transition-all cursor-pointer snap-start"
                     onClick={() => goTo(3, item.appliance, 0)}>
                     <div className="w-full h-18 bg-slate-50/50 border border-slate-100 rounded-xl flex items-center justify-center p-1.5">
                       <img
@@ -2681,7 +2710,7 @@ const Buy = () => {
                   return (
                     <div
                       key={idx}
-                      className="flex-shrink-0 w-[110px] bg-white border border-slate-200/80 rounded-2xl p-3 flex flex-col gap-2 shadow-sm hover:border-[#0B4EA2]/30 transition-all cursor-pointer snap-start"
+                      className="shrink-0 w-27.5 bg-white border border-slate-200/80 rounded-2xl p-3 flex flex-col gap-2 shadow-sm hover:border-[#0B4EA2]/30 transition-all cursor-pointer snap-start"
                       onClick={() => navigate("/buy-new")}>
                       <div className="w-full h-18 bg-slate-50/50 border border-slate-100 rounded-xl flex items-center justify-center p-1.5">
                         <img
@@ -2818,7 +2847,7 @@ const Buy = () => {
                 <div
                   key={idx}
                   onClick={() => goTo(3, item.name, 0)}
-                  className="bg-white border border-slate-200/80 rounded-3xl p-4 flex flex-col items-center justify-center gap-3.5 cursor-pointer hover:border-brand-blue/40 shadow-sm hover:scale-[1.02] transition-all text-center min-h-[135px]">
+                  className="bg-white border border-slate-200/80 rounded-3xl p-4 flex flex-col items-center justify-center gap-3.5 cursor-pointer hover:border-brand-blue/40 shadow-sm hover:scale-[1.02] transition-all text-center min-h-33.75">
                   <div className="w-13 h-13 bg-slate-50/70 border border-slate-100 rounded-2xl flex items-center justify-center p-2.5 overflow-hidden">
                     {item.isGeyser ? (
                       <Zap className="h-7 w-7 text-brand-blue" />
@@ -2859,7 +2888,7 @@ const Buy = () => {
             className="flex flex-col gap-6 pb-8">
             {/* Appliance cutout summary card */}
             <div className="bg-white border border-slate-200 rounded-3xl p-5 flex gap-4 shadow-sm relative overflow-hidden text-left">
-              <div className="w-18 h-18 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center p-1.5 flex-shrink-0">
+              <div className="w-18 h-18 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center p-1.5 shrink-0">
                 <img
                   src={selectedAMC.img}
                   alt={selectedAMC.title}
@@ -2886,7 +2915,7 @@ const Buy = () => {
             </div>
 
             {/* Policy Specifications Card */}
-            <div className="bg-gradient-to-br from-brand-navy to-[#059669] rounded-3xl p-6 text-white shadow-md flex flex-col gap-4 relative overflow-hidden border border-emerald-900/10 text-left">
+            <div className="bg-linear-to-br from-brand-navy to-[#059669] rounded-3xl p-6 text-white shadow-md flex flex-col gap-4 relative overflow-hidden border border-emerald-900/10 text-left">
               <div className="absolute -top-8 -right-8 w-20 h-20 bg-white/5 rounded-full blur-xl"></div>
 
               <div className="flex justify-between items-center border-b border-white/10 pb-3">
@@ -2933,7 +2962,7 @@ const Buy = () => {
               <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm flex flex-col gap-3.5">
                 {selectedAMC.coverage.map((item, idx) => (
                   <div key={idx} className="flex gap-3 items-start">
-                    <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                    <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0 mt-0.5" />
                     <span className="text-xs text-slate-700 font-semibold leading-relaxed">
                       {item}
                     </span>
@@ -3170,9 +3199,9 @@ const Buy = () => {
                 ].map((item, idx) => (
                   <div key={idx} className="flex gap-4 relative text-left">
                     {idx !== 2 && (
-                      <div className="absolute left-[18px] top-9 bottom-[-24px] w-0.5 bg-slate-100"></div>
+                      <div className="absolute left-4.5 top-9 -bottom-6 w-0.5 bg-slate-100"></div>
                     )}
-                    <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 shadow-2xs relative z-10 border transition-all duration-300 bg-white">
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-2xs relative z-10 border transition-all duration-300 bg-white">
                       {item.status === "Done" ? (
                         <Check className="h-4.5 w-4.5 text-emerald-600 stroke-[3px]" />
                       ) : (
@@ -3186,7 +3215,7 @@ const Buy = () => {
                         <h5 className="text-xs font-black text-brand-navy truncate">
                           {item.title}
                         </h5>
-                        <span className="text-[9px] font-black text-[#0B4EA2] flex-shrink-0 bg-blue-50/80 px-2 py-0.5 rounded-full">
+                        <span className="text-[9px] font-black text-[#0B4EA2] shrink-0 bg-blue-50/80 px-2 py-0.5 rounded-full">
                           {item.time}
                         </span>
                       </div>

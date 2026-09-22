@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import { apiRequest } from '../../lib/apiClient';
+import { goBack } from '../../lib/navigation';
 import {
   ArrowLeft,
   Mail,
@@ -145,7 +146,7 @@ const ASMDetail = () => {
 
         <div className="p-6 space-y-6 flex-1">
           <button
-            onClick={() => navigate('/super-admin/asm')}
+            onClick={() => goBack(navigate, '/super-admin/asm')}
             className="flex items-center gap-2 text-sm font-semibold text-[#0D47A1] hover:text-blue-800 transition-colors"
           >
             <ArrowLeft size={16} /> Back to ASM Management
@@ -162,10 +163,10 @@ const ASMDetail = () => {
             <>
               {/* Header card */}
               <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden">
-                <div className="bg-gradient-to-r from-[#0D47A1] via-[#1565C0] to-[#1E3A8A] p-6 text-white">
+                <div className="bg-linear-to-r from-[#0D47A1] via-[#1565C0] to-[#1E3A8A] p-6 text-white">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="flex items-center gap-4">
-                      <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 flex items-center justify-center text-white font-extrabold text-2xl uppercase flex-shrink-0">
+                      <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 flex items-center justify-center text-white font-extrabold text-2xl uppercase shrink-0">
                         {getInitials(asm.name)}
                       </div>
                       <div>
@@ -210,15 +211,15 @@ const ASMDetail = () => {
                     <h3 className="text-sm font-bold text-[#1E293B] mb-4">Contact Information</h3>
                     <div className="space-y-3.5 text-sm">
                       <div className="flex items-center gap-3 text-slate-700">
-                        <Mail size={16} className="text-[#64748B] flex-shrink-0" />
+                        <Mail size={16} className="text-[#64748B] shrink-0" />
                         <span className="truncate">{asm.email || '—'}</span>
                       </div>
                       <div className="flex items-center gap-3 text-slate-700">
-                        <Phone size={16} className="text-[#64748B] flex-shrink-0" />
+                        <Phone size={16} className="text-[#64748B] shrink-0" />
                         <span>{asm.phone || '—'}</span>
                       </div>
                       <div className="flex items-center gap-3 text-slate-700">
-                        <MapPin size={16} className="text-[#64748B] flex-shrink-0" />
+                        <MapPin size={16} className="text-[#64748B] shrink-0" />
                         <span>{asm.city?.name || 'Unassigned'}, India</span>
                       </div>
                     </div>
@@ -315,7 +316,7 @@ const ASMDetail = () => {
                               {idx > 0 && arr[idx - 1] !== p - 1 && <span className="text-slate-300 px-0.5">…</span>}
                               <button
                                 onClick={() => goToPage(p)}
-                                className={`min-w-[28px] px-2 py-1 rounded-lg font-semibold transition-colors ${
+                                className={`min-w-7 px-2 py-1 rounded-lg font-semibold transition-colors ${
                                   logPage === p ? 'bg-[#0D47A1] text-white' : 'border border-[#E2E8F0] hover:bg-[#F8FAFC] text-slate-600'
                                 }`}
                               >

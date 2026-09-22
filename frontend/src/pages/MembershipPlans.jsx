@@ -20,7 +20,7 @@ const plans = [
     bgGradient: 'from-slate-50 to-slate-200/70',
     borderColor: 'border-slate-300/80',
     glowColor: 'shadow-slate-400/10',
-    iconBg: 'bg-gradient-to-br from-slate-400 to-slate-600',
+    iconBg: 'bg-linear-to-br from-slate-400 to-slate-600',
     btnBg: 'bg-slate-900 hover:bg-slate-800 text-white',
     isPopular: false,
     benefits: [
@@ -40,7 +40,7 @@ const plans = [
     bgGradient: 'from-[#FFFDF5] to-[#FFF7E6]',
     borderColor: 'border-amber-400/80',
     glowColor: 'shadow-amber-500/20',
-    iconBg: 'bg-gradient-to-br from-amber-400 to-amber-600',
+    iconBg: 'bg-linear-to-br from-amber-400 to-amber-600',
     btnBg: 'bg-amber-600 hover:bg-amber-700 text-white',
     isPopular: true,
     benefits: [
@@ -61,7 +61,7 @@ const plans = [
     bgGradient: 'from-blue-50 to-blue-100/60',
     borderColor: 'border-blue-300/80',
     glowColor: 'shadow-blue-500/10',
-    iconBg: 'bg-gradient-to-br from-blue-400 to-blue-600',
+    iconBg: 'bg-linear-to-br from-blue-400 to-blue-600',
     btnBg: 'bg-blue-600 hover:bg-blue-700 text-white',
     isPopular: false,
     benefits: [
@@ -83,7 +83,7 @@ const plans = [
     bgGradient: 'from-fuchsia-50 to-fuchsia-100/60',
     borderColor: 'border-fuchsia-300/80',
     glowColor: 'shadow-fuchsia-500/10',
-    iconBg: 'bg-gradient-to-br from-fuchsia-400 to-fuchsia-600',
+    iconBg: 'bg-linear-to-br from-fuchsia-400 to-fuchsia-600',
     btnBg: 'bg-fuchsia-700 hover:bg-fuchsia-800 text-white',
     isPopular: false,
     benefits: [
@@ -202,9 +202,9 @@ const MembershipPlans = () => {
       <div className="max-w-screen-2xl mx-auto w-full px-3 min-[360px]:px-4 sm:px-6 lg:px-8 py-3.5 sm:py-8 flex flex-col gap-3.5 sm:gap-8 flex-1">
         
         {/* Banner Section */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-slate-900 to-blue-900 rounded-2xl sm:rounded-[28px] p-3.5 min-[360px]:p-5 sm:p-6 md:p-8 shadow-xl text-left border border-white/10">
-          <div className="absolute top-0 right-0 w-[150px] h-[150px] bg-blue-500/10 rounded-full blur-2xl" />
-          <div className="absolute bottom-0 left-0 w-[120px] h-[120px] bg-amber-500/10 rounded-full blur-2xl" />
+        <div className="relative overflow-hidden bg-linear-to-r from-slate-900 to-blue-900 rounded-2xl sm:rounded-[28px] p-3.5 min-[360px]:p-5 sm:p-6 md:p-8 shadow-xl text-left border border-white/10">
+          <div className="absolute top-0 right-0 w-37.5 h-37.5 bg-blue-500/10 rounded-full blur-2xl" />
+          <div className="absolute bottom-0 left-0 w-30 h-30 bg-amber-500/10 rounded-full blur-2xl" />
           
           <div className="flex items-center gap-1.5 sm:gap-2 text-amber-400 font-extrabold text-[9px] sm:text-[10px] md:text-xs uppercase tracking-[2px] sm:tracking-[3px]">
             <Sparkles className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -228,7 +228,7 @@ const MembershipPlans = () => {
               <div
                 key={plan.id}
                 onClick={() => setSelectedPlanId(plan.id)}
-                className={`rounded-2xl sm:rounded-[24px] border-2 transition-all duration-300 relative overflow-hidden shadow-xs sm:shadow-md bg-gradient-to-b ${plan.bgGradient} ${plan.borderColor} ${plan.glowColor} flex flex-col justify-between ${
+                className={`rounded-2xl sm:rounded-[24px] border-2 transition-all duration-300 relative overflow-hidden shadow-xs sm:shadow-md bg-linear-to-b ${plan.bgGradient} ${plan.borderColor} ${plan.glowColor} flex flex-col justify-between ${
                   isSelected ? 'scale-[1.008] sm:scale-[1.02] shadow-lg ring-2 ring-slate-400' : 'hover:scale-[1.01] opacity-95'
                 }`}
               >
@@ -247,7 +247,7 @@ const MembershipPlans = () => {
                   <div className="flex flex-col gap-2 sm:gap-3">
                     <div className="flex items-center justify-between">
                       <div
-                        className={`w-9 h-9 min-[360px]:w-10 min-[360px]:h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center flex-shrink-0 shadow-xs sm:shadow-md ${plan.iconBg}`}
+                        className={`w-9 h-9 min-[360px]:w-10 min-[360px]:h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0 shadow-xs sm:shadow-md ${plan.iconBg}`}
                       >
                         <PlanIcon id={plan.id} />
                       </div>
@@ -279,7 +279,7 @@ const MembershipPlans = () => {
                   <div className="flex flex-col gap-2 sm:gap-3 text-left flex-1">
                     {plan.benefits.map((benefit, i) => (
                       <div key={i} className="flex items-start gap-2 sm:gap-2.5">
-                        <div className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5 rounded-full bg-white flex items-center justify-center flex-shrink-0 shadow-2xs border border-slate-200 mt-0.5">
+                        <div className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5 rounded-full bg-white flex items-center justify-center shrink-0 shadow-2xs border border-slate-200 mt-0.5">
                           <Check className="h-2 w-2 sm:h-3 sm:w-3 stroke-[3]" style={{ color: plan.accentColor }} />
                         </div>
                         <span className="text-[11px] sm:text-xs text-slate-700 font-semibold sm:font-bold leading-snug">{benefit}</span>

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, Trash2, CreditCard, ShieldCheck, X, Sparkles, RefreshCw, Check, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { apiRequest } from '../lib/apiClient';
+import { goBack } from '../lib/navigation';
 
 // Helper: Auto-detect card network by BIN prefix
 const detectCardNetwork = (numberStr) => {
@@ -218,7 +219,7 @@ const PaymentMethods = () => {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-10">
-      
+
       {/* Toast Notification */}
       {toastMsg && (
         <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white font-bold text-xs py-3 px-6 rounded-2xl shadow-xl flex items-center gap-2 border border-slate-800 whitespace-nowrap">
@@ -230,7 +231,7 @@ const PaymentMethods = () => {
       {/* Header */}
       <div className="bg-white px-5 py-4 flex items-center gap-3 sticky top-0 z-50 shadow-sm border-b border-slate-100">
         <button
-          onClick={() => navigate('/profile')}
+          onClick={() => goBack(navigate, '/profile')}
           className="p-1.5 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
         >
           <ArrowLeft className="h-5 w-5 text-slate-700" />
@@ -239,7 +240,7 @@ const PaymentMethods = () => {
       </div>
 
       <div className="flex flex-col gap-5 px-4 sm:px-6 pt-5 max-w-3xl mx-auto w-full text-left">
-        
+
         {loading ? (
           <div className="flex flex-col items-center justify-center p-12 text-slate-400 gap-2">
             <RefreshCw className="h-6 w-6 animate-spin text-blue-600" />
@@ -250,7 +251,7 @@ const PaymentMethods = () => {
             {/* Saved Cards */}
             <div className="flex flex-col gap-2.5">
               <h2 className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider px-1">Tokenized Cards</h2>
-              
+
               {cards.length === 0 ? (
                 <div className="bg-white border border-slate-100 rounded-2xl p-5 text-center text-xs text-slate-400 font-semibold">
                   No saved cards. Add a card to tokenize it securely.
@@ -274,8 +275,8 @@ const PaymentMethods = () => {
                                 <Check className="h-2.5 w-2.5" /> Primary
                               </span>
                             ) : (
-                              <button 
-                                onClick={() => setPrimary(cardId)} 
+                              <button
+                                onClick={() => setPrimary(cardId)}
                                 className="text-[8px] bg-slate-100 hover:bg-blue-50 text-slate-500 hover:text-blue-600 px-2 py-0.5 rounded-full font-black uppercase transition-colors cursor-pointer"
                               >
                                 Set Primary
@@ -287,7 +288,7 @@ const PaymentMethods = () => {
                           </span>
                         </div>
                       </div>
-                      <button 
+                      <button
                         onClick={() => removePaymentMethod(cardId)}
                         className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all cursor-pointer"
                         title="Remove Card Token"
@@ -299,7 +300,7 @@ const PaymentMethods = () => {
                 })
               )}
 
-              <button 
+              <button
                 onClick={handleOpenAddCard}
                 className="bg-white border-2 border-dashed border-slate-200 hover:border-blue-500 hover:bg-blue-50/10 rounded-2xl py-3 flex items-center justify-center gap-2 text-xs font-black text-slate-500 hover:text-blue-600 transition-all cursor-pointer"
               >
@@ -311,7 +312,7 @@ const PaymentMethods = () => {
             {/* UPI Accounts */}
             <div className="flex flex-col gap-2.5 mt-2">
               <h2 className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider px-1">UPI ID Accounts</h2>
-              
+
               {upis.length === 0 ? (
                 <div className="bg-white border border-slate-100 rounded-2xl p-5 text-center text-xs text-slate-400 font-semibold">
                   No linked UPI accounts.
@@ -335,7 +336,7 @@ const PaymentMethods = () => {
                                 <Check className="h-2.5 w-2.5" /> Primary
                               </span>
                             ) : (
-                              <button 
+                              <button
                                 onClick={() => setPrimary(upiId)}
                                 className="text-[8px] bg-slate-100 hover:bg-green-50 text-slate-500 hover:text-green-600 px-2 py-0.5 rounded-full font-black uppercase transition-colors cursor-pointer"
                               >
@@ -348,7 +349,7 @@ const PaymentMethods = () => {
                           </span>
                         </div>
                       </div>
-                      <button 
+                      <button
                         onClick={() => removePaymentMethod(upiId)}
                         className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all cursor-pointer"
                         title="Remove UPI Token"
@@ -360,7 +361,7 @@ const PaymentMethods = () => {
                 })
               )}
 
-              <button 
+              <button
                 onClick={() => setShowAddUpiModal(true)}
                 className="bg-white border-2 border-dashed border-slate-200 hover:border-green-500 hover:bg-green-50/10 rounded-2xl py-3 flex items-center justify-center gap-2 text-xs font-black text-slate-500 hover:text-green-600 transition-all cursor-pointer"
               >
@@ -371,7 +372,7 @@ const PaymentMethods = () => {
 
             {/* Secure PCI-DSS Tokenization Banner */}
             <div className="bg-slate-900 text-white rounded-2xl p-4 flex items-start gap-3 mt-4 border border-slate-800 shadow-md">
-              <ShieldCheck className="h-6 w-6 text-emerald-400 flex-shrink-0 mt-0.5" />
+              <ShieldCheck className="h-6 w-6 text-emerald-400 shrink-0 mt-0.5" />
               <div className="text-left">
                 <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400 block mb-0.5">
                   End-to-End PCI-DSS Tokenized
@@ -390,7 +391,7 @@ const PaymentMethods = () => {
       {showAddCardModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-[28px] w-full max-w-sm p-6 shadow-xl relative text-left animate-in zoom-in-95 duration-150">
-            <button 
+            <button
               onClick={() => !submitting && setShowAddCardModal(false)}
               className="absolute top-4 right-4 p-1 hover:bg-slate-100 rounded-full transition-all cursor-pointer"
             >
@@ -398,9 +399,9 @@ const PaymentMethods = () => {
             </button>
             <h3 className="text-sm font-black text-slate-900 mb-1 uppercase tracking-wide">Tokenize New Card</h3>
             <p className="text-[10px] text-slate-400 font-bold mb-4">Raw card details will be tokenized and discarded instantly.</p>
-            
+
             <form onSubmit={handleAddCard} className="flex flex-col gap-4">
-              
+
               {/* Card Number Input with Real-time Brand Detection & Luhn Validation */}
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between pl-1">
@@ -416,8 +417,8 @@ const PaymentMethods = () => {
                 </div>
 
                 <div className="relative flex items-center">
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     maxLength="19"
                     placeholder="4532 XXXX XXXX 4321"
                     value={cardNumber}
@@ -427,10 +428,10 @@ const PaymentMethods = () => {
                       setCardNumber(formatted);
                     }}
                     className={`w-full bg-slate-50 border rounded-xl pl-3 pr-10 py-2.5 text-xs font-bold text-slate-800 outline-none tracking-widest transition-all ${
-                      showCardError 
-                        ? 'border-rose-500 focus:ring-1 focus:ring-rose-500' 
-                        : isLuhnValid 
-                          ? 'border-emerald-500 focus:ring-1 focus:ring-emerald-500' 
+                      showCardError
+                        ? 'border-rose-500 focus:ring-1 focus:ring-rose-500'
+                        : isLuhnValid
+                          ? 'border-emerald-500 focus:ring-1 focus:ring-emerald-500'
                           : 'border-slate-200 focus:border-blue-600'
                     }`}
                     required
@@ -462,8 +463,8 @@ const PaymentMethods = () => {
               {/* Expiry Date Input */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-1">Expiry Date (MM/YY)</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   placeholder="12/28"
                   maxLength="5"
                   value={cardExpiry}
@@ -474,8 +475,8 @@ const PaymentMethods = () => {
               </div>
 
               {/* Tokenize Button */}
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 disabled={submitting || !isLuhnValid || cardExpiry.length < 5}
                 className="bg-brand-blue hover:bg-[#09357A] text-white py-3.5 rounded-xl text-xs font-black transition-all cursor-pointer mt-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
@@ -497,7 +498,7 @@ const PaymentMethods = () => {
       {showAddUpiModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-[28px] w-full max-w-sm p-6 shadow-xl relative text-left animate-in zoom-in-95 duration-150">
-            <button 
+            <button
               onClick={() => !submitting && setShowAddUpiModal(false)}
               className="absolute top-4 right-4 p-1 hover:bg-slate-100 rounded-full transition-all cursor-pointer"
             >
@@ -509,8 +510,8 @@ const PaymentMethods = () => {
             <form onSubmit={handleAddUpi} className="flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-1">UPI ID Address</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   placeholder="username@okaxis"
                   value={upiAddress}
                   onChange={(e) => setUpiAddress(e.target.value)}
@@ -521,8 +522,8 @@ const PaymentMethods = () => {
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-1">Link Bank Account</label>
-                <select 
-                  value={upiBank} 
+                <select
+                  value={upiBank}
                   onChange={(e) => setUpiBank(e.target.value)}
                   className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-800 outline-none focus:border-green-600"
                 >
@@ -534,8 +535,8 @@ const PaymentMethods = () => {
                 </select>
               </div>
 
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 disabled={submitting || !upiAddress.includes('@')}
                 className="bg-brand-blue hover:bg-[#09357A] text-white py-3.5 rounded-xl text-xs font-black transition-all cursor-pointer mt-2 disabled:opacity-50 flex items-center justify-center gap-2"
               >
@@ -558,5 +559,3 @@ const PaymentMethods = () => {
 };
 
 export default PaymentMethods;
-
-

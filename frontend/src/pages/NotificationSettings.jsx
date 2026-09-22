@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Bell, Mail, MessageSquare, ShieldAlert, Sparkles, RefreshCw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { apiRequest } from '../lib/apiClient';
+import { goBack } from '../lib/navigation';
 import { usePushPermission, pushBlockedMessage } from '../hooks/usePushPermission';
 
 const NotificationSettings = () => {
@@ -141,7 +142,7 @@ const NotificationSettings = () => {
       {/* Header */}
       <div className="bg-white px-5 py-4 flex items-center gap-3 sticky top-0 z-50 shadow-sm border-b border-slate-100">
         <button
-          onClick={() => navigate('/profile')}
+          onClick={() => goBack(navigate, '/profile')}
           className="p-1.5 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
         >
           <ArrowLeft className="h-5 w-5 text-slate-700" />
@@ -153,7 +154,7 @@ const NotificationSettings = () => {
         
         {/* Helper Card */}
         <div className="bg-white border border-slate-100 rounded-2xl p-4 flex gap-3 shadow-xs">
-          <div className="w-9 h-9 bg-pink-50 text-pink-500 rounded-xl flex items-center justify-center flex-shrink-0">
+          <div className="w-9 h-9 bg-pink-50 text-pink-500 rounded-xl flex items-center justify-center shrink-0">
             <Bell className="h-5 w-5" />
           </div>
           <div>
@@ -185,7 +186,7 @@ const NotificationSettings = () => {
                         so say so here rather than leaving a switch that refuses
                         to move for no visible reason. */}
                     {pushUnavailable && (
-                      <span className="text-[9px] text-amber-600 font-bold block mt-1 max-w-[210px] leading-snug">
+                      <span className="text-[9px] text-amber-600 font-bold block mt-1 max-w-52.5 leading-snug">
                         {pushUnavailable}
                       </span>
                     )}
@@ -201,7 +202,7 @@ const NotificationSettings = () => {
                   } ${settings.pushNotifications ? 'bg-pink-500' : 'bg-slate-200'}`}
                 >
                   <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 shadow-sm transition-all duration-300 ${
-                    settings.pushNotifications ? 'left-[22px]' : 'left-1'
+                    settings.pushNotifications ? 'left-5.5' : 'left-1'
                   }`} />
                 </button>
               </div>
@@ -224,7 +225,7 @@ const NotificationSettings = () => {
                   }`}
                 >
                   <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 shadow-sm transition-all duration-300 ${
-                    settings.bookingUpdates ? 'left-[22px]' : 'left-1'
+                    settings.bookingUpdates ? 'left-5.5' : 'left-1'
                   }`} />
                 </button>
               </div>
@@ -247,7 +248,7 @@ const NotificationSettings = () => {
                   }`}
                 >
                   <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 shadow-sm transition-all duration-300 ${
-                    settings.whatsAppPromo ? 'left-[22px]' : 'left-1'
+                    settings.whatsAppPromo ? 'left-5.5' : 'left-1'
                   }`} />
                 </button>
               </div>
@@ -270,7 +271,7 @@ const NotificationSettings = () => {
                   }`}
                 >
                   <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 shadow-sm transition-all duration-300 ${
-                    settings.emailPromo ? 'left-[22px]' : 'left-1'
+                    settings.emailPromo ? 'left-5.5' : 'left-1'
                   }`} />
                 </button>
               </div>
@@ -293,7 +294,7 @@ const NotificationSettings = () => {
                   }`}
                 >
                   <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 shadow-sm transition-all duration-300 ${
-                    settings.securityAlerts ? 'left-[22px]' : 'left-1'
+                    settings.securityAlerts ? 'left-5.5' : 'left-1'
                   }`} />
                 </button>
               </div>

@@ -108,7 +108,7 @@ const Logs = () => {
               {filteredLogs.map((log) => (
                 <div key={log.id} className="relative">
                   {/* Timeline Dot */}
-                  <div className={`absolute -left-[31px] top-1 w-4 h-4 rounded-full border-2 border-white ${
+                  <div className={`absolute -left-7.75 top-1 w-4 h-4 rounded-full border-2 border-white ${
                     log.type === 'System' ? 'bg-[#0D47A1]' :
                     log.type === 'Support' ? 'bg-green-500' :
                     log.type === 'User' ? 'bg-red-500' :

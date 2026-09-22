@@ -9,6 +9,8 @@ export const createCategorySchema = z.object({
   categoryNote: z.string().optional(),
   brands: z.array(z.string()).optional(),
   whyBrandPoints: z.array(z.string()).optional(),
+  groups: z.array(z.string()).optional(),
+  section: z.string().optional(),
 });
 
 export const updateCategorySchema = createCategorySchema.partial().omit({ key: true });

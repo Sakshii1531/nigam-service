@@ -49,7 +49,7 @@ const AMCOverview = ({ job, additionalServices, setAdditionalServices, setShowAd
       <div className="bg-white rounded-3xl p-3.5 border border-slate-200 shadow-sm flex flex-col gap-3 text-left">
         <h4 className="text-sm font-medium text-[#052355]">Product Details</h4>
         <div className="flex gap-4 items-center">
-          <div className="w-14 h-14 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-center flex-shrink-0">
+          <div className="w-14 h-14 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-center shrink-0">
             <span className="text-2xl">🧺</span>
           </div>
           <div className="text-left flex-1">
@@ -81,7 +81,7 @@ const AMCOverview = ({ job, additionalServices, setAdditionalServices, setShowAd
               <div className="flex items-start gap-3">
                 <button
                   onClick={() => toggleTask(task.id)}
-                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-all ${
+                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all ${
                     task.done ? 'bg-green-500 border-green-500' : task.urgent ? 'border-amber-500' : 'border-slate-400'
                   }`}
                 >
@@ -89,7 +89,7 @@ const AMCOverview = ({ job, additionalServices, setAdditionalServices, setShowAd
                 </button>
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    {task.urgent && !task.done && <AlertTriangle className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />}
+                    {task.urgent && !task.done && <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0" />}
                     <span className={`text-xs font-semibold ${
                       task.done ? 'text-green-700 line-through' : task.urgent ? 'text-amber-800' : 'text-[#052355]'
                     }`}>
@@ -231,7 +231,7 @@ const AMCOverview = ({ job, additionalServices, setAdditionalServices, setShowAd
             <span>Extra Services</span>
             <span className="font-medium text-[#052355]">₹{additionalServicesTotal.toLocaleString('en-IN')}</span>
           </div>
-          <div className="h-[1px] bg-slate-100 my-0.5" />
+          <div className="h-0.25 bg-slate-100 my-0.5" />
           <div className="flex justify-between items-center text-[#052355] font-semibold text-sm">
             <span>Customer Payable</span>
             <span className="text-[#00C853] font-bold">₹{additionalServicesTotal.toLocaleString('en-IN')}</span>

@@ -209,7 +209,7 @@ const ServiceHistory = () => {
             aria-label="Refresh"
             className="p-2 -mr-2 rounded-full text-slate-500 hover:bg-slate-100 cursor-pointer"
           >
-            <RefreshCw className={`h-[18px] w-[18px] ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-4.5 w-4.5 ${loading ? 'animate-spin' : ''}`} />
           </button>
         </div>
       </header>
@@ -217,7 +217,7 @@ const ServiceHistory = () => {
       <main className="max-w-screen-lg mx-auto w-full px-2.5 sm:px-4 lg:px-6 pt-2.5 sm:pt-4 flex flex-col gap-3.5 sm:gap-4">
 
         {/* Summary */}
-        <section className="rounded-3xl bg-gradient-to-br from-[#052355] to-[#0D47A1] text-white p-3.5 sm:p-5 shadow-md">
+        <section className="rounded-3xl bg-linear-to-br from-[#052355] to-[#0D47A1] text-white p-3.5 sm:p-5 shadow-md">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-xs font-medium text-blue-200 flex items-center gap-1.5">
@@ -299,7 +299,7 @@ const ServiceHistory = () => {
         {loading ? (
           <div className="flex flex-col gap-2.5" aria-busy="true">
             {[0, 1, 2, 3].map((i) => (
-              <div key={i} className="h-[84px] rounded-2xl bg-white border border-slate-100 animate-pulse" />
+              <div key={i} className="h-21 rounded-2xl bg-white border border-slate-100 animate-pulse" />
             ))}
           </div>
         ) : error && items.length === 0 ? (

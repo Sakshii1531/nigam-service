@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Mail, Phone, KeyRound, CheckCircle2, Cpu, ShieldCheck } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
+import { goBack } from '../../lib/navigation';
 
 /**
  * Reusable "forgot password" screen, wired to POST /auth/forgot-password and
@@ -92,7 +93,7 @@ const ForgotPassword = ({ role = 'customer', variant = 'mobile', portalLabel = '
 
   const primaryBtn = isAdmin
     ? 'w-full mt-2 bg-[#0D47A1] text-white font-semibold py-2.5 rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed'
-    : 'w-full mt-2 bg-gradient-to-r from-[#FFD600] to-[#FFCA00] text-[#0D47A1] font-bold py-3 rounded-2xl hover:shadow-lg transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed';
+    : 'w-full mt-2 bg-linear-to-r from-[#FFD600] to-[#FFCA00] text-[#0D47A1] font-bold py-3 rounded-2xl hover:shadow-lg transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed';
 
   const fieldCls =
     'w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] outline-none transition-all text-sm';
@@ -265,7 +266,7 @@ const ForgotPassword = ({ role = 'customer', variant = 'mobile', portalLabel = '
               </>
             )}
             <button
-              onClick={() => navigate(backTo)}
+              onClick={() => goBack(navigate, backTo)}
               className="w-full mt-5 text-center text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors"
             >
               ← Back to login
@@ -279,13 +280,13 @@ const ForgotPassword = ({ role = 'customer', variant = 'mobile', portalLabel = '
   // ---------- MOBILE VARIANT ----------
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-4 relative overflow-hidden">
-      <div className="absolute top-[-100px] left-[-100px] w-[300px] h-[300px] bg-[#0D47A1] opacity-10 rounded-full blur-3xl" />
-      <div className="absolute bottom-[-100px] right-[-100px] w-[300px] h-[300px] bg-[#FFD600] opacity-20 rounded-full blur-3xl" />
+      <div className="absolute -top-25 -left-25 w-75 h-75 bg-[#0D47A1] opacity-10 rounded-full blur-3xl" />
+      <div className="absolute -bottom-25 -right-25 w-75 h-75 bg-[#FFD600] opacity-20 rounded-full blur-3xl" />
 
       <div className="w-full max-w-md bg-white/80 backdrop-blur-xl rounded-[30px] shadow-[0_20px_50px_rgba(13,71,161,0.05)] border border-white/50 flex flex-col p-6 relative z-10">
         <div className="flex items-center mb-2">
           <button
-            onClick={() => navigate(backTo)}
+            onClick={() => goBack(navigate, backTo)}
             className="p-2 hover:bg-white rounded-full transition-all shadow-sm border border-transparent hover:border-slate-100"
           >
             <ArrowLeft className="h-5 w-5 text-[#0D47A1]" />
@@ -315,7 +316,7 @@ const ForgotPassword = ({ role = 'customer', variant = 'mobile', portalLabel = '
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full bg-gradient-to-r from-[#FFD600] to-[#FFCA00] text-[#0D47A1] font-bold py-3 rounded-2xl hover:shadow-lg hover:shadow-yellow-400/20 transition-all transform hover:-translate-y-0.5 active:scale-95 mt-1 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full bg-linear-to-r from-[#FFD600] to-[#FFCA00] text-[#0D47A1] font-bold py-3 rounded-2xl hover:shadow-lg hover:shadow-yellow-400/20 transition-all transform hover:-translate-y-0.5 active:scale-95 mt-1 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {submitting ? 'Sending…' : 'Send Reset Code'}
               </button>

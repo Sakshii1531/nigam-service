@@ -167,12 +167,12 @@ const ServiceProviderSettings = () => {
                 {/* A blocked permission cannot be re-prompted from the page, so
                     name the reason instead of leaving a switch that will not move. */}
                 {pushUnavailable && (
-                  <p className="text-[10px] text-amber-600 font-medium mt-1 leading-snug max-w-[200px]">{pushUnavailable}</p>
+                  <p className="text-[10px] text-amber-600 font-medium mt-1 leading-snug max-w-50">{pushUnavailable}</p>
                 )}
               </div>
               <Toggle enabled={notifications} onToggle={togglePush} disabled={requesting} />
             </div>
-            <div className="h-[1px] bg-slate-100" />
+            <div className="h-0.25 bg-slate-100" />
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-medium text-[#052355]">Job Alerts</p>
@@ -200,7 +200,7 @@ const ServiceProviderSettings = () => {
               </div>
               <Toggle enabled={locationAccess} onToggle={() => setLocationAccess(p => !p)} />
             </div>
-            <div className="h-[1px] bg-slate-100" />
+            <div className="h-0.25 bg-slate-100" />
             <button 
               onClick={() => setIsChangingPassword(true)} 
               className="flex items-center justify-between w-full text-left"

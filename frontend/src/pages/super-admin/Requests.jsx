@@ -274,7 +274,7 @@ const Requests = () => {
             <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden flex flex-col">
               
               {/* Header Banner */}
-              <div className="p-6 border-b border-slate-200/80 bg-gradient-to-r from-slate-50 to-blue-50/30 flex flex-wrap items-center justify-between gap-4">
+              <div className="p-6 border-b border-slate-200/80 bg-linear-to-r from-slate-50 to-blue-50/30 flex flex-wrap items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-2xl bg-white border border-blue-200/80 text-brand-blue flex items-center justify-center shadow-xs">
                     <ClipboardList className="w-6 h-6" />
@@ -748,7 +748,7 @@ const Requests = () => {
           {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] flex items-center gap-4 shadow-sm">
-              <div className="w-12 h-12 bg-yellow-500 rounded-xl flex items-center justify-center text-white flex-shrink-0">
+              <div className="w-12 h-12 bg-yellow-500 rounded-xl flex items-center justify-center text-white shrink-0">
                 <Clock size={20} />
               </div>
               <div>
@@ -757,7 +757,7 @@ const Requests = () => {
               </div>
             </div>
             <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] flex items-center gap-4 shadow-sm">
-              <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white flex-shrink-0">
+              <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white shrink-0">
                 <ClipboardList size={20} />
               </div>
               <div>
@@ -766,7 +766,7 @@ const Requests = () => {
               </div>
             </div>
             <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] flex items-center gap-4 shadow-sm">
-              <div className="w-12 h-12 bg-red-600 rounded-xl flex items-center justify-center text-white flex-shrink-0">
+              <div className="w-12 h-12 bg-red-600 rounded-xl flex items-center justify-center text-white shrink-0">
                 <AlertTriangle size={20} />
               </div>
               <div>
@@ -775,7 +775,7 @@ const Requests = () => {
               </div>
             </div>
             <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] flex items-center gap-4 shadow-sm">
-              <div className="w-12 h-12 bg-green-600 rounded-xl flex items-center justify-center text-white flex-shrink-0">
+              <div className="w-12 h-12 bg-green-600 rounded-xl flex items-center justify-center text-white shrink-0">
                 <CheckCircle size={20} />
               </div>
               <div>
@@ -985,7 +985,7 @@ const Requests = () => {
                               <UserPlus size={16} />
                             </button>
                           ) : (
-                            <div className="w-[28px]" />
+                            <div className="w-7" />
                           )}
                         </div>
                       </td>

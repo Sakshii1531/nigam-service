@@ -206,7 +206,7 @@ const Chat = () => {
                     activeChannel === chat.id ? 'bg-[#EEF4FF]' : 'hover:bg-[#F8FAFC]'
                   }`}
                 >
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white flex-shrink-0 relative ${
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shrink-0 relative ${
                     chat.role === 'Service Provider' ? 'bg-[#FF8F00]' : 'bg-[#0D47A1]'
                   }`}>
                     {chat.name.split(' ').map(n => n[0]).join('')}
@@ -281,12 +281,12 @@ const Chat = () => {
 
             {/* Quick Templates bar */}
             <div className="bg-white px-6 py-2 border-t border-[#E2E8F0] flex gap-2 overflow-x-auto scrollbar-none items-center">
-              <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider flex-shrink-0 mr-2">Templates:</span>
+              <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider shrink-0 mr-2">Templates:</span>
               {templates.map((txt, index) => (
                 <button
                   key={index}
                   onClick={() => handleQuickResponse(txt)}
-                  className="bg-[#F1F5F9] hover:bg-[#EEF4FF] text-[#1E293B] border border-[#E2E8F0] hover:border-[#0D47A1]/35 px-3 py-1 rounded-full text-[10px] font-medium transition-colors flex-shrink-0"
+                  className="bg-[#F1F5F9] hover:bg-[#EEF4FF] text-[#1E293B] border border-[#E2E8F0] hover:border-[#0D47A1]/35 px-3 py-1 rounded-full text-[10px] font-medium transition-colors shrink-0"
                 >
                   {txt.slice(0, 25)}...
                 </button>
@@ -327,7 +327,7 @@ const Chat = () => {
 
               <button 
                 type="submit"
-                className="bg-[#0D47A1] text-white p-2.5 rounded-xl hover:bg-blue-700 transition-colors flex-shrink-0 shadow-sm"
+                className="bg-[#0D47A1] text-white p-2.5 rounded-xl hover:bg-blue-700 transition-colors shrink-0 shadow-sm"
               >
                 <Send size={16} />
               </button>

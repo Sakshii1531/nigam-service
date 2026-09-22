@@ -363,10 +363,10 @@ export async function listProductReviews(productId) {
     return {
       reviews: [],
       stats: {
-        avgRating: 4.8,
-        totalRatings: 128,
-        totalReviews: 42,
-        starsBreakdown: { 5: 78, 4: 16, 3: 4, 2: 1, 1: 1 },
+        avgRating: 0,
+        totalRatings: 0,
+        totalReviews: 0,
+        starsBreakdown: {},
       },
       photos: [],
     };
@@ -398,7 +398,7 @@ export async function listProductReviews(productId) {
     reviews,
     stats: {
       avgRating,
-      totalRatings: total + 128,
+      totalRatings: total,
       totalReviews: total,
       starsBreakdown,
     },

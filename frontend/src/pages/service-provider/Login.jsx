@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Phone, Mail, Lock, Briefcase, Eye, EyeOff } from 'lucide-react';
+import { Phone, Mail, Lock, Briefcase, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { ApiError } from '../../lib/apiClient';
 
@@ -68,38 +68,37 @@ const ServiceProviderLogin = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F4F6F8] flex items-center justify-center p-4 relative overflow-hidden">
-      
-      {/* Background Decorative Blurs */}
-      <div className="absolute top-[-100px] left-[-100px] w-[300px] h-[300px] bg-[#0D47A1] opacity-10 rounded-full blur-3xl"></div>
-      <div className="absolute bottom-[-100px] right-[-100px] w-[300px] h-[300px] bg-[#FFD600] opacity-20 rounded-full blur-3xl"></div>
+    <div className="min-h-screen bg-[#F8FAFC] relative overflow-x-hidden">
 
-      <div className="w-full max-w-md bg-white rounded-[30px] shadow-[0_20px_50px_rgba(5,150,105,0.05)] border border-slate-100 overflow-hidden flex flex-col pt-4 px-6 pb-4 relative z-10">
-        
-        {/* Header */}
-        <div className="flex items-center mb-2">
-          <button 
-            onClick={() => navigate('/')}
-            className="p-2 hover:bg-slate-50 rounded-full transition-all border border-transparent hover:border-slate-100"
-          >
-            <ArrowLeft className="h-5 w-5 text-[#0D47A1]" />
-          </button>
-          <span className="text-xs font-semibold text-[#0D47A1] ml-2 uppercase tracking-wider">Service Provider Portal</span>
-        </div>
+      {/* Background Decorative Blurs */}
+      <div className="absolute -top-25 -left-25 w-75 h-75 bg-brand-blue opacity-10 rounded-full blur-3xl"></div>
+      <div className="absolute -bottom-25 -right-25 w-75 h-75 bg-brand-yellow opacity-20 rounded-full blur-3xl"></div>
+
+      {/* Single layer of responsive gutter padding, matching the customer
+          login page — always vertically centered since this form is short
+          and never needs to scroll. */}
+      <div className="min-h-screen w-full flex items-center justify-center px-3 sm:px-4 md:px-6 py-6 sm:py-10">
+
+      <div className="w-full max-w-md bg-white/90 backdrop-blur-xl rounded-2xl sm:rounded-[30px] shadow-[0_20px_50px_rgba(13,71,161,0.05)] border border-white/50 overflow-hidden flex flex-col p-5 sm:p-6 md:p-8 relative z-10">
+
+        {/* Portal label — no back button: there is no previous page in this
+            flow to return to, and it used to send partners into the
+            customer login instead. */}
+        <span className="text-xs font-semibold text-brand-blue mb-2 uppercase tracking-wider text-center">Service Provider Portal</span>
 
         {/* Logo/Brand */}
-        <div className="flex flex-col items-center mb-2">
+        <div className="flex flex-col items-center mt-2 mb-4">
           <div className="w-12 h-12 bg-[#E3ECF9] rounded-2xl flex items-center justify-center mb-1">
-            <Briefcase className="h-6 w-6 text-[#0D47A1]" />
+            <Briefcase className="h-6 w-6 text-brand-blue" />
           </div>
-          <h1 className="text-lg font-semibold text-slate-900">Partner Login</h1>
-          <p className="text-slate-500 text-xs mt-1">Access your job dashboard and earnings</p>
+          <h1 className="text-lg sm:text-xl font-bold text-slate-800 mb-1">Partner Login</h1>
+          <p className="text-slate-500 text-xs">Access your job dashboard and earnings</p>
         </div>
 
         {/* Error message */}
         {error && (
-          <div className="mb-3 p-3 bg-red-50 border border-red-150 rounded-2xl text-red-650 text-xs font-semibold text-center">
-            {error}
+          <div className="mb-4 bg-rose-50 border border-rose-100 rounded-2xl p-3.5 text-center text-xs font-bold text-rose-600 animate-shake">
+            ⚠️ {error}
           </div>
         )}
 
@@ -130,8 +129,8 @@ const ServiceProviderLogin = () => {
                 placeholder="Email or 10-digit phone number"
                 aria-invalid={Boolean(fieldError)}
                 aria-describedby="sp-login-identifier-help"
-                className={`w-full pl-12 pr-4 py-3 bg-slate-50 border rounded-2xl focus:ring-1 outline-none transition-all text-sm ${
-                  fieldError ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : 'border-slate-200 focus:border-[#0D47A1] focus:ring-[#0D47A1]'
+                className={`w-full pl-12 pr-4 py-2.5 bg-white/50 border rounded-2xl focus:ring-1 outline-none transition-all text-[13px] shadow-xs focus:shadow-md ${
+                  fieldError ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : 'border-slate-200 focus:border-brand-blue focus:ring-brand-blue'
                 }`}
               />
             </div>
@@ -154,7 +153,7 @@ const ServiceProviderLogin = () => {
                 type={showPassword ? "text" : "password"}
                 name="password"
                 placeholder="Enter Password"
-                className="w-full pl-12 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1] outline-none transition-all text-sm"
+                className="w-full pl-12 pr-12 py-2.5 bg-white/50 border border-slate-200 rounded-2xl focus:border-brand-blue focus:ring-1 focus:ring-brand-blue outline-none transition-all text-[13px] shadow-xs focus:shadow-md"
                 required
               />
               <button
@@ -171,7 +170,7 @@ const ServiceProviderLogin = () => {
           <button
             type="button"
             onClick={() => navigate('/service-provider/forgot-password')}
-            className="text-xs font-semibold text-[#0D47A1] self-end hover:text-blue-800 transition-colors"
+            className="text-xs font-semibold text-brand-blue self-end hover:text-blue-800 transition-colors"
           >
             Forgot Password?
           </button>
@@ -180,24 +179,25 @@ const ServiceProviderLogin = () => {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full bg-[#FFD600] text-[#0D47A1] font-semibold py-3.5 rounded-2xl hover:bg-yellow-400 transition-all transform hover:-translate-y-0.5 mt-2 active:scale-95 shadow-md shadow-yellow-400/10 disabled:opacity-50"
+            className="w-full bg-linear-to-r from-brand-yellow to-[#FFCA00] text-brand-blue font-bold py-3 rounded-2xl hover:shadow-lg hover:shadow-yellow-400/20 transition-all transform hover:-translate-y-0.5 mt-2 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {submitting ? 'Connecting...' : 'Login to Dashboard'}
           </button>
         </form>
 
         {/* Footer */}
-        <div className="mt-4 text-center text-xs text-slate-500">
+        <div className="mt-4 text-center text-xs text-slate-500 border-t border-slate-100 pt-3">
           Want to become a partner?{' '}
-          <button 
+          <button
             type="button"
             onClick={() => navigate('/service-provider/apply')}
-            className="font-semibold text-[#0D47A1] hover:text-blue-800 transition-colors"
+            className="font-bold text-brand-blue hover:text-blue-800 transition-colors"
           >
             Apply Now
           </button>
         </div>
 
+      </div>
       </div>
     </div>
   );

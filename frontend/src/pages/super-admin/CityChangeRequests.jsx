@@ -175,7 +175,7 @@ const CityChangeRequests = () => {
             <div className="space-y-3">
               {items.map((request) => (
                 <div key={request.id} className="bg-white border border-[#E2E8F0] rounded-2xl p-5 flex flex-wrap items-start gap-5 justify-between">
-                  <div className="min-w-[220px] flex-1 space-y-3">
+                  <div className="min-w-55 flex-1 space-y-3">
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="text-sm font-bold text-[#1E293B]">{request.serviceProvider?.name || "Service provider"}</p>
                       <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ring-1 ring-inset ${STATUS_TONE[request.status]}`}>

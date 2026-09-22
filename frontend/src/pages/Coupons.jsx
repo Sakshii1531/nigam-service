@@ -114,7 +114,7 @@ const Coupons = () => {
                 <Ticket className="h-5 w-5" />
               </div>
               <span className="text-xs font-black text-brand-navy">No Active Coupons Available</span>
-              <span className="text-[10px] text-slate-400 font-semibold max-w-[220px] leading-relaxed">
+              <span className="text-[10px] text-slate-400 font-semibold max-w-55 leading-relaxed">
                 There are no active discount coupons at this moment. Check back later!
               </span>
             </div>
@@ -131,7 +131,7 @@ const Coupons = () => {
                 {/* Top part: Discount and code */}
                 <div className="flex justify-between items-center gap-2">
                   <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-                    <div className={`w-9 h-9 min-[360px]:w-10 min-[360px]:h-10 sm:w-11 sm:h-11 bg-gradient-to-tr ${c.color} rounded-xl sm:rounded-2xl flex items-center justify-center text-white shadow-xs flex-shrink-0`}>
+                    <div className={`w-9 h-9 min-[360px]:w-10 min-[360px]:h-10 sm:w-11 sm:h-11 bg-linear-to-tr ${c.color} rounded-xl sm:rounded-2xl flex items-center justify-center text-white shadow-xs shrink-0`}>
                       <Percent className="h-4 w-4 sm:h-5 sm:w-5" />
                     </div>
                     <div className="min-w-0">
@@ -140,7 +140,7 @@ const Coupons = () => {
                     </div>
                   </div>
                   
-                  <span className={`text-[9.5px] min-[360px]:text-[10.5px] sm:text-xs font-black px-2 min-[360px]:px-2.5 py-0.5 sm:py-1 rounded-full border flex-shrink-0 ${c.textColor}`}>
+                  <span className={`text-[9.5px] min-[360px]:text-[10.5px] sm:text-xs font-black px-2 min-[360px]:px-2.5 py-0.5 sm:py-1 rounded-full border shrink-0 ${c.textColor}`}>
                     {c.discount}
                   </span>
                 </div>
@@ -155,7 +155,7 @@ const Coupons = () => {
                   </p>
                   <button
                     onClick={() => handleCopy(c.code)}
-                    className={`w-full sm:w-auto px-3.5 py-2 rounded-xl text-[10px] sm:text-[10.5px] font-black transition-all cursor-pointer flex items-center justify-center gap-1.5 flex-shrink-0 active:scale-95 ${
+                    className={`w-full sm:w-auto px-3.5 py-2 rounded-xl text-[10px] sm:text-[10.5px] font-black transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0 active:scale-95 ${
                       copiedCode === c.code 
                         ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-xs' 
                         : 'bg-slate-50 hover:bg-blue-50 text-brand-blue border border-slate-200/60'

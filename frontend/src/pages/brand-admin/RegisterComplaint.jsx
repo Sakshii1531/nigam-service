@@ -227,7 +227,7 @@ const RegisterComplaint = () => {
                       }`}>{s.label}</span>
                     </div>
                     {idx < STEPS.length - 1 && (
-                      <div className={`h-0.5 flex-1 max-w-[60px] mx-1 rounded ${step > s.id ? 'bg-[#0D47A1]' : 'bg-slate-200'}`} />
+                      <div className={`h-0.5 flex-1 max-w-15 mx-1 rounded ${step > s.id ? 'bg-[#0D47A1]' : 'bg-slate-200'}`} />
                     )}
                   </React.Fragment>
                 );

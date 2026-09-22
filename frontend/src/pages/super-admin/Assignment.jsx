@@ -289,7 +289,7 @@ const Assignment = () => {
                 {/* Weight sliders */}
                 <div className="space-y-4">
                   <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-start gap-2.5">
-                    <Sparkles className="w-4 h-4 text-[#0D47A1] flex-shrink-0 mt-0.5" />
+                    <Sparkles className="w-4 h-4 text-[#0D47A1] shrink-0 mt-0.5" />
                     <p className="text-xs text-[#0D47A1] font-medium leading-relaxed">
                       <strong>Auto Mode Active:</strong> Incoming service requests are automatically assigned using serviceProvider location, rating, skills, and current workload.
                     </p>
@@ -366,7 +366,7 @@ const Assignment = () => {
               </div>
             ) : (
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center gap-2">
-                <UserPlus className="w-4 h-4 text-slate-600 flex-shrink-0" />
+                <UserPlus className="w-4 h-4 text-slate-600 shrink-0" />
                 <p className="text-xs text-slate-600 font-medium">
                   <strong>Manual Mode Active:</strong> Select an unassigned request on the left, then pick a serviceProvider on the right to assign directly.
                 </p>

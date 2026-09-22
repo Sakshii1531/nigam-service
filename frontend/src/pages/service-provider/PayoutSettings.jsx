@@ -226,14 +226,14 @@ const PayoutSettings = () => {
               onClick={() => { setShowMethodPicker(false); setShowBankForm(true); }}
               className="w-full flex items-center gap-4 p-4 bg-slate-50 border border-slate-200 rounded-2xl hover:border-[#0D47A1]/40 hover:bg-blue-50/30 transition-all text-left"
             >
-              <div className="w-12 h-12 bg-[#E3ECF9] rounded-2xl flex items-center justify-center flex-shrink-0">
+              <div className="w-12 h-12 bg-[#E3ECF9] rounded-2xl flex items-center justify-center shrink-0">
                 <Building2 className="h-6 w-6 text-[#0D47A1]" />
               </div>
               <div className="flex-1">
                 <p className="text-sm font-semibold text-[#052355]">Bank Account</p>
                 <p className="text-[11px] text-slate-500 mt-0.5">Add savings or current bank account</p>
               </div>
-              <ChevronRight className="h-4 w-4 text-slate-400 flex-shrink-0" />
+              <ChevronRight className="h-4 w-4 text-slate-400 shrink-0" />
             </button>
 
             {/* UPI Option */}
@@ -241,14 +241,14 @@ const PayoutSettings = () => {
               onClick={() => { setShowMethodPicker(false); setShowUpiForm(true); }}
               className="w-full flex items-center gap-4 p-4 bg-slate-50 border border-slate-200 rounded-2xl hover:border-[#0D47A1]/40 hover:bg-blue-50/30 transition-all text-left"
             >
-              <div className="w-12 h-12 bg-[#E3ECF9] rounded-2xl flex items-center justify-center flex-shrink-0">
+              <div className="w-12 h-12 bg-[#E3ECF9] rounded-2xl flex items-center justify-center shrink-0">
                 <span className="text-[#0D47A1] font-bold text-sm">UPI</span>
               </div>
               <div className="flex-1">
                 <p className="text-sm font-semibold text-[#052355]">UPI ID</p>
                 <p className="text-[11px] text-slate-500 mt-0.5">Link your UPI ID (e.g. name@upi)</p>
               </div>
-              <ChevronRight className="h-4 w-4 text-slate-400 flex-shrink-0" />
+              <ChevronRight className="h-4 w-4 text-slate-400 shrink-0" />
             </button>
           </div>
         </div>

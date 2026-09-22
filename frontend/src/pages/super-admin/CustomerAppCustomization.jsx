@@ -2746,7 +2746,7 @@ const CustomerAppCustomization = () => {
       {showServiceModal && (
         <div className="fixed inset-0 bg-[#052355]/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-2xl md:max-w-3xl p-6 shadow-2xl border border-slate-100 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh]">
-            <div className="flex justify-between items-center flex-shrink-0">
+            <div className="flex justify-between items-center shrink-0">
               <h3 className="text-base font-bold text-[#1E293B]">{isEditingService ? 'Edit Service & Details Page' : 'Add New Service & Details Page'}</h3>
               <button onClick={() => setShowServiceModal(false)} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
             </div>
@@ -2786,7 +2786,7 @@ const CustomerAppCustomization = () => {
                       required={!isEditingService}
                     />
                     {serviceForm.img && (
-                      <img src={serviceForm.img} alt="Preview" className="w-10 h-10 object-contain border border-slate-200 rounded-md p-0.5 bg-white flex-shrink-0" />
+                      <img src={serviceForm.img} alt="Preview" className="w-10 h-10 object-contain border border-slate-200 rounded-md p-0.5 bg-white shrink-0" />
                     )}
                   </div>
                 </div>
@@ -2985,7 +2985,7 @@ const CustomerAppCustomization = () => {
                                 className="w-full text-[10px] text-slate-600 file:mr-2 file:py-0.5 file:px-1.5 file:rounded file:border-0 file:text-[9px] file:font-semibold file:bg-blue-50 file:text-[#0D47A1] hover:file:bg-blue-100 cursor-pointer"
                               />
                               {pkg.icon && (
-                                <div className="w-6 h-6 flex-shrink-0 bg-white border border-slate-200 rounded-md flex items-center justify-center overflow-hidden">
+                                <div className="w-6 h-6 shrink-0 bg-white border border-slate-200 rounded-md flex items-center justify-center overflow-hidden">
                                   {pkg.icon.startsWith('data:image/') ? (
                                     <img src={pkg.icon} alt="" className="w-full h-full object-contain" />
                                   ) : (
@@ -3030,7 +3030,7 @@ const CustomerAppCustomization = () => {
               </div>
               </div>
 
-              <div className="flex gap-3 pt-3 border-t border-slate-100 flex-shrink-0">
+              <div className="flex gap-3 pt-3 border-t border-slate-100 shrink-0">
                 <button
                   type="button"
                   onClick={() => setShowServiceModal(false)}
@@ -3055,7 +3055,7 @@ const CustomerAppCustomization = () => {
       {showAddModal && (
         <div className="fixed inset-0 bg-[#052355]/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl w-full max-w-lg p-6 shadow-2xl border border-slate-100 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh]">
-            <div className="flex justify-between items-center flex-shrink-0">
+            <div className="flex justify-between items-center shrink-0">
               <div>
                 <h3 className="text-base font-black text-slate-900">{isEditing ? 'Edit Category' : 'Add New Category'}</h3>
                 <p className="text-xs font-medium text-slate-500 mt-0.5">Configure category icon, brands, and appliance types.</p>
@@ -3196,7 +3196,7 @@ const CustomerAppCustomization = () => {
                         required={!categoryForm.icon || !categoryForm.icon.startsWith('data:image/')}
                       />
                       {categoryForm.icon && categoryForm.icon.startsWith('data:image/') && (
-                        <img src={categoryForm.icon} alt="Preview" className="w-9 h-9 object-contain border border-slate-200 rounded-xl p-0.5 bg-white flex-shrink-0 shadow-2xs" />
+                        <img src={categoryForm.icon} alt="Preview" className="w-9 h-9 object-contain border border-slate-200 rounded-xl p-0.5 bg-white shrink-0 shadow-2xs" />
                       )}
                     </div>
                   )}
@@ -3256,7 +3256,7 @@ const CustomerAppCustomization = () => {
                   </div>
                   <a
                     href="/super-admin/service-catalog"
-                    className="bg-[#0D47A1] hover:bg-blue-800 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer flex items-center gap-1 flex-shrink-0"
+                    className="bg-[#0D47A1] hover:bg-blue-800 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer flex items-center gap-1 shrink-0"
                   >
                     Open Service Catalog
                   </a>
@@ -3309,7 +3309,7 @@ const CustomerAppCustomization = () => {
               </div>
               </div>
 
-              <div className="flex gap-3 pt-3 border-t border-slate-100 flex-shrink-0">
+              <div className="flex gap-3 pt-3 border-t border-slate-100 shrink-0">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
@@ -3333,7 +3333,7 @@ const CustomerAppCustomization = () => {
       {showBrandModal && (
         <div className="fixed inset-0 bg-[#052355]/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-2xl border border-slate-100 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh]">
-            <div className="flex justify-between items-center flex-shrink-0">
+            <div className="flex justify-between items-center shrink-0">
               <h3 className="text-base font-bold text-[#1E293B]">{isEditingBrand ? 'Edit Brand Offer Card' : 'Add New Brand Offer Card'}</h3>
               <button onClick={() => setShowBrandModal(false)} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
             </div>
@@ -3444,14 +3444,14 @@ const CustomerAppCustomization = () => {
                       className="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[9.5px] file:font-semibold file:bg-blue-50 file:text-[#0D47A1] hover:file:bg-blue-100 cursor-pointer"
                     />
                     {brandForm.image && (
-                      <img src={brandForm.image} alt="Preview" className="w-10 h-8 object-contain border border-slate-200 rounded-md bg-white flex-shrink-0" />
+                      <img src={brandForm.image} alt="Preview" className="w-10 h-8 object-contain border border-slate-200 rounded-md bg-white shrink-0" />
                     )}
                   </div>
                 </div>
               </div>
               </div>
 
-              <div className="flex gap-3 pt-3 border-t border-slate-100 flex-shrink-0">
+              <div className="flex gap-3 pt-3 border-t border-slate-100 shrink-0">
                 <button
                   type="button"
                   onClick={() => setShowBrandModal(false)}
@@ -3475,7 +3475,7 @@ const CustomerAppCustomization = () => {
       {showMostBookedModal && (
         <div className="fixed inset-0 bg-[#052355]/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-2xl border border-slate-100 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh]">
-            <div className="flex justify-between items-center flex-shrink-0">
+            <div className="flex justify-between items-center shrink-0">
               <h3 className="text-base font-bold text-[#1E293B]">{isEditingMostBooked ? 'Edit Most Booked Service' : 'Add Most Booked Service'}</h3>
               <button onClick={() => setShowMostBookedModal(false)} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
             </div>
@@ -3531,7 +3531,7 @@ const CustomerAppCustomization = () => {
                       className="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[9.5px] file:font-semibold file:bg-blue-50 file:text-[#0D47A1] hover:file:bg-blue-100 cursor-pointer"
                     />
                     {mostBookedForm.image && (
-                      <img src={mostBookedForm.image} alt="Preview" className="w-10 h-8 object-cover border border-slate-200 rounded-md bg-white flex-shrink-0" />
+                      <img src={mostBookedForm.image} alt="Preview" className="w-10 h-8 object-cover border border-slate-200 rounded-md bg-white shrink-0" />
                     )}
                   </div>
                 </div>
@@ -3644,7 +3644,7 @@ const CustomerAppCustomization = () => {
                                 className="w-full text-[10px] text-slate-500 file:mr-2 file:py-0.5 file:px-1.5 file:rounded file:border-0 file:text-[9px] file:font-semibold file:bg-blue-50 file:text-[#0D47A1] hover:file:bg-blue-100 cursor-pointer"
                               />
                               {pkg.icon && (
-                                <div className="w-6 h-6 flex-shrink-0 bg-white border border-slate-200 rounded-md flex items-center justify-center overflow-hidden">
+                                <div className="w-6 h-6 shrink-0 bg-white border border-slate-200 rounded-md flex items-center justify-center overflow-hidden">
                                   {pkg.icon.startsWith('data:image/') ? (
                                     <img src={pkg.icon} alt="" className="w-full h-full object-contain" />
                                   ) : (
@@ -3689,7 +3689,7 @@ const CustomerAppCustomization = () => {
               </div>
               </div>
 
-              <div className="flex gap-3 pt-3 border-t border-slate-100 flex-shrink-0">
+              <div className="flex gap-3 pt-3 border-t border-slate-100 shrink-0">
                 <button
                   type="button"
                   onClick={() => setShowMostBookedModal(false)}
@@ -3714,7 +3714,7 @@ const CustomerAppCustomization = () => {
       {showApplianceModal && (
         <div className="fixed inset-0 bg-[#052355]/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-2xl border border-slate-100 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh]">
-            <div className="flex justify-between items-center flex-shrink-0">
+            <div className="flex justify-between items-center shrink-0">
               <h3 className="text-base font-bold text-[#1E293B]">{isEditingAppliance ? 'Edit Appliance Service Card' : 'Add Appliance Service Card'}</h3>
               <button onClick={() => setShowApplianceModal(false)} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
             </div>
@@ -3782,7 +3782,7 @@ const CustomerAppCustomization = () => {
                       className="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[9.5px] file:font-semibold file:bg-blue-50 file:text-[#0D47A1] hover:file:bg-blue-100 cursor-pointer"
                     />
                     {applianceForm.image && (
-                      <img src={applianceForm.image} alt="Preview" className="w-10 h-8 object-contain border border-slate-200 rounded-md bg-white flex-shrink-0" />
+                      <img src={applianceForm.image} alt="Preview" className="w-10 h-8 object-contain border border-slate-200 rounded-md bg-white shrink-0" />
                     )}
                   </div>
                 </div>
@@ -3895,7 +3895,7 @@ const CustomerAppCustomization = () => {
                                 className="w-full text-[10px] text-slate-500 file:mr-2 file:py-0.5 file:px-1.5 file:rounded file:border-0 file:text-[9px] file:font-semibold file:bg-blue-50 file:text-[#0D47A1] hover:file:bg-blue-100 cursor-pointer"
                               />
                               {pkg.icon && (
-                                <div className="w-6 h-6 flex-shrink-0 bg-white border border-slate-200 rounded-md flex items-center justify-center overflow-hidden">
+                                <div className="w-6 h-6 shrink-0 bg-white border border-slate-200 rounded-md flex items-center justify-center overflow-hidden">
                                   {pkg.icon.startsWith('data:image/') ? (
                                     <img src={pkg.icon} alt="" className="w-full h-full object-contain" />
                                   ) : (
@@ -3940,7 +3940,7 @@ const CustomerAppCustomization = () => {
               </div>
               </div>
 
-              <div className="flex gap-3 pt-3 border-t border-slate-100 flex-shrink-0">
+              <div className="flex gap-3 pt-3 border-t border-slate-100 shrink-0">
                 <button
                   type="button"
                   onClick={() => setShowApplianceModal(false)}
@@ -3964,7 +3964,7 @@ const CustomerAppCustomization = () => {
       {showStoryModal && (
         <div className="fixed inset-0 bg-[#052355]/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-2xl border border-slate-100 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh]">
-            <div className="flex justify-between items-center flex-shrink-0">
+            <div className="flex justify-between items-center shrink-0">
               <h3 className="text-base font-bold text-[#1E293B]">{isEditingStory ? 'Edit Story Card' : 'Add Story Card'}</h3>
               <button onClick={() => setShowStoryModal(false)} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
             </div>
@@ -3996,7 +3996,7 @@ const CustomerAppCustomization = () => {
                       className="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[9.5px] file:font-semibold file:bg-blue-50 file:text-[#0D47A1] hover:file:bg-blue-100 cursor-pointer"
                     />
                     {storyForm.image && (
-                      <img src={storyForm.image} alt="Preview" className="w-10 h-8 object-contain border border-slate-200 rounded-md bg-white flex-shrink-0" />
+                      <img src={storyForm.image} alt="Preview" className="w-10 h-8 object-contain border border-slate-200 rounded-md bg-white shrink-0" />
                     )}
                   </div>
                 </div>
@@ -4048,7 +4048,7 @@ const CustomerAppCustomization = () => {
                               className="w-full text-[10px] text-slate-500 file:mr-2 file:py-0.5 file:px-1.5 file:rounded file:border-0 file:text-[9px] file:font-semibold file:bg-blue-50 file:text-[#0D47A1] hover:file:bg-blue-100 cursor-pointer"
                             />
                             {slide.image && (
-                              <img src={slide.image} alt="" className="w-10 h-8 object-contain border border-slate-200 rounded bg-white flex-shrink-0" />
+                              <img src={slide.image} alt="" className="w-10 h-8 object-contain border border-slate-200 rounded bg-white shrink-0" />
                             )}
                           </div>
                         </div>
@@ -4087,7 +4087,7 @@ const CustomerAppCustomization = () => {
               </div>
               </div>
 
-              <div className="flex gap-3 pt-3 border-t border-slate-100 flex-shrink-0">
+              <div className="flex gap-3 pt-3 border-t border-slate-100 shrink-0">
                 <button
                   type="button"
                   onClick={() => setShowStoryModal(false)}

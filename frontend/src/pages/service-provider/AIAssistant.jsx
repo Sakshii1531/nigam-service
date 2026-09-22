@@ -108,7 +108,7 @@ const AIAssistant = () => {
         <div className="flex flex-col gap-5 items-center">
           
           {/* Robot Card Wrapper with blue/white gradient */}
-          <div className="w-full bg-gradient-to-b from-[#E3ECF9]/40 to-[#E3ECF9]/10 rounded-[2.5rem] p-4 flex justify-center items-center relative overflow-hidden border border-[#E3ECF9]/20 shadow-sm">
+          <div className="w-full bg-linear-to-b from-[#E3ECF9]/40 to-[#E3ECF9]/10 rounded-[2.5rem] p-4 flex justify-center items-center relative overflow-hidden border border-[#E3ECF9]/20 shadow-sm">
             <img 
               src={robotImg} 
               alt="AI Robot Assistant" 
@@ -146,7 +146,7 @@ const AIAssistant = () => {
         {/* Dynamic Chat Messages */}
         {messages.length > 0 && (
           <div className="flex flex-col gap-4.5 mt-2">
-            <div className="h-[1px] bg-slate-100 my-1"></div>
+            <div className="h-0.25 bg-slate-100 my-1"></div>
             {messages.map((msg) => (
               <div 
                 key={msg.id} 

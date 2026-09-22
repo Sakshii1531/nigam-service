@@ -71,7 +71,7 @@ const Testimonials = () => {
           </div>
 
           {/* Right Side Carousel */}
-          <div className="relative h-[350px] flex items-center justify-center" style={{ perspective: "1000px" }}>
+          <div className="relative h-87.5 flex items-center justify-center" style={{ perspective: "1000px" }}>
             <AnimatePresence mode="wait">
               <motion.div
                 key={currentIndex}

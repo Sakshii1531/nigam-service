@@ -175,7 +175,7 @@ const ServiceProviders = () => {
                 key={index}
                 className="bg-white p-6 rounded-2xl border border-[#E2E8F0] flex items-center gap-4">
                 <div
-                  className={`w-12 h-12 ${stat.color} rounded-xl flex items-center justify-center text-white flex-shrink-0`}>
+                  className={`w-12 h-12 ${stat.color} rounded-xl flex items-center justify-center text-white shrink-0`}>
                   {stat.icon}
                 </div>
                 <div>

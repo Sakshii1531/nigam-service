@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { goBack } from '../lib/navigation';
 import { ArrowLeft, CheckCircle, Shield, CreditCard } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -7,12 +8,12 @@ const Warranty = () => {
 
   return (
     <div className="min-h-screen bg-bg-light flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-[30px] shadow-2xl overflow-hidden flex flex-col h-[700px]">
+      <div className="w-full max-w-md bg-white rounded-[30px] shadow-2xl overflow-hidden flex flex-col h-175">
         
         {/* Header */}
         <div className="p-6 flex items-center border-b border-border-color">
           <button 
-            onClick={() => navigate('/dashboard')}
+            onClick={() => goBack(navigate, '/dashboard')}
             className="p-2 hover:bg-slate-100 rounded-full transition-colors"
           >
             <ArrowLeft className="h-6 w-6 text-brand-blue" />
@@ -28,7 +29,7 @@ const Warranty = () => {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
-            className="w-full bg-white border border-blue-50 rounded-[24px] p-6 shadow-xl mb-6 relative overflow-hidden bg-gradient-to-br from-[#F0F4FA] to-white"
+            className="w-full bg-white border border-blue-50 rounded-[24px] p-6 shadow-xl mb-6 relative overflow-hidden bg-linear-to-br from-[#F0F4FA] to-white"
           >
             <div className="absolute -top-10 -right-10 w-32 h-32 bg-brand-yellow opacity-20 rounded-full blur-3xl"></div>
             <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-brand-blue opacity-5 rounded-full blur-3xl"></div>

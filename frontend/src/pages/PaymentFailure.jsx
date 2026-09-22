@@ -17,10 +17,10 @@ const PaymentFailure = () => {
 
   return (
     <div className="min-h-screen bg-[#FFF5F5] flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-[30px] shadow-2xl overflow-hidden flex flex-col h-[700px] border border-red-100">
+      <div className="w-full max-w-md bg-white rounded-[30px] shadow-2xl overflow-hidden flex flex-col h-175 border border-red-100">
         
         {/* Header */}
-        <div className="p-5 flex items-center border-b border-slate-100 flex-shrink-0">
+        <div className="p-5 flex items-center border-b border-slate-100 shrink-0">
           <button 
             onClick={() => navigate(-1)}
             className="p-2 hover:bg-red-50 rounded-full transition-colors cursor-pointer"
@@ -55,7 +55,7 @@ const PaymentFailure = () => {
 
           {/* Error Message Box */}
           <div className="w-full bg-red-50/50 border border-red-100 rounded-2xl p-4 flex gap-3 text-left">
-            <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <AlertTriangle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
             <div className="flex-1">
               <p className="text-xs font-black text-red-800">Reason for Failure</p>
               <p className="text-[11px] text-red-700/80 font-medium mt-1 leading-relaxed">
@@ -82,7 +82,7 @@ const PaymentFailure = () => {
 
           {/* Secure Trust Badge */}
           <div className="bg-slate-50 border border-slate-100 p-3 rounded-xl flex items-center gap-2.5 w-full text-left">
-            <HelpCircle className="h-4 w-4 text-slate-500 flex-shrink-0" />
+            <HelpCircle className="h-4 w-4 text-slate-500 shrink-0" />
             <span className="text-[10px] font-bold text-slate-500 leading-relaxed">
               Don't worry, if any money was deducted it will be refunded back to your account automatically within 3-5 business days.
             </span>
@@ -91,7 +91,7 @@ const PaymentFailure = () => {
         </div>
 
         {/* Footer Buttons */}
-        <div className="p-5 border-t border-slate-100 flex-shrink-0 w-full flex flex-col gap-3">
+        <div className="p-5 border-t border-slate-100 shrink-0 w-full flex flex-col gap-3">
           <button
             onClick={() => navigate(-1)}
             className="w-full bg-red-600 text-white font-extrabold py-3.5 rounded-2xl flex items-center justify-center gap-2 hover:bg-red-700 active:scale-[0.99] transition-all shadow-md shadow-red-200 cursor-pointer text-xs"

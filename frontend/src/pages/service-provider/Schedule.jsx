@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { goBack } from '../../lib/navigation';
 import { 
   Calendar, ChevronLeft, Bell, Clock, 
   MapPin, ArrowRight
@@ -108,11 +109,11 @@ const Schedule = () => {
 
 
       {/* Mobile Header (mobile only) */}
-      <div className="bg-gradient-to-b from-[#052355] to-[#0A337A] text-white pt-4 pb-5 px-4 shadow-md rounded-b-[2rem] sticky top-0 z-20 flex flex-col gap-2 lg:hidden">
+      <div className="bg-linear-to-b from-[#052355] to-[#0A337A] text-white pt-4 pb-5 px-4 shadow-md rounded-b-[2rem] sticky top-0 z-20 flex flex-col gap-2 lg:hidden">
         <div className="flex items-center justify-between">
-          <button 
+          <button
             type="button"
-            onClick={() => navigate('/service-provider/dashboard')} 
+            onClick={() => goBack(navigate, '/service-provider/dashboard')}
             className="p-1.5 hover:bg-white/10 rounded-full text-white transition-colors cursor-pointer"
             title="Back to Dashboard"
           >
@@ -155,7 +156,7 @@ const Schedule = () => {
         <div className="flex items-center justify-between bg-white rounded-3xl p-5 border border-slate-200/80 shadow-2xs">
           <div className="flex items-center gap-3.5">
             <button
-              onClick={() => navigate('/service-provider/dashboard')}
+              onClick={() => goBack(navigate, '/service-provider/dashboard')}
               className="p-2 bg-slate-100 hover:bg-slate-200 rounded-2xl text-[#052355] transition-colors cursor-pointer"
               title="Back to Dashboard"
             >
@@ -198,7 +199,7 @@ const Schedule = () => {
                 <button
                   key={dayItem.dateStr}
                   onClick={() => setSelectedDateObj(dayItem)}
-                  className={`flex flex-col items-center py-2.5 px-2 rounded-2xl flex-1 min-w-[44px] transition-all cursor-pointer select-none ${
+                  className={`flex flex-col items-center py-2.5 px-2 rounded-2xl flex-1 min-w-11 transition-all cursor-pointer select-none ${
                     isSelected
                       ? 'bg-[#052355] text-white shadow-xs scale-105 border border-[#052355]'
                       : 'text-slate-500 hover:bg-slate-50 bg-slate-50/70 border border-slate-150'
@@ -220,7 +221,7 @@ const Schedule = () => {
         </div>
 
         {/* Timeline Appointments List */}
-        <div className="flex-1 flex flex-col relative min-h-[300px] w-full">
+        <div className="flex-1 flex flex-col relative min-h-75 w-full">
           <div className="flex justify-between items-center px-1 mb-1">
             <h3 className="text-xs font-black text-[#052355] uppercase tracking-wider">
               Appointments ({activeSchedules.length})
@@ -275,7 +276,7 @@ const Schedule = () => {
                         Customer: <span className="text-slate-900 font-black">{item.customer}</span>
                       </p>
                       <div className="flex items-start gap-1 text-[11px] text-slate-500 font-medium mt-1">
-                        <MapPin className="w-3.5 h-3.5 text-slate-400 flex-shrink-0 mt-0.5" />
+                        <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
                         <span className="line-clamp-1 break-words">{item.address}</span>
                       </div>
                     </div>
@@ -314,7 +315,7 @@ const Schedule = () => {
         </div>
 
         {/* Daily Summary Card */}
-        <div className="bg-gradient-to-r from-blue-50/80 to-slate-50 rounded-3xl p-4 sm:p-5 border border-blue-100 shadow-2xs flex flex-col gap-3 w-full">
+        <div className="bg-linear-to-r from-blue-50/80 to-slate-50 rounded-3xl p-4 sm:p-5 border border-blue-100 shadow-2xs flex flex-col gap-3 w-full">
           <div className="flex justify-between items-center">
             <span className="text-xs font-black text-[#052355] uppercase tracking-wider">Performance Tally</span>
             <span className="text-[10px] font-bold text-slate-500">Live Metric</span>

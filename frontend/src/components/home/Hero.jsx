@@ -42,7 +42,7 @@ const Hero = () => {
             {/* Trust Badges */}
             <div className="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm text-text-secondary max-w-2xl">
               <div className="flex flex-col items-center justify-center text-center bg-white border border-[#014492]/30 p-4 rounded-xl shadow-sm hover:border-brand-blue/50 hover:shadow-md transition-all h-24 cursor-pointer group">
-                <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-brand-yellow mb-2 flex-shrink-0 group-hover:scale-110 transition-transform">
+                <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-brand-yellow mb-2 shrink-0 group-hover:scale-110 transition-transform">
                   <Star className="h-5 w-5 fill-current" />
                 </div>
                 <div>
@@ -52,7 +52,7 @@ const Hero = () => {
               </div>
               
               <div className="flex flex-col items-center justify-center text-center bg-white border border-[#014492]/30 p-4 rounded-xl shadow-sm hover:border-brand-blue/50 hover:shadow-md transition-all h-24 cursor-pointer group">
-                <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-brand-blue mb-2 flex-shrink-0 group-hover:scale-110 transition-transform">
+                <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-brand-blue mb-2 shrink-0 group-hover:scale-110 transition-transform">
                   <Shield className="h-5 w-5" />
                 </div>
                 <div>
@@ -62,7 +62,7 @@ const Hero = () => {
               </div>
 
               <div className="flex flex-col items-center justify-center text-center bg-white border border-[#014492]/30 p-4 rounded-xl shadow-sm hover:border-brand-blue/50 hover:shadow-md transition-all h-24 cursor-pointer group">
-                <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-brand-blue mb-2 flex-shrink-0 group-hover:scale-110 transition-transform">
+                <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-brand-blue mb-2 shrink-0 group-hover:scale-110 transition-transform">
                   <Clock className="h-5 w-5" />
                 </div>
                 <div>

@@ -116,7 +116,7 @@ const DashboardPreview = () => {
               </div>
             </div>
             
-            <div className="relative h-[220px] w-full">
+            <div className="relative h-55 w-full">
               {/* Grid Lines */}
               <div className="absolute inset-0 flex flex-col justify-between text-xs text-slate-400">
                 <div className="border-t border-dashed w-full pt-1">10,000</div>
@@ -157,7 +157,7 @@ const DashboardPreview = () => {
               </svg>
               
               {/* X-Axis Labels */}
-              <div className="absolute bottom-[-24px] left-0 right-0 flex justify-between text-xs font-medium text-text-secondary px-2">
+              <div className="absolute -bottom-6 left-0 right-0 flex justify-between text-xs font-medium text-text-secondary px-2">
                 <span>Mon</span>
                 <span>Tue</span>
                 <span>Wed</span>

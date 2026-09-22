@@ -223,7 +223,7 @@ const Reports = () => {
                     className="flex items-center gap-4 cursor-pointer group p-1.5 rounded-lg hover:bg-slate-50 transition-all duration-200"
                     onClick={() => showToast(`${t.name}: ${t.completed} of ${t.total} jobs closed (${t.completionRate}%)`)}
                   >
-                    <div className="w-8 h-8 bg-[#EEF4FF] rounded-full flex items-center justify-center text-[#0D47A1] font-bold text-xs flex-shrink-0 group-hover:scale-105 transition-transform">
+                    <div className="w-8 h-8 bg-[#EEF4FF] rounded-full flex items-center justify-center text-[#0D47A1] font-bold text-xs shrink-0 group-hover:scale-105 transition-transform">
                       {t.name.split(' ').map(n => n[0]).join('')}
                     </div>
                     <div className="flex-1">

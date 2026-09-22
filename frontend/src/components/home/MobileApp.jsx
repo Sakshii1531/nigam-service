@@ -10,7 +10,7 @@ const MobileApp = () => {
           {/* Left Mockup */}
           <div className="relative justify-self-center lg:justify-self-start">
             {/* Mock Tablet Frame */}
-            <div className="relative w-[500px] h-[350px] bg-white rounded-[30px] border-[12px] border-text-primary shadow-2xl overflow-hidden">
+            <div className="relative w-125 h-87.5 bg-white rounded-[30px] border-[12px] border-text-primary shadow-2xl overflow-hidden">
               {/* Camera dot */}
               <div className="absolute left-3 top-1/2 -translate-y-1/2 w-2 h-2 bg-text-primary rounded-full z-20"></div>
               
@@ -26,7 +26,7 @@ const MobileApp = () => {
             </div>
             
             {/* Decorative background circle */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-blue-50 rounded-full -z-10 filter blur-2xl opacity-50"></div>
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-125 h-125 bg-blue-50 rounded-full -z-10 filter blur-2xl opacity-50"></div>
           </div>
 
           {/* Right Content */}

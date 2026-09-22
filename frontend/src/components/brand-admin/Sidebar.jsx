@@ -77,7 +77,7 @@ const Sidebar = () => {
 
         {/* Logo */}
         <div className="flex items-center gap-2.5 mb-5 px-1 py-1">
-          <div className="w-9 h-9 bg-white rounded-lg flex items-center justify-center shadow-sm flex-shrink-0">
+          <div className="w-9 h-9 bg-white rounded-lg flex items-center justify-center shadow-sm shrink-0">
             <span className="text-[#0D47A1] font-black text-sm">BP</span>
           </div>
           <div>
@@ -107,7 +107,7 @@ const Sidebar = () => {
             <div className="space-y-0.5">
               <NavLink to="/brand-admin/requests" onClick={saveScroll} className={navLink}>
                 <Plus size={14} /><span>Register Complaint</span>
-                <span className="ml-auto bg-green-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0">New</span>
+                <span className="ml-auto bg-green-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0">New</span>
               </NavLink>
               <NavLink to="/brand-admin/complaints" onClick={saveScroll} className={navLink}>
                 <ClipboardList size={14} /><span>All Complaints</span>
@@ -122,7 +122,7 @@ const Sidebar = () => {
                 }
               >
                 <span className="flex items-center gap-2.5"><AlertTriangle size={14} /><span>Escalations</span></span>
-                <span className="bg-orange-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0">23</span>
+                <span className="bg-orange-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0">23</span>
               </NavLink>
             </div>
           </div>
@@ -142,8 +142,8 @@ const Sidebar = () => {
                 onClick={() => setSparePartsOpen(!sparePartsOpen)}
                 className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-[12px] font-semibold text-blue-100 hover:bg-[#1a3a8a] hover:text-white transition-all whitespace-nowrap"
               >
-                <span className="flex items-center gap-2.5 flex-shrink-0"><Package size={14} /><span>Spare Parts Management</span></span>
-                <ChevronRight size={12} className={'transition-transform duration-200 flex-shrink-0 ' + (sparePartsOpen ? 'rotate-90' : '')} />
+                <span className="flex items-center gap-2.5 shrink-0"><Package size={14} /><span>Spare Parts Management</span></span>
+                <ChevronRight size={12} className={'transition-transform duration-200 shrink-0 ' + (sparePartsOpen ? 'rotate-90' : '')} />
               </button>
               {sparePartsOpen && (
                 <div className="ml-4 space-y-0.5 border-l-2 border-blue-700/50 pl-3 pb-1">

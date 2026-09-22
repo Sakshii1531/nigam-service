@@ -351,9 +351,9 @@ const Products = () => {
                     <td className="p-4 pl-6 font-medium text-[#1E293B]">
                       <div className="flex items-center gap-3">
                         {p.image ? (
-                          <img src={p.image} className="w-10 h-10 rounded-lg object-cover border border-slate-200 flex-shrink-0" alt={p.name} />
+                          <img src={p.image} className="w-10 h-10 rounded-lg object-cover border border-slate-200 shrink-0" alt={p.name} />
                         ) : (
-                          <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 border border-slate-200 flex-shrink-0">
+                          <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 border border-slate-200 shrink-0">
                             <Package size={16} />
                           </div>
                         )}
@@ -678,7 +678,7 @@ const Products = () => {
                   </label>
                   
                   {/* Selected Spec Tag Chips */}
-                  <div className="flex flex-wrap gap-2 min-h-[38px] p-2 bg-slate-50/80 border border-slate-200 rounded-xl items-center">
+                  <div className="flex flex-wrap gap-2 min-h-9.5 p-2 bg-slate-50/80 border border-slate-200 rounded-xl items-center">
                     {specsTags.length === 0 ? (
                       <span className="text-xs text-slate-400 font-medium px-2">Click tags below or type + Enter to add specs...</span>
                     ) : (
@@ -738,7 +738,7 @@ const Products = () => {
                   </label>
 
                   {/* Selected Benefits Tag Chips */}
-                  <div className="flex flex-wrap gap-2 min-h-[38px] p-2 bg-slate-50/80 border border-slate-200 rounded-xl items-center">
+                  <div className="flex flex-wrap gap-2 min-h-9.5 p-2 bg-slate-50/80 border border-slate-200 rounded-xl items-center">
                     {benefitsTags.length === 0 ? (
                       <span className="text-xs text-slate-400 font-medium px-2">Click preset benefits below to add...</span>
                     ) : (
@@ -859,7 +859,7 @@ const Products = () => {
                       </p>
                     </div>
                   ) : (
-                    <div className="group border-2 border-dashed border-slate-200 hover:border-[#0D47A1]/50 rounded-2xl p-4 flex flex-col items-center justify-center bg-slate-50/50 hover:bg-blue-50/30 transition-all cursor-pointer relative min-h-[110px]">
+                    <div className="group border-2 border-dashed border-slate-200 hover:border-[#0D47A1]/50 rounded-2xl p-4 flex flex-col items-center justify-center bg-slate-50/50 hover:bg-blue-50/30 transition-all cursor-pointer relative min-h-27.5">
                       <div className="w-10 h-10 rounded-full bg-blue-50 group-hover:bg-blue-100 text-[#0D47A1] flex items-center justify-center mb-1.5 transition-colors shadow-inner">
                         <UploadCloud size={20} />
                       </div>

@@ -163,7 +163,7 @@ const Payment = () => {
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-amber-50 text-amber-500 rounded-xl flex-shrink-0">
+                  <div className="p-2.5 bg-amber-50 text-amber-500 rounded-xl shrink-0">
                     <Coins className="h-5 w-5" />
                   </div>
                   <div className="min-w-0 flex-1">

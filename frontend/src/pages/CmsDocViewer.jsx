@@ -146,7 +146,7 @@ const CmsDocViewer = () => {
       <div className="flex-1 max-w-screen-2xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-6">
         
         {/* Document Banner */}
-        <div className="bg-gradient-to-br from-brand-navy via-[#0B4EA2] to-brand-blue rounded-[32px] p-6 sm:p-8 md:p-10 text-white relative overflow-hidden shadow-xl flex flex-col gap-3 text-left">
+        <div className="bg-linear-to-br from-brand-navy via-[#0B4EA2] to-brand-blue rounded-[32px] p-6 sm:p-8 md:p-10 text-white relative overflow-hidden shadow-xl flex flex-col gap-3 text-left">
           <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-3.5 py-1 rounded-full border border-white/20 w-fit">
             {isPrivacy ? <Lock className="h-4 w-4 text-emerald-400" /> : <Scale className="h-4 w-4 text-amber-300" />}
             <span className="text-xs font-bold text-slate-100">Official Document • {docVersion}</span>

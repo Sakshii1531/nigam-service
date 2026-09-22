@@ -439,7 +439,7 @@ const Cities = () => {
             onClick={() => { setActiveActionsMenu(null); setMenuCity(null); }}
           />
           <div
-            className="fixed z-[999] bg-white border border-[#E2E8F0] rounded-xl shadow-2xl py-1.5 min-w-[160px] text-sm text-left"
+            className="fixed z-[999] bg-white border border-[#E2E8F0] rounded-xl shadow-2xl py-1.5 min-w-40 text-sm text-left"
             style={{ top: menuPosition.top, right: menuPosition.right }}
           >
             <button
@@ -481,7 +481,7 @@ const Cities = () => {
             {/* Modal Header */}
             <div className="flex justify-between items-start border-b border-slate-100 pb-4 relative z-10">
               <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#0D47A1] to-[#1565C0] text-white flex items-center justify-center shadow-md shadow-blue-900/20">
+                <div className="w-11 h-11 rounded-2xl bg-linear-to-br from-[#0D47A1] to-[#1565C0] text-white flex items-center justify-center shadow-md shadow-blue-900/20">
                   <Building2 size={22} />
                 </div>
                 <div>

@@ -128,7 +128,7 @@ const ComplaintMonitoring = () => {
           {/* Filters */}
           <div className="bg-white rounded-2xl border border-[#E2E8F0] p-4">
             <div className="flex gap-3 mb-4 flex-wrap">
-              <div className="relative flex-1 min-w-[200px]">
+              <div className="relative flex-1 min-w-50">
                 <Search size={14} className="absolute left-3 top-2.5 text-[#94A3B8]" />
                 <input
                   placeholder="Search by complaint ID or customer..."

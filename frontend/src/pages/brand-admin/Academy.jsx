@@ -165,7 +165,7 @@ const Academy = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {stats.map((card, index) => (
               <div key={index} className="bg-white p-6 rounded-2xl border border-[#E2E8F0] flex items-center gap-4">
-                <div className={`w-12 h-12 ${card.color} rounded-xl flex items-center justify-center text-white flex-shrink-0`}>
+                <div className={`w-12 h-12 ${card.color} rounded-xl flex items-center justify-center text-white shrink-0`}>
                   {card.icon}
                 </div>
                 <div>
@@ -179,7 +179,7 @@ const Academy = () => {
           {/* Tabs */}
           <div className="flex border-b border-[#E2E8F0]">
             <button
-              className={`px-6 py-3 text-sm font-bold transition-all border-b-2 -mb-[2px] ${
+              className={`px-6 py-3 text-sm font-bold transition-all border-b-2 -mb-0.5 ${
                 activeTab === 'guides' 
                   ? 'border-[#0D47A1] text-[#0D47A1]' 
                   : 'border-transparent text-[#64748B] hover:text-[#1E293B]'
@@ -189,7 +189,7 @@ const Academy = () => {
               Guides & Manuals
             </button>
             <button
-              className={`px-6 py-3 text-sm font-bold transition-all border-b-2 -mb-[2px] ${
+              className={`px-6 py-3 text-sm font-bold transition-all border-b-2 -mb-0.5 ${
                 activeTab === 'courses' 
                   ? 'border-[#0D47A1] text-[#0D47A1]' 
                   : 'border-transparent text-[#64748B] hover:text-[#1E293B]'

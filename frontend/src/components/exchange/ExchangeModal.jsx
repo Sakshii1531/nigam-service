@@ -418,7 +418,7 @@ const ExchangeModal = ({
                   {questions.map((q, idx) => (
                     <div key={q.id} className="bg-slate-50/50 border border-slate-200/60 rounded-2xl p-4.5 text-left flex flex-col gap-3">
                       <label className="text-xs font-black text-brand-navy flex items-start gap-1.5">
-                        <span className="bg-brand-blue/10 text-brand-blue w-5 h-5 rounded-full text-[10px] flex items-center justify-center flex-shrink-0 mt-0.5">{idx + 1}</span>
+                        <span className="bg-brand-blue/10 text-brand-blue w-5 h-5 rounded-full text-[10px] flex items-center justify-center shrink-0 mt-0.5">{idx + 1}</span>
                         {q.text}
                       </label>
 
@@ -457,7 +457,7 @@ const ExchangeModal = ({
                               }`}
                             >
                               <span>{opt}</span>
-                              <div className={`w-4 h-4 rounded-full border flex items-center justify-center flex-shrink-0 ${
+                              <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
                                 answers[q.id] === opt ? 'border-brand-blue bg-brand-blue' : 'border-slate-300'
                               }`}>
                                 {answers[q.id] === opt && <div className="w-1.5 h-1.5 rounded-full bg-white"></div>}
@@ -500,7 +500,7 @@ const ExchangeModal = ({
                                 }`}
                               >
                                 <span>{opt}</span>
-                                <div className={`w-4.5 h-4.5 rounded-md border flex items-center justify-center flex-shrink-0 ${
+                                <div className={`w-4.5 h-4.5 rounded-md border flex items-center justify-center shrink-0 ${
                                   isChecked ? 'border-brand-blue bg-brand-blue text-white' : 'border-slate-300 bg-white'
                                 }`}>
                                   {isChecked && <Check className="w-3 h-3 text-white stroke-[3px]" />}
@@ -636,7 +636,7 @@ const ExchangeModal = ({
               {/* Dynamic campaign notice */}
               {config?.campaignId && (
                 <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3.5 flex items-start gap-2.5">
-                  <Info className="w-4 h-4 text-[#10B981] flex-shrink-0 mt-0.5" />
+                  <Info className="w-4 h-4 text-[#10B981] shrink-0 mt-0.5" />
                   <div>
                     <span className="text-[10px] font-black text-emerald-800 block">Offer Applied!</span>
                     <span className="text-[9px] text-emerald-600 font-semibold block mt-0.5">{config.badgeText || 'Exchange Bonus Active'}</span>

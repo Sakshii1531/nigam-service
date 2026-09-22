@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiRequest, resolveMediaUrl } from "../../lib/apiClient";
 import { convertToWebP } from "../../lib/imageUtils";
+import { goBack } from "../../lib/navigation";
 import PhotoCaptureModal from "../../components/service-provider/PhotoCaptureModal";
 import {
   ArrowLeft,
@@ -164,7 +165,7 @@ const SignatureCanvas = ({ onSave, onCancel }) => {
         onTouchStart={startDrawing}
         onTouchMove={draw}
         onTouchEnd={stopDrawing}
-        className="bg-white rounded-2xl border border-slate-200 cursor-crosshair touch-none w-full h-[150px]"
+        className="bg-white rounded-2xl border border-slate-200 cursor-crosshair touch-none w-full h-37.5"
       />
       <div className="flex gap-2 mt-3">
         <button
@@ -815,7 +816,7 @@ const ActiveJob = () => {
         <div className="bg-white border-b border-slate-200 p-4 flex items-center justify-between sticky top-0 z-10 shadow-xs">
           <div className="flex items-center gap-3">
             <button
-              onClick={() => navigate("/service-provider/dashboard")}
+              onClick={() => goBack(navigate, "/service-provider/dashboard")}
               className="p-1 hover:bg-slate-50 rounded-full">
               <ArrowLeft className="h-6 w-6 text-slate-700" />
             </button>
@@ -1062,7 +1063,7 @@ const ActiveJob = () => {
                 {/* Segmented Timeline Line */}
                 {idx < steps.length - 1 && (
                   <div
-                    className={`absolute left-[32px] -translate-x-1/2 top-[36px] bottom-[-28px] w-[2px] z-0 ${
+                    className={`absolute left-8 -translate-x-1/2 top-9 -bottom-7 w-0.5 z-0 ${
                       status === "completed" ? "bg-[#00C853]" : "bg-slate-200"
                     }`}
                   />
@@ -1070,7 +1071,7 @@ const ActiveJob = () => {
 
                 {/* Step Icon Indicator — 3 distinct states */}
                 <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold z-10 transition-all flex-shrink-0 ${
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold z-10 transition-all shrink-0 ${
                     status === "completed"
                       ? "bg-[#00C853] text-white shadow-sm"
                       : isActive
@@ -1145,7 +1146,7 @@ const ActiveJob = () => {
                 style={{ minWidth: 20 }}>
                 {/* Step Icon Indicator — 3 distinct states */}
                 <div
-                  className={`w-5 h-5 rounded-full flex items-center justify-center border-2 text-[10px] font-semibold z-10 transition-all flex-shrink-0 ${
+                  className={`w-5 h-5 rounded-full flex items-center justify-center border-2 text-[10px] font-semibold z-10 transition-all shrink-0 ${
                     status === "completed"
                       ? "bg-[#00C853] border-[#00C853] text-white"
                       : status === "active"
@@ -1272,7 +1273,7 @@ const ActiveJob = () => {
           and the job silently fell out of sync with the server. */}
       {stepError && (
         <div className="sticky top-0 z-[120] bg-rose-600 text-white px-4 py-3 flex items-start gap-3">
-          <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+          <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
           <span className="text-xs font-semibold leading-snug flex-1">
             {stepError}
           </span>
@@ -1309,7 +1310,7 @@ const ActiveJob = () => {
           <button
             onClick={() => {
               setActiveStep("idle");
-              navigate("/service-provider/dashboard");
+              goBack(navigate, "/service-provider/dashboard");
             }}
             className="p-1 hover:bg-slate-100 rounded-full transition-colors text-[#052355]">
             <ArrowLeft className="h-6 w-6 stroke-[2]" />
@@ -1527,7 +1528,7 @@ const ActiveJob = () => {
                       AMC Plan Details
                     </h3>
                     <div className="flex items-center gap-4">
-                      <div className="w-16 h-16 bg-[#FFA000] rounded-full flex items-center justify-center text-white flex-shrink-0">
+                      <div className="w-16 h-16 bg-[#FFA000] rounded-full flex items-center justify-center text-white shrink-0">
                         <CrownIcon className="w-8 h-8" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -1601,7 +1602,7 @@ const ActiveJob = () => {
                       Coverage Details
                     </h3>
                     <div className="flex items-center gap-4">
-                      <div className="w-16 h-16 bg-[#7C4DFF] rounded-full flex items-center justify-center text-white flex-shrink-0">
+                      <div className="w-16 h-16 bg-[#7C4DFF] rounded-full flex items-center justify-center text-white shrink-0">
                         <ShieldCheckIcon className="w-8 h-8" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -1665,7 +1666,7 @@ const ActiveJob = () => {
                       Warranty Information
                     </h3>
                     <div className="flex items-center gap-4">
-                      <div className="w-16 h-16 bg-[#1E6BDB] rounded-full flex items-center justify-center text-white flex-shrink-0">
+                      <div className="w-16 h-16 bg-[#1E6BDB] rounded-full flex items-center justify-center text-white shrink-0">
                         <ShieldCheckIcon className="w-8 h-8" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -1699,7 +1700,7 @@ const ActiveJob = () => {
                     </div>
 
                     {/* Separator inside card */}
-                    <div className="h-[1px] bg-slate-100 my-4 w-full"></div>
+                    <div className="h-0.25 bg-slate-100 my-4 w-full"></div>
 
                     {/* Purchase Invoice inside card */}
                     <div>
@@ -1712,7 +1713,7 @@ const ActiveJob = () => {
                             <FileIcon className="w-6 h-6 text-slate-500" />
                           </div>
                           <div className="text-left">
-                            <p className="text-xs font-semibold text-[#052355] truncate max-w-[150px]">
+                            <p className="text-xs font-semibold text-[#052355] truncate max-w-37.5">
                               {activeJob?.invoiceUrl
                                 ? activeJob.invoiceUrl.split("/").pop()
                                 : "No invoice uploaded"}
@@ -1763,7 +1764,7 @@ const ActiveJob = () => {
                 </div>
 
                 {/* Divider */}
-                <div className="h-[1px] bg-slate-100 w-full"></div>
+                <div className="h-0.25 bg-slate-100 w-full"></div>
 
                 {/* Customer Information */}
                 <div className="flex justify-between items-center">
@@ -1799,7 +1800,7 @@ const ActiveJob = () => {
                 </div>
 
                 {/* Divider */}
-                <div className="h-[1px] bg-slate-100 w-full"></div>
+                <div className="h-0.25 bg-slate-100 w-full"></div>
 
                 {/* Service Address */}
                 <div className="flex flex-col gap-1.5">
@@ -2290,7 +2291,7 @@ const ActiveJob = () => {
                                   : "border-slate-200 hover:border-slate-350"
                               }`}>
                               <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-[#00C853] flex items-center justify-center text-white flex-shrink-0">
+                                <div className="w-8 h-8 rounded-full bg-[#00C853] flex items-center justify-center text-white shrink-0">
                                   <Check className="h-4.5 w-4.5 stroke-[3]" />
                                 </div>
                                 <div>
@@ -2315,7 +2316,7 @@ const ActiveJob = () => {
                                   : "border-slate-200 hover:border-slate-350"
                               }`}>
                               <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-[#FFA000] flex items-center justify-center text-white flex-shrink-0">
+                                <div className="w-8 h-8 rounded-full bg-[#FFA000] flex items-center justify-center text-white shrink-0">
                                   <svg
                                     xmlns="http://www.w3.org/2000/svg"
                                     fill="none"
@@ -2352,7 +2353,7 @@ const ActiveJob = () => {
                                   : "border-slate-200 hover:border-slate-350"
                               }`}>
                               <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-[#5E7A9C] flex items-center justify-center text-white flex-shrink-0">
+                                <div className="w-8 h-8 rounded-full bg-[#5E7A9C] flex items-center justify-center text-white shrink-0">
                                   <svg
                                     xmlns="http://www.w3.org/2000/svg"
                                     fill="none"
@@ -2430,7 +2431,7 @@ const ActiveJob = () => {
                     ) : (
                       <>
                         {/* Tabs Selector (Screen 5 Overview) */}
-                        <div className="flex justify-between items-center bg-white p-1 rounded-2xl border border-slate-200 shadow-sm gap-1 mx-[-10px]">
+                        <div className="flex justify-between items-center bg-white p-1 rounded-2xl border border-slate-200 shadow-sm gap-1 -mx-2.5">
                           {[
                             "Overview",
                             "Diagnosis",
@@ -2707,7 +2708,7 @@ const ActiveJob = () => {
                                   </div>
 
                                   {/* Divider */}
-                                  <div className="h-[1px] bg-slate-100 w-full"></div>
+                                  <div className="h-0.25 bg-slate-100 w-full"></div>
 
                                   {/* Installation & Warranty Rows — sourced from the customer's
                             registered OwnedAppliance record, recomputed live server-side
@@ -2755,7 +2756,7 @@ const ActiveJob = () => {
                                     {/* Base Service */}
                                     <div className="flex justify-between items-center bg-slate-50/50 border border-slate-100 rounded-2xl p-3">
                                       <div className="flex items-center gap-3">
-                                        <div className="w-5 h-5 bg-[#00C853] rounded-full flex items-center justify-center text-white flex-shrink-0 shadow-sm">
+                                        <div className="w-5 h-5 bg-[#00C853] rounded-full flex items-center justify-center text-white shrink-0 shadow-sm">
                                           <svg
                                             className="w-3 h-3 stroke-[3.5]"
                                             fill="none"
@@ -2801,7 +2802,7 @@ const ActiveJob = () => {
                                                 ),
                                               );
                                             }}
-                                            className="w-5 h-5 bg-[#00C853] hover:bg-red-500 rounded-full flex items-center justify-center text-white flex-shrink-0 shadow-sm group transition-colors"
+                                            className="w-5 h-5 bg-[#00C853] hover:bg-red-500 rounded-full flex items-center justify-center text-white shrink-0 shadow-sm group transition-colors"
                                             title="Unselect Service">
                                             <span className="group-hover:hidden">
                                               <svg
@@ -3004,7 +3005,7 @@ const ActiveJob = () => {
                                       </div>
                                     )}
 
-                                    <div className="h-[1px] bg-slate-100 my-1"></div>
+                                    <div className="h-0.25 bg-slate-100 my-1"></div>
 
                                     <div className="flex justify-between items-center text-[#052355] font-semibold text-sm">
                                       <span>Total Amount</span>
@@ -3078,7 +3079,7 @@ const ActiveJob = () => {
                                       }`}>
                                       <div className="flex items-center gap-4 flex-1">
                                         {/* Image container */}
-                                        <div className="w-16 h-16 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-center p-1.5 flex-shrink-0">
+                                        <div className="w-16 h-16 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-center p-1.5 shrink-0">
                                           <img
                                             src={part.image}
                                             alt={part.name}
@@ -3205,7 +3206,7 @@ const ActiveJob = () => {
                                       })
                                     }
                                     className="bg-white rounded-3xl p-4 border border-slate-200 shadow-sm flex items-center gap-3 cursor-pointer text-left">
-                                    <div className="bg-[#F4F8FF] p-2 rounded-xl text-[#0D47A1] flex-shrink-0">
+                                    <div className="bg-[#F4F8FF] p-2 rounded-xl text-[#0D47A1] shrink-0">
                                       <svg
                                         className="w-5 h-5 text-[#0D47A1]"
                                         fill="none"
@@ -3246,7 +3247,7 @@ const ActiveJob = () => {
                                       })
                                     }
                                     className="bg-white rounded-3xl p-4 border border-slate-200 shadow-sm flex items-center gap-3 cursor-pointer text-left">
-                                    <div className="bg-[#F4F8FF] p-2 rounded-xl text-[#0D47A1] flex-shrink-0">
+                                    <div className="bg-[#F4F8FF] p-2 rounded-xl text-[#0D47A1] shrink-0">
                                       <Video className="h-5 w-5 stroke-[2.5]" />
                                     </div>
                                     <div className="truncate">
@@ -3574,7 +3575,7 @@ const ActiveJob = () => {
                                         <p className="text-xs font-semibold text-[#052355]">
                                           This Visit (In Progress)
                                         </p>
-                                        <span className="text-[10px] font-normal text-[#0D47A1] bg-white px-2 py-0.5 rounded-md flex-shrink-0">
+                                        <span className="text-[10px] font-normal text-[#0D47A1] bg-white px-2 py-0.5 rounded-md shrink-0">
                                           Today
                                         </span>
                                       </div>
@@ -3623,7 +3624,7 @@ const ActiveJob = () => {
                                           </p>
                                         )}
                                       </div>
-                                      <span className="text-[10px] font-normal text-slate-500 bg-slate-200/50 px-2 py-0.5 rounded-md flex-shrink-0">
+                                      <span className="text-[10px] font-normal text-slate-500 bg-slate-200/50 px-2 py-0.5 rounded-md shrink-0">
                                         {visit.date
                                           ? new Date(
                                               visit.date,
@@ -3814,7 +3815,7 @@ const ActiveJob = () => {
                             <div
                               key={part.id || pIdx}
                               className="flex gap-4 items-center bg-slate-50 border border-slate-100 rounded-2xl p-3">
-                              <div className="w-14 h-14 bg-white border border-slate-200 rounded-xl flex items-center justify-center p-1 flex-shrink-0">
+                              <div className="w-14 h-14 bg-white border border-slate-200 rounded-xl flex items-center justify-center p-1 shrink-0">
                                 <img
                                   src={getProductImage(activeJob)}
                                   alt={part.name}
@@ -4077,7 +4078,7 @@ const ActiveJob = () => {
                                   <div
                                     key={part.id || pIdx}
                                     className={`flex items-center gap-3.5 ${pIdx > 0 ? "pt-2.5" : ""}`}>
-                                    <div className="w-12 h-12 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center p-1 flex-shrink-0">
+                                    <div className="w-12 h-12 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center p-1 shrink-0">
                                       <img
                                         src={getProductImage(activeJob)}
                                         alt={part.name}
@@ -4127,7 +4128,7 @@ const ActiveJob = () => {
                         {/* Sub-card 2: Expected Visit & Current Status */}
                         <div className="border border-slate-200/60 rounded-2xl bg-white overflow-hidden p-4 flex flex-col gap-3.5 shadow-sm">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center text-slate-500 flex-shrink-0">
+                            <div className="w-10 h-10 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center text-slate-500 shrink-0">
                               <Calendar className="h-5 w-5 text-slate-500" />
                             </div>
                             <div className="flex flex-col text-left">
@@ -4312,7 +4313,7 @@ const ActiveJob = () => {
 
                       {/* Product Image */}
                       <div className="w-full flex justify-center py-3 bg-slate-50 rounded-2xl border border-slate-100 shadow-inner">
-                        <div className="w-36 h-36 flex items-center justify-center p-1 flex-shrink-0">
+                        <div className="w-36 h-36 flex items-center justify-center p-1 shrink-0">
                           <img
                             src={getProductImage(activeJob)}
                             alt="Product"
@@ -4345,7 +4346,7 @@ const ActiveJob = () => {
                               ? `Required Parts (${requiredSpareParts.length})`
                               : "Required Part"}
                           </span>
-                          <div className="flex flex-col items-end max-w-[220px]">
+                          <div className="flex flex-col items-end max-w-55">
                             {requiredSpareParts.length > 0 ? (
                               requiredSpareParts.map((p, idx) => (
                                 <span
@@ -4543,7 +4544,7 @@ const ActiveJob = () => {
                       <div className="flex items-center justify-between">
                         <button
                           onClick={() =>
-                            navigate("/service-provider/dashboard")
+                            goBack(navigate, "/service-provider/dashboard")
                           }
                           className="p-1 hover:bg-white/10 rounded-full transition-colors">
                           <ArrowLeft className="h-6 w-6 text-white" />
@@ -4607,7 +4608,7 @@ const ActiveJob = () => {
                           </div>
                           <div className="flex justify-between items-start">
                             <span className="text-slate-500">Address:</span>
-                            <div className="text-right max-w-[220px]">
+                            <div className="text-right max-w-55">
                               <span className="font-semibold text-slate-700 block text-xs">
                                 {activeJob?.address}
                               </span>
@@ -4663,7 +4664,7 @@ const ActiveJob = () => {
                           activeJob?.activeStep === "revisit_otp" ? (
                             <div className="flex flex-col gap-2.5">
                               <div className="bg-emerald-50 border border-emerald-200/80 rounded-2xl p-3.5 flex items-start gap-2.5 text-left">
-                                <Check className="w-4.5 h-4.5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                                <Check className="w-4.5 h-4.5 text-emerald-600 shrink-0 mt-0.5" />
                                 <p className="text-xs text-emerald-900 font-semibold leading-relaxed">
                                   You have already completed the repair for this
                                   job. Please continue to billing.
@@ -4698,7 +4699,7 @@ const ActiveJob = () => {
                         <button
                           onClick={() => {
                             setActiveStep("idle");
-                            navigate("/service-provider/dashboard");
+                            goBack(navigate, "/service-provider/dashboard");
                           }}
                           className="p-1 hover:bg-white/10 rounded-full transition-colors">
                           <ArrowLeft className="h-6 w-6 text-white" />
@@ -4719,7 +4720,7 @@ const ActiveJob = () => {
                       <div className="bg-white rounded-3xl border border-slate-200/50 shadow-sm overflow-hidden flex flex-col">
                         {/* Top Alert Info */}
                         <div className="bg-[#FFF8E1] p-4 flex gap-3.5 items-start text-left border-b border-amber-50">
-                          <div className="w-10 h-10 bg-white border border-amber-100 rounded-xl flex items-center justify-center text-amber-600 flex-shrink-0 shadow-xs">
+                          <div className="w-10 h-10 bg-white border border-amber-100 rounded-xl flex items-center justify-center text-amber-600 shrink-0 shadow-xs">
                             <Package className="h-5 w-5 stroke-[2]" />
                           </div>
                           <div className="flex flex-col text-left">
@@ -4810,7 +4811,7 @@ const ActiveJob = () => {
                               ? "bg-green-50/20"
                               : "hover:bg-slate-50/50"
                           }`}>
-                          <div className="flex-shrink-0 mt-0.5">
+                          <div className="shrink-0 mt-0.5">
                             {revisitRepairStatus === "completed" ? (
                               <div className="w-5 h-5 rounded-full bg-green-600 flex items-center justify-center text-white">
                                 <Check className="h-3.5 w-3.5 stroke-[3]" />
@@ -4830,7 +4831,7 @@ const ActiveJob = () => {
                           </div>
                         </div>
 
-                        <div className="h-[1px] bg-slate-100"></div>
+                        <div className="h-0.25 bg-slate-100"></div>
 
                         {/* Option 2: Unable to Fix */}
                         <div
@@ -4844,7 +4845,7 @@ const ActiveJob = () => {
                               : "hover:bg-slate-50/50"
                           }`}>
                           <div className="flex items-start gap-3.5">
-                            <div className="flex-shrink-0 mt-0.5">
+                            <div className="shrink-0 mt-0.5">
                               {revisitRepairStatus === "unable" ? (
                                 <div className="w-5 h-5 rounded-full bg-[#0D47A1] flex items-center justify-center text-white">
                                   <Check className="h-3.5 w-3.5 stroke-[3]" />
@@ -4900,7 +4901,7 @@ const ActiveJob = () => {
                           )}
                         </div>
 
-                        <div className="h-[1px] bg-slate-100"></div>
+                        <div className="h-0.25 bg-slate-100"></div>
 
                         {/* Option 3: Customer Cancelled */}
                         <div
@@ -4914,7 +4915,7 @@ const ActiveJob = () => {
                               : "hover:bg-slate-50/50"
                           }`}>
                           <div className="flex items-start gap-3.5">
-                            <div className="flex-shrink-0 mt-0.5">
+                            <div className="shrink-0 mt-0.5">
                               {revisitRepairStatus === "cancelled" ? (
                                 <div className="w-5 h-5 rounded-full bg-red-600 flex items-center justify-center text-white">
                                   <Check className="h-3.5 w-3.5 stroke-[3]" />
@@ -5064,7 +5065,7 @@ const ActiveJob = () => {
                             <span className="text-slate-550 font-normal">
                               Cancellation Reason
                             </span>
-                            <span className="text-slate-700 font-semibold text-right max-w-[200px] truncate">
+                            <span className="text-slate-700 font-semibold text-right max-w-50 truncate">
                               {revisitReason}
                             </span>
                           </div>
@@ -5084,7 +5085,7 @@ const ActiveJob = () => {
                       </div>
 
                       <div className="bg-amber-50 border border-amber-200/60 rounded-2xl p-4 flex gap-3 items-start">
-                        <Info className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                        <Info className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
                         <p className="text-[11px] text-amber-800 leading-relaxed font-normal">
                           Since the customer paid the visiting charges upfront,
                           no payment collection is required.{" "}
@@ -5167,7 +5168,7 @@ const ActiveJob = () => {
                             <span className="text-slate-500 font-normal">
                               Failure Reason
                             </span>
-                            <span className="text-[#052355] font-semibold text-right max-w-[200px] truncate">
+                            <span className="text-[#052355] font-semibold text-right max-w-50 truncate">
                               {revisitReason}
                             </span>
                           </div>
@@ -5191,7 +5192,7 @@ const ActiveJob = () => {
                       </div>
 
                       <div className="bg-blue-50 border border-blue-200/60 rounded-2xl p-4 flex gap-3 items-start">
-                        <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                        <Info className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
                         <p className="text-[11px] text-blue-800 leading-relaxed font-normal">
                           The job has been logged as unresolved due to
                           serviceProvider/part issue. A refund or re-assignment
@@ -5221,7 +5222,7 @@ const ActiveJob = () => {
                       <div className="flex items-center justify-between">
                         <button
                           onClick={() => {
-                            navigate("/service-provider/dashboard");
+                            goBack(navigate, "/service-provider/dashboard");
                           }}
                           className="p-1.5 hover:bg-white/10 rounded-full transition-colors cursor-pointer"
                           title="Back to Dashboard">
@@ -5312,7 +5313,7 @@ const ActiveJob = () => {
                         </div>
 
                         {/* Divider */}
-                        <div className="h-[1px] bg-[#E2E8F0] my-1"></div>
+                        <div className="h-0.25 bg-[#E2E8F0] my-1"></div>
 
                         {/* Total Amount */}
                         <div className="flex justify-between items-center">
@@ -5375,7 +5376,7 @@ const ActiveJob = () => {
                     <div className="flex-1 bg-white mx-3.5 -mt-5 rounded-3xl p-5 sm:p-6 shadow-sm border border-slate-100 flex flex-col justify-between mb-8">
                       <div className="flex flex-col gap-5">
                         {/* Total Payable Row */}
-                        <div className="bg-gradient-to-r from-blue-50/80 to-slate-50 border border-blue-100/80 rounded-2xl p-4 flex justify-between items-center shadow-2xs">
+                        <div className="bg-linear-to-r from-blue-50/80 to-slate-50 border border-blue-100/80 rounded-2xl p-4 flex justify-between items-center shadow-2xs">
                           <div>
                             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
                               Total Payable
@@ -5521,7 +5522,7 @@ const ActiveJob = () => {
                         </span>
 
                         {/* QR Code Container */}
-                        <div className="bg-slate-50 border border-slate-200 p-4 rounded-3xl flex flex-col items-center gap-3 relative shadow-inner w-full max-w-[260px]">
+                        <div className="bg-slate-50 border border-slate-200 p-4 rounded-3xl flex flex-col items-center gap-3 relative shadow-inner w-full max-w-65">
                           <div className="p-3 bg-white rounded-2xl shadow-xs border border-slate-150 relative overflow-hidden">
                             <QrCode className="h-40 w-40 text-[#0D47A1]" />
                           </div>
@@ -5791,7 +5792,7 @@ const ActiveJob = () => {
                         </div>
 
                         {/* OTP 4 digit inputs */}
-                        <div className="flex gap-3 sm:gap-4 my-5 justify-between max-w-[320px]">
+                        <div className="flex gap-3 sm:gap-4 my-5 justify-between max-w-80">
                           {revisitOtp.map((digit, idx) => (
                             <input
                               key={idx}
@@ -5813,7 +5814,7 @@ const ActiveJob = () => {
                         </div>
 
                         {/* Divider */}
-                        <div className="h-[1px] bg-[#E2E8F0] my-3"></div>
+                        <div className="h-0.25 bg-[#E2E8F0] my-3"></div>
 
                         {/* Signature Section */}
                         <h3 className="text-[13px] font-bold text-[#052355] mb-2">
@@ -5821,7 +5822,7 @@ const ActiveJob = () => {
                         </h3>
 
                         {/* Signature Pad container */}
-                        <div className="relative border border-slate-200 rounded-2xl h-[140px] w-full overflow-hidden bg-slate-50/70 shadow-inner">
+                        <div className="relative border border-slate-200 rounded-2xl h-35 w-full overflow-hidden bg-slate-50/70 shadow-inner">
                           <canvas
                             ref={revisitCanvasRef}
                             width={340}
@@ -5832,7 +5833,7 @@ const ActiveJob = () => {
                             onTouchStart={startDrawingRevisit}
                             onTouchMove={drawRevisit}
                             onTouchEnd={stopDrawingRevisit}
-                            className="bg-transparent absolute inset-0 z-20 cursor-crosshair touch-none w-full h-[140px]"
+                            className="bg-transparent absolute inset-0 z-20 cursor-crosshair touch-none w-full h-35"
                           />
 
                           {!hasSignedRevisit && (
@@ -6100,7 +6101,7 @@ const ActiveJob = () => {
                         Enter the 4-digit OTP shown in the customer&apos;s app
                         to complete the job
                       </p>
-                      <div className="flex gap-3 justify-between max-w-[280px]">
+                      <div className="flex gap-3 justify-between max-w-70">
                         {billingOtp.map((digit, idx) => (
                           <input
                             key={idx}
@@ -6383,7 +6384,7 @@ const ActiveJob = () => {
           return (
             <div className="fixed inset-0 bg-[#052355]/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
               <div className="bg-white rounded-[2rem] w-full max-w-lg p-5 shadow-2xl flex flex-col gap-4 border border-slate-100 max-h-[85vh]">
-                <div className="flex justify-between items-center pb-2.5 border-b border-slate-100 flex-shrink-0">
+                <div className="flex justify-between items-center pb-2.5 border-b border-slate-100 shrink-0">
                   <h3 className="text-base font-semibold text-[#052355]">
                     Add Spare Parts
                   </h3>
@@ -6397,7 +6398,7 @@ const ActiveJob = () => {
                   </button>
                 </div>
 
-                <div className="relative flex-shrink-0">
+                <div className="relative shrink-0">
                   <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input
                     type="text"
@@ -6454,7 +6455,7 @@ const ActiveJob = () => {
                               ];
                             });
                           }}
-                          className="bg-[#E3ECF9] hover:bg-[#c2d7f5] text-[#0D47A1] text-xs font-semibold px-3 py-1.5 rounded-xl transition-all shadow-xs flex-shrink-0">
+                          className="bg-[#E3ECF9] hover:bg-[#c2d7f5] text-[#0D47A1] text-xs font-semibold px-3 py-1.5 rounded-xl transition-all shadow-xs shrink-0">
                           + Add
                         </button>
                       </div>
@@ -6567,7 +6568,7 @@ const ActiveJob = () => {
                       ))}
                   </div>
 
-                  <div className="h-[1px] bg-slate-200 my-2"></div>
+                  <div className="h-0.25 bg-slate-200 my-2"></div>
 
                   <div className="flex justify-between text-sm text-[#052355] font-bold">
                     <span>Total Payable:</span>
@@ -6596,7 +6597,7 @@ const ActiveJob = () => {
             <div className="flex justify-between items-center pb-2 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <FileIcon className="h-5 w-5 text-[#0D47A1]" />
-                <span className="text-sm font-semibold text-[#052355] truncate max-w-[200px]">
+                <span className="text-sm font-semibold text-[#052355] truncate max-w-50">
                   {activeJob?.invoiceUrl
                     ? activeJob.invoiceUrl.split("/").pop()
                     : "No invoice"}

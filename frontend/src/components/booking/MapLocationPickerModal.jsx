@@ -286,7 +286,7 @@ const MapLocationPickerModal = ({
         </div>
 
         {/* Map Container Area */}
-        <div className="relative flex-1 min-h-[320px] sm:min-h-[380px] bg-slate-100 overflow-hidden">
+        <div className="relative flex-1 min-h-80 sm:min-h-95 bg-slate-100 overflow-hidden">
           {loadingMap && (
             <div className="absolute inset-0 bg-white/80 backdrop-blur-xs z-10 flex flex-col items-center justify-center gap-2 text-slate-600">
               <Loader2 className="w-8 h-8 animate-spin text-brand-blue" />
@@ -310,7 +310,7 @@ const MapLocationPickerModal = ({
               </button>
             </div>
           ) : (
-            <div ref={mapContainerRef} className="w-full h-full min-h-[320px] sm:min-h-[380px]" />
+            <div ref={mapContainerRef} className="w-full h-full min-h-80 sm:min-h-95" />
           )}
 
           {/* Floating Instructions Pill */}

@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Star, Check, Shield, Award, X } from 'lucide-react';
 import applianceFridge from '../assets/appliance_fridge.png';
 import { apiRequest } from '../lib/apiClient';
+import { goBack } from '../lib/navigation';
 
 const RefrigeratorDetails = () => {
   const navigate = useNavigate();
@@ -115,7 +116,7 @@ const RefrigeratorDetails = () => {
       {/* Header */}
       <div className="bg-[#E3ECF9] p-6 rounded-b-[30px] shadow-sm flex items-center gap-4">
         <button 
-          onClick={() => navigate('/dashboard')}
+          onClick={() => goBack(navigate, '/dashboard')}
           className="p-2 bg-white rounded-full shadow-sm hover:bg-slate-50 transition-colors"
         >
           <ArrowLeft className="h-5 w-5 text-brand-blue" />
@@ -181,7 +182,7 @@ const RefrigeratorDetails = () => {
           <div className="grid grid-cols-2 gap-3">
             {includes.map((item) => (
               <div key={item} className="flex items-center gap-2">
-                <div className="w-5 h-5 bg-[#E8F5E9] rounded-full flex items-center justify-center flex-shrink-0">
+                <div className="w-5 h-5 bg-[#E8F5E9] rounded-full flex items-center justify-center shrink-0">
                   <Check className="h-3 w-3 text-[#2E7D32]" />
                 </div>
                 <span className="text-xs text-text-primary">{item}</span>

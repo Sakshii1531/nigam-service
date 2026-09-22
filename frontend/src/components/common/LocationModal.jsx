@@ -85,7 +85,7 @@ export const LocationModal = () => {
           className="relative w-full max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-100 max-h-[90vh] sm:max-h-[85vh] flex flex-col z-10 overflow-hidden"
         >
           {/* Header */}
-          <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-slate-50/80 to-blue-50/30">
+          <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-linear-to-r from-slate-50/80 to-blue-50/30">
             <div className="flex items-center gap-2.5">
               <div className="w-9 h-9 rounded-2xl bg-[#0D47A1] text-white flex items-center justify-center shadow-xs">
                 <MapPin size={18} />
@@ -108,7 +108,7 @@ export const LocationModal = () => {
             <button
               onClick={detectCurrentLocation}
               disabled={detectingLocation}
-              className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-gradient-to-r from-blue-50/90 to-indigo-50/60 border border-blue-200/80 hover:border-[#0D47A1] text-left transition-all group shadow-2xs hover:shadow-xs cursor-pointer active:scale-[0.99] disabled:opacity-75 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-linear-to-r from-blue-50/90 to-indigo-50/60 border border-blue-200/80 hover:border-[#0D47A1] text-left transition-all group shadow-2xs hover:shadow-xs cursor-pointer active:scale-[0.99] disabled:opacity-75 disabled:cursor-not-allowed"
             >
               <div className="flex items-center gap-3">
                 <div className="relative w-10 h-10 rounded-xl bg-[#0D47A1] text-white flex items-center justify-center shadow-sm">

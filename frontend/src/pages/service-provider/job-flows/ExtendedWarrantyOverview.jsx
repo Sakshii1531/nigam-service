@@ -16,7 +16,7 @@ const ExtendedWarrantyOverview = ({ job, additionalServices, setAdditionalServic
 
       {/* EW Coverage Banner */}
       <div className="bg-purple-50 border border-purple-200 rounded-3xl p-4 flex items-center gap-3">
-        <div className="w-10 h-10 bg-[#7C4DFF] rounded-full flex items-center justify-center flex-shrink-0">
+        <div className="w-10 h-10 bg-[#7C4DFF] rounded-full flex items-center justify-center shrink-0">
           <ShieldCheck className="h-5 w-5 text-white" />
         </div>
         <div className="flex flex-col flex-1">
@@ -27,7 +27,7 @@ const ExtendedWarrantyOverview = ({ job, additionalServices, setAdditionalServic
           </span>
         </div>
         {/* Claims counter */}
-        <div className="bg-white border border-purple-200 rounded-2xl px-3 py-2 text-center flex-shrink-0">
+        <div className="bg-white border border-purple-200 rounded-2xl px-3 py-2 text-center shrink-0">
           <span className={`text-lg font-bold block ${(job?.ewClaimsRemaining ?? 0) === 0 ? 'text-red-500' : 'text-[#7C4DFF]'}`}>
             {job?.ewClaimsRemaining ?? 0}
           </span>
@@ -50,7 +50,7 @@ const ExtendedWarrantyOverview = ({ job, additionalServices, setAdditionalServic
             <p className="text-[10px] text-slate-600 font-mono mt-0.5">S/N: {job?.serialNo}</p>
           </div>
         </div>
-        <div className="h-[1px] bg-slate-100 w-full" />
+        <div className="h-0.25 bg-slate-100 w-full" />
         <div className="flex flex-col gap-2">
           <div className="flex justify-between items-center">
             <span className="text-xs text-slate-600 font-normal">Installation Date</span>
@@ -179,7 +179,7 @@ const ExtendedWarrantyOverview = ({ job, additionalServices, setAdditionalServic
               <span className="font-medium text-[#052355]">₹{service.price}</span>
             </div>
           ))}
-          <div className="h-[1px] bg-slate-100 my-0.5" />
+          <div className="h-0.25 bg-slate-100 my-0.5" />
           <div className="flex justify-between items-center text-[#052355] font-semibold text-sm">
             <span>Customer Payable</span>
             <span className="text-[#00C853] font-bold">

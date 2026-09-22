@@ -62,7 +62,7 @@ const ServiceUpdates = () => {
               <div key={update.id} className="flex gap-4">
                 {/* Icon + Line */}
                 <div className="flex flex-col items-center">
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${update.done ? 'bg-green-500' : 'bg-white border-2 border-slate-200'}`}>
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${update.done ? 'bg-green-500' : 'bg-white border-2 border-slate-200'}`}>
                     {update.done && (
                       <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M20 6L9 17l-5-5" />

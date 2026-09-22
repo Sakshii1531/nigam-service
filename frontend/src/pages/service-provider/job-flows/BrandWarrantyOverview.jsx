@@ -8,7 +8,7 @@ const BrandWarrantyOverview = ({ job, additionalServices, setAdditionalServices,
 
       {/* Warranty Status Banner */}
       <div className="bg-blue-50 border border-blue-200 rounded-3xl p-4 flex items-center gap-3">
-        <div className="w-10 h-10 bg-[#1E6BDB] rounded-full flex items-center justify-center flex-shrink-0">
+        <div className="w-10 h-10 bg-[#1E6BDB] rounded-full flex items-center justify-center shrink-0">
           <Shield className="h-5 w-5 text-white" />
         </div>
         <div className="flex flex-col">
@@ -37,7 +37,7 @@ const BrandWarrantyOverview = ({ job, additionalServices, setAdditionalServices,
             <p className="text-[10px] text-slate-600 font-mono mt-0.5">S/N: {job?.serialNo}</p>
           </div>
         </div>
-        <div className="h-[1px] bg-slate-100 w-full" />
+        <div className="h-0.25 bg-slate-100 w-full" />
         <div className="flex flex-col gap-2">
           <div className="flex justify-between items-center">
             <span className="text-xs text-slate-600 font-normal">Installation Date</span>
@@ -166,7 +166,7 @@ const BrandWarrantyOverview = ({ job, additionalServices, setAdditionalServices,
               <span className="font-medium text-[#052355]">₹{service.price}</span>
             </div>
           ))}
-          <div className="h-[1px] bg-slate-100 my-0.5" />
+          <div className="h-0.25 bg-slate-100 my-0.5" />
           <div className="flex justify-between items-center text-[#052355] font-semibold text-sm">
             <span>Customer Payable</span>
             <span className="text-[#00C853] font-bold">

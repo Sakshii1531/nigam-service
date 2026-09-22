@@ -17,7 +17,7 @@ const number = new Intl.NumberFormat('en-IN');
 const KPICard = ({ title, value, icon, iconBg, onLink }) => (
   <div className="bg-white p-4 rounded-2xl border border-[#E2E8F0] hover:shadow-lg transition-all duration-200 cursor-pointer" onClick={onLink}>
     <div className="flex items-start justify-between mb-3">
-      <div className={`w-10 h-10 ${iconBg} rounded-xl flex items-center justify-center text-white flex-shrink-0`}>
+      <div className={`w-10 h-10 ${iconBg} rounded-xl flex items-center justify-center text-white shrink-0`}>
         {icon}
       </div>
     </div>
@@ -339,7 +339,7 @@ const Dashboard = () => {
                 <span className="text-[9px] text-[#64748B] bg-[#F1F5F9] px-2 py-0.5 rounded-lg">Last 7 Days ▾</span>
               </div>
               <div className="flex items-center gap-6 justify-center flex-1 py-2">
-                <div className="relative w-28 h-28 flex items-center justify-center flex-shrink-0">
+                <div className="relative w-28 h-28 flex items-center justify-center shrink-0">
                   <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
                     <circle cx="50" cy="50" r="40" fill="transparent" stroke="#F8FAFC" strokeWidth="12" />
                     {statusSegmentsWithSVGProps.map((s, i) => (
@@ -391,10 +391,10 @@ const Dashboard = () => {
                       }}
                     >
                       <span className="flex items-center gap-1.5 min-w-0">
-                        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: s.color }} />
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: s.color }} />
                         <span className={`text-[#64748B] font-medium truncate ${activeStatusIndex === i ? 'text-blue-600 font-bold' : ''}`}>{s.label}</span>
                       </span>
-                      <span className="font-bold text-[#1E293B] flex-shrink-0">{(s.value ?? 0).toLocaleString()} ({s.pct ?? 0}%)</span>
+                      <span className="font-bold text-[#1E293B] shrink-0">{(s.value ?? 0).toLocaleString()} ({s.pct ?? 0}%)</span>
                     </div>
                   ))}
                 </div>

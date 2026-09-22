@@ -223,7 +223,7 @@ const Brands = () => {
 
         {/* Brand Card */}
         <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden text-left">
-          <div className="bg-gradient-to-r from-[#0D47A1] to-[#1E3A8A] h-32 relative"></div>
+          <div className="bg-linear-to-r from-[#0D47A1] to-[#1E3A8A] h-32 relative"></div>
           <div className="p-6 relative pt-0">
             <div className="flex flex-col md:flex-row md:items-end justify-between mb-6 gap-4">
               <div className="flex items-end gap-4">
@@ -258,15 +258,15 @@ const Brands = () => {
                   <h3 className="text-sm font-bold text-[#1E293B] mb-4">Partner Brand Info</h3>
                   <div className="space-y-3.5 text-sm">
                     <div className="flex items-center gap-3 text-slate-700">
-                      <Mail size={16} className="text-[#64748B] flex-shrink-0" />
+                      <Mail size={16} className="text-[#64748B] shrink-0" />
                       <span className="truncate">{brand.supportEmail || 'No support email recorded'}</span>
                     </div>
                     <div className="flex items-center gap-3 text-slate-700">
-                      <PhoneIcon size={16} className="text-[#64748B] flex-shrink-0" />
+                      <PhoneIcon size={16} className="text-[#64748B] shrink-0" />
                       <span>{brand.supportPhone || 'No support number recorded'}</span>
                     </div>
                     <div className="flex items-center gap-3 text-slate-700">
-                      <CalendarIcon size={16} className="text-[#64748B] flex-shrink-0" />
+                      <CalendarIcon size={16} className="text-[#64748B] shrink-0" />
                       <span>{brand.createdAt ? `Partnered ${new Date(brand.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}` : 'Partnership date not recorded'}</span>
                     </div>
                   </div>

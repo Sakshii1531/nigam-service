@@ -237,7 +237,7 @@ const Dashboard = () => {
         />
 
         {/* Dashboard Body */}
-        <div className="p-6 space-y-6 flex-1 max-w-[1600px] mx-auto w-full">
+        <div className="p-6 space-y-6 flex-1 max-w-400 mx-auto w-full">
 
           {/* KPI Stats Grid — trimmed to what's actually actionable at a
               glance; Platform Net Share/Product Orders/Total Requests lived
@@ -426,7 +426,7 @@ const Dashboard = () => {
 
               <div className="flex items-center justify-between gap-4 flex-1">
                 {/* SVG Doughnut */}
-                <div className="relative w-32 h-32 flex items-center justify-center flex-shrink-0">
+                <div className="relative w-32 h-32 flex items-center justify-center shrink-0">
                   <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
                     {/* Background Circle */}
                     <circle cx="50" cy="50" r="40" fill="transparent" stroke="#F1F5F9" strokeWidth="12"/>
@@ -648,7 +648,7 @@ const Dashboard = () => {
 
             {/* Recent Escalations — real Escalation docs, replacing a
                 hardcoded #ESC-5554-style fake list. */}
-            <div className="bg-white p-5 rounded-2xl border border-[#E2E8F0] flex flex-col justify-between h-[360px]">
+            <div className="bg-white p-5 rounded-2xl border border-[#E2E8F0] flex flex-col justify-between h-90">
               <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
                 <h3 className="font-extrabold text-sm text-[#1E293B]">Recent Escalations</h3>
                 <button
@@ -676,7 +676,7 @@ const Dashboard = () => {
                         <p className="text-slate-600 font-semibold pl-3.5 leading-tight">{esc.reason || esc.description || 'Escalation'}</p>
                         <p className="text-[10px] text-slate-400 font-bold pl-3.5">{esc.city?.name || 'Unassigned zone'}</p>
                       </div>
-                      <span className="bg-red-50 text-red-600 text-[10px] font-black px-2 py-0.5 rounded-md border border-red-100 uppercase flex-shrink-0">
+                      <span className="bg-red-50 text-red-600 text-[10px] font-black px-2 py-0.5 rounded-md border border-red-100 uppercase shrink-0">
                         {esc.priority}
                       </span>
                     </div>
@@ -687,7 +687,7 @@ const Dashboard = () => {
 
             {/* Live Activity Feed — real audit log entries (super-admin's
                 Audit Logs page), replacing a hardcoded fake feed. */}
-            <div className="bg-white p-5 rounded-2xl border border-[#E2E8F0] flex flex-col justify-between h-[360px]">
+            <div className="bg-white p-5 rounded-2xl border border-[#E2E8F0] flex flex-col justify-between h-90">
               <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
                 <h3 className="font-extrabold text-sm text-[#1E293B]">Live Activity Feed</h3>
                 <button
@@ -706,7 +706,7 @@ const Dashboard = () => {
                 <div className="space-y-4 flex-1 overflow-y-auto pr-1">
                   {recentActivity.map((act) => (
                     <div key={act.id} className="flex gap-3 text-xs leading-normal">
-                      <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 bg-blue-50 text-[#0D47A1] font-black">
+                      <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 bg-blue-50 text-[#0D47A1] font-black">
                         •
                       </div>
                       <div className="flex-1">

@@ -79,7 +79,7 @@ const ZoneDashboard = () => {
               onClick={() => navigate('/super-admin/service-providers?status=Pending')}
               className="w-full flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 text-left hover:bg-amber-100/70 transition-colors"
             >
-              <span className="w-9 h-9 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center flex-shrink-0">
+              <span className="w-9 h-9 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
                 <AlertTriangle size={18} />
               </span>
               <span className="flex-1">
@@ -90,7 +90,7 @@ const ZoneDashboard = () => {
                   New applications in your zone wait here until approved or rejected.
                 </span>
               </span>
-              <ArrowRight size={16} className="text-amber-600 flex-shrink-0" />
+              <ArrowRight size={16} className="text-amber-600 shrink-0" />
             </button>
           )}
 
@@ -129,7 +129,7 @@ const ZoneDashboard = () => {
                   className="bg-white p-5 rounded-2xl border border-[#E2E8F0] shadow-sm flex items-center justify-between text-left hover:border-[#0D47A1]/40 transition-colors group"
                 >
                   <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${color}`}>
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${color}`}>
                       <Icon size={18} />
                     </div>
                     <div>
@@ -137,7 +137,7 @@ const ZoneDashboard = () => {
                       <p className="text-xs text-[#64748B] mt-0.5">{desc}</p>
                     </div>
                   </div>
-                  <ArrowRight size={16} className="text-[#94A3B8] group-hover:translate-x-1 group-hover:text-[#0D47A1] transition-all flex-shrink-0" />
+                  <ArrowRight size={16} className="text-[#94A3B8] group-hover:translate-x-1 group-hover:text-[#0D47A1] transition-all shrink-0" />
                 </button>
               ))}
             </div>

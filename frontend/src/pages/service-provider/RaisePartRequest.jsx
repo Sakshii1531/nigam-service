@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { goBack } from '../../lib/navigation';
 import { 
   Bell, ClipboardList, Wrench, Search, PlusCircle, 
   Check, Plus, ShieldCheck, ChevronLeft, X,
@@ -196,7 +197,7 @@ const RaisePartRequest = () => {
               </div>
               
               <div className="flex items-center gap-3.5">
-                <div className="w-14 h-14 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600 flex-shrink-0">
+                <div className="w-14 h-14 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600 shrink-0">
                   <ClipboardList className="w-7 h-7" />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -206,7 +207,7 @@ const RaisePartRequest = () => {
                 </div>
               </div>
 
-              <div className="h-[1px] bg-slate-100 my-1"></div>
+              <div className="h-0.25 bg-slate-100 my-1"></div>
 
               <div className="space-y-3 text-xs">
                 <div className="flex justify-between items-center">
@@ -239,11 +240,11 @@ const RaisePartRequest = () => {
       ) : (
         <>
           {/* Header Section — mobile only */}
-          <div className="bg-gradient-to-b from-[#052355] to-[#0A337A] text-white pt-4 sm:pt-5 pb-6 sm:pb-7 px-3 sm:px-4 shadow-md rounded-b-[2rem] sm:rounded-b-[2.2rem] sticky top-0 z-20 lg:hidden">
+          <div className="bg-linear-to-b from-[#052355] to-[#0A337A] text-white pt-4 sm:pt-5 pb-6 sm:pb-7 px-3 sm:px-4 shadow-md rounded-b-[2rem] sm:rounded-b-[2.2rem] sticky top-0 z-20 lg:hidden">
             <div className="flex items-center justify-between">
               <button 
                 type="button"
-                onClick={() => navigate('/service-provider/dashboard')} 
+                onClick={() => goBack(navigate, '/service-provider/dashboard')} 
                 className="p-1.5 hover:bg-white/10 rounded-full text-white transition-colors cursor-pointer"
               >
                 <ChevronLeft className="h-6 w-6 text-white stroke-[2.5]" />
@@ -286,7 +287,7 @@ const RaisePartRequest = () => {
               <div className="flex items-center gap-3.5">
                 <button
                   type="button"
-                  onClick={() => navigate('/service-provider/dashboard')}
+                  onClick={() => goBack(navigate, '/service-provider/dashboard')}
                   className="p-2 bg-slate-100 hover:bg-slate-200 rounded-2xl text-[#052355] transition-colors cursor-pointer"
                   title="Back to Dashboard"
                 >
@@ -432,7 +433,7 @@ const RaisePartRequest = () => {
                           className="bg-white rounded-2xl border border-slate-200/80 p-3.5 sm:p-4 shadow-2xs flex items-center justify-between gap-3 hover:shadow-sm transition-all"
                         >
                           {/* Left: Category Icon Container */}
-                          <div className={`w-12 h-12 rounded-2xl border flex items-center justify-center flex-shrink-0 ${iconData.bg}`}>
+                          <div className={`w-12 h-12 rounded-2xl border flex items-center justify-center shrink-0 ${iconData.bg}`}>
                             {iconData.icon}
                           </div>
 

@@ -28,6 +28,7 @@ import {
 import CustomerBottomNav from "../components/CustomerBottomNav";
 import { motion } from "framer-motion";
 import { apiRequest } from "../lib/apiClient";
+import { goBack } from "../lib/navigation";
 import { payWithRazorpay } from "../lib/razorpayCheckout";
 import { useAuth } from "../context/AuthContext";
 import { useLocationContext } from "../context/LocationContext";
@@ -204,18 +205,26 @@ const AMC = () => {
         <div className="bg-white px-6 py-4 flex items-center justify-between border-b border-border-color shadow-sm sticky top-0 z-30">
           <button
             onClick={() => {
-              if (step === 7) navigate("/buy/amc");
-              else if (step === 2) navigate("/buy/amc/select-appliance");
+              // Each step used to always jump to the specific prior-step
+              // route regardless of how the customer actually got here.
+              // goBack tries real browser history first (so it lands on
+              // wherever they really came from) and only falls back to
+              // these fixed routes for a direct deep link with no history.
+              if (step === 7) goBack(navigate, "/buy/amc");
+              else if (step === 2) goBack(navigate, "/buy/amc/select-appliance");
               else if (step === 3)
-                navigate(
+                goBack(
+                  navigate,
                   `/buy/amc/plans/${encodeURIComponent(selectedAppliance || "")}`,
                 );
               else if (step === 4)
-                navigate(
+                goBack(
+                  navigate,
                   `/buy/amc/enter-details/${encodeURIComponent(selectedAppliance || "")}/${selectedPlanIndex}`,
                 );
               else if (step === 5)
-                navigate(
+                goBack(
+                  navigate,
                   `/buy/amc/review/${encodeURIComponent(selectedAppliance || "")}/${selectedPlanIndex}`,
                 );
             }}
@@ -255,7 +264,7 @@ const AMC = () => {
                     Your Location
                   </span>
                   <div className="flex items-center gap-1">
-                    <span className="text-sm font-bold text-text-primary group-hover:text-brand-blue transition-colors truncate max-w-[170px] sm:max-w-[220px]">
+                    <span className="text-sm font-bold text-text-primary group-hover:text-brand-blue transition-colors truncate max-w-42.5 sm:max-w-55">
                       {currentLocation?.area
                         ? `${currentLocation.area}, ${currentLocation.city}`
                         : currentLocation?.city || "Select Location"}
@@ -265,7 +274,9 @@ const AMC = () => {
                 </div>
               </button>
               <div className="flex items-center gap-2.5">
-                <button className="w-9 h-9 bg-white hover:bg-slate-50 rounded-full relative flex items-center justify-center border border-slate-200 shadow-sm">
+                <button
+                  onClick={() => navigate("/notifications")}
+                  className="w-9 h-9 bg-white hover:bg-slate-50 rounded-full relative flex items-center justify-center border border-slate-200 shadow-sm cursor-pointer">
                   <Bell className="h-4 w-4 text-text-primary" />
                   <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
                 </button>
@@ -288,7 +299,7 @@ const AMC = () => {
             </div>
 
             {/* Service Type Cards — NCC Shield, NCC AMC, Exchange, Buy New */}
-            <div className="flex gap-3 overflow-x-auto no-scrollbar py-2 px-1 -mx-6 px-6 mt-[-10px] md:grid md:grid-cols-3 md:gap-5 md:overflow-visible md:mx-0 md:px-1">
+            <div className="flex gap-3 overflow-x-auto no-scrollbar py-2 px-1 -mx-6 px-6 -mt-2.5 md:grid md:grid-cols-3 md:gap-5 md:overflow-visible md:mx-0 md:px-1">
               {[
                 {
                   name: "NCC Shield\nExtended Warranty",
@@ -404,7 +415,14 @@ const AMC = () => {
                       </svg>
                     </div>
                   ),
-                  onClick: () => navigate("/buy/amc/select-appliance"),
+                  // Already on the AMC home page — jump straight to the
+                  // category picker below instead of re-navigating into the
+                  // "Select Appliance" step, which just reloads this same
+                  // page and drops the categories/plans info already on screen.
+                  onClick: () =>
+                    document
+                      .getElementById("amc-categories")
+                      ?.scrollIntoView({ behavior: "smooth", block: "start" }),
                 },
 
                 {
@@ -431,12 +449,12 @@ const AMC = () => {
                 <div
                   key={idx}
                   onClick={card.onClick}
-                  className="flex-shrink-0 w-[136px] md:w-auto md:flex-shrink bg-white border border-slate-100 rounded-[24px] p-3.5 pt-4 pb-3.5 md:p-6 flex flex-col items-center text-center justify-between shadow-[0_4px_20px_rgb(0,0,0,0.02)] hover:shadow-md transition-all cursor-pointer min-h-[210px] md:min-h-[240px] group">
+                  className="shrink-0 w-34 md:w-auto md:flex-shrink bg-white border border-slate-100 rounded-[24px] p-3.5 pt-4 pb-3.5 md:p-6 flex flex-col items-center text-center justify-between shadow-[0_4px_20px_rgb(0,0,0,0.02)] hover:shadow-md transition-all cursor-pointer min-h-52.5 md:min-h-60 group">
                   <div className="flex flex-col items-center w-full">
                     <div className="group-hover:scale-105 transition-transform duration-300">
                       {card.icon}
                     </div>
-                    <h3 className="text-[11px] font-black text-[#0A2D6E] leading-snug mt-3 mb-1 min-h-[30px] flex items-center justify-center whitespace-pre-line">
+                    <h3 className="text-[11px] font-black text-[#0A2D6E] leading-snug mt-3 mb-1 min-h-7.5 flex items-center justify-center whitespace-pre-line">
                       {card.name}
                     </h3>
                     <p className="text-[8.5px] text-slate-500 font-semibold leading-normal line-clamp-2 px-0.5 whitespace-pre-line">
@@ -450,10 +468,10 @@ const AMC = () => {
               ))}
             </div>
 
-            <div className="bg-gradient-to-br from-[#E8F1FF] to-[#C9DEFF] rounded-2xl p-4 border border-blue-100 shadow-sm flex items-center gap-4 relative overflow-hidden">
+            <div className="bg-linear-to-br from-[#E8F1FF] to-[#C9DEFF] rounded-2xl p-4 border border-blue-100 shadow-sm flex items-center gap-4 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-20 h-20 bg-blue-300/20 rounded-full blur-2xl"></div>
 
-              <div className="w-[100px] h-[120px] flex-shrink-0 relative flex items-center justify-center rounded-2xl overflow-hidden bg-gradient-to-b from-brand-blue/90 to-[#0B4EA2] shadow-md">
+              <div className="w-25 h-30 shrink-0 relative flex items-center justify-center rounded-2xl overflow-hidden bg-linear-to-b from-brand-blue/90 to-[#0B4EA2] shadow-md">
                 <div className="absolute inset-0 flex items-end justify-center pb-2">
                   <img
                     src={waterPurifierImg}
@@ -480,7 +498,7 @@ const AMC = () => {
                     <li
                       key={i}
                       className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-700">
-                      <Check className="h-3 w-3 text-green-600 flex-shrink-0" />{" "}
+                      <Check className="h-3 w-3 text-green-600 shrink-0" />{" "}
                       {t}
                     </li>
                   ))}
@@ -505,7 +523,7 @@ const AMC = () => {
               </div>
               <div className="flex items-center gap-3 overflow-x-auto no-scrollbar pb-1 md:grid md:grid-cols-5 md:gap-4 md:overflow-visible">
                 {[
-                  { name: "TV", img: tvImg, appliance: "Television" },
+                  { name: "Television", img: tvImg, appliance: "Television" },
                   {
                     name: "Refrigerator",
                     img: fridgeImg,
@@ -516,7 +534,11 @@ const AMC = () => {
                     img: washingImg,
                     appliance: "Washing Machine",
                   },
-                  { name: "AC", img: splitAcImg, appliance: "Air Conditioner" },
+                  {
+                    name: "Air Conditioner",
+                    img: splitAcImg,
+                    appliance: "Air Conditioner",
+                  },
                   {
                     name: "Water Purifier",
                     img: waterPurifierImg,
@@ -530,7 +552,7 @@ const AMC = () => {
                         `/buy/amc/plans/${encodeURIComponent(item.appliance)}`,
                       )
                     }
-                    className="flex-shrink-0 w-[72px] md:w-auto md:flex-shrink bg-white border border-slate-200/60 rounded-2xl p-2 md:p-4 flex flex-col items-center justify-center gap-1.5 md:gap-2.5 cursor-pointer shadow-sm hover:border-brand-blue/30 hover:shadow-md transition-all text-center min-h-[88px] md:min-h-[120px]">
+                    className="shrink-0 w-18 md:w-auto md:flex-shrink bg-white border border-slate-200/60 rounded-2xl p-2 md:p-4 flex flex-col items-center justify-center gap-1.5 md:gap-2.5 cursor-pointer shadow-sm hover:border-brand-blue/30 hover:shadow-md transition-all text-center min-h-22 md:min-h-30">
                     <div className="w-10 h-10 md:w-16 md:h-16 flex items-center justify-center overflow-hidden">
                       <img
                         src={item.img}
@@ -647,7 +669,7 @@ const AMC = () => {
                   }}
                   className="bg-white border border-slate-200/80 rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:border-brand-blue/40 shadow-sm hover:scale-[1.01] transition-all text-left">
                   <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 bg-slate-50/50 border border-slate-100 rounded-xl flex items-center justify-center p-1.5 flex-shrink-0">
+                    <div className="w-14 h-14 bg-slate-50/50 border border-slate-100 rounded-xl flex items-center justify-center p-1.5 shrink-0">
                       <img
                         src={item.img}
                         alt={item.name}
@@ -666,7 +688,7 @@ const AMC = () => {
                       </span>
                     </div>
                   </div>
-                  <ChevronRight className="h-5 w-5 text-text-secondary flex-shrink-0" />
+                  <ChevronRight className="h-5 w-5 text-text-secondary shrink-0" />
                 </div>
               ))}
             </div>
@@ -722,7 +744,7 @@ const AMC = () => {
                         </span>
                       </div>
                       <div
-                        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors mt-1 ${
+                        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors mt-1 ${
                           isSelected
                             ? "border-brand-blue bg-white"
                             : "border-slate-300"
@@ -735,7 +757,7 @@ const AMC = () => {
                     <div className="flex flex-col gap-1.5 border-t border-slate-100 pt-2.5">
                       {plan.benefits.map((b, i) => (
                         <div key={i} className="flex items-center gap-2">
-                          <Check className="h-3.5 w-3.5 text-green-600 flex-shrink-0" />
+                          <Check className="h-3.5 w-3.5 text-green-600 shrink-0" />
                           <span className="text-xs text-slate-700 font-semibold">
                             {b}
                           </span>
@@ -778,7 +800,7 @@ const AMC = () => {
             <div className="flex flex-col gap-3">
               {/* Brand */}
               <div className="bg-white border border-slate-200 rounded-2xl p-3.5 flex items-center gap-3 shadow-sm">
-                <Sparkles className="h-5 w-5 text-slate-400 flex-shrink-0" />
+                <Sparkles className="h-5 w-5 text-slate-400 shrink-0" />
                 <div className="flex-1">
                   <label className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider block">
                     Brand *
@@ -799,7 +821,7 @@ const AMC = () => {
 
               {/* Model Number */}
               <div className="bg-white border border-slate-200 rounded-2xl p-3.5 flex items-center gap-3 shadow-sm">
-                <Wrench className="h-5 w-5 text-slate-400 flex-shrink-0" />
+                <Wrench className="h-5 w-5 text-slate-400 shrink-0" />
                 <div className="flex-1">
                   <label className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider block">
                     Model Number *
@@ -816,7 +838,7 @@ const AMC = () => {
 
               {/* Installation Date */}
               <div className="bg-white border border-slate-200 rounded-2xl p-3.5 flex items-center gap-3 shadow-sm">
-                <Calendar className="h-5 w-5 text-slate-400 flex-shrink-0" />
+                <Calendar className="h-5 w-5 text-slate-400 shrink-0" />
                 <div className="flex-1">
                   <label className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider block">
                     Installation Date *
@@ -832,7 +854,7 @@ const AMC = () => {
 
               {/* Pincode */}
               <div className="bg-white border border-slate-200 rounded-2xl p-3.5 flex items-center gap-3 shadow-sm">
-                <MapPin className="h-5 w-5 text-slate-400 flex-shrink-0" />
+                <MapPin className="h-5 w-5 text-slate-400 shrink-0" />
                 <div className="flex-1">
                   <label className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider block">
                     Pincode *
@@ -850,7 +872,7 @@ const AMC = () => {
               {/* Upload Invoice (Optional) */}
               <div className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between shadow-sm">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100 flex-shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100 shrink-0">
                     <FileText className="h-5 w-5 text-slate-400" />
                   </div>
                   <div>
@@ -907,7 +929,7 @@ const AMC = () => {
 
             {/* Product Card */}
             <div className="bg-white border border-slate-200/80 rounded-2xl p-4 flex items-center gap-4 shadow-sm">
-              <div className="w-16 h-16 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center p-1.5 flex-shrink-0">
+              <div className="w-16 h-16 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center p-1.5 shrink-0">
                 <img
                   src={getApplianceImg(selectedAppliance)}
                   alt={selectedAppliance}
@@ -959,7 +981,7 @@ const AMC = () => {
               </h4>
               {selectedPlan.benefits.map((benefit, i) => (
                 <div key={i} className="flex items-center gap-2.5">
-                  <Check className="h-3.5 w-3.5 text-green-600 flex-shrink-0" />
+                  <Check className="h-3.5 w-3.5 text-green-600 shrink-0" />
                   <span className="text-xs text-slate-700">{benefit}</span>
                 </div>
               ))}
@@ -1010,7 +1032,7 @@ const AMC = () => {
                     : "border-slate-200"
                 }`}>
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-brand-blue flex-shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-brand-blue shrink-0">
                     <Zap className="h-5 w-5" />
                   </div>
                   <div>
@@ -1023,7 +1045,7 @@ const AMC = () => {
                   </div>
                 </div>
                 <div
-                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
                     paymentMode === "UPI"
                       ? "border-brand-blue bg-white"
                       : "border-slate-300"
@@ -1075,7 +1097,7 @@ const AMC = () => {
                       : "border-slate-200"
                   }`}>
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center flex-shrink-0">
+                    <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center shrink-0">
                       <Icon className="h-5 w-5 text-slate-400" />
                     </div>
                     <div>
@@ -1088,7 +1110,7 @@ const AMC = () => {
                     </div>
                   </div>
                   <div
-                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
                       paymentMode === id
                         ? "border-brand-blue bg-white"
                         : "border-slate-300"
@@ -1199,7 +1221,7 @@ const AMC = () => {
               </p>
             </div>
 
-            <div className="w-full bg-gradient-to-br from-brand-navy via-[#0C3F85] to-brand-blue rounded-3xl p-6 text-white shadow-2xl relative overflow-hidden border border-white/10">
+            <div className="w-full bg-linear-to-br from-brand-navy via-[#0C3F85] to-brand-blue rounded-3xl p-6 text-white shadow-2xl relative overflow-hidden border border-white/10">
               <div className="absolute -top-8 -right-8 w-24 h-24 bg-white/5 rounded-full blur-xl"></div>
               <div className="flex justify-between items-start mb-6">
                 <div>
