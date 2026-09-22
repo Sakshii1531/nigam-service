@@ -73,13 +73,23 @@ export default defineConfig({
               priority: 5,
             },
             {
-              name: 'pages-serviceProvider',
-              test: /src[\\/]pages[\\/]serviceProvider/,
+              name: 'pages-service-provider',
+              test: /src[\\/]pages[\\/]service-provider/,
               priority: 5,
             },
             {
               name: 'pages-buy-warranty',
               test: /src[\\/]pages[\\/](Buy|AMC|ExtendWarranty|Exchange|BuyProduct|BuyNew|PartnerWarranty|RaiseWarrantyRequest|SelectBrand|SelectProduct|SelectIssue)/,
+              priority: 4,
+            },
+            {
+              name: 'pages-booking',
+              test: /src[\\/]pages[\\/](Booking|Bookings|BookingDetails|BookingFlow|SearchingPartner|BookingSuccess)/,
+              priority: 4,
+            },
+            {
+              name: 'pages-customer-account',
+              test: /src[\\/]pages[\\/](Profile|EditProfile|SavedAddresses|Coupons|MembershipPlans|RewardsPlayZone|ReferEarn|Faqs|HelpSupport|MyOrders|MyWishlist)/,
               priority: 4,
             },
             {
