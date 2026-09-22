@@ -997,6 +997,22 @@ const Dashboard = ({ defaultType }) => {
     };
   }, []);
 
+  const services = tilesFor(
+    "dashboard-service",
+    [
+      { id: 1, name: "AC Repair", img: acImg },
+      { id: 2, name: "Washing Machine", img: wasingImg },
+      { id: 3, name: "Electrician", img: electricianImg },
+      { id: 4, name: "Plumber", img: plumberImg },
+      { id: 5, name: "Full Home Cleaning", img: cleaningImg },
+      { id: 6, name: "Salon for Women", img: saloonImg },
+      { id: 7, name: "Spa & Massage", img: spaImg },
+    ],
+    (t) => {
+      const fallback = getServiceFallbackImage(t.title);
+      return { id: t.id, name: t.title, img: t.imageUrl || fallback, fallbackImage: fallback };
+    },
+  );
   const displayServiceCategories =
     serviceCategories.length > 0
       ? serviceCategories.map((c) => ({
@@ -1394,45 +1410,39 @@ const Dashboard = ({ defaultType }) => {
             ref={serviceRef}
             className="flex overflow-x-auto gap-3 sm:gap-4 pb-3 sm:pb-4 -mx-1 px-1 sm:-mx-2 sm:px-2 snap-x md:snap-none no-scrollbar md:w-full md:mx-0 md:px-0 md:pb-0 relative">
             <div className="flex gap-3 sm:gap-4 min-w-full md:gap-8 lg:gap-10 md:w-max">
-              {[...displayServiceCategories, ...displayServiceCategories].map(
-                (cat, index) => (
-                  <div
-                    key={`${cat.id}-${index}`}
-                    onClick={() => {
-                      if (activeType === "in-warranty") {
-                        setSelectedServiceForWarranty({
-                          title: cat.name,
-                          price: 499,
-                        });
-                        setShowWarrantyModal(true);
-                        return;
-                      }
-                      navigate(
-                        `/book/${encodeURIComponent(cat.key || cat.name)}`,
-                      );
-                    }}
-                    className={`flex flex-col items-center gap-1.5 sm:gap-2 cursor-pointer shrink-0 w-20 sm:w-24 snap-start md:snap-none md:w-44 md:bg-white md:rounded-2xl md:p-4 md:hover:shadow-md md:transition-all ${
-                      index >= displayServiceCategories.length
-                        ? "hidden md:flex"
-                        : ""
-                    }`}>
-                    <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-full md:h-20 lg:h-24 bg-transparent rounded-2xl flex items-center justify-center transition-all overflow-hidden">
-                      <img
-                        src={cat.img || cat.fallbackImage || acImg}
-                        alt={cat.name}
-                        onError={(e) => {
-                          e.currentTarget.onerror = null;
-                          e.currentTarget.src = cat.fallbackImage || acImg;
-                        }}
-                        className="w-full h-full object-contain mix-blend-multiply p-1.5 sm:p-2"
-                      />
-                    </div>
-                    <span className="text-[11px] sm:text-xs font-semibold text-text-primary text-center line-clamp-2 md:whitespace-normal md:leading-tight w-full">
-                      {cat.name}
-                    </span>
+              {displayServiceCategories.map((cat, index) => (
+                <div
+                  key={`${cat.id || cat.key || cat.name}-${index}`}
+                  onClick={() => {
+                    if (activeType === "in-warranty") {
+                      setSelectedServiceForWarranty({
+                        title: cat.name,
+                        price: 499,
+                      });
+                      setShowWarrantyModal(true);
+                      return;
+                    }
+                    navigate(
+                      `/book/${encodeURIComponent(cat.key || cat.name)}`,
+                    );
+                  }}
+                  className="flex flex-col items-center gap-1.5 sm:gap-2 cursor-pointer shrink-0 w-20 sm:w-24 snap-start md:snap-none md:w-44 md:bg-white md:rounded-2xl md:p-4 md:hover:shadow-md md:transition-all">
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-full md:h-20 lg:h-24 bg-transparent rounded-2xl flex items-center justify-center transition-all overflow-hidden">
+                    <img
+                      src={cat.img || cat.fallbackImage || acImg}
+                      alt={cat.name}
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = cat.fallbackImage || acImg;
+                      }}
+                      className="w-full h-full object-contain mix-blend-multiply p-1.5 sm:p-2"
+                    />
                   </div>
-                ),
-              )}
+                  <span className="text-[11px] sm:text-xs font-semibold text-text-primary text-center line-clamp-2 md:whitespace-normal md:leading-tight w-full">
+                    {cat.name}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
         </div>

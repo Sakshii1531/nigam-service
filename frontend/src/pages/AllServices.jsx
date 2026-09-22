@@ -63,7 +63,7 @@ const AllServices = () => {
     if (!searchQuery.trim()) return categories;
     const query = searchQuery.toLowerCase().trim();
     return categories.filter((cat) => {
-      const matchCat = cat.name.toLowerCase().includes(query);
+      const matchCat = (cat.name || '').toLowerCase().includes(query);
       const matchService = (cat.services || []).some((s) =>
         (s.name || '').toLowerCase().includes(query) ||
         (s.description || '').toLowerCase().includes(query)
@@ -141,6 +141,10 @@ const AllServices = () => {
           <div className="bg-white rounded-2xl p-8 sm:p-12 text-center border border-slate-200/80 max-w-md mx-auto my-10">
             <p className="text-sm text-rose-600 font-semibold">{error}</p>
           </div>
+        ) : categories.length === 0 ? (
+          <div className="bg-white rounded-2xl p-8 sm:p-12 text-center border border-slate-200/80 max-w-md mx-auto my-10">
+            <p className="text-sm text-text-secondary">No service categories are available right now.</p>
+          </div>
         ) : filteredCategories.length === 0 ? (
           <div className="bg-white rounded-2xl p-8 sm:p-12 text-center border border-slate-200/80 max-w-md mx-auto my-10">
             <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3 text-slate-400">
@@ -162,8 +166,8 @@ const AllServices = () => {
               const services = cat.services || [];
               return (
                 <div
-                  key={cat.key}
-                  onClick={() => navigate(`/book/${encodeURIComponent(cat.key)}`)}
+                  key={cat.key || cat.id || cat.name}
+                  onClick={() => navigate(`/book/${encodeURIComponent(cat.key || cat.name)}`)}
                   className="group bg-white border border-slate-200/80 hover:border-brand-blue/50 rounded-2xl p-4 sm:p-5 flex flex-col justify-between gap-4 cursor-pointer transition-all duration-200 shadow-2xs hover:shadow-md hover:-translate-y-0.5"
                 >
                   {/* Category Top: Icon & Title */}
