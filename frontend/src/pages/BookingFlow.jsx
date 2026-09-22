@@ -103,35 +103,35 @@ const OptionCard = ({ icon, name, desc, selected, onClick }) => (
   <button
     type="button"
     onClick={onClick}
-    className={`relative flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all duration-200 active:scale-[0.98] text-center w-full cursor-pointer ${
+    className={`relative flex flex-col items-center gap-1.5 p-3 sm:p-4 rounded-2xl border-2 transition-all duration-200 active:scale-[0.98] text-center w-full cursor-pointer ${
       selected
         ? "border-brand-blue bg-linear-to-b from-blue-50/80 to-blue-100/30 shadow-md shadow-brand-blue/10 ring-1 ring-brand-blue"
         : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50 shadow-2xs"
     }`}>
     {selected && (
-      <div className="absolute top-2.5 right-2.5 w-5 h-5 rounded-full bg-brand-blue flex items-center justify-center shadow-xs">
-        <Check className="w-3 h-3 text-white stroke-[3]" />
+      <div className="absolute top-2 right-2 sm:top-2.5 sm:right-2.5 w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-brand-blue flex items-center justify-center shadow-xs">
+        <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white stroke-[3]" />
       </div>
     )}
 
     <div
-      className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl transition-transform ${
+      className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center text-xl sm:text-2xl transition-transform ${
         selected ? "bg-white shadow-xs scale-105" : "bg-slate-50"
       }`}>
       {isImageIcon(icon) ? (
-        <img src={icon} alt={name} className="w-7 h-7 object-contain" />
+        <img src={icon} alt={name} className="w-6 h-6 sm:w-7 sm:h-7 object-contain" />
       ) : (
         icon || "⚡"
       )}
     </div>
 
     <span
-      className={`text-[13px] font-black leading-tight ${selected ? "text-brand-blue" : "text-slate-900"}`}>
+      className={`text-[12px] sm:text-[13px] font-black leading-tight ${selected ? "text-brand-blue" : "text-slate-900"}`}>
       {name}
     </span>
     {desc && (
       <span
-        className={`text-[10px] font-medium leading-tight ${selected ? "text-brand-blue/80" : "text-slate-400"}`}>
+        className={`text-[9px] sm:text-[10px] font-medium leading-tight ${selected ? "text-brand-blue/80" : "text-slate-400"}`}>
         {desc}
       </span>
     )}
@@ -154,7 +154,7 @@ const BottomBar = ({
   return (
   <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/80 shadow-[0_-8px_20px_rgba(0,0,0,0.08)] z-30 transition-all md:hidden">
     {/* Summary row */}
-    <div className="w-full flex items-center justify-between px-5 pt-3 pb-1.5">
+    <div className="w-full flex items-center justify-between px-3.5 sm:px-5 pt-2.5 pb-1.5 gap-2.5">
       <div className="flex items-center gap-2.5 flex-1 min-w-0">
         <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-base shrink-0">
           {isImageIcon(icon) ? (
@@ -163,29 +163,29 @@ const BottomBar = ({
             icon || "🔧"
           )}
         </div>
-        <div className="flex flex-col items-start min-w-0 text-left">
+        <div className="flex flex-col min-w-0 flex-1 text-left">
           {label && (
-            <span className="text-[12px] font-black text-slate-900 truncate">
+            <p className="text-[12px] font-black text-slate-900 truncate block">
               {label}
-            </span>
+            </p>
           )}
           {sublabel && (
-            <span className="text-[10px] text-slate-400 font-semibold truncate">
+            <p className="text-[10px] text-slate-400 font-semibold truncate block mt-0.5">
               {sublabel}
-            </span>
+            </p>
           )}
         </div>
       </div>
       {showPrice && price > 0 && (
-        <div className="flex flex-col items-end gap-0.5 shrink-0">
-          <span className="text-[16px] font-black text-slate-900">
+        <div className="flex flex-col items-end shrink-0 pl-1">
+          <span className="text-[15px] sm:text-[16px] font-black text-slate-900 leading-tight">
             ₹{price}
           </span>
           {breakdown.length > 0 && (
             <button
               type="button"
               onClick={() => setShowBreakdown((v) => !v)}
-              className="text-[9px] font-bold text-brand-blue underline decoration-dotted cursor-pointer"
+              className="text-[9px] font-bold text-brand-blue underline decoration-dotted cursor-pointer whitespace-nowrap mt-0.5"
             >
               {showBreakdown ? "Hide breakdown" : "View breakdown"}
             </button>
@@ -193,10 +193,9 @@ const BottomBar = ({
         </div>
       )}
     </div>
-    {/* Price breakdown — why the total is what it is (base price, product
-        type add-on, quantity, any extra type booked as a separate visit). */}
+    {/* Price breakdown — why the total is what it is */}
     {showBreakdown && breakdown.length > 0 && (
-      <div className="px-5 pb-2 flex flex-col gap-1.5 border-t border-slate-100 pt-2 mx-5">
+      <div className="px-3.5 sm:px-5 pb-2 flex flex-col gap-1.5 border-t border-slate-100 pt-2 mx-3.5 sm:mx-5">
         {breakdown.map((row, idx) => (
           <div key={idx} className="flex justify-between text-[11px]">
             <span className={row.bold ? "font-black text-slate-900" : "font-semibold text-slate-500"}>
@@ -210,12 +209,12 @@ const BottomBar = ({
       </div>
     )}
     {/* CTA */}
-    <div className="px-5 pb-4 pt-1">
+    <div className="px-3.5 sm:px-5 pb-3.5 pt-1">
       <button
         type="button"
         disabled={btnDisabled}
         onClick={onBtn}
-        className={`w-full font-black py-3.5 rounded-2xl text-[14px] transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 ${
+        className={`w-full font-black py-3 rounded-2xl text-[14px] transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 ${
           btnDisabled
             ? "bg-slate-200 text-slate-400 cursor-not-allowed"
             : "bg-brand-blue text-white hover:bg-[#1565C0] shadow-md shadow-brand-blue/25"
@@ -776,19 +775,19 @@ const BookingFlow = () => {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans max-w-screen-2xl mx-auto w-full relative">
       {/* ── Fixed Header ── */}
-      <div className="bg-white/90 backdrop-blur-md sticky top-0 z-20 shadow-2xs border-b border-slate-100 px-4 md:px-8 py-3.5 flex items-center justify-between">
+      <div className="bg-white/90 backdrop-blur-md sticky top-0 z-20 shadow-2xs border-b border-slate-100 px-3.5 sm:px-6 md:px-8 py-2.5 sm:py-3.5 flex items-center justify-between">
         <button
           type="button"
           onClick={goBack}
-          className="w-9 h-9 hover:bg-slate-100 rounded-full transition-all flex items-center justify-center text-slate-700 active:scale-95 cursor-pointer">
-          <ArrowLeft className="h-5 w-5 stroke-[2.5]" />
+          className="w-8 h-8 sm:w-9 sm:h-9 hover:bg-slate-100 rounded-full transition-all flex items-center justify-center text-slate-700 active:scale-95 cursor-pointer">
+          <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5 stroke-[2.5]" />
         </button>
 
-        <div className="flex-1 flex flex-col items-center justify-center">
+        <div className="flex-1 flex flex-col items-center justify-center px-2">
           <StepBar currentStep={step} total={4} />
         </div>
 
-        <div className="w-9 h-9 flex items-center justify-center">
+        <div className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center">
           <span className="text-[10px] font-black text-brand-blue bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
             {step}/4
           </span>
@@ -796,21 +795,21 @@ const BookingFlow = () => {
       </div>
 
       {/* ── Page Content ── */}
-      <div className="flex-1 px-4 md:px-8 py-6 pb-36 md:pb-12 overflow-y-auto">
+      <div className="flex-1 px-3.5 sm:px-6 md:px-8 py-4 sm:py-6 pb-36 md:pb-12 overflow-y-auto">
         <div className="flex flex-col md:grid md:grid-cols-12 md:gap-8 items-start">
           {/* Left Column: Step Content */}
           <div className="w-full md:col-span-7 lg:col-span-8 flex flex-col gap-3">
             {/* Step Title Header Banner */}
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-[10px] font-black uppercase tracking-widest text-brand-blue bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100/80">
+                <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-brand-blue bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100/80">
                   {catKey} Service
                 </span>
               </div>
-              <h1 className="text-[22px] md:text-2xl font-black text-slate-900 leading-tight">
+              <h1 className="text-[19px] sm:text-2xl font-black text-slate-900 leading-tight">
                 {title}
               </h1>
-              <p className="text-[12px] md:text-sm text-slate-500 font-semibold mt-0.5">
+              <p className="text-[11px] sm:text-xs md:text-sm text-slate-500 font-semibold mt-0.5">
                 {subtitle}
               </p>
             </div>
@@ -984,7 +983,7 @@ const BookingFlow = () => {
 
             {/* ══ STEP 2: CHOOSE SERVICE ═══════════════════════════════════════════ */}
             {step === 2 && (
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-2.5 sm:gap-3">
                 <p className="text-[11px] font-black text-slate-400 uppercase tracking-wider px-1 mb-0.5">
                   Available Service Packages *
                 </p>
@@ -995,73 +994,102 @@ const BookingFlow = () => {
                       key={svc.id}
                       type="button"
                       onClick={() => setService(svc.id)}
-                      className={`relative flex items-center gap-3.5 p-4 rounded-2xl border-2 transition-all duration-200 active:scale-[0.99] text-left w-full cursor-pointer ${
+                      className={`group relative flex flex-col p-3.5 sm:p-4 rounded-2xl border-2 transition-all duration-200 active:scale-[0.99] text-left w-full cursor-pointer ${
                         isSelected
-                          ? "border-brand-blue bg-linear-to-r from-blue-50/90 to-indigo-50/30 shadow-md shadow-brand-blue/10 ring-1 ring-brand-blue"
-                          : "border-slate-200 bg-white hover:border-slate-300 shadow-2xs"
+                          ? "border-brand-blue bg-linear-to-br from-blue-50/90 via-indigo-50/30 to-white shadow-md shadow-brand-blue/10 ring-1 ring-brand-blue"
+                          : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50 shadow-2xs"
                       }`}>
-                      {/* Icon */}
-                      <div
-                        className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 text-xl overflow-hidden border transition-all ${
-                          isSelected
-                            ? "bg-white border-blue-200 shadow-xs"
-                            : "bg-slate-50 border-slate-100"
-                        }`}>
-                        {isImageIcon(svc.icon) ? (
-                          <img
-                            src={svc.icon}
-                            alt={svc.name}
-                            className="w-7 h-7 object-contain"
-                          />
-                        ) : (
-                          svc.icon || "🔧"
-                        )}
+                      {/* Top Row: Icon + Title + Price + Radio */}
+                      <div className="flex items-start justify-between gap-3 w-full">
+                        {/* Icon & Title */}
+                        <div className="flex items-start gap-2.5 sm:gap-3 flex-1 min-w-0">
+                          <div
+                            className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center shrink-0 text-xl overflow-hidden border transition-all ${
+                              isSelected
+                                ? "bg-white border-blue-200 shadow-xs"
+                                : "bg-slate-50 border-slate-100"
+                            }`}>
+                            {isImageIcon(svc.icon) ? (
+                              <img
+                                src={svc.icon}
+                                alt={svc.name}
+                                className="w-6 h-6 object-contain"
+                              />
+                            ) : (
+                              svc.icon || "🔧"
+                            )}
+                          </div>
+
+                          <div className="flex-1 min-w-0 pt-0.5">
+                            <h3
+                              className={`text-[13px] sm:text-[15px] font-black leading-snug ${
+                                isSelected ? "text-brand-blue" : "text-slate-900"
+                              }`}>
+                              {svc.name}
+                            </h3>
+                            {/* Price line for mobile (inline with unit) */}
+                            <div className="flex items-baseline gap-1.5 mt-1 sm:hidden">
+                              <span
+                                className={`text-[15px] font-black ${
+                                  isSelected ? "text-brand-blue" : "text-slate-900"
+                                }`}>
+                                ₹{svc.price}
+                              </span>
+                              <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">
+                                {svc.unit || "per unit"}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Right: Desktop Price & Radio */}
+                        <div className="flex items-center gap-3 shrink-0 pt-0.5">
+                          {/* Desktop Price */}
+                          <div className="hidden sm:flex flex-col items-end">
+                            <span
+                              className={`text-[16px] font-black ${
+                                isSelected ? "text-brand-blue" : "text-slate-900"
+                              }`}>
+                              ₹{svc.price}
+                            </span>
+                            <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">
+                              {svc.unit || "per unit"}
+                            </span>
+                          </div>
+
+                          {/* Radio */}
+                          <div
+                            className={`w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center transition-all ${
+                              isSelected
+                                ? "border-brand-blue bg-brand-blue ring-2 ring-brand-blue/20"
+                                : "border-slate-300 bg-white group-hover:border-slate-400"
+                            }`}>
+                            {isSelected && (
+                              <div className="w-2 h-2 rounded-full bg-white" />
+                            )}
+                          </div>
+                        </div>
                       </div>
 
-                      {/* Name + desc */}
-                      <div className="flex-1 min-w-0">
+                      {/* Full-width Description */}
+                      {svc.desc && (
                         <p
-                          className={`text-[13px] font-black leading-tight ${isSelected ? "text-brand-blue" : "text-slate-900"}`}>
-                          {svc.name}
+                          className={`text-[11px] sm:text-xs font-medium mt-2.5 pt-2 border-t leading-relaxed ${
+                            isSelected
+                              ? "text-slate-600 border-blue-100"
+                              : "text-slate-500 border-slate-100"
+                          }`}>
+                          {svc.desc}
                         </p>
-                        {svc.desc && (
-                          <p
-                            className={`text-[10px] font-medium mt-1 leading-snug ${isSelected ? "text-brand-blue/80" : "text-slate-500"}`}>
-                            {svc.desc}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Price */}
-                      <div className="flex flex-col items-end shrink-0 pl-1">
-                        <span
-                          className={`text-[15px] font-black ${isSelected ? "text-brand-blue" : "text-slate-900"}`}>
-                          ₹{svc.price}
-                        </span>
-                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">
-                          {svc.unit || "per unit"}
-                        </span>
-                      </div>
-
-                      {/* Radio */}
-                      <div
-                        className={`w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center transition-all ${
-                          isSelected
-                            ? "border-brand-blue bg-brand-blue"
-                            : "border-slate-300 bg-white"
-                        }`}>
-                        {isSelected && (
-                          <div className="w-2.5 h-2.5 rounded-full bg-white" />
-                        )}
-                      </div>
+                      )}
                     </button>
                   );
                 })}
 
                 {/* Note alert box */}
-                <div className="bg-amber-50/80 border border-amber-200/80 rounded-2xl p-3.5 flex items-start gap-3 mt-1 shadow-2xs">
-                  <span className="text-lg leading-none">💡</span>
-                  <div>
+                <div className="bg-amber-50/80 border border-amber-200/80 rounded-2xl p-3 sm:p-3.5 flex items-start gap-2.5 mt-1 shadow-2xs">
+                  <span className="text-base sm:text-lg leading-none shrink-0 mt-0.5">💡</span>
+                  <div className="min-w-0 flex-1">
                     <p className="text-[11px] font-black text-amber-900">
                       Price Transparency Note
                     </p>
@@ -1822,21 +1850,21 @@ const BookingFlow = () => {
           onBtn={handleBarBtn}
         />
       ) : (
-        <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/80 shadow-[0_-8px_20px_rgba(0,0,0,0.08)] z-30 px-4 pb-4 pt-3 flex flex-col gap-2.5 md:hidden">
+        <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/80 shadow-[0_-8px_20px_rgba(0,0,0,0.08)] z-30 px-3.5 sm:px-4 pb-3.5 pt-2.5 flex flex-col gap-2 md:hidden">
           {/* Summary Card */}
-          <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3 flex items-center justify-between shadow-2xs">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-slate-600">
-                <CalendarDays className="w-5 h-5 text-brand-blue" />
+          <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-2.5 sm:p-3 flex items-center justify-between shadow-2xs gap-2">
+            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-slate-600 shrink-0">
+                <CalendarDays className="w-4 h-4 sm:w-5 sm:h-5 text-brand-blue" />
               </div>
-              <div className="text-left">
-                <p className="text-[13px] font-black text-slate-900 leading-tight">
+              <div className="text-left min-w-0 flex-1">
+                <p className="text-[12px] sm:text-[13px] font-black text-slate-900 leading-tight truncate block">
                   {selectedDate
                     ? selectedDate.split(" ").slice(0, 3).join(" ")
                     : "Select Date"}
                   {brand ? ` • ${brand}` : ""}
                 </p>
-                <p className="text-[10px] text-slate-400 font-bold mt-0.5">
+                <p className="text-[10px] text-slate-400 font-bold mt-0.5 truncate block">
                   {!brand
                     ? "Select Brand, Date & Time Slot"
                     : timeGroup
@@ -1845,11 +1873,11 @@ const BookingFlow = () => {
                 </p>
               </div>
             </div>
-            <div className="flex flex-col items-end">
-              <span className="text-[16px] font-black text-slate-900 leading-none">
+            <div className="flex flex-col items-end shrink-0 pl-1">
+              <span className="text-[15px] sm:text-[16px] font-black text-slate-900 leading-none">
                 ₹{totalPrice}
               </span>
-              <span className="text-[9px] text-slate-400 font-bold mt-1 uppercase tracking-wider">
+              <span className="text-[8px] sm:text-[9px] text-slate-400 font-bold mt-1 uppercase tracking-wider">
                 Total Estimate
               </span>
             </div>
@@ -1859,7 +1887,7 @@ const BookingFlow = () => {
             type="button"
             disabled={!step3Valid}
             onClick={goNext}
-            className={`w-full font-black py-3.5 rounded-2xl text-[14px] transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 ${
+            className={`w-full font-black py-3 rounded-2xl text-[14px] transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 ${
               !step3Valid
                 ? "bg-slate-200 text-slate-400 cursor-not-allowed"
                 : "bg-brand-blue text-white hover:bg-[#1565C0] shadow-md shadow-brand-blue/25"
