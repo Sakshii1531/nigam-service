@@ -553,7 +553,7 @@ export const getCatalogEntry = (category) => {
       services: {
         default: resolvedServices
       },
-      brands: categoryConfig.brands?.length ? categoryConfig.brands : (staticDefault.brands || ['LG', 'Samsung', 'Whirlpool', 'Panasonic']),
+      brands: categoryConfig.brands?.length ? categoryConfig.brands : (staticDefault.brands || []),
       whyBrandPoints: categoryConfig.whyBrandPoints?.length
         ? categoryConfig.whyBrandPoints
         : (staticDefault.whyBrandPoints || ['Brand certified expert serviceProviders', 'Correct parts calibration', 'Genuine brand replacement parts']),
@@ -653,7 +653,7 @@ export const getCatalogEntry = (category) => {
       : categoryConfig.brands;
   }
   if (!brands || brands.length === 0) {
-    brands = staticDefault.brands || ['LG', 'Samsung', 'Whirlpool', 'Panasonic'];
+    brands = staticDefault.brands || [];
   }
 
   // Parse whyBrandPoints

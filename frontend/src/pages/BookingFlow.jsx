@@ -152,78 +152,80 @@ const BottomBar = ({
 }) => {
   const [showBreakdown, setShowBreakdown] = useState(false);
   return (
-  <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/80 shadow-[0_-8px_20px_rgba(0,0,0,0.08)] z-30 transition-all md:hidden">
-    {/* Summary row */}
-    <div className="w-full flex items-center justify-between px-3.5 sm:px-5 pt-2.5 pb-1.5 gap-2.5">
-      <div className="flex items-center gap-2.5 flex-1 min-w-0">
-        <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-base shrink-0">
-          {isImageIcon(icon) ? (
-            <img src={icon} alt="" className="w-5 h-5 object-contain" />
-          ) : (
-            icon || "🔧"
-          )}
+    <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/80 shadow-[0_-8px_20px_rgba(0,0,0,0.08)] z-30 transition-all md:hidden">
+      {/* Summary row */}
+      <div className="w-full flex items-center justify-between px-3.5 sm:px-5 pt-2.5 pb-1.5 gap-2.5">
+        <div className="flex items-center gap-2.5 flex-1 min-w-0">
+          <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-base shrink-0">
+            {isImageIcon(icon) ? (
+              <img src={icon} alt="" className="w-5 h-5 object-contain" />
+            ) : (
+              icon || "🔧"
+            )}
+          </div>
+          <div className="flex flex-col min-w-0 flex-1 text-left">
+            {label && (
+              <p className="text-[12px] font-black text-slate-900 truncate block">
+                {label}
+              </p>
+            )}
+            {sublabel && (
+              <p className="text-[10px] text-slate-400 font-semibold truncate block mt-0.5">
+                {sublabel}
+              </p>
+            )}
+          </div>
         </div>
-        <div className="flex flex-col min-w-0 flex-1 text-left">
-          {label && (
-            <p className="text-[12px] font-black text-slate-900 truncate block">
-              {label}
-            </p>
-          )}
-          {sublabel && (
-            <p className="text-[10px] text-slate-400 font-semibold truncate block mt-0.5">
-              {sublabel}
-            </p>
-          )}
-        </div>
+        {showPrice && price > 0 && (
+          <div className="flex flex-col items-end shrink-0 pl-1">
+            <span className="text-[15px] sm:text-[16px] font-black text-slate-900 leading-tight">
+              ₹{price}
+            </span>
+            {breakdown.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowBreakdown((v) => !v)}
+                className="text-[9px] font-bold text-brand-blue underline decoration-dotted cursor-pointer whitespace-nowrap mt-0.5"
+              >
+                {showBreakdown ? "Hide breakdown" : "View breakdown"}
+              </button>
+            )}
+          </div>
+        )}
       </div>
-      {showPrice && price > 0 && (
-        <div className="flex flex-col items-end shrink-0 pl-1">
-          <span className="text-[15px] sm:text-[16px] font-black text-slate-900 leading-tight">
-            ₹{price}
-          </span>
-          {breakdown.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setShowBreakdown((v) => !v)}
-              className="text-[9px] font-bold text-brand-blue underline decoration-dotted cursor-pointer whitespace-nowrap mt-0.5"
-            >
-              {showBreakdown ? "Hide breakdown" : "View breakdown"}
-            </button>
-          )}
+
+      {/* Price breakdown */}
+      {showBreakdown && breakdown.length > 0 && (
+        <div className="px-3.5 sm:px-5 pb-2 flex flex-col gap-1.5 border-t border-slate-100 pt-2 mx-3.5 sm:mx-5">
+          {breakdown.map((row, idx) => (
+            <div key={idx} className="flex justify-between text-[11px]">
+              <span className={row.bold ? "font-black text-slate-900" : "font-semibold text-slate-500"}>
+                {row.label}
+              </span>
+              <span className={row.bold ? "font-black text-slate-900" : "font-bold text-slate-700"}>
+                {row.amount != null ? `₹${row.amount}` : ""}
+              </span>
+            </div>
+          ))}
         </div>
       )}
-    </div>
-    {/* Price breakdown — why the total is what it is */}
-    {showBreakdown && breakdown.length > 0 && (
-      <div className="px-3.5 sm:px-5 pb-2 flex flex-col gap-1.5 border-t border-slate-100 pt-2 mx-3.5 sm:mx-5">
-        {breakdown.map((row, idx) => (
-          <div key={idx} className="flex justify-between text-[11px]">
-            <span className={row.bold ? "font-black text-slate-900" : "font-semibold text-slate-500"}>
-              {row.label}
-            </span>
-            <span className={row.bold ? "font-black text-slate-900" : "font-bold text-slate-700"}>
-              {row.amount != null ? `₹${row.amount}` : ""}
-            </span>
-          </div>
-        ))}
+
+      {/* CTA */}
+      <div className="px-3.5 sm:px-5 pb-3.5 pt-1">
+        <button
+          type="button"
+          disabled={btnDisabled}
+          onClick={onBtn}
+          className={`w-full font-black py-3 rounded-2xl text-[14px] transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 ${
+            btnDisabled
+              ? "bg-slate-200 text-slate-400 cursor-not-allowed"
+              : "bg-brand-blue text-white hover:bg-[#1565C0] shadow-md shadow-brand-blue/25"
+          }`}>
+          {btnLabel}
+          {!btnDisabled && <ArrowLeft className="w-4 h-4 rotate-180" />}
+        </button>
       </div>
-    )}
-    {/* CTA */}
-    <div className="px-3.5 sm:px-5 pb-3.5 pt-1">
-      <button
-        type="button"
-        disabled={btnDisabled}
-        onClick={onBtn}
-        className={`w-full font-black py-3 rounded-2xl text-[14px] transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 ${
-          btnDisabled
-            ? "bg-slate-200 text-slate-400 cursor-not-allowed"
-            : "bg-brand-blue text-white hover:bg-[#1565C0] shadow-md shadow-brand-blue/25"
-        }`}>
-        {btnLabel}
-        {!btnDisabled && <ArrowLeft className="w-4 h-4 rotate-180" />}
-      </button>
     </div>
-  </div>
   );
 };
 
@@ -703,7 +705,8 @@ const BookingFlow = () => {
   const step1Valid =
     !data.productTypes || data.productTypes.length === 0 ? true : !!productType;
   const step2Valid = !!service;
-  const step3Valid = !!brand && !!selectedDate && !!timeGroup;
+  const hasBrands = Boolean(data.brands && data.brands.length > 0);
+  const step3Valid = (!hasBrands || !!brand) && !!selectedDate && !!timeGroup;
 
   const isMobileValid = !!mobile?.trim() && /^\d{10}$/.test(mobile.trim());
   const isPincodeValid =
@@ -725,7 +728,9 @@ const BookingFlow = () => {
     },
     3: {
       title: "Schedule Visit",
-      subtitle: "Select brand, preferred date & time slot",
+      subtitle: hasBrands
+        ? "Select brand, preferred date & time slot"
+        : "Select preferred date & time slot",
     },
     4: {
       title: "Address & Payment",
@@ -749,10 +754,12 @@ const BookingFlow = () => {
   };
   const getBarBtnLabel = () => {
     if (step === 1) return "Continue — Select Service";
-    if (step === 2) return "Continue — Schedule Visit";
+    if (step === 2) return !step2Valid ? "Select Service Package" : "Continue — Schedule Visit";
     if (step === 3)
       return !step3Valid
-        ? "Select Brand, Date & Slot"
+        ? hasBrands && !brand
+          ? "Select Brand, Date & Slot"
+          : "Select Date & Time Slot"
         : "Continue — Address & Payment";
     if (submitting) return "Processing Booking...";
     if (!step4Valid) return "Enter Address & Mobile Details";
@@ -1104,49 +1111,50 @@ const BookingFlow = () => {
 
             {/* ══ STEP 3: SCHEDULE VISIT (BRAND, DATE, TIME) ══════════════════════ */}
             {step === 3 && (
-              <div className="flex flex-col gap-4">
-                {/* Brand dropdown */}
-                <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs">
-                  <p className="text-[12px] font-black text-slate-900 mb-2.5 flex items-center justify-between">
-                    <span>Select Brand *</span>
-                    {brand && (
-                      <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-1">
-                        <CheckCircle2 size={12} /> Selected
-                      </span>
-                    )}
-                  </p>
-                  <div className="relative">
-                    <select
-                      value={brand}
-                      onChange={(e) => setBrand(e.target.value)}
-                      className={`w-full appearance-none px-4 py-3 pr-10 bg-slate-50 border rounded-xl text-[13px] font-bold outline-none transition-all cursor-pointer ${
-                        brand
-                          ? "text-slate-900 border-brand-blue bg-blue-50/20"
-                          : "text-slate-400 border-amber-300 bg-amber-50/30"
-                      }`}>
-                      <option value="" disabled>
-                        Choose Appliance Brand
-                      </option>
-                      {data.brands.map((b) => (
-                        <option key={b} value={b}>
-                          {b}
-                        </option>
-                      ))}
-                      <option value="Other">Other / Not Listed</option>
-                    </select>
-                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                  </div>
-                  {!brand && (
-                    <p className="text-[11px] text-amber-600 font-bold mt-2 flex items-center gap-1">
-                      <span>⚠️</span> Please select an appliance brand to
-                      proceed
+              <div className="flex flex-col gap-3.5 sm:gap-4">
+                {/* Brand dropdown — only for categories with appliance brands */}
+                {hasBrands && (
+                  <div className="bg-white border border-slate-200/80 rounded-2xl p-3.5 sm:p-4 shadow-2xs">
+                    <p className="text-[12px] font-black text-slate-900 mb-2.5 flex items-center justify-between">
+                      <span>Select Brand *</span>
+                      {brand && (
+                        <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-1">
+                          <CheckCircle2 size={12} /> Selected
+                        </span>
+                      )}
                     </p>
-                  )}
-                </div>
+                    <div className="relative">
+                      <select
+                        value={brand}
+                        onChange={(e) => setBrand(e.target.value)}
+                        className={`w-full appearance-none px-3.5 sm:px-4 py-2.5 sm:py-3 pr-10 bg-slate-50 border rounded-xl text-[12px] sm:text-[13px] font-bold outline-none transition-all cursor-pointer ${
+                          brand
+                            ? "text-slate-900 border-brand-blue bg-blue-50/20"
+                            : "text-slate-400 border-amber-300 bg-amber-50/30"
+                        }`}>
+                        <option value="" disabled>
+                          Choose Appliance Brand
+                        </option>
+                        {data.brands.map((b) => (
+                          <option key={b} value={b}>
+                            {b}
+                          </option>
+                        ))}
+                        <option value="Other">Other / Not Listed</option>
+                      </select>
+                      <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                    </div>
+                    {!brand && (
+                      <p className="text-[10px] sm:text-[11px] text-amber-600 font-bold mt-2 flex items-center gap-1">
+                        <span>⚠️</span> Please select an appliance brand to proceed
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 {/* Date picker */}
-                <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs">
-                  <div className="flex items-center justify-between mb-3">
+                <div className="bg-white border border-slate-200/80 rounded-2xl p-3.5 sm:p-4 shadow-2xs">
+                  <div className="flex items-center justify-between mb-2.5">
                     <div>
                       <p className="text-[12px] font-black text-slate-900">
                         Select Date *
@@ -1161,7 +1169,7 @@ const BookingFlow = () => {
                         dateInputRef.current?.showPicker?.() ||
                         dateInputRef.current?.click()
                       }
-                      className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center hover:bg-blue-100 transition-all cursor-pointer shadow-2xs"
+                      className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center hover:bg-blue-100 transition-all cursor-pointer shadow-2xs shrink-0"
                       title="Open calendar">
                       <CalendarDays className="w-4 h-4 text-brand-blue" />
                     </button>
@@ -1201,7 +1209,7 @@ const BookingFlow = () => {
                       }}
                     />
                   </div>
-                  <div className="flex gap-2.5 overflow-x-auto no-scrollbar pb-1">
+                  <div className="flex gap-2 sm:gap-2.5 overflow-x-auto no-scrollbar pb-1 px-0.5 snap-x">
                     {upcomingDates.map((d) => {
                       const isActive = selectedDate === d.full;
                       return (
@@ -1217,21 +1225,21 @@ const BookingFlow = () => {
                               setTimeGroup("");
                             }
                           }}
-                          className={`flex flex-col items-center justify-center min-w-16 h-20 rounded-2xl border-2 transition-all shrink-0 cursor-pointer ${
+                          className={`flex flex-col items-center justify-center min-w-[58px] sm:min-w-16 h-[68px] sm:h-20 rounded-xl sm:rounded-2xl border-2 transition-all shrink-0 cursor-pointer snap-start ${
                             isActive
                               ? "border-brand-blue bg-brand-blue text-white shadow-md scale-105"
                               : "border-slate-200 bg-slate-50 hover:bg-white text-slate-800"
                           }`}>
                           <span
-                            className={`text-[10px] font-black ${isActive ? "text-white/90" : "text-slate-400"}`}>
+                            className={`text-[9px] sm:text-[10px] font-black ${isActive ? "text-white/90" : "text-slate-400"}`}>
                             {d.dayName}
                           </span>
                           <span
-                            className={`text-[20px] font-black mt-0.5 leading-none ${isActive ? "text-white" : "text-slate-900"}`}>
+                            className={`text-[17px] sm:text-[20px] font-black mt-0.5 leading-none ${isActive ? "text-white" : "text-slate-900"}`}>
                             {d.dayNum}
                           </span>
                           <span
-                            className={`text-[10px] font-bold mt-0.5 ${isActive ? "text-white/90" : "text-slate-400"}`}>
+                            className={`text-[9px] sm:text-[10px] font-bold mt-0.5 ${isActive ? "text-white/90" : "text-slate-400"}`}>
                             {d.month}
                           </span>
                         </button>
@@ -1241,14 +1249,14 @@ const BookingFlow = () => {
                 </div>
 
                 {/* Time Slot selector */}
-                <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs">
+                <div className="bg-white border border-slate-200/80 rounded-2xl p-3.5 sm:p-4 shadow-2xs">
                   <p className="text-[12px] font-black text-slate-900 mb-0.5">
                     Select Time Slot *
                   </p>
-                  <p className="text-[10px] text-slate-400 font-semibold mb-3">
+                  <p className="text-[10px] text-slate-400 font-semibold mb-2.5">
                     Choose a convenient time or demand instant service
                   </p>
-                  <div className="flex flex-col gap-2.5">
+                  <div className="flex flex-col gap-2 sm:gap-2.5">
                     {TIME_GROUPS.map((tg) => {
                       const isSelected = timeGroup === tg.id;
                       const isInstant = tg.isInstant;
@@ -1262,7 +1270,7 @@ const BookingFlow = () => {
                               setSelectedDate(upcomingDates[0].full);
                             }
                           }}
-                          className={`w-full relative flex items-center gap-3.5 p-3.5 rounded-2xl border-2 transition-all duration-200 text-left cursor-pointer ${
+                          className={`w-full relative flex items-center gap-2.5 sm:gap-3.5 p-3 sm:p-3.5 rounded-2xl border-2 transition-all duration-200 text-left cursor-pointer ${
                             isInstant
                               ? isSelected
                                 ? "border-amber-500 bg-linear-to-r from-amber-50 to-orange-50 shadow-md ring-1 ring-amber-400"
@@ -1273,12 +1281,12 @@ const BookingFlow = () => {
                           }`}>
                           <div className="shrink-0">{tg.icon}</div>
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className="text-[13px] font-black text-slate-900 leading-none">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <p className="text-[12px] sm:text-[13px] font-black text-slate-900 leading-none">
                                 {tg.label}
                               </p>
                               {tg.badge && (
-                                <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-amber-500 text-white tracking-wide">
+                                <span className="px-1.5 py-0.5 rounded-full text-[8px] sm:text-[9px] font-black bg-amber-500 text-white tracking-wide">
                                   {tg.badge}
                                 </span>
                               )}
@@ -1292,9 +1300,9 @@ const BookingFlow = () => {
                             className={`w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center transition-all ${
                               isSelected
                                 ? isInstant
-                                  ? "border-amber-600 bg-amber-600"
-                                  : "border-brand-blue bg-brand-blue"
-                                : "border-slate-300"
+                                  ? "border-amber-600 bg-amber-600 ring-2 ring-amber-400/20"
+                                  : "border-brand-blue bg-brand-blue ring-2 ring-brand-blue/20"
+                                : "border-slate-300 bg-white"
                             }`}>
                             {isSelected && (
                               <div className="w-2.5 h-2.5 rounded-full bg-white" />
@@ -1865,11 +1873,13 @@ const BookingFlow = () => {
                   {brand ? ` • ${brand}` : ""}
                 </p>
                 <p className="text-[10px] text-slate-400 font-bold mt-0.5 truncate block">
-                  {!brand
+                  {hasBrands && !brand
                     ? "Select Brand, Date & Time Slot"
-                    : timeGroup
-                      ? TIME_GROUPS.find((t) => t.id === timeGroup)?.timeRange
-                      : "Select Time Slot"}
+                    : !selectedDate
+                      ? "Select Visit Date"
+                      : timeGroup
+                        ? TIME_GROUPS.find((t) => t.id === timeGroup)?.timeRange
+                        : "Select Time Slot"}
                 </p>
               </div>
             </div>
@@ -1892,7 +1902,7 @@ const BookingFlow = () => {
                 ? "bg-slate-200 text-slate-400 cursor-not-allowed"
                 : "bg-brand-blue text-white hover:bg-[#1565C0] shadow-md shadow-brand-blue/25"
             }`}>
-            {!brand
+            {hasBrands && !brand
               ? "Choose Brand to Continue"
               : !selectedDate || !timeGroup
                 ? "Select Date & Time Slot"

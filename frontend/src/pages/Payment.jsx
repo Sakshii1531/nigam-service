@@ -132,50 +132,65 @@ const Payment = () => {
       </div>
 
       {/* Main Content Area — 2-column grid on desktop */}
-      <div className="flex-1 max-w-screen-2xl mx-auto w-full p-5 md:px-8 md:py-8">
+      <div className="flex-1 max-w-screen-2xl mx-auto w-full p-3.5 sm:p-5 md:px-8 md:py-8">
         <div className="flex flex-col md:grid md:grid-cols-12 md:gap-8 items-start">
           {/* Left Column: Product Info, Coins & Payment Methods */}
-          <div className="w-full md:col-span-7 lg:col-span-8 flex flex-col gap-5 text-left">
+          <div className="w-full md:col-span-7 lg:col-span-8 flex flex-col gap-4 sm:gap-5 text-left">
             {/* Product / Service Card */}
-            <div className="bg-white p-4 md:p-6 rounded-2xl md:rounded-3xl border border-slate-100 flex justify-between items-center shadow-xs">
-              <div>
-                <span className="text-[10px] md:text-xs text-slate-400 font-extrabold block uppercase tracking-wider">
-                  {isProductBuy ? 'Product' : 'Service'}
-                </span>
-                <span className="font-black text-slate-800 text-sm md:text-base mt-0.5 block">{itemName}</span>
+            <div className="bg-white p-3.5 sm:p-5 md:p-6 rounded-2xl md:rounded-3xl border border-slate-100 flex items-center justify-between shadow-xs gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] md:text-xs text-slate-400 font-extrabold uppercase tracking-wider">
+                    {isProductBuy ? 'Product Purchase' : 'Service Booking'}
+                  </span>
+                  {!isProductBuy && (
+                    <span className="text-[9px] md:text-[10px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                      ✓ 100% Guaranteed
+                    </span>
+                  )}
+                </div>
+                <h2 className="font-black text-slate-800 text-sm md:text-base mt-1 truncate block leading-snug">
+                  {itemName}
+                </h2>
+                {bookingMeta?.date && (
+                  <p className="text-[11px] text-slate-500 font-semibold mt-0.5">
+                    {bookingMeta.date} {bookingMeta.timeGroup ? `• ${bookingMeta.timeGroup}` : ''}
+                  </p>
+                )}
               </div>
-              <div className="text-right">
-                <span className="text-[10px] md:text-xs text-slate-400 font-extrabold block uppercase tracking-wider">
-                  {isProductBuy ? 'Seller' : 'ServiceProvider'}
-                </span>
-                <span className="font-black text-brand-blue text-xs md:text-sm mt-0.5 block">
-                  {isProductBuy ? 'Nigam Store' : 'Rahul Sharma'}
-                </span>
-              </div>
+              {isProductBuy && (
+                <div className="text-right shrink-0">
+                  <span className="text-[10px] md:text-xs text-slate-400 font-extrabold block uppercase tracking-wider">
+                    Seller
+                  </span>
+                  <span className="font-black text-brand-blue text-xs md:text-sm mt-0.5 block">
+                    Nigam Store
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Redeem Nigam Coins Card */}
             {availableCoins > 0 && (
               <div
                 onClick={() => setRedeemCoins((prev) => !prev)}
-                className={`p-4 md:p-5 rounded-2xl md:rounded-3xl border-2 cursor-pointer transition-all flex items-center justify-between shadow-xs ${
+                className={`p-3.5 sm:p-5 rounded-2xl md:rounded-3xl border-2 cursor-pointer transition-all flex items-center justify-between shadow-xs ${
                   redeemCoins ? 'border-brand-blue bg-blue-50/10' : 'border-slate-100 bg-white'
                 }`}
               >
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-amber-50 text-amber-500 rounded-xl shrink-0">
-                    <Coins className="h-5 w-5" />
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className="p-2 sm:p-2.5 bg-amber-50 text-amber-500 rounded-xl shrink-0">
+                    <Coins className="h-4 w-4 sm:h-5 sm:w-5" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <span className="text-xs md:text-sm font-black text-slate-800 block">Redeem Nigam Coins</span>
-                    <span className="text-[10px] md:text-xs text-slate-500 font-semibold mt-0.5 block leading-normal">
-                      Use {maxCoinsToRedeem} Coins to get ₹{coinDiscountValue.toLocaleString('en-IN')} off (
-                      {availableCoins} Coins available)
+                    <span className="text-xs sm:text-sm font-black text-slate-800 block truncate">Redeem Nigam Coins</span>
+                    <span className="text-[10px] sm:text-xs text-slate-500 font-semibold mt-0.5 block leading-normal">
+                      Use {maxCoinsToRedeem} Coins to get ₹{coinDiscountValue.toLocaleString('en-IN')} off ({availableCoins} available)
                     </span>
                   </div>
                 </div>
                 <div
-                  className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${
+                  className={`w-5 h-5 rounded border flex items-center justify-center shrink-0 ml-2 transition-all ${
                     redeemCoins ? 'border-brand-blue bg-brand-blue text-white' : 'border-slate-350 bg-white'
                   }`}
                 >
@@ -185,14 +200,14 @@ const Payment = () => {
             )}
 
             {/* Payment Methods */}
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2.5 sm:gap-3">
               <h2 className="text-[10px] md:text-xs font-extrabold text-slate-400 uppercase tracking-wider px-1">
                 Select Payment Method
               </h2>
 
               {/* Card */}
               <div
-                className={`p-4 md:p-5 rounded-2xl md:rounded-3xl border-2 cursor-pointer transition-all flex items-center justify-between shadow-xs hover:border-brand-blue ${
+                className={`p-3.5 sm:p-5 rounded-2xl md:rounded-3xl border-2 cursor-pointer transition-all flex items-center justify-between shadow-xs hover:border-brand-blue gap-2.5 ${
                   selectedMethod === 'card' ? 'border-brand-blue bg-blue-50/10' : 'border-slate-100 bg-white'
                 }`}
                 onClick={() => {
@@ -200,23 +215,23 @@ const Payment = () => {
                   navigate('/payment/card', { state: getNextPaymentState() });
                 }}
               >
-                <div className="flex items-center gap-3.5">
-                  <div className="p-3 bg-blue-50 rounded-2xl text-brand-blue">
-                    <CreditCard className="h-5 w-5" />
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className="p-2.5 sm:p-3 bg-blue-50 rounded-xl sm:rounded-2xl text-brand-blue shrink-0">
+                    <CreditCard className="h-4 w-4 sm:h-5 sm:w-5" />
                   </div>
-                  <div>
-                    <span className="text-xs md:text-sm font-black text-slate-800 block">Credit / Debit Card</span>
-                    <span className="text-[10px] md:text-xs text-slate-400 font-bold mt-0.5 block">
+                  <div className="min-w-0 flex-1">
+                    <span className="text-xs sm:text-sm font-black text-slate-800 block truncate">Credit / Debit Card</span>
+                    <span className="text-[10px] sm:text-xs text-slate-400 font-bold mt-0.5 block truncate">
                       Pay securely with Visa, Mastercard, RuPay
                     </span>
                   </div>
                 </div>
-                <ChevronRight className="h-5 w-5 text-slate-400" />
+                <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5 text-slate-400 shrink-0" />
               </div>
 
               {/* UPI */}
               <div
-                className={`p-4 md:p-5 rounded-2xl md:rounded-3xl border-2 cursor-pointer transition-all flex items-center justify-between shadow-xs hover:border-brand-blue ${
+                className={`p-3.5 sm:p-5 rounded-2xl md:rounded-3xl border-2 cursor-pointer transition-all flex items-center justify-between shadow-xs hover:border-brand-blue gap-2.5 ${
                   selectedMethod === 'upi' ? 'border-brand-blue bg-blue-50/10' : 'border-slate-100 bg-white'
                 }`}
                 onClick={() => {
@@ -224,23 +239,23 @@ const Payment = () => {
                   navigate('/payment/upi', { state: getNextPaymentState() });
                 }}
               >
-                <div className="flex items-center gap-3.5">
-                  <div className="p-3 bg-[#E8F5E9] rounded-2xl text-[#2E7D32]">
-                    <Wallet className="h-5 w-5" />
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className="p-2.5 sm:p-3 bg-[#E8F5E9] rounded-xl sm:rounded-2xl text-[#2E7D32] shrink-0">
+                    <Wallet className="h-4 w-4 sm:h-5 sm:w-5" />
                   </div>
-                  <div>
-                    <span className="text-xs md:text-sm font-black text-slate-800 block">UPI (PhonePe, GPay, Paytm)</span>
-                    <span className="text-[10px] md:text-xs text-slate-400 font-bold mt-0.5 block">
+                  <div className="min-w-0 flex-1">
+                    <span className="text-xs sm:text-sm font-black text-slate-800 block truncate">UPI (PhonePe, GPay, Paytm)</span>
+                    <span className="text-[10px] sm:text-xs text-slate-400 font-bold mt-0.5 block truncate">
                       Instant payment using UPI ID or QR Scan
                     </span>
                   </div>
                 </div>
-                <ChevronRight className="h-5 w-5 text-slate-400" />
+                <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5 text-slate-400 shrink-0" />
               </div>
 
               {/* Net Banking */}
               <div
-                className={`p-4 md:p-5 rounded-2xl md:rounded-3xl border-2 cursor-pointer transition-all flex items-center justify-between shadow-xs hover:border-brand-blue ${
+                className={`p-3.5 sm:p-5 rounded-2xl md:rounded-3xl border-2 cursor-pointer transition-all flex items-center justify-between shadow-xs hover:border-brand-blue gap-2.5 ${
                   selectedMethod === 'netbanking' ? 'border-brand-blue bg-blue-50/10' : 'border-slate-100 bg-white'
                 }`}
                 onClick={() => {
@@ -248,18 +263,18 @@ const Payment = () => {
                   navigate('/payment/netbanking', { state: getNextPaymentState() });
                 }}
               >
-                <div className="flex items-center gap-3.5">
-                  <div className="p-3 bg-[#FFF3E0] rounded-2xl text-[#E65100]">
-                    <Landmark className="h-5 w-5" />
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className="p-2.5 sm:p-3 bg-[#FFF3E0] rounded-xl sm:rounded-2xl text-[#E65100] shrink-0">
+                    <Landmark className="h-4 w-4 sm:h-5 sm:w-5" />
                   </div>
-                  <div>
-                    <span className="text-xs md:text-sm font-black text-slate-800 block">Net Banking</span>
-                    <span className="text-[10px] md:text-xs text-slate-400 font-bold mt-0.5 block">
+                  <div className="min-w-0 flex-1">
+                    <span className="text-xs sm:text-sm font-black text-slate-800 block truncate">Net Banking</span>
+                    <span className="text-[10px] sm:text-xs text-slate-400 font-bold mt-0.5 block truncate">
                       Pay directly from your retail bank account
                     </span>
                   </div>
                 </div>
-                <ChevronRight className="h-5 w-5 text-slate-400" />
+                <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5 text-slate-400 shrink-0" />
               </div>
             </div>
 
@@ -336,11 +351,11 @@ const Payment = () => {
       </div>
 
       {/* Mobile Footer Payment Submission Action */}
-      <div className="p-5 bg-white border-t border-slate-100 sticky bottom-0 mt-auto md:hidden">
+      <div className="p-3.5 sm:p-5 bg-white border-t border-slate-100 sticky bottom-0 mt-auto md:hidden">
         <button
           type="button"
           onClick={handlePay}
-          className="w-full bg-brand-yellow text-brand-blue font-extrabold py-3.5 rounded-2xl flex items-center justify-center gap-2 hover:bg-yellow-400 active:scale-[0.99] transition-all shadow-md cursor-pointer"
+          className="w-full bg-brand-yellow text-brand-blue font-black py-3 sm:py-3.5 rounded-2xl flex items-center justify-center gap-2 hover:bg-yellow-400 active:scale-[0.99] transition-all shadow-md cursor-pointer text-xs sm:text-sm"
         >
           Proceed with Selected Method (₹{finalPrice.toLocaleString('en-IN')})
         </button>
