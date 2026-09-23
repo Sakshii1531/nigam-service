@@ -1,6 +1,7 @@
 import { ServiceProvider } from '../service-provider/serviceProvider.model.js';
 import { ServiceRequest } from '../service-requests/serviceRequest.model.js';
 import { AssignmentWeighting } from '../super-admin/assignmentWeighting.model.js';
+import { City } from '../super-admin/city.model.js';
 
 function clamp0to100(n) {
   return Math.max(0, Math.min(100, n));

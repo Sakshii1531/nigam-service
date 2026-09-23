@@ -13,7 +13,7 @@ const homeTileSchema = new mongoose.Schema(
   {
     placement: {
       type: String,
-      enum: ['category', 'most-booked', 'appliance-service', 'brand-card'],
+      enum: ['category', 'dashboard-service', 'most-booked', 'appliance-service', 'brand-card'],
       required: true,
       index: true,
     },

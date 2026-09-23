@@ -15,6 +15,7 @@ import { Payment } from '../payments-wallet/payment.model.js';
 import { createRazorpayOrder, verifyRazorpaySignature } from '../payments-wallet/paymentGateway.js';
 import { computeCharges } from '../shared/pricingEngine.js';
 import { raiseServiceProviderClaim } from './claim.service.js';
+import { Claim } from '../warranty-amc-exchange/claim.model.js';
 import { getOrCreateConversation } from '../chat/conversation.service.js';
 import { emit as emitNotification } from '../notifications/notification.service.js';
 import { getIO } from '../../sockets/io.js';
@@ -28,6 +29,7 @@ import { withWarranty } from '../service-requests/ownedAppliance.service.js';
 import { Category } from '../catalog/category.model.js';
 import { ServiceCatalogItem } from '../catalog/serviceCatalogItem.model.js';
 import { SparePartCatalog } from '../super-admin/sparePartCatalog.model.js';
+import { City } from '../super-admin/city.model.js';
 
 async function syncJobTracking(job, stepOverride) {
   try {
@@ -62,6 +64,7 @@ async function syncJobTracking(job, stepOverride) {
 }
 
 function ensureTransition(job, toStep) {
+  if (job.activeStep === toStep) return;
   const allowed = JOB_STEP_TRANSITIONS[job.activeStep] || [];
   if (!allowed.includes(toStep)) {
     throw new ApiError(
@@ -204,21 +207,15 @@ export async function listAvailableJobs(serviceProviderId) {
     .sort({ createdAt: -1 });
 
   const visible = srs.filter((sr) => {
-    // If specifically assigned to this service provider
+    // If specifically assigned to this service provider, always visible to them
     if (sr.serviceProvider && String(sr.serviceProvider) === String(serviceProviderId)) {
-      if (serviceProviderCity) {
-        const jobCity = (sr.zone || sr.booking?.address?.city || '').toLowerCase().trim();
-        if (jobCity && jobCity !== serviceProviderCity && !jobCity.includes(serviceProviderCity) && !serviceProviderCity.includes(jobCity)) {
-          return false;
-        }
-      }
       return true;
     }
 
     // For broadcast unassigned jobs, only show if in service provider's city
     if (!serviceProviderCity) return false;
     const jobCity = (sr.zone || sr.booking?.address?.city || '').toLowerCase().trim();
-    return jobCity && (jobCity === serviceProviderCity || jobCity.includes(serviceProviderCity) || serviceProviderCity.includes(jobCity));
+    return Boolean(jobCity && (jobCity === serviceProviderCity || jobCity.includes(serviceProviderCity) || serviceProviderCity.includes(jobCity)));
   });
 
   // The app used to estimate this itself as a flat 30% of the booking (or a
@@ -590,7 +587,7 @@ export async function acceptJob(serviceProviderId, serviceRequestId, { type, amc
     serviceRequest = await ServiceRequest.findById(serviceRequest._id);
   }
 
-  if (String(serviceRequest.serviceProvider) !== serviceProviderId) throw new ApiError(403, 'This request is not assigned to you');
+  if (String(serviceRequest.serviceProvider) !== String(serviceProviderId)) throw new ApiError(403, 'This request is not assigned to you');
 
   const existing = await Job.findOne({ serviceRequest: serviceRequestId });
   if (existing) throw new ApiError(400, 'A job already exists for this service request');
@@ -832,17 +829,26 @@ export async function submitSpareParts(serviceProviderId, jobId, { parts = [], a
       'Brand Warranty': 'Brand',
     };
 
+    const existingClaims = await Claim.find({
+      raisedByModel: 'ServiceProvider',
+      raisedBy: serviceProviderId,
+      serviceRequest: job.serviceRequest._id || job.serviceRequest,
+    });
+    const existingItemNames = new Set(existingClaims.map((c) => c.item));
+
     await Promise.all(
-      checkedParts.map((part) =>
-        raiseServiceProviderClaim(serviceProviderId, {
-          serviceRequest: job.serviceRequest,
-          brand: claimBrandByType[job.type] || 'D2C Claim',
-          claimType: claimTypeByType[job.type] || 'D2C',
-          item: part.name,
-          amount: part.price,
-          reason: 'Spare part used during a warranty/AMC-covered job',
-        }),
-      ),
+      checkedParts
+        .filter((part) => !existingItemNames.has(part.name))
+        .map((part) =>
+          raiseServiceProviderClaim(serviceProviderId, {
+            serviceRequest: job.serviceRequest,
+            brand: claimBrandByType[job.type] || 'D2C Claim',
+            claimType: claimTypeByType[job.type] || 'D2C',
+            item: part.name,
+            amount: part.price,
+            reason: 'Spare part used during a warranty/AMC-covered job',
+          }),
+        ),
     );
   }
 
@@ -853,9 +859,20 @@ export async function submitSpareParts(serviceProviderId, jobId, { parts = [], a
     // Modeled as an immediate pass-through — this Phase 6 build doesn't track a
     // real "waiting for parts to arrive" delay window, just the fact that parts
     // were needed and are now in hand.
-    await transitionStatus(job.serviceRequest, 'Spare Required', { description: 'Spare parts required for repair' });
-    await transitionStatus(job.serviceRequest, 'Spare Ordered', { description: 'Spare parts ordered' });
-    await transitionStatus(job.serviceRequest, 'Spare Received', { description: 'Spare parts received' });
+    const sr = await ServiceRequest.findById(job.serviceRequest._id || job.serviceRequest);
+    if (sr && sr.status !== 'Spare Received') {
+      if (SERVICE_REQUEST_TRANSITIONS[sr.status]?.includes('Spare Required')) {
+        await transitionStatus(job.serviceRequest, 'Spare Required', { description: 'Spare parts required for repair' });
+      }
+      const srAfterReq = await ServiceRequest.findById(job.serviceRequest._id || job.serviceRequest);
+      if (SERVICE_REQUEST_TRANSITIONS[srAfterReq?.status]?.includes('Spare Ordered')) {
+        await transitionStatus(job.serviceRequest, 'Spare Ordered', { description: 'Spare parts ordered' });
+      }
+      const srAfterOrd = await ServiceRequest.findById(job.serviceRequest._id || job.serviceRequest);
+      if (SERVICE_REQUEST_TRANSITIONS[srAfterOrd?.status]?.includes('Spare Received')) {
+        await transitionStatus(job.serviceRequest, 'Spare Received', { description: 'Spare parts received' });
+      }
+    }
   }
 
   await syncJobTracking(job, 'spareapproval');

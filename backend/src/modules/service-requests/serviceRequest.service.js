@@ -482,7 +482,10 @@ export async function declineAssignment(id, serviceProviderId) {
         io.to(`city:${city}`).emit('job:new_available', openJobPayload);
       }
       io.to('instant:serviceProviders').emit('job:new_available', openJobPayload);
+      io.to('instant:serviceProviders').emit('instant:new_request', openJobPayload);
+      io.to('instant:serviceProviders').emit('instant:job_offered', openJobPayload);
       io.to('serviceProviders').emit('job:new_available', openJobPayload);
+      io.to('serviceProviders').emit('instant:job_offered', openJobPayload);
     } catch {
       // Socket emit optional
     }

@@ -323,12 +323,25 @@ export async function createBooking(userId, data) {
       io.to(`service-provider:${serviceProvider.user}`).emit('job:assigned', jobPayload);
       io.to(`service-provider:${serviceProvider._id}`).emit('instant:new_request', jobPayload);
       io.to(`service-provider:${serviceProvider.user}`).emit('instant:new_request', jobPayload);
+      io.to(`service-provider:${serviceProvider._id}`).emit('instant:job_offered', jobPayload);
+      io.to(`service-provider:${serviceProvider.user}`).emit('instant:job_offered', jobPayload);
 
       // Schedule 60-second waterfall cascade timeout for Candidate #1
       scheduleDispatchTimeout(serviceRequest._id, serviceProvider._id);
     } else if (customerCity) {
       // If no single candidate matched, broadcast to city channel
       io.to(`city:${customerCity.toLowerCase().trim()}`).emit('job:new_available', jobPayload);
+    } else {
+      // If no single candidate matched, broadcast to instant room, serviceProviders room, and city channel
+      io.to(INSTANT_ROOM).emit('instant:new_request', jobPayload);
+      io.to(INSTANT_ROOM).emit('job:new_available', jobPayload);
+      io.to(INSTANT_ROOM).emit('instant:job_offered', jobPayload);
+      io.to('serviceProviders').emit('job:new_available', jobPayload);
+      io.to('serviceProviders').emit('instant:job_offered', jobPayload);
+      if (customerCity) {
+        io.to(`city:${customerCity.toLowerCase().trim()}`).emit('job:new_available', jobPayload);
+        io.to(`city:${customerCity.toLowerCase().trim()}`).emit('instant:new_request', jobPayload);
+      }
     }
   }
 
@@ -853,8 +866,13 @@ export async function retrySearchBooking(userId, id) {
 
       if (serviceProvider) {
         io.to(`service-provider:${serviceProvider.id || serviceProvider._id}`).emit('instant:job_offered', jobPayload);
+        io.to(`service-provider:${serviceProvider.id || serviceProvider._id}`).emit('instant:new_request', jobPayload);
+        io.to(`service-provider:${serviceProvider.id || serviceProvider._id}`).emit('job:assigned', jobPayload);
       } else {
         io.to(INSTANT_ROOM).emit('instant:job_offered', jobPayload);
+        io.to(INSTANT_ROOM).emit('instant:new_request', jobPayload);
+        io.to(INSTANT_ROOM).emit('job:new_available', jobPayload);
+        io.to('serviceProviders').emit('job:new_available', jobPayload);
       }
     }
   } catch (_e) {

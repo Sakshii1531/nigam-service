@@ -204,7 +204,7 @@ export const JOB_STEP_TRANSITIONS = Object.freeze({
   assigned: ['ontheway'],
   ontheway: ['inspection'],
   inspection: ['spareapproval', 'repaircomplete', 'spare_part_required', 'completed_pending'],
-  spareapproval: ['revisit_scheduled', 'repaircomplete', 'spare_part_required', 'completed_pending'],
+  spareapproval: ['spareapproval', 'revisit_scheduled', 'repaircomplete', 'spare_part_required', 'completed_pending'],
   spare_part_required: ['completed_pending', 'spare_part_job_details', 'revisit_scheduled', 'inspection'],
   completed_pending: ['spare_part_job_details', 'revisit_scheduled'],
   spare_part_job_details: ['completed_pending', 'revisit_scheduled'],

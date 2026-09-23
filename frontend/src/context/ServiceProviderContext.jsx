@@ -121,8 +121,14 @@ export const ServiceProviderProvider = ({ children }) => {
         address: sr.booking?.address
           ? `${sr.booking.address.house || ""}, ${sr.booking.address.landmark || ""}, ${sr.booking.address.city || ""} ${sr.booking.address.pincode || ""}`
           : "Customer Address",
-        latitude: sr.booking?.address?.latitude ?? sr.customerLocation?.latitude ?? null,
-        longitude: sr.booking?.address?.longitude ?? sr.customerLocation?.longitude ?? null,
+        latitude:
+          sr.booking?.address?.latitude ??
+          sr.customerLocation?.latitude ??
+          null,
+        longitude:
+          sr.booking?.address?.longitude ??
+          sr.customerLocation?.longitude ??
+          null,
         isD2C: sr.booking ? sr.booking.totalPrice > 0 : true,
         isPriority: sr.priority === "High" || sr.priority === "Critical",
         isRecommended: true,
@@ -150,7 +156,8 @@ export const ServiceProviderProvider = ({ children }) => {
 
       const mappedActive = activeJobs.map((job) => {
         const sr = job.serviceRequest;
-        const resolvedOtp = sr?.booking?.completionOtp || sr?.completionOtp || null;
+        const resolvedOtp =
+          sr?.booking?.completionOtp || sr?.completionOtp || null;
         return {
           id: job.id || job._id,
           createdAt: job.createdAt || sr?.acceptedAt || sr?.assignedAt || null,
@@ -213,8 +220,14 @@ export const ServiceProviderProvider = ({ children }) => {
           address: sr?.booking?.address
             ? `${sr.booking.address.house || ""}, ${sr.booking.address.landmark || ""}, ${sr.booking.address.city || ""} ${sr.booking.address.pincode || ""}`
             : "Customer Address",
-          latitude: sr?.booking?.address?.latitude ?? sr?.customerLocation?.latitude ?? null,
-          longitude: sr?.booking?.address?.longitude ?? sr?.customerLocation?.longitude ?? null,
+          latitude:
+            sr?.booking?.address?.latitude ??
+            sr?.customerLocation?.latitude ??
+            null,
+          longitude:
+            sr?.booking?.address?.longitude ??
+            sr?.customerLocation?.longitude ??
+            null,
           isD2C: job.isD2C ?? true,
           isPriority: job.isPriority ?? false,
           isRecommended: job.isRecommended ?? true,
@@ -242,7 +255,9 @@ export const ServiceProviderProvider = ({ children }) => {
           timeSlot: sr?.booking?.timeSlot || null,
           completionOtp: resolvedOtp,
           serviceRequest: sr ? { ...sr, completionOtp: resolvedOtp } : null,
-          booking: sr?.booking ? { ...sr.booking, completionOtp: resolvedOtp } : null,
+          booking: sr?.booking
+            ? { ...sr.booking, completionOtp: resolvedOtp }
+            : null,
           diagnosis: job.diagnosis || null,
           spareParts: job.spareParts || [],
           additionalServices: job.additionalServices || [],
@@ -433,7 +448,11 @@ export const ServiceProviderProvider = ({ children }) => {
       setJobs((prevJobs) =>
         prevJobs.filter((j) => {
           if (j.isAvailableRequest) {
-            if (targetSrId && (String(j.serviceRequestId) === targetSrId || String(j.id) === targetSrId)) {
+            if (
+              targetSrId &&
+              (String(j.serviceRequestId) === targetSrId ||
+                String(j.id) === targetSrId)
+            ) {
               return false;
             }
             if (targetBookingId && String(j.bookingId) === targetBookingId) {
@@ -452,6 +471,7 @@ export const ServiceProviderProvider = ({ children }) => {
     };
 
     socket.on("instant:new_request", handleIncomingJobDispatch);
+    socket.on("instant:job_offered", handleIncomingJobDispatch);
     socket.on("job:assigned", handleIncomingJobDispatch);
     socket.on("job:new_available", handleIncomingJobDispatch);
     socket.on("job:claimed", handleJobClaimed);
@@ -465,7 +485,11 @@ export const ServiceProviderProvider = ({ children }) => {
         setJobs((prevJobs) =>
           prevJobs.filter((j) => {
             if (j.isAvailableRequest) {
-              if (targetSrId && (String(j.serviceRequestId) === targetSrId || String(j.id) === targetSrId)) {
+              if (
+                targetSrId &&
+                (String(j.serviceRequestId) === targetSrId ||
+                  String(j.id) === targetSrId)
+              ) {
                 return false;
               }
               if (targetBookingId && String(j.bookingId) === targetBookingId) {
@@ -689,27 +713,33 @@ export const ServiceProviderProvider = ({ children }) => {
     const sendLocationUpdate = () => {
       const socket = socketRef.current;
       if (!socket || !socket.connected) return;
-      const isTraveling = activeStep === 'ontheway' || activeStep === 'revisit_ontheway';
-      const status = isTraveling ? 'On the way' : activeStep === 'completed' ? 'Completed' : 'Repairing';
+      const isTraveling =
+        activeStep === "ontheway" || activeStep === "revisit_ontheway";
+      const status = isTraveling
+        ? "On the way"
+        : activeStep === "completed"
+          ? "Completed"
+          : "Repairing";
 
       const doEmit = (coords) => {
-        socket.emit('update-location', {
+        socket.emit("update-location", {
           jobId: activeJobId,
           status,
-          eta: '15 mins',
-          location: activeJob?.serviceRequest?.zone || 'Customer Location',
+          eta: "15 mins",
+          location: activeJob?.serviceRequest?.zone || "Customer Location",
           coords,
         });
       };
 
-      if (typeof navigator !== 'undefined' && navigator.geolocation) {
+      if (typeof navigator !== "undefined" && navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
-          (pos) => doEmit({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-          () => doEmit({ lat: 28.6139, lng: 77.2090 }),
+          (pos) =>
+            doEmit({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+          () => doEmit({ lat: 28.6139, lng: 77.209 }),
           { timeout: 5000 },
         );
       } else {
-        doEmit({ lat: 28.6139, lng: 77.2090 });
+        doEmit({ lat: 28.6139, lng: 77.209 });
       }
     };
 
@@ -795,8 +825,14 @@ export const ServiceProviderProvider = ({ children }) => {
           const newJobId = result.id || result._id;
           const acceptedTime = result.createdAt || new Date().toISOString();
           try {
-            const formatted = new Date(acceptedTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-            localStorage.setItem(`ncc_job_step_${newJobId}_assigned`, formatted);
+            const formatted = new Date(acceptedTime).toLocaleTimeString(
+              "en-US",
+              { hour: "2-digit", minute: "2-digit", hour12: true },
+            );
+            localStorage.setItem(
+              `ncc_job_step_${newJobId}_assigned`,
+              formatted,
+            );
           } catch (_err) {
             // Ignore localStorage errors (e.g. private browsing or storage quota)
           }
@@ -834,19 +870,30 @@ export const ServiceProviderProvider = ({ children }) => {
             }
             return { ok: true };
           }
-          if (err.message && (err.message.includes("already taken") || err.message.includes("already been accepted"))) {
+          if (
+            err.message &&
+            (err.message.includes("already taken") ||
+              err.message.includes("already been accepted"))
+          ) {
             setJobs((prevJobs) =>
               prevJobs.filter(
-                (j) => j.id !== id && j.serviceRequestId !== jobObj.serviceRequestId,
+                (j) =>
+                  j.id !== id && j.serviceRequestId !== jobObj.serviceRequestId,
               ),
             );
             await fetchRealJobs();
-            return { ok: false, error: "Another service provider has already taken this job." };
+            return {
+              ok: false,
+              error: "Another service provider has already taken this job.",
+            };
           }
           console.error("Failed to accept job on backend:", err);
           if (!silent) alert(`Failed to accept job: ${err.message}`);
           await fetchRealJobs();
-          return { ok: false, error: err.message || "Could not accept this job." };
+          return {
+            ok: false,
+            error: err.message || "Could not accept this job.",
+          };
         }
         return { ok: true };
       } else {
@@ -899,6 +946,7 @@ export const ServiceProviderProvider = ({ children }) => {
     repaircomplete: { path: "billing" },
   };
 
+  const stepBusyRef = useRef(false);
   const [stepBusy, setStepBusy] = useState(false);
   const [stepError, setStepError] = useState(null);
 
@@ -906,11 +954,14 @@ export const ServiceProviderProvider = ({ children }) => {
   // rather than from React state that may not have flushed yet.
   const advanceStep = useCallback(
     async (fromStep) => {
+      if (stepBusyRef.current)
+        return { ok: false, error: "Step update already in progress." };
       const current = typeof fromStep === "string" ? fromStep : activeStep;
       const move = STEP_ADVANCE[current];
       if (!move) return { ok: false, error: `Nothing follows "${current}".` };
       if (!activeJobId) return { ok: false, error: "No active job to update." };
 
+      stepBusyRef.current = true;
       setStepBusy(true);
       setStepError(null);
       try {
@@ -935,14 +986,27 @@ export const ServiceProviderProvider = ({ children }) => {
         // the spare-parts call below then needs it there — sending parts straight
         // from Engineer Reached is rejected as an illegal status transition.
         if (move.needsParts) {
-          await apiRequest(`/service-provider/jobs/${activeJobId}/diagnosis`, {
-            method: "POST",
-            auth: true,
-            body: {
-              notes: diagnosisNotes || undefined,
-              photos: activeJob?.diagnosis?.photos || undefined,
-            },
-          });
+          try {
+            await apiRequest(
+              `/service-provider/jobs/${activeJobId}/diagnosis`,
+              {
+                method: "POST",
+                auth: true,
+                body: {
+                  notes: diagnosisNotes || undefined,
+                  photos: activeJob?.diagnosis?.photos || undefined,
+                },
+              },
+            );
+          } catch (diagErr) {
+            if (
+              !diagErr.message?.includes(
+                "Diagnosis can only be submitted during inspection",
+              )
+            ) {
+              throw diagErr;
+            }
+          }
         }
 
         const job = await apiRequest(
@@ -951,25 +1015,40 @@ export const ServiceProviderProvider = ({ children }) => {
         );
         const nextStep = job?.activeStep || current;
         try {
-          const nowStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-          localStorage.setItem(`ncc_job_step_${activeJobId}_${nextStep}`, nowStr);
+          const nowStr = new Date().toLocaleTimeString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: true,
+          });
+          localStorage.setItem(
+            `ncc_job_step_${activeJobId}_${nextStep}`,
+            nowStr,
+          );
         } catch (_err) {
           // Ignore localStorage errors (e.g. private browsing or storage quota)
         }
         // Trust the server's step over a locally-guessed one.
         setActiveStep(nextStep);
         await fetchRealJobs();
-        return { ok: true };
+        return { ok: true, step: nextStep };
       } catch (err) {
         // Leave the UI on the current step — silently moving on after a failed
         // write is how the local-only version drifted from the server.
         setStepError(err.message || "Could not update this job.");
         return { ok: false, error: err.message };
       } finally {
+        stepBusyRef.current = false;
         setStepBusy(false);
       }
     },
-    [activeStep, activeJobId, selectedParts, diagnosisNotes, fetchRealJobs],
+    [
+      activeStep,
+      activeJobId,
+      selectedParts,
+      diagnosisNotes,
+      activeJob?.diagnosis?.photos,
+      fetchRealJobs,
+    ],
   );
 
   const resetActiveJob = useCallback(() => {
@@ -1038,6 +1117,9 @@ export const ServiceProviderProvider = ({ children }) => {
         }
         const res = await advanceStep(current);
         if (!res.ok) return res;
+        if (res.step === target) {
+          return { ok: true };
+        }
       }
       return { ok: false, error: `Could not reach "${target}".` };
     },

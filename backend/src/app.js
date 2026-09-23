@@ -20,6 +20,7 @@ import { couponRouter } from './modules/rewards-loyalty/coupon.routes.js';
 import { exchangeRouter } from './modules/warranty-amc-exchange/exchange.routes.js';
 import { walletRouter } from './modules/payments-wallet/wallet.routes.js';
 import warrantyAmcRouter from './modules/warranty-amc-exchange/warrantyAmc.routes.js';
+import { City } from './modules/super-admin/city.model.js';
 import { serviceProviderRouter } from './modules/service-provider/serviceProvider.routes.js';
 import { serviceProviderRegistrationRouter } from './modules/service-provider/serviceProviderRegistration.routes.js';
 import { assistantRouter } from './modules/service-provider/assistant.routes.js';

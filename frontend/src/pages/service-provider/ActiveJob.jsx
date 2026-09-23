@@ -570,18 +570,27 @@ const ActiveJob = () => {
 
   useEffect(() => {
     if (activeStep !== "spareapproval" || !activeJob?.serviceRequestId) return;
+    const srId = String(
+      activeJob?.serviceRequestId ||
+      activeJob?.serviceRequest?._id ||
+      activeJob?.serviceRequest?.id ||
+      (typeof activeJob?.serviceRequest === "string" ? activeJob.serviceRequest : "") ||
+      ""
+    );
+    if (activeStep !== "spareapproval" || !srId) return;
     let cancelled = false;
 
     const poll = async () => {
       try {
         const res = await apiRequest("/service-provider/claims", {
           auth: true,
+          silentError: true,
         });
         if (cancelled) return;
-        const claim = (res || []).find(
+        const claimList = Array.isArray(res) ? res : res?.items || [];
+        const claim = claimList.find(
           (c) =>
-            String(c.serviceRequest?.id || c.serviceRequest) ===
-            String(activeJob.serviceRequestId),
+            String(c.serviceRequest?._id || c.serviceRequest?.id || c.serviceRequest) === srId,
         );
         setApprovalClaimStatus(claim ? claim.status : null);
       } catch {
@@ -2051,8 +2060,9 @@ const ActiveJob = () => {
                           setShowAmcHistoryDrawer(true);
                         }
                       }}
-                      className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-normal py-4 rounded-2xl text-sm transition-all shadow-md">
-                      Mark as Inspection Arrived
+                      disabled={stepBusy}
+                      className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] disabled:opacity-60 text-white font-normal py-4 rounded-2xl text-sm transition-all shadow-md">
+                      {stepBusy ? "Saving…" : "Mark as Inspection Arrived"}
                     </button>
                   </div>
                 )}
@@ -2501,8 +2511,9 @@ const ActiveJob = () => {
                                           onClick={() =>
                                             advanceStepsTo("billing")
                                           }
-                                          className="flex-1 bg-[#1E6BDB] hover:bg-blue-700 text-white font-semibold py-3.5 rounded-2xl text-xs transition-all shadow-md">
-                                          Generate Invoice
+                                          disabled={stepBusy}
+                                          className="flex-1 bg-[#1E6BDB] hover:bg-blue-700 disabled:opacity-60 text-white font-semibold py-3.5 rounded-2xl text-xs transition-all shadow-md">
+                                          {stepBusy ? "Saving…" : "Generate Invoice"}
                                         </button>
                                       </>
                                     )}
@@ -2554,8 +2565,9 @@ const ActiveJob = () => {
                                           onClick={() =>
                                             advanceStepsTo("billing")
                                           }
-                                          className="flex-1 bg-[#7C4DFF] hover:bg-purple-600 text-white font-semibold py-3.5 rounded-2xl text-xs transition-all shadow-md">
-                                          Generate Invoice
+                                          disabled={stepBusy}
+                                          className="flex-1 bg-[#7C4DFF] hover:bg-purple-600 disabled:opacity-60 text-white font-semibold py-3.5 rounded-2xl text-xs transition-all shadow-md">
+                                          {stepBusy ? "Saving…" : "Generate Invoice"}
                                         </button>
                                       </>
                                     )}
@@ -2606,8 +2618,9 @@ const ActiveJob = () => {
                                           onClick={() =>
                                             advanceStepsTo("billing")
                                           }
-                                          className="flex-1 bg-[#FFA000] hover:bg-amber-500 text-white font-semibold py-3.5 rounded-2xl text-xs transition-all shadow-md">
-                                          Complete Visit
+                                          disabled={stepBusy}
+                                          className="flex-1 bg-[#FFA000] hover:bg-amber-500 disabled:opacity-60 text-white font-semibold py-3.5 rounded-2xl text-xs transition-all shadow-md">
+                                          {stepBusy ? "Saving…" : "Complete Visit"}
                                         </button>
                                       </>
                                     )}
@@ -3029,8 +3042,9 @@ const ActiveJob = () => {
                                   ) : (
                                     <button
                                       onClick={() => advanceStepsTo("billing")}
-                                      className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-semibold py-4 rounded-2xl text-xs transition-all shadow-md text-center cursor-pointer">
-                                      Proceed to Billing & Invoice
+                                      disabled={stepBusy}
+                                      className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] disabled:opacity-60 text-white font-semibold py-4 rounded-2xl text-xs transition-all shadow-md text-center cursor-pointer">
+                                      {stepBusy ? "Saving…" : "Proceed to Billing & Invoice"}
                                     </button>
                                   )}
                                 </div>
@@ -3385,8 +3399,9 @@ const ActiveJob = () => {
                                     setEnteredInspection(false);
                                     advanceStep();
                                   }}
-                                  className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-medium py-4 rounded-2xl text-sm transition-all shadow-md mt-4">
-                                  Save & Continue
+                                  disabled={stepBusy}
+                                  className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] disabled:opacity-60 text-white font-medium py-4 rounded-2xl text-sm transition-all shadow-md mt-4">
+                                  {stepBusy ? "Saving…" : "Save & Continue"}
                                 </button>
                               </div>
                             )}
@@ -3722,6 +3737,7 @@ const ActiveJob = () => {
                       !isD2C, so gating those too left every paid job stuck here
                       forever on "No claim has been raised for these parts yet." */}
                         {activeJob?.isD2C ||
+                        (selectedParts.length === 0 && !activeJob?.spareParts?.some((p) => p.checked)) ||
                         approvalClaimStatus === "Approved" ? (
                           <button
                             onClick={() => advanceStep()}
@@ -3729,9 +3745,11 @@ const ActiveJob = () => {
                             className={`w-full ${approvalColor} disabled:opacity-60 text-white font-normal py-4 rounded-2xl text-sm transition-all shadow-md mt-2`}>
                             {stepBusy
                               ? "Saving…"
-                              : activeJob?.isD2C
-                                ? "Parts Billed to Customer — Continue"
-                                : "Approved — Continue"}
+                              : selectedParts.length === 0 && !activeJob?.spareParts?.some((p) => p.checked)
+                                ? "No Parts Required — Continue"
+                                : activeJob?.isD2C
+                                  ? "Parts Billed to Customer — Continue"
+                                  : "Approved — Continue"}
                           </button>
                         ) : approvalClaimStatus === "Rejected" ? (
                           <div className="w-full bg-red-50 border border-red-200 text-red-700 font-semibold py-3 rounded-2xl text-xs mt-2 px-3">
@@ -4015,8 +4033,9 @@ const ActiveJob = () => {
                         onClick={() => {
                           advanceStepsTo("repaircomplete");
                         }}
-                        className="w-full bg-[#00C853] hover:bg-[#00A844] text-white font-semibold py-4 rounded-2xl text-xs transition-all shadow-md mt-auto mb-1 text-center cursor-pointer">
-                        Install Part & Complete Repair
+                        disabled={stepBusy}
+                        className="w-full bg-[#00C853] hover:bg-[#00A844] disabled:opacity-60 text-white font-semibold py-4 rounded-2xl text-xs transition-all shadow-md mt-auto mb-1 text-center cursor-pointer">
+                        {stepBusy ? "Saving…" : "Install Part & Complete Repair"}
                       </button>
                     )}
                   </div>

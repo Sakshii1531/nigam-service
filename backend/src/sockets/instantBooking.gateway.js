@@ -25,16 +25,17 @@ export function registerInstantBookingGateway(io) {
       if (socket.user?.id) {
         socket.join(`service-provider:${socket.user.id}`);
         try {
-          const provider = await ServiceProvider.findOne({ user: socket.user.id });
+          const provider = await ServiceProvider.findOne({ user: socket.user.id }).populate("city");
           if (provider) {
             socket.join(`service-provider:${provider._id}`);
             // Re-joining after a service city change: leave the old city's
             // broadcast room so the provider stops getting its open offers.
             for (const room of socket.rooms) {
-              if (room.startsWith('city:')) socket.leave(room);
+              if (room.startsWith("city:")) socket.leave(room);
             }
-            if (provider.serviceCityName) {
-              socket.join(`city:${provider.serviceCityName.toLowerCase().trim()}`);
+            const cityName = provider.serviceCityName || provider.city?.name;
+            if (cityName) {
+              socket.join(`city:${cityName.toLowerCase().trim()}`);
             }
           }
         } catch {
