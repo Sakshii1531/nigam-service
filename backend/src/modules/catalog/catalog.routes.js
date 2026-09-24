@@ -1,9 +1,13 @@
 import { Router } from 'express';
 import { validate } from '../../middleware/validate.js';
-import { requireAuth, requireRole } from '../../middleware/auth.js';
+import rateLimit from 'express-rate-limit';
+import { requireAuth, requireRole, optionalAuth } from '../../middleware/auth.js';
 import { ok, created } from '../../utils/respond.js';
 import { ROLES } from '../../config/constants.js';
 import * as catalogService from './catalog.service.js';
+import { getCategoryTree, getOfferingDetail } from './offeringBrowse.service.js';
+import { buildQuote } from './quote.service.js';
+import { toCustomerQuote } from './commercialView.js';
 import { Brand } from '../super-admin/brand.model.js';
 import {
   createCategorySchema,
@@ -15,6 +19,9 @@ import {
   addServiceItemSchema,
   updateServiceItemSchema,
   serviceItemIdParamSchema,
+  locationQuerySchema,
+  offeringCodeParamSchema,
+  quoteSchema,
 } from './catalog.validation.js';
 
 export const catalogRouter = Router();
@@ -70,6 +77,57 @@ catalogRouter.get('/brands', async (req, res, next) => {
 catalogRouter.get('/categories/:key', validate(categoryKeyParamSchema, 'params'), async (req, res, next) => {
   try {
     ok(res, await catalogService.getCategoryByKey(req.params.key));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ─── Master Service & Offering Catalogue (docs/master-catalogue Phase 2) ───
+// Public reads: the customer app browses and prices without being logged in.
+// Only bookable offerings appear, only customer-safe fields leave (commercialView).
+
+catalogRouter.get(
+  '/categories/:key/tree',
+  validate(categoryKeyParamSchema, 'params'),
+  validate(locationQuerySchema, 'query'),
+  async (req, res, next) => {
+    try {
+      ok(res, await getCategoryTree(req.params.key, req.query));
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+catalogRouter.get(
+  '/offerings/:code',
+  validate(offeringCodeParamSchema, 'params'),
+  validate(locationQuerySchema, 'query'),
+  async (req, res, next) => {
+    try {
+      ok(res, await getOfferingDetail(req.params.code, req.query));
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// The app re-quotes on every selection change (quantity, express, coupon…),
+// so this gets its own ceiling below the app-wide one. Skipped under test for
+// the same reason the global limiter is (app.js).
+const quoteRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => process.env.NODE_ENV === 'test',
+  message: { data: null, error: { message: 'Too many price requests, please slow down.' }, meta: {} },
+});
+
+catalogRouter.post('/quote', quoteRateLimit, optionalAuth, validate(quoteSchema), async (req, res, next) => {
+  try {
+    const quote = await buildQuote(req.body, { userId: req.user?.id || null });
+    ok(res, toCustomerQuote(quote));
   } catch (err) {
     next(err);
   }

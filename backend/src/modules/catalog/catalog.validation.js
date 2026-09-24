@@ -22,7 +22,6 @@ export const addProductTypeSchema = z.object({
   name: z.string().min(1),
   icon: z.string().optional(),
   desc: z.string().optional(),
-  priceAddon: z.coerce.number().min(0).optional(),
 });
 
 export const updateProductTypeSchema = addProductTypeSchema.partial().omit({ slug: true });
@@ -42,3 +41,42 @@ export const updateServiceItemSchema = addServiceItemSchema.partial().omit({ slu
 
 export const productTypeIdParamSchema = z.object({ key: z.string().min(1), productTypeId: z.string().min(1) });
 export const serviceItemIdParamSchema = z.object({ key: z.string().min(1), serviceItemId: z.string().min(1) });
+
+// ─── Master catalogue (docs/master-catalogue Phase 2) ─────────────────────
+
+const objectId = z.string().regex(/^[a-f0-9]{24}$/i, 'Invalid id');
+
+export const locationQuerySchema = z.object({
+  city: z.string().trim().min(1).optional(),
+  pincode: z.string().trim().min(1).optional(),
+});
+
+export const offeringCodeParamSchema = z.object({ code: z.string().min(1).max(64) });
+
+export const quoteSchema = z.object({
+  lines: z
+    .array(
+      z.object({
+        offeringId: objectId,
+        variantId: objectId.nullish(),
+        quantity: z.coerce.number().int().positive(),
+        isExpress: z.boolean().optional(),
+      }),
+    )
+    .min(1)
+    .max(10),
+  couponCode: z.string().trim().min(1).max(40).nullish(),
+  useCoins: z.boolean().optional(),
+  paymentMode: z.enum(['advance', 'after']).optional(),
+  location: locationQuerySchema.optional(),
+  // The customer's appliance, for server-side warranty/AMC/EW detection
+  // (signed-in only). Never a coverage claim — see quote.service.js.
+  warranty: z
+    .object({
+      brand: z.string().trim().max(80).optional(),
+      applianceId: z.string().max(40).optional(),
+      serialNo: z.string().trim().max(80).optional(),
+      purchaseDate: z.coerce.date().optional(),
+    })
+    .optional(),
+});

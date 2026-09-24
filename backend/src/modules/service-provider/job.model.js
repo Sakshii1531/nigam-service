@@ -85,14 +85,52 @@ const revisitSchema = new mongoose.Schema(
 
 const billingEstimateSchema = new mongoose.Schema(
   {
+    // The booked service's final (GST already inside) — charged as booked.
     serviceCharge: { type: Number, default: 0 },
+    // Spare parts incl. their GST (paid jobs only).
     sparePartsTotal: { type: Number, default: 0 },
+    // Catalogue add-ons at their engine-priced finals (GST included).
     additionalServicesTotal: { type: Number, default: 0 },
     gstPercent: { type: Number, default: 18 },
     total: { type: Number, default: 0 },
+    // Verified advance + coins the customer already paid; what's left is collected on site.
+    alreadyPaid: { type: Number, default: 0 },
+    amountToCollect: { type: Number, default: 0 },
     serviceProviderEarnings: { type: Number, default: 0 },
   },
   { _id: false },
+);
+
+// The partner's fixed earning for the job (docs/master-catalogue Phase 5):
+// the booking's frozen offering payout + express incentive + catalogue
+// add-ons. Never a share of the customer price.
+const payoutSchema = new mongoose.Schema(
+  {
+    base: { type: Number, default: 0 },
+    expressIncentive: { type: Number, default: 0 },
+    addOns: { type: Number, default: 0 },
+    total: { type: Number, default: 0 },
+  },
+  { _id: false },
+);
+
+// Extra work done on site, picked from the Master Catalogue and priced by
+// the same engine as bookings. `price` mirrors finalAmount for older screens.
+const addOnSchema = new mongoose.Schema(
+  {
+    offeringId: { type: mongoose.Schema.Types.ObjectId, ref: 'ServiceOffering' },
+    code: String,
+    name: String,
+    quantity: { type: Number, default: 1 },
+    unitPrice: Number,
+    taxableAmount: Number,
+    gstAmount: Number,
+    finalAmount: Number,
+    price: Number,
+    spPayout: { type: Number, default: 0 },
+    checked: { type: Boolean, default: true },
+  },
+  { timestamps: { createdAt: true, updatedAt: false } },
 );
 
 const jobSchema = new mongoose.Schema(
@@ -111,7 +149,9 @@ const jobSchema = new mongoose.Schema(
     isRecommended: { type: Boolean, default: false },
     isNccEw: { type: Boolean, default: false },
 
+    // = payout.total, kept for the screens that already read it.
     estEarnings: { type: Number, default: 0 },
+    payout: { type: payoutSchema, default: () => ({}) },
     price: { type: Number, default: 0 },
     distanceKm: Number,
 
@@ -126,7 +166,7 @@ const jobSchema = new mongoose.Schema(
     },
 
     diagnosis: diagnosisSchema,
-    additionalServices: [lineItemSchema],
+    additionalServices: [addOnSchema],
     spareParts: [{ ...lineItemSchema.obj, sku: String, source: { type: String, enum: ['recommended_ai', 'manual'] } }],
     proofs: proofsSchema,
     revisit: revisitSchema,

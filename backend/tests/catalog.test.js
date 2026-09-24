@@ -71,7 +71,7 @@ describe('GET /catalog/categories', () => {
     expect(res.body.data).toHaveLength(1);
     const [ac] = res.body.data;
     expect(ac.key).toBe('AC');
-    expect(ac.productTypes).toEqual([{ id: 'split', name: 'Split AC', icon: undefined, desc: undefined, priceAddon: 0 }]);
+    expect(ac.productTypes).toEqual([{ id: 'split', name: 'Split AC', icon: undefined, desc: undefined }]);
     expect(ac.services).toEqual([{ id: 'repair', name: 'Repair', icon: undefined, desc: undefined, price: 299, unit: 'per unit' }]);
   });
 

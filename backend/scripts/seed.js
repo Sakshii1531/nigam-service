@@ -31,6 +31,7 @@ import { Notification } from '../src/modules/notifications/notification.model.js
 import { hashPassword } from '../src/modules/auth/password.js';
 import { ROLES } from '../src/config/constants.js';
 import { CATALOG_SEED } from './catalogSeedData.js';
+import { seedMasterCatalogue } from './seedMasterCatalogue.js';
 import { seedDemoEntities } from './demoSeedData.js';
 
 const PRODUCTS = [
@@ -123,6 +124,7 @@ const PERMISSIONS = [
   { key: 'requests:manage', description: 'Manage service requests/complaints', domain: 'requests' },
   { key: 'invoices:export', description: 'View and export invoices', domain: 'invoices' },
   { key: 'catalog:manage', description: 'Manage brand catalog', domain: 'catalog' },
+  { key: 'catalogue:manage', description: 'Manage the Master Service & Offering Catalogue (prices, partner payouts)', domain: 'catalogue' },
   { key: 'claims:approve', description: 'Approve/reject warranty & FOC claims', domain: 'claims' },
   { key: 'teams:manage', description: 'Manage brand teams/departments', domain: 'teams' },
 ];
@@ -484,6 +486,11 @@ async function main() {
   console.log(`[seed] serviceProvider profile ready: ${serviceProviderProfile.name} (${serviceProviderProfile.id})`);
 
   await upsertCatalog();
+  // Master Service & Offering Catalogue (docs/master-catalogue). Runs after the
+  // legacy catalogue so its categories exist; the legacy items stay until the
+  // Phase 4 booking cut-over stops reading them.
+  const catalogue = await seedMasterCatalogue();
+  console.log(`[seed] master catalogue ready: ${catalogue.offerings} offerings (${catalogue.ratesCreated} new rates)`);
   await upsertCommerce();
   await upsertTechFixtures(customer);
   await seedDemoEntities();

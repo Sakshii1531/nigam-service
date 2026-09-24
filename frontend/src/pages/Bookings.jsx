@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { formatRupees } from '../lib/catalogueApi';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   ArrowLeft, Calendar, Clock, Wrench, Search, CheckCircle2, AlertTriangle, X, ChevronRight, RefreshCw, Sparkles, Check, Copy
@@ -503,7 +504,7 @@ const Bookings = () => {
                 ? new Date(b.scheduledDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) 
                 : 'Scheduled';
               const timeStr = typeof b.timeSlot === 'object' ? (b.timeSlot?.time || '10:00 AM – 01:00 PM') : (b.timeSlot || '10:00 AM – 01:00 PM');
-              const price = b.totalPrice != null ? `₹${b.totalPrice}` : '₹499';
+              const price = formatRupees(b.totalPrice ?? 0);
 
               return (
                 <div

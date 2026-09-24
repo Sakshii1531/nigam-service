@@ -23,7 +23,6 @@ const Payment = () => {
   const paymentState = location.state || {};
   const isProductBuy = !!paymentState.isApplianceBuy;
   const itemName = paymentState.productName || 'AC Service & Repair';
-  const itemPrice = paymentState.price !== undefined ? paymentState.price : 299;
 
   const bookingMeta =
     paymentState.bookingMeta ||
@@ -36,6 +35,12 @@ const Payment = () => {
       }
       return null;
     })();
+
+  // A service booking pays what its catalogue quote says is due now — coins
+  // were already applied in that quote (BookingFlow), so this page doesn't
+  // offer them again. Product buys keep the page's own coin redemption.
+  const bookingQuote = !isProductBuy ? bookingMeta?.quote : null;
+  const itemPrice = bookingQuote ? bookingQuote.payableNow : (paymentState.price ?? 0);
 
   // Intercept browser and hardware back button
   useEffect(() => {
@@ -88,7 +93,7 @@ const Payment = () => {
   // Conversion: 10 coins = ₹1
   const coinsRate = 10;
   const maxCoinsToRedeem = Math.min(availableCoins, Math.floor(itemPrice * coinsRate));
-  const coinDiscountValue = redeemCoins ? maxCoinsToRedeem / coinsRate : 0;
+  const coinDiscountValue = redeemCoins && !bookingQuote ? maxCoinsToRedeem / coinsRate : 0;
   const finalPrice = Math.max(0, itemPrice - coinDiscountValue);
 
   const getNextPaymentState = () => ({
@@ -170,8 +175,8 @@ const Payment = () => {
               )}
             </div>
 
-            {/* Redeem Nigam Coins Card */}
-            {availableCoins > 0 && (
+            {/* Redeem Nigam Coins Card — product buys only (see bookingQuote) */}
+            {availableCoins > 0 && !bookingQuote && (
               <div
                 onClick={() => setRedeemCoins((prev) => !prev)}
                 className={`p-3.5 sm:p-5 rounded-2xl md:rounded-3xl border-2 cursor-pointer transition-all flex items-center justify-between shadow-xs ${

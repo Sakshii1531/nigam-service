@@ -1056,7 +1056,8 @@ const Dashboard = () => {
 
                         <div className="flex flex-col gap-1 min-w-0">
                           <h4 className="text-sm font-bold text-[#052355] truncate group-hover:text-[#0D47A1] transition-colors">
-                            {job.product || job.category}
+                            {job.serviceLine || job.product || job.category}
+                            {job.isExpress ? " · ⚡ Express" : ""}
                           </h4>
                           <div className="flex flex-col gap-1 text-xs text-slate-600 mt-1">
                             <div className="flex items-center gap-1.5 font-medium">
@@ -1259,7 +1260,8 @@ const Dashboard = () => {
                         <div className="flex justify-between items-end gap-3 w-full">
                           <div className="min-w-0">
                             <p className="text-sm font-bold text-[#052355] line-clamp-2 leading-snug">
-                              {job.product}
+                              {job.serviceLine || job.product}
+                              {job.isExpress ? " · ⚡ Express" : ""}
                             </p>
                             <p className="text-xs text-slate-500 mt-1 truncate">
                               {job.customerName}
@@ -1438,7 +1440,8 @@ const Dashboard = () => {
                           </div>
 
                           <p className="text-sm font-bold text-[#052355] mt-2 line-clamp-2 leading-snug">
-                            {job.product}
+                            {job.serviceLine || job.product}
+                            {job.isExpress ? " · ⚡ Express" : ""}
                           </p>
 
                           <div className="flex items-center gap-1.5 text-slate-500 text-xs mt-1.5">
@@ -1684,7 +1687,8 @@ const Dashboard = () => {
                       <h3
                         id="dispatch-title"
                         className="text-lg font-bold text-white mt-1.5 leading-snug line-clamp-2">
-                        {job.product}
+                        {job.serviceLine || job.product}
+                        {job.isExpress ? " · ⚡ Express" : ""}
                       </h3>
                       <div className="flex flex-wrap gap-1.5 mt-2.5">
                         <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-white/15">

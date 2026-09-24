@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { createTestOffering, offeringBookingBody } from '../catalogueFixture.js';
 import { randomUUID } from 'node:crypto';
 
 // Covers the customer appliance registry and the server-priced extended
@@ -169,17 +170,14 @@ test.describe('customer payments actually reach the gateway', () => {
       headers: { Authorization: `Bearer ${adminToken}` },
       data: { key: categoryKey, name: categoryKey },
     });
-    await request.post(`/api/v1/catalog/categories/${categoryKey}/services`, {
-      headers: { Authorization: `Bearer ${adminToken}` },
-      data: { slug: 'repair', name: 'Repair', price: 1000 },
-    });
+    await createTestOffering(request, adminToken, categoryKey, { price: 1000 });
 
     const customer = await createCustomer(request);
     const auth = { headers: { Authorization: `Bearer ${customer.token}` } };
 
     const res = await request.post('/api/v1/bookings', {
       ...auth,
-      data: { category: categoryKey, serviceSlug: 'repair', paymentMode: 'advance', paymentMethod: 'UPI' },
+      data: await offeringBookingBody(request, { categoryKey, paymentMode: 'advance', paymentMethod: 'UPI' }),
     });
     expect(res.status()).toBe(201);
     const { booking, razorpay } = (await res.json()).data;

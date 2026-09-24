@@ -1,17 +1,26 @@
 import { apiRequest } from './apiClient';
 
-/** One /bookings POST body for a single appliance type entry within a
- * bookingMeta (BookingFlow's Step 4 handoff object). `extra` carries
- * call-site-specific fields, e.g. { paymentMethod: 'Card' }. */
-function buildBookingBody(meta, typeEntry, extra) {
+/**
+ * One /bookings POST body for a single quote line of a bookingMeta
+ * (BookingFlow's Step 4 handoff). Everything commercial comes from the quote
+ * the customer was shown: the offering, its size/option, quantity, express,
+ * and `expectedFinalAmount` — if the server prices it differently (the rate
+ * changed meanwhile) the booking is refused with 409 PRICE_CHANGED rather
+ * than charged at a price the customer never saw. Coupon and coins ride on
+ * the first line only (they're single-line in the flow). `extra` carries
+ * call-site fields, e.g. { paymentMethod: 'Card' }.
+ */
+function buildBookingBody(meta, line, index, extra) {
   return {
-    category: meta.category,
-    productType: typeEntry.name,
-    quantity: typeEntry.qty || 1,
-    serviceSlug: meta.serviceSlug,
-    serviceName: meta.serviceName || meta.service || meta.serviceSlug,
-    service: meta.service || meta.serviceName || meta.serviceSlug,
-    brand: meta.brand,
+    offeringId: line.offeringId,
+    ...(line.variantId ? { variantId: line.variantId } : {}),
+    quantity: line.quantity,
+    isExpress: Boolean(line.isExpress),
+    expectedFinalAmount: line.expectedFinalAmount,
+    requiredInfo: meta.requiredInfo || [],
+    ...(index === 0 && meta.couponCode ? { couponCode: meta.couponCode } : {}),
+    ...(index === 0 && meta.useCoins ? { useCoins: true } : {}),
+    brand: meta.brand || undefined,
     scheduledDate: new Date().toISOString(),
     timeSlot: { date: meta.date || '', time: meta.timeGroup || '' },
     address: meta.address,
@@ -25,43 +34,38 @@ function buildBookingBody(meta, typeEntry, extra) {
 }
 
 /**
- * The customer may need service for more than one appliance type in the same
- * visit (e.g. 1 Window AC + 2 Split AC) — a Booking is one type's service
- * call, so this creates one booking per type entry, sequentially, sharing
- * the same service/schedule/address/payment mode. `meta.typeEntries` is the
- * `[{ name, qty }, ...]` list BookingFlow's Step 1 builds (falls back to the
- * single productType/quantity pair for a plain one-type booking).
+ * Creates one booking per quote line, sequentially — a Booking is one
+ * offering's service call, so "1 Window AC + 2 Split AC" is two bookings
+ * sharing the schedule, address and payment mode.
  *
  * This is the one place that builds a /bookings request — BookingFlow's
- * pay-after-service path and each gateway payment page (Card/UPI/
- * NetBanking) used to each independently duplicate this payload, which is
- * exactly the kind of place a multi-type change is easy to apply in three
- * places and miss the fourth.
+ * pay-after-service path and each gateway payment page (Card/UPI/NetBanking)
+ * all go through it.
  *
- * `onEach(result, typeEntry)` runs after each booking is created — e.g. to
- * collect that booking's Razorpay advance before moving to the next one.
+ * `onEach(result, line)` runs after each booking is created — e.g. to collect
+ * that booking's Razorpay advance before moving to the next one.
  */
 export async function submitBookingsForMeta(meta, { extra = {}, onEach } = {}) {
-  const typeEntries = Array.isArray(meta.typeEntries) && meta.typeEntries.length > 0
-    ? meta.typeEntries
-    : [{ name: meta.productType, qty: meta.quantity || 1 }];
-
+  if (!Array.isArray(meta?.lines) || meta.lines.length === 0) {
+    throw new Error('Nothing to book — please choose the service again.');
+  }
   const results = [];
-  for (const entry of typeEntries) {
+  for (const [index, line] of meta.lines.entries()) {
     const result = await apiRequest('/bookings', {
       method: 'POST',
       auth: true,
-      body: buildBookingBody(meta, entry, extra),
+      body: buildBookingBody(meta, line, index, extra),
     });
-    if (onEach) await onEach(result, entry);
+    if (onEach) await onEach(result, line);
     results.push(result);
   }
   return results;
 }
 
 /** Sum of what every booking in the result set actually charged — the
- * authoritative, server-computed total (addons included), not a client
- * estimate. */
+ * authoritative, server-computed totals. Summed in whole paise so two
+ * bookings of ₹706.82 + ₹411.82 read ₹1,118.64, not 1118.6399999. */
 export function totalPriceFromResults(results) {
-  return results.reduce((sum, r) => sum + (r.booking?.totalPrice || 0), 0);
+  const paise = results.reduce((sum, r) => sum + Math.round((r.booking?.totalPrice || 0) * 100), 0);
+  return paise / 100;
 }

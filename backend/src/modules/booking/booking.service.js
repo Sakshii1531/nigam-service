@@ -2,11 +2,12 @@ import mongoose from 'mongoose';
 import { Booking } from './booking.model.js';
 import { ServiceRequest } from '../service-requests/serviceRequest.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
-import { findServiceItem, findProductTypeAddon } from '../catalog/catalog.service.js';
-import { Category } from '../catalog/category.model.js';
-import { ServiceCatalogItem } from '../catalog/serviceCatalogItem.model.js';
-import { ServicePageConfig } from '../super-admin/servicePageConfig.model.js';
-import { CategoryBookingConfig } from '../super-admin/categoryBookingConfig.model.js';
+import { loadBookableOfferings } from '../catalog/offeringBrowse.service.js';
+import { buildQuote, detectCoverage } from '../catalog/quote.service.js';
+import { toCustomerQuote } from '../catalog/commercialView.js';
+import { catalogError, CATALOG_ERROR_CODES } from '../catalog/catalogErrors.js';
+import { toPaise, toRupees } from '../catalog/money.js';
+import { redeemCoins, creditCoins } from '../payments-wallet/wallet.service.js';
 import { estimateServiceProviderEarnings } from '../shared/serviceProviderEarnings.js';
 import { Job } from '../service-provider/job.model.js';
 import { PartOrder } from '../service-provider/partOrder.model.js';
@@ -24,8 +25,6 @@ import { createServiceRequest, transitionStatus, emitWarrantyClaimNotification, 
 import { emit as emitNotification } from '../notifications/notification.service.js';
 import { parsePagination, paginationMeta } from '../../utils/pagination.js';
 import { runInTransaction } from '../../utils/transaction.js';
-import { detectWarrantyForAppliance } from '../warranty-amc-exchange/warrantyDetector.service.js';
-import { PlatformSettings } from '../super-admin/platformSettings.model.js';
 import { Payment } from '../payments-wallet/payment.model.js';
 import { createRazorpayOrder, verifyRazorpaySignature } from '../payments-wallet/paymentGateway.js';
 import { env } from '../../config/env.js';
@@ -41,142 +40,117 @@ import { INSTANT_ROOM } from '../../sockets/instantBooking.gateway.js';
 
 const escapeRegex = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-/**
- * The price of the service being booked, looked up server-side. Bookings used
- * to take `price` / `totalPrice` straight from the request — and the customer
- * booking page reads those from its own URL — so anyone could book a ₹399
- * repair for ₹1.
- *
- * Named services the app lists come from two admin-managed places: catalog
- * items (matched by slug, then by name) and the CMS service pages' priced
- * catalogs (matched by item name). A name found in neither is refused rather
- * than priced at a guess.
- */
-async function resolveBookedService({ category: categoryKey, serviceSlug, serviceName }) {
-  const name = (serviceName || '').trim();
-  const slug = (serviceSlug || '').trim();
-  const normSlug = slug.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
-
-  const category = await Category.findOne({ key: { $regex: new RegExp(`^${escapeRegex(categoryKey)}$`, 'i') } });
-
-  // 1. By name in database catalog
-  if (name && category) {
-    const item = await ServiceCatalogItem.findOne({
-      category: category._id,
-      name: { $regex: new RegExp(`^${escapeRegex(name)}$`, 'i') },
-      isActive: true,
-    });
-    if (item) return { name: item.name, slug: item.slug, price: item.price || 0, desc: item.desc, unit: item.unit };
-  }
-
-  // 2. By slug in database catalog (if name is missing or didn't match)
-  if (slug && category) {
-    const item = await ServiceCatalogItem.findOne({ category: category._id, slug, isActive: true });
-    if (item) return { name: item.name, slug: item.slug, price: item.price || 0, desc: item.desc, unit: item.unit };
-  }
-
-  // 3. Match from CMS ServicePageConfig (by name or by slug)
-  const servicePages = await ServicePageConfig.find({
-    $or: [
-      ...(name ? [{ 'catalog.items.name': { $regex: new RegExp(`^${escapeRegex(name)}$`, 'i') } }] : []),
-      { serviceKey: { $regex: new RegExp(`^${escapeRegex(categoryKey)}$`, 'i') } },
-      ...(name ? [{ serviceKey: { $regex: new RegExp(`^${escapeRegex(name)}$`, 'i') } }] : []),
-    ],
-  });
-  for (const page of servicePages) {
-    const pageItem = page?.catalog?.flatMap((section) => section.items || []).find((it) => {
-      const itName = (it.name || '').trim();
-      if (name && itName.toLowerCase() === name.toLowerCase()) return true;
-      if (normSlug && itName.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') === normSlug) return true;
-      return false;
-    });
-    if (pageItem) {
-      const pagePrice = Number(String(pageItem.price ?? '').replace(/[^0-9.]/g, ''));
-      if (Number.isFinite(pagePrice) && String(pageItem.price).match(/[0-9]/)) {
-        return {
-          name: pageItem.name,
-          slug: slug || pageItem.name.toLowerCase().replace(/[^a-z0-9]+/g, '_'),
-          price: pagePrice,
-          desc: pageItem.desc,
-          unit: pageItem.unit,
-        };
-      }
+/** The offering's required-info answers, validated against its questions. */
+function resolveRequiredInfo(offering, answers = []) {
+  const byKey = new Map(answers.map((a) => [a.key, String(a.value ?? '').trim()]));
+  const missing = [];
+  const resolved = [];
+  for (const question of offering.requiredInfo || []) {
+    const value = byKey.get(question.key) || '';
+    if (!value) {
+      if (question.required) missing.push(question.label);
+      continue;
     }
-  }
-
-  // 4. Match from CMS CategoryBookingConfig
-  const catConfig = await CategoryBookingConfig.findOne({
-    categoryName: { $regex: new RegExp(`^${escapeRegex(categoryKey)}$`, 'i') },
-  });
-  if (catConfig?.services) {
-    const rawServices = typeof catConfig.services === 'object' ? Object.values(catConfig.services) : [];
-    const allItems = rawServices.flatMap((group) => (Array.isArray(group) ? group : (group?.default || [])));
-    const matched = allItems.find((it) => {
-      const itName = (it.name || '').trim();
-      const itId = (it.id || '').trim().toLowerCase();
-      if (name && itName.toLowerCase() === name.toLowerCase()) return true;
-      if (slug && (itId === slug.toLowerCase() || itName.toLowerCase().replace(/[^a-z0-9]+/g, '_') === normSlug)) return true;
-      return false;
-    });
-    if (matched) {
-      const price = Number(String(matched.price ?? '').replace(/[^0-9.]/g, '')) || matched.price || 0;
-      return { name: matched.name, slug: slug || matched.id || 'service', price, desc: matched.desc, unit: matched.unit };
+    if (question.type === 'select' && question.options?.length && !question.options.includes(value)) {
+      throw new ApiError(400, `"${value}" is not a valid answer for "${question.label}"`);
     }
+    resolved.push({ key: question.key, label: question.label, value });
   }
-
-  // 5. Fallback for catalog booking by slug if no explicit name was provided
-  if (!name && slug) {
-    const item = await findServiceItem(categoryKey, slug);
-    return { name: item.name, slug: item.slug, price: item.price || 0, desc: item.desc, unit: item.unit };
-  }
-
-  throw new ApiError(400, `"${name || slug}" is not a bookable service right now — please choose it again from the services list`);
+  if (missing.length) throw new ApiError(400, `Please answer: ${missing.join(', ')}`);
+  return resolved;
 }
 
+/** The frozen commercial snapshot (rupees) from one priced quote line. */
+function commercialSnapshot(quote, line) {
+  return {
+    offeringId: line.offering.id,
+    offeringCode: line.offering.code,
+    offeringName: line.offering.name,
+    bookingType: line.offering.bookingType,
+    category: line.category,
+    productType: line.productType,
+    variant: line.variant,
+    service: line.service,
+    pricingUnit: line.offering.pricingUnit,
+    unitLabel: line.offering.unitLabel,
+    quantity: line.quantity,
+    unitPrice: toRupees(line.unitPrice),
+    baseAmount: toRupees(line.baseAmount),
+    discount: { code: line.discount > 0 ? quote.couponCode : null, amount: toRupees(line.discount) },
+    coverage: { type: line.coverage.type, amount: toRupees(line.coverage.amount) },
+    isExpress: line.isExpress,
+    expressFee: toRupees(line.expressFee),
+    taxableAmount: toRupees(line.taxableAmount),
+    gstPercent: line.gstPercent,
+    gstAmount: toRupees(line.gstAmount),
+    finalAmount: toRupees(line.finalAmount),
+    coinsApplied: toRupees(quote.coinsApplied),
+    spPayoutUnit: toRupees(line.spPayoutUnit),
+    expressSpIncentive: toRupees(line.expressSpIncentive),
+    spPayoutTotal: toRupees(line.spPayoutTotal),
+    nccMargin: toRupees(line.nccMargin),
+    rate: line.rate,
+    pricedAt: quote.pricedAt,
+  };
+}
+
+/**
+ * Creates a Booking for ONE catalogue offering (docs/master-catalogue Phase 4).
+ *
+ * The offering is priced with the same engine as POST /catalog/quote — never
+ * from anything the client sends — and the full commercial snapshot is frozen
+ * on the booking. The client's `expectedFinalAmount` must match the server's
+ * price, so a rate that changed while the customer was checking out surfaces
+ * as 409 PRICE_CHANGED (with the new quote) instead of a silent surprise.
+ * Unknown / inactive / unrated / unserviceable offerings are refused — there
+ * is no fallback to "some service in the category" any more (client Test 12).
+ */
 export async function createBooking(userId, data) {
-  const resolved = await resolveBookedService({
-    category: data.category,
-    serviceSlug: data.serviceSlug,
-    serviceName: data.serviceName || data.service,
-  });
+  const isInstant = Boolean(data.isInstant || data.timeGroup === 'ASAP' || data.timeSlot?.time === 'ASAP' || data.timeSlot?.time?.includes?.('ASAP'));
+  // An ASAP booking is an express booking (assumption A3): it pays the express
+  // fee, and an offering with express disabled cannot be booked ASAP.
+  const isExpress = Boolean(data.isExpress || isInstant);
+  const location = { city: data.address?.city || null, pincode: data.address?.pincode || null };
 
-  const quantity = data.quantity || 1;
-  // A product type (e.g. "Split AC" vs "Window AC") can cost more to service
-  // than the category's base price — the addon is set per type, on the real
-  // catalog, and applies on top of whichever service was booked. Resolved
-  // server-side; a client-supplied addon is never trusted.
-  const productTypeAddon = await findProductTypeAddon(data.category, data.productType);
-  const itemPrice = resolved.price + productTypeAddon;
-  const basePrice = itemPrice * quantity;
-  const serviceName = resolved.name;
-  const serviceSlug = resolved.slug;
+  const [entry] = await loadBookableOfferings({ _id: data.offeringId }, location);
+  if (!entry) throw catalogError(CATALOG_ERROR_CODES.OFFERING_NOT_BOOKABLE, 'This service is not available right now.', 400, { offeringId: data.offeringId });
+  const { offering } = entry;
+  const categoryKey = offering.category.key;
+  const requiredInfo = resolveRequiredInfo(offering, data.requiredInfo);
 
-  const isInstant = Boolean(data.isInstant || data.timeGroup === 'ASAP' || data.timeSlot?.time === 'ASAP' || data.timeSlot?.time?.includes('ASAP'));
-
-  // How much of the total an "advance" booking collects up front, from the
-  // super-admin Settings console. The reference below was added without this
-  // lookup, so every advance booking failed with a 500.
-  const settings = await PlatformSettings.findOne();
-  const advancePercent = settings?.bookingAdvancePercent ?? 20;
-
-  // Run automated Smart Warranty Detection pipeline
-  const {
-    warrantyStatus,
-    brandId,
-    applianceId,
-    amcSubscriptionId,
-    extendedWarrantyOrderId,
-  } = await detectWarrantyForAppliance({
+  // Warranty/AMC/EW coverage is decided here, server-side, before pricing —
+  // the same detection POST /catalog/quote runs for the same appliance details.
+  const { coverageType, detection } = await detectCoverage({
     userId,
-    category: data.category,
-    brandName: data.brand,
-    serialNo: data.serialNo,
-    purchaseDate: data.purchaseDate,
-    applianceId: data.applianceId,
+    categoryKey,
+    warranty: { brand: data.brand, serialNo: data.serialNo, purchaseDate: data.purchaseDate, applianceId: data.applianceId },
   });
+  const { warrantyStatus, brandId, applianceId, amcSubscriptionId, extendedWarrantyOrderId } = detection;
 
-  // Apply pricing benefits: covered visits are free (price resolves to 0)
-  const totalPrice = warrantyStatus === 'Out of Warranty' ? basePrice : 0;
+  const quote = await buildQuote(
+    {
+      lines: [{ offeringId: data.offeringId, variantId: data.variantId || null, quantity: data.quantity, isExpress }],
+      couponCode: data.couponCode || null,
+      useCoins: Boolean(data.useCoins),
+      paymentMode: data.paymentMode || 'after',
+      location,
+    },
+    { userId, coverageType },
+  );
+  const [line] = quote.lines;
+  if (toPaise(data.expectedFinalAmount) !== line.finalAmount) {
+    const newTotal = toRupees(line.finalAmount).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+    throw catalogError('PRICE_CHANGED', `The price for ${line.offering.name} has changed to ₹${newTotal}.`, 409, {
+      quote: toCustomerQuote(quote),
+    });
+  }
+
+  const commercial = commercialSnapshot(quote, line);
+  const totalPrice = commercial.finalAmount;
+  const serviceName = line.offering.name;
+
+  // Coins are taken before the booking exists and returned if it fails.
+  if (quote.coinsToRedeem > 0) await redeemCoins(userId, quote.coinsToRedeem, { reason: 'redeemed' });
 
   const customerCity = data.address?.city || '';
   const customerState = data.address?.state || '';
@@ -185,7 +159,7 @@ export async function createBooking(userId, data) {
 
   // Nearest-to-farthest 1-by-1 service provider selection in the territory
   const serviceProvider = await findAvailableServiceProvider({
-    category: data.category,
+    category: categoryKey,
     city: customerCity,
     state: customerState,
     latitude: customerLat,
@@ -200,85 +174,93 @@ export async function createBooking(userId, data) {
   // pointing at a booking that never got its serviceRequest set), which nothing
   // downstream could act on. Everything with an un-rollback-able side effect —
   // the Razorpay order, notifications, the socket broadcast — stays outside.
-  const { booking, serviceRequest } = await runInTransaction(async (session) => {
-    const [booking] = await Booking.create([{
-      user: userId,
-      category: data.category,
-      productType: data.productType,
-      service: {
-        slug: serviceSlug,
-        name: serviceName,
-        price: itemPrice,
-        desc: resolved.desc || serviceName,
-        unit: resolved.unit || 'service'
-      },
-      brand: data.brand,
-      quantity,
-      scheduledDate: isInstant ? new Date() : data.scheduledDate,
-      timeSlot: isInstant ? { date: 'Today (ASAP)', time: 'ASAP (Right Now)' } : data.timeSlot,
-      address: data.address,
-      fullName: data.fullName,
-      mobile: data.mobile,
-      paymentMode: data.paymentMode || 'after',
-      // A client-chosen advance is allowed (the booking page offers a flat
-      // ₹49), but only within the server-priced total.
-      advanceAmount: data.advanceAmount != null
-        ? Math.min(Math.max(0, Number(data.advanceAmount) || 0), totalPrice)
-        : (data.paymentMode === 'advance' ? Math.round(totalPrice * (advancePercent / 100)) : 0),
-      totalPrice,
-      serviceProvider: serviceProvider ? serviceProvider._id : null,
-      isAccepted: false,
-      status: isInstant ? 'Ongoing' : 'Upcoming',
-      isInstant,
-      instantStatus: initialInstantStatus,
-      instantRequestedAt: isInstant ? new Date() : null,
-      searchExpiresAt: new Date(Date.now() + SEARCH_WINDOW_MS),
-    }], session ? { session } : {});
+  let created;
+  try {
+    created = await runInTransaction(async (session) => {
+      const [booking] = await Booking.create([{
+        user: userId,
+        offering: offering._id,
+        commercial,
+        isExpress,
+        requiredInfo,
+        category: categoryKey,
+        productType: line.productType?.name,
+        service: {
+          slug: offering.service.slug,
+          name: serviceName,
+          price: commercial.unitPrice,
+          desc: offering.description || serviceName,
+          unit: offering.unitLabel,
+        },
+        brand: data.brand,
+        quantity: line.quantity,
+        scheduledDate: isInstant ? new Date() : data.scheduledDate,
+        timeSlot: isInstant ? { date: 'Today (ASAP)', time: 'ASAP (Right Now)' } : data.timeSlot,
+        address: data.address,
+        fullName: data.fullName,
+        mobile: data.mobile,
+        paymentMode: data.paymentMode || 'after',
+        advanceAmount: toRupees(quote.advanceAmount),
+        totalPrice,
+        serviceProvider: serviceProvider ? serviceProvider._id : null,
+        isAccepted: false,
+        status: isInstant ? 'Ongoing' : 'Upcoming',
+        isInstant,
+        instantStatus: initialInstantStatus,
+        instantRequestedAt: isInstant ? new Date() : null,
+        searchExpiresAt: new Date(Date.now() + SEARCH_WINDOW_MS),
+      }], session ? { session } : {});
 
-    const cleanServiceName = serviceName.replace(new RegExp(`^${escapeRegex(data.category)}\\s*[-—:]*\\s*`, 'i'), '');
-    const displayServiceTitle = serviceName.toLowerCase().startsWith(data.category.toLowerCase())
-      ? serviceName
-      : `${data.category} — ${cleanServiceName || serviceName}`;
+      const cleanServiceName = serviceName.replace(new RegExp(`^${escapeRegex(categoryKey)}\\s*[-—:]*\\s*`, 'i'), '');
+      const displayServiceTitle = serviceName.toLowerCase().startsWith(categoryKey.toLowerCase())
+        ? serviceName
+        : `${categoryKey} — ${cleanServiceName || serviceName}`;
 
-    let serviceRequest = await createServiceRequest({
-      user: userId,
-      serviceProvider: serviceProvider ? serviceProvider._id : null,
-      isAccepted: false,
-      assignedAt: serviceProvider ? new Date() : null,
-      customerLocation: (customerLat != null && customerLng != null) ? { latitude: customerLat, longitude: customerLng } : undefined,
-      booking: booking._id,
-      completionOtp: booking.completionOtp,
-      category: data.category,
-      description: displayServiceTitle,
-      requestMode: 'B2C',
-      zone: data.address?.city || undefined,
-      warranty: warrantyStatus === 'Out of Warranty' ? 'Out of Warranty' : 'In Warranty',
-      brand: brandId,
-      appliance: applianceId,
-      amcSubscription: amcSubscriptionId,
-      extendedWarrantyOrder: extendedWarrantyOrderId,
-      isInstant,
-      instantStatus: initialInstantStatus,
-    }, { session });
+      let serviceRequest = await createServiceRequest({
+        user: userId,
+        serviceProvider: serviceProvider ? serviceProvider._id : null,
+        isAccepted: false,
+        assignedAt: serviceProvider ? new Date() : null,
+        customerLocation: (customerLat != null && customerLng != null) ? { latitude: customerLat, longitude: customerLng } : undefined,
+        booking: booking._id,
+        completionOtp: booking.completionOtp,
+        category: categoryKey,
+        description: displayServiceTitle,
+        requestMode: 'B2C',
+        zone: data.address?.city || undefined,
+        warranty: warrantyStatus === 'Out of Warranty' ? 'Out of Warranty' : 'In Warranty',
+        brand: brandId,
+        appliance: applianceId,
+        amcSubscription: amcSubscriptionId,
+        extendedWarrantyOrder: extendedWarrantyOrderId,
+        isInstant,
+        instantStatus: initialInstantStatus,
+      }, { session });
 
-    if (serviceProvider) {
-      serviceRequest = await transitionStatus(serviceRequest.id, 'Assigned', {
-        description: isInstant ? `Instant auto-assigned to ${serviceProvider.name}` : `Auto-assigned to ${serviceProvider.name}`,
-        session,
-      });
-    }
+      if (serviceProvider) {
+        serviceRequest = await transitionStatus(serviceRequest.id, 'Assigned', {
+          description: isInstant ? `Instant auto-assigned to ${serviceProvider.name}` : `Auto-assigned to ${serviceProvider.name}`,
+          session,
+        });
+      }
 
-    booking.serviceRequest = serviceRequest._id;
-    await booking.save(session ? { session } : undefined);
+      booking.serviceRequest = serviceRequest._id;
+      await booking.save(session ? { session } : undefined);
 
-    return { booking, serviceRequest };
-  });
+      return { booking, serviceRequest };
+    });
+  } catch (err) {
+    // The booking never came to exist — give the customer their coins back.
+    if (quote.coinsToRedeem > 0) await creditCoins(userId, quote.coinsToRedeem, { reason: 'refund' }).catch(() => {});
+    throw err;
+  }
+  const { booking, serviceRequest } = created;
 
   // Deferred out of the transaction above: createServiceRequest skips this when
   // handed a session so a rolled-back claim never notifies the brand.
   await emitWarrantyClaimNotification(serviceRequest);
 
-  await emitNotification('booking.created', { user: userId, category: data.category, bookingId: booking.id });
+  await emitNotification('booking.created', { user: userId, category: categoryKey, bookingId: booking.id });
   if (serviceProvider) {
     await emitNotification('serviceProvider.assigned', {
       user: userId,
@@ -291,15 +273,15 @@ export async function createBooking(userId, data) {
   const io = getIO();
   if (io) {
     const estEarnings = await estimateServiceProviderEarnings(serviceRequest, booking).catch(() => 0);
-    const cleanServiceName = serviceName.replace(new RegExp(`^${escapeRegex(data.category)}\\s*[-—:]*\\s*`, 'i'), '');
-    const displayServiceTitle = serviceName.toLowerCase().startsWith(data.category.toLowerCase())
+    const cleanServiceName = serviceName.replace(new RegExp(`^${escapeRegex(categoryKey)}\\s*[-—:]*\\s*`, 'i'), '');
+    const displayServiceTitle = serviceName.toLowerCase().startsWith(categoryKey.toLowerCase())
       ? serviceName
-      : `${data.category} — ${cleanServiceName || serviceName}`;
+      : `${categoryKey} — ${cleanServiceName || serviceName}`;
 
     const jobPayload = {
       bookingId: booking.id,
       serviceRequestId: serviceRequest.id,
-      category: data.category,
+      category: categoryKey,
       serviceName,
       product: displayServiceTitle,
       address: data.address ? `${data.address.house || ''}, ${data.address.landmark || ''}, ${data.address.city || ''}`.trim().replace(/^,\s*/, '') : 'Customer Address',

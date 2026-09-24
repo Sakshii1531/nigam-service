@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { offeringBookingBody } from '../catalogueFixture.js';
 
 const API = `${process.env.UI_API_ORIGIN || 'http://localhost:4111'}/api/v1`;
 
@@ -41,11 +42,12 @@ test.describe('Dedicated Booking Details & Reschedule Workflow', () => {
     // Create booking
     const createRes = await request.post(`${API}/bookings`, {
       headers: { Authorization: `Bearer ${customer.accessToken}` },
-      data: {
-        // A real seeded catalog service — bookings are priced server-side, so a
-        // made-up name with a client-supplied price is (rightly) refused.
-        category: 'AC',
-        serviceSlug: 'deep_cleaning',
+      data: await offeringBookingBody(request, {
+        // A real seeded catalogue offering — bookings are priced server-side
+        // from the quoted offering, never from a client-supplied price.
+        api: API,
+        offeringCode: 'AC-SPLIT-DEEPCLEAN',
+        variant: '1.5 Ton',
         scheduledDate: new Date(Date.now() + 86400000).toISOString(),
         timeSlot: '10:00 AM - 01:00 PM',
         address: {
@@ -55,7 +57,7 @@ test.describe('Dedicated Booking Details & Reschedule Workflow', () => {
           state: 'Madhya Pradesh',
           pincode: '452001',
         },
-      },
+      }),
     });
     expect(createRes.status()).toBe(201);
     const { booking } = (await createRes.json()).data;
@@ -91,11 +93,9 @@ test.describe('Dedicated Booking Details & Reschedule Workflow', () => {
     // Create booking
     const createRes = await request.post(`${API}/bookings`, {
       headers: { Authorization: `Bearer ${customer.accessToken}` },
-      data: {
-        category: 'Refrigerator',
-        serviceSlug: 'repair',
-        serviceName: 'Refrigerator Compressor Inspection',
-        price: 399,
+      data: await offeringBookingBody(request, {
+        api: API,
+        offeringCode: 'AC-WINDOW-REPAIR',
         scheduledDate: new Date(Date.now() + 86400000).toISOString(),
         timeSlot: '10:00 AM - 01:00 PM',
         address: {
@@ -105,7 +105,7 @@ test.describe('Dedicated Booking Details & Reschedule Workflow', () => {
           state: 'Madhya Pradesh',
           pincode: '452001',
         },
-      },
+      }),
     });
     expect(createRes.status()).toBe(201);
     const { booking } = (await createRes.json()).data;
@@ -151,9 +151,9 @@ test.describe('Dedicated Booking Details & Reschedule Workflow', () => {
     // Create booking
     const createRes = await request.post(`${API}/bookings`, {
       headers: { Authorization: `Bearer ${customer.accessToken}` },
-      data: {
-        category: 'AC',
-        serviceSlug: 'repair',
+      data: await offeringBookingBody(request, {
+        api: API,
+        offeringCode: 'AC-WINDOW-REPAIR',
         scheduledDate: new Date().toISOString(),
         timeSlot: '08:00 AM - 11:00 AM',
         isInstant: true,
@@ -164,7 +164,7 @@ test.describe('Dedicated Booking Details & Reschedule Workflow', () => {
           state: 'Madhya Pradesh',
           pincode: '452010',
         },
-      },
+      }),
     });
     expect(createRes.status()).toBe(201);
     const { booking } = (await createRes.json()).data;

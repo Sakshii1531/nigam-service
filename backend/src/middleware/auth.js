@@ -28,6 +28,23 @@ export function requireAuth(req, res, next) {
   }
 }
 
+/** Like requireAuth, but never rejects: a valid token attaches req.user, a
+ * missing or invalid one leaves the request anonymous. For public endpoints
+ * that do a little more for a signed-in user (e.g. the catalogue quote can
+ * apply wallet coins). */
+export function optionalAuth(req, res, next) {
+  const [scheme, token] = (req.headers.authorization || '').split(' ');
+  if (scheme === 'Bearer' && token) {
+    try {
+      const payload = verifyAccessToken(token);
+      req.user = { id: payload.sub, role: payload.role, brand: payload.brand, permissions: payload.permissions || [] };
+    } catch (_err) {
+      // Anonymous instead — an expired token shouldn't stop a customer seeing prices.
+    }
+  }
+  next();
+}
+
 export function requireRole(...roles) {
   return (req, res, next) => {
     if (!req.user) return next(new ApiError(401, 'Not authenticated'));

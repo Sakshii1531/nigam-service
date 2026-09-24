@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { offeringBookingBody } from '../catalogueFixture.js';
 
 const API = `${process.env.UI_API_ORIGIN || 'http://localhost:4111'}/api/v1`;
 
@@ -43,13 +44,13 @@ async function customerBooking(request, city) {
   const customer = await verifyOtp(request, 'customer', phone);
   const res = await request.post(`${API}/bookings`, {
     headers: { Authorization: `Bearer ${customer.accessToken}` },
-    data: {
-      category: 'AC',
-      serviceSlug: 'repair',
+    data: await offeringBookingBody(request, {
+      api: API,
+      offeringCode: 'AC-WINDOW-REPAIR',
       isInstant: true,
       fullName: 'E2E Dispatch Customer',
       address: { house: '7 Test Lane', city, pincode: '452001' },
-    },
+    }),
   });
   expect(res.status()).toBe(201);
   return (await res.json()).data;

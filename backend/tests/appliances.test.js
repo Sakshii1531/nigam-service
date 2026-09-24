@@ -33,6 +33,7 @@ import { Job } from '../src/modules/service-provider/job.model.js';
 import { hashPassword } from '../src/modules/auth/password.js';
 import { ROLES } from '../src/config/constants.js';
 import { testDbUri } from './helpers/testDb.js';
+import { seedSimpleOffering, offeringBooking, clearCatalogue } from './helpers/catalogue.js';
 import { readOtpCode } from './helpers/otp.js';
 
 const TEST_DB_URI = testDbUri('appliances');
@@ -83,6 +84,7 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
+  await clearCatalogue();
   await Promise.all([
     User.deleteMany({}),
     Brand.deleteMany({}),
@@ -476,12 +478,12 @@ describe('booking advance is actually charged', () => {
 
     const category = await Category.create({ key: 'AC-PAY', name: 'AC-PAY', color: '#0D47A1' });
     await ProductType.create({ category: category._id, slug: 'split', name: 'Split AC' });
-    await ServiceCatalogItem.create({ category: category._id, slug: 'repair', name: 'Repair', price: 1000 });
+    await seedSimpleOffering({ categoryKey: category.key, price: 1000 });
 
     const res = await request(app)
       .post('/api/v1/bookings')
       .set(auth)
-      .send({ category: 'AC-PAY', serviceSlug: 'repair', paymentMode: 'advance', paymentMethod: 'UPI' })
+      .send(await offeringBooking('TEST-REPAIR', { paymentMode: 'advance', paymentMethod: 'UPI' }))
       .expect(201);
 
     const { booking, razorpay } = res.body.data;
@@ -513,12 +515,12 @@ describe('booking advance is actually charged', () => {
     const { token } = await seedCustomer();
     const category = await Category.create({ key: 'AC-AFTER', name: 'AC-AFTER', color: '#0D47A1' });
     await ProductType.create({ category: category._id, slug: 'split', name: 'Split AC' });
-    await ServiceCatalogItem.create({ category: category._id, slug: 'repair', name: 'Repair', price: 1000 });
+    await seedSimpleOffering({ categoryKey: category.key, price: 1000 });
 
     const res = await request(app)
       .post('/api/v1/bookings')
       .set('Authorization', `Bearer ${token}`)
-      .send({ category: 'AC-AFTER', serviceSlug: 'repair', paymentMode: 'after' })
+      .send(await offeringBooking('TEST-REPAIR', { paymentMode: 'after' }))
       .expect(201);
 
     expect(res.body.data.razorpay).toBeNull();

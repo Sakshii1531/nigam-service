@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { createTestOffering, offeringBookingBody } from '../catalogueFixture.js';
 import { randomUUID } from 'node:crypto';
 
 // Covers the REST surface of Phase 9's real-time layer: notifications
@@ -51,10 +52,7 @@ async function setupBookingFixture(request) {
   const adminToken = await loginAndVerify(request, { role: 'super_admin', identifier: adminEmail, password: 'password123' });
 
   await request.post('/api/v1/catalog/categories', { headers: { Authorization: `Bearer ${adminToken}` }, data: { key: categoryKey, name: categoryKey } });
-  await request.post(`/api/v1/catalog/categories/${categoryKey}/services`, {
-    headers: { Authorization: `Bearer ${adminToken}` },
-    data: { slug: 'repair', name: 'Repair', price: 499 },
-  });
+  await createTestOffering(request, adminToken, categoryKey, { price: 499 });
 
   const provider = await createServiceProvider(request, [categoryKey]);
   const customer = await createCustomer(request);
@@ -67,7 +65,7 @@ test.describe('notifications — real domain events, not just CRUD', () => {
 
     const bookingRes = await request.post('/api/v1/bookings', {
       headers: { Authorization: `Bearer ${customer.token}` },
-      data: { category: categoryKey, serviceSlug: 'repair' },
+      data: await offeringBookingBody(request, { categoryKey }),
     });
     expect(bookingRes.status()).toBe(201);
 
@@ -79,7 +77,7 @@ test.describe('notifications — real domain events, not just CRUD', () => {
 
   test('read=false/true filters correctly and read-all clears personal unread notifications', async ({ request }) => {
     const { categoryKey, customer } = await setupBookingFixture(request);
-    await request.post('/api/v1/bookings', { headers: { Authorization: `Bearer ${customer.token}` }, data: { category: categoryKey, serviceSlug: 'repair' } });
+    await request.post('/api/v1/bookings', { headers: { Authorization: `Bearer ${customer.token}` }, data: await offeringBookingBody(request, { categoryKey }) });
 
     const unreadBefore = await request.get('/api/v1/notifications?read=false', { headers: { Authorization: `Bearer ${customer.token}` } });
     const before = (await unreadBefore.json()).data;
@@ -109,7 +107,7 @@ test.describe('chat — conversation auto-created on job acceptance', () => {
 
     const bookingRes = await request.post('/api/v1/bookings', {
       headers: { Authorization: `Bearer ${customer.token}` },
-      data: { category: categoryKey, serviceSlug: 'repair' },
+      data: await offeringBookingBody(request, { categoryKey }),
     });
     const { serviceRequest } = (await bookingRes.json()).data;
 
@@ -132,7 +130,7 @@ test.describe('chat — conversation auto-created on job acceptance', () => {
 
     const bookingRes = await request.post('/api/v1/bookings', {
       headers: { Authorization: `Bearer ${customer.token}` },
-      data: { category: categoryKey, serviceSlug: 'repair' },
+      data: await offeringBookingBody(request, { categoryKey }),
     });
     const { serviceRequest } = (await bookingRes.json()).data;
     await request.post(`/api/v1/service-provider/jobs/accept/${serviceRequest.id}`, { headers: { Authorization: `Bearer ${provider.token}` }, data: {} });

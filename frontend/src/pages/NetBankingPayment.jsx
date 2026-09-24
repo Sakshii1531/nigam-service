@@ -48,8 +48,11 @@ const NetBankingPayment = () => {
     })();
 
   const itemName = paymentState.productName || bookingMeta?.serviceName || bookingMeta?.service || 'Service Booking';
-  const itemPrice = paymentState.price !== undefined ? paymentState.price : (bookingMeta?.advanceAmt || bookingMeta?.totalPrice || 299);
-  const finalPrice = paymentState.finalPrice !== undefined ? paymentState.finalPrice : itemPrice;
+  // A service booking pays what its catalogue quote says is due now (the
+  // advance) — the same number BookingFlow showed. Product buys keep their own.
+  const bookingQuote = !isProductBuy ? bookingMeta?.quote : null;
+  const itemPrice = bookingQuote ? bookingQuote.payableNow : (paymentState.price ?? 0);
+  const finalPrice = bookingQuote ? itemPrice : (paymentState.finalPrice ?? itemPrice);
 
   const handlePay = async () => {
     const meta = paymentState.bookingMeta || bookingMeta;
@@ -77,13 +80,13 @@ const NetBankingPayment = () => {
           serviceRequestId: primary.serviceRequest?.id || primary.serviceRequest?._id || '',
           service: meta.service,
           category: meta.category,
-          productType: meta.productType,
+          productType: meta.lines?.[0]?.name || '',
           brand: meta.brand || '',
-          quantity: String(meta.quantity || 1),
+          quantity: String(meta.lines?.[0]?.quantity || 1),
           date: meta.date || '',
           timeGroup: meta.timeGroup || '',
-          totalPrice: String(totalPriceFromResults(results) || meta.totalPrice || 0),
-          advanceAmt: String(meta.advanceAmt || 0),
+          totalPrice: String(totalPriceFromResults(results)),
+          advanceAmt: String(meta.quote?.payableNow || 0),
           paymentMode: meta.paymentMode || 'advance',
           bookingCount: String(results.length),
         });
@@ -94,6 +97,14 @@ const NetBankingPayment = () => {
         }
         navigate(`/booking-success?${params.toString()}`);
       } catch (err) {
+        if (err?.code === 'PRICE_CHANGED') {
+          // The rate changed while the customer was paying: back to review.
+          navigate(`/book/${encodeURIComponent(meta.category)}`, {
+            state: { step: 4, resumeBooking: meta, priceChanged: err.message },
+            replace: true,
+          });
+          return;
+        }
         console.error('Failed to create booking:', err);
         navigate('/payment-failure', {
           state: {

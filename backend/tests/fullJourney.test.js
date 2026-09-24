@@ -20,6 +20,7 @@ import { Conversation } from '../src/modules/chat/conversation.model.js';
 import { hashPassword } from '../src/modules/auth/password.js';
 import { ROLES } from '../src/config/constants.js';
 import { testDbUri } from './helpers/testDb.js';
+import { seedSimpleOffering, offeringBooking, clearCatalogue } from './helpers/catalogue.js';
 import { readOtpCode } from './helpers/otp.js';
 
 const TEST_DB_URI = testDbUri('fullJourney');
@@ -45,6 +46,7 @@ afterAll(async () => {
   await mongoose.disconnect();
 });
 beforeEach(async () => {
+  await clearCatalogue();
   await Promise.all([
     User.deleteMany({}),
     ServiceProvider.deleteMany({}),
@@ -67,7 +69,7 @@ describe('Phase 10 — the real customer journey end to end: browse -> book -> s
     // 1. Seed catalog + a real service provider who will win auto-assignment.
     const category = await Category.create({ key: 'AC', name: 'AC', color: '#000' });
     await ProductType.create({ category: category._id, slug: 'split', name: 'Split AC' });
-    await ServiceCatalogItem.create({ category: category._id, slug: 'repair', name: 'Repair', price: 999 });
+    await seedSimpleOffering({ categoryKey: category.key, price: 999 });
 
     const serviceProviderUser = await User.create({ role: ROLES.SERVICE_PROVIDER, phone: '9199999001', name: 'Journey Tech', passwordHash: await hashPassword('password123') });
     // assignmentEngine.js hard-filters by territory: a service provider with no
@@ -89,7 +91,7 @@ describe('Phase 10 — the real customer journey end to end: browse -> book -> s
     const bookingRes = await request(app)
       .post('/api/v1/bookings')
       .set('Authorization', `Bearer ${customerToken}`)
-      .send({ category: 'AC', serviceSlug: 'repair', address: { city: 'Lucknow' }, fullName: 'Journey Customer', mobile: '9199999002' })
+      .send(await offeringBooking('TEST-REPAIR', { address: { city: 'Lucknow' }, fullName: 'Journey Customer', mobile: '9199999002' }))
       .expect(201);
     const { booking, serviceRequest } = bookingRes.body.data;
     expect(booking.totalPrice).toBe(999);

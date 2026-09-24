@@ -28,6 +28,9 @@ import { ExtendedWarrantyOrder } from '../src/modules/warranty-amc-exchange/exte
 import { hashPassword } from '../src/modules/auth/password.js';
 import { ROLES } from '../src/config/constants.js';
 import { testDbUri } from './helpers/testDb.js';
+import { seedSimpleOffering, offeringBooking, clearCatalogue } from './helpers/catalogue.js';
+import { ServiceOffering } from '../src/modules/catalog/serviceOffering.model.js';
+import { createRateVersion } from '../src/modules/catalog/rateWriter.js';
 import { readOtpCode } from './helpers/otp.js';
 
 const TEST_DB_URI = testDbUri('serviceProviderJob');
@@ -49,7 +52,9 @@ async function loginAndVerify({ role, identifier, password }) {
 async function seedCatalog() {
   const category = await Category.create({ key: 'AC', name: 'AC', color: '#0D47A1' });
   await ProductType.create({ category: category._id, slug: 'split', name: 'Split AC' });
-  await ServiceCatalogItem.create({ category: category._id, slug: 'repair', name: 'Repair', price: 1000 });
+  await seedSimpleOffering({ categoryKey: category.key, price: 1000 });
+  // A small extra-work offering partners can add on site.
+  await seedSimpleOffering({ categoryKey: category.key, code: 'TEST-CLEAN', serviceName: 'Extra Cleaning', price: 100, payout: 60 });
 }
 
 async function seedCustomer(phone = nextPhone()) {
@@ -74,7 +79,7 @@ async function createAcceptedD2CJob() {
   const bookingRes = await request(app)
     .post('/api/v1/bookings')
     .set('Authorization', `Bearer ${custToken}`)
-    .send({ category: 'AC', serviceSlug: 'repair' })
+    .send(await offeringBooking('TEST-REPAIR'))
     .expect(201);
   const srId = bookingRes.body.data.serviceRequest.id;
 
@@ -107,6 +112,7 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
+  await clearCatalogue();
   await Promise.all([
     User.deleteMany({}),
     ServiceProvider.deleteMany({}),
@@ -176,7 +182,7 @@ describe('open offers (booked when nobody was online)', () => {
     const bookingRes = await request(app)
       .post('/api/v1/bookings')
       .set('Authorization', `Bearer ${custToken}`)
-      .send({ category: 'AC', serviceSlug: 'repair', address: { house: '12 MG Road', city: 'Pune', pincode: '411001' } })
+      .send(await offeringBooking('TEST-REPAIR', { address: { house: '12 MG Road', city: 'Pune', pincode: '411001' } }))
       .expect(201);
     const srId = bookingRes.body.data.serviceRequest.id;
     const sr = await ServiceRequest.findById(srId);
@@ -265,10 +271,24 @@ describe('D2C job — full lifecycle to payment', () => {
     sr = await ServiceRequest.findById(srId);
     expect(sr.status).toBe('Diagnosis Done');
 
+    // Extra work comes from the catalogue: offered, priced and paid out as configured.
+    const addOnOfferings = await request(app)
+      .get(`/api/v1/service-provider/jobs/${jobId}/addon-offerings`)
+      .set('Authorization', `Bearer ${serviceProviderToken}`)
+      .expect(200);
+    const cleaning = addOnOfferings.body.data.find((o) => o.code === 'TEST-CLEAN');
+    expect(cleaning).toMatchObject({ customerPrice: 100, spPayout: 60 });
+    const withAddOn = await request(app)
+      .post(`/api/v1/service-provider/jobs/${jobId}/addons`)
+      .set('Authorization', `Bearer ${serviceProviderToken}`)
+      .send({ offeringId: cleaning.id, quantity: 1 })
+      .expect(200);
+    expect(withAddOn.body.data.payout).toMatchObject({ base: 300, addOns: 60, total: 360 });
+
     await request(app)
       .post(`/api/v1/service-provider/jobs/${jobId}/spare-parts`)
       .set('Authorization', `Bearer ${serviceProviderToken}`)
-      .send({ parts: [{ name: 'Gas Refill Kit', price: 500, checked: true }], additionalServices: [{ name: 'Extra Cleaning', price: 100, checked: true }] })
+      .send({ parts: [{ name: 'Gas Refill Kit', price: 500, checked: true }] })
       .expect(200);
     sr = await ServiceRequest.findById(srId);
     // D2C parts don't create claims, but the SR still passes through the spare pipeline.
@@ -281,14 +301,16 @@ describe('D2C job — full lifecycle to payment', () => {
 
     const billingRes = await request(app).post(`/api/v1/service-provider/jobs/${jobId}/billing`).set('Authorization', `Bearer ${serviceProviderToken}`).expect(200);
     const { billingEstimate } = billingRes.body.data;
+    // Booked service charged as booked (its GST is already in the booking total —
+    // this test offering has GST 0), add-on at its engine price, parts + 18% GST.
     expect(billingEstimate.serviceCharge).toBe(1000);
-    expect(billingEstimate.sparePartsTotal).toBe(500);
     expect(billingEstimate.additionalServicesTotal).toBe(100);
-    const expectedSubtotal = 1000 + 500 + 100;
-    const serviceLaborSubtotal = 1000 + 100; // Technician earns only on labor charges, excluding parts
-    expect(billingEstimate.serviceProviderEarnings).toBe(Math.round(serviceLaborSubtotal * 0.3));
-    const expectedTotal = Math.round(expectedSubtotal * 1.18 * 100) / 100;
-    expect(billingEstimate.total).toBeCloseTo(expectedTotal, 2);
+    expect(billingEstimate.sparePartsTotal).toBe(590);
+    const expectedTotal = 1690;
+    expect(billingEstimate.total).toBe(expectedTotal);
+    expect(billingEstimate.amountToCollect).toBe(expectedTotal);
+    // Fixed payouts: 300 for the booked service + 60 for the add-on; nothing on parts.
+    expect(billingEstimate.serviceProviderEarnings).toBe(360);
 
     const completionOtp = await getCompletionOtp(srId);
     const payRes = await request(app)
@@ -945,9 +967,9 @@ describe('covered-visit earnings come from the brand rate card', () => {
 });
 
 describe('platform settings actually drive the money', () => {
-  it('uses the configured serviceProvider commission, not the 30% default', async () => {
-    // The whole point: an admin changing this setting must change what a
-    // service provider earns. It used to be a constant the setting could not reach.
+  it('client Test 8 (partner side): the commission setting no longer changes a partner\'s pay', async () => {
+    // Payout is the fixed catalogue amount frozen on the booking — a platform
+    // commission % (even one an admin sets) must not move it.
     await PlatformSettings.create({ serviceProviderCommissionPercent: 50 });
 
     const { jobId, serviceProviderToken } = await createAcceptedD2CJob();
@@ -955,26 +977,26 @@ describe('platform settings actually drive the money', () => {
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/start-travel`).set(auth).expect(200);
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/arrive`).set(auth).expect(200);
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`).set(auth).send({ notes: 'x' }).expect(200);
-    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/spare-parts`).set(auth).send({ parts: [], additionalServices: [] }).expect(200);
+    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/spare-parts`).set(auth).send({ parts: [] }).expect(200);
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/repair-complete`).set(auth).expect(200);
 
     const billing = await request(app).post(`/api/v1/service-provider/jobs/${jobId}/billing`).set(auth).expect(200);
-    const { billingEstimate } = billing.body.data;
-    expect(billingEstimate.serviceProviderEarnings).toBe(Math.round(billingEstimate.serviceCharge * 0.5));
+    expect(billing.body.data.billingEstimate.serviceProviderEarnings).toBe(300);
   });
 
-  it('falls back to 30% when no settings document exists', async () => {
+  it('client Test 8 (partner side): a price change after booking does not change the job\'s payout', async () => {
     const { jobId, serviceProviderToken } = await createAcceptedD2CJob();
+    const offering = await ServiceOffering.findOne({ code: 'TEST-REPAIR' });
+    await createRateVersion(offering._id, { customerPrice: 150000 }, { reason: 'Price up after booking' });
+
     const auth = { Authorization: `Bearer ${serviceProviderToken}` };
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/start-travel`).set(auth).expect(200);
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/arrive`).set(auth).expect(200);
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`).set(auth).send({ notes: 'x' }).expect(200);
-    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/spare-parts`).set(auth).send({ parts: [], additionalServices: [] }).expect(200);
+    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/spare-parts`).set(auth).send({ parts: [] }).expect(200);
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/repair-complete`).set(auth).expect(200);
-
     const billing = await request(app).post(`/api/v1/service-provider/jobs/${jobId}/billing`).set(auth).expect(200);
-    const { billingEstimate } = billing.body.data;
-    expect(billingEstimate.serviceProviderEarnings).toBe(Math.round(billingEstimate.serviceCharge * 0.3));
+    expect(billing.body.data.billingEstimate).toMatchObject({ serviceCharge: 1000, serviceProviderEarnings: 300 });
   });
 });
 

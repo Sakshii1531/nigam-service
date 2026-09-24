@@ -31,19 +31,26 @@ const BillingEstimate = () => {
   const billedServices = (activeJob?.additionalServices || []).filter((i) => i.checked);
   const gstPercent = billing.gstPercent ?? 18;
 
-  // For AMC/warranty jobs the base visit is covered, so the customer only pays
-  // for extras beyond scope.
-  const extrasTotal = billedServices.reduce((sum, i) => sum + (i.price || 0), 0)
-    + billedParts.reduce((sum, i) => sum + (i.price || 0), 0);
-  const gst = Math.round(extrasTotal * (gstPercent / 100));
-  const extrasGrandTotal = extrasTotal + gst;
+  // docs/master-catalogue Phase 5: the booked service is billed exactly as
+  // booked (its GST is already inside); catalogue add-ons carry their own
+  // engine-priced final (GST included); only spare parts get GST added here,
+  // and only on paid jobs (covered jobs' parts are claimed, not billed).
+  // Once billing is generated, every figure comes from the server's bill.
+  const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
+  const addOnsTotal = billedServices.reduce((sum, i) => sum + (i.finalAmount ?? i.price ?? 0), 0);
+  const partsCost = isPaid ? billedParts.reduce((sum, i) => sum + (i.price || 0), 0) : 0;
+  const gst = round2(partsCost * (gstPercent / 100));
+  const partsTotal = billing.sparePartsTotal ?? round2(partsCost + gst);
 
   const serviceCharge = billing.serviceCharge || 0;
-  const paidSubtotal = serviceCharge + extrasTotal;
-  const paidTax = Math.round(paidSubtotal * (gstPercent / 100));
-  const paidTotal = billing.total != null ? Math.round(billing.total) : paidSubtotal + paidTax;
+  const extrasGrandTotal = billing.total ?? round2(addOnsTotal + partsTotal);
+  const paidTax = gst;
+  const paidTotal = billing.total ?? round2(serviceCharge + addOnsTotal + partsTotal);
+  const amountToCollect = billing.amountToCollect ?? paidTotal;
+  // The partner's fixed catalogue payout (+ express bonus + add-ons) — never a % of the bill.
+  const earnings = billing.serviceProviderEarnings ?? activeJob?.payout?.total ?? activeJob?.estEarnings ?? 0;
 
-  const money = (n) => `₹${Math.round(n || 0).toLocaleString('en-IN')}`;
+  const money = (n) => `₹${Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 
   const handleCollectPayment = () => {
     if (activeJob) {
@@ -98,7 +105,7 @@ const BillingEstimate = () => {
           <div class="task-row"><span class="followup">↻</span> Water Flow Verified — Follow-up Clear</div>
           <div class="section-title" style="margin-top: 24px;">Additional Charges (Beyond AMC Scope)</div>
           ${[...billedServices, ...billedParts].map((i) => `<div class="total-row"><span>${i.name}</span><span>₹${i.price}</span></div>`).join('')}
-          <div class="total-row"><span>GST (${gstPercent}%)</span><span>₹${gst}</span></div>
+          <div class="total-row"><span>GST on parts (${gstPercent}%)</span><span>₹${gst}</span></div>
           <div class="grand-total"><span>Customer Payable</span><span>₹${extrasGrandTotal}</span></div>
           <script>window.onload = function() { window.print(); }</script>
         </body>
@@ -145,7 +152,7 @@ const BillingEstimate = () => {
           </div>
           <div class="section-title">Additional Chargeable Services</div>
           ${[...billedServices, ...billedParts].map((i) => `<div class="line-row"><span>${i.name}</span><span>₹${i.price}</span></div>`).join('')}
-          <div class="line-row"><span>GST (${gstPercent}%)</span><span>₹${gst}</span></div>
+          <div class="line-row"><span>GST on parts (${gstPercent}%)</span><span>₹${gst}</span></div>
           <div class="grand-total"><span>Customer Payable</span><span>₹${extrasGrandTotal}</span></div>
           <script>window.onload = function() { window.print(); }</script>
         </body>
@@ -228,7 +235,7 @@ const BillingEstimate = () => {
                   </div>
                 ))}
                 <div className="flex justify-between items-center">
-                  <span>GST ({gstPercent}%)</span>
+                  <span>GST on parts ({gstPercent}%)</span>
                   <span className="text-[#052355] font-medium">{money(gst)}</span>
                 </div>
               </div>
@@ -242,7 +249,7 @@ const BillingEstimate = () => {
             {/* ServiceProvider Earnings */}
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm px-3.5 py-3.5 text-left flex justify-between items-center">
               <span className="text-xs font-normal text-slate-800">Service Provider Earnings (Extras)</span>
-              <span className="text-base font-medium text-[#052355]">₹{Math.round(extrasTotal * 0.3)}</span>
+              <span className="text-base font-medium text-[#052355]">{money(earnings)}</span>
             </div>
 
             {/* Actions */}
@@ -303,7 +310,7 @@ const BillingEstimate = () => {
                   </div>
                 ))}
                 <div className="flex justify-between items-center">
-                  <span>GST ({gstPercent}% on extras)</span>
+                  <span>GST on parts ({gstPercent}%)</span>
                   <span className="text-[#052355] font-medium">{money(gst)}</span>
                 </div>
               </div>
@@ -327,7 +334,7 @@ const BillingEstimate = () => {
             {/* ServiceProvider Earnings */}
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm px-3.5 py-3.5 text-left flex justify-between items-center">
               <span className="text-xs font-normal text-slate-800">Service Provider Earnings</span>
-              <span className="text-base font-medium text-[#052355]">₹{Math.round(extrasTotal * 0.3)}</span>
+              <span className="text-base font-medium text-[#052355]">{money(earnings)}</span>
             </div>
 
             {/* File Actions */}
@@ -371,7 +378,7 @@ const BillingEstimate = () => {
                   </div>
                 ))}
                 <div className="flex justify-between items-center">
-                  <span className="text-slate-600 font-normal">Tax ({gstPercent}%)</span>
+                  <span className="text-slate-600 font-normal">GST on parts ({gstPercent}%)</span>
                   <span className="text-[#052355] font-medium">{money(paidTax)}</span>
                 </div>
               </div>
@@ -382,11 +389,21 @@ const BillingEstimate = () => {
                 <span className="text-xs font-normal text-[#0D47A1]">Customer Payable</span>
                 <span className="text-xl font-medium text-[#00C853]">{money(paidTotal)}</span>
               </div>
+              {billing.alreadyPaid > 0 && (
+                <div className="flex justify-between items-center py-1">
+                  <span className="text-xs font-normal text-slate-500">Already paid (advance / coins)</span>
+                  <span className="text-sm font-medium text-slate-600">−{money(billing.alreadyPaid)}</span>
+                </div>
+              )}
+              <div className="flex justify-between items-center py-1">
+                <span className="text-xs font-normal text-[#0D47A1]">Collect now</span>
+                <span className="text-xl font-medium text-[#052355]">{money(amountToCollect)}</span>
+              </div>
             </div>
 
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm px-3.5 py-3.5 text-left flex justify-between items-center">
               <span className="text-xs font-normal text-slate-800">Service Provider Earnings</span>
-              <span className="text-base font-medium text-[#052355]">₹{activeJob?.estEarnings || 850}</span>
+              <span className="text-base font-medium text-[#052355]">{money(earnings)}</span>
             </div>
 
             <div className="grid grid-cols-2 gap-4 mt-1">

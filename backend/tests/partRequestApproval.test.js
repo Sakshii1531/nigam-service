@@ -15,6 +15,7 @@ import { PartOrder } from '../src/modules/service-provider/partOrder.model.js';
 import { hashPassword } from '../src/modules/auth/password.js';
 import { ROLES } from '../src/config/constants.js';
 import { testDbUri } from './helpers/testDb.js';
+import { seedSimpleOffering, offeringBooking, clearCatalogue } from './helpers/catalogue.js';
 import { readOtpCode } from './helpers/otp.js';
 
 const TEST_DB_URI = testDbUri('partRequestApproval');
@@ -34,7 +35,7 @@ async function loginAndVerify({ role, identifier, password }) {
 
 async function seedCatalog() {
   const category = await Category.create({ key: 'AC', name: 'AC', color: '#0D47A1' });
-  await ServiceCatalogItem.create({ category: category._id, slug: 'repair', name: 'Repair', price: 1000 });
+  await seedSimpleOffering({ categoryKey: category.key, price: 1000 });
 }
 
 async function seedCustomer() {
@@ -71,7 +72,7 @@ async function createJobWithPartRequested(orderSource = 'NCC Warehouse') {
   const bookingRes = await request(app)
     .post('/api/v1/bookings')
     .set('Authorization', `Bearer ${custToken}`)
-    .send({ category: 'AC', serviceSlug: 'repair' })
+    .send(await offeringBooking('TEST-REPAIR'))
     .expect(201);
   const bookingId = bookingRes.body.data.booking.id;
   const srId = bookingRes.body.data.serviceRequest.id;
@@ -114,6 +115,7 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
+  await clearCatalogue();
   await Promise.all([
     User.deleteMany({}),
     ServiceProvider.deleteMany({}),
@@ -240,7 +242,7 @@ describe('POST /bookings/:id/respond-part-request', () => {
     const bookingRes = await request(app)
       .post('/api/v1/bookings')
       .set('Authorization', `Bearer ${custToken}`)
-      .send({ category: 'AC', serviceSlug: 'repair' })
+      .send(await offeringBooking('TEST-REPAIR'))
       .expect(201);
 
     await request(app)

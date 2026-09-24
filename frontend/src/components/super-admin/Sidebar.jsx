@@ -282,7 +282,7 @@ const Sidebar = () => {
     },
     {
       type: "link",
-      label: "Service Catalog",
+      label: "Master Catalogue",
       path: "/super-admin/service-catalog",
       icon: <LayoutGrid size={18} />,
     },

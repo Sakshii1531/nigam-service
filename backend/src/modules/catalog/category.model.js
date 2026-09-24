@@ -29,6 +29,9 @@ const categorySchema = new mongoose.Schema(
     // categories within a given tab, e.g. "Maintenance", "Installation".
     groups: { type: [String], default: [], index: true },
     section: { type: String, default: '' },
+    // Search synonyms for the master catalogue (e.g. "electrician", "wiring"
+    // on Electrical) — folded into each offering's searchText.
+    keywords: { type: [String], default: [] },
   },
   { timestamps: true },
 );

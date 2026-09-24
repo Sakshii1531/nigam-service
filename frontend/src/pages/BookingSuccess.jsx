@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { formatRupees } from "../lib/catalogueApi";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   ArrowRight,
@@ -82,8 +83,9 @@ const BookingSuccess = () => {
   const quantityParam = p.get("quantity") || "1";
   const dateParam = p.get("date") || "Today";
   const timeGroupParam = p.get("timeGroup") || "09:00 AM";
-  const totalPriceParam = p.get("totalPrice") || "299";
-  const advanceAmtParam = p.get("advanceAmt") || "49";
+  // No invented fallbacks: without a param the booking itself (below) is the source.
+  const totalPriceParam = p.get("totalPrice") || "";
+  const advanceAmtParam = p.get("advanceAmt") || "";
 
   const isInstant =
     p.get("isInstant") === "true" ||
@@ -386,13 +388,13 @@ const BookingSuccess = () => {
     Icon: Flame,
     iconColor: "#F97316",
     label: "Total Amount",
-    value: `₹${totalPrice}`,
+    value: formatRupees(totalPrice),
   });
   rows.push({
     Icon: CheckSquare,
     iconColor: "#22C55E",
     label: "Advance Paid",
-    value: `₹${advanceAmt}`,
+    value: formatRupees(advanceAmt),
     valueColor: "#0B4EA2",
   });
 

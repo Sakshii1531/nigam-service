@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { offeringBookingBody } from '../catalogueFixture.js';
 
 const API = `${process.env.UI_API_ORIGIN || 'http://localhost:4111'}/api/v1`;
 
@@ -41,11 +42,9 @@ test.describe('Customer Booking Cancellation', () => {
     // Create a booking via API
     const createRes = await request.post(`${API}/bookings`, {
       headers: { Authorization: `Bearer ${customer.accessToken}` },
-      data: {
-        category: 'AC',
-        serviceSlug: 'repair',
-        serviceName: 'AC repair Standard Work',
-        price: 299,
+      data: await offeringBookingBody(request, {
+        api: API,
+        offeringCode: 'AC-WINDOW-REPAIR',
         scheduledDate: new Date().toISOString(),
         timeSlot: { date: 'Today', time: '10:00 AM - 01:00 PM' },
         address: {
@@ -55,7 +54,7 @@ test.describe('Customer Booking Cancellation', () => {
           state: 'Madhya Pradesh',
           pincode: '452010',
         },
-      },
+      }),
     });
     expect(createRes.status()).toBe(201);
     const { booking } = (await createRes.json()).data;
@@ -101,11 +100,9 @@ test.describe('Customer Booking Cancellation', () => {
     // Create an instant booking
     const createRes = await request.post(`${API}/bookings`, {
       headers: { Authorization: `Bearer ${customer.accessToken}` },
-      data: {
-        category: 'AC',
-        serviceSlug: 'repair',
-        serviceName: 'AC repair Standard Work',
-        price: 299,
+      data: await offeringBookingBody(request, {
+        api: API,
+        offeringCode: 'AC-WINDOW-REPAIR',
         isInstant: true,
         address: {
           house: 'House 55',
@@ -114,7 +111,7 @@ test.describe('Customer Booking Cancellation', () => {
           state: 'Madhya Pradesh',
           pincode: '452001',
         },
-      },
+      }),
     });
     expect(createRes.status()).toBe(201);
     const { booking, serviceRequest } = (await createRes.json()).data;

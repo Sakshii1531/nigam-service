@@ -1,6 +1,6 @@
 import { apiRequest } from "../../lib/apiClient";
 import { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import Sidebar from "../../components/super-admin/Sidebar";
 import Topbar from "../../components/super-admin/Topbar";
 import {
@@ -1107,6 +1107,21 @@ const DEFAULT_BRAND_CARDS = [
     textColor: "#C30F42",
   },
 ];
+
+// The prices typed on this page are the legacy CMS prices. The Master
+// Catalogue (docs/master-catalogue) replaces them as the booking price at the
+// Phase 4 cut-over, and Phase 6 swaps these inputs for an offering picker.
+// Until then they still price bookings made from these tiles, so they stay
+// editable — this just makes sure nobody mistakes them for the real catalogue.
+const LegacyPriceNotice = () => (
+  <div className="col-span-full text-[11px] leading-relaxed text-amber-900 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+    <b>Legacy prices.</b> Service prices and partner payouts now live in{" "}
+    <Link to="/super-admin/service-catalog" className="font-bold underline">
+      Master Catalogue
+    </Link>
+    . The prices below are only used by the old booking flow and will stop applying once bookings move to the catalogue.
+  </div>
+);
 
 const CustomerAppCustomization = () => {
   const location = useLocation();
@@ -4138,6 +4153,8 @@ const CustomerAppCustomization = () => {
                     </div>
                   </div>
 
+                  <LegacyPriceNotice />
+
                   <div>
                     <label className="text-xs font-semibold text-[#64748B] mb-1 block">
                       Start Price (₹) *
@@ -4523,6 +4540,8 @@ const CustomerAppCustomization = () => {
                       />
                     </div>
                   </div>
+
+                  <LegacyPriceNotice />
 
                   <div>
                     <label className="text-xs font-semibold text-[#64748B] mb-1 block">

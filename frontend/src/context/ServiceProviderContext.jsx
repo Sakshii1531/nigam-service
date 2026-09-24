@@ -10,6 +10,14 @@ import { io } from "socket.io-client";
 import { useAuth } from "./AuthContext";
 import { apiRequest, getStoredTokens } from "../lib/apiClient";
 
+/** "Split AC · 1.5 Ton · Installation × 2" from a booking's catalogue snapshot (docs/master-catalogue). */
+function serviceLineOf(booking) {
+  const c = booking?.commercial;
+  if (!c) return booking?.service?.name || null;
+  const what = [c.productType?.name, c.variant?.label, c.service?.name || c.offeringName].filter(Boolean).join(" · ");
+  return c.quantity > 1 ? `${what} × ${c.quantity}` : what;
+}
+
 const SOCKET_URL = import.meta.env.VITE_API_BASE_URL
   ? import.meta.env.VITE_API_BASE_URL.replace("/api/v1", "")
   : "http://localhost:4000";
@@ -112,9 +120,12 @@ export const ServiceProviderProvider = ({ children }) => {
         // used to be dialled/WhatsApped as if it were the real customer.
         serialNo: sr.serialNo || null,
         complaint: sr.description || "Service booking request",
-        // Computed server-side from the live commission / brand rate card.
+        // The booking's fixed catalogue payout (or the brand rate card for a
+        // complaint without a booking) — computed server-side, never a % here.
         estEarnings: sr.estEarnings ?? 0,
         price: sr.booking?.totalPrice ?? 0,
+        serviceLine: serviceLineOf(sr.booking),
+        isExpress: Boolean(sr.booking?.isExpress),
         distance: null,
         customerName: sr.booking?.fullName || sr.user?.name || "Customer",
         phone: sr.booking?.mobile || sr.user?.phone || null,
@@ -180,6 +191,9 @@ export const ServiceProviderProvider = ({ children }) => {
           warrantyStatus: sr?.appliance?.warrantyStatus || sr?.warranty || null,
           applianceId: sr?.appliance?.id || sr?.appliance?._id || null,
           estEarnings: job.estEarnings || 0,
+          payout: job.payout || null,
+          serviceLine: serviceLineOf(sr?.booking),
+          isExpress: Boolean(sr?.booking?.isExpress),
           invoiceUrl:
             sr?.attachments?.[0] || sr?.appliance?.invoiceFileUrl || null,
           invoiceAvailable: Boolean(sr?.invoiceAvailable),

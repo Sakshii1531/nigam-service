@@ -51,11 +51,15 @@ export function getCurrentPortal(pathname = typeof window !== 'undefined' ? wind
 }
 
 export class ApiError extends Error {
-  constructor(status, message, details) {
+  constructor(status, message, details, code) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.details = details;
+    // Machine-readable reason from the backend envelope (error.code), e.g.
+    // PRICE_CHANGED, OFFERING_NOT_BOOKABLE — lets screens react without
+    // parsing the message.
+    this.code = code;
     Object.setPrototypeOf(this, ApiError.prototype);
   }
 }
@@ -165,7 +169,7 @@ async function rawRequest(path, { method = 'GET', body, accessToken, envelope = 
   }
 
   if (!res.ok) {
-    throw new ApiError(res.status, json?.error?.message || 'Request failed', json?.error?.details);
+    throw new ApiError(res.status, json?.error?.message || 'Request failed', json?.error?.details, json?.error?.code);
   }
   return envelope ? json : json.data;
 }

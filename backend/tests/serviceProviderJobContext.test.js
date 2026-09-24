@@ -16,6 +16,7 @@ import { SparePartCatalog } from '../src/modules/super-admin/sparePartCatalog.mo
 import { hashPassword } from '../src/modules/auth/password.js';
 import { ROLES } from '../src/config/constants.js';
 import { testDbUri } from './helpers/testDb.js';
+import { seedSimpleOffering, offeringBooking, clearCatalogue } from './helpers/catalogue.js';
 import { readOtpCode } from './helpers/otp.js';
 
 const TEST_DB_URI = testDbUri('serviceProviderJobContext');
@@ -35,8 +36,8 @@ async function loginAndVerify({ role, identifier, password }) {
 
 async function seedCatalog() {
   const category = await Category.create({ key: 'AC', name: 'AC', color: '#0D47A1' });
-  await ServiceCatalogItem.create({ category: category._id, slug: 'repair', name: 'Repair', price: 1000 });
-  await ServiceCatalogItem.create({ category: category._id, slug: 'foam_wash', name: 'AC Foam Wash', price: 399 });
+  await seedSimpleOffering({ categoryKey: category.key, price: 1000 });
+  await seedSimpleOffering({ categoryKey: category.key, code: 'TEST-FOAM-WASH', serviceName: 'AC Foam Wash', price: 399, payout: 200 });
   await SparePartCatalog.create({ name: 'Capacitor 45 MFD', category: 'AC', costPrice: 300, markupPercent: 20, stock: 10 });
   return category;
 }
@@ -70,6 +71,7 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
+  await clearCatalogue();
   await Promise.all([
     User.deleteMany({}),
     ServiceProvider.deleteMany({}),
@@ -119,7 +121,7 @@ describe('GET /service-provider/jobs/:id/context', () => {
     const bookingRes = await request(app)
       .post('/api/v1/bookings')
       .set('Authorization', `Bearer ${custToken}`)
-      .send({ category: 'AC', serviceSlug: 'repair', applianceId: String(appliance._id) })
+      .send(await offeringBooking('TEST-REPAIR', { applianceId: String(appliance._id) }))
       .expect(201);
     const srId = bookingRes.body.data.serviceRequest.id;
 
@@ -166,7 +168,7 @@ describe('GET /service-provider/jobs/:id/context', () => {
     const bookingRes = await request(app)
       .post('/api/v1/bookings')
       .set('Authorization', `Bearer ${custToken}`)
-      .send({ category: 'AC', serviceSlug: 'repair' })
+      .send(await offeringBooking('TEST-REPAIR'))
       .expect(201);
     const srId = bookingRes.body.data.serviceRequest.id;
 

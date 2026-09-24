@@ -8,6 +8,7 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { healthRouter } from './modules/health/health.routes.js';
 import { authRouter } from './modules/auth/auth.routes.js';
 import { catalogRouter } from './modules/catalog/catalog.routes.js';
+import { catalogAdminRouter } from './modules/catalog/catalogAdmin.routes.js';
 import { bookingRouter } from './modules/booking/booking.routes.js';
 import { serviceRequestRouter } from './modules/service-requests/serviceRequest.routes.js';
 import { applianceRouter } from './modules/service-requests/ownedAppliance.routes.js';
@@ -187,6 +188,7 @@ export function createApp() {
   app.use('/api/v1/brand', brandInsightsRouter);
   app.use('/api/v1/super-admin/brands', brandRouter);
   app.use('/api/v1/super-admin/cities', cityRouter);
+  app.use('/api/v1/super-admin/catalogue', catalogAdminRouter);
   app.use('/api/v1/super-admin/asms', asmRouter);
   app.use('/api/v1/super-admin/assignment-weighting', assignmentWeightingRouter);
   app.use('/api/v1/super-admin/settings', platformSettingsRouter);

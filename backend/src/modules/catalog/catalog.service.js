@@ -15,7 +15,7 @@ async function assembleCategory(category) {
   const json = category.toJSON();
   return {
     ...json,
-    productTypes: productTypes.map((pt) => ({ id: pt.slug, name: pt.name, icon: pt.icon, desc: pt.desc, priceAddon: pt.priceAddon || 0 })),
+    productTypes: productTypes.map((pt) => ({ id: pt.slug, name: pt.name, icon: pt.icon, desc: pt.desc })),
     services: services.map((s) => ({ id: s.slug, name: s.name, icon: s.icon, desc: s.desc, price: s.price, unit: s.unit })),
   };
 }
@@ -48,17 +48,11 @@ export async function getCategoryForAdmin(key) {
   };
 }
 
+// Exact key only. This used to fall back to a case-insensitive match, then a
+// name regex, then ANY active category — so a typo'd key silently edited (or
+// priced a booking from) an unrelated category.
 async function findCategoryOr404(key) {
-  let category = await Category.findOne({ key });
-  if (!category && key) {
-    category = await Category.findOne({ key: { $regex: new RegExp(`^${key}$`, 'i') } });
-  }
-  if (!category && key) {
-    category = await Category.findOne({ name: { $regex: new RegExp(key, 'i') } });
-  }
-  if (!category) {
-    category = await Category.findOne({ isActive: true });
-  }
+  const category = await Category.findOne({ key });
   if (!category) throw new ApiError(404, `No category found for key "${key}"`);
   return category;
 }
@@ -98,20 +92,6 @@ export async function deleteProductType(categoryKey, productTypeId) {
   if (result.deletedCount === 0) throw new ApiError(404, 'Product type not found in this category');
 }
 
-/** Used by booking.service.js to price a booking server-side — the client
- * names a product type (e.g. "Split AC"), never its addon amount. Matches
- * by name (not slug) since that's what the booking flow and the legacy
- * CMS-configured product type lists both send. */
-export async function findProductTypeAddon(categoryKey, productTypeName) {
-  if (!productTypeName) return 0;
-  const category = await findCategoryOr404(categoryKey);
-  const productType = await ProductType.findOne({
-    category: category._id,
-    name: { $regex: new RegExp(`^${productTypeName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
-  });
-  return productType?.priceAddon || 0;
-}
-
 export async function addServiceItem(categoryKey, data) {
   const category = await findCategoryOr404(categoryKey);
   const item = await ServiceCatalogItem.create({ category: category._id, ...data });
@@ -131,27 +111,4 @@ export async function deleteServiceItem(categoryKey, serviceItemId) {
   const category = await findCategoryOr404(categoryKey);
   const result = await ServiceCatalogItem.deleteOne({ _id: serviceItemId, category: category._id });
   if (result.deletedCount === 0) throw new ApiError(404, 'Service item not found in this category');
-}
-
-/** Used by booking.service.js to price a booking server-side — never trust a
- * client-supplied price for what's being charged. */
-export async function findServiceItem(categoryKey, serviceSlug) {
-  const category = await findCategoryOr404(categoryKey);
-  let item = await ServiceCatalogItem.findOne({ category: category._id, slug: serviceSlug, isActive: true });
-  if (!item && serviceSlug) {
-    const cleanSlug = serviceSlug.toLowerCase();
-    if (cleanSlug.includes('repair')) {
-      item = await ServiceCatalogItem.findOne({ category: category._id, slug: 'repair', isActive: true });
-    } else if (cleanSlug.includes('install')) {
-      item = await ServiceCatalogItem.findOne({ category: category._id, slug: 'installation', isActive: true });
-    } else if (cleanSlug.includes('gas')) {
-      item = await ServiceCatalogItem.findOne({ category: category._id, slug: 'gas_refilling', isActive: true });
-    }
-  }
-  if (!item && process.env.NODE_ENV !== 'test') {
-    // Fallback: try to find the first active service under this category
-    item = await ServiceCatalogItem.findOne({ category: category._id, isActive: true });
-  }
-  if (!item) throw new ApiError(404, `No active service "${serviceSlug}" under category "${categoryKey}"`);
-  return item;
 }

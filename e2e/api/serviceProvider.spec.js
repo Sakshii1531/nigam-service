@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { createTestOffering, offeringBookingBody } from '../catalogueFixture.js';
 import { randomUUID } from 'node:crypto';
 
 // Covers backend/src/modules/service provider/*.routes.js end-to-end — the Phase 6
@@ -58,10 +59,7 @@ async function setupD2cFixture(request, { price = 1000 } = {}) {
     headers: { Authorization: `Bearer ${adminToken}` },
     data: { key: categoryKey, name: categoryKey },
   });
-  await request.post(`/api/v1/catalog/categories/${categoryKey}/services`, {
-    headers: { Authorization: `Bearer ${adminToken}` },
-    data: { slug: 'repair', name: 'Repair', price },
-  });
+  await createTestOffering(request, adminToken, categoryKey, { price });
 
   const provider = await createServiceProvider(request, { specs: [categoryKey] });
   const customer = await createCustomer(request);
@@ -72,7 +70,7 @@ async function acceptedD2cJob(request) {
   const { categoryKey, provider, customer } = await setupD2cFixture(request);
   const bookingRes = await request.post('/api/v1/bookings', {
     headers: { Authorization: `Bearer ${customer.token}` },
-    data: { category: categoryKey, serviceSlug: 'repair' },
+    data: await offeringBookingBody(request, { categoryKey }),
   });
   const { booking, serviceRequest } = (await bookingRes.json()).data;
 
@@ -101,8 +99,14 @@ test.describe('serviceProvider job lifecycle — D2C', () => {
     await request.post(`/api/v1/service-provider/jobs/${jobId}/repair-complete`, auth);
     const billingRes = await request.post(`/api/v1/service-provider/jobs/${jobId}/billing`, auth);
     const { billingEstimate } = (await billingRes.json()).data;
+    // docs/master-catalogue Phase 5: the booked service is billed as booked
+    // (GST already inside — this test offering has GST 0); parts get 18% GST;
+    // the partner earns the offering's fixed payout (30% of 1000 = 300 here,
+    // set by createTestOffering), not a share of the bill.
     expect(billingEstimate.serviceCharge).toBe(1000);
-    expect(billingEstimate.sparePartsTotal).toBe(500);
+    expect(billingEstimate.sparePartsTotal).toBe(590);
+    expect(billingEstimate.total).toBe(1590);
+    expect(billingEstimate.serviceProviderEarnings).toBe(300);
 
     const payRes = await request.post(`/api/v1/service-provider/jobs/${jobId}/collect-payment`, { ...auth, data: { paymentMethod: 'Cash', otp: completionOtp } });
     expect(payRes.status()).toBe(200);

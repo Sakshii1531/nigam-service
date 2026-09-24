@@ -141,7 +141,7 @@ const SuperAdminAMC = lazy(() => import("./pages/super-admin/AMC"));
 const SuperAdminProducts = lazy(() => import("./pages/super-admin/Products"));
 const SuperAdminProductCategories = lazy(() => import("./pages/super-admin/ProductCategories"));
 const SuperAdminWarrantyVerification = lazy(() => import("./pages/super-admin/WarrantyVerification"));
-const SuperAdminServiceCatalog = lazy(() => import("./pages/super-admin/ServiceCatalog"));
+const SuperAdminMasterCatalogue = lazy(() => import("./pages/super-admin/MasterCatalogue"));
 const SuperAdminEscalationDesk = lazy(() => import("./pages/super-admin/EscalationDesk"));
 const SuperAdminStories = lazy(() => import("./pages/super-admin/Stories"));
 const SuperAdminVideos = lazy(() => import("./pages/super-admin/Videos"));
@@ -1280,7 +1280,7 @@ function App() {
                           />
                           <Route
                             path="/super-admin/service-catalog"
-                            element={<SuperAdminServiceCatalog />}
+                            element={<SuperAdminMasterCatalogue />}
                           />
                           <Route
                             path="/super-admin/escalation-desk"

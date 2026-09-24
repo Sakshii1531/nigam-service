@@ -26,10 +26,22 @@ const sparePartSchema = lineItemSchema.extend({
   source: z.enum(['recommended_ai', 'manual']).optional(),
 });
 
+// Extra work is added from the Master Catalogue (addJobAddOnSchema), not as
+// free text here — an `additionalServices` field is ignored (stripped).
 export const submitSparePartsSchema = z.object({
   parts: z.array(sparePartSchema).default([]),
-  additionalServices: z.array(lineItemSchema).default([]),
 });
+
+const objectId = z.string().regex(/^[a-f0-9]{24}$/i, 'Invalid id');
+
+export const addOnOfferingsQuerySchema = z.object({ category: z.string().trim().min(1).max(80).optional() });
+
+export const addJobAddOnSchema = z.object({
+  offeringId: objectId,
+  quantity: z.coerce.number().int().positive().default(1),
+});
+
+export const jobAddOnParamSchema = z.object({ id: z.string().min(1), addOnId: objectId });
 
 export const collectPaymentSchema = z.object({
   paymentMethod: z.enum(['Card', 'UPI', 'NetBanking', 'Cash', 'Wallet', 'Online']).optional(),

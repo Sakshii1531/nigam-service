@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { createTestOffering, offeringBookingBody } from '../catalogueFixture.js';
 import { randomUUID } from 'node:crypto';
 
 // The parts of the service flow that had no coverage at all: a service provider
@@ -58,17 +59,14 @@ async function isolatedCategory(request, { price = 1000 } = {}) {
     headers: { Authorization: `Bearer ${adminToken}` },
     data: { key: categoryKey, name: categoryKey },
   });
-  await request.post(`/api/v1/catalog/categories/${categoryKey}/services`, {
-    headers: { Authorization: `Bearer ${adminToken}` },
-    data: { slug: 'repair', name: 'Repair', price },
-  });
+  await createTestOffering(request, adminToken, categoryKey, { price });
   return { categoryKey, adminToken };
 }
 
 async function book(request, customer, categoryKey, extra = {}) {
   const res = await request.post('/api/v1/bookings', {
     headers: { Authorization: `Bearer ${customer.token}` },
-    data: { category: categoryKey, serviceSlug: 'repair', ...extra },
+    data: await offeringBookingBody(request, { categoryKey, ...extra }),
   });
   expect(res.status()).toBe(201);
   return (await res.json()).data;

@@ -6,7 +6,7 @@ import { createBooking } from '../src/modules/booking/booking.service.js';
 import { acceptJob } from '../src/modules/service-provider/job.service.js';
 import { User } from '../src/modules/auth/user.model.js';
 import { Brand } from '../src/modules/super-admin/brand.model.js';
-import { ServiceCatalogItem } from '../src/modules/catalog/serviceCatalogItem.model.js';
+import { seedSimpleOffering, offeringBooking, clearCatalogue } from './helpers/catalogue.js';
 import { Category } from '../src/modules/catalog/category.model.js';
 import { ServiceProvider } from '../src/modules/service-provider/serviceProvider.model.js';
 import { OwnedAppliance } from '../src/modules/service-requests/ownedAppliance.model.js';
@@ -24,7 +24,6 @@ describe('Smart Warranty Detection Pipeline', () => {
   let serviceProviderUser;
   let serviceProvider;
   let brand;
-  let category;
 
   beforeAll(async () => {
     // Per-file suffix, not a bare testDbUri() — that resolves to the shared
@@ -42,10 +41,10 @@ describe('Smart Warranty Detection Pipeline', () => {
   });
 
   beforeEach(async () => {
+    await clearCatalogue();
     await Promise.all([
       User.deleteMany({}),
       Brand.deleteMany({}),
-      ServiceCatalogItem.deleteMany({}),
       Category.deleteMany({}),
       ServiceProvider.deleteMany({}),
       OwnedAppliance.deleteMany({}),
@@ -90,20 +89,14 @@ describe('Smart Warranty Detection Pipeline', () => {
       status: 'Active',
     });
 
-    category = await Category.create({
+    await Category.create({
       key: 'AC',
       name: 'AC',
       slug: 'ac',
       order: 1,
     });
 
-    await ServiceCatalogItem.create({
-      category: category._id,
-      name: 'AC Servicing',
-      slug: 'ac-servicing',
-      price: 500,
-      desc: 'Deep cleaning AC service',
-    });
+    await seedSimpleOffering({ categoryKey: 'AC', code: 'AC-SERVICING', serviceName: 'AC Servicing', price: 500 });
   });
 
   describe('detectWarrantyForAppliance()', () => {
@@ -191,12 +184,10 @@ describe('Smart Warranty Detection Pipeline', () => {
       const recentDate = new Date();
       recentDate.setMonth(recentDate.getMonth() - 1);
 
-      const { booking, serviceRequest } = await createBooking(customer.id, {
-        category: 'AC',
-        serviceSlug: 'ac-servicing',
-        brand: 'LG Electronics',
-        purchaseDate: recentDate,
-      });
+      const { booking, serviceRequest } = await createBooking(
+        customer.id,
+        await offeringBooking('AC-SERVICING', { brand: 'LG Electronics', purchaseDate: recentDate, coverageType: 'Brand Warranty' }),
+      );
 
       expect(booking.totalPrice).toBe(0); // Covered by Brand Warranty!
       expect(serviceRequest.warranty).toBe('In Warranty');
@@ -207,12 +198,10 @@ describe('Smart Warranty Detection Pipeline', () => {
       const oldDate = new Date();
       oldDate.setFullYear(oldDate.getFullYear() - 3);
 
-      const { booking, serviceRequest } = await createBooking(customer.id, {
-        category: 'AC',
-        serviceSlug: 'ac-servicing',
-        brand: 'LG Electronics',
-        purchaseDate: oldDate,
-      });
+      const { booking, serviceRequest } = await createBooking(
+        customer.id,
+        await offeringBooking('AC-SERVICING', { brand: 'LG Electronics', purchaseDate: oldDate }),
+      );
 
       expect(booking.totalPrice).toBe(500); // Standard catalog price
       expect(serviceRequest.warranty).toBe('Out of Warranty');
@@ -232,11 +221,10 @@ describe('Smart Warranty Detection Pipeline', () => {
         status: 'Active',
       });
 
-      const { serviceRequest } = await createBooking(customer.id, {
-        category: 'AC',
-        serviceSlug: 'ac-servicing',
-        brand: 'LG Electronics',
-      });
+      const { serviceRequest } = await createBooking(
+        customer.id,
+        await offeringBooking('AC-SERVICING', { brand: 'LG Electronics', coverageType: 'AMC Visit' }),
+      );
 
       // Update ServiceRequest service provider manually for acceptance
       serviceRequest.serviceProvider = serviceProvider._id;

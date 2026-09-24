@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { formatRupees } from "../lib/catalogueApi";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -110,6 +111,20 @@ const getCategoryIcon = (category, serviceName) => {
     return cleaningImg;
   return iconAc;
 };
+
+/** Billing lines from the booking's frozen commercial snapshot (docs/master-catalogue Phase 4). */
+function billingRows(booking) {
+  const c = booking.commercial;
+  if (!c) return [{ label: "Total Payable", amount: booking.totalPrice ?? 0, total: true }];
+  const rows = [{ label: `${c.offeringName} × ${c.quantity} (${formatRupees(c.unitPrice)} ${c.unitLabel || "per unit"})`, amount: c.baseAmount }];
+  if (c.coverage?.amount > 0) rows.push({ label: `Covered — ${c.coverage.type}`, amount: -c.coverage.amount });
+  if (c.discount?.amount > 0) rows.push({ label: `Coupon ${c.discount.code || ""}`.trim(), amount: -c.discount.amount });
+  if (c.expressFee > 0) rows.push({ label: "Express fee", amount: c.expressFee });
+  rows.push({ label: `GST (${c.gstPercent}%)`, amount: c.gstAmount });
+  rows.push({ label: "Total", amount: c.finalAmount, total: true });
+  if (c.coinsApplied > 0) rows.push({ label: "NCC coins used", amount: -c.coinsApplied });
+  return rows;
+}
 
 const BookingDetails = () => {
   const { id } = useParams();
@@ -509,7 +524,7 @@ const BookingDetails = () => {
                   {booking.category || "Appliance Service"}
                 </span>
                 <span className="text-base font-black text-slate-900">
-                  ₹{booking.totalPrice ?? 499}
+                  {formatRupees(booking.totalPrice ?? 0)}
                 </span>
               </div>
               <h2 className="text-sm md:text-base font-black text-slate-900 mt-0.5 truncate">
@@ -524,6 +539,16 @@ const BookingDetails = () => {
                 {booking.productType && (
                   <span className="bg-slate-100 border border-slate-200/80 text-slate-700 text-[11px] font-bold px-2.5 py-0.5 rounded-lg">
                     Type: {booking.productType}
+                  </span>
+                )}
+                {booking.commercial?.variant?.label && (
+                  <span className="bg-slate-100 border border-slate-200/80 text-slate-700 text-[11px] font-bold px-2.5 py-0.5 rounded-lg">
+                    Size: {booking.commercial.variant.label}
+                  </span>
+                )}
+                {booking.isExpress && (
+                  <span className="bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-bold px-2.5 py-0.5 rounded-lg">
+                    Express
                   </span>
                 )}
                 <span className="bg-slate-100 border border-slate-200/80 text-slate-700 text-[11px] font-bold px-2.5 py-0.5 rounded-lg">
@@ -793,26 +818,24 @@ const BookingDetails = () => {
           </div>
 
           <div className="flex flex-col gap-2 text-xs divide-y divide-slate-100 mt-1">
-            <div className="flex justify-between items-center pt-1">
-              <span className="text-slate-500 font-medium">
-                Standard Service Charge
-              </span>
-              <span className="font-bold text-slate-800">
-                ₹{booking.totalPrice ?? 499}
-              </span>
-            </div>
+            {/* The commercial snapshot frozen when the booking was made — a
+                later catalogue price change never alters it. */}
+            {billingRows(booking).map((row) => (
+              <div key={row.label} className={`flex justify-between items-center pt-2 ${row.total ? "text-sm" : ""}`}>
+                <span className={row.total ? "font-black text-slate-900" : "text-slate-500 font-medium"}>{row.label}</span>
+                <span className={row.total ? "font-black text-slate-900" : "font-bold text-slate-800"}>
+                  {row.amount < 0 ? `−${formatRupees(-row.amount)}` : formatRupees(row.amount)}
+                </span>
+              </div>
+            ))}
             <div className="flex justify-between items-center pt-2">
               <span className="text-slate-500 font-medium">Payment Mode</span>
               <span className="font-bold text-brand-blue uppercase text-[11px]">
                 {booking.paymentMode === "advance"
-                  ? "Advance Paid Online"
+                  ? booking.advancePaid
+                    ? `Advance ${formatRupees(booking.advanceAmount)} paid online`
+                    : `Advance ${formatRupees(booking.advanceAmount)} online`
                   : "Pay After Service (Cash / UPI)"}
-              </span>
-            </div>
-            <div className="flex justify-between items-center pt-2 text-sm">
-              <span className="font-black text-slate-900">Total Payable</span>
-              <span className="font-black text-slate-900">
-                ₹{booking.totalPrice ?? 499}
               </span>
             </div>
           </div>

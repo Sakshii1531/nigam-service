@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { createTestOffering, offeringBookingBody } from '../catalogueFixture.js';
 import { randomUUID } from 'node:crypto';
 
 function uniquePhone() {
@@ -45,10 +46,7 @@ async function setupIsolatedFixture(request, { price = 299 } = {}) {
     headers: { Authorization: `Bearer ${adminToken}` },
     data: { key: categoryKey, name: categoryKey },
   });
-  await request.post(`/api/v1/catalog/categories/${categoryKey}/services`, {
-    headers: { Authorization: `Bearer ${adminToken}` },
-    data: { slug: 'repair', name: 'Repair', price },
-  });
+  await createTestOffering(request, adminToken, categoryKey, { price });
 
   const provider = await createServiceProvider(request, { specs: [categoryKey] });
   const customer = await createCustomer(request);
@@ -63,9 +61,9 @@ test.describe('Smart Warranty Detection E2E', () => {
 
     const res = await request.post('/api/v1/bookings', {
       headers: { Authorization: `Bearer ${customer.token}` },
-      data: {
-        category: categoryKey,
-        serviceSlug: 'repair',
+      data: await offeringBookingBody(request, {
+        categoryKey,
+        covered: true, // in brand warranty → the customer pays ₹0
         brand: 'Demo Brand',
         scheduledDate: new Date(Date.now() + 86400000).toISOString(),
         timeSlot: { date: '2026-07-21', time: '10:00 AM' },
@@ -74,7 +72,7 @@ test.describe('Smart Warranty Detection E2E', () => {
         fullName: 'E2E Warranty User',
         mobile: customer.phone,
         paymentMode: 'after',
-      },
+      }),
     });
 
     expect(res.status()).toBe(201);
@@ -90,9 +88,9 @@ test.describe('Smart Warranty Detection E2E', () => {
     // 1. Customer creates an in-warranty booking
     const res = await request.post('/api/v1/bookings', {
       headers: { Authorization: `Bearer ${customer.token}` },
-      data: {
-        category: categoryKey,
-        serviceSlug: 'repair',
+      data: await offeringBookingBody(request, {
+        categoryKey,
+        covered: true, // in brand warranty → the customer pays ₹0
         brand: 'Demo Brand',
         scheduledDate: new Date(Date.now() + 86400000).toISOString(),
         timeSlot: { date: '2026-07-21', time: '10:00 AM' },
@@ -101,7 +99,7 @@ test.describe('Smart Warranty Detection E2E', () => {
         fullName: 'E2E Warranty User 2',
         mobile: customer.phone,
         paymentMode: 'after',
-      },
+      }),
     });
 
     expect(res.status()).toBe(201);

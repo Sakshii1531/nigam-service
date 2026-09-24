@@ -18,6 +18,7 @@
  */
 
 import { test, expect } from '@playwright/test';
+import { createTestOffering, offeringBookingBody } from '../catalogueFixture.js';
 import { randomUUID } from 'node:crypto';
 
 function uniquePhone() {
@@ -64,10 +65,7 @@ async function setupFixture(request) {
     headers: { Authorization: `Bearer ${adminToken}` },
     data: { key: categoryKey, name: categoryKey },
   });
-  await request.post(`/api/v1/catalog/categories/${categoryKey}/services`, {
-    headers: { Authorization: `Bearer ${adminToken}` },
-    data: { slug: 'repair', name: 'Repair', price: 299 },
-  });
+  await createTestOffering(request, adminToken, categoryKey, { price: 299 });
 
   const provider = await createServiceProvider(request, { specs: [categoryKey] });
   const customer = await createCustomer(request);
@@ -75,7 +73,7 @@ async function setupFixture(request) {
   // Create a booking to get an assigned service request
   const bookingRes = await request.post('/api/v1/bookings', {
     headers: { Authorization: `Bearer ${customer.token}` },
-    data: { category: categoryKey, serviceSlug: 'repair' },
+    data: await offeringBookingBody(request, { categoryKey }),
   });
   expect(bookingRes.status()).toBe(201);
   const { serviceRequest } = (await bookingRes.json()).data;

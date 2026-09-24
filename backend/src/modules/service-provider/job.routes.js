@@ -15,6 +15,9 @@ import {
   requestPartSchema,
   collectPaymentSchema,
   verifyJobPaymentSchema,
+  addOnOfferingsQuerySchema,
+  addJobAddOnSchema,
+  jobAddOnParamSchema,
 } from './job.validation.js';
 
 export const jobRouter = Router();
@@ -130,6 +133,41 @@ jobRouter.post(
     }
   },
 );
+
+// ─── On-site extra work from the Master Catalogue (docs/master-catalogue Phase 5)
+jobRouter.get(
+  '/:id/addon-offerings',
+  validate(jobIdParamSchema, 'params'),
+  validate(addOnOfferingsQuerySchema, 'query'),
+  async (req, res, next) => {
+    try {
+      ok(res, await jobService.listAddOnOfferings(req.serviceProvider.id, req.params.id, req.query));
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+jobRouter.post(
+  '/:id/addons',
+  validate(jobIdParamSchema, 'params'),
+  validate(addJobAddOnSchema),
+  async (req, res, next) => {
+    try {
+      ok(res, await jobService.addJobAddOn(req.serviceProvider.id, req.params.id, req.body));
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+jobRouter.delete('/:id/addons/:addOnId', validate(jobAddOnParamSchema, 'params'), async (req, res, next) => {
+  try {
+    ok(res, await jobService.removeJobAddOn(req.serviceProvider.id, req.params.id, req.params.addOnId));
+  } catch (err) {
+    next(err);
+  }
+});
 
 jobRouter.post(
   '/:id/spare-parts',

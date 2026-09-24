@@ -13,7 +13,6 @@ import { AMCVisit } from '../warranty-amc-exchange/amcVisit.model.js';
 import { ExtendedWarrantyOrder } from '../warranty-amc-exchange/extendedWarrantyOrder.model.js';
 import { Payment } from '../payments-wallet/payment.model.js';
 import { createRazorpayOrder, verifyRazorpaySignature } from '../payments-wallet/paymentGateway.js';
-import { computeCharges } from '../shared/pricingEngine.js';
 import { raiseServiceProviderClaim } from './claim.service.js';
 import { Claim } from '../warranty-amc-exchange/claim.model.js';
 import { getOrCreateConversation } from '../chat/conversation.service.js';
@@ -22,12 +21,17 @@ import { getIO } from '../../sockets/io.js';
 import { env } from '../../config/env.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { JOB_STEP_TRANSITIONS, SERVICE_REQUEST_TRANSITIONS } from '../../config/constants.js';
-import { serviceProviderShare, coveredVisitEarnings } from '../shared/serviceProviderEarnings.js';
+import { estimateServiceProviderEarnings } from '../shared/serviceProviderEarnings.js';
+import { initialJobPayout, withAddOnPayout, computeJobBilling } from '../shared/servicePartnerPayout.js';
+import { loadBookableOfferings } from '../catalog/offeringBrowse.service.js';
+import { buildQuote } from '../catalog/quote.service.js';
+import { toRupees } from '../catalog/money.js';
+import { Category } from '../catalog/category.model.js';
+import { Variant } from '../catalog/variant.model.js';
+import { ServiceOffering } from '../catalog/serviceOffering.model.js';
 import { Review } from '../reviews/review.model.js';
 import { upsertTracking } from '../super-admin/liveTracking.service.js';
 import { withWarranty } from '../service-requests/ownedAppliance.service.js';
-import { Category } from '../catalog/category.model.js';
-import { ServiceCatalogItem } from '../catalog/serviceCatalogItem.model.js';
 import { SparePartCatalog } from '../super-admin/sparePartCatalog.model.js';
 import { City } from '../super-admin/city.model.js';
 
@@ -218,16 +222,12 @@ export async function listAvailableJobs(serviceProviderId) {
     return Boolean(jobCity && (jobCity === serviceProviderCity || jobCity.includes(serviceProviderCity) || serviceProviderCity.includes(jobCity)));
   });
 
-  // The app used to estimate this itself as a flat 30% of the booking (or a
-  // made-up 150 when there was no booking), which drifted from the configured
-  // commission and ignored brand rate cards. Same rules as acceptJob uses.
-  const share = await serviceProviderShare();
+  // What the partner will earn if they accept: the booking's fixed catalogue
+  // payout (docs/master-catalogue Phase 5) — the same rule acceptJob freezes
+  // onto the Job — or the brand RateCard for a complaint with no booking.
   return Promise.all(
     visible.map(async (sr) => {
-      const paid = sr.booking && sr.booking.totalPrice > 0;
-      const estEarnings = paid
-        ? Math.round(sr.booking.totalPrice * share)
-        : await coveredVisitEarnings(sr);
+      const estEarnings = await estimateServiceProviderEarnings(sr, sr.booking);
       return { ...sr.toJSON(), estEarnings };
     }),
   );
@@ -425,16 +425,6 @@ function escapeRegExp(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-async function findCategoryFuzzy(categoryValue) {
-  if (!categoryValue) return null;
-  const escaped = escapeRegExp(categoryValue);
-  return (
-    (await Category.findOne({ key: categoryValue })) ||
-    (await Category.findOne({ key: { $regex: new RegExp(`^${escaped}$`, 'i') } })) ||
-    (await Category.findOne({ name: { $regex: new RegExp(escaped, 'i') } }))
-  );
-}
-
 /**
  * Everything the job-details screen needs about the appliance being serviced,
  * in one call: the customer's real appliance record (warranty recomputed live,
@@ -444,28 +434,74 @@ async function findCategoryFuzzy(categoryValue) {
  * this appliance's real repair history (past completed Jobs on the same
  * OwnedAppliance, or same customer+category when no appliance was linked).
  */
+/**
+ * What the partner needs to know about the job and the money, from the
+ * booking's frozen snapshot (docs/master-catalogue Phase 5): the exact
+ * service (type · size · quantity, express), the customer's answers to the
+ * offering's questions, the offering's instructions and scope, the partner's
+ * fixed payout breakdown, and what to collect on site — the same numbers
+ * computeJobBilling will bill. Never the NCC margin.
+ */
+async function buildJobSummary(job, sr) {
+  const booking = sr?.booking || null;
+  const c = booking?.commercial || null;
+  const offering = booking?.offering
+    ? await ServiceOffering.findById(booking.offering).select('customerInstructions included excluded estimatedDurationMins').lean()
+    : null;
+  const bill = computeJobBilling(job, booking);
+  return {
+    serviceName: c?.offeringName || booking?.service?.name || sr?.description || null,
+    offeringCode: c?.offeringCode || null,
+    productType: c?.productType?.name || booking?.productType || null,
+    variant: c?.variant?.label || null,
+    service: c?.service?.name || null,
+    quantity: c?.quantity ?? booking?.quantity ?? 1,
+    unitLabel: c?.unitLabel || booking?.service?.unit || null,
+    isExpress: Boolean(booking?.isExpress),
+    coverage: c?.coverage?.type || null,
+    requiredInfo: (booking?.requiredInfo || []).map(({ key, label, value }) => ({ key, label, value })),
+    customerInstructions: offering?.customerInstructions || '',
+    included: offering?.included || [],
+    excluded: offering?.excluded || [],
+    estimatedDurationMins: offering?.estimatedDurationMins ?? null,
+    customerAmount: {
+      bookingTotal: booking?.totalPrice ?? 0,
+      alreadyPaid: bill.alreadyPaid,
+      toCollect: bill.amountToCollect,
+      paymentMode: booking?.paymentMode || 'after',
+    },
+    payout: withAddOnPayout(job.payout, job.additionalServices),
+  };
+}
+
 export async function getJobDetailContext(serviceProviderId, jobId) {
   const job = await findOwnedJob(serviceProviderId, jobId);
   const sr = job.serviceRequest;
   const applianceDoc = sr?.appliance || null;
   const categoryValue = sr?.category || applianceDoc?.category || null;
 
-  const [category, sparePartDocs, appliance] = await Promise.all([
-    findCategoryFuzzy(categoryValue),
+  const [sparePartDocs, appliance] = await Promise.all([
     categoryValue
       ? SparePartCatalog.find({ category: { $regex: new RegExp(`^${escapeRegExp(categoryValue)}$`, 'i') } }).sort({ name: 1 })
       : SparePartCatalog.find().sort({ name: 1 }).limit(20),
     applianceDoc ? withWarranty(applianceDoc) : Promise.resolve(null),
   ]);
 
-  const addonServices = category
-    ? (await ServiceCatalogItem.find({ category: category._id, isActive: true }).sort({ createdAt: 1 })).map((s) => ({
-        id: s.id,
-        name: s.name,
-        price: s.price,
-        unit: s.unit,
-      }))
-    : [];
+  // Extra work the partner can add: Master Catalogue offerings (priced by the
+  // same engine as bookings, with their configured payout). `price` is the
+  // pre-GST unit price the add-on picker shows; `id` is the offering id the
+  // add endpoint takes. Legacy ServiceCatalogItem prices no longer apply.
+  const addonServices = (await listAddOnOfferings(serviceProviderId, jobId)).map((o) => ({
+    id: o.id,
+    offeringId: o.id,
+    code: o.code,
+    name: o.name,
+    price: o.customerPrice,
+    spPayout: o.spPayout,
+    unit: o.unitLabel,
+    minQty: o.minQty,
+    maxQty: o.maxQty,
+  }));
 
   const spareParts = sparePartDocs.map((p) => ({
     id: p.id,
@@ -524,6 +560,7 @@ export async function getJobDetailContext(serviceProviderId, jobId) {
       }));
 
   return {
+    jobSummary: await buildJobSummary(job, sr),
     appliance: appliance
       ? {
           id: appliance.id,
@@ -614,8 +651,8 @@ export async function acceptJob(serviceProviderId, serviceRequestId, { type, amc
   const isD2C = jobType === 'NCC Paid Service';
   const price = booking ? booking.totalPrice : 0;
 
-  const coveredEarnings = isD2C ? 0 : await coveredVisitEarnings(serviceRequest);
-  const share = await serviceProviderShare();
+  // Frozen now: later catalogue price or payout changes never reach this job.
+  const payout = await initialJobPayout(serviceRequest, booking);
 
   const jobData = {
     serviceRequest: serviceRequest._id,
@@ -625,7 +662,8 @@ export async function acceptJob(serviceProviderId, serviceRequestId, { type, amc
     isPartner: !isD2C,
     isNccEw: jobType === 'NCC Extended Warranty',
     price,
-    estEarnings: isD2C ? Math.round(price * share) : coveredEarnings,
+    payout,
+    estEarnings: payout.total,
     activeStep: 'assigned',
   };
 
@@ -805,6 +843,98 @@ export async function submitDiagnosis(serviceProviderId, jobId, diagnosisData = 
   return job;
 }
 
+// ─── Catalogue add-ons: extra work done on site ──────────────────────────
+// Picked from the Master Catalogue and priced by the same engine as bookings,
+// so the customer pays a configured price and the partner earns the
+// offering's configured payout (assumption A6). Allowed until billing.
+
+const ADD_ON_CLOSED_STEPS = new Set([
+  'billing', 'revisit_billing', 'revisit_payment', 'awaitingpayment', 'completed', 'cancelled',
+]);
+
+async function addOnContext(job) {
+  const serviceRequest = await ServiceRequest.findById(job.serviceRequest).populate('booking');
+  return {
+    categoryKey: serviceRequest?.booking?.category || serviceRequest?.category,
+    city: serviceRequest?.booking?.address?.city || serviceRequest?.zone || null,
+  };
+}
+
+/**
+ * Offerings a partner can add on site, in the job's category (or another one
+ * via `category`). Only offerings that need no further choice — a
+ * size-specific offering, or one whose type/service has no sizes — so the
+ * partner picks one row and a quantity.
+ */
+export async function listAddOnOfferings(serviceProviderId, jobId, { category } = {}) {
+  const job = await findOwnedJob(serviceProviderId, jobId);
+  const context = await addOnContext(job);
+  const categoryDoc = await Category.findOne({ key: category || context.categoryKey });
+  if (!categoryDoc) return [];
+
+  const bookable = await loadBookableOfferings({ category: categoryDoc._id }, { city: context.city });
+  const parentIds = bookable.filter((b) => !b.offering.variant).map((b) => b.offering.productType?._id || b.offering.service._id);
+  const withVariants = new Set(
+    (await Variant.find({ isActive: true, $or: [{ productType: { $in: parentIds } }, { service: { $in: parentIds } }] }).lean())
+      .map((v) => String(v.productType || v.service)),
+  );
+
+  return bookable
+    .filter(({ offering }) => offering.variant || !withVariants.has(String(offering.productType?._id || offering.service._id)))
+    .map(({ offering, rate }) => ({
+      id: String(offering._id),
+      code: offering.code,
+      name: offering.name,
+      unitLabel: offering.unitLabel,
+      minQty: offering.minQty,
+      maxQty: offering.maxQty,
+      customerPrice: toRupees(rate.customerPrice),
+      spPayout: toRupees(rate.spPayout),
+    }));
+}
+
+export async function addJobAddOn(serviceProviderId, jobId, { offeringId, quantity = 1 }) {
+  const job = await findOwnedJob(serviceProviderId, jobId);
+  if (ADD_ON_CLOSED_STEPS.has(job.activeStep)) {
+    throw new ApiError(400, 'Extra work can only be added before billing');
+  }
+  const context = await addOnContext(job);
+  const quote = await buildQuote({ lines: [{ offeringId, quantity }], location: { city: context.city } }, { coverageType: null });
+  const [line] = quote.lines;
+
+  job.additionalServices.push({
+    offeringId,
+    code: line.offering.code,
+    name: line.offering.name,
+    quantity: line.quantity,
+    unitPrice: toRupees(line.unitPrice),
+    taxableAmount: toRupees(line.taxableAmount),
+    gstAmount: toRupees(line.gstAmount),
+    finalAmount: toRupees(line.finalAmount),
+    price: toRupees(line.finalAmount),
+    spPayout: toRupees(line.spPayoutTotal),
+    checked: true,
+  });
+  job.payout = withAddOnPayout(job.payout, job.additionalServices);
+  job.estEarnings = job.payout.total;
+  await job.save();
+  return job;
+}
+
+export async function removeJobAddOn(serviceProviderId, jobId, addOnId) {
+  const job = await findOwnedJob(serviceProviderId, jobId);
+  if (ADD_ON_CLOSED_STEPS.has(job.activeStep)) {
+    throw new ApiError(400, 'Extra work can only be changed before billing');
+  }
+  const before = job.additionalServices.length;
+  job.additionalServices = job.additionalServices.filter((a) => String(a._id) !== String(addOnId));
+  if (job.additionalServices.length === before) throw new ApiError(404, 'Add-on not found on this job');
+  job.payout = withAddOnPayout(job.payout, job.additionalServices);
+  job.estEarnings = job.payout.total;
+  await job.save();
+  return job;
+}
+
 /**
  * Selecting spare parts both submits the parts list and advances
  * inspection -> spareapproval. For warranty-covered jobs (anything but D2C
@@ -813,12 +943,13 @@ export async function submitDiagnosis(serviceProviderId, jobId, diagnosisData = 
  * service provider gets reimbursed instead via an auto-created FOC Claim per part,
  * matching ServiceProviderContext.jsx's placePartsOrder behavior.
  */
-export async function submitSpareParts(serviceProviderId, jobId, { parts = [], additionalServices = [] }) {
+export async function submitSpareParts(serviceProviderId, jobId, { parts = [] }) {
   const job = await findOwnedJob(serviceProviderId, jobId);
   ensureTransition(job, 'spareapproval');
 
+  // Extra work is no longer free text — it's added from the Master Catalogue
+  // via addJobAddOn() so it carries a real price and a configured payout.
   job.spareParts = parts;
-  job.additionalServices = additionalServices;
 
   const checkedParts = parts.filter((p) => p.checked);
 
@@ -1042,24 +1173,10 @@ export async function generateBilling(serviceProviderId, jobId) {
   const billingStep = job.activeStep === 'revisit_complete' ? 'revisit_billing' : 'billing';
   ensureTransition(job, billingStep);
 
-  const serviceCharge = job.isD2C ? job.price : 0;
-  const sparePartsTotal = job.isD2C ? job.spareParts.filter((p) => p.checked).reduce((sum, p) => sum + p.price, 0) : 0;
-  const additionalServicesTotal = job.additionalServices.filter((s) => s.checked).reduce((sum, s) => sum + s.price, 0);
-
-  const charges = computeCharges({ laborRate: serviceCharge, partsCost: sparePartsTotal, additionalCharges: additionalServicesTotal });
-  const billingShare = await serviceProviderShare();
-  // Service provider only earns commission on service labor, never on spare parts (100% retained for super-admin/platform)
-  const serviceLaborSubtotal = serviceCharge + additionalServicesTotal;
-  const serviceProviderEarnings = job.isD2C ? Math.round(serviceLaborSubtotal * billingShare) : job.estEarnings;
-
-  job.billingEstimate = {
-    serviceCharge,
-    sparePartsTotal,
-    additionalServicesTotal,
-    gstPercent: charges.gstPercent,
-    total: charges.total,
-    serviceProviderEarnings,
-  };
+  const serviceRequest = await ServiceRequest.findById(job.serviceRequest).populate('booking');
+  job.billingEstimate = computeJobBilling(job, serviceRequest?.booking);
+  job.payout = withAddOnPayout(job.payout, job.additionalServices);
+  job.estEarnings = job.payout.total;
   job.activeStep = billingStep;
   await job.save();
   return job;
@@ -1215,24 +1332,11 @@ export async function collectPayment(serviceProviderId, jobId, { paymentMethod =
     }
   }
 
-  // Auto-compute billingEstimate if missing
+  // Bill if it wasn't generated yet — same rules as generateBilling.
   if (!job.billingEstimate || job.billingEstimate.total == null) {
-    const serviceCharge = job.isD2C ? (job.price || 499) : 0;
-    const sparePartsTotal = job.isD2C ? (job.spareParts || []).filter((p) => p.checked).reduce((sum, p) => sum + (p.price || 0), 0) : 0;
-    const additionalServicesTotal = (job.additionalServices || []).filter((s) => s.checked).reduce((sum, s) => sum + (s.price || 0), 0);
-    const charges = computeCharges({ laborRate: serviceCharge, partsCost: sparePartsTotal, additionalCharges: additionalServicesTotal });
-    const billingShare = await serviceProviderShare();
-    // Service provider only earns commission on service labor, never on spare parts (100% retained for super-admin/platform)
-    const serviceLaborSubtotal = serviceCharge + additionalServicesTotal;
-    const serviceProviderEarnings = job.isD2C ? Math.round(serviceLaborSubtotal * billingShare) : (job.estEarnings || 250);
-    job.billingEstimate = {
-      serviceCharge,
-      sparePartsTotal,
-      additionalServicesTotal,
-      gstPercent: charges.gstPercent,
-      total: charges.total,
-      serviceProviderEarnings,
-    };
+    job.billingEstimate = computeJobBilling(job, serviceRequest?.booking);
+    job.payout = withAddOnPayout(job.payout, job.additionalServices);
+    job.estEarnings = job.payout.total;
   }
 
   if (otp || expectedOtp) {
@@ -1244,7 +1348,8 @@ export async function collectPayment(serviceProviderId, jobId, { paymentMethod =
     job.revisit.signatureUrl = signatureUrl;
   }
 
-  const amount = job.billingEstimate.total;
+  // Only what's still owed: a verified advance or coins were already paid.
+  const amount = job.billingEstimate.amountToCollect ?? job.billingEstimate.total;
   const needsGateway = amount > 0 && paymentMethod !== 'Cash' && paymentMethod !== 'cash';
 
   if (!needsGateway) {

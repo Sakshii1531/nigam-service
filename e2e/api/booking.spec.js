@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { createTestOffering, offeringBookingBody } from '../catalogueFixture.js';
 import { randomUUID } from 'node:crypto';
 
 // Covers backend/src/modules/booking/booking.routes.js and
@@ -64,10 +65,7 @@ async function setupIsolatedFixture(request, { price = 299 } = {}) {
     headers: { Authorization: `Bearer ${adminToken}` },
     data: { key: categoryKey, name: categoryKey },
   });
-  await request.post(`/api/v1/catalog/categories/${categoryKey}/services`, {
-    headers: { Authorization: `Bearer ${adminToken}` },
-    data: { slug: 'repair', name: 'Repair', price },
-  });
+  await createTestOffering(request, adminToken, categoryKey, { price });
 
   const provider = await createServiceProvider(request, { specs: [categoryKey] });
   const customer = await createCustomer(request);
@@ -81,7 +79,7 @@ test.describe('POST /bookings — booking -> service-request -> auto-assign', ()
 
     const res = await request.post('/api/v1/bookings', {
       headers: { Authorization: `Bearer ${customer.token}` },
-      data: { category: categoryKey, serviceSlug: 'repair', quantity: 2 },
+      data: await offeringBookingBody(request, { categoryKey, quantity: 2 }),
     });
     expect(res.status()).toBe(201);
     const { booking, serviceRequest, serviceProvider } = (await res.json()).data;
@@ -93,20 +91,27 @@ test.describe('POST /bookings — booking -> service-request -> auto-assign', ()
     expect(serviceRequest.timeline.map((t) => t.stepLabel)).toEqual(['New', 'Assigned']);
   });
 
-  test('404s for an unknown service under a known category', async ({ request }) => {
+  test('refuses an offering that does not exist, and the old category + serviceSlug shape', async ({ request }) => {
     const { categoryKey, customer } = await setupIsolatedFixture(request);
-    const res = await request.post('/api/v1/bookings', {
+    const unknown = await request.post('/api/v1/bookings', {
       headers: { Authorization: `Bearer ${customer.token}` },
-      data: { category: categoryKey, serviceSlug: 'not-a-real-service' },
+      data: { offeringId: '64b000000000000000000001', expectedFinalAmount: 1 },
     });
-    expect(res.status()).toBe(404);
+    expect(unknown.status()).toBe(400);
+    expect((await unknown.json()).error.code).toBe('OFFERING_NOT_BOOKABLE');
+
+    const legacy = await request.post('/api/v1/bookings', {
+      headers: { Authorization: `Bearer ${customer.token}` },
+      data: { category: categoryKey, serviceSlug: 'repair' },
+    });
+    expect(legacy.status()).toBe(400);
   });
 
   test('rejects a booking attempt from a serviceProvider role with 403', async ({ request }) => {
     const { categoryKey, provider } = await setupIsolatedFixture(request);
     const res = await request.post('/api/v1/bookings', {
       headers: { Authorization: `Bearer ${provider.token}` },
-      data: { category: categoryKey, serviceSlug: 'repair' },
+      data: await offeringBookingBody(request, { categoryKey }),
     });
     expect(res.status()).toBe(403);
   });
@@ -119,7 +124,7 @@ test.describe('booking ownership', () => {
 
     const createRes = await request.post('/api/v1/bookings', {
       headers: { Authorization: `Bearer ${owner.token}` },
-      data: { category: categoryKey, serviceSlug: 'repair' },
+      data: await offeringBookingBody(request, { categoryKey }),
     });
     const { booking } = (await createRes.json()).data;
 
@@ -135,7 +140,7 @@ test.describe('service request status transitions', () => {
     const { categoryKey, provider, customer } = await setupIsolatedFixture(request);
     const createRes = await request.post('/api/v1/bookings', {
       headers: { Authorization: `Bearer ${customer.token}` },
-      data: { category: categoryKey, serviceSlug: 'repair' },
+      data: await offeringBookingBody(request, { categoryKey }),
     });
     const { serviceRequest } = (await createRes.json()).data;
     return { srId: serviceRequest.id, provider, customer };
@@ -175,7 +180,7 @@ test.describe('POST /bookings/:id/cancel', () => {
     const { categoryKey, customer } = await setupIsolatedFixture(request);
     const createRes = await request.post('/api/v1/bookings', {
       headers: { Authorization: `Bearer ${customer.token}` },
-      data: { category: categoryKey, serviceSlug: 'repair' },
+      data: await offeringBookingBody(request, { categoryKey }),
     });
     const { booking, serviceRequest } = (await createRes.json()).data;
 
@@ -204,10 +209,7 @@ test.describe('POST /bookings — territory isolation (Indore vs Delhi)', () => 
       headers: { Authorization: `Bearer ${adminToken}` },
       data: { key: categoryKey, name: categoryKey },
     });
-    await request.post(`/api/v1/catalog/categories/${categoryKey}/services`, {
-      headers: { Authorization: `Bearer ${adminToken}` },
-      data: { slug: 'repair', name: 'Repair', price: 350 },
-    });
+    await createTestOffering(request, adminToken, categoryKey, { price: 350 });
 
     // Create a Delhi service provider
     const delhiTech = await createServiceProvider(request, {
@@ -228,15 +230,14 @@ test.describe('POST /bookings — territory isolation (Indore vs Delhi)', () => 
     // Customer places a booking located in Indore, Madhya Pradesh
     const res = await request.post('/api/v1/bookings', {
       headers: { Authorization: `Bearer ${customer.token}` },
-      data: {
-        category: categoryKey,
-        serviceSlug: 'repair',
+      data: await offeringBookingBody(request, {
+        categoryKey,
         address: {
           city: 'Indore',
           state: 'Madhya Pradesh',
           house: '123 Vijay Nagar',
         },
-      },
+      }),
     });
 
     expect(res.status()).toBe(201);
@@ -259,10 +260,7 @@ test.describe('POST /bookings — territory isolation (Indore vs Delhi)', () => 
       headers: { Authorization: `Bearer ${adminToken}` },
       data: { key: categoryKey, name: categoryKey },
     });
-    await request.post(`/api/v1/catalog/categories/${categoryKey}/services`, {
-      headers: { Authorization: `Bearer ${adminToken}` },
-      data: { slug: 'repair', name: 'Repair', price: 350 },
-    });
+    await createTestOffering(request, adminToken, categoryKey, { price: 350 });
 
     // Only Delhi service provider is created
     const delhiTech = await createServiceProvider(request, {
@@ -276,15 +274,14 @@ test.describe('POST /bookings — territory isolation (Indore vs Delhi)', () => 
     // Customer places booking in Bhopal where no service provider exists
     const res = await request.post('/api/v1/bookings', {
       headers: { Authorization: `Bearer ${customer.token}` },
-      data: {
-        category: categoryKey,
-        serviceSlug: 'repair',
+      data: await offeringBookingBody(request, {
+        categoryKey,
         address: {
           city: 'Bhopal',
           state: 'Madhya Pradesh',
           house: '456 MP Nagar',
         },
-      },
+      }),
     });
 
     expect(res.status()).toBe(201);

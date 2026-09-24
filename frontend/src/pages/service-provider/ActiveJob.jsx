@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import JobSummaryCard from "../../components/service-provider/JobSummaryCard";
 import { useNavigate } from "react-router-dom";
 import { apiRequest, resolveMediaUrl } from "../../lib/apiClient";
 import { convertToWebP } from "../../lib/imageUtils";
@@ -477,31 +478,86 @@ const ActiveJob = () => {
     };
   }, [activeJob?.id]);
 
-  // Seeds the Overview "Selected/Add More Services" card: already-booked
-  // services come from the real job doc, addable ones from this category's
-  // real catalog (jobContext.addonServices) — replaces a fixed five-item list
-  // ("Deep Cleaning", "Drain Pipe Cleaning", ...) that was the same for every
-  // job regardless of category or what the customer actually booked. Keyed on
-  // jobContext rather than activeJob.additionalServices so it doesn't clobber
-  // a technician's in-progress checkbox taps on every 4s job poll.
-  useEffect(() => {
-    const bookedServices = activeJob?.additionalServices || [];
-    const bookedNames = new Set(
-      bookedServices.map((s) => (s.name || "").toLowerCase()),
-    );
-    const candidates = (jobContext?.addonServices || [])
-      .filter((s) => !bookedNames.has((s.name || "").toLowerCase()))
-      .map((s) => ({ id: s.id, name: s.name, price: s.price, checked: false }));
-    setAdditionalServices([
-      ...bookedServices.map((s, idx) => ({
-        id: s.id || `booked-${idx}`,
-        name: s.name,
-        price: s.price,
-        checked: Boolean(s.checked),
+  // Seeds the Overview "Selected/Add More Services" card (docs/master-catalogue
+  // Phase 5): add-ons already on the job come from the job document (each with
+  // its server id and engine-priced final incl. GST); addable ones are this
+  // category's Master Catalogue offerings (jobContext.addonServices, pre-GST
+  // unit price + the partner's payout). Keyed on jobContext so the 4s job poll
+  // doesn't clobber an in-progress tap.
+  const seedAddOns = useCallback((jobAddOns, catalogueAddOns) => {
+    const added = (jobAddOns || []).filter((s) => s.checked !== false);
+    const addedOfferings = new Set(added.map((s) => String(s.offeringId || "")));
+    return [
+      ...added.map((s, idx) => ({
+        id: s.id || s._id || `addon-${idx}`,
+        addOnId: s.id || s._id || null,
+        offeringId: s.offeringId || null,
+        name: s.quantity > 1 ? `${s.name} × ${s.quantity}` : s.name,
+        price: s.finalAmount ?? s.price ?? 0,
+        spPayout: s.spPayout || 0,
+        checked: true,
       })),
-      ...candidates,
-    ]);
-  }, [activeJob?.id, jobContext]);
+      ...(catalogueAddOns || [])
+        .filter((s) => !addedOfferings.has(String(s.offeringId || s.id)))
+        .map((s) => ({
+          id: s.id,
+          addOnId: null,
+          offeringId: s.offeringId || s.id,
+          name: s.name,
+          price: s.price,
+          spPayout: s.spPayout || 0,
+          priceIsPreGst: true,
+          checked: false,
+        })),
+    ];
+  }, []);
+  useEffect(() => {
+    setAdditionalServices(seedAddOns(activeJob?.additionalServices, jobContext?.addonServices));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeJob?.id, jobContext, seedAddOns]);
+
+  // Every add-on tick/untick goes through here: applied locally at once, then
+  // synced — a newly ticked catalogue offering is added to the job (priced and
+  // paid out by the server), an unticked one is removed. On failure the list
+  // is restored from the server's copy.
+  const updateAddOns = (updater) => {
+    const prev = additionalServices;
+    const next = typeof updater === "function" ? updater(prev) : updater;
+    setAdditionalServices(next);
+    if (!activeJob?.id) return;
+    const wasChecked = new Map(prev.map((s) => [s.id, s.checked]));
+    const calls = next
+      .filter((s) => Boolean(s.checked) !== Boolean(wasChecked.get(s.id)))
+      .map((s) =>
+        s.checked
+          ? s.offeringId && !s.addOnId
+            ? apiRequest(`/service-provider/jobs/${activeJob.id}/addons`, {
+                method: "POST",
+                auth: true,
+                body: { offeringId: s.offeringId, quantity: 1 },
+              })
+            : null
+          : s.addOnId
+            ? apiRequest(`/service-provider/jobs/${activeJob.id}/addons/${s.addOnId}`, {
+                method: "DELETE",
+                auth: true,
+              })
+            : null,
+      )
+      .filter(Boolean);
+    if (!calls.length) return;
+    Promise.all(calls)
+      .then((results) => {
+        const job = results[results.length - 1];
+        setAdditionalServices(seedAddOns(job?.additionalServices, jobContext?.addonServices));
+        // Refresh the server-built summary (payout, amount to collect).
+        return apiRequest(`/service-provider/jobs/${activeJob.id}/context`, { auth: true }).then(setJobContext);
+      })
+      .catch((err) => {
+        alert(err.message || "Could not update the extra work on this job.");
+        setAdditionalServices(seedAddOns(activeJob?.additionalServices, jobContext?.addonServices));
+      });
+  };
 
   // Seeds the spareParts state from jobContext.requiredParts (the job's
   // already-selected parts, as of when jobContext was fetched) and catalog
@@ -807,20 +863,29 @@ const ActiveJob = () => {
   const revisitServiceCharge = isWarrantyOrAMC ? 0 : jobServiceCharge;
   const revisitSparePartPrice = dynamicPartPrice;
   const revisitAdditionalServicesPrice = additionalServices
-    .filter((s) => s.checked)
+    .filter((s) => s.checked && !s.priceIsPreGst)
     .reduce((sum, s) => sum + s.price, 0);
 
+  // docs/master-catalogue Phase 5: the booked service's price already
+  // includes its GST and catalogue add-ons carry their final (GST included),
+  // so GST is only added on spare parts here — the server bills the same way
+  // (computeJobBilling) and its billingEstimate replaces this once generated.
   const revisitTaxableAmount =
     revisitServiceCharge +
     revisitSparePartPrice +
     revisitAdditionalServicesPrice;
-  const revisitTax = Math.round(revisitTaxableAmount * (gstPercent / 100));
-  const revisitTotal = revisitTaxableAmount + revisitTax;
+  const revisitTax = Math.round(revisitSparePartPrice * (gstPercent / 100) * 100) / 100;
+  const revisitTotal = Math.round((revisitTaxableAmount + revisitTax) * 100) / 100;
+  const billPreview = {
+    addOns: revisitAdditionalServicesPrice,
+    parts: Math.round((revisitSparePartPrice + revisitTax) * 100) / 100,
+    total: revisitTotal,
+  };
 
   const finalAmountCollected =
-    activeJob?.billingEstimate?.total != null
-      ? Math.round(activeJob.billingEstimate.total)
-      : revisitTotal;
+    activeJob?.billingEstimate?.amountToCollect ??
+    activeJob?.billingEstimate?.total ??
+    revisitTotal;
 
   useEffect(() => {
     if (chatEndRef.current) {
@@ -885,7 +950,7 @@ const ActiveJob = () => {
                     {job.customerName}
                   </p>
                   <p className="text-[11px] text-slate-500 mt-0.5">
-                    {job.category} · {job.type}
+                    {job.serviceLine || job.category} · {job.type}
                   </p>
                   <span className="inline-block mt-1.5 text-[9.5px] font-bold uppercase tracking-wider text-[#0D47A1] bg-[#E3ECF9] px-2 py-0.5 rounded">
                     {String(job.activeStep || "assigned").replace(/_/g, " ")}
@@ -1898,20 +1963,29 @@ const ActiveJob = () => {
                     {activeJob.price > 0 ? "PAID SERVICE" : "FREE SERVICE"}
                   </span>
                 </div>
+                {activeJob.serviceLine && (
+                  <div className="flex justify-between items-center gap-3 pb-2.5 border-b border-slate-200">
+                    <span className="text-xs text-slate-500 font-normal">Service</span>
+                    <span className="text-sm font-medium text-[#052355] text-right">
+                      {activeJob.serviceLine}
+                      {activeJob.isExpress ? " · Express" : ""}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between items-center pb-2.5 border-b border-slate-200">
                   <span className="text-xs text-slate-500 font-normal">
-                    Est. Spare Cost
+                    Customer pays
                   </span>
                   <span className="text-sm font-medium text-[#052355]">
-                    ₹{activeJob.price > 0 ? "950" : "0"}
+                    ₹{Number(activeJob.price || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 })}
                   </span>
                 </div>
                 <div className="flex justify-between items-center pb-2.5 border-b border-slate-200">
                   <span className="text-xs text-slate-500 font-normal">
-                    Est. Earn
+                    You earn (fixed)
                   </span>
-                  <span className="text-sm font-medium text-[#052355]">
-                    ₹{activeJob.estEarnings}
+                  <span className="text-sm font-medium text-[#2E7D32]">
+                    ₹{Number(activeJob.estEarnings || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 })}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
@@ -1975,6 +2049,10 @@ const ActiveJob = () => {
               <div className="flex-1 flex flex-col justify-between">
                 {renderStepper(true)}
 
+                <div className="mt-4">
+                  <JobSummaryCard summary={jobContext?.jobSummary} />
+                </div>
+
                 <button
                   onClick={() => {
                     setEnteredInspection(true);
@@ -2007,6 +2085,11 @@ const ActiveJob = () => {
                   activeStep !== "revisit_payment_wallet" &&
                   activeStep !== "revisit_otp" &&
                   renderStepper()}
+
+                {/* Booked service, amount to collect and the partner's fixed payout */}
+                {!["completed", "cancelled"].includes(activeStep) && (
+                  <JobSummaryCard summary={jobContext?.jobSummary} />
+                )}
 
                 {/* 2. Step Details Panel */}
                 {/* Step: ASSIGNED (Step 1) */}
@@ -2499,7 +2582,7 @@ const ActiveJob = () => {
                                     job={activeJob}
                                     additionalServices={additionalServices}
                                     setAdditionalServices={
-                                      setAdditionalServices
+                                      updateAddOns
                                     }
                                     setShowAddServicesModal={
                                       setShowAddServicesModal
@@ -2553,7 +2636,7 @@ const ActiveJob = () => {
                                     job={activeJob}
                                     additionalServices={additionalServices}
                                     setAdditionalServices={
-                                      setAdditionalServices
+                                      updateAddOns
                                     }
                                     setShowAddServicesModal={
                                       setShowAddServicesModal
@@ -2607,7 +2690,7 @@ const ActiveJob = () => {
                                     job={activeJob}
                                     additionalServices={additionalServices}
                                     setAdditionalServices={
-                                      setAdditionalServices
+                                      updateAddOns
                                     }
                                     setShowAddServicesModal={
                                       setShowAddServicesModal
@@ -2650,20 +2733,13 @@ const ActiveJob = () => {
                             }
 
                             // Default: NCC Paid Service (Card 1)
-                            const additionalServicesTotal = additionalServices
-                              .filter((s) => s.checked)
-                              .reduce((sum, s) => sum + s.price, 0);
-                            const sparePartsTotal = spareParts
-                              .filter((p) => p.checked)
-                              .reduce((sum, p) => sum + p.price, 0);
+                            const additionalServicesTotal = billPreview.addOns;
+                            const sparePartsTotal = billPreview.parts;
                             const baseServicePrice =
                               activeJob && activeJob.price > 0
                                 ? activeJob.price
                                 : 0;
-                            const totalAmount =
-                              baseServicePrice +
-                              additionalServicesTotal +
-                              sparePartsTotal;
+                            const totalAmount = billPreview.total;
 
                             const selectedAddons = additionalServices.filter(
                               (s) => s.checked,
@@ -2827,7 +2903,7 @@ const ActiveJob = () => {
                                           <button
                                             type="button"
                                             onClick={() => {
-                                              setAdditionalServices((prev) =>
+                                              updateAddOns((prev) =>
                                                 prev.map((s) =>
                                                   s.id === service.id
                                                     ? { ...s, checked: false }
@@ -2882,7 +2958,7 @@ const ActiveJob = () => {
                                             type="checkbox"
                                             checked={false}
                                             onChange={() => {
-                                              setAdditionalServices((prev) =>
+                                              updateAddOns((prev) =>
                                                 prev.map((s) =>
                                                   s.id === service.id
                                                     ? { ...s, checked: true }
@@ -6086,20 +6162,11 @@ const ActiveJob = () => {
                     <div className="grid grid-cols-2 gap-3 mt-2">
                       <button
                         onClick={() => {
-                          const additionalServicesTotal = additionalServices
-                            .filter((s) => s.checked)
-                            .reduce((sum, s) => sum + s.price, 0);
-                          const sparePartsTotal = spareParts
-                            .filter((p) => p.checked)
-                            .reduce((sum, p) => sum + p.price, 0);
                           const baseServicePrice =
                             activeJob && activeJob.price > 0
                               ? activeJob.price
                               : 0;
-                          const totalAmount =
-                            baseServicePrice +
-                            additionalServicesTotal +
-                            sparePartsTotal;
+                          const totalAmount = billPreview.total;
 
                           const printWindow = window.open("", "_blank");
                           printWindow.document.write(`
@@ -6179,20 +6246,7 @@ const ActiveJob = () => {
                       </button>
                       <button
                         onClick={() => {
-                          const additionalServicesTotal = additionalServices
-                            .filter((s) => s.checked)
-                            .reduce((sum, s) => sum + s.price, 0);
-                          const sparePartsTotal = spareParts
-                            .filter((p) => p.checked)
-                            .reduce((sum, p) => sum + p.price, 0);
-                          const baseServicePrice =
-                            activeJob && activeJob.price > 0
-                              ? activeJob.price
-                              : 0;
-                          const totalAmount =
-                            baseServicePrice +
-                            additionalServicesTotal +
-                            sparePartsTotal;
+                          const totalAmount = billPreview.total;
 
                           // No fallback number: this used to WhatsApp the invoice to
                           // a hardcoded 9876543210 whenever the real phone was
@@ -6423,12 +6477,15 @@ const ActiveJob = () => {
                             {addon.name}
                           </p>
                           <p className="text-[10px] text-slate-500 font-normal mt-0.5">
-                            ₹{addon.price}
+                            ₹{addon.price} + GST{addon.unit ? ` ${addon.unit}` : ""}
+                            {addon.spPayout ? (
+                              <span className="text-[#2E7D32]"> · you earn ₹{addon.spPayout}</span>
+                            ) : null}
                           </p>
                         </div>
                         <button
                           onClick={() => {
-                            setAdditionalServices((prev) => {
+                            updateAddOns((prev) => {
                               const existingIndex = prev.findIndex(
                                 (s) =>
                                   s.name.toLowerCase() ===
@@ -6657,16 +6714,9 @@ const ActiveJob = () => {
       {/* Invoice Preview Overlay Card Modal */}
       {showInvoicePreviewModal &&
         (() => {
-          const additionalServicesTotal = additionalServices
-            .filter((s) => s.checked)
-            .reduce((sum, s) => sum + s.price, 0);
-          const sparePartsTotal = spareParts
-            .filter((p) => p.checked)
-            .reduce((sum, p) => sum + p.price, 0);
           const baseServicePrice =
             activeJob && activeJob.price > 0 ? activeJob.price : 0;
-          const totalAmount =
-            baseServicePrice + additionalServicesTotal + sparePartsTotal;
+          const totalAmount = billPreview.total;
 
           return (
             <div className="fixed inset-0 bg-[#052355]/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">

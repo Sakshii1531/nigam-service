@@ -97,15 +97,13 @@ const EarningDetailPage = () => {
           customer: sr.user?.name || sr.customerName || "—",
           address: formatAddress(sr.booking?.address || sr.zone),
           description: sr.description || "—",
-          baseAmount:
-            (bill.serviceCharge || 0) + (bill.additionalServicesTotal || 0),
-          platformFee: Math.max(
-            (bill.serviceCharge || 0) +
-              (bill.additionalServicesTotal || 0) -
-              (bill.serviceProviderEarnings || 0),
-            0,
-          ),
-          netAmount: bill.serviceProviderEarnings || 0,
+          // The partner's own fixed payout, by component (docs/master-catalogue
+          // Phase 5) — not "customer bill minus a platform fee", which would
+          // show NCC's margin to the partner.
+          payoutBase: job.payout?.base ?? bill.serviceProviderEarnings ?? 0,
+          payoutExpress: job.payout?.expressIncentive || 0,
+          payoutAddOns: job.payout?.addOns || 0,
+          netAmount: bill.serviceProviderEarnings ?? job.payout?.total ?? 0,
           creditedTo: "Earnings balance",
           payoutNote: quick
             ? "Credited to your balance on job completion"
@@ -321,20 +319,23 @@ const EarningDetailPage = () => {
           </div>
           <div className="px-4 py-3 flex flex-col gap-2.5">
             <div className="flex justify-between items-center">
-              <span className="text-[11px] text-slate-500">Service Amount</span>
+              <span className="text-[11px] text-slate-500">Booked service payout</span>
               <span className="text-[11px] font-semibold text-[#052355]">
-                ₹{earning.baseAmount}
+                ₹{earning.payoutBase}
               </span>
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-[11px] text-slate-500">Platform Fee</span>
-              <span
-                className={`text-[11px] font-semibold ${earning.platformFee === 0 ? "text-green-600" : "text-red-500"}`}>
-                {earning.platformFee === 0
-                  ? "₹0 (Free)"
-                  : `-₹${earning.platformFee}`}
-              </span>
-            </div>
+            {earning.payoutExpress > 0 && (
+              <div className="flex justify-between items-center">
+                <span className="text-[11px] text-slate-500">Express bonus</span>
+                <span className="text-[11px] font-semibold text-[#052355]">₹{earning.payoutExpress}</span>
+              </div>
+            )}
+            {earning.payoutAddOns > 0 && (
+              <div className="flex justify-between items-center">
+                <span className="text-[11px] text-slate-500">Extra work on site</span>
+                <span className="text-[11px] font-semibold text-[#052355]">₹{earning.payoutAddOns}</span>
+              </div>
+            )}
             <div className="h-px bg-slate-100 my-0.5" />
             <div className="flex justify-between items-center">
               <span className="text-xs font-bold text-[#052355]">

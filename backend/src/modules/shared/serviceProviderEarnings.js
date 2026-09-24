@@ -1,3 +1,4 @@
+import { initialJobPayout } from './servicePartnerPayout.js';
 import { RateCard } from '../brand-admin/rateCard.model.js';
 import { PlatformSettings } from '../super-admin/platformSettings.model.js';
 
@@ -24,11 +25,10 @@ export async function coveredVisitEarnings(serviceRequest) {
 
 /**
  * What the service provider should expect to earn from a request before
- * accepting it — the same rules acceptJob snapshots onto the Job. Paid
- * bookings earn the commission share; covered (₹0) work earns the rate card.
+ * accepting it — the same rule acceptJob freezes onto the Job: the booking's
+ * fixed catalogue payout (docs/master-catalogue Phase 5), or the brand
+ * RateCard for a complaint with no booking.
  */
 export async function estimateServiceProviderEarnings(serviceRequest, booking) {
-  const totalPrice = booking?.totalPrice ?? 0;
-  if (totalPrice > 0) return Math.round(totalPrice * (await serviceProviderShare()));
-  return coveredVisitEarnings(serviceRequest);
+  return (await initialJobPayout(serviceRequest, booking)).total;
 }
