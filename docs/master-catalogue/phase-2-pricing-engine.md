@@ -139,7 +139,7 @@ Booking creation (Phase 4), admin writes (Phase 3), search (Phase 6), any CITY/P
 
 | Date | Commit | Notes |
 |---|---|---|
-| 2026-09-24 | _uncommitted_ | Phase 2 built and verified; all tasks above done |
+| 2026-09-24 | `9a65f5a` | Phase 2 built and verified; all tasks above done |
 
 ### What was built
 

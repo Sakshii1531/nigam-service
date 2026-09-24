@@ -122,7 +122,7 @@ Bulk CSV import (add later if the client's rate sheet is large; ~2 days), CITY/P
 
 | Date | Commit | Notes |
 |---|---|---|
-| 2026-09-24 | _uncommitted_ | Phase 3 built and verified in the browser |
+| 2026-09-24 | `9a65f5a` | Phase 3 built and verified in the browser |
 
 ### What was built
 

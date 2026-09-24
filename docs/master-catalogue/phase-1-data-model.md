@@ -205,7 +205,7 @@ APIs, admin UI, customer flow, CITY/PINCODE rate rows (the field exists, nothing
 
 | Date | Commit | Notes |
 |---|---|---|
-| 2026-09-24 | _uncommitted_ | Phase 1 built and verified; all tasks above done |
+| 2026-09-24 | `9a65f5a` | Phase 1 built and verified; all tasks above done |
 
 ### What was built
 

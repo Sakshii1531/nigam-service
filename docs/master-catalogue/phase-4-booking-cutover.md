@@ -146,7 +146,7 @@ Partner payout credit (still % until Phase 5; the snapshot already stores the fi
 
 | Date | Commit | Notes |
 |---|---|---|
-| 2026-09-24 | _uncommitted_ | Phase 4 built; verified by API tests, e2e specs and a browser walk-through of every client scenario |
+| 2026-09-24 | `9a65f5a` | Phase 4 built; verified by API tests, e2e specs and a browser walk-through of every client scenario |
 
 ### What was built
 

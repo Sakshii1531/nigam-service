@@ -114,7 +114,7 @@ Customer approval of add-ons before billing (today only spare parts need approva
 
 | Date | Commit | Notes |
 |---|---|---|
-| 2026-09-24 | _uncommitted_ | Phase 5 built; payout and billing verified end to end by API tests; partner screens partly browser-verified (see below) |
+| 2026-09-24 | `9a65f5a` | Phase 5 built; payout and billing verified end to end by API tests; partner screens partly browser-verified (see below) |
 
 ### What was built
 
