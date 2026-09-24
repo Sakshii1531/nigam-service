@@ -100,6 +100,29 @@ const EVENT_TEMPLATES = {
     smsBody: `Your technician has requested a spare part (${p.partName || 'Spare Part'}) worth ₹${p.amount ?? 0}. Approve it in the Nigam Care app to continue.`,
     whatsappBody: `⏳ *Spare Part Approval Needed*\n\nYour technician has requested *${p.partName || 'Spare Part'}* worth *₹${p.amount ?? 0}* for your *${p.category || 'service'}*.\n\nOpen the Nigam Care app to approve or decline this cost before it's ordered.`,
   }),
+  // Sent to the SERVICE PROVIDER (not the customer) — the customer declined
+  // the part's cost, so the job that was parked at 'completed_pending'
+  // waiting on their sign-off is now cancelled outright.
+  'job.part_rejected_cancelled': (p) => ({
+    recipient: p.user,
+    type: 'provider',
+    title: 'Job cancelled — customer declined the spare part',
+    message: `The customer declined the ${p.partName || 'spare part'} request (₹${p.amount ?? 0}) for their ${p.category || 'service'} job. The service is cancelled.`,
+    cta: p.jobId ? { label: 'View Job', route: `/service-provider/active-job` } : undefined,
+    smsBody: `Customer declined the spare part request for their ${p.category || 'service'} job. The service is cancelled.`,
+    whatsappBody: `❌ *Job Cancelled*\n\nThe customer declined the *${p.partName || 'spare part'}* request (₹${p.amount ?? 0}) for their *${p.category || 'service'}* job.\n\nThe service is now cancelled.`,
+  }),
+  // Sent to the SERVICE PROVIDER when a customer who previously rejected a
+  // part request changes their mind and re-approves it, reopening the job.
+  'job.part_reraised': (p) => ({
+    recipient: p.user,
+    type: 'provider',
+    title: 'Customer re-approved the spare part',
+    message: `The customer re-approved the ${p.partName || 'spare part'} request for their ${p.category || 'service'} job. It's back with Super Admin for approval and will be scheduled once actioned.`,
+    cta: p.jobId ? { label: 'View Job', route: `/service-provider/active-job` } : undefined,
+    smsBody: `Customer re-approved the spare part request for their ${p.category || 'service'} job. Awaiting Super Admin approval again.`,
+    whatsappBody: `✅ *Spare Part Re-approved*\n\nThe customer re-approved *${p.partName || 'spare part'}* for their *${p.category || 'service'}* job.\n\nIt's back with Super Admin for approval.`,
+  }),
   'service.rescheduled': (p) => ({
     recipient: p.user,
     type: 'assigned',

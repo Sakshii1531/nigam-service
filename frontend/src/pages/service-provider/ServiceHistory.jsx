@@ -53,7 +53,7 @@ function describeJob(job) {
 
   let status = { label: 'In progress', tone: 'bg-amber-50 text-amber-700 ring-amber-200' };
   if (step === 'completed') status = { label: 'Completed', tone: 'bg-emerald-50 text-emerald-700 ring-emerald-200' };
-  else if (repairStatus === 'cancelled') status = { label: 'Cancelled', tone: 'bg-rose-50 text-rose-700 ring-rose-200' };
+  else if (step === 'cancelled' || repairStatus === 'cancelled') status = { label: 'Cancelled', tone: 'bg-rose-50 text-rose-700 ring-rose-200' };
   else if (repairStatus === 'unable') status = { label: 'Unable to fix', tone: 'bg-rose-50 text-rose-700 ring-rose-200' };
   else if (step?.startsWith('revisit') || step === 'spareapproval' || step === 'spare_part_required') {
     status = { label: 'Revisit pending', tone: 'bg-blue-50 text-[#0D47A1] ring-blue-200' };

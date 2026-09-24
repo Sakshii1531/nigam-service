@@ -315,6 +315,17 @@ const PartRequests = () => {
                                 <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md inline-flex items-center gap-1">
                                   <CheckCircle2 size={11} /> Revisit Rescheduled
                                 </span>
+                              ) : r.status === 'Rejected' &&
+                                r.customerApprovalStatus === 'Rejected' ? (
+                                // Only a CUSTOMER rejection cancels the job outright
+                                // (see booking.service.js's respondToPartRequest) —
+                                // an admin's own Reject just closes this one request
+                                // and leaves the job where it was.
+                                <span
+                                  className="text-[10px] text-rose-700 font-bold bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-md inline-flex items-center gap-1"
+                                  title="The customer declined this part's cost — the job was cancelled outright.">
+                                  <X size={11} /> Rejected — Service Cancelled
+                                </span>
                               ) : (
                                 <span className="text-[10px] text-slate-400 font-semibold inline-flex items-center gap-1">
                                   <Clock size={11} /> Closed ({r.status})

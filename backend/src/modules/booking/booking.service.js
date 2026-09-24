@@ -10,6 +10,7 @@ import { CategoryBookingConfig } from '../super-admin/categoryBookingConfig.mode
 import { estimateServiceProviderEarnings } from '../shared/serviceProviderEarnings.js';
 import { Job } from '../service-provider/job.model.js';
 import { PartOrder } from '../service-provider/partOrder.model.js';
+import { ServiceProvider } from '../service-provider/serviceProvider.model.js';
 
 // How long a booking keeps looking for a service provider before giving up.
 export const SEARCH_WINDOW_MS = 15 * 60 * 1000;
@@ -479,17 +480,42 @@ export async function respondToPartRequest(userId, bookingId, { approve }) {
         { customerApprovalStatus: approve ? 'Approved' : 'Rejected', customerRespondedAt: new Date() },
       );
       if (!approve) {
-        // Rejected orders are done — nothing for super-admin to act on. The
-        // job stays parked at completed_pending; the technician sees the
-        // decline next time they check this job (no push channel exists for
-        // service providers in this build).
+        // Rejected orders are done — nothing for super-admin to act on.
         await PartOrder.updateMany(
           { job: job._id, customerApprovalStatus: 'Rejected', status: 'Pending' },
           { status: 'Rejected' },
         );
+        const rejectedNames = booking.partApproval.partNames?.join(', ') || 'the requested spare part';
         job.revisit = job.revisit || {};
-        job.revisit.notes = 'Customer declined the spare part request.';
+        job.revisit.notes = `Customer declined the spare part request (${rejectedNames}) — service cancelled.`;
+        job.activeStep = 'cancelled';
         await job.save();
+
+        // A declined cost ends the job outright — reuses the same
+        // booking+SR cancellation and service-provider socket notice as any
+        // other cancellation (see closeBooking), rather than leaving the job
+        // silently parked at completed_pending with no way for the customer
+        // or service provider to know it's over.
+        await closeBooking(booking, {
+          reason: `Customer declined the spare part request (${rejectedNames})`,
+          timelineDescription: `Service cancelled — customer declined the spare part request (${rejectedNames})`,
+        });
+
+        try {
+          const provider = await ServiceProvider.findById(job.serviceProvider);
+          if (provider?.user) {
+            const sr = await ServiceRequest.findById(booking.serviceRequest);
+            await emitNotification('job.part_rejected_cancelled', {
+              user: provider.user,
+              category: sr?.category,
+              partName: rejectedNames,
+              amount: booking.partApproval.amount,
+              jobId: job.id,
+            }).catch(() => {});
+          }
+        } catch (_err) {
+          // Non-critical notification failure
+        }
       }
     }
   }
@@ -502,6 +528,93 @@ export async function respondToPartRequest(userId, bookingId, { approve }) {
     });
   } catch (_err) {
     // Non-critical socket emission failure
+  }
+
+  return booking;
+}
+
+/**
+ * Undoes a customer's earlier rejection of a spare-part request: re-approves
+ * the cost and reopens the booking/service request/job exactly to the state
+ * they were in right before the rejection (parked at completed_pending,
+ * awaiting Super Admin dispatch) — the same state a fresh approval leaves
+ * them in, so it re-enters the existing PartOrder approval queue unchanged
+ * rather than needing its own dispatch/reschedule logic.
+ */
+export async function reRaisePartRequest(userId, bookingId) {
+  const booking = await findOwnedOr404(userId, bookingId);
+  if (booking.status !== 'Cancelled' || booking.partApproval?.status !== 'Rejected') {
+    throw new ApiError(400, 'This booking was not cancelled by a declined spare-part request.');
+  }
+  if (!booking.serviceRequest) {
+    throw new ApiError(400, 'This booking has no linked service request to reopen.');
+  }
+
+  const job = await Job.findOne({ serviceRequest: booking.serviceRequest });
+  if (!job) throw new ApiError(404, 'The job for this booking no longer exists.');
+
+  booking.partApproval.status = 'Approved';
+  booking.partApproval.respondedAt = new Date();
+  booking.status = 'Ongoing';
+  booking.instantStatus = booking.isInstant ? 'PARTS_PENDING' : booking.instantStatus;
+  booking.cancellationReason = null;
+  booking.cancelledAt = null;
+  await booking.save();
+
+  const sr = await ServiceRequest.findById(booking.serviceRequest);
+  if (sr) {
+    sr.status = 'Spare Ordered';
+    sr.cancellationReason = null;
+    sr.cancelledAt = null;
+    sr.timeline.push({
+      stepLabel: 'Spare Ordered',
+      done: true,
+      timestamp: new Date(),
+      description: 'Customer re-approved the previously declined spare part request',
+    });
+    await sr.save();
+  }
+
+  job.activeStep = 'completed_pending';
+  job.revisit = job.revisit || {};
+  job.revisit.status = 'Pending Approval';
+  job.revisit.notes = 'Customer re-approved the spare part request.';
+  await job.save();
+
+  await PartOrder.updateMany(
+    { job: job._id, customerApprovalStatus: 'Rejected' },
+    { customerApprovalStatus: 'Approved', status: 'Pending', customerRespondedAt: new Date() },
+  );
+
+  try {
+    const io = getIO();
+    io.to(`user:${userId}`).emit('booking:updated', {
+      bookingId: booking.id,
+      status: booking.status,
+      partApprovalStatus: booking.partApproval.status,
+    });
+    if (job.serviceProvider) {
+      io.to(`service-provider:${job.serviceProvider}`).emit('job:updated', {
+        jobId: job.id,
+        serviceRequestId: sr?.id,
+      });
+    }
+  } catch (_err) {
+    // Non-critical socket emission failure
+  }
+
+  try {
+    const provider = await ServiceProvider.findById(job.serviceProvider);
+    if (provider?.user) {
+      await emitNotification('job.part_reraised', {
+        user: provider.user,
+        category: sr?.category,
+        partName: booking.partApproval.partNames?.join(', '),
+        jobId: job.id,
+      }).catch(() => {});
+    }
+  } catch (_err) {
+    // Non-critical notification failure
   }
 
   return booking;

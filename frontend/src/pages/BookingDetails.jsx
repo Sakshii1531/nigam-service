@@ -278,6 +278,27 @@ const BookingDetails = () => {
     }
   };
 
+  // Undoes an earlier decline: re-approves the same part request and reopens
+  // the booking/job exactly where they were before the rejection — see
+  // backend booking.service.js's reRaisePartRequest.
+  const handleReRaisePartRequest = async () => {
+    if (!booking) return;
+    setActionLoading(true);
+    try {
+      await apiRequest(
+        `/bookings/${booking.id || booking.humanId}/re-raise-part-request`,
+        { method: "POST", auth: true },
+      );
+      setToastMessage("Spare part re-approved — your service is back on.");
+      setTimeout(() => setToastMessage(""), 4000);
+      await loadBooking(true);
+    } catch (err) {
+      setError(err.message || "Could not re-raise the spare part request.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F0F4FF] flex flex-col items-center justify-center p-4">
@@ -458,6 +479,16 @@ const BookingDetails = () => {
                 . If any advance amount was paid, it will be refunded within 5-7
                 working days.
               </p>
+              {booking.partApproval?.status === "Rejected" && (
+                <button
+                  onClick={handleReRaisePartRequest}
+                  disabled={actionLoading}
+                  className="mt-3 bg-white border border-rose-300 hover:bg-rose-50 disabled:opacity-60 text-rose-700 text-xs font-bold py-2.5 px-4 rounded-xl transition-colors cursor-pointer">
+                  {actionLoading
+                    ? "Re-approving…"
+                    : "Re-approve Spare Part & Reschedule"}
+                </button>
+              )}
             </div>
           </div>
         )}

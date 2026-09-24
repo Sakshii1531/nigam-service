@@ -509,6 +509,7 @@ const Dashboard = () => {
     (j) =>
       !j.isAvailableRequest &&
       j.activeStep !== "completed" &&
+      j.activeStep !== "cancelled" &&
       j.status !== "Completed" &&
       j.status !== "Customer Confirmation" &&
       j.status !== "Closed",

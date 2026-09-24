@@ -33,6 +33,7 @@ import {
   Navigation,
   Search,
   Camera,
+  X,
 } from "lucide-react";
 import { useTech } from "../../context/ServiceProviderContext";
 import ServiceProviderBottomNav from "../../components/ServiceProviderBottomNav";
@@ -313,15 +314,31 @@ const ActiveJob = () => {
   useEffect(() => {
     setWarrantyCheck(activeJob?.diagnosis?.warrantyCheck || null);
   }, [activeJob?.id, activeJob?.diagnosis?.warrantyCheck]);
-  const [productPhoto, setProductPhoto] = useState(
-    "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=300&q=80",
-  );
-  const [serialPhoto, setSerialPhoto] = useState(
-    "https://images.unsplash.com/photo-1589571894960-20bbe2828d0a?auto=format&fit=crop&w=300&q=80",
-  );
-  const [issuePhoto, setIssuePhoto] = useState(
-    "https://images.unsplash.com/photo-1621905252507-b354bc25edac?auto=format&fit=crop&w=300&q=80",
-  );
+  // Starts empty (no stock-photo placeholder) — these boxes verify the
+  // technician's own on-site photos, so a fake image here would look like
+  // a real one was already taken. An external placeholder URL here also
+  // meant a real network request per box on every page load, which just
+  // errors out (and retries) when that CDN is blocked/unreachable.
+  const [productPhoto, setProductPhoto] = useState(null);
+  const [serialPhoto, setSerialPhoto] = useState(null);
+  const [issuePhoto, setIssuePhoto] = useState(null);
+  // The diagnosis endpoint's photos.{product,serial,issue} are each
+  // z.string().optional() — that accepts a missing key but rejects an
+  // explicit null, so a not-yet-taken slot must be left out of the payload
+  // rather than sent as null (which 400s the whole diagnosis auto-save).
+  const buildPhotosPayload = (overrides = {}) => {
+    const merged = {
+      product: productPhoto,
+      serial: serialPhoto,
+      issue: issuePhoto,
+      ...overrides,
+    };
+    const payload = {};
+    if (merged.product) payload.product = merged.product;
+    if (merged.serial) payload.serial = merged.serial;
+    if (merged.issue) payload.issue = merged.issue;
+    return payload;
+  };
   const [uploadingPhoto, setUploadingPhoto] = useState({
     product: false,
     serial: false,
@@ -349,11 +366,7 @@ const ActiveJob = () => {
           method: "POST",
           auth: true,
           body: {
-            photos: {
-              product: type === "product" ? uploadedUrl : productPhoto,
-              serial: type === "serial" ? uploadedUrl : serialPhoto,
-              issue: type === "issue" ? uploadedUrl : issuePhoto,
-            },
+            photos: buildPhotosPayload({ [type]: uploadedUrl }),
           },
         });
       } catch (err) {
@@ -411,11 +424,7 @@ const ActiveJob = () => {
           method: "POST",
           auth: true,
           body: {
-            photos: {
-              product: type === "product" ? finalUrl : productPhoto,
-              serial: type === "serial" ? finalUrl : serialPhoto,
-              issue: type === "issue" ? finalUrl : issuePhoto,
-            },
+            photos: buildPhotosPayload({ [type]: finalUrl }),
           },
         }).catch(() => {});
       }
@@ -431,6 +440,17 @@ const ActiveJob = () => {
   const [partAvailability, setPartAvailability] = useState("not_available");
   const [showAddPartsModal, setShowAddPartsModal] = useState(false);
   const [partSearchQuery, setPartSearchQuery] = useState("");
+  // Staged copy of spareParts the Add Spare Parts modal edits — only written
+  // back via the Done button, so Cancel (or the 4s job poll re-seeding
+  // spareParts in the background) can't lose or clobber an in-progress pick.
+  const [pendingSpareParts, setPendingSpareParts] = useState([]);
+  useEffect(() => {
+    if (showAddPartsModal) {
+      setPendingSpareParts(spareParts);
+      setPartSearchQuery("");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showAddPartsModal]);
   const [showInvoicePreviewModal, setShowInvoicePreviewModal] = useState(false);
   const [showInvoicePdfModal, setShowInvoicePdfModal] = useState(false);
   // AMC: show history drawer before entering inspection tabs
@@ -483,12 +503,13 @@ const ActiveJob = () => {
     ]);
   }, [activeJob?.id, jobContext]);
 
-  // Seeds the spareParts state from activeJob.spareParts, jobContext.requiredParts, and catalog candidates
+  // Seeds the spareParts state from jobContext.requiredParts (the job's
+  // already-selected parts, as of when jobContext was fetched) and catalog
+  // candidates. Keyed on jobContext rather than activeJob.spareParts so it
+  // doesn't clobber a technician's in-progress part selection on every 4s
+  // job poll — same fix already applied to the additionalServices seed above.
   useEffect(() => {
-    const existingParts =
-      activeJob?.spareParts && activeJob.spareParts.length > 0
-        ? activeJob.spareParts
-        : jobContext?.requiredParts || [];
+    const existingParts = jobContext?.requiredParts || [];
 
     const existingNames = new Set(
       existingParts.map((p) => (p.name || "").toLowerCase()),
@@ -515,7 +536,7 @@ const ActiveJob = () => {
       })),
       ...candidates,
     ]);
-  }, [activeJob?.id, activeJob?.spareParts, jobContext]);
+  }, [activeJob?.id, jobContext]);
 
   // Synchronize activeStep with the real job step if opened on an active job
   useEffect(() => {
@@ -808,7 +829,7 @@ const ActiveJob = () => {
   }, [chatMessages, chatOpen]);
 
   useEffect(() => {
-    if (showDatePicker) {
+    if (showDatePicker || showAddPartsModal) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "unset";
@@ -816,7 +837,7 @@ const ActiveJob = () => {
     return () => {
       document.body.style.overflow = "unset";
     };
-  }, [showDatePicker]);
+  }, [showDatePicker, showAddPartsModal]);
 
   if (!activeJob) {
     return (
@@ -1265,6 +1286,7 @@ const ActiveJob = () => {
               activeStep === "spare_part_required" ||
               activeStep === "completed_pending" ||
               activeStep === "spare_part_job_details" ||
+              activeStep === "cancelled" ||
               activeStep === "cancellation_summary" ||
               activeStep === "unable_to_fix_summary" ||
               activeStep === "revisit_billing" ||
@@ -1299,6 +1321,7 @@ const ActiveJob = () => {
       activeStep === "completed_pending" ||
       activeStep === "customer_update_preview" ||
       activeStep === "spare_part_job_details" ||
+      activeStep === "cancelled" ||
       activeStep === "revisit_scheduled" ||
       activeStep === "revisit_ontheway" ||
       activeStep === "revisit_arrived" ||
@@ -1969,6 +1992,7 @@ const ActiveJob = () => {
                   activeStep !== "completed_pending" &&
                   activeStep !== "customer_update_preview" &&
                   activeStep !== "spare_part_job_details" &&
+                  activeStep !== "cancelled" &&
                   activeStep !== "revisit_scheduled" &&
                   activeStep !== "revisit_ontheway" &&
                   activeStep !== "revisit_arrived" &&
@@ -2097,16 +2121,16 @@ const ActiveJob = () => {
                                   })
                                 }
                                 className="w-full aspect-square bg-slate-100 border-2 border-slate-200 hover:border-[#0D47A1] rounded-2xl overflow-hidden flex items-center justify-center relative cursor-pointer group hover:bg-slate-200/60 transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-[#0D47A1]/20">
-                                <img
-                                  src={resolveMediaUrl(productPhoto)}
-                                  alt="Product"
-                                  onError={(e) => {
-                                    e.target.onerror = null;
-                                    e.target.src =
-                                      "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=300&q=80";
-                                  }}
-                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                                />
+                                {productPhoto ? (
+                                  <img
+                                    src={resolveMediaUrl(productPhoto)}
+                                    alt="Product"
+                                    onError={() => setProductPhoto(null)}
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                  />
+                                ) : (
+                                  <Camera className="h-6 w-6 text-slate-300" />
+                                )}
                                 {uploadingPhoto.product && (
                                   <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center text-white">
                                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mb-1" />
@@ -2141,16 +2165,16 @@ const ActiveJob = () => {
                                   })
                                 }
                                 className="w-full aspect-square bg-slate-100 border-2 border-slate-200 hover:border-[#0D47A1] rounded-2xl overflow-hidden flex items-center justify-center relative cursor-pointer group hover:bg-slate-200/60 transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-[#0D47A1]/20">
-                                <img
-                                  src={resolveMediaUrl(serialPhoto)}
-                                  alt="Serial Number"
-                                  onError={(e) => {
-                                    e.target.onerror = null;
-                                    e.target.src =
-                                      "https://images.unsplash.com/photo-1589571894960-20bbe2828d0a?auto=format&fit=crop&w=300&q=80";
-                                  }}
-                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                                />
+                                {serialPhoto ? (
+                                  <img
+                                    src={resolveMediaUrl(serialPhoto)}
+                                    alt="Serial Number"
+                                    onError={() => setSerialPhoto(null)}
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                  />
+                                ) : (
+                                  <Camera className="h-6 w-6 text-slate-300" />
+                                )}
                                 {uploadingPhoto.serial && (
                                   <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center text-white">
                                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mb-1" />
@@ -2185,16 +2209,16 @@ const ActiveJob = () => {
                                   })
                                 }
                                 className="w-full aspect-square bg-slate-100 border-2 border-slate-200 hover:border-[#0D47A1] rounded-2xl overflow-hidden flex items-center justify-center relative cursor-pointer group hover:bg-slate-200/60 transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-[#0D47A1]/20">
-                                <img
-                                  src={resolveMediaUrl(issuePhoto)}
-                                  alt="Issue"
-                                  onError={(e) => {
-                                    e.target.onerror = null;
-                                    e.target.src =
-                                      "https://images.unsplash.com/photo-1621905252507-b354bc25edac?auto=format&fit=crop&w=300&q=80";
-                                  }}
-                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                                />
+                                {issuePhoto ? (
+                                  <img
+                                    src={resolveMediaUrl(issuePhoto)}
+                                    alt="Issue"
+                                    onError={() => setIssuePhoto(null)}
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                  />
+                                ) : (
+                                  <Camera className="h-6 w-6 text-slate-300" />
+                                )}
                                 {uploadingPhoto.issue && (
                                   <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center text-white">
                                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mb-1" />
@@ -2417,11 +2441,7 @@ const ActiveJob = () => {
                                         [selectedDiagnosis]: true,
                                       },
                                       warrantyCheck: warrantyCheck || undefined,
-                                      photos: {
-                                        product: productPhoto,
-                                        serial: serialPhoto,
-                                        issue: issuePhoto,
-                                      },
+                                      photos: buildPhotosPayload(),
                                     },
                                   },
                                 );
@@ -4274,6 +4294,87 @@ const ActiveJob = () => {
                         className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-semibold py-4 rounded-2xl text-sm transition-all shadow-md text-center">
                         View Job Details
                       </button>
+
+                      <button
+                        onClick={() => {
+                          resetActiveJob();
+                          navigate("/service-provider/dashboard");
+                        }}
+                        className="w-full bg-slate-100 hover:bg-slate-250 text-[#052355] font-semibold py-4 rounded-2xl text-sm transition-all border border-slate-200 shadow-sm text-center">
+                        Go to Dashboard
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Step: CANCELLED — the customer declined the requested
+                    spare part, ending the job outright (see backend
+                    booking.service.js's respondToPartRequest). Terminal
+                    unless the customer re-raises the request from their own
+                    booking page, which reopens the job at completed_pending. */}
+                {activeStep === "cancelled" && (
+                  <div className="bg-[#F5F8FC] flex flex-col gap-4 text-left font-sans -mx-4 -my-4 p-4 min-h-screen">
+                    <div className="bg-[#052355] text-white pt-4 pb-6 px-4 flex flex-col gap-3 rounded-b-[2.5rem] relative z-10 shadow-md -mx-4 -mt-4">
+                      <div className="flex items-center justify-between">
+                        <button
+                          onClick={() => {
+                            resetActiveJob();
+                            navigate("/service-provider/dashboard");
+                          }}
+                          className="p-1 hover:bg-white/10 rounded-full transition-colors">
+                          <ArrowLeft className="h-6 w-6 text-white" />
+                        </button>
+                        <div className="flex-1 text-center pr-9">
+                          <h1 className="text-base font-semibold text-white">
+                            Job Details
+                          </h1>
+                          <span className="text-xs text-white/80 block font-normal mt-0.5">
+                            #{activeJob.id}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-white rounded-3xl p-4 border border-slate-200 shadow-sm text-center flex flex-col gap-6 py-10 my-2">
+                      <div className="w-20 h-20 bg-rose-50 rounded-full flex items-center justify-center text-rose-500 mx-auto border border-rose-100 shadow-sm">
+                        <AlertCircle className="h-10 w-10 stroke-[2.5]" />
+                      </div>
+
+                      <div>
+                        <h2 className="text-2xl font-medium text-[#052355]">
+                          Service Cancelled
+                        </h2>
+                        <p className="text-sm text-slate-600 mt-2 font-normal">
+                          The customer declined the requested spare part, so
+                          this service has been cancelled. If they change
+                          their mind, they can re-approve the part from their
+                          booking — you'll see the job reopen here once they
+                          do.
+                        </p>
+                      </div>
+
+                      <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 text-left text-xs font-normal text-slate-600 space-y-2.5">
+                        <div className="flex justify-between border-b border-slate-200/50 pb-2">
+                          <span className="text-slate-600">Job Reference</span>
+                          <span className="text-[#052355]">
+                            #{activeJob.id}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">Status</span>
+                          <span className="text-rose-600 font-normal bg-rose-50 px-2 py-0.5 rounded-md text-[10px]">
+                            Cancelled — Spare Part Declined
+                          </span>
+                        </div>
+                        {activeJob?.revisit?.notes && (
+                          <div className="pt-2 border-t border-slate-200/50">
+                            <span className="text-slate-600">Notes</span>
+                            <p className="text-[#052355] mt-1">
+                              {activeJob.revisit.notes}
+                            </p>
+                          </div>
+                        )}
+                      </div>
 
                       <button
                         onClick={() => {
@@ -6382,13 +6483,14 @@ const ActiveJob = () => {
           // AC job only ever sees AC parts here, a TV job only TV parts.
           const AVAILABLE_PARTS = jobContext?.spareParts || [];
 
-          // Filter out parts that are currently checked/active in the spareParts list
+          const selectedParts = pendingSpareParts.filter((p) => p.checked);
+          const selectedNames = new Set(
+            selectedParts.map((p) => p.name.toLowerCase()),
+          );
+
+          // Filter out parts that are currently selected in this modal
           const notYetAdded = AVAILABLE_PARTS.filter(
-            (part) =>
-              !spareParts.some(
-                (p) =>
-                  p.name.toLowerCase() === part.name.toLowerCase() && p.checked,
-              ),
+            (part) => !selectedNames.has(part.name.toLowerCase()),
           );
           const query = partSearchQuery.trim().toLowerCase();
           const filteredParts = query
@@ -6400,35 +6502,98 @@ const ActiveJob = () => {
               )
             : notYetAdded;
 
+          const closeModal = () => {
+            setShowAddPartsModal(false);
+            setPartSearchQuery("");
+          };
+
+          const addPart = (part) => {
+            setPendingSpareParts((prev) => {
+              const existingIndex = prev.findIndex(
+                (p) => p.name.toLowerCase() === part.name.toLowerCase(),
+              );
+              if (existingIndex > -1) {
+                return prev.map((p, idx) =>
+                  idx === existingIndex ? { ...p, checked: true } : p,
+                );
+              }
+              return [
+                ...prev,
+                {
+                  id: part.id,
+                  name: part.name,
+                  price: part.price,
+                  sku: part.code,
+                  checked: true,
+                },
+              ];
+            });
+          };
+
+          const removePart = (name) => {
+            setPendingSpareParts((prev) =>
+              prev.map((p) =>
+                p.name.toLowerCase() === name.toLowerCase()
+                  ? { ...p, checked: false }
+                  : p,
+              ),
+            );
+          };
+
           return (
-            <div className="fixed inset-0 bg-[#052355]/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-              <div className="bg-white rounded-[2rem] w-full max-w-lg p-5 shadow-2xl flex flex-col gap-4 border border-slate-100 max-h-[85vh]">
-                <div className="flex justify-between items-center pb-2.5 border-b border-slate-100 shrink-0">
+            <div
+              className="fixed inset-0 bg-[#052355]/40 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center"
+              onClick={closeModal}>
+              <div
+                className="bg-white rounded-t-[2rem] sm:rounded-[2rem] w-full sm:max-w-lg shadow-2xl flex flex-col border border-slate-100 max-h-[88vh] sm:m-4"
+                onClick={(e) => e.stopPropagation()}>
+                <div className="flex justify-between items-center px-5 pt-5 pb-3 border-b border-slate-100 shrink-0">
                   <h3 className="text-base font-semibold text-[#052355]">
                     Add Spare Parts
                   </h3>
                   <button
-                    onClick={() => {
-                      setShowAddPartsModal(false);
-                      setPartSearchQuery("");
-                    }}
-                    className="text-slate-400 hover:text-slate-650 text-xs font-semibold hover:underline">
-                    Cancel
+                    onClick={closeModal}
+                    className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors">
+                    <X className="w-4 h-4" />
                   </button>
                 </div>
 
-                <div className="relative shrink-0">
-                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input
-                    type="text"
-                    value={partSearchQuery}
-                    onChange={(e) => setPartSearchQuery(e.target.value)}
-                    placeholder="Search parts by name, brand or SKU..."
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-[#052355] outline-none focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1]"
-                  />
+                <div className="px-5 pt-3 shrink-0">
+                  <div className="relative">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      type="text"
+                      value={partSearchQuery}
+                      onChange={(e) => setPartSearchQuery(e.target.value)}
+                      placeholder="Search parts by name, brand or SKU..."
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-[#052355] outline-none focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1]"
+                    />
+                  </div>
                 </div>
 
-                <div className="flex flex-col gap-3 overflow-y-auto pr-1 flex-1">
+                {selectedParts.length > 0 && (
+                  <div className="px-5 pt-3 shrink-0">
+                    <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-2">
+                      Selected ({selectedParts.length})
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedParts.map((part) => (
+                        <span
+                          key={part.id || part.name}
+                          className="flex items-center gap-1.5 bg-[#E3ECF9] text-[#0D47A1] text-xs font-semibold pl-3 pr-2 py-1.5 rounded-full">
+                          {part.name}
+                          <button
+                            onClick={() => removePart(part.name)}
+                            className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-[#c2d7f5]">
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex flex-col gap-3 overflow-y-auto px-5 py-3 flex-1">
                   {filteredParts.length > 0 ? (
                     filteredParts.map((part) => (
                       <div
@@ -6448,32 +6613,7 @@ const ActiveJob = () => {
                           </p>
                         </div>
                         <button
-                          onClick={() => {
-                            setSpareParts((prev) => {
-                              const existingIndex = prev.findIndex(
-                                (p) =>
-                                  p.name.toLowerCase() ===
-                                  part.name.toLowerCase(),
-                              );
-                              if (existingIndex > -1) {
-                                return prev.map((p, idx) =>
-                                  idx === existingIndex
-                                    ? { ...p, checked: true }
-                                    : p,
-                                );
-                              }
-                              return [
-                                ...prev,
-                                {
-                                  id: part.id,
-                                  name: part.name,
-                                  price: part.price,
-                                  sku: part.code,
-                                  checked: true,
-                                },
-                              ];
-                            });
-                          }}
+                          onClick={() => addPart(part)}
                           className="bg-[#E3ECF9] hover:bg-[#c2d7f5] text-[#0D47A1] text-xs font-semibold px-3 py-1.5 rounded-xl transition-all shadow-xs shrink-0">
                           + Add
                         </button>
@@ -6492,6 +6632,22 @@ const ActiveJob = () => {
                       No parts match "{partSearchQuery}".
                     </p>
                   )}
+                </div>
+
+                <div className="flex gap-3 px-5 py-4 border-t border-slate-100 shrink-0">
+                  <button
+                    onClick={closeModal}
+                    className="flex-1 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 font-semibold py-3 rounded-2xl text-sm transition-all">
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSpareParts(pendingSpareParts);
+                      closeModal();
+                    }}
+                    className="flex-1 bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-semibold py-3 rounded-2xl text-sm transition-all shadow-md">
+                    Done
+                  </button>
                 </div>
               </div>
             </div>

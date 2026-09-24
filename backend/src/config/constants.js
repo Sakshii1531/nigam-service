@@ -123,6 +123,11 @@ export const JOB_STEPS = Object.freeze([
   'billing',
   'awaitingpayment',
   'completed',
+  // Terminal: the customer rejected a requested spare part, ending the job —
+  // see booking.service.js's respondToPartRequest. Re-raising a rejected part
+  // (booking.service.js's reRaisePartRequest) moves it back to
+  // 'completed_pending', the step it was parked at before the rejection.
+  'cancelled',
 ]);
 
 export const JOB_REVISIT_STEPS = Object.freeze([
@@ -206,7 +211,7 @@ export const JOB_STEP_TRANSITIONS = Object.freeze({
   inspection: ['spareapproval', 'repaircomplete', 'spare_part_required', 'completed_pending'],
   spareapproval: ['spareapproval', 'revisit_scheduled', 'repaircomplete', 'spare_part_required', 'completed_pending'],
   spare_part_required: ['completed_pending', 'spare_part_job_details', 'revisit_scheduled', 'inspection'],
-  completed_pending: ['spare_part_job_details', 'revisit_scheduled'],
+  completed_pending: ['spare_part_job_details', 'revisit_scheduled', 'cancelled'],
   spare_part_job_details: ['completed_pending', 'revisit_scheduled'],
   revisit_scheduled: ['revisit_ontheway', 'revisit_arrived', 'revisit_complete', 'completed'],
   revisit_ontheway: ['revisit_arrived', 'revisit_complete', 'completed'],
@@ -219,6 +224,7 @@ export const JOB_STEP_TRANSITIONS = Object.freeze({
   billing: ['completed', 'awaitingpayment'],
   awaitingpayment: ['completed'],
   completed: [],
+  cancelled: ['completed_pending'],
 });
 
 export const GST_PERCENT_DEFAULT = 18; // Confirmed flat rate everywhere (user decision) — the frontend's 10% sighting (§9) was mock-data inconsistency, not a second real rate.

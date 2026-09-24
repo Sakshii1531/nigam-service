@@ -343,9 +343,14 @@ export async function listJobHistory(serviceProviderId, { status = 'all', type =
   if (status === 'completed') {
     query.activeStep = 'completed';
   } else if (status === 'cancelled') {
-    query['revisit.repairStatus'] = 'cancelled';
+    // Two distinct ways a job ends up cancelled: a revisit the service
+    // provider themselves marked unable-to-fix/cancelled ('revisit.repairStatus'),
+    // and a customer declining a requested spare part, which cancels the job
+    // outright at the top level (activeStep — see booking.service.js's
+    // respondToPartRequest).
+    query.$or = [{ 'revisit.repairStatus': 'cancelled' }, { activeStep: 'cancelled' }];
   } else if (status === 'in_progress') {
-    query.activeStep = { $nin: ['completed', 'idle'] };
+    query.activeStep = { $nin: ['completed', 'idle', 'cancelled'] };
   }
 
   // `status` doubles as the type filter for older clients that only send one pill.

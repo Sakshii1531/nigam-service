@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -8,187 +8,187 @@ import {
   Navigate,
 } from "react-router-dom";
 import { usePageTitle } from "./hooks/usePageTitle";
-import Home from "./pages/Home";
-import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
-import Warranty from "./pages/Warranty";
-import Payment from "./pages/Payment";
-import CardPayment from "./pages/CardPayment";
-import UpiPayment from "./pages/UpiPayment";
-import NetBankingPayment from "./pages/NetBankingPayment";
-import PaymentFailure from "./pages/PaymentFailure";
-import Booking from "./pages/Booking";
-import BookingFlow from "./pages/BookingFlow";
+const Home = lazy(() => import("./pages/Home"));
+const Login = lazy(() => import("./pages/Login"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Warranty = lazy(() => import("./pages/Warranty"));
+const Payment = lazy(() => import("./pages/Payment"));
+const CardPayment = lazy(() => import("./pages/CardPayment"));
+const UpiPayment = lazy(() => import("./pages/UpiPayment"));
+const NetBankingPayment = lazy(() => import("./pages/NetBankingPayment"));
+const PaymentFailure = lazy(() => import("./pages/PaymentFailure"));
+const Booking = lazy(() => import("./pages/Booking"));
+const BookingFlow = lazy(() => import("./pages/BookingFlow"));
 import { BookingProvider } from "./context/BookingContext";
 import { AuthProvider } from "./context/AuthContext";
 import { NotificationProvider } from "./context/NotificationContext";
 import { AdminSidebarProvider } from "./context/AdminSidebarContext";
 import { LogoProvider } from "./context/LogoContext";
 import { ToastProvider } from "./context/ToastContext";
-import Chat from "./pages/Chat";
-import AllServices from "./pages/AllServices";
-import Categories from "./pages/Categories";
-import AllCleaningServices from "./pages/AllCleaningServices";
-import AllApplianceServices from "./pages/AllApplianceServices";
-import BookingSuccess from "./pages/BookingSuccess";
-import SearchingPartner from "./pages/SearchingPartner";
-import RefrigeratorDetails from "./pages/RefrigeratorDetails";
-import Bookings from "./pages/Bookings";
-import BookingDetails from "./pages/BookingDetails";
-import Profile from "./pages/Profile";
-import HelpSupport from "./pages/HelpSupport";
-import SavedAddresses from "./pages/SavedAddresses";
-import EditProfile from "./pages/EditProfile";
-import Buy from "./pages/Buy";
-import AMC from "./pages/AMC";
-import Exchange from "./pages/Exchange";
-import BuyNew from "./pages/BuyNew";
-import ExtendWarranty from "./pages/ExtendWarranty";
-import BuyProduct from "./pages/BuyProduct";
-import PartnerWarranty from "./pages/PartnerWarranty";
-import SelectBrand from "./pages/SelectBrand";
-import SelectProduct from "./pages/SelectProduct";
-import SelectIssue from "./pages/SelectIssue";
-import RaiseWarrantyRequest from "./pages/RaiseWarrantyRequest";
-import TicketSuccess from "./pages/TicketSuccess";
-import TrackTicket from "./pages/TrackTicket";
-import TicketDetails from "./pages/TicketDetails";
-import ServiceUpdates from "./pages/ServiceUpdates";
-import RateService from "./pages/RateService";
-import ProductDetails from "./pages/ProductDetails";
-import Wishlist from "./pages/Wishlist";
-import MyWishlist from "./pages/MyWishlist";
-import Coupons from "./pages/Coupons";
-import FinanceDetails from "./pages/FinanceDetails";
-import MembershipPlans from "./pages/MembershipPlans";
-import RewardsPlayZone from "./pages/RewardsPlayZone";
-import MyBookings from "./pages/MyBookings";
-import MyOrders from "./pages/MyOrders";
-import ExchangeDetails from "./pages/ExchangeDetails";
-import ReferEarn from "./pages/ReferEarn";
-import ServicePartner from "./pages/ServicePartner";
-import PaymentMethods from "./pages/PaymentMethods";
-import NotificationSettings from "./pages/NotificationSettings";
-import Faqs from "./pages/Faqs";
-import AboutNCC from "./pages/AboutNCC";
-import AreaNotServiceable from "./pages/AreaNotServiceable";
+const Chat = lazy(() => import("./pages/Chat"));
+const AllServices = lazy(() => import("./pages/AllServices"));
+const Categories = lazy(() => import("./pages/Categories"));
+const AllCleaningServices = lazy(() => import("./pages/AllCleaningServices"));
+const AllApplianceServices = lazy(() => import("./pages/AllApplianceServices"));
+const BookingSuccess = lazy(() => import("./pages/BookingSuccess"));
+const SearchingPartner = lazy(() => import("./pages/SearchingPartner"));
+const RefrigeratorDetails = lazy(() => import("./pages/RefrigeratorDetails"));
+const Bookings = lazy(() => import("./pages/Bookings"));
+const BookingDetails = lazy(() => import("./pages/BookingDetails"));
+const Profile = lazy(() => import("./pages/Profile"));
+const HelpSupport = lazy(() => import("./pages/HelpSupport"));
+const SavedAddresses = lazy(() => import("./pages/SavedAddresses"));
+const EditProfile = lazy(() => import("./pages/EditProfile"));
+const Buy = lazy(() => import("./pages/Buy"));
+const AMC = lazy(() => import("./pages/AMC"));
+const Exchange = lazy(() => import("./pages/Exchange"));
+const BuyNew = lazy(() => import("./pages/BuyNew"));
+const ExtendWarranty = lazy(() => import("./pages/ExtendWarranty"));
+const BuyProduct = lazy(() => import("./pages/BuyProduct"));
+const PartnerWarranty = lazy(() => import("./pages/PartnerWarranty"));
+const SelectBrand = lazy(() => import("./pages/SelectBrand"));
+const SelectProduct = lazy(() => import("./pages/SelectProduct"));
+const SelectIssue = lazy(() => import("./pages/SelectIssue"));
+const RaiseWarrantyRequest = lazy(() => import("./pages/RaiseWarrantyRequest"));
+const TicketSuccess = lazy(() => import("./pages/TicketSuccess"));
+const TrackTicket = lazy(() => import("./pages/TrackTicket"));
+const TicketDetails = lazy(() => import("./pages/TicketDetails"));
+const ServiceUpdates = lazy(() => import("./pages/ServiceUpdates"));
+const RateService = lazy(() => import("./pages/RateService"));
+const ProductDetails = lazy(() => import("./pages/ProductDetails"));
+const Wishlist = lazy(() => import("./pages/Wishlist"));
+const MyWishlist = lazy(() => import("./pages/MyWishlist"));
+const Coupons = lazy(() => import("./pages/Coupons"));
+const FinanceDetails = lazy(() => import("./pages/FinanceDetails"));
+const MembershipPlans = lazy(() => import("./pages/MembershipPlans"));
+const RewardsPlayZone = lazy(() => import("./pages/RewardsPlayZone"));
+const MyBookings = lazy(() => import("./pages/MyBookings"));
+const MyOrders = lazy(() => import("./pages/MyOrders"));
+const ExchangeDetails = lazy(() => import("./pages/ExchangeDetails"));
+const ReferEarn = lazy(() => import("./pages/ReferEarn"));
+const ServicePartner = lazy(() => import("./pages/ServicePartner"));
+const PaymentMethods = lazy(() => import("./pages/PaymentMethods"));
+const NotificationSettings = lazy(() => import("./pages/NotificationSettings"));
+const Faqs = lazy(() => import("./pages/Faqs"));
+const AboutNCC = lazy(() => import("./pages/AboutNCC"));
+const AreaNotServiceable = lazy(() => import("./pages/AreaNotServiceable"));
 import { LocationProvider } from "./context/LocationContext";
 import LocationModal from "./components/common/LocationModal";
 import { getActiveCities, isCityServiceable } from "./utils/serviceableCities";
-import CmsDocViewer from "./pages/CmsDocViewer";
-import AllBrands from "./pages/AllBrands";
-import Onboarding from "./pages/Onboarding";
-import ServiceProviderLogin from "./pages/service-provider/Login";
+const CmsDocViewer = lazy(() => import("./pages/CmsDocViewer"));
+const AllBrands = lazy(() => import("./pages/AllBrands"));
+const Onboarding = lazy(() => import("./pages/Onboarding"));
+const ServiceProviderLogin = lazy(() => import("./pages/service-provider/Login"));
 import { ServiceProviderProvider } from "./context/ServiceProviderContext";
-import BrandLogin from "./pages/brand-admin/Login";
-import BrandDashboard from "./pages/brand-admin/Dashboard";
-import BrandRequests from "./pages/brand-admin/Requests";
-import BrandWarranty from "./pages/brand-admin/Warranty";
-import BrandServiceProviders from "./pages/brand-admin/ServiceProviders";
-import BrandInventory from "./pages/brand-admin/Inventory";
-import BrandPartRequests from "./pages/brand-admin/PartRequests";
-import BrandInvoices from "./pages/brand-admin/Invoices";
-import BrandCustomers from "./pages/brand-admin/Customers";
-import BrandNotifications from "./pages/brand-admin/Notifications";
-import BrandReports from "./pages/brand-admin/Reports";
-import BrandSettings from "./pages/brand-admin/Settings";
-import BrandAMCs from "./pages/brand-admin/AMCs";
-import BrandExchanges from "./pages/brand-admin/Exchanges";
-import BrandWarrantyClaims from "./pages/brand-admin/WarrantyClaims";
-import BrandCatalog from "./pages/brand-admin/Catalog";
-import BrandReviews from "./pages/brand-admin/Reviews";
-import BrandChat from "./pages/brand-admin/Chat";
-import BrandAcademy from "./pages/brand-admin/Academy";
-import BrandReverseLogistics from "./pages/brand-admin/ReverseLogistics";
-import BrandComplaintMonitoring from "./pages/brand-admin/ComplaintMonitoring";
-import BrandEscalations from "./pages/brand-admin/Escalations";
-import BrandServiceCompletionMonitor from "./pages/brand-admin/ServiceCompletionMonitor";
-import BrandReplacementApprovals from "./pages/brand-admin/ReplacementApprovals";
-import BrandLetterDocumentCenter from "./pages/brand-admin/LetterDocumentCenter";
-import BrandCallRatesCharges from "./pages/brand-admin/CallRatesCharges";
-import BrandPayments from "./pages/brand-admin/Payments";
-import BrandUserRoleManagement from "./pages/brand-admin/UserRoleManagement";
-import BrandTeamsDepartments from "./pages/brand-admin/TeamsDepartments";
-import BrandRegisterComplaint from "./pages/brand-admin/RegisterComplaint";
-import ServiceProviderApply from "./pages/service-provider/Apply";
-import SuperAdminLogin from "./pages/super-admin/Login";
-import SuperAdminDashboard from "./pages/super-admin/Dashboard";
-import SuperAdminUsers from "./pages/super-admin/Users";
-import SuperAdminServiceProviders from "./pages/super-admin/ServiceProviders";
-import SuperAdminCityChangeRequests from "./pages/super-admin/CityChangeRequests";
-import SuperAdminBrands from "./pages/super-admin/Brands";
-import SuperAdminRequests from "./pages/super-admin/Requests";
-import SuperAdminWarranty from "./pages/super-admin/Warranty";
-import SuperAdminAssignment from "./pages/super-admin/Assignment";
-import SuperAdminTracking from "./pages/super-admin/Tracking";
-import SuperAdminInventory from "./pages/super-admin/Inventory";
-import SuperAdminPartRequests from "./pages/super-admin/PartRequests";
-import SuperAdminOrders from "./pages/super-admin/Orders";
-import SuperAdminBilling from "./pages/super-admin/Billing";
-import SuperAdminComplaints from "./pages/super-admin/Complaints";
-import SuperAdminSupport from "./pages/super-admin/Support";
-import SuperAdminNotifications from "./pages/super-admin/Notifications";
-import SuperAdminReports from "./pages/super-admin/Reports";
-import SuperAdminCities from "./pages/super-admin/Cities";
-import SuperAdminRoles from "./pages/super-admin/Roles";
-import SuperAdminSettings from "./pages/super-admin/Settings";
-import SuperAdminLogs from "./pages/super-admin/Logs";
-import CustomerAppCustomization from "./pages/super-admin/CustomerAppCustomization";
-import SuperAdminExchangeOffers from "./pages/super-admin/ExchangeOffers";
-import SuperAdminASM from "./pages/super-admin/ASM";
-import SuperAdminASMDetail from "./pages/super-admin/ASMDetail";
-import SuperAdminAMC from "./pages/super-admin/AMC";
-import SuperAdminProducts from "./pages/super-admin/Products";
-import SuperAdminProductCategories from "./pages/super-admin/ProductCategories";
-import SuperAdminWarrantyVerification from "./pages/super-admin/WarrantyVerification";
-import SuperAdminServiceCatalog from "./pages/super-admin/ServiceCatalog";
-import SuperAdminEscalationDesk from "./pages/super-admin/EscalationDesk";
-import SuperAdminStories from "./pages/super-admin/Stories";
-import SuperAdminVideos from "./pages/super-admin/Videos";
-import SuperAdminAdvertisements from "./pages/super-admin/Advertisements";
-import SuperAdminRevenue from "./pages/super-admin/Revenue";
-import SuperAdminTransactions from "./pages/super-admin/Transactions";
-import SuperAdminCMS from "./pages/super-admin/CMS";
-import SuperAdminLoyaltyProgram from "./pages/super-admin/LoyaltyProgram";
-import SuperAdminServiceProviderAppCustomization from "./pages/super-admin/ServiceProviderAppCustomization";
-import SuperAdminReviewsCustomization from "./pages/super-admin/ReviewsCustomization";
-import ServiceProviderDashboard from "./pages/service-provider/Dashboard";
-import ActiveJob from "./pages/service-provider/ActiveJob";
-import Schedule from "./pages/service-provider/Schedule";
-import ProfilePage from "./pages/service-provider/Profile";
-import EarningsPage from "./pages/service-provider/Earnings";
-import RecentEarnings from "./pages/service-provider/RecentEarnings";
-import PersonalInfo from "./pages/service-provider/PersonalInfo";
-import PayoutSettings from "./pages/service-provider/PayoutSettings";
-import Verification from "./pages/service-provider/Verification";
-import HelpSupportTech from "./pages/service-provider/HelpSupport";
-import RaisePartRequest from "./pages/service-provider/RaisePartRequest";
-import ServiceProviderNotifications from "./pages/service-provider/Notifications";
-import AIAssistant from "./pages/service-provider/AIAssistant";
-import Analytics from "./pages/service-provider/Analytics";
-import Inventory from "./pages/service-provider/Inventory";
-import BillingEstimate from "./pages/service-provider/BillingEstimate";
-import SkillsCertifications from "./pages/service-provider/SkillsCertifications";
-import ServiceProviderSettings from "./pages/service-provider/ServiceProviderSettings";
-import Academy from "./pages/service-provider/Academy";
-import TechnicalSupport from "./pages/service-provider/TechnicalSupport";
-import Announcements from "./pages/service-provider/Announcements";
-import EarningDetailPage from "./pages/service-provider/EarningDetail";
-import ServiceHistory from "./pages/service-provider/ServiceHistory";
+const BrandLogin = lazy(() => import("./pages/brand-admin/Login"));
+const BrandDashboard = lazy(() => import("./pages/brand-admin/Dashboard"));
+const BrandRequests = lazy(() => import("./pages/brand-admin/Requests"));
+const BrandWarranty = lazy(() => import("./pages/brand-admin/Warranty"));
+const BrandServiceProviders = lazy(() => import("./pages/brand-admin/ServiceProviders"));
+const BrandInventory = lazy(() => import("./pages/brand-admin/Inventory"));
+const BrandPartRequests = lazy(() => import("./pages/brand-admin/PartRequests"));
+const BrandInvoices = lazy(() => import("./pages/brand-admin/Invoices"));
+const BrandCustomers = lazy(() => import("./pages/brand-admin/Customers"));
+const BrandNotifications = lazy(() => import("./pages/brand-admin/Notifications"));
+const BrandReports = lazy(() => import("./pages/brand-admin/Reports"));
+const BrandSettings = lazy(() => import("./pages/brand-admin/Settings"));
+const BrandAMCs = lazy(() => import("./pages/brand-admin/AMCs"));
+const BrandExchanges = lazy(() => import("./pages/brand-admin/Exchanges"));
+const BrandWarrantyClaims = lazy(() => import("./pages/brand-admin/WarrantyClaims"));
+const BrandCatalog = lazy(() => import("./pages/brand-admin/Catalog"));
+const BrandReviews = lazy(() => import("./pages/brand-admin/Reviews"));
+const BrandChat = lazy(() => import("./pages/brand-admin/Chat"));
+const BrandAcademy = lazy(() => import("./pages/brand-admin/Academy"));
+const BrandReverseLogistics = lazy(() => import("./pages/brand-admin/ReverseLogistics"));
+const BrandComplaintMonitoring = lazy(() => import("./pages/brand-admin/ComplaintMonitoring"));
+const BrandEscalations = lazy(() => import("./pages/brand-admin/Escalations"));
+const BrandServiceCompletionMonitor = lazy(() => import("./pages/brand-admin/ServiceCompletionMonitor"));
+const BrandReplacementApprovals = lazy(() => import("./pages/brand-admin/ReplacementApprovals"));
+const BrandLetterDocumentCenter = lazy(() => import("./pages/brand-admin/LetterDocumentCenter"));
+const BrandCallRatesCharges = lazy(() => import("./pages/brand-admin/CallRatesCharges"));
+const BrandPayments = lazy(() => import("./pages/brand-admin/Payments"));
+const BrandUserRoleManagement = lazy(() => import("./pages/brand-admin/UserRoleManagement"));
+const BrandTeamsDepartments = lazy(() => import("./pages/brand-admin/TeamsDepartments"));
+const BrandRegisterComplaint = lazy(() => import("./pages/brand-admin/RegisterComplaint"));
+const ServiceProviderApply = lazy(() => import("./pages/service-provider/Apply"));
+const SuperAdminLogin = lazy(() => import("./pages/super-admin/Login"));
+const SuperAdminDashboard = lazy(() => import("./pages/super-admin/Dashboard"));
+const SuperAdminUsers = lazy(() => import("./pages/super-admin/Users"));
+const SuperAdminServiceProviders = lazy(() => import("./pages/super-admin/ServiceProviders"));
+const SuperAdminCityChangeRequests = lazy(() => import("./pages/super-admin/CityChangeRequests"));
+const SuperAdminBrands = lazy(() => import("./pages/super-admin/Brands"));
+const SuperAdminRequests = lazy(() => import("./pages/super-admin/Requests"));
+const SuperAdminWarranty = lazy(() => import("./pages/super-admin/Warranty"));
+const SuperAdminAssignment = lazy(() => import("./pages/super-admin/Assignment"));
+const SuperAdminTracking = lazy(() => import("./pages/super-admin/Tracking"));
+const SuperAdminInventory = lazy(() => import("./pages/super-admin/Inventory"));
+const SuperAdminPartRequests = lazy(() => import("./pages/super-admin/PartRequests"));
+const SuperAdminOrders = lazy(() => import("./pages/super-admin/Orders"));
+const SuperAdminBilling = lazy(() => import("./pages/super-admin/Billing"));
+const SuperAdminComplaints = lazy(() => import("./pages/super-admin/Complaints"));
+const SuperAdminSupport = lazy(() => import("./pages/super-admin/Support"));
+const SuperAdminNotifications = lazy(() => import("./pages/super-admin/Notifications"));
+const SuperAdminReports = lazy(() => import("./pages/super-admin/Reports"));
+const SuperAdminCities = lazy(() => import("./pages/super-admin/Cities"));
+const SuperAdminRoles = lazy(() => import("./pages/super-admin/Roles"));
+const SuperAdminSettings = lazy(() => import("./pages/super-admin/Settings"));
+const SuperAdminLogs = lazy(() => import("./pages/super-admin/Logs"));
+const CustomerAppCustomization = lazy(() => import("./pages/super-admin/CustomerAppCustomization"));
+const SuperAdminExchangeOffers = lazy(() => import("./pages/super-admin/ExchangeOffers"));
+const SuperAdminASM = lazy(() => import("./pages/super-admin/ASM"));
+const SuperAdminASMDetail = lazy(() => import("./pages/super-admin/ASMDetail"));
+const SuperAdminAMC = lazy(() => import("./pages/super-admin/AMC"));
+const SuperAdminProducts = lazy(() => import("./pages/super-admin/Products"));
+const SuperAdminProductCategories = lazy(() => import("./pages/super-admin/ProductCategories"));
+const SuperAdminWarrantyVerification = lazy(() => import("./pages/super-admin/WarrantyVerification"));
+const SuperAdminServiceCatalog = lazy(() => import("./pages/super-admin/ServiceCatalog"));
+const SuperAdminEscalationDesk = lazy(() => import("./pages/super-admin/EscalationDesk"));
+const SuperAdminStories = lazy(() => import("./pages/super-admin/Stories"));
+const SuperAdminVideos = lazy(() => import("./pages/super-admin/Videos"));
+const SuperAdminAdvertisements = lazy(() => import("./pages/super-admin/Advertisements"));
+const SuperAdminRevenue = lazy(() => import("./pages/super-admin/Revenue"));
+const SuperAdminTransactions = lazy(() => import("./pages/super-admin/Transactions"));
+const SuperAdminCMS = lazy(() => import("./pages/super-admin/CMS"));
+const SuperAdminLoyaltyProgram = lazy(() => import("./pages/super-admin/LoyaltyProgram"));
+const SuperAdminServiceProviderAppCustomization = lazy(() => import("./pages/super-admin/ServiceProviderAppCustomization"));
+const SuperAdminReviewsCustomization = lazy(() => import("./pages/super-admin/ReviewsCustomization"));
+const ServiceProviderDashboard = lazy(() => import("./pages/service-provider/Dashboard"));
+const ActiveJob = lazy(() => import("./pages/service-provider/ActiveJob"));
+const Schedule = lazy(() => import("./pages/service-provider/Schedule"));
+const ProfilePage = lazy(() => import("./pages/service-provider/Profile"));
+const EarningsPage = lazy(() => import("./pages/service-provider/Earnings"));
+const RecentEarnings = lazy(() => import("./pages/service-provider/RecentEarnings"));
+const PersonalInfo = lazy(() => import("./pages/service-provider/PersonalInfo"));
+const PayoutSettings = lazy(() => import("./pages/service-provider/PayoutSettings"));
+const Verification = lazy(() => import("./pages/service-provider/Verification"));
+const HelpSupportTech = lazy(() => import("./pages/service-provider/HelpSupport"));
+const RaisePartRequest = lazy(() => import("./pages/service-provider/RaisePartRequest"));
+const ServiceProviderNotifications = lazy(() => import("./pages/service-provider/Notifications"));
+const AIAssistant = lazy(() => import("./pages/service-provider/AIAssistant"));
+const Analytics = lazy(() => import("./pages/service-provider/Analytics"));
+const Inventory = lazy(() => import("./pages/service-provider/Inventory"));
+const BillingEstimate = lazy(() => import("./pages/service-provider/BillingEstimate"));
+const SkillsCertifications = lazy(() => import("./pages/service-provider/SkillsCertifications"));
+const ServiceProviderSettings = lazy(() => import("./pages/service-provider/ServiceProviderSettings"));
+const Academy = lazy(() => import("./pages/service-provider/Academy"));
+const TechnicalSupport = lazy(() => import("./pages/service-provider/TechnicalSupport"));
+const Announcements = lazy(() => import("./pages/service-provider/Announcements"));
+const EarningDetailPage = lazy(() => import("./pages/service-provider/EarningDetail"));
+const ServiceHistory = lazy(() => import("./pages/service-provider/ServiceHistory"));
 
 // Auth (OTP + password recovery) — all panels
-import VerifyOtp from "./pages/VerifyOtp";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
-import ServiceProviderVerifyOtp from "./pages/service-provider/VerifyOtp";
-import ServiceProviderForgotPassword from "./pages/service-provider/ForgotPassword";
-import BrandVerifyOtp from "./pages/brand-admin/VerifyOtp";
-import BrandForgotPassword from "./pages/brand-admin/ForgotPassword";
-import SuperAdminVerifyOtp from "./pages/super-admin/VerifyOtp";
-import SuperAdminForgotPassword from "./pages/super-admin/ForgotPassword";
-import SuperAdminChangePassword from "./pages/super-admin/ChangePassword";
-import SuperAdminProfile from "./pages/super-admin/Profile";
-import SuperAdminZoneDashboard from "./pages/super-admin/ZoneDashboard";
+const VerifyOtp = lazy(() => import("./pages/VerifyOtp"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const ServiceProviderVerifyOtp = lazy(() => import("./pages/service-provider/VerifyOtp"));
+const ServiceProviderForgotPassword = lazy(() => import("./pages/service-provider/ForgotPassword"));
+const BrandVerifyOtp = lazy(() => import("./pages/brand-admin/VerifyOtp"));
+const BrandForgotPassword = lazy(() => import("./pages/brand-admin/ForgotPassword"));
+const SuperAdminVerifyOtp = lazy(() => import("./pages/super-admin/VerifyOtp"));
+const SuperAdminForgotPassword = lazy(() => import("./pages/super-admin/ForgotPassword"));
+const SuperAdminChangePassword = lazy(() => import("./pages/super-admin/ChangePassword"));
+const SuperAdminProfile = lazy(() => import("./pages/super-admin/Profile"));
+const SuperAdminZoneDashboard = lazy(() => import("./pages/super-admin/ZoneDashboard"));
 
 // Desktop top navigation for the customer + service provider panels
 import AppChrome, {
@@ -197,11 +197,33 @@ import AppChrome, {
 } from "./components/AppChrome";
 
 // Notifications
-import NotificationsFeed from "./pages/Notifications";
-import NotificationDetail from "./pages/NotificationDetail";
+const NotificationsFeed = lazy(() => import("./pages/Notifications"));
+const NotificationDetail = lazy(() => import("./pages/NotificationDetail"));
 
+// Every panel's unmatched-URL fallback (a single flat "*" route covers all
+// five: customer, service-provider, brand-admin, super-admin and ASM — the
+// latter two share the /super-admin prefix, split by role). "Home" is
+// resolved from the URL prefix rather than hardcoded, so a bad/typo'd link
+// inside any panel sends the user back into that same panel, not out of it.
 const PageHandler = () => {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const { user } = useAuth();
+
+  let panelName = "page";
+  let homeRoute = "/dashboard";
+  if (pathname.startsWith("/super-admin")) {
+    panelName = user?.role === "asm" ? "ASM" : "Super Admin";
+    homeRoute =
+      user?.role === "asm" ? "/super-admin/zone-dashboard" : "/super-admin/dashboard";
+  } else if (pathname.startsWith("/service-provider")) {
+    panelName = "Service Provider";
+    homeRoute = "/service-provider/dashboard";
+  } else if (pathname.startsWith("/brand-admin")) {
+    panelName = "Brand Admin";
+    homeRoute = "/brand-admin/dashboard";
+  }
+
   return (
     <div className="min-h-screen bg-[#F5F7FB] flex flex-col items-center justify-center p-6">
       <div className="bg-white p-8 rounded-2xl shadow-sm text-center max-w-sm w-full border border-gray-100">
@@ -209,16 +231,23 @@ const PageHandler = () => {
           <span className="text-[#0D47A1] font-bold text-2xl">!</span>
         </div>
         <h1 className="text-xl font-bold text-gray-900 mb-2">
-          Page Coming Soon
+          Page Not Found
         </h1>
         <p className="text-sm text-gray-500 mb-6">
-          This feature is under development.
+          This {panelName} page doesn&apos;t exist or isn&apos;t available.
         </p>
-        <button
-          onClick={() => navigate(-1)}
-          className="w-full bg-[#0D47A1] text-white font-semibold py-3 rounded-xl hover:bg-blue-700 transition-colors shadow-sm">
-          Go Back
-        </button>
+        <div className="flex flex-col gap-2.5">
+          <button
+            onClick={() => window.location.reload()}
+            className="w-full bg-[#0D47A1] text-white font-semibold py-3 rounded-xl hover:bg-blue-700 transition-colors shadow-sm">
+            Reload Page
+          </button>
+          <button
+            onClick={() => navigate(homeRoute, { replace: true })}
+            className="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl hover:bg-slate-50 transition-colors">
+            Go to Home
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -501,6 +530,18 @@ function PageTitleManager() {
   return null;
 }
 
+// Every route below is code-split (React.lazy) so a hard refresh on, say,
+// /service-provider/dashboard only fetches that panel's page chunks instead
+// of all five panels' — this is the fallback shown for the moment it takes
+// to fetch the chunk for whichever route was just navigated to.
+function RouteLoadingFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="w-8 h-8 border-2 border-[#0D47A1] border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+}
+
 function App() {
   return (
     <Router>
@@ -518,6 +559,7 @@ function App() {
                       <ScrollToTop />
                       <AppChrome />
                       <PanelContainer>
+                        <Suspense fallback={<RouteLoadingFallback />}>
                         <Routes>
                           <Route path="/" element={<Login />} />
                           <Route path="/home" element={<Home />} />
@@ -1285,6 +1327,7 @@ function App() {
 
                           <Route path="*" element={<PageHandler />} />
                         </Routes>
+                        </Suspense>
                       </PanelContainer>
                       <LocationModal />
                     </ServiceProviderProvider>

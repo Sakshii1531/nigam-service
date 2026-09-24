@@ -74,6 +74,18 @@ bookingRouter.post(
 );
 
 bookingRouter.post(
+  '/:id/re-raise-part-request',
+  validate(idParamSchema, 'params'),
+  async (req, res, next) => {
+    try {
+      ok(res, await bookingService.reRaisePartRequest(req.user.id, req.params.id));
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+bookingRouter.post(
   '/:id/retry-search',
   validate(idParamSchema, 'params'),
   async (req, res, next) => {
