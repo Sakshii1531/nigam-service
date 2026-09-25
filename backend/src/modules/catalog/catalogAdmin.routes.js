@@ -4,6 +4,7 @@ import { requireAuth, requireRole } from '../../middleware/auth.js';
 import { ok, created } from '../../utils/respond.js';
 import { ROLES } from '../../config/constants.js';
 import * as admin from './catalogAdmin.service.js';
+import * as brands from './catalogueBrand.service.js';
 import {
   idParamSchema,
   statusSchema,
@@ -23,6 +24,8 @@ import {
   listOfferingsQuerySchema,
   rateChangesQuerySchema,
   suggestCodeQuerySchema,
+  createCatalogueBrandSchema,
+  updateCatalogueBrandSchema,
 } from './catalogAdmin.validation.js';
 
 // Super-admin Master Service & Offering Catalogue — /api/v1/super-admin/catalogue.
@@ -49,6 +52,12 @@ catalogAdminRouter.post('/categories', validate(createCategorySchema), handle((r
 catalogAdminRouter.put('/categories/:id', byId, validate(updateCategorySchema), handle((req) => admin.updateCategory(req.params.id, req.body, actor(req))));
 catalogAdminRouter.patch('/categories/:id/status', byId, validate(statusSchema), handle((req) => admin.updateCategory(req.params.id, req.body, actor(req))));
 catalogAdminRouter.get('/categories/:id/structure', byId, handle((req) => admin.getCategoryStructure(req.params.id)));
+
+// Catalogue brands — what a customer picks on a product-linked booking (Phase 19)
+catalogAdminRouter.get('/brands', handle(() => brands.listBrands()));
+catalogAdminRouter.post('/brands', validate(createCatalogueBrandSchema), handle((req) => brands.createBrand(req.body, actor(req)), created));
+catalogAdminRouter.put('/brands/:id', byId, validate(updateCatalogueBrandSchema), handle((req) => brands.updateBrand(req.params.id, req.body, actor(req))));
+catalogAdminRouter.delete('/brands/:id', byId, handle((req) => brands.deleteBrand(req.params.id, actor(req))));
 
 // Product types
 catalogAdminRouter.post('/product-types', validate(createProductTypeSchema), handle((req) => admin.createProductType(req.body, actor(req)), created));

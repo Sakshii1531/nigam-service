@@ -59,6 +59,21 @@ A category can hold product-linked **and** standalone offerings (RO has both).
 > `RO Water Purifier`) rather than new "Electrical / Cleaning / RO" ones. Examples in this
 > document that say "Electrical" mean the `Electrician` category.
 
+### 2.1a `CatalogueBrand` — new in Phase 19
+`backend/src/modules/catalog/catalogueBrand.model.js`. This is the manufacturer a customer picks on a
+**product-linked** booking ("which brand is your AC?"), so the partner knows whose product it is.
+It is **not** a partner brand: partner brands (`super-admin/brand.model.js`) are brand-admin tenants
+with logins.
+
+| Field | Type | Why |
+|---|---|---|
+| `name` / `nameKey` | String | unique ignoring case |
+| `categories` | `[String]` | category keys it is offered for; drives the booking tree's `category.brands` (only when the category has product types) and `GET /catalog/brands?category=` |
+| `warrantyMonths` | Number (12) | manufacturer warranty. Warranty checks use the partner brand's own months first, then this, then 12 (`shared/brandWarranty.js`) |
+| `isActive`, `sortOrder` | | hidden brands leave every picker; picker order |
+
+Replaces the old `Category.brands` string list (removed).
+
 ### 2.2 `ProductType` — existing model, repurposed
 `backend/src/modules/catalog/productType.model.js`
 
@@ -431,6 +446,7 @@ customer quote). Coins are redeemed at booking and refunded if creation fails.
 | `POST …/offerings/:id/duplicate` | clone as a starting point (e.g. 1 Ton from 1.5 Ton); copy starts inactive + DEMO-flagged |
 | `GET …/categories/:id/structure` | product types → variants, services → options, inactive included |
 | `GET …/suggest-code?category=&productType=&variant=&service=` | client-style code suggestion |
+| `GET/POST/PUT/DELETE …/brands[/:id]` | catalogue brands (Phase 19) — name, categories, warranty months, active, order; audited |
 
 Gated by `requireRole(SUPER_ADMIN)`. Duplicate combination / code / slug → `409` naming the existing row.
 

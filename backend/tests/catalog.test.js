@@ -129,9 +129,9 @@ describe('admin-editable category writes', () => {
     const createRes = await request(app).post('/api/v1/catalog/categories').set(auth).send({ key: 'TV', name: 'TV', color: '#B71C1C' }).expect(201);
     expect(createRes.body.data).toMatchObject({ key: 'TV', productTypes: [], services: [] });
 
-    await request(app).put('/api/v1/catalog/categories/TV').set(auth).send({ brands: ['Sony', 'LG'] }).expect(200);
+    await request(app).put('/api/v1/catalog/categories/TV').set(auth).send({ categoryNote: 'Wall-mounted or on a stand' }).expect(200);
     const res = await request(app).get('/api/v1/catalog/categories/TV').expect(200);
-    expect(res.body.data.brands).toEqual(['Sony', 'LG']);
+    expect(res.body.data.categoryNote).toBe('Wall-mounted or on a stand');
   });
 
   it('rejects creating a category with a key that already exists', async () => {

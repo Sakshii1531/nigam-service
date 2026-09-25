@@ -3,6 +3,7 @@ import { OwnedAppliance } from '../service-requests/ownedAppliance.model.js';
 import { AMCSubscription } from './amcSubscription.model.js';
 import { ExtendedWarrantyOrder } from './extendedWarrantyOrder.model.js';
 import { computeWarrantyStatus } from '../shared/warrantyEngine.js';
+import { brandWarrantyMonths, escapeRegex } from '../shared/brandWarranty.js';
 
 /**
  * Automatically detects the warranty/AMC/Extended-Warranty status for a booking/complaint.
@@ -41,7 +42,7 @@ export async function detectWarrantyForAppliance({
     appliance = await OwnedAppliance.findOne({
       user: userId,
       category,
-      brand: new RegExp(`^${brandName}$`, 'i'),
+      brand: new RegExp(`^${escapeRegex(brandName)}$`, 'i'),
     });
   }
 
@@ -63,7 +64,7 @@ export async function detectWarrantyForAppliance({
   }
   if (!amcSubscription && resolvedBrand) {
     // Fall back to brand/category-matched subscription
-    const brandAmcQuery = { ...amcQuery, brand: new RegExp(`^${resolvedBrand}$`, 'i') };
+    const brandAmcQuery = { ...amcQuery, brand: new RegExp(`^${escapeRegex(resolvedBrand)}$`, 'i') };
     amcSubscription = await AMCSubscription.findOne(brandAmcQuery).populate('plan');
   }
 
@@ -81,19 +82,21 @@ export async function detectWarrantyForAppliance({
   }
   if (!extendedWarrantyOrder && resolvedBrand) {
     // Fall back to brand-matched order
-    const brandEwQuery = { ...ewQuery, brand: new RegExp(`^${resolvedBrand}$`, 'i') };
+    const brandEwQuery = { ...ewQuery, brand: new RegExp(`^${escapeRegex(resolvedBrand)}$`, 'i') };
     extendedWarrantyOrder = await ExtendedWarrantyOrder.findOne(brandEwQuery);
   }
 
   // 4. Resolve Brand ObjectId
   let brandDoc = null;
   if (resolvedBrand) {
-    brandDoc = await Brand.findOne({ name: new RegExp(`^${resolvedBrand}$`, 'i') });
+    brandDoc = await Brand.findOne({ name: new RegExp(`^${escapeRegex(resolvedBrand)}$`, 'i') });
   }
 
   // 5. Compute status
+  // The brand's own warranty length — not a flat 12 months for every brand.
   const warrantyStatus = computeWarrantyStatus({
     purchaseDate: resolvedPurchaseDate,
+    brandWarrantyMonths: await brandWarrantyMonths(resolvedBrand),
     amcActive: !!amcSubscription,
     extendedWarrantyActive: !!extendedWarrantyOrder,
     extendedWarrantyValidTill: extendedWarrantyOrder?.validTill,

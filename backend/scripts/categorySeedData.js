@@ -1,4 +1,4 @@
-// Service categories: key, name, visuals, grouping, brands and booking-flow
+// Service categories: key, name, visuals, grouping and booking-flow
 // copy. Deliberately no product types, services or prices — those live only
 // in the Master Catalogue (masterCatalogueSeedData.js, docs/master-catalogue).
 export const CATEGORY_SEED = [
@@ -10,7 +10,6 @@ export const CATEGORY_SEED = [
     groups: ['handyman', 'appliance'],
     section: 'AC & Appliance Repair',
     categoryNote: 'The price you confirm is what you pay for the service. Spare parts, if needed, are quoted separately for your approval.',
-    brands: ['Voltas', 'LG', 'Samsung', 'Daikin', 'Whirlpool', 'Lloyd', 'Panasonic', 'Blue Star', 'Hitachi', 'Carrier', 'O General'],
     whyBrandPoints: [
       'ServiceProviders carry brand-specific gas & parts',
       'AC model-specific calibration & settings',
@@ -25,7 +24,6 @@ export const CATEGORY_SEED = [
     groups: ['handyman', 'appliance'],
     section: 'Kitchen and Appliance',
     categoryNote: 'The price you confirm is what you pay for the service. Spare parts, if needed, are quoted separately for your approval.',
-    brands: ['LG', 'Samsung', 'Whirlpool', 'IFB', 'Bosch', 'Haier', 'Godrej', 'Panasonic', 'Voltas', 'Siemens'],
     whyBrandPoints: [
       'Brand-specific PCB & motor spare parts stocked',
       'Correct drum belt & bearing specifications',
@@ -40,7 +38,6 @@ export const CATEGORY_SEED = [
     groups: ['handyman', 'appliance'],
     section: 'Kitchen and Appliance',
     categoryNote: 'Cooling issues may need gas refilling — exact diagnosis done by the serviceProvider on-site.',
-    brands: ['LG', 'Samsung', 'Whirlpool', 'Godrej', 'Haier', 'Panasonic', 'Bosch', 'Voltas', 'Hitachi', 'Liebherr'],
     whyBrandPoints: [
       'Brand-specific compressor & thermostat parts',
       'Correct refrigerant type (R600a vs R134a)',
@@ -55,7 +52,6 @@ export const CATEGORY_SEED = [
     groups: ['handyman', 'appliance'],
     section: 'AC & Appliance Repair',
     categoryNote: 'Panel repairs depend on part availability. ServiceProvider will confirm before proceeding.',
-    brands: ['LG', 'Samsung', 'Sony', 'Panasonic', 'Mi', 'OnePlus', 'TCL', 'Haier', 'VU', 'Philips', 'Hisense'],
     whyBrandPoints: [
       'Brand-specific display panels & backlights stocked',
       'Firmware & software issues diagnosed correctly',
@@ -70,7 +66,6 @@ export const CATEGORY_SEED = [
     groups: ['handyman', 'appliance'],
     section: 'AC & Appliance Repair',
     categoryNote: 'Filter replacement intervals depend on your water quality (usually every 6–12 months).',
-    brands: ['Kent', 'Eureka Forbes', 'Aquaguard', 'Pureit', 'Blue Star', 'AO Smith', 'Livpure', 'HUL', 'Luminous', 'Havells'],
     whyBrandPoints: [
       'Brand-specific filter cartridges & membranes available',
       'Correct TDS calibration per model specs',
@@ -85,7 +80,6 @@ export const CATEGORY_SEED = [
     groups: ['handyman', 'appliance'],
     section: 'AC & Appliance Repair',
     categoryNote: 'Regular tank flushing every 2 years extends geyser life significantly.',
-    brands: ['Havells', 'AO Smith', 'Racold', 'Bajaj', 'V-Guard', 'Venus', 'Kenstar', 'Usha', 'Orient', 'Crompton'],
     whyBrandPoints: [
       'Brand-specific heating elements & thermostats available',
       'Correct wattage element for your tank capacity',
@@ -100,7 +94,6 @@ export const CATEGORY_SEED = [
     groups: ['handyman', 'appliance'],
     section: 'Kitchen and Appliance',
     categoryNote: 'Never use metal containers inside. ServiceProvider will inspect for any magnetron damage.',
-    brands: ['LG', 'Samsung', 'IFB', 'Morphy Richards', 'Bajaj', 'Panasonic', 'Godrej', 'Whirlpool', 'Philips', 'Bosch'],
     whyBrandPoints: [
       'Brand-specific magnetron & waveguide cover parts',
       'Correct turntable motor & coupler replacements',
@@ -115,7 +108,6 @@ export const CATEGORY_SEED = [
     groups: ['handyman', 'appliance'],
     section: 'Kitchen and Appliance',
     categoryNote: 'Chimney should be deep-cleaned every 3–6 months for optimal suction performance.',
-    brands: ['Faber', 'Elica', 'Glen', 'Hindware', 'Kaff', 'Sunflame', 'Bosch', 'IFB', 'Siemens', 'Whirlpool'],
     whyBrandPoints: [
       'Brand-specific motor & oil collector parts available',
       'Correct ducting adaptor & pipe fittings used',
@@ -130,7 +122,6 @@ export const CATEGORY_SEED = [
     groups: ['appliance'],
     section: 'AC & Appliance Repair',
     categoryNote: 'Replace cooling pads every season for best cooling efficiency.',
-    brands: ['Symphony', 'Bajaj', 'Orient', 'Kenstar', 'Crompton', 'Hindware', 'Usha', 'Havells', 'Voltas', 'Cello'],
     whyBrandPoints: [
       'Brand-specific pump & motor replacements available',
       'Correct cooling pad type (honeycomb vs wood wool)',

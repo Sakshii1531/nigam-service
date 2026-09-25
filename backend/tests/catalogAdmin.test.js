@@ -291,7 +291,7 @@ describe('structure', () => {
   it('lists categories with offering counts', async () => {
     const res = await as(adminToken).get('/categories');
     const ac = res.body.data.find((c) => c.key === 'AC');
-    expect(ac.offerings).toEqual({ total: 10, active: 10, needsRateReview: 8 });
+    expect(ac.offerings).toEqual({ total: 10, active: 10, needsRateReview: 8, productLinked: 10 });
   });
 });
 

@@ -567,6 +567,9 @@ const BookingFlow = () => {
   const selectedPT = productTypes.find((pt) => pt.id === productTypeId) || null;
   const selectedStandalone = standaloneServices.find((sv) => sv.id === standaloneServiceId) || null;
   const isStandalone = Boolean(selectedStandalone);
+  // Only a product-linked booking asks which brand the appliance is
+  // (docs/master-catalogue Phase 19) — a standalone service never carries one.
+  const bookingBrand = isStandalone ? "" : brand;
   const serviceChoices = selectedPT ? servicesFor(tree, { productTypeId, variantId: variantId || null }) : [];
   const serviceId =
     chosenServiceId ||
@@ -624,7 +627,7 @@ const BookingFlow = () => {
         // The appliance's brand lets the server detect warranty / AMC / EW
         // coverage for a signed-in customer — the same check the booking
         // runs — so a covered visit shows ₹0 here before confirming.
-        warranty: signedIn && brand ? { brand } : undefined,
+        warranty: signedIn && bookingBrand ? { brand: bookingBrand } : undefined,
       })
     : "";
 
@@ -734,7 +737,7 @@ const BookingFlow = () => {
 
   const catKey = tree.category.name || tree.category.key;
   const data = {
-    brands: tree.category.brands || [],
+    brands: isStandalone ? [] : tree.category.brands || [],
     icon: tree.category.icon,
   };
 
@@ -951,7 +954,7 @@ const BookingFlow = () => {
       .map((q) => ({ key: q.key, value: String(answers[q.key]).trim() })),
     couponCode: quote.couponCode || null,
     useCoins: quote.coinsApplied > 0,
-    brand,
+    brand: bookingBrand,
     date: selectedDate,
     timeGroup,
     isInstant: isExpress,
@@ -1019,7 +1022,7 @@ const BookingFlow = () => {
           service: svcName,
           category: tree.category.key,
           productType: selectedPT?.name || "",
-          brand: brand || "",
+          brand: bookingBrand,
           quantity: String(qty),
           date: selectedDate || "",
           timeGroup: timeGroup || "",

@@ -2,7 +2,8 @@ import mongoose from 'mongoose';
 import { applyStandardPlugins } from '../shared/plugins.js';
 import { watchCatalogueWrites } from './catalogCache.js';
 
-// A service category: key, name, visuals, brands and booking-flow copy. The
+// A service category: key, name, visuals and booking-flow copy (its brands
+// are CatalogueBrand documents that list this key). The
 // top of the Master Catalogue (docs/master-catalogue) — product types,
 // services and priced offerings all hang off it.
 const categorySchema = new mongoose.Schema(
@@ -18,7 +19,6 @@ const categorySchema = new mongoose.Schema(
     bannerImg: String,
     tagline: String,
     subtitle: String,
-    brands: [String], // simple list of brand names offered under this category's booking flow
     whyBrandPoints: [String],
     isForYou: { type: Boolean, default: false },
     isMore: { type: Boolean, default: false },

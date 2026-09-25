@@ -43,7 +43,7 @@ tests) is in each phase's Implementation Log.
 | 2 | Product-linked offerings (AC types × services) | P1, P2, P4 | ✅ (P1–P4) |
 | 3 | TV size-based pricing | P1 variants, P4 variant step | ✅ (P1–P4) |
 | 4 | Reusable for any product/variant (WM, fridge, RO, geyser, wifi camera) | P1 `variantDimension` — data, no code per product | ✅ model/data-driven (P1); new products via admin (P3) |
-| 5 | Standalone services, product optional | P1 `STANDALONE`, P4 flow skips product step | ✅ (P4) |
+| 5 | Standalone services, product optional | P1 `STANDALONE`, P4 flow skips product step, P19 no brand step | ✅ (P4); a standalone booking never asks for or stores a brand; product-linked bookings pick from admin-managed catalogue brands (P19, `catalogueBrands.test.js`) |
 | 6 | Offering = bookable job with unique code | P1 `ServiceOffering.code` | ✅ every booking is one offering, code on the snapshot (P4) |
 | 7 | Fixed partner payout, not % commission | P1 rate, P5 payout engine | ✅ fixed payout per offering, frozen per job (P5) |
 | 8 | Payout configured per offering | P1, P3 | ✅ (P3 + P5) |

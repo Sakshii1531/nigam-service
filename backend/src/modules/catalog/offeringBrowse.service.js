@@ -8,6 +8,7 @@ import { GST_PERCENT_DEFAULT } from '../../config/constants.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { catalogError, CATALOG_ERROR_CODES } from './catalogErrors.js';
 import { cachedTree } from './catalogCache.js';
+import { brandNamesForCategory } from './catalogueBrand.service.js';
 
 // What a customer is allowed to see and pick. An offering is bookable only if
 // it and every parent (category, product type, variant, service) is active,
@@ -101,6 +102,10 @@ async function buildCategoryTree(key, loc) {
     else entry.agnostic = true;
   }
 
+  // Only a product-linked booking asks "which brand is it?" — a category with
+  // nothing but standalone services has no brand picker at all.
+  const brands = productTypes.size > 0 ? await brandNamesForCategory(category.key) : [];
+
   const variantsFor = (parentField, parentId, entry) =>
     parentVariants
       .filter((v) => String(v[parentField]) === parentId && (entry.agnostic || entry.variantIds.has(String(v._id))))
@@ -115,7 +120,7 @@ async function buildCategoryTree(key, loc) {
       color: category.color,
       lightBg: category.lightBg,
       categoryNote: category.categoryNote,
-      brands: category.brands || [],
+      brands,
       whyBrandPoints: category.whyBrandPoints || [],
     },
     productTypes: [...productTypes.entries()]

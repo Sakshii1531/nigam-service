@@ -192,3 +192,13 @@ export const suggestCodeQuerySchema = z.object({
   variant: objectId.optional(),
   service: objectId.optional(),
 });
+
+// ─── Catalogue brands (Phase 19) ─────────────────────────────────────────
+export const createCatalogueBrandSchema = z.object({
+  name: text(60).min(1),
+  categories: z.array(text(60).min(1)).optional(),
+  warrantyMonths: z.coerce.number().int().min(0).max(120).optional(),
+  sortOrder: z.coerce.number().int().optional(),
+  isActive: z.boolean().optional(),
+});
+export const updateCatalogueBrandSchema = createCatalogueBrandSchema.partial().strict();

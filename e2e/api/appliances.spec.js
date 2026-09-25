@@ -139,25 +139,31 @@ test.describe('authenticated file upload', () => {
 });
 
 test.describe('public brand list', () => {
-  test('exposes active brands without authentication and hides pending ones', async ({ request }) => {
+  // Catalogue brands (docs/master-catalogue Phase 19) — partner brands with a
+  // brand-admin login are a different list and never show up here.
+  test('lists active catalogue brands, narrowed by category, and never partner brands', async ({ request }) => {
     const adminToken = await createSuperAdmin(request);
-    const activeName = `E2E-Brand-${randomUUID()}`;
-    const pendingName = `E2E-Pending-${randomUUID()}`;
+    const auth = { headers: { Authorization: `Bearer ${adminToken}` } };
+    const brandName = `E2E-Cat-Brand-${randomUUID()}`;
+    const hiddenName = `E2E-Hidden-${randomUUID()}`;
+    const partnerName = `E2E-Partner-${randomUUID()}`;
 
-    await request.post('/api/v1/super-admin/brands', {
-      headers: { Authorization: `Bearer ${adminToken}` },
-      data: { name: activeName, category: 'Appliances', status: 'Active' },
-    });
-    await request.post('/api/v1/super-admin/brands', {
-      headers: { Authorization: `Bearer ${adminToken}` },
-      data: { name: pendingName, category: 'Appliances', status: 'Pending' },
-    });
+    const created = await request.post('/api/v1/super-admin/catalogue/brands', { ...auth, data: { name: brandName, categories: ['AC'], warrantyMonths: 24 } });
+    expect(created.status()).toBe(201);
+    await request.post('/api/v1/super-admin/catalogue/brands', { ...auth, data: { name: hiddenName, categories: ['AC'], isActive: false } });
+    await request.post('/api/v1/super-admin/brands', { ...auth, data: { name: partnerName, category: 'Appliances', status: 'Active' } });
 
-    const res = await request.get('/api/v1/catalog/brands');
-    expect(res.status()).toBe(200);
-    const names = (await res.json()).data.map((b) => b.name);
-    expect(names).toContain(activeName);
-    expect(names).not.toContain(pendingName);
+    const names = (await (await request.get('/api/v1/catalog/brands')).json()).data.map((b) => b.name);
+    expect(names).toContain(brandName);
+    expect(names).not.toContain(hiddenName);
+    expect(names).not.toContain(partnerName);
+
+    const ac = (await (await request.get('/api/v1/catalog/brands?category=AC')).json()).data;
+    expect(ac.find((b) => b.name === brandName)).toMatchObject({ warrantyMonths: 24 });
+    const tv = (await (await request.get('/api/v1/catalog/brands?category=TV')).json()).data.map((b) => b.name);
+    expect(tv).not.toContain(brandName);
+
+    await request.delete(`/api/v1/super-admin/catalogue/brands/${(await created.json()).data.id}`, auth);
   });
 });
 

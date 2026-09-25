@@ -1,6 +1,7 @@
 import { OwnedAppliance } from './ownedAppliance.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
-import { computeWarrantyStatus, addMonths, DEFAULT_BRAND_WARRANTY_MONTHS } from '../shared/warrantyEngine.js';
+import { computeWarrantyStatus, addMonths } from '../shared/warrantyEngine.js';
+import { brandWarrantyMonths } from '../shared/brandWarranty.js';
 import { AMCSubscription } from '../warranty-amc-exchange/amcSubscription.model.js';
 import { ExtendedWarrantyOrder } from '../warranty-amc-exchange/extendedWarrantyOrder.model.js';
 
@@ -12,13 +13,15 @@ import { ExtendedWarrantyOrder } from '../warranty-amc-exchange/extendedWarranty
  * plus the customer's real AMC/EW documents.
  */
 export async function withWarranty(appliance) {
-  const [amc, ew] = await Promise.all([
+  const [amc, ew, warrantyMonths] = await Promise.all([
     AMCSubscription.findOne({ user: appliance.user, status: 'Active' }),
     ExtendedWarrantyOrder.findOne({ user: appliance.user, status: 'Active' }).sort({ validTill: -1 }),
+    brandWarrantyMonths(appliance.brand),
   ]);
 
   const status = computeWarrantyStatus({
     purchaseDate: appliance.purchaseDate,
+    brandWarrantyMonths: warrantyMonths,
     amcActive: Boolean(amc),
     extendedWarrantyActive: Boolean(ew),
     extendedWarrantyValidTill: ew?.validTill || null,
@@ -34,7 +37,7 @@ export async function withWarranty(appliance) {
   // date. Null when no purchase date was ever recorded — the screens must show
   // "not recorded" rather than invent one.
   const brandExpiry = appliance.purchaseDate
-    ? addMonths(appliance.purchaseDate, DEFAULT_BRAND_WARRANTY_MONTHS)
+    ? addMonths(appliance.purchaseDate, warrantyMonths)
     : null;
   const warrantyExpiresOn = ew?.validTill && (!brandExpiry || new Date(ew.validTill) > brandExpiry)
     ? ew.validTill

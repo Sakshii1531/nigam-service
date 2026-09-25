@@ -73,13 +73,14 @@ export async function listCategories() {
           total: { $sum: 1 },
           active: { $sum: { $cond: ['$isActive', 1, 0] } },
           needsRateReview: { $sum: { $cond: ['$needsRateReview', 1, 0] } },
+          productLinked: { $sum: { $cond: [{ $eq: ['$bookingType', 'PRODUCT_LINKED'] }, 1, 0] } },
         },
       },
     ]),
   ]);
   const counts = new Map(offeringCounts.map((c) => [String(c._id), c]));
   return categories.map((c) => {
-    const count = counts.get(String(c._id)) || { total: 0, active: 0, needsRateReview: 0 };
+    const count = counts.get(String(c._id)) || { total: 0, active: 0, needsRateReview: 0, productLinked: 0 };
     return {
       id: String(c._id),
       key: c.key,
@@ -90,7 +91,7 @@ export async function listCategories() {
       keywords: c.keywords || [],
       groups: c.groups || [],
       section: c.section || '',
-      offerings: { total: count.total, active: count.active, needsRateReview: count.needsRateReview },
+      offerings: { total: count.total, active: count.active, needsRateReview: count.needsRateReview, productLinked: count.productLinked },
     };
   });
 }

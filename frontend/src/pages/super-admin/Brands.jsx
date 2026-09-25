@@ -16,7 +16,8 @@ import {
   Mail,
   Phone as PhoneIcon,
   Calendar as CalendarIcon,
-  Download
+  Download,
+  Edit2
 } from 'lucide-react';
 
 const Brands = () => {
@@ -53,7 +54,11 @@ const Brands = () => {
   }, [selectedBrandProfile?.id]);
 
   const [showModal, setShowModal] = useState(false);
-  const [newBrand, setNewBrand] = useState({ name: '', category: 'Home Appliances', activeCases: '0', spareStock: '0', status: 'Active', revenue: '₹0' });
+  // Partner-brand details the admin can set. Warranty months override the
+  // catalogue brand's figure in customer warranty checks (Phase 19).
+  const EMPTY_PARTNER = { name: '', category: 'Home Appliances', status: 'Active', warrantyMonths: '', supportEmail: '', supportPhone: '' };
+  const [newBrand, setNewBrand] = useState(EMPTY_PARTNER);
+  const [editingId, setEditingId] = useState(null);
 
   const [brands, setBrands] = useState([]);
   const [, setLoadError] = useState('');
@@ -77,6 +82,7 @@ const Brands = () => {
           revenue: item.revenue != null ? `₹${Number(item.revenue).toLocaleString('en-IN')}` : '₹0',
           supportEmail: item.supportEmail || '',
           supportPhone: item.supportPhone || '',
+          warrantyMonths: item.warrantyMonths ?? null,
           createdAt: item.createdAt || null,
         })));
       } catch (err) {
@@ -115,6 +121,25 @@ const Brands = () => {
     }
   };
 
+  const openEditBrand = (brand) => {
+    setEditingId(brand.id);
+    setNewBrand({
+      name: brand.name,
+      category: brand.category === '—' ? 'Home Appliances' : brand.category,
+      status: brand.status,
+      warrantyMonths: brand.warrantyMonths ?? '',
+      supportEmail: brand.supportEmail || '',
+      supportPhone: brand.supportPhone || '',
+    });
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setEditingId(null);
+    setNewBrand(EMPTY_PARTNER);
+  };
+
   const handleAddBrandSubmit = async (e) => {
     e.preventDefault();
     if (!newBrand.name) {
@@ -123,31 +148,47 @@ const Brands = () => {
     }
 
     setLoadError('');
+    const body = {
+      name: newBrand.name,
+      category: newBrand.category,
+      status: newBrand.status,
+      supportEmail: newBrand.supportEmail,
+      supportPhone: newBrand.supportPhone,
+      ...(newBrand.warrantyMonths !== '' ? { warrantyMonths: Number(newBrand.warrantyMonths) } : {}),
+    };
     try {
-      const res = await apiRequest('/super-admin/brands', {
-        method: 'POST',
+      const res = await apiRequest(editingId ? `/super-admin/brands/${editingId}` : '/super-admin/brands', {
+        method: editingId ? 'PUT' : 'POST',
         auth: true,
-        body: {
-          name: newBrand.name,
-          category: newBrand.category,
-          status: newBrand.status,
-        },
+        body,
       });
-      setBrands((prev) => [{
-        id: res.id,
-        humanId: res.humanId || res.id,
+      const details = {
         name: res.name,
         category: res.category || '—',
-        activeCases: 0,
-        spareStock: 0,
         status: res.status,
-        revenue: '₹0',
-      }, ...prev]);
-      setNewBrand({ name: '', category: 'Home Appliances', activeCases: '0', spareStock: '0', status: 'Active', revenue: '₹0' });
-      setShowModal(false);
-      showToast(`Brand "${res.name}" registered.`);
+        supportEmail: res.supportEmail || '',
+        supportPhone: res.supportPhone || '',
+        warrantyMonths: res.warrantyMonths ?? null,
+      };
+      if (editingId) {
+        setBrands((prev) => prev.map((b) => (b.id === editingId ? { ...b, ...details } : b)));
+        setSelectedBrandProfile((prev) => (prev && prev.id === editingId ? { ...prev, ...details } : prev));
+        showToast(`Brand "${res.name}" updated.`);
+      } else {
+        setBrands((prev) => [{
+          id: res.id,
+          humanId: res.humanId || res.id,
+          ...details,
+          activeCases: 0,
+          spareStock: 0,
+          revenue: '₹0',
+          createdAt: res.createdAt || null,
+        }, ...prev]);
+        showToast(`Brand "${res.name}" registered.`);
+      }
+      closeModal();
     } catch (err) {
-      setLoadError(err.message || 'Could not register the brand.');
+      setLoadError(err.message || (editingId ? 'Could not update the brand.' : 'Could not register the brand.'));
     }
   };
 
@@ -255,7 +296,16 @@ const Brands = () => {
               {/* Left Column - Core Info */}
               <div className="space-y-6 lg:col-span-1">
                 <div className="bg-[#F8FAFC] p-5 rounded-xl border border-[#E2E8F0]">
-                  <h3 className="text-sm font-bold text-[#1E293B] mb-4">Partner Brand Info</h3>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-sm font-bold text-[#1E293B]">Partner Brand Info</h3>
+                    <button
+                      type="button"
+                      onClick={() => openEditBrand(brand)}
+                      className="inline-flex items-center gap-1 text-xs font-bold text-[#0D47A1] hover:underline cursor-pointer"
+                    >
+                      <Edit2 size={12} /> Edit details
+                    </button>
+                  </div>
                   <div className="space-y-3.5 text-sm">
                     <div className="flex items-center gap-3 text-slate-700">
                       <Mail size={16} className="text-[#64748B] shrink-0" />
@@ -264,6 +314,10 @@ const Brands = () => {
                     <div className="flex items-center gap-3 text-slate-700">
                       <PhoneIcon size={16} className="text-[#64748B] shrink-0" />
                       <span>{brand.supportPhone || 'No support number recorded'}</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-slate-700">
+                      <ShieldCheck size={16} className="text-[#64748B] shrink-0" />
+                      <span>{brand.warrantyMonths ? `${brand.warrantyMonths}-month manufacturer warranty` : 'Warranty: catalogue brand / platform default'}</span>
                     </div>
                     <div className="flex items-center gap-3 text-slate-700">
                       <CalendarIcon size={16} className="text-[#64748B] shrink-0" />
@@ -559,9 +613,9 @@ const Brands = () => {
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-2xl max-w-md w-full p-6 space-y-4">
             <div className="flex justify-between items-center border-b border-[#E2E8F0] pb-3">
-              <h3 className="font-bold text-[#1E293B] text-lg">Register New Partner Brand</h3>
+              <h3 className="font-bold text-[#1E293B] text-lg">{editingId ? `Edit ${newBrand.name || 'Partner Brand'}` : 'Register New Partner Brand'}</h3>
               <button 
-                onClick={() => setShowModal(false)}
+                onClick={closeModal}
                 className="text-[#64748B] hover:text-[#1E293B] p-1 rounded-full hover:bg-slate-100"
               >
                 <X size={20} />
@@ -597,23 +651,52 @@ const Brands = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs font-semibold text-[#64748B] mb-1 block">Spare Stock Units</label>
+                  <label htmlFor="partner-warranty" className="text-xs font-semibold text-[#64748B] mb-1 block">Warranty (months)</label>
                   <input
+                    id="partner-warranty"
                     type="number"
+                    min={1}
                     className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none text-slate-800 bg-[#F8FAFC]"
-                    placeholder="e.g. 500"
-                    value={newBrand.spareStock}
-                    onChange={(e) => setNewBrand({ ...newBrand, spareStock: e.target.value })}
+                    placeholder="Platform default"
+                    value={newBrand.warrantyMonths}
+                    onChange={(e) => setNewBrand({ ...newBrand, warrantyMonths: e.target.value })}
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-[#64748B] mb-1 block">Contract Revenue Share</label>
-                  <input
-                    type="text"
+                  <label htmlFor="partner-status" className="text-xs font-semibold text-[#64748B] mb-1 block">Status</label>
+                  <select
+                    id="partner-status"
                     className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none text-slate-800 bg-[#F8FAFC]"
-                    placeholder="e.g. ₹1.5L"
-                    value={newBrand.revenue}
-                    onChange={(e) => setNewBrand({ ...newBrand, revenue: e.target.value })}
+                    value={newBrand.status}
+                    onChange={(e) => setNewBrand({ ...newBrand, status: e.target.value })}
+                  >
+                    <option value="Active">Active</option>
+                    <option value="Pending">Pending</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="partner-email" className="text-xs font-semibold text-[#64748B] mb-1 block">Support email</label>
+                  <input
+                    id="partner-email"
+                    type="email"
+                    className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none text-slate-800 bg-[#F8FAFC]"
+                    placeholder="support@brand.com"
+                    value={newBrand.supportEmail}
+                    onChange={(e) => setNewBrand({ ...newBrand, supportEmail: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="partner-phone" className="text-xs font-semibold text-[#64748B] mb-1 block">Support phone</label>
+                  <input
+                    id="partner-phone"
+                    type="tel"
+                    className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none text-slate-800 bg-[#F8FAFC]"
+                    placeholder="1800…"
+                    value={newBrand.supportPhone}
+                    onChange={(e) => setNewBrand({ ...newBrand, supportPhone: e.target.value })}
                   />
                 </div>
               </div>
@@ -621,7 +704,7 @@ const Brands = () => {
               <div className="pt-4 border-t border-[#E2E8F0] flex gap-3 justify-end text-sm">
                 <button 
                   type="button"
-                  onClick={() => setShowModal(false)}
+                  onClick={closeModal}
                   className="bg-white text-[#64748B] border border-[#E2E8F0] px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-[#F8FAFC] transition-colors"
                 >
                   Cancel
@@ -630,7 +713,7 @@ const Brands = () => {
                   type="submit"
                   className="bg-[#0D47A1] text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm"
                 >
-                  Save Partner
+                  {editingId ? 'Save Changes' : 'Save Partner'}
                 </button>
               </div>
             </form>

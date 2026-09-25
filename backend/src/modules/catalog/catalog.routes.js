@@ -9,7 +9,7 @@ import { getCategoryTree, getOfferingDetail } from './offeringBrowse.service.js'
 import { buildQuote } from './quote.service.js';
 import { searchCatalogue, resolveLabels, listServiceGroups, popularSearches } from './offeringSearch.service.js';
 import { toCustomerQuote } from './commercialView.js';
-import { Brand } from '../super-admin/brand.model.js';
+import { listPublicBrands } from './catalogueBrand.service.js';
 import {
   createCategorySchema,
   updateCategorySchema,
@@ -19,6 +19,7 @@ import {
   quoteSchema,
   searchQuerySchema,
   resolveLabelsSchema,
+  brandsQuerySchema,
 } from './catalog.validation.js';
 
 export const catalogRouter = Router();
@@ -34,38 +35,13 @@ catalogRouter.get('/categories', async (req, res, next) => {
   }
 });
 
-// The brands a customer can pick when registering an appliance. The full Brand
-// record is super-admin-only; this exposes just the labels the picker needs, so
-// customer screens stop shipping their own hardcoded brand list.
-catalogRouter.get('/brands', async (req, res, next) => {
+// The brands a customer can pick (docs/master-catalogue Phase 19): catalogue
+// brands, managed in Super Admin → Categories & Brands. ?category=AC narrows
+// the list to the brands offered for that appliance. Partner brands
+// (brand-admin tenants) are a different thing and are never listed here.
+catalogRouter.get('/brands', validate(brandsQuerySchema, 'query'), async (req, res, next) => {
   try {
-    let brands = await Brand.find({ status: 'Active' }).select('name category').sort({ name: 1 });
-    if (!brands || brands.length === 0) {
-      const count = await Brand.countDocuments();
-      if (count === 0) {
-        const DEFAULT_BRANDS = [
-          { name: 'Samsung', category: 'Appliances', status: 'Active' },
-          { name: 'LG', category: 'Appliances', status: 'Active' },
-          { name: 'Sony', category: 'Electronics', status: 'Active' },
-          { name: 'Panasonic', category: 'Appliances', status: 'Active' },
-          { name: 'Whirlpool', category: 'Appliances', status: 'Active' },
-          { name: 'Daikin', category: 'Air Conditioner', status: 'Active' },
-          { name: 'Voltas', category: 'Air Conditioner', status: 'Active' },
-          { name: 'Godrej', category: 'Appliances', status: 'Active' },
-          { name: 'Carrier', category: 'Air Conditioner', status: 'Active' },
-          { name: 'Hitachi', category: 'Air Conditioner', status: 'Active' },
-          { name: 'Blue Star', category: 'Air Conditioner', status: 'Active' },
-          { name: 'Haier', category: 'Appliances', status: 'Active' },
-          { name: 'IFB', category: 'Appliances', status: 'Active' },
-          { name: 'Bosch', category: 'Appliances', status: 'Active' },
-          { name: 'Kent', category: 'Water Purifier', status: 'Active' },
-          { name: 'Aquaguard', category: 'Water Purifier', status: 'Active' },
-        ];
-        await Brand.insertMany(DEFAULT_BRANDS);
-        brands = await Brand.find({ status: 'Active' }).select('name category').sort({ name: 1 });
-      }
-    }
-    ok(res, brands);
+    ok(res, await listPublicBrands(req.query));
   } catch (err) {
     next(err);
   }

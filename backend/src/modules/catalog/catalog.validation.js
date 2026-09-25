@@ -8,13 +8,14 @@ export const createCategorySchema = z.object({
   color: z.string().optional(),
   lightBg: z.string().optional(),
   categoryNote: z.string().optional(),
-  brands: z.array(z.string()).optional(),
   whyBrandPoints: z.array(z.string()).optional(),
   groups: z.array(z.string()).optional(),
   section: z.string().optional(),
 });
 
 export const updateCategorySchema = createCategorySchema.partial().omit({ key: true });
+
+export const brandsQuerySchema = z.object({ category: z.string().trim().min(1).max(60).optional() });
 
 export const categoryKeyParamSchema = z.object({ key: z.string().min(1) });
 

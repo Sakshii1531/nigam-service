@@ -82,7 +82,7 @@ const AMC = () => {
       .then((res) => {
         if (Array.isArray(res) && res.length > 0) {
           const colors = ['#1428A0', '#A50034', '#00205B', '#E31837', '#003087', '#0055A5', '#0B4EA2', '#000000'];
-          setDynamicBrands(res.map((b, i) => ({ name: b.name, color: colors[i % colors.length] })));
+          setDynamicBrands(res.map((b, i) => ({ name: b.name, categories: b.categories || [], color: colors[i % colors.length] })));
         }
       })
       .catch(() => {});
@@ -140,19 +140,12 @@ const AMC = () => {
       );
   }, [selectedAppliance]);
 
-  const getBrandsForAppliance = (appliance) => {
-    const n = appliance?.toLowerCase() || "";
-    if (n.includes("water purifier") || n.includes("purifier"))
-      return ["Kent", "Aquaguard", "Livpure", "Pureit", "HUL", "AO Smith"];
-    if (/\bac\b/.test(n) || n.includes("conditioner"))
-      return ["Daikin", "LG", "Voltas", "Blue Star", "Hitachi", "Carrier"];
-    if (n.includes("refrigerator") || n.includes("fridge"))
-      return ["Samsung", "LG", "Whirlpool", "Haier", "Godrej", "Voltas"];
-    if (n.includes("washing") || n.includes("machine"))
-      return ["Samsung", "LG", "Whirlpool", "IFB", "Bosch", "Haier"];
-    if (n.includes("television") || n.includes("tv"))
-      return ["Samsung", "LG", "Sony", "Panasonic", "OnePlus", "Mi"];
-    return ["Samsung", "LG", "Sony", "Panasonic", "Whirlpool", "Daikin"];
+  // Brands offered for this appliance, as set in Super Admin → Categories &
+  // Brands → Catalogue Brands (docs/master-catalogue Phase 19); the full
+  // catalogue list when none is tagged for it.
+  const getBrandsForAppliance = (applianceKey) => {
+    const tagged = dynamicBrands.filter((b) => b.categories.includes(applianceKey)).map((b) => b.name);
+    return tagged.length > 0 ? tagged : dynamicBrands.map((b) => b.name);
   };
 
   const getModelPlaceholder = (appliance) => {
@@ -195,7 +188,7 @@ const AMC = () => {
   };
 
   const selectedPlan = amcPlans[selectedPlanIndex] || amcPlans[0] || null;
-  const applianceBrands = getBrandsForAppliance(applianceName);
+  const applianceBrands = getBrandsForAppliance(selectedAppliance);
   const activeBrand = selectedBrand || applianceBrands[0];
 
   return (

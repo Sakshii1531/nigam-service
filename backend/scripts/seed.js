@@ -12,6 +12,7 @@ import { Brand } from '../src/modules/super-admin/brand.model.js';
 import { City } from '../src/modules/super-admin/city.model.js';
 import { AssignmentWeighting } from '../src/modules/super-admin/assignmentWeighting.model.js';
 import { Category } from '../src/modules/catalog/category.model.js';
+import { CatalogueBrand } from '../src/modules/catalog/catalogueBrand.model.js';
 import { Product } from '../src/modules/buy-commerce/product.model.js';
 import { ProductCategory } from '../src/modules/buy-commerce/productCategory.model.js';
 import { Coupon } from '../src/modules/rewards-loyalty/coupon.model.js';
@@ -29,6 +30,7 @@ import { Notification } from '../src/modules/notifications/notification.model.js
 import { hashPassword } from '../src/modules/auth/password.js';
 import { ROLES } from '../src/config/constants.js';
 import { CATEGORY_SEED } from './categorySeedData.js';
+import { CATALOGUE_BRAND_SEED } from './catalogueBrandSeedData.js';
 import { AMC_PLAN_SEED, EW_PLAN_SEED, SPARE_PART_SEED } from './planSeedData.js';
 import { listServiceGroups } from '../src/modules/catalog/offeringSearch.service.js';
 import { seedMasterCatalogue } from './seedMasterCatalogue.js';
@@ -221,6 +223,18 @@ async function upsertCategories() {
     await Category.findOneAndUpdate({ key: entry.key }, entry, { upsert: true, new: true, setDefaultsOnInsert: true });
   }
   console.log(`[seed] ${CATEGORY_SEED.length} categories ready`);
+}
+
+// Catalogue brands (docs/master-catalogue Phase 19). Inserted once — an
+// admin's later edits (warranty months, categories) are never overwritten.
+// Categories used to carry their own `brands` list; that copy is dropped.
+async function upsertCatalogueBrands() {
+  await Category.collection.updateMany({ brands: { $exists: true } }, { $unset: { brands: '' } });
+  for (const brand of CATALOGUE_BRAND_SEED) {
+    const nameKey = brand.name.toLowerCase();
+    await CatalogueBrand.updateOne({ nameKey }, { $setOnInsert: { ...brand, nameKey, isActive: true } }, { upsert: true });
+  }
+  console.log(`[seed] ${CATALOGUE_BRAND_SEED.length} catalogue brands ready`);
 }
 
 // Home-screen tiles, built from the Master Catalogue just seeded: each tile
@@ -466,6 +480,7 @@ async function main() {
   console.log(`[seed] serviceProvider profile ready: ${serviceProviderProfile.name} (${serviceProviderProfile.id})`);
 
   await upsertCategories();
+  await upsertCatalogueBrands();
   // Master Service & Offering Catalogue (docs/master-catalogue): product
   // types, services, offerings and their rates — the only price source.
   const catalogue = await seedMasterCatalogue();

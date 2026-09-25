@@ -100,6 +100,7 @@ additive (nothing existing breaks). Phase 4 is the cut-over.
 | 16 | [Brand-admin dashboard & payments real data](phase-16-brand-admin-real-data.md) | No hardcoded brand figures | — | 1 d | ✅ Done 2026-09-25 |
 | 17 | [Images through Cloudinary](phase-17-cloudinary-images.md) | Uploads, not base64; category images | — | 1–2 d | ✅ Done 2026-09-25 |
 | 18 | [Tests updated, green, commit](phase-18-tests-and-commit.md) | All suites green; committed | — | 0.5 d | ✅ Done 2026-09-25 |
+| 19 | [Catalogue brands vs partner brands; brand warranty length](phase-19-catalogue-brands.md) | Customer brand picker from catalogue brands (product-linked only); warranty months honoured | — | 1 d | ✅ Done 2026-09-25 |
 
 **Total: ~39–48 developer-days** (≈ 8–10 weeks for one full-stack developer).
 

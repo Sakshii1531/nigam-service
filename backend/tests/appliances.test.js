@@ -5,6 +5,7 @@ import { createApp } from '../src/app.js';
 import { registerAllModels } from '../src/config/registerModels.js';
 import { ensureIndexes } from '../src/config/db.js';
 import { User } from '../src/modules/auth/user.model.js';
+import { CatalogueBrand } from '../src/modules/catalog/catalogueBrand.model.js';
 import { Brand } from '../src/modules/super-admin/brand.model.js';
 import { OwnedAppliance } from '../src/modules/service-requests/ownedAppliance.model.js';
 import { ExtendedWarrantyPlan } from '../src/modules/warranty-amc-exchange/extendedWarrantyPlan.model.js';
@@ -85,6 +86,7 @@ beforeEach(async () => {
   await Promise.all([
     User.deleteMany({}),
     Brand.deleteMany({}),
+    CatalogueBrand.deleteMany({}),
     OwnedAppliance.deleteMany({}),
     ExtendedWarrantyPlan.deleteMany({}),
     ExtendedWarrantyOrder.deleteMany({}),
@@ -281,11 +283,13 @@ describe('extended warranty is priced by the server, not the client', () => {
 });
 
 describe('public brand list', () => {
-  it('returns only active brands, without the admin-only fields', async () => {
-    await Brand.create([
-      { name: 'LG', category: 'Appliances', status: 'Active' },
-      { name: 'Unapproved Co', category: 'Appliances', status: 'Pending' },
+  // Catalogue brands, not partner brands (docs/master-catalogue Phase 19).
+  it('returns only active catalogue brands — never partner brands', async () => {
+    await CatalogueBrand.create([
+      { name: 'LG', categories: ['AC'] },
+      { name: 'Retired Co', categories: ['AC'], isActive: false },
     ]);
+    await Brand.create({ name: 'Partner Co', category: 'Appliances', status: 'Active' });
 
     const res = await request(app).get('/api/v1/catalog/brands').expect(200);
     expect(res.body.data.map((b) => b.name)).toEqual(['LG']);
