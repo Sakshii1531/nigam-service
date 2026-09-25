@@ -25,7 +25,7 @@ Every image an admin or customer adds is uploaded through `POST /api/v1/uploads`
 
 | Date | Commit | Notes |
 |---|---|---|
-| 2026-09-25 | see Phase 18 | 10 base64 image paths moved to uploads; `Category.imageUrl`; backend refuses base64 on 10 image fields. `catalogAdmin.test.js` +2 tests |
+| 2026-09-25 | `a08a6dc` | 10 base64 image paths moved to uploads; `Category.imageUrl`; backend refuses base64 on 10 image fields. `catalogAdmin.test.js` +2 tests |
 
 **How an image is stored now.** The screen calls `uploadImage(file)` (`frontend/src/lib/uploadImage.js`), which does the following:
 1. checks the file is an image of 5 MB or less;

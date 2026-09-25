@@ -23,7 +23,7 @@ The browser suite covers the new behaviour and every suite passes. The work is c
 
 | Date | Commit | Notes |
 |---|---|---|
-| 2026-09-25 | see git log | New `e2e/ui/platformCleanup.spec.js` (4 tests); every suite green |
+| 2026-09-25 | `a08a6dc` | New `e2e/ui/platformCleanup.spec.js` (4 tests); every suite green |
 
 **New browser tests** (`e2e/ui/platformCleanup.spec.js`)
 

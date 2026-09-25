@@ -24,7 +24,7 @@ Every number on the brand-admin Dashboard and Payments pages comes from the bran
 
 | Date | Commit | Notes |
 |---|---|---|
-| 2026-09-25 | see Phase 18 | New `GET /brand/payments/summary`; `/brand/dashboard` gains `finance` + `parts`; 10 hardcoded figures replaced. `brandAdmin.test.js` 61 tests (2 new, with a second brand's data seeded to prove isolation) |
+| 2026-09-25 | `a08a6dc` | New `GET /brand/payments/summary`; `/brand/dashboard` gains `finance` + `parts`; 10 hardcoded figures replaced. `brandAdmin.test.js` 61 tests (2 new, with a second brand's data seeded to prove isolation) |
 
 **What each figure is now** (all scoped to the logged-in brand)
 

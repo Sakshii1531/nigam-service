@@ -24,7 +24,7 @@ The finance offer page is removed from the app. The search synonym list is kept 
 
 | Date | Commit | Notes |
 |---|---|---|
-| 2026-09-25 | see Phase 18 | Finance page deleted; 3 synonym problems fixed; `catalogSearch.test.js` 19 tests (2 new) |
+| 2026-09-25 | `a08a6dc` | Finance page deleted; 3 synonym problems fixed; `catalogSearch.test.js` 19 tests (2 new) |
 
 **Finance page.** `pages/FinanceDetails.jsx` and its `/finance/:type` route are deleted. No screen linked to them. The "Easy EMI" labels on the AMC, Buy and Exchange pages are payment-method choices and stay.
 
