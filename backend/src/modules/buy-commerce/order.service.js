@@ -77,6 +77,13 @@ async function resolveLineItems({ userId, items, useCart }) {
  */
 export async function createOrder(userId, { items, useCart, address, couponCode, exchangeRequestId, coinsToRedeem = 0, paymentMethod = 'UPI' }) {
   const lineItems = await resolveLineItems({ userId, items, useCart });
+  // Pay on Delivery is a per-product setting (Super Admin → NCC Products).
+  if (paymentMethod === 'COD') {
+    const noCod = lineItems.filter(({ product }) => product.codAvailable === false);
+    if (noCod.length) {
+      throw new ApiError(400, `Pay on Delivery is not available for: ${noCod.map(({ product }) => product.name).join(', ')}`);
+    }
+  }
 
   const orderItems = lineItems.map(({ product, quantity }) => ({
     product: product._id,

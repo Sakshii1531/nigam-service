@@ -298,7 +298,7 @@ const ProductDetails = () => {
           <div className="bg-white border border-slate-200/60 rounded-2xl overflow-hidden shadow-sm">
             <table className="w-full text-xs">
               <tbody>
-                {Object.entries(product.fullSpecs).map(([key, val], index) => (
+                {(product.specifications || []).flatMap((g) => g.items.map((i) => [i.label, i.value])).map(([key, val], index) => (
                   <tr 
                     key={key} 
                     className={`border-b border-slate-100 last:border-0 ${

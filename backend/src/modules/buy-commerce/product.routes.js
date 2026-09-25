@@ -4,7 +4,7 @@ import { requireAuth, requireRole } from '../../middleware/auth.js';
 import { ok, created } from '../../utils/respond.js';
 import { ROLES } from '../../config/constants.js';
 import * as productService from './product.service.js';
-import { listProductsQuerySchema, createProductSchema, updateProductSchema, idParamSchema } from './product.validation.js';
+import { listProductsQuerySchema, adminListProductsQuerySchema, createProductSchema, updateProductSchema, idParamSchema } from './product.validation.js';
 
 export const productRouter = Router();
 
@@ -15,6 +15,25 @@ productRouter.get('/', validate(listProductsQuerySchema, 'query'), async (req, r
   try {
     const { items, meta } = await productService.listProducts(req.query);
     ok(res, items, meta);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Super Admin → NCC Products: inactive products included, with sales.
+// Registered before '/:id' so "manage" is never read as a product id.
+productRouter.get('/manage', requireAdmin, validate(adminListProductsQuerySchema, 'query'), async (req, res, next) => {
+  try {
+    const { items, meta } = await productService.listProductsForAdmin(req.query);
+    ok(res, items, meta);
+  } catch (err) {
+    next(err);
+  }
+});
+
+productRouter.get('/manage/:id', requireAdmin, validate(idParamSchema, 'params'), async (req, res, next) => {
+  try {
+    ok(res, await productService.getProductForAdmin(req.params.id));
   } catch (err) {
     next(err);
   }

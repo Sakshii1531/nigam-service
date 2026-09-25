@@ -43,7 +43,7 @@ The review also found a bug in the brand warranty length:
 - [x] Customer booking flow:
   - a standalone booking never shows the brand picker and never sends a brand (booking, quote warranty check, success page)
 - [x] `Category.brands` removed from the model, the category seed and the old category API
-  - The seed turns the 9 appliance lists into 51 catalogue brands (`catalogueBrandSeedData.js`), inserted once so admin edits are never overwritten.
+  - The seed turns the 9 appliance lists into 50 catalogue brands (`catalogueBrandSeedData.js`), inserted once so admin edits are never overwritten.
 - [x] Super Admin → Categories & Brands → **Catalogue Brands** tab:
   - Fields: name, "Offered for" (only categories with product services), warranty months, order, Active/Hidden.
   - The tab says that partner brands live in Brand Partners.
@@ -65,7 +65,8 @@ The review also found a bug in the brand warranty length:
 
 | Date | Commit | Notes |
 |---|---|---|
-| 2026-09-25 | _pending_ | Catalogue brands split from partner brands; warranty months honoured |
+| 2026-09-25 | `00abd5f` | Catalogue brands split from partner brands; warranty months honoured |
+| 2026-09-25 | _pending_ | New `npm run seed:brands` (standalone, idempotent). With the user's go-ahead, the dev DB (Atlas `nigam`, which had 0 offerings) was seeded with `seed:catalogue` (211 offerings, 211 DEMO v1 rates) and `seed:brands` (50 brands). Nothing was deleted. Checked: AC tree in Lucknow has 11 brands, and a Split AC 1 Ton Installation quote is ₹1,399 + GST = ₹1,650.82 |
 
 **How it is decided now**
 

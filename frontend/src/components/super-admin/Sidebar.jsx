@@ -731,7 +731,7 @@ const Sidebar = () => {
             // Default link item
             const isLinkActive = item.path.includes("?")
               ? location.pathname + location.search === item.path
-              : location.pathname === item.path;
+              : location.pathname === item.path || location.pathname.startsWith(`${item.path}/`); // detail pages keep their section lit
             const badgeCount = item.badgeKey ? badgeCounts[item.badgeKey] : 0;
             return (
               <NavLink

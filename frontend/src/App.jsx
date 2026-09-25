@@ -121,6 +121,8 @@ const SuperAdminWarranty = lazy(() => import("./pages/super-admin/Warranty"));
 const SuperAdminAssignment = lazy(() => import("./pages/super-admin/Assignment"));
 const SuperAdminTracking = lazy(() => import("./pages/super-admin/Tracking"));
 const SuperAdminInventory = lazy(() => import("./pages/super-admin/Inventory"));
+const SuperAdminSparePartDetail = lazy(() => import("./pages/super-admin/SparePartDetail"));
+const SuperAdminSparePartEditor = lazy(() => import("./pages/super-admin/SparePartEditor"));
 const SuperAdminPartRequests = lazy(() => import("./pages/super-admin/PartRequests"));
 const SuperAdminOrders = lazy(() => import("./pages/super-admin/Orders"));
 const SuperAdminBilling = lazy(() => import("./pages/super-admin/Billing"));
@@ -138,6 +140,8 @@ const SuperAdminASM = lazy(() => import("./pages/super-admin/ASM"));
 const SuperAdminASMDetail = lazy(() => import("./pages/super-admin/ASMDetail"));
 const SuperAdminAMC = lazy(() => import("./pages/super-admin/AMC"));
 const SuperAdminProducts = lazy(() => import("./pages/super-admin/Products"));
+const SuperAdminProductDetail = lazy(() => import("./pages/super-admin/ProductDetail"));
+const SuperAdminProductEditor = lazy(() => import("./pages/super-admin/ProductEditor"));
 const SuperAdminProductCategories = lazy(() => import("./pages/super-admin/ProductCategories"));
 const SuperAdminWarrantyVerification = lazy(() => import("./pages/super-admin/WarrantyVerification"));
 const SuperAdminMasterCatalogue = lazy(() => import("./pages/super-admin/MasterCatalogue"));
@@ -1206,6 +1210,9 @@ function App() {
                             path="/super-admin/inventory"
                             element={<SuperAdminInventory />}
                           />
+                          <Route path="/super-admin/inventory/new" element={<SuperAdminSparePartEditor />} />
+                          <Route path="/super-admin/inventory/:id" element={<SuperAdminSparePartDetail />} />
+                          <Route path="/super-admin/inventory/:id/edit" element={<SuperAdminSparePartEditor />} />
                           <Route
                             path="/super-admin/part-requests"
                             element={<SuperAdminPartRequests />}
@@ -1270,6 +1277,9 @@ function App() {
                             path="/super-admin/products"
                             element={<SuperAdminProducts />}
                           />
+                          <Route path="/super-admin/products/new" element={<SuperAdminProductEditor />} />
+                          <Route path="/super-admin/products/:id" element={<SuperAdminProductDetail />} />
+                          <Route path="/super-admin/products/:id/edit" element={<SuperAdminProductEditor />} />
                           <Route
                             path="/super-admin/product-categories"
                             element={<SuperAdminProductCategories />}

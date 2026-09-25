@@ -101,6 +101,8 @@ additive (nothing existing breaks). Phase 4 is the cut-over.
 | 17 | [Images through Cloudinary](phase-17-cloudinary-images.md) | Uploads, not base64; category images | — | 1–2 d | ✅ Done 2026-09-25 |
 | 18 | [Tests updated, green, commit](phase-18-tests-and-commit.md) | All suites green; committed | — | 0.5 d | ✅ Done 2026-09-25 |
 | 19 | [Catalogue brands vs partner brands; brand warranty length](phase-19-catalogue-brands.md) | Customer brand picker from catalogue brands (product-linked only); warranty months honoured | — | 1 d | ✅ Done 2026-09-25 |
+| 20 | [NCC Products detailed](phase-20-ncc-products-detailed.md) | Marketplace-style listing, product page, per-product services | — | 1–2 d | ✅ Done 2026-09-25 |
+| 21 | [Inventory detailed](phase-21-inventory-detailed.md) | Part page, fits, pricing, stock history | — | 1–2 d | ✅ Done 2026-09-25 |
 
 **Total: ~39–48 developer-days** (≈ 8–10 weeks for one full-stack developer).
 

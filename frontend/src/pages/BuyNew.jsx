@@ -1907,28 +1907,31 @@ const BuyNew = () => {
                   {/* 5. 4-CARD SERVICE ASSURANCE GRID */}
                   <div className="p-4 sm:p-6 grid grid-cols-2 @3xl:grid-cols-4 gap-2.5 sm:gap-3">
                     {[
+                      // Per-product services, set in Super Admin → NCC Products
+                      // (docs/master-catalogue Phase 20) — these used to be the
+                      // same four promises for every product.
                       {
-                        title: "Free Doorstep Setting",
-                        desc: "Certified Installation",
+                        title: finalProduct.installationIncluded ? "Free Installation" : "Installation Extra",
+                        desc: finalProduct.installationIncluded ? "By an NCC technician" : "Book it as a service",
                         Icon: Wrench,
                         color: "text-blue-600 bg-blue-50 border-blue-100",
                       },
                       {
-                        title: `${finalProduct.warrantyMonths || 12}M Brand Warranty`,
-                        desc: "Genuine Assurance",
+                        title: finalProduct.warrantyMonths ? `${finalProduct.warrantyMonths}M Brand Warranty` : "No Warranty",
+                        desc: finalProduct.warrantySummary || "Genuine Assurance",
                         Icon: ShieldCheck,
                         color:
                           "text-emerald-600 bg-emerald-50 border-emerald-100",
                       },
                       {
-                        title: "7 Days Replacement",
-                        desc: "Easy Return Policy",
+                        title: (finalProduct.returnDays ?? 7) > 0 ? `${finalProduct.returnDays ?? 7} Days Replacement` : "Not Returnable",
+                        desc: (finalProduct.returnDays ?? 7) > 0 ? "Easy Return Policy" : "All sales final",
                         Icon: RefreshCw,
                         color: "text-indigo-600 bg-indigo-50 border-indigo-100",
                       },
                       {
-                        title: "Pay on Delivery",
-                        desc: "Cash / UPI Available",
+                        title: finalProduct.codAvailable === false ? "Prepaid Only" : "Pay on Delivery",
+                        desc: finalProduct.codAvailable === false ? "Pay online at checkout" : "Cash / UPI Available",
                         Icon: Percent,
                         color: "text-amber-600 bg-amber-50 border-amber-100",
                       },
@@ -2105,6 +2108,49 @@ const BuyNew = () => {
                         );
                       })}
                     </div>
+                  </div>
+                )}
+
+                {finalProduct.description && (
+                  <div className="pt-2">
+                    <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-wider mb-2">Description</h4>
+                    <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-line">{finalProduct.description}</p>
+                  </div>
+                )}
+
+                {finalProduct.specifications?.length > 0 && (
+                  <div className="pt-2 space-y-4">
+                    {finalProduct.specifications.map((group) => (
+                      <div key={group.group}>
+                        <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-wider mb-1.5">{group.group}</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 text-xs">
+                          {group.items.map((item) => (
+                            <div key={item.label} className="flex justify-between gap-4 py-2 border-b border-slate-100">
+                              <span className="text-slate-500 font-bold">{item.label}</span>
+                              <span className="text-slate-900 font-black text-right">{item.value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {(finalProduct.inTheBox?.length > 0 || finalProduct.manufacturer || finalProduct.countryOfOrigin) && (
+                  <div className="pt-2 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                    {finalProduct.inTheBox?.length > 0 && (
+                      <div>
+                        <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-wider mb-1.5">In the Box</h4>
+                        <p className="text-slate-700 font-semibold">{finalProduct.inTheBox.join(", ")}</p>
+                      </div>
+                    )}
+                    {(finalProduct.manufacturer || finalProduct.countryOfOrigin) && (
+                      <div>
+                        <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Manufacturer</h4>
+                        {finalProduct.manufacturer && <p className="text-slate-700 font-semibold">{finalProduct.manufacturer}</p>}
+                        {finalProduct.countryOfOrigin && <p className="text-slate-500 mt-0.5">Country of origin: {finalProduct.countryOfOrigin}</p>}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

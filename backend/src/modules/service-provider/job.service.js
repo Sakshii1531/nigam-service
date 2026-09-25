@@ -484,8 +484,14 @@ export async function getJobDetailContext(serviceProviderId, jobId) {
 
   const [sparePartDocs, appliance] = await Promise.all([
     categoryValue
-      ? SparePartCatalog.find({ category: { $regex: new RegExp(`^${escapeRegExp(categoryValue)}$`, 'i') } }).sort({ name: 1 })
-      : SparePartCatalog.find().sort({ name: 1 }).limit(20),
+      ? SparePartCatalog.find({
+          isActive: { $ne: false },
+          $or: [
+            { category: { $regex: new RegExp(`^${escapeRegExp(categoryValue)}$`, 'i') } },
+            { compatibleCategories: categoryValue },
+          ],
+        }).sort({ name: 1 })
+      : SparePartCatalog.find({ isActive: { $ne: false } }).sort({ name: 1 }).limit(20),
     applianceDoc ? withWarranty(applianceDoc) : Promise.resolve(null),
   ]);
 
@@ -514,6 +520,9 @@ export async function getJobDetailContext(serviceProviderId, jobId) {
     price: Math.round(p.retailPrice),
     stock: p.stock,
     status: p.status,
+    imageUrl: p.imageUrl,
+    unit: p.unit,
+    warrantyMonths: p.warrantyMonths || 0,
   }));
 
   // Past completed visits on the same appliance (or same customer + category,
