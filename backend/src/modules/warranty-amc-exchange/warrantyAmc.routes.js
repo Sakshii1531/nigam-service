@@ -96,13 +96,13 @@ router.get('/amc/appliances', async (req, res) => {
     const plans = await AMCPlan.find({ isActive: true }).select('applianceCategory price').lean();
     const generic = plans.filter((p) => !p.applianceCategory);
     const keys = [...new Set(plans.map((p) => p.applianceCategory).filter(Boolean))];
-    const categories = await Category.find({ key: { $in: keys } }).select('key name sortOrder').lean();
+    const categories = await Category.find({ key: { $in: keys } }).select('key name sortOrder imageUrl').lean();
     const nameOf = new Map(categories.map((c) => [c.key, c]));
     const data = keys
       .map((key) => {
         const own = plans.filter((p) => p.applianceCategory === key);
         const all = [...own, ...generic];
-        return { appliance: key, name: nameOf.get(key)?.name || key, fromPrice: Math.min(...all.map((p) => p.price)), planCount: all.length };
+        return { appliance: key, name: nameOf.get(key)?.name || key, imageUrl: nameOf.get(key)?.imageUrl || null, fromPrice: Math.min(...all.map((p) => p.price)), planCount: all.length };
       })
       .sort((a, b) => (nameOf.get(a.appliance)?.sortOrder ?? 0) - (nameOf.get(b.appliance)?.sortOrder ?? 0) || a.name.localeCompare(b.name));
     return res.json({ data });
@@ -141,12 +141,12 @@ router.get('/extended-warranty/appliances', async (req, res) => {
     const plans = await ExtendedWarrantyPlan.find({ isActive: true }).select('applianceCategory price').lean();
     const generic = plans.filter((p) => !p.applianceCategory);
     const keys = [...new Set(plans.map((p) => p.applianceCategory).filter(Boolean))];
-    const categories = await Category.find({ key: { $in: keys } }).select('key name sortOrder').lean();
+    const categories = await Category.find({ key: { $in: keys } }).select('key name sortOrder imageUrl').lean();
     const byKey = new Map(categories.map((c) => [c.key, c]));
     const data = keys
       .map((key) => {
         const all = [...plans.filter((p) => p.applianceCategory === key), ...generic];
-        return { appliance: key, name: byKey.get(key)?.name || key, fromPrice: Math.min(...all.map((p) => p.price)), planCount: all.length };
+        return { appliance: key, name: byKey.get(key)?.name || key, imageUrl: byKey.get(key)?.imageUrl || null, fromPrice: Math.min(...all.map((p) => p.price)), planCount: all.length };
       })
       .sort((a, b) => (byKey.get(a.appliance)?.sortOrder ?? 0) - (byKey.get(b.appliance)?.sortOrder ?? 0) || a.name.localeCompare(b.name));
     return res.json({ data });

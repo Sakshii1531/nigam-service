@@ -2,6 +2,11 @@
 // Each group is interchangeable in search: typing any word in a group also
 // matches the others. Single words only; keep them lower-case and singular
 // (the search stems plurals). Add freely — no other code changes needed.
+// Rules (tests/catalogSearch.test.js checks them): a word may be in only one
+// group — two groups sharing a word would chain unrelated meanings ("washing"
+// in both machine and cleaning made "clean" match washing-machine repairs) —
+// and no stop word ("service", "near"…), since those are dropped from queries.
+// A specific job ("wiring") is not a synonym of a trade ("electrician").
 export const SYNONYM_GROUPS = [
   ['fridge', 'refrigerator', 'freezer'],
   ['tv', 'television', 'led'],
@@ -14,11 +19,11 @@ export const SYNONYM_GROUPS = [
   ['install', 'installation', 'fitting', 'setup', 'mount', 'mounting'],
   ['uninstall', 'uninstallation', 'removal', 'dismantle'],
   ['repair', 'fix', 'repairing', 'broken'],
-  ['clean', 'cleaning', 'wash', 'washing'],
-  ['service', 'servicing', 'maintenance'],
+  ['clean', 'cleaning', 'wash'],
+  ['servicing', 'maintenance'],
   ['gas', 'refrigerant'],
   ['refill', 'refilling', 'topup'],
-  ['electrician', 'electrical', 'electric', 'wiring'],
+  ['electrician', 'electrical', 'electric'],
   ['plumber', 'plumbing'],
   ['carpenter', 'carpentry'],
   ['painter', 'painting', 'paint'],

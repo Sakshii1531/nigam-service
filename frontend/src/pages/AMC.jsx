@@ -645,7 +645,7 @@ const AMC = () => {
                 name: a.name,
                 desc: `${a.planCount} AMC plan${a.planCount === 1 ? "" : "s"}`,
                 price: `₹${Number(a.fromPrice).toLocaleString("en-IN")}`,
-                img: getApplianceImg(a.name),
+                img: a.imageUrl || getApplianceImg(a.name),
               })).map((item) => (
                 <div
                   key={item.id}

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { mediaUrl } from '../shared/mediaUrl.js';
 
 export const createReviewSchema = z.object({
   serviceRequest: z.string().min(1),
@@ -12,7 +13,7 @@ export const createReviewSchema = z.object({
     })
     .optional(),
   tags: z.array(z.string()).optional(),
-  photos: z.array(z.string()).optional(),
+  photos: z.array(mediaUrl()).optional(),
   tip: z.number().min(0).optional(),
   comment: z.string().optional(),
 });

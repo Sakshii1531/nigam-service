@@ -85,6 +85,7 @@ export async function listCategories() {
       key: c.key,
       name: c.name,
       icon: c.icon,
+      imageUrl: c.imageUrl || null,
       isActive: c.isActive,
       keywords: c.keywords || [],
       groups: c.groups || [],

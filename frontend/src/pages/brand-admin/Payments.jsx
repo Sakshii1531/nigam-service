@@ -74,6 +74,7 @@ const Payments = () => {
   const [customerPayments, setCustomerPayments] = useState([]);
   const [serviceProviderPayouts, setTechPayouts] = useState([]);
   const [dues, setDues] = useState([]);
+  const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -85,12 +86,14 @@ const Payments = () => {
       try {
         // Three separate views, each resolved server-side through
         // Job -> ServiceRequest.brand (or Invoice.brand for dues).
-        const [pay, out, due] = await Promise.all([
+        const [pay, out, due, sum] = await Promise.all([
           apiRequest('/brand/payments/customer', { auth: true }),
           apiRequest('/brand/payments/payouts', { auth: true }),
           apiRequest('/brand/payments/dues', { auth: true }),
+          apiRequest('/brand/payments/summary', { auth: true }),
         ]);
         if (cancelled) return;
+        setSummary(sum || null);
         setCustomerPayments((Array.isArray(pay) ? pay : []).map(shapePayment));
         setTechPayouts((Array.isArray(out) ? out : []).map(shapePayout));
         setDues((Array.isArray(due) ? due : []).map(shapeDue));
@@ -117,11 +120,13 @@ const Payments = () => {
     return matchSearch && matchStatus;
   });
 
+  // GET /brand/payments/summary — this brand's own money, "—" until loaded.
+  const money = (v) => (v == null ? '—' : currency.format(v));
   const summaryCards = [
-    { label: 'Total Collected', value: '₹40,30,020', sub: 'This month', bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-600' },
-    { label: 'Total Paid Out', value: '₹8,24,320', sub: 'To serviceProviders', bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-600' },
-    { label: 'Outstanding Dues', value: '₹9,910', sub: '2 pending', bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-600' },
-    { label: 'Overdue Amount', value: '₹3,186', sub: '1 overdue', bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-600' },
+    { label: 'Total Collected', value: money(summary?.collectedThisMonth), sub: 'This month', bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-600' },
+    { label: 'Total Paid Out', value: money(summary?.paidOutThisMonth), sub: 'To service providers this month', bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-600' },
+    { label: 'Outstanding Dues', value: money(summary?.outstandingAmount), sub: summary ? `${summary.outstandingCount} unpaid invoice${summary.outstandingCount === 1 ? '' : 's'}` : '—', bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-600' },
+    { label: 'Overdue Amount', value: money(summary?.overdueAmount), sub: summary ? `${summary.overdueCount} unpaid over ${summary.overdueDays} days` : '—', bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-600' },
   ];
 
   return (

@@ -1345,3 +1345,71 @@ describe('brand reports monthly series', () => {
     expect(monthlyChangePercent).toBeNull();
   });
 });
+
+describe('dashboard & payments figures come from the brand’s own data (Phase 16)', () => {
+  async function seedMoney() {
+    const brandA = await seedBrandWithAdmin('Brand A');
+    const brandB = await seedBrandWithAdmin('Brand B');
+    const customer = await seedCustomer();
+    const spA = await seedServiceProvider();
+    const spB = await seedServiceProvider();
+    const srA = await seedServiceRequestForBrand(brandA.brand, customer, spA);
+    const srB = await seedServiceRequestForBrand(brandB.brand, customer, spB);
+    const jobA = await Job.create({ serviceRequest: srA.id, serviceProvider: spA._id, type: 'NCC Paid Service' });
+    const jobB = await Job.create({ serviceRequest: srB.id, serviceProvider: spB._id, type: 'NCC Paid Service' });
+
+    // Invoices: A paid 1000, pending 500 (recent), pending 300 raised 40 days ago (overdue).
+    const inv = (brand, sr, total, status) => Invoice.create({ brand: brand._id, serviceRequest: sr.id, customer: customer._id, total, status });
+    await inv(brandA.brand, srA, 1000, 'Paid');
+    await inv(brandA.brand, srA, 500, 'Pending');
+    const old = await inv(brandA.brand, srA, 300, 'Pending');
+    await Invoice.collection.updateOne({ _id: old._id }, { $set: { createdAt: new Date(Date.now() - 40 * 86400000) } });
+    await inv(brandB.brand, srB, 9999, 'Pending');
+
+    // Customer payments on A's job this month (one failed), and on B's job.
+    await Payment.create({ user: customer._id, targetType: 'job', targetId: jobA._id, amount: 700, method: 'UPI', status: 'Success' });
+    await Payment.create({ user: customer._id, targetType: 'job', targetId: jobA._id, amount: 100, method: 'UPI', status: 'Failed' });
+    await Payment.create({ user: customer._id, targetType: 'job', targetId: jobB._id, amount: 5000, method: 'UPI', status: 'Success' });
+
+    // Partner payouts: A settled 400 (net), A pending 50, B settled 999.
+    await Payout.create({ serviceProvider: spA._id, job: jobA._id, baseAmount: 450, netAmount: 400, status: 'Settled' });
+    await Payout.create({ serviceProvider: spA._id, job: jobA._id, baseAmount: 50, netAmount: 50, status: 'Pending' });
+    await Payout.create({ serviceProvider: spB._id, job: jobB._id, baseAmount: 999, netAmount: 999, status: 'Settled' });
+
+    // Parts: A's partner holds 5; A has 2 in transit and 1 handed over today; B has 7 in transit.
+    await ServiceProviderInventoryItem.create({ serviceProvider: spA._id, name: 'Capacitor', qty: 5 });
+    await PartOrder.create({ serviceProvider: spA._id, job: jobA._id, partName: 'PCB', qty: 2, orderSource: 'Partner Brand', status: 'Dispatched' });
+    await PartOrder.create({ serviceProvider: spA._id, job: jobA._id, partName: 'Fan', qty: 1, orderSource: 'NCC Warehouse', status: 'Handed Over' });
+    await PartOrder.create({ serviceProvider: spB._id, job: jobB._id, partName: 'Other', qty: 7, orderSource: 'Partner Brand', status: 'Dispatched' });
+    return { brandA };
+  }
+
+  it('payments summary: collected, paid out, outstanding and overdue — only this brand', async () => {
+    const { brandA } = await seedMoney();
+    const res = await request(app).get('/api/v1/brand/payments/summary').set('Authorization', `Bearer ${brandA.token}`).expect(200);
+    expect(res.body.data).toEqual({
+      collectedThisMonth: 700,
+      paidOutThisMonth: 400,
+      outstandingAmount: 800,
+      outstandingCount: 2,
+      overdueAmount: 300,
+      overdueCount: 1,
+      overdueDays: 30,
+    });
+  });
+
+  it('dashboard: invoice finance and parts figures — only this brand', async () => {
+    const { brandA } = await seedMoney();
+    const res = await request(app).get('/api/v1/brand/dashboard').set('Authorization', `Bearer ${brandA.token}`).expect(200);
+    expect(res.body.data.finance).toEqual({
+      totalInvoiceValue: 1800,
+      paidAmount: 1000,
+      pendingInvoiceValue: 800,
+      pendingCount: 2,
+      overdueAmount: 300,
+      overdueCount: 1,
+      overdueDays: 30,
+    });
+    expect(res.body.data.parts).toEqual({ inventoryOnHand: 5, inTransit: 2, focPartsApproved: 0, dispatchedToday: 3 });
+  });
+});

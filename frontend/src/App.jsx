@@ -60,7 +60,6 @@ const ProductDetails = lazy(() => import("./pages/ProductDetails"));
 const Wishlist = lazy(() => import("./pages/Wishlist"));
 const MyWishlist = lazy(() => import("./pages/MyWishlist"));
 const Coupons = lazy(() => import("./pages/Coupons"));
-const FinanceDetails = lazy(() => import("./pages/FinanceDetails"));
 const RewardsPlayZone = lazy(() => import("./pages/RewardsPlayZone"));
 const MyBookings = lazy(() => import("./pages/MyBookings"));
 const MyOrders = lazy(() => import("./pages/MyOrders"));
@@ -853,10 +852,6 @@ function App() {
                           <Route path="/wishlist" element={<Wishlist />} />
                           <Route path="/my-wishlist" element={<MyWishlist />} />
                           <Route path="/coupons" element={<Coupons />} />
-                          <Route
-                            path="/finance/:type"
-                            element={<FinanceDetails />}
-                          />
                           <Route
                             path="/membership-plans"
                             element={<Navigate to="/buy/amc" replace />}

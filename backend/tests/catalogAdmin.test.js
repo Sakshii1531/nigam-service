@@ -365,3 +365,29 @@ describe('location / pincode prices (Phase 10)', () => {
     expect(history.filter((r) => r.scope.type === 'CITY').map((r) => r.version)).toEqual([2, 1]);
   });
 });
+
+describe('images are URLs, never base64 (Phase 17)', () => {
+  const b64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+
+  it('a category picture is saved as a URL and reaches the appliance pickers', async () => {
+    const ac = await Category.findOne({ key: 'AC' });
+    const url = 'https://res.cloudinary.com/demo/image/upload/ac.png';
+    const res = await as(adminToken).put(`/categories/${ac.id}`, { imageUrl: url }).expect(200);
+    expect(res.body.data.imageUrl).toBe(url);
+    const list = await as(adminToken).get('/categories').expect(200);
+    expect(list.body.data.find((c) => c.key === 'AC').imageUrl).toBe(url);
+  });
+
+  it('base64 image data is refused on catalogue, product and CMS image fields', async () => {
+    const ac = await Category.findOne({ key: 'AC' });
+    const cat = await as(adminToken).put(`/categories/${ac.id}`, { imageUrl: b64 });
+    expect(cat.status).toBe(400);
+    expect(JSON.stringify(cat.body)).toMatch(/Upload the image first/);
+    await request(app).post('/api/v1/products').set('Authorization', `Bearer ${adminToken}`)
+      .send({ category: 'Spare Parts', name: 'X', price: 10, imageUrl: b64 }).expect(400);
+    await request(app).post('/api/v1/cms/banners').set('Authorization', `Bearer ${adminToken}`)
+      .send({ imageUrl: b64 }).expect(400);
+    await request(app).post('/api/v1/cms/home-tiles').set('Authorization', `Bearer ${adminToken}`)
+      .send({ placement: 'most-booked', title: 'X', imageUrl: b64 }).expect(400);
+  });
+});

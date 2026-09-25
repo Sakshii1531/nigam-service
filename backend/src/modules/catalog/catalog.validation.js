@@ -1,9 +1,10 @@
 import { z } from 'zod';
+import { mediaUrl } from '../shared/mediaUrl.js';
 
 export const createCategorySchema = z.object({
   key: z.string().min(1),
   name: z.string().min(1),
-  icon: z.string().optional(),
+  icon: mediaUrl().optional(),
   color: z.string().optional(),
   lightBg: z.string().optional(),
   categoryNote: z.string().optional(),

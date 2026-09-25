@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { mediaUrl } from '../shared/mediaUrl.js';
 import { BOOKING_TYPES, PRICING_UNITS, REQUIRED_INFO_TYPES, OFFERING_CODE_PATTERN } from './serviceOffering.model.js';
 
 // Super-admin Master Catalogue request shapes. Amounts are rupees (converted
@@ -19,7 +20,9 @@ export const statusSchema = z.object({ isActive: z.boolean() });
 export const createCategorySchema = z.object({
   key: text(60).min(1),
   name: text(80).min(1),
-  icon: z.string().max(500).optional(),
+  icon: mediaUrl(500).optional(),
+  // Category picture (Cloudinary URL) — shown on the AMC / warranty / Buy appliance pickers.
+  imageUrl: mediaUrl().nullable().optional(),
   color: text(20).optional(),
   lightBg: text(20).optional(),
   categoryNote: text(500).optional(),
@@ -35,7 +38,7 @@ export const createProductTypeSchema = z.object({
   category: objectId,
   name: text(80).min(1),
   slug: text(60).optional(),
-  icon: z.string().max(500).optional(),
+  icon: mediaUrl(500).optional(),
   desc: text(300).optional(),
   variantDimension: dimension.optional(),
   sortOrder: z.coerce.number().int().optional(),
@@ -47,7 +50,7 @@ export const createServiceSchema = z.object({
   category: objectId,
   name: text(80).min(1),
   slug: text(60).optional(),
-  icon: z.string().max(500).optional(),
+  icon: mediaUrl(500).optional(),
   desc: text(300).optional(),
   keywords: z.array(text(60)).optional(),
   optionDimension: dimension.optional(),

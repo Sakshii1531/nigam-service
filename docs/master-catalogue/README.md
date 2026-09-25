@@ -96,6 +96,10 @@ additive (nothing existing breaks). Phase 4 is the cut-over.
 | 12 | [AMC Plans (membership merged)](phase-12-amc-plans.md) | One AMC Plan product, admin-managed, one route | — | 2–3 d | ✅ Done 2026-09-25 |
 | 13 | [Warranty, Buy hub & store lists configurable](phase-13-warranty-buy-configurable.md) | EW plan admin; no hardcoded customer prices | — | 2 d | ✅ Done 2026-09-25 |
 | 14 | [Browser test suite green](phase-14-browser-suite-green.md) | Every UI spec passes | — | 1–2 d | ✅ Done 2026-09-25 |
+| 15 | [Remove finance page; review synonyms](phase-15-finance-removal-synonyms.md) | Finance page gone; synonym list checked | — | 0.5 d | ✅ Done 2026-09-25 |
+| 16 | [Brand-admin dashboard & payments real data](phase-16-brand-admin-real-data.md) | No hardcoded brand figures | — | 1 d | ✅ Done 2026-09-25 |
+| 17 | [Images through Cloudinary](phase-17-cloudinary-images.md) | Uploads, not base64; category images | — | 1–2 d | ✅ Done 2026-09-25 |
+| 18 | [Tests updated, green, commit](phase-18-tests-and-commit.md) | All suites green; committed | — | 0.5 d | ✅ Done 2026-09-25 |
 
 **Total: ~39–48 developer-days** (≈ 8–10 weeks for one full-stack developer).
 

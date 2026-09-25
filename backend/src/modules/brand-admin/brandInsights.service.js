@@ -327,6 +327,129 @@ export async function getBrandDashboard(brandId) {
     statusBreakdown: statusRows.map((r) => ({ label: r._id, count: r.count })),
     trend,
     byProduct,
+    finance: await brandInvoiceSummary(brandId),
+    parts: await brandPartsSummary(brandId, focRows[0]?.count || 0),
+  };
+}
+
+// An invoice not paid this long after it was raised counts as overdue.
+// Invoices carry no due date of their own, so the term is fixed here.
+export const INVOICE_OVERDUE_DAYS = 30;
+
+/** Invoice value by state — the dashboard's "Financial Overview" and the Payments cards. */
+async function brandInvoiceSummary(brandId) {
+  const overdueBefore = new Date(Date.now() - INVOICE_OVERDUE_DAYS * 86400000);
+  const [row] = await Invoice.aggregate([
+    { $match: { brand: asObjectId(brandId) } },
+    {
+      $group: {
+        _id: null,
+        total: { $sum: '$total' },
+        paid: { $sum: { $cond: [{ $eq: ['$status', 'Paid'] }, '$total', 0] } },
+        pending: { $sum: { $cond: [{ $ne: ['$status', 'Paid'] }, '$total', 0] } },
+        pendingCount: { $sum: { $cond: [{ $ne: ['$status', 'Paid'] }, 1, 0] } },
+        overdue: {
+          $sum: { $cond: [{ $and: [{ $ne: ['$status', 'Paid'] }, { $lt: ['$createdAt', overdueBefore] }] }, '$total', 0] },
+        },
+        overdueCount: {
+          $sum: { $cond: [{ $and: [{ $ne: ['$status', 'Paid'] }, { $lt: ['$createdAt', overdueBefore] }] }, 1, 0] },
+        },
+      },
+    },
+  ]);
+  const r = row || {};
+  return {
+    totalInvoiceValue: r.total || 0,
+    paidAmount: r.paid || 0,
+    pendingInvoiceValue: r.pending || 0,
+    pendingCount: r.pendingCount || 0,
+    overdueAmount: r.overdue || 0,
+    overdueCount: r.overdueCount || 0,
+    overdueDays: INVOICE_OVERDUE_DAYS,
+  };
+}
+
+/**
+ * Parts picture for the brand: stock its partners hold, parts on the way,
+ * FOC parts approved, and parts dispatched or handed over today. Part orders
+ * belong to the brand through Job -> ServiceRequest, as in listBrandPartOrders.
+ */
+async function brandPartsSummary(brandId, focPartsApproved) {
+  const requestIds = await ServiceRequest.distinct('_id', { brand: asObjectId(brandId) });
+  const providerIds = await ServiceRequest.distinct('serviceProvider', { brand: asObjectId(brandId), serviceProvider: { $ne: null } });
+  const jobIds = requestIds.length ? await Job.distinct('_id', { serviceRequest: { $in: requestIds } }) : [];
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+
+  const [stock, orders] = await Promise.all([
+    providerIds.length
+      ? ServiceProviderInventoryItem.aggregate([
+          { $match: { serviceProvider: { $in: providerIds } } },
+          { $group: { _id: null, qty: { $sum: '$qty' } } },
+        ])
+      : [],
+    jobIds.length
+      ? PartOrder.aggregate([
+          { $match: { job: { $in: jobIds } } },
+          {
+            $group: {
+              _id: null,
+              inTransit: { $sum: { $cond: [{ $eq: ['$status', 'Dispatched'] }, '$qty', 0] } },
+              dispatchedToday: {
+                $sum: {
+                  $cond: [
+                    { $and: [{ $in: ['$status', ['Dispatched', 'Handed Over', 'Delivered']] }, { $gte: ['$updatedAt', startOfDay] }] },
+                    '$qty',
+                    0,
+                  ],
+                },
+              },
+            },
+          },
+        ])
+      : [],
+  ]);
+  return {
+    inventoryOnHand: stock[0]?.qty || 0,
+    inTransit: orders[0]?.inTransit || 0,
+    focPartsApproved,
+    dispatchedToday: orders[0]?.dispatchedToday || 0,
+  };
+}
+
+/**
+ * GET /brand/payments/summary — the Payments page cards: money collected and
+ * paid out this calendar month on the brand's jobs, and unpaid / overdue invoices.
+ */
+export async function getBrandPaymentsSummary(brandId) {
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  monthStart.setHours(0, 0, 0, 0);
+  const jobIds = await brandJobIds(brandId);
+  const [collected, paidOut, invoices] = await Promise.all([
+    jobIds.length
+      ? Payment.aggregate([
+          { $match: { targetType: 'job', targetId: { $in: jobIds }, status: 'Success', createdAt: { $gte: monthStart } } },
+          { $group: { _id: null, amount: { $sum: '$amount' } } },
+        ])
+      : [],
+    jobIds.length
+      ? Payout.aggregate([
+          { $match: { job: { $in: jobIds }, status: 'Settled', updatedAt: { $gte: monthStart } } },
+          // netAmount is what the partner actually received.
+          { $group: { _id: null, amount: { $sum: '$netAmount' } } },
+        ])
+      : [],
+    brandInvoiceSummary(brandId),
+  ]);
+  return {
+    collectedThisMonth: collected[0]?.amount || 0,
+    paidOutThisMonth: paidOut[0]?.amount || 0,
+    outstandingAmount: invoices.pendingInvoiceValue,
+    outstandingCount: invoices.pendingCount,
+    overdueAmount: invoices.overdueAmount,
+    overdueCount: invoices.overdueCount,
+    overdueDays: invoices.overdueDays,
   };
 }
 

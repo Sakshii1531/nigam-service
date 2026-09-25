@@ -11,6 +11,7 @@ import RateChangeModal from '../../components/super-admin/catalogue/RateChangeMo
 import DuplicateOfferingModal from '../../components/super-admin/catalogue/DuplicateOfferingModal';
 import { Modal, Field, inputClass, Toggle, ErrorNote, PrimaryButton, SecondaryButton } from '../../components/super-admin/catalogue/ui';
 import { listToText, textToList } from '../../components/super-admin/catalogue/listText';
+import { uploadImage } from '../../lib/uploadImage';
 
 // Master Service & Offering Catalogue (docs/master-catalogue Phase 3) — the
 // single place where what customers can book, what they pay and what the
@@ -23,6 +24,23 @@ function CategoryModal({ category, onClose, onSaved }) {
   const [key, setKey] = useState(category?.key || '');
   const [name, setName] = useState(category?.name || '');
   const [keywords, setKeywords] = useState(listToText(category?.keywords, ', '));
+  const [imageUrl, setImageUrl] = useState(category?.imageUrl || '');
+  const [uploading, setUploading] = useState(false);
+
+  // The picture goes to Cloudinary first; the category stores its URL.
+  const pickImage = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setError('');
+    try {
+      setImageUrl(await uploadImage(file));
+    } catch (err) {
+      setError(err.message || 'Image upload failed.');
+    } finally {
+      setUploading(false);
+    }
+  };
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -31,7 +49,7 @@ function CategoryModal({ category, onClose, onSaved }) {
     setSaving(true);
     setError('');
     try {
-      const body = { name: name.trim(), keywords: textToList(keywords, { commas: true }) };
+      const body = { name: name.trim(), keywords: textToList(keywords, { commas: true }), imageUrl: imageUrl || null };
       const saved = isNew
         ? await catalogueAdmin.createCategory({ ...body, key: key.trim() })
         : await catalogueAdmin.updateCategory(category.id, body);
@@ -56,10 +74,26 @@ function CategoryModal({ category, onClose, onSaved }) {
         <Field label="Search keywords" hint="Comma separated, e.g. electrician, wiring, switch.">
           <input value={keywords} onChange={(e) => setKeywords(e.target.value)} className={inputClass} />
         </Field>
+        <Field label="Picture" hint="Shown on the AMC, warranty and Buy appliance lists. PNG / JPG / WEBP up to 5 MB.">
+          <div className="flex items-center gap-3">
+            {imageUrl ? (
+              <img src={imageUrl} alt="" className="w-14 h-14 object-contain rounded-xl border border-slate-200 bg-slate-50" />
+            ) : (
+              <div className="w-14 h-14 rounded-xl border border-dashed border-slate-300 bg-slate-50" />
+            )}
+            <input type="file" accept="image/*" onChange={pickImage} aria-label="Upload category picture" className="text-xs" />
+            {uploading && <span className="text-xs text-slate-500">Uploading…</span>}
+            {imageUrl && !uploading && (
+              <button type="button" onClick={() => setImageUrl('')} className="text-xs font-bold text-red-600 cursor-pointer">
+                Remove
+              </button>
+            )}
+          </div>
+        </Field>
         <ErrorNote message={error} />
         <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
           <SecondaryButton type="button" onClick={onClose}>Cancel</SecondaryButton>
-          <PrimaryButton type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save'}</PrimaryButton>
+          <PrimaryButton type="submit" disabled={saving || uploading}>{saving ? 'Saving…' : 'Save'}</PrimaryButton>
         </div>
       </form>
     </Modal>

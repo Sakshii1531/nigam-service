@@ -172,3 +172,25 @@ describe('search v2 — typos, synonyms, suggestions (Phase 11)', () => {
     expect(JSON.stringify(res.body.data)).not.toMatch(/payout|margin|price/i);
   });
 });
+
+describe('synonym list stays safe (Phase 15)', () => {
+  it('no word belongs to two groups, and none is a stop word', async () => {
+    const { SYNONYM_GROUPS } = await import('../src/modules/catalog/searchSynonyms.js');
+    const { queryTokens } = await import('../src/modules/catalog/offeringSearch.service.js');
+    const seen = new Map();
+    for (const [i, group] of SYNONYM_GROUPS.entries()) {
+      for (const word of group) {
+        expect([word, seen.get(word)]).toEqual([word, undefined]);
+        seen.set(word, i);
+        expect(queryTokens(word)).toEqual([word]);
+      }
+    }
+  });
+
+  it('"clean" does not drag in washing-machine repairs; "wiring" is not every electrician job', async () => {
+    const clean = await search('clean');
+    expect(clean.groups.some((g) => /Washing Machine.*(Repair|Installation)/.test(g.title))).toBe(false);
+    const wiring = await search('wiring');
+    expect(titles(wiring)).toEqual(['Wiring Repair']);
+  });
+});

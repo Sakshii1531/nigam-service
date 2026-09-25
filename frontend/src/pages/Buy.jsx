@@ -940,7 +940,7 @@ const Buy = () => {
                 name: a.name,
                 desc: `${a.planCount} warranty pack${a.planCount === 1 ? "" : "s"}`,
                 price: `₹${Number(a.fromPrice).toLocaleString("en-IN")}`,
-                img: applianceArt(a.name),
+                img: a.imageUrl || applianceArt(a.name),
               })).map((item) => (
                 <div
                   key={item.id}
@@ -2764,7 +2764,7 @@ const Buy = () => {
               {(ewAppliances || []).map((a) => ({
                 key: a.appliance,
                 name: a.name,
-                img: applianceArt(a.name),
+                img: a.imageUrl || applianceArt(a.name),
                 desc: `From ₹${Number(a.fromPrice).toLocaleString("en-IN")}`,
               })).map((item, idx) => (
                 <div

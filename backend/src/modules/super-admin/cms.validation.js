@@ -1,7 +1,8 @@
 import { z } from 'zod';
+import { mediaUrl } from '../shared/mediaUrl.js';
 
 export const createBannerSchema = z.object({
-  imageUrl: z.string().min(1),
+  imageUrl: mediaUrl().pipe(z.string().min(1)),
   title: z.string().optional(),
   description: z.string().optional(),
   segment: z.enum(['warranty', 'non-warranty']).optional(),
@@ -12,7 +13,7 @@ export const updateBannerSchema = createBannerSchema.partial().extend({ isActive
 export const listBannersQuerySchema = z.object({ app: z.enum(['customer', 'service_provider']).optional() });
 
 const storySlideSchema = z.object({
-  image: z.string().optional(),
+  image: mediaUrl().optional(),
   caption: z.string().optional(),
   subCaption: z.string().optional(),
 });
@@ -20,7 +21,7 @@ const storySlideSchema = z.object({
 export const createStorySchema = z.object({
   title: z.string().min(1),
   type: z.enum(['Promo Banner', 'Customer Help Slider', 'Informational']),
-  mediaUrl: z.string().optional(),
+  mediaUrl: mediaUrl().optional(),
   aspectRatio: z.string().optional(),
   slides: z.array(storySlideSchema).optional(),
 });

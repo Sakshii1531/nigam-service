@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { mediaUrl } from '../shared/mediaUrl.js';
 
 const PLACEMENTS = ['category', 'dashboard-service', 'most-booked', 'appliance-service', 'brand-card'];
 
@@ -9,8 +10,8 @@ export const listTilesQuerySchema = z.object({
 export const createTileSchema = z.object({
   placement: z.enum(PLACEMENTS),
   title: z.string().min(1),
-  imageUrl: z.string().optional(),
-  icon: z.string().optional(),
+  imageUrl: mediaUrl().optional(),
+  icon: mediaUrl().optional(),
   rating: z.number().min(0).max(5).optional(),
   badge: z.string().optional(),
   link: z.string().optional(),

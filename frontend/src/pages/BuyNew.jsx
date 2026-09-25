@@ -55,6 +55,7 @@ import waterPurifierImg from "../assets/categories/water_purifier.png";
 import tvImg from "../assets/categories/television.png";
 import geyserImg from "../assets/icon_3d_geyser.png";
 import ovenImg from "../assets/icon_3d_oven.png";
+import { uploadImage } from "../lib/uploadImage";
 
 // Helper to map category names to images
 function getApplianceImg(category) {
@@ -3950,10 +3951,10 @@ const BuyNew = () => {
                         onChange={(e) => {
                           const file = e.target.files?.[0];
                           if (file) {
-                            const reader = new FileReader();
-                            reader.onloadend = () =>
-                              setNewReviewPhoto(reader.result);
-                            reader.readAsDataURL(file);
+                            // Stored on Cloudinary; the review keeps only the URL.
+                            uploadImage(file)
+                              .then(setNewReviewPhoto)
+                              .catch((err) => alert(err.message || "Photo upload failed."));
                           }
                         }}
                       />

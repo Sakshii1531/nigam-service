@@ -3,6 +3,7 @@ import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import { Search, Package, Plus, Edit2, Trash2, X, UploadCloud, Percent, Layers, ShieldCheck, DollarSign, Check, PlusCircle } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
+import { uploadImages } from '../../lib/uploadImage';
 
 const PRESET_SPECS = {
   'Air Conditioner': ['1.5 Ton', '1.0 Ton', '2.0 Ton', '5 Star Rating', '3 Star Rating', '100% Copper Condenser', 'Dual Inverter', 'Wi-Fi Smart Control', 'Convertible 4-in-1'],
@@ -217,6 +218,22 @@ const Products = () => {
         setBenefitsTags((prev) => [...prev, val]);
       }
       setCustomBenefitInput('');
+    }
+  };
+
+  // Product photos go to Cloudinary (POST /uploads); only their URLs are saved.
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const addProductImages = async (files) => {
+    if (!files.length) return;
+    setUploadingImages(true);
+    try {
+      const urls = await uploadImages(files);
+      setNewImages((prev) => [...prev, ...urls].slice(0, 5));
+      setNewImage((prev) => prev || urls[0]);
+    } catch (err) {
+      setLoadError(err.message || 'Image upload failed.');
+    } finally {
+      setUploadingImages(false);
     }
   };
 
@@ -838,17 +855,7 @@ const Products = () => {
                               multiple
                               className="absolute inset-0 opacity-0 cursor-pointer" 
                               onChange={(e) => {
-                                const files = Array.from(e.target.files || []);
-                                const remaining = 5 - newImages.length;
-                                const allowedFiles = files.slice(0, remaining);
-                                allowedFiles.forEach((file) => {
-                                  const reader = new FileReader();
-                                  reader.onloadend = () => {
-                                    setNewImages((prev) => prev.length < 5 ? [...prev, reader.result] : prev);
-                                    setNewImage((prev) => prev || reader.result);
-                                  };
-                                  reader.readAsDataURL(file);
-                                });
+                                addProductImages(Array.from(e.target.files || []).slice(0, 5 - newImages.length));
                               }}
                             />
                           </div>
@@ -864,7 +871,7 @@ const Products = () => {
                         <UploadCloud size={20} />
                       </div>
                       <span className="text-xs text-slate-700 font-bold mb-0.5 group-hover:text-[#0D47A1] transition-colors">
-                        Click to Upload Product Images (Max 5 Images)
+                        {uploadingImages ? 'Uploading…' : 'Click to Upload Product Images (Max 5 Images)'}
                       </span>
                       <span className="text-[10px] text-slate-400 font-medium">PNG, JPG, WEBP up to 5MB (Maximum 5 photos)</span>
                       <input 
@@ -873,16 +880,7 @@ const Products = () => {
                         multiple
                         className="absolute inset-0 opacity-0 cursor-pointer" 
                         onChange={(e) => {
-                          const files = Array.from(e.target.files || []);
-                          const allowedFiles = files.slice(0, 5);
-                          allowedFiles.forEach((file) => {
-                            const reader = new FileReader();
-                            reader.onloadend = () => {
-                              setNewImages((prev) => prev.length < 5 ? [...prev, reader.result] : prev);
-                              setNewImage((prev) => prev || reader.result);
-                            };
-                            reader.readAsDataURL(file);
-                          });
+                          addProductImages(Array.from(e.target.files || []).slice(0, 5));
                         }}
                       />
                     </div>

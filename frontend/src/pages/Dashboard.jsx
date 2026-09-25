@@ -16,6 +16,7 @@ import { useLocationContext } from "../context/LocationContext";
 import { useCatalogueSearch } from "../lib/useCatalogueSearch";
 import CatalogueSearchResults from "../components/common/CatalogueSearchResults";
 import SearchSuggestions from "../components/common/SearchSuggestions";
+import { isImageUrl } from "../lib/uploadImage";
 import { formatRupees, resolveLabels } from "../lib/catalogueApi";
 import { useAuth } from "../context/AuthContext";
 import { apiRequest } from "../lib/apiClient";
@@ -574,7 +575,7 @@ const getCategoryIconKey = (cat) => {
   if (!cat) return "more";
   if (
     cat.icon &&
-    (cat.icon.startsWith("data:image/") || cat.icon.startsWith("http"))
+    isImageUrl(cat.icon)
   ) {
     return cat.icon;
   }
@@ -1373,8 +1374,7 @@ const Dashboard = ({ defaultType }) => {
                     const iconKey = getCategoryIconKey(cat);
                     if (
                       iconKey &&
-                      (iconKey.startsWith("data:image/") ||
-                        iconKey.startsWith("http"))
+                      isImageUrl(iconKey)
                     ) {
                       return (
                         <img

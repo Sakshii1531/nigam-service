@@ -107,8 +107,8 @@ describe('customer AMC page reads exactly what the admin set', () => {
     ]);
     const res = await request(app).get('/api/v1/warranty-amc/amc/appliances').expect(200);
     expect(res.body.data).toEqual([
-      { appliance: 'AC', name: 'AC', fromPrice: 999, planCount: 3 },
-      { appliance: 'Refrigerator', name: 'Refrigerator', fromPrice: 999, planCount: 2 },
+      { appliance: 'AC', name: 'AC', imageUrl: null, fromPrice: 999, planCount: 3 },
+      { appliance: 'Refrigerator', name: 'Refrigerator', imageUrl: null, fromPrice: 999, planCount: 2 },
     ]);
 
     const plans = await request(app).get('/api/v1/warranty-amc/amc/plans?appliance=AC').expect(200);
@@ -155,7 +155,7 @@ describe('extended-warranty packs (Phase 13)', () => {
     await api('put', `/extended-warranty/${created.body.data.id}`, { price: 2099 }).expect(200);
 
     const appliances = await request(app).get('/api/v1/warranty-amc/extended-warranty/appliances').expect(200);
-    expect(appliances.body.data).toEqual([{ appliance: 'AC', name: 'AC', fromPrice: 799, planCount: 2 }]);
+    expect(appliances.body.data).toEqual([{ appliance: 'AC', name: 'AC', imageUrl: null, fromPrice: 799, planCount: 2 }]);
     const packs = await request(app).get('/api/v1/warranty-amc/extended-warranty/plans?category=AC').expect(200);
     expect(packs.body.data.map((p) => [p.name, p.price])).toEqual([['AC 2-Year Extended Warranty', 2099], ['Any 1-Year', 799]]);
     expect(await AuditLog.findOne({ action: /warranty pack "AC 2-Year Extended Warranty" updated — price 1999 → 2099/ })).not.toBeNull();

@@ -23,6 +23,7 @@ import mostBookedAc1 from "../../assets/most_booked_ac_1.png";
 import mostBookedAc2 from "../../assets/most_booked_ac_2.png";
 import mostBookedCleaning from "../../assets/most_booked_cleaning.png";
 import mostBookedSalon from "../../assets/most_booked_salon.png";
+import { uploadImage, isImageUrl } from "../../lib/uploadImage";
 
 // Stories assets
 
@@ -1234,12 +1235,12 @@ const CustomerAppCustomization = () => {
   const handleCategoryFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
+      uploadImage(file)
+        .then((url) => {
         setIconMode("upload");
-        setCategoryForm((prev) => ({ ...prev, icon: reader.result }));
-      };
-      reader.readAsDataURL(file);
+        setCategoryForm((prev) => ({ ...prev, icon: url }));
+        })
+        .catch((err) => showToast(err.message || "Image upload failed."));
     }
   };
 
@@ -1257,7 +1258,7 @@ const CustomerAppCustomization = () => {
     setShowIconPicker(false);
     const cat = categories[index];
     setIconMode(
-      cat.icon && cat.icon.startsWith("data:image/") ? "upload" : "preset",
+      isImageUrl(cat.icon) ? "upload" : "preset",
     );
 
     // Booking content for a category (brands, notes, services, prices) lives
@@ -1326,11 +1327,11 @@ const CustomerAppCustomization = () => {
   const handleBannerFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setNewBannerFile(reader.result);
-      };
-      reader.readAsDataURL(file);
+      uploadImage(file)
+        .then((url) => {
+        setNewBannerFile(url);
+        })
+        .catch((err) => showToast(err.message || "Image upload failed."));
     }
   };
 
@@ -1398,11 +1399,11 @@ const CustomerAppCustomization = () => {
   const handleBrandFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setBrandForm((prev) => ({ ...prev, image: reader.result }));
-      };
-      reader.readAsDataURL(file);
+      uploadImage(file)
+        .then((url) => {
+        setBrandForm((prev) => ({ ...prev, image: url }));
+        })
+        .catch((err) => showToast(err.message || "Image upload failed."));
     }
   };
 
@@ -1491,11 +1492,11 @@ const CustomerAppCustomization = () => {
   const handleMostBookedFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setMostBookedForm((prev) => ({ ...prev, image: reader.result }));
-      };
-      reader.readAsDataURL(file);
+      uploadImage(file)
+        .then((url) => {
+        setMostBookedForm((prev) => ({ ...prev, image: url }));
+        })
+        .catch((err) => showToast(err.message || "Image upload failed."));
     }
   };
 
@@ -1563,11 +1564,11 @@ const CustomerAppCustomization = () => {
   const handleApplianceFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setApplianceForm((prev) => ({ ...prev, image: reader.result }));
-      };
-      reader.readAsDataURL(file);
+      uploadImage(file)
+        .then((url) => {
+        setApplianceForm((prev) => ({ ...prev, image: url }));
+        })
+        .catch((err) => showToast(err.message || "Image upload failed."));
     }
   };
 
@@ -1637,11 +1638,11 @@ const CustomerAppCustomization = () => {
   const handleStoryFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setStoryForm((prev) => ({ ...prev, image: reader.result }));
-      };
-      reader.readAsDataURL(file);
+      uploadImage(file)
+        .then((url) => {
+        setStoryForm((prev) => ({ ...prev, image: url }));
+        })
+        .catch((err) => showToast(err.message || "Image upload failed."));
     }
   };
 
@@ -1838,7 +1839,7 @@ const CustomerAppCustomization = () => {
                           </td>
 
                           <td className="px-6 py-4">
-                            {cat.icon && cat.icon.startsWith("data:image/") ? (
+                            {isImageUrl(cat.icon) ? (
                               <img
                                 src={cat.icon}
                                 alt={cat.name}
@@ -2466,8 +2467,7 @@ const CustomerAppCustomization = () => {
                             setIconMode("preset");
                             setShowIconPicker(true);
                             if (
-                              categoryForm.icon &&
-                              categoryForm.icon.startsWith("data:image/")
+                              isImageUrl(categoryForm.icon)
                             ) {
                               setCategoryForm((prev) => ({
                                 ...prev,
@@ -2570,12 +2570,10 @@ const CustomerAppCustomization = () => {
                           onChange={handleCategoryFileChange}
                           className="w-full text-xs text-slate-500 file:mr-3 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-blue-50 file:text-[#0D47A1] hover:file:bg-blue-100 cursor-pointer"
                           required={
-                            !categoryForm.icon ||
-                            !categoryForm.icon.startsWith("data:image/")
+                            !isImageUrl(categoryForm.icon)
                           }
                         />
-                        {categoryForm.icon &&
-                          categoryForm.icon.startsWith("data:image/") && (
+                        {isImageUrl(categoryForm.icon) && (
                             <img
                               src={categoryForm.icon}
                               alt="Preview"
@@ -3217,17 +3215,17 @@ const CustomerAppCustomization = () => {
                                 onChange={(e) => {
                                   const file = e.target.files[0];
                                   if (file) {
-                                    const reader = new FileReader();
-                                    reader.onloadend = () => {
+                                    uploadImage(file)
+                                      .then((url) => {
                                       setStorySlides((prev) =>
                                         prev.map((s) =>
                                           s.id === slide.id
-                                            ? { ...s, image: reader.result }
+                                            ? { ...s, image: url }
                                             : s,
                                         ),
                                       );
-                                    };
-                                    reader.readAsDataURL(file);
+                                      })
+                                      .catch((err) => showToast(err.message || "Image upload failed."));
                                   }
                                 }}
                                 className="w-full text-[10px] text-slate-500 file:mr-2 file:py-0.5 file:px-1.5 file:rounded file:border-0 file:text-[9px] file:font-semibold file:bg-blue-50 file:text-[#0D47A1] hover:file:bg-blue-100 cursor-pointer"

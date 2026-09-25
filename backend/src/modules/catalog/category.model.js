@@ -10,6 +10,8 @@ const categorySchema = new mongoose.Schema(
     key: { type: String, required: true, unique: true }, // e.g. "AC", "Washing Machine"
     name: { type: String, required: true },
     icon: String,
+    // Picture of the appliance / service (Cloudinary URL), set in Master Catalogue.
+    imageUrl: { type: String, default: null },
     color: String,
     lightBg: String,
     categoryNote: String,

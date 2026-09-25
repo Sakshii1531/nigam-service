@@ -11,6 +11,9 @@ import {
 import { apiRequest } from '../../lib/apiClient';
 
 const currency = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+// "—" while the dashboard is loading, never a made-up figure.
+const money = (v) => (v == null ? '—' : currency.format(v));
+const count = (v) => (v == null ? '—' : Number(v).toLocaleString('en-IN'));
 const number = new Intl.NumberFormat('en-IN');
 
 /* ── KPI Card ── */
@@ -546,10 +549,11 @@ const Dashboard = () => {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { label: 'Total Inventory', value: '15,230', sub: 'Pcs', icon: <Package size={16} />, bg: 'bg-blue-50', color: 'text-blue-600' },
-                  { label: 'Parts in Transit', value: '1,845', sub: 'Pcs', icon: <Truck size={16} />, bg: 'bg-purple-50', color: 'text-purple-600' },
-                  { label: 'FOC Parts Approved', value: '2,356', sub: 'Pcs', icon: <CheckCircle2 size={16} />, bg: 'bg-green-50', color: 'text-green-600' },
-                  { label: 'Dispatch Today', value: '256', sub: 'Pcs', icon: <Truck size={16} />, bg: 'bg-orange-50', color: 'text-orange-600' },
+                  // From GET /brand/dashboard → parts (this brand's partners, part orders and FOC claims).
+                  { label: 'Total Inventory', value: count(metrics?.parts?.inventoryOnHand), sub: 'Pcs', icon: <Package size={16} />, bg: 'bg-blue-50', color: 'text-blue-600' },
+                  { label: 'Parts in Transit', value: count(metrics?.parts?.inTransit), sub: 'Pcs', icon: <Truck size={16} />, bg: 'bg-purple-50', color: 'text-purple-600' },
+                  { label: 'FOC Parts Approved', value: count(metrics?.parts?.focPartsApproved), sub: 'Claims', icon: <CheckCircle2 size={16} />, bg: 'bg-green-50', color: 'text-green-600' },
+                  { label: 'Dispatch Today', value: count(metrics?.parts?.dispatchedToday), sub: 'Pcs', icon: <Truck size={16} />, bg: 'bg-orange-50', color: 'text-orange-600' },
                 ].map((s, i) => (
                   <div key={i} className={`${s.bg} rounded-xl p-3`}>
                     <div className={`${s.color} mb-1`}>{s.icon}</div>
@@ -569,10 +573,11 @@ const Dashboard = () => {
               </div>
               <div className="space-y-3">
                 {[
-                  { label: 'Total Invoice Value', value: '₹48,75,230', valueColor: 'text-[#1E293B]' },
-                  { label: 'Pending Invoice Value', value: '₹8,45,210', valueColor: 'text-red-500' },
-                  { label: 'Paid Amount', value: '₹40,30,020', valueColor: 'text-green-600' },
-                  { label: 'Overdue Amount', value: '₹2,15,780', valueColor: 'text-red-500' },
+                  // From GET /brand/dashboard → finance (this brand's invoices).
+                  { label: 'Total Invoice Value', value: money(metrics?.finance?.totalInvoiceValue), valueColor: 'text-[#1E293B]' },
+                  { label: 'Pending Invoice Value', value: money(metrics?.finance?.pendingInvoiceValue), valueColor: 'text-red-500' },
+                  { label: 'Paid Amount', value: money(metrics?.finance?.paidAmount), valueColor: 'text-green-600' },
+                  { label: `Overdue (${metrics?.finance?.overdueDays ?? 30}+ days)`, value: money(metrics?.finance?.overdueAmount), valueColor: 'text-red-500' },
                 ].map((f, i) => (
                   <div key={i} className="flex justify-between items-center pb-2 border-b border-[#F1F5F9] last:border-0 last:pb-0">
                     <span className="text-[10px] font-semibold text-[#64748B]">{f.label}</span>

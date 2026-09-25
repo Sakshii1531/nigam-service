@@ -130,6 +130,14 @@ brandInsightsRouter.get('/inventory', validate(listPaginatedQuerySchema, 'query'
   }
 });
 
+brandInsightsRouter.get('/payments/summary', async (req, res, next) => {
+  try {
+    ok(res, await brandInsights.getBrandPaymentsSummary(req.user.brand));
+  } catch (err) {
+    next(err);
+  }
+});
+
 brandInsightsRouter.get('/payments/customer', validate(listPaymentsQuerySchema, 'query'), async (req, res, next) => {
   try {
     const { items, meta } = await brandInsights.listBrandCustomerPayments(req.user.brand, req.query);

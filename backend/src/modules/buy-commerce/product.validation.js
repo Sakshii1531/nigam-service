@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { mediaUrl } from '../shared/mediaUrl.js';
 
 export const listProductsQuerySchema = z.object({
   category: z.string().optional(),
@@ -22,8 +23,8 @@ export const createProductSchema = z.object({
   benefits: z.array(z.string()).optional(),
   stock: z.coerce.number().int().nonnegative().optional(),
   sku: z.string().optional(),
-  imageUrl: z.string().optional(),
-  images: z.array(z.string()).optional(),
+  imageUrl: mediaUrl().optional(),
+  images: z.array(mediaUrl()).optional(),
 });
 
 export const updateProductSchema = createProductSchema.partial();
