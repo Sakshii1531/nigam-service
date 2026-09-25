@@ -126,6 +126,19 @@ export const createOfferingSchema = offeringContentSchema.partial().extend({
 // commercial numbers are not editable here — the latter only via /rates.
 export const updateOfferingSchema = offeringContentSchema.partial().strict();
 
+// Where a rate applies: the default price list, one city, or one pincode.
+export const rateScopeSchema = z
+  .object({
+    type: z.enum(['DEFAULT', 'CITY', 'PINCODE']),
+    value: z.string().trim().max(80).nullable().optional(),
+  })
+  .strict()
+  .superRefine((scope, ctx) => {
+    if (scope.type === 'DEFAULT') return;
+    if (!scope.value) ctx.addIssue({ code: 'custom', path: ['value'], message: `Choose the ${scope.type === 'CITY' ? 'city' : 'pincode'}` });
+    else if (scope.type === 'PINCODE' && !/^\d{6}$/.test(scope.value)) ctx.addIssue({ code: 'custom', path: ['value'], message: 'A pincode is 6 digits' });
+  });
+
 export const changeRateSchema = z
   .object({
     customerPrice: rupees.optional(),
@@ -134,11 +147,16 @@ export const changeRateSchema = z
     expressSpIncentive: rupees.optional(),
     effectiveFrom: z.coerce.date().optional(),
     reason: text(300).min(3, 'Give a reason for the change'),
+    scope: rateScopeSchema.optional(),
   })
   .strict()
   .refine((v) => ['customerPrice', 'spPayout', 'expressFee', 'expressSpIncentive'].some((k) => v[k] !== undefined), {
     message: 'Change at least one amount',
   });
+
+export const endRateScopeSchema = z
+  .object({ scope: rateScopeSchema, reason: text(300).min(3, 'Give a reason') })
+  .strict();
 
 export const duplicateOfferingSchema = z.object({
   variant: nullableId.optional(),

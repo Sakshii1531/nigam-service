@@ -40,6 +40,7 @@ export const catalogueAdmin = {
 
   changeRate: (id, body) => call(`/offerings/${id}/rates`, { method: 'POST', body }),
   rateHistory: (id) => call(`/offerings/${id}/rates`),
+  endLocalRate: (id, body) => call(`/offerings/${id}/rates/end`, { method: 'POST', body }),
   rateChanges: (filters = {}) => call(`/rate-changes${qs(filters)}`, { envelope: true }),
 };
 

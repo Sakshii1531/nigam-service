@@ -621,7 +621,7 @@ const Users = () => {
                                     </div>
                                     <div className="text-right">
                                       <p className="text-xs font-bold text-[#0D47A1]">
-                                        ₹{sub.amountPaid || 1499}
+                                        ₹{sub.amountPaid ?? 0}
                                       </p>
                                       <span className="text-[9px] font-bold bg-green-50 text-green-600 px-1.5 py-0.5 rounded mt-1 inline-block uppercase tracking-wider">
                                         {sub.status}

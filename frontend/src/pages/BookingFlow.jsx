@@ -37,6 +37,8 @@ import MapLocationPickerModal from "../components/booking/MapLocationPickerModal
 
 import {
   getCategoryTree,
+  hasDeepLink,
+  selectionFromDeepLink,
   getOffering,
   getQuote,
   pickOffering,
@@ -359,7 +361,10 @@ const BookingFlow = () => {
   // Step 2 — the service (product-linked) and the quantity. Other product
   // types serviced in the same visit (1 Window AC + 2 Split AC) are extra
   // lines: each resolves to its own offering and becomes its own booking.
-  const [serviceId, setServiceId] = useState(() => sel.serviceId || "");
+  const [chosenServiceId, setServiceId] = useState(() => sel.serviceId || "");
+  // A deep link's service (?svc=installation) — picked in step 2 as soon as
+  // the chosen type / size offers it, unless the customer picks another.
+  const [preferredServiceId, setPreferredServiceId] = useState("");
   const [quantity, setQuantity] = useState(() => sel.quantity || 1);
   const [extraLines, setExtraLines] = useState(() => sel.extraLines || []);
 
@@ -528,6 +533,8 @@ const BookingFlow = () => {
 
   // ── Catalogue: load the tree, resolve the selection, get the quote ─────────
   const city = address.city || currentLocation?.city || "";
+  const deepLinkApplied = useRef(false);
+  const entry = useRef({ search: location.search, resuming: Boolean(resumeBooking) });
   useEffect(() => {
     let alive = true;
     getCategoryTree(category, { city })
@@ -535,6 +542,19 @@ const BookingFlow = () => {
         if (!alive) return;
         setTree(t);
         setTreeError("");
+        // Search results, home tiles and other entry points open the flow
+        // with the selection in the URL; apply it once, on a fresh start.
+        if (!deepLinkApplied.current && !entry.current.resuming && hasDeepLink(entry.current.search)) {
+          const link = selectionFromDeepLink(t, entry.current.search);
+          setProductTypeId(link.productTypeId);
+          setVariantId(link.variantId);
+          setStandaloneServiceId(link.standaloneServiceId);
+          setOptionId(link.optionId);
+          setPreferredServiceId(link.preferredServiceId);
+          setQuantity(link.quantity);
+          setStep(link.step);
+        }
+        deepLinkApplied.current = true;
       })
       .catch((err) => alive && setTreeError(err.message || "This service isn't available right now."));
     return () => {
@@ -548,6 +568,9 @@ const BookingFlow = () => {
   const selectedStandalone = standaloneServices.find((sv) => sv.id === standaloneServiceId) || null;
   const isStandalone = Boolean(selectedStandalone);
   const serviceChoices = selectedPT ? servicesFor(tree, { productTypeId, variantId: variantId || null }) : [];
+  const serviceId =
+    chosenServiceId ||
+    (preferredServiceId && serviceChoices.some((c) => c.service.id === preferredServiceId) ? preferredServiceId : "");
   const optionChoices = selectedStandalone ? optionsFor(tree, standaloneServiceId) : [];
 
   const primaryOffering = isStandalone

@@ -19,7 +19,6 @@ import { Escalation } from '../src/modules/super-admin/escalation.model.js';
 import { AuditLog } from '../src/modules/super-admin/auditLog.model.js';
 import { Revenue } from '../src/modules/super-admin/revenue.model.js';
 import { HomeTile } from '../src/modules/super-admin/homeTile.model.js';
-import { ServicePageConfig } from '../src/modules/super-admin/servicePageConfig.model.js';
 import { Announcement } from '../src/modules/service-provider/announcement.model.js';
 import { ReferralCampaign } from '../src/modules/rewards-loyalty/referralCampaign.model.js';
 import { AMCSubscription } from '../src/modules/warranty-amc-exchange/amcSubscription.model.js';
@@ -32,7 +31,6 @@ import { Advertisement } from '../src/modules/super-admin/advertisement.model.js
 import { CMSPage } from '../src/modules/super-admin/cmsPage.model.js';
 import { AppSetting } from '../src/modules/super-admin/appSetting.model.js';
 import { LoyaltyMilestone } from '../src/modules/rewards-loyalty/loyaltyMilestone.model.js';
-import { Membership } from '../src/modules/rewards-loyalty/membership.model.js';
 import { SpinWheelConfig } from '../src/modules/rewards-loyalty/spinWheelConfig.model.js';
 import { ServiceRequest } from '../src/modules/service-requests/serviceRequest.model.js';
 import { Category } from '../src/modules/catalog/category.model.js';
@@ -96,7 +94,6 @@ beforeEach(async () => {
     AuditLog.deleteMany({}),
     Revenue.deleteMany({}),
     HomeTile.deleteMany({}),
-    ServicePageConfig.deleteMany({}),
     Announcement.deleteMany({}),
     ReferralCampaign.deleteMany({}),
     AMCSubscription.deleteMany({}),
@@ -109,7 +106,6 @@ beforeEach(async () => {
     CMSPage.deleteMany({}),
     AppSetting.deleteMany({}),
     LoyaltyMilestone.deleteMany({}),
-    Membership.deleteMany({}),
     SpinWheelConfig.deleteMany({}),
     ServiceRequest.deleteMany({}),
     Category.deleteMany({}),
@@ -545,7 +541,7 @@ describe('Warranty registration verification', () => {
 });
 
 describe('loyalty config', () => {
-  it('CRUDs a milestone and a membership tier, rejecting a duplicate tierRank', async () => {
+  it('CRUDs a milestone; membership tiers are gone (merged into AMC plans, Phase 12)', async () => {
     const { token } = await seedSuperAdmin();
 
     const milestoneRes = await request(app)
@@ -555,16 +551,8 @@ describe('loyalty config', () => {
       .expect(201);
     expect(milestoneRes.body.data.status).toBe('Locked');
 
-    await request(app)
-      .post('/api/v1/super-admin/loyalty/memberships')
-      .set('Authorization', `Bearer ${token}`)
-      .send({ name: 'Silver', price: 499, tierRank: 1 })
-      .expect(201);
-    await request(app)
-      .post('/api/v1/super-admin/loyalty/memberships')
-      .set('Authorization', `Bearer ${token}`)
-      .send({ name: 'Silver Duplicate', price: 599, tierRank: 1 })
-      .expect(409);
+    await request(app).get('/api/v1/super-admin/loyalty/memberships').set('Authorization', `Bearer ${token}`).expect(404);
+    await request(app).get('/api/v1/memberships/plans').expect(404);
   });
 
   it('rejects spin-wheel segment probabilities summing over 100', async () => {
@@ -812,7 +800,9 @@ describe('CMS home tiles', () => {
 
     const mostBooked = await request(app).get('/api/v1/cms/home-tiles?placement=most-booked').expect(200);
     expect(mostBooked.body.data).toHaveLength(1);
-    expect(mostBooked.body.data[0].price).toBe(649);
+    // Tiles hold no price (docs/master-catalogue Phase 7) — a sent one is dropped.
+    expect(mostBooked.body.data[0].price).toBeUndefined();
+    expect(mostBooked.body.data[0].badge).toBe('Instant');
 
     const categories = await request(app).get('/api/v1/cms/home-tiles?placement=category').expect(200);
     expect(categories.body.data).toHaveLength(1);
@@ -868,77 +858,8 @@ describe('CMS home tiles', () => {
   });
 });
 
-describe('CMS service page configs', () => {
-  it('stores hero copy and its catalog as one document per service', async () => {
-    const { token } = await seedSuperAdmin();
-
-    const res = await request(app)
-      .put('/api/v1/cms/service-pages/AC%20Repair')
-      .set('Authorization', `Bearer ${token}`)
-      .send({
-        tagline: 'Cool Again Today',
-        subtitle: 'Certified AC ServiceProviders',
-        subServices: 'Book a consultation, Gas Refilling',
-        catalog: [
-          {
-            section: 'Book a consultation',
-            items: [{ name: 'Standard Consultancy', rating: 4.4, reviews: 38, price: '₹149', time: '1 hrs', bullets: ['Detailed inspection'] }],
-          },
-        ],
-      })
-      .expect(200);
-
-    expect(res.body.data.serviceKey).toBe('AC Repair');
-    expect(res.body.data.catalog[0].items[0].bullets).toEqual(['Detailed inspection']);
-
-    // The customer app reads this without auth.
-    const publicRes = await request(app).get('/api/v1/cms/service-pages/AC%20Repair').expect(200);
-    expect(publicRes.body.data.tagline).toBe('Cool Again Today');
-  });
-
-  it('upserts rather than requiring the service to exist first', async () => {
-    const { token } = await seedSuperAdmin();
-    await request(app)
-      .put('/api/v1/cms/service-pages/Plumber')
-      .set('Authorization', `Bearer ${token}`)
-      .send({ tagline: 'Leak Fixed Fast' })
-      .expect(200);
-
-    const second = await request(app)
-      .put('/api/v1/cms/service-pages/Plumber')
-      .set('Authorization', `Bearer ${token}`)
-      .send({ tagline: 'Updated' })
-      .expect(200);
-
-    expect(second.body.data.tagline).toBe('Updated');
-    expect(await ServicePageConfig.countDocuments({ serviceKey: 'Plumber' })).toBe(1);
-  });
-
-  it('ignores a body-supplied serviceKey so one service cannot overwrite another', async () => {
-    const { token } = await seedSuperAdmin();
-    const res = await request(app)
-      .put('/api/v1/cms/service-pages/Electrician')
-      .set('Authorization', `Bearer ${token}`)
-      .send({ serviceKey: 'AC Repair', tagline: 'Power Back On' })
-      .expect(200);
-
-    expect(res.body.data.serviceKey).toBe('Electrician');
-    expect(await ServicePageConfig.countDocuments({ serviceKey: 'AC Repair' })).toBe(0);
-  });
-
-  it('returns null (not 404) for an unconfigured service and closes writes to non-admins', async () => {
-    // An unconfigured service page is an ordinary state, not an error: the
-    // customer app falls back to its built-in copy. This asserted 404 back when
-    // the route threw, which made every visit to an unstyled service page log a
-    // failed request; the route now returns the standard { data, error, meta }
-    // envelope with data: null (see servicePageConfig.routes.js).
-    const res = await request(app).get('/api/v1/cms/service-pages/Nonexistent').expect(200);
-    expect(res.body.data).toBeNull();
-    expect(res.body.error).toBeNull();
-
-    await request(app).put('/api/v1/cms/service-pages/AC%20Repair').send({ tagline: 'x' }).expect(401);
-  });
-});
+// (The service-page CMS was removed in docs/master-catalogue Phase 9 — nothing
+// in the customer app read it.)
 
 describe('CMS serviceProvider app content — announcements and skill catalogue', () => {
   it('broadcasts an announcement that the serviceProvider app then reads', async () => {

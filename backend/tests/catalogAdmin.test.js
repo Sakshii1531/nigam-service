@@ -133,7 +133,8 @@ describe('offering list', () => {
   it('shows current rate, final price, payout and margin per row', async () => {
     const tv = await Category.findOne({ key: 'TV' });
     const res = await as(adminToken).get(`/offerings?category=${tv._id}`);
-    expect(res.body.meta.total).toBe(5);
+    // 5 installation / uninstallation offerings + 4 LED service offerings (Phase 8).
+    expect(res.body.meta.total).toBe(9);
     const row = res.body.data.find((o) => o.code === 'TV-LED-55-65-INSTALL');
     expect(row).toMatchObject({
       variant: { label: '55–65 inch' },
@@ -147,7 +148,8 @@ describe('offering list', () => {
 
   it('filters by DEMO rates and by search text', async () => {
     const demo = await as(adminToken).get('/offerings?needsRateReview=true&limit=100');
-    expect(demo.body.meta.total).toBe(29);
+    // Everything except the 5 rates the client's brief gave (Phase 8 seeds every category).
+    expect(demo.body.meta.total).toBe(206);
     const search = await as(adminToken).get('/offerings?q=fan');
     expect(search.body.data.map((o) => o.code)).toContain('ELEC-FAN-INSTALL');
   });
@@ -290,5 +292,76 @@ describe('structure', () => {
     const res = await as(adminToken).get('/categories');
     const ac = res.body.data.find((c) => c.key === 'AC');
     expect(ac.offerings).toEqual({ total: 10, active: 10, needsRateReview: 8 });
+  });
+});
+
+describe('location / pincode prices (Phase 10)', () => {
+  const quoteIn = async (code, location) => {
+    const id = await idOf(code);
+    return (await request(app).post('/api/v1/catalog/quote').send({ lines: [{ offeringId: id, quantity: 1 }], location }).expect(200)).body.data.lines[0].unitPrice;
+  };
+  const jaipur = { type: 'CITY', value: 'Jaipur' };
+  const full = { customerPrice: 279, spPayout: 170, expressFee: 99, expressSpIncentive: 50 };
+
+  it('adds a city price that only that city sees, without touching the default or its DEMO flag', async () => {
+    const fan = await idOf('ELEC-FAN-INSTALL');
+    const res = await as(adminToken).post(`/offerings/${fan}/rates`, { ...full, scope: jaipur, reason: 'Jaipur launch' }).expect(201);
+    expect(res.body.data.rate).toMatchObject({ customerPrice: 299, spPayout: 180 });
+    expect(res.body.data.localRates).toEqual([
+      expect.objectContaining({ scope: jaipur, rate: expect.objectContaining({ customerPrice: 279, spPayout: 170, version: 1 }) }),
+    ]);
+    expect(await quoteIn('ELEC-FAN-INSTALL', { city: 'jaipur' })).toBe(279);
+    expect(await quoteIn('ELEC-FAN-INSTALL', { city: 'Delhi' })).toBe(299);
+
+    // A DEMO offering keeps its DEMO flag when only a city price is added.
+    const sw = await idOf('ELEC-SWITCH-INSTALL');
+    await as(adminToken).post(`/offerings/${sw}/rates`, { customerPrice: 89, spPayout: 50, expressFee: 99, expressSpIncentive: 50, scope: jaipur, reason: 'Jaipur' }).expect(201);
+    expect((await ServiceOffering.findById(sw)).needsRateReview).toBe(true);
+
+    const log = await AuditLog.findOne({ action: /ELEC-FAN-INSTALL city Jaipur rate v1/ });
+    expect(log).not.toBeNull();
+  });
+
+  it('a new location needs every amount; the same city in any case is one version chain', async () => {
+    const fan = await idOf('ELEC-FAN-INSTALL');
+    const partial = await as(adminToken).post(`/offerings/${fan}/rates`, { customerPrice: 279, scope: jaipur, reason: 'x x x' });
+    expect(partial.status).toBe(400);
+    expect(partial.body.error.message).toMatch(/every amount/);
+
+    await as(adminToken).post(`/offerings/${fan}/rates`, { ...full, scope: jaipur, reason: 'Jaipur launch' }).expect(201);
+    const again = await as(adminToken).post(`/offerings/${fan}/rates`, { customerPrice: 289, scope: { type: 'CITY', value: 'JAIPUR' }, reason: 'Jaipur revision' }).expect(201);
+    expect(again.body.data.localRates).toHaveLength(1);
+    expect(again.body.data.localRates[0]).toMatchObject({ scope: jaipur, rate: { customerPrice: 289, spPayout: 170, version: 2 } });
+  });
+
+  it('a pincode price beats the city price; a bad pincode is refused', async () => {
+    const fan = await idOf('ELEC-FAN-INSTALL');
+    await as(adminToken).post(`/offerings/${fan}/rates`, { ...full, scope: jaipur, reason: 'Jaipur launch' }).expect(201);
+    await as(adminToken).post(`/offerings/${fan}/rates`, { ...full, customerPrice: 259, scope: { type: 'PINCODE', value: '302017' }, reason: 'Malviya Nagar' }).expect(201);
+    expect(await quoteIn('ELEC-FAN-INSTALL', { city: 'Jaipur', pincode: '302017' })).toBe(259);
+    await as(adminToken).post(`/offerings/${fan}/rates`, { ...full, scope: { type: 'PINCODE', value: '30201' }, reason: 'typo' }).expect(400);
+    await as(adminToken).post(`/offerings/${fan}/rates`, { ...full, scope: { type: 'CITY' }, reason: 'no city' }).expect(400);
+
+    const list = await as(adminToken).get('/offerings?q=ELEC-FAN-INSTALL').expect(200);
+    expect(list.body.data[0].localRateCount).toBe(2);
+  });
+
+  it('ending a city price sends that city back to the default; it can be added again later', async () => {
+    const fan = await idOf('ELEC-FAN-INSTALL');
+    await as(adminToken).post(`/offerings/${fan}/rates`, { ...full, scope: jaipur, reason: 'Jaipur launch' }).expect(201);
+    const ended = await as(adminToken).post(`/offerings/${fan}/rates/end`, { scope: jaipur, reason: 'Promo over' }).expect(200);
+    expect(ended.body.data.localRates).toEqual([]);
+    expect(await quoteIn('ELEC-FAN-INSTALL', { city: 'Jaipur' })).toBe(299);
+
+    await as(adminToken).post(`/offerings/${fan}/rates/end`, { scope: jaipur, reason: 'again' }).expect(404);
+    await as(adminToken).post(`/offerings/${fan}/rates/end`, { scope: { type: 'DEFAULT' }, reason: 'nope' }).expect(400);
+
+    // Same amounts again — allowed, because the old window is closed.
+    const back = await as(adminToken).post(`/offerings/${fan}/rates`, { customerPrice: 279, scope: jaipur, reason: 'Promo back' }).expect(201);
+    expect(back.body.data.localRates[0].rate).toMatchObject({ customerPrice: 279, version: 2 });
+    expect(await quoteIn('ELEC-FAN-INSTALL', { city: 'Jaipur' })).toBe(279);
+
+    const history = (await as(adminToken).get(`/offerings/${fan}/rates`).expect(200)).body.data;
+    expect(history.filter((r) => r.scope.type === 'CITY').map((r) => r.version)).toEqual([2, 1]);
   });
 });

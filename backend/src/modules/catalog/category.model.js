@@ -1,9 +1,10 @@
 import mongoose from 'mongoose';
 import { applyStandardPlugins } from '../shared/plugins.js';
+import { watchCatalogueWrites } from './catalogCache.js';
 
-// Replaces frontend/src/data/bookingCatalog.js + the custom_service_*/custom_categories
-// localStorage overrides. Written to by super-admin's CustomerAppCustomization
-// endpoints (Phase 8), read by the customer app's catalog endpoints (Phase 4).
+// A service category: key, name, visuals, brands and booking-flow copy. The
+// top of the Master Catalogue (docs/master-catalogue) — product types,
+// services and priced offerings all hang off it.
 const categorySchema = new mongoose.Schema(
   {
     key: { type: String, required: true, unique: true }, // e.g. "AC", "Washing Machine"
@@ -37,5 +38,7 @@ const categorySchema = new mongoose.Schema(
 );
 
 applyStandardPlugins(categorySchema);
+// Writes drop the cached customer category trees (catalogCache.js).
+categorySchema.plugin(watchCatalogueWrites);
 
 export const Category = mongoose.models.Category || mongoose.model('Category', categorySchema);

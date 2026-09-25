@@ -124,11 +124,13 @@ describe('client test 4 & 12 — the tree only offers bookable combinations', ()
 
     const v55 = led.variants.find((v) => v.label === '55–65 inch').id;
     const forV55 = offerings.filter((o) => o.productTypeId === led.id && (o.variantId === v55 || o.variantId === null));
-    expect(forV55.map((o) => [o.serviceName, o.customerPrice])).toEqual([
+    const installs = forV55.filter((o) => /installation/i.test(o.serviceName));
+    expect(installs.map((o) => [o.serviceName, o.customerPrice])).toEqual([
       ['Installation', 799],
       ['Uninstallation', 299],
     ]);
-    expect(forV55.some((o) => o.customerPrice === 349)).toBe(false);
+    // The 32" install price never shows up as the 55–65" install price.
+    expect(installs.some((o) => o.customerPrice === 349)).toBe(false);
   });
 
   it('Window AC offers no Gas Refilling or Deep Cleaning', async () => {

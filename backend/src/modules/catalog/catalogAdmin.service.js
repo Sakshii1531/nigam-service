@@ -4,7 +4,7 @@ import { Variant } from './variant.model.js';
 import { CatalogService } from './catalogService.model.js';
 import { ServiceOffering } from './serviceOffering.model.js';
 import { OfferingRate, RATE_MONEY_FIELDS } from './offeringRate.model.js';
-import { createRateVersion, findLatestRate } from './rateWriter.js';
+import { createRateVersion, findLatestRate, endRateScope } from './rateWriter.js';
 import { resolveRates } from './rateResolver.js';
 import { priceLine } from './offeringPricing.js';
 import { platformPricingSettings } from './offeringBrowse.service.js';
@@ -291,10 +291,13 @@ export async function listOfferings({ category, bookingType, active, needsRateRe
   const at = new Date();
   const ids = offerings.map((o) => o._id);
   // Admin view is the DEFAULT price list, so no location is passed.
-  const [current, next] = await Promise.all([resolveRates(ids, { at }), upcomingRates(ids, at)]);
+  const [current, next, local] = await Promise.all([resolveRates(ids, { at }), upcomingRates(ids, at), localRatesFor(ids, at)]);
 
   return {
-    items: offerings.map((o) => offeringRow(o, current.get(String(o._id)), next.get(String(o._id)), settings.defaultGstPercent)),
+    items: offerings.map((o) => ({
+      ...offeringRow(o, current.get(String(o._id)), next.get(String(o._id)), settings.defaultGstPercent),
+      localRateCount: (local.get(String(o._id)) || []).length,
+    })),
     meta: paginationMeta({ page: pg, limit: lim, total }),
   };
 }
@@ -303,10 +306,11 @@ export async function getOffering(id) {
   const offering = await ServiceOffering.findById(id).populate(OFFERING_POPULATE).lean();
   if (!offering) throw new ApiError(404, 'Offering not found');
   const at = new Date();
-  const [current, next, settings] = await Promise.all([
+  const [current, next, settings, local] = await Promise.all([
     resolveRates([offering._id], { at }),
     upcomingRates([offering._id], at),
     platformPricingSettings(),
+    localRatesFor([offering._id], at),
   ]);
   // eslint-disable-next-line no-unused-vars
   const { _id, __v, category, productType, variant, service, searchText, ...fields } = offering;
@@ -315,6 +319,7 @@ export async function getOffering(id) {
     ...offeringRow(offering, current.get(String(_id)), next.get(String(_id)), settings.defaultGstPercent),
     tax: offering.tax,
     express: offering.express,
+    localRates: local.get(String(_id)) || [],
   };
 }
 
@@ -414,15 +419,76 @@ export async function duplicateOffering(id, { variant = null, service, name, cod
 
 // ─── Rates ───────────────────────────────────────────────────────────────
 
-export async function changeRate(id, { reason, effectiveFrom, ...amounts }, actorId) {
+const scopeLabel = (scope) => (scope.type === 'DEFAULT' ? 'default' : `${scope.type === 'CITY' ? 'city' : 'pincode'} ${scope.value}`);
+
+/**
+ * One version chain per (offering, city): "Jaipur" and "jaipur" are the same
+ * city, so an existing override's spelling is reused. Pincodes are digits.
+ */
+async function canonicalScope(offeringId, scope) {
+  if (!scope || scope.type === 'DEFAULT') return { type: 'DEFAULT', value: null };
+  const value = scope.value.trim();
+  if (scope.type === 'PINCODE') return { type: 'PINCODE', value };
+  const existing = await OfferingRate.findOne({
+    offering: offeringId,
+    'scope.type': 'CITY',
+    'scope.value': new RegExp(`^${value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
+  }).select('scope');
+  return { type: 'CITY', value: existing?.scope.value || value };
+}
+
+export async function changeRate(id, { reason, effectiveFrom, scope: requested, ...amounts }, actorId) {
   const offering = await findOr404(ServiceOffering, id, 'Offering');
+  const scope = await canonicalScope(offering._id, requested);
   const patch = Object.fromEntries(
     Object.entries(amounts).filter(([, value]) => value !== undefined).map(([field, value]) => [field, toPaise(value)]),
   );
-  const rate = await createRateVersion(offering._id, patch, { reason, changedBy: actorId, effectiveFrom: effectiveFrom || new Date() });
-  const summary = rate.changes.map((c) => `${c.field} ₹${toRupees(c.from)} → ₹${toRupees(c.to)}`).join(', ');
-  await logAudit({ user: actorId, action: `Catalogue: ${offering.code} rate v${rate.version} — ${summary} (${reason})`, type: 'Finance' });
+  const rate = await createRateVersion(offering._id, patch, {
+    reason,
+    changedBy: actorId,
+    effectiveFrom: effectiveFrom || new Date(),
+    scope,
+  });
+  const summary = rate.changes.length
+    ? rate.changes.map((c) => `${c.field} ₹${toRupees(c.from)} → ₹${toRupees(c.to)}`).join(', ')
+    : `₹${toRupees(rate.customerPrice)} / payout ₹${toRupees(rate.spPayout)}`;
+  await logAudit({
+    user: actorId,
+    action: `Catalogue: ${offering.code}${scope.type === 'DEFAULT' ? '' : ` ${scopeLabel(scope)}`} rate v${rate.version} — ${summary} (${reason})`,
+    type: 'Finance',
+  });
   return getOffering(offering._id);
+}
+
+/** Ends a city / pincode price now; that location goes back to the next scope's price. */
+export async function endLocalRate(id, { scope: requested, reason }, actorId) {
+  const offering = await findOr404(ServiceOffering, id, 'Offering');
+  const scope = await canonicalScope(offering._id, requested);
+  await endRateScope(offering._id, scope);
+  await logAudit({ user: actorId, action: `Catalogue: ${offering.code} ${scopeLabel(scope)} price ended (${reason})`, type: 'Finance' });
+  return getOffering(offering._id);
+}
+
+/** Active and scheduled city / pincode prices for offerings: { [offeringId]: [{ scope, rate }] }. */
+async function localRatesFor(offeringIds, at = new Date()) {
+  const rates = await OfferingRate.find({
+    offering: { $in: offeringIds },
+    'scope.type': { $ne: 'DEFAULT' },
+    $or: [{ effectiveUntil: null }, { effectiveUntil: { $gt: at } }],
+  })
+    .sort({ version: -1 })
+    .lean();
+  const out = new Map();
+  for (const rate of rates) {
+    const key = String(rate.offering);
+    if (!out.has(key)) out.set(key, []);
+    const list = out.get(key);
+    if (!list.some((r) => r.scope.type === rate.scope.type && r.scope.value === rate.scope.value)) {
+      list.push({ scope: rate.scope, rate: rupeeRate(rate), scheduled: rate.effectiveFrom > at });
+    }
+  }
+  for (const list of out.values()) list.sort((a, b) => a.scope.type.localeCompare(b.scope.type) || a.scope.value.localeCompare(b.scope.value));
+  return out;
 }
 
 function historyEntry(rate) {

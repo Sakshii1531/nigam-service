@@ -1,22 +1,28 @@
 import { Category } from './category.model.js';
 import { ProductType } from './productType.model.js';
-import { ServiceCatalogItem } from './serviceCatalogItem.model.js';
+import { CatalogService } from './catalogService.model.js';
+import { ServiceOffering } from './serviceOffering.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 
-/** Assembles one category + its product types + its service items into the exact
- * shape frontend/src/data/bookingCatalog.js's BOOKING_CATALOG entries already
- * have — so the customer app's booking flow needs no reshaping once wired to this. */
+/**
+ * One category for browsing screens (category grids, the services list, the
+ * partner application): its visuals plus the product types and services that
+ * have an active Master Catalogue offering. Names only — prices come from the
+ * category tree / search / quote APIs (docs/master-catalogue), never from here.
+ */
 async function assembleCategory(category) {
+  const offerings = await ServiceOffering.find({ category: category._id, isActive: true }).select('productType service').lean();
+  const productTypeIds = [...new Set(offerings.map((o) => o.productType).filter(Boolean).map(String))];
+  const serviceIds = [...new Set(offerings.map((o) => String(o.service)))];
   const [productTypes, services] = await Promise.all([
-    ProductType.find({ category: category._id }).sort({ createdAt: 1 }),
-    ServiceCatalogItem.find({ category: category._id, isActive: true }).sort({ createdAt: 1 }),
+    ProductType.find({ _id: { $in: productTypeIds }, isActive: true }).sort({ sortOrder: 1, name: 1 }),
+    CatalogService.find({ _id: { $in: serviceIds }, isActive: true }).sort({ sortOrder: 1, name: 1 }),
   ]);
 
-  const json = category.toJSON();
   return {
-    ...json,
+    ...category.toJSON(),
     productTypes: productTypes.map((pt) => ({ id: pt.slug, name: pt.name, icon: pt.icon, desc: pt.desc })),
-    services: services.map((s) => ({ id: s.slug, name: s.name, icon: s.icon, desc: s.desc, price: s.price, unit: s.unit })),
+    services: services.map((s) => ({ id: s.slug, name: s.name, icon: s.icon, desc: s.desc })),
   };
 }
 
@@ -26,26 +32,7 @@ export async function listCategories() {
 }
 
 export async function getCategoryByKey(key) {
-  const category = await Category.findOne({ key });
-  if (!category) throw new ApiError(404, `No category found for key "${key}"`);
-  return assembleCategory(category);
-}
-
-/** Admin view of a category: every product type and service item (including
- * inactive ones), each keyed by its real id so the console can edit/delete
- * them — assembleCategory() only returns active services by slug, which is
- * right for the public/customer read but not enough for an editor. */
-export async function getCategoryForAdmin(key) {
-  const category = await findCategoryOr404(key);
-  const [productTypes, services] = await Promise.all([
-    ProductType.find({ category: category._id }).sort({ createdAt: 1 }),
-    ServiceCatalogItem.find({ category: category._id }).sort({ createdAt: 1 }),
-  ]);
-  return {
-    ...category.toJSON(),
-    productTypes: productTypes.map((pt) => pt.toJSON()),
-    services: services.map((s) => s.toJSON()),
-  };
+  return assembleCategory(await findCategoryOr404(key));
 }
 
 // Exact key only. This used to fall back to a case-insensitive match, then a
@@ -69,46 +56,4 @@ export async function updateCategory(key, data) {
   Object.assign(category, data);
   await category.save();
   return assembleCategory(category);
-}
-
-export async function addProductType(categoryKey, data) {
-  const category = await findCategoryOr404(categoryKey);
-  const productType = await ProductType.create({ category: category._id, ...data });
-  return productType.toJSON();
-}
-
-export async function updateProductType(categoryKey, productTypeId, data) {
-  const category = await findCategoryOr404(categoryKey);
-  const productType = await ProductType.findOne({ _id: productTypeId, category: category._id });
-  if (!productType) throw new ApiError(404, 'Product type not found in this category');
-  Object.assign(productType, data);
-  await productType.save();
-  return productType.toJSON();
-}
-
-export async function deleteProductType(categoryKey, productTypeId) {
-  const category = await findCategoryOr404(categoryKey);
-  const result = await ProductType.deleteOne({ _id: productTypeId, category: category._id });
-  if (result.deletedCount === 0) throw new ApiError(404, 'Product type not found in this category');
-}
-
-export async function addServiceItem(categoryKey, data) {
-  const category = await findCategoryOr404(categoryKey);
-  const item = await ServiceCatalogItem.create({ category: category._id, ...data });
-  return item.toJSON();
-}
-
-export async function updateServiceItem(categoryKey, serviceItemId, data) {
-  const category = await findCategoryOr404(categoryKey);
-  const item = await ServiceCatalogItem.findOne({ _id: serviceItemId, category: category._id });
-  if (!item) throw new ApiError(404, 'Service item not found in this category');
-  Object.assign(item, data);
-  await item.save();
-  return item.toJSON();
-}
-
-export async function deleteServiceItem(categoryKey, serviceItemId) {
-  const category = await findCategoryOr404(categoryKey);
-  const result = await ServiceCatalogItem.deleteOne({ _id: serviceItemId, category: category._id });
-  if (result.deletedCount === 0) throw new ApiError(404, 'Service item not found in this category');
 }

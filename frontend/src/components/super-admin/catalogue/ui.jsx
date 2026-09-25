@@ -1,7 +1,7 @@
 import { X } from 'lucide-react';
 
 // Small shared pieces for the Master Catalogue screens, in the same visual
-// language as the other super-admin pages (ServiceCatalog.jsx, Cities.jsx).
+// language as the other super-admin pages (Cities.jsx, Settings.jsx).
 
 export const inputClass =
   'w-full border border-slate-200 bg-white p-2.5 rounded-xl outline-none focus:ring-2 focus:ring-[#0D47A1] text-sm disabled:bg-slate-50 disabled:text-slate-500';

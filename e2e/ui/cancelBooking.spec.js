@@ -66,9 +66,11 @@ test.describe('Customer Booking Cancellation', () => {
     // Find the booking card
     await expect(page.getByText(humanId)).toBeVisible({ timeout: 10_000 });
 
-    // Click "Cancel" button on the card
-    const cancelBtn = page.getByRole('button', { name: /^Cancel$/i }).first();
-    await expect(cancelBtn).toBeVisible();
+    // Cancelling happens on the booking's details page: open the card, then "Cancel Booking".
+    await page.getByText(humanId).first().click();
+    await expect(page).toHaveURL(new RegExp(`/bookings/${humanId}`));
+    const cancelBtn = page.getByRole('button', { name: /^Cancel Booking$/i });
+    await expect(cancelBtn).toBeVisible({ timeout: 10_000 });
     await cancelBtn.click();
 
     // Verify cancellation modal is open
@@ -83,13 +85,12 @@ test.describe('Customer Booking Cancellation', () => {
     const confirmCancelBtn = page.getByRole('button', { name: /Yes, Cancel Booking/i });
     await confirmCancelBtn.click();
 
-    // Toast message appears
-    await expect(page.getByText(/Booking has been cancelled successfully/i)).toBeVisible({ timeout: 10_000 });
-
-    // Status on card updates to Cancelled
+    // Confirmation appears and the booking shows as cancelled
+    await expect(page.getByText(/Booking cancelled successfully/i)).toBeVisible({ timeout: 10_000 });
     await expect(page.getByText('Cancelled').first()).toBeVisible();
 
-    // In Cancelled tab, the booking is listed
+    // Back in My Bookings, the Cancelled tab lists it
+    await page.goto('/my-bookings');
     await page.getByRole('button', { name: /Cancelled/i }).first().click();
     await expect(page.getByText(humanId)).toBeVisible();
   });

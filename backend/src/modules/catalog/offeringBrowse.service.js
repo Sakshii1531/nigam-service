@@ -7,6 +7,7 @@ import { PlatformSettings } from '../super-admin/platformSettings.model.js';
 import { GST_PERCENT_DEFAULT } from '../../config/constants.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { catalogError, CATALOG_ERROR_CODES } from './catalogErrors.js';
+import { cachedTree } from './catalogCache.js';
 
 // What a customer is allowed to see and pick. An offering is bookable only if
 // it and every parent (category, product type, variant, service) is active,
@@ -65,6 +66,10 @@ const bySort = (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || String(a.lab
  * for them, or a variant-agnostic one covers the whole parent.
  */
 export async function getCategoryTree(key, loc = {}) {
+  return cachedTree(key, loc, () => buildCategoryTree(key, loc));
+}
+
+async function buildCategoryTree(key, loc) {
   const category = await Category.findOne({ key, isActive: true }).lean();
   if (!category) throw new ApiError(404, `No category found for key "${key}"`);
 

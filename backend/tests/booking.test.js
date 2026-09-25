@@ -11,7 +11,6 @@ import { ProductType } from '../src/modules/catalog/productType.model.js';
 import { Variant } from '../src/modules/catalog/variant.model.js';
 import { Booking } from '../src/modules/booking/booking.model.js';
 import { ServiceRequest } from '../src/modules/service-requests/serviceRequest.model.js';
-import { ServicePageConfig } from '../src/modules/super-admin/servicePageConfig.model.js';
 import { sweepExpiredAssignments } from '../src/modules/service-requests/serviceRequest.service.js';
 import { expireStaleSearches, SEARCH_END_MESSAGES } from '../src/modules/booking/booking.service.js';
 import { hashPassword } from '../src/modules/auth/password.js';
@@ -80,7 +79,6 @@ beforeEach(async () => {
     ProductType.deleteMany({}),
     Booking.deleteMany({}),
     ServiceRequest.deleteMany({}),
-    ServicePageConfig.deleteMany({}),
   ]);
 });
 

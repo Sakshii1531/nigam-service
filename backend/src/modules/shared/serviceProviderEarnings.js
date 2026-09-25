@@ -1,15 +1,5 @@
 import { initialJobPayout } from './servicePartnerPayout.js';
 import { RateCard } from '../brand-admin/rateCard.model.js';
-import { PlatformSettings } from '../super-admin/platformSettings.model.js';
-
-// Default only — the live share is PlatformSettings.serviceProviderCommissionPercent.
-const DEFAULT_TECH_EARNINGS_SHARE = 0.3; // 30% of the D2C subtotal
-
-export async function serviceProviderShare() {
-  const settings = await PlatformSettings.findOne();
-  const percent = settings?.serviceProviderCommissionPercent;
-  return percent != null ? percent / 100 : DEFAULT_TECH_EARNINGS_SHARE;
-}
 
 // Covered work (Brand Warranty / AMC / EW) is priced from the brand's RateCard
 // for that appliance category. This used to be a flat 150 because no RateCard

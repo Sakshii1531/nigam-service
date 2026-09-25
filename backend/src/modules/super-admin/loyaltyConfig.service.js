@@ -1,5 +1,4 @@
 import { LoyaltyMilestone } from '../rewards-loyalty/loyaltyMilestone.model.js';
-import { Membership } from '../rewards-loyalty/membership.model.js';
 import { SpinWheelConfig } from '../rewards-loyalty/spinWheelConfig.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { ReferralCampaign } from '../rewards-loyalty/referralCampaign.model.js';
@@ -27,24 +26,6 @@ export async function updateMilestone(id, updates) {
 export async function deleteMilestone(id) {
   const milestone = await LoyaltyMilestone.findByIdAndDelete(id);
   if (!milestone) throw new ApiError(404, 'Loyalty milestone not found');
-}
-
-export async function listMemberships() {
-  return Membership.find().sort({ tierRank: 1 });
-}
-export async function createMembership(data) {
-  const existing = await Membership.findOne({ tierRank: data.tierRank });
-  if (existing) throw new ApiError(409, `A membership tier with rank ${data.tierRank} already exists`);
-  return Membership.create(data);
-}
-export async function updateMembership(id, updates) {
-  const membership = await Membership.findByIdAndUpdate(id, updates, { new: true });
-  if (!membership) throw new ApiError(404, 'Membership tier not found');
-  return membership;
-}
-export async function deleteMembership(id) {
-  const membership = await Membership.findByIdAndDelete(id);
-  if (!membership) throw new ApiError(404, 'Membership tier not found');
 }
 
 export async function getSpinWheelConfig() {

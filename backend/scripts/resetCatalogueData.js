@@ -1,9 +1,9 @@
 // Clean-slate reset for the master-catalogue rebuild (docs/master-catalogue,
 // decision D1 — the app is not live). Wipes every booking and everything that
 // hangs off one (via clearBookingsAndServiceRequests.js), then the
-// master-catalogue collections themselves. Categories, product types and the
-// legacy ServiceCatalogItem rows are kept: the old booking flow still reads
-// them until the Phase 4 cut-over.
+// master-catalogue collections themselves. Categories and product types are
+// kept. The pre-catalogue `servicecatalogitems` collection (its model was
+// deleted in Phase 7) is dropped if a database still has it.
 //
 //   npm run db:reset-catalogue -- --yes          (then: npm run seed:catalogue)
 //
@@ -40,6 +40,11 @@ try {
   for (const name of ['OfferingRate', 'ServiceOffering', 'Variant', 'CatalogService']) {
     const { deletedCount } = await mongoose.model(name).deleteMany({});
     console.log(`[reset-catalogue] ${name}: ${deletedCount} deleted`);
+  }
+  const legacy = await mongoose.connection.db.listCollections({ name: 'servicecatalogitems' }).toArray();
+  if (legacy.length) {
+    await mongoose.connection.db.dropCollection('servicecatalogitems');
+    console.log('[reset-catalogue] legacy servicecatalogitems: dropped');
   }
   console.log('[reset-catalogue] Done. Run `npm run seed:catalogue` to reseed.');
 } catch (err) {

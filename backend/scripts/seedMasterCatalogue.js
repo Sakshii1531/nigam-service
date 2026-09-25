@@ -16,7 +16,7 @@ import { CatalogService } from '../src/modules/catalog/catalogService.model.js';
 import { ServiceOffering } from '../src/modules/catalog/serviceOffering.model.js';
 import { findLatestRate, createRateVersion } from '../src/modules/catalog/rateWriter.js';
 import { toPaise } from '../src/modules/catalog/money.js';
-import { MASTER_CATALOGUE_SEED } from './masterCatalogueSeedData.js';
+import { FULL_CATALOGUE_SEED } from './catalogueExpansion.js';
 
 async function upsertCategory(entry) {
   let category = await Category.findOne({ key: entry.key });
@@ -79,7 +79,7 @@ async function upsertOffering(category, refs, spec) {
   return { offering, rateCreated: created };
 }
 
-export async function seedMasterCatalogue(data = MASTER_CATALOGUE_SEED) {
+export async function seedMasterCatalogue(data = FULL_CATALOGUE_SEED) {
   const summary = { categories: 0, offerings: 0, ratesCreated: 0 };
 
   for (const entry of data) {

@@ -43,7 +43,8 @@ test('email mode starts with a letter and must be a valid address', async ({ pag
   await expect(help).toHaveText('Enter a valid email address, like name@example.com.');
 
   await input.fill('partner@example.com');
-  await expect(help).not.toHaveText(/valid email/);
+  // A valid address clears the error — the help line is removed, not emptied.
+  await expect(help).not.toBeVisible();
 
   await input.fill('@partner');
   await input.blur();

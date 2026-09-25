@@ -1,6 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Search, X, Sparkles } from 'lucide-react';
+import { useLocationContext } from '../context/LocationContext';
+import { useCatalogueSearch } from '../lib/useCatalogueSearch';
+import CatalogueSearchResults from '../components/common/CatalogueSearchResults';
 import CustomerBottomNav from '../components/CustomerBottomNav';
 import { apiRequest } from '../lib/apiClient';
 
@@ -103,6 +106,13 @@ const Categories = () => {
     return Array.from(bySection.entries()).map(([title, items]) => ({ title, items }));
   }, [activeCategories]);
 
+  const { currentLocation } = useLocationContext();
+  const { results: catalogueResults, loading: catalogueLoading } = useCatalogueSearch(searchQuery, {
+    city: currentLocation?.city,
+  });
+
+  // Category names still match as-you-type (one letter is enough); bookable
+  // services come from the catalogue search above.
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return null;
     const query = searchQuery.toLowerCase().trim();
@@ -244,7 +254,10 @@ const Categories = () => {
               <p className="text-[11px] sm:text-xs text-slate-500 mt-1">{loadError}</p>
             </div>
           ) : searchResults ? (
-            <div>
+            <div className="flex flex-col gap-3">
+              {searchQuery.trim().length >= 2 && (catalogueResults?.groups?.length > 0 || searchResults.length === 0) && (
+                <CatalogueSearchResults query={searchQuery} results={catalogueResults} loading={catalogueLoading} />
+              )}
               {searchResults.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 min-[380px]:gap-2.5 sm:gap-4">
                   {searchResults.map((cat) => {
@@ -273,7 +286,7 @@ const Categories = () => {
                     );
                   })}
                 </div>
-              ) : (
+              ) : searchQuery.trim().length >= 2 ? null : (
                 <div className="bg-white rounded-2xl p-6 sm:p-12 text-center border border-slate-200/60 my-2 sm:my-4">
                   <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-2.5 text-slate-400">
                     <Search className="h-5 w-5 sm:h-6 sm:w-6" />

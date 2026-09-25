@@ -18,6 +18,7 @@ import { AMCPlan } from '../warranty-amc-exchange/amcPlan.model.js';
 import { AMCSubscription } from '../warranty-amc-exchange/amcSubscription.model.js';
 import { Brand } from '../super-admin/brand.model.js';
 import { Job } from '../service-provider/job.model.js';
+import { Notification } from '../notifications/notification.model.js';
 
 // Non-production only (mounted conditionally in app.js) — exercises the Phase 2
 // shared plumbing (pagination, validation-error shape, file upload, id generation)
@@ -79,6 +80,22 @@ if (isTest) {
     const entry = getLastOtpForTesting(req.params.identifier);
     if (!entry) return next(new ApiError(404, 'No OTP captured for this identifier'));
     ok(res, entry);
+  });
+
+  // A notification addressed to the calling user, so the notification specs
+  // can exercise read / read-all without driving a real event (booking,
+  // payment…) that happens to notify.
+  const testNotificationSchema = z.object({
+    type: z.enum(['assigned', 'created', 'payment', 'completed', 'service', 'promo']).default('created'),
+    title: z.string().min(1).max(120),
+    message: z.string().max(500).optional(),
+  });
+  devRouter.post('/_dev/test-notification', requireAuth, validate(testNotificationSchema), async (req, res, next) => {
+    try {
+      ok(res, await Notification.create({ recipient: req.user.id, ...req.body }));
+    } catch (err) {
+      next(err);
+    }
   });
 
   // E2E fixture creation — there's no signup endpoint yet (Phase 3 doesn't include

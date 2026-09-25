@@ -14,11 +14,9 @@ import { Payment } from '../src/modules/payments-wallet/payment.model.js';
 import { signForTesting } from '../src/modules/payments-wallet/paymentGateway.js';
 import { ServiceOffering } from '../src/modules/catalog/serviceOffering.model.js';
 import { createRateVersion } from '../src/modules/catalog/rateWriter.js';
-import { hashPassword } from '../src/modules/auth/password.js';
-import { ROLES } from '../src/config/constants.js';
 import { seedTestCatalogue, clearCatalogue, offeringBooking } from './helpers/catalogue.js';
+import { jobFlow } from './helpers/jobFlow.js';
 import { testDbUri } from './helpers/testDb.js';
-import { readOtpCode } from './helpers/otp.js';
 
 // Fixed partner payout end to end on the real seeded catalogue
 // (docs/master-catalogue Phase 5): booking → accept → work → bill → collect →
@@ -26,62 +24,7 @@ import { readOtpCode } from './helpers/otp.js';
 
 const TEST_DB_URI = testDbUri('partner_payout');
 let app;
-let phoneSeq = 9300100000;
-const nextPhone = () => String(phoneSeq++);
-
-async function loginAndVerify({ role, identifier }) {
-  await request(app).post('/api/v1/auth/login').send({ role, identifier, password: 'password123' }).expect(200);
-  const res = await request(app)
-    .post('/api/v1/auth/otp/verify')
-    .send({ role, identifier, code: readOtpCode(identifier) })
-    .expect(200);
-  return res.body.data.accessToken;
-}
-
-async function partner(specs) {
-  const phone = nextPhone();
-  const user = await User.create({ role: ROLES.SERVICE_PROVIDER, phone, name: 'Payout Partner', passwordHash: await hashPassword('password123') });
-  const serviceProvider = await ServiceProvider.create({ user: user._id, name: 'Payout Partner', phone, status: 'Active', availability: 'Available', specs });
-  return { serviceProvider, token: await loginAndVerify({ role: ROLES.SERVICE_PROVIDER, identifier: phone }) };
-}
-
-async function customer() {
-  const phone = nextPhone();
-  const user = await User.create({ role: ROLES.CUSTOMER, phone, name: 'Payout Customer', passwordHash: await hashPassword('password123') });
-  return { user, token: await loginAndVerify({ role: ROLES.CUSTOMER, identifier: phone }) };
-}
-
-/** Books `code`, has the partner accept it, and walks it to billing. Returns job + billing. */
-async function jobToBilling(code, { specs, bookingOptions = {}, beforeWork } = {}) {
-  const sp = await partner(specs);
-  const cust = await customer();
-  const body = await offeringBooking(code, { userId: String(cust.user._id), ...bookingOptions });
-  const booked = await request(app).post('/api/v1/bookings').set('Authorization', `Bearer ${cust.token}`).send(body).expect(201);
-  const { booking, serviceRequest, razorpay } = booked.body.data;
-
-  const auth = { Authorization: `Bearer ${sp.token}` };
-  const accepted = await request(app).post(`/api/v1/service-provider/jobs/accept/${serviceRequest.id}`).set(auth).send({}).expect(200);
-  const jobId = accepted.body.data.id;
-
-  if (beforeWork) await beforeWork({ jobId, auth, booking, razorpay, custToken: cust.token });
-  await request(app).post(`/api/v1/service-provider/jobs/${jobId}/start-travel`).set(auth).expect(200);
-  await request(app).post(`/api/v1/service-provider/jobs/${jobId}/arrive`).set(auth).expect(200);
-  await request(app).post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`).set(auth).send({ notes: 'ok' }).expect(200);
-  return { jobId, auth, sp, booking, serviceRequest, accepted: accepted.body.data };
-}
-
-async function billAndCollect({ jobId, auth, serviceRequest, parts = [] }) {
-  await request(app).post(`/api/v1/service-provider/jobs/${jobId}/spare-parts`).set(auth).send({ parts }).expect(200);
-  await request(app).post(`/api/v1/service-provider/jobs/${jobId}/repair-complete`).set(auth).expect(200);
-  const billing = (await request(app).post(`/api/v1/service-provider/jobs/${jobId}/billing`).set(auth).expect(200)).body.data.billingEstimate;
-  const sr = await ServiceRequest.findById(serviceRequest.id).populate('booking');
-  const paid = await request(app)
-    .post(`/api/v1/service-provider/jobs/${jobId}/collect-payment`)
-    .set(auth)
-    .send({ paymentMethod: 'Cash', otp: sr.booking.completionOtp })
-    .expect(200);
-  return { billing, payment: paid.body.data.payment };
-}
+const { partner, customer, jobToBilling, billAndCollect } = jobFlow(() => app);
 
 const tallyOf = async (sp) => (await EarningsTally.findOne({ serviceProvider: sp.serviceProvider._id }))?.total;
 

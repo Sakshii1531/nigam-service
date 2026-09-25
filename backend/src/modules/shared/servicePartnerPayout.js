@@ -1,5 +1,5 @@
 import { computeCharges } from './pricingEngine.js';
-import { coveredVisitEarnings, serviceProviderShare } from './serviceProviderEarnings.js';
+import { coveredVisitEarnings } from './serviceProviderEarnings.js';
 import { toPaise } from '../catalog/money.js';
 
 // What a service partner earns for a job, and what the customer is billed at
@@ -16,10 +16,9 @@ const rupees = (p) => p / 100;
 
 /**
  * The payout a job starts with. Booking-backed jobs use the booking's
- * commercial snapshot; a brand-raised complaint with no booking uses the
- * brand's RateCard. A booking made before the catalogue cut-over (no
- * snapshot) keeps the old commission rule — only reachable on data the
- * clean-slate reset didn't wipe.
+ * commercial snapshot (every booking has one since the catalogue cut-over);
+ * a brand-raised complaint with no booking uses the brand's RateCard. There
+ * is no percentage-of-price rule any more (client Req 7–9).
  */
 export async function initialJobPayout(serviceRequest, booking) {
   const commercial = booking?.commercial;
@@ -27,10 +26,6 @@ export async function initialJobPayout(serviceRequest, booking) {
     const expressIncentive = commercial.expressSpIncentive || 0;
     const base = rupees(paise(commercial.spPayoutTotal) - paise(expressIncentive));
     return { base, expressIncentive, addOns: 0, total: commercial.spPayoutTotal };
-  }
-  if (booking && booking.totalPrice > 0) {
-    const legacy = Math.round(booking.totalPrice * (await serviceProviderShare()));
-    return { base: legacy, expressIncentive: 0, addOns: 0, total: legacy };
   }
   const covered = await coveredVisitEarnings(serviceRequest);
   return { base: covered, expressIncentive: 0, addOns: 0, total: covered };

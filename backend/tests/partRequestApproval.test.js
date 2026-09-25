@@ -7,7 +7,6 @@ import { ensureIndexes } from '../src/config/db.js';
 import { User } from '../src/modules/auth/user.model.js';
 import { ServiceProvider } from '../src/modules/service-provider/serviceProvider.model.js';
 import { Category } from '../src/modules/catalog/category.model.js';
-import { ServiceCatalogItem } from '../src/modules/catalog/serviceCatalogItem.model.js';
 import { Booking } from '../src/modules/booking/booking.model.js';
 import { ServiceRequest } from '../src/modules/service-requests/serviceRequest.model.js';
 import { Job } from '../src/modules/service-provider/job.model.js';
@@ -120,7 +119,6 @@ beforeEach(async () => {
     User.deleteMany({}),
     ServiceProvider.deleteMany({}),
     Category.deleteMany({}),
-    ServiceCatalogItem.deleteMany({}),
     Booking.deleteMany({}),
     ServiceRequest.deleteMany({}),
     Job.deleteMany({}),

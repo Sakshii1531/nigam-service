@@ -283,16 +283,16 @@ const Profile = () => {
               <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Rewards & Offers</h3>
               <div className="bg-white border border-slate-200/80 rounded-[20px] overflow-hidden shadow-2xs flex flex-col divide-y divide-slate-100/80">
 
-                {/* Membership Plan */}
+                {/* AMC plan (membership merged into AMC, docs/master-catalogue Phase 12) */}
                 <div 
-                  onClick={() => navigate('/membership-plans')}
+                  onClick={() => navigate('/buy/amc')}
                   className="p-3.5 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-amber-50 text-amber-600 rounded-xl shrink-0">
                       <Shield className="h-4 w-4" />
                     </div>
-                    <span className="text-xs sm:text-[13px] font-bold text-slate-800">Membership Plan</span>
+                    <span className="text-xs sm:text-[13px] font-bold text-slate-800">AMC Plan</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <span className="text-xs text-slate-400 font-semibold">{hasMembership ? membershipName : 'No Active Plan'}</span>
@@ -592,7 +592,7 @@ const Profile = () => {
               </div>
             ) : (
               <div 
-                onClick={() => navigate('/membership-plans')}
+                onClick={() => navigate('/buy/amc')}
                 className="bg-white border border-slate-200/80 rounded-3xl p-5 shadow-2xs hover:shadow-md transition-all cursor-pointer flex items-center justify-between group"
               >
                 <div className="flex items-center gap-3.5">
@@ -600,8 +600,8 @@ const Profile = () => {
                     <Shield className="h-5 w-5" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-black text-slate-900 group-hover:text-brand-blue transition-colors">Join Membership Plan</h4>
-                    <p className="text-xs text-slate-500 mt-0.5">Save up to 20% on all home service bookings</p>
+                    <h4 className="text-sm font-black text-slate-900 group-hover:text-brand-blue transition-colors">Get an AMC Plan</h4>
+                    <p className="text-xs text-slate-500 mt-0.5">Scheduled service visits for your appliances, all year</p>
                   </div>
                 </div>
                 <ChevronRight className="h-5 w-5 text-slate-400 group-hover:translate-x-1 transition-transform" />
@@ -741,7 +741,7 @@ const Profile = () => {
 
               <div className="flex flex-col gap-2">
                 <div 
-                  onClick={() => navigate('/membership-plans')}
+                  onClick={() => navigate('/buy/amc')}
                   className="p-3.5 bg-slate-50 hover:bg-[#EAF4FF]/60 rounded-2xl border border-slate-100 flex items-center justify-between cursor-pointer transition-all group"
                 >
                   <div className="flex items-center gap-3">
@@ -749,7 +749,7 @@ const Profile = () => {
                       <Shield className="h-5 w-5" />
                     </div>
                     <div>
-                      <h4 className="text-xs font-bold text-slate-800 group-hover:text-brand-blue">Membership Plan</h4>
+                      <h4 className="text-xs font-bold text-slate-800 group-hover:text-brand-blue">AMC Plan</h4>
                       <p className="text-[11px] text-slate-400 font-medium">{hasMembership ? membershipName : 'No active plan'}</p>
                     </div>
                   </div>

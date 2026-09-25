@@ -7,9 +7,9 @@ import { ensureIndexes } from '../src/config/db.js';
 import { User } from '../src/modules/auth/user.model.js';
 import { Category } from '../src/modules/catalog/category.model.js';
 import { ProductType } from '../src/modules/catalog/productType.model.js';
-import { ServiceCatalogItem } from '../src/modules/catalog/serviceCatalogItem.model.js';
 import { hashPassword } from '../src/modules/auth/password.js';
 import { ROLES } from '../src/config/constants.js';
+import { clearCatalogue, seedSimpleOffering } from './helpers/catalogue.js';
 import { testDbUri } from './helpers/testDb.js';
 import { readOtpCode } from './helpers/otp.js';
 
@@ -35,10 +35,12 @@ async function loginAsAdmin() {
   return res.body.data.accessToken;
 }
 
+// An AC category with one bookable Master Catalogue service (Repair) and one
+// product type that has no offering yet (so it is not listed).
 async function seedCategory() {
   const category = await Category.create({ key: 'AC', name: 'AC', color: '#0D47A1' });
   await ProductType.create({ category: category._id, slug: 'split', name: 'Split AC' });
-  await ServiceCatalogItem.create({ category: category._id, slug: 'repair', name: 'Repair', price: 299 });
+  await seedSimpleOffering({ categoryKey: 'AC', code: 'AC-TEST-REPAIR', serviceName: 'Repair', price: 299 });
   return category;
 }
 
@@ -60,19 +62,21 @@ beforeEach(async () => {
     User.deleteMany({}),
     Category.deleteMany({}),
     ProductType.deleteMany({}),
-    ServiceCatalogItem.deleteMany({}),
   ]);
+  await clearCatalogue();
 });
 
 describe('GET /catalog/categories', () => {
-  it('returns categories with nested productTypes and services in the frontend-compatible shape', async () => {
+  it('lists each category with the services it can actually book — names only, never a price', async () => {
     await seedCategory();
     const res = await request(app).get('/api/v1/catalog/categories').expect(200);
     expect(res.body.data).toHaveLength(1);
     const [ac] = res.body.data;
     expect(ac.key).toBe('AC');
-    expect(ac.productTypes).toEqual([{ id: 'split', name: 'Split AC', icon: undefined, desc: undefined }]);
-    expect(ac.services).toEqual([{ id: 'repair', name: 'Repair', icon: undefined, desc: undefined, price: 299, unit: 'per unit' }]);
+    // Split AC has no offering yet, so it isn't offered here.
+    expect(ac.productTypes).toEqual([]);
+    expect(ac.services).toEqual([{ id: 'repair', name: 'Repair' }]);
+    expect(JSON.stringify(ac)).not.toMatch(/price/i);
   });
 
   it('excludes inactive categories', async () => {
@@ -94,7 +98,7 @@ describe('GET /catalog/categories/:key', () => {
   });
 });
 
-describe('admin-editable catalog writes', () => {
+describe('admin-editable category writes', () => {
   it('rejects category creation with no auth', async () => {
     await request(app).post('/api/v1/catalog/categories').send({ key: 'TV', name: 'TV' }).expect(401);
   });
@@ -119,32 +123,15 @@ describe('admin-editable catalog writes', () => {
       .expect(403);
   });
 
-  it('lets a super_admin create a category, then add a product type and a service to it', async () => {
+  it('lets a super_admin create and edit a category', async () => {
     const token = await loginAsAdmin();
+    const auth = { Authorization: `Bearer ${token}` };
+    const createRes = await request(app).post('/api/v1/catalog/categories').set(auth).send({ key: 'TV', name: 'TV', color: '#B71C1C' }).expect(201);
+    expect(createRes.body.data).toMatchObject({ key: 'TV', productTypes: [], services: [] });
 
-    const createRes = await request(app)
-      .post('/api/v1/catalog/categories')
-      .set('Authorization', `Bearer ${token}`)
-      .send({ key: 'TV', name: 'TV', color: '#B71C1C' })
-      .expect(201);
-    expect(createRes.body.data.key).toBe('TV');
-
-    await request(app)
-      .post('/api/v1/catalog/categories/TV/product-types')
-      .set('Authorization', `Bearer ${token}`)
-      .send({ slug: 'led', name: 'LED TV' })
-      .expect(201);
-
-    await request(app)
-      .post('/api/v1/catalog/categories/TV/services')
-      .set('Authorization', `Bearer ${token}`)
-      .send({ slug: 'repair', name: 'Repair', price: 349 })
-      .expect(201);
-
+    await request(app).put('/api/v1/catalog/categories/TV').set(auth).send({ brands: ['Sony', 'LG'] }).expect(200);
     const res = await request(app).get('/api/v1/catalog/categories/TV').expect(200);
-    expect(res.body.data.productTypes).toHaveLength(1);
-    expect(res.body.data.services).toHaveLength(1);
-    expect(res.body.data.services[0].price).toBe(349);
+    expect(res.body.data.brands).toEqual(['Sony', 'LG']);
   });
 
   it('rejects creating a category with a key that already exists', async () => {
@@ -156,88 +143,12 @@ describe('admin-editable catalog writes', () => {
       .send({ key: 'AC', name: 'AC Again' })
       .expect(409);
   });
-});
 
-describe('editing and removing individual product types / services', () => {
-  it('updates a service item\'s price and name, and the change is visible on the public read', async () => {
-    const category = await seedCategory();
-    const item = await ServiceCatalogItem.findOne({ category: category._id, slug: 'repair' });
-    const token = await loginAsAdmin();
-
-    const res = await request(app)
-      .put(`/api/v1/catalog/categories/AC/services/${item.id}`)
-      .set('Authorization', `Bearer ${token}`)
-      .send({ name: 'Standard Repair', price: 399 })
-      .expect(200);
-    expect(res.body.data.name).toBe('Standard Repair');
-    expect(res.body.data.price).toBe(399);
-
-    const publicRes = await request(app).get('/api/v1/catalog/categories/AC').expect(200);
-    expect(publicRes.body.data.services[0]).toMatchObject({ name: 'Standard Repair', price: 399 });
-  });
-
-  it('deletes a service item, which then disappears from the public read', async () => {
-    const category = await seedCategory();
-    const item = await ServiceCatalogItem.findOne({ category: category._id, slug: 'repair' });
-    const token = await loginAsAdmin();
-
-    await request(app)
-      .delete(`/api/v1/catalog/categories/AC/services/${item.id}`)
-      .set('Authorization', `Bearer ${token}`)
-      .expect(200);
-
-    const publicRes = await request(app).get('/api/v1/catalog/categories/AC').expect(200);
-    expect(publicRes.body.data.services).toHaveLength(0);
-  });
-
-  it('404s deleting a service item that belongs to a different category', async () => {
-    const category = await seedCategory();
-    const item = await ServiceCatalogItem.findOne({ category: category._id, slug: 'repair' });
-    const token = await loginAsAdmin();
-    await Category.create({ key: 'TV', name: 'TV' });
-
-    await request(app)
-      .delete(`/api/v1/catalog/categories/TV/services/${item.id}`)
-      .set('Authorization', `Bearer ${token}`)
-      .expect(404);
-  });
-
-  it('updates and deletes a product type the same way', async () => {
-    const category = await seedCategory();
-    const pt = await ProductType.findOne({ category: category._id, slug: 'split' });
-    const token = await loginAsAdmin();
-
-    await request(app)
-      .put(`/api/v1/catalog/categories/AC/product-types/${pt.id}`)
-      .set('Authorization', `Bearer ${token}`)
-      .send({ name: 'Split AC Unit' })
-      .expect(200);
-
-    await request(app)
-      .delete(`/api/v1/catalog/categories/AC/product-types/${pt.id}`)
-      .set('Authorization', `Bearer ${token}`)
-      .expect(200);
-
-    const publicRes = await request(app).get('/api/v1/catalog/categories/AC').expect(200);
-    expect(publicRes.body.data.productTypes).toHaveLength(0);
-  });
-});
-
-describe('GET /catalog/categories/:key/admin', () => {
-  it('is admin-only and includes inactive services with their real ids', async () => {
-    const category = await seedCategory();
-    await ServiceCatalogItem.create({ category: category._id, slug: 'hidden', name: 'Hidden Service', price: 199, isActive: false });
-    const token = await loginAsAdmin();
-
-    await request(app).get('/api/v1/catalog/categories/AC/admin').expect(401);
-
-    const res = await request(app)
-      .get('/api/v1/catalog/categories/AC/admin')
-      .set('Authorization', `Bearer ${token}`)
-      .expect(200);
-    expect(res.body.data.services).toHaveLength(2);
-    const hidden = res.body.data.services.find((s) => s.slug === 'hidden');
-    expect(hidden.isActive).toBe(false);
-    expect(hidden.id).toBeTruthy();
+  it('the pre-catalogue per-category price editor is gone (prices live only in the Master Catalogue)', async () => {
+    await seedCategory();
+    const auth = { Authorization: `Bearer ${await loginAsAdmin()}` };
+    await request(app).post('/api/v1/catalog/categories/AC/services').set(auth).send({ slug: 'x', name: 'X', price: 1 }).expect(404);
+    await request(app).post('/api/v1/catalog/categories/AC/product-types').set(auth).send({ slug: 'x', name: 'X' }).expect(404);
+    await request(app).get('/api/v1/catalog/categories/AC/admin').set(auth).expect(404);
   });
 });

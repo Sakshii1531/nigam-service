@@ -16,6 +16,5 @@ export const updateSettingsSchema = z.object({
   refereeDiscountPercent: z.number().min(0).max(100).optional(),
   defaultSparePartMarkupPercent: z.number().min(0).max(100).optional(),
   bookingAdvancePercent: z.number().min(0).max(100).optional(),
-  serviceProviderCommissionPercent: z.number().min(0).max(100).optional(),
   visitFeeAmount: z.number().min(0).optional(),
 });

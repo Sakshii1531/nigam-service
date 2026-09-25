@@ -58,10 +58,11 @@ test('price is not shown on Step 1, and only appears in Step 2 after a service i
   // Step 1: "Select AC Type"
   await expect(page.getByRole('heading', { name: /Select AC Type/i })).toBeVisible({ timeout: 15_000 });
 
-  // Select a product type (Split AC)
+  // Select a product type (Split AC) and its size — the catalogue prices by size
   await page.getByText('Split AC').click();
+  await page.getByRole('button', { name: /^1\.5 Ton/ }).click();
 
-  // In Step 1, the sticky bottom bar should NOT display any price (no ₹299 or any other price)
+  // In Step 1, the sticky bottom bar should NOT display any price
   const bottomBar = page.locator('.fixed.bottom-0');
   await expect(bottomBar).toBeVisible();
   await expect(bottomBar.getByText(/₹/)).toHaveCount(0);
@@ -71,46 +72,33 @@ test('price is not shown on Step 1, and only appears in Step 2 after a service i
   await expect(continueBtn).toBeEnabled();
   await continueBtn.click();
 
-  // Step 2: "Select Service Option"
-  await expect(page.getByRole('heading', { name: /Select Service Option/i })).toBeVisible();
+  // Step 2: "Select Service"
+  await expect(page.getByRole('heading', { name: /^Select Service$/i })).toBeVisible();
 
   // Before selecting a service in Step 2, bottom bar should not have a price
   await expect(bottomBar.getByText(/₹/)).toHaveCount(0);
 
-  // Click an available service card (e.g. AC repair Standard Work or Installation)
-  const serviceCard = page.getByRole('button', { name: /(AC repair|Installation|Standard Work)/i }).first();
-  await serviceCard.click();
-
-  // Now the selected price must be visible in the bottom bar
-  await expect(bottomBar.getByText(/₹(299|499|649)/)).toBeVisible();
+  // Pick Installation: Split AC 1.5 Ton Installation, ₹1,499 + 18 % GST from the catalogue quote
+  await page.getByRole('button', { name: /Installation/i }).first().click();
+  await expect(bottomBar.getByText('₹1,768.82')).toBeVisible();
 });
 
-test('desktop view hides price on Step 1 and shows dynamic price in sidebar on Step 2 after selection', async ({ page, request }) => {
+test('desktop view: no price on Step 1, the catalogue quote on Step 2 after selection', async ({ page, request }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   const customer = await signedInCustomer(request);
   await signIn(page, customer);
 
   await page.goto('/book/AC');
   await expect(page.getByRole('heading', { name: /Select AC Type/i })).toBeVisible({ timeout: 15_000 });
-
-  // On Step 1, desktop pricing breakdown should show notice, not hardcoded ₹299
-  await expect(page.getByText('Service pricing will appear once you select a service package in Step 2.')).toBeVisible();
-  await expect(page.locator('text=Total Estimate')).toHaveCount(0);
-
-  // Select Split AC and click continue
   await page.getByText('Split AC').click();
+  await page.getByRole('button', { name: /^1\.5 Ton/ }).click();
+  // Nothing priced yet — a price needs a service.
+  await expect(page.getByText(/₹[\d,]+\.\d{2}/)).toHaveCount(0);
   await page.getByRole('button', { name: /Continue — Select Service/i }).click();
 
-  // On Step 2 before selecting:
-  await expect(page.getByRole('heading', { name: /Select Service Option/i })).toBeVisible();
-  await expect(page.getByText('Select a service package above to view estimated pricing.')).toBeVisible();
-
-  // Select service package
-  await page.getByRole('button', { name: /(AC repair|Installation|Standard Work)/i }).first().click();
-
-  // Now Total Estimate appears in the desktop sidebar
-  await expect(page.locator('text=Total Estimate')).toBeVisible();
-  await expect(page.getByText(/₹(299|499|649)/).first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^Select Service$/i })).toBeVisible();
+  await page.getByRole('button', { name: /Installation/i }).first().click();
+  await expect(page.getByText('₹1,768.82').first()).toBeVisible();
 });
 
 test('saved address with empty landmark/pincode enables payment button immediately in Step 4', async ({ page, request }) => {
@@ -138,6 +126,7 @@ test('saved address with empty landmark/pincode enables payment button immediate
   // Step 1: Select Type
   await expect(page.getByRole('heading', { name: /Select AC Type/i })).toBeVisible({ timeout: 15_000 });
   await page.getByText('Split AC').click();
+  await page.getByRole('button', { name: /^1\.5 Ton/ }).click();
   await page.getByRole('button', { name: /Continue — Select Service/i }).click();
 
   // Step 2: Select Service
@@ -156,7 +145,8 @@ test('saved address with empty landmark/pincode enables payment button immediate
   await expect(page.getByText('Saved Apartment 402').first()).toBeVisible();
 
   // Payment button MUST be active immediately (not "Enter Address & Mobile Details")
-  const payBtn = page.getByRole('button', { name: /Pay ₹199 & Confirm Booking/i });
+  // (the advance is the catalogue quote's payable-now amount)
+  const payBtn = page.getByRole('button', { name: /Pay ₹[\d,.]+ & Confirm Booking/i });
   await expect(payBtn).toBeVisible();
   await expect(payBtn).toBeEnabled();
 });

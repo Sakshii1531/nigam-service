@@ -57,10 +57,15 @@ export async function createRateVersion(
       changes = RATE_MONEY_FIELDS
         .filter((field) => next[field] !== current[field])
         .map((field) => ({ field, from: current[field], to: next[field] }));
-      if (!changes.length) throw new ApiError(400, 'Nothing changed — the new rate matches the current one');
+      // A location override that was ended earlier starts again as a fresh
+      // version — even at the same amounts — and its closed window stays closed.
+      const ended = current.effectiveUntil && current.effectiveUntil <= from;
+      if (!changes.length && !ended) throw new ApiError(400, 'Nothing changed — the new rate matches the current one');
 
-      current.effectiveUntil = from;
-      await current.save({ session });
+      if (!ended) {
+        current.effectiveUntil = from;
+        await current.save({ session });
+      }
     }
 
     const [rate] = await OfferingRate.create(
@@ -77,11 +82,30 @@ export async function createRateVersion(
       session ? { session } : {},
     );
 
-    if (offering.needsRateReview !== needsRateReview) {
+    // The DEMO flag is about the default price list; a city or pincode
+    // override doesn't make a placeholder default rate real.
+    if (scope.type === 'DEFAULT' && offering.needsRateReview !== needsRateReview) {
       offering.needsRateReview = needsRateReview;
       await offering.save({ session });
     }
 
     return rate;
   });
+}
+
+/**
+ * Ends a CITY / PINCODE override now: its current version gets
+ * `effectiveUntil = at`, and quotes fall back to the next scope (CITY, then
+ * DEFAULT). The version itself is kept — it stays in the history. The
+ * default price list can't be ended, only changed.
+ */
+export async function endRateScope(offeringId, scope, { at = new Date() } = {}) {
+  if (!scope || scope.type === 'DEFAULT') throw new ApiError(400, 'The default rate cannot be ended — change it instead');
+  const current = await findLatestRate(offeringId, scope);
+  if (!current || (current.effectiveUntil && current.effectiveUntil <= at)) {
+    throw new ApiError(404, 'No active price for this location');
+  }
+  current.effectiveUntil = at;
+  await current.save();
+  return current;
 }

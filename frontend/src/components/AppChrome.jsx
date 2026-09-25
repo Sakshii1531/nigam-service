@@ -59,7 +59,6 @@ const CUSTOMER_TABS = [
   ["/coupons", "account"],
   ["/rewards", "account"],
   ["/refer-earn", "account"],
-  ["/membership-plans", "account"],
 ];
 
 const TECH_TABS = [

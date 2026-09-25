@@ -180,8 +180,9 @@ for (const scenario of [
     await expect(dialog.getByRole('heading', { name: scenario.title })).toBeVisible();
     await expect(dialog.getByText(scenario.message)).toBeVisible();
 
-    // Try again takes the customer back to booking the same category.
-    await dialog.getByRole('button', { name: /Try again/i }).click();
+    // Two ways forward: search again for the same booking, or book afresh.
+    await expect(dialog.getByRole('button', { name: /Search Again/i })).toBeVisible();
+    await dialog.getByRole('button', { name: /Create New Booking/i }).click();
     await expect(page).toHaveURL(/\/book\/AC/);
   });
 }

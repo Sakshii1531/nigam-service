@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Star, Check, Shield, Award, X } from 'lucide-react';
 import applianceFridge from '../assets/appliance_fridge.png';
-import { apiRequest } from '../lib/apiClient';
+import { resolveLabels, formatRupees } from '../lib/catalogueApi';
 import { goBack } from '../lib/navigation';
 
 const RefrigeratorDetails = () => {
@@ -10,19 +10,22 @@ const RefrigeratorDetails = () => {
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const brandName = searchParams.get('brand') || '';
-  // The out-of-warranty visit charge comes from the Refrigerator service
-  // catalogue rather than being fixed at ₹499 in this page.
-  const [servicePrice, setServicePrice] = useState(null);
+  // Price and destination come from the Master Catalogue: the lowest
+  // Refrigerator rate ("from"), or no price while none is configured.
+  const [refrigerator, setRefrigerator] = useState(null);
 
   useEffect(() => {
-    apiRequest('/catalog/categories/Refrigerator')
-      .then((res) => {
-        const services = res?.services || [];
-        const repair = services.find((sv) => /repair|service/i.test(sv.name)) || services[0];
-        setServicePrice(repair?.price ?? null);
-      })
-      .catch((err) => console.warn('[refrigerator] Could not load service price:', err.message));
+    let alive = true;
+    resolveLabels(['Refrigerator'])
+      .then(([row]) => alive && setRefrigerator(row?.match || null))
+      .catch(() => alive && setRefrigerator(null));
+    return () => {
+      alive = false;
+    };
   }, []);
+  // Warranty / AMC coverage is detected by the booking itself (brand + the
+  // customer's registered cover), so both modal buttons open the same flow.
+  const bookingLink = refrigerator?.deepLink || '/book/Refrigerator';
 
   const [selectedIssue, setSelectedIssue] = useState('');
   const [showWarrantyModal, setShowWarrantyModal] = useState(false);
@@ -93,7 +96,7 @@ const RefrigeratorDetails = () => {
                     return;
                   }
                   setShowWarrantyModal(false);
-                  navigate(`/booking?service=Refrigerator Service&price=0&warranty=true`);
+                  navigate(bookingLink);
                 }}
                 className="flex-1 bg-brand-yellow text-brand-blue font-bold py-2 rounded-xl hover:bg-yellow-400 transition-colors text-sm"
               >
@@ -102,7 +105,7 @@ const RefrigeratorDetails = () => {
               <button 
                 onClick={() => {
                   setShowWarrantyModal(false);
-                  navigate(`/booking?service=Refrigerator Service&price=${servicePrice ?? 0}`);
+                  navigate(bookingLink);
                 }}
                 className="flex-1 bg-slate-100 text-text-primary font-semibold py-2 rounded-xl hover:bg-slate-200 transition-colors text-sm"
               >
@@ -195,11 +198,10 @@ const RefrigeratorDetails = () => {
         <div className="bg-[#E3ECF9]/50 border border-[#BACBE7] p-4 rounded-2xl flex justify-between items-center">
           <div>
             <span className="text-xs text-text-secondary block">Price</span>
-            <span className="text-lg font-bold text-brand-blue">Starting from ₹499</span>
+            <span className="text-lg font-bold text-brand-blue">
+              {refrigerator?.fromPrice != null ? `Starting from ${formatRupees(refrigerator.fromPrice)}` : 'Price shown when you book'}
+            </span>
           </div>
-          <span className="text-xs text-[#2E7D32] font-semibold bg-[#E8F5E9] px-2 py-0.5 rounded-full">
-            Save up to 20%
-          </span>
         </div>
 
       </div>
@@ -207,9 +209,9 @@ const RefrigeratorDetails = () => {
       {/* Footer / Action Button */}
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-border-color shadow-lg flex justify-between items-center z-10 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-[min(100%,48rem)] md:rounded-t-2xl">
         <div>
-          <span className="text-xs text-text-secondary block">Total</span>
+          <span className="text-xs text-text-secondary block">Starts at</span>
           <span className="text-base font-bold text-text-primary">
-            {servicePrice != null ? `₹${servicePrice.toLocaleString('en-IN')}` : '—'}
+            {refrigerator?.fromPrice != null ? `from ${formatRupees(refrigerator.fromPrice)}` : '—'}
           </span>
         </div>
         <button

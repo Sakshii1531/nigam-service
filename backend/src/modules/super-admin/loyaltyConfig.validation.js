@@ -8,14 +8,6 @@ export const createMilestoneSchema = z.object({
 });
 export const updateMilestoneSchema = createMilestoneSchema.partial();
 
-export const createMembershipSchema = z.object({
-  name: z.string().min(1),
-  price: z.number().min(0),
-  benefits: z.array(z.string()).optional(),
-  tierRank: z.number().int().positive(),
-});
-export const updateMembershipSchema = createMembershipSchema.partial();
-
 const segmentSchema = z.object({
   label: z.string().min(1),
   probability: z.number().min(0).max(100),

@@ -69,7 +69,7 @@ const APPLIANCE_TIPS = [
     icon: '⚡',
     title: 'Optimal AC Temperature Setting',
     desc: 'Setting your AC to 24°C instead of 18°C can reduce monthly power consumption by up to 24% while extending compressor lifespan.',
-    benefit: 'Save up to ₹800/month',
+    benefit: 'Lower power bills',
   },
   {
     id: 2,

@@ -8,18 +8,18 @@ import { createRateVersion } from '../../src/modules/catalog/rateWriter.js';
 import { buildQuote } from '../../src/modules/catalog/quote.service.js';
 import { toPaise, toRupees } from '../../src/modules/catalog/money.js';
 import { seedMasterCatalogue } from '../../scripts/seedMasterCatalogue.js';
-import { MASTER_CATALOGUE_SEED } from '../../scripts/masterCatalogueSeedData.js';
+import { FULL_CATALOGUE_SEED } from '../../scripts/catalogueExpansion.js';
 
 /** The categories the master-catalogue seed expects to already exist (seed.js creates them in real runs). */
 export async function createCatalogueCategories() {
   await Promise.all(
-    MASTER_CATALOGUE_SEED.filter((entry) => !entry.create).map((entry) =>
+    FULL_CATALOGUE_SEED.filter((entry) => !entry.create).map((entry) =>
       Category.updateOne({ key: entry.key }, { $setOnInsert: { key: entry.key, name: entry.key } }, { upsert: true }),
     ),
   );
 }
 
-/** Full master catalogue (34 offerings, v1 rates) in the current test database. */
+/** Full master catalogue (every category, v1 rates) in the current test database. */
 export async function seedTestCatalogue() {
   await createCatalogueCategories();
   return seedMasterCatalogue();

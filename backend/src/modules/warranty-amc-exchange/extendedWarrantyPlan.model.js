@@ -12,8 +12,11 @@ const extendedWarrantyPlanSchema = new mongoose.Schema(
     price: { type: Number, required: true },
     description: String,
     features: [String],
-    // Optional scoping — a pack offered only for one appliance category.
+    // Master Catalogue category key the pack covers ("AC", "TV"); null = any
+    // appliance. Admin-managed from Super Admin → Plans (docs/master-catalogue Phase 13).
     applianceCategory: { type: String, default: null, index: true },
+    displayOrder: { type: Number, default: 0 },
+    isPopular: { type: Boolean, default: false },
     claimsTotal: { type: Number, default: 0 },
     isActive: { type: Boolean, default: true, index: true },
   },

@@ -27,7 +27,7 @@ const FinanceDetails = () => {
   };
 
   const getSubTitle = () => {
-    if (isPersonalLoan) return 'Pre-approved loan up to ₹10,00,000 in 5 minutes';
+    if (isPersonalLoan) return 'Personal loans through our finance partner';
     if (isEMI) return 'Convert high-cost home appliance bills into 0% interest EMIs';
     if (isCreditCard) return 'Unlimited 5% cashback on all Nigam home services';
     return 'Activate Buy Now Pay Later in 3 interest-free payments';
@@ -198,40 +198,22 @@ const FinanceDetails = () => {
                   type="submit"
                   className="w-full bg-brand-yellow text-brand-blue font-extrabold py-3.5 rounded-2xl flex items-center justify-center gap-1.5 hover:bg-yellow-400 active:scale-[0.99] transition-all shadow-md mt-2 cursor-pointer text-xs"
                 >
-                  <Sparkles className="h-4 w-4" /> Check Approval Status
+                  <Sparkles className="h-4 w-4" /> Request a Call Back
                 </button>
               </form>
             </>
           ) : (
-            /* Congratulations / Approved Screen */
+            /* Request received — the finance partner decides eligibility and limits;
+               this screen used to show an invented "pre-approved" limit and rate. */
             <div className="flex-1 flex flex-col items-center justify-center text-center gap-4 animate-[scaleIn_0.35s_ease-out]">
               <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center shadow-inner">
                 <Check className="h-8 w-8" />
               </div>
               <div>
-                <h3 className="font-extrabold text-[#212121] text-base">Congratulations, {user?.name ? user.name.split(' ')[0] : 'Customer'}!</h3>
+                <h3 className="font-extrabold text-[#212121] text-base">Request received, {user?.name ? user.name.split(' ')[0] : 'Customer'}</h3>
                 <p className="text-xs text-text-secondary mt-1 max-w-70 mx-auto leading-relaxed">
-                  Your eligibility is pre-approved by our CIBIL validation system!
+                  Our finance partner will contact you on your registered number with your eligibility, limit and rates.
                 </p>
-              </div>
-
-              <div className="bg-[#F8FAFC] border border-[#BACBE7]/80 rounded-2xl p-4 w-full text-left flex flex-col gap-2 mt-2">
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-text-secondary">Approved Limit:</span>
-                  <span className="font-extrabold text-brand-blue">
-                    {isPersonalLoan ? '₹8,50,000' : isEMI ? '₹1,20,000' : isCreditCard ? '₹1,50,000' : '₹45,000'}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-text-secondary">Interest Rate:</span>
-                  <span className="font-extrabold text-emerald-600">
-                    {isPersonalLoan ? '10.5% p.a.' : '0% Interest'}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-text-secondary">Processing Time:</span>
-                  <span className="font-bold text-text-primary">Instant Disbursal</span>
-                </div>
               </div>
 
               <button 

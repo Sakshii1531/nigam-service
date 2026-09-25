@@ -10,6 +10,7 @@ import { ServiceOffering } from '../src/modules/catalog/serviceOffering.model.js
 import { OfferingRate } from '../src/modules/catalog/offeringRate.model.js';
 import { buildOfferingCode, suggestOfferingCode } from '../src/modules/catalog/offeringCode.js';
 import { seedTestCatalogue } from './helpers/catalogue.js';
+import { FULL_CATALOGUE_SEED } from '../scripts/catalogueExpansion.js';
 import { testDbUri } from './helpers/testDb.js';
 
 const TEST_DB_URI = testDbUri('catalog_models');
@@ -146,15 +147,16 @@ describe('offering code suggestion', () => {
 });
 
 describe('master catalogue seed', () => {
-  it('seeds all 34 offerings with exactly one v1 rate each, idempotently', async () => {
+  it('seeds every offering with exactly one v1 rate each, idempotently', async () => {
     const first = await seedTestCatalogue();
-    expect(first).toEqual({ categories: 8, offerings: 34, ratesCreated: 34 });
+    const expected = FULL_CATALOGUE_SEED.flatMap((c) => c.offerings).length;
+    expect(first).toEqual({ categories: FULL_CATALOGUE_SEED.length, offerings: expected, ratesCreated: expected });
 
     const second = await seedTestCatalogue();
     expect(second.ratesCreated).toBe(0);
 
-    expect(await ServiceOffering.countDocuments()).toBe(34);
-    expect(await OfferingRate.countDocuments()).toBe(34);
+    expect(await ServiceOffering.countDocuments()).toBe(expected);
+    expect(await OfferingRate.countDocuments()).toBe(expected);
     const perOffering = await OfferingRate.aggregate([{ $group: { _id: '$offering', n: { $sum: 1 } } }, { $match: { n: { $ne: 1 } } }]);
     expect(perOffering).toHaveLength(0);
   });

@@ -69,9 +69,8 @@ test.describe('Dedicated Booking Details & Reschedule Workflow', () => {
     // Booking card appears in list
     await expect(page.getByText(humanId)).toBeVisible({ timeout: 10_000 });
 
-    // Click "Details" button to navigate to dedicated route
-    const detailsBtn = page.getByRole('button', { name: /Details/i }).first();
-    await detailsBtn.click();
+    // The whole booking card opens the dedicated details route ("Details" is its label).
+    await page.getByText(humanId).first().click();
 
     // Verify URL is /bookings/:id
     await expect(page).toHaveURL(new RegExp(`/bookings/${humanId}`));
@@ -175,7 +174,8 @@ test.describe('Dedicated Booking Details & Reschedule Workflow', () => {
 
     // Verify Radar and Stage progress
     await expect(page.getByRole('heading', { name: /Searching for Service Partner/i })).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText(/Stage:.*\/ 15:00/i)).toBeVisible();
+    // The current search stage is shown as a heading (the minute timer was removed).
+    await expect(page.getByRole('heading', { name: /Scanning Nearby Verified Partners|Expanding Search Territory/i })).toBeVisible();
     await expect(page.getByText(/Near Indore/i)).toBeVisible();
 
     // Verify Rotating Appliance Care Carousel

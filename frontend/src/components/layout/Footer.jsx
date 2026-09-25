@@ -54,7 +54,7 @@ const Footer = () => {
                 <button onClick={() => handleNav('/dashboard')} className="text-sm text-slate-300 hover:text-white hover:underline transition-colors cursor-pointer font-medium">Home</button>
               </li>
               <li>
-                <button onClick={() => handleNav('/membership-plans')} className="text-sm text-slate-300 hover:text-white hover:underline transition-colors cursor-pointer font-medium">Membership Plans</button>
+                <button onClick={() => handleNav('/buy/amc')} className="text-sm text-slate-300 hover:text-white hover:underline transition-colors cursor-pointer font-medium">AMC Plans</button>
               </li>
               <li>
                 <button onClick={() => handleNav('/help-support')} className="text-sm text-slate-300 hover:text-white hover:underline transition-colors cursor-pointer font-medium">Careers & Contact</button>

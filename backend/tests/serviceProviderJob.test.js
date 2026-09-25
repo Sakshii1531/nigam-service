@@ -8,7 +8,6 @@ import { User } from '../src/modules/auth/user.model.js';
 import { ServiceProvider } from '../src/modules/service-provider/serviceProvider.model.js';
 import { Category } from '../src/modules/catalog/category.model.js';
 import { ProductType } from '../src/modules/catalog/productType.model.js';
-import { ServiceCatalogItem } from '../src/modules/catalog/serviceCatalogItem.model.js';
 import { Booking } from '../src/modules/booking/booking.model.js';
 import { ServiceRequest } from '../src/modules/service-requests/serviceRequest.model.js';
 import { Job } from '../src/modules/service-provider/job.model.js';
@@ -118,7 +117,6 @@ beforeEach(async () => {
     ServiceProvider.deleteMany({}),
     Category.deleteMany({}),
     ProductType.deleteMany({}),
-    ServiceCatalogItem.deleteMany({}),
     Booking.deleteMany({}),
     ServiceRequest.deleteMany({}),
     Job.deleteMany({}),
@@ -236,6 +234,22 @@ describe('open offers (booked when nobody was online)', () => {
       .set('Authorization', `Bearer ${first.token}`)
       .send({})
       .expect(403);
+  });
+
+  it('a partner who declines a direct assignment does not get it back as an open offer', async () => {
+    const { srId, first, second } = await bookOpenOffer();
+    await ServiceRequest.updateOne({ _id: srId }, { serviceProvider: first.serviceProvider._id, status: 'Assigned' });
+
+    await request(app)
+      .post(`/api/v1/service-provider/jobs/reject/${srId}`)
+      .set('Authorization', `Bearer ${first.token}`)
+      .expect(200);
+    expect(await ServiceRequest.findById(srId)).toMatchObject({ serviceProvider: null, status: 'New' });
+
+    const firstFeed = await request(app).get('/api/v1/service-provider/jobs/available').set('Authorization', `Bearer ${first.token}`).expect(200);
+    expect(firstFeed.body.data.some((o) => o.id === srId)).toBe(false);
+    const secondFeed = await request(app).get('/api/v1/service-provider/jobs/available').set('Authorization', `Bearer ${second.token}`).expect(200);
+    expect(secondFeed.body.data.some((o) => o.id === srId)).toBe(true);
   });
 
   it('refuses to let a provider outside the city claim the offer', async () => {
@@ -967,23 +981,6 @@ describe('covered-visit earnings come from the brand rate card', () => {
 });
 
 describe('platform settings actually drive the money', () => {
-  it('client Test 8 (partner side): the commission setting no longer changes a partner\'s pay', async () => {
-    // Payout is the fixed catalogue amount frozen on the booking — a platform
-    // commission % (even one an admin sets) must not move it.
-    await PlatformSettings.create({ serviceProviderCommissionPercent: 50 });
-
-    const { jobId, serviceProviderToken } = await createAcceptedD2CJob();
-    const auth = { Authorization: `Bearer ${serviceProviderToken}` };
-    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/start-travel`).set(auth).expect(200);
-    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/arrive`).set(auth).expect(200);
-    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`).set(auth).send({ notes: 'x' }).expect(200);
-    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/spare-parts`).set(auth).send({ parts: [] }).expect(200);
-    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/repair-complete`).set(auth).expect(200);
-
-    const billing = await request(app).post(`/api/v1/service-provider/jobs/${jobId}/billing`).set(auth).expect(200);
-    expect(billing.body.data.billingEstimate.serviceProviderEarnings).toBe(300);
-  });
-
   it('client Test 8 (partner side): a price change after booking does not change the job\'s payout', async () => {
     const { jobId, serviceProviderToken } = await createAcceptedD2CJob();
     const offering = await ServiceOffering.findOne({ code: 'TEST-REPAIR' });

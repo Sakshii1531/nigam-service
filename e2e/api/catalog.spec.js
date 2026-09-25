@@ -1,9 +1,10 @@
 import { test, expect } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
+import { createTestOffering } from '../catalogueFixture.js';
 
 // Covers backend/src/modules/catalog/catalog.routes.js. Read endpoints exercise
-// the real category data seeded by global-setup.js (backend/scripts/seed.js) —
-// the same 9 categories frontend/src/data/bookingCatalog.js defines. Admin-write
+// the real category data seeded by global-setup.js (backend/scripts/seed.js:
+// categorySeedData.js + the Master Catalogue seed). Admin-write
 // tests create their own uniquely-keyed fixtures so parallel workers don't collide.
 
 async function getOtpCode(request, identifier) {
@@ -22,7 +23,7 @@ async function loginAsFreshAdmin(request) {
 }
 
 test.describe('GET /catalog/categories', () => {
-  test('includes the seeded AC category with its product types and services', async ({ request }) => {
+  test('includes the seeded AC category with its bookable product types and services — no prices', async ({ request }) => {
     const res = await request.get('/api/v1/catalog/categories');
     expect(res.status()).toBe(200);
     const body = await res.json();
@@ -30,10 +31,11 @@ test.describe('GET /catalog/categories', () => {
     const ac = body.data.find((c) => c.key === 'AC');
     expect(ac).toBeTruthy();
     expect(ac.productTypes.some((pt) => pt.id === 'split')).toBe(true);
-    expect(ac.services.some((s) => s.id === 'repair' && s.price === 299)).toBe(true);
+    expect(ac.services.some((s) => s.id === 'installation')).toBe(true);
+    expect(JSON.stringify(ac)).not.toMatch(/"price"/);
   });
 
-  test('seeded all 9 bookingCatalog.js categories', async ({ request }) => {
+  test('seeded the appliance categories', async ({ request }) => {
     const res = await request.get('/api/v1/catalog/categories');
     const body = await res.json();
     const keys = body.data.map((c) => c.key);
@@ -62,7 +64,7 @@ test.describe('admin-editable catalog writes', () => {
     expect(res.status()).toBe(401);
   });
 
-  test('lets a super_admin create a category and add a product type + service to it', async ({ request }) => {
+  test('lets a super_admin create a category; its services come from Master Catalogue offerings', async ({ request }) => {
     const token = await loginAsFreshAdmin(request);
     const key = `E2E-${randomUUID()}`;
 
@@ -71,20 +73,11 @@ test.describe('admin-editable catalog writes', () => {
       data: { key, name: 'E2E Category' },
     });
     expect(createRes.status()).toBe(201);
+    expect((await createRes.json()).data.services).toEqual([]);
 
-    await request.post(`/api/v1/catalog/categories/${key}/product-types`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { slug: 'type-a', name: 'Type A' },
-    });
-    await request.post(`/api/v1/catalog/categories/${key}/services`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { slug: 'service-a', name: 'Service A', price: 123 },
-    });
-
-    const res = await request.get(`/api/v1/catalog/categories/${key}`);
-    const body = await res.json();
-    expect(body.data.productTypes).toHaveLength(1);
-    expect(body.data.productTypes[0]).toMatchObject({ id: 'type-a', name: 'Type A' });
-    expect(body.data.services[0]).toMatchObject({ id: 'service-a', name: 'Service A', price: 123 });
+    await createTestOffering(request, token, key, { price: 123, serviceName: 'Service A' });
+    const body = await (await request.get(`/api/v1/catalog/categories/${key}`)).json();
+    expect(body.data.services).toEqual([expect.objectContaining({ name: 'Service A' })]);
+    expect(body.data.services[0].price).toBeUndefined();
   });
 });

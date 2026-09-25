@@ -4,6 +4,7 @@ import { catalogueAdmin, formatINR, PRICING_UNIT_LABELS } from '../../../lib/cat
 import { Field, inputClass, Toggle, ErrorNote, PrimaryButton, SecondaryButton, DemoBadge, StatusPill } from './ui';
 import { listToText, textToList } from './listText';
 import RateHistoryPanel from './RateHistoryPanel';
+import LocalPricesPanel from './LocalPricesPanel';
 
 // Create / edit one Service Offering — every field from the client brief
 // (Req 20). An offering's code and the combination it prices are fixed once
@@ -123,7 +124,7 @@ function contentBody(form) {
   };
 }
 
-export default function OfferingEditor({ mode, offeringId, categoryId, structure, cities, onClose, onSaved, onChangeRate, rateVersionKey }) {
+export default function OfferingEditor({ mode, offeringId, categoryId, structure, cities, onClose, onSaved, onChangeRate, onRatesChanged, rateVersionKey }) {
   const isCreate = mode === 'create';
   const [tab, setTab] = useState('basics');
   const [offering, setOffering] = useState(null);
@@ -458,6 +459,8 @@ export default function OfferingEditor({ mode, offeringId, categoryId, structure
                     </div>
                   )
                 )}
+
+                {!isCreate && offering && <LocalPricesPanel offering={offering} onChangeRate={onChangeRate} onRatesChanged={onRatesChanged} />}
 
                 <div className="grid grid-cols-2 gap-3">
                   <Field label="Pricing unit">

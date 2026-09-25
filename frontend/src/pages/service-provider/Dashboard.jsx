@@ -345,7 +345,7 @@ const Dashboard = () => {
     await dismissJob(id);
     setAlertBusy(null);
     setDutyMessage(
-      "Direct offer passed — job is now open to all service providers in offers.",
+      "Offer passed — we're finding another partner for this job.",
     );
   };
 

@@ -18,6 +18,7 @@ const UpiPayment = lazy(() => import("./pages/UpiPayment"));
 const NetBankingPayment = lazy(() => import("./pages/NetBankingPayment"));
 const PaymentFailure = lazy(() => import("./pages/PaymentFailure"));
 const Booking = lazy(() => import("./pages/Booking"));
+const OfferingLink = lazy(() => import("./pages/Booking").then((m) => ({ default: m.OfferingLink })));
 const BookingFlow = lazy(() => import("./pages/BookingFlow"));
 import { BookingProvider } from "./context/BookingContext";
 import { AuthProvider } from "./context/AuthContext";
@@ -60,7 +61,6 @@ const Wishlist = lazy(() => import("./pages/Wishlist"));
 const MyWishlist = lazy(() => import("./pages/MyWishlist"));
 const Coupons = lazy(() => import("./pages/Coupons"));
 const FinanceDetails = lazy(() => import("./pages/FinanceDetails"));
-const MembershipPlans = lazy(() => import("./pages/MembershipPlans"));
 const RewardsPlayZone = lazy(() => import("./pages/RewardsPlayZone"));
 const MyBookings = lazy(() => import("./pages/MyBookings"));
 const MyOrders = lazy(() => import("./pages/MyOrders"));
@@ -147,6 +147,7 @@ const SuperAdminStories = lazy(() => import("./pages/super-admin/Stories"));
 const SuperAdminVideos = lazy(() => import("./pages/super-admin/Videos"));
 const SuperAdminAdvertisements = lazy(() => import("./pages/super-admin/Advertisements"));
 const SuperAdminRevenue = lazy(() => import("./pages/super-admin/Revenue"));
+const SuperAdminPlans = lazy(() => import("./pages/super-admin/Plans"));
 const SuperAdminTransactions = lazy(() => import("./pages/super-admin/Transactions"));
 const SuperAdminCMS = lazy(() => import("./pages/super-admin/CMS"));
 const SuperAdminLoyaltyProgram = lazy(() => import("./pages/super-admin/LoyaltyProgram"));
@@ -792,6 +793,10 @@ function App() {
                           />
                           <Route path="/booking" element={<Booking />} />
                           <Route
+                            path="/book/o/:offeringCode"
+                            element={<OfferingLink />}
+                          />
+                          <Route
                             path="/book/:category"
                             element={<BookingFlow />}
                           />
@@ -854,7 +859,7 @@ function App() {
                           />
                           <Route
                             path="/membership-plans"
-                            element={<MembershipPlans />}
+                            element={<Navigate to="/buy/amc" replace />}
                           />
                           <Route
                             path="/rewards-play-zone"
@@ -1301,6 +1306,10 @@ function App() {
                           <Route
                             path="/super-admin/revenue"
                             element={<SuperAdminRevenue />}
+                          />
+                          <Route
+                            path="/super-admin/plans"
+                            element={<SuperAdminPlans />}
                           />
                           <Route
                             path="/super-admin/transactions"

@@ -17,31 +17,6 @@ export const updateCategorySchema = createCategorySchema.partial().omit({ key: t
 
 export const categoryKeyParamSchema = z.object({ key: z.string().min(1) });
 
-export const addProductTypeSchema = z.object({
-  slug: z.string().min(1),
-  name: z.string().min(1),
-  icon: z.string().optional(),
-  desc: z.string().optional(),
-});
-
-export const updateProductTypeSchema = addProductTypeSchema.partial().omit({ slug: true });
-
-export const addServiceItemSchema = z.object({
-  slug: z.string().min(1),
-  name: z.string().min(1),
-  icon: z.string().optional(),
-  desc: z.string().optional(),
-  price: z.coerce.number().nonnegative(),
-  unit: z.string().optional(),
-});
-
-export const updateServiceItemSchema = addServiceItemSchema.partial().omit({ slug: true }).extend({
-  isActive: z.boolean().optional(),
-});
-
-export const productTypeIdParamSchema = z.object({ key: z.string().min(1), productTypeId: z.string().min(1) });
-export const serviceItemIdParamSchema = z.object({ key: z.string().min(1), serviceItemId: z.string().min(1) });
-
 // ─── Master catalogue (docs/master-catalogue Phase 2) ─────────────────────
 
 const objectId = z.string().regex(/^[a-f0-9]{24}$/i, 'Invalid id');
@@ -79,4 +54,16 @@ export const quoteSchema = z.object({
       purchaseDate: z.coerce.date().optional(),
     })
     .optional(),
+});
+
+export const searchQuerySchema = z.object({
+  q: z.string().trim().min(1).max(80),
+  city: z.string().trim().min(1).optional(),
+  pincode: z.string().trim().min(1).optional(),
+  limit: z.coerce.number().int().min(1).max(30).optional(),
+});
+
+export const resolveLabelsSchema = z.object({
+  labels: z.array(z.string().trim().min(1).max(80)).min(1).max(40),
+  location: locationQuerySchema.optional(),
 });

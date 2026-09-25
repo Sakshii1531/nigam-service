@@ -1,3 +1,3 @@
 # catalog
 
-Phase 4 (initially), rewritten by Phase 8. Admin-editable `Category` / `ProductType` / `ServiceCatalogItem` — replaces `frontend/src/data/bookingCatalog.js` and the `custom_service_*` localStorage overrides. Written to by super-admin's CMS/app-customization endpoints (Phase 8), read by the customer app. See BACKEND_CONTEXT.md §3.4, §6.2.
+The Master Service & Offering Catalogue — `Category` → `ProductType` / `Variant` / `CatalogService` → `ServiceOffering` → `OfferingRate` (append-only, paise). The single source of customer prices and partner payouts. Customer reads: category tree, offering detail, quote, search (`catalog.routes.js`); admin: `catalogAdmin.routes.js`. Design and phase logs: `docs/master-catalogue/`.

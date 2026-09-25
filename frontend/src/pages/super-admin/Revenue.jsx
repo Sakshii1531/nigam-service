@@ -3,6 +3,7 @@ import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import { IndianRupee, TrendingUp, ArrowUpRight, BarChart3, ShieldCheck } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
+import ServiceMarginReport from '../../components/super-admin/ServiceMarginReport';
 
 const currency = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
 
@@ -13,6 +14,7 @@ const Revenue = () => {
   const [summary, setSummary] = useState({ gross: 0, partnerShare: 0, net: 0, marginPercent: 0, rows: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [tab, setTab] = useState('margin');
 
   useEffect(() => {
     let cancelled = false;
@@ -41,7 +43,28 @@ const Revenue = () => {
       <div className="flex-1 ml-64 min-h-screen flex flex-col">
         <Topbar title="Revenue Dashboard" subtitle="Overview of gross, partner split, and platform net revenues" />
         <div className="p-6 space-y-6 flex-1">
-          
+          <div role="tablist" aria-label="Revenue views" className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit">
+            {[
+              ['margin', 'Service Margin'],
+              ['channels', 'Channels'],
+            ].map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={tab === id}
+                onClick={() => setTab(id)}
+                className={`px-4 py-2 rounded-lg text-xs font-bold cursor-pointer ${tab === id ? 'bg-white text-[#0D47A1] shadow-sm' : 'text-slate-500'}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {tab === 'margin' ? (
+            <ServiceMarginReport />
+          ) : (
+          <>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="bg-white p-5 rounded-2xl border border-[#E2E8F0] shadow-sm flex items-center gap-4">
               <div className="w-10 h-10 bg-blue-50 text-[#0D47A1] rounded-xl flex items-center justify-center border border-blue-100">
@@ -120,7 +143,8 @@ const Revenue = () => {
               </tbody>
             </table>
           </div>
-
+          </>
+          )}
         </div>
       </div>
     </div>

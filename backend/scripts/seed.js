@@ -12,9 +12,8 @@ import { Brand } from '../src/modules/super-admin/brand.model.js';
 import { City } from '../src/modules/super-admin/city.model.js';
 import { AssignmentWeighting } from '../src/modules/super-admin/assignmentWeighting.model.js';
 import { Category } from '../src/modules/catalog/category.model.js';
-import { ProductType } from '../src/modules/catalog/productType.model.js';
-import { ServiceCatalogItem } from '../src/modules/catalog/serviceCatalogItem.model.js';
 import { Product } from '../src/modules/buy-commerce/product.model.js';
+import { ProductCategory } from '../src/modules/buy-commerce/productCategory.model.js';
 import { Coupon } from '../src/modules/rewards-loyalty/coupon.model.js';
 import { ExchangeQuestionSet } from '../src/modules/warranty-amc-exchange/exchangeQuestionSet.model.js';
 import { ExchangeCampaign } from '../src/modules/warranty-amc-exchange/exchangeCampaign.model.js';
@@ -23,14 +22,15 @@ import { AMCSubscription } from '../src/modules/warranty-amc-exchange/amcSubscri
 import { ExtendedWarrantyOrder } from '../src/modules/warranty-amc-exchange/extendedWarrantyOrder.model.js';
 import { ExtendedWarrantyPlan } from '../src/modules/warranty-amc-exchange/extendedWarrantyPlan.model.js';
 import { ExchangeBaseValue } from '../src/modules/warranty-amc-exchange/exchangeBaseValue.model.js';
-import { Membership } from '../src/modules/rewards-loyalty/membership.model.js';
 import { HomeTile } from '../src/modules/super-admin/homeTile.model.js';
 import { EXCHANGE_BASE_VALUES } from './exchangeBaseValueSeedData.js';
 import { OwnedAppliance } from '../src/modules/service-requests/ownedAppliance.model.js';
 import { Notification } from '../src/modules/notifications/notification.model.js';
 import { hashPassword } from '../src/modules/auth/password.js';
 import { ROLES } from '../src/config/constants.js';
-import { CATALOG_SEED } from './catalogSeedData.js';
+import { CATEGORY_SEED } from './categorySeedData.js';
+import { AMC_PLAN_SEED, EW_PLAN_SEED, SPARE_PART_SEED } from './planSeedData.js';
+import { listServiceGroups } from '../src/modules/catalog/offeringSearch.service.js';
 import { seedMasterCatalogue } from './seedMasterCatalogue.js';
 import { seedDemoEntities } from './demoSeedData.js';
 
@@ -216,48 +216,45 @@ async function upsertUser({ role, name, phone, email, password, extra = {} }) {
   return user;
 }
 
-async function upsertCatalog() {
-  for (const entry of CATALOG_SEED) {
-    const { productTypes, services, ...categoryFields } = entry;
-    const category = await Category.findOneAndUpdate({ key: entry.key }, categoryFields, {
-      upsert: true,
-      new: true,
-      setDefaultsOnInsert: true,
-    });
-
-    await Promise.all(
-      productTypes.map((pt) =>
-        ProductType.findOneAndUpdate({ category: category._id, slug: pt.slug }, { category: category._id, ...pt }, { upsert: true }),
-      ),
-    );
-    await Promise.all(
-      services.map((s) =>
-        ServiceCatalogItem.findOneAndUpdate({ category: category._id, slug: s.slug }, { category: category._id, ...s }, { upsert: true }),
-      ),
-    );
+async function upsertCategories() {
+  for (const entry of CATEGORY_SEED) {
+    await Category.findOneAndUpdate({ key: entry.key }, entry, { upsert: true, new: true, setDefaultsOnInsert: true });
   }
-  // Home-screen tiles, built from the catalogue just seeded. The customer app
-  // falls back to a bundled list when none exist — and that list carried
-  // invented star ratings (4.76, 4.90) and prices, so a fresh install showed
-  // customers satisfaction scores no review had ever produced.
-  const serviceItems = await ServiceCatalogItem.find({ isActive: true }).limit(6);
-  for (const [i, item] of serviceItems.entries()) {
-    const link = `/booking?service=${encodeURIComponent(item.name)}&price=${item.price}`;
+  console.log(`[seed] ${CATEGORY_SEED.length} categories ready`);
+}
+
+// Home-screen tiles, built from the Master Catalogue just seeded: each tile
+// is a bookable service group with its deep link. No price is stored — the
+// app shows the catalogue's live "from" price (docs/master-catalogue Phase 6).
+// Without tiles the app falls back to a bundled list, which is fine too.
+async function upsertHomeTiles() {
+  // One service per category first, so the tiles span the catalogue.
+  const all = await listServiceGroups();
+  const firsts = all.filter((g, i) => all.findIndex((x) => x.category.key === g.category.key) === i);
+  const groups = [...firsts, ...all.filter((g) => !firsts.includes(g))].slice(0, 6);
+  for (const [i, group] of groups.entries()) {
     for (const placement of ['most-booked', 'appliance-service']) {
       await HomeTile.findOneAndUpdate(
-        { placement, title: item.name },
-        { placement, title: item.name, price: item.price, service: item.slug, link, sortOrder: i, isActive: true },
+        { placement, title: group.title },
+        { placement, title: group.title, link: group.deepLink, sortOrder: i, isActive: true },
         { upsert: true, setDefaultsOnInsert: true },
       );
     }
   }
-
-  console.log(`[seed] catalog ready: ${CATALOG_SEED.length} categories, ${serviceItems.length * 2} home tiles`);
+  console.log(`[seed] ${groups.length * 2} home tiles ready`);
 }
 
 async function upsertCommerce() {
-  await Promise.all(PRODUCTS.map((p) => Product.findOneAndUpdate({ sku: p.sku }, p, { upsert: true, setDefaultsOnInsert: true })));
-  console.log(`[seed] ${PRODUCTS.length} products ready`);
+  await Promise.all([...PRODUCTS, ...SPARE_PART_SEED].map((p) => Product.findOneAndUpdate({ sku: p.sku }, p, { upsert: true, setDefaultsOnInsert: true })));
+  // The admin Products screen picks a product's category from this list.
+  for (const [i, name] of ['Refrigerator', 'Television', 'Washing Machine', 'Spare Parts'].entries()) {
+    await ProductCategory.findOneAndUpdate(
+      { name },
+      { name, slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-'), sortOrder: i, isActive: true },
+      { upsert: true, setDefaultsOnInsert: true },
+    );
+  }
+  console.log(`[seed] ${PRODUCTS.length + SPARE_PART_SEED.length} products ready`);
 
   await ExchangeQuestionSet.findOneAndUpdate({ category: EXCHANGE_QUESTION_SET.category }, EXCHANGE_QUESTION_SET, {
     upsert: true,
@@ -267,17 +264,6 @@ async function upsertCommerce() {
     upsert: true,
     setDefaultsOnInsert: true,
   });
-  // Membership tiers — the plans page sells these, and the purchase endpoint
-  // prices from them, so an empty catalogue means nothing is buyable.
-  const MEMBERSHIPS = [
-    { name: 'Silver Plan', price: 499, tierRank: 1, benefits: ['Flat ₹100 off visiting charge', '5% off all services', 'Priority booking'] },
-    { name: 'Gold Plan', price: 999, tierRank: 2, benefits: ['Flat ₹200 off visiting charge', '10% off all services', 'Priority booking', 'Free health check (1/year)'] },
-    { name: 'Diamond Plan', price: 1999, tierRank: 3, benefits: ['Free visiting charge', '15% off all services', 'Priority booking', 'Free health check (2/year)', 'Dedicated relationship manager'] },
-  ];
-  for (const plan of MEMBERSHIPS) {
-    await Membership.findOneAndUpdate({ tierRank: plan.tierRank }, plan, { upsert: true, setDefaultsOnInsert: true });
-  }
-
   // Trade-in base values — without these, no model can be valued online.
   await ExchangeBaseValue.bulkWrite(
     EXCHANGE_BASE_VALUES.map((row) => ({
@@ -299,20 +285,11 @@ async function upsertCommerce() {
 // decision) — these fixtures give Phase 6's AMC-Visit/NCC-Extended-Warranty job
 // types something real to link against without building that flow early.
 async function upsertTechFixtures(customer) {
-  // A plan per tier — the customer AMC screen sells from this catalogue, which
-  // replaced a per-appliance price list hardcoded in the app bundle.
-  for (const plan of [
-    { name: 'AMC Silver Plan', tier: 'Silver', price: 999, visitsTotal: 2, isActive: true },
-    { name: 'AMC Platinum Plan', tier: 'Platinum', price: 3999, visitsTotal: 6, isActive: true },
-  ]) {
+  // AMC plans — the customer AMC page sells exactly these (Super Admin → Plans).
+  for (const plan of AMC_PLAN_SEED) {
     await AMCPlan.findOneAndUpdate({ name: plan.name }, plan, { upsert: true, setDefaultsOnInsert: true });
   }
-
-  const amcPlan = await AMCPlan.findOneAndUpdate(
-    { name: 'AMC Gold Plan' },
-    { name: 'AMC Gold Plan', tier: 'Gold', price: 2499, visitsTotal: 4, isActive: true },
-    { upsert: true, new: true, setDefaultsOnInsert: true },
-  );
+  const amcPlan = await AMCPlan.findOne({ name: 'AMC Gold Plan' });
 
   const amcSubscription = await AMCSubscription.findOneAndUpdate(
     { user: customer._id, brand: 'LG', model: 'Double Door 260L' },
@@ -333,6 +310,9 @@ async function upsertTechFixtures(customer) {
   // The purchasable extension packs — ExtendWarranty.jsx reads these, and the
   // order endpoint prices from them, so an empty catalogue means nothing is
   // buyable rather than a silent default price.
+  for (const pack of EW_PLAN_SEED) {
+    await ExtendedWarrantyPlan.findOneAndUpdate({ name: pack.name }, pack, { upsert: true, setDefaultsOnInsert: true });
+  }
   await ExtendedWarrantyPlan.findOneAndUpdate(
     { name: '1-Year Extension Pack' },
     {
@@ -485,12 +465,12 @@ async function main() {
   );
   console.log(`[seed] serviceProvider profile ready: ${serviceProviderProfile.name} (${serviceProviderProfile.id})`);
 
-  await upsertCatalog();
-  // Master Service & Offering Catalogue (docs/master-catalogue). Runs after the
-  // legacy catalogue so its categories exist; the legacy items stay until the
-  // Phase 4 booking cut-over stops reading them.
+  await upsertCategories();
+  // Master Service & Offering Catalogue (docs/master-catalogue): product
+  // types, services, offerings and their rates — the only price source.
   const catalogue = await seedMasterCatalogue();
   console.log(`[seed] master catalogue ready: ${catalogue.offerings} offerings (${catalogue.ratesCreated} new rates)`);
+  await upsertHomeTiles();
   await upsertCommerce();
   await upsertTechFixtures(customer);
   await seedDemoEntities();

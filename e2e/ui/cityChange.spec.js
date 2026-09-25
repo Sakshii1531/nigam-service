@@ -80,14 +80,15 @@ async function requestFromApp(browser, provider, to) {
   await signIn(page, provider.session);
   await page.goto('/service-provider/personal-info');
 
-  await expect(page.getByText('Service City')).toBeVisible({ timeout: 15_000 });
+  // The profile section is headed "Service Territory" (it was "Service City").
+  await expect(page.getByText('Service Territory')).toBeVisible({ timeout: 15_000 });
   await page.getByRole('button', { name: 'Request change' }).click();
-  const sheet = page.getByRole('dialog', { name: 'Request a city change' });
+  const sheet = page.getByRole('dialog', { name: 'Request Territory Transfer' });
   await sheet.getByRole('combobox').selectOption({ label: `${to.name}, ${to.state}` });
-  await sheet.getByPlaceholder('e.g. I have moved to this city').fill('Moved house');
+  await sheet.getByPlaceholder(/Relocated residence/).fill('Moved house');
   await sheet.getByRole('button', { name: 'Send request' }).click();
 
-  await expect(page.getByText('Waiting for approval')).toBeVisible();
+  await expect(page.getByText('Pending Admin Approval')).toBeVisible();
   await expect(page.getByText(`${to.name}, ${to.state}`)).toBeVisible();
   return { context, page };
 }
@@ -112,8 +113,8 @@ test('provider requests a city change in the app and a super-admin approves it',
   await expect.poll(() => providerCity(request, provider.session)).toBe(to.name);
 
   await providerPage.reload();
-  await expect(providerPage.getByText(`Your move to ${to.name} was approved.`)).toBeVisible({ timeout: 15_000 });
-  await expect(providerPage.getByText('Waiting for approval')).toHaveCount(0);
+  await expect(providerPage.getByText(`Your transfer to ${to.name} was approved!`)).toBeVisible({ timeout: 15_000 });
+  await expect(providerPage.getByText('Pending Admin Approval')).toHaveCount(0);
 
   await providerContext.close();
   await adminContext.close();
@@ -140,7 +141,7 @@ test('a rejection needs a reason, and the provider sees it while keeping their c
 
   expect(await providerCity(request, provider.session)).toBe(from.name);
   await providerPage.reload();
-  await expect(providerPage.getByText(`Your request to move to ${to.name} was not approved.`)).toBeVisible({ timeout: 15_000 });
+  await expect(providerPage.getByText(`Your transfer request to ${to.name} was not approved.`)).toBeVisible({ timeout: 15_000 });
   await expect(providerPage.getByText('That city is fully staffed right now')).toBeVisible();
 
   await providerContext.close();

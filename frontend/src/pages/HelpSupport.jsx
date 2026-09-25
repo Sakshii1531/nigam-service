@@ -86,8 +86,8 @@ const HelpSupport = () => {
     },
     {
       id: 5,
-      question: 'How do I purchase a Nigam Premium Club Membership?',
-      answer: 'Visit the "Membership Plans" tab to browse Silver, Gold, Diamond, and Platinum plans for zero visiting charges and exclusive discounts.',
+      question: 'How do I buy an NCC AMC plan?',
+      answer: 'Open Buy → AMC Plans, pick your appliance and choose a plan. Each plan lists its price, the visits it includes, how long it lasts and its benefits.',
     },
   ];
 

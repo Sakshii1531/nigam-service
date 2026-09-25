@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { applyStandardPlugins } from '../shared/plugins.js';
+import { watchCatalogueWrites } from './catalogCache.js';
 
 // The only bookable thing in the catalogue: one exact (product type?, variant?,
 // service) combination with its own code, quantity rules, express/tax settings
@@ -202,6 +203,8 @@ async function buildSearchText(offering) {
 }
 
 applyStandardPlugins(serviceOfferingSchema);
+// Writes drop the cached customer category trees (catalogCache.js).
+serviceOfferingSchema.plugin(watchCatalogueWrites);
 
 export const ServiceOffering =
   mongoose.models.ServiceOffering || mongoose.model('ServiceOffering', serviceOfferingSchema);

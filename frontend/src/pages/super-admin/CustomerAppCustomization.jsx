@@ -11,7 +11,6 @@ import {
   Image,
   Sparkles,
   LayoutGrid,
-  Package,
 } from "lucide-react";
 
 // Default static banners imported in Dashboard.jsx
@@ -28,13 +27,6 @@ import mostBookedSalon from "../../assets/most_booked_salon.png";
 // Stories assets
 
 // Default static service images
-import acImgDefault from "../../assets/categories/ac.png";
-import washingImgDefault from "../../assets/categories/wasing.png";
-import electricianImgDefault from "../../assets/categories/electrician_fixed.png";
-import plumberImgDefault from "../../assets/categories/plumber_fixed.png";
-import cleaningImgDefault from "../../assets/categories/cleaning.png";
-import saloonImgDefault from "../../assets/categories/saloon.png";
-import spaImgDefault from "../../assets/categories/spa.png";
 
 const DEFAULT_CATEGORIES = [
   { name: "For You", icon: "sparkles", isForYou: true },
@@ -528,68 +520,6 @@ const CategoryVectorIcon = ({
 };
 
 // The API stores imageUrl/segment; this screen has always spoken image/title.
-// ── Category booking-config storage ───────────────────────────────────────────
-// Same storage swap as the tiles: a synchronous mirror keeps the existing
-// editors working while writes go to /cms/category-configs, which the booking
-// flow can now read. This config was previously written and never read by
-// anything.
-const categoryConfigCache = {};
-
-async function hydrateCategoryConfigs() {
-  try {
-    const rows = await apiRequest("/cms/category-configs");
-    for (const row of Array.isArray(rows) ? rows : []) {
-      categoryConfigCache[row.categoryName] = {
-        productTypes: row.productTypes || [],
-        services: row.services || {},
-        brands: row.brands || [],
-        whyBrandPoints: row.whyBrandPoints || [],
-        categoryNote: row.categoryNote || "",
-      };
-    }
-  } catch (err) {
-    console.warn("Could not load category booking configs:", err.message);
-  }
-}
-
-function readCategoryConfigs() {
-  return Object.keys(categoryConfigCache).length
-    ? JSON.stringify(categoryConfigCache)
-    : null;
-}
-
-function writeCategoryConfigs(configs) {
-  const removed = Object.keys(categoryConfigCache).filter(
-    (k) => !(k in configs),
-  );
-  const changed = Object.keys(configs).filter(
-    (k) =>
-      JSON.stringify(configs[k]) !== JSON.stringify(categoryConfigCache[k]),
-  );
-
-  for (const key of Object.keys(categoryConfigCache))
-    delete categoryConfigCache[key];
-  Object.assign(categoryConfigCache, configs);
-
-  changed.forEach((key) =>
-    apiRequest(`/cms/category-configs/${encodeURIComponent(key)}`, {
-      method: "PUT",
-      auth: true,
-      body: configs[key],
-    }).catch((err) =>
-      console.warn(`Could not save category "${key}":`, err.message),
-    ),
-  );
-  removed.forEach((key) =>
-    apiRequest(`/cms/category-configs/${encodeURIComponent(key)}`, {
-      method: "DELETE",
-      auth: true,
-    }).catch((err) =>
-      console.warn(`Could not delete category "${key}":`, err.message),
-    ),
-  );
-}
-
 // ── Home-tile storage ─────────────────────────────────────────────────────────
 // Same approach as the service-page editors: the five tile lists were written
 // against synchronous localStorage across ~25 sites, so the storage layer is
@@ -597,7 +527,6 @@ function writeCategoryConfigs(configs) {
 // `placement` of /cms/home-tiles, which the customer app reads directly.
 const TILE_PLACEMENTS = {
   categories: "category",
-  services: "dashboard-service",
   mostBooked: "most-booked",
   applianceServices: "appliance-service",
   brandCards: "brand-card",
@@ -617,16 +546,12 @@ const TILE_ADAPTERS = {
       service: t.service,
     }),
   },
-  services: {
-    toApi: (t) => ({ title: t.name, imageUrl: t.img }),
-    fromApi: (t) => ({ id: t.id, name: t.title, img: t.imageUrl }),
-  },
+
   mostBooked: {
     toApi: (t) => ({
       title: t.title,
       imageUrl: t.image,
       rating: t.rating,
-      price: t.price,
       badge: t.badge,
     }),
     fromApi: (t) => ({
@@ -634,7 +559,6 @@ const TILE_ADAPTERS = {
       title: t.title,
       image: t.imageUrl,
       rating: t.rating,
-      price: t.price,
       badge: t.badge,
     }),
   },
@@ -643,7 +567,6 @@ const TILE_ADAPTERS = {
       title: t.title,
       imageUrl: t.image,
       rating: t.rating,
-      price: t.price,
       badge: t.badge,
       link: t.path,
     }),
@@ -652,7 +575,6 @@ const TILE_ADAPTERS = {
       title: t.title,
       image: t.imageUrl,
       rating: t.rating,
-      price: t.price,
       badge: t.badge,
       path: t.link,
     }),
@@ -819,78 +741,6 @@ async function writeTiles(key, list) {
   return updatedList;
 }
 
-// ── Service-page storage ──────────────────────────────────────────────────────
-// These editors were written against a synchronous localStorage API, and there
-// are ~40 read/write sites across the sub-sections. Rather than rewrite each,
-// the storage layer underneath them is swapped: a module-level mirror keeps the
-// synchronous reads working, and every write is pushed to /cms/service-pages so
-// the customer app sees it. Hero copy and catalog live in one document per
-// service, so a write to either syncs the merged pair.
-const servicePageCache = { configs: {}, catalogs: {} };
-
-async function hydrateServicePages() {
-  try {
-    const rows = await apiRequest("/cms/service-pages");
-    for (const row of Array.isArray(rows) ? rows : []) {
-      servicePageCache.configs[row.serviceKey] = {
-        tagline: row.tagline || "",
-        subtitle: row.subtitle || "",
-        subServices: row.subServices || "",
-        bannerImg: row.bannerImg || "",
-        productTypes: Array.isArray(row.productTypes) ? row.productTypes : [],
-      };
-      if (row.catalog?.length)
-        servicePageCache.catalogs[row.serviceKey] = row.catalog;
-    }
-  } catch (err) {
-    console.warn("Could not load service page configs:", err.message);
-  }
-}
-
-function syncServicePage(serviceKey) {
-  const config = servicePageCache.configs[serviceKey] || {};
-  const catalog = servicePageCache.catalogs[serviceKey];
-  return apiRequest(`/cms/service-pages/${encodeURIComponent(serviceKey)}`, {
-    method: "PUT",
-    auth: true,
-    body: { ...config, ...(catalog ? { catalog } : {}) },
-  }).catch((err) =>
-    console.warn(`Could not save "${serviceKey}":`, err.message),
-  );
-}
-
-async function writeServiceConfigs(configs) {
-  const changed = Object.keys(configs).filter(
-    (k) =>
-      JSON.stringify(configs[k]) !==
-      JSON.stringify(servicePageCache.configs[k]),
-  );
-  servicePageCache.configs = configs;
-  await Promise.all(changed.map(syncServicePage));
-}
-
-async function writeServiceCatalogs(catalogs) {
-  const changed = Object.keys(catalogs).filter(
-    (k) =>
-      JSON.stringify(catalogs[k]) !==
-      JSON.stringify(servicePageCache.catalogs[k]),
-  );
-  servicePageCache.catalogs = catalogs;
-  await Promise.all(changed.map(syncServicePage));
-}
-
-function readServiceConfigs() {
-  return Object.keys(servicePageCache.configs).length
-    ? JSON.stringify(servicePageCache.configs)
-    : null;
-}
-
-function readServiceCatalogs() {
-  return Object.keys(servicePageCache.catalogs).length
-    ? JSON.stringify(servicePageCache.catalogs)
-    : null;
-}
-
 function shapeStory(s) {
   return {
     id: s.id,
@@ -910,60 +760,12 @@ function shapeBanner(b) {
   };
 }
 
-const DEFAULT_SERVICES = [
-  { id: 1, name: "AC Repair", img: acImgDefault },
-  { id: 2, name: "Washing Machine", img: washingImgDefault },
-  { id: 3, name: "Electrician", img: electricianImgDefault },
-  { id: 4, name: "Plumber", img: plumberImgDefault },
-  { id: 5, name: "Full Home Cleaning", img: cleaningImgDefault },
-  { id: 6, name: "Salon for Women", img: saloonImgDefault },
-  { id: 7, name: "Spa & Massage", img: spaImgDefault },
-];
-
-// Shared by the "Most Booked Services" and "Appliance Repair & Service" tabs
-// below as their starting point for a new item's pricing packages.
-const DEFAULT_CATALOG_TEMPLATE = [
-  {
-    section: "Book a consultation",
-    items: [
-      {
-        name: "Standard Consultancy",
-        rating: 4.4,
-        reviews: 38,
-        price: "₹149",
-        time: "1 hrs",
-        bullets: [
-          "Detailed inspection and quote estimation",
-          "Fee adjusted in final repair work invoice",
-        ],
-      },
-    ],
-  },
-  {
-    section: "Repair & Installation Services",
-    items: [
-      {
-        name: "Standard Repair Service",
-        rating: 4.5,
-        reviews: 28,
-        price: "₹299",
-        time: "1 hrs",
-        bullets: [
-          "Expert installation and functional testing",
-          "30 days post-service warranty",
-        ],
-      },
-    ],
-  },
-];
-
 const DEFAULT_MOST_BOOKED = [
   {
     id: 1,
     title: "Foam-jet AC service",
     image: mostBookedAc1,
     rating: 4.76,
-    price: 649,
     badge: "Instant",
   },
   {
@@ -971,7 +773,6 @@ const DEFAULT_MOST_BOOKED = [
     title: "AC repair",
     image: mostBookedAc2,
     rating: 4.74,
-    price: 299,
     badge: "Instant",
   },
   {
@@ -979,7 +780,6 @@ const DEFAULT_MOST_BOOKED = [
     title: "Washing Machine",
     image: mostBookedWm,
     rating: 4.85,
-    price: 499,
     badge: "Instant",
   },
   {
@@ -987,7 +787,6 @@ const DEFAULT_MOST_BOOKED = [
     title: "Home Cleaning",
     image: mostBookedCleaning,
     rating: 4.9,
-    price: 999,
     badge: "Trending",
   },
   {
@@ -995,7 +794,6 @@ const DEFAULT_MOST_BOOKED = [
     title: "Women Salon",
     image: mostBookedSalon,
     rating: 4.8,
-    price: 799,
     badge: "Best Seller",
   },
 ];
@@ -1006,7 +804,6 @@ const DEFAULT_APPLIANCE_SERVICES = [
     title: "Foam-jet AC service",
     image: mostBookedAc1,
     rating: 4.76,
-    price: 649,
     badge: "Instant",
     path: "/booking",
   },
@@ -1015,7 +812,6 @@ const DEFAULT_APPLIANCE_SERVICES = [
     title: "AC repair",
     image: mostBookedAc2,
     rating: 4.74,
-    price: 299,
     badge: "Instant",
     path: "/booking",
   },
@@ -1024,7 +820,6 @@ const DEFAULT_APPLIANCE_SERVICES = [
     title: "Washing Machine",
     image: mostBookedWm,
     rating: 4.85,
-    price: 499,
     badge: "Instant",
     path: "/booking",
   },
@@ -1033,7 +828,6 @@ const DEFAULT_APPLIANCE_SERVICES = [
     title: "Refrigerator Repair & Service",
     image: applianceFridge,
     rating: 4.8,
-    price: 899,
     badge: "Instant",
     path: "/refrigerator-details",
   },
@@ -1042,7 +836,6 @@ const DEFAULT_APPLIANCE_SERVICES = [
     title: "Deep Clean AC",
     image: mostBookedAc1,
     rating: 4.76,
-    price: 1198,
     badge: "2 ACs",
     path: "/booking",
   },
@@ -1051,7 +844,6 @@ const DEFAULT_APPLIANCE_SERVICES = [
     title: "WM Checkup",
     image: mostBookedWm,
     rating: 4.85,
-    price: 199,
     badge: "Instant",
     path: "/booking",
   },
@@ -1108,24 +900,23 @@ const DEFAULT_BRAND_CARDS = [
   },
 ];
 
-// The prices typed on this page are the legacy CMS prices. The Master
-// Catalogue (docs/master-catalogue) replaces them as the booking price at the
-// Phase 4 cut-over, and Phase 6 swaps these inputs for an offering picker.
-// Until then they still price bookings made from these tiles, so they stay
-// editable — this just makes sure nobody mistakes them for the real catalogue.
-const LegacyPriceNotice = () => (
+// Tiles and service packages carry no price of their own (docs/master-catalogue
+// Phase 7 removed the fields): the customer app shows the Master Catalogue's
+// price for whatever the tile title matches (POST /catalog/search/resolve).
+const CataloguePriceNotice = () => (
   <div className="col-span-full text-[11px] leading-relaxed text-amber-900 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-    <b>Legacy prices.</b> Service prices and partner payouts now live in{" "}
+    <b>Tiles have no price of their own.</b> Each tile shows the lowest price of the service its title matches in the{" "}
     <Link to="/super-admin/service-catalog" className="font-bold underline">
       Master Catalogue
-    </Link>
-    . The prices below are only used by the old booking flow and will stop applying once bookings move to the catalogue.
+    </Link>{" "}
+    and opens that service&apos;s booking (e.g. &quot;AC repair&quot; → AC with Repair selected). A title that matches nothing
+    bookable shows no price and opens the services list — name tiles after catalogue services.
   </div>
 );
 
 const CustomerAppCustomization = () => {
   const location = useLocation();
-  const [activeSubSection, setActiveSubSection] = useState("categories"); // 'categories' | 'banners' | 'services' | 'brands' | 'mostbooked' | 'applianceservices'
+  const [activeSubSection, setActiveSubSection] = useState("categories"); // 'categories' | 'banners' | 'brands' | 'mostbooked' | 'applianceservices'
   const [successMessage, setSuccessMessage] = useState("");
 
   // Stories State
@@ -1144,8 +935,6 @@ const CustomerAppCustomization = () => {
     const tab = params.get("tab");
     if (tab === "banners") {
       setActiveSubSection("banners");
-    } else if (tab === "services") {
-      setActiveSubSection("services");
     } else if (tab === "brands") {
       setActiveSubSection("brands");
     } else if (tab === "mostbooked") {
@@ -1169,14 +958,9 @@ const CustomerAppCustomization = () => {
   const [categoryForm, setCategoryForm] = useState({
     name: "",
     icon: "ac",
-    service: "",
     isForYou: false,
     isMore: false,
     isFridge: false,
-    productTypes: "",
-    servicesJson: "",
-    brands: "",
-    categoryNote: "",
   });
 
   // Banner State
@@ -1185,20 +969,6 @@ const CustomerAppCustomization = () => {
   const [warrantyBanners, setWarrantyBanners] = useState([]);
   const [newBannerTitle, setNewBannerTitle] = useState("");
   const [newBannerFile, setNewBannerFile] = useState("");
-
-  // Services State — just the "Our Services" dashboard tile list (name +
-  // image). This used to also carry a details-page editor (tagline, device
-  // types, priced service packages) for the customer-facing /service-details
-  // page; that page was removed since /book/<category> is the real, working
-  // booking flow, so the tile list is all that's left to manage here.
-  const [services, setServices] = useState([]);
-  const [showServiceModal, setShowServiceModal] = useState(false);
-  const [isEditingService, setIsEditingService] = useState(false);
-  const [editServiceIndex, setEditServiceIndex] = useState(-1);
-  const [serviceForm, setServiceForm] = useState({
-    name: "",
-    img: "",
-  });
 
   // Brands & Offers State
   const [brandCards, setBrandCards] = useState([]);
@@ -1225,12 +995,9 @@ const CustomerAppCustomization = () => {
   const [mostBookedForm, setMostBookedForm] = useState({
     title: "",
     rating: "4.8",
-    price: "499",
     badge: "Instant",
     image: "",
   });
-  const [mostBookedTypes, setMostBookedTypes] = useState([]);
-  const [mostBookedPackages, setMostBookedPackages] = useState([]);
 
   // Appliance Services State
   const [applianceServicesList, setApplianceServicesList] = useState([]);
@@ -1240,19 +1007,14 @@ const CustomerAppCustomization = () => {
   const [applianceForm, setApplianceForm] = useState({
     title: "",
     rating: "4.8",
-    price: "499",
     badge: "Instant",
     image: "",
-    path: "/booking",
+    path: "",
   });
-  const [applianceTypes, setApplianceTypes] = useState([]);
-  const [appliancePackages, setAppliancePackages] = useState([]);
 
   useEffect(() => {
     (async () => {
       await hydrateTiles();
-      await hydrateCategoryConfigs();
-      await hydrateServicePages();
 
       // Load Categories
       const savedCats = readTiles("categories");
@@ -1274,15 +1036,6 @@ const CustomerAppCustomization = () => {
       } else {
         setCategories(DEFAULT_CATEGORIES);
         writeTiles("categories", DEFAULT_CATEGORIES);
-      }
-
-      // Load Services
-      const savedServices = readTiles("services");
-      if (savedServices) {
-        setServices(JSON.parse(savedServices));
-      } else {
-        setServices(DEFAULT_SERVICES);
-        writeTiles("services", DEFAULT_SERVICES);
       }
 
       // Load Brands & Offers
@@ -1344,73 +1097,6 @@ const CustomerAppCustomization = () => {
         console.warn("Could not load stories:", err.message);
       }
     })();
-
-    // Pre-populate default catalogs and configs if not exists
-    const savedCatalogs = readServiceCatalogs();
-    const catalogs = savedCatalogs ? JSON.parse(savedCatalogs) : {};
-
-    const savedConfigs = readServiceConfigs();
-    const configs = savedConfigs ? JSON.parse(savedConfigs) : {};
-
-    const defaultServiceNames = [
-      "Foam-jet AC service",
-      "AC repair",
-      "Washing Machine",
-      "Home Cleaning",
-      "Women Salon",
-      "Refrigerator Repair & Service",
-      "Deep Clean AC",
-      "WM Checkup",
-    ];
-
-    let changed = false;
-    defaultServiceNames.forEach((name) => {
-      if (!catalogs[name]) {
-        catalogs[name] = [
-          {
-            section: "General Services",
-            items: [
-              {
-                name: name + " Standard Work",
-                rating: 4.5,
-                reviews: 28,
-                price: "₹299",
-                time: "1 hrs",
-                bullets: [
-                  "Professional execution by certified serviceProvider",
-                  "30 days service warranty included",
-                ],
-                icon: "🔧",
-                desc: "Standard professional service",
-                unit: "per job",
-              },
-            ],
-          },
-        ];
-        changed = true;
-      }
-      if (!configs[name]) {
-        configs[name] = {
-          tagline: "Expert Help at Your Door",
-          subtitle: "Verified Professionals\nFor Every Home Need",
-          bannerImg: "",
-          productTypes: name.toLowerCase().includes("ac")
-            ? ["Split AC", "Window AC"]
-            : name.toLowerCase().includes("washing") ||
-                name.toLowerCase().includes("wm")
-              ? ["Top Load", "Front Load"]
-              : [],
-          brands: ["LG", "Samsung", "Whirlpool", "Panasonic"],
-          categoryNote: "Prices shown are indicative.",
-        };
-        changed = true;
-      }
-    });
-
-    if (changed) {
-      writeServiceCatalogs(catalogs);
-      writeServiceConfigs(configs);
-    }
   }, []);
 
   const showToast = (msg) => {
@@ -1561,20 +1247,7 @@ const CustomerAppCustomization = () => {
     setIsEditing(false);
     setIconMode("preset");
     setShowIconPicker(false);
-    setCategoryForm({
-      name: "",
-      icon: "ac",
-      service: "",
-      isForYou: false,
-      isMore: false,
-      isFridge: false,
-      productTypes: "",
-      servicesJson:
-        '[\n  { "id": "repair", "name": "Repair", "icon": "🔧", "desc": "Fix breakdowns & issues", "price": 299 },\n  { "id": "installation", "name": "Installation", "icon": "🔩", "desc": "Standard installation", "price": 399 }\n]',
-      brands: "Voltas, LG, Samsung, Whirlpool",
-      categoryNote:
-        "Prices shown are indicative. The serviceProvider will confirm exact charges after inspection.",
-    });
+    setCategoryForm({ name: "", icon: "ac", isForYou: false, isMore: false, isFridge: false });
     setShowAddModal(true);
   };
 
@@ -1587,234 +1260,14 @@ const CustomerAppCustomization = () => {
       cat.icon && cat.icon.startsWith("data:image/") ? "upload" : "preset",
     );
 
-    const savedCatalogs = readCategoryConfigs();
-    const customCatalogs = savedCatalogs ? JSON.parse(savedCatalogs) : {};
-
-    let config = customCatalogs[cat.name] || {};
-    if (!customCatalogs[cat.name]) {
-      const norm = cat.name.toLowerCase();
-      if (norm.includes("ac")) {
-        config = {
-          productTypes:
-            "Split AC, Window AC, Cassette AC, Tower AC, Portable AC",
-          services: [
-            {
-              id: "installation",
-              name: "Installation",
-              icon: "🔩",
-              desc: "New AC fitting & setup",
-              price: 499,
-            },
-            {
-              id: "repair",
-              name: "Repair",
-              icon: "🔧",
-              desc: "Fix breakdowns & issues",
-              price: 299,
-            },
-            {
-              id: "gas_refilling",
-              name: "Gas Refilling",
-              icon: "💨",
-              desc: "Refrigerant top-up",
-              price: 799,
-            },
-            {
-              id: "maintenance",
-              name: "Maintenance",
-              icon: "🛠️",
-              desc: "Preventive check & tune-up",
-              price: 349,
-            },
-            {
-              id: "deep_cleaning",
-              name: "Deep Cleaning",
-              icon: "✨",
-              desc: "Foam-jet wash & coil clean",
-              price: 649,
-            },
-          ],
-          brands:
-            "Voltas, LG, Samsung, Daikin, Whirlpool, Lloyd, Panasonic, Blue Star, Hitachi",
-          categoryNote:
-            "Prices shown are indicative. The serviceProvider will confirm exact charges after inspection.",
-        };
-      } else if (norm.includes("wash") || norm.includes("machine")) {
-        config = {
-          productTypes: "Front Load, Top Load, Semi Automatic",
-          services: [
-            {
-              id: "repair",
-              name: "Repair",
-              icon: "🔧",
-              desc: "Fix spin, drain & motor issues",
-              price: 399,
-            },
-            {
-              id: "installation",
-              name: "Installation",
-              icon: "🔩",
-              desc: "New machine setup & demo",
-              price: 299,
-            },
-            {
-              id: "drum_cleaning",
-              name: "Drum Cleaning",
-              icon: "✨",
-              desc: "Deep drum & tub sanitisation",
-              price: 499,
-            },
-          ],
-          brands:
-            "LG, Samsung, Whirlpool, IFB, Bosch, Haier, Godrej, Panasonic",
-          categoryNote:
-            "Prices are indicative. Exact charges are confirmed after inspection.",
-        };
-      } else if (norm.includes("fridge") || norm.includes("refriger")) {
-        config = {
-          productTypes:
-            "Single Door, Double Door, Side By Side, Convertible, French Door",
-          services: [
-            {
-              id: "cooling_issue",
-              name: "Cooling Issue",
-              icon: "🌡️",
-              desc: "Not cooling / over-freezing fix",
-              price: 449,
-            },
-            {
-              id: "installation",
-              name: "Installation",
-              icon: "🔩",
-              desc: "Setup, levelling & demo",
-              price: 299,
-            },
-            {
-              id: "repair",
-              name: "Repair",
-              icon: "🔧",
-              desc: "General repairs & part fix",
-              price: 499,
-            },
-          ],
-          brands:
-            "LG, Samsung, Whirlpool, Godrej, Haier, Panasonic, Bosch, Voltas, Hitachi",
-          categoryNote:
-            "Cooling issues may need gas refilling — exact diagnosis done by the serviceProvider on-site.",
-        };
-      } else if (norm.includes("tv") || norm.includes("television")) {
-        config = {
-          productTypes: "LED TV, OLED TV, QLED TV, Smart TV",
-          services: [
-            {
-              id: "wall_mount",
-              name: "Wall Mount Installation",
-              icon: "🔩",
-              desc: "TV mounting & cable management",
-              price: 299,
-            },
-            {
-              id: "repair",
-              name: "Repair",
-              icon: "🔧",
-              desc: "No display, flickering, no sound",
-              price: 349,
-            },
-            {
-              id: "display_issue",
-              name: "Display Issue",
-              icon: "🖥️",
-              desc: "Screen lines, colour fix",
-              price: 599,
-            },
-          ],
-          brands: "LG, Samsung, Sony, Panasonic, Mi, OnePlus, TCL, Haier, VU",
-          categoryNote:
-            "Panel repairs depend on part availability. Service Provider will confirm before proceeding.",
-        };
-      } else if (
-        norm.includes("ro") ||
-        norm.includes("purif") ||
-        norm.includes("water")
-      ) {
-        config = {
-          productTypes: "RO, UV, UF, RO + UV",
-          services: [
-            {
-              id: "installation",
-              name: "Installation",
-              icon: "🔩",
-              desc: "New purifier setup & fitting",
-              price: 399,
-            },
-            {
-              id: "filter_replacement",
-              name: "Filter Replacement",
-              icon: "🔄",
-              desc: "Replace complete filter set",
-              price: 799,
-            },
-            {
-              id: "repair",
-              name: "Repair",
-              icon: "🔧",
-              desc: "No water / leakage fix",
-              price: 349,
-            },
-          ],
-          brands: "Kent, Aquaguard, Pureit, Livpure, Blue Star, Havells",
-          categoryNote:
-            "Filters are replaced with genuine parts. Membrane is checked separately.",
-        };
-      } else {
-        config = {
-          productTypes: "",
-          services: [
-            {
-              id: "repair",
-              name: "Repair",
-              icon: "🔧",
-              desc: "General repair services",
-              price: 299,
-            },
-            {
-              id: "installation",
-              name: "Installation",
-              icon: "🔩",
-              desc: "Setup & fitting",
-              price: 399,
-            },
-          ],
-          brands: "Other",
-          categoryNote: "Prices shown are indicative.",
-        };
-      }
-    }
-
-    let selectedIcon = cat.icon || detectIconFromName(cat.name) || "ac";
-
+    // Booking content for a category (brands, notes, services, prices) lives
+    // in the Master Catalogue; a chip here is just its name, icon and flags.
     setCategoryForm({
       name: cat.name,
-      icon: selectedIcon,
-      service: cat.service || "",
+      icon: cat.icon || "",
       isForYou: !!cat.isForYou,
       isMore: !!cat.isMore,
       isFridge: !!cat.isFridge,
-      productTypes:
-        typeof config.productTypes === "string"
-          ? config.productTypes
-          : (config.productTypes || [])
-              .map((p) => (typeof p === "string" ? p : p.name))
-              .join(", "),
-      servicesJson: JSON.stringify(
-        config.services?.default || config.services || [],
-        null,
-        2,
-      ),
-      brands: Array.isArray(config.brands)
-        ? config.brands.join(", ")
-        : config.brands || "",
-      categoryNote: config.categoryNote || "",
     });
     setShowAddModal(true);
   };
@@ -1826,13 +1279,6 @@ const CustomerAppCustomization = () => {
       setCategories(updated);
       writeTiles("categories", updated);
 
-      const savedCatalogs = readCategoryConfigs();
-      if (savedCatalogs) {
-        const customCatalogs = JSON.parse(savedCatalogs);
-        delete customCatalogs[catName];
-        writeCategoryConfigs(customCatalogs);
-      }
-
       showToast("Category deleted successfully.");
     }
   };
@@ -1841,24 +1287,11 @@ const CustomerAppCustomization = () => {
     e.preventDefault();
     if (!categoryForm.name.trim()) return;
 
-    let parsedServices;
-    try {
-      parsedServices = JSON.parse(categoryForm.servicesJson);
-      if (!Array.isArray(parsedServices)) {
-        alert("Services must be a valid JSON array.");
-        return;
-      }
-    } catch (err) {
-      alert("Invalid JSON in Booking Services. Details:\n" + err.message);
-      return;
-    }
-
     let updated = [...categories];
     const newCat = {
       id: isEditing ? categories[editIndex]?.id : undefined,
       name: categoryForm.name,
       icon: categoryForm.icon,
-      service: categoryForm.service || undefined,
       isForYou: categoryForm.isForYou || undefined,
       isMore: categoryForm.isMore || undefined,
       isFridge: categoryForm.isFridge || undefined,
@@ -1873,38 +1306,8 @@ const CustomerAppCustomization = () => {
     setCategories(updated);
     writeTiles("categories", updated);
 
-    const savedCatalogs = readCategoryConfigs();
-    const customCatalogs = savedCatalogs ? JSON.parse(savedCatalogs) : {};
-
-    const typesArray = categoryForm.productTypes.trim()
-      ? categoryForm.productTypes.split(",").map((p) => ({
-          id: p.trim().toLowerCase().replace(/ /g, "_"),
-          name: p.trim(),
-          icon: "⚡",
-          desc: "",
-        }))
-      : [];
-
-    customCatalogs[categoryForm.name] = {
-      productTypes: typesArray,
-      services: {
-        default: parsedServices,
-      },
-      brands: categoryForm.brands
-        .split(",")
-        .map((b) => b.trim())
-        .filter(Boolean),
-      whyBrandPoints: [
-        "Brand certified expert serviceProviders",
-        "Correct parts calibration",
-        "Genuine brand replacement parts",
-      ],
-      categoryNote: categoryForm.categoryNote,
-    };
-    writeCategoryConfigs(customCatalogs);
-
     setShowAddModal(false);
-    showToast("Category and booking settings saved successfully.");
+    showToast("Category saved successfully.");
   };
 
   const handleResetCategories = () => {
@@ -1915,93 +1318,7 @@ const CustomerAppCustomization = () => {
     ) {
       setCategories(DEFAULT_CATEGORIES);
       writeTiles("categories", DEFAULT_CATEGORIES);
-      writeCategoryConfigs({});
       showToast("Restored default categories.");
-    }
-  };
-
-  // --- Services Handlers ---
-  const handleServiceFileChange = async (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      try {
-        const formData = new FormData();
-        formData.append("file", file);
-        const res = await apiRequest("/uploads", {
-          method: "POST",
-          auth: true,
-          body: formData,
-        });
-        const url = res.url || res.data?.url || "";
-        if (url) {
-          setServiceForm((prev) => ({ ...prev, img: url }));
-        }
-      } catch (err) {
-        showToast(`Image upload failed: ${err.message}`);
-      }
-    }
-  };
-
-  const handleOpenAddService = () => {
-    setIsEditingService(false);
-    setServiceForm({ name: "", img: "" });
-    setShowServiceModal(true);
-  };
-
-  const handleOpenEditService = (index) => {
-    setIsEditingService(true);
-    setEditServiceIndex(index);
-    const srv = services[index];
-    setServiceForm({ name: srv.name, img: srv.img || "" });
-    setShowServiceModal(true);
-  };
-
-  const handleDeleteService = async (index) => {
-    const srvName = services[index].name;
-    if (window.confirm(`Are you sure you want to delete "${srvName}"?`)) {
-      const updated = services.filter((_, i) => i !== index);
-      try {
-        const savedTiles = await writeTiles("services", updated);
-        setServices(savedTiles || updated);
-        showToast("Service deleted successfully.");
-      } catch (err) {
-        showToast(`Could not delete service: ${err.message}`);
-      }
-    }
-  };
-
-  const handleSaveService = async (e) => {
-    e.preventDefault();
-    if (!serviceForm.name.trim()) return;
-
-    let updated = [...services];
-    const newSrv = {
-      id: isEditingService ? services[editServiceIndex].id : Date.now(),
-      name: serviceForm.name,
-      img: serviceForm.img,
-    };
-
-    if (isEditingService) {
-      updated[editServiceIndex] = newSrv;
-    } else {
-      updated.push(newSrv);
-    }
-
-    try {
-      const savedTiles = await writeTiles("services", updated);
-      setServices(savedTiles || updated);
-      setShowServiceModal(false);
-      showToast("Service saved successfully!");
-    } catch (err) {
-      showToast(`Error saving service: ${err.message}`);
-    }
-  };
-
-  const handleResetServices = () => {
-    if (window.confirm("Reset dashboard services to original defaults?")) {
-      setServices(DEFAULT_SERVICES);
-      writeTiles("services", DEFAULT_SERVICES);
-      showToast("Restored original defaults.");
     }
   };
 
@@ -2184,27 +1501,7 @@ const CustomerAppCustomization = () => {
 
   const handleOpenAddMostBooked = () => {
     setIsEditingMostBooked(false);
-    setMostBookedForm({
-      title: "",
-      rating: "4.8",
-      price: "499",
-      badge: "Instant",
-      image: "",
-    });
-    setMostBookedTypes([]);
-    setMostBookedPackages([
-      {
-        id: Date.now() + 1,
-        section: "Book a consultation",
-        name: "Standard Consultancy",
-        price: "149",
-        bullets:
-          "Inspection and quote estimation, Fee adjusted in final invoice",
-        icon: "🔩",
-        desc: "Standard inspection & quote",
-        unit: "per visit",
-      },
-    ]);
+    setMostBookedForm({ title: "", rating: "4.8", badge: "Instant", image: "" });
     setShowMostBookedModal(true);
   };
 
@@ -2212,153 +1509,42 @@ const CustomerAppCustomization = () => {
     setIsEditingMostBooked(true);
     setEditMostBookedIndex(index);
     const mb = mostBookedList[index];
-
-    // Load custom service details configs & catalogs under this service title
-    const savedConfigs = readServiceConfigs();
-    const configs = savedConfigs ? JSON.parse(savedConfigs) : {};
-    const config = configs[mb.title] || {
-      tagline: "Expert Help at Your Door",
-      subtitle: "Verified Professionals\nFor Every Home Need",
-      bannerImg: "",
-      productTypes: [],
-    };
-
-    const savedCatalogs = readServiceCatalogs();
-    const catalogs = savedCatalogs ? JSON.parse(savedCatalogs) : {};
-    const catalog = catalogs[mb.title] || DEFAULT_CATALOG_TEMPLATE;
-
     setMostBookedForm({
       title: mb.title,
       rating: mb.rating || "4.8",
-      price: mb.price || "499",
       badge: mb.badge || "Instant",
       image: mb.image || "",
     });
-
-    const rawTypes = config.productTypes || [];
-    setMostBookedTypes(rawTypes);
-
-    const pkgs = [];
-    catalog.forEach((group) => {
-      if (group && group.items) {
-        group.items.forEach((item) => {
-          pkgs.push({
-            id: Math.random() + Math.random(),
-            section: group.section || "General Services",
-            name: item.name || "",
-            price: (item.price || "").replace("₹", ""),
-            bullets: Array.isArray(item.bullets)
-              ? item.bullets.join(", ")
-              : item.bullets || "",
-            icon: item.icon || "🔧",
-            desc: item.desc || "",
-            unit: item.unit || "per unit",
-          });
-        });
-      }
-    });
-    setMostBookedPackages(pkgs);
-
     setShowMostBookedModal(true);
   };
 
   const handleDeleteMostBooked = (index) => {
     const title = mostBookedList[index].title;
-    if (
-      window.confirm(
-        `Are you sure you want to delete "${title}" from most booked list?`,
-      )
-    ) {
+    if (window.confirm(`Are you sure you want to delete "${title}" from most booked list?`)) {
       const updated = mostBookedList.filter((_, i) => i !== index);
       setMostBookedList(updated);
       writeTiles("mostBooked", updated);
-
-      // delete configs & catalogs too
-      const savedConfigs = readServiceConfigs();
-      if (savedConfigs) {
-        const configs = JSON.parse(savedConfigs);
-        delete configs[title];
-        writeServiceConfigs(configs);
-      }
-
-      const savedCatalogs = readServiceCatalogs();
-      if (savedCatalogs) {
-        const catalogs = JSON.parse(savedCatalogs);
-        delete catalogs[title];
-        writeServiceCatalogs(catalogs);
-      }
-
       showToast("Most booked service deleted successfully.");
     }
   };
 
+  // A tile is a title + artwork. Its price and booking destination come from
+  // the Master Catalogue service the title names (see CataloguePriceNotice).
   const handleSaveMostBooked = (e) => {
     e.preventDefault();
     if (!mostBookedForm.title.trim()) return;
-
-    // Parse sub-sections
-    const sectionsMap = {};
-    mostBookedPackages.forEach((pkg) => {
-      const secName = pkg.section.trim() || "General Services";
-      if (!sectionsMap[secName]) {
-        sectionsMap[secName] = { section: secName, items: [] };
-      }
-      sectionsMap[secName].items.push({
-        name: pkg.name.trim(),
-        rating: 4.5,
-        reviews: 25,
-        price: pkg.price.startsWith("₹") ? pkg.price : `₹${pkg.price}`,
-        bullets: pkg.bullets
-          .split(",")
-          .map((b) => b.trim())
-          .filter(Boolean),
-        icon: pkg.icon || "🔧",
-        desc: pkg.desc || "",
-        unit: pkg.unit || "per unit",
-        img: "",
-      });
-    });
-    const parsedCatalog = Object.values(sectionsMap);
-
-    let updated = [...mostBookedList];
+    const updated = [...mostBookedList];
     const newMb = {
-      id: isEditingMostBooked
-        ? mostBookedList[editMostBookedIndex].id
-        : Date.now(),
+      id: isEditingMostBooked ? mostBookedList[editMostBookedIndex].id : Date.now(),
       title: mostBookedForm.title,
       rating: parseFloat(mostBookedForm.rating) || 4.8,
-      price: parseInt(mostBookedForm.price) || 499,
       badge: mostBookedForm.badge,
       image: mostBookedForm.image,
     };
-
-    if (isEditingMostBooked) {
-      updated[editMostBookedIndex] = newMb;
-    } else {
-      updated.push(newMb);
-    }
-
+    if (isEditingMostBooked) updated[editMostBookedIndex] = newMb;
+    else updated.push(newMb);
     setMostBookedList(updated);
     writeTiles("mostBooked", updated);
-
-    // Save configurations
-    const savedConfigs = readServiceConfigs();
-    const configs = savedConfigs ? JSON.parse(savedConfigs) : {};
-    configs[mostBookedForm.title] = {
-      tagline: "Expert Help at Your Door",
-      subtitle: "Verified Professionals\nFor Every Home Need",
-      bannerImg: "",
-      productTypes: mostBookedTypes,
-      brands: ["LG", "Samsung", "Whirlpool", "Panasonic"],
-      categoryNote: "Prices shown are indicative.",
-    };
-    writeServiceConfigs(configs);
-
-    const savedCatalogs = readServiceCatalogs();
-    const catalogs = savedCatalogs ? JSON.parse(savedCatalogs) : {};
-    catalogs[mostBookedForm.title] = parsedCatalog;
-    writeServiceCatalogs(catalogs);
-
     setShowMostBookedModal(false);
     showToast("Most booked service saved successfully!");
   };
@@ -2387,28 +1573,7 @@ const CustomerAppCustomization = () => {
 
   const handleOpenAddAppliance = () => {
     setIsEditingAppliance(false);
-    setApplianceForm({
-      title: "",
-      rating: "4.8",
-      price: "499",
-      badge: "Instant",
-      image: "",
-      path: "/booking",
-    });
-    setApplianceTypes([]);
-    setAppliancePackages([
-      {
-        id: Date.now() + 1,
-        section: "Book a consultation",
-        name: "Standard Consultancy",
-        price: "149",
-        bullets:
-          "Inspection and quote estimation, Fee adjusted in final invoice",
-        icon: "🔩",
-        desc: "Standard inspection & quote",
-        unit: "per visit",
-      },
-    ]);
+    setApplianceForm({ title: "", rating: "4.8", badge: "Instant", image: "", path: "" });
     setShowApplianceModal(true);
   };
 
@@ -2416,155 +1581,42 @@ const CustomerAppCustomization = () => {
     setIsEditingAppliance(true);
     setEditApplianceIndex(index);
     const app = applianceServicesList[index];
-
-    // Load custom service details configs & catalogs under this service title
-    const savedConfigs = readServiceConfigs();
-    const configs = savedConfigs ? JSON.parse(savedConfigs) : {};
-    const config = configs[app.title] || {
-      tagline: "Expert Help at Your Door",
-      subtitle: "Verified Professionals\nFor Every Home Need",
-      bannerImg: "",
-      productTypes: [],
-    };
-
-    const savedCatalogs = readServiceCatalogs();
-    const catalogs = savedCatalogs ? JSON.parse(savedCatalogs) : {};
-    const catalog = catalogs[app.title] || DEFAULT_CATALOG_TEMPLATE;
-
     setApplianceForm({
       title: app.title || "",
       rating: app.rating || "4.8",
-      price: app.price || "499",
       badge: app.badge || "Instant",
       image: app.image || "",
-      path: app.path || "/booking",
+      path: app.path && app.path !== "/booking" ? app.path : "",
     });
-
-    const rawTypes = config.productTypes || [];
-    setApplianceTypes(rawTypes);
-
-    const pkgs = [];
-    catalog.forEach((group) => {
-      if (group && group.items) {
-        group.items.forEach((item) => {
-          pkgs.push({
-            id: Math.random() + Math.random(),
-            section: group.section || "General Services",
-            name: item.name || "",
-            price: (item.price || "").replace("₹", ""),
-            bullets: Array.isArray(item.bullets)
-              ? item.bullets.join(", ")
-              : item.bullets || "",
-            icon: item.icon || "🔧",
-            desc: item.desc || "",
-            unit: item.unit || "per unit",
-          });
-        });
-      }
-    });
-    setAppliancePackages(pkgs);
-
     setShowApplianceModal(true);
   };
 
   const handleDeleteAppliance = (index) => {
     const title = applianceServicesList[index].title;
-    if (
-      window.confirm(
-        `Are you sure you want to delete "${title}" from appliance services list?`,
-      )
-    ) {
+    if (window.confirm(`Are you sure you want to delete "${title}" from appliance services?`)) {
       const updated = applianceServicesList.filter((_, i) => i !== index);
       setApplianceServicesList(updated);
       writeTiles("applianceServices", updated);
-
-      // delete configs & catalogs too
-      const savedConfigs = readServiceConfigs();
-      if (savedConfigs) {
-        const configs = JSON.parse(savedConfigs);
-        delete configs[title];
-        writeServiceConfigs(configs);
-      }
-
-      const savedCatalogs = readServiceCatalogs();
-      if (savedCatalogs) {
-        const catalogs = JSON.parse(savedCatalogs);
-        delete catalogs[title];
-        writeServiceCatalogs(catalogs);
-      }
-
-      showToast("Appliance service card deleted successfully.");
+      showToast("Appliance service deleted successfully.");
     }
   };
 
   const handleSaveAppliance = (e) => {
     e.preventDefault();
     if (!applianceForm.title.trim()) return;
-
-    // Parse sub-sections
-    const sectionsMap = {};
-    appliancePackages.forEach((pkg) => {
-      const secName = pkg.section.trim() || "General Services";
-      if (!sectionsMap[secName]) {
-        sectionsMap[secName] = { section: secName, items: [] };
-      }
-      sectionsMap[secName].items.push({
-        name: pkg.name.trim(),
-        rating: 4.5,
-        reviews: 25,
-        price: pkg.price.startsWith("₹") ? pkg.price : `₹${pkg.price}`,
-        bullets: pkg.bullets
-          .split(",")
-          .map((b) => b.trim())
-          .filter(Boolean),
-        icon: pkg.icon || "🔧",
-        desc: pkg.desc || "",
-        unit: pkg.unit || "per unit",
-        img: "",
-      });
-    });
-    const parsedCatalog = Object.values(sectionsMap);
-
-    let updated = [...applianceServicesList];
+    const updated = [...applianceServicesList];
     const newApp = {
-      id: isEditingAppliance
-        ? applianceServicesList[editApplianceIndex].id
-        : Date.now(),
+      id: isEditingAppliance ? applianceServicesList[editApplianceIndex].id : Date.now(),
       title: applianceForm.title,
       rating: parseFloat(applianceForm.rating) || 4.8,
-      price: parseInt(applianceForm.price) || 499,
       badge: applianceForm.badge,
       image: applianceForm.image,
       path: applianceForm.path,
     };
-
-    if (isEditingAppliance) {
-      updated[editApplianceIndex] = newApp;
-    } else {
-      updated.push(newApp);
-    }
-
+    if (isEditingAppliance) updated[editApplianceIndex] = newApp;
+    else updated.push(newApp);
     setApplianceServicesList(updated);
     writeTiles("applianceServices", updated);
-
-    // Save configurations
-    const savedConfigs = readServiceConfigs();
-    const configs = savedConfigs ? JSON.parse(savedConfigs) : {};
-    configs[applianceForm.title] = {
-      tagline: "Expert Help at Your Door",
-      subtitle: "Verified Professionals\nFor Every Home Need",
-      bannerImg: "",
-      productTypes: applianceTypes,
-      brands: ["LG", "Samsung", "Whirlpool", "Panasonic"],
-      categoryNote: "Prices shown are indicative.",
-    };
-    writeServiceConfigs(configs);
-
-    const savedCatalogs = readServiceCatalogs();
-    const catalogs = savedCatalogs ? JSON.parse(savedCatalogs) : {};
-    catalogs[applianceForm.title] = parsedCatalog;
-    writeServiceCatalogs(catalogs);
-
     setShowApplianceModal(false);
     showToast("Appliance service saved successfully!");
   };
@@ -2960,7 +2012,7 @@ const CustomerAppCustomization = () => {
                       <th className="px-6 py-4">Position</th>
                       <th className="px-6 py-4">Service Title</th>
                       <th className="px-6 py-4">Badge</th>
-                      <th className="px-6 py-4">Start Price</th>
+                      <th className="px-6 py-4">Price</th>
                       <th className="px-6 py-4">Image Preview</th>
                       <th className="px-6 py-4 text-right">Actions</th>
                     </tr>
@@ -2982,7 +2034,7 @@ const CustomerAppCustomization = () => {
                           </span>
                         </td>
                         <td className="px-6 py-4 font-bold text-slate-800">
-                          ₹{mb.price}
+                          <span className="text-slate-400 font-semibold">From catalogue</span>
                         </td>
                         <td className="px-6 py-4">
                           {mb.image && (
@@ -3049,7 +2101,7 @@ const CustomerAppCustomization = () => {
                       <th className="px-6 py-4">Position</th>
                       <th className="px-6 py-4">Appliance Title</th>
                       <th className="px-6 py-4">Badge</th>
-                      <th className="px-6 py-4">Start Price</th>
+                      <th className="px-6 py-4">Price</th>
                       <th className="px-6 py-4">Action Path</th>
                       <th className="px-6 py-4">Image Preview</th>
                       <th className="px-6 py-4 text-right">Actions</th>
@@ -3072,7 +2124,7 @@ const CustomerAppCustomization = () => {
                           </span>
                         </td>
                         <td className="px-6 py-4 font-bold text-slate-800">
-                          ₹{app.price}
+                          <span className="text-slate-400 font-semibold">From catalogue</span>
                         </td>
                         <td className="px-6 py-4 font-medium text-slate-500">
                           {app.path}
@@ -3338,185 +2390,8 @@ const CustomerAppCustomization = () => {
             </div>
           )}
 
-          {/* ---------------- SUBSECTION 3: SERVICES CUSTOMIZATION ---------------- */}
-          {activeSubSection === "services" && (
-            <div className="space-y-6 animate-in fade-in duration-300">
-              {/* Services Header Card */}
-              <div className="flex flex-wrap justify-between items-center bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs gap-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-[#0D47A1]">
-                      <Package size={18} />
-                    </div>
-                    <h2 className="text-base font-extrabold text-slate-900 tracking-tight">
-                      Dashboard Services Listing
-                    </h2>
-                    <span className="bg-blue-50 border border-blue-100 text-[#0D47A1] text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                      {services.length} Active Services
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-500 font-medium pl-10">
-                    Manage the primary service catalog grid displayed under 'Our
-                    Services' on the customer app dashboard.
-                  </p>
-                </div>
-
-                <div className="flex gap-2.5 items-center">
-                  <button
-                    onClick={handleResetServices}
-                    className="bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200/80 px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs">
-                    <RotateCcw size={14} className="text-slate-500" /> Reset
-                    Defaults
-                  </button>
-                  <button
-                    onClick={handleOpenAddService}
-                    className="bg-[#0D47A1] hover:bg-blue-800 text-white px-4 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-98">
-                    <Plus size={15} /> Add Service
-                  </button>
-                </div>
-              </div>
-
-              {/* Services Table Container */}
-              <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead>
-                      <tr className="bg-slate-50/80 text-slate-500 font-bold uppercase tracking-wider text-[10.5px] border-b border-slate-200/80">
-                        <th className="px-6 py-3.5 w-16">#</th>
-                        <th className="px-6 py-3.5">Service Name</th>
-                        <th className="px-6 py-3.5">Image Preview</th>
-                        <th className="px-6 py-3.5 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 font-medium">
-                      {services.map((srv, idx) => (
-                        <tr
-                          key={srv.id || idx}
-                          className="hover:bg-slate-50/80 transition-colors group">
-                          <td className="px-6 py-4 font-extrabold text-slate-400 font-mono text-xs">
-                            {idx + 1}
-                          </td>
-
-                          <td className="px-6 py-4 font-bold text-slate-900 text-sm">
-                            <span className="group-hover:text-[#0D47A1] transition-colors">
-                              {srv.name}
-                            </span>
-                          </td>
-
-                          <td className="px-6 py-4">
-                            {srv.img ? (
-                              <img
-                                src={srv.img}
-                                alt={srv.name}
-                                className="w-11 h-11 object-contain border border-slate-200/80 rounded-xl p-1 bg-slate-50 shadow-2xs group-hover:scale-105 transition-transform"
-                              />
-                            ) : (
-                              <span className="text-slate-400 text-xs italic">
-                                No image uploaded
-                              </span>
-                            )}
-                          </td>
-
-                          <td className="px-6 py-4 text-right">
-                            <div className="flex gap-2 justify-end items-center">
-                              <button
-                                onClick={() => handleOpenEditService(idx)}
-                                className="p-2 text-slate-500 hover:text-[#0D47A1] hover:bg-blue-50 rounded-xl transition-all cursor-pointer"
-                                title="Edit Service Details">
-                                <Edit2 size={15} />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteService(idx)}
-                                className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all cursor-pointer"
-                                title="Delete Service">
-                                <Trash2 size={15} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
-
-      {/* Edit/Add Service Modal Overlay */}
-      {showServiceModal && (
-        <div className="fixed inset-0 bg-[#052355]/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl border border-slate-100 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex justify-between items-center shrink-0">
-              <h3 className="text-base font-bold text-[#1E293B]">
-                {isEditingService
-                  ? "Edit Service Tile"
-                  : "Add New Service Tile"}
-              </h3>
-              <button
-                onClick={() => setShowServiceModal(false)}
-                className="text-slate-400 hover:text-slate-600 font-bold">
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveService} className="flex flex-col gap-4">
-              <div>
-                <label className="text-xs font-bold text-slate-700 mb-1 block">
-                  Service Name *
-                </label>
-                <input
-                  type="text"
-                  value={serviceForm.name}
-                  onChange={(e) =>
-                    setServiceForm({ ...serviceForm, name: e.target.value })
-                  }
-                  placeholder="e.g. Chimney Cleaning"
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 font-medium placeholder:text-slate-400 outline-none focus:border-[#0D47A1] focus:ring-1 focus:ring-[#0D47A1]/20 transition-all shadow-2xs"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-slate-700 mb-1 block">
-                  Dashboard Grid Image *
-                </label>
-                <div className="flex items-center gap-3 bg-white border border-dashed border-slate-300 rounded-lg p-2">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleServiceFileChange}
-                    className="w-full text-xs text-slate-600 file:mr-3 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-blue-50 file:text-[#0D47A1] hover:file:bg-blue-100 cursor-pointer"
-                    required={!isEditingService}
-                  />
-                  {serviceForm.img && (
-                    <img
-                      src={serviceForm.img}
-                      alt="Preview"
-                      className="w-10 h-10 object-contain border border-slate-200 rounded-md p-0.5 bg-white shrink-0"
-                    />
-                  )}
-                </div>
-              </div>
-
-              <div className="flex gap-3 pt-3 border-t border-slate-100 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setShowServiceModal(false)}
-                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2.5 rounded-lg text-xs transition-all">
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 bg-[#0D47A1] hover:bg-blue-800 text-white font-semibold py-2.5 rounded-lg text-xs transition-all shadow-sm">
-                  Save Service
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* Edit/Add Category Modal Overlay */}
       {showAddModal && (
@@ -3712,114 +2587,13 @@ const CustomerAppCustomization = () => {
                   </div>
                 </div>
 
-                {/* 2. Supported Options & Brands */}
-                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-3">
-                  <span className="text-[10px] font-black text-[#0D47A1] uppercase tracking-wider block">
-                    2. Booking Options & Brands
-                  </span>
-
-                  <div>
-                    <label className="text-xs font-bold text-slate-700 mb-1 block">
-                      Supported Brands (Comma separated)
-                    </label>
-                    <input
-                      type="text"
-                      value={categoryForm.brands}
-                      onChange={(e) =>
-                        setCategoryForm({
-                          ...categoryForm,
-                          brands: e.target.value,
-                        })
-                      }
-                      placeholder="e.g. Voltas, LG, Samsung, Whirlpool"
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium outline-none focus:border-[#0D47A1] transition-all"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-bold text-slate-700 mb-1 block">
-                      Appliance Types (Optional - Comma separated)
-                    </label>
-                    <input
-                      type="text"
-                      value={categoryForm.productTypes}
-                      onChange={(e) =>
-                        setCategoryForm({
-                          ...categoryForm,
-                          productTypes: e.target.value,
-                        })
-                      }
-                      placeholder="e.g. Split AC, Window AC, Cassette AC"
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium outline-none focus:border-[#0D47A1] transition-all"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-bold text-slate-700 mb-1 block">
-                      Price Note / Disclaimer
-                    </label>
-                    <input
-                      type="text"
-                      value={categoryForm.categoryNote}
-                      onChange={(e) =>
-                        setCategoryForm({
-                          ...categoryForm,
-                          categoryNote: e.target.value,
-                        })
-                      }
-                      placeholder="e.g. Prices shown are indicative. Exact charges confirmed after inspection."
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium outline-none focus:border-[#0D47A1] transition-all"
-                    />
-                  </div>
-                </div>
-
-                {/* Booking services/pricing used to be editable right here, but nothing
-                  reads CategoryBookingConfig.services anymore — the customer booking
-                  flow and the service-provider job screen both read the real catalog
-                  (Category/ServiceCatalogItem). Manage services from Service Catalog
-                  in the sidebar instead; editing them here would silently do nothing. */}
                 <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100/80 space-y-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <span className="text-[10px] font-black text-[#0D47A1] uppercase tracking-wider block font-sans">
-                        Booking Services & Pricing
-                      </span>
-                      <span className="text-[10px] text-slate-500 font-medium mt-0.5 block">
-                        Moved — manage this category's bookable services from{" "}
-                        <strong>Service Catalog</strong> in the sidebar. That's
-                        the screen customers and providers actually see.
-                      </span>
-                    </div>
-                    <a
-                      href="/super-admin/service-catalog"
-                      className="bg-[#0D47A1] hover:bg-blue-800 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer flex items-center gap-1 shrink-0">
-                      Open Service Catalog
-                    </a>
-                  </div>
-
                   {/* Advanced Mode Section - Open automatically */}
                   <details open className="mt-2 text-xs">
                     <summary className="cursor-pointer text-[10px] font-extrabold text-[#0D47A1] hover:underline">
                       ⚙️ Advanced Options & Technical Flags
                     </summary>
                     <div className="mt-3 space-y-3 p-3 bg-white rounded-xl border border-slate-200">
-                      <div>
-                        <label className="text-[10px] font-bold text-slate-500 mb-1 block">
-                          Direct Details Page Link (Optional)
-                        </label>
-                        <input
-                          type="text"
-                          value={categoryForm.service}
-                          onChange={(e) =>
-                            setCategoryForm({
-                              ...categoryForm,
-                              service: e.target.value,
-                            })
-                          }
-                          placeholder="e.g. Smart TV Service & Repair"
-                          className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none focus:border-[#0D47A1]"
-                        />
-                      </div>
                       <div className="flex flex-wrap gap-4 pt-1">
                         <label className="flex items-center gap-1.5 text-xs text-slate-700 font-semibold cursor-pointer">
                           <input
@@ -4153,26 +2927,8 @@ const CustomerAppCustomization = () => {
                     </div>
                   </div>
 
-                  <LegacyPriceNotice />
+                  <CataloguePriceNotice />
 
-                  <div>
-                    <label className="text-xs font-semibold text-[#64748B] mb-1 block">
-                      Start Price (₹) *
-                    </label>
-                    <input
-                      type="text"
-                      value={mostBookedForm.price}
-                      onChange={(e) =>
-                        setMostBookedForm({
-                          ...mostBookedForm,
-                          price: e.target.value,
-                        })
-                      }
-                      placeholder="e.g. 649"
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:border-[#0D47A1] transition-all"
-                      required
-                    />
-                  </div>
 
                   <div>
                     <label className="text-xs font-semibold text-[#64748B] mb-1 block">
@@ -4196,266 +2952,6 @@ const CustomerAppCustomization = () => {
                   </div>
                 </div>
 
-                <div className="bg-blue-50/50 p-3 rounded-xl border border-blue-100 space-y-3">
-                  <span className="text-[10px] font-bold text-[#0D47A1] uppercase tracking-wider block font-sans">
-                    2. Checkout Booking Flow Settings
-                  </span>
-
-                  <div>
-                    <label className="text-xs font-semibold text-[#64748B] mb-1 block">
-                      Device Types (Optional - Comma separated)
-                    </label>
-                    <input
-                      type="text"
-                      value={mostBookedTypes.join(", ")}
-                      onChange={(e) =>
-                        setMostBookedTypes(
-                          e.target.value
-                            .split(",")
-                            .map((t) => t.trim())
-                            .filter(Boolean),
-                        )
-                      }
-                      placeholder="e.g. Split AC, Window AC, Cassette AC"
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:border-[#0D47A1] transition-all"
-                    />
-                    <p className="text-[10px] text-slate-400 mt-0.5">
-                      Leave blank if this device does not have sub-types (e.g.
-                      Full Home Cleaning).
-                    </p>
-                  </div>
-                </div>
-
-                <div className="bg-slate-50 p-3 rounded-xl border border-slate-150 space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-[#0D47A1] uppercase tracking-wider">
-                      3. Services & Packages List *
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setMostBookedPackages([
-                          ...mostBookedPackages,
-                          {
-                            id: Date.now(),
-                            section: "General Services",
-                            name: "",
-                            price: "",
-                            bullets: "",
-                            icon: "🔧",
-                            desc: "",
-                            unit: "per unit",
-                          },
-                        ])
-                      }
-                      className="bg-white hover:bg-slate-50 text-[#0D47A1] border border-slate-200 px-2.5 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all">
-                      + Add Package
-                    </button>
-                  </div>
-
-                  {mostBookedPackages.length > 0 ? (
-                    <div className="space-y-4 max-h-[30vh] overflow-y-auto pr-1">
-                      {mostBookedPackages.map((pkg) => (
-                        <div
-                          key={pkg.id}
-                          className="bg-white border border-slate-200 rounded-xl p-3 space-y-2.5 relative shadow-2xs">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setMostBookedPackages(
-                                mostBookedPackages.filter(
-                                  (p) => p.id !== pkg.id,
-                                ),
-                              )
-                            }
-                            className="absolute top-2 right-2 p-1 text-slate-400 hover:text-red-600 rounded-lg transition-colors">
-                            <Trash2 size={13} />
-                          </button>
-
-                          <div className="grid grid-cols-2 gap-2">
-                            <div>
-                              <label className="text-[9px] font-bold text-slate-400 block mb-0.5">
-                                Section Name *
-                              </label>
-                              <input
-                                type="text"
-                                value={pkg.section}
-                                onChange={(e) =>
-                                  setMostBookedPackages(
-                                    mostBookedPackages.map((p) =>
-                                      p.id === pkg.id
-                                        ? { ...p, section: e.target.value }
-                                        : p,
-                                    ),
-                                  )
-                                }
-                                placeholder="e.g. Installation Services"
-                                className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-md text-xs outline-none focus:border-[#0D47A1] transition-all"
-                                required
-                              />
-                            </div>
-                            <div>
-                              <label className="text-[9px] font-bold text-slate-400 block mb-0.5">
-                                Package/Service Name *
-                              </label>
-                              <input
-                                type="text"
-                                value={pkg.name}
-                                onChange={(e) =>
-                                  setMostBookedPackages(
-                                    mostBookedPackages.map((p) =>
-                                      p.id === pkg.id
-                                        ? { ...p, name: e.target.value }
-                                        : p,
-                                    ),
-                                  )
-                                }
-                                placeholder="e.g. Split AC Installation"
-                                className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-md text-xs outline-none focus:border-[#0D47A1] transition-all"
-                                required
-                              />
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-3 gap-2">
-                            <div>
-                              <label className="text-[9px] font-bold text-slate-400 block mb-0.5">
-                                Price (₹) *
-                              </label>
-                              <input
-                                type="text"
-                                value={pkg.price}
-                                onChange={(e) =>
-                                  setMostBookedPackages(
-                                    mostBookedPackages.map((p) =>
-                                      p.id === pkg.id
-                                        ? { ...p, price: e.target.value }
-                                        : p,
-                                    ),
-                                  )
-                                }
-                                placeholder="e.g. 299"
-                                className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-md text-xs outline-none focus:border-[#0D47A1] transition-all"
-                                required
-                              />
-                            </div>
-                            <div>
-                              <label className="text-[9px] font-bold text-slate-400 block mb-0.5">
-                                Price Unit *
-                              </label>
-                              <input
-                                type="text"
-                                value={pkg.unit || "per unit"}
-                                onChange={(e) =>
-                                  setMostBookedPackages(
-                                    mostBookedPackages.map((p) =>
-                                      p.id === pkg.id
-                                        ? { ...p, unit: e.target.value }
-                                        : p,
-                                    ),
-                                  )
-                                }
-                                placeholder="e.g. per AC, per visit"
-                                className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-md text-xs outline-none focus:border-[#0D47A1] transition-all"
-                                required
-                              />
-                            </div>
-                            <div>
-                              <label className="text-[9px] font-bold text-slate-400 block mb-0.5">
-                                Upload Icon Image *
-                              </label>
-                              <div className="flex items-center gap-1.5 bg-slate-50 border border-dashed border-slate-200 rounded-md p-1">
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  onChange={(e) => {
-                                    const file = e.target.files[0];
-                                    if (file) {
-                                      const reader = new FileReader();
-                                      reader.onloadend = () => {
-                                        setMostBookedPackages((prev) =>
-                                          prev.map((p) =>
-                                            p.id === pkg.id
-                                              ? { ...p, icon: reader.result }
-                                              : p,
-                                          ),
-                                        );
-                                      };
-                                      reader.readAsDataURL(file);
-                                    }
-                                  }}
-                                  className="w-full text-[10px] text-slate-500 file:mr-2 file:py-0.5 file:px-1.5 file:rounded file:border-0 file:text-[9px] file:font-semibold file:bg-blue-50 file:text-[#0D47A1] hover:file:bg-blue-100 cursor-pointer"
-                                />
-                                {pkg.icon && (
-                                  <div className="w-6 h-6 shrink-0 bg-white border border-slate-200 rounded-md flex items-center justify-center overflow-hidden">
-                                    {pkg.icon.startsWith("data:image/") ? (
-                                      <img
-                                        src={pkg.icon}
-                                        alt=""
-                                        className="w-full h-full object-contain"
-                                      />
-                                    ) : (
-                                      <span className="text-[11px]">
-                                        {pkg.icon}
-                                      </span>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-3 gap-2">
-                            <div className="col-span-1">
-                              <label className="text-[9px] font-bold text-slate-400 block mb-0.5">
-                                Short Description
-                              </label>
-                              <input
-                                type="text"
-                                value={pkg.desc || ""}
-                                onChange={(e) =>
-                                  setMostBookedPackages(
-                                    mostBookedPackages.map((p) =>
-                                      p.id === pkg.id
-                                        ? { ...p, desc: e.target.value }
-                                        : p,
-                                    ),
-                                  )
-                                }
-                                placeholder="e.g. New AC fitting & setup"
-                                className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-md text-xs outline-none focus:border-[#0D47A1] transition-all"
-                              />
-                            </div>
-                            <div className="col-span-2">
-                              <label className="text-[9px] font-bold text-slate-400 block mb-0.5">
-                                Description Bullets (Comma-separated)
-                              </label>
-                              <input
-                                type="text"
-                                value={pkg.bullets}
-                                onChange={(e) =>
-                                  setMostBookedPackages(
-                                    mostBookedPackages.map((p) =>
-                                      p.id === pkg.id
-                                        ? { ...p, bullets: e.target.value }
-                                        : p,
-                                    ),
-                                  )
-                                }
-                                placeholder="e.g. 30 days warranty, gas leak check"
-                                className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-md text-xs outline-none focus:border-[#0D47A1] transition-all"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-[10px] text-red-500 italic bg-red-50 border border-red-100 rounded-lg p-3 text-center font-semibold">
-                      Please add at least one service package.
-                    </div>
-                  )}
-                </div>
               </div>
 
               <div className="flex gap-3 pt-3 border-t border-slate-100 shrink-0">
@@ -4467,7 +2963,6 @@ const CustomerAppCustomization = () => {
                 </button>
                 <button
                   type="submit"
-                  disabled={mostBookedPackages.length === 0}
                   className="flex-1 bg-[#0D47A1] hover:bg-blue-800 text-white font-semibold py-2.5 rounded-lg text-xs transition-all shadow-sm disabled:opacity-50">
                   Save Service Card
                 </button>
@@ -4541,26 +3036,8 @@ const CustomerAppCustomization = () => {
                     </div>
                   </div>
 
-                  <LegacyPriceNotice />
+                  <CataloguePriceNotice />
 
-                  <div>
-                    <label className="text-xs font-semibold text-[#64748B] mb-1 block">
-                      Start Price (₹) *
-                    </label>
-                    <input
-                      type="text"
-                      value={applianceForm.price}
-                      onChange={(e) =>
-                        setApplianceForm({
-                          ...applianceForm,
-                          price: e.target.value,
-                        })
-                      }
-                      placeholder="e.g. 499"
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:border-[#0D47A1] transition-all"
-                      required
-                    />
-                  </div>
 
                   <div>
                     <label className="text-xs font-semibold text-[#64748B] mb-1 block">
@@ -4603,266 +3080,6 @@ const CustomerAppCustomization = () => {
                   </div>
                 </div>
 
-                <div className="bg-blue-50/50 p-3 rounded-xl border border-blue-100 space-y-3">
-                  <span className="text-[10px] font-bold text-[#0D47A1] uppercase tracking-wider block font-sans">
-                    2. Checkout Booking Flow Settings
-                  </span>
-
-                  <div>
-                    <label className="text-xs font-semibold text-[#64748B] mb-1 block">
-                      Device Types (Optional - Comma separated)
-                    </label>
-                    <input
-                      type="text"
-                      value={applianceTypes.join(", ")}
-                      onChange={(e) =>
-                        setApplianceTypes(
-                          e.target.value
-                            .split(",")
-                            .map((t) => t.trim())
-                            .filter(Boolean),
-                        )
-                      }
-                      placeholder="e.g. Split AC, Window AC, Cassette AC"
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:border-[#0D47A1] transition-all"
-                    />
-                    <p className="text-[10px] text-slate-400 mt-0.5">
-                      Leave blank if this device does not have sub-types (e.g.
-                      Full Home Cleaning).
-                    </p>
-                  </div>
-                </div>
-
-                <div className="bg-slate-50 p-3 rounded-xl border border-slate-150 space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-[#0D47A1] uppercase tracking-wider">
-                      3. Services & Packages List *
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setAppliancePackages([
-                          ...appliancePackages,
-                          {
-                            id: Date.now(),
-                            section: "General Services",
-                            name: "",
-                            price: "",
-                            bullets: "",
-                            icon: "🔧",
-                            desc: "",
-                            unit: "per unit",
-                          },
-                        ])
-                      }
-                      className="bg-white hover:bg-slate-50 text-[#0D47A1] border border-slate-200 px-2.5 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all">
-                      + Add Package
-                    </button>
-                  </div>
-
-                  {appliancePackages.length > 0 ? (
-                    <div className="space-y-4 max-h-[30vh] overflow-y-auto pr-1">
-                      {appliancePackages.map((pkg) => (
-                        <div
-                          key={pkg.id}
-                          className="bg-white border border-slate-200 rounded-xl p-3 space-y-2.5 relative shadow-2xs">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setAppliancePackages(
-                                appliancePackages.filter(
-                                  (p) => p.id !== pkg.id,
-                                ),
-                              )
-                            }
-                            className="absolute top-2 right-2 p-1 text-slate-400 hover:text-red-600 rounded-lg transition-colors">
-                            <Trash2 size={13} />
-                          </button>
-
-                          <div className="grid grid-cols-2 gap-2">
-                            <div>
-                              <label className="text-[9px] font-bold text-slate-400 block mb-0.5">
-                                Section Name *
-                              </label>
-                              <input
-                                type="text"
-                                value={pkg.section}
-                                onChange={(e) =>
-                                  setAppliancePackages(
-                                    appliancePackages.map((p) =>
-                                      p.id === pkg.id
-                                        ? { ...p, section: e.target.value }
-                                        : p,
-                                    ),
-                                  )
-                                }
-                                placeholder="e.g. Installation Services"
-                                className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-md text-xs outline-none focus:border-[#0D47A1] transition-all"
-                                required
-                              />
-                            </div>
-                            <div>
-                              <label className="text-[9px] font-bold text-slate-400 block mb-0.5">
-                                Package/Service Name *
-                              </label>
-                              <input
-                                type="text"
-                                value={pkg.name}
-                                onChange={(e) =>
-                                  setAppliancePackages(
-                                    appliancePackages.map((p) =>
-                                      p.id === pkg.id
-                                        ? { ...p, name: e.target.value }
-                                        : p,
-                                    ),
-                                  )
-                                }
-                                placeholder="e.g. Split AC Installation"
-                                className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-md text-xs outline-none focus:border-[#0D47A1] transition-all"
-                                required
-                              />
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-3 gap-2">
-                            <div>
-                              <label className="text-[9px] font-bold text-slate-400 block mb-0.5">
-                                Price (₹) *
-                              </label>
-                              <input
-                                type="text"
-                                value={pkg.price}
-                                onChange={(e) =>
-                                  setAppliancePackages(
-                                    appliancePackages.map((p) =>
-                                      p.id === pkg.id
-                                        ? { ...p, price: e.target.value }
-                                        : p,
-                                    ),
-                                  )
-                                }
-                                placeholder="e.g. 299"
-                                className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-md text-xs outline-none focus:border-[#0D47A1] transition-all"
-                                required
-                              />
-                            </div>
-                            <div>
-                              <label className="text-[9px] font-bold text-slate-400 block mb-0.5">
-                                Price Unit *
-                              </label>
-                              <input
-                                type="text"
-                                value={pkg.unit || "per unit"}
-                                onChange={(e) =>
-                                  setAppliancePackages(
-                                    appliancePackages.map((p) =>
-                                      p.id === pkg.id
-                                        ? { ...p, unit: e.target.value }
-                                        : p,
-                                    ),
-                                  )
-                                }
-                                placeholder="e.g. per AC, per visit"
-                                className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-md text-xs outline-none focus:border-[#0D47A1] transition-all"
-                                required
-                              />
-                            </div>
-                            <div>
-                              <label className="text-[9px] font-bold text-slate-400 block mb-0.5">
-                                Upload Icon Image *
-                              </label>
-                              <div className="flex items-center gap-1.5 bg-slate-50 border border-dashed border-slate-200 rounded-md p-1">
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  onChange={(e) => {
-                                    const file = e.target.files[0];
-                                    if (file) {
-                                      const reader = new FileReader();
-                                      reader.onloadend = () => {
-                                        setAppliancePackages((prev) =>
-                                          prev.map((p) =>
-                                            p.id === pkg.id
-                                              ? { ...p, icon: reader.result }
-                                              : p,
-                                          ),
-                                        );
-                                      };
-                                      reader.readAsDataURL(file);
-                                    }
-                                  }}
-                                  className="w-full text-[10px] text-slate-500 file:mr-2 file:py-0.5 file:px-1.5 file:rounded file:border-0 file:text-[9px] file:font-semibold file:bg-blue-50 file:text-[#0D47A1] hover:file:bg-blue-100 cursor-pointer"
-                                />
-                                {pkg.icon && (
-                                  <div className="w-6 h-6 shrink-0 bg-white border border-slate-200 rounded-md flex items-center justify-center overflow-hidden">
-                                    {pkg.icon.startsWith("data:image/") ? (
-                                      <img
-                                        src={pkg.icon}
-                                        alt=""
-                                        className="w-full h-full object-contain"
-                                      />
-                                    ) : (
-                                      <span className="text-[11px]">
-                                        {pkg.icon}
-                                      </span>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-3 gap-2">
-                            <div className="col-span-1">
-                              <label className="text-[9px] font-bold text-slate-400 block mb-0.5">
-                                Short Description
-                              </label>
-                              <input
-                                type="text"
-                                value={pkg.desc || ""}
-                                onChange={(e) =>
-                                  setAppliancePackages(
-                                    appliancePackages.map((p) =>
-                                      p.id === pkg.id
-                                        ? { ...p, desc: e.target.value }
-                                        : p,
-                                    ),
-                                  )
-                                }
-                                placeholder="e.g. New AC fitting & setup"
-                                className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-md text-xs outline-none focus:border-[#0D47A1] transition-all"
-                              />
-                            </div>
-                            <div className="col-span-2">
-                              <label className="text-[9px] font-bold text-slate-400 block mb-0.5">
-                                Description Bullets (Comma-separated)
-                              </label>
-                              <input
-                                type="text"
-                                value={pkg.bullets}
-                                onChange={(e) =>
-                                  setAppliancePackages(
-                                    appliancePackages.map((p) =>
-                                      p.id === pkg.id
-                                        ? { ...p, bullets: e.target.value }
-                                        : p,
-                                    ),
-                                  )
-                                }
-                                placeholder="e.g. 30 days warranty, gas leak check"
-                                className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-md text-xs outline-none focus:border-[#0D47A1] transition-all"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-[10px] text-red-500 italic bg-red-50 border border-red-100 rounded-lg p-3 text-center font-semibold">
-                      Please add at least one service package.
-                    </div>
-                  )}
-                </div>
               </div>
 
               <div className="flex gap-3 pt-3 border-t border-slate-100 shrink-0">
@@ -4874,7 +3091,6 @@ const CustomerAppCustomization = () => {
                 </button>
                 <button
                   type="submit"
-                  disabled={appliancePackages.length === 0}
                   className="flex-1 bg-[#0D47A1] hover:bg-blue-800 text-white font-semibold py-2.5 rounded-lg text-xs transition-all shadow-sm disabled:opacity-50">
                   Save Appliance Card
                 </button>

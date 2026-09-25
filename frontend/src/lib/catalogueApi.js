@@ -72,3 +72,78 @@ export const standaloneOffering = (tree, serviceId) => pickOffering(tree, { serv
 
 export const formatRupees = (value) =>
   `₹${Number(value || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+
+/** GET /catalog/search — grouped results ({ groups, categories }), each with a "from" price and a deepLink. */
+export const searchCatalogue = (q, { city, pincode, limit } = {}) =>
+  apiRequest(`/catalog/search${qs({ q, city, pincode, limit })}`, { silentError: true });
+
+/** POST /catalog/search/resolve — the best destination (or null) for each free-text label, in order. */
+export const resolveLabels = (labels, { city, pincode } = {}) =>
+  apiRequest('/catalog/search/resolve', {
+    method: 'POST',
+    body: { labels, location: city || pincode ? { city, pincode } : undefined },
+    silentError: true,
+  });
+
+/**
+ * The booking-flow selection a deep link asks for (Phase 6):
+ * /book/AC?pt=split&variant=1_5_ton&svc=installation&qty=2, or
+ * /book/Electrician?offering=ELEC-FAN-INSTALL. Unknown slugs are ignored, so
+ * a stale link still opens the category. `preferredServiceId` is a
+ * product-linked service to pick in step 2 once a type (and size) is chosen;
+ * `step` is the first step that still needs the customer's input.
+ */
+export function selectionFromDeepLink(tree, search) {
+  const params = new URLSearchParams(search);
+  const bySlug = (list, slug) => (slug ? (list || []).find((x) => x.slug === slug) || null : null);
+  const selection = {
+    productTypeId: '',
+    variantId: '',
+    standaloneServiceId: '',
+    optionId: '',
+    preferredServiceId: '',
+    quantity: Math.max(1, Number.parseInt(params.get('qty'), 10) || 1),
+  };
+
+  const code = (params.get('offering') || '').toUpperCase();
+  const offering = code ? tree.offerings.find((o) => o.code === code) : null;
+  if (offering && offering.productTypeId) {
+    selection.productTypeId = offering.productTypeId;
+    selection.variantId = offering.variantId || '';
+    selection.preferredServiceId = offering.serviceId;
+  } else if (offering) {
+    selection.standaloneServiceId = offering.serviceId;
+    selection.optionId = offering.variantId || '';
+  } else {
+    const pt = bySlug(tree.productTypes, params.get('pt'));
+    const standalone = !pt && bySlug(tree.standaloneServices, params.get('svc'));
+    if (pt) {
+      selection.productTypeId = pt.id;
+      selection.variantId = bySlug(pt.variants, params.get('variant'))?.id || '';
+    } else if (standalone) {
+      selection.standaloneServiceId = standalone.id;
+      selection.optionId = bySlug(standalone.options, params.get('variant'))?.id || '';
+    }
+    if (!standalone) selection.preferredServiceId = bySlug(tree.services, params.get('svc'))?.id || '';
+  }
+
+  const pt = tree.productTypes.find((p) => p.id === selection.productTypeId);
+  const standalone = tree.standaloneServices.find((s) => s.id === selection.standaloneServiceId);
+  const stepOneDone = pt
+    ? pt.variants.length === 0 || Boolean(selection.variantId)
+    : standalone
+      ? standalone.options.length === 0 || Boolean(selection.optionId)
+      : false;
+  selection.step = stepOneDone ? 2 : 1;
+  return selection;
+}
+
+/** Whether a URL carries any deep-link selection. */
+export const hasDeepLink = (search) => ['offering', 'pt', 'svc', 'variant'].some((k) => new URLSearchParams(search).has(k));
+
+/** GET /catalog/service-groups — every bookable service with its "from" price and deepLink. */
+export const listServiceGroups = ({ city, pincode } = {}) =>
+  apiRequest(`/catalog/service-groups${qs({ city, pincode })}`, { silentError: true });
+
+/** GET /catalog/search/popular — suggestions for an empty search box ({ label, deepLink }). */
+export const getPopularSearches = () => apiRequest('/catalog/search/popular', { silentError: true });

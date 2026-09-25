@@ -200,8 +200,10 @@ export async function listAvailableJobs(serviceProviderId) {
   const srs = await ServiceRequest.find({
     $or: [
       { serviceProvider: serviceProviderId, status: 'Assigned' },
-      // Open offers: broadcast to everyone in the city unless explicitly declined from open feed
-      { serviceProvider: null, status: { $in: ['New', 'Assigned', 'Pending'] }, declinedOpenOfferBy: { $ne: serviceProviderId } },
+      // Open offers: broadcast to everyone in the city — except a partner who
+      // already said no to this request, whether it was offered to them
+      // directly (declinedAssignmentBy) or from the open feed (both land in declinedBy).
+      { serviceProvider: null, status: { $in: ['New', 'Assigned', 'Pending'] }, declinedBy: { $ne: serviceProviderId } },
     ],
     _id: { $nin: acceptedServiceRequestIds },
   })
@@ -490,7 +492,7 @@ export async function getJobDetailContext(serviceProviderId, jobId) {
   // Extra work the partner can add: Master Catalogue offerings (priced by the
   // same engine as bookings, with their configured payout). `price` is the
   // pre-GST unit price the add-on picker shows; `id` is the offering id the
-  // add endpoint takes. Legacy ServiceCatalogItem prices no longer apply.
+  // add endpoint takes.
   const addonServices = (await listAddOnOfferings(serviceProviderId, jobId)).map((o) => ({
     id: o.id,
     offeringId: o.id,
@@ -1251,6 +1253,7 @@ async function finalizeJobCompletion(job, payment) {
     updatedBooking = await Booking.findById(serviceRequest.booking);
     if (updatedBooking && updatedBooking.status !== 'Cancelled') {
       updatedBooking.status = 'Completed';
+      updatedBooking.completedAt = new Date();
       if (updatedBooking.isInstant) updatedBooking.instantStatus = 'COMPLETED';
       await updatedBooking.save();
     }

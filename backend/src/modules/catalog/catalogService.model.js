@@ -1,12 +1,12 @@
 import mongoose from 'mongoose';
 import { applyStandardPlugins } from '../shared/plugins.js';
 import { dimensionSchema } from './dimension.schema.js';
+import { watchCatalogueWrites } from './catalogCache.js';
 
 // The work itself — "Installation" under AC, "Fan Installation" under
 // Electrician. Deliberately has no price: what a job costs depends on the exact
 // (product type, variant, service) combination, so price and payout live on
-// ServiceOffering → OfferingRate. Replaces ServiceCatalogItem (which carried
-// one price per category service) once the booking cut-over lands.
+// ServiceOffering → OfferingRate.
 const catalogServiceSchema = new mongoose.Schema(
   {
     category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true, index: true },
@@ -27,6 +27,8 @@ const catalogServiceSchema = new mongoose.Schema(
 catalogServiceSchema.index({ category: 1, slug: 1 }, { unique: true });
 
 applyStandardPlugins(catalogServiceSchema);
+// Writes drop the cached customer category trees (catalogCache.js).
+catalogServiceSchema.plugin(watchCatalogueWrites);
 
 export const CatalogService =
   mongoose.models.CatalogService || mongoose.model('CatalogService', catalogServiceSchema);

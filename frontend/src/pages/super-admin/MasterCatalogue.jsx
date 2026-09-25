@@ -332,7 +332,7 @@ const MasterCatalogue = () => {
                   onClearFocus={() => setFocus(null)}
                   onNew={() => setEditor({ mode: 'create' })}
                   onOpen={(row) => setEditor({ mode: 'edit', offeringId: row.id })}
-                  onChangeRate={(row) => setRateFor(row)}
+                  onChangeRate={(row) => setRateFor({ offering: row })}
                   onToggle={toggleOffering}
                   onDuplicate={(row) => setDuplicateFor(row)}
                 />
@@ -351,7 +351,11 @@ const MasterCatalogue = () => {
           cities={cities}
           rateVersionKey={rateVersionKey}
           onClose={() => setEditor(null)}
-          onChangeRate={(offering) => setRateFor(offering)}
+          onChangeRate={(offering, scope) => setRateFor({ offering, scope })}
+          onRatesChanged={() => {
+            setRateVersionKey((k) => k + 1);
+            refreshAll();
+          }}
           onSaved={(saved, { keepOpen } = {}) => {
             refreshAll();
             if (keepOpen) return;
@@ -362,7 +366,9 @@ const MasterCatalogue = () => {
 
       {rateFor && (
         <RateChangeModal
-          offering={rateFor}
+          offering={rateFor.offering}
+          scope={rateFor.scope}
+          cities={cities}
           onClose={() => setRateFor(null)}
           onSaved={() => {
             setRateFor(null);

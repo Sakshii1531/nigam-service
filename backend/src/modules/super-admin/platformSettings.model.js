@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { applyStandardPlugins } from '../shared/plugins.js';
+import { watchCatalogueWrites } from '../catalog/catalogCache.js';
 
 // Singleton doc (service layer enforces exactly one exists) — platform-wide config
 // surfaced across super-admin's Settings.jsx tabs.
@@ -34,8 +35,6 @@ const platformSettingsSchema = new mongoose.Schema(
 
     // Share of the total taken as an advance when a customer picks "pay advance".
     bookingAdvancePercent: { type: Number, default: 20 },
-    // Share of a D2C job's subtotal paid to the service provider.
-    serviceProviderCommissionPercent: { type: Number, default: 30 },
     // Paid to a service provider who travelled to a job the customer then cancelled
     // or was unavailable for. 0 disables the payment entirely.
     visitFeeAmount: { type: Number, default: 150 },
@@ -44,5 +43,7 @@ const platformSettingsSchema = new mongoose.Schema(
 );
 
 applyStandardPlugins(platformSettingsSchema);
+// Writes drop the cached customer category trees (catalogCache.js).
+platformSettingsSchema.plugin(watchCatalogueWrites);
 
 export const PlatformSettings = mongoose.models.PlatformSettings || mongoose.model('PlatformSettings', platformSettingsSchema);

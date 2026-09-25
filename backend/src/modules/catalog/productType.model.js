@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import { applyStandardPlugins } from '../shared/plugins.js';
 import { dimensionSchema } from './dimension.schema.js';
+import { watchCatalogueWrites } from './catalogCache.js';
 
 const productTypeSchema = new mongoose.Schema(
   {
@@ -23,5 +24,7 @@ const productTypeSchema = new mongoose.Schema(
 productTypeSchema.index({ category: 1, slug: 1 }, { unique: true });
 
 applyStandardPlugins(productTypeSchema);
+// Writes drop the cached customer category trees (catalogCache.js).
+productTypeSchema.plugin(watchCatalogueWrites);
 
 export const ProductType = mongoose.models.ProductType || mongoose.model('ProductType', productTypeSchema);

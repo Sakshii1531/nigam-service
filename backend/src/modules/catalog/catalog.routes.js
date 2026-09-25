@@ -7,21 +7,18 @@ import { ROLES } from '../../config/constants.js';
 import * as catalogService from './catalog.service.js';
 import { getCategoryTree, getOfferingDetail } from './offeringBrowse.service.js';
 import { buildQuote } from './quote.service.js';
+import { searchCatalogue, resolveLabels, listServiceGroups, popularSearches } from './offeringSearch.service.js';
 import { toCustomerQuote } from './commercialView.js';
 import { Brand } from '../super-admin/brand.model.js';
 import {
   createCategorySchema,
   updateCategorySchema,
   categoryKeyParamSchema,
-  addProductTypeSchema,
-  updateProductTypeSchema,
-  productTypeIdParamSchema,
-  addServiceItemSchema,
-  updateServiceItemSchema,
-  serviceItemIdParamSchema,
   locationQuerySchema,
   offeringCodeParamSchema,
   quoteSchema,
+  searchQuerySchema,
+  resolveLabelsSchema,
 } from './catalog.validation.js';
 
 export const catalogRouter = Router();
@@ -124,6 +121,45 @@ const quoteRateLimit = rateLimit({
   message: { data: null, error: { message: 'Too many price requests, please slow down.' }, meta: {} },
 });
 
+// Search (docs/master-catalogue Phase 6) — public, customer-safe, rate-limited
+// with the quote limiter (the app searches as the customer types).
+catalogRouter.get('/search', quoteRateLimit, validate(searchQuerySchema, 'query'), async (req, res, next) => {
+  try {
+    const { q, city, pincode, limit } = req.query;
+    ok(res, await searchCatalogue(q, { city, pincode, limit }));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Suggestions for an empty search box (most-booked services, then biggest categories).
+catalogRouter.get('/search/popular', quoteRateLimit, async (req, res, next) => {
+  try {
+    ok(res, await popularSearches());
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Every bookable service with its "from" price (the "all services" pages).
+catalogRouter.get('/service-groups', quoteRateLimit, validate(locationQuerySchema, 'query'), async (req, res, next) => {
+  try {
+    ok(res, await listServiceGroups({ city: req.query.city, pincode: req.query.pincode }));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Best destination + "from" price for a batch of labels (home tiles and other
+// entry points that carry a title rather than a catalogue id).
+catalogRouter.post('/search/resolve', quoteRateLimit, validate(resolveLabelsSchema), async (req, res, next) => {
+  try {
+    ok(res, await resolveLabels(req.body.labels, req.body.location || {}));
+  } catch (err) {
+    next(err);
+  }
+});
+
 catalogRouter.post('/quote', quoteRateLimit, optionalAuth, validate(quoteSchema), async (req, res, next) => {
   try {
     const quote = await buildQuote(req.body, { userId: req.user?.id || null });
@@ -132,21 +168,6 @@ catalogRouter.post('/quote', quoteRateLimit, optionalAuth, validate(quoteSchema)
     next(err);
   }
 });
-
-// Admin view — every product type/service (including inactive), each with its
-// real id, for the catalog console's edit/delete actions.
-catalogRouter.get(
-  '/categories/:key/admin',
-  requireAdmin,
-  validate(categoryKeyParamSchema, 'params'),
-  async (req, res, next) => {
-    try {
-      ok(res, await catalogService.getCategoryForAdmin(req.params.key));
-    } catch (err) {
-      next(err);
-    }
-  },
-);
 
 // Admin-editable (Phase 4 exit criterion) — a full CMS with brand-scoped/finer
 // permissions lands in Phase 8; a super_admin role gate is enough for now.
@@ -172,86 +193,3 @@ catalogRouter.put(
   },
 );
 
-catalogRouter.post(
-  '/categories/:key/product-types',
-  requireAdmin,
-  validate(categoryKeyParamSchema, 'params'),
-  validate(addProductTypeSchema),
-  async (req, res, next) => {
-    try {
-      created(res, await catalogService.addProductType(req.params.key, req.body));
-    } catch (err) {
-      next(err);
-    }
-  },
-);
-
-catalogRouter.put(
-  '/categories/:key/product-types/:productTypeId',
-  requireAdmin,
-  validate(productTypeIdParamSchema, 'params'),
-  validate(updateProductTypeSchema),
-  async (req, res, next) => {
-    try {
-      ok(res, await catalogService.updateProductType(req.params.key, req.params.productTypeId, req.body));
-    } catch (err) {
-      next(err);
-    }
-  },
-);
-
-catalogRouter.delete(
-  '/categories/:key/product-types/:productTypeId',
-  requireAdmin,
-  validate(productTypeIdParamSchema, 'params'),
-  async (req, res, next) => {
-    try {
-      await catalogService.deleteProductType(req.params.key, req.params.productTypeId);
-      ok(res, { deleted: true });
-    } catch (err) {
-      next(err);
-    }
-  },
-);
-
-catalogRouter.post(
-  '/categories/:key/services',
-  requireAdmin,
-  validate(categoryKeyParamSchema, 'params'),
-  validate(addServiceItemSchema),
-  async (req, res, next) => {
-    try {
-      created(res, await catalogService.addServiceItem(req.params.key, req.body));
-    } catch (err) {
-      next(err);
-    }
-  },
-);
-
-catalogRouter.put(
-  '/categories/:key/services/:serviceItemId',
-  requireAdmin,
-  validate(serviceItemIdParamSchema, 'params'),
-  validate(updateServiceItemSchema),
-  async (req, res, next) => {
-    try {
-      ok(res, await catalogService.updateServiceItem(req.params.key, req.params.serviceItemId, req.body));
-    } catch (err) {
-      next(err);
-    }
-  },
-);
-
-catalogRouter.delete(
-  '/categories/:key/services/:serviceItemId',
-  requireAdmin,
-  validate(serviceItemIdParamSchema, 'params'),
-  async (req, res, next) => {
-    try {
-      await catalogService.deleteServiceItem(req.params.key, req.params.serviceItemId);
-      ok(res, { deleted: true });
-    } catch (err) {
-      next(err);
-    }
-  },
-);

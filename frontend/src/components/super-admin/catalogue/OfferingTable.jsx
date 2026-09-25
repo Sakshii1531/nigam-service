@@ -109,6 +109,11 @@ export default function OfferingTable({ rows, loading, filters, onFilters, focus
                         <span className="flex items-center gap-1.5 mt-0.5">
                           <code className="text-[10px] font-bold text-[#0D47A1]">{row.code}</code>
                           {row.needsRateReview && <DemoBadge />}
+                          {row.localRateCount > 0 && (
+                            <span title={`${row.localRateCount} city / pincode price(s)`} className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-black bg-purple-50 text-purple-700">
+                              📍 {row.localRateCount}
+                            </span>
+                          )}
                           {row.express.enabled && <span className="text-[9px] font-black uppercase text-purple-700 bg-purple-50 px-1 rounded">Express</span>}
                         </span>
                       </button>

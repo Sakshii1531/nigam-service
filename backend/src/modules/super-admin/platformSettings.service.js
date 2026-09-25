@@ -39,7 +39,6 @@ const EDITABLE_FIELDS = [
   'coinConversionRate',
   'referralBonusAmount',
   'refereeDiscountPercent',
-  'serviceProviderCommissionPercent',
   'bookingAdvancePercent',
   'visitFeeAmount',
   'defaultSparePartMarkupPercent',

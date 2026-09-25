@@ -121,7 +121,7 @@ export const MASTER_CATALOGUE_SEED = [
   // ─── TV ────────────────────────────────────────────────────────────────
   {
     key: 'TV',
-    keywords: ['television', 'led', 'smart tv', 'wall mount'],
+    keywords: ['television', 'led', 'smart tv', 'wall mount', 'tv installation'],
     productTypes: [
       {
         slug: 'led', name: 'LED TV', icon: '📺', desc: 'Standard LED/LCD flat screen',

@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { applyStandardPlugins } from '../shared/plugins.js';
+import { watchCatalogueWrites } from './catalogCache.js';
 
 // One size / capacity / configuration value: "1.5 Ton" under Split AC,
 // "55–65 inch" under LED TV, or — for a standalone service — an option such as
@@ -35,5 +36,7 @@ variantSchema.index(
 );
 
 applyStandardPlugins(variantSchema);
+// Writes drop the cached customer category trees (catalogCache.js).
+variantSchema.plugin(watchCatalogueWrites);
 
 export const Variant = mongoose.models.Variant || mongoose.model('Variant', variantSchema);

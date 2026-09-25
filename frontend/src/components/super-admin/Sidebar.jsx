@@ -328,12 +328,6 @@ const Sidebar = () => {
     },
     {
       type: "link",
-      label: "Services Customization",
-      path: "/super-admin/customer-app-customization?tab=services",
-      icon: <Wrench size={18} />,
-    },
-    {
-      type: "link",
       label: "Brands & Offers",
       path: "/super-admin/customer-app-customization?tab=brands",
       icon: <Building size={18} />,
@@ -418,7 +412,7 @@ const Sidebar = () => {
     },
     {
       type: "link",
-      label: "Partner Commission",
+      label: "Payouts & Advance",
       path: "/super-admin/settings?tab=commission",
       icon: <Coins size={18} />,
     },
@@ -434,8 +428,14 @@ const Sidebar = () => {
     },
     {
       type: "link",
-      label: "Membership Plans",
-      path: "/super-admin/loyalty-program?tab=membership",
+      label: "AMC Plans",
+      path: "/super-admin/plans?tab=amc",
+      icon: <Award size={18} />,
+    },
+    {
+      type: "link",
+      label: "Warranty Packs",
+      path: "/super-admin/plans?tab=warranty",
       icon: <Award size={18} />,
     },
     {

@@ -13,6 +13,10 @@ import Footer from "../components/layout/Footer";
 import CustomerBottomNav from "../components/CustomerBottomNav";
 import { useNotifications } from "../context/NotificationContext";
 import { useLocationContext } from "../context/LocationContext";
+import { useCatalogueSearch } from "../lib/useCatalogueSearch";
+import CatalogueSearchResults from "../components/common/CatalogueSearchResults";
+import SearchSuggestions from "../components/common/SearchSuggestions";
+import { formatRupees, resolveLabels } from "../lib/catalogueApi";
 import { useAuth } from "../context/AuthContext";
 import { apiRequest } from "../lib/apiClient";
 import acBanner from "../assets/ac_service_banner.png";
@@ -614,13 +618,17 @@ const getCategoryIcon = (categoryName = "") => {
 const Dashboard = ({ defaultType }) => {
   const { unreadCount } = useNotifications();
   const { currentLocation, openLocationModal } = useLocationContext();
+  const [searchText, setSearchText] = useState("");
+  const [searchFocused, setSearchFocused] = useState(false);
+  const { results: searchResults, loading: searchLoading } = useCatalogueSearch(searchText, {
+    city: currentLocation?.city,
+  });
   const { user } = useAuth();
   const navigate = useNavigate();
   const bannerRef = useRef(null);
   const [activeType, setActiveType] = useState(defaultType || "non-warranty"); // 'non-warranty' or 'in-warranty'
   const [cmsBanners, setCmsBanners] = useState(null);
   const [cmsTiles, setCmsTiles] = useState(null);
-  const [configuredServices, setConfiguredServices] = useState([]);
   const [serviceCategories, setServiceCategories] = useState([]);
 
   useEffect(() => {
@@ -704,21 +712,6 @@ const Dashboard = ({ defaultType }) => {
     return unique.length ? unique : raw;
   })();
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const data = await apiRequest("/cms/service-pages");
-        if (!cancelled)
-          setConfiguredServices((data || []).map((c) => c.serviceKey));
-      } catch {
-        if (!cancelled) setConfiguredServices([]);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -735,7 +728,6 @@ const Dashboard = ({ defaultType }) => {
     };
   }, []);
 
-  const hasServicePage = (title) => configuredServices.includes(title);
 
   useEffect(() => {
     let cancelled = false;
@@ -779,56 +771,48 @@ const Dashboard = ({ defaultType }) => {
         id: 1,
         title: "Foam-jet AC service",
         image: mostBookedAc1,
-        price: 649,
         badge: "Instant",
       },
       {
         id: 2,
         title: "AC repair",
         image: mostBookedAc2,
-        price: 299,
         badge: "Instant",
       },
       {
         id: 3,
         title: "Washing Machine",
         image: mostBookedWm,
-        price: 499,
         badge: "Instant",
       },
       {
         id: 4,
         title: "Home Cleaning",
         image: mostBookedCleaning,
-        price: 999,
         badge: "Trending",
       },
       {
         id: 5,
         title: "Women Salon",
         image: mostBookedSalon,
-        price: 799,
         badge: "Best Seller",
       },
       {
         id: 6,
         title: "Refrigerator Repair",
         image: applianceFridge,
-        price: 899,
         badge: "Popular",
       },
       {
         id: 7,
         title: "Electrician Service",
         image: electricianImg,
-        price: 199,
         badge: "Instant",
       },
       {
         id: 8,
         title: "Plumbing Checkup",
         image: plumberImg,
-        price: 199,
         badge: "Instant",
       },
     ],
@@ -840,7 +824,6 @@ const Dashboard = ({ defaultType }) => {
         image: t.imageUrl || fallback,
         fallbackImage: fallback,
         rating: t.rating,
-        price: t.price,
         badge: t.badge,
       };
     },
@@ -853,31 +836,24 @@ const Dashboard = ({ defaultType }) => {
         id: 1,
         title: "Foam-jet AC service",
         image: mostBookedAc1,
-        price: 649,
         badge: "Instant",
-        path: "/booking",
       },
       {
         id: 2,
         title: "AC repair",
         image: mostBookedAc2,
-        price: 299,
         badge: "Instant",
-        path: "/booking",
       },
       {
         id: 3,
         title: "Washing Machine",
         image: mostBookedWm,
-        price: 499,
         badge: "Instant",
-        path: "/booking",
       },
       {
         id: 4,
         title: "Refrigerator Repair & Service",
         image: applianceFridge,
-        price: 899,
         badge: "Instant",
         path: "/refrigerator-details",
       },
@@ -885,33 +861,25 @@ const Dashboard = ({ defaultType }) => {
         id: 5,
         title: "Deep Clean AC",
         image: mostBookedAc1,
-        price: 1198,
         badge: "2 ACs",
-        path: "/booking",
       },
       {
         id: 6,
         title: "WM Checkup",
         image: mostBookedWm,
-        price: 199,
         badge: "Instant",
-        path: "/booking",
       },
       {
         id: 7,
         title: "Electrician Service",
         image: electricianImg,
-        price: 199,
         badge: "Instant",
-        path: "/booking",
       },
       {
         id: 8,
         title: "Plumbing Checkup",
         image: plumberImg,
-        price: 199,
         badge: "Instant",
-        path: "/booking",
       },
     ],
     (t) => {
@@ -922,12 +890,66 @@ const Dashboard = ({ defaultType }) => {
         image: t.imageUrl || fallback,
         fallbackImage: fallback,
         rating: t.rating,
-        price: t.price,
         badge: t.badge,
-        path: t.link || "/booking",
+        path: t.link || "",
       };
     },
   );
+
+  // Spare parts strip: store products in the "Spare Parts" category
+  // (Super Admin → Products) — no price lives in this file.
+  const [spareParts, setSpareParts] = useState([]);
+  useEffect(() => {
+    let alive = true;
+    apiRequest("/products?category=Spare%20Parts&limit=10")
+      .then((res) => alive && setSpareParts(Array.isArray(res) ? res : []))
+      .catch(() => alive && setSpareParts([]));
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const partArt = (name = "") => {
+    const n = name.toLowerCase();
+    if (n.includes("pre-filter") || n.includes("prefilter")) return roPreFilterImg;
+    if (n.includes("membrane")) return roMembraneImg;
+    if (n.includes("sediment")) return roSedimentImg;
+    if (n.includes("post")) return roPostCarbonImg;
+    if (n.includes("carbon")) return roCarbonImg;
+    return roPreFilterImg;
+  };
+
+  // Tile titles are free text (CMS-editable); the catalogue decides where
+  // each one books and its "from" price. A title nothing bookable matches
+  // shows no price and opens the services list — never a made-up price.
+  const tileLabels = [
+    ...new Set([...mostBookedServices, ...applianceServices].map((t) => t.title).filter(Boolean)),
+  ];
+  const tileLabelsKey = JSON.stringify(tileLabels);
+  const tileCity = currentLocation?.city || "";
+  const [tileMatches, setTileMatches] = useState({});
+  useEffect(() => {
+    const labels = JSON.parse(tileLabelsKey);
+    if (!labels.length) return undefined;
+    let alive = true;
+    resolveLabels(labels, { city: tileCity || undefined })
+      .then((rows) => {
+        if (alive) setTileMatches(Object.fromEntries(rows.map((r) => [r.label, r.match])));
+      })
+      .catch(() => alive && setTileMatches({}));
+    return () => {
+      alive = false;
+    };
+  }, [tileLabelsKey, tileCity]);
+  const tileMatch = (title) => tileMatches[title] || null;
+  const tilePrice = (title) => {
+    const match = tileMatch(title);
+    return match?.fromPrice != null ? `from ${formatRupees(match.fromPrice)}` : "";
+  };
+  // An explicit tile link (CMS "link", e.g. /refrigerator-details) wins.
+  const tileDestination = (tile) =>
+    (tile.path && tile.path !== "/booking" && !tile.path.startsWith("/booking?") ? tile.path : null) ||
+    tileMatch(tile.title)?.deepLink ||
+    "/services";
 
   useEffect(() => {
     if (defaultType === "in-warranty") {
@@ -997,22 +1019,6 @@ const Dashboard = ({ defaultType }) => {
     };
   }, []);
 
-  const services = tilesFor(
-    "dashboard-service",
-    [
-      { id: 1, name: "AC Repair", img: acImg },
-      { id: 2, name: "Washing Machine", img: wasingImg },
-      { id: 3, name: "Electrician", img: electricianImg },
-      { id: 4, name: "Plumber", img: plumberImg },
-      { id: 5, name: "Full Home Cleaning", img: cleaningImg },
-      { id: 6, name: "Salon for Women", img: saloonImg },
-      { id: 7, name: "Spa & Massage", img: spaImg },
-    ],
-    (t) => {
-      const fallback = getServiceFallbackImage(t.title);
-      return { id: t.id, name: t.title, img: t.imageUrl || fallback, fallbackImage: fallback };
-    },
-  );
   const displayServiceCategories =
     serviceCategories.length > 0
       ? serviceCategories.map((c) => ({
@@ -1159,9 +1165,10 @@ const Dashboard = ({ defaultType }) => {
                     return;
                   }
                   setShowWarrantyModal(false);
-                  navigate(
-                    `/booking?service=${encodeURIComponent(selectedServiceForWarranty.title)}&price=0&warranty=true`,
-                  );
+                  // Coverage is checked by the booking itself (brand + the
+                  // customer's registered warranty) — the price there shows ₹0
+                  // when it applies.
+                  navigate(selectedServiceForWarranty.destination);
                 }}
                 className="flex-1 bg-brand-yellow text-brand-blue font-bold py-2 rounded-xl hover:bg-yellow-400 transition-colors text-sm">
                 Verify & Proceed
@@ -1169,9 +1176,7 @@ const Dashboard = ({ defaultType }) => {
               <button
                 onClick={() => {
                   setShowWarrantyModal(false);
-                  navigate(
-                    `/booking?service=${encodeURIComponent(selectedServiceForWarranty.title)}&price=${selectedServiceForWarranty.price}`,
-                  );
+                  navigate(selectedServiceForWarranty.destination);
                 }}
                 className="flex-1 bg-slate-100 text-text-primary font-semibold py-2 rounded-xl hover:bg-slate-200 transition-colors text-sm">
                 Skip / No Warranty
@@ -1310,10 +1315,31 @@ const Dashboard = ({ defaultType }) => {
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-text-secondary" />
             <input
-              type="text"
+              type="search"
+              aria-label="Search for services"
               placeholder="Search for services (AC, Geyser...)"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              onKeyDown={(e) => e.key === "Escape" && setSearchText("")}
+              onFocus={() => setSearchFocused(true)}
+              onBlur={() => setSearchFocused(false)}
               className="w-full pl-12 pr-4 py-1.5 bg-slate-50 border border-border-color rounded-2xl focus:border-brand-blue focus:ring-1 focus:ring-brand-blue outline-none transition-all text-sm"
             />
+            {searchFocused && searchText.trim().length < 2 && (
+              <SearchSuggestions
+                onPick={() => setSearchFocused(false)}
+                className="absolute left-0 right-0 top-full mt-1.5 z-40 shadow-lg"
+              />
+            )}
+            {searchText.trim().length >= 2 && (
+              <CatalogueSearchResults
+                query={searchText}
+                results={searchResults}
+                loading={searchLoading}
+                onPick={() => setSearchText("")}
+                className="absolute left-0 right-0 top-full mt-1.5 z-40 shadow-lg max-h-[60vh] overflow-y-auto"
+              />
+            )}
           </div>
           {/* Horizontal Categories — scroll on mobile, grid on desktop */}
           <div className="flex overflow-x-auto gap-3 mt-2 pb-1.5 snap-x no-scrollbar md:grid md:grid-cols-8 xl:grid-cols-10 md:overflow-visible md:pb-0">
@@ -1417,7 +1443,7 @@ const Dashboard = ({ defaultType }) => {
                     if (activeType === "in-warranty") {
                       setSelectedServiceForWarranty({
                         title: cat.name,
-                        price: 499,
+                        destination: `/book/${encodeURIComponent(cat.key || cat.name)}`,
                       });
                       setShowWarrantyModal(true);
                       return;
@@ -1608,17 +1634,10 @@ const Dashboard = ({ defaultType }) => {
                 key={service.id}
                 onClick={() => {
                   if (activeType === "in-warranty") {
-                    setSelectedServiceForWarranty(service);
+                    setSelectedServiceForWarranty({ title: service.title, destination: tileDestination(service) });
                     setShowWarrantyModal(true);
                   } else {
-                    // Check if there is a custom catalog config saved for this exact title
-                    if (hasServicePage(service.title)) {
-                      navigate(`/book/${encodeURIComponent(service.title)}`);
-                    } else {
-                      navigate(
-                        `/booking?service=${encodeURIComponent(service.title)}&price=${service.price}`,
-                      );
-                    }
+                    navigate(tileDestination(service));
                   }
                 }}
                 className="flex flex-col gap-1.5 sm:gap-2 cursor-pointer shrink-0 w-32.5 min-[360px]:w-36.25 sm:w-44 snap-start md:w-auto md:flex-shrink border border-border-color rounded-2xl p-2 min-[360px]:p-2.5 md:p-4 bg-white hover:border-brand-blue hover:shadow-md transition-all">
@@ -1653,7 +1672,7 @@ const Dashboard = ({ defaultType }) => {
                     className={`text-xs min-[360px]:text-sm md:text-base font-bold md:font-extrabold ${activeType === "in-warranty" ? "text-green-600" : "text-[#0B4EA2]"}`}>
                     {activeType === "in-warranty"
                       ? "₹0 (Warranty)"
-                      : `₹${service.price}`}
+                      : tilePrice(service.title)}
                   </span>
                 </div>
               </div>
@@ -1678,39 +1697,11 @@ const Dashboard = ({ defaultType }) => {
               <div
                 key={service.id}
                 onClick={() => {
-                  const titleNorm = service.title.toLowerCase();
-                  const isAC = titleNorm.includes("ac");
-                  const isWM =
-                    titleNorm.includes("washing") || titleNorm.includes("wm");
-                  const isFridge =
-                    titleNorm.includes("refrigerator") ||
-                    titleNorm.includes("fridge");
-
-                  // Check if there is a custom catalog config saved for this exact title
-                  if (hasServicePage(service.title)) {
-                    navigate(`/book/${encodeURIComponent(service.title)}`);
-                  } else if (
-                    service.path &&
-                    service.path !== "/booking" &&
-                    service.path !== "/book/AC" &&
-                    service.path !== "/book/Washing Machine" &&
-                    service.path !== "/book/Refrigerator"
-                  ) {
-                    navigate(service.path);
-                  } else if (isAC) {
-                    navigate("/book/AC");
-                  } else if (isWM) {
-                    navigate("/book/Washing Machine");
-                  } else if (isFridge) {
-                    navigate("/book/Refrigerator");
-                  } else if (activeType === "in-warranty") {
-                    setSelectedServiceForWarranty(service);
+                  if (activeType === "in-warranty") {
+                    setSelectedServiceForWarranty({ title: service.title, destination: tileDestination(service) });
                     setShowWarrantyModal(true);
                   } else {
-                    navigate(
-                      service.path ||
-                        `/booking?service=${encodeURIComponent(service.title)}&price=${service.price}`,
-                    );
+                    navigate(tileDestination(service));
                   }
                 }}
                 className="flex flex-col gap-1.5 sm:gap-2 cursor-pointer shrink-0 w-32.5 min-[360px]:w-36.25 sm:w-44 snap-start md:w-auto md:flex-shrink border border-border-color rounded-2xl p-2 min-[360px]:p-2.5 md:p-4 bg-white hover:border-brand-blue hover:shadow-md transition-all">
@@ -1745,7 +1736,7 @@ const Dashboard = ({ defaultType }) => {
                     className={`text-xs min-[360px]:text-sm md:text-base font-bold md:font-extrabold ${activeType === "in-warranty" ? "text-green-600" : "text-[#0B4EA2]"}`}>
                     {activeType === "in-warranty"
                       ? "₹0 (Warranty)"
-                      : `₹${service.price}`}
+                      : tilePrice(service.title)}
                   </span>
                 </div>
               </div>
@@ -1766,48 +1757,14 @@ const Dashboard = ({ defaultType }) => {
             </button>
           </div>
           <div className="flex gap-2.5 sm:gap-4 overflow-x-auto pb-3 sm:pb-4 -mx-1 px-1 sm:-mx-2 sm:px-2 snap-x no-scrollbar md:grid md:grid-cols-5 xl:grid-cols-5 md:gap-5 md:overflow-visible md:mx-0 md:px-0 md:pb-0">
-            {[
-              {
-                id: 1,
-                title: "Pre-Filter Candle",
-                desc: "RO Outer Candle",
-                price: 199,
-                image: roPreFilterImg,
-                badge: "Genuine",
-              },
-              {
-                id: 2,
-                title: "RO Membrane",
-                desc: "High TDS Membrane",
-                price: 899,
-                image: roMembraneImg,
-                badge: "Best Seller",
-              },
-              {
-                id: 3,
-                title: "Sediment Filter",
-                desc: "RO Inner Filter",
-                price: 249,
-                image: roSedimentImg,
-                badge: "Genuine",
-              },
-              {
-                id: 4,
-                title: "Carbon Filter",
-                desc: "Active Carbon",
-                price: 299,
-                image: roCarbonImg,
-                badge: "Trending",
-              },
-              {
-                id: 5,
-                title: "Post Carbon Filter",
-                desc: "Taste Enhancer",
-                price: 249,
-                image: roPostCarbonImg,
-                badge: "Genuine",
-              },
-            ].map((item) => (
+            {spareParts.map((p) => ({
+              id: p.id,
+              title: p.name,
+              desc: (p.specs || [])[0] || "",
+              price: Number(p.price).toLocaleString("en-IN"),
+              image: p.imageUrl || p.images?.[0] || partArt(p.name),
+              badge: (p.benefits || [])[0] || "Genuine",
+            })).map((item) => (
               <div
                 key={item.id}
                 onClick={() => navigate("/buy-product")}

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import { apiRequest } from '../../lib/apiClient';
@@ -17,8 +17,6 @@ import {
   RotateCcw,
   Loader2,
   BadgePercent,
-  Calculator,
-  Info,
 } from 'lucide-react';
 
 // Which settings fields each tab owns. Save sends only the active tab's fields
@@ -28,7 +26,7 @@ const TAB_FIELDS = {
   Notifications: ['emailNotifications', 'smsNotifications', 'pushNotifications'],
   Security: ['twoFactorEnabled'],
   Payment: ['razorpayKeyId'],
-  Commission: ['serviceProviderCommissionPercent', 'bookingAdvancePercent', 'visitFeeAmount'],
+  Commission: ['bookingAdvancePercent', 'visitFeeAmount'],
   Tax: ['defaultGstPercent'],
 };
 
@@ -76,10 +74,8 @@ const Settings = () => {
   const [twoFactor, setTwoFactor] = useState(false);
 
   // Commission & Payouts states
-  const [commissionPercent, setCommissionPercent] = useState('30');
   const [advancePercent, setAdvancePercent] = useState('20');
   const [visitFee, setVisitFee] = useState('150');
-  const [simulatedBookingPrice, setSimulatedBookingPrice] = useState('299');
 
   // Notifications toggles
   const [emailNotif, setEmailNotif] = useState(true);
@@ -106,7 +102,6 @@ const Settings = () => {
         setRazorpayKey(s.razorpayKeyId || '');
         setDefaultGst(String(s.defaultGstPercent ?? 18));
         setTwoFactor(!!s.twoFactorEnabled);
-        setCommissionPercent(String(s.serviceProviderCommissionPercent ?? 30));
         setAdvancePercent(String(s.bookingAdvancePercent ?? 20));
         setVisitFee(String(s.visitFeeAmount ?? 150));
         setEmailNotif(s.emailNotifications !== false);
@@ -198,7 +193,6 @@ const Settings = () => {
       pushNotifications: pushNotif,
       twoFactorEnabled: twoFactor,
       razorpayKeyId: razorpayKey,
-      serviceProviderCommissionPercent: Number(commissionPercent),
       bookingAdvancePercent: Number(advancePercent),
       visitFeeAmount: Number(visitFee),
       defaultGstPercent: Number(defaultGst),
@@ -208,11 +202,6 @@ const Settings = () => {
     for (const field of TAB_FIELDS[activeTab] || []) body[field] = all[field];
 
     if (activeTab === 'Commission') {
-      const comm = Number(commissionPercent);
-      if (!Number.isFinite(comm) || comm < 0 || comm > 100) {
-        showToast('Service provider commission must be between 0% and 100%.');
-        return;
-      }
       const adv = Number(advancePercent);
       if (!Number.isFinite(adv) || adv < 0 || adv > 100) {
         showToast('Booking advance percentage must be between 0% and 100%.');
@@ -525,136 +514,21 @@ const Settings = () => {
               {activeTab === 'Commission' && (
                 <div className="space-y-6 max-w-3xl text-left">
                   <div>
-                    <h3 className="font-bold text-[#1E293B] text-base">Service Provider Commission & Payouts</h3>
+                    <h3 className="font-bold text-[#1E293B] text-base">Payouts & Advance</h3>
                     <p className="text-xs text-slate-500 mt-1">
-                      Control the commission percentage earned by service providers on direct customer bookings, cancellation visit fees, and advance payment ratios.
+                      Cancellation visit fees and the advance-payment ratio. Partner earnings per service are set in the Master Catalogue.
                     </p>
                   </div>
 
-                  {/* Commission Rate Card */}
-                  <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 shadow-xs space-y-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <label className="text-sm font-bold text-slate-800 block">
-                          Service Provider Commission Rate (%)
-                        </label>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                          The percentage of the customer's total service payment paid to the service provider upon job completion. The remaining balance represents platform commission.
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-1.5 bg-blue-50 text-[#0D47A1] font-black text-sm px-3 py-1.5 rounded-xl border border-blue-200 shrink-0">
-                        <span>{commissionPercent || '0'}%</span>
-                        <span className="text-[10px] font-semibold text-blue-600">Earnings Share</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <div className="relative flex-1">
-                        <input
-                          type="number"
-                          min="0"
-                          max="100"
-                          step="1"
-                          className="w-full border border-[#E2E8F0] rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#0D47A1] text-slate-800 bg-[#F8FAFC] font-semibold"
-                          value={commissionPercent}
-                          onChange={(e) => setCommissionPercent(e.target.value)}
-                          placeholder="e.g. 30"
-                        />
-                        <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400 pointer-events-none">
-                          %
-                        </span>
-                      </div>
-
-                      {/* Quick Presets */}
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        {['20', '30', '40', '50', '70'].map((preset) => (
-                          <button
-                            key={preset}
-                            type="button"
-                            onClick={() => setCommissionPercent(preset)}
-                            className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                              commissionPercent === preset
-                                ? 'bg-[#0D47A1] text-white shadow-xs'
-                                : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                            }`}
-                          >
-                            {preset}%{preset === '30' ? ' (Default)' : ''}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+                  {/* Partner payouts are fixed per offering (docs/master-catalogue) — no percentage. */}
+                  <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 text-xs text-slate-700 leading-relaxed">
+                    <b className="text-[#0D47A1]">Partner payouts are fixed per service.</b> Each offering in the{' '}
+                    <Link to="/super-admin/service-catalog" className="font-bold underline text-[#0D47A1]">
+                      Master Catalogue
+                    </Link>{' '}
+                    carries its own partner payout (and express incentive), so a price change never changes what the partner earns.
+                    NCC&apos;s margin per service is in <b>Revenue → Service Margin</b>.
                   </div>
-
-                  {/* Interactive Live Breakdown Card */}
-                  {(() => {
-                    const comm = Math.min(100, Math.max(0, Number(commissionPercent) || 0));
-                    const testAmt = Math.max(0, Number(simulatedBookingPrice) || 0);
-                    const providerEarnings = Math.round(testAmt * (comm / 100));
-                    const platformFee = Math.max(0, testAmt - providerEarnings);
-                    return (
-                      <div className="bg-linear-to-br from-[#072C63] to-[#0D47A1] text-white p-5 rounded-2xl shadow-md border border-white/10 space-y-4">
-                        <div className="flex items-center justify-between flex-wrap gap-2">
-                          <div className="flex items-center gap-2">
-                            <Calculator className="h-4 w-4 text-amber-400" />
-                            <h4 className="font-extrabold text-sm tracking-wide text-white">
-                              Live Earnings Preview Simulator
-                            </h4>
-                          </div>
-                          <div className="flex items-center gap-2 text-xs">
-                            <span className="text-blue-200 font-medium">Test Booking Amount:</span>
-                            <div className="relative">
-                              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-300">₹</span>
-                              <input
-                                type="number"
-                                min="0"
-                                value={simulatedBookingPrice}
-                                onChange={(e) => setSimulatedBookingPrice(e.target.value)}
-                                className="w-24 bg-white/10 border border-white/20 rounded-lg pl-6 pr-2 py-1 text-xs text-white font-bold outline-none focus:bg-white/20"
-                              />
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                          <div className="bg-white/10 backdrop-blur-xs border border-white/10 rounded-xl p-3 text-left">
-                            <span className="text-[11px] text-blue-200 block font-medium">Customer Pays</span>
-                            <span className="text-xl font-extrabold text-white mt-0.5 block">
-                              ₹{testAmt.toLocaleString('en-IN')}
-                            </span>
-                            <span className="text-[10px] text-blue-300 font-semibold mt-1 block">100% Gross Subtotal</span>
-                          </div>
-
-                          <div className="bg-amber-400/15 border border-amber-400/30 rounded-xl p-3 text-left">
-                            <span className="text-[11px] text-amber-200 block font-medium">Service Provider Earns</span>
-                            <span className="text-xl font-black text-amber-300 mt-0.5 block">
-                              ₹{providerEarnings.toLocaleString('en-IN')}
-                            </span>
-                            <span className="text-[10px] text-amber-200/90 font-semibold mt-1 block">
-                              {comm}% Provider Earnings Share
-                            </span>
-                          </div>
-
-                          <div className="bg-emerald-400/15 border border-emerald-400/30 rounded-xl p-3 text-left">
-                            <span className="text-[11px] text-emerald-200 block font-medium">Platform Retains</span>
-                            <span className="text-xl font-black text-emerald-300 mt-0.5 block">
-                              ₹{platformFee.toLocaleString('en-IN')}
-                            </span>
-                            <span className="text-[10px] text-emerald-200/90 font-semibold mt-1 block">
-                              {100 - comm}% Platform Commission Margin
-                            </span>
-                          </div>
-                        </div>
-
-                        <p className="text-[11px] text-blue-200 flex items-center gap-1.5">
-                          <Info className="h-3.5 w-3.5 shrink-0 text-amber-400" />
-                          <span>
-                            When a customer books a <strong>₹{testAmt || 299} service</strong>, the service provider pop-up displays{' '}
-                            <strong>Customer pays ₹{testAmt || 299}</strong> and <strong>You earn ₹{providerEarnings}</strong>.
-                          </span>
-                        </p>
-                      </div>
-                    );
-                  })()}
 
                   {/* Additional Payout & Visit Parameters */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

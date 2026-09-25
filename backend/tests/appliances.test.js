@@ -17,10 +17,7 @@ import { Booking } from '../src/modules/booking/booking.model.js';
 import { Payment } from '../src/modules/payments-wallet/payment.model.js';
 import { Category } from '../src/modules/catalog/category.model.js';
 import { ProductType } from '../src/modules/catalog/productType.model.js';
-import { ServiceCatalogItem } from '../src/modules/catalog/serviceCatalogItem.model.js';
 import { ServiceRequest } from '../src/modules/service-requests/serviceRequest.model.js';
-import { Membership } from '../src/modules/rewards-loyalty/membership.model.js';
-import { UserMembership } from '../src/modules/rewards-loyalty/userMembership.model.js';
 import { signForTesting } from '../src/modules/payments-wallet/paymentGateway.js';
 import { Notification } from '../src/modules/notifications/notification.model.js';
 import { Order } from '../src/modules/buy-commerce/order.model.js';
@@ -99,10 +96,7 @@ beforeEach(async () => {
     Payment.deleteMany({}),
     Category.deleteMany({}),
     ProductType.deleteMany({}),
-    ServiceCatalogItem.deleteMany({}),
     ServiceRequest.deleteMany({}),
-    Membership.deleteMany({}),
-    UserMembership.deleteMany({}),
     Notification.deleteMany({}),
     Order.deleteMany({}),
     Product.deleteMany({}),
@@ -528,97 +522,6 @@ describe('booking advance is actually charged', () => {
   });
 });
 
-describe('memberships', () => {
-  it('prices from the catalogue and only activates once the signature verifies', async () => {
-    const { token } = await seedCustomer();
-    const auth = { Authorization: `Bearer ${token}` };
-    const plan = await Membership.create({ name: 'Gold Plan', price: 999, tierRank: 2, benefits: ['10% off'] });
-
-    const before = await request(app).get('/api/v1/memberships/me').set(auth).expect(200);
-    expect(before.body.data).toBeNull();
-
-    const purchase = await request(app)
-      .post('/api/v1/memberships/purchase')
-      .set(auth)
-      .send({ planId: plan.id, paymentMethod: 'UPI' })
-      .expect(201);
-
-    const { membership, razorpay } = purchase.body.data;
-    expect(membership.status).toBe('Pending Payment');
-    expect(membership.pricePaid).toBe(999);
-
-    // Unpaid means not a member.
-    const during = await request(app).get('/api/v1/memberships/me').set(auth).expect(200);
-    expect(during.body.data).toBeNull();
-
-    const signature = signForTesting({ orderId: razorpay.orderId, paymentId: 'pay_mem' });
-    await request(app)
-      .post(`/api/v1/memberships/${membership.id}/verify-payment`)
-      .set(auth)
-      .send({ razorpayPaymentId: 'pay_mem', razorpaySignature: signature })
-      .expect(200);
-
-    const after = await request(app).get('/api/v1/memberships/me').set(auth).expect(200);
-    expect(after.body.data.membership.name).toBe('Gold Plan');
-  });
-
-  it('refuses a second membership while one is active', async () => {
-    const { token } = await seedCustomer();
-    const auth = { Authorization: `Bearer ${token}` };
-    const plan = await Membership.create({ name: 'Silver Plan', price: 499, tierRank: 1 });
-
-    const purchase = await request(app).post('/api/v1/memberships/purchase').set(auth).send({ planId: plan.id }).expect(201);
-    const { membership, razorpay } = purchase.body.data;
-    await request(app)
-      .post(`/api/v1/memberships/${membership.id}/verify-payment`)
-      .set(auth)
-      .send({ razorpayPaymentId: 'p1', razorpaySignature: signForTesting({ orderId: razorpay.orderId, paymentId: 'p1' }) })
-      .expect(200);
-
-    await request(app).post('/api/v1/memberships/purchase').set(auth).send({ planId: plan.id }).expect(409);
-  });
-
-  it("refuses to verify another customer's membership", async () => {
-    const owner = await seedCustomer();
-    const attacker = await seedCustomer();
-    const plan = await Membership.create({ name: 'Gold Plan', price: 999, tierRank: 2 });
-
-    const purchase = await request(app)
-      .post('/api/v1/memberships/purchase')
-      .set('Authorization', `Bearer ${owner.token}`)
-      .send({ planId: plan.id })
-      .expect(201);
-
-    await request(app)
-      .post(`/api/v1/memberships/${purchase.body.data.membership.id}/verify-payment`)
-      .set('Authorization', `Bearer ${attacker.token}`)
-      .send({ razorpayPaymentId: 'p', razorpaySignature: 'x' })
-      .expect(403);
-  });
-
-  it('reports an expired membership as no longer active', async () => {
-    const { user, token } = await seedCustomer();
-    const plan = await Membership.create({ name: 'Gold Plan', price: 999, tierRank: 2 });
-    await UserMembership.create({
-      user: user._id,
-      membership: plan._id,
-      pricePaid: 999,
-      expiresAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
-      status: 'Active',
-    });
-
-    const res = await request(app).get('/api/v1/memberships/me').set('Authorization', `Bearer ${token}`).expect(200);
-    expect(res.body.data).toBeNull();
-  });
-
-  it('lists plans without authentication but requires it to buy', async () => {
-    await Membership.create({ name: 'Gold Plan', price: 999, tierRank: 2 });
-    const res = await request(app).get('/api/v1/memberships/plans').expect(200);
-    expect(res.body.data).toHaveLength(1);
-
-    await request(app).post('/api/v1/memberships/purchase').send({ planId: res.body.data[0].id }).expect(401);
-  });
-});
 
 describe('GET /notifications/:id', () => {
   it('returns the notification and does not shadow the literal routes beside it', async () => {

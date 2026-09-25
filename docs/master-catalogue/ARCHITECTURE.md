@@ -259,6 +259,27 @@ Steps 1–2 exist in code from Phase 2 but no UI writes CITY/PINCODE rows yet �
 switching location pricing on later needs only an admin screen, no model or
 engine change (Req 25).
 
+### Location pricing (Req 25) — built in Phase 10
+
+_The admin UI below is now built (phase-10-location-pricing-admin.md); this section is kept as the design record._
+
+#### Original notes
+
+**What already works** (proved by `backend/tests/locationPricing.test.js`):
+- `createRateVersion(offeringId, amounts, { scope: { type: 'CITY', value: 'Jaipur' } })` writes a CITY rate. Each (offering, scope) pair has its own version chain, and its first version needs all four amounts.
+- Quotes (`location.city` / `location.pincode`), the category tree (`?city=`), search, and bookings (from `address.city` / `address.pincode`) all use the most specific rate. City matching ignores case.
+- The booking snapshot records `rate.scope` ("CITY"), and the payout frozen on the job is the local payout.
+
+Example: Fan in Jaipur is ₹279 / ₹170. The Jaipur quote is ₹279 + 18 % = ₹329.22 and the payout is ₹170. Delhi gets the default ₹299 / ₹180. Pincode 302017 at ₹259 beats Jaipur's ₹279.
+
+**What's missing: the admin UI only (~2 days).**
+1. Add an optional `scope` to `changeRateSchema` (it is `.strict()` today) and pass it from `changeRate()` to `createRateVersion()`. That's a few lines; the writer already takes it. Then add a *Scope* selector (Default · City · Pincode + value) to `RateChangeModal`.
+2. In `RateHistoryPanel`, group versions by scope (the API already sorts by `scope.type`), and allow "End this override" (a version with `effectiveUntil`).
+3. In the offering table, show a "local rates" badge when an offering has non-DEFAULT rates.
+4. The scheduled-changes view, `catalogAdmin.service.js` around line 266, filters `scope.type: 'DEFAULT'`. Widen it.
+
+Nothing in the pricing engine, the models, the booking snapshot or the partner payout needs to change.
+
 **Future-dated change** (A9): admin sets `effectiveFrom = 2026-12-01`. Quotes and
 bookings created before that date use v1; after, v2. Bookings already created keep
 their snapshot forever.
@@ -311,10 +332,12 @@ customer-facing responses (§8).
 
 | Method & path | Purpose |
 |---|---|
-| `GET /catalog/categories` | Category list (existing, trimmed — no prices) |
-| `GET /catalog/categories/:key/tree?city=&pincode=` | Everything needed to render the booking flow for one category: product types → variants → services, **plus the list of bookable offerings** with their current customer price. Only active, available, serviceable, rated offerings appear |
+| `GET /catalog/categories` | Category list; each category's `services` / `productTypes` are the ones with an active offering (names only — no prices) |
+| `GET /catalog/categories/:key/tree?city=&pincode=` | Everything needed to render the booking flow for one category: product types → variants → services, **plus the list of bookable offerings** with their current customer price. Only active, available, serviceable, rated offerings appear. Cached in-process for 60 s per (category, city, pincode); any catalogue write drops the cache (`catalogCache.js`) |
 | `GET /catalog/offerings/:code?city=&pincode=` | One offering's full detail (description, included/excluded, instructions, requiredInfo, price) |
-| `GET /catalog/search?q=&city=` | Offering search (Phase 6) |
+| `GET /catalog/search?q=&city=&pincode=&limit=` | Offering search, grouped by (product type, service) with "from" price + deep link (Phase 6) |
+| `POST /catalog/search/resolve` `{ labels, location? }` | Best destination + "from" price for free-text labels — home tiles, old `/booking?service=` links (Phase 6) |
+| `GET /catalog/service-groups?city=&pincode=` | Every bookable service, grouped like search (the "all services" pages) |
 | `POST /catalog/quote` | Price a selection (below) |
 
 **`POST /catalog/quote`**
@@ -411,6 +434,15 @@ customer quote). Coins are redeemed at booking and refunded if creation fails.
 
 Gated by `requireRole(SUPER_ADMIN)`. Duplicate combination / code / slug → `409` naming the existing row.
 
+### Reports (`/api/v1/super-admin/reports`) — Phase 7
+
+| Method & path | Purpose |
+|---|---|
+| `GET …/margin?from=&to=&groupBy=category\|offering\|partner\|day&coverage=paid\|covered\|all` | NCC gross service margin over completed bookings (by `Booking.completedAt`, IST days): revenue ex-GST (booking + add-on taxable), discounts, express fees, partner payouts, margin, margin %; GST and spare parts beside revenue. Covered visits in their own section |
+
+Rate limits: `/catalog/quote`, `/catalog/search`, `/catalog/search/resolve` and
+`/catalog/service-groups` share a 120/min/IP limiter.
+
 ---
 
 ## 7. Price consistency contract
@@ -476,18 +508,22 @@ frontend/src/
   pages/super-admin/MasterCatalogue.jsx + components/super-admin/catalogue/*   (Phase 3)
 ```
 
-## 10. Old → new mapping (what gets deleted)
+## 10. Old → new mapping (what was deleted)
+
+All done. The Phase 7 grep gate over `backend/src` and `frontend/src` returns nothing:
+`ServiceCatalogItem | priceAddon | resolveBookedService | findProductTypeAddon | serviceProviderCommissionPercent | serviceProviderShare | BOOKING_CATALOG | bookingCatalog | advanceAmt = 199 | ?? 299 | || 299 | || 149`.
 
 | Old | Replaced by | Removed in |
 |---|---|---|
-| `ServiceCatalogItem` model + `findServiceItem()` | `CatalogService` + `ServiceOffering` | Phase 7 (unused after Phase 4) |
+| `ServiceCatalogItem` model, its admin routes (`/catalog/categories/:key/services`, `/product-types`, `/admin`), `catalogSeedData.js`, `seedCatalogOnly.js` | `CatalogService` + `ServiceOffering`; `categorySeedData.js` (category visuals only) | Phase 7 |
 | `ProductType.priceAddon` + `findProductTypeAddon()` | Per-combination offerings | Phase 4 |
 | `resolveBookedService()` 4-source fuzzy lookup | `quote.service.js` by offering id | Phase 4 |
 | `findCategoryOr404()` "any active category" fallback | Exact lookup, 404 otherwise | Phase 4 |
-| `ServicePageConfig.catalog[].price` (string) | `catalog[].offeringCode` → live price | Phase 6 |
-| `CategoryBookingConfig.services` | Offering tree API | Phase 6 |
-| `frontend/src/data/bookingCatalog.js` prices + `|| 299` | Tree API | Phase 4 (prices) / Phase 7 (file) |
-| `Booking.jsx` `?price=` path, `Payment.jsx` `state.price || 299`, `advanceAmt = 199` | Quote in `BookingContext` | Phase 4 / 6 |
-| `serviceProviderShare()` 30% for paid bookings | `booking.commercial.spPayoutTotal` | Phase 5 |
-| `PlatformSettings.serviceProviderCommissionPercent` | — | Phase 7 |
-| Super-admin `ServiceCatalog.jsx` | `MasterCatalogue.jsx` | Phase 3 |
+| `ServicePageConfig.catalog[].price`, `HomeTile.price` | Tile title resolved to the catalogue (`/catalog/search/resolve`) → live price | Phase 6 (unused) / Phase 7 (fields) |
+| `CategoryBookingConfig.services` | Offering tree API | Phase 6 (unused) / Phase 7 (field) |
+| `frontend/src/data/bookingCatalog.js` | Tree API | Phase 4 (prices) / Phase 7 (file) |
+| `Booking.jsx` `?price=` path, `Payment.jsx` `state.price \|\| 299`, `advanceAmt = 199` | Quote; `/booking` is now a label → catalogue redirect | Phase 4 / 6 |
+| `serviceProviderShare()` 30 % for paid bookings | `booking.commercial.spPayoutTotal` | Phase 5 (use) / Phase 7 (code) |
+| `PlatformSettings.serviceProviderCommissionPercent` + Settings commission editor/simulator | Per-offering payout in the Master Catalogue | Phase 7 |
+| Super-admin `ServiceCatalog.jsx` | `MasterCatalogue.jsx` | Phase 3 (route) / Phase 7 (file) |
+| CMS tile / package price inputs in `CustomerAppCustomization.jsx` | Catalogue price shown by the app | Phase 7 |

@@ -18,6 +18,7 @@ import {
   createOfferingSchema,
   updateOfferingSchema,
   changeRateSchema,
+  endRateScopeSchema,
   duplicateOfferingSchema,
   listOfferingsQuerySchema,
   rateChangesQuerySchema,
@@ -75,5 +76,6 @@ catalogAdminRouter.post('/offerings/:id/duplicate', byId, validate(duplicateOffe
 
 // Rates — the only way a price or payout changes
 catalogAdminRouter.post('/offerings/:id/rates', byId, validate(changeRateSchema), handle((req) => admin.changeRate(req.params.id, req.body, actor(req)), created));
+catalogAdminRouter.post('/offerings/:id/rates/end', byId, validate(endRateScopeSchema), handle((req) => admin.endLocalRate(req.params.id, req.body, actor(req))));
 catalogAdminRouter.get('/offerings/:id/rates', byId, handle((req) => admin.listRateHistory(req.params.id)));
 catalogAdminRouter.get('/rate-changes', validate(rateChangesQuerySchema, 'query'), handle((req) => admin.listRateChanges(req.query)));

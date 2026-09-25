@@ -63,12 +63,15 @@ test('dashboard shows real partner data instead of the old hardcoded score', asy
   await signIn(page, session);
   await page.goto('/service-provider/dashboard');
 
-  await expect(page.getByText(/Good (morning|afternoon|evening),/)).toBeVisible({ timeout: 15_000 });
-  await expect(page.getByText('No ratings yet')).toBeVisible();
+  await expect(page.getByRole('button', { name: /Online · Accepting jobs/ })).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText(/ELITE PARTNER/i)).toHaveCount(0);
-  await expect(page.getByText('New offers')).toBeVisible();
-  // Stats settle to real numbers rather than staying on loading dashes.
-  await expect(page.getByText('Done today').locator('xpath=preceding-sibling::p')).toHaveText('0', { timeout: 15_000 });
+  // Stats are real counts for a brand-new partner, not a made-up score.
+  await expect(page.getByRole('button', { name: '0 New offers' })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole('button', { name: '0 Done today' })).toBeVisible();
+
+  // The rating lives on the history page and says so honestly when there is none.
+  await page.goto('/service-provider/history');
+  await expect(page.getByText('No ratings yet')).toBeVisible({ timeout: 15_000 });
 });
 
 test('an online provider gets the job pop-up with real earnings, can accept it, and sees it in history', async ({ page, request }) => {
@@ -90,7 +93,10 @@ test('an online provider gets the job pop-up with real earnings, can accept it, 
   await expect(dialog.getByLabel(/seconds left to respond/)).toBeVisible();
 
   await dialog.getByRole('button', { name: /Accept job/i }).click();
-  await expect(page).toHaveURL(/\/service-provider\/active-job/, { timeout: 15_000 });
+  // Accepting keeps the partner on the dashboard and lists the job under Active Jobs.
+  await expect(dialog).toBeHidden({ timeout: 15_000 });
+  await expect(page.getByRole('button', { name: '1 Active jobs' })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole('button', { name: 'Start Job' })).toBeVisible();
 
   await page.goto('/service-provider/history');
   await expect(page.getByRole('heading', { name: 'Service History' })).toBeVisible({ timeout: 15_000 });

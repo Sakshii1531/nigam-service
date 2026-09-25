@@ -1,42 +1,62 @@
 import { useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { apiRequest } from "../lib/apiClient";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { getOffering, resolveLabels } from "../lib/catalogueApi";
 
-// The old single-page booking screen took its price from the URL
-// (`/booking?service=…&price=…`) and booked "category + service name" —
-// both retired by the Master Catalogue (docs/master-catalogue Phase 4): a
-// booking is now one catalogue offering, priced by the server.
+// Redirect-only routes into the catalogue booking flow (docs/master-catalogue
+// Phase 6). A booking is always one catalogue offering priced by the server,
+// so nothing here carries a price.
 //
-// Until every link that still points here is re-pointed at the catalogue
-// flow (Phase 6), this forwards to `/book/:category` when the service name
-// names a category ("AC Repair" → AC), otherwise to the services list.
-const Booking = () => {
-  const navigate = useNavigate();
-  const [params] = useSearchParams();
+//  /booking?service=AC%20Repair   old links (`&price=` is ignored) — the label
+//                                 is resolved like a home tile's title
+//  /book/o/:offeringCode          short link to one offering (CMS, share links)
 
-  useEffect(() => {
-    const service = (params.get("service") || "").toLowerCase().trim();
-    let alive = true;
-    apiRequest("/catalog/categories", { silentError: true })
-      .catch(() => [])
-      .then((categories) => {
-        if (!alive) return;
-        const match = (Array.isArray(categories) ? categories : [])
-          .filter((c) => service && (service.startsWith(c.key.toLowerCase()) || service.startsWith((c.name || "").toLowerCase())))
-          .sort((a, b) => b.key.length - a.key.length)[0];
-        navigate(match ? `/book/${encodeURIComponent(match.key)}` : "/services", { replace: true });
-      });
-    return () => {
-      alive = false;
-    };
-  }, [params, navigate]);
-
+function Redirecting() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-white gap-3">
       <div className="w-10 h-10 border-4 border-blue-200 border-t-brand-blue rounded-full animate-spin" />
       <p className="text-xs font-bold text-slate-500">Opening booking…</p>
     </div>
   );
+}
+
+const Booking = () => {
+  const navigate = useNavigate();
+  const [params] = useSearchParams();
+
+  useEffect(() => {
+    const service = (params.get("service") || "").trim();
+    let alive = true;
+    (service ? resolveLabels([service]) : Promise.resolve([]))
+      .catch(() => [])
+      .then(([result] = []) => {
+        if (alive) navigate(result?.match?.deepLink || "/services", { replace: true });
+      });
+    return () => {
+      alive = false;
+    };
+  }, [params, navigate]);
+
+  return <Redirecting />;
 };
+
+export function OfferingLink() {
+  const navigate = useNavigate();
+  const { offeringCode } = useParams();
+
+  useEffect(() => {
+    let alive = true;
+    getOffering(offeringCode)
+      .then((offering) => {
+        if (!alive) return;
+        navigate(`/book/${encodeURIComponent(offering.category.key)}?offering=${encodeURIComponent(offering.code)}`, { replace: true });
+      })
+      .catch(() => alive && navigate("/services", { replace: true }));
+    return () => {
+      alive = false;
+    };
+  }, [offeringCode, navigate]);
+
+  return <Redirecting />;
+}
 
 export default Booking;

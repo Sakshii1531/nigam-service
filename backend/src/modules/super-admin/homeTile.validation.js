@@ -12,7 +12,6 @@ export const createTileSchema = z.object({
   imageUrl: z.string().optional(),
   icon: z.string().optional(),
   rating: z.number().min(0).max(5).optional(),
-  price: z.number().min(0).optional(),
   badge: z.string().optional(),
   link: z.string().optional(),
   service: z.string().optional(),

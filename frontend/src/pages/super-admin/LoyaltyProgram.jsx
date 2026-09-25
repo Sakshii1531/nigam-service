@@ -3,7 +3,7 @@ import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import { 
   Plus, Trash2, Edit2, 
-  Check, Save, RefreshCw, Star, Info
+  Check, Save, RefreshCw, Info
 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { apiRequest } from '../../lib/apiClient';
@@ -74,68 +74,6 @@ const LoyaltyProgram = () => {
       showToast('Milestone reward removed.');
     } catch (err) {
       showToast(err.message || 'Could not remove milestone.');
-    }
-  };
-
-  // 2. MEMBERSHIP PLANS STATE
-  const [membershipPlans, setMembershipPlans] = useState([]);
-
-  const loadPlans = React.useCallback(async () => {
-    try {
-      const res = await apiRequest('/super-admin/loyalty/memberships', { auth: true });
-      setMembershipPlans(res || []);
-    } catch (err) {
-      showToast(err.message || 'Could not load membership plans.');
-    }
-  }, []);
-  const [editingPlanId, setEditingPlanId] = useState(null);
-  const [editPrice, setEditPrice] = useState(0);
-  const [newPlan, setNewPlan] = useState({ name: '', price: '', benefits: '' });
-  const [showAddPlanModal, setShowAddPlanModal] = useState(false);
-
-  const handleSavePlanPrice = async (id) => {
-    try {
-      await apiRequest(`/super-admin/loyalty/memberships/${id}`, {
-        method: 'PUT',
-        auth: true,
-        body: { price: parseInt(editPrice, 10) },
-      });
-      await loadPlans();
-      setEditingPlanId(null);
-      showToast('Plan price updated.');
-    } catch (err) {
-      showToast(err.message || 'Could not update plan price.');
-    }
-  };
-
-  const handleCreatePlan = async (e) => {
-    e.preventDefault();
-    if (!newPlan.name || !newPlan.price) return;
-    const benefitsList = newPlan.benefits
-      ? newPlan.benefits.split(',').map(b => b.trim()).filter(Boolean)
-      : ['Priority Customer Support'];
-
-    try {
-      await apiRequest('/super-admin/loyalty/memberships', {
-        method: 'POST',
-        auth: true,
-        body: { name: newPlan.name, price: parseInt(newPlan.price, 10), benefits: benefitsList },
-      });
-      await loadPlans();
-      setNewPlan({ name: '', price: '', benefits: '' });
-      showToast(`New membership plan '${newPlan.name}' created!`);
-    } catch (err) {
-      showToast(err.message || 'Could not create plan.');
-    }
-  };
-
-  const handleDeletePlan = async (id) => {
-    try {
-      await apiRequest(`/super-admin/loyalty/memberships/${id}`, { method: 'DELETE', auth: true });
-      await loadPlans();
-      showToast('Membership plan deleted.');
-    } catch (err) {
-      showToast(err.message || 'Could not delete plan.');
     }
   };
 
@@ -357,13 +295,12 @@ const LoyaltyProgram = () => {
       loadMilestones();
       loadCoinRedemption();
     }
-    else if (activeTab === 'membership') loadPlans();
     else if (activeTab === 'referrals') {
       loadReferralCampaigns();
       loadReferralStats();
       loadReferralSettings();
     }
-  }, [activeTab, loadMilestones, loadCoinRedemption, loadPlans, loadReferralCampaigns, loadReferralStats, loadReferralSettings]);
+  }, [activeTab, loadMilestones, loadCoinRedemption, loadReferralCampaigns, loadReferralStats, loadReferralSettings]);
 
   const handleAddCoupon = async (e) => {
     e.preventDefault();
@@ -648,185 +585,6 @@ const LoyaltyProgram = () => {
               </div>
             )}
 
-            {/* SUBSECTION 2: MEMBERSHIP PLANS */}
-            {activeTab === 'membership' && (
-              <div className="flex flex-col gap-6">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">Membership Pricing & Perks</h3>
-                    <p className="text-xs text-slate-400 font-semibold mt-1">Configure pricing tiers and subscription options for Club Memberships.</p>
-                  </div>
-                  <button 
-                    onClick={() => setShowAddPlanModal(true)}
-                    className="bg-[#0D47A1] hover:bg-blue-800 text-white font-bold py-2.5 px-4.5 rounded-xl text-xs flex items-center gap-1.5 cursor-pointer shadow-xs"
-                  >
-                    <Plus className="h-4 w-4" />
-                    <span>Add Plan</span>
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-2 gap-5 mt-2">
-                  {membershipPlans.map((plan) => {
-                    const tierStyles = {
-                      silver: { bg: 'from-slate-50 to-slate-100/60', border: 'border-slate-200', text: 'text-slate-700', iconBg: 'bg-slate-200 text-slate-600' },
-                      gold: { bg: 'from-amber-50/50 to-amber-100/30', border: 'border-amber-250', text: 'text-amber-700', iconBg: 'bg-amber-100 text-amber-600' },
-                      diamond: { bg: 'from-blue-50/40 to-blue-100/20', border: 'border-blue-200', text: 'text-blue-700', iconBg: 'bg-blue-100 text-blue-600' },
-                      platinum: { bg: 'from-purple-50/40 to-purple-100/20', border: 'border-purple-200', text: 'text-purple-700', iconBg: 'bg-purple-100 text-purple-600' },
-                    };
-                    const style = tierStyles[plan.id] || { bg: 'from-emerald-50/30 to-emerald-100/20', border: 'border-emerald-250', text: 'text-emerald-700', iconBg: 'bg-emerald-100 text-emerald-600' };
-
-                    return (
-                      <div key={plan.id} className={`bg-linear-to-b ${style.bg} border ${style.border} rounded-2xl p-4.5 shadow-sm hover:shadow-md transition-all text-left flex flex-col justify-between relative group`}>
-                        <div>
-                          <div className="flex justify-between items-start">
-                            <div className="flex items-center gap-2.5">
-                              <div className={`w-8 h-8 ${style.iconBg} rounded-lg flex items-center justify-center shrink-0 shadow-3xs`}>
-                                <Star className="h-4 w-4 fill-current" />
-                              </div>
-                              <div>
-                                <h4 className="text-xs font-black text-slate-800 tracking-wider uppercase">{plan.name}</h4>
-                                <span className="text-[9px] font-bold text-slate-400">ANNUAL SUBSCRIPTION</span>
-                              </div>
-                            </div>
-                            
-                            <button 
-                              onClick={() => handleDeletePlan(plan.id)}
-                              className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
-                              title="Delete Plan"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-
-                          <div className="mt-3.5 bg-white/70 border border-slate-100 rounded-xl p-2.5 flex justify-between items-center shadow-3xs">
-                            <span className="text-[9px] text-slate-400 font-extrabold uppercase">Plan Price</span>
-                            
-                            {editingPlanId === plan.id ? (
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-xs font-black text-slate-800">₹</span>
-                                <input 
-                                  type="number"
-                                  value={editPrice}
-                                  onChange={(e) => setEditPrice(e.target.value)}
-                                  className="w-16 border border-slate-350 p-1 rounded font-bold text-xs"
-                                />
-                                <button onClick={() => handleSavePlanPrice(plan.id)} className="p-1 text-green-600 hover:bg-green-50 rounded cursor-pointer">
-                                  <Check className="h-4 w-4" />
-                                </button>
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-xs font-black text-slate-900">₹{plan.price.toLocaleString()} <span className="text-[10px] text-slate-400 font-semibold">/Yr</span></span>
-                                <button 
-                                  onClick={() => {
-                                    setEditingPlanId(plan.id);
-                                    setEditPrice(plan.price);
-                                  }}
-                                  className="p-1 hover:bg-slate-100 rounded text-slate-500 cursor-pointer"
-                                >
-                                  <Edit2 className="h-3 w-3" />
-                                </button>
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="flex flex-col gap-1 mt-3.5">
-                            <span className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider block">Plan Benefits</span>
-                            <div className="flex flex-col gap-1 mt-1">
-                              {plan.benefits.map((b, idx) => (
-                                <div key={idx} className="flex items-start gap-1.5 text-[11px] font-semibold text-slate-655">
-                                  <Check className={`h-3 w-3 mt-0.5 shrink-0 ${style.text}`} />
-                                  <span className="leading-tight">{b}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Create Membership Plan Modal */}
-                {showAddPlanModal && (
-                  <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-3xl border border-slate-100 shadow-2xl max-w-lg w-full overflow-hidden p-6 animate-in fade-in zoom-in-95 duration-150">
-                      <div className="flex justify-between items-center pb-4 border-b border-slate-100">
-                        <span className="text-sm font-black text-slate-800 uppercase tracking-wider">Create New Membership Plan</span>
-                        <button 
-                          onClick={() => setShowAddPlanModal(false)}
-                          className="text-slate-400 hover:text-slate-650 font-black text-lg p-1.5 cursor-pointer"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                      
-                      <form onSubmit={(e) => {
-                        handleCreatePlan(e);
-                        setShowAddPlanModal(false);
-                      }} className="flex flex-col gap-4 text-left mt-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="flex flex-col gap-1.5">
-                            <label className="text-[10px] text-slate-400 font-bold uppercase">Plan Name</label>
-                            <input 
-                              type="text"
-                              placeholder="e.g. Bronze Plan"
-                              value={newPlan.name}
-                              onChange={(e) => setNewPlan({ ...newPlan, name: e.target.value })}
-                              className="bg-white border border-slate-200 rounded-lg p-2.5 text-xs font-semibold text-slate-800 focus:outline-none focus:border-brand-blue"
-                              required
-                            />
-                          </div>
-
-                          <div className="flex flex-col gap-1.5">
-                            <label className="text-[10px] text-slate-400 font-bold uppercase">Annual Price (₹)</label>
-                            <input 
-                              type="number"
-                              placeholder="e.g. 799"
-                              value={newPlan.price}
-                              onChange={(e) => setNewPlan({ ...newPlan, price: e.target.value })}
-                              className="bg-white border border-slate-200 rounded-lg p-2.5 text-xs font-semibold text-slate-800 focus:outline-none focus:border-brand-blue"
-                              required
-                            />
-                          </div>
-                        </div>
-
-                        <div className="flex flex-col gap-1.5">
-                          <label className="text-[10px] text-slate-400 font-bold uppercase">Benefits (Comma-separated list)</label>
-                          <input 
-                            type="text"
-                            placeholder="e.g. Flat ₹150 off on visiting charge, 8% off on all services, Priority Booking"
-                            value={newPlan.benefits}
-                            onChange={(e) => setNewPlan({ ...newPlan, benefits: e.target.value })}
-                            className="bg-white border border-slate-200 rounded-lg p-2.5 text-xs font-semibold text-slate-800 focus:outline-none focus:border-brand-blue"
-                          />
-                          <span className="text-[9px] text-slate-400 font-medium">Enter plan benefits separated by commas.</span>
-                        </div>
-
-                        <div className="flex justify-end gap-3 mt-2 pt-4 border-t border-slate-100">
-                          <button 
-                            type="button"
-                            onClick={() => setShowAddPlanModal(false)}
-                            className="border border-slate-250 hover:bg-slate-50 text-slate-500 font-bold py-2.5 px-5 rounded-xl text-xs cursor-pointer"
-                          >
-                            Cancel
-                          </button>
-                          <button 
-                            type="submit"
-                            className="bg-[#0D47A1] hover:bg-blue-800 text-white font-bold py-2.5 px-5 rounded-xl text-xs flex items-center gap-1.5 cursor-pointer shadow-md"
-                          >
-                            <Plus className="h-4 w-4" />
-                            <span>Create Plan</span>
-                          </button>
-                        </div>
-                      </form>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* SUBSECTION 3: SPIN WHEEL CONFIG */}
             {activeTab === 'spinwheel' && (
               <div className="flex flex-col gap-6">
                 <div className="flex justify-between items-center">

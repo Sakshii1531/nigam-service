@@ -6436,8 +6436,8 @@ const ActiveJob = () => {
       </div>
 
       {/* Add More Services Overlay Card Modal — pulled from this job's real
-          category catalog (the same ServiceCatalogItem records the customer
-          booking flow uses), not a fixed AC-only five-item list. */}
+          Master Catalogue offerings (priced by the same engine as bookings),
+          not a fixed AC-only five-item list. */}
       {showAddServicesModal &&
         (() => {
           const AVAILABLE_ADDONS = jobContext?.addonServices || [];

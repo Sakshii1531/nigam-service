@@ -105,8 +105,20 @@ const AMC = () => {
   const [amcPlans, setAmcPlans] = useState([]);
   const [plansError, setPlansError] = useState("");
 
+  // The appliances that have plans, with their "from" price — the picker
+  // below used to be five hardcoded appliances with hardcoded prices.
+  const [amcAppliances, setAmcAppliances] = useState(null);
   useEffect(() => {
-    apiRequest("/warranty-amc/amc/plans", { auth: true })
+    apiRequest("/warranty-amc/amc/appliances")
+      .then((res) => setAmcAppliances(Array.isArray(res) ? res : []))
+      .catch(() => setAmcAppliances([]));
+  }, []);
+  const applianceName =
+    amcAppliances?.find((a) => a.appliance === selectedAppliance)?.name || selectedAppliance;
+
+  useEffect(() => {
+    const query = selectedAppliance ? `?appliance=${encodeURIComponent(selectedAppliance)}` : "";
+    apiRequest(`/warranty-amc/amc/plans${query}`, { auth: true })
       .then((res) =>
         setAmcPlans(
           (res || []).map((p) => ({
@@ -114,26 +126,25 @@ const AMC = () => {
             name: p.name,
             price: p.price,
             tier: p.tier,
+            description: p.description || "",
             visitsTotal: p.visitsTotal,
-            popular: p.tier === "Gold",
-            benefits: [
-              `${p.visitsTotal} scheduled visit(s)`,
-              "Priority booking",
-              "Free service charges on covered visits",
-            ],
+            durationMonths: p.durationMonths || 12,
+            popular: Boolean(p.isPopular),
+            // The admin writes the benefits; a plan without any still says what it includes.
+            benefits: p.benefits?.length ? p.benefits : [`${p.visitsTotal} scheduled visit(s)`],
           })),
         ),
       )
       .catch((err) =>
         setPlansError(err.message || "Could not load AMC plans."),
       );
-  }, []);
+  }, [selectedAppliance]);
 
   const getBrandsForAppliance = (appliance) => {
     const n = appliance?.toLowerCase() || "";
     if (n.includes("water purifier") || n.includes("purifier"))
       return ["Kent", "Aquaguard", "Livpure", "Pureit", "HUL", "AO Smith"];
-    if (n.includes("ac") || n.includes("conditioner"))
+    if (/\bac\b/.test(n) || n.includes("conditioner"))
       return ["Daikin", "LG", "Voltas", "Blue Star", "Hitachi", "Carrier"];
     if (n.includes("refrigerator") || n.includes("fridge"))
       return ["Samsung", "LG", "Whirlpool", "Haier", "Godrej", "Voltas"];
@@ -148,7 +159,7 @@ const AMC = () => {
     const n = appliance?.toLowerCase() || "";
     if (n.includes("water purifier") || n.includes("purifier"))
       return "e.g. Grand Plus, Mineral Plus";
-    if (n.includes("ac") || n.includes("conditioner"))
+    if (/\bac\b/.test(n) || n.includes("conditioner"))
       return "e.g. 1.5T Inverter LS-Q18YNZA";
     if (n.includes("refrigerator") || n.includes("fridge"))
       return "e.g. RT28T3032S8";
@@ -163,7 +174,7 @@ const AMC = () => {
     const n = appliance?.toLowerCase() || "";
     if (n.includes("water purifier") || n.includes("purifier"))
       return "your RO details";
-    if (n.includes("ac") || n.includes("conditioner")) return "your AC details";
+    if (/\bac\b/.test(n) || n.includes("conditioner")) return "your AC details";
     if (n.includes("refrigerator") || n.includes("fridge"))
       return "your Refrigerator details";
     if (n.includes("washing") || n.includes("machine"))
@@ -176,7 +187,7 @@ const AMC = () => {
     const n = appliance?.toLowerCase() || "";
     if (n.includes("water purifier") || n.includes("purifier"))
       return waterPurifierImg;
-    if (n.includes("ac") || n.includes("conditioner")) return splitAcImg;
+    if (/\bac\b/.test(n) || n.includes("conditioner")) return splitAcImg;
     if (n.includes("refrigerator") || n.includes("fridge")) return fridgeImg;
     if (n.includes("washing") || n.includes("machine")) return washingImg;
     if (n.includes("television") || n.includes("tv")) return tvImg;
@@ -184,7 +195,7 @@ const AMC = () => {
   };
 
   const selectedPlan = amcPlans[selectedPlanIndex] || amcPlans[0] || null;
-  const applianceBrands = getBrandsForAppliance(selectedAppliance);
+  const applianceBrands = getBrandsForAppliance(applianceName);
   const activeBrand = selectedBrand || applianceBrands[0];
 
   return (
@@ -233,7 +244,7 @@ const AMC = () => {
           </button>
           <h1 className="text-base font-extrabold text-brand-navy text-center flex-1 pr-9">
             {step === 7 && "Select Appliance"}
-            {step === 2 && `AMC Plans for ${selectedAppliance}`}
+            {step === 2 && `AMC Plans for ${applianceName}`}
             {step === 3 && "Enter Details"}
             {step === 4 && "Review & Confirm"}
             {step === 5 && "Payment"}
@@ -625,47 +636,21 @@ const AMC = () => {
             </div>
 
             <div className="flex flex-col gap-3 md:grid md:grid-cols-2 xl:grid-cols-3">
-              {[
-                {
-                  id: "tv",
-                  name: "Television",
-                  desc: "NCC AMC Plans",
-                  price: "₹599",
-                  img: tvImg,
-                },
-                {
-                  id: "refrigerator",
-                  name: "Refrigerator",
-                  desc: "NCC AMC Plans",
-                  price: "₹799",
-                  img: fridgeImg,
-                },
-                {
-                  id: "washing-machine",
-                  name: "Washing Machine",
-                  desc: "NCC AMC Plans",
-                  price: "₹699",
-                  img: washingImg,
-                },
-                {
-                  id: "ac",
-                  name: "Air Conditioner",
-                  desc: "NCC AMC Plans",
-                  price: "₹999",
-                  img: splitAcImg,
-                },
-                {
-                  id: "water-purifier",
-                  name: "Water Purifier",
-                  desc: "NCC AMC Plans",
-                  price: "₹999",
-                  img: waterPurifierImg,
-                },
-              ].map((item) => (
+              {amcAppliances?.length === 0 && (
+                <p className="text-xs font-semibold text-slate-500">No AMC plans are on sale right now.</p>
+              )}
+              {(amcAppliances || []).map((a) => ({
+                id: a.appliance,
+                key: a.appliance,
+                name: a.name,
+                desc: `${a.planCount} AMC plan${a.planCount === 1 ? "" : "s"}`,
+                price: `₹${Number(a.fromPrice).toLocaleString("en-IN")}`,
+                img: getApplianceImg(a.name),
+              })).map((item) => (
                 <div
                   key={item.id}
                   onClick={() => {
-                    navigate(`/buy/amc/plans/${encodeURIComponent(item.name)}`);
+                    navigate(`/buy/amc/plans/${encodeURIComponent(item.key)}`);
                   }}
                   className="bg-white border border-slate-200/80 rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:border-brand-blue/40 shadow-sm hover:scale-[1.01] transition-all text-left">
                   <div className="flex items-center gap-4">
@@ -684,7 +669,7 @@ const AMC = () => {
                         {item.desc}
                       </p>
                       <span className="text-xs font-extrabold text-brand-blue block mt-1">
-                        From {item.price}/Year
+                        From {item.price}
                       </span>
                     </div>
                   </div>
@@ -731,7 +716,7 @@ const AMC = () => {
                             ₹{plan.price.toLocaleString()}
                           </span>
                           <span className="text-xs text-text-secondary font-semibold">
-                            /Year
+                            / {plan.durationMonths === 12 ? "year" : `${plan.durationMonths} months`}
                           </span>
                           {plan.popular && (
                             <span className="bg-brand-yellow text-brand-navy text-[8px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">
@@ -742,6 +727,9 @@ const AMC = () => {
                         <span className="text-sm font-black text-brand-navy">
                           {plan.name}
                         </span>
+                        {plan.description && (
+                          <p className="text-[11px] text-text-secondary font-medium mt-0.5">{plan.description}</p>
+                        )}
                       </div>
                       <div
                         className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors mt-1 ${
@@ -793,7 +781,7 @@ const AMC = () => {
                 Enter Details
               </h2>
               <p className="text-xs text-text-secondary font-semibold">
-                Please provide {getSubtitle(selectedAppliance)}
+                Please provide {getSubtitle(applianceName)}
               </p>
             </div>
 
@@ -831,7 +819,7 @@ const AMC = () => {
                     value={modelNumber}
                     onChange={(e) => setModelNumber(e.target.value)}
                     className="text-xs font-bold text-slate-800 w-full outline-none bg-transparent mt-0.5"
-                    placeholder={getModelPlaceholder(selectedAppliance)}
+                    placeholder={getModelPlaceholder(applianceName)}
                   />
                 </div>
               </div>
@@ -931,14 +919,14 @@ const AMC = () => {
             <div className="bg-white border border-slate-200/80 rounded-2xl p-4 flex items-center gap-4 shadow-sm">
               <div className="w-16 h-16 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center p-1.5 shrink-0">
                 <img
-                  src={getApplianceImg(selectedAppliance)}
-                  alt={selectedAppliance}
+                  src={getApplianceImg(applianceName)}
+                  alt={applianceName}
                   className="w-full h-full object-contain mix-blend-multiply"
                 />
               </div>
               <div>
                 <h4 className="text-sm font-black text-brand-navy leading-tight">
-                  {activeBrand} {modelNumber || selectedAppliance}
+                  {activeBrand} {modelNumber || applianceName}
                 </h4>
                 <p className="text-xs text-text-secondary mt-0.5">
                   {selectedPlan.name}
@@ -1154,7 +1142,7 @@ const AMC = () => {
                         body: {
                           plan: selectedPlan?.id,
                           planName: selectedPlan?.name,
-                          category: selectedAppliance || "Appliance",
+                          category: applianceName || "Appliance",
                           brand: selectedBrand || "Nigam Care",
                           model: modelNumber || undefined,
                         },
@@ -1229,7 +1217,7 @@ const AMC = () => {
                     NIGAM AMC
                   </span>
                   <h4 className="text-base font-black mt-2.5">
-                    {selectedAppliance} AMC
+                    {applianceName} AMC
                   </h4>
                 </div>
                 <div className="w-10 h-10 bg-white/10 rounded-2xl flex items-center justify-center border border-white/10">

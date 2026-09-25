@@ -197,25 +197,21 @@ test.describe('customer payments actually reach the gateway', () => {
     expect((await reread.json()).data.advancePaid).toBe(false);
   });
 
-  test('a membership is only active after payment verification', async ({ request }) => {
+  test('an AMC subscription is sold from an admin plan and only counts once paid', async ({ request }) => {
     const adminToken = await createSuperAdmin(request);
-    const planRes = await request.post('/api/v1/memberships/plans', {
+    const planRes = await request.post('/api/v1/super-admin/plans/amc', {
       headers: { Authorization: `Bearer ${adminToken}` },
-      data: { name: `E2E Tier ${randomUUID()}`, price: 999, tierRank: Math.floor(Math.random() * 100000) + 100 },
+      data: { name: `E2E AMC ${randomUUID()}`, price: 999, visitsTotal: 2, durationMonths: 12 },
     });
     expect(planRes.status()).toBe(201);
     const plan = (await planRes.json()).data;
 
     const customer = await createCustomer(request);
     const auth = { headers: { Authorization: `Bearer ${customer.token}` } };
-
-    const purchase = await request.post('/api/v1/memberships/purchase', { ...auth, data: { planId: plan.id } });
+    const purchase = await request.post('/api/v1/warranty-amc/amc/subscriptions', { ...auth, data: { plan: plan.id, brand: 'LG', model: 'X' } });
     expect(purchase.status()).toBe(201);
-    expect((await purchase.json()).data.membership.status).toBe('Pending Payment');
-
-    // Unpaid means not a member.
-    const me = await request.get('/api/v1/memberships/me', auth);
-    expect((await me.json()).data).toBeNull();
+    const { subscription } = (await purchase.json()).data;
+    expect(subscription).toMatchObject({ visitsTotal: 2, paid: false });
   });
 });
 
@@ -226,8 +222,9 @@ test.describe('endpoints the consoles depend on exist', () => {
   const PATHS = [
     '/api/v1/catalog/categories',
     '/api/v1/catalog/brands',
-    '/api/v1/cms/home-tiles?placement=dashboard-service',
-    '/api/v1/memberships/plans',
+    '/api/v1/cms/home-tiles?placement=most-booked',
+    '/api/v1/warranty-amc/amc/plans',
+    '/api/v1/warranty-amc/amc/appliances',
   ];
 
   for (const path of PATHS) {

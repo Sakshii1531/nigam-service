@@ -8,7 +8,7 @@ import { applyStandardPlugins } from '../shared/plugins.js';
 // but they are the same thing in different slots: a curated tile with artwork
 // that links somewhere. One model with a `placement` discriminator keeps them
 // in one CRUD surface instead of five near-identical ones; fields not relevant
-// to a placement are simply left unset (a category chip has no price).
+// to a placement are simply left unset (no tile has a price: the app shows the Master Catalogue's).
 const homeTileSchema = new mongoose.Schema(
   {
     placement: {
@@ -22,7 +22,6 @@ const homeTileSchema = new mongoose.Schema(
     // Lucide icon key, used by the category chips rather than artwork.
     icon: String,
     rating: Number,
-    price: Number,
     badge: String,
     // Where tapping the tile goes — an in-app route, or a service name the
     // booking flow resolves.

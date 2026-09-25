@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { applyStandardPlugins } from '../shared/plugins.js';
+import { watchCatalogueWrites } from './catalogCache.js';
 
 // One version of an offering's commercial numbers. Append-only: a price or
 // payout change inserts a new version (rateWriter.createRateVersion) and closes
@@ -51,5 +52,7 @@ offeringRateSchema.index({ offering: 1, effectiveFrom: -1 });
 offeringRateSchema.index({ createdAt: -1 });
 
 applyStandardPlugins(offeringRateSchema);
+// Writes drop the cached customer category trees (catalogCache.js).
+offeringRateSchema.plugin(watchCatalogueWrites);
 
 export const OfferingRate = mongoose.models.OfferingRate || mongoose.model('OfferingRate', offeringRateSchema);

@@ -95,6 +95,8 @@ const bookingSchema = new mongoose.Schema(
       default: 'Upcoming',
       index: true,
     },
+    // When the job was completed and paid (the NCC margin report's date).
+    completedAt: { type: Date, default: null, index: true },
     completionOtp: { type: String, default: () => Math.floor(1000 + Math.random() * 9000).toString() },
     // The customer's own sign-off on a spare part the technician requested,
     // before it ever reaches the super-admin approval queue — a technician
@@ -141,6 +143,8 @@ const bookingSchema = new mongoose.Schema(
 );
 
 bookingSchema.index({ user: 1, status: 1, createdAt: -1 });
+// NCC margin report: completed bookings by completion date.
+bookingSchema.index({ status: 1, completedAt: 1 });
 
 applyStandardPlugins(bookingSchema, { prefix: ID_PREFIXES.BOOKING });
 

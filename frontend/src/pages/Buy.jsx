@@ -78,6 +78,9 @@ const Buy = () => {
   else if (pathname.includes("/buy/amc-details")) step = 13;
   else if (pathname.includes("/buy/file-claim")) step = 14;
   else if (pathname.includes("/buy/claim-success")) step = 15;
+  // These two pages existed but had no URL mapping, so they always showed the hub.
+  else if (pathname.includes("/buy/accessories")) step = 11;
+  else if (pathname.includes("/buy/all-appliances")) step = 12;
 
   // Appliance & tier from URL params + query string
   const [searchParams] = useSearchParams();
@@ -201,6 +204,26 @@ const Buy = () => {
   }, [step]);
 
   // Product-specific brands per appliance
+  // Bundled artwork by appliance / part name — an uploaded product image wins.
+  const applianceArt = (name = "") => {
+    const n = name.toLowerCase();
+    if (n.includes("tv") || n.includes("television")) return tvImg;
+    if (n.includes("refrigerator") || n.includes("fridge")) return fridgeImg;
+    if (n.includes("washing")) return washingImg;
+    if (/\bac\b/.test(n) || n.includes("conditioner")) return splitAcImg;
+    if (n.includes("purifier") || /\bro\b/.test(n)) return waterPurifierImg;
+    return kitchenApplianceImg;
+  };
+  const partArt = (name = "") => {
+    const n = name.toLowerCase();
+    if (n.includes("pre-filter") || n.includes("prefilter")) return roPreFilterImg;
+    if (n.includes("membrane")) return roMembraneImg;
+    if (n.includes("sediment")) return roSedimentImg;
+    if (n.includes("post")) return roPostCarbonImg;
+    if (n.includes("carbon")) return roCarbonImg;
+    return roPreFilterImg;
+  };
+
   const getBrandsForAppliance = (appliance) => {
     const n = appliance?.toLowerCase() || "";
     if (n.includes("television") || n.includes("tv"))
@@ -209,7 +232,7 @@ const Buy = () => {
       return ["Samsung", "LG", "Whirlpool", "Haier", "Godrej", "Voltas"];
     if (n.includes("washing") || n.includes("machine"))
       return ["Samsung", "LG", "Whirlpool", "IFB", "Bosch", "Haier"];
-    if (n.includes("ac") || n.includes("conditioner"))
+    if (/\bac\b/.test(n) || n.includes("conditioner"))
       return ["Daikin", "LG", "Voltas", "Blue Star", "Hitachi", "Carrier"];
     if (n.includes("purifier"))
       return ["Kent", "Aquaguard", "Livpure", "Pureit", "HUL", "AO Smith"];
@@ -227,7 +250,7 @@ const Buy = () => {
       return "e.g. RT28T3032S8";
     if (n.includes("washing") || n.includes("machine"))
       return "e.g. WA70T4262GG";
-    if (n.includes("ac") || n.includes("conditioner"))
+    if (/\bac\b/.test(n) || n.includes("conditioner"))
       return "e.g. 1.5T FTKY50";
     if (n.includes("purifier")) return "e.g. KIM11PM";
     return "Enter model number";
@@ -242,8 +265,19 @@ const Buy = () => {
   const [ewPlans, setEwPlans] = useState([]);
   const [, setPlansError] = useState("");
 
+  // Appliances that have warranty packs, with "from" prices (Super Admin → Plans).
+  const [ewAppliances, setEwAppliances] = useState(null);
   useEffect(() => {
-    apiRequest("/warranty-amc/extended-warranty/plans")
+    apiRequest("/warranty-amc/extended-warranty/appliances")
+      .then((res) => setEwAppliances(Array.isArray(res) ? res : []))
+      .catch(() => setEwAppliances([]));
+  }, []);
+  const applianceName =
+    ewAppliances?.find((a) => a.appliance === selectedAppliance)?.name || selectedAppliance;
+
+  useEffect(() => {
+    const query = selectedAppliance ? `?category=${encodeURIComponent(selectedAppliance)}` : "";
+    apiRequest(`/warranty-amc/extended-warranty/plans${query}`)
       .then((res) =>
         setEwPlans(
           (res || []).map((pl) => ({
@@ -251,6 +285,8 @@ const Buy = () => {
             label: pl.name,
             price: pl.price,
             durationYears: pl.durationYears,
+            description: pl.description || "",
+            popular: Boolean(pl.isPopular),
             features: pl.features || [],
           })),
         ),
@@ -258,7 +294,17 @@ const Buy = () => {
       .catch((err) =>
         setPlansError(err.message || "Could not load warranty plans."),
       );
+  }, [selectedAppliance]);
+
+  // Store products (Super Admin → Products): appliances and spare parts.
+  const [storeProducts, setStoreProducts] = useState([]);
+  useEffect(() => {
+    apiRequest("/products?limit=100")
+      .then((res) => setStoreProducts(Array.isArray(res) ? res : []))
+      .catch(() => setStoreProducts([]));
   }, []);
+  const popularProducts = storeProducts.filter((p) => p.category !== "Spare Parts").sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 8);
+  const spareParts = storeProducts.filter((p) => p.category === "Spare Parts");
 
   const [buying, setBuying] = useState(false);
   const [buyError, setBuyError] = useState("");
@@ -306,7 +352,7 @@ const Buy = () => {
       setBuying(false);
     }
   };
-  const applianceBrands = getBrandsForAppliance(selectedAppliance);
+  const applianceBrands = getBrandsForAppliance(applianceName);
   const defaultBrand = applianceBrands[0] || "Samsung";
   const activeBrand = selectedBrand || defaultBrand;
 
@@ -349,7 +395,7 @@ const Buy = () => {
 
           <h1 className="text-base font-extrabold text-brand-navy text-center flex-1 pr-9">
             {step === 2 && "Select Appliance"}
-            {step === 3 && selectedAppliance}
+            {step === 3 && applianceName}
             {step === 4 && "Review & Confirm"}
             {step === 5 && "Enter Details"}
             {step === 6 && "Payment"}
@@ -556,7 +602,7 @@ const Buy = () => {
                         </svg>
                       </div>
                     ),
-                    onClick: () => navigate("/membership-plans"),
+                    onClick: () => navigate("/buy/amc"),
                   },
                   {
                     name: "Buy\nNew",
@@ -696,7 +742,7 @@ const Buy = () => {
                 {/* Banner 3: NCC AMC Plans */}
                 <div className="w-full shrink-0 px-0.5">
                   <div
-                    onClick={() => navigate("/membership-plans")}
+                    onClick={() => navigate("/buy/amc")}
                     className="bg-linear-to-br from-[#E6F4EA] to-[#C9EAD2] rounded-2xl p-3.5 sm:p-4 border border-emerald-100 shadow-2xs flex items-center gap-3 sm:gap-4 relative overflow-hidden cursor-pointer hover:shadow-md transition-all text-left min-h-33.75 sm:min-h-35.5">
                     <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-300/20 rounded-full blur-2xl"></div>
 
@@ -727,7 +773,7 @@ const Buy = () => {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate("/membership-plans");
+                          navigate("/buy/amc");
                         }}
                         className="bg-[#059669] hover:bg-emerald-700 text-white text-[8.5px] sm:text-[9px] font-black px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer">
                         Explore AMC
@@ -885,48 +931,22 @@ const Buy = () => {
             </div>
 
             <div className="flex flex-col gap-3 md:grid md:grid-cols-2 xl:grid-cols-3">
-              {[
-                {
-                  id: "tv",
-                  name: "Television",
-                  desc: "Extended Warranty",
-                  price: "₹999",
-                  img: tvImg,
-                },
-                {
-                  id: "refrigerator",
-                  name: "Refrigerator",
-                  desc: "Extended Warranty",
-                  price: "₹999",
-                  img: fridgeImg,
-                },
-                {
-                  id: "washing-machine",
-                  name: "Washing Machine",
-                  desc: "Extended Warranty",
-                  price: "₹999",
-                  img: washingImg,
-                },
-                {
-                  id: "ac",
-                  name: "Air Conditioner",
-                  desc: "Extended Warranty",
-                  price: "₹1,199",
-                  img: splitAcImg,
-                },
-                {
-                  id: "water-purifier",
-                  name: "Water Purifier",
-                  desc: "Extended Warranty",
-                  price: "₹699",
-                  img: waterPurifierImg,
-                },
-              ].map((item) => (
+              {ewAppliances?.length === 0 && (
+                <p className="text-xs font-semibold text-slate-500">No warranty packs are on sale right now.</p>
+              )}
+              {(ewAppliances || []).map((a) => ({
+                id: a.appliance,
+                key: a.appliance,
+                name: a.name,
+                desc: `${a.planCount} warranty pack${a.planCount === 1 ? "" : "s"}`,
+                price: `₹${Number(a.fromPrice).toLocaleString("en-IN")}`,
+                img: applianceArt(a.name),
+              })).map((item) => (
                 <div
                   key={item.id}
                   onClick={() => {
                     navigate(
-                      `/buy/select-tier/${encodeURIComponent(item.name)}`,
+                      `/buy/select-tier/${encodeURIComponent(item.key)}`,
                     );
                   }}
                   className="bg-white border border-slate-200/80 rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:border-brand-blue/40 shadow-sm hover:scale-[1.01] transition-all">
@@ -978,11 +998,11 @@ const Buy = () => {
             className="flex flex-col gap-5">
             <div className="px-1">
               <h2 className="text-lg font-black text-brand-navy">
-                {selectedAppliance || "Appliance"}
+                {applianceName || "Appliance"}
               </h2>
               <p className="text-xs text-text-secondary font-semibold">
                 Select your{" "}
-                {selectedAppliance === "Television" ? "TV" : "appliance"}{" "}
+                {/\btv\b|television/i.test(applianceName || "") ? "TV" : "appliance"}{" "}
                 category
               </p>
             </div>
@@ -2379,11 +2399,11 @@ const Buy = () => {
               <div className="flex items-center gap-5 overflow-x-auto no-scrollbar pb-2.5 pt-1">
                 {[
                   { name: "For You", isForYou: true },
-                  { name: "AC", appliance: "Air Conditioner" },
+                  { name: "AC", appliance: "AC" },
                   { name: "Washing Machine", appliance: "Washing Machine" },
                   { name: "Refrigerator", appliance: "Refrigerator" },
-                  { name: "TV", appliance: "Television" },
-                  { name: "RO Water Purifier", appliance: "Water Purifier" },
+                  { name: "TV", appliance: "TV" },
+                  { name: "RO Water Purifier", appliance: "RO Water Purifier" },
                   { name: "Geyser", appliance: "Geyser" },
                   { name: "More", isMore: true },
                 ].map((item, idx) => (
@@ -2607,55 +2627,27 @@ const Buy = () => {
               </div>
 
               <div className="flex gap-4 overflow-x-auto pb-2 snap-x no-scrollbar">
-                {[
-                  {
-                    name: "Water Purifier",
-                    price: "₹6,999",
-                    img: waterPurifierImg,
-                    appliance: "Water Purifier",
-                  },
-                  {
-                    name: "Desert Cooler",
-                    price: "₹7,499",
-                    img: kitchenApplianceImg,
-                    appliance: "Cooler",
-                  },
-                  {
-                    name: "Smart TV",
-                    price: "₹10,999",
-                    img: tvImg,
-                    appliance: "Television",
-                  },
-                  {
-                    name: "Split AC",
-                    price: "₹24,999",
-                    img: splitAcImg,
-                    appliance: "Air Conditioner",
-                  },
-                  {
-                    name: "Refrigerator",
-                    price: "₹15,999",
-                    img: fridgeImg,
-                    appliance: "Refrigerator",
-                  },
-                ].map((item, idx) => (
+                {popularProducts.length === 0 && (
+                  <p className="text-xs font-semibold text-slate-500 px-1">No products in the store yet.</p>
+                )}
+                {popularProducts.map((product) => (
                   <div
-                    key={idx}
-                    className="shrink-0 w-27.5 bg-white border border-slate-200/80 rounded-2xl p-3 flex flex-col gap-2 shadow-sm hover:border-[#0B4EA2]/30 transition-all cursor-pointer snap-start"
-                    onClick={() => goTo(3, item.appliance, 0)}>
+                    key={product.id}
+                    className="shrink-0 w-27.5 bg-white border border-slate-200/80 rounded-2xl p-3 flex flex-col gap-2 shadow-sm hover:border-[#0B4EA2] transition-all cursor-pointer"
+                    onClick={() => navigate(`/buy-new/details/${encodeURIComponent(product.category)}/${encodeURIComponent(product.name)}`)}>
                     <div className="w-full h-18 bg-slate-50/50 border border-slate-100 rounded-xl flex items-center justify-center p-1.5">
                       <img
-                        src={item.img}
-                        alt={item.name}
+                        src={product.imageUrl || product.images?.[0] || applianceArt(product.category)}
+                        alt={product.name}
                         className="w-full h-full object-contain mix-blend-multiply"
                       />
                     </div>
                     <div>
                       <h4 className="text-[10px] font-black text-brand-navy leading-tight truncate">
-                        {item.name}
+                        {product.name}
                       </h4>
                       <span className="text-[9px] font-bold text-slate-500 block mt-0.5">
-                        From {item.price}
+                        ₹{Number(product.price).toLocaleString("en-IN")}
                       </span>
                     </div>
                   </div>
@@ -2675,38 +2667,15 @@ const Buy = () => {
               </div>
 
               <div className="flex gap-4 overflow-x-auto pb-2 snap-x no-scrollbar">
-                {[
-                  {
-                    name: "Pre-Filter Candle",
-                    price: "₹199",
-                    desc: "RO Outer Candle",
-                    img: roPreFilterImg,
-                  },
-                  {
-                    name: "RO Membrane",
-                    price: "₹899",
-                    desc: "High TDS Membrane",
-                    img: roMembraneImg,
-                  },
-                  {
-                    name: "Sediment Filter",
-                    price: "₹249",
-                    desc: "RO Inner Filter",
-                    img: roSedimentImg,
-                  },
-                  {
-                    name: "Carbon Filter",
-                    price: "₹299",
-                    desc: "Active Carbon",
-                    img: roCarbonImg,
-                  },
-                  {
-                    name: "Post Carbon",
-                    price: "₹249",
-                    desc: "Taste Enhancer Filter",
-                    img: roPostCarbonImg,
-                  },
-                ].map((item, idx) => {
+                {spareParts.length === 0 && (
+                  <p className="text-xs font-semibold text-slate-500 px-1">No spare parts in the store yet.</p>
+                )}
+                {spareParts.map((p) => ({
+                  name: p.name,
+                  desc: (p.specs || [])[0] || "",
+                  price: `₹${Number(p.price).toLocaleString("en-IN")}`,
+                  img: p.imageUrl || p.images?.[0] || partArt(p.name),
+                })).map((item, idx) => {
                   return (
                     <div
                       key={idx}
@@ -2792,61 +2761,15 @@ const Buy = () => {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              {[
-                { name: "Television", img: tvImg, desc: "TV Extended Cover" },
-                {
-                  name: "Refrigerator",
-                  img: fridgeImg,
-                  desc: "Fridge Extended Cover",
-                },
-                {
-                  name: "Washing Machine",
-                  img: washingImg,
-                  desc: "WM Extended Cover",
-                },
-                {
-                  name: "Air Conditioner",
-                  img: splitAcImg,
-                  desc: "AC Extended Cover",
-                },
-                {
-                  name: "Water Purifier",
-                  img: waterPurifierImg,
-                  desc: "RO Extended Cover",
-                },
-                {
-                  name: "Desert Cooler",
-                  img: kitchenApplianceImg,
-                  desc: "Cooler Extended Cover",
-                },
-                {
-                  name: "Geyser",
-                  img: null,
-                  desc: "Geyser Extended Cover",
-                  isGeyser: true,
-                },
-                {
-                  name: "Microwave Oven",
-                  img: null,
-                  desc: "Oven Extended Cover",
-                  isMicrowave: true,
-                },
-                {
-                  name: "Chimney",
-                  img: null,
-                  desc: "Chimney Extended Cover",
-                  isChimney: true,
-                },
-                {
-                  name: "Dishwasher",
-                  img: null,
-                  desc: "Dishwasher Cover",
-                  isDishwasher: true,
-                },
-              ].map((item, idx) => (
+              {(ewAppliances || []).map((a) => ({
+                key: a.appliance,
+                name: a.name,
+                img: applianceArt(a.name),
+                desc: `From ₹${Number(a.fromPrice).toLocaleString("en-IN")}`,
+              })).map((item, idx) => (
                 <div
                   key={idx}
-                  onClick={() => goTo(3, item.name, 0)}
+                  onClick={() => goTo(3, item.key, 0)}
                   className="bg-white border border-slate-200/80 rounded-3xl p-4 flex flex-col items-center justify-center gap-3.5 cursor-pointer hover:border-brand-blue/40 shadow-sm hover:scale-[1.02] transition-all text-center min-h-33.75">
                   <div className="w-13 h-13 bg-slate-50/70 border border-slate-100 rounded-2xl flex items-center justify-center p-2.5 overflow-hidden">
                     {item.isGeyser ? (

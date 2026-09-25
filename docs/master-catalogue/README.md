@@ -87,8 +87,15 @@ additive (nothing existing breaks). Phase 4 is the cut-over.
 | 3 | [Super Admin — Master Catalogue module](phase-3-admin-catalogue.md) | Full CRUD, rate changes with reason + history, activate/deactivate | 8 (admin side) | 7–9 d | ✅ Done 2026-09-24 |
 | 4 | [Booking engine cut-over + customer booking flow](phase-4-booking-cutover.md) | Offering-based `createBooking`, full snapshot, BookingFlow/Payment/Success driven by quote | 5, 6, 7, 10, 11, 12 | 8–10 d | ✅ Done 2026-09-24 |
 | 5 | [Fixed payout engine + Service Partner app](phase-5-payout-partner-app.md) | Payout from snapshot, on-site add-ons from catalogue, partner screens | 8, 9 (payout side) | 5–6 d | ✅ Done 2026-09-24 |
-| 6 | [Discovery — search + all entry points](phase-6-discovery-entry-points.md) | Offering search, home/service pages/dashboards routed into offerings, URL-price path removed | 10 (every entry point) | 5–6 d | ⬜ Not started |
-| 7 | [NCC margin reporting + legacy cleanup + acceptance suite](phase-7-reporting-cleanup.md) | Margin report, old models/code deleted, 12-test automated suite | all, re-verified | 5–6 d | ⬜ Not started |
+| 6 | [Discovery — search + all entry points](phase-6-discovery-entry-points.md) | Offering search, home/service pages/dashboards routed into offerings, URL-price path removed | 10 (every entry point) | 5–6 d | ✅ Done 2026-09-25 |
+| 7 | [NCC margin reporting + legacy cleanup + acceptance suite](phase-7-reporting-cleanup.md) | Margin report, old models/code deleted, 12-test automated suite | all, re-verified | 5–6 d | ✅ Done 2026-09-25 |
+| 8 | [Rates for every service](phase-8-full-catalogue-seed.md) | Offerings + DEMO rates for all 39 categories | — | 1–2 d | ✅ Done 2026-09-25 |
+| 9 | [Remove dead CMS screens](phase-9-dead-cms-cleanup.md) | Service-page / category-config editors and modules deleted | — | 1 d | ✅ Done 2026-09-25 |
+| 10 | [Location / pincode pricing admin](phase-10-location-pricing-admin.md) | City & pincode price overrides from the admin | Req 25 (UI) | 2 d | ✅ Done 2026-09-25 |
+| 11 | [Search v2](phase-11-search-v2.md) | Typo tolerance, synonyms, suggestions | Req 21+ | 1–2 d | ✅ Done 2026-09-25 |
+| 12 | [AMC Plans (membership merged)](phase-12-amc-plans.md) | One AMC Plan product, admin-managed, one route | — | 2–3 d | ✅ Done 2026-09-25 |
+| 13 | [Warranty, Buy hub & store lists configurable](phase-13-warranty-buy-configurable.md) | EW plan admin; no hardcoded customer prices | — | 2 d | ✅ Done 2026-09-25 |
+| 14 | [Browser test suite green](phase-14-browser-suite-green.md) | Every UI spec passes | — | 1–2 d | ✅ Done 2026-09-25 |
 
 **Total: ~39–48 developer-days** (≈ 8–10 weeks for one full-stack developer).
 
@@ -126,3 +133,58 @@ Phase 1 ──► Phase 2 ──┬──► Phase 3 (admin)   ─┐
 | **Quote** | The engine's calculated breakdown for a selection; what every customer screen renders |
 | **Commercial snapshot** | The frozen quote saved on a booking at creation time |
 | **SP / Partner** | Service Partner = technician (same entity at NCC) |
+
+
+---
+
+## 7. Admin guide — adding a new product or service (no code)
+
+Everything below happens in **Super Admin → Master Catalogue**. Nothing needs a
+developer or a deploy. The example adds **Refrigerator · Double Door · 250–350 L · Gas Refilling**
+at ₹1,899 to the customer and ₹1,100 to the partner.
+
+1. **Category.** Pick *Refrigerator* in the category list, or create it with **+ Category**.
+   Add search keywords such as `fridge, freezer`.
+2. **Product type.** In the category's structure panel, click **Add product type**, then:
+   - name: *Double Door*;
+   - size dimension: label *Capacity*, unit *L* (leave it empty if the product has no sizes).
+3. **Size (variant).** Under *Double Door*, click **Add variant**: *250–350 L*. Add each size you price separately.
+4. **Service.** Click **Add service**: *Gas Refilling*. Add keywords such as `gas, refrigerant, cooling`.
+   Services belong to the category, so you add *Gas Refilling* once and reuse it for every refrigerator type.
+5. **Offering.** Click **New offering** and fill in:
+   - booking type *Product-linked*, product type *Double Door*, size *250–350 L*, service *Gas Refilling*;
+   - name *Double Door Refrigerator 250–350 L Gas Refilling*. The code is suggested automatically, e.g. `REFRIGERATOR-DOUBLE-DOOR-250-350L-GAS-REFILL`;
+   - pricing unit *Per service / visit*, unit label *per fridge*;
+   - **customer price ₹1,899** and **SP payout ₹1,100**, plus an express fee and incentive if express is allowed;
+   - description, what's included / not included, customer instructions and any required questions (e.g. *Gas type: R600a / R134a / Don't know*).
+6. **Save.** The offering is live straight away:
+   - it appears in the customer booking flow under Refrigerator → Double Door → 250–350 L;
+   - search finds it ("fridge gas refilling");
+   - partners see its payout on the job.
+   The Offerings table shows the final price with GST (₹2,240.82) and NCC's margin (42.1%, i.e. ₹799 of ₹1,899).
+7. **Later price changes.** Click **Change price** on the offering row, enter the new amount and a reason.
+   Only the field you change moves: the partner payout stays ₹1,100 unless you change it too.
+   Existing bookings keep their original price and payout. The change shows under the offering's **History** tab.
+8. **Switching it off.** Toggle the offering off. It disappears from the booking flow and search at once,
+   and a direct API booking of it is refused (`OFFERING_NOT_BOOKABLE`).
+
+A service with no product (e.g. *Sofa Cleaning*): skip steps 2–3 and choose booking type
+*Standalone* in step 5. To price it by size, add the sizes as variants under the service itself;
+the customer then picks a size, as with water-tank capacities.
+
+Home-screen tiles (**CMS → Customer App**) carry only a title and an image. The app finds the
+catalogue service the title names ("Split AC Installation") and shows its live price. Name
+tiles after catalogue services.
+
+### AMC plans and warranty packs
+
+**Super Admin → Plans** (sidebar: *AMC Plans*, *Warranty Packs*) manages everything customers can buy besides a service booking:
+- name, appliance (or any appliance), price;
+- visits and validity (AMC) or years and claims (warranty);
+- the benefit lines shown on the card, a *Popular* flag, display order, and on / off.
+
+The customer AMC and Extended Warranty screens show only these: the appliance list and each "From ₹X" come from them.
+
+A plan or pack that customers have bought can't be deleted, only switched off; buyers keep what they paid for. Membership plans no longer exist: they were merged into AMC plans (Phase 12).
+
+Store products (appliances, spare parts) stay in **Super Admin → Products**. The Buy hub and the Dashboard spare-parts strip read them from there.

@@ -7,8 +7,6 @@ import * as loyaltyConfigService from './loyaltyConfig.service.js';
 import {
   createMilestoneSchema,
   updateMilestoneSchema,
-  createMembershipSchema,
-  updateMembershipSchema,
   updateSpinWheelSchema,
   idParamSchema,
   createReferralCampaignSchema,
@@ -47,41 +45,6 @@ loyaltyConfigRouter.put(
 loyaltyConfigRouter.delete('/milestones/:id', validate(idParamSchema, 'params'), async (req, res, next) => {
   try {
     await loyaltyConfigService.deleteMilestone(req.params.id);
-    ok(res, { deleted: true });
-  } catch (err) {
-    next(err);
-  }
-});
-
-loyaltyConfigRouter.get('/memberships', async (req, res, next) => {
-  try {
-    ok(res, await loyaltyConfigService.listMemberships());
-  } catch (err) {
-    next(err);
-  }
-});
-loyaltyConfigRouter.post('/memberships', validate(createMembershipSchema), async (req, res, next) => {
-  try {
-    created(res, await loyaltyConfigService.createMembership(req.body));
-  } catch (err) {
-    next(err);
-  }
-});
-loyaltyConfigRouter.put(
-  '/memberships/:id',
-  validate(idParamSchema, 'params'),
-  validate(updateMembershipSchema),
-  async (req, res, next) => {
-    try {
-      ok(res, await loyaltyConfigService.updateMembership(req.params.id, req.body));
-    } catch (err) {
-      next(err);
-    }
-  },
-);
-loyaltyConfigRouter.delete('/memberships/:id', validate(idParamSchema, 'params'), async (req, res, next) => {
-  try {
-    await loyaltyConfigService.deleteMembership(req.params.id);
     ok(res, { deleted: true });
   } catch (err) {
     next(err);

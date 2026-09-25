@@ -2,6 +2,7 @@ import express from 'express';
 import { ExtendedWarrantyOrder } from './extendedWarrantyOrder.model.js';
 import { AMCSubscription } from './amcSubscription.model.js';
 import { AMCPlan } from './amcPlan.model.js';
+import { Category } from '../catalog/category.model.js';
 import { ExtendedWarrantyPlan } from './extendedWarrantyPlan.model.js';
 import { OwnedAppliance } from '../service-requests/ownedAppliance.model.js';
 import { Payment } from '../payments-wallet/payment.model.js';
@@ -66,13 +67,45 @@ import { requireAuth } from '../../middleware/auth.js';
 const router = express.Router();
 
 /**
- * @route   GET /api/v1/warranty-amc/amc/plans
- * @desc    The purchasable AMC plans (public catalog)
+ * @route   GET /api/v1/warranty-amc/amc/plans?appliance=AC
+ * @desc    The purchasable AMC plans (public, admin-managed). With `appliance`
+ *          (a catalogue category key): that appliance's plans plus the plans
+ *          that cover any appliance.
  */
 router.get('/amc/plans', async (req, res) => {
   try {
-    const plans = await AMCPlan.find({ isActive: true }).sort({ price: 1 });
+    const query = { isActive: true };
+    if (req.query.appliance) query.applianceCategory = { $in: [String(req.query.appliance), null] };
+    const plans = await AMCPlan.find(query).sort({ displayOrder: 1, price: 1 });
+    // The appliance's own plans first, then the plans that cover any appliance.
+    plans.sort((a, b) => Number(!a.applianceCategory) - Number(!b.applianceCategory));
     return res.json({ data: plans });
+  } catch (err) {
+    return res.status(500).json({ error: { message: err.message } });
+  }
+});
+
+/**
+ * @route   GET /api/v1/warranty-amc/amc/appliances
+ * @desc    The appliance picker: each appliance with an active plan, its
+ *          "from" price (cheapest plan, any-appliance plans included) and
+ *          plan count — so the customer screen needs no price list of its own.
+ */
+router.get('/amc/appliances', async (req, res) => {
+  try {
+    const plans = await AMCPlan.find({ isActive: true }).select('applianceCategory price').lean();
+    const generic = plans.filter((p) => !p.applianceCategory);
+    const keys = [...new Set(plans.map((p) => p.applianceCategory).filter(Boolean))];
+    const categories = await Category.find({ key: { $in: keys } }).select('key name sortOrder').lean();
+    const nameOf = new Map(categories.map((c) => [c.key, c]));
+    const data = keys
+      .map((key) => {
+        const own = plans.filter((p) => p.applianceCategory === key);
+        const all = [...own, ...generic];
+        return { appliance: key, name: nameOf.get(key)?.name || key, fromPrice: Math.min(...all.map((p) => p.price)), planCount: all.length };
+      })
+      .sort((a, b) => (nameOf.get(a.appliance)?.sortOrder ?? 0) - (nameOf.get(b.appliance)?.sortOrder ?? 0) || a.name.localeCompare(b.name));
+    return res.json({ data });
   } catch (err) {
     return res.status(500).json({ error: { message: err.message } });
   }
@@ -88,8 +121,35 @@ router.get('/extended-warranty/plans', async (req, res) => {
     if (req.query.category) {
       query.$or = [{ applianceCategory: req.query.category }, { applianceCategory: null }];
     }
-    const plans = await ExtendedWarrantyPlan.find(query).sort({ durationYears: 1, price: 1 });
+    const plans = await ExtendedWarrantyPlan.find(query).sort({ displayOrder: 1, durationYears: 1, price: 1 });
+    // The appliance's own packs first, then the packs that cover any appliance.
+    plans.sort((a, b) => Number(!a.applianceCategory) - Number(!b.applianceCategory));
     return res.json({ data: plans });
+  } catch (err) {
+    return res.status(500).json({ error: { message: err.message } });
+  }
+});
+
+/**
+ * @route   GET /api/v1/warranty-amc/extended-warranty/appliances
+ * @desc    The extended-warranty appliance picker: each appliance with an
+ *          active pack, its "from" price and pack count (any-appliance packs
+ *          included) — the Buy screen keeps no price list of its own.
+ */
+router.get('/extended-warranty/appliances', async (req, res) => {
+  try {
+    const plans = await ExtendedWarrantyPlan.find({ isActive: true }).select('applianceCategory price').lean();
+    const generic = plans.filter((p) => !p.applianceCategory);
+    const keys = [...new Set(plans.map((p) => p.applianceCategory).filter(Boolean))];
+    const categories = await Category.find({ key: { $in: keys } }).select('key name sortOrder').lean();
+    const byKey = new Map(categories.map((c) => [c.key, c]));
+    const data = keys
+      .map((key) => {
+        const all = [...plans.filter((p) => p.applianceCategory === key), ...generic];
+        return { appliance: key, name: byKey.get(key)?.name || key, fromPrice: Math.min(...all.map((p) => p.price)), planCount: all.length };
+      })
+      .sort((a, b) => (byKey.get(a.appliance)?.sortOrder ?? 0) - (byKey.get(b.appliance)?.sortOrder ?? 0) || a.name.localeCompare(b.name));
+    return res.json({ data });
   } catch (err) {
     return res.status(500).json({ error: { message: err.message } });
   }
@@ -140,7 +200,7 @@ router.post('/extended-warranty/orders', async (req, res) => {
     // catalogue, never from the request. The client used to post its own
     // `amountPaid`, so the price charged was whatever the browser said.
     const ewPlan = await ExtendedWarrantyPlan.findOne(
-      plan ? { _id: plan } : { isActive: true },
+      plan ? { _id: plan, isActive: true } : { isActive: true },
     ).catch(() => null);
     if (!ewPlan) {
       return res.status(404).json({ error: { message: 'Extended warranty plan not found' } });
@@ -217,8 +277,13 @@ router.post('/amc/subscriptions', async (req, res) => {
       return res.status(404).json({ error: { message: 'AMC plan not found' } });
     }
 
+    if (!amcPlan.isActive) {
+      return res.status(404).json({ error: { message: 'AMC plan not found' } });
+    }
+
+    // Validity comes from the plan (admin-set), not a fixed year.
     const expiryDate = new Date();
-    expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+    expiryDate.setMonth(expiryDate.getMonth() + (amcPlan.durationMonths || 12));
 
     const subscription = await AMCSubscription.create({
       user: req.user.id,

@@ -345,7 +345,6 @@ export async function cleanTestData({
         ],
       },
     ],
-    ["usermemberships", { user: { $in: testUserIds } }],
     ["exchangerequests", { user: { $in: testUserIds } }],
     [
       "referrals",
