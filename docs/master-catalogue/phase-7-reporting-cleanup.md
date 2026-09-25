@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | ✅ Done (2026-09-25, uncommitted) |
+| **Status** | ✅ Done (2026-09-25) |
 | **Estimate** | 5–6 developer-days |
 | **Depends on** | Phases 1–6 |
 | **Client requirements** | 24, 25 (documented and tested seam), 27, 28 |
@@ -99,7 +99,7 @@ Using the Phase 5 job (AC × 2 express + socket add-on) and one Fan × 2 booking
 
 | Date | Commit | Notes |
 |---|---|---|
-| 2026-09-25 | _uncommitted_ | Margin report (API + Revenue tab), legacy pricing removed (grep gate empty), location-pricing seam proven, 12-test acceptance suite (API + browser), tree cache, indexes, rate limits. Backend 700/700, e2e API 192 ✓ / 1 skipped, e2e UI 29 ✓ / 11 ✘ (all 11 pre-existing; baseline had 12) |
+| 2026-09-25 | `686c217` | Margin report (API + Revenue tab), legacy pricing removed (grep gate empty), location-pricing seam proven, 12-test acceptance suite (API + browser), tree cache, indexes, rate limits. Backend 700/700, e2e API 192 ✓ / 1 skipped, e2e UI 29 ✓ / 11 ✘ (all 11 pre-existing; baseline had 12) |
 
 ### 7.1 NCC gross margin report
 

@@ -32,7 +32,7 @@ Search that forgives how people type: spelling mistakes, short forms, synonyms. 
 
 | Date | Commit | Notes |
 |---|---|---|
-| 2026-09-25 | see git log | Matcher rewritten; synonyms module; popular-searches endpoint; typo notice, suggestions and recent searches in the app. `catalogSearch.test.js` 17 tests (5 new); browser check ✓ |
+| 2026-09-25 | `686c217` | Matcher rewritten; synonyms module; popular-searches endpoint; typo notice, suggestions and recent searches in the app. `catalogSearch.test.js` 17 tests (5 new); browser check ✓ |
 
 **How a query word matches** (`offeringSearch.service.js`, `searchSynonyms.js`)
 

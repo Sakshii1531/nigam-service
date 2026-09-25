@@ -30,7 +30,7 @@
 
 | Date | Commit | Notes |
 |---|---|---|
-| 2026-09-25 | see git log | `npm run test:ui` **40 / 40 passed, twice in a row** (was 29 passed · 11 failed). API e2e 194 passed, **0 skipped** (was 1 skipped). Backend 720 / 720 |
+| 2026-09-25 | `686c217` | `npm run test:ui` **40 / 40 passed, twice in a row** (was 29 passed · 11 failed). API e2e 194 passed, **0 skipped** (was 1 skipped). Backend 720 / 720 |
 
 Each failure was traced to a cause before anything was changed. Two were **app bugs**, which were fixed in the app; the rest were **tests written for screens that have since been redesigned**, which were updated to the current screens.
 

@@ -33,7 +33,7 @@ Before: Refrigerator → "This service isn't available yet". After: Refrigerator
 
 | Date | Commit | Notes |
 |---|---|---|
-| 2026-09-25 | see git log | 39 categories · 211 offerings · 206 DEMO rates. Backend 706/706, e2e API 192 ✓ |
+| 2026-09-25 | `686c217` | 39 categories · 211 offerings · 206 DEMO rates. Backend 706/706, e2e API 192 ✓ |
 
 **How it's built**
 - `scripts/catalogueExpansionData.js`: names only, taken from the pre-catalogue seed.

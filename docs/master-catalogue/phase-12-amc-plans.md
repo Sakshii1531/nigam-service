@@ -32,7 +32,7 @@ Admin adds "AC Gold AMC — ₹1,799, 3 visits, 12 months, benefits: free gas to
 
 | Date | Commit | Notes |
 |---|---|---|
-| 2026-09-25 | see git log | One AMC Plan product; Super Admin → Plans → AMC Plans; membership deleted. New `plansAdmin.test.js` (8 tests); e2e appliances spec 14 ✓; browser walkthrough ✓ |
+| 2026-09-25 | `686c217` | One AMC Plan product; Super Admin → Plans → AMC Plans; membership deleted. New `plansAdmin.test.js` (8 tests); e2e appliances spec 14 ✓; browser walkthrough ✓ |
 
 **Why AMC wins the merge.** An AMC subscription does real work: its visits become covered "AMC Visit" jobs (₹0 to the customer) until they run out or the plan expires. A membership only stored a tier and a benefits list that nothing applied (no discount was ever given). Profile already showed an active AMC as "My Membership".
 

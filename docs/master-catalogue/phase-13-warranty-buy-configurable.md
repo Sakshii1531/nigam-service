@@ -33,7 +33,7 @@ Admin sets "Refrigerator — 2-year Extended Warranty ₹1,299". The Buy → Ext
 
 | Date | Commit | Notes |
 |---|---|---|
-| 2026-09-25 | see git log | EW packs admin + public appliance picker; Buy hub and Dashboard store lists from Products; fake finance approvals removed. `plansAdmin.test.js` 12 tests (4 new); browser walkthrough ✓ |
+| 2026-09-25 | `686c217` | EW packs admin + public appliance picker; Buy hub and Dashboard store lists from Products; fake finance approvals removed. `plansAdmin.test.js` 12 tests (4 new); browser walkthrough ✓ |
 
 **Extended-warranty packs**
 - **Model:** `ExtendedWarrantyPlan` gains `displayOrder` and `isPopular`. `applianceCategory` is now a Master Catalogue key.

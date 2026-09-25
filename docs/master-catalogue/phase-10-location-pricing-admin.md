@@ -32,7 +32,7 @@ Admin → Fan Installation → Local prices → Add → City "Jaipur", ₹279 / 
 
 | Date | Commit | Notes |
 |---|---|---|
-| 2026-09-25 | see git log | Admin API + UI for city / pincode prices. `catalogAdmin.test.js` +4 tests (21 total), `locationPricing.test.js` still green; browser walkthrough ✓ |
+| 2026-09-25 | `686c217` | Admin API + UI for city / pincode prices. `catalogAdmin.test.js` +4 tests (21 total), `locationPricing.test.js` still green; browser walkthrough ✓ |
 
 **API** (`/api/v1/super-admin/catalogue`)
 

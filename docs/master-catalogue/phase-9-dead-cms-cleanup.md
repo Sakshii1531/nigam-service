@@ -31,7 +31,7 @@ The admin opens CMS → Customer App and sees only sections that affect the app 
 
 | Date | Commit | Notes |
 |---|---|---|
-| 2026-09-25 | see git log | CMS editor 4,700 → 3,329 lines; 2 backend modules deleted. Backend 702/702 (the 4 service-page tests went with the feature), build ✓ |
+| 2026-09-25 | `686c217` | CMS editor 4,700 → 3,329 lines; 2 backend modules deleted. Backend 702/702 (the 4 service-page tests went with the feature), build ✓ |
 
 **Audit: what each CMS section feeds**
 

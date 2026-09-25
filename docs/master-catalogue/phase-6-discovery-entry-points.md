@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | ✅ Done (2026-09-25, uncommitted) |
+| **Status** | ✅ Done (2026-09-25) |
 | **Estimate** | 5–6 developer-days |
 | **Depends on** | Phase 4 |
 | **Client requirements** | 1, 15, 21, 22 |
@@ -99,7 +99,7 @@ Typo tolerance / fuzzy search (Atlas Search) if Mongo text search proves too str
 
 | Date | Commit | Notes |
 |---|---|---|
-| 2026-09-25 | _uncommitted_ | (Phase 7 follow-up: a label naming a product type — "Split AC Installation" — now resolves to that type's price.) Search API + resolve + service-groups, deep links, short link, search UI, every customer entry point re-pointed. Backend 685/685, e2e 192 passed / 1 skipped, frontend build ✅ |
+| 2026-09-25 | `686c217` | (Phase 7 follow-up: a label naming a product type — "Split AC Installation" — now resolves to that type's price.) Search API + resolve + service-groups, deep links, short link, search UI, every customer entry point re-pointed. Backend 685/685, e2e 192 passed / 1 skipped, frontend build ✅ |
 
 ### What was built
 
