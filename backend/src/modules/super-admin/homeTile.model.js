@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { applyStandardPlugins } from '../shared/plugins.js';
+import { watchCatalogueWrites } from '../catalog/catalogCache.js';
 
 // Merchandising tiles on the customer app's home screen.
 //
@@ -9,6 +10,7 @@ import { applyStandardPlugins } from '../shared/plugins.js';
 // that links somewhere. One model with a `placement` discriminator keeps them
 // in one CRUD surface instead of five near-identical ones; fields not relevant
 // to a placement are simply left unset (no tile has a price: the app shows the Master Catalogue's).
+export const SERVICE_TILE_PLACEMENTS = Object.freeze(['most-booked', 'appliance-service']);
 const homeTileSchema = new mongoose.Schema(
   {
     placement: {
@@ -21,8 +23,20 @@ const homeTileSchema = new mongoose.Schema(
     imageUrl: String,
     // Lucide icon key, used by the category chips rather than artwork.
     icon: String,
-    rating: Number,
-    badge: String,
+    // most-booked / appliance-service: the catalogue service group the tile
+    // books (docs/master-catalogue Phase 22). Price, "Instant" and rating are
+    // read live from the catalogue, express settings and real reviews — never
+    // stored on the tile. (It used to carry a typed-in rating and badge.)
+    target: {
+      type: new mongoose.Schema(
+        {
+          productType: { type: mongoose.Schema.Types.ObjectId, ref: 'ProductType', default: null },
+          service: { type: mongoose.Schema.Types.ObjectId, ref: 'CatalogService', required: true },
+        },
+        { _id: false },
+      ),
+      default: undefined,
+    },
     // Where tapping the tile goes — an in-app route, or a service name the
     // booking flow resolves.
     link: String,
@@ -44,5 +58,7 @@ const homeTileSchema = new mongoose.Schema(
 homeTileSchema.index({ placement: 1, sortOrder: 1 });
 
 applyStandardPlugins(homeTileSchema);
+// The home sections are cached with the catalogue (homeSections.service.js).
+homeTileSchema.plugin(watchCatalogueWrites);
 
 export const HomeTile = mongoose.models.HomeTile || mongoose.model('HomeTile', homeTileSchema);

@@ -56,6 +56,7 @@ import roMembraneImg from "../assets/ro_membrane.png";
 import roSedimentImg from "../assets/ro_sediment_filter.png";
 import roCarbonImg from "../assets/ro_carbon_filter.png";
 import roPostCarbonImg from "../assets/ro_post_carbon.png";
+import { Skeleton, SkeletonCardRow, SkeletonList } from '../components/common/Skeleton';
 
 const Buy = () => {
   const navigate = useNavigate();
@@ -287,15 +288,24 @@ const Buy = () => {
       );
   }, [selectedAppliance]);
 
-  // Store products (Super Admin → Products): appliances and spare parts.
-  const [storeProducts, setStoreProducts] = useState([]);
+  // Store products (Super Admin → NCC Products), one request per section so
+  // each shows as soon as it lands. Spare parts are asked for by category —
+  // filtering the first 100 products on the device dropped them once the
+  // store held more than 100.
+  const [popularList, setPopularList] = useState(null); // null = still loading
+  const [sparePartList, setSparePartList] = useState(null);
   useEffect(() => {
-    apiRequest("/products?limit=100")
-      .then((res) => setStoreProducts(Array.isArray(res) ? res : []))
-      .catch(() => setStoreProducts([]));
+    apiRequest("/products?limit=30&sort=-rating")
+      .then((res) => setPopularList(Array.isArray(res) ? res : []))
+      .catch(() => setPopularList([]));
+    apiRequest("/products?category=Spare%20Parts&limit=20")
+      .then((res) => setSparePartList(Array.isArray(res) ? res : []))
+      .catch(() => setSparePartList([]));
   }, []);
-  const popularProducts = storeProducts.filter((p) => p.category !== "Spare Parts").sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 8);
-  const spareParts = storeProducts.filter((p) => p.category === "Spare Parts");
+  const popularLoading = popularList === null;
+  const sparePartsLoading = sparePartList === null;
+  const popularProducts = (popularList || []).filter((p) => p.category !== "Spare Parts").slice(0, 8);
+  const spareParts = sparePartList || [];
 
   const [buying, setBuying] = useState(false);
   const [buyError, setBuyError] = useState("");
@@ -922,6 +932,7 @@ const Buy = () => {
             </div>
 
             <div className="flex flex-col gap-3 md:grid md:grid-cols-2 xl:grid-cols-3">
+              {ewAppliances === null && <SkeletonList rows={4} className="contents" />}
               {ewAppliances?.length === 0 && (
                 <p className="text-xs font-semibold text-slate-500">No warranty packs are on sale right now.</p>
               )}
@@ -2618,7 +2629,8 @@ const Buy = () => {
               </div>
 
               <div className="flex gap-4 overflow-x-auto pb-2 snap-x no-scrollbar">
-                {popularProducts.length === 0 && (
+                {popularLoading && <SkeletonCardRow count={4} />}
+                {!popularLoading && popularProducts.length === 0 && (
                   <p className="text-xs font-semibold text-slate-500 px-1">No products in the store yet.</p>
                 )}
                 {popularProducts.map((product) => (
@@ -2658,7 +2670,8 @@ const Buy = () => {
               </div>
 
               <div className="flex gap-4 overflow-x-auto pb-2 snap-x no-scrollbar">
-                {spareParts.length === 0 && (
+                {sparePartsLoading && <SkeletonCardRow count={4} />}
+                {!sparePartsLoading && spareParts.length === 0 && (
                   <p className="text-xs font-semibold text-slate-500 px-1">No spare parts in the store yet.</p>
                 )}
                 {spareParts.map((p) => ({
@@ -2752,6 +2765,7 @@ const Buy = () => {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
+              {ewAppliances === null && Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-36" rounded="rounded-2xl" />)}
               {(ewAppliances || []).map((a) => ({
                 key: a.appliance,
                 name: a.name,

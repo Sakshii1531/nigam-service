@@ -9,6 +9,7 @@ import { getCategoryTree, getOfferingDetail } from './offeringBrowse.service.js'
 import { buildQuote } from './quote.service.js';
 import { searchCatalogue, resolveLabels, listServiceGroups, popularSearches } from './offeringSearch.service.js';
 import { toCustomerQuote } from './commercialView.js';
+import { getHomeSections } from './homeSections.service.js';
 import { listPublicBrands } from './catalogueBrand.service.js';
 import {
   createCategorySchema,
@@ -118,6 +119,15 @@ catalogRouter.get('/search/popular', quoteRateLimit, async (req, res, next) => {
 });
 
 // Every bookable service with its "from" price (the "all services" pages).
+// The home screen's service rows (Phase 22) — every figure live.
+catalogRouter.get('/home-sections', quoteRateLimit, validate(locationQuerySchema, 'query'), async (req, res, next) => {
+  try {
+    ok(res, await getHomeSections({ city: req.query.city, pincode: req.query.pincode }));
+  } catch (err) {
+    next(err);
+  }
+});
+
 catalogRouter.get('/service-groups', quoteRateLimit, validate(locationQuerySchema, 'query'), async (req, res, next) => {
   try {
     ok(res, await listServiceGroups({ city: req.query.city, pincode: req.query.pincode }));

@@ -7,13 +7,16 @@ export const listTilesQuerySchema = z.object({
   placement: z.enum(PLACEMENTS).optional(),
 });
 
-export const createTileSchema = z.object({
+const objectId = z.string().regex(/^[a-f0-9]{24}$/i, 'Invalid id');
+const SERVICE_PLACEMENTS = ['most-booked', 'appliance-service'];
+
+const tileFields = z.object({
   placement: z.enum(PLACEMENTS),
-  title: z.string().min(1),
-  imageUrl: mediaUrl().optional(),
+  // Optional for service tiles — it defaults to the service's own name.
+  title: z.string().trim().max(80).optional(),
+  target: z.object({ productType: objectId.nullable().optional(), service: objectId }).optional(),
+  imageUrl: mediaUrl().nullable().optional(),
   icon: mediaUrl().optional(),
-  rating: z.number().min(0).max(5).optional(),
-  badge: z.string().optional(),
   link: z.string().optional(),
   service: z.string().optional(),
   brandName: z.string().optional(),
@@ -23,10 +26,14 @@ export const createTileSchema = z.object({
   gradient: z.string().optional(),
   textColor: z.string().optional(),
   sortOrder: z.number().optional(),
-});
-
-export const updateTileSchema = createTileSchema.partial().extend({
   isActive: z.boolean().optional(),
 });
+
+// A service tile must say which bookable service it is; other tiles need a title.
+export const createTileSchema = tileFields
+  .refine((t) => !SERVICE_PLACEMENTS.includes(t.placement) || t.target, { message: 'Pick the service this tile books', path: ['target'] })
+  .refine((t) => SERVICE_PLACEMENTS.includes(t.placement) || t.title, { message: 'Title is required', path: ['title'] });
+
+export const updateTileSchema = tileFields.partial();
 
 export const idParamSchema = z.object({ id: z.string().min(1) });

@@ -8,10 +8,11 @@ import {
 import ServiceProviderBottomNav from '../../components/ServiceProviderBottomNav';
 import { useTech } from '../../context/ServiceProviderContext';
 import { useNotifications } from '../../context/NotificationContext';
+import { LoadingSection, SkeletonCards, InlineValue } from '../../components/common/Skeleton';
 
 const Schedule = () => {
   const navigate = useNavigate();
-  const { jobs, selectJobForDetails, earningsTally } = useTech();
+  const { jobs, selectJobForDetails, earningsTally, jobsLoading, earningsLoading } = useTech();
   const { unreadCount: unreadNotificationsCount } = useNotifications();
 
   const today = new Date();
@@ -138,15 +139,15 @@ const Schedule = () => {
         <div className="grid grid-cols-3 gap-2 mt-4 pt-1">
           <div className="bg-white/10 backdrop-blur-xs rounded-2xl p-2.5 text-center border border-white/15">
             <span className="text-[10px] font-bold text-white/70 uppercase tracking-wider block">Day Jobs</span>
-            <span className="text-base font-black text-white">{activeSchedules.length}</span>
+            <span className="text-base font-black text-white"><InlineValue value={jobsLoading ? null : activeSchedules.length} className="h-4 w-5" /></span>
           </div>
           <div className="bg-white/10 backdrop-blur-xs rounded-2xl p-2.5 text-center border border-white/15">
             <span className="text-[10px] font-bold text-white/70 uppercase tracking-wider block">Earnings</span>
-            <span className="text-base font-black text-emerald-300">₹{earningsTally.today.toLocaleString('en-IN')}</span>
+            <span className="text-base font-black text-emerald-300"><InlineValue value={earningsLoading ? null : earningsTally.today} className="h-4 w-14">₹{earningsTally.today.toLocaleString('en-IN')}</InlineValue></span>
           </div>
           <div className="bg-white/10 backdrop-blur-xs rounded-2xl p-2.5 text-center border border-white/15">
             <span className="text-[10px] font-bold text-white/70 uppercase tracking-wider block">Completed</span>
-            <span className="text-base font-black text-amber-300">{earningsTally.completedToday || 0}</span>
+            <span className="text-base font-black text-amber-300"><InlineValue value={earningsLoading ? null : earningsTally.completedToday || 0} className="h-4 w-6" /></span>
           </div>
         </div>
       </div>
@@ -170,10 +171,10 @@ const Schedule = () => {
 
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 px-3.5 py-1.5 rounded-2xl text-xs font-bold text-[#0D47A1]">
-              <span>Day Jobs: {activeSchedules.length}</span>
+              <span>Day Jobs: <InlineValue value={jobsLoading ? null : activeSchedules.length} className="h-3 w-4" /></span>
             </div>
             <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-3.5 py-1.5 rounded-2xl text-xs font-bold text-emerald-700">
-              <span>Today: ₹{earningsTally.today.toLocaleString('en-IN')}</span>
+              <span>Today: <InlineValue value={earningsLoading ? null : earningsTally.today} className="h-4 w-14">₹{earningsTally.today.toLocaleString('en-IN')}</InlineValue></span>
             </div>
           </div>
         </div>
@@ -231,7 +232,9 @@ const Schedule = () => {
             )}
           </div>
 
-          {activeSchedules.length > 0 ? (
+          {jobsLoading ? (
+            <LoadingSection loading label="appointments" skeleton={<SkeletonCards count={2} />} />
+          ) : activeSchedules.length > 0 ? (
             <div className="flex flex-col gap-3 relative w-full mt-1 lg:grid lg:grid-cols-2">
               {activeSchedules.map((item) => (
                 <div 
@@ -328,12 +331,12 @@ const Schedule = () => {
             </div>
             
             <div className="flex flex-col items-center justify-center bg-white rounded-2xl p-2.5 border border-slate-150">
-              <span className="text-lg sm:text-xl font-black text-[#16A34A]">₹{earningsTally.today.toLocaleString('en-IN')}</span>
+              <span className="text-lg sm:text-xl font-black text-[#16A34A]"><InlineValue value={earningsLoading ? null : earningsTally.today} className="h-4 w-14">₹{earningsTally.today.toLocaleString('en-IN')}</InlineValue></span>
               <span className="text-[9.5px] font-bold text-slate-400 uppercase mt-0.5">Earnings</span>
             </div>
             
             <div className="flex flex-col items-center justify-center bg-white rounded-2xl p-2.5 border border-slate-150">
-              <span className="text-lg sm:text-xl font-black text-[#0D47A1]">{earningsTally.completedToday || 0}</span>
+              <span className="text-lg sm:text-xl font-black text-[#0D47A1]"><InlineValue value={earningsLoading ? null : earningsTally.completedToday || 0} className="h-4 w-6" /></span>
               <span className="text-[9.5px] font-bold text-slate-400 uppercase mt-0.5">Completed</span>
             </div>
           </div>

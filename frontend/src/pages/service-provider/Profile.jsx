@@ -14,6 +14,7 @@ import { goBack } from '../../lib/navigation';
 import ServiceProviderBottomNav from '../../components/ServiceProviderBottomNav';
 import serviceProviderAvatar from '../../assets/service_provider_avatar.png';
 import { useServiceProviderSummary } from '../../hooks/useServiceProviderSummary';
+import { Skeleton } from '../../components/common/Skeleton';
 
 const ProfilePage = () => {
   const navigate = useNavigate();
@@ -259,7 +260,7 @@ const ProfilePage = () => {
                 </div>
 
                 <p className="text-xs text-slate-500 font-semibold mt-1 break-words line-clamp-2 leading-relaxed">
-                  {serviceProviderSpecs}
+                  {profile ? serviceProviderSpecs : <Skeleton inline className="h-3 w-40" />}
                 </p>
 
                 {/* Rating (Only shown if rating exists) & Verified Badges */}

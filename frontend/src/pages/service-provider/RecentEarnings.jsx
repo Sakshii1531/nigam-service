@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ChevronRight, Zap, FileText } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
 import { goBack } from '../../lib/navigation';
+import { LoadingSection, SkeletonList } from '../../components/common/Skeleton';
 
 
 const RecentEarnings = () => {
@@ -63,7 +64,7 @@ const RecentEarnings = () => {
 
       {/* Earnings List */}
       <div className="flex-1 p-3.5 lg:px-6 xl:px-8 flex flex-col gap-3 max-w-screen-xl mx-auto w-full">
-        {loading && <p className="text-[11px] text-slate-400 font-semibold py-6 text-center">Loading earnings…</p>}
+        {loading && <LoadingSection loading label="earnings" skeleton={<SkeletonList rows={5} />} />}
         {error && <p className="text-[11px] text-rose-500 font-semibold py-6 text-center">{error}</p>}
         {!loading && !error && earnings.length === 0 && (
           <p className="text-[11px] text-slate-400 font-semibold py-6 text-center">No completed jobs yet.</p>

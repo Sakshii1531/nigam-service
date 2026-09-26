@@ -6,6 +6,7 @@ import {
 import ServiceProviderBottomNav from '../../components/ServiceProviderBottomNav';
 import { apiRequest } from '../../lib/apiClient';
 import { usePushPermission, pushBlockedMessage } from '../../hooks/usePushPermission';
+import { Skeleton } from '../../components/common/Skeleton';
 
 const Toggle = ({ enabled, onToggle, disabled = false }) => (
   <button
@@ -33,6 +34,7 @@ const ServiceProviderSettings = () => {
   const [notifications, setNotifications] = useState(true);
   const [jobAlerts, setJobAlerts] = useState(true);
   const [prefsError, setPrefsError] = useState('');
+  const [prefsLoading, setPrefsLoading] = useState(true);
   const [locationAccess, setLocationAccess] = useState(true);
 
   const { permission, requesting, requestPush } = usePushPermission();
@@ -46,7 +48,8 @@ const ServiceProviderSettings = () => {
         setNotifications(prefs.pushNotifications !== undefined ? Boolean(prefs.pushNotifications) : prefs.push !== false);
         setJobAlerts(prefs.bookingUpdates !== false);
       })
-      .catch((err) => console.warn('[settings] could not load notification preferences:', err.message));
+      .catch((err) => console.warn('[settings] could not load notification preferences:', err.message))
+      .finally(() => !cancelled && setPrefsLoading(false));
     return () => { cancelled = true; };
   }, []);
 
@@ -170,7 +173,7 @@ const ServiceProviderSettings = () => {
                   <p className="text-[10px] text-amber-600 font-medium mt-1 leading-snug max-w-50">{pushUnavailable}</p>
                 )}
               </div>
-              <Toggle enabled={notifications} onToggle={togglePush} disabled={requesting} />
+              {prefsLoading ? <Skeleton className="h-6 w-11" rounded="rounded-full" /> : <Toggle enabled={notifications} onToggle={togglePush} disabled={requesting} />}
             </div>
             <div className="h-0.25 bg-slate-100" />
             <div className="flex items-center justify-between">
@@ -178,7 +181,7 @@ const ServiceProviderSettings = () => {
                 <p className="text-xs font-medium text-[#052355]">Job Alerts</p>
                 <p className="text-[10px] text-slate-500 font-normal mt-0.5">New job assignment alerts</p>
               </div>
-              <Toggle enabled={jobAlerts} onToggle={toggleJobAlerts} />
+              {prefsLoading ? <Skeleton className="h-6 w-11" rounded="rounded-full" /> : <Toggle enabled={jobAlerts} onToggle={toggleJobAlerts} />}
             </div>
             {prefsError && (
               <p className="text-[10px] text-red-600 font-medium leading-snug">{prefsError}</p>

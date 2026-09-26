@@ -229,6 +229,7 @@ test.describe('endpoints the consoles depend on exist', () => {
     '/api/v1/catalog/categories',
     '/api/v1/catalog/brands',
     '/api/v1/cms/home-tiles?placement=most-booked',
+    '/api/v1/catalog/home-sections',
     '/api/v1/warranty-amc/amc/plans',
     '/api/v1/warranty-amc/amc/appliances',
   ];

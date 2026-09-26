@@ -30,6 +30,9 @@ export const useTech = () => {
     ctx || {
       jobs: [],
       jobsLoading: false,
+      inventoryLoading: false,
+      claimsLoading: false,
+      earningsLoading: false,
       availability: null,
       availabilityBusy: false,
       inventory: [],
@@ -52,6 +55,10 @@ export const ServiceProviderProvider = ({ children }) => {
   // cards rendered a confident 0 for the several seconds the fetch takes,
   // which reads as "the service provider has been assigned nothing".
   const [jobsLoading, setJobsLoading] = useState(true);
+  // First-load flags for the sections that load alongside the jobs.
+  const [inventoryLoading, setInventoryLoading] = useState(true);
+  const [claimsLoading, setClaimsLoading] = useState(true);
+  const [earningsLoading, setEarningsLoading] = useState(true);
   // The service provider's own online switch. Auto-assignment only ever considers
   // service providers whose availability is 'Available', so until this could be set a
   // service provider was never a candidate for any job.
@@ -288,7 +295,10 @@ export const ServiceProviderProvider = ({ children }) => {
       jobsLoadedOnceRef.current = true;
       setJobsLoading(false);
 
-      // 2. Fetch real inventory
+      // 2–4. Inventory, claims and earnings load in parallel, each with its
+      // own first-load flag, so a screen shows each section as soon as its
+      // own data lands (they used to run one after another behind the jobs).
+      const loadInventory = async () => {
       try {
         const invRes = await apiRequest("/service-provider/inventory", {
           auth: true,
@@ -319,9 +329,12 @@ export const ServiceProviderProvider = ({ children }) => {
         }
       } catch (e) {
         console.warn("Service Provider inventory fetch warning:", e.message);
+      } finally {
+        setInventoryLoading(false);
       }
+      };
 
-      // 3. Fetch real claims
+      const loadClaims = async () => {
       try {
         const claimsRes = await apiRequest("/service-provider/claims", {
           auth: true,
@@ -343,9 +356,12 @@ export const ServiceProviderProvider = ({ children }) => {
         }
       } catch (e) {
         console.warn("Service Provider claims fetch warning:", e.message);
+      } finally {
+        setClaimsLoading(false);
       }
+      };
 
-      // 4. Fetch real earnings summary
+      const loadEarnings = async () => {
       try {
         // The breakdown endpoint carries the tally plus the withdrawable balance
         // and the Quick/Invoice split. The field names here are the API's own —
@@ -376,12 +392,21 @@ export const ServiceProviderProvider = ({ children }) => {
           "ServiceProvider earnings summary fetch warning:",
           e.message,
         );
+      } finally {
+        setEarningsLoading(false);
       }
+      };
+
+      await Promise.allSettled([loadInventory(), loadClaims(), loadEarnings()]);
     } catch (err) {
       console.error(
         "Failed to fetch real jobs for serviceProvider:",
         err.message,
       );
+      // The other sections never started — stop their skeletons.
+      setInventoryLoading(false);
+      setClaimsLoading(false);
+      setEarningsLoading(false);
     } finally {
       setJobsLoading(false);
     }
@@ -1565,6 +1590,9 @@ export const ServiceProviderProvider = ({ children }) => {
         availabilityBusy,
         setAvailability,
         jobsLoading,
+        inventoryLoading,
+        claimsLoading,
+        earningsLoading,
         acceptInstantJob,
       }}>
       {children}

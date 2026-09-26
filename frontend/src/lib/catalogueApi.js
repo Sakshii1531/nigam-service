@@ -141,6 +141,10 @@ export function selectionFromDeepLink(tree, search) {
 /** Whether a URL carries any deep-link selection. */
 export const hasDeepLink = (search) => ['offering', 'pt', 'svc', 'variant'].some((k) => new URLSearchParams(search).has(k));
 
+/** GET /catalog/home-sections — the home screen's service rows, every figure live (Phase 22). */
+export const getHomeSections = ({ city, pincode } = {}) =>
+  apiRequest(`/catalog/home-sections${qs({ city, pincode })}`, { silentError: true });
+
 /** GET /catalog/service-groups — every bookable service with its "from" price and deepLink. */
 export const listServiceGroups = ({ city, pincode } = {}) =>
   apiRequest(`/catalog/service-groups${qs({ city, pincode })}`, { silentError: true });

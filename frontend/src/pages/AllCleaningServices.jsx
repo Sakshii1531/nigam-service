@@ -8,6 +8,7 @@ import cleaningCarpet from '../assets/cleaning_carpet.png';
 import cleaningKitchen from '../assets/cleaning_kitchen.png';
 import { resolveLabels, formatRupees } from '../lib/catalogueApi';
 import { useLocationContext } from '../context/LocationContext';
+import { Skeleton } from '../components/common/Skeleton';
 
 // Curated cleaning tiles (artwork + title). Price and destination come from
 // the Master Catalogue: a tile nothing bookable matches shows no price and
@@ -26,7 +27,7 @@ const AllCleaningServices = () => {
 
   const { currentLocation } = useLocationContext();
   const city = currentLocation?.city || '';
-  const [matches, setMatches] = useState({});
+  const [matches, setMatches] = useState(null); // null = prices still loading
   useEffect(() => {
     let alive = true;
     resolveLabels(TILES.map((t) => t.title), { city: city || undefined })
@@ -51,7 +52,7 @@ const AllCleaningServices = () => {
       <div className="p-6">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
           {TILES.map((service) => {
-            const match = matches[service.title];
+            const match = matches?.[service.title];
             return (
             <div 
               key={service.id}
@@ -65,7 +66,9 @@ const AllCleaningServices = () => {
                 <span className="text-sm font-semibold text-text-primary truncate">
                   {service.title}
                 </span>
-                {match?.fromPrice != null && (
+                {matches === null ? (
+                  <Skeleton className="h-4 w-20" />
+                ) : match?.fromPrice != null && (
                   <span className="text-sm font-bold text-brand-blue">from {formatRupees(match.fromPrice)}</span>
                 )}
               </div>

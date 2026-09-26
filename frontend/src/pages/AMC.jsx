@@ -38,6 +38,7 @@ import washingImg from "../assets/categories/wasing.png";
 import splitAcImg from "../assets/categories/split_ac.png";
 import waterPurifierImg from "../assets/categories/water_purifier.png";
 import tvImg from "../assets/categories/television.png";
+import { SkeletonCards, SkeletonList } from '../components/common/Skeleton';
 
 const AMC = () => {
   const navigate = useNavigate();
@@ -102,7 +103,7 @@ const AMC = () => {
   // The purchasable AMC plans, from the admin-managed catalogue. This screen
   // shipped its own per-appliance price list, so the plans on offer could not
   // be changed without a redeploy and did not have to match what was charged.
-  const [amcPlans, setAmcPlans] = useState([]);
+  const [amcPlans, setAmcPlans] = useState(null); // null = still loading
   const [plansError, setPlansError] = useState("");
 
   // The appliances that have plans, with their "from" price — the picker
@@ -135,9 +136,10 @@ const AMC = () => {
           })),
         ),
       )
-      .catch((err) =>
-        setPlansError(err.message || "Could not load AMC plans."),
-      );
+      .catch((err) => {
+        setPlansError(err.message || "Could not load AMC plans.");
+        setAmcPlans([]);
+      });
   }, [selectedAppliance]);
 
   // Brands offered for this appliance, as set in Super Admin → Categories &
@@ -187,7 +189,7 @@ const AMC = () => {
     return waterPurifierImg;
   };
 
-  const selectedPlan = amcPlans[selectedPlanIndex] || amcPlans[0] || null;
+  const selectedPlan = amcPlans?.[selectedPlanIndex] || amcPlans?.[0] || null;
   const applianceBrands = getBrandsForAppliance(selectedAppliance);
   const activeBrand = selectedBrand || applianceBrands[0];
 
@@ -198,9 +200,9 @@ const AMC = () => {
           {plansError}
         </p>
       )}
-      {!plansError && amcPlans.length === 0 && step > 1 && (
+      {!plansError && amcPlans?.length === 0 && step > 1 && (
         <p className="mx-6 mt-4 text-[11px] font-semibold text-slate-500">
-          Loading AMC plans…
+          No AMC plans are on sale for this appliance right now.
         </p>
       )}
 
@@ -629,6 +631,7 @@ const AMC = () => {
             </div>
 
             <div className="flex flex-col gap-3 md:grid md:grid-cols-2 xl:grid-cols-3">
+              {amcAppliances === null && <SkeletonList rows={4} className="contents" />}
               {amcAppliances?.length === 0 && (
                 <p className="text-xs font-semibold text-slate-500">No AMC plans are on sale right now.</p>
               )}
@@ -687,7 +690,8 @@ const AMC = () => {
             </div>
 
             <div className="flex flex-col gap-3">
-              {amcPlans.map((plan, idx) => {
+              {amcPlans === null && <SkeletonCards count={3} className="contents" />}
+              {(amcPlans || []).map((plan, idx) => {
                 const isSelected = selectedPlanIndex === idx;
                 return (
                   <div

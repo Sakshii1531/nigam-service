@@ -18,6 +18,7 @@ import waterPurifierImg from '../assets/categories/water_purifier.png';
 import tvImg from '../assets/categories/television.png';
 import geyserImg from '../assets/icon_3d_geyser.png';
 import ovenImg from '../assets/icon_3d_oven.png';
+import { InlineValue } from '../components/common/Skeleton';
 
 const Exchange = () => {
   const navigate = useNavigate();
@@ -453,7 +454,7 @@ const Exchange = () => {
             <div className="bg-white border border-slate-200/80 rounded-3xl p-5 flex flex-col gap-4 shadow-sm">
               <div className="flex justify-between items-center text-sm">
                 <span className="text-text-secondary font-semibold">Selected Product Value</span>
-                <span className="font-extrabold text-text-primary">₹{newProductPrice.toLocaleString()}</span>
+                <span className="font-extrabold text-text-primary"><InlineValue value={newProductPrice} className="h-4 w-16">₹{newProductPrice?.toLocaleString()}</InlineValue></span>
               </div>
               
               <div className="flex justify-between items-center text-sm border-t border-slate-100 pt-3">

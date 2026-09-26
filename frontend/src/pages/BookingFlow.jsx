@@ -47,6 +47,7 @@ import {
   standaloneOffering,
   formatRupees,
 } from "../lib/catalogueApi";
+import { Skeleton } from '../components/common/Skeleton';
 
 // Every price on this screen comes from the Master Catalogue quote API
 // (docs/master-catalogue Phase 4) — nothing here adds, multiplies or taxes.
@@ -681,12 +682,33 @@ const BookingFlow = () => {
   const quoteLoading = Boolean(quoteKey) && !quoteCurrent;
 
   if (!tree && !treeError) {
+    // Shaped like step 1: header, stepper, the type/size options, bottom bar.
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-white gap-3">
-        <div className="w-10 h-10 border-4 border-blue-200 border-t-brand-blue rounded-full animate-spin" />
-        <p className="text-xs font-bold text-slate-500">
-          Loading service details…
-        </p>
+      <div role="status" aria-busy="true" className="min-h-screen bg-white">
+        <span className="sr-only">Loading service details…</span>
+        <div aria-hidden="true" className="px-4 py-3.5 border-b border-slate-100 flex items-center gap-3">
+          <Skeleton className="w-8 h-8" rounded="rounded-full" />
+          <Skeleton className="h-4 w-40" />
+        </div>
+        <div aria-hidden="true" className="max-w-3xl mx-auto px-4 py-5 space-y-5">
+          <div className="flex items-center gap-2">
+            {Array.from({ length: 4 }, (_, i) => (
+              <Skeleton key={i} className="h-1.5 flex-1" rounded="rounded-full" />
+            ))}
+          </div>
+          <Skeleton className="h-5 w-48" />
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {Array.from({ length: 6 }, (_, i) => (
+              <div key={i} className="border border-slate-100 rounded-2xl p-3 space-y-2">
+                <Skeleton className="h-16 w-full" rounded="rounded-xl" />
+                <Skeleton className="h-3.5 w-3/4" />
+              </div>
+            ))}
+          </div>
+        </div>
+        <div aria-hidden="true" className="fixed bottom-0 inset-x-0 bg-white border-t border-slate-100 p-4">
+          <Skeleton className="h-12 w-full max-w-3xl mx-auto" rounded="rounded-2xl" />
+        </div>
       </div>
     );
   }

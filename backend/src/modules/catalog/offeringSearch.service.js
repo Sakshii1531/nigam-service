@@ -232,6 +232,10 @@ function correctedQuery(q, entries) {
  * results (product type + service, sizes folded into a "from" price), in
  * catalogue order. Backs the "all services" listing pages.
  */
+/** A service group is (product type or none) × service — its id in one string. */
+export const serviceGroupId = ({ productTypeId, serviceId }) => `${productTypeId || 'none'}:${serviceId}`;
+const isImageUrl = (value) => typeof value === 'string' && /^(https?:\/\/|\/uploads\/)/i.test(value);
+
 export async function listServiceGroups({ city = null, pincode = null } = {}) {
   const bookable = await loadBookableOfferings({}, { city, pincode });
   const groups = new Map();
@@ -242,12 +246,22 @@ export async function listServiceGroups({ city = null, pincode = null } = {}) {
     groups.get(key).push(entry);
   }
   return [...groups.values()]
-    .map((entries) => ({
-      ...describeProductGroup(entries),
-      fromPrice: toRupees(Math.min(...entries.map((e) => e.rate.customerPrice))),
-      offeringCount: entries.length,
-      order: Math.min(...entries.map((e) => e.offering.displayOrder ?? 0)),
-    }))
+    .map((entries) => {
+      const { offering } = entries[0];
+      const ids = { productTypeId: offering.productType ? String(offering.productType._id) : null, serviceId: String(offering.service._id) };
+      return {
+        ...describeProductGroup(entries),
+        // Stable identity of the group — what a home tile or story points at.
+        groupId: serviceGroupId(ids),
+        ...ids,
+        fromPrice: toRupees(Math.min(...entries.map((e) => e.rate.customerPrice))),
+        offeringCount: entries.length,
+        // Bookable as an express ("Instant") visit.
+        instant: entries.some((e) => e.offering.express?.enabled),
+        imageUrl: [offering.productType?.icon, offering.service.icon].find(isImageUrl) || null,
+        order: Math.min(...entries.map((e) => e.offering.displayOrder ?? 0)),
+      };
+    })
     .sort((a, b) => a.category.name.localeCompare(b.category.name) || a.order - b.order || a.title.localeCompare(b.title))
     .map(({ order: _order, ...g }) => g);
 }

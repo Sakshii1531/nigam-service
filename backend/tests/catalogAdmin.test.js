@@ -388,6 +388,6 @@ describe('images are URLs, never base64 (Phase 17)', () => {
     await request(app).post('/api/v1/cms/banners').set('Authorization', `Bearer ${adminToken}`)
       .send({ imageUrl: b64 }).expect(400);
     await request(app).post('/api/v1/cms/home-tiles').set('Authorization', `Bearer ${adminToken}`)
-      .send({ placement: 'most-booked', title: 'X', imageUrl: b64 }).expect(400);
+      .send({ placement: 'brand-card', title: 'X', imageUrl: b64 }).expect(400);
   });
 });

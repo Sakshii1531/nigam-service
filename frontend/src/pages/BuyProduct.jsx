@@ -8,6 +8,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import CustomerBottomNav from '../components/CustomerBottomNav';
+import { SkeletonCards } from '../components/common/Skeleton';
 
 const BuyProduct = () => {
   const navigate = useNavigate();
@@ -45,7 +46,7 @@ const BuyProduct = () => {
   // would 404. Ratings and review counts were invented per row too.
   const [products, setProducts] = useState([]);
   const [, setLoadError] = useState('');
-  const [, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -148,7 +149,9 @@ const BuyProduct = () => {
       {/* PRODUCT GRID */}
       <div className="flex-1 px-6 flex flex-col gap-5 overflow-y-auto">
         
-        {filteredProducts.length === 0 ? (
+        {loading ? (
+          <SkeletonCards count={3} />
+        ) : filteredProducts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <span className="text-4xl mb-2">🔍</span>
             <h3 className="font-bold text-text-primary text-sm">No products found</h3>

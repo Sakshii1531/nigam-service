@@ -17,6 +17,19 @@ const storySchema = new mongoose.Schema(
       },
     ],
     aspectRatio: String,
+    // Optional "Book now" on the story: the catalogue service it promotes
+    // (docs/master-catalogue Phase 22). Resolved to a booking link on read,
+    // and left out while that service isn't bookable.
+    target: {
+      type: new mongoose.Schema(
+        {
+          productType: { type: mongoose.Schema.Types.ObjectId, ref: 'ProductType', default: null },
+          service: { type: mongoose.Schema.Types.ObjectId, ref: 'CatalogService', required: true },
+        },
+        { _id: false },
+      ),
+      default: undefined,
+    },
     clicks: { type: Number, default: 0 },
     status: { type: String, enum: ['Active', 'Scheduled'], default: 'Active', index: true },
   },

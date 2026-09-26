@@ -17,7 +17,7 @@ import { useCatalogueSearch } from "../lib/useCatalogueSearch";
 import CatalogueSearchResults from "../components/common/CatalogueSearchResults";
 import SearchSuggestions from "../components/common/SearchSuggestions";
 import { isImageUrl } from "../lib/uploadImage";
-import { formatRupees, resolveLabels } from "../lib/catalogueApi";
+import { formatRupees, getHomeSections } from "../lib/catalogueApi";
 import { useAuth } from "../context/AuthContext";
 import { apiRequest } from "../lib/apiClient";
 import acBanner from "../assets/ac_service_banner.png";
@@ -25,11 +25,7 @@ import electricianBanner from "../assets/electrician_banner.png";
 import plumbingBanner from "../assets/plumbing_banner.png";
 import warrantyBanner1 from "../assets/warranty_banner_1.png";
 import warrantyBanner2 from "../assets/warranty_banner_2.png";
-import mostBookedAc1 from "../assets/most_booked_ac_1.png";
-import mostBookedAc2 from "../assets/most_booked_ac_2.png";
 import mostBookedWm from "../assets/most_booked_wm.png";
-import mostBookedCleaning from "../assets/most_booked_cleaning.png";
-import mostBookedSalon from "../assets/most_booked_salon.png";
 import applianceFridge from "../assets/appliance_fridge.png";
 import acImg from "../assets/categories/ac.png";
 import splitAcImg from "../assets/categories/split_ac.png";
@@ -56,6 +52,7 @@ import roSedimentImg from "../assets/ro_sediment_filter.png";
 import roCarbonImg from "../assets/ro_carbon_filter.png";
 import roPostCarbonImg from "../assets/ro_post_carbon.png";
 import Stories from "../components/home/Stories";
+import { LoadingSection, Skeleton, SkeletonCardRow, SkeletonHeading } from "../components/common/Skeleton";
 import PlatformReviewCarousel from "../components/home/PlatformReviewCarousel";
 
 const renderDashboardCategoryIcon = (iconKey) => {
@@ -616,6 +613,76 @@ const getCategoryIcon = (categoryName = "") => {
   return iconWrench;
 };
 
+/** One horizontal row of bookable service cards (Phase 22). Hidden when empty. */
+function ServiceRow({ title, cards, seeAll, inWarranty, onOpen }) {
+  // undefined = still loading → heading + card skeletons; [] = nothing to show → hidden.
+  if (cards === undefined) {
+    return (
+      <LoadingSection loading label={title} className="mt-6 md:mt-12 lg:mt-16 xl:mt-20" skeleton={<><SkeletonHeading /><SkeletonCardRow /></>} />
+    );
+  }
+  if (!cards.length) return null;
+  return (
+    <section className="mt-6 md:mt-12 lg:mt-16 xl:mt-20" aria-label={title}>
+      <div className="flex justify-between items-center mb-6 md:mb-8 lg:mb-10 md:relative md:justify-center">
+        <h2 className="text-lg font-bold md:text-2xl lg:text-3xl xl:text-4xl md:font-black text-text-primary md:text-center">{title}</h2>
+        <button
+          onClick={seeAll}
+          className="px-4 py-1.5 bg-[#0B4EA2] text-white hover:bg-[#072C63] text-xs font-bold rounded-xl shadow-xs hover:shadow-md transition-all active:scale-95 cursor-pointer md:absolute md:right-0">
+          See All
+        </button>
+      </div>
+      <div className="flex gap-2.5 sm:gap-4 overflow-x-auto pb-3 sm:pb-4 -mx-1 px-1 sm:-mx-2 sm:px-2 snap-x no-scrollbar md:grid md:grid-cols-4 xl:grid-cols-4 md:gap-5 md:overflow-visible md:mx-0 md:px-0 md:pb-0">
+        {cards.map((card) => {
+          const fallback = getCategoryIcon(card.category?.name || card.title);
+          return (
+            <button
+              type="button"
+              key={card.id}
+              onClick={() => onOpen(card)}
+              className="text-left flex flex-col gap-1.5 sm:gap-2 cursor-pointer shrink-0 w-32.5 min-[360px]:w-36.25 sm:w-44 snap-start md:w-auto md:flex-shrink border border-border-color rounded-2xl p-2 min-[360px]:p-2.5 md:p-4 bg-white hover:border-brand-blue hover:shadow-md transition-all">
+              <div className="w-full h-26 min-[360px]:h-30 sm:h-36 md:h-44 lg:h-48 bg-slate-50/60 rounded-xl flex items-center justify-center overflow-hidden relative">
+                <img
+                  src={card.imageUrl || fallback}
+                  alt={card.title}
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = fallback;
+                  }}
+                  className={card.imageUrl ? "w-full h-full object-cover" : "w-3/4 h-3/4 object-contain"}
+                />
+                {card.instant && (
+                  <span
+                    title="Can be booked as an express visit"
+                    className={`absolute top-1.5 right-1.5 min-[360px]:top-2 min-[360px]:right-2 text-[9px] min-[360px]:text-[10px] md:text-xs font-bold px-1.5 min-[360px]:px-2 md:px-2.5 py-0.5 md:py-1 rounded-full ${inWarranty ? "bg-[#E8F5E9] text-[#2E7D32]" : "bg-[#E3F2FD] text-brand-blue"}`}>
+                    Instant
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-col gap-1 mt-0.5 sm:mt-1">
+                <span className="text-[11.5px] min-[360px]:text-xs sm:text-sm md:text-base font-semibold md:font-bold text-text-primary line-clamp-2 leading-tight min-h-7 min-[360px]:min-h-8">
+                  {card.title}
+                </span>
+                {card.rating != null && card.reviewCount > 0 && (
+                  <span className="flex items-center gap-1" title={`${card.reviewCount} customer review${card.reviewCount === 1 ? "" : "s"}`}>
+                    <Star className="h-3 w-3 md:h-3.5 md:w-3.5 text-yellow-500 fill-yellow-500" />
+                    <span className="text-[9.5px] min-[360px]:text-[10px] md:text-xs text-text-secondary">
+                      {card.rating.toFixed(1)} ({card.reviewCount})
+                    </span>
+                  </span>
+                )}
+                <span className={`text-xs min-[360px]:text-sm md:text-base font-bold md:font-extrabold ${inWarranty ? "text-green-600" : "text-[#0B4EA2]"}`}>
+                  {inWarranty ? "₹0 (Warranty)" : `from ${formatRupees(card.fromPrice)}`}
+                </span>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 const Dashboard = ({ defaultType }) => {
   const { unreadCount } = useNotifications();
   const { currentLocation, openLocationModal } = useLocationContext();
@@ -630,13 +697,13 @@ const Dashboard = ({ defaultType }) => {
   const [activeType, setActiveType] = useState(defaultType || "non-warranty"); // 'non-warranty' or 'in-warranty'
   const [cmsBanners, setCmsBanners] = useState(null);
   const [cmsTiles, setCmsTiles] = useState(null);
-  const [serviceCategories, setServiceCategories] = useState([]);
+  const [serviceCategories, setServiceCategories] = useState(null); // null = still loading
 
   useEffect(() => {
     let cancelled = false;
     apiRequest("/catalog/categories")
       .then((res) => {
-        if (!cancelled && Array.isArray(res)) setServiceCategories(res);
+        if (!cancelled) setServiceCategories(Array.isArray(res) ? res : []);
       })
       .catch(() => {
         if (!cancelled) setServiceCategories([]);
@@ -750,156 +817,33 @@ const Dashboard = ({ defaultType }) => {
   const regularBanners = fromCms("non-warranty", FALLBACK_REGULAR);
   const warrantyBannersList = fromCms("warranty", FALLBACK_WARRANTY);
 
-  const getServiceFallbackImage = (title = "") => {
-    const t = (title || "").toLowerCase();
-    if (t.includes("washing") || t.includes("wm")) return mostBookedWm;
-    if (t.includes("clean")) return mostBookedCleaning;
-    if (t.includes("fridge") || t.includes("refrigerator")) return applianceFridge;
-    if (t.includes("salon") || t.includes("saloon")) return mostBookedSalon;
-    if (t.includes("spa") || t.includes("massage")) return spaImg;
-    if (t.includes("electric")) return electricianImg;
-    if (t.includes("plumb")) return plumberImg;
-    if (t.includes("gas") || t.includes("refill")) return mostBookedAc1;
-    if (t.includes("repair")) return mostBookedAc2;
-    if (t.includes("ac") || t.includes("air condition")) return splitAcImg;
-    return mostBookedAc1;
+  // "Most Booked Services" and "Appliance repair & service" (docs/master-catalogue
+  // Phase 22): every card is a bookable catalogue service with its live price,
+  // a real "Instant" and a real review rating — nothing here is typed in by hand.
+  // A row with nothing to show is hidden.
+  const homeCity = currentLocation?.city || "";
+  const [homeSections, setHomeSections] = useState(null); // null = still loading
+  useEffect(() => {
+    let alive = true;
+    getHomeSections({ city: homeCity || undefined })
+      .then((data) => alive && setHomeSections({ mostBooked: data?.mostBooked || [], applianceServices: data?.applianceServices || [] }))
+      .catch(() => alive && setHomeSections({ mostBooked: [], applianceServices: [] }));
+    return () => {
+      alive = false;
+    };
+  }, [homeCity]);
+  const openServiceCard = (card) => {
+    if (activeType === "in-warranty") {
+      setSelectedServiceForWarranty({ title: card.title, destination: card.deepLink });
+      setShowWarrantyModal(true);
+    } else {
+      navigate(card.deepLink);
+    }
   };
-
-  const mostBookedServices = tilesFor(
-    "most-booked",
-    [
-      {
-        id: 1,
-        title: "Foam-jet AC service",
-        image: mostBookedAc1,
-        badge: "Instant",
-      },
-      {
-        id: 2,
-        title: "AC repair",
-        image: mostBookedAc2,
-        badge: "Instant",
-      },
-      {
-        id: 3,
-        title: "Washing Machine",
-        image: mostBookedWm,
-        badge: "Instant",
-      },
-      {
-        id: 4,
-        title: "Home Cleaning",
-        image: mostBookedCleaning,
-        badge: "Trending",
-      },
-      {
-        id: 5,
-        title: "Women Salon",
-        image: mostBookedSalon,
-        badge: "Best Seller",
-      },
-      {
-        id: 6,
-        title: "Refrigerator Repair",
-        image: applianceFridge,
-        badge: "Popular",
-      },
-      {
-        id: 7,
-        title: "Electrician Service",
-        image: electricianImg,
-        badge: "Instant",
-      },
-      {
-        id: 8,
-        title: "Plumbing Checkup",
-        image: plumberImg,
-        badge: "Instant",
-      },
-    ],
-    (t) => {
-      const fallback = getServiceFallbackImage(t.title);
-      return {
-        id: t.id,
-        title: t.title,
-        image: t.imageUrl || fallback,
-        fallbackImage: fallback,
-        rating: t.rating,
-        badge: t.badge,
-      };
-    },
-  );
-
-  const applianceServices = tilesFor(
-    "appliance-service",
-    [
-      {
-        id: 1,
-        title: "Foam-jet AC service",
-        image: mostBookedAc1,
-        badge: "Instant",
-      },
-      {
-        id: 2,
-        title: "AC repair",
-        image: mostBookedAc2,
-        badge: "Instant",
-      },
-      {
-        id: 3,
-        title: "Washing Machine",
-        image: mostBookedWm,
-        badge: "Instant",
-      },
-      {
-        id: 4,
-        title: "Refrigerator Repair & Service",
-        image: applianceFridge,
-        badge: "Instant",
-        path: "/refrigerator-details",
-      },
-      {
-        id: 5,
-        title: "Deep Clean AC",
-        image: mostBookedAc1,
-        badge: "2 ACs",
-      },
-      {
-        id: 6,
-        title: "WM Checkup",
-        image: mostBookedWm,
-        badge: "Instant",
-      },
-      {
-        id: 7,
-        title: "Electrician Service",
-        image: electricianImg,
-        badge: "Instant",
-      },
-      {
-        id: 8,
-        title: "Plumbing Checkup",
-        image: plumberImg,
-        badge: "Instant",
-      },
-    ],
-    (t) => {
-      const fallback = getServiceFallbackImage(t.title);
-      return {
-        id: t.id,
-        title: t.title,
-        image: t.imageUrl || fallback,
-        fallbackImage: fallback,
-        rating: t.rating,
-        badge: t.badge,
-        path: t.link || "",
-      };
-    },
-  );
 
   // Spare parts strip: store products in the "Spare Parts" category
   // (Super Admin → Products) — no price lives in this file.
-  const [spareParts, setSpareParts] = useState([]);
+  const [spareParts, setSpareParts] = useState(null); // null = still loading
   useEffect(() => {
     let alive = true;
     apiRequest("/products?category=Spare%20Parts&limit=10")
@@ -918,39 +862,6 @@ const Dashboard = ({ defaultType }) => {
     if (n.includes("carbon")) return roCarbonImg;
     return roPreFilterImg;
   };
-
-  // Tile titles are free text (CMS-editable); the catalogue decides where
-  // each one books and its "from" price. A title nothing bookable matches
-  // shows no price and opens the services list — never a made-up price.
-  const tileLabels = [
-    ...new Set([...mostBookedServices, ...applianceServices].map((t) => t.title).filter(Boolean)),
-  ];
-  const tileLabelsKey = JSON.stringify(tileLabels);
-  const tileCity = currentLocation?.city || "";
-  const [tileMatches, setTileMatches] = useState({});
-  useEffect(() => {
-    const labels = JSON.parse(tileLabelsKey);
-    if (!labels.length) return undefined;
-    let alive = true;
-    resolveLabels(labels, { city: tileCity || undefined })
-      .then((rows) => {
-        if (alive) setTileMatches(Object.fromEntries(rows.map((r) => [r.label, r.match])));
-      })
-      .catch(() => alive && setTileMatches({}));
-    return () => {
-      alive = false;
-    };
-  }, [tileLabelsKey, tileCity]);
-  const tileMatch = (title) => tileMatches[title] || null;
-  const tilePrice = (title) => {
-    const match = tileMatch(title);
-    return match?.fromPrice != null ? `from ${formatRupees(match.fromPrice)}` : "";
-  };
-  // An explicit tile link (CMS "link", e.g. /refrigerator-details) wins.
-  const tileDestination = (tile) =>
-    (tile.path && tile.path !== "/booking" && !tile.path.startsWith("/booking?") ? tile.path : null) ||
-    tileMatch(tile.title)?.deepLink ||
-    "/services";
 
   useEffect(() => {
     if (defaultType === "in-warranty") {
@@ -1020,8 +931,14 @@ const Dashboard = ({ defaultType }) => {
     };
   }, []);
 
+  // Each home section loads on its own and shows a skeleton only while its own
+  // data is pending (the rest of the page renders as soon as it can).
+  const tilesLoading = cmsTiles === null;
+  const bannersLoading = cmsBanners === null;
+  const categoriesLoading = serviceCategories === null;
+
   const displayServiceCategories =
-    serviceCategories.length > 0
+    serviceCategories?.length > 0
       ? serviceCategories.map((c) => ({
           id: c.id || c.key,
           key: c.key,
@@ -1344,7 +1261,12 @@ const Dashboard = ({ defaultType }) => {
           </div>
           {/* Horizontal Categories — scroll on mobile, grid on desktop */}
           <div className="flex overflow-x-auto gap-3 mt-2 pb-1.5 snap-x no-scrollbar md:grid md:grid-cols-8 xl:grid-cols-10 md:overflow-visible md:pb-0">
-            {dashboardCategories.map((cat, index) => (
+            {tilesLoading ? Array.from({ length: 8 }, (_, i) => (
+              <div key={`chip-skeleton-${i}`} aria-hidden="true" className="flex flex-col items-center gap-1.5 shrink-0 w-14.5">
+                <Skeleton className="w-12 h-12" rounded="rounded-2xl" />
+                <Skeleton className="h-2.5 w-11" />
+              </div>
+            )) : dashboardCategories.map((cat, index) => (
               <div
                 key={index}
                 className="flex flex-col items-center gap-1 cursor-pointer shrink-0 snap-start group w-14.5"
@@ -1402,7 +1324,9 @@ const Dashboard = ({ defaultType }) => {
         <div
           ref={bannerRef}
           className="flex gap-3 sm:gap-4 overflow-x-auto pb-2 -mx-1 px-1 sm:-mx-2 sm:px-2 snap-x snap-mandatory scroll-smooth no-scrollbar md:mx-auto md:px-0 md:pb-0 md:max-w-355 md:w-full relative mt-4 sm:mt-6 md:mt-10">
-          {(activeType === "non-warranty"
+          {bannersLoading ? (
+            <Skeleton className="min-w-[85vw] sm:min-w-85 md:min-w-full h-32 sm:h-36 md:h-auto md:aspect-[3.35/1] shrink-0" rounded="rounded-2xl" />
+          ) : (activeType === "non-warranty"
             ? regularBanners
             : warrantyBannersList
           ).map((banner) => (
@@ -1436,7 +1360,12 @@ const Dashboard = ({ defaultType }) => {
             ref={serviceRef}
             className="flex overflow-x-auto gap-3 sm:gap-4 pb-3 sm:pb-4 -mx-1 px-1 sm:-mx-2 sm:px-2 snap-x md:snap-none no-scrollbar md:w-full md:mx-0 md:px-0 md:pb-0 relative">
             <div className="flex gap-3 sm:gap-4 min-w-full md:gap-8 lg:gap-10 md:w-max">
-              {displayServiceCategories.map((cat, index) => (
+              {categoriesLoading ? Array.from({ length: 6 }, (_, i) => (
+                <div key={`cat-skeleton-${i}`} aria-hidden="true" className="flex flex-col items-center gap-2 shrink-0 w-24 sm:w-28">
+                  <Skeleton className="w-20 h-20 sm:w-24 sm:h-24" rounded="rounded-2xl" />
+                  <Skeleton className="h-3 w-16" />
+                </div>
+              )) : displayServiceCategories.map((cat, index) => (
                 <div
                   key={`${cat.id || cat.key || cat.name}-${index}`}
                   onClick={() => {
@@ -1512,7 +1441,9 @@ const Dashboard = ({ defaultType }) => {
           <div className="md:bg-slate-100 md:rounded-[32px] md:p-6 lg:p-8 md:border md:border-slate-200/80 md:shadow-[0_10px_30px_rgba(0,0,0,0.03)] md:max-w-325 md:mx-auto">
             {/* Brand Cards — scroll on mobile, 2x2 grid inside single card on desktop */}
             <div className="flex overflow-x-auto gap-3 sm:gap-4 pt-1 pb-3 sm:pb-4 -mx-1 px-1 sm:-mx-2 sm:px-2 snap-x no-scrollbar md:grid md:grid-cols-2 md:gap-6 lg:gap-8 md:overflow-visible md:mx-0 md:px-0 md:pb-0 md:pt-0">
-              {brandCards.map((bc) => (
+              {tilesLoading ? Array.from({ length: 2 }, (_, i) => (
+                <Skeleton key={`brand-skeleton-${i}`} className="shrink-0 w-[80vw] sm:w-96 md:w-auto h-40 md:h-48" rounded="rounded-3xl" />
+              )) : brandCards.map((bc) => (
                 <div
                   key={bc.id}
                   onClick={() => {
@@ -1616,142 +1547,35 @@ const Dashboard = ({ defaultType }) => {
           </div>
         </div>
 
-        {/* Most Booked Services */}
-        <div className="mt-6 md:mt-12 lg:mt-16 xl:mt-20">
-          <div className="flex justify-between items-center mb-6 md:mb-8 lg:mb-10 md:relative md:justify-center">
-            <h2 className="text-lg font-bold md:text-2xl lg:text-3xl xl:text-4xl md:font-black text-text-primary md:text-center">
-              Most Booked Services
-            </h2>
-            <button
-              onClick={() => navigate("/services")}
-              className="px-4 py-1.5 bg-[#0B4EA2] text-white hover:bg-[#072C63] text-xs font-bold rounded-xl shadow-xs hover:shadow-md transition-all active:scale-95 cursor-pointer md:absolute md:right-0">
-              See All
-            </button>
-          </div>
-          <div className="flex gap-2.5 sm:gap-4 overflow-x-auto pb-3 sm:pb-4 -mx-1 px-1 sm:-mx-2 sm:px-2 snap-x no-scrollbar md:grid md:grid-cols-4 xl:grid-cols-4 md:gap-5 md:overflow-visible md:mx-0 md:px-0 md:pb-0">
-            {mostBookedServices.slice(0, 8).map((service) => (
-              <div
-                key={service.id}
-                onClick={() => {
-                  if (activeType === "in-warranty") {
-                    setSelectedServiceForWarranty({ title: service.title, destination: tileDestination(service) });
-                    setShowWarrantyModal(true);
-                  } else {
-                    navigate(tileDestination(service));
-                  }
-                }}
-                className="flex flex-col gap-1.5 sm:gap-2 cursor-pointer shrink-0 w-32.5 min-[360px]:w-36.25 sm:w-44 snap-start md:w-auto md:flex-shrink border border-border-color rounded-2xl p-2 min-[360px]:p-2.5 md:p-4 bg-white hover:border-brand-blue hover:shadow-md transition-all">
-                <div className="w-full h-26 min-[360px]:h-30 sm:h-36 md:h-44 lg:h-48 bg-slate-50/60 rounded-xl flex items-center justify-center overflow-hidden relative">
-                  <img
-                    src={service.image || service.fallbackImage || mostBookedAc1}
-                    alt={service.title}
-                    onError={(e) => {
-                      e.currentTarget.onerror = null;
-                      e.currentTarget.src = service.fallbackImage || mostBookedAc1;
-                    }}
-                    className="w-full h-full object-cover"
-                  />
-                  <span
-                    className={`absolute top-1.5 right-1.5 min-[360px]:top-2 min-[360px]:right-2 text-[9px] min-[360px]:text-[10px] md:text-xs font-bold px-1.5 min-[360px]:px-2 md:px-2.5 py-0.5 md:py-1 rounded-full ${activeType === "in-warranty" ? "bg-[#E8F5E9] text-[#2E7D32]" : "bg-[#E3F2FD] text-brand-blue"}`}>
-                    {service.badge}
-                  </span>
-                </div>
-                <div className="flex flex-col gap-1 mt-0.5 sm:mt-1">
-                  <span className="text-[11.5px] min-[360px]:text-xs sm:text-sm md:text-base font-semibold md:font-bold text-text-primary line-clamp-2 leading-tight min-h-7 min-[360px]:min-h-8">
-                    {service.title}
-                  </span>
-                  {service.rating ? (
-                    <div className="flex items-center gap-1">
-                      <Star className="h-3 w-3 md:h-3.5 md:w-3.5 text-yellow-500 fill-yellow-500" />
-                      <span className="text-[9.5px] min-[360px]:text-[10px] md:text-xs text-text-secondary">
-                        {service.rating}
-                      </span>
-                    </div>
-                  ) : null}
-                  <span
-                    className={`text-xs min-[360px]:text-sm md:text-base font-bold md:font-extrabold ${activeType === "in-warranty" ? "text-green-600" : "text-[#0B4EA2]"}`}>
-                    {activeType === "in-warranty"
-                      ? "₹0 (Warranty)"
-                      : tilePrice(service.title)}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        <ServiceRow
+          title="Most Booked Services"
+          cards={homeSections?.mostBooked}
+          seeAll={() => navigate("/services")}
+          inWarranty={activeType === "in-warranty"}
+          onOpen={openServiceCard}
+        />
+        <ServiceRow
+          title="Appliance repair & service"
+          cards={homeSections?.applianceServices}
+          seeAll={() => navigate("/appliance-services")}
+          inWarranty={activeType === "in-warranty"}
+          onOpen={openServiceCard}
+        />
 
-        {/* Appliance repair & service */}
+        {/* Spare Parts & Accessories — store products in the "Spare Parts"
+            store category (Super Admin → NCC Products). Hidden when there are none. */}
         <div className="mt-6 md:mt-12 lg:mt-16 xl:mt-20">
-          <div className="flex justify-between items-center mb-6 md:mb-8 lg:mb-10 md:relative md:justify-center">
-            <h2 className="text-lg font-bold md:text-2xl lg:text-3xl xl:text-4xl md:font-black text-text-primary md:text-center">
-              Appliance repair & service
-            </h2>
-            <button
-              onClick={() => navigate("/appliance-services")}
-              className="px-4 py-1.5 bg-[#0B4EA2] text-white hover:bg-[#072C63] text-xs font-bold rounded-xl shadow-xs hover:shadow-md transition-all active:scale-95 cursor-pointer md:absolute md:right-0">
-              See All
-            </button>
-          </div>
-          <div className="flex gap-2.5 sm:gap-4 overflow-x-auto pb-3 sm:pb-4 -mx-1 px-1 sm:-mx-2 sm:px-2 snap-x no-scrollbar md:grid md:grid-cols-4 xl:grid-cols-4 md:gap-5 md:overflow-visible md:mx-0 md:px-0 md:pb-0">
-            {applianceServices.slice(0, 8).map((service) => (
-              <div
-                key={service.id}
-                onClick={() => {
-                  if (activeType === "in-warranty") {
-                    setSelectedServiceForWarranty({ title: service.title, destination: tileDestination(service) });
-                    setShowWarrantyModal(true);
-                  } else {
-                    navigate(tileDestination(service));
-                  }
-                }}
-                className="flex flex-col gap-1.5 sm:gap-2 cursor-pointer shrink-0 w-32.5 min-[360px]:w-36.25 sm:w-44 snap-start md:w-auto md:flex-shrink border border-border-color rounded-2xl p-2 min-[360px]:p-2.5 md:p-4 bg-white hover:border-brand-blue hover:shadow-md transition-all">
-                <div className="w-full h-26 min-[360px]:h-30 sm:h-36 md:h-44 lg:h-48 bg-slate-50/60 rounded-xl flex items-center justify-center overflow-hidden relative">
-                  <img
-                    src={service.image || service.fallbackImage || mostBookedAc1}
-                    alt={service.title}
-                    onError={(e) => {
-                      e.currentTarget.onerror = null;
-                      e.currentTarget.src = service.fallbackImage || mostBookedAc1;
-                    }}
-                    className="w-full h-full object-cover"
-                  />
-                  <span
-                    className={`absolute top-1.5 right-1.5 min-[360px]:top-2 min-[360px]:right-2 text-[9px] min-[360px]:text-[10px] md:text-xs font-bold px-1.5 min-[360px]:px-2 md:px-2.5 py-0.5 md:py-1 rounded-full ${service.badge === "2 ACs" ? "bg-[#5C0632] text-white" : activeType === "in-warranty" ? "bg-[#E8F5E9] text-green-600" : "bg-[#E3F2FD] text-brand-blue"}`}>
-                    {service.badge}
-                  </span>
-                </div>
-                <div className="flex flex-col gap-1 mt-0.5 sm:mt-1">
-                  <span className="text-[11.5px] min-[360px]:text-xs sm:text-sm md:text-base font-semibold md:font-bold text-text-primary line-clamp-2 leading-tight min-h-7 min-[360px]:min-h-8">
-                    {service.title}
-                  </span>
-                  {service.rating ? (
-                    <div className="flex items-center gap-1">
-                      <Star className="h-3 w-3 md:h-3.5 md:w-3.5 text-yellow-500 fill-yellow-500" />
-                      <span className="text-[9.5px] min-[360px]:text-[10px] md:text-xs text-text-secondary">
-                        {service.rating}
-                      </span>
-                    </div>
-                  ) : null}
-                  <span
-                    className={`text-xs min-[360px]:text-sm md:text-base font-bold md:font-extrabold ${activeType === "in-warranty" ? "text-green-600" : "text-[#0B4EA2]"}`}>
-                    {activeType === "in-warranty"
-                      ? "₹0 (Warranty)"
-                      : tilePrice(service.title)}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Spare Parts & Accessories */}
-        <div className="mt-6 md:mt-12 lg:mt-16 xl:mt-20">
+          {spareParts === null && (
+            <LoadingSection loading label="spare parts" skeleton={<><SkeletonHeading /><SkeletonCardRow count={5} columns="md:grid-cols-5" /></>} />
+          )}
+          {spareParts?.length > 0 && (
+          <>
           <div className="flex justify-between items-center mb-6 md:mb-8 lg:mb-10 md:relative md:justify-center">
             <h2 className="text-lg font-bold md:text-2xl lg:text-3xl xl:text-4xl md:font-black text-text-primary md:text-center">
               Spare Parts & Accessories
             </h2>
             <button
-              onClick={() => navigate("/buy-product")}
+              onClick={() => navigate("/buy/accessories")}
               className="px-4 py-1.5 bg-[#0B4EA2] text-white hover:bg-[#072C63] text-xs font-bold rounded-xl shadow-xs hover:shadow-md transition-all active:scale-95 cursor-pointer md:absolute md:right-0">
               See All
             </button>
@@ -1761,23 +1585,28 @@ const Dashboard = ({ defaultType }) => {
               id: p.id,
               title: p.name,
               desc: (p.specs || [])[0] || "",
-              price: Number(p.price).toLocaleString("en-IN"),
+              price: p.price,
+              mrp: p.originalPrice > p.price ? p.originalPrice : null,
               image: p.imageUrl || p.images?.[0] || partArt(p.name),
-              badge: (p.benefits || [])[0] || "Genuine",
+              // Only true statements: the real discount, or real low stock.
+              badge: p.discountPercent > 0 ? `${p.discountPercent}% off` : p.stockStatus === "Low Stock" ? `Only ${p.stock} left` : null,
             })).map((item) => (
-              <div
+              <button
+                type="button"
                 key={item.id}
-                onClick={() => navigate("/buy-product")}
-                className="flex flex-col gap-2 cursor-pointer shrink-0 w-34.5 min-[360px]:w-37 sm:w-44 snap-start md:w-auto md:flex-shrink border border-border-color rounded-2xl p-2 md:p-4 bg-white hover:border-brand-blue hover:shadow-md transition-all">
+                onClick={() => navigate(`/product-details?id=${item.id}`)}
+                className="text-left flex flex-col gap-2 cursor-pointer shrink-0 w-34.5 min-[360px]:w-37 sm:w-44 snap-start md:w-auto md:flex-shrink border border-border-color rounded-2xl p-2 md:p-4 bg-white hover:border-brand-blue hover:shadow-md transition-all">
                 <div className="w-full h-28 min-[360px]:h-32 md:h-44 lg:h-48 bg-slate-50/50 rounded-xl flex items-center justify-center overflow-hidden relative">
                   <img
                     src={item.image}
                     alt={item.title}
                     className="w-full h-full object-contain p-2 mix-blend-multiply"
                   />
-                  <span className="absolute top-2 right-2 text-[10px] md:text-xs font-bold px-2 md:px-2.5 py-0.5 md:py-1 rounded-full bg-[#E3F2FD] text-brand-blue">
-                    {item.badge}
-                  </span>
+                  {item.badge && (
+                    <span className="absolute top-2 right-2 text-[10px] md:text-xs font-bold px-2 md:px-2.5 py-0.5 md:py-1 rounded-full bg-[#E3F2FD] text-brand-blue">
+                      {item.badge}
+                    </span>
+                  )}
                 </div>
                 <div className="flex flex-col gap-1 mt-1">
                   <span className="text-xs min-[360px]:text-sm md:text-base font-semibold md:font-bold text-text-primary line-clamp-2 leading-snug">
@@ -1787,12 +1616,15 @@ const Dashboard = ({ defaultType }) => {
                     {item.desc}
                   </span>
                   <span className="text-xs min-[360px]:text-sm md:text-base font-bold md:font-extrabold text-[#0B4EA2]">
-                    ₹{item.price}
+                    {formatRupees(item.price)}
+                    {item.mrp && <s className="ml-1.5 text-[10px] md:text-xs font-semibold text-slate-400">{formatRupees(item.mrp)}</s>}
                   </span>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
+          </>
+          )}
 
           {/* Desktop-Only Featured Platform Reviews Carousel */}
           <div className="hidden md:block">

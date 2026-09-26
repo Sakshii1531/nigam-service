@@ -13,6 +13,7 @@
     "seed:demo": "node scripts/seedDemoItems.js",
     "seed:catalogue": "node scripts/seedMasterCatalogue.js",
     "seed:brands": "node scripts/seedCatalogueBrands.js",
+    "seed:home": "node scripts/seedHomeSections.js",
     "db:clear": "node scripts/clearDb.js",
     "db:clear-bookings": "node scripts/clearBookingsAndServiceRequests.js",
     "db:reset-catalogue": "node scripts/resetCatalogueData.js",

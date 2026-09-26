@@ -8,6 +8,7 @@ import { apiRequest } from '../lib/apiClient';
 import { useCart } from '../lib/cartStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
+import { SkeletonScreen } from '../components/common/Skeleton';
 
 const ProductDetails = () => {
   const navigate = useNavigate();
@@ -122,11 +123,7 @@ const ProductDetails = () => {
   }
 
   if (!product) {
-    return (
-      <div className="min-h-screen bg-bg-light flex items-center justify-center">
-        <p className="text-sm font-semibold text-text-secondary">Loading product…</p>
-      </div>
-    );
+    return <SkeletonScreen variant="product" label="product" />;
   }
 
   const style = CATEGORY_STYLE[(product.category || '').toLowerCase()]

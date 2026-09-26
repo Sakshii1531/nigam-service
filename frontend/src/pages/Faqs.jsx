@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Search, ChevronDown, HelpCircle, RefreshCw, MessageCircle } from 'lucide-react';
+import { ArrowLeft, Search, ChevronDown, HelpCircle, MessageCircle } from 'lucide-react';
 import { apiRequest } from '../lib/apiClient';
 import { goBack } from '../lib/navigation';
+import { LoadingSection, SkeletonList } from '../components/common/Skeleton';
 
 const Faqs = () => {
   const navigate = useNavigate();
@@ -88,10 +89,7 @@ const Faqs = () => {
 
         {/* FAQ Items Feed */}
         {loading ? (
-          <div className="flex flex-col items-center justify-center p-16 text-slate-400 gap-2">
-            <RefreshCw className="h-6 w-6 animate-spin text-brand-blue" />
-            <span className="text-xs font-semibold">Loading FAQs...</span>
-          </div>
+          <LoadingSection loading label="FAQs" skeleton={<SkeletonList rows={6} withAvatar={false} withTrailing={false} />} />
         ) : filteredFaqs.length === 0 ? (
           <div className="bg-white border border-slate-100 rounded-2xl p-8 text-center text-xs text-slate-400 font-semibold flex flex-col items-center gap-2 shadow-xs">
             <HelpCircle className="h-8 w-8 text-slate-300" />

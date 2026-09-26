@@ -6,6 +6,7 @@ import {
 import { apiRequest } from '../lib/apiClient';
 import { relativeTime } from '../lib/relativeTime';
 import { useNotifications } from '../context/NotificationContext';
+import { SkeletonScreen } from '../components/common/Skeleton';
 
 const ICONS = {
   assigned: { Icon: UserCheck, bg: 'bg-[#E8F5E9]', color: 'text-[#2E7D32]' },
@@ -45,6 +46,9 @@ const NotificationDetail = () => {
 
   const { Icon, bg, color } = ICONS[n?.type] || { Icon: Bell, bg: 'bg-slate-100', color: 'text-slate-500' };
 
+  if (!n && !loadError) {
+    return <SkeletonScreen variant="detail" label="notification" className="min-h-screen bg-[#F8FAFC]" />;
+  }
   if (!n) {
     return (
       <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-6">

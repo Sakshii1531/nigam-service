@@ -9,6 +9,7 @@ import {
 import ServiceProviderBottomNav from '../../components/ServiceProviderBottomNav';
 import { useTech } from '../../context/ServiceProviderContext';
 import { useNotifications } from '../../context/NotificationContext';
+import { LoadingSection, SkeletonList } from '../../components/common/Skeleton';
 
 const RaisePartRequest = () => {
   const navigate = useNavigate();
@@ -22,6 +23,8 @@ const RaisePartRequest = () => {
     removePartFromCart, 
     placePartsOrder, 
     raiseClaim,
+    inventoryLoading,
+    claimsLoading,
   } = useTech();
 
   // Read URL query parameter for active tab, defaulting to 'inventory'
@@ -421,7 +424,9 @@ const RaisePartRequest = () => {
 
                 {/* Inventory List */}
                 <div className="flex flex-col gap-2.5 lg:grid lg:grid-cols-2">
-                  {filteredInventory.length > 0 ? (
+                  {inventoryLoading ? (
+                    <LoadingSection loading label="your parts" skeleton={<SkeletonList rows={4} />} />
+                  ) : filteredInventory.length > 0 ? (
                     filteredInventory.map(item => {
                       const iconData = getPartIcon(item.name, item.sku);
                       const stockInfo = getStockBadge(item.qty);
@@ -685,7 +690,9 @@ const RaisePartRequest = () => {
 
                 {/* Claim list */}
                 <div className="flex flex-col gap-2.5">
-                  {filteredClaims.length > 0 ? (
+                  {claimsLoading ? (
+                    <LoadingSection loading label="claims" skeleton={<SkeletonList rows={3} />} />
+                  ) : filteredClaims.length > 0 ? (
                     filteredClaims.map(claim => (
                       <div 
                         key={claim.id} 

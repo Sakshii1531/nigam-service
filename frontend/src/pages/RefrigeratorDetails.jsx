@@ -4,6 +4,7 @@ import { ArrowLeft, Star, Check, Shield, Award, X } from 'lucide-react';
 import applianceFridge from '../assets/appliance_fridge.png';
 import { resolveLabels, formatRupees } from '../lib/catalogueApi';
 import { goBack } from '../lib/navigation';
+import { Skeleton } from '../components/common/Skeleton';
 
 const RefrigeratorDetails = () => {
   const navigate = useNavigate();
@@ -13,12 +14,14 @@ const RefrigeratorDetails = () => {
   // Price and destination come from the Master Catalogue: the lowest
   // Refrigerator rate ("from"), or no price while none is configured.
   const [refrigerator, setRefrigerator] = useState(null);
+  const [priceLoading, setPriceLoading] = useState(true);
 
   useEffect(() => {
     let alive = true;
     resolveLabels(['Refrigerator'])
       .then(([row]) => alive && setRefrigerator(row?.match || null))
-      .catch(() => alive && setRefrigerator(null));
+      .catch(() => alive && setRefrigerator(null))
+      .finally(() => alive && setPriceLoading(false));
     return () => {
       alive = false;
     };
@@ -199,7 +202,7 @@ const RefrigeratorDetails = () => {
           <div>
             <span className="text-xs text-text-secondary block">Price</span>
             <span className="text-lg font-bold text-brand-blue">
-              {refrigerator?.fromPrice != null ? `Starting from ${formatRupees(refrigerator.fromPrice)}` : 'Price shown when you book'}
+              {priceLoading ? <Skeleton inline className="h-3.5 w-28" /> : refrigerator?.fromPrice != null ? `Starting from ${formatRupees(refrigerator.fromPrice)}` : 'Price shown when you book'}
             </span>
           </div>
         </div>
@@ -211,7 +214,7 @@ const RefrigeratorDetails = () => {
         <div>
           <span className="text-xs text-text-secondary block">Starts at</span>
           <span className="text-base font-bold text-text-primary">
-            {refrigerator?.fromPrice != null ? `from ${formatRupees(refrigerator.fromPrice)}` : '—'}
+            {priceLoading ? <Skeleton inline className="h-4 w-20" /> : refrigerator?.fromPrice != null ? `from ${formatRupees(refrigerator.fromPrice)}` : '—'}
           </span>
         </div>
         <button

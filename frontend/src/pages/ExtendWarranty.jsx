@@ -6,6 +6,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { apiRequest } from '../lib/apiClient';
 import { payWithRazorpay } from '../lib/razorpayCheckout';
+import { Skeleton, SkeletonList, SkeletonCards } from '../components/common/Skeleton';
 
 const ExtendWarranty = () => {
   const navigate = useNavigate();
@@ -37,10 +38,11 @@ const ExtendWarranty = () => {
   // Catalogue and the customer's own records — all server-owned. These were
   // hardcoded arrays, so the screen offered categories and brands the platform
   // did not actually service.
-  const [categories, setCategories] = useState([]);
-  const [brands, setBrands] = useState([]);
-  const [existingWarranties, setExistingWarranties] = useState([]);
-  const [extendWarrantyPlans, setExtendWarrantyPlans] = useState([]);
+  // Each list loads on its own; null = still loading (its section shows a skeleton).
+  const [categories, setCategories] = useState(null);
+  const [brands, setBrands] = useState(null);
+  const [existingWarranties, setExistingWarranties] = useState(null);
+  const [extendWarrantyPlans, setExtendWarrantyPlans] = useState(null);
   const [loadError, setLoadError] = useState('');
 
 
@@ -59,23 +61,20 @@ const ExtendWarranty = () => {
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      try {
-        const [catRes, brandRes, appRes, planRes] = await Promise.all([
-          apiRequest('/catalog/categories'),
-          apiRequest('/catalog/brands').catch(() => ({ data: [] })),
-          apiRequest('/appliances', { auth: true }),
-          apiRequest('/warranty-amc/extended-warranty/plans'),
-        ]);
-        if (cancelled) return;
-        setCategories((catRes || []).map((c) => ({ id: c.key || c.id, name: c.name, icon: c.icon || '🔧' })));
-        setBrands((brandRes.data || []).map((b) => b.name || b));
-        setExistingWarranties((appRes || []).map(toApplianceCard));
-        setExtendWarrantyPlans(planRes || []);
-      } catch (err) {
-        if (!cancelled) setLoadError(err.message || 'Could not load your appliances and plans.');
-      }
-    })();
+    const load = (request, apply) =>
+      request
+        .then((res) => !cancelled && apply(res))
+        .catch((err) => {
+          if (cancelled) return;
+          apply(null, err);
+          setLoadError(err.message || 'Could not load your appliances and plans.');
+        });
+    load(apiRequest('/catalog/categories'), (res) => setCategories((res || []).map((c) => ({ id: c.key || c.id, name: c.name, icon: c.icon || '🔧' }))));
+    // apiRequest already returns the list — `.data` on it was undefined, so
+    // this screen's brand picker was always empty.
+    load(apiRequest('/catalog/brands'), (res) => setBrands((Array.isArray(res) ? res : []).map((b) => b.name || b)));
+    load(apiRequest('/appliances', { auth: true }), (res) => setExistingWarranties((res || []).map(toApplianceCard)));
+    load(apiRequest('/warranty-amc/extended-warranty/plans'), (res) => setExtendWarrantyPlans(res || []));
     return () => { cancelled = true; };
   }, []);
 
@@ -145,7 +144,7 @@ const ExtendWarranty = () => {
             method: 'POST',
             auth: true,
             body: {
-              category: categories.find((c) => c.id === selectedCategory)?.name || selectedCategory,
+              category: (categories || []).find((c) => c.id === selectedCategory)?.name || selectedCategory,
               brand: selectedBrand,
               modelNumber: modelNo,
               serialNumber: serialNo,
@@ -179,7 +178,7 @@ const ExtendWarranty = () => {
         body: {
           plan: selectedPlan?.id,
           appliance: selectedAppliance?.id,
-          category: selectedAppliance?.category || categories.find((c) => c.id === selectedCategory)?.name,
+          category: selectedAppliance?.category || (categories || []).find((c) => c.id === selectedCategory)?.name,
           brand: selectedAppliance?.brand || selectedBrand,
           modelName: modelNo || selectedAppliance?.productName,
           purchaseDate: purchaseDate || undefined,
@@ -305,7 +304,7 @@ const ExtendWarranty = () => {
             {applianceMode === 'registered' ? (
               <div className="flex flex-col gap-4">
                 <div className="flex flex-col gap-3">
-                  {existingWarranties.map((item) => (
+                  {existingWarranties === null ? <SkeletonList rows={2} /> : existingWarranties.map((item) => (
                     <div
                       key={item.id}
                       onClick={() => setSelectedAppliance(item)}
@@ -354,7 +353,7 @@ const ExtendWarranty = () => {
                   <div className="flex flex-col gap-3">
                     <span className="text-xs font-bold text-text-secondary">Choose Appliance Category</span>
                     <div className="grid grid-cols-2 gap-3">
-                      {categories.map((cat) => (
+                      {categories === null ? Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-20" rounded="rounded-2xl" />) : categories.map((cat) => (
                         <div
                           key={cat.id}
                           onClick={() => setSelectedCategory(cat.id)}
@@ -393,7 +392,7 @@ const ExtendWarranty = () => {
                     </div>
 
                     <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5 md:gap-4 max-h-56 md:max-h-none overflow-y-auto pr-1">
-                      {brands
+                      {brands === null ? Array.from({ length: 6 }, (_, i) => <Skeleton key={i} className="h-14" rounded="rounded-xl" />) : brands
                         .filter(b => b.toLowerCase().includes(brandSearch.toLowerCase()))
                         .map((b) => (
                           <div
@@ -415,7 +414,7 @@ const ExtendWarranty = () => {
                     <div className="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-200">
                       <div className="flex flex-col">
                         <span className="text-[10px] text-text-secondary uppercase tracking-wider font-bold">Registering</span>
-                        <strong className="text-xs text-text-primary font-bold">{selectedBrand} • {categories.find(c => c.id === selectedCategory)?.name}</strong>
+                        <strong className="text-xs text-text-primary font-bold">{selectedBrand} • {(categories || []).find(c => c.id === selectedCategory)?.name}</strong>
                       </div>
                       <button 
                         onClick={() => {
@@ -526,7 +525,7 @@ const ExtendWarranty = () => {
             <p className="text-sm text-text-secondary -mt-2">Extend coverage for {selectedAppliance?.productName} (Current Expiry: {selectedAppliance?.expiryDate}).</p>
             
             <div className="flex flex-col gap-4">
-              {extendWarrantyPlans.map((plan) => (
+              {extendWarrantyPlans === null ? <SkeletonCards count={2} /> : extendWarrantyPlans.map((plan) => (
                 <div 
                   key={plan.id}
                   onClick={() => setSelectedPlan(plan)}

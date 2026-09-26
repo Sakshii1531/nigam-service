@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { apiRequest } from '../lib/apiClient';
 import { goBack } from '../lib/navigation';
 import { usePushPermission, pushBlockedMessage } from '../hooks/usePushPermission';
+import { LoadingSection, SkeletonList } from '../components/common/Skeleton';
 
 const NotificationSettings = () => {
   const navigate = useNavigate();
@@ -164,10 +165,7 @@ const NotificationSettings = () => {
         </div>
 
         {loading ? (
-          <div className="flex flex-col items-center justify-center p-12 text-slate-400 gap-2">
-            <RefreshCw className="h-6 w-6 animate-spin text-brand-blue" />
-            <span className="text-xs font-semibold">Loading notification preferences...</span>
-          </div>
+          <LoadingSection loading label="notification preferences" skeleton={<SkeletonList rows={5} withAvatar={false} />} />
         ) : (
           <>
             {/* Toggles Container */}

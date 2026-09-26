@@ -792,23 +792,29 @@ describe('CMS home tiles', () => {
     const auth = { headers: { Authorization: `Bearer ${token}` } };
 
     await request(app).post('/api/v1/cms/home-tiles').set(auth.headers)
-      .send({ placement: 'most-booked', title: 'Foam-jet AC service', price: 649, rating: 4.76, badge: 'Instant' })
+      .send({ placement: 'brand-card', title: 'LG week', brandName: 'LG', price: 649 })
       .expect(201);
     await request(app).post('/api/v1/cms/home-tiles').set(auth.headers)
       .send({ placement: 'category', title: 'AC', icon: 'ac', service: 'AC Repair' })
       .expect(201);
 
-    const mostBooked = await request(app).get('/api/v1/cms/home-tiles?placement=most-booked').expect(200);
-    expect(mostBooked.body.data).toHaveLength(1);
+    const cards = await request(app).get('/api/v1/cms/home-tiles?placement=brand-card').expect(200);
+    expect(cards.body.data).toHaveLength(1);
     // Tiles hold no price (docs/master-catalogue Phase 7) — a sent one is dropped.
-    expect(mostBooked.body.data[0].price).toBeUndefined();
-    expect(mostBooked.body.data[0].badge).toBe('Instant');
+    expect(cards.body.data[0].price).toBeUndefined();
 
     const categories = await request(app).get('/api/v1/cms/home-tiles?placement=category').expect(200);
     expect(categories.body.data).toHaveLength(1);
     expect(categories.body.data[0].icon).toBe('ac');
-    // A category chip carries no price — unused fields stay unset, not zeroed.
     expect(categories.body.data[0].price).toBeUndefined();
+  });
+
+  it('a service-row tile must name the catalogue service it books; typed-in ratings and badges are gone (Phase 22)', async () => {
+    const { token } = await seedSuperAdmin();
+    const res = await request(app).post('/api/v1/cms/home-tiles').set('Authorization', `Bearer ${token}`)
+      .send({ placement: 'most-booked', title: 'Foam-jet AC service', rating: 4.76, badge: 'Instant' })
+      .expect(400);
+    expect(JSON.stringify(res.body)).toMatch(/Pick the service this tile books/);
   });
 
   it('hides a deactivated tile from the app but shows it to the console', async () => {
@@ -816,18 +822,18 @@ describe('CMS home tiles', () => {
     const auth = { headers: { Authorization: `Bearer ${token}` } };
 
     const created = await request(app).post('/api/v1/cms/home-tiles').set(auth.headers)
-      .send({ placement: 'most-booked', title: 'Retired Service' })
+      .send({ placement: 'dashboard-service', title: 'Retired Service' })
       .expect(201);
 
     await request(app).put(`/api/v1/cms/home-tiles/${created.body.data.id}`).set(auth.headers)
       .send({ isActive: false })
       .expect(200);
 
-    const publicRes = await request(app).get('/api/v1/cms/home-tiles?placement=most-booked').expect(200);
+    const publicRes = await request(app).get('/api/v1/cms/home-tiles?placement=dashboard-service').expect(200);
     expect(publicRes.body.data).toHaveLength(0);
 
     const adminRes = await request(app)
-      .get('/api/v1/cms/home-tiles/admin?placement=most-booked')
+      .get('/api/v1/cms/home-tiles/admin?placement=dashboard-service')
       .set(auth.headers)
       .expect(200);
     expect(adminRes.body.data).toHaveLength(1);
@@ -838,11 +844,11 @@ describe('CMS home tiles', () => {
     const auth = { headers: { Authorization: `Bearer ${token}` } };
 
     await request(app).post('/api/v1/cms/home-tiles').set(auth.headers)
-      .send({ placement: 'appliance-service', title: 'Second', sortOrder: 2 }).expect(201);
+      .send({ placement: 'dashboard-service', title: 'Second', sortOrder: 2 }).expect(201);
     await request(app).post('/api/v1/cms/home-tiles').set(auth.headers)
-      .send({ placement: 'appliance-service', title: 'First', sortOrder: 1 }).expect(201);
+      .send({ placement: 'dashboard-service', title: 'First', sortOrder: 1 }).expect(201);
 
-    const res = await request(app).get('/api/v1/cms/home-tiles?placement=appliance-service').expect(200);
+    const res = await request(app).get('/api/v1/cms/home-tiles?placement=dashboard-service').expect(200);
     expect(res.body.data.map((t) => t.title)).toEqual(['First', 'Second']);
   });
 

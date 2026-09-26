@@ -49,6 +49,7 @@ import AMCHistoryDrawer from "./job-flows/AMCHistoryDrawer";
 import AMCOverview from "./job-flows/AMCOverview";
 import BrandWarrantyOverview from "./job-flows/BrandWarrantyOverview";
 import ExtendedWarrantyOverview from "./job-flows/ExtendedWarrantyOverview";
+import { SkeletonScreen } from '../../components/common/Skeleton';
 
 const CrownIcon = (props) => (
   <svg
@@ -222,6 +223,7 @@ const ActiveJob = () => {
     advanceStepsTo,
     requestSparePart,
     setDiagnosisNotes,
+    jobsLoading,
   } = useTech();
 
   // ── Click-to-call relay ────────────────────────────────────────────────────
@@ -904,6 +906,10 @@ const ActiveJob = () => {
     };
   }, [showDatePicker, showAddPartsModal]);
 
+  // Opened directly (or after a reload): the job list is still arriving.
+  if (!activeJob && jobsLoading) {
+    return <SkeletonScreen variant="detail" label="job details" className="min-h-screen bg-[#F5F8FC]" />;
+  }
   if (!activeJob) {
     return (
       <div className="min-h-screen bg-[#F5F8FC] flex flex-col justify-between pb-20 lg:pb-8 relative font-sans">

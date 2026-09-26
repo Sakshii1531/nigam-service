@@ -1,4 +1,5 @@
 import { useEffect, lazy, Suspense } from "react";
+import PageSkeleton from "./components/common/PageSkeleton";
 import {
   BrowserRouter as Router,
   Routes,
@@ -538,14 +539,6 @@ function PageTitleManager() {
 // /service-provider/dashboard only fetches that panel's page chunks instead
 // of all five panels' — this is the fallback shown for the moment it takes
 // to fetch the chunk for whichever route was just navigated to.
-function RouteLoadingFallback() {
-  return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="w-8 h-8 border-2 border-[#0D47A1] border-t-transparent rounded-full animate-spin" />
-    </div>
-  );
-}
-
 function App() {
   return (
     <Router>
@@ -563,7 +556,7 @@ function App() {
                       <ScrollToTop />
                       <AppChrome />
                       <PanelContainer>
-                        <Suspense fallback={<RouteLoadingFallback />}>
+                        <Suspense fallback={<PageSkeleton />}>
                         <Routes>
                           <Route path="/" element={<Login />} />
                           <Route path="/home" element={<Home />} />

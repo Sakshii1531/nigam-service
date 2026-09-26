@@ -6,6 +6,7 @@ import {
 import { apiRequest } from '../../lib/apiClient';
 import { relativeTime } from '../../lib/relativeTime';
 import { useNotifications } from '../../context/NotificationContext';
+import { LoadingSection, SkeletonList } from '../../components/common/Skeleton';
 
 // The backend's notification `type` vocabulary mapped onto this screen's three
 // filter tabs. Anything unmapped (a platform broadcast, a service update) is
@@ -25,6 +26,7 @@ const Notifications = () => {
   // branch. It never fetched, so a service provider saw none of what the platform
   // actually sent them — not an assignment, not a super-admin broadcast.
   const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const { subscribe, refreshUnread } = useNotifications();
 
@@ -40,7 +42,8 @@ const Notifications = () => {
   useEffect(() => {
     apiRequest('/notifications?limit=50', { auth: true })
       .then((res) => setNotifications((res || []).map(shape)))
-      .catch((err) => setLoadError(err.message || 'Could not load your notifications.'));
+      .catch((err) => setLoadError(err.message || 'Could not load your notifications.'))
+      .finally(() => setLoading(false));
   }, [shape]);
 
   // Live arrivals go to the top instead of waiting for a reload.
@@ -159,7 +162,9 @@ const Notifications = () => {
 
           {/* Notifications list */}
           <div className="flex flex-col divide-y divide-slate-100">
-            {filteredNotifications.length > 0 ? (
+            {loading ? (
+              <LoadingSection loading label="notifications" skeleton={<SkeletonList rows={5} withTrailing={false} />} />
+            ) : filteredNotifications.length > 0 ? (
               filteredNotifications.map((n) => (
                 <div 
                   key={n.id} 

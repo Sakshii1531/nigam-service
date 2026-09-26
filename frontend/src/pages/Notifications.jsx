@@ -6,6 +6,7 @@ import {
 import { apiRequest } from '../lib/apiClient';
 import { relativeTime } from '../lib/relativeTime';
 import { useNotifications } from '../context/NotificationContext';
+import { LoadingSection, SkeletonList } from '../components/common/Skeleton';
 
 const ICONS = {
   assigned: { Icon: UserCheck, bg: 'bg-[#E8F5E9]', color: 'text-[#2E7D32]' },
@@ -20,6 +21,7 @@ const Notifications = () => {
   // platform actually emitted ever reached the customer, and "mark read" only
   // changed local state.
   const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const unread = items.filter((n) => !n.read).length;
   const { subscribe, markedRead, refreshUnread } = useNotifications();
@@ -27,7 +29,8 @@ const Notifications = () => {
   useEffect(() => {
     apiRequest('/notifications?limit=50', { auth: true })
       .then((res) => setItems(res || []))
-      .catch((err) => setLoadError(err.message || 'Could not load your notifications.'));
+      .catch((err) => setLoadError(err.message || 'Could not load your notifications.'))
+      .finally(() => setLoading(false));
   }, []);
 
   // Anything arriving while this screen is open goes straight to the top,
@@ -138,7 +141,8 @@ const Notifications = () => {
       )}
 
       <div className="flex flex-col gap-2.5 px-4 pt-3">
-        {!loadError && items.length === 0 && (
+        {loading && <LoadingSection loading label="notifications" skeleton={<SkeletonList rows={6} withTrailing={false} className="flex flex-col gap-2.5" />} />}
+        {!loading && !loadError && items.length === 0 && (
           <p className="text-center text-xs font-semibold text-slate-400 py-10">You have no notifications yet.</p>
         )}
         {items.map((n) => {

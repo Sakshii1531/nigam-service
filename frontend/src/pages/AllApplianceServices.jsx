@@ -7,6 +7,7 @@ import mostBookedAc1 from '../assets/most_booked_ac_1.png';
 import mostBookedAc2 from '../assets/most_booked_ac_2.png';
 import mostBookedWm from '../assets/most_booked_wm.png';
 import applianceFridge from '../assets/appliance_fridge.png';
+import { LoadingSection, SkeletonCardRow } from '../components/common/Skeleton';
 
 // Illustration per category — artwork, not data.
 const CATEGORY_IMAGES = [mostBookedAc1, mostBookedAc2, mostBookedWm, applianceFridge];
@@ -56,6 +57,11 @@ const AllApplianceServices = () => {
           <p className="text-center text-xs font-semibold text-slate-400 py-10">No services published yet.</p>
         )}
 
+        <LoadingSection
+          loading={loading}
+          label="services"
+          skeleton={<SkeletonCardRow count={10} columns="grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5" cardClassName="w-auto" imageClassName="h-32" />}
+        >
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
           {services.map((service, i) => (
             <div 
@@ -80,6 +86,7 @@ const AllApplianceServices = () => {
             </div>
           ))}
         </div>
+        </LoadingSection>
       </div>
     </div>
   );

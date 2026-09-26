@@ -37,6 +37,7 @@ import iconWm from "../assets/icon_3d_wm.png";
 import electricianImg from "../assets/categories/electrician_fixed.png";
 import plumberImg from "../assets/categories/plumber_fixed.png";
 import cleaningImg from "../assets/categories/cleaning.png";
+import { SkeletonScreen } from '../components/common/Skeleton';
 
 const SOCKET_URL = (
   import.meta.env.VITE_API_BASE_URL || "http://localhost:4000"
@@ -315,14 +316,7 @@ const BookingDetails = () => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[#F0F4FF] flex flex-col items-center justify-center p-4">
-        <div className="w-12 h-12 border-3 border-brand-blue border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="text-xs font-bold text-slate-600">
-          Loading booking details…
-        </p>
-      </div>
-    );
+    return <SkeletonScreen variant="detail" label="booking details" className="min-h-screen bg-[#F0F4FF]" />;
   }
 
   if (error || !booking) {

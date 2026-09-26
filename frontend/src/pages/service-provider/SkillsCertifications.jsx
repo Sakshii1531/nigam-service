@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Award, CheckCircle, Clock, Wrench } from 'lucide-react';
 import ServiceProviderBottomNav from '../../components/ServiceProviderBottomNav';
 import { apiRequest } from '../../lib/apiClient';
+import { LoadingSection, SkeletonList } from '../../components/common/Skeleton';
 
 const levelColor = {
   Expert: 'bg-[#E3ECF9] text-[#0D47A1]',
@@ -83,6 +84,7 @@ const SkillsCertifications = () => {
             My Skills
           </h3>
           <div className="flex flex-col gap-3">
+            {loading && <LoadingSection loading label="skills" skeleton={<SkeletonList rows={3} withTrailing={false} />} />}
             {!loading && skills.length === 0 && (
               <p className="text-[11px] text-slate-400 font-normal">No skills recorded yet.</p>
             )}
@@ -107,6 +109,7 @@ const SkillsCertifications = () => {
             Certifications
           </h3>
           <div className="flex flex-col gap-3">
+            {loading && <LoadingSection loading label="certifications" skeleton={<SkeletonList rows={2} withTrailing={false} />} />}
             {!loading && certifications.length === 0 && (
               <p className="text-[11px] text-slate-400 font-normal">No certifications recorded yet.</p>
             )}

@@ -103,6 +103,8 @@ additive (nothing existing breaks). Phase 4 is the cut-over.
 | 19 | [Catalogue brands vs partner brands; brand warranty length](phase-19-catalogue-brands.md) | Customer brand picker from catalogue brands (product-linked only); warranty months honoured | — | 1 d | ✅ Done 2026-09-25 |
 | 20 | [NCC Products detailed](phase-20-ncc-products-detailed.md) | Marketplace-style listing, product page, per-product services | — | 1–2 d | ✅ Done 2026-09-25 |
 | 21 | [Inventory detailed](phase-21-inventory-detailed.md) | Part page, fits, pricing, stock history | — | 1–2 d | ✅ Done 2026-09-25 |
+| 22 | [Home sections from real data](phase-22-home-sections-real-data.md) | Most Booked / Appliance tiles are bookable catalogue services with live price, Instant and real ratings; stories can book | — | 1–2 d | ✅ Done 2026-09-25 |
+| 23 | [Skeleton loaders & partial loading](phase-23-skeleton-loading.md) | Every section of the customer and service-provider apps shows its data as soon as it lands, with a skeleton only where data is pending | — | 1–2 d | ✅ Done 2026-09-26 |
 
 **Total: ~39–48 developer-days** (≈ 8–10 weeks for one full-stack developer).
 

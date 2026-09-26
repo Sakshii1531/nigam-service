@@ -15,17 +15,20 @@ import geyserImg from '../assets/icon_3d_geyser.png';
 import ovenImg from '../assets/icon_3d_oven.png';
 import { apiRequest } from '../lib/apiClient';
 import { goBack } from '../lib/navigation';
+import { LoadingSection, SkeletonList } from '../components/common/Skeleton';
 
 const MyWishlist = () => {
   const navigate = useNavigate();
   // The wishlist lives on the account, so it's the same on every device.
   const [wishlist, setWishlist] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [, setWishlistError] = useState('');
 
   useEffect(() => {
     apiRequest('/wishlist', { auth: true })
       .then((res) => setWishlist(res || []))
-      .catch((err) => setWishlistError(err.message || 'Could not load your wishlist.'));
+      .catch((err) => setWishlistError(err.message || 'Could not load your wishlist.'))
+      .finally(() => setLoading(false));
   }, []);
 
   const getApplianceImg = (category) => {
@@ -71,7 +74,9 @@ const MyWishlist = () => {
       </div>
 
       <div className="flex-1 p-4 sm:p-6 flex flex-col gap-5">
-        {wishlist.length === 0 ? (
+        {loading ? (
+          <LoadingSection loading label="wishlist" skeleton={<SkeletonList rows={3} />} />
+        ) : wishlist.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center gap-4">
             <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center shadow-inner">
               <Heart size={30} className="text-red-400" />

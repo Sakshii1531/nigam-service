@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { apiRequest } from '../lib/apiClient';
 import { goBack } from '../lib/navigation';
+import { LoadingSection, SkeletonList, Skeleton } from '../components/common/Skeleton';
 
 // Clean, vibrant segment color palette matching app aesthetics
 const PRESET_COLORS = [
@@ -428,7 +429,7 @@ const RewardsPlayZone = () => {
                 <span>Nigam Coins</span>
               </div>
               <span className="text-white text-3xl font-black mt-2 tracking-tight">
-                {loadingCoins ? '...' : coins.toLocaleString()}
+                {loadingCoins ? <Skeleton inline className="h-8 w-24 bg-white/20" /> : coins.toLocaleString()}
               </span>
               <p className="text-indigo-300 text-[10px] font-bold mt-1.5 flex items-center gap-0.5">
                 <span>Value: ₹{(coins / 10).toFixed(0)}</span>
@@ -600,9 +601,7 @@ const RewardsPlayZone = () => {
           </h3>
           
           {loadingTasks ? (
-            <div className="bg-white border border-slate-100 rounded-2xl p-6 text-center text-xs text-slate-400 font-bold">
-              Evaluating missions...
-            </div>
+            <LoadingSection loading label="missions" skeleton={<SkeletonList rows={3} />} />
           ) : (
             <div className="flex flex-col gap-3">
               {tasks.map((task) => {

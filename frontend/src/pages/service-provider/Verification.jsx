@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Bell, Shield, Check } from 'lucide-react';
 import ServiceProviderBottomNav from '../../components/ServiceProviderBottomNav';
 import { apiRequest } from '../../lib/apiClient';
+import { LoadingSection, Skeleton, SkeletonList } from '../../components/common/Skeleton';
 
 const TONE = {
   Verified: 'text-green-600 bg-green-50',
@@ -12,7 +13,7 @@ const TONE = {
 
 const Verification = () => {
   const navigate = useNavigate();
-  const [documents, setDocuments] = useState([]);
+  const [documents, setDocuments] = useState(null); // null = still loading
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -36,7 +37,7 @@ const Verification = () => {
       .catch((err) => setError(err.message || 'Could not load your verification status.'));
   }, []);
 
-  const allVerified = documents.length > 0 && documents.every((d) => d.status === 'Verified');
+  const allVerified = documents?.length > 0 && documents.every((d) => d.status === 'Verified');
 
 
   return (
@@ -82,7 +83,22 @@ const Verification = () => {
 
         {/* Status Header — reflects the serviceProvider's real verification record,
             which used to read "Verified Partner" for everyone. */}
-        {documents.length > 0 && (
+        {documents === null && !error && (
+          <LoadingSection
+            loading
+            label="verification status"
+            skeleton={
+              <div className="space-y-4">
+                <div className="bg-white border border-slate-100 rounded-2xl p-6 flex flex-col items-center gap-3">
+                  <Skeleton className="w-16 h-16" rounded="rounded-full" />
+                  <Skeleton className="h-4 w-40" />
+                </div>
+                <SkeletonList rows={4} />
+              </div>
+            }
+          />
+        )}
+        {documents?.length > 0 && (
         <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm flex flex-col items-center gap-2">
           <div className={`w-16 h-16 rounded-full flex items-center justify-center ${allVerified ? 'bg-green-50' : 'bg-amber-50'}`}>
             <Shield className={`h-8 w-8 ${allVerified ? 'text-green-500' : 'text-amber-500'}`} />
@@ -109,7 +125,7 @@ const Verification = () => {
           <h3 className="text-sm font-semibold text-slate-900 mb-3">Submitted Documents</h3>
 
           <div className="flex flex-col gap-3">
-            {documents.map((doc) => (
+            {(documents || []).map((doc) => (
               <div key={doc.label} className="flex justify-between items-center border-b border-slate-50 pb-3 last:border-b-0 last:pb-0">
                 <div>
                   <h4 className="text-sm font-semibold text-slate-900">{doc.label}</h4>

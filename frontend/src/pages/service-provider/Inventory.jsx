@@ -5,10 +5,11 @@ import {
 } from 'lucide-react';
 import ServiceProviderBottomNav from '../../components/ServiceProviderBottomNav';
 import { useTech } from '../../context/ServiceProviderContext';
+import { LoadingSection, SkeletonList } from '../../components/common/Skeleton';
 
 const Inventory = () => {
   const navigate = useNavigate();
-  const { inventory } = useTech();
+  const { inventory, inventoryLoading } = useTech();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [stockFilter, setStockFilter] = useState('All'); // 'All', 'In Stock', 'Low Stock', 'Out of Stock'
@@ -130,7 +131,9 @@ const Inventory = () => {
 
         {/* Inventory Parts List */}
         <div className="flex flex-col gap-3.5">
-          {filteredInventory.length > 0 ? (
+          {inventoryLoading ? (
+            <LoadingSection loading label="your parts" skeleton={<SkeletonList rows={5} />} />
+          ) : filteredInventory.length > 0 ? (
             filteredInventory.map(item => (
               <div 
                 key={item.id} 

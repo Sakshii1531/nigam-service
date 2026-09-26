@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 // Duration each slide is shown (ms)
 const SLIDE_DURATION = 4000;
 
 // Single story panel (one full-screen view with slides & progress bars)
 const StoryPanel = ({ story, isActive, onFinished, onClose }) => {
+  const navigate = useNavigate();
   const slides = story.slides || [];
   const [slideIndex, setSlideIndex] = useState(0);
   const [progress, setProgress] = useState(0);
@@ -151,9 +153,28 @@ const StoryPanel = ({ story, isActive, onFinished, onClose }) => {
         </button>
       </div>
 
+      {/* "Book now" — only when the story is linked to a bookable catalogue
+          service (Super Admin → Stories, docs/master-catalogue Phase 22). */}
+      {story.bookLink && (
+        <div className="absolute bottom-5 left-0 right-0 px-5 z-20">
+          <button
+            type="button"
+            className="w-full py-3 rounded-2xl bg-white text-[#0B4EA2] text-sm font-black shadow-lg cursor-pointer"
+            onPointerDown={(e) => e.stopPropagation()}
+            onPointerUp={(e) => {
+              e.stopPropagation();
+              onClose();
+              navigate(story.bookLink);
+            }}
+          >
+            Book {story.bookTitle || 'now'}
+          </button>
+        </div>
+      )}
+
       {/* Bottom caption */}
       {currentSlide?.caption && (
-        <div className="absolute bottom-10 left-0 right-0 px-5 z-10 pointer-events-none">
+        <div className={`absolute ${story.bookLink ? 'bottom-24' : 'bottom-10'} left-0 right-0 px-5 z-10 pointer-events-none`}>
           <p className="text-white text-[15px] font-medium leading-snug drop-shadow-lg">
             {currentSlide.caption}
           </p>

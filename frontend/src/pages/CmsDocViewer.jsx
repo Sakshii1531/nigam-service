@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
-  ArrowLeft, RefreshCw, ShieldCheck, Lock, Scale, Mail, Clock, Search, X, Printer 
+  ArrowLeft, ShieldCheck, Lock, Scale, Mail, Clock, Search, X, Printer 
 } from 'lucide-react';
 import { apiRequest } from '../lib/apiClient';
 import Footer from '../components/layout/Footer';
+import { LoadingSection, Skeleton, SkeletonText } from '../components/common/Skeleton';
 
 const defaultTerms = [
   {
@@ -186,10 +187,20 @@ const CmsDocViewer = () => {
 
         {/* Content Container */}
         {loading ? (
-          <div className="flex flex-col items-center justify-center p-16 text-slate-400 gap-2 bg-white rounded-[28px] border border-slate-200/80">
-            <RefreshCw className="h-6 w-6 animate-spin text-brand-blue" />
-            <span className="text-xs font-semibold">Loading official documentation...</span>
-          </div>
+          <LoadingSection
+            loading
+            label="documentation"
+            skeleton={
+              <div className="bg-white rounded-[28px] border border-slate-200/80 p-6 space-y-6">
+                {Array.from({ length: 3 }, (_, i) => (
+                  <div key={i} className="space-y-3">
+                    <Skeleton className="h-4 w-1/3" />
+                    <SkeletonText lines={4} />
+                  </div>
+                ))}
+              </div>
+            }
+          />
         ) : (
           <div className="bg-white rounded-[28px] p-6 md:p-10 border border-slate-200/80 shadow-xs flex flex-col gap-6 text-left">
             

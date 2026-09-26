@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import ServiceProviderBottomNav from '../../components/ServiceProviderBottomNav';
 import { apiRequest } from '../../lib/apiClient';
+import { LoadingSection, Skeleton, SkeletonStats } from '../../components/common/Skeleton';
 
 const TIMEFRAME_DAYS = { 'Last 7 Days': 7, 'Last 30 Days': 30, 'Last 90 Days': 90 };
 const SLICE_COLORS = ['#0D47A1', '#2E7D32', '#7B1FA2', '#FFB300', '#EF6C00', '#00838F'];
@@ -102,6 +103,19 @@ const Analytics = () => {
           </div>
         )}
 
+        {stats === null && !error ? (
+          <LoadingSection
+            loading
+            label="analytics"
+            skeleton={
+              <div className="space-y-4">
+                <SkeletonStats count={4} className="grid grid-cols-2 md:grid-cols-4 gap-4" />
+                <Skeleton className="h-52 w-full" rounded="rounded-[2rem]" />
+              </div>
+            }
+          />
+        ) : (
+        <>
         {/* 2x2 Metric Cards Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           
@@ -197,6 +211,8 @@ const Analytics = () => {
 
           </div>
         </div>
+        </>
+        )}
 
       </div>
 

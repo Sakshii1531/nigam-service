@@ -1,6 +1,9 @@
+import ServiceTilesEditor from "../../components/super-admin/home/ServiceTilesEditor";
+import ServiceGroupSelect from "../../components/super-admin/home/ServiceGroupSelect";
+import { groupIdToTarget, targetToGroupId } from "../../components/super-admin/home/serviceGroupTarget";
 import { apiRequest } from "../../lib/apiClient";
 import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import Sidebar from "../../components/super-admin/Sidebar";
 import Topbar from "../../components/super-admin/Topbar";
 import {
@@ -19,10 +22,6 @@ import {
 import splitAcImg from "../../assets/categories/split_ac.png";
 import mostBookedWm from "../../assets/most_booked_wm.png";
 import applianceFridge from "../../assets/appliance_fridge.png";
-import mostBookedAc1 from "../../assets/most_booked_ac_1.png";
-import mostBookedAc2 from "../../assets/most_booked_ac_2.png";
-import mostBookedCleaning from "../../assets/most_booked_cleaning.png";
-import mostBookedSalon from "../../assets/most_booked_salon.png";
 import { uploadImage, isImageUrl } from "../../lib/uploadImage";
 
 // Stories assets
@@ -528,8 +527,6 @@ const CategoryVectorIcon = ({
 // `placement` of /cms/home-tiles, which the customer app reads directly.
 const TILE_PLACEMENTS = {
   categories: "category",
-  mostBooked: "most-booked",
-  applianceServices: "appliance-service",
   brandCards: "brand-card",
 };
 
@@ -548,38 +545,6 @@ const TILE_ADAPTERS = {
     }),
   },
 
-  mostBooked: {
-    toApi: (t) => ({
-      title: t.title,
-      imageUrl: t.image,
-      rating: t.rating,
-      badge: t.badge,
-    }),
-    fromApi: (t) => ({
-      id: t.id,
-      title: t.title,
-      image: t.imageUrl,
-      rating: t.rating,
-      badge: t.badge,
-    }),
-  },
-  applianceServices: {
-    toApi: (t) => ({
-      title: t.title,
-      imageUrl: t.image,
-      rating: t.rating,
-      badge: t.badge,
-      link: t.path,
-    }),
-    fromApi: (t) => ({
-      id: t.id,
-      title: t.title,
-      image: t.imageUrl,
-      rating: t.rating,
-      badge: t.badge,
-      path: t.link,
-    }),
-  },
   brandCards: {
     toApi: (t) => ({
       title: t.title,
@@ -749,6 +714,7 @@ function shapeStory(s) {
     type: s.type,
     image: s.mediaUrl || s.slides?.[0]?.image || "",
     slides: (s.slides || []).map((sl, i) => ({ id: i + 1, ...sl })),
+    groupId: targetToGroupId(s.target),
   };
 }
 
@@ -760,95 +726,6 @@ function shapeBanner(b) {
     sortOrder: b.sortOrder ?? 0,
   };
 }
-
-const DEFAULT_MOST_BOOKED = [
-  {
-    id: 1,
-    title: "Foam-jet AC service",
-    image: mostBookedAc1,
-    rating: 4.76,
-    badge: "Instant",
-  },
-  {
-    id: 2,
-    title: "AC repair",
-    image: mostBookedAc2,
-    rating: 4.74,
-    badge: "Instant",
-  },
-  {
-    id: 3,
-    title: "Washing Machine",
-    image: mostBookedWm,
-    rating: 4.85,
-    badge: "Instant",
-  },
-  {
-    id: 4,
-    title: "Home Cleaning",
-    image: mostBookedCleaning,
-    rating: 4.9,
-    badge: "Trending",
-  },
-  {
-    id: 5,
-    title: "Women Salon",
-    image: mostBookedSalon,
-    rating: 4.8,
-    badge: "Best Seller",
-  },
-];
-
-const DEFAULT_APPLIANCE_SERVICES = [
-  {
-    id: 1,
-    title: "Foam-jet AC service",
-    image: mostBookedAc1,
-    rating: 4.76,
-    badge: "Instant",
-    path: "/booking",
-  },
-  {
-    id: 2,
-    title: "AC repair",
-    image: mostBookedAc2,
-    rating: 4.74,
-    badge: "Instant",
-    path: "/booking",
-  },
-  {
-    id: 3,
-    title: "Washing Machine",
-    image: mostBookedWm,
-    rating: 4.85,
-    badge: "Instant",
-    path: "/booking",
-  },
-  {
-    id: 4,
-    title: "Refrigerator Repair & Service",
-    image: applianceFridge,
-    rating: 4.8,
-    badge: "Instant",
-    path: "/refrigerator-details",
-  },
-  {
-    id: 5,
-    title: "Deep Clean AC",
-    image: mostBookedAc1,
-    rating: 4.76,
-    badge: "2 ACs",
-    path: "/booking",
-  },
-  {
-    id: 6,
-    title: "WM Checkup",
-    image: mostBookedWm,
-    rating: 4.85,
-    badge: "Instant",
-    path: "/booking",
-  },
-];
 
 const DEFAULT_BRAND_CARDS = [
   {
@@ -901,20 +778,6 @@ const DEFAULT_BRAND_CARDS = [
   },
 ];
 
-// Tiles and service packages carry no price of their own (docs/master-catalogue
-// Phase 7 removed the fields): the customer app shows the Master Catalogue's
-// price for whatever the tile title matches (POST /catalog/search/resolve).
-const CataloguePriceNotice = () => (
-  <div className="col-span-full text-[11px] leading-relaxed text-amber-900 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-    <b>Tiles have no price of their own.</b> Each tile shows the lowest price of the service its title matches in the{" "}
-    <Link to="/super-admin/service-catalog" className="font-bold underline">
-      Master Catalogue
-    </Link>{" "}
-    and opens that service&apos;s booking (e.g. &quot;AC repair&quot; → AC with Repair selected). A title that matches nothing
-    bookable shows no price and opens the services list — name tiles after catalogue services.
-  </div>
-);
-
 const CustomerAppCustomization = () => {
   const location = useLocation();
   const [activeSubSection, setActiveSubSection] = useState("categories"); // 'categories' | 'banners' | 'brands' | 'mostbooked' | 'applianceservices'
@@ -928,6 +791,7 @@ const CustomerAppCustomization = () => {
   const [storyForm, setStoryForm] = useState({
     title: "",
     image: "",
+    groupId: "",
   });
   const [storySlides, setStorySlides] = useState([]);
 
@@ -988,30 +852,6 @@ const CustomerAppCustomization = () => {
     textColor: "#014694",
   });
 
-  // Most Booked State
-  const [mostBookedList, setMostBookedList] = useState([]);
-  const [showMostBookedModal, setShowMostBookedModal] = useState(false);
-  const [isEditingMostBooked, setIsEditingMostBooked] = useState(false);
-  const [editMostBookedIndex, setEditMostBookedIndex] = useState(-1);
-  const [mostBookedForm, setMostBookedForm] = useState({
-    title: "",
-    rating: "4.8",
-    badge: "Instant",
-    image: "",
-  });
-
-  // Appliance Services State
-  const [applianceServicesList, setApplianceServicesList] = useState([]);
-  const [showApplianceModal, setShowApplianceModal] = useState(false);
-  const [isEditingAppliance, setIsEditingAppliance] = useState(false);
-  const [editApplianceIndex, setEditApplianceIndex] = useState(-1);
-  const [applianceForm, setApplianceForm] = useState({
-    title: "",
-    rating: "4.8",
-    badge: "Instant",
-    image: "",
-    path: "",
-  });
 
   useEffect(() => {
     (async () => {
@@ -1048,23 +888,6 @@ const CustomerAppCustomization = () => {
         writeTiles("brandCards", DEFAULT_BRAND_CARDS);
       }
 
-      // Load Most Booked
-      const savedMost = readTiles("mostBooked");
-      if (savedMost) {
-        setMostBookedList(JSON.parse(savedMost));
-      } else {
-        setMostBookedList(DEFAULT_MOST_BOOKED);
-        writeTiles("mostBooked", DEFAULT_MOST_BOOKED);
-      }
-
-      // Load Appliance Services
-      const savedAppliance = readTiles("applianceServices");
-      if (savedAppliance) {
-        setApplianceServicesList(JSON.parse(savedAppliance));
-      } else {
-        setApplianceServicesList(DEFAULT_APPLIANCE_SERVICES);
-        writeTiles("applianceServices", DEFAULT_APPLIANCE_SERVICES);
-      }
     })();
 
     // Load Banners
@@ -1488,152 +1311,6 @@ const CustomerAppCustomization = () => {
     }
   };
 
-  // --- Most Booked Handlers ---
-  const handleMostBookedFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      uploadImage(file)
-        .then((url) => {
-        setMostBookedForm((prev) => ({ ...prev, image: url }));
-        })
-        .catch((err) => showToast(err.message || "Image upload failed."));
-    }
-  };
-
-  const handleOpenAddMostBooked = () => {
-    setIsEditingMostBooked(false);
-    setMostBookedForm({ title: "", rating: "4.8", badge: "Instant", image: "" });
-    setShowMostBookedModal(true);
-  };
-
-  const handleOpenEditMostBooked = (index) => {
-    setIsEditingMostBooked(true);
-    setEditMostBookedIndex(index);
-    const mb = mostBookedList[index];
-    setMostBookedForm({
-      title: mb.title,
-      rating: mb.rating || "4.8",
-      badge: mb.badge || "Instant",
-      image: mb.image || "",
-    });
-    setShowMostBookedModal(true);
-  };
-
-  const handleDeleteMostBooked = (index) => {
-    const title = mostBookedList[index].title;
-    if (window.confirm(`Are you sure you want to delete "${title}" from most booked list?`)) {
-      const updated = mostBookedList.filter((_, i) => i !== index);
-      setMostBookedList(updated);
-      writeTiles("mostBooked", updated);
-      showToast("Most booked service deleted successfully.");
-    }
-  };
-
-  // A tile is a title + artwork. Its price and booking destination come from
-  // the Master Catalogue service the title names (see CataloguePriceNotice).
-  const handleSaveMostBooked = (e) => {
-    e.preventDefault();
-    if (!mostBookedForm.title.trim()) return;
-    const updated = [...mostBookedList];
-    const newMb = {
-      id: isEditingMostBooked ? mostBookedList[editMostBookedIndex].id : Date.now(),
-      title: mostBookedForm.title,
-      rating: parseFloat(mostBookedForm.rating) || 4.8,
-      badge: mostBookedForm.badge,
-      image: mostBookedForm.image,
-    };
-    if (isEditingMostBooked) updated[editMostBookedIndex] = newMb;
-    else updated.push(newMb);
-    setMostBookedList(updated);
-    writeTiles("mostBooked", updated);
-    setShowMostBookedModal(false);
-    showToast("Most booked service saved successfully!");
-  };
-
-  const handleResetMostBooked = () => {
-    if (
-      window.confirm("Reset Most Booked Services list to original defaults?")
-    ) {
-      setMostBookedList(DEFAULT_MOST_BOOKED);
-      writeTiles("mostBooked", DEFAULT_MOST_BOOKED);
-      showToast("Restored most booked defaults.");
-    }
-  };
-
-  // --- Appliance Services Handlers ---
-  const handleApplianceFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      uploadImage(file)
-        .then((url) => {
-        setApplianceForm((prev) => ({ ...prev, image: url }));
-        })
-        .catch((err) => showToast(err.message || "Image upload failed."));
-    }
-  };
-
-  const handleOpenAddAppliance = () => {
-    setIsEditingAppliance(false);
-    setApplianceForm({ title: "", rating: "4.8", badge: "Instant", image: "", path: "" });
-    setShowApplianceModal(true);
-  };
-
-  const handleOpenEditAppliance = (index) => {
-    setIsEditingAppliance(true);
-    setEditApplianceIndex(index);
-    const app = applianceServicesList[index];
-    setApplianceForm({
-      title: app.title || "",
-      rating: app.rating || "4.8",
-      badge: app.badge || "Instant",
-      image: app.image || "",
-      path: app.path && app.path !== "/booking" ? app.path : "",
-    });
-    setShowApplianceModal(true);
-  };
-
-  const handleDeleteAppliance = (index) => {
-    const title = applianceServicesList[index].title;
-    if (window.confirm(`Are you sure you want to delete "${title}" from appliance services?`)) {
-      const updated = applianceServicesList.filter((_, i) => i !== index);
-      setApplianceServicesList(updated);
-      writeTiles("applianceServices", updated);
-      showToast("Appliance service deleted successfully.");
-    }
-  };
-
-  const handleSaveAppliance = (e) => {
-    e.preventDefault();
-    if (!applianceForm.title.trim()) return;
-    const updated = [...applianceServicesList];
-    const newApp = {
-      id: isEditingAppliance ? applianceServicesList[editApplianceIndex].id : Date.now(),
-      title: applianceForm.title,
-      rating: parseFloat(applianceForm.rating) || 4.8,
-      badge: applianceForm.badge,
-      image: applianceForm.image,
-      path: applianceForm.path,
-    };
-    if (isEditingAppliance) updated[editApplianceIndex] = newApp;
-    else updated.push(newApp);
-    setApplianceServicesList(updated);
-    writeTiles("applianceServices", updated);
-    setShowApplianceModal(false);
-    showToast("Appliance service saved successfully!");
-  };
-
-  const handleResetAppliance = () => {
-    if (
-      window.confirm(
-        "Reset Appliance Repair & Services list to original defaults?",
-      )
-    ) {
-      setApplianceServicesList(DEFAULT_APPLIANCE_SERVICES);
-      writeTiles("applianceServices", DEFAULT_APPLIANCE_SERVICES);
-      showToast("Restored appliance services defaults.");
-    }
-  };
-
   // --- Stories Handlers ---
   const handleStoryFileChange = (e) => {
     const file = e.target.files[0];
@@ -1651,6 +1328,7 @@ const CustomerAppCustomization = () => {
     setStoryForm({
       title: "",
       image: "",
+      groupId: "",
     });
     setStorySlides([
       { id: Date.now() + 1, image: "", caption: "", subCaption: "" },
@@ -1665,6 +1343,7 @@ const CustomerAppCustomization = () => {
     setStoryForm({
       title: story.title || "",
       image: story.image || "",
+      groupId: story.groupId || "",
     });
 
     const slides = (story.slides || []).map((slide) => ({
@@ -1714,6 +1393,8 @@ const CustomerAppCustomization = () => {
       title: storyForm.title,
       type: storyForm.type || "Customer Help Slider",
       mediaUrl: storyForm.image || parsedSlides[0]?.image || "",
+      // Optional "Book now" — a real catalogue service (Phase 22).
+      target: groupIdToTarget(storyForm.groupId),
       slides: parsedSlides.map(({ image, caption, subCaption }) => ({
         image,
         caption,
@@ -1979,186 +1660,13 @@ const CustomerAppCustomization = () => {
             </div>
           )}
 
-          {/* ---------------- SUBSECTION 5: MOST BOOKED SERVICES CUSTOMIZATION ---------------- */}
+          {/* Most Booked / Appliance repair & service — tiles are real
+              catalogue services (docs/master-catalogue Phase 22). */}
           {activeSubSection === "mostbooked" && (
-            <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-[#E2E8F0] shadow-xs">
-                <div>
-                  <h2 className="text-sm font-bold text-[#1E293B]">
-                    Most Booked Services Customization
-                  </h2>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Manage the services displayed under the 'Most Booked
-                    Services' section of the dashboard.
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleResetMostBooked}
-                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors">
-                    <RotateCcw size={14} /> Reset Defaults
-                  </button>
-                  <button
-                    onClick={handleOpenAddMostBooked}
-                    className="bg-[#0D47A1] hover:bg-blue-800 text-white px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs">
-                    <Plus size={14} /> Add Service Card
-                  </button>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-xs overflow-hidden">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="bg-slate-50 text-[#64748B] font-semibold border-b border-[#E2E8F0]">
-                      <th className="px-6 py-4">Position</th>
-                      <th className="px-6 py-4">Service Title</th>
-                      <th className="px-6 py-4">Badge</th>
-                      <th className="px-6 py-4">Price</th>
-                      <th className="px-6 py-4">Image Preview</th>
-                      <th className="px-6 py-4 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#E2E8F0]">
-                    {mostBookedList.map((mb, idx) => (
-                      <tr
-                        key={mb.id || idx}
-                        className="hover:bg-slate-50/50 transition-colors">
-                        <td className="px-6 py-4 font-bold text-slate-500">
-                          {idx + 1}
-                        </td>
-                        <td className="px-6 py-4 font-bold text-[#1E293B]">
-                          {mb.title}
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="bg-[#E3F2FD] text-[#0D47A1] px-2 py-0.5 rounded-full font-bold text-[10px]">
-                            {mb.badge || "Instant"}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 font-bold text-slate-800">
-                          <span className="text-slate-400 font-semibold">From catalogue</span>
-                        </td>
-                        <td className="px-6 py-4">
-                          {mb.image && (
-                            <img
-                              src={mb.image}
-                              alt={mb.title}
-                              className="w-10 h-10 object-cover border border-slate-200 rounded-lg p-0.5 bg-slate-50"
-                            />
-                          )}
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="flex gap-2 justify-end">
-                            <button
-                              onClick={() => handleOpenEditMostBooked(idx)}
-                              className="p-1.5 text-slate-500 hover:text-[#0D47A1] hover:bg-slate-100 rounded-lg transition-colors">
-                              <Edit2 size={14} />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteMostBooked(idx)}
-                              className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <ServiceTilesEditor placement="most-booked" onToast={showToast} />
           )}
-
-          {/* ---------------- SUBSECTION 6: APPLIANCE REPAIR & SERVICE CUSTOMIZATION ---------------- */}
           {activeSubSection === "applianceservices" && (
-            <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-[#E2E8F0] shadow-xs">
-                <div>
-                  <h2 className="text-sm font-bold text-[#1E293B]">
-                    Appliance Repair & Service Customization
-                  </h2>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Manage the services displayed under the 'Appliance Repair &
-                    Service' section of the dashboard.
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleResetAppliance}
-                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors">
-                    <RotateCcw size={14} /> Reset Defaults
-                  </button>
-                  <button
-                    onClick={handleOpenAddAppliance}
-                    className="bg-[#0D47A1] hover:bg-blue-800 text-white px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs">
-                    <Plus size={14} /> Add Appliance Card
-                  </button>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-xs overflow-hidden">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="bg-slate-50 text-[#64748B] font-semibold border-b border-[#E2E8F0]">
-                      <th className="px-6 py-4">Position</th>
-                      <th className="px-6 py-4">Appliance Title</th>
-                      <th className="px-6 py-4">Badge</th>
-                      <th className="px-6 py-4">Price</th>
-                      <th className="px-6 py-4">Action Path</th>
-                      <th className="px-6 py-4">Image Preview</th>
-                      <th className="px-6 py-4 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#E2E8F0]">
-                    {applianceServicesList.map((app, idx) => (
-                      <tr
-                        key={app.id || idx}
-                        className="hover:bg-slate-50/50 transition-colors">
-                        <td className="px-6 py-4 font-bold text-slate-500">
-                          {idx + 1}
-                        </td>
-                        <td className="px-6 py-4 font-bold text-[#1E293B]">
-                          {app.title}
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="bg-[#E3F2FD] text-[#0D47A1] px-2 py-0.5 rounded-full font-bold text-[10px]">
-                            {app.badge || "Instant"}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 font-bold text-slate-800">
-                          <span className="text-slate-400 font-semibold">From catalogue</span>
-                        </td>
-                        <td className="px-6 py-4 font-medium text-slate-500">
-                          {app.path}
-                        </td>
-                        <td className="px-6 py-4">
-                          {app.image && (
-                            <img
-                              src={app.image}
-                              alt={app.title}
-                              className="w-10 h-10 object-cover border border-slate-200 rounded-lg p-0.5 bg-slate-50"
-                            />
-                          )}
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="flex gap-2 justify-end">
-                            <button
-                              onClick={() => handleOpenEditAppliance(idx)}
-                              className="p-1.5 text-slate-500 hover:text-[#0D47A1] hover:bg-slate-100 rounded-lg transition-colors">
-                              <Edit2 size={14} />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteAppliance(idx)}
-                              className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <ServiceTilesEditor placement="appliance-service" onToast={showToast} />
           )}
 
           {/* ---------------- SUBSECTION 7: STORIES CUSTOMIZATION ---------------- */}
@@ -2861,242 +2369,6 @@ const CustomerAppCustomization = () => {
         </div>
       )}
 
-      {/* Edit/Add Most Booked Modal Overlay */}
-      {showMostBookedModal && (
-        <div className="fixed inset-0 bg-[#052355]/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-2xl border border-slate-100 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh]">
-            <div className="flex justify-between items-center shrink-0">
-              <h3 className="text-base font-bold text-[#1E293B]">
-                {isEditingMostBooked
-                  ? "Edit Most Booked Service"
-                  : "Add Most Booked Service"}
-              </h3>
-              <button
-                onClick={() => setShowMostBookedModal(false)}
-                className="text-slate-400 hover:text-slate-600 font-bold">
-                ✕
-              </button>
-            </div>
-
-            <form
-              onSubmit={handleSaveMostBooked}
-              className="flex flex-col flex-1 min-h-0 gap-4">
-              <div className="space-y-4 overflow-y-auto pr-1 flex-1 min-h-0 max-h-[75vh] no-scrollbar">
-                <div className="bg-slate-50 p-3 rounded-xl border border-slate-150 space-y-3">
-                  <span className="text-[10px] font-bold text-[#0D47A1] uppercase tracking-wider block font-sans">
-                    1. Card View Customization
-                  </span>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-semibold text-[#64748B] mb-1 block">
-                        Service Title *
-                      </label>
-                      <input
-                        type="text"
-                        value={mostBookedForm.title}
-                        onChange={(e) =>
-                          setMostBookedForm({
-                            ...mostBookedForm,
-                            title: e.target.value,
-                          })
-                        }
-                        placeholder="e.g. Foam-jet AC service"
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:border-[#0D47A1] transition-all"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-semibold text-[#64748B] mb-1 block">
-                        Badge (e.g. Instant, 2 ACs)
-                      </label>
-                      <input
-                        type="text"
-                        value={mostBookedForm.badge}
-                        onChange={(e) =>
-                          setMostBookedForm({
-                            ...mostBookedForm,
-                            badge: e.target.value,
-                          })
-                        }
-                        placeholder="e.g. Instant"
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:border-[#0D47A1] transition-all"
-                      />
-                    </div>
-                  </div>
-
-                  <CataloguePriceNotice />
-
-
-                  <div>
-                    <label className="text-xs font-semibold text-[#64748B] mb-1 block">
-                      Upload Card Image *
-                    </label>
-                    <div className="flex items-center gap-3 bg-white border border-dashed border-slate-200 rounded-lg p-1.5">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleMostBookedFileChange}
-                        className="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[9.5px] file:font-semibold file:bg-blue-50 file:text-[#0D47A1] hover:file:bg-blue-100 cursor-pointer"
-                      />
-                      {mostBookedForm.image && (
-                        <img
-                          src={mostBookedForm.image}
-                          alt="Preview"
-                          className="w-10 h-8 object-cover border border-slate-200 rounded-md bg-white shrink-0"
-                        />
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-
-              <div className="flex gap-3 pt-3 border-t border-slate-100 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setShowMostBookedModal(false)}
-                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2.5 rounded-lg text-xs transition-all">
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 bg-[#0D47A1] hover:bg-blue-800 text-white font-semibold py-2.5 rounded-lg text-xs transition-all shadow-sm disabled:opacity-50">
-                  Save Service Card
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Edit/Add Appliance Service Modal Overlay */}
-      {showApplianceModal && (
-        <div className="fixed inset-0 bg-[#052355]/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-2xl border border-slate-100 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh]">
-            <div className="flex justify-between items-center shrink-0">
-              <h3 className="text-base font-bold text-[#1E293B]">
-                {isEditingAppliance
-                  ? "Edit Appliance Service Card"
-                  : "Add Appliance Service Card"}
-              </h3>
-              <button
-                onClick={() => setShowApplianceModal(false)}
-                className="text-slate-400 hover:text-slate-600 font-bold">
-                ✕
-              </button>
-            </div>
-
-            <form
-              onSubmit={handleSaveAppliance}
-              className="flex flex-col flex-1 min-h-0 gap-4">
-              <div className="space-y-4 overflow-y-auto pr-1 flex-1 min-h-0 max-h-[75vh] no-scrollbar">
-                <div className="bg-slate-50 p-3 rounded-xl border border-slate-150 space-y-3">
-                  <span className="text-[10px] font-bold text-[#0D47A1] uppercase tracking-wider block font-sans">
-                    Card Details
-                  </span>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-semibold text-[#64748B] mb-1 block">
-                        Appliance Title *
-                      </label>
-                      <input
-                        type="text"
-                        value={applianceForm.title}
-                        onChange={(e) =>
-                          setApplianceForm({
-                            ...applianceForm,
-                            title: e.target.value,
-                          })
-                        }
-                        placeholder="e.g. Refrigerator Repair & Service"
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:border-[#0D47A1] transition-all"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-semibold text-[#64748B] mb-1 block">
-                        Badge (e.g. Instant, 2 ACs)
-                      </label>
-                      <input
-                        type="text"
-                        value={applianceForm.badge}
-                        onChange={(e) =>
-                          setApplianceForm({
-                            ...applianceForm,
-                            badge: e.target.value,
-                          })
-                        }
-                        placeholder="e.g. Instant"
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:border-[#0D47A1] transition-all"
-                      />
-                    </div>
-                  </div>
-
-                  <CataloguePriceNotice />
-
-
-                  <div>
-                    <label className="text-xs font-semibold text-[#64748B] mb-1 block">
-                      Action Path / Category Link *
-                    </label>
-                    <input
-                      type="text"
-                      value={applianceForm.path}
-                      onChange={(e) =>
-                        setApplianceForm({
-                          ...applianceForm,
-                          path: e.target.value,
-                        })
-                      }
-                      placeholder="e.g. /refrigerator-details or /book/Refrigerator"
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:border-[#0D47A1] transition-all"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-[#64748B] mb-1 block">
-                      Upload Card Image *
-                    </label>
-                    <div className="flex items-center gap-3 bg-white border border-dashed border-slate-200 rounded-lg p-1.5">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleApplianceFileChange}
-                        className="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[9.5px] file:font-semibold file:bg-blue-50 file:text-[#0D47A1] hover:file:bg-blue-100 cursor-pointer"
-                      />
-                      {applianceForm.image && (
-                        <img
-                          src={applianceForm.image}
-                          alt="Preview"
-                          className="w-10 h-8 object-contain border border-slate-200 rounded-md bg-white shrink-0"
-                        />
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-
-              <div className="flex gap-3 pt-3 border-t border-slate-100 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setShowApplianceModal(false)}
-                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2.5 rounded-lg text-xs transition-all">
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 bg-[#0D47A1] hover:bg-blue-800 text-white font-semibold py-2.5 rounded-lg text-xs transition-all shadow-sm disabled:opacity-50">
-                  Save Appliance Card
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
       {/* Edit/Add Story Modal Overlay */}
       {showStoryModal && (
         <div className="fixed inset-0 bg-[#052355]/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
@@ -3135,6 +2407,19 @@ const CustomerAppCustomization = () => {
                       className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:border-[#0D47A1] transition-all"
                       required
                     />
+                  </div>
+
+                  <div>
+                    <label htmlFor="story-book-service" className="text-xs font-semibold text-[#64748B] mb-1 block">
+                      &quot;Book now&quot; service
+                    </label>
+                    <ServiceGroupSelect
+                      id="story-book-service"
+                      value={storyForm.groupId}
+                      onChange={(groupId) => setStoryForm({ ...storyForm, groupId })}
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:border-[#0D47A1] transition-all"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">Adds a button in the story that opens this service&apos;s booking. It hides itself while the service isn&apos;t bookable.</p>
                   </div>
 
                   <div>

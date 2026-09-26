@@ -26,59 +26,64 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { apiRequest } from '../lib/apiClient';
 import CustomerBottomNav from '../components/CustomerBottomNav';
+import { InlineValue, Skeleton } from '../components/common/Skeleton';
 
 const Profile = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [hasMembership, setHasMembership] = useState(false);
+  const [hasMembership, setHasMembership] = useState(null); // null = still loading
   const [membershipName, setMembershipName] = useState('');
   const [membershipExpiry, setMembershipExpiry] = useState('');
-  const [bookingsCount, setBookingsCount] = useState(0);
+  const [bookingsCount, setBookingsCount] = useState(null); // null = still loading
 
   const userCoins = user?.walletCoins || 0;
-  const [wishlistCount, setWishlistCount] = useState(0);
+  const [wishlistCount, setWishlistCount] = useState(null); // null = still loading
 
   useEffect(() => {
     apiRequest('/wishlist', { auth: true })
       .then((res) => setWishlistCount((res || []).length))
-      .catch((err) => console.warn('[profile] Could not load wishlist count:', err.message));
+      .catch((err) => {
+        console.warn('[profile] Could not load wishlist count:', err.message);
+        setWishlistCount(0);
+      });
   }, []);
 
   useEffect(() => {
-    const loadStats = async () => {
-      try {
-        const bookingsRes = await apiRequest('/bookings', { auth: true });
-        const bookingsList = Array.isArray(bookingsRes) ? bookingsRes : (bookingsRes || []);
-        setBookingsCount(bookingsList.length);
-      } catch (err) {
-        console.warn('Error loading bookings count:', err);
-      }
+    // Independent requests: each stat shows as soon as its own answer lands.
+    const loadStats = () => {
+      apiRequest('/bookings', { auth: true })
+        .then((res) => setBookingsCount((Array.isArray(res) ? res : res || []).length))
+        .catch((err) => {
+          console.warn('Error loading bookings count:', err);
+          setBookingsCount(0);
+        });
 
-      try {
-        const amcRes = await apiRequest('/warranty-amc/amc/subscriptions', { auth: true });
-        const warrantiesRes = await apiRequest('/warranty-amc/extended-warranty/orders', { auth: true });
-        
-        const amcList = Array.isArray(amcRes) ? amcRes : (amcRes || []);
-        const warrantyList = Array.isArray(warrantiesRes) ? warrantiesRes : (warrantiesRes || []);
-        
-        const activeAmc = amcList.find(s => s.status === 'Active');
-        const activeWarranty = warrantyList.find(w => w.status === 'Active');
-
-        if (activeAmc) {
-          setHasMembership(true);
-          setMembershipName(activeAmc.planName || 'GOLD PLAN');
-          setMembershipExpiry(new Date(activeAmc.expiryDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }));
-        } else if (activeWarranty) {
-          setHasMembership(true);
-          setMembershipName(`${activeWarranty.brand} Warranty`);
-          setMembershipExpiry(new Date(activeWarranty.validTill).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }));
-        } else {
+      Promise.all([
+        apiRequest('/warranty-amc/amc/subscriptions', { auth: true }),
+        apiRequest('/warranty-amc/extended-warranty/orders', { auth: true }),
+      ])
+        .then(([amcRes, warrantiesRes]) => {
+          const amcList = Array.isArray(amcRes) ? amcRes : amcRes || [];
+          const warrantyList = Array.isArray(warrantiesRes) ? warrantiesRes : warrantiesRes || [];
+          const activeAmc = amcList.find((s) => s.status === 'Active');
+          const activeWarranty = warrantyList.find((w) => w.status === 'Active');
+          if (activeAmc) {
+            setMembershipName(activeAmc.planName || 'GOLD PLAN');
+            setMembershipExpiry(new Date(activeAmc.expiryDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }));
+            setHasMembership(true);
+          } else if (activeWarranty) {
+            setMembershipName(`${activeWarranty.brand} Warranty`);
+            setMembershipExpiry(new Date(activeWarranty.validTill).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }));
+            setHasMembership(true);
+          } else {
+            setHasMembership(false);
+          }
+        })
+        .catch((err) => {
+          console.warn('Error loading memberships:', err);
           setHasMembership(false);
-        }
-      } catch (err) {
-        console.warn('Error loading memberships:', err);
-      }
+        });
     };
 
     if (user) {
@@ -181,7 +186,7 @@ const Profile = () => {
               className="bg-white border border-slate-200/80 rounded-2xl p-2.5 flex flex-col gap-0.5 shadow-2xs hover:shadow-xs transition-all cursor-pointer group"
             >
               <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate">My Bookings</span>
-              <span className="text-base sm:text-lg font-black text-slate-900 mt-0.5">{bookingsCount}</span>
+              <span className="text-base sm:text-lg font-black text-slate-900 mt-0.5"><InlineValue value={bookingsCount} /></span>
               <span className="text-[9px] font-extrabold text-brand-blue group-hover:underline self-start mt-0.5">
                 View All
               </span>
@@ -295,7 +300,7 @@ const Profile = () => {
                     <span className="text-xs sm:text-[13px] font-bold text-slate-800">AMC Plan</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs text-slate-400 font-semibold">{hasMembership ? membershipName : 'No Active Plan'}</span>
+                    <span className="text-xs text-slate-400 font-semibold"><InlineValue value={hasMembership} className="h-3 w-20">{hasMembership ? membershipName : 'No Active Plan'}</InlineValue></span>
                     <ChevronRight className="h-4 w-4 text-slate-400" />
                   </div>
                 </div>
@@ -340,7 +345,7 @@ const Profile = () => {
                     <span className="text-xs sm:text-[13px] font-bold text-slate-800">My Wishlist</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs text-slate-400 font-semibold">{wishlistCount} items</span>
+                    <span className="text-xs text-slate-400 font-semibold"><InlineValue value={wishlistCount} className="h-3 w-5" /> items</span>
                     <ChevronRight className="h-4 w-4 text-slate-400" />
                   </div>
                 </div>
@@ -566,7 +571,9 @@ const Profile = () => {
             </div>
 
             {/* Plus Gold Membership Card */}
-            {hasMembership ? (
+            {hasMembership === null ? (
+              <Skeleton className="h-36 w-full" rounded="rounded-3xl" />
+            ) : hasMembership ? (
               <div className="bg-linear-to-r from-[#0C1D33] via-[#102747] to-[#0C1D33] rounded-3xl p-5 text-white shadow-md relative overflow-hidden border border-amber-400/30">
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex items-center gap-3">
@@ -615,7 +622,7 @@ const Profile = () => {
                 className="bg-white border border-slate-200/80 rounded-2xl p-4 flex flex-col gap-1 shadow-2xs hover:shadow-md transition-all cursor-pointer group"
               >
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Bookings</span>
-                <span className="text-xl font-black text-slate-900 group-hover:text-brand-blue transition-colors">{bookingsCount}</span>
+                <span className="text-xl font-black text-slate-900 group-hover:text-brand-blue transition-colors"><InlineValue value={bookingsCount} /></span>
                 <span className="text-[10px] font-bold text-brand-blue mt-1">View All →</span>
               </div>
 
@@ -676,7 +683,7 @@ const Profile = () => {
                     </div>
                     <div>
                       <h4 className="text-xs font-bold text-slate-800 group-hover:text-brand-blue">My Bookings</h4>
-                      <p className="text-[11px] text-slate-400 font-medium">{bookingsCount} active/completed requests</p>
+                      <p className="text-[11px] text-slate-400 font-medium"><InlineValue value={bookingsCount} className="h-3 w-5" /> active/completed requests</p>
                     </div>
                   </div>
                   <ChevronRight className="h-4 w-4 text-slate-400 group-hover:translate-x-1 transition-transform" />
@@ -750,7 +757,7 @@ const Profile = () => {
                     </div>
                     <div>
                       <h4 className="text-xs font-bold text-slate-800 group-hover:text-brand-blue">AMC Plan</h4>
-                      <p className="text-[11px] text-slate-400 font-medium">{hasMembership ? membershipName : 'No active plan'}</p>
+                      <p className="text-[11px] text-slate-400 font-medium"><InlineValue value={hasMembership} className="h-3 w-20">{hasMembership ? membershipName : 'No active plan'}</InlineValue></p>
                     </div>
                   </div>
                   <ChevronRight className="h-4 w-4 text-slate-400 group-hover:translate-x-1 transition-transform" />
@@ -798,7 +805,7 @@ const Profile = () => {
                     </div>
                     <div>
                       <h4 className="text-xs font-bold text-slate-800 group-hover:text-brand-blue">My Wishlist</h4>
-                      <p className="text-[11px] text-slate-400 font-medium">{wishlistCount} saved items</p>
+                      <p className="text-[11px] text-slate-400 font-medium"><InlineValue value={wishlistCount} className="h-3 w-5" /> saved items</p>
                     </div>
                   </div>
                   <ChevronRight className="h-4 w-4 text-slate-400 group-hover:translate-x-1 transition-transform" />

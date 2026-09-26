@@ -6,6 +6,7 @@ import {
 import defaultLogo from '../assets/nigam-care.png';
 import Footer from '../components/layout/Footer';
 import { apiRequest } from '../lib/apiClient';
+import { Skeleton, SkeletonText } from '../components/common/Skeleton';
 
 const defaultStats = [
   { label: 'Happy Customers', value: '50,000+', icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
@@ -46,7 +47,7 @@ const bgColors = ['bg-blue-600', 'bg-emerald-600', 'bg-amber-600', 'bg-indigo-60
 
 const AboutNCC = () => {
   const navigate = useNavigate();
-  const [, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [heroTitle, setHeroTitle] = useState('Empowering Smart Home Care & Appliance Solutions');
   const [heroSubtitle, setHeroSubtitle] = useState("Nigam Care Center (NCC) is India's leading home service network. We connect households with top-rated, background-verified serviceProviders for AC repair, appliance servicing, electrical work, plumbing, and genuine spare parts delivery.");
   const [appVersion, setAppVersion] = useState('v2.4.0');
@@ -120,10 +121,10 @@ const AboutNCC = () => {
                 <span className="text-xs font-bold tracking-wide text-slate-100">Official Release {appVersion}</span>
               </div>
               <h2 className="text-2xl sm:text-3xl md:text-5xl font-black text-white leading-tight">
-                {heroTitle}
+                {loading ? <SkeletonText lines={2} lineClassName="h-7 bg-white/20" /> : heroTitle}
               </h2>
               <p className="text-xs sm:text-sm md:text-base text-slate-200 leading-relaxed font-medium mt-1">
-                {heroSubtitle}
+                {loading ? <SkeletonText lines={3} lineClassName="h-3 bg-white/20" /> : heroSubtitle}
               </p>
             </div>
             
@@ -137,7 +138,8 @@ const AboutNCC = () => {
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-          {stats.map((stat, i) => {
+          {loading && Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-28" rounded="rounded-3xl" />)}
+          {!loading && stats.map((stat, i) => {
             const Icon = stat.icon;
             return (
               <div key={i} className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex flex-col items-center text-center gap-2 hover:shadow-md transition-all">
@@ -161,7 +163,8 @@ const AboutNCC = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {coreValues.map((val, idx) => {
+            {loading && Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-32" rounded="rounded-3xl" />)}
+            {!loading && coreValues.map((val, idx) => {
               const Icon = val.icon;
               return (
                 <div key={idx} className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-xs flex gap-5 items-start hover:shadow-md transition-all text-left">

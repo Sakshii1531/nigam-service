@@ -20,6 +20,7 @@ import { useAppLogo } from "../context/LogoContext";
 import { useLocationContext } from "../context/LocationContext";
 import { getActiveCities, isCityServiceable } from "../utils/serviceableCities";
 import { apiRequest } from "../lib/apiClient";
+import { Skeleton, SkeletonList } from '../components/common/Skeleton';
 
 const AreaNotServiceable = () => {
   const navigate = useNavigate();
@@ -30,7 +31,7 @@ const AreaNotServiceable = () => {
 
   const [notified, setNotified] = useState(false);
   const [activeCities, setActiveCities] = useState([]);
-  const [, setLoadingCities] = useState(true);
+  const [loadingCities, setLoadingCities] = useState(true);
   const [showChangeCityModal, setShowChangeCityModal] = useState(false);
   const [showActiveCitiesModal, setShowActiveCitiesModal] = useState(false);
   const [searchCity, setSearchCity] = useState("");
@@ -281,7 +282,7 @@ const AreaNotServiceable = () => {
               className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-blue hover:text-blue-800 transition-colors pt-2">
               <Globe2 size={13} />
               <span>
-                See where Nigam Care is available now ({activeCities.length}{" "}
+                See where Nigam Care is available now ({loadingCities ? <Skeleton inline className="h-3 w-4" /> : activeCities.length}{" "}
                 cities)
               </span>
             </button>
@@ -427,6 +428,7 @@ const AreaNotServiceable = () => {
               </p>
 
               <div className="overflow-y-auto space-y-2 pr-1 max-h-72">
+                {loadingCities && <SkeletonList rows={4} withTrailing={false} />}
                 {activeCities.map((city) => (
                   <div
                     key={city.name}

@@ -5,13 +5,14 @@ import {
 } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
 import ServiceProviderBottomNav from '../../components/ServiceProviderBottomNav';
+import { SkeletonList } from '../../components/common/Skeleton';
 
 const PayoutSettings = () => {
   const navigate = useNavigate();
 
   // Payout methods live on the service provider's profile — they have to survive a
   // reinstall and be the same account payouts actually settle to.
-  const [accounts, setAccounts] = useState([]);
+  const [accounts, setAccounts] = useState(null); // null = still loading
   const [error, setError] = useState('');
 
   const loadAccounts = React.useCallback(async () => {
@@ -27,6 +28,7 @@ const PayoutSettings = () => {
       setError('');
     } catch (err) {
       setError(err.message || 'Could not load payout methods.');
+      setAccounts((prev) => prev || []);
     }
   }, []);
 
@@ -70,7 +72,7 @@ const PayoutSettings = () => {
           accountNo: bankForm.accountNo,
           ifsc: bankForm.ifsc,
           holderName: bankForm.holderName,
-          isPrimary: accounts.length === 0,
+          isPrimary: !accounts?.length,
         },
       });
       await loadAccounts();
@@ -89,7 +91,7 @@ const PayoutSettings = () => {
       await apiRequest('/service-provider/profile/payout-methods', {
         method: 'POST',
         auth: true,
-        body: { type: 'upi', name: upiId, upiId, isPrimary: accounts.length === 0 },
+        body: { type: 'upi', name: upiId, upiId, isPrimary: !accounts?.length },
       });
       await loadAccounts();
     } catch (err) {
@@ -156,10 +158,11 @@ const PayoutSettings = () => {
         <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
           <h3 className="text-sm font-semibold text-slate-900 mb-3">Payment Methods</h3>
           <div className="flex flex-col gap-3">
-            {accounts.length === 0 && (
+            {accounts === null && <SkeletonList rows={2} />}
+            {accounts?.length === 0 && (
               <p className="text-[11px] text-slate-400 font-medium">No payout method added yet.</p>
             )}
-            {accounts.map((acc) => (
+            {(accounts || []).map((acc) => (
               <div key={acc.id} className="bg-slate-50 border border-slate-100 rounded-xl p-4 flex justify-between items-center">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-[#E3ECF9] rounded-full flex items-center justify-center">

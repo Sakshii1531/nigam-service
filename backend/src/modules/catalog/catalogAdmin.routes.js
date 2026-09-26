@@ -5,6 +5,7 @@ import { ok, created } from '../../utils/respond.js';
 import { ROLES } from '../../config/constants.js';
 import * as admin from './catalogAdmin.service.js';
 import * as brands from './catalogueBrand.service.js';
+import { describeGroupsForAdmin } from './homeSections.service.js';
 import {
   idParamSchema,
   statusSchema,
@@ -52,6 +53,10 @@ catalogAdminRouter.post('/categories', validate(createCategorySchema), handle((r
 catalogAdminRouter.put('/categories/:id', byId, validate(updateCategorySchema), handle((req) => admin.updateCategory(req.params.id, req.body, actor(req))));
 catalogAdminRouter.patch('/categories/:id/status', byId, validate(statusSchema), handle((req) => admin.updateCategory(req.params.id, req.body, actor(req))));
 catalogAdminRouter.get('/categories/:id/structure', byId, handle((req) => admin.getCategoryStructure(req.params.id)));
+
+// Every bookable service group with live price / rating / bookings — the
+// picker for home tiles and story links (Phase 22).
+catalogAdminRouter.get('/service-groups', handle(() => describeGroupsForAdmin()));
 
 // Catalogue brands — what a customer picks on a product-linked booking (Phase 19)
 catalogAdminRouter.get('/brands', handle(() => brands.listBrands()));

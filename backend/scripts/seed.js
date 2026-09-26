@@ -22,7 +22,6 @@ import { AMCSubscription } from '../src/modules/warranty-amc-exchange/amcSubscri
 import { ExtendedWarrantyOrder } from '../src/modules/warranty-amc-exchange/extendedWarrantyOrder.model.js';
 import { ExtendedWarrantyPlan } from '../src/modules/warranty-amc-exchange/extendedWarrantyPlan.model.js';
 import { ExchangeBaseValue } from '../src/modules/warranty-amc-exchange/exchangeBaseValue.model.js';
-import { HomeTile } from '../src/modules/super-admin/homeTile.model.js';
 import { EXCHANGE_BASE_VALUES } from './exchangeBaseValueSeedData.js';
 import { OwnedAppliance } from '../src/modules/service-requests/ownedAppliance.model.js';
 import { Notification } from '../src/modules/notifications/notification.model.js';
@@ -30,8 +29,8 @@ import { hashPassword } from '../src/modules/auth/password.js';
 import { ROLES } from '../src/config/constants.js';
 import { CATEGORY_SEED } from './categorySeedData.js';
 import { seedCatalogueBrands } from './seedCatalogueBrands.js';
+import { seedHomeSections } from './seedHomeSections.js';
 import { AMC_PLAN_SEED, EW_PLAN_SEED, SPARE_PART_SEED } from './planSeedData.js';
-import { listServiceGroups } from '../src/modules/catalog/offeringSearch.service.js';
 import { seedMasterCatalogue } from './seedMasterCatalogue.js';
 import { seedDemoEntities } from './demoSeedData.js';
 
@@ -229,25 +228,11 @@ async function upsertCatalogueBrands() {
   console.log(`[seed] ${total} catalogue brands ready`);
 }
 
-// Home-screen tiles, built from the Master Catalogue just seeded: each tile
-// is a bookable service group with its deep link. No price is stored — the
-// app shows the catalogue's live "from" price (docs/master-catalogue Phase 6).
-// Without tiles the app falls back to a bundled list, which is fine too.
+// Home-screen service rows (Phase 22): tiles that point at bookable
+// catalogue services — no price, rating or badge stored.
 async function upsertHomeTiles() {
-  // One service per category first, so the tiles span the catalogue.
-  const all = await listServiceGroups();
-  const firsts = all.filter((g, i) => all.findIndex((x) => x.category.key === g.category.key) === i);
-  const groups = [...firsts, ...all.filter((g) => !firsts.includes(g))].slice(0, 6);
-  for (const [i, group] of groups.entries()) {
-    for (const placement of ['most-booked', 'appliance-service']) {
-      await HomeTile.findOneAndUpdate(
-        { placement, title: group.title },
-        { placement, title: group.title, link: group.deepLink, sortOrder: i, isActive: true },
-        { upsert: true, setDefaultsOnInsert: true },
-      );
-    }
-  }
-  console.log(`[seed] ${groups.length * 2} home tiles ready`);
+  const { created, removedLegacy } = await seedHomeSections();
+  console.log(`[seed] home tiles: ${created} created, ${removedLegacy} legacy removed`);
 }
 
 async function upsertCommerce() {

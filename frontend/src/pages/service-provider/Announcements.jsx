@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Bell, AlertTriangle } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
+import { LoadingSection, SkeletonCards } from '../../components/common/Skeleton';
 
 const SEVERITY_TONE = {
   Critical: { border: 'border-red-500', chip: 'bg-red-50 text-red-600' },
@@ -79,7 +80,7 @@ const Announcements = () => {
       <div className="flex-1 overflow-y-auto p-4 lg:px-6 xl:px-8 flex flex-col gap-4 text-left pb-8 max-w-screen-xl mx-auto w-full">
         <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">Notice & alert from Headquarters</span>
 
-        {loading && <p className="text-[11px] text-slate-400 font-semibold py-6 text-center">Loading announcements…</p>}
+        {loading && <LoadingSection loading label="announcements" skeleton={<SkeletonCards count={3} />} />}
         {error && <p className="text-[11px] text-rose-500 font-semibold py-6 text-center">{error}</p>}
         {!loading && !error && notices.length === 0 && (
           <p className="text-[11px] text-slate-400 font-semibold py-6 text-center">No announcements right now.</p>

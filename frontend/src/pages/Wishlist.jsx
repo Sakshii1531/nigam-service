@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiRequest } from '../lib/apiClient';
 import { ArrowLeft, ShoppingCart, Star, Heart } from 'lucide-react';
+import { LoadingSection, SkeletonList } from '../components/common/Skeleton';
 
 const Wishlist = () => {
   const navigate = useNavigate();
@@ -10,13 +11,15 @@ const Wishlist = () => {
   // (with 1,420 and 840 "reviews" and Unsplash stock photos) that no order
   // could reference — MyWishlist.jsx already reads the real list.
   const [wishlistItems, setWishlistItems] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
     let cancelled = false;
     apiRequest('/wishlist', { auth: true })
       .then((res) => { if (!cancelled) setWishlistItems(res || []); })
-      .catch((err) => { if (!cancelled) setLoadError(err.message || 'Could not load your wishlist.'); });
+      .catch((err) => { if (!cancelled) setLoadError(err.message || 'Could not load your wishlist.'); })
+      .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, []);
 
@@ -45,7 +48,8 @@ const Wishlist = () => {
 
           {/* Without this the page rendered as a bare header — nothing told the
               customer whether their wishlist was empty or still loading. */}
-          {!loadError && wishlistItems.length === 0 && (
+          {loading && <LoadingSection loading label="wishlist" skeleton={<SkeletonList rows={3} />} />}
+          {!loading && !loadError && wishlistItems.length === 0 && (
             <div className="flex-1 flex flex-col items-center justify-center text-center py-16 gap-2">
               <p className="text-sm font-bold text-brand-blue">Your wishlist is empty</p>
               <p className="text-xs text-slate-500 max-w-60">

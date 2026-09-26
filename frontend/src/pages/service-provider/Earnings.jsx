@@ -3,17 +3,18 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Bell, ArrowLeft, Shield, TrendingUp, ChevronDown, Check, Clock, 
   Zap, FileText, Building2, ChevronRight,
-  AlertCircle, RefreshCw, ArrowUpRight
+  AlertCircle, ArrowUpRight
 } from 'lucide-react';
 import ServiceProviderBottomNav from '../../components/ServiceProviderBottomNav';
 import { useTech } from '../../context/ServiceProviderContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { apiRequest } from '../../lib/apiClient';
+import { LoadingSection, Skeleton, SkeletonList, InlineValue } from '../../components/common/Skeleton';
 
 const EarningsPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { earningsTally } = useTech();
+  const { earningsTally, earningsLoading } = useTech();
   const { unreadCount: unreadNotificationsCount } = useNotifications();
 
   const [stats, setStats] = useState(null);
@@ -342,7 +343,7 @@ const EarningsPage = () => {
               </div>
               <div>
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Today's Earnings</span>
-                <p className="text-2xl font-black text-[#052355] mt-0.5">₹{earningsTally.today.toLocaleString('en-IN')}</p>
+                <p className="text-2xl font-black text-[#052355] mt-0.5"><InlineValue value={earningsLoading ? null : earningsTally.today} className="h-6 w-24">₹{earningsTally.today.toLocaleString('en-IN')}</InlineValue></p>
                 <p className="text-[10px] text-slate-500 font-semibold mt-0.5">
                   {earningsTally.completedToday || 0} completed job{earningsTally.completedToday === 1 ? '' : 's'} today
                 </p>
@@ -362,7 +363,7 @@ const EarningsPage = () => {
           <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-2xs flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-black text-[#052355] uppercase tracking-wider">Payout Categories</h3>
-              <span className="text-[10px] font-bold text-slate-400">Total ₹{earningsTally.total.toLocaleString('en-IN')}</span>
+              <span className="text-[10px] font-bold text-slate-400">Total <InlineValue value={earningsLoading ? null : earningsTally.total} className="h-2.5 w-12">₹{earningsTally.total.toLocaleString('en-IN')}</InlineValue></span>
             </div>
 
             {/* Segmented Controls */}
@@ -398,7 +399,7 @@ const EarningsPage = () => {
                   <span className="text-xs font-bold text-amber-900">D2C On-Demand Services</span>
                   <span className="text-[9px] font-black text-amber-800 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-md">Instant</span>
                 </div>
-                <p className="text-2xl font-black text-[#052355]">₹{earningsTally.split.quick.amount.toLocaleString('en-IN')}</p>
+                <p className="text-2xl font-black text-[#052355]"><InlineValue value={earningsLoading ? null : earningsTally.split.quick.amount} className="h-6 w-24">₹{earningsTally.split.quick.amount.toLocaleString('en-IN')}</InlineValue></p>
                 <p className="text-[10.5px] text-amber-700 font-medium">
                   {earningsTally.split.quick.jobs} Jobs • Direct credited to available balance
                 </p>
@@ -409,7 +410,7 @@ const EarningsPage = () => {
                   <span className="text-xs font-bold text-[#052355]">Brand Warranty & Invoices</span>
                   <span className="text-[9px] font-black text-blue-800 bg-blue-100 border border-blue-300 px-2 py-0.5 rounded-md">Approval Cycle</span>
                 </div>
-                <p className="text-2xl font-black text-[#052355]">₹{earningsTally.split.invoice.amount.toLocaleString('en-IN')}</p>
+                <p className="text-2xl font-black text-[#052355]"><InlineValue value={earningsLoading ? null : earningsTally.split.invoice.amount} className="h-6 w-24">₹{earningsTally.split.invoice.amount.toLocaleString('en-IN')}</InlineValue></p>
                 <p className="text-[10.5px] text-slate-600 font-medium">
                   {earningsTally.split.invoice.jobs} Jobs • Verified and credited per billing schedule
                 </p>
@@ -448,10 +449,17 @@ const EarningsPage = () => {
             {/* Chart Area */}
             <div className="pt-2">
               {loadingAnalytics ? (
-                <div className="h-44 flex items-center justify-center text-slate-400 text-xs font-medium gap-2">
-                  <RefreshCw className="h-4 w-4 animate-spin text-[#0D47A1]" />
-                  <span>Loading trends...</span>
-                </div>
+                <LoadingSection
+                  loading
+                  label="earnings trend"
+                  skeleton={
+                    <div className="h-44 flex items-end gap-2 px-1">
+                      {[40, 65, 30, 80, 55, 70, 45].map((h, i) => (
+                        <Skeleton key={i} className="flex-1" style={{ height: `${h}%` }} rounded="rounded-t-lg" />
+                      ))}
+                    </div>
+                  }
+                />
               ) : (stats?.daily || []).length === 0 ? (
                 <div className="h-44 flex flex-col items-center justify-center text-slate-400 text-xs font-medium gap-1 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
                   <TrendingUp className="h-8 w-8 text-slate-300 stroke-[1.5]" />
@@ -514,10 +522,7 @@ const EarningsPage = () => {
 
             <div className="flex flex-col divide-y divide-slate-100">
               {loadingPayouts ? (
-                <div className="p-8 text-center text-slate-400 text-xs font-medium flex items-center justify-center gap-2">
-                  <RefreshCw className="h-4 w-4 animate-spin text-[#0D47A1]" />
-                  <span>Loading payout history...</span>
-                </div>
+                <LoadingSection loading label="payout history" skeleton={<SkeletonList rows={3} className="divide-y divide-slate-100" rowClassName="p-4" />} />
               ) : visiblePayouts.length === 0 ? (
                 <div className="p-10 text-center text-slate-400 flex flex-col items-center justify-center gap-2">
                   <FileText className="h-8 w-8 text-slate-300 stroke-[1.5]" />

@@ -9,6 +9,7 @@ import ServiceProviderBottomNav from '../../components/ServiceProviderBottomNav'
 import { apiRequest } from '../../lib/apiClient';
 import { useTech } from '../../context/ServiceProviderContext';
 import { useServiceProviderSummary } from '../../hooks/useServiceProviderSummary';
+import { Skeleton } from '../../components/common/Skeleton';
 
 const PAGE_SIZE = 20;
 
@@ -544,7 +545,7 @@ const ServiceHistory = () => {
 function SummaryStat({ label, value, loading }) {
   return (
     <div className="px-2 py-3 text-center">
-      <p className="text-lg font-bold tabular-nums">{loading ? '—' : (value ?? 0)}</p>
+      <p className="text-lg font-bold tabular-nums">{loading ? <Skeleton inline className="h-5 w-8 bg-white/25" /> : (value ?? 0)}</p>
       <p className="text-[11px] text-blue-200 leading-tight">{label}</p>
     </div>
   );

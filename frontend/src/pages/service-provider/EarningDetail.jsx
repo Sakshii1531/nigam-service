@@ -18,6 +18,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { apiRequest } from "../../lib/apiClient";
+import { SkeletonScreen } from '../../components/common/Skeleton';
 
 const statusConfig = {
   Credited: {
@@ -128,11 +129,7 @@ const EarningDetailPage = () => {
   }, [id]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[#F4F6FA] flex items-center justify-center">
-        <p className="text-sm text-slate-500">Loading…</p>
-      </div>
-    );
+    return <SkeletonScreen variant="detail" label="earning details" className="min-h-screen bg-[#F4F6FA]" />;
   }
 
   if (!earning) {

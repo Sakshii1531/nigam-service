@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Award, Play, BookOpen } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
+import { LoadingSection, SkeletonList } from '../../components/common/Skeleton';
 
 const CATEGORY_TONE = [
   'text-[#00C853] bg-green-50',
@@ -181,6 +182,7 @@ const Academy = () => {
               </div>
 
               <div className="flex flex-col gap-3">
+                {loading && <LoadingSection loading label="video lessons" skeleton={<SkeletonList rows={3} />} />}
                 {!loading && videos.length === 0 && (
                   <p className="text-[11px] text-slate-400 font-normal">No video lessons published yet.</p>
                 )}
@@ -216,6 +218,7 @@ const Academy = () => {
               </div>
 
               <div className="flex flex-col gap-3">
+                {loading && <LoadingSection loading label="articles" skeleton={<SkeletonList rows={3} />} />}
                 {!loading && blogs.length === 0 && (
                   <p className="text-[11px] text-slate-400 font-normal">No articles published yet.</p>
                 )}

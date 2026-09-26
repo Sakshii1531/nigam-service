@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, MapPin, Home, Briefcase, Plus, X, Pencil, Trash2, Star, Check, Sparkles, RefreshCw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { apiRequest } from '../lib/apiClient';
+import { LoadingSection, SkeletonCards } from '../components/common/Skeleton';
 
 const SavedAddresses = () => {
   const navigate = useNavigate();
@@ -213,10 +214,7 @@ const SavedAddresses = () => {
       {/* Content */}
       <div className="flex-1 p-6 flex flex-col lg:grid lg:grid-cols-2 gap-4 max-w-screen-2xl mx-auto w-full">
         {loading ? (
-          <div className="flex flex-col items-center justify-center p-12 text-slate-400 gap-2">
-            <RefreshCw className="h-6 w-6 animate-spin text-brand-blue" />
-            <span className="text-xs font-semibold">Loading saved addresses...</span>
-          </div>
+          <LoadingSection loading label="saved addresses" className="contents" skeleton={<SkeletonCards count={2} className="contents" />} />
         ) : addresses.length === 0 ? (
           <div className="bg-white rounded-2xl p-8 text-center flex flex-col items-center gap-3 border border-border-color shadow-sm">
             <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-brand-blue">

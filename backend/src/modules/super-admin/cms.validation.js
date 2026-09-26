@@ -24,6 +24,10 @@ export const createStorySchema = z.object({
   mediaUrl: mediaUrl().optional(),
   aspectRatio: z.string().optional(),
   slides: z.array(storySlideSchema).optional(),
+  target: z
+    .object({ productType: z.string().regex(/^[a-f0-9]{24}$/i).nullable().optional(), service: z.string().regex(/^[a-f0-9]{24}$/i) })
+    .nullable()
+    .optional(),
 });
 export const updateStorySchema = createStorySchema.partial().extend({ status: z.enum(['Active', 'Scheduled']).optional() });
 

@@ -4,6 +4,7 @@ import { ArrowLeft, Gift, Copy, Check, Share2, Coins, Sparkles, Users, Clock } f
 import { useAuth } from '../context/AuthContext';
 import { apiRequest } from '../lib/apiClient';
 import { goBack } from '../lib/navigation';
+import { LoadingSection, SkeletonList } from '../components/common/Skeleton';
 
 const ReferEarn = () => {
   const navigate = useNavigate();
@@ -238,10 +239,7 @@ const ReferEarn = () => {
           </div>
 
           {loadingReferrals ? (
-            <div className="bg-white border border-slate-150 rounded-3xl p-8 flex items-center justify-center gap-2 text-slate-400 text-xs font-bold">
-              <div className="w-4 h-4 border-2 border-brand-blue border-t-transparent rounded-full animate-spin" />
-              Loading your referrals...
-            </div>
+            <LoadingSection loading label="your referrals" skeleton={<SkeletonList rows={3} />} />
           ) : referralsError ? (
             <div className="bg-red-50 border border-red-100 rounded-3xl p-5 text-red-600 text-xs font-semibold text-center">
               {referralsError}

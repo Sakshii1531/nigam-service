@@ -25,6 +25,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { apiRequest } from '../../lib/apiClient';
 import serviceProviderAvatar from '../../assets/service_provider_avatar.png';
+import { Skeleton } from '../../components/common/Skeleton';
 
 const cityLabel = (snapshot) =>
   snapshot?.name ? [snapshot.name, snapshot.state].filter(Boolean).join(', ') : 'Not set';
@@ -171,7 +172,7 @@ function ServiceCityCard() {
               </span>
             </div>
             <p className="text-base sm:text-lg font-black text-slate-900 mt-0.5">
-              {current ? cityLabel(current) : 'Loading territory…'}
+              {current ? cityLabel(current) : <Skeleton inline className="h-5 w-40" />}
             </p>
             <p className="text-xs text-slate-500 font-medium mt-0.5">
               Dispatch orders and auto-assignment are scoped to this city.

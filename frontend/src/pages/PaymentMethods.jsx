@@ -4,6 +4,7 @@ import { ArrowLeft, Plus, Trash2, CreditCard, ShieldCheck, X, Sparkles, RefreshC
 import { useAuth } from '../context/AuthContext';
 import { apiRequest } from '../lib/apiClient';
 import { goBack } from '../lib/navigation';
+import { LoadingSection, SkeletonList } from '../components/common/Skeleton';
 
 // Helper: Auto-detect card network by BIN prefix
 const detectCardNetwork = (numberStr) => {
@@ -242,10 +243,7 @@ const PaymentMethods = () => {
       <div className="flex flex-col gap-5 px-4 sm:px-6 pt-5 max-w-3xl mx-auto w-full text-left">
 
         {loading ? (
-          <div className="flex flex-col items-center justify-center p-12 text-slate-400 gap-2">
-            <RefreshCw className="h-6 w-6 animate-spin text-blue-600" />
-            <span className="text-xs font-semibold">Loading tokenized payment methods...</span>
-          </div>
+          <LoadingSection loading label="payment methods" skeleton={<SkeletonList rows={3} />} />
         ) : (
           <>
             {/* Saved Cards */}

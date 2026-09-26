@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Send, Paperclip, Check, CheckCheck, X, ShieldOff, Image as ImageIcon } from 'lucide-react';
 import { io } from 'socket.io-client';
 import { apiRequest, getStoredTokens } from '../lib/apiClient';
+import { LoadingSection, Skeleton } from '../components/common/Skeleton';
 
 const SOCKET_URL = import.meta.env.VITE_API_BASE_URL
   ? import.meta.env.VITE_API_BASE_URL.replace('/api/v1', '')
@@ -16,6 +17,7 @@ const Chat = () => {
   // list of canned service provider replies, so a customer believed they were talking
   // to their engineer when nothing was sent anywhere.
   const [messages, setMessages] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
   const [conversationId, setConversationId] = useState(null);
   const [chatError, setChatError] = useState('');
   const [serviceProviderTyping] = useState(false);
@@ -47,6 +49,7 @@ const Chat = () => {
           status: 'read',
         })));
 
+        setHistoryLoading(false);
         const { accessToken } = getStoredTokens();
         const socket = io(SOCKET_URL, { auth: { token: accessToken }, transports: ['websocket'] });
         socketRef.current = socket;
@@ -62,7 +65,10 @@ const Chat = () => {
         });
         socket.on('connect_error', () => setChatError('Lost connection to chat.'));
       } catch (err) {
-        if (!cancelled) setChatError(err.message || 'Could not open this conversation.');
+        if (!cancelled) {
+          setChatError(err.message || 'Could not open this conversation.');
+          setHistoryLoading(false);
+        }
       }
     })();
 
@@ -141,6 +147,21 @@ const Chat = () => {
           🔒 Your phone number is masked for security.
         </div>
 
+        {historyLoading && (
+          <LoadingSection
+            loading
+            label="messages"
+            skeleton={
+              <div className="flex flex-col gap-3">
+                {[['items-start', 'w-3/5'], ['items-end', 'w-1/2'], ['items-start', 'w-2/3'], ['items-end', 'w-2/5']].map(([side, width], i) => (
+                  <div key={i} className={`flex flex-col ${side}`}>
+                    <Skeleton className={`h-11 ${width}`} rounded="rounded-2xl" />
+                  </div>
+                ))}
+              </div>
+            }
+          />
+        )}
         {messages.map((msg) =>
           msg.from === 'service_provider' ? (
             <div key={msg.id} className="flex flex-col items-start gap-1">

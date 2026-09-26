@@ -31,6 +31,7 @@ import { useNotifications } from "../../context/NotificationContext";
 import { useAuth } from "../../context/AuthContext";
 import ServiceProviderBottomNav from "../../components/ServiceProviderBottomNav";
 import { useServiceProviderSummary } from "../../hooks/useServiceProviderSummary";
+import { InlineValue } from '../../components/common/Skeleton';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -38,6 +39,7 @@ const Dashboard = () => {
   const {
     jobs,
     earningsTally,
+    earningsLoading,
     acceptJob,
     selectJobForDetails,
     jobsLoading,
@@ -487,7 +489,7 @@ const Dashboard = () => {
   // sat at 0 no matter what the platform had actually sent.
   const { unreadCount: unreadNotificationsCount } = useNotifications();
 
-  const { summary } = useServiceProviderSummary();
+  const { summary, loading: summaryLoading } = useServiceProviderSummary();
 
   const isDeclinedOffer = (job) =>
     declinedOfferIds.includes(job.id) ||
@@ -862,14 +864,14 @@ const Dashboard = () => {
               {[
                 {
                   label: "New offers",
-                  value: jobsLoading ? "—" : availableJobsCount,
+                  value: jobsLoading ? null : availableJobsCount,
                   icon: Briefcase,
                   tone: "bg-[#E3F2FD] text-[#1565C0]",
                   onClick: () => openJobsList("Offers"),
                 },
                 {
                   label: "Active jobs",
-                  value: jobsLoading ? "—" : activeJobs.length,
+                  value: jobsLoading ? null : activeJobs.length,
                   icon: Wrench,
                   tone: "bg-[#E8F5E9] text-[#2E7D32]",
                   onClick: () => {
@@ -888,7 +890,7 @@ const Dashboard = () => {
                 },
                 {
                   label: "Revisits",
-                  value: jobsLoading ? "—" : revisitJobs.length,
+                  value: jobsLoading ? null : revisitJobs.length,
                   icon: RotateCw,
                   tone: "bg-[#FFF3E0] text-[#E65100]",
                   onClick: () => {
@@ -903,7 +905,7 @@ const Dashboard = () => {
                 },
                 {
                   label: "Done today",
-                  value: completedToday,
+                  value: summaryLoading && earningsLoading ? null : completedToday,
                   icon: CheckCircle,
                   tone: "bg-[#F3E5F5] text-[#6A1B9A]",
                   onClick: () => navigate("/service-provider/history"),
@@ -919,7 +921,7 @@ const Dashboard = () => {
                   </div>
                   <div className="min-w-0">
                     <p className="text-xl font-bold text-[#052355] leading-none tabular-nums">
-                      {stat.value}
+                      <InlineValue value={stat.value} className="h-5 w-7" />
                     </p>
                     <p className="text-xs text-slate-500 mt-1 truncate">
                       {stat.label}
@@ -940,13 +942,13 @@ const Dashboard = () => {
                 <div className="min-w-0">
                   <p className="text-xs text-slate-500">Earned today</p>
                   <p className="text-base font-bold text-[#052355] tabular-nums">
-                    {inr(earningsTally.today)}
+                    <InlineValue value={earningsLoading ? null : earningsTally.today} className="h-4 w-16">{inr(earningsTally.today)}</InlineValue>
                   </p>
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs text-slate-500">Wallet balance</p>
                   <p className="text-base font-bold text-[#052355] tabular-nums">
-                    {inr(earningsTally.available)}
+                    <InlineValue value={earningsLoading ? null : earningsTally.available} className="h-4 w-16">{inr(earningsTally.available)}</InlineValue>
                   </p>
                 </div>
               </div>

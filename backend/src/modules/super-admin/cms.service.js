@@ -1,3 +1,4 @@
+import { listServiceGroups, serviceGroupId } from '../catalog/offeringSearch.service.js';
 import { Banner } from './banner.model.js';
 import { Story } from './story.model.js';
 import { Video } from './video.model.js';
@@ -36,8 +37,18 @@ export async function deleteBanner(id) {
   if (!banner) throw new ApiError(404, 'Banner not found');
 }
 
+// Each story with a bookable target gets its "Book now" link (Phase 22).
 export async function listStories() {
-  return Story.find({ status: 'Active' }).sort({ createdAt: -1 });
+  const stories = await Story.find({ status: 'Active' }).sort({ createdAt: -1 });
+  if (!stories.some((s) => s.target?.service)) return stories;
+  const groups = new Map((await listServiceGroups({})).map((g) => [g.groupId, g]));
+  return stories.map((story) => {
+    const json = story.toJSON();
+    const group = story.target?.service
+      ? groups.get(serviceGroupId({ productTypeId: story.target.productType ? String(story.target.productType) : null, serviceId: String(story.target.service) }))
+      : null;
+    return { ...json, bookLink: group?.deepLink || null, bookTitle: group?.title || null };
+  });
 }
 export async function createStory(data) {
   return Story.create(data);
