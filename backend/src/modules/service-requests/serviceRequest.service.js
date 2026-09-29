@@ -7,7 +7,7 @@ import { Job } from '../service-provider/job.model.js';
 import { SERVICE_REQUEST_TRANSITIONS } from '../../config/constants.js';
 import { parsePagination, paginationMeta } from '../../utils/pagination.js';
 
-import { emit as emitNotification } from '../notifications/notification.service.js';
+import { emit as emitNotification, emitToBrand } from '../notifications/notification.service.js';
 import { getIO } from '../../sockets/io.js';
 import { isTest } from '../../config/env.js';
 import { estimateServiceProviderEarnings } from '../shared/serviceProviderEarnings.js';
@@ -42,7 +42,7 @@ export async function createServiceRequest(data, { session } = {}) {
  * with any service request — it no-ops unless the claim actually qualifies. */
 export async function emitWarrantyClaimNotification(serviceRequest) {
   if (!serviceRequest?.brand || serviceRequest.warranty !== 'In Warranty') return;
-  await emitNotification('brand.warranty_claim', {
+  await emitToBrand('brand.warranty_claim', serviceRequest.brand, {
     reason: `New Brand Warranty claim raised for Service Request ${serviceRequest.humanId || serviceRequest.id}`,
   });
 }

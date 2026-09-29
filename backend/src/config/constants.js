@@ -61,7 +61,8 @@ export function broadcastAudiencesForRole(role) {
 // so the existing UI needs no changes once wired to real data (BACKEND_CONTEXT.md §7.2).
 export const ID_PREFIXES = Object.freeze({
   BOOKING: 'NCC', // NCC-YYMMDD-####
-  WARRANTY_TICKET: 'NCCW', // NCCW-2024-######
+  WARRANTY_TICKET: 'NCCW', // NCCW-{current year}-###### — partner warranty claim (docs/partner-warranty)
+  SERVICE_JOB: 'NCCJ', // NCCJ-{current year}-###### — Service Job created from an approved warranty claim
   EXTENDED_WARRANTY: 'NCCEW', // NCCEW######
   AMC: 'NCCAMC', // NCCAMC####
   ORDER: 'NCCO', // NCCO######
@@ -152,6 +153,7 @@ export const JOB_REVISIT_STEPS = Object.freeze([
 export const ID_SCHEMES = Object.freeze({
   [ID_PREFIXES.BOOKING]: { digits: 4, dateSegment: 'YYMMDD', separator: '-' },
   [ID_PREFIXES.WARRANTY_TICKET]: { digits: 6, dateSegment: 'YYYY', separator: '-' },
+  [ID_PREFIXES.SERVICE_JOB]: { digits: 6, dateSegment: 'YYYY', separator: '-' },
   [ID_PREFIXES.EXTENDED_WARRANTY]: { digits: 6, dateSegment: null, separator: '' },
   [ID_PREFIXES.AMC]: { digits: 4, dateSegment: null, separator: '' },
   [ID_PREFIXES.ORDER]: { digits: 6, dateSegment: null, separator: '' },

@@ -14,6 +14,7 @@
     "seed:catalogue": "node scripts/seedMasterCatalogue.js",
     "seed:brands": "node scripts/seedCatalogueBrands.js",
     "seed:home": "node scripts/seedHomeSections.js",
+    "seed:partner-warranty": "node scripts/seedPartnerWarranty.js",
     "db:clear": "node scripts/clearDb.js",
     "db:clear-bookings": "node scripts/clearBookingsAndServiceRequests.js",
     "db:reset-catalogue": "node scripts/resetCatalogueData.js",

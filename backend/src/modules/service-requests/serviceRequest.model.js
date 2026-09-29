@@ -44,7 +44,9 @@ const serviceRequestSchema = new mongoose.Schema(
     warranty: { type: String, enum: ['In Warranty', 'Out of Warranty'], default: 'Out of Warranty' },
     invoiceAvailable: { type: Boolean, default: false },
     attachments: [String],
-    requestMode: { type: String, enum: ['B2B', 'B2C'], default: 'B2C' },
+    // B2B2C = a Service Job created from a brand-approved partner warranty claim.
+    requestMode: { type: String, enum: ['B2B', 'B2C', 'B2B2C'], default: 'B2C' },
+    warrantyClaim: { type: mongoose.Schema.Types.ObjectId, ref: 'WarrantyClaim', default: null, index: true },
 
     status: { type: String, enum: SERVICE_REQUEST_STATUS, default: 'New', index: true },
     completionOtp: { type: String, default: () => Math.floor(1000 + Math.random() * 9000).toString() },
@@ -52,6 +54,7 @@ const serviceRequestSchema = new mongoose.Schema(
 
     slaDueAt: Date,
     zone: String,
+    pincode: { type: String, default: null, index: true },
     customerLocation: {
       latitude: Number,
       longitude: Number,

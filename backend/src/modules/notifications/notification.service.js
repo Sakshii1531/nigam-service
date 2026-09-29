@@ -6,7 +6,7 @@ import { ApiError } from '../../middleware/errorHandler.js';
 import { parsePagination, paginationMeta } from '../../utils/pagination.js';
 import { getIO } from '../../sockets/io.js';
 import { User } from '../auth/user.model.js';
-import { BROADCAST_ROLE_FILTER, broadcastAudiencesForRole } from '../../config/constants.js';
+import { BROADCAST_ROLE_FILTER, broadcastAudiencesForRole, ROLES } from '../../config/constants.js';
 import { sendPush } from './providers/push.provider.js';
 import { sendWhatsApp } from './providers/whatsapp.provider.js';
 import { sendSms } from './providers/sms.provider.js';
@@ -168,11 +168,51 @@ const EVENT_TEMPLATES = {
     // an ops escalation firing a phone alert at every user on the platform is
     // not what "raise an escalation" should mean.
   }),
+  // Sent through emitToBrand, one copy per user of the brand the claim belongs
+  // to. It used to go to the whole Brands broadcast role, so every brand saw
+  // every other brand's claims.
   'brand.warranty_claim': (p) => ({
-    broadcastRole: 'Brands',
+    recipient: p.user,
     type: 'dispatch',
     title: 'Brand Warranty Claim',
     message: p.reason || 'A new Brand Warranty claim has been raised.',
+    priority: 'High',
+  }),
+  // ── Partner warranty claims (docs/partner-warranty) ──
+  // The claim routes pass `cta` (from claimLinks) so each app opens its own
+  // screen; templates only own the wording.
+  'warranty.claim_submitted': (p) => ({
+    recipient: p.user,
+    type: 'claims',
+    title: 'Warranty Claim Submitted',
+    message: `Your ${p.brandName} ${p.productName} claim ${p.humanId} has been sent to ${p.brandName} for verification.`,
+    cta: p.cta,
+    priority: 'Medium',
+    smsBody: `Nigam Care: warranty claim ${p.humanId} submitted to ${p.brandName}. Track it in the app.`,
+    whatsappBody: `🛡️ *Warranty Claim Submitted*\n\nTicket: *${p.humanId}*\n${p.brandName} · ${p.productName}\n\nWe've sent it to ${p.brandName} for verification. You can track it in the Nigam Care app.`,
+  }),
+  'warranty.new_claim_brand': (p) => ({
+    recipient: p.user,
+    type: 'claims',
+    title: 'New Warranty Claim',
+    message: `${p.humanId}: ${p.productName} — ${p.issueName} (${p.city || p.pincode}). Awaiting your review.`,
+    cta: p.cta,
+    priority: 'High',
+  }),
+  'warranty.new_claim_admin': (p) => ({
+    recipient: p.user,
+    type: 'claims',
+    title: 'New Partner Warranty Claim',
+    message: `${p.humanId}: ${p.brandName} ${p.productName} — ${p.issueName} (${p.city || p.pincode}).`,
+    cta: p.cta,
+    priority: 'Medium',
+  }),
+  'warranty.info_provided': (p) => ({
+    recipient: p.user,
+    type: 'claims',
+    title: 'Customer Sent More Information',
+    message: `${p.humanId}: the customer answered your request${p.documentCount ? ` and added ${p.documentCount} document(s)` : ''}.`,
+    cta: p.cta,
     priority: 'High',
   }),
   // Fired at the referrer when someone signs up using their code
@@ -460,6 +500,33 @@ export async function emit(event, payload) {
     console.error(`[notifications] failed to emit "${event}":`, err.message);
     return null;
   }
+}
+
+/**
+ * emit() once per user matching `filter`, with `user` set to each one — for
+ * templates addressed to a group that isn't a broadcast audience (one brand's
+ * staff, the super-admins). Never throws, same as emit().
+ */
+async function emitToUsers(event, filter, payload) {
+  try {
+    const users = await User.find(filter).select('_id').lean();
+    await Promise.all(users.map((u) => emit(event, { ...payload, user: u._id })));
+    return users.length;
+  } catch (err) {
+    console.error(`[notifications] failed to fan out "${event}":`, err.message);
+    return 0;
+  }
+}
+
+/** Notify every user of one partner brand — and nobody from any other brand. */
+export function emitToBrand(event, brandId, payload) {
+  if (!brandId) return Promise.resolve(0);
+  return emitToUsers(event, { role: ROLES.BRAND_ADMIN, brand: brandId }, payload);
+}
+
+/** Notify every super-admin. */
+export function emitToAdmins(event, payload) {
+  return emitToUsers(event, { role: ROLES.SUPER_ADMIN }, payload);
 }
 
 // ── Admin ad-hoc dispatch ─────────────────────────────────────────────────────

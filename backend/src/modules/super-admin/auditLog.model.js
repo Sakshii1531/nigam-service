@@ -8,10 +8,20 @@ const auditLogSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null, index: true },
     action: { type: String, required: true },
-    type: { type: String, enum: ['System', 'Support', 'User', 'Finance', 'Inventory'], required: true, index: true },
+    type: { type: String, enum: ['System', 'Support', 'User', 'Finance', 'Inventory', 'Warranty'], required: true, index: true },
+    // Which record the action was on, and the status move it made — set by
+    // workflows with a status machine (partner warranty claims). Optional so
+    // the older free-text entries stay valid.
+    entityType: { type: String, default: null },
+    entityId: { type: mongoose.Schema.Types.ObjectId, default: null },
+    fromStatus: { type: String, default: null },
+    toStatus: { type: String, default: null },
+    reason: { type: String, default: null },
   },
   { timestamps: { createdAt: true, updatedAt: false } },
 );
+
+auditLogSchema.index({ entityType: 1, entityId: 1, createdAt: 1 });
 
 applyStandardPlugins(auditLogSchema);
 

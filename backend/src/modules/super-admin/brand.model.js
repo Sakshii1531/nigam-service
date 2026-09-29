@@ -21,6 +21,28 @@ const brandSchema = new mongoose.Schema(
     slaAdherencePercent: Number,
     csat: Number,
     contractTerms: String,
+
+    // ── Partner Warranty (docs/partner-warranty) ──
+    logoUrl: { type: String, default: null },
+    // Listed in the customer app's Partner Warranty flow only when true.
+    warrantyEnabled: { type: Boolean, default: false, index: true },
+    // Master Catalogue categories (the customer's "Product" step: AC,
+    // Refrigerator, …) this brand accepts warranty claims for.
+    coverage: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category' }],
+    // Stage deadlines in hours; unset → platform defaults.
+    warrantySla: {
+      approvalHours: Number,
+      assignmentHours: Number,
+      visitHours: Number,
+      resolutionHours: Number,
+    },
+    // Outgoing CRM webhook (Phase 10). The secret is never returned by reads.
+    webhook: {
+      url: String,
+      secret: { type: String, select: false },
+      enabled: { type: Boolean, default: false },
+      events: [String],
+    },
   },
   { timestamps: true },
 );

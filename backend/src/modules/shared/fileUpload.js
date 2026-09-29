@@ -102,3 +102,22 @@ export async function storeUploadedFile(file) {
   if (isProd) throw new ApiError(500, 'File storage is not configured — cannot accept uploads in production');
   return saveLocal(file);
 }
+
+/**
+ * True when `url` is a file this server stored — a Cloudinary URL under our
+ * own cloud, or (outside production) a local /uploads/ path. Documents a
+ * customer attaches as evidence (warranty claim invoices, photos) must come
+ * through POST /api/v1/uploads rather than being arbitrary links.
+ */
+export function isOwnUploadUrl(url) {
+  if (typeof url !== 'string' || url.length > 2048) return false;
+  if (!isProd && /^\/uploads\/[A-Za-z0-9._-]+$/.test(url)) return true;
+  if (!isFileStorageConfigured) return false;
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'https:' && parsed.hostname === 'res.cloudinary.com'
+      && parsed.pathname.startsWith(`/${env.cloudinary.cloudName}/`);
+  } catch {
+    return false;
+  }
+}

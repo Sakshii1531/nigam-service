@@ -72,6 +72,12 @@ import { superAdminClaimRouter } from './modules/super-admin/claim.routes.js';
 import { extendedWarrantyPlanRouter } from './modules/super-admin/extendedWarrantyPlan.routes.js';
 import { adminOrderRouter } from './modules/super-admin/adminOrder.routes.js';
 import { brandActionsRouter } from './modules/brand-admin/brandActions.routes.js';
+import {
+  warrantyCatalogPublicRouter,
+  warrantyCatalogAdminRouter,
+  warrantyCoverageBrandRouter,
+} from './modules/partner-warranty/warrantyCatalog.routes.js';
+import { warrantyClaimCustomerRouter } from './modules/partner-warranty/warrantyClaim.routes.js';
 import { uploadRouter } from './modules/shared/upload.routes.js';
 import { superAdminExchangeRequestRouter } from './modules/super-admin/exchangeRequest.routes.js';
 import { chatRouter } from './modules/chat/chat.routes.js';
@@ -184,6 +190,7 @@ export function createApp() {
   app.use('/api/v1/brand/settings', brandSettingsRouter);
   app.use('/api/v1/brand/actions', brandActionsRouter);
   app.use('/api/v1/brand/academy', brandAcademyRouter);
+  app.use('/api/v1/brand/warranty-coverage', warrantyCoverageBrandRouter);
   app.use('/api/v1/brand', brandInsightsRouter);
   app.use('/api/v1/super-admin/brands', brandRouter);
   app.use('/api/v1/super-admin/cities', cityRouter);
@@ -215,6 +222,9 @@ export function createApp() {
   app.use('/api/v1/uploads', uploadRouter);
   app.use('/api/v1/super-admin/exchange-requests', superAdminExchangeRequestRouter);
   app.use('/api/v1/warranty-amc', warrantyAmcRouter);
+  app.use('/api/v1/partner-warranty/claims', warrantyClaimCustomerRouter);
+  app.use('/api/v1/partner-warranty', warrantyCatalogPublicRouter);
+  app.use('/api/v1/super-admin/warranty-catalog', warrantyCatalogAdminRouter);
   app.use('/api/v1/cms', cmsRouter);
   app.use('/api/v1/cms/home-tiles', homeTileRouter);
   app.use('/api/v1/chat', chatRouter);

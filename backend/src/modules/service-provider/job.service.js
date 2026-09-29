@@ -15,6 +15,7 @@ import { Payment } from '../payments-wallet/payment.model.js';
 import { createRazorpayOrder, verifyRazorpaySignature } from '../payments-wallet/paymentGateway.js';
 import { raiseServiceProviderClaim } from './claim.service.js';
 import { Claim } from '../warranty-amc-exchange/claim.model.js';
+import { Brand } from '../super-admin/brand.model.js';
 import { getOrCreateConversation } from '../chat/conversation.service.js';
 import { emit as emitNotification } from '../notifications/notification.service.js';
 import { getIO } from '../../sockets/io.js';
@@ -965,10 +966,16 @@ export async function submitSpareParts(serviceProviderId, jobId, { parts = [] })
   const checkedParts = parts.filter((p) => p.checked);
 
   if (!job.isD2C) {
+    // A Brand Warranty parts claim is billed to the manufacturer, and the brand
+    // panel finds its claims by brand name — so it has to carry the real name.
+    // It used to be the literal "Brand Warranty Claim", which matched no brand.
+    const sr = job.serviceRequest;
+    const brandDoc = sr?.brand ? await Brand.findById(sr.brand._id || sr.brand).select('name').lean() : null;
+    const warrantyBrandName = brandDoc?.name || sr?.appliance?.brand || sr?.booking?.brand || 'Brand Warranty Claim';
     const claimBrandByType = {
       'AMC Visit': 'NCC Warehouse Order',
       'NCC Extended Warranty': 'NCC EW Claim',
-      'Brand Warranty': 'Brand Warranty Claim',
+      'Brand Warranty': warrantyBrandName,
     };
     const claimTypeByType = {
       'AMC Visit': 'Warehouse Order',

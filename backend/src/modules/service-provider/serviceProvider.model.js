@@ -43,6 +43,13 @@ const serviceProviderSchema = new mongoose.Schema(
       longitude: { type: Number },
     },
     specs: [String], // active specializations, e.g. ['AC', 'Refrigerator', 'Washing Machine'] — drives job-feed filtering
+    // Partner brands this provider is authorized to service under warranty
+    // (docs/partner-warranty §6). Set by Super Admin.
+    authorizedBrands: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Brand', index: true }],
+    // Service area for warranty jobs: explicit pincodes, and/or a radius around
+    // `location`. Neither set → the city match is used.
+    servicePincodes: [{ type: String, trim: true }],
+    serviceRadiusKm: { type: Number, default: null, min: 0 },
     skills: [skillSchema],
     certifications: [certificationSchema],
     rating: { type: Number, default: 0 },
