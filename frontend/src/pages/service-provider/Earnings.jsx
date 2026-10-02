@@ -6,6 +6,7 @@ import {
   AlertCircle, ArrowUpRight
 } from 'lucide-react';
 import ServiceProviderBottomNav from '../../components/ServiceProviderBottomNav';
+import B2b2cPayoutPanel from '../../components/service-provider/B2b2cPayoutPanel';
 import { useTech } from '../../context/ServiceProviderContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { apiRequest } from '../../lib/apiClient';
@@ -92,7 +93,8 @@ const EarningsPage = () => {
     .filter((p) => (p.payoutType || 'Quick').toLowerCase() === activeTab)
     .map((p) => ({
       id: p.id || p._id,
-      job: p.job ? `#${String(p.job).slice(-4)}` : (p.jobId ? `#${String(p.jobId).slice(-4)}` : 'Direct'),
+      // A B2B2C (warranty) settlement covers several jobs and carries NCC's transfer reference.
+      job: p.job ? `Job #${String(p.job).slice(-4)}` : (p.jobId ? `Job #${String(p.jobId).slice(-4)}` : (p.transactionId ? `NCC settlement · ${p.transactionId}` : 'Job Direct')),
       date: p.createdAt ? new Date(p.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—',
       amount: `+₹${(p.netAmount || p.amount || 0).toLocaleString('en-IN')}`,
       status: (p.status || 'Pending').toUpperCase(),
@@ -416,6 +418,7 @@ const EarningsPage = () => {
                 </p>
               </div>
             )}
+            {activeTab === 'invoice' && <B2b2cPayoutPanel />}
           </div>
 
         </div>
@@ -543,7 +546,7 @@ const EarningsPage = () => {
                         )}
                       </div>
                       <div className="min-w-0">
-                        <h4 className="text-xs sm:text-sm font-extrabold text-[#052355] truncate">Job {p.job}</h4>
+                        <h4 className="text-xs sm:text-sm font-extrabold text-[#052355] truncate">{p.job}</h4>
                         <p className="text-[10.5px] text-slate-400 font-medium">{p.date}</p>
                       </div>
                     </div>

@@ -62,7 +62,56 @@ export function calculateDistanceKm(lat1, lon1, lat2, lon2) {
   return Math.round(R * c * 10) / 10;
 }
 
-export async function rankServiceProviders({ category, city, state, latitude, longitude, includeUnavailable = false, exclude = [] } = {}) {
+// Partner level for warranty jobs (client #9): a small score bonus, so among
+// comparable partners the more senior one is preferred — never enough to
+// outweigh being nearer.
+const TIER_BONUS = Object.freeze({ 'Senior SP': 10, SP: 5, TSP: 0 });
+
+/** Default service radius for a partner with a location but no radius of their own. */
+export const DEFAULT_SERVICE_RADIUS_KM = 25;
+
+function cityMatches(provider, city, state) {
+  const targetCity = city.trim().toLowerCase();
+  const targetState = state ? state.trim().toLowerCase() : '';
+  const serviceProviderCity = (provider.serviceCityName || provider.city?.name || '').trim().toLowerCase();
+  const serviceProviderState = (provider.serviceStateName || provider.city?.state || '').trim().toLowerCase();
+
+  // If service provider has a registered city, it MUST match the booking city
+  if (!serviceProviderCity) return false;
+  const cityMatch = serviceProviderCity === targetCity || serviceProviderCity.includes(targetCity) || targetCity.includes(serviceProviderCity);
+  if (!cityMatch) return false;
+  if (targetState && serviceProviderState) {
+    return serviceProviderState === targetState || serviceProviderState.includes(targetState) || targetState.includes(serviceProviderState);
+  }
+  return true;
+}
+
+/**
+ * Warranty service area (ARCHITECTURE §6), most specific rule first:
+ *   1. the partner lists pincodes → the customer's pincode must be one of them;
+ *   2. the partner has a radius (or a location, with the 25 km default) and
+ *      both locations are known → within that distance;
+ *   3. otherwise → the city match every other booking uses.
+ */
+export function inWarrantyServiceArea(provider, { pincode, city, state, latitude, longitude }) {
+  if (provider.servicePincodes?.length) return Boolean(pincode) && provider.servicePincodes.includes(String(pincode));
+
+  const lat = provider.location?.latitude ?? provider.latitude;
+  const lon = provider.location?.longitude ?? provider.longitude;
+  const distance = calculateDistanceKm(latitude, longitude, lat, lon);
+  if (distance != null) return distance <= (provider.serviceRadiusKm || DEFAULT_SERVICE_RADIUS_KM);
+
+  return city && city.trim() ? cityMatches(provider, city, state) : true;
+}
+
+/**
+ * `warranty: { brand, pincode }` switches on the partner-warranty rules
+ * (docs/partner-warranty Phase 6): skill becomes a hard filter, the brand's
+ * authorized partners are required when it has any (each result then carries
+ * `authorized`), the service area replaces the plain city match, and tier
+ * adds a small bonus. Without it, ranking is exactly as before.
+ */
+export async function rankServiceProviders({ category, city, state, latitude, longitude, includeUnavailable = false, exclude = [], warranty = null } = {}) {
   // Auto-assignment only ever considers service providers who have marked themselves
   // Available. The super-admin console passes includeUnavailable so an operator
   // can still hand-pick an Active service provider who is Busy or Offline.
@@ -73,30 +122,24 @@ export async function rankServiceProviders({ category, city, state, latitude, lo
   let candidates = await ServiceProvider.find(filter).populate('city');
   if (candidates.length === 0) return [];
 
-  // Territory restriction: If a booking has a city, only match service providers registered in that city territory.
-  // A service provider registered in Indore, MP will never receive or be assigned jobs from Delhi, Bangalore, etc.
-  if (city && city.trim()) {
-    const targetCity = city.trim().toLowerCase();
-    const targetState = state ? state.trim().toLowerCase() : '';
-
-    candidates = candidates.filter((provider) => {
-      const serviceProviderCity = (provider.serviceCityName || provider.city?.name || '').trim().toLowerCase();
-      const serviceProviderState = (provider.serviceStateName || provider.city?.state || '').trim().toLowerCase();
-
-      // If service provider has a registered city, it MUST match the booking city
-      if (serviceProviderCity) {
-        const cityMatch = serviceProviderCity === targetCity || serviceProviderCity.includes(targetCity) || targetCity.includes(serviceProviderCity);
-        if (!cityMatch) return false;
-
-        if (targetState && serviceProviderState) {
-          const stateMatch = serviceProviderState === targetState || serviceProviderState.includes(targetState) || targetState.includes(serviceProviderState);
-          if (!stateMatch) return false;
-        }
-        return true;
-      }
-      return false;
-    });
-
+  let brandRequiresAuthorization = false;
+  if (warranty) {
+    // A warranty job is never offered to someone who doesn't service the product.
+    candidates = candidates.filter((provider) => (provider.specs || []).includes(category));
+    if (warranty.brand) {
+      brandRequiresAuthorization = Boolean(await ServiceProvider.exists({ status: 'Active', authorizedBrands: warranty.brand }));
+    }
+    if (brandRequiresAuthorization) {
+      candidates = candidates.filter((provider) => (provider.authorizedBrands || []).some((b) => String(b) === String(warranty.brand)));
+    }
+    candidates = candidates.filter((provider) =>
+      inWarrantyServiceArea(provider, { pincode: warranty.pincode, city, state, latitude, longitude }),
+    );
+    if (candidates.length === 0) return [];
+  } else if (city && city.trim()) {
+    // Territory restriction: If a booking has a city, only match service providers registered in that city territory.
+    // A service provider registered in Indore, MP will never receive or be assigned jobs from Delhi, Bangalore, etc.
+    candidates = candidates.filter((provider) => cityMatches(provider, city, state));
     if (candidates.length === 0) return [];
   }
 
@@ -132,14 +175,21 @@ export async function rankServiceProviders({ category, city, state, latitude, lo
     const load = provider.activeJobsCount + (pending.get(String(provider._id)) || 0);
     const workload = clamp0to100(100 - load * 20);
 
+    const tier = warranty ? TIER_BONUS[provider.tier] || 0 : 0;
     const score =
       (proximity * weighting.proximityPercent +
         skill * weighting.skillPercent +
         rating * weighting.ratingPercent +
         workload * weighting.workloadPercent) /
-      100;
+        100 +
+      tier;
 
-    return { proximity, distanceKm, skill, rating, workload, score };
+    const result = { proximity, distanceKm, skill, rating, workload, tier, score };
+    if (warranty) {
+      result.authorized = (provider.authorizedBrands || []).some((b) => String(b) === String(warranty.brand));
+      result.brandRequiresAuthorization = brandRequiresAuthorization;
+    }
+    return result;
   }
 
   // Order from nearest to farthest (when GPS distance exists) or highest weighted score
@@ -153,8 +203,8 @@ export async function rankServiceProviders({ category, city, state, latitude, lo
     });
 }
 
-export async function findAvailableServiceProvider({ category, city, state, latitude, longitude, exclude = [] } = {}) {
-  const [best] = await rankServiceProviders({ category, city, state, latitude, longitude, exclude });
+export async function findAvailableServiceProvider({ category, city, state, latitude, longitude, exclude = [], warranty = null } = {}) {
+  const [best] = await rankServiceProviders({ category, city, state, latitude, longitude, exclude, warranty });
   return best ? best.serviceProvider : null;
 }
 

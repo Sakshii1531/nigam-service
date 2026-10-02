@@ -17,4 +17,12 @@ export const updateSettingsSchema = z.object({
   defaultSparePartMarkupPercent: z.number().min(0).max(100).optional(),
   bookingAdvancePercent: z.number().min(0).max(100).optional(),
   visitFeeAmount: z.number().min(0).optional(),
+  warrantySla: z
+    .object({
+      approvalHours: z.number().positive().max(24 * 90).optional(),
+      assignmentHours: z.number().positive().max(24 * 90).optional(),
+      visitHours: z.number().positive().max(24 * 90).optional(),
+      resolutionHours: z.number().positive().max(24 * 90).optional(),
+    })
+    .optional(),
 });

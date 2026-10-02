@@ -16,6 +16,8 @@ import { createRazorpayOrder, verifyRazorpaySignature } from '../payments-wallet
 import { raiseServiceProviderClaim } from './claim.service.js';
 import { Claim } from '../warranty-amc-exchange/claim.model.js';
 import { Brand } from '../super-admin/brand.model.js';
+import { WarrantyClaim } from '../partner-warranty/warrantyClaim.model.js';
+import { warrantyInfoBySr, warrantyJobInfo, syncClaimFromJob } from '../partner-warranty/claimDispatch.js';
 import { getOrCreateConversation } from '../chat/conversation.service.js';
 import { emit as emitNotification } from '../notifications/notification.service.js';
 import { getIO } from '../../sockets/io.js';
@@ -139,7 +141,8 @@ async function simpleTransition(serviceProviderId, jobId, toStep, srStatus) {
     try {
       const sr = updatedSr || (await ServiceRequest.findById(job.serviceRequest._id || job.serviceRequest));
       const provider = await ServiceProvider.findById(serviceProviderId);
-      if (sr?.user) {
+      // Warranty jobs: the claim sends its own "Technician On the Way" (Phase 10).
+      if (sr?.user && !sr.warrantyClaim) {
         await emitNotification('serviceProvider.ontheway', {
           user: sr.user,
           serviceProviderName: provider?.name || 'Service Provider',
@@ -180,6 +183,13 @@ async function simpleTransition(serviceProviderId, jobId, toStep, srStatus) {
 
   await syncJobTracking(job, targetStep);
 
+  // A job step can matter to a warranty claim without changing the request's
+  // status (on the way to an already-scheduled visit), so sync here as well as
+  // in transitionStatus — the sync is forward-only, so running twice is harmless.
+  if (updatedSr?.warrantyClaim) {
+    await syncClaimFromJob(updatedSr).catch((err) => console.warn('[partner-warranty] step sync failed:', err.message));
+  }
+
   return job;
 }
 
@@ -204,7 +214,9 @@ export async function listAvailableJobs(serviceProviderId) {
       // Open offers: broadcast to everyone in the city — except a partner who
       // already said no to this request, whether it was offered to them
       // directly (declinedAssignmentBy) or from the open feed (both land in declinedBy).
-      { serviceProvider: null, status: { $in: ['New', 'Assigned', 'Pending'] }, declinedBy: { $ne: serviceProviderId } },
+      // Partner-warranty jobs are never open offers: they go only to a partner
+      // who passes the warranty rules (skill, brand, service area).
+      { serviceProvider: null, status: { $in: ['New', 'Assigned', 'Pending'] }, declinedBy: { $ne: serviceProviderId }, warrantyClaim: null },
     ],
     _id: { $nin: acceptedServiceRequestIds },
   })
@@ -228,10 +240,11 @@ export async function listAvailableJobs(serviceProviderId) {
   // What the partner will earn if they accept: the booking's fixed catalogue
   // payout (docs/master-catalogue Phase 5) — the same rule acceptJob freezes
   // onto the Job — or the brand RateCard for a complaint with no booking.
+  const warrantyInfo = await warrantyInfoBySr(visible);
   return Promise.all(
     visible.map(async (sr) => {
       const estEarnings = await estimateServiceProviderEarnings(sr, sr.booking);
-      return { ...sr.toJSON(), estEarnings };
+      return { ...sr.toJSON(), estEarnings, warranty: warrantyInfo.get(String(sr._id)) || null };
     }),
   );
 }
@@ -329,7 +342,9 @@ export async function listActiveJobs(serviceProviderId) {
     }),
   );
 
-  return jobs;
+  // Partner-warranty jobs: brand, product, issue, NCCJ / claim IDs (client #11).
+  const warrantyInfo = await warrantyInfoBySr(jobs.map((j) => j.serviceRequest).filter(Boolean));
+  return jobs.map((j) => ({ ...j.toJSON(), warranty: (j.serviceRequest && warrantyInfo.get(String(j.serviceRequest._id))) || null }));
 }
 
 const HISTORY_TYPE_FILTERS = {
@@ -357,6 +372,8 @@ export async function listJobHistory(serviceProviderId, { status = 'all', type =
   }
 
   // `status` doubles as the type filter for older clients that only send one pill.
+  // 'b2b2c' = partner-warranty jobs only (paid by NCC, not the customer).
+  if (type === 'b2b2c') query.warrantyClaim = { $ne: null };
   const typeFilter = HISTORY_TYPE_FILTERS[type] || HISTORY_TYPE_FILTERS[status];
   if (typeFilter) query.type = { $in: typeFilter };
 
@@ -571,8 +588,12 @@ export async function getJobDetailContext(serviceProviderId, jobId) {
         checked: true,
       }));
 
+  const warrantyClaim = sr?.warrantyClaim ? await WarrantyClaim.findById(sr.warrantyClaim).populate('brand', 'name') : null;
+
   return {
     jobSummary: await buildJobSummary(job, sr),
+    // Partner-warranty job: brand, product, issue, both IDs, "Warranty Service".
+    warranty: warrantyJobInfo(warrantyClaim, sr, { forAssignedPartner: true }),
     appliance: appliance
       ? {
           id: appliance.id,
@@ -659,7 +680,10 @@ export async function acceptJob(serviceProviderId, serviceRequestId, { type, amc
   else if (booking && booking.totalPrice > 0) inferredJobType = 'NCC Paid Service';
   else if (booking) inferredJobType = 'NCC Paid Service';
 
-  const jobType = type || inferredJobType;
+  // A partner-warranty (B2B2C) job is always a Brand Warranty job — free to
+  // the customer, paid by NCC — whatever type the app sends: the partner app
+  // used to send 'NCC Paid Service' for these offers, which billed the customer.
+  const jobType = serviceRequest.warrantyClaim ? 'Brand Warranty' : type || inferredJobType;
   const isD2C = jobType === 'NCC Paid Service';
   const price = booking ? booking.totalPrice : 0;
 
@@ -669,6 +693,7 @@ export async function acceptJob(serviceProviderId, serviceRequestId, { type, amc
   const jobData = {
     serviceRequest: serviceRequest._id,
     serviceProvider: serviceProviderId,
+    warrantyClaim: serviceRequest.warrantyClaim || null,
     type: jobType,
     isD2C,
     isPartner: !isD2C,
@@ -1214,12 +1239,19 @@ async function finalizeJobCompletion(job, payment) {
   const serviceRequest = await ServiceRequest.findById(job.serviceRequest);
   const serviceProviderId = job.serviceProvider;
 
+  // A partner warranty (B2B2C) job is paid out manually by NCC (client #20),
+  // so its earning is recorded on the job as unsettled instead of joining the
+  // withdrawable balance — otherwise a Quick payout could take it straight out.
+  const manualSettlement = Boolean(serviceRequest?.warrantyClaim);
+  const earned = manualSettlement ? 0 : job.billingEstimate.serviceProviderEarnings;
+  if (manualSettlement) job.settlement = { status: 'unsettled' };
+
   await EarningsTally.findOneAndUpdate(
     { serviceProvider: serviceProviderId },
     {
       $inc: {
-        today: job.billingEstimate.serviceProviderEarnings,
-        total: job.billingEstimate.serviceProviderEarnings,
+        today: earned,
+        total: earned,
         completedToday: 1,
         completedTotal: 1,
       },
@@ -1315,8 +1347,12 @@ async function finalizeJobCompletion(job, payment) {
     console.error('[job.service] Failed to emit completion socket events:', err.message);
   }
 
-  await emitNotification('payment.success', { user: serviceRequest.user, amount: payment.amount });
-  await emitNotification('service.completed', { user: serviceRequest.user, serviceRequestId: serviceRequest.id });
+  // Warranty jobs cost the customer nothing and their claim announces the
+  // completion itself — no "Payment of Rs.0 received" (Phase 10).
+  if (!serviceRequest.warrantyClaim) {
+    await emitNotification('payment.success', { user: serviceRequest.user, amount: payment.amount });
+    await emitNotification('service.completed', { user: serviceRequest.user, serviceRequestId: serviceRequest.id });
+  }
 
   return { job, payment };
 }

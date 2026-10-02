@@ -31,6 +31,8 @@ const byId = validate(claimIdParamSchema, 'params');
 warrantyClaimCustomerRouter.post('/', validate(createClaimSchema), handle((req) => claims.createClaim(req.user, req.body), created));
 warrantyClaimCustomerRouter.get('/', validate(listMyClaimsQuerySchema, 'query'), handle((req) => claims.listMyClaims(req.user.id, req.query)));
 warrantyClaimCustomerRouter.get('/:id', byId, handle((req) => claims.getMyClaim(req.user.id, req.params.id)));
+warrantyClaimCustomerRouter.get('/:id/track', byId, handle((req) => claims.trackMyClaim(req.user.id, req.params.id)));
+warrantyClaimCustomerRouter.post('/:id/confirm', byId, handle((req) => claims.confirmMyService(req.user.id, req.params.id)));
 warrantyClaimCustomerRouter.post(
   '/:id/documents',
   byId,

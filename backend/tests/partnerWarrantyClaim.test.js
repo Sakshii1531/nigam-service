@@ -16,6 +16,7 @@ import { Notification } from '../src/modules/notifications/notification.model.js
 import { appendEvent } from '../src/modules/partner-warranty/claimTimeline.js';
 import { hashPassword } from '../src/modules/auth/password.js';
 import { testDbUri } from './helpers/testDb.js';
+import { listenOnLoopback, closeServer } from './helpers/loopbackServer.js';
 import { jobFlow } from './helpers/jobFlow.js';
 
 const TEST_DB_URI = testDbUri('partnerWarrantyClaim');
@@ -33,10 +34,11 @@ beforeAll(async () => {
   await mongoose.connection.dropDatabase();
   await registerAllModels();
   await ensureIndexes();
-  app = createApp();
+  app = await listenOnLoopback(createApp());
 });
 
 afterAll(async () => {
+  await closeServer(app);
   await mongoose.connection.dropDatabase();
   await mongoose.disconnect();
 });

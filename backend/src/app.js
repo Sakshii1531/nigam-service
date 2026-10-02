@@ -78,6 +78,11 @@ import {
   warrantyCoverageBrandRouter,
 } from './modules/partner-warranty/warrantyCatalog.routes.js';
 import { warrantyClaimCustomerRouter } from './modules/partner-warranty/warrantyClaim.routes.js';
+import { brandWarrantyClaimRouter } from './modules/partner-warranty/brandClaim.routes.js';
+import { warrantyPartnerJobRouter } from './modules/partner-warranty/partnerWarrantyJob.routes.js';
+import { adminWarrantyClaimRouter } from './modules/partner-warranty/adminClaim.routes.js';
+import { brandWarrantyWebhookRouter, adminWarrantyWebhookRouter } from './modules/partner-warranty/claimWebhooks.routes.js';
+import { adminB2b2cPayoutRouter } from './modules/partner-warranty/b2b2cPayout.routes.js';
 import { uploadRouter } from './modules/shared/upload.routes.js';
 import { superAdminExchangeRequestRouter } from './modules/super-admin/exchangeRequest.routes.js';
 import { chatRouter } from './modules/chat/chat.routes.js';
@@ -173,6 +178,7 @@ export function createApp() {
   app.use('/api/v1/service-provider/profile', serviceProviderRouter);
   app.use('/api/v1/service-provider/assistant', assistantRouter);
   app.use('/api/v1/service-provider/jobs', jobRouter);
+  app.use('/api/v1/service-provider/warranty-jobs', warrantyPartnerJobRouter);
   app.use('/api/v1/service-provider/claims', serviceProviderClaimRouter);
   app.use('/api/v1/service-provider/inventory', inventoryRouter);
   app.use('/api/v1/service-provider/earnings', earningsRouter);
@@ -191,6 +197,8 @@ export function createApp() {
   app.use('/api/v1/brand/actions', brandActionsRouter);
   app.use('/api/v1/brand/academy', brandAcademyRouter);
   app.use('/api/v1/brand/warranty-coverage', warrantyCoverageBrandRouter);
+  app.use('/api/v1/brand/warranty-claims', brandWarrantyClaimRouter);
+  app.use('/api/v1/brand/warranty-webhook', brandWarrantyWebhookRouter);
   app.use('/api/v1/brand', brandInsightsRouter);
   app.use('/api/v1/super-admin/brands', brandRouter);
   app.use('/api/v1/super-admin/cities', cityRouter);
@@ -225,6 +233,9 @@ export function createApp() {
   app.use('/api/v1/partner-warranty/claims', warrantyClaimCustomerRouter);
   app.use('/api/v1/partner-warranty', warrantyCatalogPublicRouter);
   app.use('/api/v1/super-admin/warranty-catalog', warrantyCatalogAdminRouter);
+  app.use('/api/v1/super-admin/warranty-claims', adminWarrantyClaimRouter);
+  app.use('/api/v1/super-admin/warranty-webhooks', adminWarrantyWebhookRouter);
+  app.use('/api/v1/super-admin/b2b2c-payouts', adminB2b2cPayoutRouter);
   app.use('/api/v1/cms', cmsRouter);
   app.use('/api/v1/cms/home-tiles', homeTileRouter);
   app.use('/api/v1/chat', chatRouter);

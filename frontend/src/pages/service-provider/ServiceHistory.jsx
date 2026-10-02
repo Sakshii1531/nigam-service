@@ -20,6 +20,8 @@ const FILTERS = [
   { id: 'in_progress', label: 'In progress', status: 'in_progress', type: 'all' },
   { id: 'paid', label: 'Paid', status: 'all', type: 'paid' },
   { id: 'warranty', label: 'Warranty', status: 'all', type: 'warranty' },
+  // Partner-warranty jobs only — paid by NCC, settled manually (docs/partner-warranty Phase 15).
+  { id: 'b2b2c', label: 'Warranty (B2B2C)', status: 'all', type: 'b2b2c' },
   { id: 'amc', label: 'AMC', status: 'all', type: 'amc' },
 ];
 
@@ -62,11 +64,12 @@ function describeJob(job) {
 
   const isCompleted = step === 'completed';
   const earned = job.billingEstimate?.serviceProviderEarnings;
+  const isB2b2c = Boolean(job.warrantyClaim);
 
   return {
     id: job.id || job._id,
     ticket: sr.humanId || job.humanId || '',
-    title: booking.service?.name || (category ? `${category} Service` : 'Service job'),
+    title: booking.service?.name || (isB2b2c && sr.description) || (category ? `${category} Service` : 'Service job'),
     category,
     brand: sr.brand?.name || booking.brand || '',
     model: sr.model || '',
@@ -76,7 +79,7 @@ function describeJob(job) {
     phone: booking.mobile || sr.user?.phone || '',
     address: formatAddress(booking.address) || sr.zone || '',
     type: job.type,
-    typeLabel: TYPE_LABEL[job.type] || job.type,
+    typeLabel: isB2b2c ? 'Warranty (B2B2C)' : TYPE_LABEL[job.type] || job.type,
     isCompleted,
     status,
     date: isCompleted ? job.updatedAt : booking.scheduledDate || job.createdAt,

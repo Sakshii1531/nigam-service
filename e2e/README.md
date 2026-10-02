@@ -25,7 +25,8 @@ signed-in customer opening the feed, and a broadcast sent **while the feed is op
 appearing over the socket. That last one is the direct regression guard for
 `notification:new` having shipped with no frontend listener at all.
 
-It runs on its own ports (`4111`/`5199`) against its own database, and passes the API
+It runs on its own ports (`4111`/`5199`; set `E2E_UI_PORT` if another project's dev
+server holds 5199 — the suite would otherwise reuse and test that app) against its own database, and passes the API
 origin to Vite explicitly rather than reading `frontend/.env` — otherwise a developer
 pointing their local `.env` at a deployed backend would silently change what is tested.
 

@@ -65,6 +65,14 @@ export const adminBrandSettingsSchema = z
   })
   .refine((v) => Object.keys(v).length > 0, 'Nothing to update');
 
+export const partnerEligibilitySchema = z
+  .object({
+    authorizedBrands: z.array(objectId).max(100).optional(),
+    servicePincodes: z.array(z.string().trim().regex(/^\d{6}$/, 'Pincodes must be 6 digits')).max(500).optional(),
+    serviceRadiusKm: z.coerce.number().positive().max(300).nullable().optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, 'Nothing to update');
+
 // .strict(): a brand sending warrantyEnabled / warrantySla gets told no,
 // instead of the field being dropped silently.
 export const brandCoverageSchema = z

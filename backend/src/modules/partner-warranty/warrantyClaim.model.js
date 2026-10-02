@@ -114,11 +114,19 @@ const warrantyClaimSchema = new mongoose.Schema(
       unauthorizedFallback: { type: Boolean, default: false },
     },
 
+    // Stage deadlines (docs/partner-warranty Phase 9). `hours` is a snapshot of
+    // the brand/platform SLA at submission, so later edits never move an
+    // existing claim's deadlines. The clock pauses while `pausedAt` is set
+    // (On Hold, or waiting on the customer) and deadlines shift on resume.
     sla: {
+      hours: { approval: Number, assignment: Number, visit: Number, resolution: Number },
       brandApprovalDueAt: Date,
       assignmentDueAt: Date,
       visitDueAt: Date,
       resolutionDueAt: Date,
+      met: { brandApproval: Date, assignment: Date, visit: Date, resolution: Date },
+      pausedAt: { type: Date, default: null },
+      state: { type: String, enum: ['ok', 'warning', 'breached'], default: 'ok', index: true },
       warnings: [String],
       breaches: [String],
     },
@@ -127,7 +135,10 @@ const warrantyClaimSchema = new mongoose.Schema(
     closedAt: Date,
     cancelledAt: Date,
   },
-  { timestamps: true },
+  // optimisticConcurrency: every save checks the version it read, so two
+  // people deciding the same claim at once can't both win — the second save
+  // fails with a VersionError (surfaced as 409 by the services).
+  { timestamps: true, optimisticConcurrency: true },
 );
 
 warrantyClaimSchema.index({ brand: 1, status: 1, createdAt: -1 });

@@ -76,7 +76,7 @@ const Sidebar = () => {
     let cancelled = false;
     const loadBadgeCounts = async () => {
       try {
-        const [providers, cityChanges] = await Promise.all([
+        const [providers, cityChanges, warrantyNoPartner] = await Promise.all([
           apiRequest("/super-admin/service-providers?status=Pending&limit=1", {
             auth: true,
             envelope: true,
@@ -86,12 +86,19 @@ const Sidebar = () => {
             "/super-admin/city-change-requests?status=Pending&limit=1",
             { auth: true, envelope: true },
           ).catch(() => null),
+          // Partner warranty claims whose job found no eligible partner —
+          // they wait on a manual assignment. Super-admin only (403 for an ASM).
+          apiRequest("/super-admin/warranty-claims?allocationFailed=true&limit=1", {
+            auth: true,
+            envelope: true,
+          }).catch(() => null),
         ]);
         if (!cancelled) {
           setBadgeCounts((prev) => ({
             ...prev,
             pendingServiceProviders: providers?.meta?.total || 0,
             pendingCityChanges: cityChanges?.meta?.total || 0,
+            warrantyNoPartner: warrantyNoPartner?.meta?.total || 0,
           }));
         }
       } catch {
@@ -263,8 +270,10 @@ const Sidebar = () => {
       icon: <ClipboardList size={18} />,
     },
     {
+      // Spare-part reimbursement claims from covered jobs — renamed from
+      // "NCC Shield (Warranty)", which read like the partner warranty module.
       type: "link",
-      label: "NCC Shield (Warranty)",
+      label: "Parts Claims",
       path: "/super-admin/warranty",
       icon: <Shield size={18} />,
     },
@@ -455,6 +464,47 @@ const Sidebar = () => {
       label: "Coupon Codes",
       path: "/super-admin/loyalty-program?tab=coupons",
       icon: <Ticket size={18} />,
+    },
+    {
+      type: "header",
+      label: "PARTNER WARRANTY",
+    },
+    {
+      type: "link",
+      label: "Warranty Claims",
+      path: "/super-admin/partner-warranty/claims",
+      icon: <ClipboardList size={18} />,
+      badgeKey: "warrantyNoPartner",
+    },
+    {
+      type: "link",
+      label: "Warranty SLA",
+      path: "/super-admin/partner-warranty/sla",
+      icon: <Clock size={18} />,
+    },
+    {
+      type: "link",
+      label: "Warranty Catalogue",
+      path: "/super-admin/partner-warranty/catalogue",
+      icon: <Layers size={18} />,
+    },
+    {
+      type: "link",
+      label: "Partner Eligibility",
+      path: "/super-admin/partner-warranty/partners",
+      icon: <UserCheck size={18} />,
+    },
+    {
+      type: "link",
+      label: "B2B2C Payouts",
+      path: "/super-admin/partner-warranty/payouts",
+      icon: <DollarSign size={18} />,
+    },
+    {
+      type: "link",
+      label: "Brand Webhook Log",
+      path: "/super-admin/partner-warranty/webhooks",
+      icon: <RefreshCw size={18} />,
     },
     {
       type: "header",

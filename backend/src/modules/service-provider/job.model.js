@@ -165,6 +165,16 @@ const jobSchema = new mongoose.Schema(
       index: true,
     },
 
+    // Partner warranty (B2B2C) job — docs/partner-warranty Phase 11. Its payout
+    // never enters the partner's withdrawable balance; NCC settles it by hand.
+    warrantyClaim: { type: mongoose.Schema.Types.ObjectId, ref: 'WarrantyClaim', default: null, index: true },
+    settlement: {
+      status: { type: String, enum: ['unsettled', 'settled', null], default: null, index: true },
+      settledAt: Date,
+      payout: { type: mongoose.Schema.Types.ObjectId, ref: 'Payout', default: null },
+      reference: String,
+    },
+
     diagnosis: diagnosisSchema,
     additionalServices: [addOnSchema],
     spareParts: [{ ...lineItemSchema.obj, sku: String, source: { type: String, enum: ['recommended_ai', 'manual'] } }],

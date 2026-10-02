@@ -370,7 +370,7 @@ const Dashboard = () => {
     );
     const res = await acceptJob(job.id, { silent: true });
     if (res?.ok) {
-      selectJobForDetails(job.id);
+      selectJobForDetails(res.jobId || job.id);
       setDutyMessage("Job accepted! It is now listed under Active Jobs below.");
       setShowAllJobs(false);
       setTimeout(() => {
@@ -401,7 +401,10 @@ const Dashboard = () => {
     setAlertError(null);
     const res = await acceptJob(job.id, { silent: true });
     if (res?.ok) {
-      selectJobForDetails(job.id);
+      // job.id is the offer's (service request) id; after accepting, the
+      // active job is the new Job — selecting job.id sent "Start Job" to a
+      // job that no longer exists.
+      selectJobForDetails(res.jobId || job.id);
       setAcceptedInstantIds((prev) =>
         [...prev, job.id, job.serviceRequestId].filter(Boolean),
       );
@@ -1653,11 +1656,13 @@ const Dashboard = () => {
         (() => {
           const job = instantAlertJob;
           const kind = JOB_KIND_STYLE[jobKind(job)];
+          const w = job.warranty;
           const when = job.isInstant
             ? "As soon as possible"
             : [job.scheduledDateLabel, job.scheduledTime]
                 .filter(Boolean)
-                .join(", ") || "Time to be confirmed";
+                .join(", ") ||
+              (w ? "You schedule the visit after accepting" : "Time to be confirmed");
           const address = (job.address || "")
             .split(",")
             .map((part) => part.trim())
@@ -1689,13 +1694,20 @@ const Dashboard = () => {
                       <h3
                         id="dispatch-title"
                         className="text-lg font-bold text-white mt-1.5 leading-snug line-clamp-2">
-                        {job.serviceLine || job.product}
+                        {w
+                          ? `${w.brand || ""} ${w.productName || ""}`.trim()
+                          : job.serviceLine || job.product}
                         {job.isExpress ? " · ⚡ Express" : ""}
                       </h3>
                       <div className="flex flex-wrap gap-1.5 mt-2.5">
                         <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-white/15">
-                          {kind.label}
+                          {w ? w.serviceLabel : kind.label}
                         </span>
+                        {w?.jobId && (
+                          <span className="text-[11px] font-mono font-semibold px-2 py-0.5 rounded-full bg-white/15">
+                            {w.jobId}
+                          </span>
+                        )}
                         {job.isInstant && (
                           <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[#FFD400] text-[#052355]">
                             <Zap className="w-3 h-3" /> Instant
@@ -1754,7 +1766,15 @@ const Dashboard = () => {
                         {inr(job.estEarnings)}
                       </p>
                     </div>
-                    {job.price > 0 && (
+                    {w && (
+                      <div className="text-right">
+                        <p className="text-xs text-blue-200">Customer pays</p>
+                        <p className="text-base font-semibold tabular-nums">
+                          ₹0 · paid by NCC
+                        </p>
+                      </div>
+                    )}
+                    {!w && job.price > 0 && (
                       <div className="text-right">
                         <p className="text-xs text-blue-200">Customer pays</p>
                         <p className="text-base font-semibold tabular-nums">
@@ -1767,8 +1787,14 @@ const Dashboard = () => {
 
                 <div className="px-5 py-4 flex flex-col gap-3.5">
                   {[
+                    ...(w
+                      ? [
+                          { icon: Shield, label: "Issue", value: w.issueName },
+                          { icon: ClipboardList, label: "Warranty claim", value: w.claimId },
+                        ]
+                      : []),
                     { icon: Clock, label: "When", value: when },
-                    { icon: MapPin, label: "Where", value: address },
+                    { icon: MapPin, label: "Where", value: w ? [w.area, w.pincode].filter(Boolean).join(" · ") || address : address },
                     { icon: User, label: "Customer", value: job.customerName },
                   ]
                     .filter((row) => row.value)

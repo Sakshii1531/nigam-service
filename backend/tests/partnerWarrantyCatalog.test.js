@@ -16,6 +16,7 @@ import { resolveSelection } from '../src/modules/partner-warranty/warrantyCatalo
 import { seedPartnerWarranty, WARRANTY_GROUP_SEED } from '../scripts/seedPartnerWarranty.js';
 import { hashPassword } from '../src/modules/auth/password.js';
 import { testDbUri } from './helpers/testDb.js';
+import { listenOnLoopback, closeServer } from './helpers/loopbackServer.js';
 import { jobFlow } from './helpers/jobFlow.js';
 
 const TEST_DB_URI = testDbUri('partnerWarrantyCatalog');
@@ -30,10 +31,11 @@ beforeAll(async () => {
   await mongoose.connection.dropDatabase();
   await registerAllModels();
   await ensureIndexes();
-  app = createApp();
+  app = await listenOnLoopback(createApp());
 });
 
 afterAll(async () => {
+  await closeServer(app);
   await mongoose.connection.dropDatabase();
   await mongoose.disconnect();
 });

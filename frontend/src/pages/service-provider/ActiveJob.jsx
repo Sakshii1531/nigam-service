@@ -49,6 +49,7 @@ import AMCHistoryDrawer from "./job-flows/AMCHistoryDrawer";
 import AMCOverview from "./job-flows/AMCOverview";
 import BrandWarrantyOverview from "./job-flows/BrandWarrantyOverview";
 import ExtendedWarrantyOverview from "./job-flows/ExtendedWarrantyOverview";
+import { PartnerWarrantyDetails, WarrantyVisitScheduler } from "./job-flows/PartnerWarrantyJob";
 import { SkeletonScreen } from '../../components/common/Skeleton';
 
 const CrownIcon = (props) => (
@@ -464,6 +465,9 @@ const ActiveJob = () => {
   // replaces what used to be five separate hardcoded mock sections (warranty
   // status, "Standard Checks", service history, add-services list, add-parts list).
   const [jobContext, setJobContext] = useState(null);
+  // Partner-warranty (B2B2C) job: the job context adds the customer's
+  // documents once the job is this partner's (docs/partner-warranty Phase 15).
+  const partnerWarranty = jobContext?.warranty || activeJob?.warranty || null;
   useEffect(() => {
     setJobContext(null);
     if (!activeJob?.id) return;
@@ -1745,6 +1749,11 @@ const ActiveJob = () => {
                     </div>
                   </div>
                 </div>
+              ) : partnerWarranty ? (
+                <PartnerWarrantyDetails
+                  warranty={partnerWarranty}
+                  payout={activeJob.estEarnings}
+                />
               ) : (
                 <div className="flex flex-col gap-4">
                   {/* Badge and Subtitle */}
@@ -1752,14 +1761,8 @@ const ActiveJob = () => {
                     <span className="bg-[#1E6BDB] text-white text-[9px] font-semibold px-2.5 py-1 rounded-md uppercase tracking-wider">
                       BRAND WARRANTY
                     </span>
-                    <span
-                      onClick={() =>
-                        navigate("/partner-warranty/track-ticket", {
-                          state: { ticketId: "LG-IN-8842" },
-                        })
-                      }
-                      className="text-xs text-slate-650 hover:text-[#1E6BDB] hover:underline cursor-pointer select-none font-normal">
-                      LG Warranty Call
+                    <span className="text-xs text-slate-650 font-normal">
+                      {activeJob.brand} warranty call
                     </span>
                   </div>
 
@@ -1779,7 +1782,7 @@ const ActiveJob = () => {
                               Warranty Status
                             </span>
                             <span className="text-green-600 font-semibold">
-                              In Warranty
+                              {activeJob.warrantyStatus || "Not recorded"}
                             </span>
                           </div>
                           <div className="flex justify-between items-center text-xs">
@@ -1787,7 +1790,7 @@ const ActiveJob = () => {
                               Warranty Till
                             </span>
                             <span className="text-[#052355] font-semibold">
-                              15 Jan 2027
+                              {activeJob.warrantyTill || "Not recorded"}
                             </span>
                           </div>
                           <div className="flex justify-between items-center text-xs">
@@ -1795,7 +1798,9 @@ const ActiveJob = () => {
                               Case ID
                             </span>
                             <span className="text-[#052355] font-semibold">
-                              LG-IN-8842
+                              {activeJob.caseId ||
+                                activeJob.serviceRequest?.brandTicketNo ||
+                                "Not recorded"}
                             </span>
                           </div>
                         </div>
@@ -2104,6 +2109,19 @@ const ActiveJob = () => {
                     <h3 className="text-base font-normal text-[#052355]">
                       Assigned Job Details
                     </h3>
+                    {partnerWarranty && (
+                      <>
+                        <WarrantyVisitScheduler
+                          key={activeJob.id}
+                          jobId={activeJob.id}
+                          warranty={partnerWarranty}
+                        />
+                        <PartnerWarrantyDetails
+                          warranty={partnerWarranty}
+                          payout={activeJob.estEarnings}
+                        />
+                      </>
+                    )}
                     <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200">
                       <p className="text-sm font-normal text-[#052355]">
                         {activeJob.brand} {activeJob.product}

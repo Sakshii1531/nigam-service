@@ -55,7 +55,7 @@ const RaiseWarrantyRequest = lazy(() => import("./pages/RaiseWarrantyRequest"));
 const TicketSuccess = lazy(() => import("./pages/TicketSuccess"));
 const TrackTicket = lazy(() => import("./pages/TrackTicket"));
 const TicketDetails = lazy(() => import("./pages/TicketDetails"));
-const ServiceUpdates = lazy(() => import("./pages/ServiceUpdates"));
+const MyWarrantyClaims = lazy(() => import("./pages/MyWarrantyClaims"));
 const RateService = lazy(() => import("./pages/RateService"));
 const ProductDetails = lazy(() => import("./pages/ProductDetails"));
 const Wishlist = lazy(() => import("./pages/Wishlist"));
@@ -95,6 +95,17 @@ const BrandSettings = lazy(() => import("./pages/brand-admin/Settings"));
 const BrandAMCs = lazy(() => import("./pages/brand-admin/AMCs"));
 const BrandExchanges = lazy(() => import("./pages/brand-admin/Exchanges"));
 const BrandWarrantyClaims = lazy(() => import("./pages/brand-admin/WarrantyClaims"));
+const BrandWarrantyClaimDetail = lazy(() => import("./pages/brand-admin/WarrantyClaimDetail"));
+const BrandWarrantySettings = lazy(() => import("./pages/brand-admin/WarrantySettings"));
+const BrandPartsClaims = lazy(() => import("./pages/brand-admin/PartsClaims"));
+// Super Admin → Partner Warranty (docs/partner-warranty Phase 14)
+const AdminWarrantyClaims = lazy(() => import("./pages/super-admin/partner-warranty/Claims"));
+const AdminWarrantyClaimDetail = lazy(() => import("./pages/super-admin/partner-warranty/ClaimDetail"));
+const AdminWarrantySla = lazy(() => import("./pages/super-admin/partner-warranty/SlaOverview"));
+const AdminWarrantyCatalogue = lazy(() => import("./pages/super-admin/partner-warranty/Catalogue"));
+const AdminWarrantyEligibility = lazy(() => import("./pages/super-admin/partner-warranty/PartnerEligibility"));
+const AdminB2b2cPayouts = lazy(() => import("./pages/super-admin/partner-warranty/Payouts"));
+const AdminWarrantyWebhooks = lazy(() => import("./pages/super-admin/partner-warranty/WebhookLog"));
 const BrandCatalog = lazy(() => import("./pages/brand-admin/Catalog"));
 const BrandReviews = lazy(() => import("./pages/brand-admin/Reviews"));
 const BrandChat = lazy(() => import("./pages/brand-admin/Chat"));
@@ -602,20 +613,23 @@ function App() {
                             path="/partner-warranty"
                             element={<PartnerWarranty />}
                           />
+                          {/* Partner Warranty (docs/partner-warranty Phase 12) —
+                              :group is a warranty group slug ("all" from brand
+                              search); :brandId / :categoryId are real ids. */}
                           <Route
-                            path="/partner-warranty/brands/:category"
+                            path="/partner-warranty/brands/:group"
                             element={<SelectBrand />}
                           />
                           <Route
-                            path="/partner-warranty/products/:category/:brand"
+                            path="/partner-warranty/products/:group/:brandId"
                             element={<SelectProduct />}
                           />
                           <Route
-                            path="/partner-warranty/issues/:category/:brand/:product"
+                            path="/partner-warranty/issues/:group/:brandId/:categoryId"
                             element={<SelectIssue />}
                           />
                           <Route
-                            path="/partner-warranty/raise-request/:category/:brand/:product"
+                            path="/partner-warranty/raise-request/:group/:brandId/:categoryId"
                             element={<RaiseWarrantyRequest />}
                           />
                           <Route
@@ -623,16 +637,29 @@ function App() {
                             element={<TicketSuccess />}
                           />
                           <Route
-                            path="/partner-warranty/track-ticket"
-                            element={<TrackTicket />}
+                            path="/partner-warranty/claims"
+                            element={<MyWarrantyClaims />}
                           />
                           <Route
-                            path="/partner-warranty/ticket-details"
+                            path="/partner-warranty/claims/:id"
                             element={<TicketDetails />}
                           />
                           <Route
+                            path="/partner-warranty/claims/:id/track"
+                            element={<TrackTicket />}
+                          />
+                          {/* Old mock-screen addresses → the real list. */}
+                          <Route
+                            path="/partner-warranty/track-ticket"
+                            element={<Navigate to="/partner-warranty/claims" replace />}
+                          />
+                          <Route
+                            path="/partner-warranty/ticket-details"
+                            element={<Navigate to="/partner-warranty/claims" replace />}
+                          />
+                          <Route
                             path="/partner-warranty/service-updates"
-                            element={<ServiceUpdates />}
+                            element={<Navigate to="/partner-warranty/claims" replace />}
                           />
                           <Route
                             path="/partner-warranty/rate-service"
@@ -967,6 +994,19 @@ function App() {
                             path="/brand-admin/warranty-claims"
                             element={<BrandWarrantyClaims />}
                           />
+                          {/* Partner Warranty (docs/partner-warranty Phase 13) */}
+                          <Route
+                            path="/brand-admin/warranty-claims/:id"
+                            element={<BrandWarrantyClaimDetail />}
+                          />
+                          <Route
+                            path="/brand-admin/warranty-settings"
+                            element={<BrandWarrantySettings />}
+                          />
+                          <Route
+                            path="/brand-admin/parts-claims"
+                            element={<BrandPartsClaims />}
+                          />
                           <Route
                             path="/brand-admin/catalog"
                             element={<BrandCatalog />}
@@ -1191,6 +1231,14 @@ function App() {
                             path="/super-admin/warranty"
                             element={<SuperAdminWarranty />}
                           />
+                          <Route path="/super-admin/partner-warranty" element={<Navigate to="/super-admin/partner-warranty/claims" replace />} />
+                          <Route path="/super-admin/partner-warranty/claims" element={<AdminWarrantyClaims />} />
+                          <Route path="/super-admin/partner-warranty/claims/:id" element={<AdminWarrantyClaimDetail />} />
+                          <Route path="/super-admin/partner-warranty/sla" element={<AdminWarrantySla />} />
+                          <Route path="/super-admin/partner-warranty/catalogue" element={<AdminWarrantyCatalogue />} />
+                          <Route path="/super-admin/partner-warranty/partners" element={<AdminWarrantyEligibility />} />
+                          <Route path="/super-admin/partner-warranty/payouts" element={<AdminB2b2cPayouts />} />
+                          <Route path="/super-admin/partner-warranty/webhooks" element={<AdminWarrantyWebhooks />} />
                           <Route
                             path="/super-admin/assignment"
                             element={<SuperAdminAssignment />}

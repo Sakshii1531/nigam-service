@@ -12,7 +12,9 @@ const E2E_DB = useE2eDatabase(DEFAULT_UI_DB);
 // in rather than read from frontend/.env, so a developer pointing their local
 // .env at a deployed backend does not silently change what this tests.
 const API_PORT = 4111;
-const UI_PORT = 5199;
+// E2E_UI_PORT moves the UI off 5199 when another project's dev server holds it
+// (reuseExistingServer would otherwise test that app instead of this one).
+const UI_PORT = Number(process.env.E2E_UI_PORT) || 5199;
 const API_ORIGIN = `http://localhost:${API_PORT}`;
 
 export default defineConfig({

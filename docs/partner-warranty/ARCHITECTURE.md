@@ -124,7 +124,7 @@ Submitted ──(brand opens)──▶ Brand Review ──▶ Info Requested ─
 Job Created ──▶ Partner Assigned ──▶ Visit Scheduled ──▶ Technician On Way
             ──▶ Service In Progress ──▶ Service Completed ──▶ Closed
 
-Any non-terminal ──▶ On Hold ──(resume)──▶ statusBeforeHold
+Any non-terminal ──▶ On Hold ──(resume)──▶ statusBeforeHold   (claim-level; the job keeps its own status — Phase 8)
 Any non-terminal ──▶ Cancelled                Closed/Cancelled ──(admin reopen)──▶ Brand Review | Job Created
 ```
 
@@ -205,6 +205,18 @@ A sweep (every 5 min, `server.js`) marks `warning` at 80 % of the window and
 `breach` at 100 %, once each, with an internal timeline event, an admin
 notification, and (approval stage) escalation. Paused while `On Hold`.
 
+**As built (Phase 9):** hours are **snapshotted** on the claim at submission
+(`sla.hours`: brand → PlatformSettings.warrantySla → built-in), so edits never
+move existing deadlines. Clocks start/stop inside `appendEvent`
+(`applySlaTransition`): approval + resolution start at submission; assignment
+(re)starts at Job Created; visit starts at Partner Assigned and is met at
+On Way / In Progress or later. The clock pauses while **On Hold or Info
+Requested** (waiting on the customer) and every open deadline shifts by the
+paused time. A reassignment or reopen restarts the relevant clocks (old flags
+cleared; history stays in timeline + audit). `sla.state` ∈ ok / warning /
+breached drives the admin list. Brand-approval warning/breach events are
+brand-visible and notify the brand; the others are internal.
+
 ---
 
 ## §8 Domain events + webhooks
@@ -240,7 +252,17 @@ and job-step changes. It maps (SR status, Job step) → claim status:
 
 Only forward moves are applied (a revisit does not drag the claim backwards
 past In Progress). Each applied move emits sockets to `user:{customer}`,
-`brand:{brandId}` and `admins`, plus the §10 notification.
+`brand:{brandId}` and `admins`, plus the §10 notification (Phase 10).
+
+**Built in Phase 7:** the sync runs from `transitionStatus` (every SR status
+change) and after every partner job step (`simpleTransition`), because "on the
+way" to an already-scheduled visit changes no SR status. Visit slot:
+`POST /service-provider/warranty-jobs/:jobId/schedule-visit`. Closing: the SR
+stops at Customer Confirmation after payment; `POST /partner-warranty/claims/:id/confirm`
+(customer) closes job + claim, and `autoCloseCompletedClaims()` (hourly from
+server.js) closes them 72 h after completion if nobody confirms. Socket event
+`warranty_claim:updated` `{ id, humanId, status, customerStatusLabel, updatedAt }`;
+brand-admin sockets join `brand:{brandId}`, super-admins `admins`.
 
 ---
 

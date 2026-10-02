@@ -110,6 +110,8 @@ export const CLAIM_ACTIONS = Object.freeze([
   'INFO_PROVIDED',
   'DOCUMENT_ADDED',
   'JOB_CREATED',
+  'PARTNER_OFFERED',
+  'PARTNER_DECLINED',
   'PARTNER_ASSIGNED',
   'PARTNER_UNASSIGNED',
   'ALLOCATION_FAILED',
@@ -122,7 +124,38 @@ export const CLAIM_ACTIONS = Object.freeze([
   'REOPENED',
   'SLA_WARNING',
   'SLA_BREACHED',
+  // Service progress, synced from the Service Job (Phase 7)
+  'VISIT_SCHEDULED',
+  'TECHNICIAN_ON_WAY',
+  'JOB_STARTED',
+  'JOB_COMPLETED',
+  'CUSTOMER_CONFIRMED',
+  'CLAIM_CLOSED',
+  'JOB_CANCELLED',
+  // Super Admin overrides (Phase 8)
+  'MANUAL_ASSIGNMENT',
+  'REASSIGNED',
+  'STATUS_OVERRIDDEN',
 ]);
 
 export const EVENT_VISIBILITY = Object.freeze(['customer', 'brand', 'internal']);
 export const ACTOR_KINDS = Object.freeze(['customer', 'brand', 'admin', 'partner', 'system']);
+
+/**
+ * "Sat, 3 Oct 2026, 9 AM – 12 PM" for a visit's YYYY-MM-DD date and slot — the
+ * timeline notes every party reads (a raw "2026-10-03" used to show through).
+ * The date is a calendar day, so it's formatted in UTC to stay that day.
+ */
+export function visitLabel(date, slot) {
+  const day = new Date(`${date}T00:00:00Z`);
+  let text = String(date);
+  if (!Number.isNaN(day.getTime())) {
+    const parts = Object.fromEntries(
+      new Intl.DateTimeFormat('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
+        .formatToParts(day)
+        .map((p) => [p.type, p.value]),
+    );
+    text = `${parts.weekday}, ${parts.day} ${parts.month} ${parts.year}`;
+  }
+  return slot ? `${text}, ${slot}` : text;
+}

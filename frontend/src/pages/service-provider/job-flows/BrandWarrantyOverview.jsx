@@ -16,8 +16,8 @@ const BrandWarrantyOverview = ({ job, additionalServices, setAdditionalServices,
             {job?.brand} Brand Warranty — Active
           </span>
           <span className="text-[10px] text-slate-600 font-normal mt-0.5">
-            Warranty Till: <strong className="text-[#052355]">{job?.warrantyTill || '15 Jan 2027'}</strong>
-            &nbsp;·&nbsp;Case ID: <strong className="text-[#052355]">{job?.caseId || 'LG-IN-8842'}</strong>
+            Warranty Till: <strong className="text-[#052355]">{job?.warrantyTill || 'Not recorded'}</strong>
+            &nbsp;·&nbsp;Case ID: <strong className="text-[#052355]">{job?.caseId || 'Not recorded'}</strong>
           </span>
         </div>
       </div>
@@ -46,7 +46,7 @@ const BrandWarrantyOverview = ({ job, additionalServices, setAdditionalServices,
           <div className="flex justify-between items-center">
             <span className="text-xs text-slate-600 font-normal">Warranty Status</span>
             <span className="text-xs font-medium bg-green-50 text-green-600 px-2.5 py-0.5 rounded-lg">
-              {job?.warrantyStatus || 'In Warranty'}
+              {job?.warrantyStatus || 'Not recorded'}
             </span>
           </div>
         </div>
@@ -55,7 +55,7 @@ const BrandWarrantyOverview = ({ job, additionalServices, setAdditionalServices,
       {/* Complaint */}
       <div className="bg-white rounded-3xl p-3.5 border border-slate-200 shadow-sm flex flex-col gap-2 text-left">
         <h4 className="text-sm font-medium text-[#052355]">Complaint</h4>
-        <p className="text-sm text-slate-700 font-normal mt-1">{job?.complaint || 'Noise from freezer compartment'}</p>
+        <p className="text-sm text-slate-700 font-normal mt-1">{job?.complaint || 'Not recorded'}</p>
       </div>
 
       {/* Extra Services (Chargeable) */}

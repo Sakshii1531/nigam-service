@@ -38,6 +38,10 @@ export function initSockets(httpServer) {
     for (const audience of broadcastAudiencesForRole(socket.user.role)) {
       socket.join(`broadcast:${audience}`);
     }
+    // Partner warranty live updates (docs/partner-warranty Phase 7): a brand's
+    // staff hear about their own brand's claims only; super-admins about all.
+    if (socket.user.role === 'brand_admin' && socket.user.brand) socket.join(`brand:${socket.user.brand}`);
+    if (socket.user.role === 'super_admin') socket.join('admins');
 
     // Allow clients to join rooms for live tracking and booking updates
     socket.on('join:booking', ({ bookingId, humanId } = {}) => {

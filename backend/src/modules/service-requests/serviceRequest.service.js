@@ -1,6 +1,6 @@
 import { ServiceRequest } from './serviceRequest.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
-import { rankServiceProviders, findAvailableServiceProvider } from '../shared/assignmentEngine.js';
+import { rankServiceProviders } from '../shared/assignmentEngine.js';
 import { ServiceProvider } from '../service-provider/serviceProvider.model.js';
 import { Booking } from '../booking/booking.model.js';
 import { Job } from '../service-provider/job.model.js';
@@ -11,11 +11,35 @@ import { emit as emitNotification, emitToBrand } from '../notifications/notifica
 import { getIO } from '../../sockets/io.js';
 import { isTest } from '../../config/env.js';
 import { estimateServiceProviderEarnings } from '../shared/serviceProviderEarnings.js';
+import { WarrantyClaim } from '../partner-warranty/warrantyClaim.model.js';
+import {
+  onWarrantyJobOffered,
+  onWarrantyJobDeclined,
+  markAllocationFailedFor,
+  warrantyJobInfo,
+  syncClaimFromJob,
+} from '../partner-warranty/claimDispatch.js';
+
+/** Partner-warranty dispatch rules apply to a Service Job created from a claim (docs/partner-warranty Phase 6). */
+function warrantyContext(serviceRequest) {
+  return serviceRequest.warrantyClaim ? { brand: serviceRequest.brand, pincode: serviceRequest.pincode } : null;
+}
+
+/** A warranty hook failing must never break dispatch itself — log and carry on. */
+async function warrantyHook(label, fn) {
+  try {
+    await fn();
+  } catch (err) {
+    console.warn(`[partner-warranty] ${label} failed:`, err.message);
+  }
+}
 
 /** `session` opts this write into a caller's transaction (see
  * utils/transaction.js) — createBooking uses it so a booking and its service
- * request can never be half-created. Omitted, it behaves exactly as before. */
-export async function createServiceRequest(data, { session } = {}) {
+ * request can never be half-created. Omitted, it behaves exactly as before.
+ * `notifyBrand: false` skips the brand warranty alert outright (a Service Job
+ * from an already-approved partner warranty claim needs none). */
+export async function createServiceRequest(data, { session, notifyBrand = true } = {}) {
   // Model.create takes an array when given options, otherwise it reads the
   // options object as a second document to insert.
   const [serviceRequest] = await ServiceRequest.create(
@@ -33,7 +57,7 @@ export async function createServiceRequest(data, { session } = {}) {
   // an external side effect that cannot be rolled back, so telling a brand
   // about a claim whose write later aborts would be a lie. The caller that
   // owns the transaction re-runs this after the commit.
-  if (!session) await emitWarrantyClaimNotification(serviceRequest);
+  if (!session && notifyBrand) await emitWarrantyClaimNotification(serviceRequest);
 
   return serviceRequest;
 }
@@ -80,7 +104,7 @@ export async function getServiceRequestDetail(id) {
 /** Server-side transition validation — the frontend's own status enum is not
  * trusted as the source of truth for what moves are legal (Phase 4 exit
  * criterion: "status transitions validated server-side, not client-trusted"). */
-export async function transitionStatus(id, toStatus, { description, session } = {}) {
+export async function transitionStatus(id, toStatus, { description, session, skipWarrantySync = false } = {}) {
   // Read through the same session as the write, or the document created
   // moments ago inside an uncommitted transaction is invisible here.
   const serviceRequest = session
@@ -99,6 +123,14 @@ export async function transitionStatus(id, toStatus, { description, session } = 
   serviceRequest.status = toStatus;
   serviceRequest.timeline.push({ stepLabel: toStatus, done: true, timestamp: new Date(), description });
   await serviceRequest.save(session ? { session } : undefined);
+
+  // Every Service Job status change reaches its warranty claim here — the one
+  // place all of them pass through (docs/partner-warranty Phase 7). Warranty
+  // jobs never run inside a caller's transaction, so a session means "not ours".
+  // `skipWarrantySync`: the caller is moving the claim itself in the same step.
+  if (serviceRequest.warrantyClaim && !session && !skipWarrantySync) {
+    await warrantyHook('status sync', () => syncClaimFromJob(serviceRequest));
+  }
   return serviceRequest;
 }
 
@@ -156,6 +188,11 @@ export async function suggestServiceProviders(id) {
   const ranked = await rankServiceProviders({
     category: serviceRequest.category,
     city: serviceRequest.zone,
+    latitude: serviceRequest.customerLocation?.latitude,
+    longitude: serviceRequest.customerLocation?.longitude,
+    // A warranty job's shortlist applies the warranty rules (skill, brand
+    // authorization, service area) — the operator still sees Busy/Offline ones.
+    warranty: warrantyContext(serviceRequest),
     // The operator is overriding auto-assignment, so they get every Active
     // service provider — including the Busy/Offline ones auto-assign skips. The
     // shortlist used to be filtered to Available only, which meant that with
@@ -164,7 +201,7 @@ export async function suggestServiceProviders(id) {
     // automatic assignment had already failed.
     includeUnavailable: true,
   });
-  return ranked.map(({ serviceProvider, score, proximity, skill, rating, workload }) => ({
+  return ranked.map(({ serviceProvider, score, proximity, skill, rating, workload, distanceKm, authorized }) => ({
     id: serviceProvider.id,
     name: serviceProvider.name,
     specs: serviceProvider.specs,
@@ -176,6 +213,9 @@ export async function suggestServiceProviders(id) {
     city: serviceProvider.city?.name || null,
     score: Math.round(score),
     breakdown: { proximity, skill, rating, workload },
+    distanceKm: distanceKm ?? null,
+    tier: serviceProvider.tier,
+    ...(authorized === undefined ? {} : { authorizedForBrand: authorized }),
   }));
 }
 
@@ -200,7 +240,7 @@ export async function sweepExpiredAssignments(now = new Date()) {
   let passedOn = 0;
   for (const sr of expired) {
     try {
-      await declineAssignment(String(sr._id), String(sr.serviceProvider));
+      await declineAssignment(String(sr._id), String(sr.serviceProvider), { reason: 'timeout' });
       passedOn += 1;
     } catch (err) {
       // 409 once a Job exists (accepted in the meantime) — nothing to pass on.
@@ -240,7 +280,7 @@ export function scheduleDispatchTimeout(serviceRequestId, serviceProviderId, tim
         String(sr.serviceProvider) === String(serviceProviderId)
       ) {
         console.log(`[dispatch-cascade] 60s timeout expired for serviceProvider ${serviceProviderId} on SR ${serviceRequestId}. Cascading to next nearest serviceProvider.`);
-        await declineAssignment(serviceRequestId, serviceProviderId);
+        await declineAssignment(serviceRequestId, serviceProviderId, { reason: 'timeout' });
       }
     } catch (err) {
       console.warn('[dispatch-cascade] Timeout cascade notice:', err.message);
@@ -263,20 +303,33 @@ export async function assignServiceProvider(id, serviceProviderId) {
     booking = await Booking.findById(serviceRequest.booking);
   }
 
+  const warranty = warrantyContext(serviceRequest);
   let serviceProvider;
+  let authorized = null;
   if (serviceProviderId) {
     serviceProvider = await ServiceProvider.findById(serviceProviderId);
     if (!serviceProvider) throw new ApiError(404, 'Service Provider not found');
     if (serviceProvider.status !== 'Active') throw new ApiError(409, `Service Provider is ${serviceProvider.status}, not Active`);
   } else {
-    serviceProvider = await findAvailableServiceProvider({
+    if (warranty) {
+      // A held or finished claim is never auto-dispatched (Super Admin, Phase 8);
+      // naming a partner explicitly is still allowed.
+      const claim = await WarrantyClaim.findById(serviceRequest.warrantyClaim).select('status').lean();
+      if (['On Hold', 'Cancelled', 'Closed', 'Rejected'].includes(claim?.status)) {
+        throw new ApiError(409, `Warranty claim is ${claim.status} — not dispatching`);
+      }
+    }
+    const [best] = await rankServiceProviders({
       category: serviceRequest.category,
       city: serviceRequest.zone || booking?.address?.city,
       state: booking?.address?.state,
       latitude: serviceRequest.customerLocation?.latitude || booking?.address?.latitude,
       longitude: serviceRequest.customerLocation?.longitude || booking?.address?.longitude,
       exclude: serviceRequest.declinedBy || [],
+      warranty,
     });
+    serviceProvider = best?.serviceProvider;
+    authorized = best?.authorized ?? null;
     if (!serviceProvider) throw new ApiError(409, 'No available serviceProvider to assign');
   }
 
@@ -319,6 +372,12 @@ export async function assignServiceProvider(id, serviceProviderId) {
       instantStatus: serviceRequest.isInstant ? 'ASSIGNED' : null,
       isAvailableRequest: false,
     };
+    if (warranty) {
+      // Client #11: brand, product, issue, area, job + claim IDs, "Warranty Service".
+      const claim = await WarrantyClaim.findById(serviceRequest.warrantyClaim).populate('brand', 'name');
+      jobPayload.warranty = warrantyJobInfo(claim, serviceRequest);
+      jobPayload.service = `${jobPayload.warranty?.serviceLabel}: ${claim?.productName} — ${claim?.issueName}`;
+    }
     io.to(`service-provider:${serviceProvider._id}`).emit('job:assigned', jobPayload);
     io.to(`service-provider:${serviceProvider.user}`).emit('job:assigned', jobPayload);
     io.to(`service-provider:${serviceProvider._id}`).emit('instant:new_request', jobPayload);
@@ -330,11 +389,19 @@ export async function assignServiceProvider(id, serviceProviderId) {
   // Schedule auto-timeout cascade (60s)
   scheduleDispatchTimeout(serviceRequest._id, serviceProvider._id);
 
-  await emitNotification('serviceProvider.assigned', {
-    user: serviceRequest.user,
-    serviceProviderName: serviceProvider.name,
-    serviceRequestId: serviceRequest.id,
-  });
+  if (warranty) {
+    await warrantyHook('offer', () => onWarrantyJobOffered(serviceRequest, serviceProvider, { authorized, manual: Boolean(serviceProviderId) }));
+  }
+
+  // A warranty job is only *offered* here; its customer hears "Technician
+  // Assigned" from the claim once the partner accepts (Phase 10).
+  if (!warranty) {
+    await emitNotification('serviceProvider.assigned', {
+      user: serviceRequest.user,
+      serviceProviderName: serviceProvider.name,
+      serviceRequestId: serviceRequest.id,
+    });
+  }
 
   return ServiceRequest.findById(id).populate('serviceProvider', 'name rating specs');
 }
@@ -349,7 +416,7 @@ export async function assignServiceProvider(id, serviceProviderId) {
  * the request back in the pool, remember who said no, and immediately look for
  * the next best service provider.
  */
-export async function declineAssignment(id, serviceProviderId) {
+export async function declineAssignment(id, serviceProviderId, { reason = 'declined' } = {}) {
   const serviceRequest = await findOr404(id);
 
   // If already at terminal states (Completed / Closed / Cancelled), cannot reject
@@ -391,6 +458,7 @@ export async function declineAssignment(id, serviceProviderId) {
     serviceRequest.declinedAssignmentBy = serviceRequest.declinedAssignmentBy || [];
     serviceRequest.declinedAssignmentBy.push(serviceProviderId);
   }
+  const declinedProviderId = serviceRequest.serviceProvider;
   serviceRequest.serviceProvider = null;
   serviceRequest.status = 'New';
   if (serviceRequest.isInstant) serviceRequest.instantStatus = 'SEARCHING';
@@ -449,6 +517,13 @@ export async function declineAssignment(id, serviceProviderId) {
     // Socket might not be initialized during isolated tests
   }
 
+  if (serviceRequest.warrantyClaim) {
+    await warrantyHook('decline', async () => {
+      const declined = await ServiceProvider.findById(declinedProviderId).select('name').lean();
+      await onWarrantyJobDeclined(serviceRequest, declined?.name, reason);
+    });
+  }
+
   // Offer it to the next best service provider right away. Nobody else being
   // available is a normal outcome — it stays queued for the next sweep.
   let reassignedTo = null;
@@ -457,6 +532,16 @@ export async function declineAssignment(id, serviceProviderId) {
     reassignedTo = updated.serviceProvider?.name || null;
   } catch {
     reassignedTo = null;
+  }
+
+  // A warranty job is never thrown into the open pool, where any partner in
+  // the city could take it regardless of skill or brand authorization. With
+  // nobody eligible left, Super Admin is told to assign it by hand.
+  if (!reassignedTo && serviceRequest.warrantyClaim) {
+    await warrantyHook('allocation-failed', () =>
+      markAllocationFailedFor(serviceRequest, 'Every eligible partner declined or did not respond'),
+    );
+    return { declined: true, reassignedTo: null };
   }
 
   // If no single provider was directly assigned, it is now an open pool job for everyone

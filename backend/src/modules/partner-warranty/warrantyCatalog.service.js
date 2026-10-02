@@ -4,6 +4,7 @@ import { WarrantyIssue } from './warrantyIssue.model.js';
 import { Brand } from '../super-admin/brand.model.js';
 import { Category } from '../catalog/category.model.js';
 import { ProductType } from '../catalog/productType.model.js';
+import { ServiceProvider } from '../service-provider/serviceProvider.model.js';
 import { logAudit } from '../shared/auditLog.js';
 import { escapeRegex } from '../shared/brandWarranty.js';
 import { ApiError } from '../../middleware/errorHandler.js';
@@ -299,4 +300,54 @@ export async function updateBrandSettings(brandId, data, actorId, { asBrand = fa
 export async function listCoverageOptions() {
   const cats = await Category.find({ isActive: true }).sort(byOrder).lean();
   return cats.map(categoryView);
+}
+
+// ── Partner warranty eligibility (Super Admin) ───────────────────────────────
+// Which brands a service partner is authorized for, and where they serve
+// warranty jobs (docs/partner-warranty Phase 6, ARCHITECTURE §6).
+
+async function eligibilityView(providerId) {
+  const sp = await ServiceProvider.findById(providerId)
+    .select('name phone specs tier serviceCityName authorizedBrands servicePincodes serviceRadiusKm location status availability')
+    .populate('authorizedBrands', 'name')
+    .lean();
+  if (!sp) throw new ApiError(404, 'Service partner not found');
+  return {
+    id: String(sp._id),
+    name: sp.name,
+    status: sp.status,
+    availability: sp.availability,
+    specs: sp.specs || [],
+    tier: sp.tier,
+    city: sp.serviceCityName || null,
+    hasLocation: sp.location?.latitude != null && sp.location?.longitude != null,
+    authorizedBrands: (sp.authorizedBrands || []).map((b) => ({ id: String(b._id), name: b.name })),
+    servicePincodes: sp.servicePincodes || [],
+    serviceRadiusKm: sp.serviceRadiusKm ?? null,
+  };
+}
+
+export const getPartnerEligibility = eligibilityView;
+
+export async function updatePartnerEligibility(providerId, data, actorId) {
+  const sp = await ServiceProvider.findById(providerId);
+  if (!sp) throw new ApiError(404, 'Service partner not found');
+
+  if (data.authorizedBrands) {
+    const unique = [...new Set(data.authorizedBrands.map(String))];
+    if ((await Brand.countDocuments({ _id: { $in: unique } })) !== unique.length) {
+      throw new ApiError(400, 'One or more brands do not exist');
+    }
+    sp.authorizedBrands = unique;
+  }
+  if (data.servicePincodes) sp.servicePincodes = [...new Set(data.servicePincodes)];
+  if (data.serviceRadiusKm !== undefined) sp.serviceRadiusKm = data.serviceRadiusKm;
+  await sp.save();
+
+  await logAudit({
+    user: actorId,
+    type: 'Warranty',
+    action: `Partner warranty: updated eligibility for ${sp.name} (${Object.keys(data).join(', ')})`,
+  });
+  return eligibilityView(sp._id);
 }

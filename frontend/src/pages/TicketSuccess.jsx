@@ -1,9 +1,14 @@
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 
+// Shown once, straight after a claim is submitted; the ticket comes from the
+// server's response (docs/partner-warranty Phase 12). Without it (a refresh)
+// there is nothing to show, so it goes to the customer's claim list.
 const TicketSuccess = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { ticketId } = location.state || { ticketId: 'NCCW-2024-000123' };
+  const claim = location.state?.claim;
+  if (!claim) return <Navigate to="/partner-warranty/claims" replace />;
+  const ticketId = claim.humanId;
 
   return (
     <div className="min-h-screen bg-blue-50/50 flex flex-col items-center justify-center p-6">
@@ -34,7 +39,7 @@ const TicketSuccess = () => {
         <div className="text-center flex flex-col gap-2">
           <h1 className="text-xl font-black text-slate-900 tracking-tight">Ticket Raised Successfully!</h1>
           <p className="text-sm text-slate-500 leading-relaxed">
-            Your request has been submitted.<br />We will notify you once it is<br />verified by the brand.
+            Your request has been sent to {claim.brand?.name || 'the brand'}.<br />We will notify you once it is<br />verified by the brand.
           </p>
         </div>
 
@@ -46,7 +51,7 @@ const TicketSuccess = () => {
 
         {/* Track Ticket Button */}
         <button
-          onClick={() => navigate('/partner-warranty/track-ticket', { state: { ticketId } })}
+          onClick={() => navigate(`/partner-warranty/claims/${claim.id}/track`, { replace: true })}
           className="w-full py-4 bg-brand-navy text-white font-bold text-base rounded-2xl cursor-pointer tracking-wide"
         >
           Track Ticket

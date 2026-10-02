@@ -18,6 +18,35 @@ function serviceLineOf(booking) {
   return c.quantity > 1 ? `${what} × ${c.quantity}` : what;
 }
 
+/**
+ * A partner-warranty (B2B2C) job has no booking: its brand, product, issue,
+ * area and IDs come from the server's `warranty` block (docs/partner-warranty
+ * Phase 15). Without this the offer showed as "NCC Paid Service" for "Brand"
+ * at "Customer Address".
+ */
+function withWarranty(mapped, w) {
+  if (!w?.isWarranty) return { ...mapped, warranty: null };
+  const where = [w.area, w.pincode].filter(Boolean).join(" ");
+  return {
+    ...mapped,
+    warranty: w,
+    type: "Brand Warranty",
+    brand: w.brand || mapped.brand,
+    product: w.productName || mapped.product,
+    category: w.productName || mapped.category,
+    complaint: w.issueName || mapped.complaint,
+    model: w.modelNumber || mapped.model,
+    serialNo: w.serialNumber || mapped.serialNo,
+    caseId: w.claimId,
+    jobNumber: w.jobId,
+    price: 0,
+    isD2C: false,
+    address: mapped.address === "Customer Address" && where ? where : mapped.address,
+    scheduledDateLabel: w.visit?.date || mapped.scheduledDateLabel,
+    scheduledTime: w.visit?.slot || mapped.scheduledTime,
+  };
+}
+
 const SOCKET_URL = import.meta.env.VITE_API_BASE_URL
   ? import.meta.env.VITE_API_BASE_URL.replace("/api/v1", "")
   : "http://localhost:4000";
@@ -107,7 +136,7 @@ export const ServiceProviderProvider = ({ children }) => {
       const availableSRs = Array.isArray(availableRes) ? availableRes : [];
       const activeJobs = Array.isArray(activeRes) ? activeRes : [];
 
-      const mappedAvailable = availableSRs.map((sr) => ({
+      const mappedAvailable = availableSRs.map((sr) => withWarranty({
         id: sr.id || sr._id,
         type:
           sr.booking?.totalPrice === 0
@@ -170,13 +199,13 @@ export const ServiceProviderProvider = ({ children }) => {
         ewValidTill: sr.extendedWarrantyOrder?.validTill || null,
         ewClaimsRemaining: sr.extendedWarrantyOrder?.claimsRemaining ?? null,
         ewClaimsTotal: sr.extendedWarrantyOrder?.claimsTotal ?? null,
-      }));
+      }, sr.warranty));
 
       const mappedActive = activeJobs.map((job) => {
         const sr = job.serviceRequest;
         const resolvedOtp =
           sr?.booking?.completionOtp || sr?.completionOtp || null;
-        return {
+        return withWarranty({
           id: job.id || job._id,
           createdAt: job.createdAt || sr?.acceptedAt || sr?.assignedAt || null,
           acceptedAt: sr?.acceptedAt || job.createdAt || null,
@@ -285,7 +314,7 @@ export const ServiceProviderProvider = ({ children }) => {
           billingEstimate: job.billingEstimate || null,
           proofs: job.proofs || null,
           revisit: job.revisit || null,
-        };
+        }, job.warranty);
       });
 
       const combinedJobs = [...mappedActive, ...mappedAvailable];
@@ -897,6 +926,9 @@ export const ServiceProviderProvider = ({ children }) => {
           setActiveJobId(newJobId);
           setActiveStep("assigned");
           await fetchRealJobs();
+          // The caller's `jobs` still lists this as the offer (id = the
+          // service request's), so it must select the new job by this id.
+          return { ok: true, jobId: newJobId };
         } catch (err) {
           if (err.message && err.message.includes("already exists")) {
             await fetchRealJobs();
@@ -934,7 +966,6 @@ export const ServiceProviderProvider = ({ children }) => {
             error: err.message || "Could not accept this job.",
           };
         }
-        return { ok: true };
       } else {
         setActiveJobId(id);
         setActiveStep("assigned");

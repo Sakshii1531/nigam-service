@@ -49,6 +49,10 @@ export async function updateSettings(updates, actingUserId) {
   for (const field of EDITABLE_FIELDS) {
     if (updates[field] !== undefined) settings[field] = updates[field];
   }
+  // Nested: merge, so changing one partner-warranty SLA leaves the others.
+  if (updates.warrantySla) {
+    for (const [key, hours] of Object.entries(updates.warrantySla)) settings.set(`warrantySla.${key}`, hours);
+  }
   await settings.save();
   await logAudit({ user: actingUserId, action: `Updated platform settings: ${Object.keys(updates).join(', ')}`, type: 'System' });
   return settings;

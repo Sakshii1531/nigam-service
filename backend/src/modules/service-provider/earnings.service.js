@@ -5,6 +5,7 @@ import { Job } from './job.model.js';
 import { PlatformSettings } from '../super-admin/platformSettings.model.js';
 import { ServiceProvider } from './serviceProvider.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
+import { partnerB2b2cSummary } from '../partner-warranty/b2b2cPayout.service.js';
 import { parsePagination, paginationMeta } from '../../utils/pagination.js';
 
 const PLATFORM_FEE_PERCENT = 2; // flat fee on instant 'Quick' payouts; 'Invoice' payouts settle fee-free on the next billing cycle
@@ -101,6 +102,9 @@ export async function listRecentEarnings(serviceProviderId, { page, limit } = {}
     amount: job.billingEstimate?.serviceProviderEarnings || 0,
     paymentMethod: job.paymentMethod || null,
     completedAt: job.updatedAt,
+    // B2B2C: paid by NCC's manual settlement, not from the balance.
+    isB2B2C: Boolean(job.warrantyClaim),
+    settlementStatus: job.warrantyClaim ? job.settlement?.status || 'unsettled' : null,
   }));
 
   return { items, meta: paginationMeta({ page: pg, limit: lim, total }) };
@@ -210,11 +214,16 @@ export async function getEarningsBreakdown(serviceProviderId) {
       { $match: { serviceProvider: new mongoose.Types.ObjectId(String(serviceProviderId)), status: 'Settled' } },
       { $group: { _id: null, base: { $sum: '$baseAmount' }, net: { $sum: '$netAmount' } } },
     ]),
-    Job.find({ serviceProvider: serviceProviderId, activeStep: 'completed' }).select('type billingEstimate'),
+    Job.find({ serviceProvider: serviceProviderId, activeStep: 'completed' }).select('type billingEstimate warrantyClaim'),
   ]);
+
+  // Partner warranty (B2B2C) jobs are their own bucket, settled manually by
+  // NCC and not part of `available` (docs/partner-warranty Phase 11).
+  const b2b2c = await partnerB2b2cSummary(serviceProviderId);
 
   const split = { quick: { amount: 0, jobs: 0 }, invoice: { amount: 0, jobs: 0 } };
   for (const job of jobs) {
+    if (job.warrantyClaim) continue;
     const bucket = job.type === 'NCC Paid Service' ? split.quick : split.invoice;
     bucket.amount += job.billingEstimate?.serviceProviderEarnings || 0;
     bucket.jobs += 1;
@@ -228,8 +237,10 @@ export async function getEarningsBreakdown(serviceProviderId) {
     completedToday: tally.completedToday,
     completedTotal: tally.completedTotal,
     paidOut,
-    lifetimeEarned: tally.total + withdrawn,
+    // Settled B2B2C money is already in `withdrawn` (as a settled Invoice payout).
+    lifetimeEarned: tally.total + withdrawn + b2b2c.pending.amount,
     split,
+    b2b2c,
   };
 }
 

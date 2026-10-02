@@ -15,9 +15,19 @@ export function jobFlow(getApp, { phoneStart = 9300100000 } = {}) {
   const nextPhone = () => String(phoneSeq++);
   const api = () => request(getApp());
 
+  // Fails with the server's own error message rather than a bare status, so an
+  // intermittent login failure under a full-suite run says what went wrong.
+  async function expectOk(res, step) {
+    if (res.status !== 200) throw new Error(`${step}: ${res.status} ${JSON.stringify(res.body?.error || res.body)}`);
+    return res;
+  }
+
   async function loginAndVerify({ role, identifier }) {
-    await api().post('/api/v1/auth/login').send({ role, identifier, password: 'password123' }).expect(200);
-    const res = await api().post('/api/v1/auth/otp/verify').send({ role, identifier, code: readOtpCode(identifier) }).expect(200);
+    await expectOk(await api().post('/api/v1/auth/login').send({ role, identifier, password: 'password123' }), `login ${identifier}`);
+    const res = await expectOk(
+      await api().post('/api/v1/auth/otp/verify').send({ role, identifier, code: readOtpCode(identifier) }),
+      `otp/verify ${identifier}`,
+    );
     return res.body.data.accessToken;
   }
 

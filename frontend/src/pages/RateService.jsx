@@ -10,7 +10,11 @@ const TIPS = [0, 20, 50, 100];
 const RateService = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { ticketId, serviceId, bookingId } = location.state || { ticketId: 'NCCW-2024-000123' };
+  // What to rate comes from the screen that sent the customer here (a booking,
+  // or a closed warranty claim's job). No fallback: this used to rate a fake
+  // 'NCCW-2024-000123' ticket when opened without one.
+  const { ticketId, serviceId, bookingId, serviceRequestId, technician } = location.state || {};
+  const idToRate = serviceId || bookingId || serviceRequestId || null;
   const fileRef = useRef(null);
 
   const [ratings, setRatings] = useState({ 'Overall Experience': 0, 'Service Provider Behavior': 0, 'Service Quality': 0, 'Timeliness': 0 });
@@ -20,8 +24,8 @@ const RateService = () => {
   const [tip, setTip] = useState(0);
   const [comment, setComment] = useState('');
   const [submitted, setSubmitted] = useState(false);
-  const [, setSubmitting] = useState(false);
-  const [, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
   const handleRate = (category, star) => setRatings((prev) => ({ ...prev, [category]: star }));
   const toggleTag = (t) => setTags((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
@@ -36,9 +40,13 @@ const RateService = () => {
   const removePhoto = (id) => setPhotos((prev) => prev.filter((p) => p.id !== id));
 
   const handleSubmit = async () => {
-    const serviceProviderRating = ratings['Service Provider Behavior'] || ratings['Overall Experience'] || 5;
-    const platRating = ratings['Overall Experience'] || 5;
-    const idToRate = serviceId || bookingId || ticketId;
+    // Never a made-up score: unrated used to be sent as 5 stars.
+    if (!ratings['Overall Experience']) {
+      setError('Please rate your overall experience.');
+      return;
+    }
+    const serviceProviderRating = ratings['Service Provider Behavior'] || ratings['Overall Experience'];
+    const platRating = ratings['Overall Experience'];
 
     try {
       setSubmitting(true);
@@ -53,14 +61,26 @@ const RateService = () => {
         },
         auth: true,
       });
-    } catch (err) {
-      console.warn('[RateService] submit note:', err.message);
-    } finally {
-      setSubmitting(false);
       setSubmitted(true);
       setTimeout(() => navigate('/dashboard'), 2000);
+    } catch (err) {
+      // Shown, not swallowed: a failed rating used to report success.
+      setError(err.status === 409 ? 'You have already rated this service.' : err.message || 'Could not submit your rating.');
+    } finally {
+      setSubmitting(false);
     }
   };
+
+  if (!idToRate) {
+    return (
+      <div className="min-h-screen bg-blue-50/50 flex flex-col items-center justify-center p-6 gap-4 text-center">
+        <p className="text-sm text-slate-600 max-w-xs">Open a completed service from your bookings or warranty claims to rate it.</p>
+        <button onClick={() => navigate(-1)} className="px-5 py-3 bg-brand-navy text-white font-bold rounded-2xl">
+          Go back
+        </button>
+      </div>
+    );
+  }
 
   if (submitted) {
     return (
@@ -73,7 +93,7 @@ const RateService = () => {
           </div>
           <h2 className="text-lg font-black text-slate-900">Thanks for your feedback!</h2>
           <p className="text-sm text-slate-500 text-center">
-            Your rating{tip > 0 ? ` and ₹${tip} tip` : ''} has been submitted successfully.
+            Your rating has been submitted.
           </p>
         </div>
       </div>
@@ -91,11 +111,12 @@ const RateService = () => {
       </div>
 
       <div className="flex-1 p-6 flex flex-col gap-5 max-w-lg mx-auto w-full">
-        {/* Ticket ID */}
-        <div className="bg-white border border-slate-200/80 rounded-2xl px-5 py-3 flex items-center justify-between">
-          <span className="text-xs text-slate-400 font-semibold">Ticket ID</span>
-          <span className="text-sm font-black text-brand-navy tracking-wide">{ticketId}</span>
-        </div>
+        {ticketId && (
+          <div className="bg-white border border-slate-200/80 rounded-2xl px-5 py-3 flex items-center justify-between">
+            <span className="text-xs text-slate-400 font-semibold">Ticket ID</span>
+            <span className="text-sm font-black text-brand-navy tracking-wide">{ticketId}</span>
+          </div>
+        )}
 
         {/* Category star ratings */}
         <div className="bg-white border border-slate-200/80 rounded-2xl px-5 py-5 flex flex-col gap-5">
@@ -111,6 +132,8 @@ const RateService = () => {
                       onMouseEnter={() => setHovered({ category, star })}
                       onMouseLeave={() => setHovered({ category: null, star: 0 })}
                       onClick={() => handleRate(category, star)}
+                      aria-label={`${category}: ${star} star${star > 1 ? 's' : ''}`}
+                      aria-pressed={ratings[category] === star}
                       className="cursor-pointer"
                     >
                       <Star className={`h-6 w-6 transition-colors ${isActive ? 'text-amber-400 fill-amber-400' : 'text-slate-200 fill-slate-200'}`} />
@@ -176,7 +199,7 @@ const RateService = () => {
         {/* Tip */}
         <div className="bg-white border border-slate-200/80 rounded-2xl px-5 py-4 flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <label className="text-sm font-black text-black tracking-wide">Add a tip for Rahul</label>
+            <label className="text-sm font-black text-black tracking-wide">Add a tip for {technician || 'your technician'}</label>
             <span className="text-xs text-slate-400 font-normal">Optional</span>
           </div>
           <div className="flex gap-2">
@@ -211,8 +234,13 @@ const RateService = () => {
           </div>
         </div>
 
+        {error && (
+          <p role="alert" className="text-sm font-semibold text-red-600 text-center">
+            {error}
+          </p>
+        )}
         {/* Submit */}
-        <button onClick={handleSubmit} className="w-full py-4 bg-brand-navy text-white font-bold text-base rounded-2xl cursor-pointer tracking-wide flex items-center justify-center gap-2">
+        <button onClick={handleSubmit} disabled={submitting} className="w-full py-4 bg-brand-navy text-white font-bold text-base rounded-2xl cursor-pointer tracking-wide flex items-center justify-center gap-2 disabled:opacity-60">
           {tip > 0 ? `Submit Rating + ₹${tip} Tip` : 'Submit Rating'}
         </button>
       </div>

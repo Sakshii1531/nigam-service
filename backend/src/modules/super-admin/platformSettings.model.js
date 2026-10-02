@@ -38,6 +38,15 @@ const platformSettingsSchema = new mongoose.Schema(
     // Paid to a service provider who travelled to a job the customer then cancelled
     // or was unavailable for. 0 disables the payment entirely.
     visitFeeAmount: { type: Number, default: 150 },
+
+    // Partner warranty stage deadlines in hours (docs/partner-warranty
+    // Phase 9) — platform defaults; a brand's own warrantySla overrides them.
+    warrantySla: {
+      approvalHours: { type: Number, default: 24 },
+      assignmentHours: { type: Number, default: 4 },
+      visitHours: { type: Number, default: 48 },
+      resolutionHours: { type: Number, default: 168 },
+    },
   },
   { timestamps: true },
 );

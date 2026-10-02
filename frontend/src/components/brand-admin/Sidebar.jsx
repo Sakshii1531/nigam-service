@@ -21,7 +21,10 @@ import {
   LogOut,
   ChevronRight,
   Plus,
-  Headphones
+  Headphones,
+  ClipboardCheck,
+  Wrench,
+  SlidersHorizontal
 } from 'lucide-react';
 
 const Sidebar = () => {
@@ -165,8 +168,18 @@ const Sidebar = () => {
               <NavLink to="/brand-admin/catalog" onClick={saveScroll} className={navLink}>
                 <Package size={14} /><span>Sub-Brands &amp; Catalog</span>
               </NavLink>
+              {/* Partner Warranty (docs/partner-warranty Phase 13) */}
+              <NavLink to="/brand-admin/warranty-claims" onClick={saveScroll} className={navLink}>
+                <ClipboardCheck size={14} /><span>Warranty Claims</span>
+              </NavLink>
               <NavLink to="/brand-admin/warranty" onClick={saveScroll} className={navLink}>
                 <ShieldCheck size={14} /><span>Warranty Verification</span>
+              </NavLink>
+              <NavLink to="/brand-admin/parts-claims" onClick={saveScroll} className={navLink}>
+                <Wrench size={14} /><span>Parts Claims</span>
+              </NavLink>
+              <NavLink to="/brand-admin/warranty-settings" onClick={saveScroll} className={navLink}>
+                <SlidersHorizontal size={14} /><span>Warranty Settings</span>
               </NavLink>
               <NavLink to="/brand-admin/replacement-approvals" onClick={saveScroll} className={navLink}>
                 <RefreshCcw size={14} /><span>Replacement Approvals</span>

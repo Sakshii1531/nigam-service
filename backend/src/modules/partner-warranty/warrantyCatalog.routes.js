@@ -18,6 +18,7 @@ import {
   updateIssueSchema,
   adminBrandSettingsSchema,
   brandCoverageSchema,
+  partnerEligibilitySchema,
 } from './warrantyCatalog.validation.js';
 
 /** Route handler → promise; errors go to the central handler. */
@@ -71,6 +72,15 @@ warrantyCatalogAdminRouter.put(
   byId,
   validate(adminBrandSettingsSchema),
   handle((req) => catalog.updateBrandSettings(req.params.id, req.body, actor(req))),
+);
+
+// Which brands a service partner may do warranty jobs for, and where.
+warrantyCatalogAdminRouter.get('/service-providers/:id', byId, handle((req) => catalog.getPartnerEligibility(req.params.id)));
+warrantyCatalogAdminRouter.put(
+  '/service-providers/:id',
+  byId,
+  validate(partnerEligibilitySchema),
+  handle((req) => catalog.updatePartnerEligibility(req.params.id, req.body, actor(req))),
 );
 
 // ── Brand admin: /api/v1/brand/warranty-coverage ─────────────────────────────
