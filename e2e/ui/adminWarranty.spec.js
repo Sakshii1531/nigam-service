@@ -62,6 +62,7 @@ test('Super Admin runs a stuck warranty claim to settlement', async ({ browser, 
   const customer = (await session(request, 'customer', phone)).accessToken;
   const claim = await call(request, 'post', '/partner-warranty/claims', customer, {
     brandId: brand.id,
+    groupId: group.id,
     categoryId: ac.id,
     issueId: issue.id,
     modelNumber: 'AS-Q18',
@@ -79,6 +80,10 @@ test('Super Admin runs a stuck warranty claim to settlement', async ({ browser, 
   await page.goto('/super-admin/partner-warranty/claims?view=allocation');
   await expect(page.getByRole('link', { name: claim.humanId })).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText('No partner').first()).toBeVisible();
+  // Client #3 "Category" = the warranty group: filtering by it keeps this claim.
+  await page.getByLabel('Category').selectOption(group.id);
+  await expect(page.getByRole('link', { name: claim.humanId })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole('row').filter({ hasText: claim.humanId })).toContainText(group.name);
   await page.screenshot({ path: `${SHOTS}phase-14-claims-attention.png` });
 
   // A partner who is offline in that city: the shortlist still offers them.

@@ -41,7 +41,11 @@ function withWarranty(mapped, w) {
     jobNumber: w.jobId,
     price: 0,
     isD2C: false,
-    address: mapped.address === "Customer Address" && where ? where : mapped.address,
+    // Accepted jobs carry the full address and map position (client #11);
+    // an offer only shows the area.
+    address: w.address?.line || (mapped.address === "Customer Address" && where ? where : mapped.address),
+    latitude: w.address?.latitude ?? mapped.latitude,
+    longitude: w.address?.longitude ?? mapped.longitude,
     scheduledDateLabel: w.visit?.date || mapped.scheduledDateLabel,
     scheduledTime: w.visit?.slot || mapped.scheduledTime,
   };

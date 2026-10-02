@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CalendarClock, FileText, Image as ImageIcon, Loader2, ShieldCheck } from 'lucide-react';
+import { CalendarClock, FileText, Image as ImageIcon, Loader2, MapPin, Navigation, ShieldCheck } from 'lucide-react';
 import { apiRequest } from '../../../lib/apiClient';
 
 // Partner app — a partner-warranty (B2B2C) job (docs/partner-warranty Phase 15,
@@ -59,7 +59,29 @@ export function PartnerWarrantyDetails({ warranty: w, payout }) {
         <Row label="Model" value={w.modelNumber} />
         <Row label="Serial no." value={w.serialNumber} mono />
         <Row label="Purchased" value={fmtDate(w.purchaseDate)} />
-        <Row label="Area" value={[w.area, w.pincode].filter(Boolean).join(' · ')} />
+        {w.address?.line ? (
+          <div className="bg-slate-50 rounded-2xl px-3 py-2.5 flex items-start gap-2.5">
+            <MapPin className="w-4 h-4 text-[#1E6BDB] shrink-0 mt-0.5" aria-hidden="true" />
+            <div className="min-w-0 flex-1">
+              <span className="block text-[10px] uppercase tracking-wider text-slate-500">Visit address</span>
+              <span className="block text-xs font-semibold text-[#052355]">{w.address.line}</span>
+              <a
+                href={
+                  w.address.latitude != null && w.address.longitude != null
+                    ? `https://www.google.com/maps/dir/?api=1&destination=${w.address.latitude},${w.address.longitude}`
+                    : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(w.address.line)}`
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 mt-1 text-[11px] font-bold text-[#1E6BDB] min-h-8"
+              >
+                <Navigation className="w-3 h-3" aria-hidden="true" /> Open in Maps
+              </a>
+            </div>
+          </div>
+        ) : (
+          <Row label="Area" value={[w.area, w.pincode].filter(Boolean).join(' · ')} />
+        )}
         {w.remarks && (
           <div className="bg-slate-50 rounded-2xl px-3 py-2 text-xs text-slate-700">
             <span className="block text-[10px] uppercase tracking-wider text-slate-500 mb-0.5">Customer’s note</span>

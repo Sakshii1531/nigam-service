@@ -120,6 +120,9 @@ test('a service partner takes a warranty job from offer to NCC settlement', asyn
   await expect(page.getByRole('heading', { name: 'Visit' })).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText('Customer documents (1)')).toBeVisible({ timeout: 15_000 });
   await expect(page.getByRole('link', { name: /Bill \/ Invoice/ })).toHaveAttribute('href', /\/uploads\//);
+  // Client #11: the accepted partner gets the street address and directions.
+  await expect(page.getByText(`12 Lake View, ${city} 462001`).first()).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Open in Maps' }).first()).toHaveAttribute('href', /google\.com\/maps\/dir/);
   await expect(page.getByText(/Customer’s note\s*Blows warm air after 10 minutes/)).toBeVisible();
   await expect(page.getByText(/Customer pays ₹0 for this warranty repair/)).toBeVisible();
   await expect(page.getByText('LG-IN-8842')).toHaveCount(0);
@@ -168,4 +171,8 @@ test('a service partner takes a warranty job from offer to NCC settlement', asyn
   const card = page.getByRole('button', { name: new RegExp(`Warranty: ${ac.name} — Not cooling ${tag}`) });
   await expect(card).toBeVisible({ timeout: 15_000 });
   await expect(card).toContainText('Warranty (B2B2C)');
+
+  // Client #16: the offer reached the partner's notifications, not only the pop-up.
+  await page.goto('/service-provider/notifications');
+  await expect(page.getByText('New Warranty Job').first()).toBeVisible({ timeout: 15_000 });
 });
