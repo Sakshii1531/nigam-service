@@ -13,6 +13,12 @@ const featuredReviewSchema = new mongoose.Schema(
       default: 'pink',
     },
     isVisible: { type: Boolean, default: true },
+    approvalStatus: {
+      type: String,
+      enum: ['Approved', 'Rejected'],
+      default: 'Approved',
+      index: true,
+    },
     sortOrder: { type: Number, default: 0 },
   },
   { timestamps: true },

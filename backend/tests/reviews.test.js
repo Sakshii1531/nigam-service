@@ -9,6 +9,7 @@ import { ServiceProvider } from '../src/modules/service-provider/serviceProvider
 import { Brand } from '../src/modules/super-admin/brand.model.js';
 import { ServiceRequest } from '../src/modules/service-requests/serviceRequest.model.js';
 import { Review } from '../src/modules/reviews/review.model.js';
+import { FeaturedReview } from '../src/modules/reviews/featuredReview.model.js';
 import { signAccessToken } from '../src/modules/auth/tokens.js';
 import { hashPassword } from '../src/modules/auth/password.js';
 import { ROLES } from '../src/config/constants.js';
@@ -39,6 +40,10 @@ async function createBrandAdmin(brand) {
   const user = await User.create({ role: ROLES.BRAND_ADMIN, email: `ba-${nextPhone()}@test.local`, name: 'BA', brand: brand._id, passwordHash: await hashPassword('x') });
   return { user, token: tokenFor(user) };
 }
+async function createSuperAdmin() {
+  const user = await User.create({ role: ROLES.SUPER_ADMIN, email: `admin-${nextPhone()}@test.local`, name: 'Admin', passwordHash: await hashPassword('x') });
+  return { user, token: tokenFor(user) };
+}
 
 beforeAll(async () => {
   await registerAllModels();
@@ -52,7 +57,35 @@ afterAll(async () => {
   await mongoose.disconnect();
 });
 beforeEach(async () => {
-  await Promise.all([User.deleteMany({}), ServiceProvider.deleteMany({}), Brand.deleteMany({}), ServiceRequest.deleteMany({}), Review.deleteMany({})]);
+  await Promise.all([User.deleteMany({}), ServiceProvider.deleteMany({}), Brand.deleteMany({}), ServiceRequest.deleteMany({}), Review.deleteMany({}), FeaturedReview.deleteMany({})]);
+});
+
+describe('featured review approval', () => {
+  it('shows only approved cards publicly and preserves fallback cards until three are approved', async () => {
+    const admin = await createSuperAdmin();
+    const auth = { Authorization: `Bearer ${admin.token}` };
+    const approved = await request(app).post('/api/v1/reviews/featured-admin').set(auth).send({
+      title: 'Approved card', comment: 'Visible to customers', rating: 5,
+      authorName: 'Customer', theme: 'pink', isVisible: true, approvalStatus: 'Approved',
+    }).expect(201);
+    await request(app).post('/api/v1/reviews/featured-admin').set(auth).send({
+      title: 'Hidden card', comment: 'Not visible', rating: 4,
+      authorName: 'Customer', theme: 'teal', isVisible: false, approvalStatus: 'Rejected',
+    }).expect(201);
+
+    const publicCards = (await request(app).get('/api/v1/reviews/featured').expect(200)).body.data;
+    expect(publicCards).toHaveLength(6);
+    expect(publicCards[0].title).toBe('Approved card');
+    expect(publicCards.map((card) => card.title)).not.toContain('Hidden card');
+
+    await request(app)
+      .patch(`/api/v1/reviews/featured-admin/${approved.body.data.id}`)
+      .set(auth)
+      .send({ isVisible: false, approvalStatus: 'Rejected' })
+      .expect(200);
+    const afterRejection = (await request(app).get('/api/v1/reviews/featured').expect(200)).body.data;
+    expect(afterRejection.map((card) => card.title)).not.toContain('Approved card');
+  });
 });
 
 describe('POST /reviews', () => {

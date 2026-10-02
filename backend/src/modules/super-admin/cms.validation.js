@@ -28,24 +28,51 @@ export const createStorySchema = z.object({
     .object({ productType: z.string().regex(/^[a-f0-9]{24}$/i).nullable().optional(), service: z.string().regex(/^[a-f0-9]{24}$/i) })
     .nullable()
     .optional(),
+  status: z.enum(['Active', 'Scheduled']).optional(),
 });
-export const updateStorySchema = createStorySchema.partial().extend({ status: z.enum(['Active', 'Scheduled']).optional() });
+export const updateStorySchema = createStorySchema.partial();
 
 export const createVideoSchema = z.object({
   title: z.string().min(1),
   category: z.string().optional(),
-  url: z.string().optional(),
+  // A published lesson without playable media produces a dead card in the
+  // partner app. New rows therefore require a URL; legacy rows can still be
+  // edited/deactivated through the partial update schema below.
+  url: mediaUrl().pipe(z.string().min(1)),
   duration: z.string().optional(),
   sizeBytes: z.number().optional(),
 });
 export const updateVideoSchema = createVideoSchema.partial().extend({ isActive: z.boolean().optional() });
 
-export const createAdvertisementSchema = z.object({
+const advertisementFieldsSchema = z.object({
   name: z.string().min(1),
   type: z.enum(['App Header Banner', 'Category Popup', 'Cart Bottom Banner']),
-  budget: z.number().optional(),
+  title: z.string().min(1).optional(),
+  description: z.string().max(500).optional(),
+  imageUrl: mediaUrl().optional(),
+  actionUrl: z.string().max(2048).optional(),
+  buttonText: z.string().max(80).optional(),
+  backgroundColor: z.string().regex(/^#[0-9a-f]{6}$/i).optional(),
+  textColor: z.string().regex(/^#[0-9a-f]{6}$/i).optional(),
+  budget: z.number().min(0).optional(),
+  status: z.enum(['Running', 'Paused']).optional(),
+  startsAt: z.coerce.date().nullable().optional(),
+  endsAt: z.coerce.date().nullable().optional(),
+  sortOrder: z.number().int().min(0).optional(),
 });
-export const updateAdvertisementSchema = createAdvertisementSchema.partial().extend({ status: z.enum(['Running', 'Paused']).optional() });
+
+const validateAdvertisementDates = (data, ctx) => {
+  if (data.startsAt && data.endsAt && data.endsAt <= data.startsAt) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['endsAt'], message: 'End date must be after the start date' });
+  }
+};
+
+export const createAdvertisementSchema = advertisementFieldsSchema.superRefine(validateAdvertisementDates);
+export const updateAdvertisementSchema = advertisementFieldsSchema.partial().superRefine(validateAdvertisementDates);
+
+export const listAdvertisementsQuerySchema = z.object({
+  type: z.enum(['App Header Banner', 'Category Popup', 'Cart Bottom Banner']).optional(),
+});
 
 export const faqItemSchema = z.object({
   question: z.string().min(1),
@@ -81,7 +108,17 @@ export const setAppSettingSchema = z.object({
   key: z.string().min(1),
   value: z.unknown(),
 });
-export const appParamSchema = z.object({ app: z.string().min(1) });
+const normalizeAppName = (value) => {
+  if (typeof value !== 'string') return value;
+  const normalized = value.trim().toLowerCase().replace(/[\s-]+/g, '_');
+  return normalized === 'serviceprovider' ? 'service_provider' : normalized;
+};
+
+// Keep the old serviceProvider/service-provider spellings readable while all
+// new rows use the enum value stored by AppSetting.
+export const appParamSchema = z.object({
+  app: z.preprocess(normalizeAppName, z.enum(['customer', 'service_provider'])),
+});
 
 export const idParamSchema = z.object({ id: z.string().min(1) });
 

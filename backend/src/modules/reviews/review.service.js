@@ -164,7 +164,15 @@ export async function getFeaturedPlatformReviews() {
 
   try {
     // Prefer admin-curated FeaturedReview entries if any visible ones exist
-    const adminReviews = await FeaturedReview.find({ isVisible: true })
+    const adminReviews = await FeaturedReview.find({
+      isVisible: true,
+      $or: [
+        { approvalStatus: 'Approved' },
+        // Existing records predate explicit approval; visible legacy cards were
+        // already approved by the super-admin and remain live after deployment.
+        { approvalStatus: { $exists: false } },
+      ],
+    })
       .sort({ sortOrder: 1, createdAt: -1 })
       .lean();
 
@@ -204,13 +212,29 @@ export async function listAdminFeaturedReviews() {
   return FeaturedReview.find().sort({ sortOrder: 1, createdAt: -1 }).lean();
 }
 
-export async function createAdminFeaturedReview({ title, comment, rating, authorName, theme, isVisible, sortOrder }) {
-  return FeaturedReview.create({ title, comment, rating, authorName, theme, isVisible, sortOrder });
+export async function createAdminFeaturedReview({ title, comment, rating, authorName, theme, isVisible, approvalStatus, sortOrder }) {
+  const approved = approvalStatus ? approvalStatus === 'Approved' : isVisible !== false;
+  return FeaturedReview.create({
+    title,
+    comment,
+    rating,
+    authorName,
+    theme,
+    isVisible: approved && isVisible !== false,
+    approvalStatus: approved ? 'Approved' : 'Rejected',
+    sortOrder,
+  });
 }
 
 export async function updateAdminFeaturedReview(id, updates) {
   const doc = await FeaturedReview.findById(id);
   if (!doc) throw new ApiError(404, 'Featured review not found');
+  if (updates.isVisible !== undefined && updates.approvalStatus === undefined) {
+    updates.approvalStatus = updates.isVisible ? 'Approved' : 'Rejected';
+  }
+  if (updates.approvalStatus !== undefined && updates.isVisible === undefined) {
+    updates.isVisible = updates.approvalStatus === 'Approved';
+  }
   Object.assign(doc, updates);
   return doc.save();
 }
@@ -421,5 +445,4 @@ export async function createProductReview(userId, { productId, rating, comment, 
 
   return review.populate('user', 'name profilePicture');
 }
-
 

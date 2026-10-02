@@ -8,6 +8,7 @@ import { getAsmByUserId } from './asm.service.js';
 import * as cityChangeService from '../service-provider/cityChange.service.js';
 import {
   changeServiceProviderCitySchema,
+  createServiceProviderSchema,
   listServiceProvidersQuerySchema,
   updateServiceProviderStatusSchema,
   idParamSchema,
@@ -47,6 +48,19 @@ adminServiceProviderRouter.get('/', requireAsmPermission('techs:view'), validate
     next(err);
   }
 });
+
+adminServiceProviderRouter.post(
+  '/',
+  requireRole(ROLES.SUPER_ADMIN),
+  validate(createServiceProviderSchema),
+  async (req, res, next) => {
+    try {
+      ok(res, await adminServiceProviderService.createServiceProvider(req.body, req.user.id), {}, 201);
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 adminServiceProviderRouter.get('/:id', requireAsmPermission('techs:view'), validate(idParamSchema, 'params'), async (req, res, next) => {
   try {

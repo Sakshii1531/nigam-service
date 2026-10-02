@@ -3,12 +3,10 @@ import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import {
   Plus, Trash2, Check, RefreshCw,
-  Image, Video, Bell, Award
+  Image, Video, Bell, Award, Upload
 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
-import { apiRequest } from '../../lib/apiClient';
-
-const FALLBACK_BANNER_IMAGE = 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=150';
+import { apiRequest, resolveMediaUrl } from '../../lib/apiClient';
 
 // The five sections below are authored here and consumed by the service provider app.
 // Each row keeps the shape the table markup already expects, so mapping happens
@@ -18,13 +16,15 @@ const toBanner = (d) => ({
   title: d.title || 'Untitled banner',
   desc: d.description || '',
   status: d.isActive ? 'Active' : 'Inactive',
-  image: d.imageUrl,
+  image: resolveMediaUrl(d.imageUrl),
+  imageUrl: d.imageUrl,
 });
 const toVideo = (d) => ({
   id: d.id,
   title: d.title,
   category: d.category || 'General',
   duration: d.duration || '—',
+  url: d.url || '',
   status: d.isActive ? 'Active' : 'Inactive',
 });
 const toAnnouncement = (d) => ({
@@ -35,7 +35,7 @@ const toAnnouncement = (d) => ({
   // the audience label the console shows.
   scope: d.region || 'All Regions',
 });
-const toSkill = (d) => ({ id: d.id, name: d.name, code: d.code, group: d.group || 'General' });
+const toSkill = (d) => ({ id: d.id, name: d.name, code: d.code, group: d.group || 'General', status: d.isActive ? 'Active' : 'Inactive' });
 
 const ServiceProviderAppCustomization = () => {
   const [searchParams] = useSearchParams();
@@ -60,17 +60,18 @@ const ServiceProviderAppCustomization = () => {
   const [skills, setSkills] = useState([]);
   const [settings, setSettings] = useState({
     offlineMode: true,
-    autoAssign: false,
+    autoAssign: true,
     gpsInterval: 60,
     payoutCycle: 'weekly'
   });
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
 
-  const [newBanner, setNewBanner] = useState({ title: '', desc: '' });
-  const [newVideo, setNewVideo] = useState({ title: '', category: '', duration: '' });
-  const [newAnnounce, setNewAnnounce] = useState({ msg: '', scope: '' });
+  const [newBanner, setNewBanner] = useState({ title: '', desc: '', imageUrl: '' });
+  const [newVideo, setNewVideo] = useState({ title: '', category: '', duration: '', url: '' });
+  const [newAnnounce, setNewAnnounce] = useState({ msg: '', scope: '', severity: 'Info' });
   const [newSkill, setNewSkill] = useState({ name: '', code: '', group: '' });
+  const [uploadingBanner, setUploadingBanner] = useState(false);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -82,8 +83,8 @@ const ServiceProviderAppCustomization = () => {
         apiRequest('/cms/banners/admin?app=service_provider', { auth: true }),
         apiRequest('/cms/videos/admin', { auth: true }),
         apiRequest('/cms/announcements', { auth: true }),
-        apiRequest('/cms/skills', { auth: true }),
-        apiRequest('/cms/app-settings/service-provider'),
+        apiRequest('/cms/skills/admin', { auth: true }),
+        apiRequest('/cms/app-settings/service_provider'),
       ]);
       setBanners((bannerRes || []).map(toBanner));
       setVideos((videoRes || []).map(toVideo));
@@ -102,23 +103,50 @@ const ServiceProviderAppCustomization = () => {
   // 1. BANNERS
   const handleAddBanner = async (e) => {
     e.preventDefault();
-    if (!newBanner.title) return;
+    if (!newBanner.title || !newBanner.imageUrl) return;
     try {
       const res = await apiRequest('/cms/banners', {
         method: 'POST',
         auth: true,
         body: {
-          imageUrl: FALLBACK_BANNER_IMAGE,
+          imageUrl: newBanner.imageUrl,
           title: newBanner.title,
           description: newBanner.desc || 'Service Provider Alert Announcement Banner',
           app: 'service_provider',
         },
       });
       setBanners((prev) => [...prev, toBanner(res)]);
-      setNewBanner({ title: '', desc: '' });
+      setNewBanner({ title: '', desc: '', imageUrl: '' });
+      setShowAddBannerModal(false);
       showToast('New service provider banner published!');
     } catch (err) {
       showToast(err.message || 'Could not publish banner.');
+    }
+  };
+
+  const handleBannerUpload = async (file) => {
+    if (!file) return;
+    setUploadingBanner(true);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const uploaded = await apiRequest('/uploads', { method: 'POST', auth: true, body: form });
+      setNewBanner((prev) => ({ ...prev, imageUrl: uploaded.url }));
+    } catch (err) {
+      showToast(err.message || 'Could not upload banner image.');
+    } finally {
+      setUploadingBanner(false);
+    }
+  };
+
+  const handleToggleBanner = async (banner) => {
+    try {
+      const res = await apiRequest(`/cms/banners/${banner.id}`, {
+        method: 'PUT', auth: true, body: { isActive: banner.status !== 'Active' },
+      });
+      setBanners((prev) => prev.map((item) => item.id === banner.id ? toBanner(res) : item));
+    } catch (err) {
+      showToast(err.message || 'Could not update banner status.');
     }
   };
 
@@ -135,7 +163,7 @@ const ServiceProviderAppCustomization = () => {
   // 2. VIDEOS
   const handleAddVideo = async (e) => {
     e.preventDefault();
-    if (!newVideo.title) return;
+    if (!newVideo.title || !newVideo.url) return;
     try {
       const res = await apiRequest('/cms/videos', {
         method: 'POST',
@@ -144,13 +172,26 @@ const ServiceProviderAppCustomization = () => {
           title: newVideo.title,
           category: newVideo.category || 'General',
           duration: newVideo.duration || '10 mins',
+          url: newVideo.url,
         },
       });
       setVideos((prev) => [...prev, toVideo(res)]);
-      setNewVideo({ title: '', category: '', duration: '' });
+      setNewVideo({ title: '', category: '', duration: '', url: '' });
+      setShowAddVideoModal(false);
       showToast('Training video added successfully!');
     } catch (err) {
       showToast(err.message || 'Could not add video.');
+    }
+  };
+
+  const handleToggleVideo = async (video) => {
+    try {
+      const res = await apiRequest(`/cms/videos/${video.id}`, {
+        method: 'PUT', auth: true, body: { isActive: video.status !== 'Active' },
+      });
+      setVideos((prev) => prev.map((item) => item.id === video.id ? toVideo(res) : item));
+    } catch (err) {
+      showToast(err.message || 'Could not update video status.');
     }
   };
 
@@ -175,10 +216,11 @@ const ServiceProviderAppCustomization = () => {
         auth: true,
         // A named region narrows the broadcast to those cities; blank means
         // everyone.
-        body: { message: newAnnounce.msg, scope: region ? 'city' : 'all', region },
+        body: { message: newAnnounce.msg, severity: newAnnounce.severity, scope: region ? 'city' : 'all', region },
       });
       setAnnouncements((prev) => [toAnnouncement(res), ...prev]);
-      setNewAnnounce({ msg: '', scope: '' });
+      setNewAnnounce({ msg: '', scope: '', severity: 'Info' });
+      setShowAddAnnounceModal(false);
       showToast('System announcement broadcasted!');
     } catch (err) {
       showToast(err.message || 'Could not broadcast announcement.');
@@ -211,6 +253,7 @@ const ServiceProviderAppCustomization = () => {
       });
       setSkills((prev) => [...prev, toSkill(res)]);
       setNewSkill({ name: '', code: '', group: '' });
+      setShowAddSkillModal(false);
       showToast('Dynamic skill tag added!');
     } catch (err) {
       showToast(err.message || 'Could not add skill.');
@@ -227,12 +270,23 @@ const ServiceProviderAppCustomization = () => {
     }
   };
 
+  const handleToggleSkill = async (skill) => {
+    try {
+      const res = await apiRequest(`/cms/skills/${skill.id}`, {
+        method: 'PUT', auth: true, body: { isActive: skill.status !== 'Active' },
+      });
+      setSkills((prev) => prev.map((item) => item.id === skill.id ? toSkill(res) : item));
+    } catch (err) {
+      showToast(err.message || 'Could not update skill status.');
+    }
+  };
+
   // 5. SETTINGS — stored as flat key/value rows under the 'service provider' app.
   const handleSaveSettings = async (e) => {
     e.preventDefault();
     try {
       for (const [key, value] of Object.entries(settings)) {
-        await apiRequest('/cms/app-settings/service-provider', {
+        await apiRequest('/cms/app-settings/service_provider', {
           method: 'PUT',
           auth: true,
           body: { key, value },
@@ -324,7 +378,11 @@ const ServiceProviderAppCustomization = () => {
                             <p className="text-[11px] text-slate-500 font-semibold leading-relaxed mt-1">{banner.desc}</p>
                           </div>
                           <div>
-                            <span className="bg-green-50 text-green-600 px-2 py-0.5 rounded-full text-[9px] border border-green-200 font-bold">{banner.status}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleBanner(banner)}
+                              className={`px-2 py-0.5 rounded-full text-[9px] border font-bold ${banner.status === 'Active' ? 'bg-green-50 text-green-600 border-green-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}
+                            >{banner.status}</button>
                           </div>
                         </div>
 
@@ -354,10 +412,7 @@ const ServiceProviderAppCustomization = () => {
                         </button>
                       </div>
                       
-                      <form onSubmit={(e) => {
-                        handleAddBanner(e);
-                        setShowAddBannerModal(false);
-                      }} className="flex flex-col gap-4 text-left mt-4">
+                      <form onSubmit={handleAddBanner} className="flex flex-col gap-4 text-left mt-4">
                         <div className="flex flex-col gap-1.5">
                           <label className="text-[10px] text-slate-400 font-bold uppercase">Banner Title</label>
                           <input 
@@ -379,6 +434,25 @@ const ServiceProviderAppCustomization = () => {
                             onChange={(e) => setNewBanner({ ...newBanner, desc: e.target.value })}
                             className="bg-white border border-slate-200 rounded-lg p-2.5 text-xs font-semibold text-slate-800 focus:outline-none focus:border-brand-blue"
                           />
+                        </div>
+
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[10px] text-slate-400 font-bold uppercase">Banner Image</label>
+                          <div className="flex gap-2">
+                            <input
+                              type="url"
+                              placeholder="https://cdn.example.com/banner.webp"
+                              value={newBanner.imageUrl}
+                              onChange={(e) => setNewBanner({ ...newBanner, imageUrl: e.target.value })}
+                              className="flex-1 bg-white border border-slate-200 rounded-lg p-2.5 text-xs font-semibold text-slate-800 focus:outline-none focus:border-brand-blue"
+                              required
+                            />
+                            <label className="px-3 rounded-lg border border-slate-200 bg-slate-50 text-[#0D47A1] flex items-center gap-1.5 text-xs font-bold cursor-pointer">
+                              <Upload size={14} /> {uploadingBanner ? 'Uploading…' : 'Upload'}
+                              <input type="file" accept="image/*" className="hidden" disabled={uploadingBanner} onChange={(e) => handleBannerUpload(e.target.files?.[0])} />
+                            </label>
+                          </div>
+                          {newBanner.imageUrl && <img src={resolveMediaUrl(newBanner.imageUrl)} alt="Banner preview" className="h-28 w-full object-cover rounded-xl border border-slate-200" />}
                         </div>
 
                         <div className="flex justify-end gap-3 mt-2 pt-4 border-t border-slate-100">
@@ -438,7 +512,9 @@ const ServiceProviderAppCustomization = () => {
                           <td className="p-3 font-bold text-slate-800">{v.title}</td>
                           <td className="p-3 text-[#0D47A1]">{v.category}</td>
                           <td className="p-3 text-slate-500">{v.duration}</td>
-                          <td className="p-3"><span className="bg-green-50 text-green-600 px-2 py-0.5 rounded-full text-[10px] border border-green-200">Active</span></td>
+                          <td className="p-3">
+                            <button type="button" onClick={() => handleToggleVideo(v)} className={`px-2 py-0.5 rounded-full text-[10px] border ${v.status === 'Active' ? 'bg-green-50 text-green-600 border-green-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>{v.status}</button>
+                          </td>
                           <td className="p-3 text-center">
                             <button
                               onClick={() => handleDeleteVideo(v.id)}
@@ -474,10 +550,7 @@ const ServiceProviderAppCustomization = () => {
                         </button>
                       </div>
                       
-                      <form onSubmit={(e) => {
-                        handleAddVideo(e);
-                        setShowAddVideoModal(false);
-                      }} className="flex flex-col gap-4 text-left mt-4">
+                      <form onSubmit={handleAddVideo} className="flex flex-col gap-4 text-left mt-4">
                         <div className="flex flex-col gap-1.5">
                           <label className="text-[10px] text-slate-400 font-bold uppercase">Video Title</label>
                           <input 
@@ -512,6 +585,19 @@ const ServiceProviderAppCustomization = () => {
                               className="bg-white border border-slate-200 rounded-lg p-2.5 text-xs font-semibold text-slate-800 focus:outline-none focus:border-brand-blue"
                             />
                           </div>
+                        </div>
+
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[10px] text-slate-400 font-bold uppercase">Playable Video URL</label>
+                          <input
+                            type="url"
+                            placeholder="https://cdn.example.com/training.mp4"
+                            value={newVideo.url}
+                            onChange={(e) => setNewVideo({ ...newVideo, url: e.target.value })}
+                            className="bg-white border border-slate-200 rounded-lg p-2.5 text-xs font-semibold text-slate-800 focus:outline-none focus:border-brand-blue"
+                            required
+                          />
+                          <span className="text-[9px] text-slate-400">Use a direct browser-playable MP4/WebM URL.</span>
                         </div>
 
                         <div className="flex justify-end gap-3 mt-2 pt-4 border-t border-slate-100">
@@ -599,10 +685,7 @@ const ServiceProviderAppCustomization = () => {
                         </button>
                       </div>
                       
-                      <form onSubmit={(e) => {
-                        handleAddAnnounce(e);
-                        setShowAddAnnounceModal(false);
-                      }} className="flex flex-col gap-4 text-left mt-4">
+                      <form onSubmit={handleAddAnnounce} className="flex flex-col gap-4 text-left mt-4">
                         <div className="flex flex-col gap-1.5">
                           <label className="text-[10px] text-slate-400 font-bold uppercase">Broadcast Message</label>
                           <textarea 
@@ -624,6 +707,15 @@ const ServiceProviderAppCustomization = () => {
                             onChange={(e) => setNewAnnounce({ ...newAnnounce, scope: e.target.value })}
                             className="bg-white border border-slate-200 rounded-lg p-2.5 text-xs font-semibold text-slate-800 focus:outline-none focus:border-brand-blue"
                           />
+                        </div>
+
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[10px] text-slate-400 font-bold uppercase">Severity</label>
+                          <select value={newAnnounce.severity} onChange={(e) => setNewAnnounce({ ...newAnnounce, severity: e.target.value })} className="bg-white border border-slate-200 rounded-lg p-2.5 text-xs font-semibold text-slate-800 focus:outline-none focus:border-brand-blue">
+                            <option>Info</option>
+                            <option>Warning</option>
+                            <option>Critical</option>
+                          </select>
                         </div>
 
                         <div className="flex justify-end gap-3 mt-2 pt-4 border-t border-slate-100">
@@ -673,6 +765,7 @@ const ServiceProviderAppCustomization = () => {
                         <th className="p-3">Skill Name</th>
                         <th className="p-3">Unique Code</th>
                         <th className="p-3">Skill Group</th>
+                        <th className="p-3">Status</th>
                         <th className="p-3 text-center">Action</th>
                       </tr>
                     </thead>
@@ -682,6 +775,9 @@ const ServiceProviderAppCustomization = () => {
                           <td className="p-3 font-bold text-slate-800">{s.name}</td>
                           <td className="p-3 font-mono text-[#0D47A1]">{s.code}</td>
                           <td className="p-3 text-slate-500">{s.group}</td>
+                          <td className="p-3">
+                            <button type="button" onClick={() => handleToggleSkill(s)} className={`px-2 py-0.5 rounded-full text-[10px] border ${s.status === 'Active' ? 'bg-green-50 text-green-600 border-green-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>{s.status}</button>
+                          </td>
                           <td className="p-3 text-center">
                             <button
                               onClick={() => handleDeleteSkill(s.id)}
@@ -717,10 +813,7 @@ const ServiceProviderAppCustomization = () => {
                         </button>
                       </div>
                       
-                      <form onSubmit={(e) => {
-                        handleAddSkill(e);
-                        setShowAddSkillModal(false);
-                      }} className="flex flex-col gap-4 text-left mt-4">
+                      <form onSubmit={handleAddSkill} className="flex flex-col gap-4 text-left mt-4">
                         <div className="flex flex-col gap-1.5">
                           <label className="text-[10px] text-slate-400 font-bold uppercase">Skill Name</label>
                           <input 
@@ -796,8 +889,8 @@ const ServiceProviderAppCustomization = () => {
                 <div className="grid grid-cols-2 gap-5 mt-2">
                   <div className="border border-slate-150 rounded-2xl p-4.5 bg-[#FAFBFF] shadow-3xs flex justify-between items-center">
                     <div>
-                      <span className="text-xs font-bold text-slate-800 block">Allow Offline Booking Sync</span>
-                      <span className="text-[10px] text-slate-400 font-semibold block mt-0.5">Let service providers close tickets in areas without cell network.</span>
+                      <span className="text-xs font-bold text-slate-800 block">Allow Offline Dashboard Cache</span>
+                      <span className="text-[10px] text-slate-400 font-semibold block mt-0.5">Keep the last synced job list readable when the network drops.</span>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input 

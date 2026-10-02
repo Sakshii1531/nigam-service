@@ -14,6 +14,7 @@ import {
   updateVideoSchema,
   createAdvertisementSchema,
   updateAdvertisementSchema,
+  listAdvertisementsQuerySchema,
   upsertCmsPageSchema,
   slugParamSchema,
   setAppSettingSchema,
@@ -148,9 +149,9 @@ cmsRouter.delete('/videos/:id', ...requireAdmin, validate(idParamSchema, 'params
 });
 
 // Advertisements
-cmsRouter.get('/advertisements', async (req, res, next) => {
+cmsRouter.get('/advertisements', validate(listAdvertisementsQuerySchema, 'query'), async (req, res, next) => {
   try {
-    ok(res, await cmsService.listAdvertisements());
+    ok(res, await cmsService.listAdvertisements(req.query));
   } catch (err) {
     next(err);
   }
@@ -192,6 +193,16 @@ cmsRouter.delete('/advertisements/:id', ...requireAdmin, validate(idParamSchema,
   try {
     await cmsService.deleteAdvertisement(req.params.id);
     ok(res, { deleted: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Public click counter. Only a currently live campaign can record a click, so
+// paused/expired ids cannot be used to inflate historical campaign metrics.
+cmsRouter.post('/advertisements/:id/click', validate(idParamSchema, 'params'), async (req, res, next) => {
+  try {
+    ok(res, await cmsService.recordAdvertisementClick(req.params.id));
   } catch (err) {
     next(err);
   }
@@ -279,8 +290,16 @@ cmsRouter.delete('/announcements/:id', ...requireAdmin, validate(idParamSchema, 
   }
 });
 
-// Public — the service provider profile reads the catalogue to offer a controlled
-// list of specialisations.
+// Admin reader includes disabled catalogue entries so they can be re-enabled.
+cmsRouter.get('/skills/admin', ...requireAdmin, async (req, res, next) => {
+  try {
+    ok(res, await cmsService.listAllSkills());
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Public — the service provider app reads only active catalogue entries.
 cmsRouter.get('/skills', async (req, res, next) => {
   try {
     ok(res, await cmsService.listSkills());

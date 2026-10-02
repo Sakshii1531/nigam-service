@@ -52,6 +52,13 @@ const SOCKET_URL = import.meta.env.VITE_API_BASE_URL
   : "http://localhost:4000";
 
 const ServiceProviderContext = createContext(null);
+const DEFAULT_PARTNER_APP_SETTINGS = {
+  offlineMode: true,
+  autoAssign: true,
+  gpsInterval: 60,
+  payoutCycle: 'weekly',
+};
+const JOB_CACHE_KEY = 'ncc_service_provider_jobs_cache';
 
 export const useTech = () => {
   const ctx = useContext(ServiceProviderContext);
@@ -98,6 +105,7 @@ export const ServiceProviderProvider = ({ children }) => {
   // showing that stale value if the hydrating request failed.
   const [availability, setAvailabilityState] = useState(null);
   const [availabilityBusy, setAvailabilityBusy] = useState(false);
+  const [appSettings, setAppSettings] = useState(DEFAULT_PARTNER_APP_SETTINGS);
   const [inventory, setInventory] = useState([]);
   const [claims, setClaims] = useState([]);
   const [notifications, setNotifications] = useState([]);
@@ -111,6 +119,25 @@ export const ServiceProviderProvider = ({ children }) => {
     lifetimeEarned: 0,
     split: { quick: { amount: 0, jobs: 0 }, invoice: { amount: 0, jobs: 0 } },
   });
+
+  useEffect(() => {
+    if (!user || user.role !== 'service_provider') return undefined;
+    let active = true;
+    const loadSettings = async () => {
+      try {
+        const settings = await apiRequest('/cms/app-settings/service_provider', { silentError: true });
+        if (active) setAppSettings((prev) => ({ ...prev, ...(settings || {}) }));
+      } catch {
+        // Defaults preserve the operational behavior if optional CMS config is unavailable.
+      }
+    };
+    loadSettings();
+    const timer = window.setInterval(loadSettings, 30000);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [user]);
 
   // Fetch real jobs, inventory, claims, and earnings from backend when logged in as service provider
   // Only the first load shows placeholders. The 4s poll below re-runs this
@@ -319,6 +346,13 @@ export const ServiceProviderProvider = ({ children }) => {
 
       const combinedJobs = [...mappedActive, ...mappedAvailable];
       setJobs(combinedJobs);
+      if (appSettings.offlineMode) {
+        try {
+          localStorage.setItem(JOB_CACHE_KEY, JSON.stringify(combinedJobs));
+        } catch {
+          // Storage can be disabled; the live list still works.
+        }
+      }
       // Jobs are on screen now; the inventory/claims/earnings calls below are
       // secondary and must not keep the job cards in a loading state.
       jobsLoadedOnceRef.current = true;
@@ -436,10 +470,18 @@ export const ServiceProviderProvider = ({ children }) => {
       setInventoryLoading(false);
       setClaimsLoading(false);
       setEarningsLoading(false);
+      if (appSettings.offlineMode) {
+        try {
+          const cached = JSON.parse(localStorage.getItem(JOB_CACHE_KEY) || '[]');
+          if (Array.isArray(cached) && cached.length) setJobs(cached);
+        } catch {
+          // Ignore corrupt/blocked cache and retain the current in-memory state.
+        }
+      }
     } finally {
       setJobsLoading(false);
     }
-  }, [user]);
+  }, [user, appSettings.offlineMode]);
 
   useEffect(() => {
     fetchRealJobs();
@@ -812,9 +854,11 @@ export const ServiceProviderProvider = ({ children }) => {
     };
 
     sendLocationUpdate();
-    const locInterval = setInterval(sendLocationUpdate, 20000);
+    const configuredSeconds = Number(appSettings.gpsInterval);
+    const intervalMs = Math.min(300, Math.max(10, Number.isFinite(configuredSeconds) ? configuredSeconds : 60)) * 1000;
+    const locInterval = setInterval(sendLocationUpdate, intervalMs);
     return () => clearInterval(locInterval);
-  }, [activeJobId, activeStep, activeJob?.serviceRequest?.zone]);
+  }, [activeJobId, activeStep, activeJob?.serviceRequest?.zone, appSettings.gpsInterval]);
 
   /**
    * Re-open a restored job at the step the server says it is on.
@@ -1625,6 +1669,7 @@ export const ServiceProviderProvider = ({ children }) => {
         claimsLoading,
         earningsLoading,
         acceptInstantJob,
+        appSettings,
       }}>
       {children}
     </ServiceProviderContext.Provider>

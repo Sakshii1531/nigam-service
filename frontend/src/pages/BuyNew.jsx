@@ -56,6 +56,7 @@ import tvImg from "../assets/categories/television.png";
 import geyserImg from "../assets/icon_3d_geyser.png";
 import ovenImg from "../assets/icon_3d_oven.png";
 import { uploadImage } from "../lib/uploadImage";
+import CustomerAdvertisements from "../components/home/CustomerAdvertisements";
 
 // Helper to map category names to images
 function getApplianceImg(category) {
@@ -2729,6 +2730,8 @@ const BuyNew = () => {
                       </span>
                     </div>
                   </div>
+
+                  <CustomerAdvertisements placement="Cart Bottom Banner" />
                 </div>
 
                 {/* Sticky checkout bar — sits above the fixed bottom tab bar

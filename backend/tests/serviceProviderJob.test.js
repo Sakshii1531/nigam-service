@@ -16,6 +16,7 @@ import { EarningsTally } from '../src/modules/service-provider/earningsTally.mod
 import { Brand } from '../src/modules/super-admin/brand.model.js';
 import { RateCard } from '../src/modules/brand-admin/rateCard.model.js';
 import { PlatformSettings } from '../src/modules/super-admin/platformSettings.model.js';
+import { AppSetting } from '../src/modules/super-admin/appSetting.model.js';
 import { Payout } from '../src/modules/service-provider/payout.model.js';
 import { Payment } from '../src/modules/payments-wallet/payment.model.js';
 import { signForTesting } from '../src/modules/payments-wallet/paymentGateway.js';
@@ -124,6 +125,7 @@ beforeEach(async () => {
     Brand.deleteMany({}),
     RateCard.deleteMany({}),
     PlatformSettings.deleteMany({}),
+    AppSetting.deleteMany({}),
     Payout.deleteMany({}),
     Payment.deleteMany({}),
     Claim.deleteMany({}),
@@ -261,6 +263,20 @@ describe('open offers (booked when nobody was online)', () => {
       .set('Authorization', `Bearer ${outsider.token}`)
       .send({})
       .expect(403);
+  });
+
+  it('honors the partner-app autoAssign switch when a provider goes online', async () => {
+    const { srId, first } = await bookOpenOffer();
+    await AppSetting.create({ app: 'service_provider', key: 'autoAssign', value: false });
+
+    const online = await request(app)
+      .patch('/api/v1/service-provider/profile/availability')
+      .set('Authorization', `Bearer ${first.token}`)
+      .send({ availability: 'Available' })
+      .expect(200);
+
+    expect(online.body.data.autoAssigned.assignedCount).toBe(0);
+    expect((await ServiceRequest.findById(srId)).serviceProvider).toBeNull();
   });
 });
 

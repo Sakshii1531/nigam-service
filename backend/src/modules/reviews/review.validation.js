@@ -33,3 +33,17 @@ export const listQuerySchema = z.object({
 export const brandListQuerySchema = listQuerySchema.extend({
   status: z.enum(['Reviewed', 'Responded', 'Escalated']).optional(),
 });
+
+const featuredReviewFieldsSchema = z.object({
+  title: z.string().trim().min(1).max(120),
+  comment: z.string().trim().min(1).max(1000),
+  rating: z.number().min(1).max(5),
+  authorName: z.string().trim().min(1).max(120),
+  theme: z.enum(['pink', 'purple', 'teal', 'amber']),
+  isVisible: z.boolean(),
+  approvalStatus: z.enum(['Approved', 'Rejected']).optional(),
+  sortOrder: z.number().int().min(0).optional(),
+});
+
+export const createFeaturedReviewSchema = featuredReviewFieldsSchema;
+export const updateFeaturedReviewSchema = featuredReviewFieldsSchema.partial();

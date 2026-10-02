@@ -110,9 +110,10 @@ const PlatformReviewCarousel = () => {
     const onSync = () => fetchReviews();
     window.addEventListener('focus', onSync);
     window.addEventListener('ncc_reviews_updated', onSync);
-    window.addEventListener('storage', (e) => {
+    const onStorage = (e) => {
       if (e.key === 'ncc_reviews_updated') onSync();
-    });
+    };
+    window.addEventListener('storage', onStorage);
 
     // 10-second polling fallback for active sessions
     const interval = setInterval(fetchReviews, 10000);
@@ -121,7 +122,7 @@ const PlatformReviewCarousel = () => {
       cancelled = true;
       window.removeEventListener('focus', onSync);
       window.removeEventListener('ncc_reviews_updated', onSync);
-      window.removeEventListener('storage', onSync);
+      window.removeEventListener('storage', onStorage);
       clearInterval(interval);
     };
   }, []);

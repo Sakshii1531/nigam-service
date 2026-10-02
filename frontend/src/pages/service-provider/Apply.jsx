@@ -94,10 +94,16 @@ const ServiceProviderApply = () => {
       }
 
       try {
-        const categories = await apiRequest("/catalog/categories");
-        const serviceList = [
-          ...new Set((categories || []).map((c) => c.name).filter(Boolean)),
-        ];
+        const [skills, categories] = await Promise.all([
+          apiRequest("/cms/skills").catch(() => []),
+          apiRequest("/catalog/categories").catch(() => []),
+        ]);
+        const configuredSkills = (skills || []).map((skill) => skill.name).filter(Boolean);
+        const serviceList = [...new Set(
+          configuredSkills.length
+            ? configuredSkills
+            : (categories || []).map((category) => category.name).filter(Boolean),
+        )];
         if (serviceList.length > 0) {
           setAvailableServices(serviceList);
         }

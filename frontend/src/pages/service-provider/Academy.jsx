@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Award, Play, BookOpen } from 'lucide-react';
-import { apiRequest } from '../../lib/apiClient';
+import { apiRequest, resolveMediaUrl } from '../../lib/apiClient';
 import { LoadingSection, SkeletonList } from '../../components/common/Skeleton';
 
 const CATEGORY_TONE = [
@@ -24,18 +24,32 @@ const Academy = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
+  const loadContent = useCallback(() => {
+    setLoading(true);
     Promise.all([
       apiRequest('/cms/videos'),
       apiRequest('/service-provider/academy/blogs', { auth: true }),
     ])
       .then(([videoRes, blogRes]) => {
-        setVideos(videoRes.data || []);
-        setBlogs(blogRes.data || []);
+        // apiRequest already unwraps the backend envelope.
+        setVideos(Array.isArray(videoRes) ? videoRes : []);
+        setBlogs(Array.isArray(blogRes) ? blogRes : []);
+        setError('');
       })
       .catch((err) => setError(err.message || 'Could not load academy content.'))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    loadContent();
+    const onFocus = () => loadContent();
+    window.addEventListener('focus', onFocus);
+    const timer = window.setInterval(loadContent, 30000);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      window.clearInterval(timer);
+    };
+  }, [loadContent]);
 
   const activeBlog = blogs.find((b) => b.id === activeBlogId);
 
@@ -100,8 +114,8 @@ const Academy = () => {
         <div className="flex-1 bg-black flex flex-col justify-between">
           <div className="w-full aspect-video bg-slate-900 relative flex items-center justify-center border-b border-white/10 mt-auto mb-auto">
             <video
-              src={activeVideo.url}
-              poster={activeVideo.thumbnailUrl || undefined}
+              src={resolveMediaUrl(activeVideo.url)}
+              poster={activeVideo.thumbnailUrl ? resolveMediaUrl(activeVideo.thumbnailUrl) : undefined}
               controls
               autoPlay
               playsInline

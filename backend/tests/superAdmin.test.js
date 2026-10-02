@@ -422,9 +422,29 @@ describe('CMS — console readers see unpublished content the apps must not', ()
     expect(filtered.body.data.map((a) => a.name)).toEqual(['Paused one']);
   });
 
+  it('filters advertisement schedules and records clicks only for live campaigns', async () => {
+    const { token } = await seedSuperAdmin();
+    const auth = { Authorization: `Bearer ${token}` };
+    const now = Date.now();
+    const live = await request(app).post('/api/v1/cms/advertisements').set(auth).send({
+      name: 'Live creative', type: 'App Header Banner', title: 'Book AC care',
+      imageUrl: 'https://example.com/ad.png', actionUrl: '/book/AC',
+      startsAt: new Date(now - 60_000), endsAt: new Date(now + 60_000), status: 'Running',
+    }).expect(201);
+    await request(app).post('/api/v1/cms/advertisements').set(auth).send({
+      name: 'Future creative', type: 'App Header Banner', title: 'Later',
+      startsAt: new Date(now + 60_000), status: 'Running',
+    }).expect(201);
+
+    const publicAds = await request(app).get('/api/v1/cms/advertisements?type=App%20Header%20Banner').expect(200);
+    expect(publicAds.body.data.map((ad) => ad.name)).toEqual(['Live creative']);
+    const click = await request(app).post(`/api/v1/cms/advertisements/${live.body.data.id}/click`).expect(200);
+    expect(click.body.data.clicks).toBe(1);
+  });
+
   it('hides deactivated videos and banners from the app but shows them to the console', async () => {
     const { token } = await seedSuperAdmin();
-    await Video.create({ title: 'Live video', isActive: true });
+    await Video.create({ title: 'Live video', url: 'https://cdn.example.com/live.mp4', isActive: true });
     await Video.create({ title: 'Retired video', isActive: false });
     await Banner.create({ imageUrl: 'a.png', app: 'customer', isActive: true });
     await Banner.create({ imageUrl: 'b.png', app: 'customer', isActive: false });
@@ -784,6 +804,17 @@ describe('CMS story slides', () => {
       .expect(201);
     expect(res.body.data.slides).toEqual([]);
   });
+
+  it('creates and updates the publication status used by the customer app', async () => {
+    const { token } = await seedSuperAdmin();
+    const auth = { Authorization: `Bearer ${token}` };
+    const draft = await request(app).post('/api/v1/cms/stories').set(auth).send({
+      title: 'Draft story', type: 'Informational', mediaUrl: 'cover.png', status: 'Scheduled',
+    }).expect(201);
+    expect((await request(app).get('/api/v1/cms/stories').expect(200)).body.data).toHaveLength(0);
+    await request(app).put(`/api/v1/cms/stories/${draft.body.data.id}`).set(auth).send({ status: 'Active' }).expect(200);
+    expect((await request(app).get('/api/v1/cms/stories').expect(200)).body.data[0].title).toBe('Draft story');
+  });
 });
 
 describe('CMS home tiles', () => {
@@ -973,9 +1004,10 @@ describe('CMS serviceProvider app content — announcements and skill catalogue'
     const video = await request(app)
       .post('/api/v1/cms/videos')
       .set('Authorization', `Bearer ${token}`)
-      .send({ title: 'Inverter AC Troubleshooting', category: 'AC Service', duration: '12 mins' })
+      .send({ title: 'Inverter AC Troubleshooting', category: 'AC Service', duration: '12 mins', url: 'https://cdn.example.com/ac-training.mp4' })
       .expect(201);
     expect(video.body.data.category).toBe('AC Service');
+    expect(video.body.data.url).toBe('https://cdn.example.com/ac-training.mp4');
   });
 });
 

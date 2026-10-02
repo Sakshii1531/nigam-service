@@ -13,6 +13,7 @@ import { City } from '../src/modules/super-admin/city.model.js';
 import { ASM } from '../src/modules/super-admin/asm.model.js';
 import { AuditLog } from '../src/modules/super-admin/auditLog.model.js';
 import { Notification } from '../src/modules/notifications/notification.model.js';
+import { Announcement } from '../src/modules/service-provider/announcement.model.js';
 import { hashPassword } from '../src/modules/auth/password.js';
 import { ROLES } from '../src/config/constants.js';
 import { testDbUri } from './helpers/testDb.js';
@@ -94,6 +95,7 @@ beforeEach(async () => {
     ASM.deleteMany({}),
     AuditLog.deleteMany({}),
     Notification.deleteMany({}),
+    Announcement.deleteMany({}),
   ]);
   await Permission.create([
     { key: 'techs:view', description: 'View service providers', domain: 'techs' },
@@ -104,6 +106,22 @@ beforeEach(async () => {
     City.create({ name: 'Mumbai', state: 'Maharashtra' }),
     City.create({ name: 'Delhi', state: 'Delhi' }),
   ]);
+});
+
+describe('partner announcements', () => {
+  it('returns global and matching-city announcements without leaking another city', async () => {
+    const adminToken = await seedSuperAdmin();
+    const { token } = await seedProvider(pune);
+    const authHeader = auth(adminToken);
+
+    await request(app).post('/api/v1/cms/announcements').set(authHeader).send({ message: 'Everyone sees this', scope: 'all' }).expect(201);
+    await request(app).post('/api/v1/cms/announcements').set(authHeader).send({ message: 'Pune only', scope: 'city', region: 'Pune' }).expect(201);
+    await request(app).post('/api/v1/cms/announcements').set(authHeader).send({ message: 'Delhi only', scope: 'city', region: 'Delhi' }).expect(201);
+
+    const res = await request(app).get('/api/v1/service-provider/academy/announcements').set(auth(token)).expect(200);
+    expect(res.body.data.map((item) => item.message)).toEqual(expect.arrayContaining(['Everyone sees this', 'Pune only']));
+    expect(res.body.data.map((item) => item.message)).not.toContain('Delhi only');
+  });
 });
 
 describe('service provider requests a city change', () => {

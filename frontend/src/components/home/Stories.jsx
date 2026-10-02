@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import StoryViewer from './StoryViewer';
 
-import { apiRequest } from '../../lib/apiClient';
+import { apiRequest, resolveMediaUrl } from '../../lib/apiClient';
 import { LoadingSection, Skeleton, SkeletonHeading } from '../common/Skeleton';
 
 const Stories = () => {
@@ -16,29 +16,37 @@ const Stories = () => {
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    const fetchStories = async () => {
       try {
         const data = await apiRequest('/cms/stories');
         if (!cancelled) setStories(data || []);
       } catch {
         if (!cancelled) setStories([]);
       }
-    })();
-    return () => { cancelled = true; };
+    };
+    fetchStories();
+    window.addEventListener('focus', fetchStories);
+    const interval = setInterval(fetchStories, 30_000);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('focus', fetchStories);
+      clearInterval(interval);
+    };
   }, []);
 
   const storiesList = (stories || [])
     .map((story) => ({
         id: story.id,
         title: story.title,
-        image: story.mediaUrl || story.slides?.[0]?.image,
+        image: resolveMediaUrl(story.mediaUrl || story.slides?.[0]?.image),
         bookLink: story.bookLink || null,
         bookTitle: story.bookTitle || null,
         // The viewer pages through slides; fall back to a single cover slide so
         // a story published without any still opens.
-        slides: story.slides?.length
+        slides: (story.slides?.length
           ? story.slides
-          : [{ image: story.mediaUrl, caption: story.title, subCaption: '' }],
+          : [{ image: story.mediaUrl, caption: story.title, subCaption: '' }])
+          .map((slide) => ({ ...slide, image: resolveMediaUrl(slide.image) })),
       }))
     .filter((story) => story.image);
 

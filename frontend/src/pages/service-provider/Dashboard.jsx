@@ -32,6 +32,7 @@ import { useAuth } from "../../context/AuthContext";
 import ServiceProviderBottomNav from "../../components/ServiceProviderBottomNav";
 import { useServiceProviderSummary } from "../../hooks/useServiceProviderSummary";
 import { InlineValue } from '../../components/common/Skeleton';
+import PartnerBanners from '../../components/service-provider/PartnerBanners';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -933,6 +934,8 @@ const Dashboard = () => {
                 </button>
               ))}
             </div>
+
+            <PartnerBanners />
 
             {/* Earnings strip */}
             <button

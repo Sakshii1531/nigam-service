@@ -54,6 +54,7 @@ import roPostCarbonImg from "../assets/ro_post_carbon.png";
 import Stories from "../components/home/Stories";
 import { LoadingSection, Skeleton, SkeletonCardRow, SkeletonHeading } from "../components/common/Skeleton";
 import PlatformReviewCarousel from "../components/home/PlatformReviewCarousel";
+import CustomerAdvertisements from "../components/home/CustomerAdvertisements";
 
 const renderDashboardCategoryIcon = (iconKey) => {
   const k = (iconKey || "").toLowerCase();
@@ -1028,6 +1029,7 @@ const Dashboard = ({ defaultType }) => {
 
   return (
     <div className="min-h-screen bg-bg-light flex flex-col pb-16 lg:pb-0">
+      <CustomerAdvertisements placement="Category Popup" />
       {/* Warranty Modal */}
       {showWarrantyModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -1320,10 +1322,11 @@ const Dashboard = ({ defaultType }) => {
 
       {/* Main Content */}
       <div className="flex-1 px-3 sm:px-4 py-4 md:px-10 md:py-6 lg:px-16 lg:py-8 xl:px-20 flex flex-col gap-5 md:gap-8 max-w-screen-2xl mx-auto w-full">
+        <CustomerAdvertisements placement="App Header Banner" className="mt-4 sm:mt-6 md:mt-10" />
         {/* Service Banners — horizontal auto-slide carousel */}
         <div
           ref={bannerRef}
-          className="flex gap-3 sm:gap-4 overflow-x-auto pb-2 -mx-1 px-1 sm:-mx-2 sm:px-2 snap-x snap-mandatory scroll-smooth no-scrollbar md:mx-auto md:px-0 md:pb-0 md:max-w-355 md:w-full relative mt-4 sm:mt-6 md:mt-10">
+          className="flex gap-3 sm:gap-4 overflow-x-auto pb-2 -mx-1 px-1 sm:-mx-2 sm:px-2 snap-x snap-mandatory scroll-smooth no-scrollbar md:mx-auto md:px-0 md:pb-0 md:max-w-355 md:w-full relative">
           {bannersLoading ? (
             <Skeleton className="min-w-[85vw] sm:min-w-85 md:min-w-full h-32 sm:h-36 md:h-auto md:aspect-[3.35/1] shrink-0" rounded="rounded-2xl" />
           ) : (activeType === "non-warranty"
@@ -1626,8 +1629,8 @@ const Dashboard = ({ defaultType }) => {
           </>
           )}
 
-          {/* Desktop-Only Featured Platform Reviews Carousel */}
-          <div className="hidden md:block">
+          {/* Featured reviews are customer content on every screen size. */}
+          <div>
             <PlatformReviewCarousel />
           </div>
         </div>

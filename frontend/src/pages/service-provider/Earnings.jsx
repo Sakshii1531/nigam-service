@@ -15,7 +15,7 @@ import { LoadingSection, Skeleton, SkeletonList, InlineValue } from '../../compo
 const EarningsPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { earningsTally, earningsLoading } = useTech();
+  const { earningsTally, earningsLoading, appSettings } = useTech();
   const { unreadCount: unreadNotificationsCount } = useNotifications();
 
   const [stats, setStats] = useState(null);
@@ -304,7 +304,7 @@ const EarningsPage = () => {
               </p>
               <p className="text-[11px] text-blue-200/80 mt-2 flex items-center gap-1.5 font-medium">
                 <Clock className="h-3.5 w-3.5 text-blue-300" />
-                Processed & settled directly to your registered bank account
+                Platform payout cycle: <span className="capitalize">{String(appSettings?.payoutCycle || 'weekly').replace('-', ' ')}</span>
               </p>
             </div>
 

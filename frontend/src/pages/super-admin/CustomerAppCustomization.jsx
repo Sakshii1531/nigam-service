@@ -715,6 +715,7 @@ function shapeStory(s) {
     image: s.mediaUrl || s.slides?.[0]?.image || "",
     slides: (s.slides || []).map((sl, i) => ({ id: i + 1, ...sl })),
     groupId: targetToGroupId(s.target),
+    status: s.status || "Active",
   };
 }
 
@@ -780,7 +781,10 @@ const DEFAULT_BRAND_CARDS = [
 
 const CustomerAppCustomization = () => {
   const location = useLocation();
-  const [activeSubSection, setActiveSubSection] = useState("categories"); // 'categories' | 'banners' | 'brands' | 'mostbooked' | 'applianceservices'
+  const requestedTab = new URLSearchParams(location.search).get("tab");
+  const activeSubSection = ["categories", "banners", "brands", "mostbooked", "applianceservices", "stories"].includes(requestedTab)
+    ? requestedTab
+    : "categories";
   const [successMessage, setSuccessMessage] = useState("");
 
   // Stories State
@@ -792,26 +796,10 @@ const CustomerAppCustomization = () => {
     title: "",
     image: "",
     groupId: "",
+    type: "Customer Help Slider",
+    status: "Active",
   });
   const [storySlides, setStorySlides] = useState([]);
-
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const tab = params.get("tab");
-    if (tab === "banners") {
-      setActiveSubSection("banners");
-    } else if (tab === "brands") {
-      setActiveSubSection("brands");
-    } else if (tab === "mostbooked") {
-      setActiveSubSection("mostbooked");
-    } else if (tab === "applianceservices") {
-      setActiveSubSection("applianceservices");
-    } else if (tab === "stories") {
-      setActiveSubSection("stories");
-    } else {
-      setActiveSubSection("categories");
-    }
-  }, [location.search]);
 
   // Category State
   const [categories, setCategories] = useState([]);
@@ -1329,6 +1317,8 @@ const CustomerAppCustomization = () => {
       title: "",
       image: "",
       groupId: "",
+      type: "Customer Help Slider",
+      status: "Active",
     });
     setStorySlides([
       { id: Date.now() + 1, image: "", caption: "", subCaption: "" },
@@ -1344,6 +1334,8 @@ const CustomerAppCustomization = () => {
       title: story.title || "",
       image: story.image || "",
       groupId: story.groupId || "",
+      type: story.type || "Customer Help Slider",
+      status: story.status || "Active",
     });
 
     const slides = (story.slides || []).map((slide) => ({
@@ -1382,6 +1374,15 @@ const CustomerAppCustomization = () => {
     e.preventDefault();
     if (!storyForm.title.trim()) return;
 
+    if (storySlides.length === 0) {
+      showToast("Add at least one slide before saving the story.");
+      return;
+    }
+    if (!storyForm.image && !storySlides.some((slide) => slide.image)) {
+      showToast("Upload a cover or slide image before saving the story.");
+      return;
+    }
+
     const parsedSlides = storySlides.map((slide, idx) => ({
       id: idx + 1,
       image: slide.image || storyForm.image,
@@ -1395,6 +1396,7 @@ const CustomerAppCustomization = () => {
       mediaUrl: storyForm.image || parsedSlides[0]?.image || "",
       // Optional "Book now" — a real catalogue service (Phase 22).
       target: groupIdToTarget(storyForm.groupId),
+      status: storyForm.status || "Active",
       slides: parsedSlides.map(({ image, caption, subCaption }) => ({
         image,
         caption,
@@ -1424,18 +1426,41 @@ const CustomerAppCustomization = () => {
         setStoriesList([...storiesList, shapeStory(saved)]);
       }
       setShowStoryModal(false);
-      showToast("Story published to the customer app.");
+      showToast(body.status === "Active" ? "Story published to the customer app." : "Story saved as a draft.");
     } catch (err) {
       showToast(`Could not save the story: ${err.message}`);
     }
   };
 
-  // Same reasoning as banners: stories are live shared content, so there is no
-  // local default to restore without deleting real content for every customer.
-  const handleResetStories = () => {
-    showToast(
-      "Stories are live content — delete individual stories instead of resetting.",
-    );
+  const handleToggleStoryStatus = async (story) => {
+    const nextStatus = story.status === "Active" ? "Scheduled" : "Active";
+    if (nextStatus === "Active" && !story.image) {
+      showToast("Add a cover or slide image before publishing this story.");
+      return;
+    }
+    try {
+      const saved = await apiRequest(`/cms/stories/${story.id}`, {
+        method: "PUT",
+        auth: true,
+        body: { status: nextStatus },
+      });
+      setStoriesList((current) =>
+        current.map((item) => item.id === story.id ? shapeStory(saved) : item),
+      );
+      showToast(nextStatus === "Active" ? "Story is now live in the customer app." : "Story removed from the customer app.");
+    } catch (err) {
+      showToast(`Could not update story status: ${err.message}`);
+    }
+  };
+
+  const handleRefreshStories = async () => {
+    try {
+      const data = await apiRequest("/cms/stories/admin", { auth: true });
+      setStoriesList((data || []).map(shapeStory));
+      showToast("Stories refreshed from the server.");
+    } catch (err) {
+      showToast(`Could not refresh stories: ${err.message}`);
+    }
   };
 
   return (
@@ -1684,9 +1709,9 @@ const CustomerAppCustomization = () => {
                 </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={handleResetStories}
+                    onClick={handleRefreshStories}
                     className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors">
-                    <RotateCcw size={14} /> Reset Defaults
+                    <RotateCcw size={14} /> Refresh
                   </button>
                   <button
                     onClick={handleOpenAddStory}
@@ -1704,6 +1729,7 @@ const CustomerAppCustomization = () => {
                       <th className="px-6 py-4">Story Cover Title</th>
                       <th className="px-6 py-4">Total Slides</th>
                       <th className="px-6 py-4">Cover Image Preview</th>
+                      <th className="px-6 py-4">Publication</th>
                       <th className="px-6 py-4 text-right">Actions</th>
                     </tr>
                   </thead>
@@ -1729,6 +1755,14 @@ const CustomerAppCustomization = () => {
                               className="w-10 h-10 object-cover border border-slate-200 rounded-lg p-0.5 bg-slate-50"
                             />
                           )}
+                        </td>
+                        <td className="px-6 py-4">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleStoryStatus(story)}
+                            className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase border transition-colors ${story.status === "Active" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-amber-50 text-amber-700 border-amber-200"}`}>
+                            {story.status === "Active" ? "Live" : "Scheduled"}
+                          </button>
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex gap-2 justify-end">
@@ -2407,6 +2441,30 @@ const CustomerAppCustomization = () => {
                       className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:border-[#0D47A1] transition-all"
                       required
                     />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-semibold text-[#64748B] mb-1 block">Story Type</label>
+                      <select
+                        value={storyForm.type || "Customer Help Slider"}
+                        onChange={(e) => setStoryForm({ ...storyForm, type: e.target.value })}
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:border-[#0D47A1]">
+                        <option>Customer Help Slider</option>
+                        <option>Promo Banner</option>
+                        <option>Informational</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-[#64748B] mb-1 block">Publication</label>
+                      <select
+                        value={storyForm.status || "Active"}
+                        onChange={(e) => setStoryForm({ ...storyForm, status: e.target.value })}
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:border-[#0D47A1]">
+                        <option value="Active">Live now</option>
+                        <option value="Scheduled">Draft / scheduled</option>
+                      </select>
+                    </div>
                   </div>
 
                   <div>

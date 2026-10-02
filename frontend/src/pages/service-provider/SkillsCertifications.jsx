@@ -16,13 +16,20 @@ const SkillsCertifications = () => {
   // Skills and certifications are part of the service provider's own profile record.
   const [skills, setSkills] = useState([]);
   const [certifications, setCertifications] = useState([]);
+  const [catalogue, setCatalogue] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    apiRequest('/service-provider/profile/profile', { auth: true })
-      .then((res) => {
-        setSkills((res?.skills || []).map((sk) => ({
+    Promise.all([
+      apiRequest('/service-provider/profile/profile', { auth: true }),
+      apiRequest('/cms/skills'),
+    ])
+      .then(([res, skillCatalogue]) => {
+        const recordedSkills = res?.skills?.length
+          ? res.skills
+          : (res?.specs || []).map((name) => ({ name, level: 'Intermediate' }));
+        setSkills(recordedSkills.map((sk) => ({
           name: sk.name,
           level: sk.level,
           years: sk.years ? `${sk.years} yr${sk.years === 1 ? '' : 's'}` : null,
@@ -33,6 +40,7 @@ const SkillsCertifications = () => {
           date: c.date ? new Date(c.date).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : '—',
           status: c.status,
         })));
+        setCatalogue(Array.isArray(skillCatalogue) ? skillCatalogue : []);
       })
       .catch((err) => setError(err.message || 'Could not load your profile.'))
       .finally(() => setLoading(false));
@@ -99,6 +107,22 @@ const SkillsCertifications = () => {
                 </span>
               </div>
             ))}
+          </div>
+        </div>
+
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+          <h3 className="text-xs font-medium text-[#052355] mb-3 flex items-center gap-2">
+            <Award className="h-4 w-4 text-[#0D47A1]" />
+            Active Skill Catalogue
+          </h3>
+          <p className="text-[10px] text-slate-500 mb-3">Skills currently approved by Nigam Care for partner onboarding and training.</p>
+          <div className="flex flex-wrap gap-2">
+            {catalogue.map((item) => (
+              <span key={item.id} className="rounded-full bg-blue-50 border border-blue-100 px-2.5 py-1 text-[10px] font-medium text-[#0D47A1]">
+                {item.name}{item.group ? ` · ${item.group}` : ''}
+              </span>
+            ))}
+            {!loading && catalogue.length === 0 && <span className="text-[11px] text-slate-400">No catalogue skills published yet.</span>}
           </div>
         </div>
 

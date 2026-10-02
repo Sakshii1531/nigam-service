@@ -6,6 +6,8 @@ import { City } from './city.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { parsePagination, paginationMeta } from '../../utils/pagination.js';
 import { logAudit } from '../shared/auditLog.js';
+import { hashPassword } from '../auth/password.js';
+import { ROLES } from '../../config/constants.js';
 
 // Platform-wide service provider directory for the super-admin console. Distinct from
 // modules/service provider/service provider.service.js, which is the service provider's own
@@ -127,6 +129,52 @@ export async function getServiceProvider(id, scopedCity) {
   const serviceProvider = await findOr404(id, scopedCity);
   const [withAsm] = await attachAsm([serviceProvider]);
   return withAsm;
+}
+
+export async function createServiceProvider({ name, phone, email, password, cityId, specs, status }, actingUserId) {
+  const city = await City.findOne({ _id: cityId, status: 'Active' });
+  if (!city) throw new ApiError(400, 'Choose an active service city');
+
+  const duplicate = await User.findOne({
+    $or: [{ phone }, ...(email ? [{ email: email.toLowerCase() }] : [])],
+  });
+  if (duplicate) throw new ApiError(409, 'A user already exists with this phone number or email');
+
+  let user;
+  try {
+    user = await User.create({
+      role: ROLES.SERVICE_PROVIDER,
+      name,
+      phone,
+      email: email || undefined,
+      passwordHash: await hashPassword(password),
+      status: status === 'Active' ? 'Active' : 'Pending',
+    });
+    const provider = await ServiceProvider.create({
+      user: user._id,
+      name,
+      phone,
+      email: email || undefined,
+      city: city._id,
+      serviceCityName: city.name,
+      serviceStateName: city.state || '',
+      specs: [...new Set(specs)],
+      status,
+      availability: 'Offline',
+      joinedAt: status === 'Active' ? new Date() : undefined,
+      verification: status === 'Active'
+        ? { aadharStatus: 'Verified', panStatus: 'Verified', backgroundCheckStatus: 'Verified' }
+        : undefined,
+    });
+    await logAudit({ user: actingUserId, action: `Created service provider "${name}" (${phone})`, type: 'System' });
+    const populated = await ServiceProvider.findById(provider._id).populate('city', 'name state');
+    const [withAsm] = await attachAsm([populated]);
+    return withAsm;
+  } catch (err) {
+    if (user?._id) await User.findByIdAndDelete(user._id);
+    if (err?.code === 11000) throw new ApiError(409, 'A user already exists with this phone number or email');
+    throw err;
+  }
 }
 
 /**

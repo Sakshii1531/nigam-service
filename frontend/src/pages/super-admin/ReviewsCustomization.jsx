@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import { apiRequest } from '../../lib/apiClient';
@@ -13,7 +13,7 @@ const THEMES = [
   { key: 'amber',  label: 'Royal Ice Blue', bg: 'bg-linear-to-br from-[#EFF6FF] to-[#DBEAFE]', border: 'border-blue-200',  title: 'text-[#0B4EA2]',   badge: 'bg-blue-100 text-[#0B4EA2]',   dot: 'bg-blue-400' },
 ];
 
-const EMPTY_FORM = { title: '', comment: '', rating: 5, authorName: '', theme: 'pink', isVisible: true };
+const EMPTY_FORM = { title: '', comment: '', rating: 5, authorName: '', theme: 'pink', isVisible: true, approvalStatus: 'Approved' };
 
 function StarRating({ rating }) {
   return (
@@ -61,23 +61,17 @@ function CardPreview({ form }) {
 }
 
 function ReviewModal({ open, editItem, onClose, onSave }) {
-  const [form, setForm] = useState(EMPTY_FORM);
+  const [form, setForm] = useState(() => editItem ? {
+    title: editItem.title,
+    comment: editItem.comment,
+    rating: editItem.rating,
+    authorName: editItem.authorName,
+    theme: editItem.theme,
+    isVisible: editItem.isVisible,
+    approvalStatus: editItem.approvalStatus || (editItem.isVisible ? 'Approved' : 'Rejected'),
+  } : EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [error, setError]   = useState('');
-
-  useEffect(() => {
-    if (open) {
-      setForm(editItem ? {
-        title: editItem.title,
-        comment: editItem.comment,
-        rating: editItem.rating,
-        authorName: editItem.authorName,
-        theme: editItem.theme,
-        isVisible: editItem.isVisible,
-      } : EMPTY_FORM);
-      setError('');
-    }
-  }, [open, editItem]);
 
   const set = (key, val) => setForm(prev => ({ ...prev, [key]: val }));
 
@@ -180,12 +174,16 @@ function ReviewModal({ open, editItem, onClose, onSave }) {
 
             <div className="flex items-center justify-between py-3 px-4 bg-slate-50 rounded-xl border border-slate-200">
               <div>
-                <p className="text-sm font-bold text-slate-700">Visible on Dashboard</p>
-                <p className="text-xs text-slate-400 mt-0.5">Toggle to show/hide this card in the carousel</p>
+                <p className="text-sm font-bold text-slate-700">Approved for Customer App</p>
+                <p className="text-xs text-slate-400 mt-0.5">Approved cards are eligible for the dashboard carousel</p>
               </div>
               <button
                 type="button"
-                onClick={() => set('isVisible', !form.isVisible)}
+                onClick={() => setForm(prev => ({
+                  ...prev,
+                  isVisible: !prev.isVisible,
+                  approvalStatus: !prev.isVisible ? 'Approved' : 'Rejected',
+                }))}
                 className={`relative w-11 h-6 rounded-full transition-colors duration-200 cursor-pointer ${form.isVisible ? 'bg-[#0D47A1]' : 'bg-slate-300'}`}
               >
                 <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${form.isVisible ? 'translate-x-5' : 'translate-x-0'}`} />
@@ -236,27 +234,22 @@ export default function ReviewsCustomization() {
   const [deleteId, setDeleteId]       = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const data = await apiRequest('/reviews/featured-admin', { auth: true });
-      setReviews(data || []);
-    } catch (err) {
-      setError(err.message || 'Failed to load reviews.');
-    } finally {
-      setLoading(false);
-    }
+  useEffect(() => {
+    let alive = true;
+    apiRequest('/reviews/featured-admin', { auth: true })
+      .then((data) => { if (alive) setReviews(data || []); })
+      .catch((err) => { if (alive) setError(err.message || 'Failed to load reviews.'); })
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
   }, []);
-
-  useEffect(() => { load(); }, [load]);
 
   const handleAdd = () => { setEditItem(null); setModalOpen(true); };
   const handleEdit = (item) => { setEditItem(item); setModalOpen(true); };
 
   const broadcastSync = () => {
     try {
-      localStorage.setItem('ncc_reviews_updated', String(Date.now()));
+      const key = 'ncc_reviews_updated';
+      localStorage.setItem(key, localStorage.getItem(key) === '1' ? '0' : '1');
       window.dispatchEvent(new CustomEvent('ncc_reviews_updated'));
     } catch {
       // ignore
@@ -264,14 +257,18 @@ export default function ReviewsCustomization() {
   };
 
   const handleSave = async (form) => {
+    const payload = {
+      ...form,
+      approvalStatus: form.isVisible ? 'Approved' : 'Rejected',
+    };
     if (editItem) {
       const updated = await apiRequest(`/reviews/featured-admin/${editItem._id || editItem.id}`, {
-        method: 'PATCH', body: form, auth: true,
+        method: 'PATCH', body: payload, auth: true,
       });
       setReviews(prev => prev.map(r => (r._id || r.id) === (editItem._id || editItem.id) ? { ...r, ...updated } : r));
     } else {
       const created = await apiRequest('/reviews/featured-admin', {
-        method: 'POST', body: form, auth: true,
+        method: 'POST', body: payload, auth: true,
       });
       setReviews(prev => [created, ...prev]);
     }
@@ -280,8 +277,14 @@ export default function ReviewsCustomization() {
 
   const handleToggleVisible = async (item) => {
     const id = item._id || item.id;
+    const currentlyApproved = item.isVisible && item.approvalStatus !== 'Rejected';
     const updated = await apiRequest(`/reviews/featured-admin/${id}`, {
-      method: 'PATCH', body: { isVisible: !item.isVisible }, auth: true,
+      method: 'PATCH',
+      body: {
+        isVisible: !currentlyApproved,
+        approvalStatus: !currentlyApproved ? 'Approved' : 'Rejected',
+      },
+      auth: true,
     });
     setReviews(prev => prev.map(r => (r._id || r.id) === id ? { ...r, ...updated } : r));
     broadcastSync();
@@ -321,7 +324,7 @@ export default function ReviewsCustomization() {
               </div>
               <div>
                 <p className="text-sm font-black text-slate-800">Featured Review Cards</p>
-                <p className="text-xs text-slate-400">{reviews.length} review{reviews.length !== 1 ? 's' : ''} configured &nbsp;·&nbsp; {reviews.filter(r => r.isVisible).length} visible on dashboard</p>
+                <p className="text-xs text-slate-400">{reviews.length} review{reviews.length !== 1 ? 's' : ''} configured &nbsp;·&nbsp; {reviews.filter(r => r.isVisible && (r.approvalStatus === 'Approved' || !r.approvalStatus)).length} approved for dashboard</p>
               </div>
             </div>
             <button
@@ -377,7 +380,7 @@ export default function ReviewsCustomization() {
                   <th className="p-4">Rating</th>
                   <th className="p-4">Author</th>
                   <th className="p-4">Theme</th>
-                  <th className="p-4">Visibility</th>
+                  <th className="p-4">Approval</th>
                   <th className="p-4 pr-6 text-right">Actions</th>
                 </tr>
               </thead>
@@ -406,6 +409,7 @@ export default function ReviewsCustomization() {
                 ) : reviews.map((item) => {
                   const theme = THEMES.find(t => t.key === item.theme) || THEMES[0];
                   const id = item._id || item.id;
+                  const approved = item.isVisible && item.approvalStatus !== 'Rejected';
                   return (
                     <tr key={id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
                       <td className="p-4 pl-6 max-w-xs">
@@ -430,10 +434,10 @@ export default function ReviewsCustomization() {
                       <td className="p-4">
                         <button
                           onClick={() => handleToggleVisible(item)}
-                          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border transition-colors cursor-pointer ${item.isVisible ? 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100' : 'bg-slate-100 text-slate-400 border-slate-200 hover:bg-slate-200'}`}
+                          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border transition-colors cursor-pointer ${approved ? 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100' : 'bg-slate-100 text-slate-400 border-slate-200 hover:bg-slate-200'}`}
                         >
-                          {item.isVisible ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
-                          {item.isVisible ? 'Visible' : 'Hidden'}
+                          {approved ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                          {approved ? 'Approved' : 'Hidden'}
                         </button>
                       </td>
                       <td className="p-4 pr-6">
@@ -464,12 +468,15 @@ export default function ReviewsCustomization() {
       </div>
 
       {/* Add / Edit Modal */}
-      <ReviewModal
-        open={modalOpen}
-        editItem={editItem}
-        onClose={() => setModalOpen(false)}
-        onSave={handleSave}
-      />
+      {modalOpen && (
+        <ReviewModal
+          key={editItem?._id || editItem?.id || 'new'}
+          open
+          editItem={editItem}
+          onClose={() => setModalOpen(false)}
+          onSave={handleSave}
+        />
+      )}
     </div>
   );
 }

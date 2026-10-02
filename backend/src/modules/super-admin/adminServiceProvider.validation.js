@@ -20,6 +20,16 @@ export const updateServiceProviderStatusSchema = z.object({
   status: z.enum(['Active', 'Inactive', 'Pending']),
 });
 
+export const createServiceProviderSchema = z.object({
+  name: z.string().trim().min(2),
+  phone: z.string().trim().regex(/^\d{10}$/, 'Phone number must be exactly 10 digits'),
+  email: z.string().trim().email().optional().or(z.literal('')),
+  password: z.string().min(6),
+  cityId: z.string().regex(/^[a-f\d]{24}$/i, 'Invalid city id'),
+  specs: z.array(z.string().trim().min(1)).min(1),
+  status: z.enum(['Active', 'Pending']).default('Pending'),
+});
+
 export const idParamSchema = z.object({ id: z.string().min(1) });
 
 export const changeServiceProviderCitySchema = z.object({

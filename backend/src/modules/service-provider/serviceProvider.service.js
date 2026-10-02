@@ -2,6 +2,7 @@ import { ServiceProvider } from './serviceProvider.model.js';
 import { User } from '../auth/user.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { autoAssignPendingRequests } from '../service-requests/serviceRequest.service.js';
+import { AppSetting } from '../super-admin/appSetting.model.js';
 
 const ONLINE = 'Available';
 
@@ -33,8 +34,12 @@ export async function setAvailability(serviceProviderId, availability) {
   // Coming online is exactly when a request that had no candidate at booking
   // time becomes assignable, so drain the backlog now instead of leaving it for
   // the next booking (or for an admin to notice).
+  const autoAssignSetting = await AppSetting.findOne({ app: 'service_provider', key: 'autoAssign' }).lean();
+  // Missing config preserves the long-standing behavior. The super-admin can
+  // explicitly turn it off from Partner App Settings.
+  const autoAssignEnabled = autoAssignSetting?.value !== false;
   const autoAssigned =
-    availability === ONLINE && wasOffline
+    availability === ONLINE && wasOffline && autoAssignEnabled
       ? await autoAssignPendingRequests()
       : { assignedCount: 0, assigned: [] };
 

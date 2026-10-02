@@ -173,6 +173,53 @@ describe('GET /super-admin/service-providers', () => {
   });
 });
 
+describe('POST /super-admin/service-providers', () => {
+  it('creates a real provider login and profile in the selected city', async () => {
+    const token = await seedSuperAdmin();
+    const city = await City.create({ name: 'Indore', state: 'Madhya Pradesh', status: 'Active' });
+
+    const res = await request(app)
+      .post('/api/v1/super-admin/service-providers')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        name: 'Admin Onboarded Partner',
+        phone: '9898989898',
+        email: 'onboarded@test.local',
+        password: 'password123',
+        cityId: city.id,
+        specs: ['Split AC Installation'],
+        status: 'Active',
+      })
+      .expect(201);
+
+    expect(res.body.data).toMatchObject({
+      name: 'Admin Onboarded Partner',
+      status: 'Active',
+      availability: 'Offline',
+      specs: ['Split AC Installation'],
+    });
+    expect(res.body.data.city.name).toBe('Indore');
+    expect(await User.countDocuments({ phone: '9898989898', role: ROLES.SERVICE_PROVIDER })).toBe(1);
+    expect(await ServiceProvider.countDocuments({ phone: '9898989898' })).toBe(1);
+
+    const providerToken = await loginAndVerify({ role: ROLES.SERVICE_PROVIDER, identifier: '9898989898', password: 'password123' });
+    expect(providerToken).toBeTruthy();
+  });
+
+  it('does not create a table-only duplicate account', async () => {
+    const token = await seedSuperAdmin();
+    const city = await City.create({ name: 'Pune', state: 'Maharashtra', status: 'Active' });
+    await seedServiceProvider({ name: 'Existing Partner' });
+    const existing = await ServiceProvider.findOne({ name: 'Existing Partner' });
+
+    await request(app)
+      .post('/api/v1/super-admin/service-providers')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Duplicate', phone: existing.phone, password: 'password123', cityId: city.id, specs: ['AC'], status: 'Pending' })
+      .expect(409);
+  });
+});
+
 describe('PATCH /super-admin/service-providers/:id/status', () => {
   it('persists the new status and forces a non-Active serviceProvider offline', async () => {
     const token = await seedSuperAdmin();

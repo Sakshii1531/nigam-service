@@ -104,15 +104,19 @@ const ServiceProviders = () => {
   }, [selectedTechProfile?.id]);
 
   const [showModal, setShowModal] = useState(false);
+  const [onboardingBusy, setOnboardingBusy] = useState(false);
+  const [onboardingCities, setOnboardingCities] = useState([]);
+  const [onboardingSkills, setOnboardingSkills] = useState([]);
   const [serviceProviderToDelete, setTechToDelete] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [newTech, setNewTech] = useState({
     name: "",
-    skill: "AC & Refrigerator",
-    city: "Delhi",
-    rating: "5.0",
-    availability: "Available",
-    status: "Active",
+    phone: "",
+    email: "",
+    password: "",
+    skill: "",
+    cityId: "",
+    status: "Pending",
   });
 
   const [serviceProviders, setServiceProviders] = useState([]);
@@ -155,6 +159,11 @@ const ServiceProviders = () => {
           asm: item.asm || null,
           aadharFrontUrl: item.verification?.aadharFrontUrl || "",
           aadharBackUrl: item.verification?.aadharBackUrl || "",
+          verification: {
+            aadhar: item.verification?.aadharStatus || "Pending",
+            pan: item.verification?.panStatus || "Pending",
+            background: item.verification?.backgroundCheckStatus || "Pending",
+          },
           appliedDate: item.createdAt
             ? new Date(item.createdAt).toLocaleDateString("en-IN", {
                 day: "numeric",
@@ -173,6 +182,30 @@ const ServiceProviders = () => {
   useEffect(() => {
     fetchTechs();
   }, [fetchTechs]);
+
+  useEffect(() => {
+    if (!showModal) return;
+    Promise.all([
+      apiRequest("/super-admin/cities/public"),
+      apiRequest("/cms/skills"),
+      apiRequest("/catalog/categories"),
+    ])
+      .then(([cities, skills, categories]) => {
+        const activeCities = Array.isArray(cities) ? cities : [];
+        const configuredSkills = Array.isArray(skills) ? skills : [];
+        const activeSkills = configuredSkills.length
+          ? configuredSkills
+          : (Array.isArray(categories) ? categories : []).map((category) => ({ id: category.id, name: category.name }));
+        setOnboardingCities(activeCities);
+        setOnboardingSkills(activeSkills);
+        setNewTech((prev) => ({
+          ...prev,
+          cityId: prev.cityId || activeCities[0]?.id || "",
+          skill: prev.skill || activeSkills[0]?.name || "",
+        }));
+      })
+      .catch((err) => setSuccessMessage(`Could not load onboarding options: ${err.message}`));
+  }, [showModal]);
 
   useEffect(() => {
     if (location.search.includes("add=true")) {
@@ -223,8 +256,8 @@ const ServiceProviders = () => {
       return;
     }
 
-    setServiceProviders(
-      serviceProviders.map((t) =>
+    setServiceProviders((current) =>
+      current.map((t) =>
         t.id === id
           ? {
               ...t,
@@ -232,8 +265,11 @@ const ServiceProviders = () => {
               availability: saved?.availability ?? t.availability,
             }
           : t,
-      ),
+      )
     );
+    setSelectedTechProfile((current) => current?.id === id
+      ? { ...current, status: saved?.status || newStatus, availability: saved?.availability ?? current.availability }
+      : current);
 
     if (newStatus !== "Active") {
       showToast(`Service Provider status updated to ${newStatus}`);
@@ -316,36 +352,37 @@ const ServiceProviders = () => {
     showToast(`Service Provider "${name}" (${id}) removed permanently.`);
   };
 
-  const handleAddTechSubmit = (e) => {
+  const handleAddTechSubmit = async (e) => {
     e.preventDefault();
-    if (!newTech.name) {
-      showToast("Please enter a serviceProvider name.");
+    if (!newTech.name || !newTech.phone || !newTech.password || !newTech.cityId || !newTech.skill) {
+      showToast("Complete the required account, city and skill fields.");
       return;
     }
-
-    const addedTech = {
-      id: `TECH-00${serviceProviders.length + 1}`,
-      name: newTech.name,
-      skill: newTech.skill,
-      city: newTech.city,
-      rating: parseFloat(newTech.rating) || 5.0,
-      activeJobs: 0,
-      completedJobs: 0,
-      status: newTech.status,
-      availability: newTech.availability,
-    };
-
-    setServiceProviders([addedTech, ...serviceProviders]);
-    setNewTech({
-      name: "",
-      skill: "AC & Refrigerator",
-      city: "Delhi",
-      rating: "5.0",
-      availability: "Available",
-      status: "Active",
-    });
-    setShowModal(false);
-    showToast(`Service Provider "${addedTech.name}" onboarded successfully!`);
+    setOnboardingBusy(true);
+    try {
+      await apiRequest("/super-admin/service-providers", {
+        method: "POST",
+        auth: true,
+        body: {
+          name: newTech.name.trim(),
+          phone: newTech.phone.trim(),
+          email: newTech.email.trim(),
+          password: newTech.password,
+          cityId: newTech.cityId,
+          specs: [newTech.skill],
+          status: newTech.status,
+        },
+      });
+      await fetchTechs();
+      const createdName = newTech.name.trim();
+      setNewTech({ name: "", phone: "", email: "", password: "", skill: "", cityId: "", status: "Pending" });
+      setShowModal(false);
+      showToast(`Service Provider "${createdName}" onboarded successfully!`);
+    } catch (err) {
+      showToast(`Could not onboard service provider: ${err.message}`);
+    } finally {
+      setOnboardingBusy(false);
+    }
   };
 
   // Dropdown options are derived from whatever's actually loaded rather than
@@ -436,18 +473,12 @@ const ServiceProviders = () => {
             {canManage && provider.status === "Pending" && (
               <>
                 <button
-                  onClick={() => {
-                    handleStatusChange(provider.id, "Active");
-                    setSelectedTechProfile({ ...provider, status: "Active" });
-                  }}
+                  onClick={() => handleStatusChange(provider.id, "Active")}
                   className="bg-green-600 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-green-700 transition-colors flex items-center gap-1.5 shadow-sm">
                   <CheckCircle size={14} /> Approve Partner
                 </button>
                 <button
-                  onClick={() => {
-                    handleStatusChange(provider.id, "Inactive");
-                    setSelectedTechProfile({ ...provider, status: "Inactive" });
-                  }}
+                  onClick={() => handleStatusChange(provider.id, "Inactive")}
                   className="bg-red-600 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-red-700 transition-colors flex items-center gap-1.5 shadow-sm">
                   <XCircle size={14} /> Reject Partner
                 </button>
@@ -456,10 +487,7 @@ const ServiceProviders = () => {
 
             {canManage && provider.status === "Active" && (
               <button
-                onClick={() => {
-                  handleStatusChange(provider.id, "Inactive");
-                  setSelectedTechProfile({ ...provider, status: "Inactive" });
-                }}
+                onClick={() => handleStatusChange(provider.id, "Inactive")}
                 className="bg-red-600 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-red-700 transition-colors flex items-center gap-1.5 shadow-sm">
                 <Ban size={14} /> Suspend Partner
               </button>
@@ -467,10 +495,7 @@ const ServiceProviders = () => {
 
             {canManage && provider.status === "Inactive" && (
               <button
-                onClick={() => {
-                  handleStatusChange(provider.id, "Active");
-                  setSelectedTechProfile({ ...provider, status: "Active" });
-                }}
+                onClick={() => handleStatusChange(provider.id, "Active")}
                 className="bg-green-600 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-green-700 transition-colors flex items-center gap-1.5 shadow-sm">
                 <CheckCircle size={14} /> Activate Partner
               </button>
@@ -578,7 +603,7 @@ const ServiceProviders = () => {
               <span>
                 ⭐ Rating:{" "}
                 <strong className="text-slate-900">
-                  {provider.rating || "5.0"} / 5.0
+                  {provider.rating ?? 0} / 5.0
                 </strong>
               </span>
               <span>
@@ -676,11 +701,9 @@ const ServiceProviders = () => {
                     Aadhar Card Verification
                   </span>
                   <span
-                    className={`font-semibold flex items-center gap-1 ${provider.status === "Pending" ? "text-amber-600" : "text-green-600"}`}>
+                    className={`font-semibold flex items-center gap-1 ${provider.verification?.aadhar === "Verified" ? "text-green-600" : provider.verification?.aadhar === "Rejected" ? "text-red-600" : "text-amber-600"}`}>
                     <ShieldCheck size={14} />{" "}
-                    {provider.status === "Pending"
-                      ? "Pending Approval"
-                      : "Verified"}
+                    {provider.verification?.aadhar || "Pending"}
                   </span>
                 </div>
 
@@ -733,16 +756,16 @@ const ServiceProviders = () => {
                   <span className="text-[#64748B] font-medium">
                     PAN Card Verification
                   </span>
-                  <span className="text-green-600 font-semibold flex items-center gap-1">
-                    <ShieldCheck size={14} /> Verified
+                  <span className={`font-semibold flex items-center gap-1 ${provider.verification?.pan === "Verified" ? "text-green-600" : provider.verification?.pan === "Rejected" ? "text-red-600" : "text-amber-600"}`}>
+                    <ShieldCheck size={14} /> {provider.verification?.pan || "Pending"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between py-1">
                   <span className="text-[#64748B] font-medium">
                     Background Verification
                   </span>
-                  <span className="text-green-600 font-semibold flex items-center gap-1">
-                    <ShieldCheck size={14} /> Passed
+                  <span className={`font-semibold flex items-center gap-1 ${provider.verification?.background === "Verified" ? "text-green-600" : provider.verification?.background === "Rejected" ? "text-red-600" : "text-amber-600"}`}>
+                    <ShieldCheck size={14} /> {provider.verification?.background || "Pending"}
                   </span>
                 </div>
               </div>
@@ -1373,6 +1396,46 @@ const ServiceProviders = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
+                  <label className="text-xs font-semibold text-[#64748B] mb-1 block">Phone</label>
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    pattern="[0-9]{10}"
+                    required
+                    placeholder="10-digit number"
+                    value={newTech.phone}
+                    onChange={(e) => setNewTech({ ...newTech, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+                    className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none text-slate-800 bg-[#F8FAFC]"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-[#64748B] mb-1 block">Email (optional)</label>
+                  <input
+                    type="email"
+                    placeholder="partner@example.com"
+                    value={newTech.email}
+                    onChange={(e) => setNewTech({ ...newTech, email: e.target.value })}
+                    className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none text-slate-800 bg-[#F8FAFC]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-[#64748B] mb-1 block">Temporary Password</label>
+                <input
+                  type="password"
+                  minLength={6}
+                  required
+                  autoComplete="new-password"
+                  value={newTech.password}
+                  onChange={(e) => setNewTech({ ...newTech, password: e.target.value })}
+                  className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none text-slate-800 bg-[#F8FAFC]"
+                />
+                <p className="text-[10px] text-slate-400 mt-1">Share this securely with the provider; they use it to sign in.</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
                   <label className="text-xs font-semibold text-[#64748B] mb-1 block">
                     Skill Specialization
                   </label>
@@ -1382,11 +1445,10 @@ const ServiceProviders = () => {
                     onChange={(e) =>
                       setNewTech({ ...newTech, skill: e.target.value })
                     }>
-                    <option>AC & Refrigerator</option>
-                    <option>Washing Machine</option>
-                    <option>Microwave & TV</option>
-                    <option>Chimney & Hob</option>
-                    <option>All Appliances</option>
+                    <option value="" disabled>Select a configured skill</option>
+                    {onboardingSkills.map((skill) => (
+                      <option key={skill.id} value={skill.name}>{skill.name}</option>
+                    ))}
                   </select>
                 </div>
                 <div>
@@ -1395,51 +1457,27 @@ const ServiceProviders = () => {
                   </label>
                   <select
                     className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none text-slate-800 bg-[#F8FAFC]"
-                    value={newTech.city}
+                    value={newTech.cityId}
                     onChange={(e) =>
-                      setNewTech({ ...newTech, city: e.target.value })
+                      setNewTech({ ...newTech, cityId: e.target.value })
                     }>
-                    <option>Delhi</option>
-                    <option>Mumbai</option>
-                    <option>Bangalore</option>
-                    <option>Pune</option>
-                    <option>Chennai</option>
+                    <option value="" disabled>Select an active city</option>
+                    {onboardingCities.map((city) => (
+                      <option key={city.id} value={city.id}>{city.name}{city.state ? `, ${city.state}` : ""}</option>
+                    ))}
                   </select>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-semibold text-[#64748B] mb-1 block">
-                    Initial Rating
-                  </label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="1.0"
-                    max="5.0"
-                    className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none text-slate-800 bg-[#F8FAFC]"
-                    value={newTech.rating}
-                    onChange={(e) =>
-                      setNewTech({ ...newTech, rating: e.target.value })
-                    }
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-[#64748B] mb-1 block">
-                    Availability
-                  </label>
-                  <select
-                    className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none text-slate-800 bg-[#F8FAFC]"
-                    value={newTech.availability}
-                    onChange={(e) =>
-                      setNewTech({ ...newTech, availability: e.target.value })
-                    }>
-                    <option>Available</option>
-                    <option>Busy</option>
-                    <option>Offline</option>
-                  </select>
-                </div>
+              <div>
+                <label className="text-xs font-semibold text-[#64748B] mb-1 block">Account Status</label>
+                <select
+                  className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg focus:ring-2 focus:ring-[#0D47A1] outline-none text-slate-800 bg-[#F8FAFC]"
+                  value={newTech.status}
+                  onChange={(e) => setNewTech({ ...newTech, status: e.target.value })}>
+                  <option value="Pending">Pending review</option>
+                  <option value="Active">Active immediately</option>
+                </select>
               </div>
 
               <div className="pt-4 border-t border-[#E2E8F0] flex gap-3 justify-end text-sm">
@@ -1451,8 +1489,9 @@ const ServiceProviders = () => {
                 </button>
                 <button
                   type="submit"
-                  className="bg-[#0D47A1] text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm">
-                  Onboard Tech
+                  disabled={onboardingBusy}
+                  className="bg-[#0D47A1] text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-60">
+                  {onboardingBusy ? "Creating…" : "Create Account"}
                 </button>
               </div>
             </form>

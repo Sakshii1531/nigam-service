@@ -64,7 +64,9 @@ export async function deleteStory(id) {
 }
 
 export async function listVideos() {
-  return Video.find({ isActive: true }).sort({ createdAt: -1 });
+  // Old rows created before the console collected a URL are kept visible to
+  // admins for cleanup, but never become unplayable cards in the partner app.
+  return Video.find({ isActive: true, url: { $type: 'string', $ne: '' } }).sort({ createdAt: -1 });
 }
 export async function createVideo(data) {
   return Video.create(data);
@@ -79,20 +81,52 @@ export async function deleteVideo(id) {
   if (!video) throw new ApiError(404, 'Video not found');
 }
 
-export async function listAdvertisements() {
-  return Advertisement.find({ status: 'Running' }).sort({ createdAt: -1 });
+function liveAdvertisementQuery({ type, id } = {}) {
+  const now = new Date();
+  const query = {
+    status: 'Running',
+    $and: [
+      { $or: [{ startsAt: null }, { startsAt: { $exists: false } }, { startsAt: { $lte: now } }] },
+      { $or: [{ endsAt: null }, { endsAt: { $exists: false } }, { endsAt: { $gt: now } }] },
+    ],
+  };
+  if (type) query.type = type;
+  if (id) query._id = id;
+  return query;
+}
+
+export async function listAdvertisements({ type } = {}) {
+  return Advertisement.find(liveAdvertisementQuery({ type })).sort({ sortOrder: 1, createdAt: -1 });
 }
 export async function createAdvertisement(data) {
-  return Advertisement.create(data);
+  return Advertisement.create({ ...data, title: data.title || data.name });
 }
 export async function updateAdvertisement(id, updates) {
-  const ad = await Advertisement.findByIdAndUpdate(id, updates, { new: true });
+  const ad = await Advertisement.findById(id);
   if (!ad) throw new ApiError(404, 'Advertisement not found');
+  Object.assign(ad, updates);
+  // Old campaign rows only had a name/type/status. They remain publishable as
+  // a clean text creative and acquire the customer-facing title on first edit.
+  if (!ad.title) ad.title = ad.name;
+  if (ad.startsAt && ad.endsAt && ad.endsAt <= ad.startsAt) {
+    throw new ApiError(400, 'End date must be after the start date');
+  }
+  await ad.save();
   return ad;
 }
 export async function deleteAdvertisement(id) {
   const ad = await Advertisement.findByIdAndDelete(id);
   if (!ad) throw new ApiError(404, 'Advertisement not found');
+}
+
+export async function recordAdvertisementClick(id) {
+  const ad = await Advertisement.findOneAndUpdate(
+    liveAdvertisementQuery({ id }),
+    { $inc: { clicks: 1 } },
+    { new: true },
+  );
+  if (!ad) throw new ApiError(404, 'Live advertisement not found');
+  return { id: ad.id, clicks: ad.clicks };
 }
 
 // ── Admin (console) readers — unfiltered by publish state ─────────────────────
@@ -116,7 +150,7 @@ export async function listAllVideos() {
 export async function listAllAdvertisements({ status } = {}) {
   const query = {};
   if (status) query.status = status;
-  return Advertisement.find(query).sort({ createdAt: -1 });
+  return Advertisement.find(query).sort({ sortOrder: 1, createdAt: -1 });
 }
 
 const DEFAULT_FAQS = [
@@ -346,6 +380,9 @@ export async function deleteAnnouncement(id) {
 }
 
 export async function listSkills() {
+  return ServiceProviderSkill.find({ isActive: true }).sort({ group: 1, name: 1 });
+}
+export async function listAllSkills() {
   return ServiceProviderSkill.find().sort({ group: 1, name: 1 });
 }
 export async function createSkill(data) {

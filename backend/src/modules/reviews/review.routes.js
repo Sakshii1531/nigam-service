@@ -11,6 +11,8 @@ import {
   serviceProviderIdParamSchema,
   listQuerySchema,
   brandListQuerySchema,
+  createFeaturedReviewSchema,
+  updateFeaturedReviewSchema,
 } from './review.validation.js';
 
 export const reviewRouter = Router();
@@ -24,7 +26,7 @@ reviewRouter.get('/featured-admin', requireAuth, requireRole('super_admin'), asy
   }
 });
 
-reviewRouter.post('/featured-admin', requireAuth, requireRole('super_admin'), async (req, res, next) => {
+reviewRouter.post('/featured-admin', requireAuth, requireRole('super_admin'), validate(createFeaturedReviewSchema), async (req, res, next) => {
   try {
     created(res, await reviewService.createAdminFeaturedReview(req.body));
   } catch (err) {
@@ -32,7 +34,7 @@ reviewRouter.post('/featured-admin', requireAuth, requireRole('super_admin'), as
   }
 });
 
-reviewRouter.patch('/featured-admin/:id', requireAuth, requireRole('super_admin'), async (req, res, next) => {
+reviewRouter.patch('/featured-admin/:id', requireAuth, requireRole('super_admin'), validate(idParamSchema, 'params'), validate(updateFeaturedReviewSchema), async (req, res, next) => {
   try {
     ok(res, await reviewService.updateAdminFeaturedReview(req.params.id, req.body));
   } catch (err) {
@@ -40,7 +42,7 @@ reviewRouter.patch('/featured-admin/:id', requireAuth, requireRole('super_admin'
   }
 });
 
-reviewRouter.delete('/featured-admin/:id', requireAuth, requireRole('super_admin'), async (req, res, next) => {
+reviewRouter.delete('/featured-admin/:id', requireAuth, requireRole('super_admin'), validate(idParamSchema, 'params'), async (req, res, next) => {
   try {
     ok(res, await reviewService.deleteAdminFeaturedReview(req.params.id));
   } catch (err) {

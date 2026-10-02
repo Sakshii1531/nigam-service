@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Bell, AlertTriangle } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
@@ -27,7 +27,8 @@ const Announcements = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setLoading(true);
     apiRequest('/service-provider/academy/announcements', { auth: true })
       .then((res) => setNotices((res || []).map((n) => ({
         id: n.id,
@@ -36,9 +37,21 @@ const Announcements = () => {
         region: n.scope === 'all' ? null : n.region,
         when: relativeTime(n.createdAt),
       }))))
+      .then(() => setError(''))
       .catch((err) => setError(err.message || 'Could not load announcements.'))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    load();
+    const onFocus = () => load();
+    window.addEventListener('focus', onFocus);
+    const timer = window.setInterval(load, 30000);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      window.clearInterval(timer);
+    };
+  }, [load]);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-16 lg:pb-8 relative font-sans">
