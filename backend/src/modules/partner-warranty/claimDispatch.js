@@ -6,7 +6,7 @@ import { ServiceProvider } from '../service-provider/serviceProvider.model.js';
 import { claimLinks } from './claimLinks.js';
 import { Brand } from '../super-admin/brand.model.js';
 import { ServiceRequest } from '../service-requests/serviceRequest.model.js';
-import { emitToAdmins } from '../notifications/notification.service.js';
+import { emit as emitNotification, emitToAdmins } from '../notifications/notification.service.js';
 
 // What the dispatch engine (service-requests/serviceRequest.service.js) tells
 // a warranty claim about its Service Job — offered, declined, timed out,
@@ -50,6 +50,32 @@ export async function onWarrantyJobOffered(sr, provider, { authorized = null, ma
     visibility: 'internal',
   });
   await saveClaim(claim);
+
+  // The partner hears about it even with the app closed (client #16) — the
+  // pop-up only reaches an open app.
+  await notifyPartner(provider, 'warranty.job_offered_partner', claim, sr);
+}
+
+/**
+ * Tells a partner about their warranty job (client #16). `provider` is a
+ * ServiceProvider doc or id; `kind` picks the wording for a withdrawal. NCC's
+ * own reason stays internal — the partner is only told what to do.
+ */
+export async function notifyPartner(provider, template, claim, sr, extra = {}) {
+  if (!provider) return;
+  const sp = provider.user ? provider : await ServiceProvider.findById(provider).select('user name').lean();
+  if (!sp?.user) return;
+  const brand = claim.brand?.name ? claim.brand : await Brand.findById(claim.brand).select('name').lean();
+  await emitNotification(template, {
+    user: sp.user,
+    jobId: sr?.humanId || null,
+    humanId: claim.humanId,
+    brandName: brand?.name || 'Partner brand',
+    productName: claim.productName,
+    issueName: claim.issueName,
+    area: [claim.address?.city, claim.address?.pincode].filter(Boolean).join(' '),
+    ...extra,
+  });
 }
 
 /** The offered partner said no, or let the offer time out. */
@@ -117,10 +143,23 @@ export function warrantyJobInfo(claim, sr, { forAssignedPartner = false } = {}) 
     customerPays: 0,
   };
   if (!forAssignedPartner) return info;
-  // Once the job is theirs: the customer's proof of purchase and photos, and
-  // what they wrote — never the brand's internal notes.
+  // Once the job is theirs: where to go (client #11 "customer location" — the
+  // offer shows only area + pincode), the customer's proof of purchase and
+  // photos, and what they wrote — never the brand's internal notes.
+  const a = claim.address || {};
   return {
     ...info,
+    address: {
+      name: a.name || null,
+      house: a.house || null,
+      landmark: a.landmark || null,
+      city: a.city || null,
+      state: a.state || null,
+      pincode: a.pincode || null,
+      latitude: a.latitude ?? null,
+      longitude: a.longitude ?? null,
+      line: [a.house, a.landmark, a.city, a.state].filter(Boolean).join(', ') + (a.pincode ? ` ${a.pincode}` : ''),
+    },
     claimStatus: claim.status,
     purchaseDate: claim.purchaseDate || null,
     remarks: claim.remarks || null,
@@ -128,8 +167,11 @@ export function warrantyJobInfo(claim, sr, { forAssignedPartner = false } = {}) 
   };
 }
 
-/** Warranty info for many service requests at once (the partner's job feed). */
-export async function warrantyInfoBySr(srs) {
+/**
+ * Warranty info for many service requests at once — the offer feed, or (with
+ * `forAssignedPartner`) the partner's own accepted jobs.
+ */
+export async function warrantyInfoBySr(srs, { forAssignedPartner = false } = {}) {
   const ids = srs.filter((sr) => sr.warrantyClaim).map((sr) => sr.warrantyClaim._id || sr.warrantyClaim);
   if (!ids.length) return new Map();
   const claims = await WarrantyClaim.find({ _id: { $in: ids } }).populate('brand', 'name');
@@ -137,7 +179,7 @@ export async function warrantyInfoBySr(srs) {
   return new Map(
     srs
       .filter((sr) => sr.warrantyClaim)
-      .map((sr) => [String(sr._id), warrantyJobInfo(byId.get(String(sr.warrantyClaim._id || sr.warrantyClaim)), sr)]),
+      .map((sr) => [String(sr._id), warrantyJobInfo(byId.get(String(sr.warrantyClaim._id || sr.warrantyClaim)), sr, { forAssignedPartner })]),
   );
 }
 

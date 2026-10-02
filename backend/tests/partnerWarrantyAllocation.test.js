@@ -252,14 +252,26 @@ describe('Phase 6 — what the partner sees', () => {
     const accepted = await api().post(`/api/v1/service-provider/jobs/accept/${sr.id}`).set(bearer(sp.token)).send({}).expect(200);
     const context = await api().get(`/api/v1/service-provider/jobs/${accepted.body.data.id}/context`).set(bearer(sp.token)).expect(200);
     expect(context.body.data.warranty).toMatchObject({ ...expected, claimStatus: 'Partner Assigned' });
-    // Once theirs: the invoice/photos the customer uploaded, the purchase date.
+    // Once theirs: where to go — the full address and map position (the offer
+    // above had only area + pincode) — and the invoice/photos, the purchase date.
+    expect(offer.warranty.address).toBeUndefined();
+    expect(context.body.data.warranty.address).toMatchObject({
+      house: '12 MG Road',
+      city: 'Indore',
+      pincode: '452001',
+      latitude: 22.72,
+      longitude: 75.86,
+      line: '12 MG Road, Indore, MP 452001',
+    });
     expect(context.body.data.warranty.documents).toEqual(saved.documents.map((d) => ({ kind: d.kind, url: d.url, name: d.name || null })));
     expect(context.body.data.warranty.documents.length).toBeGreaterThan(0);
     expect(new Date(context.body.data.warranty.purchaseDate).getTime()).toBe(saved.purchaseDate.getTime());
 
     // The active-jobs list (the partner app's job cards) carries it too.
     const active = await api().get('/api/v1/service-provider/jobs/active').set(bearer(sp.token)).expect(200);
-    expect(active.body.data.find((j) => j.id === accepted.body.data.id).warranty).toMatchObject(expected);
+    const activeWarranty = active.body.data.find((j) => j.id === accepted.body.data.id).warranty;
+    expect(activeWarranty).toMatchObject(expected);
+    expect(activeWarranty.address.line).toBe('12 MG Road, Indore, MP 452001');
 
     // History: "Warranty (B2B2C)" lists only partner-warranty jobs.
     await ServiceRequest.create({ user: s.cust.user._id, category: 'AC', zone: 'Indore', status: 'Assigned', serviceProvider: sp.id, assignedAt: new Date() }).then((plain) =>

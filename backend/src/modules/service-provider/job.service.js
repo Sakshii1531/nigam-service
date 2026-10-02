@@ -343,7 +343,8 @@ export async function listActiveJobs(serviceProviderId) {
   );
 
   // Partner-warranty jobs: brand, product, issue, NCCJ / claim IDs (client #11).
-  const warrantyInfo = await warrantyInfoBySr(jobs.map((j) => j.serviceRequest).filter(Boolean));
+  // They're this partner's accepted jobs, so the full block (address included).
+  const warrantyInfo = await warrantyInfoBySr(jobs.map((j) => j.serviceRequest).filter(Boolean), { forAssignedPartner: true });
   return jobs.map((j) => ({ ...j.toJSON(), warranty: (j.serviceRequest && warrantyInfo.get(String(j.serviceRequest._id))) || null }));
 }
 
