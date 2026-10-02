@@ -13,6 +13,9 @@ export const claimIdParamSchema = z.object({ id: z.string().trim().min(1).max(40
 
 export const listAdminClaimsQuerySchema = z.object({
   brand: objectId.optional(),
+  // Client #3: Category = the warranty group the customer picked first
+  // (e.g. ElectroCare); Product = the product category (e.g. AC).
+  group: objectId.optional(),
   category: text(60).optional(),
   productType: objectId.optional(),
   status: text(300).optional(),

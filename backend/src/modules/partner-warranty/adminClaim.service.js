@@ -4,7 +4,7 @@ import { appendEvent, saveClaim } from './claimTimeline.js';
 import { CLAIM_STATUS, CLAIM_STATUSES, SERVICE_STAGES, canTransition, customerStatusLabel } from './claimStatus.js';
 import { claimLinks } from './claimLinks.js';
 import { approveAndCreateJob, createServiceJobForClaim, dispatchServiceJob } from './claimJob.service.js';
-import { syncClaimFromJob } from './claimDispatch.js';
+import { syncClaimFromJob, notifyPartner } from './claimDispatch.js';
 import { User } from '../auth/user.model.js';
 import { Brand } from '../super-admin/brand.model.js';
 import { AuditLog } from '../super-admin/auditLog.model.js';
@@ -44,6 +44,7 @@ function toAdminSummary(claim) {
     status: claim.status,
     brand: claim.brand?._id ? { id: String(claim.brand._id), name: claim.brand.name } : null,
     customer: claim.customer?._id ? { id: String(claim.customer._id), name: claim.customer.name, phone: claim.customer.phone || null } : null,
+    category: claim.group?._id ? { id: String(claim.group._id), name: claim.group.name } : null,
     productName: claim.productName,
     categoryKey: claim.categoryKey,
     issueName: claim.issueName,
@@ -63,6 +64,7 @@ function toAdminSummary(claim) {
 
 const POPULATE_SUMMARY = [
   { path: 'brand', select: 'name' },
+  { path: 'group', select: 'name' },
   { path: 'customer', select: 'name phone' },
   { path: 'serviceRequest', select: 'humanId status serviceProvider', populate: { path: 'serviceProvider', select: 'name phone' } },
 ];
@@ -77,15 +79,17 @@ async function loadClaim(idOrHumanId) {
 // ── List ─────────────────────────────────────────────────────────────────────
 
 /**
- * All brands' claims. Filters (client #3): brand, category, product type,
+ * All brands' claims. Filters (client #3): brand, group ("Category"), product
+ * category, product type,
  * status (comma list), date range, city, pincode; plus escalated,
  * allocationFailed, slaState, and `q` over ticket, Service Job ID, serial,
  * model and customer name/phone.
  */
 export async function listClaims(filters = {}) {
-  const { brand, category, productType, status, from, to, city, pincode, escalated, allocationFailed, slaState: sla, q, page, limit, sort } = filters;
+  const { brand, group, category, productType, status, from, to, city, pincode, escalated, allocationFailed, slaState: sla, q, page, limit, sort } = filters;
   const query = {};
   if (brand) query.brand = brand;
+  if (group) query.group = group;
   if (category) query.categoryKey = category;
   if (productType) query.productType = productType;
   if (status) query.status = { $in: String(status).split(',').map((s) => s.trim()).filter((s) => CLAIM_STATUSES.includes(s)) };
@@ -356,11 +360,15 @@ export async function reassignPartner(user, id, { serviceProviderId, reason, for
       );
       await dispatchServiceJob(claim._id);
     }
+    if (previous && String(previous) !== String(serviceProviderId || '')) {
+      await notifyPartner(previous, 'warranty.job_withdrawn_partner', claim, sr, { kind: 'reassigned' });
+    }
     return getClaim(claim._id);
   }
 
   if (!force) throw new ApiError(409, 'The partner has already accepted this job — pass force: true to replace the job');
   await retireJob(sr, `Replaced: ${reason}`);
+  await notifyPartner(sr.serviceProvider, 'warranty.job_withdrawn_partner', claim, sr, { kind: 'reassigned' });
   claim.visit = undefined;
   appendEvent(claim, { action: 'REASSIGNED', toStatus: S.JOB_CREATED, actor, note: 'We are arranging a new service partner for you', visibility: 'customer' });
   appendEvent(claim, { action: 'NOTE_ADDED', actor, note: `Replaced Service Job ${sr.humanId}: ${reason}`, visibility: 'internal' });
@@ -427,8 +435,16 @@ export async function hold(user, id, { reason }) {
   await saveClaim(claim);
 
   const sr = await activeJobOf(claim);
-  if (sr && sr.status === 'Assigned' && !(await Job.exists({ serviceRequest: sr._id }))) {
-    await ServiceRequest.updateOne({ _id: sr._id }, { serviceProvider: null, status: 'New', isAccepted: false });
+  if (sr?.serviceProvider) {
+    const accepted = await Job.exists({ serviceRequest: sr._id });
+    if (!accepted && sr.status === 'Assigned') {
+      // An offer is taken back (it may go to someone else on resume).
+      await ServiceRequest.updateOne({ _id: sr._id }, { serviceProvider: null, status: 'New', isAccepted: false });
+      await notifyPartner(sr.serviceProvider, 'warranty.job_withdrawn_partner', claim, sr, { kind: 'withdrawn' });
+    } else if (accepted) {
+      // The accepted partner keeps the job but must not visit meanwhile.
+      await notifyPartner(sr.serviceProvider, 'warranty.job_withdrawn_partner', claim, sr, { kind: 'hold' });
+    }
   }
   return getClaim(claim._id);
 }
@@ -445,6 +461,9 @@ export async function resume(user, id, { reason }) {
     // re-offer a job that nobody holds.
     await syncClaimFromJob(sr);
     if (sr.status === 'New' && !sr.serviceProvider) await dispatchServiceJob(claim._id);
+    else if (sr.serviceProvider && (await Job.exists({ serviceRequest: sr._id }))) {
+      await notifyPartner(sr.serviceProvider, 'warranty.job_resumed_partner', claim, sr);
+    }
   }
   return getClaim(claim._id);
 }
@@ -459,7 +478,10 @@ export async function cancel(user, id, { reason }) {
   appendEvent(claim, { action: 'CANCELLED', toStatus: S.CANCELLED, actor: await adminActor(user), note: reason, visibility: 'customer' });
   await saveClaim(claim);
   const sr = await activeJobOf(claim);
-  if (sr) await retireJob(sr, reason);
+  if (sr) {
+    await retireJob(sr, reason);
+    await notifyPartner(sr.serviceProvider, 'warranty.job_withdrawn_partner', claim, sr, { kind: 'cancelled' });
+  }
   await Promise.all([notifyCustomer(claim, 'warranty.claim_cancelled', { reason }), notifyBrand(claim, 'warranty.claim_cancelled', { reason })]);
   return getClaim(claim._id);
 }

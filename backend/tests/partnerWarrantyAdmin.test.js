@@ -322,3 +322,48 @@ describe('Phase 8 — status, escalation, hold, cancel, reopen, notes', () => {
     expect((await detail(s)).timeline.find((e) => e.action === 'NOTE_ADDED')).toMatchObject({ note: 'Brand SPOC is Mr. Rao', visibility: 'internal' });
   });
 });
+
+describe('Client audit fixes — Category filter and partner notifications', () => {
+  it('filters by Category (the warranty group) and shows it on each row (client #3)', async () => {
+    const s = await scenario();
+    const ungrouped = await kit.submitClaim(s.w, s.cust, { groupId: undefined });
+    const res = await api().get(`/api/v1/super-admin/warranty-claims?group=${s.w.group._id}`).set(A(s)).expect(200);
+    expect(res.body.data.map((c) => c.id)).toEqual([s.claim.id]);
+    expect(res.body.data[0].category).toEqual({ id: String(s.w.group._id), name: 'AirCare' });
+    const all = (await api().get('/api/v1/super-admin/warranty-claims').set(A(s)).expect(200)).body.data;
+    expect(all.find((c) => c.id === ungrouped.id).category).toBeNull();
+    await api().get('/api/v1/super-admin/warranty-claims?group=not-an-id').set(A(s)).expect(400);
+  });
+
+  it('tells the partner when a job is offered, taken away, held, resumed or cancelled (client #16)', async () => {
+    const s = await scenario();
+    const ravi = await partner({ name: 'Ravi', km: 1 });
+    const asha = await partner({ name: 'Asha', km: 3 });
+    const inbox = async (p) => {
+      const user = (await ServiceProvider.findById(p.id).select('user').lean()).user;
+      return (await Notification.find({ recipient: user, type: 'jobs' }).sort({ createdAt: 1, _id: 1 }).lean()).map((n) => ({ title: n.title, message: n.message }));
+    };
+
+    await brandApprove(s);
+    const sr = await currentSr(s);
+    expect(await inbox(ravi)).toEqual([{ title: 'New Warranty Job', message: expect.stringContaining(`LG Air Conditioner — Cooling Issue in Indore 452001. Job ${sr.humanId}`) }]);
+
+    // Taken from Ravi before he answered; Asha is offered it.
+    await api().post(adminUrl(s.claim, 'reassign')).set(A(s)).send({ serviceProviderId: asha.id, reason: 'Ravi is slow to respond' }).expect(200);
+    expect((await inbox(ravi)).at(-1)).toEqual({ title: 'Warranty Job Withdrawn', message: expect.stringContaining('NCC has given it to another partner') });
+    expect((await inbox(asha)).map((n) => n.title)).toEqual(['New Warranty Job']);
+
+    // Asha accepts; hold → don't visit; resume → back on; cancel → no visit needed.
+    await api().post(`/api/v1/service-provider/jobs/accept/${sr.id}`).set(bearer(asha.token)).send({}).expect(200);
+    await api().post(adminUrl(s.claim, 'hold')).set(A(s)).send({ reason: 'Customer travelling' }).expect(200);
+    expect((await inbox(asha)).at(-1)).toEqual({ title: 'Warranty Job On Hold', message: expect.stringContaining("Please don't visit until NCC resumes it") });
+    await api().post(adminUrl(s.claim, 'resume')).set(A(s)).send({ reason: 'Customer back' }).expect(200);
+    expect((await inbox(asha)).at(-1).title).toBe('Warranty Job Resumed');
+    await api().post(adminUrl(s.claim, 'cancel')).set(A(s)).send({ reason: 'Duplicate claim' }).expect(200);
+    expect((await inbox(asha)).at(-1)).toEqual({ title: 'Warranty Job Withdrawn', message: expect.stringContaining('the warranty claim was cancelled') });
+
+    // NCC's own reasons stay internal.
+    const all = [...(await inbox(ravi)), ...(await inbox(asha))].map((n) => n.message).join(' ');
+    for (const reason of ['slow to respond', 'travelling', 'Duplicate']) expect(all).not.toContain(reason);
+  });
+});

@@ -107,3 +107,23 @@ Screenshots (the walkthrough): `screenshots/phase-16-01-customer-submitted.png` 
 ### Not done
 
 - **Commit to `main`:** waiting for the user's go-ahead (they asked for no commits after Phases 1–3).
+
+### Client re-audit (2026-10-02, after commit e3830fa)
+
+A point-by-point re-check against the client's original brief found three points only partly met. All three are now fixed:
+
+- **#11, customer location.** After accepting, the partner saw only the city and pincode, so they couldn't reach the customer.
+  - `warrantyJobInfo(…, { forAssignedPartner })` now carries the claim's address (house, landmark, city, state, pincode, latitude/longitude, plus a one-line form). This applies to the job context and, via `warrantyInfoBySr(…, { forAssignedPartner: true })`, to `/jobs/active`. The offer feed still shows only area and pincode.
+  - The partner app shows a **Visit address** with Open in Maps, and uses the address and coordinates for the job card and navigation.
+- **#16, partner notifications.** Partners only got the live pop-up. New templates:
+  - `warranty.job_offered_partner`, sent from `onWarrantyJobOffered`;
+  - `warranty.job_withdrawn_partner`, for reassigned (before or after acceptance), cancelled, offer taken back on hold, and accepted job on hold;
+  - `warranty.job_resumed_partner`.
+
+  `notifyPartner()` in `claimDispatch.js` sends them. NCC's reason is never included.
+- **#3, Category filter.** Super Admin had no Category filter. Added:
+  - a `group` filter on `GET /super-admin/warranty-claims`;
+  - `category: { id, name }` on each row;
+  - a Category select, a line under the product, and a CSV column.
+
+**Verification:** backend 62/62 suites (896 tests, run in two batches); browser 57/57; API 195/195; `vite build` passes.

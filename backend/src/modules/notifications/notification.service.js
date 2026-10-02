@@ -352,6 +352,41 @@ const EVENT_TEMPLATES = {
     priority: 'Medium',
     smsBody: `Nigam Care: Rs.${p.amount} settled for ${p.jobs} warranty job(s). Ref ${p.reference}.`,
   }),
+  // To the service partner (client #16). Their app shows a pop-up only while
+  // open; these reach the bell, push and SMS too.
+  'warranty.job_offered_partner': (p) => ({
+    recipient: p.user,
+    type: 'jobs',
+    title: 'New Warranty Job',
+    message: `${p.brandName} ${p.productName} — ${p.issueName}${p.area ? ` in ${p.area}` : ''}. Job ${p.jobId}. Free for the customer; NCC pays you. Respond within 60 seconds.`,
+    cta: { label: 'View Job', route: '/service-provider/dashboard' },
+    priority: 'High',
+    smsBody: `Nigam Care: new warranty job ${p.jobId} (${p.brandName} ${p.productName}${p.area ? `, ${p.area}` : ''}). Open the partner app to accept.`,
+  }),
+  'warranty.job_withdrawn_partner': (p) => {
+    const why = {
+      reassigned: 'NCC has given it to another partner',
+      cancelled: 'the warranty claim was cancelled',
+      hold: 'NCC has put it on hold',
+    }[p.kind] || 'NCC has withdrawn it';
+    return {
+      recipient: p.user,
+      type: 'jobs',
+      title: p.kind === 'hold' ? 'Warranty Job On Hold' : 'Warranty Job Withdrawn',
+      message: `Job ${p.jobId} (${p.brandName} ${p.productName}): ${why}. ${p.kind === 'hold' ? 'Please don\'t visit until NCC resumes it.' : 'You don\'t need to visit.'}`,
+      cta: { label: 'My Jobs', route: '/service-provider/dashboard' },
+      priority: 'High',
+      smsBody: `Nigam Care: warranty job ${p.jobId} — ${why}. ${p.kind === 'hold' ? 'Do not visit until resumed.' : 'No visit needed.'}`,
+    };
+  },
+  'warranty.job_resumed_partner': (p) => ({
+    recipient: p.user,
+    type: 'jobs',
+    title: 'Warranty Job Resumed',
+    message: `Job ${p.jobId} (${p.brandName} ${p.productName}) is back on — continue as planned.`,
+    cta: { label: 'Open Job', route: '/service-provider/dashboard' },
+    priority: 'Medium',
+  }),
   'warranty.info_provided': (p) => ({
     recipient: p.user,
     type: 'claims',
