@@ -7,9 +7,13 @@
     "node": ">=20.0.0"
   },
   "scripts": {
+    "security:scan": "node ../scripts/scan-malware.mjs",
+    "predev": "npm run security:scan",
     "dev": "vite",
+    "prebuild": "npm run security:scan",
     "build": "vite build",
     "lint": "eslint .",
+    "prepreview": "npm run security:scan",
     "preview": "vite preview"
   },
   "dependencies": {
