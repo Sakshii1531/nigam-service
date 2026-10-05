@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Mail, Lock, ArrowRight, Shield, Cpu, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login: authLogin } = useAuth();
   const [formData, setFormData] = useState({
     email: 'admin123@gmail.com',
@@ -74,6 +75,12 @@ const Login = () => {
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-lg text-red-600 text-xs text-center">
               {error}
+            </div>
+          )}
+
+          {location.state?.passwordChanged && (
+            <div className="mb-4 p-3 bg-green-50 border border-green-100 rounded-lg text-green-700 text-xs text-center">
+              Password set successfully. Sign in with your new password.
             </div>
           )}
 

@@ -67,8 +67,10 @@ const providers = {
     },
   },
   test: {
-    async send({ identifier, code, purpose }) {
-      lastCodeByIdentifier.set(identifier, { code, purpose });
+    async send({ identifier, lookupIdentifier, code, purpose }) {
+      // Tests retrieve the OTP by the login identifier. Delivery may go to a
+      // different channel (for example: email username, registered phone SMS).
+      lastCodeByIdentifier.set(lookupIdentifier || identifier, { code, purpose });
     },
   },
   smsindiahub: {
@@ -84,9 +86,9 @@ export function generateOtpCode() {
   return String(Math.floor(100000 + Math.random() * 900000)); // 6 digits, never starts with 0
 }
 
-export async function sendOtp({ identifier, code, purpose }) {
+export async function sendOtp({ identifier, lookupIdentifier, code, purpose }) {
   const provider = providers[env.otpProvider] || providers.stub;
-  await provider.send({ identifier, code, purpose });
+  await provider.send({ identifier, lookupIdentifier, code, purpose });
 }
 
 /** Masks a phone/email for display, matching what the frontend's OTP screen shows (e.g. "98******10", "j***@example.com"). */

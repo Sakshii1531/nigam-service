@@ -64,7 +64,7 @@ async function resolvePermissions(user) {
   return [...new Set(keys)];
 }
 
-async function initiateOtp({ role, identifier, purpose }) {
+async function initiateOtp({ role, identifier, purpose, deliveryIdentifier = identifier }) {
   await Otp.deleteMany({ identifier, role, purpose, verified: false });
 
   const code = generateOtpCode();
@@ -72,9 +72,9 @@ async function initiateOtp({ role, identifier, purpose }) {
   const expiresAt = new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000);
 
   await Otp.create({ identifier, role, codeHash, purpose, expiresAt });
-  await sendOtp({ identifier, code, purpose });
+  await sendOtp({ identifier: deliveryIdentifier, lookupIdentifier: identifier, code, purpose });
 
-  return { destination: maskIdentifier(identifier) };
+  return { destination: maskIdentifier(deliveryIdentifier) };
 }
 
 async function consumeOtp({ role, identifier, code, purpose }) {
@@ -104,6 +104,7 @@ async function issueSession(user) {
     role: user.role,
     brand: user.brand ? user.brand.toString() : null,
     permissions,
+    mustChangePassword: Boolean(user.mustChangePassword),
   });
   const refreshToken = signRefreshToken({ sub: user.id.toString() });
 
@@ -149,7 +150,7 @@ export async function login({ role, identifier, password }) {
   }
   if (user.status !== 'Active') throw new ApiError(403, `Account is ${user.status.toLowerCase()}`);
 
-  return initiateOtp({ role, identifier, purpose: 'login' });
+  return initiateOtp({ role, identifier, purpose: 'login', deliveryIdentifier: user.phone || identifier });
 }
 
 /** Resend button on the OTP screen — same as login's OTP step, minus the password check. */
@@ -163,7 +164,7 @@ export async function resendOtp({ role, identifier, purpose = 'login' }) {
   }
   const user = await findUserByIdentifier(role, identifier);
   if (!user) throw new ApiError(404, 'No account found for this identifier');
-  return initiateOtp({ role, identifier, purpose });
+  return initiateOtp({ role, identifier, purpose, deliveryIdentifier: user.phone || identifier });
 }
 
 /** Step 2 of login: verifying the OTP is what actually issues tokens. */
@@ -368,7 +369,7 @@ export async function forgotPassword({ role, identifier }) {
   const user = await findUserByIdentifier(role, identifier);
   // Deliberately don't reveal whether the account exists — always return the same
   // shape, but only actually send an OTP when there's a real account behind it.
-  if (user) await initiateOtp({ role, identifier, purpose: 'forgot_password' });
+  if (user) await initiateOtp({ role, identifier, purpose: 'forgot_password', deliveryIdentifier: user.phone || identifier });
   return { destination: maskIdentifier(identifier) };
 }
 
@@ -677,6 +678,20 @@ export async function changePassword(userId, { currentPassword, newPassword }) {
   if (user.mustChangePassword) user.mustChangePassword = false;
   await user.save();
 
+  await RefreshToken.updateMany({ user: user._id, revoked: false }, { revoked: true });
+}
+
+/** Completes an admin-provisioned first login after password + OTP authentication. */
+export async function completeFirstLoginPassword(userId, newPassword) {
+  const user = await User.findById(userId).select('+passwordHash');
+  if (!user) throw new ApiError(404, 'Account not found');
+  if (!user.mustChangePassword) throw new ApiError(409, 'This account does not require a first-login password change');
+  if (await verifyPassword(newPassword, user.passwordHash)) {
+    throw new ApiError(400, 'New password must be different from the temporary password');
+  }
+  user.passwordHash = await hashPassword(newPassword);
+  user.mustChangePassword = false;
+  await user.save();
   await RefreshToken.updateMany({ user: user._id, revoked: false }, { revoked: true });
 }
 

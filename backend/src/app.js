@@ -44,6 +44,7 @@ import { brandInsightsRouter } from './modules/brand-admin/brandInsights.routes.
 import { brandSettingsRouter } from './modules/brand-admin/brandSettings.routes.js';
 import { brandAcademyRouter } from './modules/brand-admin/brandAcademy.routes.js';
 import { brandRouter } from './modules/super-admin/brand.routes.js';
+import { brandAdminRouter } from './modules/super-admin/brandAdmin.routes.js';
 import { cityRouter } from './modules/super-admin/city.routes.js';
 import { asmRouter } from './modules/super-admin/asm.routes.js';
 import { assignmentWeightingRouter } from './modules/super-admin/assignmentWeighting.routes.js';
@@ -201,6 +202,7 @@ export function createApp() {
   app.use('/api/v1/brand/warranty-webhook', brandWarrantyWebhookRouter);
   app.use('/api/v1/brand', brandInsightsRouter);
   app.use('/api/v1/super-admin/brands', brandRouter);
+  app.use('/api/v1/super-admin/brand-admins', brandAdminRouter);
   app.use('/api/v1/super-admin/cities', cityRouter);
   app.use('/api/v1/super-admin/catalogue', catalogAdminRouter);
   app.use('/api/v1/super-admin/asms', asmRouter);

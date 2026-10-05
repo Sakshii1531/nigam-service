@@ -54,6 +54,10 @@ export const changePasswordSchema = z.object({
   newPassword: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
+export const firstLoginPasswordSchema = z.object({
+  newPassword: z.string().min(6, 'Password must be at least 6 characters'),
+});
+
 export const updateOwnProfileSchema = z.object({
   name: z.string().min(1).optional(),
   phone: z.string().min(1).optional(),

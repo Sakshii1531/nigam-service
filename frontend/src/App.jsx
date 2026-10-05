@@ -128,6 +128,7 @@ const SuperAdminUsers = lazy(() => import("./pages/super-admin/Users"));
 const SuperAdminServiceProviders = lazy(() => import("./pages/super-admin/ServiceProviders"));
 const SuperAdminCityChangeRequests = lazy(() => import("./pages/super-admin/CityChangeRequests"));
 const SuperAdminBrands = lazy(() => import("./pages/super-admin/Brands"));
+const SuperAdminBrandAdministrators = lazy(() => import("./pages/super-admin/BrandAdministrators"));
 const SuperAdminRequests = lazy(() => import("./pages/super-admin/Requests"));
 const SuperAdminWarranty = lazy(() => import("./pages/super-admin/Warranty"));
 const SuperAdminAssignment = lazy(() => import("./pages/super-admin/Assignment"));
@@ -200,6 +201,7 @@ const ServiceProviderVerifyOtp = lazy(() => import("./pages/service-provider/Ver
 const ServiceProviderForgotPassword = lazy(() => import("./pages/service-provider/ForgotPassword"));
 const BrandVerifyOtp = lazy(() => import("./pages/brand-admin/VerifyOtp"));
 const BrandForgotPassword = lazy(() => import("./pages/brand-admin/ForgotPassword"));
+const BrandChangePassword = lazy(() => import("./pages/brand-admin/ChangePassword"));
 const SuperAdminVerifyOtp = lazy(() => import("./pages/super-admin/VerifyOtp"));
 const SuperAdminForgotPassword = lazy(() => import("./pages/super-admin/ForgotPassword"));
 const SuperAdminChangePassword = lazy(() => import("./pages/super-admin/ChangePassword"));
@@ -359,7 +361,12 @@ const ScrollToTop = () => {
     // 2. BRAND ADMIN PORTAL
     else if (pathname.startsWith("/brand-admin")) {
       if (user && user.role === "brand_admin") {
-        if (brandAdminAuthPages.includes(pathname)) {
+        if (user.mustChangePassword) {
+          if (pathname !== "/brand-admin/change-password") {
+            navigate("/brand-admin/change-password", { replace: true });
+            return;
+          }
+        } else if (brandAdminAuthPages.includes(pathname) || pathname === "/brand-admin/change-password") {
           navigate("/brand-admin/dashboard", { replace: true });
           return;
         }
@@ -939,6 +946,10 @@ function App() {
                             element={<BrandForgotPassword />}
                           />
                           <Route
+                            path="/brand-admin/change-password"
+                            element={<BrandChangePassword />}
+                          />
+                          <Route
                             path="/brand-admin/dashboard"
                             element={<BrandDashboard />}
                           />
@@ -1218,6 +1229,10 @@ function App() {
                           <Route
                             path="/super-admin/brands"
                             element={<SuperAdminBrands />}
+                          />
+                          <Route
+                            path="/super-admin/brand-administrators"
+                            element={<SuperAdminBrandAdministrators />}
                           />
                           <Route
                             path="/super-admin/customer-app-customization"

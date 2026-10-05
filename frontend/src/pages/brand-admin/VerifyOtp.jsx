@@ -12,12 +12,12 @@ const VerifyOtp = () => {
   const hasRealSession = Boolean(state?.role && state?.identifier);
 
   const handleVerify = async (code) => {
-    await authVerifyOtp({
+    const user = await authVerifyOtp({
       role: state.role,
       identifier: state.identifier,
       code
     });
-    navigate('/brand-admin/dashboard');
+    navigate(user?.mustChangePassword ? '/brand-admin/change-password' : '/brand-admin/dashboard');
   };
 
   const handleResend = async () => {

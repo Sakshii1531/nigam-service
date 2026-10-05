@@ -151,6 +151,64 @@ describe('Brand', () => {
   });
 });
 
+describe('Brand administrator provisioning', () => {
+  it('forces a private password change before allowing Brand Panel access', async () => {
+    const { token } = await seedSuperAdmin();
+    const brandRes = await request(app)
+      .post('/api/v1/super-admin/brands')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Provisioned Brand', status: 'Active' })
+      .expect(201);
+
+    const email = 'first.brand.admin@test.local';
+    const phone = '9876543210';
+    const temporaryPassword = 'TempPass#123';
+    const createRes = await request(app)
+      .post('/api/v1/super-admin/brand-admins')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        name: 'First Brand Admin',
+        email,
+        phone,
+        brand: brandRes.body.data.id,
+        temporaryPassword,
+      })
+      .expect(201);
+
+    expect(createRes.body.data).toMatchObject({
+      email,
+      mustChangePassword: true,
+      status: 'Active',
+    });
+    expect(createRes.body.data.brand.name).toBe('Provisioned Brand');
+    expect(JSON.stringify(createRes.body)).not.toContain('passwordHash');
+    expect(JSON.stringify(createRes.body)).not.toContain(temporaryPassword);
+
+    const temporaryToken = await loginAndVerify({ role: ROLES.BRAND_ADMIN, identifier: email, password: temporaryPassword });
+    await request(app)
+      .get('/api/v1/brand/users')
+      .set('Authorization', `Bearer ${temporaryToken}`)
+      .expect(403);
+
+    await request(app)
+      .patch('/api/v1/auth/first-login-password')
+      .set('Authorization', `Bearer ${temporaryToken}`)
+      .send({ newPassword: 'PrivatePass#456' })
+      .expect(200);
+
+    await request(app)
+      .post('/api/v1/auth/login')
+      .send({ role: ROLES.BRAND_ADMIN, identifier: email, password: temporaryPassword })
+      .expect(401);
+
+    const privateToken = await loginAndVerify({ role: ROLES.BRAND_ADMIN, identifier: email, password: 'PrivatePass#456' });
+    await request(app)
+      .get('/api/v1/brand/users')
+      .set('Authorization', `Bearer ${privateToken}`)
+      .expect(200);
+  });
+});
+
 describe('City, ASM', () => {
   it('creates a city and an ASM assigned to it', async () => {
     const { token } = await seedSuperAdmin();

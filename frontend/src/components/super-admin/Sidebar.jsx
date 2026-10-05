@@ -518,6 +518,12 @@ const Sidebar = () => {
     },
     {
       type: "link",
+      label: "Brand Administrators",
+      path: "/super-admin/brand-administrators",
+      icon: <UserPlus size={18} />,
+    },
+    {
+      type: "link",
       label: "Warranty Verification",
       path: "/super-admin/warranty-verification",
       icon: <CheckCircle size={18} />,

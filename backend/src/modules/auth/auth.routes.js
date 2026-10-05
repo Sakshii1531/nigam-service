@@ -18,6 +18,7 @@ import {
   signupCheckSchema,
   signupVerifySchema,
   changePasswordSchema,
+  firstLoginPasswordSchema,
   updateOwnProfileSchema,
 } from './auth.validation.js';
 
@@ -244,6 +245,15 @@ authRouter.patch('/payment-methods/:id/primary', requireAuth, async (req, res, n
 authRouter.patch('/password', requireAuth, validate(changePasswordSchema), async (req, res, next) => {
   try {
     await authService.changePassword(req.user.id, req.body);
+    ok(res, { changed: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+authRouter.patch('/first-login-password', requireAuth, validate(firstLoginPasswordSchema), async (req, res, next) => {
+  try {
+    await authService.completeFirstLoginPassword(req.user.id, req.body.newPassword);
     ok(res, { changed: true });
   } catch (err) {
     next(err);
