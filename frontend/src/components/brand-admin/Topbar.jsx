@@ -1,35 +1,67 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Bell, ChevronDown, User, LogOut, Phone, Calendar, Copy, Check, Mail } from 'lucide-react';
 import { useNotifications } from '../../context/NotificationContext';
+import { apiRequest } from '../../lib/apiClient';
+
+const dateLabel = (date) => date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+const rangeLabel = (from, to = from) => `${dateLabel(from)} – ${dateLabel(to)}`;
+
+function buildDateOptions() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  const week = new Date(today);
+  week.setDate(today.getDate() - 6);
+  const month = new Date(today);
+  month.setDate(today.getDate() - 29);
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  return [
+    { label: `Today (${dateLabel(today)})`, val: rangeLabel(today) },
+    { label: `Yesterday (${dateLabel(yesterday)})`, val: rangeLabel(yesterday) },
+    { label: 'Last 7 Days', val: rangeLabel(week, today) },
+    { label: 'Last 30 Days', val: rangeLabel(month, today) },
+    { label: 'This Month', val: rangeLabel(monthStart, monthEnd) },
+  ];
+}
 
 const Topbar = ({ title, subtitle }) => {
   const { unreadCount } = useNotifications();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isPhoneDropdownOpen, setIsPhoneDropdownOpen] = useState(false);
   const [isDateDropdownOpen, setIsDateDropdownOpen] = useState(false);
-  const [selectedDateRange, setSelectedDateRange] = useState('21 May 2025 – 21 May 2025');
+  const dateOptions = buildDateOptions();
+  const [selectedDateRange, setSelectedDateRange] = useState(() => dateOptions[0].val);
   const [copied, setCopied] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [contact, setContact] = useState({ supportPhone: '', supportEmail: '' });
   
   const navigate = useNavigate();
 
+  useEffect(() => {
+    let cancelled = false;
+    apiRequest('/brand/settings', { auth: true, silentError: true })
+      .then((settings) => {
+        if (!cancelled) setContact({
+          supportPhone: settings?.supportPhone || '',
+          supportEmail: settings?.supportEmail || '',
+        });
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
   const handleCopyPhone = (e) => {
     e.stopPropagation();
-    navigator.clipboard.writeText('1800-123-4567');
+    if (!contact.supportPhone) return;
+    navigator.clipboard.writeText(contact.supportPhone);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
-
-  const dateOptions = [
-    { label: 'Today (21 May 2025)', val: '21 May 2025 – 21 May 2025' },
-    { label: 'Yesterday (20 May 2025)', val: '20 May 2025 – 20 May 2025' },
-    { label: 'Last 7 Days', val: '15 May 2025 – 21 May 2025' },
-    { label: 'Last 30 Days', val: '21 Apr 2025 – 21 May 2025' },
-    { label: 'This Month', val: '01 May 2025 – 31 May 2025' }
-  ];
 
   return (
     <div className="h-16 bg-white border-b border-[#E2E8F0] flex items-center justify-between px-6 sticky top-0 z-30 gap-4">
@@ -52,7 +84,7 @@ const Topbar = ({ title, subtitle }) => {
             <Phone size={13} className="text-[#0D47A1]" />
             <div className="flex flex-col text-left">
               <span className="text-[9px] font-bold text-[#64748B] uppercase tracking-wider leading-none">Toll Free Number</span>
-              <span className="text-xs font-bold text-[#1E293B] leading-tight">1800-123-4567</span>
+              <span className="text-xs font-bold text-[#1E293B] leading-tight">{contact.supportPhone || 'Not configured'}</span>
             </div>
             <ChevronDown size={12} className={`text-[#64748B] transition-transform duration-200 ${isPhoneDropdownOpen ? 'rotate-180' : ''}`} />
           </div>
@@ -65,7 +97,7 @@ const Topbar = ({ title, subtitle }) => {
                 <div className="flex items-center justify-between bg-[#F8FAFC] rounded-lg p-2 mb-2 border border-[#E2E8F0]">
                   <div>
                     <p className="text-[9px] text-[#64748B] font-medium leading-none">Toll-Free</p>
-                    <p className="text-xs font-bold text-[#1E293B] mt-0.5">1800-123-4567</p>
+                    <p className="text-xs font-bold text-[#1E293B] mt-0.5">{contact.supportPhone || 'Not configured'}</p>
                   </div>
                   <button 
                     onClick={handleCopyPhone}
@@ -76,11 +108,11 @@ const Topbar = ({ title, subtitle }) => {
                   </button>
                 </div>
                 <div className="space-y-1.5">
-                  <a href="tel:18001234567" className="flex items-center gap-2 px-2 py-1.5 text-xs text-[#0D47A1] font-bold hover:bg-[#EEF4FF] rounded-lg transition-colors">
+                  <a href={contact.supportPhone ? `tel:${contact.supportPhone.replace(/[^+\d]/g, '')}` : undefined} className={`flex items-center gap-2 px-2 py-1.5 text-xs font-bold rounded-lg transition-colors ${contact.supportPhone ? 'text-[#0D47A1] hover:bg-[#EEF4FF]' : 'text-slate-400 pointer-events-none'}`}>
                     <Phone size={13} />
                     <span>Call Helpline Now</span>
                   </a>
-                  <a href="mailto:support@brand.com" className="flex items-center gap-2 px-2 py-1.5 text-xs text-[#1E293B] hover:bg-[#F8FAFC] rounded-lg transition-colors">
+                  <a href={contact.supportEmail ? `mailto:${contact.supportEmail}` : undefined} className={`flex items-center gap-2 px-2 py-1.5 text-xs rounded-lg transition-colors ${contact.supportEmail ? 'text-[#1E293B] hover:bg-[#F8FAFC]' : 'text-slate-400 pointer-events-none'}`}>
                     <Mail size={13} className="text-[#64748B]" />
                     <span>Email Support</span>
                   </a>
@@ -153,8 +185,8 @@ const Topbar = ({ title, subtitle }) => {
               BP
             </div>
             <div className="hidden md:block text-left">
-              <span className="text-xs font-semibold text-[#1E293B] block leading-tight">Brand Admin</span>
-              <span className="text-[10px] text-[#64748B] leading-tight">Brand Admin</span>
+              <span className="text-xs font-semibold text-[#1E293B] block leading-tight">{user?.name || 'Brand Admin'}</span>
+              <span className="text-[10px] text-[#64748B] leading-tight">{user?.email || 'Brand Admin'}</span>
             </div>
             <ChevronDown
               size={14}

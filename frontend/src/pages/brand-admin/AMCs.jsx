@@ -36,6 +36,7 @@ function shape(sub) {
     expiryDate: sub.expiryDate ? dateFormatter.format(new Date(sub.expiryDate)) : '—',
     brand: sub.brand || '—',
     model: sub.model || '—',
+    visitHistory: Array.isArray(sub.visits) ? sub.visits : [],
   };
 }
 
@@ -199,24 +200,15 @@ const AMCs = () => {
                 <div>
                   <h3 className="text-xs uppercase text-[#64748B] font-semibold mb-2">Maintenance History</h3>
                   <div className="border-l-2 border-[#E2E8F0] ml-2 pl-4 space-y-4">
-                    <div className="relative">
-                      <div className="absolute -left-5.25 top-1 w-3 h-3 bg-green-600 rounded-full"></div>
-                      <p className="text-sm font-medium text-[#1E293B]">Visit #1: Deep Cleaning</p>
-                      <p className="text-xs text-[#64748B]">Completed on 15 Feb, 2026 by Rahul Kumar</p>
-                    </div>
-                    {selectedAmc.visits.startsWith('0') ? (
-                      <div className="relative">
-                        <div className="absolute -left-5.25 top-1 w-3 h-3 bg-yellow-500 rounded-full"></div>
-                        <p className="text-sm font-medium text-[#1E293B]">Visit #1: Preventive Maintenance</p>
-                        <p className="text-xs text-[#64748B]">Scheduled for 30 Jun, 2026</p>
+                    {selectedAmc.visitHistory.map((visit) => (
+                      <div key={visit.id || visit._id} className="relative">
+                        <div className={`absolute -left-5.25 top-1 w-3 h-3 rounded-full ${visit.status === 'Completed' ? 'bg-green-600' : visit.status === 'Missed' ? 'bg-red-500' : 'bg-yellow-500'}`}></div>
+                        <p className="text-sm font-medium text-[#1E293B]">Visit #{visit.visitNumber}: {visit.status}</p>
+                        <p className="text-xs text-[#64748B]">{visit.scheduledDate ? dateFormatter.format(new Date(visit.scheduledDate)) : 'Date not set'}{visit.serviceProvider?.name ? ` by ${visit.serviceProvider.name}` : ''}</p>
+                        {visit.notes && <p className="text-xs text-[#64748B]">{visit.notes}</p>}
                       </div>
-                    ) : (
-                      <div className="relative">
-                        <div className="absolute -left-5.25 top-1 w-3 h-3 bg-gray-300 rounded-full"></div>
-                        <p className="text-sm font-medium text-[#64748B]">Visit #2: Diagnostics checkup</p>
-                        <p className="text-xs text-[#64748B]">Pending schedule</p>
-                      </div>
-                    )}
+                    ))}
+                    {selectedAmc.visitHistory.length === 0 && <p className="text-xs text-[#64748B]">No maintenance visits recorded.</p>}
                   </div>
                 </div>
               </div>

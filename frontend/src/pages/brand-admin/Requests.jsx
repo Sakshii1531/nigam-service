@@ -2,16 +2,15 @@ import { useState, useEffect } from 'react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
 import { apiRequest } from '../../lib/apiClient';
+import { exportCsv } from '../../lib/exportCsv';
 import { 
   Search, 
-  Filter, 
   Download, 
   Eye, 
   ClipboardList,
   Clock,
   AlertTriangle,
   CheckCircle2,
-  X,
   ArrowLeft
 } from 'lucide-react';
 
@@ -36,6 +35,7 @@ function shape(req) {
     id: req.id,
     ref: req.humanId || req.id,
     customer: req.user?.name || 'Customer',
+    phone: req.user?.phone || '—',
     product: req.category || '—',
     model: req.model || '—',
     // ServiceRequest records only whether an invoice exists, not its number.
@@ -47,6 +47,7 @@ function shape(req) {
     apiStatus: req.status,
     status: toBucket(req.status),
     date: req.createdAt ? dateFormatter.format(new Date(req.createdAt)) : '—',
+    timeline: Array.isArray(req.timeline) ? req.timeline : [],
   };
 }
 
@@ -55,8 +56,6 @@ const Requests = () => {
   const [selectedRequest, setSelectedRequest] = useState(null);
 
   const [successMessage, setSuccessMessage] = useState('');
-  const [showReassignModal, setShowReassignModal] = useState(false);
-  const [reassignTechName, setReassignTechName] = useState('Rahul Kumar');
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('All Status');
@@ -116,14 +115,14 @@ const Requests = () => {
     }
   };
 
-  // No endpoint exists to reassign a service request's service provider — the API
-  // exposes only a status transition. Kept as a local no-op with an explicit
-  // notice rather than pretending the change was saved.
-  const handleReassignSubmit = (e) => {
-    e.preventDefault();
-    setShowReassignModal(false);
-    setShowDrawer(false);
-    setError('Reassigning a serviceProvider is not supported by the API yet — no change was saved.');
+  const handleExport = () => {
+    const written = exportCsv(
+      'brand-complaints',
+      ['Ticket', 'Customer', 'Phone', 'Product', 'Model', 'Warranty', 'Service Provider', 'Priority', 'Status', 'Date'],
+      filteredRequests.map((request) => [request.ref, request.customer, request.phone, request.product, request.model, request.warranty, request.serviceProvider, request.priority, request.apiStatus, request.date]),
+    );
+    setSuccessMessage(written ? 'Complaints exported as CSV.' : 'There are no complaints to export.');
+    setTimeout(() => setSuccessMessage(''), 3000);
   };
 
   const handleRowClick = (req) => {
@@ -185,7 +184,7 @@ const Requests = () => {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-[#64748B]">Phone:</span>
-                      <span className="text-sm font-medium text-[#1E293B]">+91 98765 43210</span>
+                      <span className="text-sm font-medium text-[#1E293B]">{selectedRequest.phone}</span>
                     </div>
                   </div>
                 </div>
@@ -225,18 +224,15 @@ const Requests = () => {
                       </span>
                     </div>
                     
-                    {/* Mini Timeline */}
                     <div className="border-l-2 border-[#E2E8F0] ml-2 pl-4 space-y-3 mt-2">
-                      <div className="relative">
-                        <div className="absolute -left-5.25 top-1 w-3 h-3 bg-[#0D47A1] rounded-full"></div>
-                        <p className="text-sm font-medium text-[#1E293B]">Request Raised</p>
-                        <p className="text-xs text-[#64748B]">12 May, 2026 - 10:00 AM</p>
-                      </div>
-                      <div className="relative">
-                        <div className="absolute -left-5.25 top-1 w-3 h-3 bg-[#0D47A1] rounded-full"></div>
-                        <p className="text-sm font-medium text-[#1E293B]">Service Provider Assigned</p>
-                        <p className="text-xs text-[#64748B]">12 May, 2026 - 11:30 AM</p>
-                      </div>
+                      {selectedRequest.timeline.map((event, index) => (
+                        <div key={`${event.stepLabel}-${index}`} className="relative">
+                          <div className={`absolute -left-5.25 top-1 w-3 h-3 rounded-full ${event.done ? 'bg-[#0D47A1]' : 'bg-slate-300'}`}></div>
+                          <p className="text-sm font-medium text-[#1E293B]">{event.stepLabel}</p>
+                          <p className="text-xs text-[#64748B]">{event.timestamp ? new Date(event.timestamp).toLocaleString('en-IN') : 'Pending'}{event.description ? ` — ${event.description}` : ''}</p>
+                        </div>
+                      ))}
+                      {selectedRequest.timeline.length === 0 && <p className="text-xs text-[#64748B]">No timeline events recorded.</p>}
                     </div>
                   </div>
                 </div>
@@ -244,12 +240,6 @@ const Requests = () => {
 
               {/* Actions Footer */}
               <div className="p-6 border-t border-[#E2E8F0] flex gap-3 bg-[#F8FAFC]">
-                <button 
-                  onClick={() => setShowReassignModal(true)}
-                  className="bg-white text-[#1E293B] border border-[#E2E8F0] px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-[#F8FAFC] transition-colors"
-                >
-                  Reassign
-                </button>
                 {selectedRequest.status === 'Pending' && (
                   <button 
                     onClick={() => updateRequestStatus(selectedRequest.id, 'Assigned')}
@@ -333,19 +323,7 @@ const Requests = () => {
 
             <div className="flex gap-2">
               <button 
-                onClick={() => {
-                  setSuccessMessage('Additional filters loaded successfully.');
-                  setTimeout(() => setSuccessMessage(''), 2500);
-                }}
-                className="bg-white text-[#1E293B] border border-[#E2E8F0] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#F8FAFC] transition-colors flex items-center gap-2"
-              >
-                <Filter size={16} /> More Filters
-              </button>
-              <button 
-                onClick={() => {
-                  setSuccessMessage('Data exported successfully as CSV!');
-                  setTimeout(() => setSuccessMessage(''), 3000);
-                }}
+                onClick={handleExport}
                 className="bg-white text-[#1E293B] border border-[#E2E8F0] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#F8FAFC] transition-colors flex items-center gap-2"
               >
                 <Download size={16} /> Export
@@ -469,58 +447,6 @@ const Requests = () => {
 
           </div>
         )}
-
-
-
-        {/* Reassign Modal */}
-        {showReassignModal && selectedRequest && (
-          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-2xl max-w-md w-full overflow-hidden">
-              <div className="p-6 border-b border-[#E2E8F0] flex justify-between items-center bg-[#F8FAFC]">
-                <div>
-                  <h3 className="text-lg font-bold text-[#1E293B]">Reassign Service Provider</h3>
-                  <p className="text-xs text-[#64748B]">Select a new service partner for ticket {selectedRequest.ref}</p>
-                </div>
-                <button onClick={() => setShowReassignModal(false)} className="text-[#64748B] hover:text-[#1E293B] p-2 hover:bg-[#EEF2F6] rounded-full">
-                  <X size={20} />
-                </button>
-              </div>
-              
-              <form onSubmit={handleReassignSubmit} className="p-6 space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-[#64748B] uppercase mb-1">Select Service Provider</label>
-                  <select
-                    value={reassignTechName}
-                    onChange={(e) => setReassignTechName(e.target.value)}
-                    className="w-full px-3.5 py-2 border border-[#E2E8F0] rounded-lg bg-[#F8FAFC] text-sm outline-none focus:ring-2 focus:ring-[#0D47A1]"
-                  >
-                    <option>Rahul Kumar</option>
-                    <option>Amit Singh</option>
-                    <option>Suresh Raina</option>
-                    <option>Vikram Batra</option>
-                  </select>
-                </div>
-
-                <div className="pt-4 border-t border-[#E2E8F0] flex gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowReassignModal(false)}
-                    className="flex-1 bg-white text-[#1E293B] border border-[#E2E8F0] py-2 rounded-lg text-sm font-medium hover:bg-[#F8FAFC]"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex-1 bg-[#0D47A1] text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-700"
-                  >
-                    Confirm Reassign
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
         {/* Success Toast */}
         {successMessage && (
           <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-green-600 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg flex items-center gap-2 animate-bounce">

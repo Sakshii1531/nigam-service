@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import Sidebar from "../../components/brand-admin/Sidebar";
 import Topbar from "../../components/brand-admin/Topbar";
 import Pagination from "../../components/common/Pagination";
@@ -49,9 +50,10 @@ function shape(c) {
 }
 
 const Customers = () => {
+  const [searchParams] = useSearchParams();
   const [showDrawer, setShowDrawer] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(() => searchParams.get('search') || "");
   const [selectedCity, setSelectedCity] = useState("All Cities");
   const [selectedWarranty, setSelectedWarranty] = useState("Warranty Status");
   const [currentPage, setCurrentPage] = useState(1);

@@ -8,6 +8,7 @@ import {
   ShieldCheck, ShieldOff, ArrowRight, X, FileText, Copy
 } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
+import { uploadImage } from '../../lib/uploadImage';
 
 // ── Customer lookup ──
 // Customers are the brand's own (everyone who has raised a request with it).
@@ -43,12 +44,6 @@ function shapeCustomer(c) {
 const complaintTypes = ['Breakdown', 'No Power / Dead', 'Noise Issue', 'Performance Degradation', 'Physical Damage', 'Intermittent Fault'];
 
 
-const issueCategories = {
-  'LED & Luminaires': ['Flickering', 'Not Turning On', 'Driver Failure', 'Dim Output', 'Remote Not Working'],
-  'Fans & Appliances': ['Not Running', 'Noise / Vibration', 'Speed Not Working', 'Capacitor Issue', 'Blade Damage'],
-};
-
-
 const STEPS = [
   { id: 1, label: 'Search Customer', icon: Search },
   { id: 2, label: 'Customer Details', icon: User },
@@ -79,7 +74,8 @@ const RegisterComplaint = () => {
   const [complaintIds, setComplaintIds] = useState({ brandNo: '', nccId: '' });
   const [copiedId, setCopiedId] = useState(null);
   const [customers, setCustomers] = useState([]);
-  const [, setError] = useState('');
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -138,21 +134,44 @@ const RegisterComplaint = () => {
     setComplaint(prev => ({ ...prev, warranty: prod.warranty, issueCategory: '' }));
   };
 
-  const handleRaiseTicket = () => {
-    const now = new Date();
-    const yy = String(now.getFullYear()).slice(-2);
-    const mm = String(now.getMonth() + 1).padStart(2, '0');
-    const dd = String(now.getDate()).padStart(2, '0');
-    const dateStr = `${yy}${mm}${dd}`;
-    const randomBrand = String(Math.floor(100000 + Math.random() * 900000));
-    const randomNcc = String(Math.floor(10000 + Math.random() * 90000));
-    
-    const brandNo = `SOM-GKP-${dateStr}-${randomBrand}`;
-    const nccId = `NCC-${dateStr}-${randomNcc}`;
-    
-    setComplaintIds({ brandNo, nccId });
-    setTicketId(nccId);
-    setSuccessModal(true);
+  const handleRaiseTicket = async () => {
+    if (!selectedCustomer || !selectedProduct || submitting) return;
+    setSubmitting(true);
+    setError('');
+    try {
+      const attachmentUrl = complaint.attachment ? await uploadImage(complaint.attachment) : null;
+      const typeMap = {
+        'No Power / Dead': 'No Power',
+        'Noise Issue': 'Noise',
+        'Performance Degradation': 'Performance',
+        'Intermittent Fault': 'Intermittent',
+      };
+      const priorityMap = { Normal: 'Medium', High: 'High', Critical: 'Critical' };
+      const created = await apiRequest('/service-requests', {
+        method: 'POST',
+        auth: true,
+        body: {
+          user: selectedCustomer.id,
+          category: selectedProduct.category,
+          model: selectedProduct.model || undefined,
+          serialNo: selectedProduct.serial || undefined,
+          complaintType: typeMap[complaint.type] || complaint.type,
+          description: [complaint.issueCategory, complaint.description].filter(Boolean).join(': '),
+          priority: priorityMap[complaint.priority] || 'Medium',
+          warranty: complaint.warranty,
+          invoiceAvailable: complaint.invoiceAvailable === 'Yes',
+          ...(attachmentUrl ? { attachments: [attachmentUrl] } : {}),
+        },
+      });
+      const serverId = created.humanId || created.id;
+      setComplaintIds({ brandNo: created.brandTicketNo || '', nccId: serverId });
+      setTicketId(serverId);
+      setSuccessModal(true);
+    } catch (err) {
+      setError(err.message || 'Could not register the complaint.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleCopy = (text, id) => {
@@ -266,7 +285,6 @@ const RegisterComplaint = () => {
               {searchStatus === 'not-found' && (
                 <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-600 font-semibold">
                   ❌ No customer found with this number.
-                  <button className="ml-2 underline text-[#0D47A1] font-bold">+ Add New Customer</button>
                 </div>
               )}
 
@@ -445,14 +463,13 @@ const RegisterComplaint = () => {
                 {/* Issue Category */}
                 <div>
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">Issue Category *</label>
-                  <select
+                  <input
+                    type="text"
                     className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-xl focus:ring-2 focus:ring-[#0D47A1] outline-none text-sm font-semibold text-slate-800 bg-[#F8FAFC]"
                     value={complaint.issueCategory}
                     onChange={e => setComplaint(p => ({...p, issueCategory: e.target.value}))}
-                  >
-                    <option value="">Select issue category</option>
-                    {(issueCategories[selectedProduct?.category] || []).map(c => <option key={c}>{c}</option>)}
-                  </select>
+                    placeholder="Describe the affected component or issue"
+                  />
                 </div>
               </div>
 
@@ -502,7 +519,7 @@ const RegisterComplaint = () => {
                   ref={fileInputRef}
                   onChange={handleFileChange}
                   className="hidden"
-                  accept=".jpg,.jpeg,.png,.pdf"
+                  accept="image/jpeg,image/png,image/webp"
                 />
                 {!complaint.attachment ? (
                   <div
@@ -513,7 +530,7 @@ const RegisterComplaint = () => {
                   >
                     <Upload size={24} className="text-slate-300 mx-auto mb-2" />
                     <p className="text-xs text-slate-400 font-semibold">Click to upload or drag and drop</p>
-                    <p className="text-[10px] text-slate-300 mt-1">JPG, PNG, PDF (Max 5MB)</p>
+                    <p className="text-[10px] text-slate-300 mt-1">JPG, PNG or WebP (Max 5MB)</p>
                   </div>
                 ) : (
                   <div className="border border-green-200 bg-green-50/50 rounded-xl p-4 flex items-center justify-between">
@@ -620,15 +637,12 @@ const RegisterComplaint = () => {
                   </div>
                   <button
                     onClick={handleRaiseTicket}
-                    className="w-full bg-[#0D47A1] hover:bg-blue-800 text-white text-sm font-extrabold py-3 rounded-xl cursor-pointer shadow-md transition-colors flex items-center justify-center gap-2"
+                    disabled={submitting}
+                    className="w-full bg-[#0D47A1] hover:bg-blue-800 text-white text-sm font-extrabold py-3 rounded-xl cursor-pointer shadow-md transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
                   >
-                    <FileText size={16} /> Raise Ticket
+                    <FileText size={16} /> {submitting ? 'Raising Ticket…' : 'Raise Ticket'}
                   </button>
-                  <button
-                    className="w-full border border-[#0D47A1] text-[#0D47A1] text-xs font-bold py-2.5 rounded-xl cursor-pointer hover:bg-blue-50 transition-colors"
-                  >
-                    Save as Draft
-                  </button>
+                  {error && <p role="alert" className="text-xs font-semibold text-red-600">{error}</p>}
                 </div>
               </div>
             </div>
@@ -670,7 +684,7 @@ const RegisterComplaint = () => {
             {/* IDs Grid */}
             <div className="grid grid-cols-2 gap-4">
               {/* Brand Complaint No */}
-              <div className="border border-slate-200 rounded-xl p-4 bg-white relative">
+              {complaintIds.brandNo && <div className="border border-slate-200 rounded-xl p-4 bg-white relative">
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Brand Complaint No.</p>
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-sm font-black text-slate-800">{complaintIds.brandNo}</p>
@@ -682,10 +696,10 @@ const RegisterComplaint = () => {
                     {copiedId === 'brand' ? <CheckCircle2 size={14} className="text-green-600" /> : <Copy size={14} />}
                   </button>
                 </div>
-              </div>
+              </div>}
 
               {/* NCC Internal Ticket ID */}
-              <div className="border border-slate-200 rounded-xl p-4 bg-white relative">
+              <div className={`border border-slate-200 rounded-xl p-4 bg-white relative ${complaintIds.brandNo ? '' : 'col-span-2'}`}>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">NCC Internal Ticket ID</p>
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-sm font-black text-slate-800">{complaintIds.nccId}</p>

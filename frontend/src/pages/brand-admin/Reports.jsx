@@ -15,6 +15,15 @@ import { exportCsv } from '../../lib/exportCsv';
 
 const CATEGORY_COLORS = ['bg-blue-600', 'bg-yellow-500', 'bg-emerald-500', 'bg-purple-500', 'bg-gray-400', 'bg-gray-300'];
 
+function reportRange(timeframe) {
+  const to = new Date();
+  const from = new Date(to);
+  if (timeframe === 'This Year') from.setMonth(0, 1);
+  else from.setDate(to.getDate() - (timeframe === 'Last Quarter' ? 89 : 29));
+  from.setHours(0, 0, 0, 0);
+  return `?from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(to.toISOString())}`;
+}
+
 const Reports = () => {
   const [timeframe, setTimeframe] = useState('Last 30 Days');
   const [successMessage, setSuccessMessage] = useState('');
@@ -27,7 +36,8 @@ const Reports = () => {
     let cancelled = false;
     async function loadReport() {
       try {
-        const res = await apiRequest('/brand/reports', { auth: true });
+        setLoading(true);
+        const res = await apiRequest(`/brand/reports${reportRange(timeframe)}`, { auth: true });
         if (!cancelled && res) setReport(res);
       } catch (err) {
         if (!cancelled) setError(err.message);
@@ -37,7 +47,7 @@ const Reports = () => {
     }
     loadReport();
     return () => { cancelled = true; };
-  }, []);
+  }, [timeframe]);
 
   // Bars are drawn as a share of the largest category, so the widest bar always
   // fills the row regardless of absolute volume.

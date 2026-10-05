@@ -5,6 +5,7 @@ import { User } from '../auth/user.model.js';
 import { Brand } from '../super-admin/brand.model.js';
 import { ExtendedWarrantyOrder } from '../warranty-amc-exchange/extendedWarrantyOrder.model.js';
 import { AMCSubscription } from '../warranty-amc-exchange/amcSubscription.model.js';
+import { AMCVisit } from '../warranty-amc-exchange/amcVisit.model.js';
 import { Claim } from '../warranty-amc-exchange/claim.model.js';
 import { Review } from '../reviews/review.model.js';
 import { Invoice } from './invoice.model.js';
@@ -216,7 +217,7 @@ export async function listBrandAmcSubscriptions(brandId, { status, page, limit, 
   if (status) query.status = status;
 
   const { skip, limit: lim, page: pg, sort: sortObj } = parsePagination({ page, limit, sort });
-  const [items, total] = await Promise.all([
+  const [subscriptions, total] = await Promise.all([
     AMCSubscription.find(query)
       .populate('user', 'name email phone')
       .populate('plan', 'name tier price visitsTotal')
@@ -225,6 +226,19 @@ export async function listBrandAmcSubscriptions(brandId, { status, page, limit, 
       .limit(lim),
     AMCSubscription.countDocuments(query),
   ]);
+  const visits = await AMCVisit.find({ subscription: { $in: subscriptions.map((subscription) => subscription._id) } })
+    .populate('serviceProvider', 'name')
+    .sort({ visitNumber: 1 })
+    .lean();
+  const visitsBySubscription = new Map();
+  for (const visit of visits) {
+    const key = String(visit.subscription);
+    visitsBySubscription.set(key, [...(visitsBySubscription.get(key) || []), visit]);
+  }
+  const items = subscriptions.map((subscription) => ({
+    ...subscription.toJSON(),
+    visits: visitsBySubscription.get(String(subscription._id)) || [],
+  }));
   return { items, meta: paginationMeta({ page: pg, limit: lim, total }) };
 }
 

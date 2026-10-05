@@ -30,6 +30,7 @@ export const createServiceRequestSchema = z.object({
   priority: z.enum(['Critical', 'High', 'P1', 'P2', 'Medium', 'P3', 'Low']).optional(),
   warranty: z.enum(['In Warranty', 'Out of Warranty']).optional(),
   invoiceAvailable: z.boolean().optional(),
+  attachments: z.array(z.string().url()).max(5).optional(),
   brandTicketNo: z.string().optional(),
   zone: z.string().optional(),
 });

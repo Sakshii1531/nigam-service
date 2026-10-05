@@ -4,7 +4,7 @@ import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
 import {
   ClipboardList, CheckCircle2, Clock, AlertTriangle, IndianRupee,
-  Package, ArrowUpRight, Plus, Upload,
+  Package, ArrowUpRight, Plus,
   Search, Truck, ShieldCheck, FileText, BarChart2,
   PhoneCall
 } from 'lucide-react';
@@ -36,7 +36,7 @@ const KPICard = ({ title, value, icon, iconBg, onLink }) => (
 const Dashboard = () => {
   const navigate = useNavigate();
   const [searchCustomer, setSearchCustomer] = useState('');
-  const [tollFreeInput, setTollFreeInput] = useState('1800-123-4567');
+  const [tollFreeInput, setTollFreeInput] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
   // Graph interaction states
@@ -73,9 +73,10 @@ const Dashboard = () => {
     let cancelled = false;
     async function loadDashboard() {
       try {
-        const [dash, recent] = await Promise.all([
+        const [dash, recent, settings] = await Promise.all([
           apiRequest('/brand/dashboard', { auth: true }),
           apiRequest('/service-requests?limit=5&sort=-createdAt', { auth: true }),
+          apiRequest('/brand/settings', { auth: true }),
         ]);
         if (cancelled) return;
         // apiRequest returns the envelope's `data` payload directly — unwrapping
@@ -88,6 +89,7 @@ const Dashboard = () => {
           status: r.status || 'New',
           date: r.createdAt ? new Date(r.createdAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—',
         })));
+        setTollFreeInput(settings?.supportPhone || '');
       } catch (err) {
         if (!cancelled) setError(err.message);
       } finally {
@@ -97,6 +99,19 @@ const Dashboard = () => {
     loadDashboard();
     return () => { cancelled = true; };
   }, []);
+
+  const saveSupportPhone = async () => {
+    try {
+      await apiRequest('/brand/settings', {
+        method: 'PUT',
+        auth: true,
+        body: { supportPhone: tollFreeInput.trim() },
+      });
+      toast('Support number saved.');
+    } catch (err) {
+      toast(err.message || 'Could not save the support number.');
+    }
+  };
 
   // The `trend` percentages that sat on each card are gone — nothing stores a
   // prior-period snapshot, so there is no comparison to compute.
@@ -454,7 +469,7 @@ const Dashboard = () => {
                       onChange={e => setTollFreeInput(e.target.value)}
                       className="flex-1 border border-[#E2E8F0] rounded-lg px-2.5 py-1.5 text-[11px] bg-[#F8FAFC] outline-none focus:ring-1 focus:ring-[#0D47A1]"
                     />
-                    <button className="bg-[#0D47A1] text-white px-3 py-1.5 rounded-lg text-[10px] font-bold hover:bg-blue-700">OK</button>
+                    <button onClick={saveSupportPhone} className="bg-[#0D47A1] text-white px-3 py-1.5 rounded-lg text-[10px] font-bold hover:bg-blue-700">Save</button>
                   </div>
                 </div>
                 <div>
@@ -465,23 +480,22 @@ const Dashboard = () => {
                       placeholder="Enter Mobile / Ticket / Name"
                       value={searchCustomer}
                       onChange={e => setSearchCustomer(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && searchCustomer.trim()) {
+                          navigate(`/brand-admin/customers?search=${encodeURIComponent(searchCustomer.trim())}`);
+                        }
+                      }}
                       className="w-full pl-7 pr-3 border border-[#E2E8F0] rounded-lg py-1.5 text-[11px] bg-[#F8FAFC] outline-none focus:ring-1 focus:ring-[#0D47A1]"
                     />
                   </div>
                 </div>
               </div>
-              <div className="flex gap-3">
+              <div>
                 <button
                   onClick={() => navigate('/brand-admin/requests')}
-                  className="flex-1 bg-[#0D47A1] hover:bg-blue-700 text-white text-[10px] font-bold py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-colors"
+                  className="w-full bg-[#0D47A1] hover:bg-blue-700 text-white text-[10px] font-bold py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-colors"
                 >
                   <Plus size={13} /> Register New Complaint
-                </button>
-                <button
-                  onClick={() => toast('Bulk upload started!')}
-                  className="flex-1 border border-[#0D47A1] text-[#0D47A1] hover:bg-[#EEF4FF] text-[10px] font-bold py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-colors"
-                >
-                  <Upload size={13} /> Bulk Upload Complaints
                 </button>
               </div>
             </div>

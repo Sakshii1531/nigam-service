@@ -31,6 +31,7 @@ import {
 const Sidebar = () => {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [openEscalations, setOpenEscalations] = useState(0);
+  const [supportPhone, setSupportPhone] = useState('');
   const scrollContainerRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
@@ -68,6 +69,14 @@ const Sidebar = () => {
       cancelled = true;
       window.removeEventListener('brand:escalations-changed', loadEscalationCount);
     };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    apiRequest('/brand/settings', { auth: true, silentError: true })
+      .then((settings) => { if (!cancelled) setSupportPhone(settings?.supportPhone || ''); })
+      .catch(() => {});
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
@@ -269,7 +278,7 @@ const Sidebar = () => {
             <p className="text-[10px] font-bold text-white">Quick Help</p>
           </div>
           <p className="text-[9px] text-blue-300 mb-1">Customer Care Support</p>
-          <p className="text-xs font-bold text-[#FFD600]">1800-123-4567</p>
+          <p className="text-xs font-bold text-[#FFD600]">{supportPhone || 'Not configured'}</p>
           <p className="text-[9px] text-blue-300 mt-0.5">24x7 Support Available</p>
         </div>
         <button

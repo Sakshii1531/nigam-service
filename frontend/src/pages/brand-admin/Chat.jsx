@@ -4,10 +4,7 @@ import Topbar from '../../components/brand-admin/Topbar';
 import {
   Search,
   Send,
-  Smile,
-  Paperclip,
-  User,
-  CheckCircle2
+  User
 } from 'lucide-react';
 import { io } from 'socket.io-client';
 import { apiRequest, getStoredTokens } from '../../lib/apiClient';
@@ -44,10 +41,10 @@ function shapeConversation(c) {
 }
 
 const Chat = () => {
-  const [activeChannel, setActiveChannel] = useState('cust-1'); // 'cust-1', 'service-provider-1'
+  const [activeChannel, setActiveChannel] = useState(null);
   const [inputText, setInputText] = useState('');
+  const [sending, setSending] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
   
   const [conversations, setConversations] = useState({});
   const [loading, setLoading] = useState(true);
@@ -101,11 +98,6 @@ const Chat = () => {
   useEffect(() => {
     const socket = socketRef.current;
     if (!activeChannel || !socket) return undefined;
-    // 'cust-1'/'service-provider-1' are the placeholder channel ids this screen starts on
-    // until a real conversation is opened. Sending those to the API asks Mongo
-    // to cast them to an ObjectId, which failed the request outright.
-    if (!/^[0-9a-fA-F]{24}$/.test(activeChannel)) return undefined;
-
     socket.emit('join-conversation', { conversationId: activeChannel }, (ack) => {
       if (!ack?.ok) setError(ack?.error || 'Could not join this conversation.');
     });
@@ -131,26 +123,30 @@ const Chat = () => {
 
   const activeChat = conversations[activeChannel] || null;
 
-  const handleSendMessage = (e) => {
+  const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!inputText.trim()) return;
-
-    const newMsg = {
-      id: Date.now(),
-      sender: 'brand',
-      text: inputText,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    };
-
-    setConversations({
-      ...conversations,
-      [activeChannel]: {
-        ...activeChat,
-        messages: [...activeChat.messages, newMsg]
-      }
-    });
-    
-    setInputText('');
+    const text = inputText.trim();
+    if (!text || !activeChannel || sending) return;
+    setSending(true);
+    setError('');
+    try {
+      const sent = await apiRequest(`/chat/conversations/${activeChannel}/messages`, {
+        method: 'POST',
+        auth: true,
+        body: { text },
+      });
+      const shaped = shapeMessage(sent);
+      setConversations((prev) => {
+        const chat = prev[activeChannel];
+        if (!chat || chat.messages.some((message) => message.id === shaped.id)) return prev;
+        return { ...prev, [activeChannel]: { ...chat, messages: [...chat.messages, shaped] } };
+      });
+      setInputText('');
+    } catch (err) {
+      setError(err.message || 'Could not send the message.');
+    } finally {
+      setSending(false);
+    }
   };
 
   const handleQuickResponse = (text) => {
@@ -294,18 +290,8 @@ const Chat = () => {
             </div>
 
             {/* Input bar */}
+            {error && <p role="alert" className="bg-red-50 border-t border-red-100 px-6 py-2 text-xs font-semibold text-red-600">{error}</p>}
             <form onSubmit={handleSendMessage} className="bg-white p-4 border-t border-[#E2E8F0] flex gap-3 items-center">
-              <button 
-                type="button" 
-                onClick={() => {
-                  setSuccessMessage("File attachment dialog initialized successfully.");
-                  setTimeout(() => setSuccessMessage(''), 2500);
-                }}
-                className="p-2 text-slate-400 hover:text-slate-600 rounded hover:bg-[#F1F5F9]"
-              >
-                <Paperclip size={18} />
-              </button>
-              
               <input
                 type="text"
                 className="flex-1 px-4 py-2.5 border border-[#E2E8F0] rounded-xl outline-none text-xs focus:ring-2 focus:ring-[#0D47A1] focus:border-[#0D47A1]"
@@ -315,19 +301,9 @@ const Chat = () => {
               />
 
               <button 
-                type="button" 
-                onClick={() => {
-                  setSuccessMessage("Emoji panel initialized successfully.");
-                  setTimeout(() => setSuccessMessage(''), 2500);
-                }}
-                className="p-2 text-slate-400 hover:text-slate-600 rounded hover:bg-[#F1F5F9]"
-              >
-                <Smile size={18} />
-              </button>
-
-              <button 
                 type="submit"
-                className="bg-[#0D47A1] text-white p-2.5 rounded-xl hover:bg-blue-700 transition-colors shrink-0 shadow-sm"
+                disabled={sending || !inputText.trim()}
+                className="bg-[#0D47A1] text-white p-2.5 rounded-xl hover:bg-blue-700 transition-colors shrink-0 shadow-sm disabled:opacity-50"
               >
                 <Send size={16} />
               </button>
@@ -376,13 +352,6 @@ const Chat = () => {
         </div>
       </div>
 
-      {/* Success Toast */}
-      {successMessage && (
-        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-green-600 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg flex items-center gap-2 animate-bounce">
-          <CheckCircle2 className="h-4 w-4" />
-          {successMessage}
-        </div>
-      )}
     </div>
   );
 };
