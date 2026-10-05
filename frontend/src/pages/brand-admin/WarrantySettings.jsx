@@ -43,7 +43,9 @@ function CoverageCard() {
   const [msg, setMsg] = useState(null);
   const logoInput = useId();
   const d = res.data;
-  const chosen = selected ?? new Set((d?.coverage || []).map((c) => c.id));
+  const coverage = Array.isArray(d?.coverage) ? d.coverage : [];
+  const options = Array.isArray(d?.options) ? d.options : [];
+  const chosen = selected ?? new Set(coverage.map((c) => c.id));
   const logoUrl = logo === undefined ? d?.logoUrl : logo;
 
   const toggle = (id) => {
@@ -99,9 +101,10 @@ function CoverageCard() {
           </div>
 
           <fieldset>
-            <legend className="text-xs font-semibold text-[#1E293B] mb-2">Products covered</legend>
+            <legend className="text-xs font-semibold text-[#1E293B] mb-1">Products covered</legend>
+            <p className="text-[10px] text-[#64748B] mb-2">Active Master Catalogue categories configured by Super Admin.</p>
             <div className="grid grid-cols-3 gap-2">
-              {d.options.map((o) => (
+              {options.map((o) => (
                 <label key={o.id} className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs cursor-pointer ${chosen.has(o.id) ? 'border-[#0D47A1] bg-[#EEF4FF] text-[#0D47A1] font-bold' : 'border-[#E2E8F0] text-[#1E293B]'}`}>
                   <input type="checkbox" checked={chosen.has(o.id)} onChange={() => toggle(o.id)} className="accent-[#0D47A1]" />
                   {o.name}
@@ -211,7 +214,7 @@ function WebhookCard() {
           <fieldset>
             <legend className="text-xs font-semibold text-[#1E293B] mb-2">Events (none ticked = all)</legend>
             <div className="flex flex-wrap gap-2">
-              {d.availableEvents.map((ev) => (
+              {(Array.isArray(d?.availableEvents) ? d.availableEvents : []).map((ev) => (
                 <label key={ev} className={`px-2.5 py-1 rounded-lg border text-[10px] font-mono cursor-pointer ${form.events.includes(ev) ? 'border-[#0D47A1] bg-[#EEF4FF] text-[#0D47A1]' : 'border-[#E2E8F0] text-[#64748B]'}`}>
                   <input type="checkbox" className="sr-only" checked={form.events.includes(ev)} onChange={() => toggleEvent(ev)} />
                   {ev}
@@ -254,7 +257,7 @@ function WebhookCard() {
 
           <div>
             <p className="text-xs font-semibold text-[#1E293B] mb-2">Recent deliveries</p>
-            {d.recentDeliveries.length === 0 ? (
+            {(Array.isArray(d?.recentDeliveries) ? d.recentDeliveries : []).length === 0 ? (
               <p className="text-xs text-[#94A3B8]">Nothing sent yet.</p>
             ) : (
               <table className="w-full text-[11px] text-left">
@@ -268,7 +271,7 @@ function WebhookCard() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#F1F5F9]">
-                  {d.recentDeliveries.map((e) => (
+                  {(Array.isArray(d?.recentDeliveries) ? d.recentDeliveries : []).map((e) => (
                     <tr key={e.id}>
                       <td className="py-1.5 font-mono">{e.type}</td>
                       <td>{e.claimTicket || '—'}</td>

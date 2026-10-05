@@ -301,6 +301,7 @@ describe('Phase 2 — brand edits its own coverage', () => {
       .expect(200);
     expect(put.body.data.coverage.map((c) => c.key).sort()).toEqual(['AC', 'Refrigerator']);
     expect(put.body.data.logoUrl).toBe('https://res.cloudinary.com/x/voltas.png');
+    expect(put.body.data.options.map((o) => o.key)).toEqual(['AC', 'Refrigerator']);
   });
 
   it('cannot switch itself on or change its SLA', async () => {

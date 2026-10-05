@@ -97,5 +97,10 @@ warrantyCoverageBrandRouter.get(
 warrantyCoverageBrandRouter.put(
   '/',
   validate(brandCoverageSchema),
-  handle((req) => catalog.updateBrandSettings(req.user.brand, req.body, req.user.id, { asBrand: true })),
+  handle(async (req) => ({
+    ...(await catalog.updateBrandSettings(req.user.brand, req.body, req.user.id, { asBrand: true })),
+    // Keep PUT and GET response shapes identical. The brand panel renders this
+    // response immediately after save and still needs the catalogue options.
+    options: await catalog.listCoverageOptions(),
+  })),
 );

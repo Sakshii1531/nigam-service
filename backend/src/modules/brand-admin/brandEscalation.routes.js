@@ -14,6 +14,14 @@ export const brandEscalationRouter = Router();
 
 brandEscalationRouter.use(requireAuth, requireBrandScope);
 
+brandEscalationRouter.get('/open-count', async (req, res, next) => {
+  try {
+    ok(res, { count: await brandEscalationService.countOpenBrandEscalations(req.user.brand) });
+  } catch (err) {
+    next(err);
+  }
+});
+
 brandEscalationRouter.get('/', validate(listQuerySchema, 'query'), async (req, res, next) => {
   try {
     const { items, meta } = await brandEscalationService.listBrandEscalations(req.user.brand, req.query);

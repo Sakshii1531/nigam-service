@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { apiRequest } from '../../lib/apiClient';
 import {
   LayoutDashboard,
   ClipboardList,
@@ -29,6 +30,7 @@ import {
 
 const Sidebar = () => {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [openEscalations, setOpenEscalations] = useState(0);
   const scrollContainerRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
@@ -44,6 +46,29 @@ const Sidebar = () => {
       setSparePartsOpen(true);
     }
   }, [location.pathname]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadEscalationCount = async () => {
+      try {
+        const result = await apiRequest('/brand/escalations/open-count', { auth: true });
+        if (!cancelled) {
+          setOpenEscalations(Number.isFinite(result?.count) ? result.count : 0);
+        }
+      } catch {
+        // A navigation badge must never prevent the brand panel from rendering.
+        if (!cancelled) setOpenEscalations(0);
+      }
+    };
+
+    loadEscalationCount();
+    window.addEventListener('brand:escalations-changed', loadEscalationCount);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('brand:escalations-changed', loadEscalationCount);
+    };
+  }, []);
 
   useEffect(() => {
     const container = scrollContainerRef.current;
@@ -125,7 +150,11 @@ const Sidebar = () => {
                 }
               >
                 <span className="flex items-center gap-2.5"><AlertTriangle size={14} /><span>Escalations</span></span>
-                <span className="bg-orange-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0">23</span>
+                {openEscalations > 0 && (
+                  <span className="bg-orange-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0">
+                    {openEscalations}
+                  </span>
+                )}
               </NavLink>
             </div>
           </div>
@@ -291,4 +320,3 @@ const Sidebar = () => {
 };
 
 export default Sidebar;
-

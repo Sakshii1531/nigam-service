@@ -59,7 +59,8 @@ const Escalations = () => {
         auth: true,
       });
       toast(`Complaint ${id} de-escalated and marked Resolved!`);
-      fetchEscalations();
+      await fetchEscalations();
+      window.dispatchEvent(new Event('brand:escalations-changed'));
     } catch (err) {
       toast(`Error: ${err.message}`);
     }
@@ -74,7 +75,8 @@ const Escalations = () => {
         auth: true,
       });
       toast(`Complaint ${id} assigned to Senior Service Provider!`);
-      fetchEscalations();
+      await fetchEscalations();
+      window.dispatchEvent(new Event('brand:escalations-changed'));
     } catch (err) {
       toast(`Error: ${err.message}`);
     }

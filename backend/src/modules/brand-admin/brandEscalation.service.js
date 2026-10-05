@@ -24,6 +24,10 @@ export async function listBrandEscalations(brandId, { status, priority, page, li
   return { items, meta: paginationMeta({ page: pg, limit: lim, total }) };
 }
 
+export async function countOpenBrandEscalations(brandId) {
+  return Escalation.countDocuments({ scope: 'brand', brand: brandId, status: { $ne: 'Resolved' } });
+}
+
 export async function createBrandEscalation(brandId, data) {
   return await Escalation.create({
     ...data,

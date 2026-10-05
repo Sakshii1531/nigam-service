@@ -676,6 +676,10 @@ describe('POST /service-requests — brand-admin logs a complaint', () => {
 describe('brand settings', () => {
   it('creates defaults on first read and merges the brand\'s own identity', async () => {
     const { brand, token } = await seedBrandWithAdmin('Settings Brand');
+    await Brand.findByIdAndUpdate(brand._id, {
+      supportEmail: 'partner-support@example.test',
+      supportPhone: '1800-555-0100',
+    });
 
     const res = await request(app)
       .get('/api/v1/brand/settings')
@@ -687,6 +691,8 @@ describe('brand settings', () => {
     expect(res.body.data.smsAlerts).toBe(false);
     // Identity comes from the Brand document, which super-admin owns.
     expect(res.body.data.brandName).toBe('Settings Brand');
+    expect(res.body.data.supportEmail).toBe('partner-support@example.test');
+    expect(res.body.data.supportPhone).toBe('1800-555-0100');
     expect(String(res.body.data.brand)).toBe(String(brand._id));
   });
 
@@ -705,6 +711,7 @@ describe('brand settings', () => {
       .set('Authorization', `Bearer ${a.token}`)
       .expect(200);
     expect(aRes.body.data.supportEmail).toBe('help@a.test');
+    expect((await Brand.findById(a.brand._id)).supportEmail).toBe('help@a.test');
     expect(aRes.body.data.smsAlerts).toBe(true);
     expect(aRes.body.data.autoAssignServiceProvider).toBe(false);
 
