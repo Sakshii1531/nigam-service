@@ -9,6 +9,7 @@ export const requestLogger = pinoHttp({
     res.setHeader('x-request-id', id);
     return id;
   },
+  redact: ['req.headers.authorization', 'req.headers.cookie', 'res.headers["set-cookie"]'],
   autoLogging: !isTest,
   level: isProd ? 'info' : 'debug',
   transport: isProd

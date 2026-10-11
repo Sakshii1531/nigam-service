@@ -1,0 +1,168 @@
+import { BRAND_AUDIT_COVERAGE } from '../src/modules/brand-crm/auditCoverage.js';
+import { beforeAll, afterAll, beforeEach, it, expect, jest } from '@jest/globals';
+import express from 'express';
+import mongoose from 'mongoose';
+import { createApp } from '../src/app.js';
+import { registerAllModels } from '../src/config/registerModels.js';
+import { ensureIndexes } from '../src/config/db.js';
+import { brandCrmKit } from './helpers/brandCrm.js';
+import { testDbUri } from './helpers/testDb.js';
+import { listenOnLoopback, closeServer } from './helpers/loopbackServer.js';
+import { invalidateBrandPermissions } from '../src/modules/brand-crm/brandPermission.middleware.js';
+import { awaitPendingDeliveries } from '../src/modules/notifications/notification.service.js';
+import { AuditLog } from '../src/modules/super-admin/auditLog.model.js';
+import { recordAction } from '../src/modules/shared/auditLog.js';
+import { auditRequestContext } from '../src/modules/shared/auditContext.js';
+import { auditMutations } from '../src/modules/brand-crm/auditMutations.js';
+import { actorFromUser } from '../src/modules/brand-crm/actor.js';
+import { TICKET_AUDIT_ACTIONS } from '../src/modules/brand-crm/ticketAuditActions.js';
+import { CLAIM_ACTIONS } from '../src/modules/partner-warranty/claimStatus.js';
+let server;
+const kit = brandCrmKit(()=>server,{phoneStart:9371610000});
+const oid = () => new mongoose.Types.ObjectId().toString();
+const api = (u,method,path,body) => kit.api()[method](`/api/v1/brand${path}`).set(kit.bearer(u.token)).send(body);
+beforeAll(async()=>{await mongoose.connect(testDbUri('brandCrmAudit'));await registerAllModels();await ensureIndexes();server=await listenOnLoopback(createApp());});
+afterAll(async()=>{await awaitPendingDeliveries();await closeServer(server);await mongoose.connection.dropDatabase();await mongoose.disconnect();});
+beforeEach(async()=>{await awaitPendingDeliveries();invalidateBrandPermissions();await Promise.all(Object.values(mongoose.models).map(m=>m.deleteMany({})));});
+async function world() {const w=await kit.world();w.customer=await kit.customer();w.owner=await kit.brandUser(w.lg,{templates:['brand_super_admin'],employeeId:'LG-MGR-016',name:'Audit Manager'});w.cce=await kit.brandUser(w.lg,{templates:['cce'],employeeId:'LG-CCE-016'});w.other=await kit.brandAdmin(w.samsung);return w;}
+async function row(w,action,entityId) {const r=await AuditLog.findOne({brand:w.lg._id,action,...(entityId?{entityId}: {})}).sort({createdAt:-1}).lean();expect(r).toBeTruthy();expect(r.actor).toMatchObject({employeeId:w.owner.user.employeeId,name:w.owner.user.name,kind:'brand'});return r;}
+it('mirrors every timeline action through one table and records exact priority diffs and actors',async()=>{
+  const w=await world();expect(BRAND_AUDIT_COVERAGE.filter(r=>r.status==='gap')).toEqual([]);expect(Object.keys(TICKET_AUDIT_ACTIONS)).toEqual(CLAIM_ACTIONS);
+  const c=await kit.createTicketAs(w.cce,kit.ticketInput(w,w.customer));
+  const creation=await AuditLog.findOne({action:'ticket.created',entityId:c._id}).lean();expect(creation.actor.employeeId).toBe('LG-CCE-016');
+  await api(w.owner,'post',`/tickets/${c.id}/priority`,{priority:'High',remarks:'Customer needs urgent repair'}).expect(200);
+  expect((await row(w,'ticket.priority_changed',c.id)).meta).toMatchObject({timelineAction:'PRIORITY_CHANGED',changes:{priority:['Normal','High']}});
+  const executive=await kit.brandUser(w.lg,{templates:['warranty_executive'],employeeId:'LG-WE-016'});
+  await api(executive,'post',`/tickets/${c.id}/approve`,{coverageDecision:'goodwill',remarks:'Goodwill for audit verification'}).expect(200);
+  expect((await AuditLog.findOne({action:'ticket.approved',entityId:c.id})).actor.employeeId).toBe('LG-WE-016');
+  expect(await AuditLog.countDocuments({action:'http.mutation'})).toBe(0);
+});
+it('audits catalog, academy, documents, replacements, returns and settings with persisted diffs',async()=>{
+  const w=await world();
+  const service=(await api(w.owner,'post','/catalog/master-services',{name:'Repair',type:'Repair',charge:200}).expect(201)).body.data;
+  await row(w,'catalog_item.created',service.id);
+  await api(w.owner,'put',`/catalog/master-services/${service.id}`,{charge:350}).expect(200);
+  expect((await row(w,'catalog_item.updated',service.id)).meta.changes.charge).toEqual([200,350]);
+  await api(w.owner,'delete',`/catalog/master-services/${service.id}`).expect(200);
+  expect((await row(w,'catalog_item.deleted',service.id)).meta.changes.name).toEqual(['Repair',null]);
+  const course=(await api(w.owner,'post','/academy/courses',{name:'Safety'}).expect(201)).body.data;
+  await api(w.owner,'put',`/academy/courses/${course.id}`,{name:'Safety v2'}).expect(200);
+  expect((await row(w,'academy_item.updated',course.id)).meta.changes.name).toEqual(['Safety','Safety v2']);
+  await api(w.owner,'post','/documents',{type:'Warranty Certificate',serviceRequest:oid()}).expect(201);await row(w,'document.generated');
+  const replacement=(await api(w.owner,'post','/replacement-approvals',{serviceRequest:oid(),reason:'Cannot repair'}).expect(201)).body.data;
+  await api(w.owner,'patch',`/replacement-approvals/${replacement.id}/status`,{status:'Approved'}).expect(200);
+  expect((await row(w,'replacement.status_changed')).meta.changes.status).toEqual(['Pending','Approved']);
+  const ret=(await api(w.owner,'post','/returns',{serviceProvider:oid(),partName:'Compressor'}).expect(201)).body.data;
+  await api(w.owner,'patch',`/returns/${ret.id}`,{damageFlag:true}).expect(200);
+  expect((await row(w,'return.updated')).meta.changes.damageFlag).toEqual([false,true]);
+  await api(w.owner,'put','/settings',{supportPhone:'9876543210'}).expect(200);
+  expect((await row(w,'settings.updated')).meta.changes.supportPhone[1]).toBe('9876543210');
+  expect(await AuditLog.countDocuments({action:'http.mutation'})).toBe(0);
+});
+it('keeps tenant filters mandatory, denies CCE, validates filters and paginates stable search results',async()=>{
+  const w=await world(),actor=await actorFromUser(w.owner.user._id,'brand');
+  await AuditLog.deleteMany({});
+  for(let i=0;i<3;i++)await recordAction({brand:w.lg._id,actor,entityType:'ticket',entityId:oid(),action:'ticket.updated',reason:i?'Normal':'Literal [filter]'});
+  await recordAction({brand:w.samsung._id,actor,entityType:'ticket',action:'ticket.updated'});
+  const first=(await api(w.owner,'get','/audit-logs?q=LG-MGR-016&limit=2').expect(200)).body;
+  expect(first.meta.total).toBe(3);expect(first.data).toHaveLength(2);expect(first.data.every(r=>r.brand===String(w.lg._id))).toBe(true);
+  const second=(await api(w.owner,'get','/audit-logs?q=LG-MGR-016&limit=2&page=2').expect(200)).body;expect(second.data).toHaveLength(1);expect(first.data.map(r=>r.id)).not.toContain(second.data[0].id);
+  expect((await api(w.owner,'get','/audit-logs?q=%5Bfilter%5D').expect(200)).body.meta.total).toBe(1);
+  expect((await api(w.other,'get','/audit-logs').expect(200)).body.meta.total).toBe(1);
+  await api(w.cce,'get','/audit-logs').expect(403);await api(w.cce,'get','/audit-logs?format=csv').expect(403);
+  await api(w.owner,'get','/audit-logs?entityId=bad').expect(400);await api(w.owner,'get','/audit-logs?brand='+w.samsung.id).expect(400);
+  await api(w.owner,'get','/audit-logs?from=2026-10-10&to=2026-10-01').expect(400);
+});
+it('redacts credentials in nested diffs for both shared and direct audit writers without leaking platform-only rows',async()=>{
+  const w=await world(),actor=await actorFromUser(w.owner.user._id,'brand');
+  await recordAction({brand:w.lg._id,actor,entityType:'webhook',action:'webhook.updated',meta:{changes:{password:['old-password','new-password'],nested:[{apiKey:'super-private',secret:'sign-private'}]},accessToken:'bearer-private'}});
+  await AuditLog.create({brand:null,actor,user:actor.user,type:'Finance',entityType:'BrandRate',action:'rate.updated',meta:{changes:{partnerPayout:[1,2]},passwordHash:'hash-private'}});
+  const logs=await AuditLog.find().lean(),json=JSON.stringify(logs);
+  for(const secret of ['old-password','new-password','super-private','sign-private','bearer-private','hash-private'])expect(json).not.toContain(secret);
+  expect(logs.find(r=>r.action==='webhook.updated').meta.changes.password).toBe('changed');
+  expect((await api(w.owner,'get','/audit-logs').expect(200)).body.data.some(r=>r.meta?.changes?.partnerPayout)).toBe(false);
+});
+it('exports all filtered rows as escaped CSV and records audit.exported before returning',async()=>{
+  const w=await world(),actor=await actorFromUser(w.owner.user._id,'brand');
+  await recordAction({brand:w.lg._id,actor,entityType:'ticket',action:'ticket.updated',reason:'=HYPERLINK("bad")\nsecond line'});
+  await recordAction({brand:w.samsung._id,actor,entityType:'ticket',action:'ticket.updated',reason:'other-brand-secret'});
+  const csv=await api(w.owner,'get','/audit-logs?format=csv&action=ticket.updated&limit=1').expect(200);
+  expect(csv.headers['content-type']).toContain('text/csv');expect(csv.text).toContain('LG-MGR-016');expect(csv.text).toContain("'=HYPERLINK");expect(csv.text).not.toContain('other-brand-secret');
+  await row(w,'audit.exported');
+});
+it('the safety net records only successful unaudited writes and suppresses duplicate rows',async()=>{
+  const w=await world(),app=express();app.use(express.json(),auditRequestContext,(req,res,next)=>{req.user={id:w.owner.user.id,role:'brand_admin',brand:String(w.lg._id)};next();},auditMutations);
+  app.post('/forgotten',(_req,res)=>res.json({data:{ok:true}}));
+  app.post('/rejected',(_req,res)=>res.status(409).json({error:'Conflict'}));
+  app.post('/covered',async(_req,res)=>{await recordAction({brand:w.lg._id,actor:await actorFromUser(w.owner.user.id,'brand'),action:'settings.updated',entityType:'settings'});res.json({data:{ok:true}});});
+  const testServer=await listenOnLoopback(app),testKit=brandCrmKit(()=>testServer,{phoneStart:9371620000}),warn=jest.spyOn(console,'warn').mockImplementation(()=>{});
+  try {await testKit.api().post('/forgotten').send({password:'do-not-log'}).expect(200);await testKit.api().post('/rejected').expect(409);await testKit.api().post('/covered').expect(200);
+    const rows=await AuditLog.find({action:'http.mutation'}).lean();expect(rows).toHaveLength(1);expect(rows[0].meta).toEqual({method:'POST',path:'/forgotten'});expect(warn).toHaveBeenCalledTimes(1);
+  } finally {warn.mockRestore();await closeServer(testServer);}
+});
+it('security events record failed and completed logins, password changes and suspension without credentials',async()=>{
+  const w=await world();await kit.api().post('/api/v1/auth/login').send({role:'brand_admin',identifier:w.owner.user.email,password:'wrong-password'}).expect(401);
+  await row(w,'auth.login_failed');
+  await kit.flow.loginAndVerify({role:'brand_admin',identifier:w.owner.user.email});await row(w,'auth.login_succeeded');
+  await kit.api().patch('/api/v1/auth/password').set(kit.bearer(w.owner.token)).send({currentPassword:'password123',newPassword:'Changed-password-123'}).expect(200);
+  expect((await row(w,'auth.password_changed')).meta.changes.password).toBe('changed');
+  await api(w.owner,'put',`/users/${w.cce.user.id}`,{status:'Suspended'}).expect(200);
+  expect((await row(w,'auth.suspended')).meta.changes.status).toEqual(['Active','Suspended']);
+  await kit.api().post('/api/v1/auth/otp/verify').send({role:'brand_admin',identifier:w.cce.user.email,code:'123456'}).expect(403);
+  expect(await AuditLog.countDocuments({action:'auth.login_failed',entityId:w.cce.user.id,'meta.stage':'account_status'})).toBe(1);
+  expect(JSON.stringify(await AuditLog.find().lean())).not.toContain('Changed-password-123');
+});
+it('retains native customer, policy, serial import, role, user, team and rate audit writers and adds webhook/escalation coverage',async()=>{
+  const w=await world();
+  const customer=(await api(w.owner,'post','/customers',{name:'Audit Customer',phone:'9876501616'}).expect(201)).body.data;
+  await api(w.owner,'patch',`/customers/${customer.id}`,{name:'Updated Customer'}).expect(200);
+  expect((await row(w,'customer.updated')).meta.changes.name).toEqual(['Audit Customer','Updated Customer']);
+  const policy=(await api(w.owner,'post','/warranty-policies',{name:'Base',warrantyMonths:12}).expect(201)).body.data;
+  await api(w.owner,'put',`/warranty-policies/${policy.id}`,{name:'Extended',warrantyMonths:24}).expect(200);
+  expect((await row(w,'warranty_policy.versioned')).meta.changes.warrantyMonths).toEqual([12,24]);
+  await api(w.owner,'post','/warranty-policies/serials/import',{csv:`serial,category\nAUDIT-SERIAL,${w.ac.key}`,dryRun:false}).expect(200);await row(w,'serials.imported');
+  const role=(await api(w.owner,'post','/roles',{name:'Audit reader',permissionKeys:['dashboard:view']}).expect(201)).body.data;
+  await api(w.owner,'put',`/roles/${role.id}`,{permissionKeys:['audit:view']}).expect(200);
+  expect((await row(w,'role.permissions_changed')).meta.changes.permissions).toEqual([['dashboard:view'],['audit:view']]);
+  const staff=(await api(w.owner,'post','/users',{name:'Audited staff',email:'audit-invite@example.test',password:'Initial-password-123',employeeId:'LG-NEW-16',assignedRoles:[role.id]}).expect(201)).body.data;
+  await api(w.owner,'put',`/users/${staff.id}`,{name:'Renamed staff'}).expect(200);
+  expect((await row(w,'user.updated')).meta.changes.name).toEqual(['Audited staff','Renamed staff']);
+  const team=(await api(w.owner,'post','/teams',{name:'Audit team',department:'Remote Support'}).expect(201)).body.data;
+  await api(w.owner,'put',`/teams/${team.id}`,{name:'Renamed team'}).expect(200);
+  expect((await row(w,'team.updated')).meta.changes.name).toEqual(['Audit team','Renamed team']);
+  const rate=(await api(w.owner,'post','/rates',{category:String(w.ac._id),serviceType:'repair',brandRate:300,effectiveFrom:'2026-01-01'}).expect(200)).body.data;
+  await api(w.owner,'patch',`/rates/${rate.id}`,{category:String(w.ac._id),serviceType:'repair',brandRate:350,effectiveFrom:'2026-01-01'}).expect(200);
+  expect((await row(w,'rate.updated')).meta.changes.brandRate).toEqual([300,350]);
+  const webhook=(await api(w.owner,'put','/warranty-webhook',{enabled:false,rotateSecret:true}).expect(200)).body.data;
+  const entry=await row(w,'webhook.updated');expect(JSON.stringify(entry.meta)).not.toContain(webhook.secret);expect(entry.meta.secret).toBe('changed');
+  const ticket=await kit.createTicketAs(w.owner,kit.ticketInput(w,w.customer));
+  const escalation=(await api(w.owner,'post','/escalations',{warrantyClaim:ticket.id,reason:'Audit escalation test'}).expect(201)).body.data;
+  await api(w.owner,'patch',`/escalations/${escalation.id}`,{status:'Under Review'}).expect(200);
+  expect((await row(w,'escalation.updated')).meta.changes.status).toEqual(['Open','Under Review']);
+  expect(await AuditLog.countDocuments({action:'http.mutation'})).toBe(0);
+});
+it('records billing line adjustments, invoice generation and payment with exact actor snapshots and diffs',async()=>{
+  const w=await world();w.owner=await kit.brandUser(w.lg,{templates:['finance'],employeeId:'LG-FIN-016',name:'Audit Finance'});
+  const actor=await actorFromUser(w.owner.user.id,'brand');
+  const { BillingLine }=await import('../src/modules/brand-crm/billingLine.model.js');
+  const { totalCharges,addOtherCharge }=await import('../src/modules/brand-crm/charges.service.js');
+  const billing=await import('../src/modules/brand-crm/billing.service.js');
+  const line=await BillingLine.create(totalCharges({brand:w.lg._id,ticket:oid(),ticketNo:'AUDIT-TICKET',closedAt:new Date('2026-08-15'),completedAt:new Date('2026-08-14'),status:'billable',state:'MP',city:'Indore',rate:{amount:100,matchedOn:'national'},parts:[],otherCharges:[],gstPercent:0}));
+  await addOtherCharge(line.id,actor,{label:'Transport',amount:20,reason:'Approved travel charge'});
+  expect((await row(w,'billing_line.charge_added')).meta.changes.total).toEqual([100,120]);
+  const invoice=await billing.draftInvoice(w.lg.id,{periodFrom:new Date('2026-08-01'),periodTo:new Date('2026-09-01'),actor});
+  await row(w,'invoice.drafted',invoice.id);
+  await billing.issueInvoice(invoice.id,actor);expect((await row(w,'invoice.issued')).meta.changes.status).toEqual(['draft','issued']);
+  const paid=await billing.recordPayment(invoice.id,{amount:50,reference:'AUDIT-PAY',mode:'bank_transfer'},actor);
+  const payment=await row(w,'payment.recorded',paid.payment.id);expect(payment.entityType).toBe('BrandPayment');expect(payment.meta.changes.paidAmount).toEqual([0,50]);
+});
+it('brand reads and exports exclude internal and unclassified legacy ticket audits while admin retains them',async()=>{
+  const w=await world(),actor=await actorFromUser(w.owner.user.id,'brand');
+  await AuditLog.create([{brand:w.lg._id,actor,entityType:'WarrantyClaim',entityId:oid(),type:'Warranty',action:'ticket.note_added',reason:'internal-only-detail',meta:{visibility:'internal',timelineAction:'NOTE_ADDED'}},
+    {brand:w.lg._id,actor,entityType:'WarrantyClaim',entityId:oid(),type:'Warranty',action:'NCCW: NOTE_ADDED',reason:'legacy-unclassified-detail'}]);
+  const json=(await api(w.owner,'get','/audit-logs').expect(200)).text,csv=(await api(w.owner,'get','/audit-logs?format=csv').expect(200)).text;
+  for(const detail of ['internal-only-detail','legacy-unclassified-detail']){expect(json).not.toContain(detail);expect(csv).not.toContain(detail);}
+  const admin=await kit.superAdmin();
+  const all=await kit.api().get(`/api/v1/super-admin/audit-logs?brand=${w.lg.id}&q=internal-only-detail`).set(kit.bearer(admin.token)).expect(200);
+  expect(all.body.meta.total).toBe(1);expect(all.body.data[0].brand.name).toBe('LG');expect(all.body.data[0].actor.employeeId).toBe('LG-MGR-016');
+});
