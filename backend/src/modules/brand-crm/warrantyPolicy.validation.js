@@ -1,0 +1,11 @@
+import { z } from 'zod';
+import { id,productSchema } from './registration.validation.js';
+import { SERVICE_TYPES,WARRANTY_STATUSES } from '../partner-warranty/ticketConstants.js';
+const text=max=>z.string().trim().max(max);
+const months=z.number().int().min(0).max(240);
+const coverage=z.object({coveredServices:z.array(z.enum(SERVICE_TYPES)).default(['repair']),nonCoveredServices:z.array(z.enum(SERVICE_TYPES)).default([]),partsCovered:z.boolean().default(true),labourCovered:z.boolean().default(true),visitCharge:z.object({payer:z.enum(['brand','customer','none']).default('brand'),amount:z.number().min(0).max(1000000).default(0)}).default({}),excludedIssues:z.array(id).max(100).default([]),conditions:text(2000).default('')}).strict();
+export const policySchema=z.object({name:text(150).min(1),appliesTo:z.object({category:id.nullable().default(null),productType:id.nullable().default(null),modelPattern:text(60).regex(/^[A-Z0-9*-]+$/i,'Use letters, numbers, hyphens and * wildcard').nullable().default(null)}).strict().default({}),warrantyMonths:months,partsWarrantyMonths:months.optional(),labourWarrantyMonths:months.optional(),coverage:coverage.default({}),requireInvoice:z.boolean().default(true),requireSerial:z.boolean().default(true),requireSerialInRegistry:z.boolean().default(false),effectiveFrom:z.coerce.date().optional(),effectiveTo:z.coerce.date().optional()}).strict().refine(v=>!v.effectiveFrom||!v.effectiveTo||v.effectiveTo>=v.effectiveFrom,'Effective end must follow start');
+export const evaluationSchema=z.object({category:id.optional(),productType:id.optional(),model:text(60).optional(),serial:text(60).optional(),purchaseDate:z.coerce.date().optional(),hasInvoice:z.boolean().default(false),issue:id.optional(),serviceType:z.enum(SERVICE_TYPES).default('repair')}).strict();
+export const overrideSchema=z.object({status:z.enum(WARRANTY_STATUSES),note:text(1000).min(5,'Give a verification note (at least 5 characters)')}).strict();
+export const editProductSchema=productSchema.extend({categoryId:id.optional(),productTypeId:id.nullable().optional()}).refine(v=>Object.keys(v).length>0,'Provide product fields');
+export const importSerialsSchema=z.object({csv:z.string().max(1000000),dryRun:z.boolean().default(true)}).strict();

@@ -1,0 +1,10 @@
+import { useId,useState } from 'react';
+import { apiRequest } from '../../lib/apiClient';
+import { useApiData } from '../../hooks/useApiData';
+export default function WarrantyOverride({id,onSaved}){
+ const statusId=useId(),noteId=useId();
+ const options=useApiData(()=>apiRequest('/brand/warranty-policies/options',{auth:true}),[]);
+ const [open,setOpen]=useState(false),[status,setStatus]=useState(''),[note,setNote]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
+ const save=async e=>{e.preventDefault();setBusy(true);setError('');try{await apiRequest(`/brand/tickets/${id}/warranty/override`,{auth:true,method:'POST',body:{status,note}});setOpen(false);onSaved();}catch(e){setError(e.message);}finally{setBusy(false);}};
+ return <><button type="button" onClick={()=>setOpen(true)} className="text-blue-800 text-sm mt-3">Override warranty</button>{open&&<div className="fixed inset-0 z-50 bg-black/40 flex justify-center items-center p-5"><form onSubmit={save} role="dialog" aria-modal="true" aria-label="Override warranty" className="bg-white rounded-xl p-6 w-full max-w-md space-y-4"><h2 className="font-bold">Override warranty</h2><div><label htmlFor={statusId} className="block text-sm">Verified status</label><select id={statusId} required className="w-full border rounded-lg p-2 mt-1" value={status} onChange={e=>setStatus(e.target.value)}><option value="">Choose status</option>{options.data?.warrantyStatuses.map(s=><option key={s}>{s}</option>)}</select></div><div><label htmlFor={noteId} className="block text-sm">Verification note</label><textarea id={noteId} required minLength={5} maxLength={1000} className="w-full border rounded-lg p-2 mt-1" value={note} onChange={e=>setNote(e.target.value)}/></div>{error&&<p role="alert" className="text-sm text-red-700">{error}</p>}<div className="flex gap-3"><button disabled={busy} className="bg-blue-800 text-white rounded-lg px-4 py-2 text-sm">Save verification</button><button type="button" disabled={busy} onClick={()=>setOpen(false)} className="text-sm">Cancel</button></div></form></div>}</>;
+}
