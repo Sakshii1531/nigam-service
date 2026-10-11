@@ -1,0 +1,6 @@
+import {resolveMediaUrl} from '../../lib/apiClient';
+import { formatDateTime } from '../../lib/partnerWarrantyFormat';
+export default function TicketParts({parts=[]}) {
+ if(!parts.length)return <p className="text-xs text-slate-500">Part requests appear when the technician requests a spare.</p>;
+ return <div className="space-y-4">{parts.map(p=><article key={p.id||p._id} className="border rounded-xl p-3 text-xs" data-testid="ticket-part"><h3 className="font-bold">{p.partName} · {p.partNumber||p.sku||'No part number'}</h3><p>Qty {p.qty} · ₹{p.price} each · Payer: {p.payer}</p><p>Technician: {p.serviceProvider?.name||'—'} · {p.status}</p><p>Brand: {p.approval?.brand?.status||'Not Required'} · NCC: {p.approval?.ncc?.status||'Pending'}</p><ol className="border-l-2 border-blue-200 ml-1 mt-3 pl-3 space-y-2">{(p.statusHistory||[]).map((h,i)=><li key={i}><b>{h.status==='Pending'?'Requested':h.status}</b><p className="text-slate-500">{h.actor?.name||'NCC'}{h.actor?.employeeId?` (${h.actor.employeeId})`:''} · {formatDateTime(h.at)}</p></li>)}</ol>{p.installPhotoUrl&&<a href={resolveMediaUrl(p.installPhotoUrl)} target="_blank" rel="noreferrer" className="text-blue-800 underline">Installation photo</a>}</article>)}</div>;
+}

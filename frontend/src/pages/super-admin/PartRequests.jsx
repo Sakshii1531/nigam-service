@@ -30,13 +30,14 @@ const STATUS_STYLES = {
 // A part already in NCC warehouse stock only needs approving and handing
 // over — no shipping leg — while a procured part genuinely gets dispatched
 // and delivered. Two different ladders, picked by fulfillmentType.
-const FILTERS = ['All', 'Pending', 'Approved', 'Ready to Hand Over', 'Handed Over', 'Dispatched', 'Delivered', 'Rejected'];
+const FILTERS = ['All', 'Pending', 'Approved', 'Ready to Hand Over', 'Handed Over', 'Dispatched', 'Delivered', 'Received', 'Installed', 'Rejected'];
 
 const PartRequests = () => {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [toast, setToast] = useState('');
+  const [brandApproval,setBrandApproval]=useState('');
   const [filter, setFilter] = useState('All');
   const [busyId, setBusyId] = useState(null);
 
@@ -46,7 +47,7 @@ const PartRequests = () => {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await apiRequest(`/super-admin/part-orders?limit=200${filter === 'All' ? '' : `&status=${filter}`}`, { auth: true });
+      const data = await apiRequest(`/super-admin/part-orders?limit=200${brandApproval ? `&brandApproval=${brandApproval}` : ''}${filter === 'All' ? '' : `&status=${filter}`}`, { auth: true });
       const items = Array.isArray(data) ? data : [];
       setRequests(items);
 
@@ -61,7 +62,7 @@ const PartRequests = () => {
     } finally {
       setLoading(false);
     }
-  }, [filter]);
+  }, [filter,brandApproval]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -118,6 +119,7 @@ const PartRequests = () => {
         />
 
         <div className="p-6 flex flex-col gap-5">
+          <label className="text-xs">Brand approval<select aria-label="Brand approval" value={brandApproval} onChange={e=>setBrandApproval(e.target.value)} className="ml-2 border rounded p-2"><option value="">All</option>{['Pending','Approved','Rejected','Not Required'].map(s=><option key={s}>{s}</option>)}</select></label>
           {toast && (
             <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold rounded-xl px-4 py-3 flex items-center gap-2 animate-in fade-in">
               <CheckCircle2 size={15} /> {toast}
@@ -167,7 +169,7 @@ const PartRequests = () => {
                       <th className="px-5 py-3.5 font-bold">Service Provider</th>
                       <th className="px-5 py-3.5 font-bold">Job / Service Request</th>
                       <th className="px-5 py-3.5 font-bold">Source</th>
-                      <th className="px-5 py-3.5 font-bold">Status</th>
+                      <th className="px-5 py-3.5 font-bold">Brand approval / Status</th>
                       <th className="px-5 py-3.5 font-bold text-right">Actions</th>
                     </tr>
                   </thead>
@@ -225,6 +227,7 @@ const PartRequests = () => {
                               <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold border w-fit ${STATUS_STYLES[r.status] || 'bg-slate-50 text-slate-600 border-slate-200'}`}>
                                 {r.status}
                               </span>
+                              <span className="block text-xs">Brand: {r.approval?.brand?.status || 'Not Required'}</span>
                               {r.status === 'Pending' && r.customerApprovalStatus === 'Pending' && (
                                 <span className="text-[9px] text-amber-700 font-bold uppercase tracking-wide">Awaiting Customer</span>
                               )}
@@ -242,7 +245,7 @@ const PartRequests = () => {
                                 <Eye size={13} /> Details
                               </button>
 
-                              {r.status === 'Pending' && r.customerApprovalStatus === 'Pending' ? (
+                              {r.approval?.required?.includes('brand') && r.approval?.brand?.status !== 'Approved' ? <span className="text-amber-700">Awaiting brand approval</span> : r.status === 'Pending' && r.customerApprovalStatus === 'Pending' ? (
                                 <>
                                   <span
                                     className="text-[10px] text-amber-700 font-bold bg-amber-50 border border-amber-200 px-2 py-1.5 rounded-lg inline-flex items-center gap-1"
@@ -252,7 +255,7 @@ const PartRequests = () => {
                                   </span>
                                   <button
                                     onClick={() => decide(r.id || r._id, 'Rejected')}
-                                    disabled={busyId === (r.id || r._id)}
+                                    disabled={busyId === (r.id || r._id) || (r.approval?.required?.includes('brand') && r.approval?.brand?.status !== 'Approved')}
                                     className="inline-flex items-center gap-1 bg-white hover:bg-slate-50 disabled:opacity-60 text-rose-600 text-[11px] font-bold px-2.5 py-1.5 rounded-lg border border-slate-200 transition-colors cursor-pointer"
                                   >
                                     <X size={13} /> Reject
@@ -262,14 +265,14 @@ const PartRequests = () => {
                                 <>
                                   <button
                                     onClick={() => decide(r.id || r._id, 'Approved')}
-                                    disabled={busyId === (r.id || r._id)}
+                                    disabled={busyId === (r.id || r._id) || (r.approval?.required?.includes('brand') && r.approval?.brand?.status !== 'Approved')}
                                     className="inline-flex items-center gap-1 bg-[#0D47A1] hover:bg-blue-800 disabled:opacity-60 text-white text-[11px] font-bold px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer shadow-xs"
                                   >
                                     <CheckCircle2 size={13} /> Approve
                                   </button>
                                   <button
                                     onClick={() => decide(r.id || r._id, 'Rejected')}
-                                    disabled={busyId === (r.id || r._id)}
+                                    disabled={busyId === (r.id || r._id) || (r.approval?.required?.includes('brand') && r.approval?.brand?.status !== 'Approved')}
                                     className="inline-flex items-center gap-1 bg-white hover:bg-slate-50 disabled:opacity-60 text-rose-600 text-[11px] font-bold px-2.5 py-1.5 rounded-lg border border-slate-200 transition-colors cursor-pointer"
                                   >
                                     <X size={13} /> Reject
@@ -278,7 +281,7 @@ const PartRequests = () => {
                               ) : r.status === 'Approved' && r.fulfillmentType === 'in_stock' ? (
                                 <button
                                   onClick={() => decide(r.id || r._id, 'Ready to Hand Over')}
-                                  disabled={busyId === (r.id || r._id)}
+                                  disabled={busyId === (r.id || r._id) || (r.approval?.required?.includes('brand') && r.approval?.brand?.status !== 'Approved')}
                                   className="inline-flex items-center gap-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-[11px] font-bold px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer shadow-xs"
                                 >
                                   <Package size={13} /> Mark Ready
@@ -286,7 +289,7 @@ const PartRequests = () => {
                               ) : r.status === 'Ready to Hand Over' ? (
                                 <button
                                   onClick={() => decide(r.id || r._id, 'Handed Over')}
-                                  disabled={busyId === (r.id || r._id)}
+                                  disabled={busyId === (r.id || r._id) || (r.approval?.required?.includes('brand') && r.approval?.brand?.status !== 'Approved')}
                                   className="inline-flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-[11px] font-bold px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer shadow-xs"
                                 >
                                   <CheckCircle2 size={13} /> Hand Over
@@ -298,7 +301,7 @@ const PartRequests = () => {
                               ) : r.status === 'Approved' ? (
                                 <button
                                   onClick={() => decide(r.id || r._id, 'Dispatched')}
-                                  disabled={busyId === (r.id || r._id)}
+                                  disabled={busyId === (r.id || r._id) || (r.approval?.required?.includes('brand') && r.approval?.brand?.status !== 'Approved')}
                                   className="inline-flex items-center gap-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-[11px] font-bold px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer shadow-xs"
                                 >
                                   <Truck size={13} /> Dispatch
@@ -306,7 +309,7 @@ const PartRequests = () => {
                               ) : r.status === 'Dispatched' ? (
                                 <button
                                   onClick={() => decide(r.id || r._id, 'Delivered')}
-                                  disabled={busyId === (r.id || r._id)}
+                                  disabled={busyId === (r.id || r._id) || (r.approval?.required?.includes('brand') && r.approval?.brand?.status !== 'Approved')}
                                   className="inline-flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-[11px] font-bold px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer shadow-xs"
                                 >
                                   <CheckCircle2 size={13} /> Deliver
@@ -324,7 +327,7 @@ const PartRequests = () => {
                                 <span
                                   className="text-[10px] text-rose-700 font-bold bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-md inline-flex items-center gap-1"
                                   title="The customer declined this part's cost — the job was cancelled outright.">
-                                  <X size={11} /> Rejected — Service Cancelled
+                                  <X size={11} /> {r.warrantyClaim ? 'Rejected — revise part request' : 'Rejected — Service Cancelled'}
                                 </span>
                               ) : (
                                 <span className="text-[10px] text-slate-400 font-semibold inline-flex items-center gap-1">
@@ -496,7 +499,7 @@ const PartRequests = () => {
                   <>
                     <button
                       onClick={() => decide(selectedRequest.id || selectedRequest._id, 'Approved')}
-                      disabled={busyId === (selectedRequest.id || selectedRequest._id) || selectedRequest.customerApprovalStatus !== 'Approved'}
+                      disabled={busyId === (selectedRequest.id || selectedRequest._id) || selectedRequest.customerApprovalStatus !== 'Approved' || (selectedRequest.approval?.required?.includes('brand') && selectedRequest.approval?.brand?.status !== 'Approved')}
                       title={selectedRequest.customerApprovalStatus !== 'Approved' ? "The customer hasn't approved this cost yet" : undefined}
                       className="px-3.5 py-2 bg-[#0D47A1] hover:bg-blue-800 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -504,7 +507,7 @@ const PartRequests = () => {
                     </button>
                     <button
                       onClick={() => decide(selectedRequest.id || selectedRequest._id, 'Rejected')}
-                      disabled={busyId === (selectedRequest.id || selectedRequest._id)}
+                      disabled={busyId === (selectedRequest.id || selectedRequest._id) || (selectedRequest.approval?.required?.includes('brand') && selectedRequest.approval?.brand?.status !== 'Approved')}
                       className="px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-xs"
                     >
                       Reject
@@ -515,7 +518,7 @@ const PartRequests = () => {
                 {selectedRequest.status === 'Approved' && selectedRequest.fulfillmentType === 'in_stock' && (
                   <button
                     onClick={() => decide(selectedRequest.id || selectedRequest._id, 'Ready to Hand Over')}
-                    disabled={busyId === (selectedRequest.id || selectedRequest._id)}
+                    disabled={busyId === (selectedRequest.id || selectedRequest._id) || (selectedRequest.approval?.required?.includes('brand') && selectedRequest.approval?.brand?.status !== 'Approved')}
                     className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-xs"
                   >
                     Mark Ready to Hand Over
@@ -525,7 +528,7 @@ const PartRequests = () => {
                 {selectedRequest.status === 'Ready to Hand Over' && (
                   <button
                     onClick={() => decide(selectedRequest.id || selectedRequest._id, 'Handed Over')}
-                    disabled={busyId === (selectedRequest.id || selectedRequest._id)}
+                    disabled={busyId === (selectedRequest.id || selectedRequest._id) || (selectedRequest.approval?.required?.includes('brand') && selectedRequest.approval?.brand?.status !== 'Approved')}
                     className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-xs"
                   >
                     Mark Handed Over
@@ -535,7 +538,7 @@ const PartRequests = () => {
                 {selectedRequest.status === 'Approved' && selectedRequest.fulfillmentType !== 'in_stock' && (
                   <button
                     onClick={() => decide(selectedRequest.id || selectedRequest._id, 'Dispatched')}
-                    disabled={busyId === (selectedRequest.id || selectedRequest._id)}
+                    disabled={busyId === (selectedRequest.id || selectedRequest._id) || (selectedRequest.approval?.required?.includes('brand') && selectedRequest.approval?.brand?.status !== 'Approved')}
                     className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-xs"
                   >
                     Mark Dispatched
@@ -545,7 +548,7 @@ const PartRequests = () => {
                 {selectedRequest.status === 'Dispatched' && (
                   <button
                     onClick={() => decide(selectedRequest.id || selectedRequest._id, 'Delivered')}
-                    disabled={busyId === (selectedRequest.id || selectedRequest._id)}
+                    disabled={busyId === (selectedRequest.id || selectedRequest._id) || (selectedRequest.approval?.required?.includes('brand') && selectedRequest.approval?.brand?.status !== 'Approved')}
                     className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-xs"
                   >
                     Mark Delivered

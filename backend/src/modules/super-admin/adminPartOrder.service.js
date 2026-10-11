@@ -1,3 +1,4 @@
+import { syncJobStage } from '../partner-warranty/claimDispatch.js';
 import { PartOrder } from '../service-provider/partOrder.model.js';
 import { Job } from '../service-provider/job.model.js';
 import { ServiceRequest } from '../service-requests/serviceRequest.model.js';
@@ -18,9 +19,10 @@ import { parsePagination, paginationMeta } from '../../utils/pagination.js';
  * written to the database and then seen by nobody. This is the queue that owns
  * them.
  */
-export async function listPartOrders({ status, orderSource, fulfillmentType, page, limit, sort } = {}) {
+export async function listPartOrders({ status, orderSource, fulfillmentType, brandApproval, page, limit, sort } = {}) {
   const query = {};
   if (status) query.status = status;
+  if (brandApproval) query['approval.brand.status'] = brandApproval;
   if (orderSource) query.orderSource = orderSource;
   if (fulfillmentType) query.fulfillmentType = fulfillmentType;
 
@@ -48,9 +50,12 @@ export async function listPartOrders({ status, orderSource, fulfillmentType, pag
  * console's behaviour deliberately: a service provider should not get a different
  * outcome depending on which desk happened to action their request.
  */
-export async function updatePartOrderStatus(partOrderId, { status, scheduledDate, timeSlot, notes } = {}) {
+export async function updatePartOrderStatus(partOrderId, { status, scheduledDate, timeSlot, notes } = {}, actor = {kind: 'admin', name: 'NCC'}) {
   const partOrder = await PartOrder.findById(partOrderId);
   if (!partOrder) throw new ApiError(404, 'Part request not found');
+
+  if (!partOrder.warrantyClaim && partOrder.job) {const job=await Job.findById(partOrder.job).select('serviceRequest');const sr=job?await ServiceRequest.findById(job.serviceRequest).select('warrantyClaim'):null;if(sr?.warrantyClaim)throw new ApiError(409,'Upgrade this legacy warranty part with backfillWarrantyParts before fulfillment');}
+  if (partOrder.warrantyClaim) return (await import('../brand-crm/ticketParts.service.js')).changePart({id:partOrderId,actor,status,remarks:notes});
 
   // The customer has to sign off on this cost before it goes any further —
   // a technician used to be able to have a real-money part approved/dispatched
@@ -117,6 +122,7 @@ export async function updatePartOrderStatus(partOrderId, { status, scheduledDate
         job.activeStep = 'revisit_scheduled';
         job.revisit = {
           scheduledDate: parsedDate,
+          partReceivedAt: ['Delivered','Handed Over'].includes(status) ? new Date() : job.revisit?.partReceivedAt,
           expectedDate: parsedDate,
           timeSlot: timeSlotStr,   // revisitSchema defines timeSlot as String
           status: 'Scheduled',
@@ -136,6 +142,7 @@ export async function updatePartOrderStatus(partOrderId, { status, scheduledDate
           sr.timeline.push({ stepLabel, done: true, timestamp: new Date(), description: notes || defaultNote });
         }
         await sr.save();
+        if (sr.warrantyClaim) await syncJobStage(sr);
       }
     }
 
@@ -182,6 +189,7 @@ export async function updatePartOrderStatus(partOrderId, { status, scheduledDate
               status: 'Upcoming',
               instantStatus: 'RESCHEDULED',
               scheduledDate: parsedDate,
+          partReceivedAt: ['Delivered','Handed Over'].includes(status) ? new Date() : job.revisit?.partReceivedAt,
               timeSlot: timeSlotStr,
             });
             io.to(`user:${customerUserId}`).emit('instant:status_update', {
@@ -219,6 +227,7 @@ export async function updatePartOrderStatus(partOrderId, { status, scheduledDate
           description: notes || 'Spare part request rejected by Super Admin',
         });
         await sr.save();
+        if (sr.warrantyClaim) await syncJobStage(sr);
       }
     }
   }

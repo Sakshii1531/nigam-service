@@ -1,11 +1,20 @@
 import mongoose from 'mongoose';
 import { applyStandardPlugins } from '../shared/plugins.js';
+import { brandScopeGuard } from '../shared/brandScopeGuard.js';
 import { ID_PREFIXES } from '../../config/constants.js';
 
 const partOrderSchema = new mongoose.Schema(
   {
     serviceProvider: { type: mongoose.Schema.Types.ObjectId, ref: 'ServiceProvider', required: true, index: true },
     job: { type: mongoose.Schema.Types.ObjectId, ref: 'Job', default: null },
+    warrantyClaim: { type: mongoose.Schema.Types.ObjectId, ref: 'WarrantyClaim', index: true },
+    serviceRequest: { type: mongoose.Schema.Types.ObjectId, ref: 'ServiceRequest' },
+    brand: { type: mongoose.Schema.Types.ObjectId, ref: 'Brand', index: true },
+    partNumber: String,
+    approval: { required: [{ type: String, enum: ['brand','ncc'] }], brand: { status: String, by: mongoose.Schema.Types.Mixed, at: Date, remarks: String }, ncc: { status: String, by: mongoose.Schema.Types.Mixed, at: Date, remarks: String } },
+    payer: { type: String, enum: ['brand','customer','ncc'] },
+    receivedAt: Date, installedAt: Date, installPhotoUrl: String,
+    statusHistory: [{ status: String, at: { type: Date, default: Date.now }, actor: mongoose.Schema.Types.Mixed }],
     partName: { type: String, required: true },
     sku: String,
     qty: { type: Number, default: 1 },
@@ -20,7 +29,7 @@ const partOrderSchema = new mongoose.Schema(
     fulfillmentType: { type: String, enum: ['in_stock', 'procurement'], default: 'procurement' },
     status: {
       type: String,
-      enum: ['Pending', 'Approved', 'Ready to Hand Over', 'Handed Over', 'Dispatched', 'Delivered', 'Rejected'],
+      enum: ['Pending', 'Approved', 'Ready to Hand Over', 'Handed Over', 'Dispatched', 'Delivered', 'Received', 'Installed', 'Rejected'],
       default: 'Pending',
       index: true,
     },
@@ -29,9 +38,23 @@ const partOrderSchema = new mongoose.Schema(
     customerApprovalStatus: { type: String, enum: ['Pending', 'Approved', 'Rejected'], default: 'Pending' },
     customerRespondedAt: Date,
   },
-  { timestamps: true },
+  { timestamps: true, optimisticConcurrency: true },
 );
 
+// Keep the tenant reference on the row itself. This also covers legacy callers
+// that only supplied a Job id; the relationship is resolved once at write time.
+partOrderSchema.pre('validate', async function resolveBrand() {
+  if (this.brand || !this.job) return;
+  const Job = mongoose.models.Job;
+  const ServiceRequest = mongoose.models.ServiceRequest;
+  if (!Job || !ServiceRequest) return;
+  const job = await Job.findById(this.job).select('serviceRequest').lean();
+  if (!job?.serviceRequest) return;
+  const request = await ServiceRequest.findById(job.serviceRequest).select('brand').lean();
+  this.brand = request?.brand || null;
+});
+
+brandScopeGuard(partOrderSchema);
 applyStandardPlugins(partOrderSchema, { prefix: ID_PREFIXES.PART_REQUEST });
 
 export const PartOrder = mongoose.models.PartOrder || mongoose.model('PartOrder', partOrderSchema);

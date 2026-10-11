@@ -1,3 +1,5 @@
+import { mutationAudit } from '../brand-crm/auditMutations.js';
+import { actorFromUser } from '../brand-crm/actor.js';
 import { Router } from 'express';
 import { z } from 'zod';
 import { validate } from '../../middleware/validate.js';
@@ -6,10 +8,11 @@ import { ok } from '../../utils/respond.js';
 import { ROLES } from '../../config/constants.js';
 import * as adminPartOrderService from './adminPartOrder.service.js';
 
-const PART_ORDER_STATUSES = ['Pending', 'Approved', 'Ready to Hand Over', 'Handed Over', 'Dispatched', 'Delivered', 'Rejected'];
+const PART_ORDER_STATUSES = ['Pending', 'Approved', 'Ready to Hand Over', 'Handed Over', 'Dispatched', 'Delivered', 'Received', 'Installed', 'Rejected'];
 
 const listQuerySchema = z.object({
   status: z.enum(PART_ORDER_STATUSES).optional(),
+  brandApproval: z.enum(['Pending','Approved','Rejected','Not Required']).optional(),
   orderSource: z.enum(['NCC Warehouse', 'Partner Brand', 'Nearby Store']).optional(),
   fulfillmentType: z.enum(['in_stock', 'procurement']).optional(),
   page: z.coerce.number().int().positive().optional(),
@@ -27,7 +30,7 @@ const updateStatusSchema = z.object({
 });
 
 export const adminPartOrderRouter = Router();
-adminPartOrderRouter.use(requireAuth, requireRole(ROLES.SUPER_ADMIN));
+adminPartOrderRouter.use(requireAuth, requireRole(ROLES.SUPER_ADMIN), mutationAudit({admin:true,prefix:'/part-orders'}));
 
 adminPartOrderRouter.get('/', validate(listQuerySchema, 'query'), async (req, res, next) => {
   try {
@@ -44,7 +47,7 @@ adminPartOrderRouter.patch(
   validate(updateStatusSchema),
   async (req, res, next) => {
     try {
-      ok(res, await adminPartOrderService.updatePartOrderStatus(req.params.id, req.body));
+      ok(res, await adminPartOrderService.updatePartOrderStatus(req.params.id, req.body, await actorFromUser(req.user.id, 'admin')));
     } catch (err) {
       next(err);
     }

@@ -1,0 +1,11 @@
+import { Router } from 'express';
+import { z } from 'zod';
+import { validate } from '../../middleware/validate.js';
+import { ok } from '../../utils/respond.js';
+import { actorFromUser } from './actor.js';
+import { listParts, changePart } from './ticketParts.service.js';
+export const ticketPartsRouter=Router();
+const id=z.object({id:z.string().regex(/^[a-f\d]{24}$/i)});
+const query=z.object({status:z.enum(['Pending','Approved','Ready to Hand Over','Handed Over','Dispatched','Delivered','Received','Installed','Rejected']).optional(),approval:z.enum(['Pending','Approved','Rejected','Not Required']).optional(),tab:z.enum(['awaiting','progress','installed','rejected']).optional(),ticket:z.string().max(100).optional(),q:z.string().trim().max(100).optional(),from:z.string().date().optional(),to:z.string().date().optional(),page:z.coerce.number().int().positive().default(1),limit:z.coerce.number().int().min(1).max(200).default(20)}).strict().refine(v=>!v.from||!v.to||v.from<=v.to,'End date must follow start');
+ticketPartsRouter.get('/parts',validate(query,'query'),async(req,res,next)=>{try{const {items,meta}=await listParts(req.user.brand,req.query);ok(res,items,meta);}catch(e){next(e);}});
+for(const action of ['approve','reject'])ticketPartsRouter.post(`/parts/:id/${action}`,validate(id,'params'),validate(action==='approve'?z.object({remarks:z.string().trim().max(2000).optional()}).strict():z.object({reason:z.string().trim().min(5).max(2000)}).strict()),async(req,res,next)=>{try{ok(res,await changePart({id:req.params.id,brand:req.user.brand,actor:await actorFromUser(req.user.id,'brand'),status:action==='approve'?'Approved':'Rejected',remarks:req.body.reason||req.body.remarks}));}catch(e){next(e);}});
